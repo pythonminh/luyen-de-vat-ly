@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 app.py - Ứng dụng luyện đề chạy Render + Google Sheet
-----------------------------------------------------
+====================================================
 - Flask + Gunicorn.
-- Đọc trực tiếp Google Sheet qua GOOGLE_SHEET_ID và GOOGLE_CREDENTIALS_JSON.
-- Đăng nhập bằng MaHS + MatKhau. Nếu chưa có cột MatKhau: dùng 6 số cuối SoDienThoai, nếu trống dùng 123456.
-- Chống dùng chung tài khoản: đăng nhập mới sẽ đá phiên cũ.
-- FREE: làm bài và xem điểm, không xem đáp án/lời giải.
-- VIP/S.VIP/ADMIN: Loại 2 câu sai, xem đáp án/lời giải sau khi nộp.
-- ADMIN: có nút đồng bộ lại dữ liệu từ Google Sheet.
+- Đọc trực tiếp Google Sheet bằng GOOGLE_SHEET_ID và GOOGLE_CREDENTIALS_JSON.
+- Đăng nhập bằng sheet HOC_VIEN: MaHS + MatKhau.
+- Chống dùng chung tài khoản: đăng nhập mới đá phiên cũ.
+- FREE: làm bài, xem điểm, không xem đáp án/lời giải.
+- VIP/S.VIP: làm bài, dùng 50:50, xem đáp án/lời giải sau khi nộp.
+- ADMIN: đăng nhập là xem đáp án/lời giải ngay, không cần làm; được sửa câu hỏi và ghi ngược Google Sheet.
 
 Render Start Command:
     gunicorn app:app --bind 0.0.0.0:$PORT
@@ -28,19 +28,18 @@ import random
 import re
 import time
 import unicodedata
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
 
-APP_VERSION = "LOGIN_GOOGLE_SHEET_2026_05_30_V3"
+APP_VERSION = "2026_05_30_V4"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "doi-khoa-bi-mat-nay-2026")
 app.config["JSON_AS_ASCII"] = False
 
 # ============================================================
-# TIỆN ÍCH CHUẨN HÓA
+# TIỆN ÍCH
 # ============================================================
 
 def strip_accents(s: Any) -> str:
@@ -67,15 +66,15 @@ def stable_hash(text: str, n: int = 12) -> str:
 
 
 def get_any(row: Dict[str, Any], names: List[str], default: str = "") -> str:
-    m = {key_norm(k): k for k in row.keys()}
+    keys = {key_norm(k): k for k in row.keys()}
     for name in names:
-        k = m.get(key_norm(name))
+        k = keys.get(key_norm(name))
         if k is not None:
             return clean(row.get(k, default))
     return default
 
 
-ALIASES = {
+ALIASES: Dict[str, List[str]] = {
     "MaDe": ["MaDe", "Mã đề", "Ma De", "MA_DE", "ma_de"],
     "ID": ["ID", "Id", "Mã câu", "MaCau", "Ma Cau"],
     "BoDe": ["BoDe", "Bộ đề", "Bo De", "Bộ Đề"],
@@ -101,8 +100,10 @@ ALIASES = {
 
 FIELDS = [
     "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "MucDo",
-    "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap"
+    "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap",
 ]
+
+EDITABLE_FIELDS = ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "MucDo", "Dang", "DangBaiTap", "Chuong", "BaiHoc", "De", "BoDe", "HinhAnh"]
 
 
 def normalize_dang(s: str) -> str:
@@ -220,15 +221,60 @@ class SheetClient:
         return ws.get_all_records()
 
     def worksheet(self, worksheet_name: str):
+        if not self.connected:
+            raise RuntimeError(self.error or "Chưa kết nối Google Sheet")
         return self.sh.worksheet(worksheet_name)
 
     def ensure_worksheet(self, worksheet_name: str, headers: List[str]):
+        if not self.connected:
+            raise RuntimeError(self.error or "Chưa kết nối Google Sheet")
         try:
             ws = self.sh.worksheet(worksheet_name)
         except Exception:
             ws = self.sh.add_worksheet(title=worksheet_name, rows=1000, cols=max(10, len(headers)))
             ws.append_row(headers)
         return ws
+
+    def _header_index(self, headers: List[str], aliases: List[str]) -> Optional[int]:
+        hmap = {key_norm(h): i for i, h in enumerate(headers)}
+        for a in aliases:
+            if key_norm(a) in hmap:
+                return hmap[key_norm(a)]
+        return None
+
+    def update_question_by_id(self, question_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """ADMIN sửa câu hỏi trực tiếp trong sheet Cau_Hoi theo cột ID."""
+        ws = self.worksheet("Cau_Hoi")
+        values = ws.get_all_values()
+        if not values:
+            raise RuntimeError("Sheet Cau_Hoi đang trống")
+        headers = values[0]
+        id_col = self._header_index(headers, ALIASES["ID"])
+        if id_col is None:
+            raise RuntimeError("Sheet Cau_Hoi chưa có cột ID")
+
+        target_row = None
+        for r_idx, row in enumerate(values[1:], start=2):
+            val = row[id_col] if id_col < len(row) else ""
+            if clean(val) == clean(question_id):
+                target_row = r_idx
+                break
+        if target_row is None:
+            raise RuntimeError(f"Không tìm thấy câu có ID: {question_id}")
+
+        changed: Dict[str, str] = {}
+        for field, value in updates.items():
+            if field not in EDITABLE_FIELDS:
+                continue
+            col = self._header_index(headers, ALIASES.get(field, [field]))
+            if col is None:
+                continue
+            ws.update_cell(target_row, col + 1, clean(value))
+            changed[field] = clean(value)
+        if not changed:
+            raise RuntimeError("Không có cột nào được cập nhật. Kiểm tra tên cột trong sheet Cau_Hoi.")
+        return {"row": target_row, "changed": changed}
+
 
 SHEET = SheetClient()
 
@@ -251,32 +297,34 @@ class Store:
         self.last_error = ""
         try:
             qrows = SHEET.rows("Cau_Hoi")
-            questions = []
+            questions: List[Dict[str, str]] = []
             for row in qrows:
                 q = canonical_question(row)
                 if not clean(q.get("CauHoi")):
                     continue
                 questions.append(q)
             self.questions = questions
-            self.by_made = {}
-            for q in self.questions:
-                self.by_made.setdefault(q["MaDe"], []).append(q)
-            self.catalog = self._build_catalog()
+            self._reindex()
             self.users = self._load_users()
             self.loaded_at = time.strftime("%Y-%m-%d %H:%M:%S")
         except Exception as e:
             self.last_error = str(e)
-            # fallback JSON nếu có, tránh app chết hoàn toàn
+            # fallback JSON để app không chết khi đang cấu hình Google Sheet
             path = "luyen_de_vat_ly.json"
             if os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 self.questions = data.get("questions", [])
-                self.by_made = {}
                 for q in self.questions:
                     q["MaDe"] = q.get("MaDe") or make_made(q)
-                    self.by_made.setdefault(q["MaDe"], []).append(q)
-                self.catalog = self._build_catalog()
+                self._reindex()
+
+    def _reindex(self):
+        self.by_made = {}
+        for q in self.questions:
+            q["MaDe"] = q.get("MaDe") or make_made(q)
+            self.by_made.setdefault(q["MaDe"], []).append(q)
+        self.catalog = self._build_catalog()
 
     def _build_catalog(self) -> List[Dict[str, str]]:
         groups: Dict[str, Dict[str, Any]] = {}
@@ -287,7 +335,7 @@ class Store:
                     "MaDe": m, "Lop": q.get("Lop", ""), "Mon": q.get("Mon", ""),
                     "Chuong": q.get("Chuong", ""), "BaiHoc": q.get("BaiHoc", ""),
                     "DangBaiTap": q.get("DangBaiTap", ""), "BoDe": q.get("BoDe", ""),
-                    "De": q.get("De", ""), "SoCau": 0, "MucDo": set(), "Dang": set(), "QuyenTruyCap": set()
+                    "De": q.get("De", ""), "SoCau": 0, "MucDo": set(), "Dang": set(), "QuyenTruyCap": set(),
                 }
             g = groups[m]
             g["SoCau"] += 1
@@ -357,8 +405,29 @@ class Store:
             "catalog": self.catalog,
         }
 
-    def public_question(self, q: Dict[str, str], index: int) -> Dict[str, Any]:
-        return {"index": index, "ID": q.get("ID", ""), "MaDe": q.get("MaDe", ""), "Dang": normalize_dang(q.get("Dang", "")), "MucDo": q.get("MucDo", ""), "CauHoi": q.get("CauHoi", ""), "A": q.get("A", ""), "B": q.get("B", ""), "C": q.get("C", ""), "D": q.get("D", ""), "HinhAnh": q.get("HinhAnh", "")}
+    def public_question(self, q: Dict[str, str], index: int, include_secret: bool = False) -> Dict[str, Any]:
+        item = {
+            "index": index,
+            "ID": q.get("ID", ""),
+            "MaDe": q.get("MaDe", ""),
+            "Dang": normalize_dang(q.get("Dang", "")),
+            "MucDo": q.get("MucDo", ""),
+            "CauHoi": q.get("CauHoi", ""),
+            "A": q.get("A", ""), "B": q.get("B", ""), "C": q.get("C", ""), "D": q.get("D", ""),
+            "HinhAnh": q.get("HinhAnh", ""),
+        }
+        if include_secret:
+            item.update({
+                "DapAn": q.get("DapAn", ""),
+                "SaiSo": q.get("SaiSo", ""),
+                "LoiGiai": q.get("LoiGiai", ""),
+                "DangBaiTap": q.get("DangBaiTap", ""),
+                "Chuong": q.get("Chuong", ""),
+                "BaiHoc": q.get("BaiHoc", ""),
+                "De": q.get("De", ""),
+                "BoDe": q.get("BoDe", ""),
+            })
+        return item
 
     def start_quiz(self, made: str) -> Dict[str, Any]:
         qs = list(self.by_made.get(made, []))
@@ -366,7 +435,28 @@ class Store:
             raise ValueError("Không có câu hỏi trong đề này")
         sid = stable_hash(f"{made}|{time.time()}|{random.random()}", 16)
         self.sessions[sid] = {"made": made, "created": time.time(), "questions": qs, "used_5050": set(), "mahs": current_user().get("mahs", "")}
-        return {"sid": sid, "questions": [self.public_question(q, i) for i, q in enumerate(qs)]}
+        include_secret = current_role() == "ADMIN"
+        return {"sid": sid, "admin_mode": include_secret, "questions": [self.public_question(q, i, include_secret=include_secret) for i, q in enumerate(qs)]}
+
+    def question_by_id(self, question_id: str) -> Dict[str, str]:
+        for q in self.questions:
+            if clean(q.get("ID")) == clean(question_id):
+                return q
+        raise ValueError(f"Không tìm thấy câu ID: {question_id}")
+
+    def update_question(self, question_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        changed_result = SHEET.update_question_by_id(question_id, updates)
+        changed = changed_result.get("changed", {})
+        # Cập nhật bộ nhớ RAM ngay, không cần đợi sync.
+        q = self.question_by_id(question_id)
+        for k, v in changed.items():
+            q[k] = clean(v)
+        if "Dang" in q:
+            q["Dang"] = normalize_dang(q.get("Dang", ""))
+        if any(k in changed for k in ["MaDe", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De"]):
+            q["MaDe"] = make_made(q)
+        self._reindex()
+        return changed_result
 
     def fifty_fifty(self, sid: str, index: int) -> Dict[str, Any]:
         ses = self.sessions.get(sid)
@@ -411,27 +501,27 @@ class Store:
                 item.update({"correct": correct, "LoiGiai": q.get("LoiGiai", ""), "DapAn": q.get("DapAn", "")})
             results.append(item)
         score = round(10 * correct_count / auto_count, 2) if auto_count else 0
-        self.save_result(score, correct_count, auto_count, ses.get("made", ""))
+        self._save_result(ses.get("made", ""), score, correct_count, auto_count)
         return {"total": len(qs), "auto_count": auto_count, "correct_count": correct_count, "score": score, "can_view_solution": can_view, "results": results}
 
-    def save_result(self, score: float, correct_count: int, total: int, made: str):
+    def _save_result(self, made: str, score: float, correct_count: int, auto_count: int) -> None:
         try:
             user = current_user()
-            headers = ["ThoiGian", "MaHS", "HoTen", "Lop", "Role", "MaDe", "Diem", "SoDung", "TongCau"]
-            ws = SHEET.ensure_worksheet("Ket_Qua", headers)
-            ws.append_row([time.strftime("%Y-%m-%d %H:%M:%S"), user.get("mahs", ""), user.get("hoten", ""), user.get("lop", ""), user.get("role", ""), made, score, correct_count, total])
+            ws = SHEET.ensure_worksheet("Ket_Qua", ["ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "Diem", "SoDung", "TongCau"])
+            ws.append_row([time.strftime("%Y-%m-%d %H:%M:%S"), user.get("mahs", ""), user.get("hoten", ""), user.get("lop", ""), user.get("role", ""), made, score, correct_count, auto_count])
         except Exception:
             pass
+
 
 STORE = Store()
 
 # ============================================================
-# ĐĂNG NHẬP / CHỐNG DÙNG CHUNG
+# ĐĂNG NHẬP / PHÂN QUYỀN
 # ============================================================
 
 def current_user() -> Dict[str, str]:
     mahs = session.get("mahs", "")
-    return STORE.users.get(mahs, {}) if mahs else {}
+    return STORE.users.get(mahs, {})
 
 
 def current_role() -> str:
@@ -442,61 +532,57 @@ def can_use_5050() -> bool:
     return current_role() in ["VIP", "S.VIP", "ADMIN"]
 
 
-def ensure_login_response():
-    if not session.get("mahs"):
-        return redirect(url_for("login"))
-    u = current_user()
-    if not u:
-        session.clear()
-        return redirect(url_for("login", msg="Tài khoản không còn tồn tại."))
-    if u.get("status", "ON").upper() not in ["ON", "ACTIVE", "VIP", "S.VIP", "ADMIN"]:
-        session.clear()
-        return redirect(url_for("login", msg="Tài khoản đang bị khóa hoặc hết hạn."))
-    token = session.get("session_token", "")
-    if token and u.get("session_token") and token != u.get("session_token"):
-        session.clear()
-        return redirect(url_for("login", msg="Tài khoản này đã đăng nhập ở thiết bị khác."))
-    return None
+def is_admin() -> bool:
+    return current_role() == "ADMIN"
 
 
-def update_session_token(mahs: str, token: str):
-    # Cập nhật local trước để đá phiên cũ ngay trong runtime hiện tại.
+def update_session_token(mahs: str, token: str) -> None:
     if mahs in STORE.users:
         STORE.users[mahs]["session_token"] = token
-    # Cập nhật sheet nếu có thể. Nếu không được thì app vẫn chạy với local token.
     try:
         ws = SHEET.worksheet("HOC_VIEN")
         values = ws.get_all_values()
         if not values:
             return
         headers = values[0]
-        hnorm = [key_norm(h) for h in headers]
-        def col(name: str) -> int:
-            kn = key_norm(name)
-            if kn in hnorm:
-                return hnorm.index(kn) + 1
-            headers.append(name)
-            hnorm.append(kn)
-            ws.update_cell(1, len(headers), name)
-            return len(headers)
+        hmap = {key_norm(h): i for i, h in enumerate(headers)}
         mahs_col = None
-        for name in ["MaHS", "Mã HS", "TaiKhoan", "Tài khoản"]:
-            if key_norm(name) in hnorm:
-                mahs_col = hnorm.index(key_norm(name)) + 1
+        for a in ["MaHS", "Mã HS", "TaiKhoan", "Tài khoản", "Username"]:
+            if key_norm(a) in hmap:
+                mahs_col = hmap[key_norm(a)]
                 break
-        if not mahs_col:
+        if mahs_col is None:
             return
-        row_idx = None
-        for r in range(2, len(values) + 1):
-            if clean(values[r-1][mahs_col-1] if len(values[r-1]) >= mahs_col else "") == mahs:
-                row_idx = r
+        token_col = hmap.get(key_norm("SessionToken"))
+        if token_col is None:
+            ws.update_cell(1, len(headers) + 1, "SessionToken")
+            token_col = len(headers)
+        for r_idx, row in enumerate(values[1:], start=2):
+            val = row[mahs_col] if mahs_col < len(row) else ""
+            if clean(val) == mahs:
+                ws.update_cell(r_idx, token_col + 1, token)
                 break
-        if not row_idx:
-            return
-        ws.update_cell(row_idx, col("SessionToken"), token)
-        ws.update_cell(row_idx, col("LastLogin"), time.strftime("%Y-%m-%d %H:%M:%S"))
     except Exception:
         pass
+
+
+def ensure_login_response():
+    mahs = session.get("mahs")
+    token = session.get("session_token")
+    if not mahs or not token:
+        return redirect(url_for("login"))
+    u = STORE.users.get(mahs)
+    if not u:
+        session.clear()
+        return redirect(url_for("login", msg="Tài khoản không còn tồn tại."))
+    if u.get("status", "ON").upper() not in ["ON", "ACTIVE", "VIP", "S.VIP", "ADMIN"]:
+        session.clear()
+        return redirect(url_for("login", msg="Tài khoản đang bị khóa hoặc hết hạn."))
+    saved = u.get("session_token", "")
+    if saved and saved != token:
+        session.clear()
+        return redirect(url_for("login", msg="Tài khoản này đã đăng nhập ở thiết bị khác."))
+    return None
 
 # ============================================================
 # HTML
@@ -510,7 +596,7 @@ LOGIN_HTML = r"""
 <h2>Đăng nhập học viên</h2>
 {% if msg %}<div class="err">{{msg}}</div>{% endif %}
 <form method="post"><label>Mã học sinh / MaHS</label><input name="mahs" autocomplete="username" autofocus required><label>Mật khẩu</label><input type="password" name="password" autocomplete="current-password" required><button>Đăng nhập</button></form>
-<div class="hint">Tài khoản lấy từ sheet <b>HOC_VIEN</b>. Nếu chưa có cột <b>MatKhau</b>, app dùng tạm 6 số cuối SĐT hoặc <b>123456</b>.</div>
+<div class="hint">ADMIN đăng nhập bằng tài khoản có <b>LoaiTaiKhoan = ADMIN</b> trong sheet <b>HOC_VIEN</b>. ADMIN được xem đáp án/lời giải ngay và sửa câu hỏi.</div>
 </div></body></html>
 """
 
@@ -523,24 +609,47 @@ INDEX_HTML = r"""
   <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   <style>
-    :root{--blue:#1d4ed8;--green:#dcfce7;--red:#fee2e2;--border:#d6dee9;--bg:#f5f7fb;--text:#111827}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text);font-size:15px}.top{background:var(--blue);color:#fff;padding:12px 18px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px #0002}.top h1{margin:0;font-size:20px}.top small{opacity:.95}.wrap{padding:14px;max-width:1380px;margin:auto}.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}.field label{font-weight:700;font-size:12px;color:#374151}select,input,button,textarea{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:700}.btn{background:var(--blue);color:#fff;border-color:var(--blue)}.btn2{background:#eef2ff;color:#1e40af}.btnGreen{background:#dcfce7;color:#166534;border-color:#bbf7d0}.btnRed{background:#fee2e2;color:#991b1b;border-color:#fecaca}.btn:disabled,button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px}.card h3{margin:0 0 8px;font-size:16px;color:#1e3a8a}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px;font-weight:700;margin:2px}.muted{color:#6b7280}.line{height:1px;background:var(--border);margin:10px 0}.quizLayout{display:grid;grid-template-columns:1fr 260px;gap:12px}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:170px;line-height:1.55;font-size:18px}.qid{font-size:20px;font-weight:800;margin-bottom:10px}.options{margin-top:12px}.opt{display:flex;gap:9px;align-items:flex-start;border:1px solid transparent;border-radius:10px;padding:10px;margin:7px 0;background:#fff}.optionHidden{opacity:.25;pointer-events:none;text-decoration:line-through}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.tfrow{display:grid;grid-template-columns:36px 1fr 90px 90px;gap:8px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px;margin:8px 0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;background:#fff;border:1px solid var(--border);font-weight:800}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px;display:none}.resultBox{font-size:18px;font-weight:800}.hide{display:none!important}.imgQ{max-width:100%;border:1px solid var(--border);border-radius:8px;margin-top:10px}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.side{order:-1}.qbox{font-size:16px}.top h1{font-size:17px}}
+    :root{--blue:#1d4ed8;--green:#dcfce7;--red:#fee2e2;--border:#d6dee9;--bg:#f5f7fb;--text:#111827}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text);font-size:15px}.top{background:var(--blue);color:#fff;padding:12px 18px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px #0002}.top h1{margin:0;font-size:20px}.top small{opacity:.95}.wrap{padding:14px;max-width:1380px;margin:auto}.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}.field label{font-weight:700;font-size:12px;color:#374151}select,input,button,textarea{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:700}.btn{background:var(--blue);color:#fff;border-color:var(--blue)}.btn2{background:#eef2ff;color:#1e40af}.btnGreen{background:#dcfce7;color:#166534;border-color:#bbf7d0}.btnRed{background:#fee2e2;color:#991b1b;border-color:#fecaca}.btnOrange{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.btn:disabled,button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px}.card h3{margin:0 0 8px;font-size:16px;color:#1e3a8a}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px;font-weight:700;margin:2px}.muted{color:#6b7280}.line{height:1px;background:var(--border);margin:10px 0}.quizLayout{display:grid;grid-template-columns:1fr 280px;gap:12px}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:170px;line-height:1.55;font-size:18px}.qid{font-size:20px;font-weight:800;margin-bottom:10px}.options{margin-top:12px}.opt{display:flex;gap:9px;align-items:flex-start;border:1px solid transparent;border-radius:10px;padding:10px;margin:7px 0;background:#fff}.optionHidden{opacity:.25;pointer-events:none;text-decoration:line-through}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.tfrow{display:grid;grid-template-columns:36px 1fr 90px 90px;gap:8px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px;margin:8px 0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;background:#fff;border:1px solid var(--border);font-weight:800}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px;display:none}.adminEdit{background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px;margin-top:12px;display:none}.adminEdit textarea{width:100%;min-height:70px}.resultBox{font-size:18px;font-weight:800}.hide{display:none!important}.imgQ{max-width:100%;border:1px solid var(--border);border-radius:8px;margin-top:10px}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.side{order:-1}.qbox{font-size:16px}.top h1{font-size:17px}}
   </style>
 </head>
 <body>
   <div class="top"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><small id="info">Đang nạp dữ liệu...</small><span style="float:right">{{user.hoten}} - {{user.role}} | <a style="color:white" href="/logout">Thoát</a></span></div>
   <div class="wrap">
-    <div class="panel row" style="justify-content:space-between"><div><b>Đã đăng nhập:</b> {{user.mahs}} - {{user.hoten}} - {{user.lop}} - {{user.role}}</div>{% if user.role=='ADMIN' %}<button class="btnRed" onclick="adminSync()">ADMIN: Đồng bộ Google Sheet</button>{% endif %}</div>
+    <div class="panel row" style="justify-content:space-between"><div><b>Đã đăng nhập:</b> {{user.mahs}} - {{user.hoten}} - {{user.lop}} - {{user.role}}</div>{% if user.role=='ADMIN' %}<div><button class="btnRed" onclick="adminSync()">ADMIN: Đồng bộ Google Sheet</button></div>{% endif %}</div>
+    {% if user.role=='ADMIN' %}<div class="panel" style="background:#fff7ed;border-color:#fed7aa"><b>Chế độ ADMIN:</b> Thầy xem đáp án/lời giải ngay, không cần làm bài. Có thể sửa câu và lưu ngược về Google Sheet.</div>{% endif %}
     <div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
-    <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span></div><div class="resultBox" id="resultBox"></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="qtext" class="qbox"></div><div id="options" class="options"></div><div id="solution" class="solution"></div><div class="row" style="margin-top:12px;justify-content:space-between"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="side panel"><b>Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">FREE chỉ xem điểm. VIP/S.VIP/ADMIN được xem đáp án/lời giải sau khi nộp.</div></div></div></div>
+    <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span></div><div class="resultBox" id="resultBox"></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnAdminAnswer" class="btnOrange" onclick="adminShowAnswer()">ADMIN: Xem đáp án</button><button id="btnAdminEdit" class="btnRed" onclick="adminOpenEdit()">ADMIN: Sửa câu</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="qtext" class="qbox"></div><div id="options" class="options"></div><div id="solution" class="solution"></div><div id="adminEdit" class="adminEdit"></div><div class="row" style="margin-top:12px;justify-content:space-between"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="side panel"><b>Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted" id="sideHint">FREE chỉ xem điểm. VIP/S.VIP xem đáp án/lời giải sau nộp. ADMIN xem và sửa ngay.</div></div></div></div>
   </div>
 <script>
-let META=null,CATALOG=[],SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CAN_VIEW=false,CAN_5050={{'true' if can5050 else 'false'}};
-function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}function val(id){return document.getElementById(id).value}function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}async function api(url,opts={}){let r=await fetch(url,opts); if(r.redirected){location.href=r.url;return} let j=await r.json(); if(!r.ok||j.error)throw new Error(j.error||'Lỗi API'); return j}
-async function init(){META=await api('/api/meta');CATALOG=META.catalog;document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | ${META.version}`;setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}function okFilter(x){let s=val('fSearch').toLowerCase();let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase();return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
-function renderCatalog(){let list=CATALOG.filter(okFilter);document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>`<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong||'')}</div><div><b>Bài:</b> ${esc(x.BaiHoc||'')}</div><div><b>Dạng:</b> ${esc(x.Dang||'')}</div><div><b>Mức độ:</b> ${esc(x.MucDo||'')}</div><div><b>Bộ đề:</b> ${esc(x.BoDe||'')}</div><div style="text-align:right;margin-top:10px"><button class="btn" onclick="startQuiz('${x.MaDe}')">Làm bài</button></div></div>`).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
-async function startQuiz(made){let j=await api('/api/start?made='+encodeURIComponent(made));SID=j.sid;QUESTIONS=j.questions;CUR=0;ANSWERS={};SUBMITTED=false;RESULTS={};CAN_VIEW=false;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent='';let c=CATALOG.find(x=>x.MaDe==made)||{};document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}`;renderNav();renderQuestion()}function backHome(){document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide')}function saveCurrent(){let q=QUESTIONS[CUR];if(!q)return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r)ANSWERS[CUR]=r.value}else if(q.Dang=='Đúng sai'){let arr=[];for(let L of ['A','B','C','D']){let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr}else{let el=document.getElementById('shortAns');if(el)ANSWERS[CUR]=el.value}renderNav()}function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if(SUBMITTED&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';html+=`<button class="${cls}" onclick="goQ(${i})">${i+1}</button>`}document.getElementById('navNums').innerHTML=html}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}}
-function renderQuestion(){let q=QUESTIONS[CUR];renderNav();document.getElementById('qid').textContent=`Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;let img=q.HinhAnh?`<br><img class="imgQ" src="${esc(q.HinhAnh)}">`:'';document.getElementById('qtext').innerHTML=esc(q.CauHoi)+img;document.getElementById('solution').style.display='none';document.getElementById('solution').innerHTML='';document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!CAN_5050;document.getElementById('btnSubmit').disabled=SUBMITTED;let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';if(SUBMITTED&&RESULTS[CUR]){if(CAN_VIEW&&RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&(!CAN_VIEW||RESULTS[CUR].chosen!=RESULTS[CUR].correct))cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let corr=SUBMITTED&&RESULTS[CUR]&&CAN_VIEW?String(RESULTS[CUR].correct||'').split(','):[];let chosen=SUBMITTED&&RESULTS[CUR]?String(RESULTS[CUR].chosen||'').split(','):old;for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';if(SUBMITTED){if(CAN_VIEW&&chosen[idx]&&chosen[idx]==corr[idx])cls+=' correct';else cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){let cls='';if(SUBMITTED&&RESULTS[CUR])cls=RESULTS[CUR].ok?'correct':'wrong';html=`<input id="shortAns" class="${cls}" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:130px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;if(SUBMITTED&&RESULTS[CUR]){let r=RESULTS[CUR];document.getElementById('solution').style.display='block';if(CAN_VIEW){document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${esc(r.correct||r.DapAn||'')}<br><b>Em chọn:</b> ${esc(r.chosen||'')}<div class="line"></div><b>Lời giải:</b><br>${esc(r.LoiGiai||'Chưa có lời giải.')}`}else{document.getElementById('solution').innerHTML=`<b>FREE:</b> Em đã nộp bài. Tài khoản FREE chỉ xem điểm, chưa xem đáp án/lời giải.`}}typeset()}
-async function use5050(){saveCurrent();let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('optionHidden')}document.getElementById('btn5050').disabled=true;if(j.message)alert(j.message)}async function submitQuiz(){saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;CAN_VIEW=!!j.can_view_solution;RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count}`;renderQuestion();renderNav()}async function adminSync(){let j=await api('/admin/sync',{method:'POST'});alert(j.message);location.reload()}init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
+let META=null,CATALOG=[],SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CAN_VIEW=false;
+const USER_ROLE={{user.role|tojson}};
+const IS_ADMIN=USER_ROLE==='ADMIN';
+let CAN_5050={{'true' if can5050 else 'false'}};
+function h(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+function br(s){return h(s).replace(/\n/g,'<br>')}
+function val(id){return document.getElementById(id).value}
+function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${h(x)}</option>`).join('')}
+function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
+async function api(url,opts={}){let r=await fetch(url,opts); if(r.redirected){location.href=r.url;return} let j=await r.json(); if(!r.ok||j.error)throw new Error(j.error||'Lỗi API'); return j}
+async function init(){META=await api('/api/meta');CATALOG=META.catalog;document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | ${META.version}`;setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
+function okFilter(x){let s=val('fSearch').toLowerCase();let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase();return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
+function renderCatalog(){let list=CATALOG.filter(okFilter);document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>`<div class="card"><h3>${h(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${h(x.Mon)}</span><span class="tag">Lớp ${h(x.Lop)}</span><span class="tag">${h(x.SoCau)} câu</span></div><div class="line"></div><div><b>Chương:</b> ${h(x.Chuong||'')}</div><div><b>Bài:</b> ${h(x.BaiHoc||'')}</div><div><b>Dạng:</b> ${h(x.Dang||'')}</div><div><b>Mức độ:</b> ${h(x.MucDo||'')}</div><div><b>Bộ đề:</b> ${h(x.BoDe||'')}</div><div style="text-align:right;margin-top:10px"><button class="btn" onclick="startQuiz('${x.MaDe}')">${IS_ADMIN?'Xem/Sửa':'Làm bài'}</button></div></div>`).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
+async function startQuiz(made){let j=await api('/api/start?made='+encodeURIComponent(made));SID=j.sid;QUESTIONS=j.questions;CUR=0;ANSWERS={};SUBMITTED=false;RESULTS={};CAN_VIEW=IS_ADMIN;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=IS_ADMIN?'ADMIN: đang soát đề':'';let c=CATALOG.find(x=>x.MaDe==made)||{};document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}`;renderNav();renderQuestion()}
+function backHome(){document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide')}
+function saveCurrent(){let q=QUESTIONS[CUR];if(!q||IS_ADMIN)return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r)ANSWERS[CUR]=r.value}else if(q.Dang=='Đúng sai'){let arr=[];for(let L of ['A','B','C','D']){let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr}else{let el=document.getElementById('shortAns');if(el)ANSWERS[CUR]=el.value}renderNav()}
+function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if(SUBMITTED&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';html+=`<button class="${cls}" onclick="goQ(${i})">${i+1}</button>`}document.getElementById('navNums').innerHTML=html}
+function goQ(i){saveCurrent();CUR=i;renderQuestion()}
+function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}}
+function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}}
+function correctFor(q){return String(q.DapAn||'').match(/[ABCD]/i)?.[0]?.toUpperCase()||String(q.DapAn||'')}
+function renderQuestion(){let q=QUESTIONS[CUR];renderNav();document.getElementById('qid').textContent=`Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;let img=q.HinhAnh?`<br><img class="imgQ" src="${h(q.HinhAnh)}">`:'';document.getElementById('qtext').innerHTML=br(q.CauHoi)+img;document.getElementById('solution').style.display='none';document.getElementById('solution').innerHTML='';document.getElementById('adminEdit').style.display='none';document.getElementById('adminEdit').innerHTML='';document.getElementById('btnAdminAnswer').style.display=IS_ADMIN?'inline-block':'none';document.getElementById('btnAdminEdit').style.display=IS_ADMIN?'inline-block':'none';document.getElementById('btn5050').style.display=IS_ADMIN?'none':'inline-block';document.getElementById('btnSubmit').style.display=IS_ADMIN?'none':'inline-block';document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!CAN_5050;document.getElementById('btnSubmit').disabled=SUBMITTED;let html='';if(q.Dang=='Trắc nghiệm'){let corr=IS_ADMIN?correctFor(q):'';for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';if(IS_ADMIN&&corr==L)cls+=' correct';if(SUBMITTED&&RESULTS[CUR]){if(CAN_VIEW&&RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&(!CAN_VIEW||RESULTS[CUR].chosen!=RESULTS[CUR].correct))cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${SUBMITTED||IS_ADMIN?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${br(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let corr=IS_ADMIN?String(q.DapAn||'').replace(/Đ/g,'D').match(/[DS]/g)||[]:(SUBMITTED&&RESULTS[CUR]&&CAN_VIEW?String(RESULTS[CUR].correct||'').split(','):[]);let chosen=SUBMITTED&&RESULTS[CUR]?String(RESULTS[CUR].chosen||'').split(','):old;for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';if(IS_ADMIN&&corr[idx])cls+=' correct';else if(SUBMITTED){if(CAN_VIEW&&chosen[idx]&&chosen[idx]==corr[idx])cls+=' correct';else cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${br(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${SUBMITTED||IS_ADMIN?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${SUBMITTED||IS_ADMIN?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){let cls='';if(SUBMITTED&&RESULTS[CUR])cls=RESULTS[CUR].ok?'correct':'wrong';html=`<input id="shortAns" class="${cls}" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${h(ANSWERS[CUR]||'')}" ${SUBMITTED||IS_ADMIN?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:130px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED||IS_ADMIN?'disabled':''} oninput="saveCurrent()">${h(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;if(IS_ADMIN){adminShowAnswer(false)}else if(SUBMITTED&&RESULTS[CUR]){let r=RESULTS[CUR];document.getElementById('solution').style.display='block';if(CAN_VIEW){document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${br(r.correct||r.DapAn||'')}<br><b>Em chọn:</b> ${br(r.chosen||'')}<div class="line"></div><b>Lời giải:</b><br>${br(r.LoiGiai||'Chưa có lời giải.')}`}else{document.getElementById('solution').innerHTML=`<b>FREE:</b> Em đã nộp bài. Tài khoản FREE chỉ xem điểm, chưa xem đáp án/lời giải.`}}typeset()}
+async function use5050(){saveCurrent();let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('optionHidden')}document.getElementById('btn5050').disabled=true;if(j.message)alert(j.message)}
+async function submitQuiz(){saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;CAN_VIEW=!!j.can_view_solution;RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count}`;renderQuestion();renderNav()}
+function adminShowAnswer(alertMissing=true){if(!IS_ADMIN)return;let q=QUESTIONS[CUR];document.getElementById('solution').style.display='block';document.getElementById('solution').innerHTML=`<b>ADMIN - Đáp án:</b> ${br(q.DapAn||'Chưa có đáp án')}<br><b>Sai số:</b> ${br(q.SaiSo||'')}<div class="line"></div><b>Lời giải:</b><br>${br(q.LoiGiai||'Chưa có lời giải.')}`;typeset()}
+function adminOpenEdit(){if(!IS_ADMIN)return;let q=QUESTIONS[CUR];let box=document.getElementById('adminEdit');box.style.display='block';box.innerHTML=`<h3>ADMIN: Sửa câu ${CUR+1} - ID ${h(q.ID)}</h3><label>Nội dung câu hỏi</label><textarea id="ed_CauHoi">${h(q.CauHoi)}</textarea><div class="row"><div class="field"><label>A</label><textarea id="ed_A">${h(q.A)}</textarea></div><div class="field"><label>B</label><textarea id="ed_B">${h(q.B)}</textarea></div></div><div class="row"><div class="field"><label>C</label><textarea id="ed_C">${h(q.C)}</textarea></div><div class="field"><label>D</label><textarea id="ed_D">${h(q.D)}</textarea></div></div><div class="row"><div class="field"><label>Đáp án</label><input id="ed_DapAn" value="${h(q.DapAn)}"></div><div class="field"><label>Sai số</label><input id="ed_SaiSo" value="${h(q.SaiSo)}"></div><div class="field"><label>Mức độ</label><input id="ed_MucDo" value="${h(q.MucDo)}"></div><div class="field"><label>Dạng</label><input id="ed_Dang" value="${h(q.Dang)}"></div></div><label>Lời giải</label><textarea id="ed_LoiGiai" style="min-height:120px">${h(q.LoiGiai)}</textarea><div class="row" style="margin-top:10px"><button class="btnRed" onclick="adminSaveEdit()">Lưu sửa vào Google Sheet</button><button onclick="document.getElementById('adminEdit').style.display='none'">Đóng</button></div>`}
+async function adminSaveEdit(){let q=QUESTIONS[CUR];let fields={CauHoi:val('ed_CauHoi'),A:val('ed_A'),B:val('ed_B'),C:val('ed_C'),D:val('ed_D'),DapAn:val('ed_DapAn'),SaiSo:val('ed_SaiSo'),MucDo:val('ed_MucDo'),Dang:val('ed_Dang'),LoiGiai:val('ed_LoiGiai')};let j=await api('/admin/update_question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ID:q.ID,fields})});Object.assign(q,fields);alert(j.message||'Đã lưu.');renderQuestion()}
+async function adminSync(){let j=await api('/admin/sync',{method:'POST'});alert(j.message);location.reload()}
+init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+h(e.message)+'</pre>'})
 </script>
 </body></html>
 """
@@ -554,6 +663,8 @@ def version():
     return jsonify({
         "version": APP_VERSION,
         "login_required": True,
+        "admin_can_view_without_submit": True,
+        "admin_can_edit_question": True,
         "sheet_connected": SHEET.connected,
         "sheet_error": SHEET.error,
         "users": len(STORE.users),
@@ -631,10 +742,33 @@ def admin_sync():
     r = ensure_login_response()
     if r:
         return jsonify({"error": "Chưa đăng nhập"}), 401
-    if current_role() != "ADMIN":
+    if not is_admin():
         return jsonify({"error": "Chỉ ADMIN được đồng bộ."}), 403
     STORE.sync()
     return jsonify({"ok": True, "message": f"Đã đồng bộ: {len(STORE.questions)} câu, {len(STORE.catalog)} đề, {len(STORE.users)} tài khoản."})
+
+@app.route("/admin/question")
+def admin_question():
+    r = ensure_login_response()
+    if r:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xem đầy đủ câu hỏi."}), 403
+    qid = request.args.get("id", "")
+    return jsonify({"question": STORE.public_question(STORE.question_by_id(qid), 0, include_secret=True)})
+
+@app.route("/admin/update_question", methods=["POST"])
+def admin_update_question():
+    r = ensure_login_response()
+    if r:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được sửa câu hỏi."}), 403
+    data = request.get_json(silent=True) or {}
+    qid = clean(data.get("ID"))
+    fields = data.get("fields", {}) or {}
+    result = STORE.update_question(qid, fields)
+    return jsonify({"ok": True, "message": f"Đã lưu sửa câu {qid} ở dòng {result.get('row')} trên Google Sheet.", "result": result})
 
 @app.errorhandler(Exception)
 def handle_error(e):
