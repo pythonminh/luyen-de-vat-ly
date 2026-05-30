@@ -16,6 +16,7 @@ import re
 import time
 import unicodedata
 import hashlib
+import threading
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,7 +29,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "LOGIN_GOOGLE_SHEET_ADMIN_EDIT_TRIAL_FREE_ONLY_FAST_LOGIN_2026_05_30_V8"
+APP_VERSION = "LOGIN_GOOGLE_SHEET_ADMIN_EDIT_TRIAL_FAST_SAFE_LOADING_NOTICE_2026_05_30_V10"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -315,6 +316,12 @@ class SheetStore:
         # Login chỉ đọc nhanh sheet HOC_VIEN; dữ liệu đề chỉ nạp khi vào app hoặc ADMIN bấm đồng bộ.
         self.questions_loaded = False
         self.users_loaded = False
+        # V9 SAFE LOADING:
+        # Không để /api/meta chờ Google Sheet quá lâu rồi bị Render cắt kết nối.
+        # Dữ liệu câu hỏi sẽ nạp nền; trang web hiển thị trạng thái và tự thử lại.
+        self.questions_loading = False
+        self.questions_error = ""
+        self.load_lock = threading.Lock()
 
     def connect(self):
         if self.sheet is not None:
@@ -354,7 +361,51 @@ class SheetStore:
         """Nạp Cau_Hoi + catalog khi thật sự cần. Lần đầu có thể chậm, các lần sau dùng RAM."""
         if self.questions_loaded and self.questions and not force:
             return
-        self.load()
+        with self.load_lock:
+            if self.questions_loaded and self.questions and not force:
+                return
+            self.questions_error = ""
+            self.load()
+
+    def start_questions_background(self, force: bool = False) -> None:
+        """Khởi động nạp dữ liệu nền để tránh request /api/meta bị timeout trên Render Free."""
+        if self.questions_loaded and self.questions and not force:
+            return
+        if self.questions_loading:
+            return
+
+        def worker():
+            self.questions_loading = True
+            self.questions_error = ""
+            try:
+                self.ensure_questions_loaded(force=force)
+            except Exception as e:
+                self.questions_error = str(e)
+            finally:
+                self.questions_loading = False
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def meta_light(self) -> Dict[str, Any]:
+        """Trả về nhanh cho trang chủ. Nếu chưa nạp xong, không bắt trình duyệt chờ Google Sheet."""
+        if not self.questions_loaded:
+            self.start_questions_background(force=False)
+            return {
+                "version": APP_VERSION,
+                "loaded_at": self.loaded_at,
+                "loading": True,
+                "loading_message": "Hệ thống đang khởi động và nạp dữ liệu từ Google Sheet. Nếu dùng Render Free, lần đầu truy cập sau khi app ngủ có thể chờ khoảng 10–40 giây. Trang sẽ tự thử lại, thầy/các em không cần đăng nhập lại.",
+                "load_error": self.questions_error,
+                "count_questions": len(self.questions),
+                "count_catalog": len(self.catalog),
+                "user": current_user_public(),
+                "filters": {"Mon": [], "Lop": [], "Chuong": [], "BaiHoc": [], "BoDe": []},
+                "catalog": [],
+            }
+        m = self.meta()
+        m["loading"] = False
+        m["load_error"] = self.questions_error
+        return m
 
     def ensure_ws(self, name: str, headers: List[str]):
         self.connect()
@@ -808,10 +859,10 @@ function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;
 function val(id){return document.getElementById(id).value}function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
 async function api(url,opts={}){let r=await fetch(url,opts);let j=await r.json().catch(()=>({error:'Không đọc được phản hồi'}));if(!r.ok||j.error){if(r.status==401)location='/login';throw new Error(j.error||'Lỗi API')}return j}
 function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
-async function init(){META=await api('/api/meta');CATALOG=META.catalog;USER=META.user;document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;document.getElementById('me').textContent=`${USER.hoten} (${USER.role}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;if(USER.is_admin)document.getElementById('syncBtn').classList.remove('hide');setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
+async function init(){META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;if(USER.is_admin)document.getElementById('syncBtn').classList.remove('hide');if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card" style="border-color:#93c5fd;background:#eff6ff"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin:10px 0"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p style="color:red"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
 function okFilter(x){let s=val('fSearch').toLowerCase();let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase();return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btn" onclick="startQuiz('${x.MaDe}')">Làm bài</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${note}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
-async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert('Đã đồng bộ: '+j.count_questions+' câu, '+j.count_catalog+' đề.');location.reload()}
+async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
 async function startQuiz(made){try{let j=await api('/api/start?made='+encodeURIComponent(made));SID=j.sid;QUESTIONS=j.questions;CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}`;renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide')}function saveCurrent(){let q=QUESTIONS[CUR];if(!q||USER.is_admin)return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r)ANSWERS[CUR]=r.value}else if(q.Dang=='Đúng sai'){let arr=[];for(let L of ['A','B','C','D']){let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr}else{let el=document.getElementById('shortAns');if(el)ANSWERS[CUR]=el.value}renderNav()}
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if(SUBMITTED&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';html+=`<button class="${cls}" onclick="goQ(${i})">${i+1}</button>`}document.getElementById('navNums').innerHTML=html}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}}
@@ -926,8 +977,7 @@ def api_meta():
     if bad:
         return bad
     st = get_store()
-    st.ensure_questions_loaded()
-    return jsonify(st.meta())
+    return jsonify(st.meta_light())
 
 @app.route("/api/sync", methods=["POST"])
 def api_sync():
@@ -936,8 +986,10 @@ def api_sync():
         return bad
     if not is_admin():
         return jsonify({"error": "Chỉ ADMIN được đồng bộ dữ liệu"}), 403
-    st = get_store(force_reload=True)
-    return jsonify({"ok": True, "count_questions": len(st.questions), "count_catalog": len(st.catalog), "loaded_at": st.loaded_at})
+    st = get_store()
+    st.questions_loaded = False
+    st.start_questions_background(force=True)
+    return jsonify({"ok": True, "loading": True, "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây."})
 
 @app.route("/api/start")
 def api_start():
@@ -946,7 +998,9 @@ def api_start():
         return bad
     made = request.args.get("made", "")
     st = get_store()
-    st.ensure_questions_loaded()
+    if not st.questions_loaded:
+        st.start_questions_background(force=False)
+        return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
     return jsonify(st.start_quiz(made))
 
 @app.route("/api/fifty", methods=["POST"])
