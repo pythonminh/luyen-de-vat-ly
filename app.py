@@ -1,58 +1,55 @@
 # -*- coding: utf-8 -*-
 """
-app_luyen_de_json_full.py
-============================================================
-Ứng dụng luyện đề đọc JSON cho nhẹ, có kèm chức năng chuyển XLSX Google Sheets sang JSON.
+app.py - Ứng dụng luyện đề JSON + đăng nhập học viên + công cụ chuyển XLSX Google Sheets sang JSON.
 
-Tính năng chính:
-- Chuyển file Google Sheets xuất .xlsx sang JSON một lần.
-- App nạp JSON nhanh hơn đọc trực tiếp Excel.
-- Giao diện chạy trên trình duyệt, có MathJax.
-- Làm bài từng câu, không hiện đáp án/lời giải trước khi nộp.
-- Có Loại 2 câu sai cho câu trắc nghiệm A-B-C-D.
-- Sau khi nộp: tô xanh đáp án đúng, tô đỏ đáp án chọn sai.
-- Hỗ trợ: Trắc nghiệm, Đúng/Sai, Trả lời ngắn, Tự luận.
-- Lọc đúng đề theo MaDe nếu có; nếu chưa có thì tự sinh MaDe theo khóa:
-  Lớp + Môn + Chương + Bài học + Dạng bài tập + Bộ đề + Đề.
+Dùng trên Render:
+    Start Command: gunicorn app:app --bind 0.0.0.0:$PORT
 
-Cách dùng:
-1) Chuyển XLSX sang JSON:
-   python app_luyen_de_json_full.py --convert "Luyện Đề Vật Lý.xlsx" --json luyen_de_vat_ly.json
+Dùng ở máy thầy:
+    python app.py --convert "Luyện Đề Vật Lý.xlsx" --json luyen_de_vat_ly.json --users users.json
+    python app.py --check --json luyen_de_vat_ly.json --users users.json
+    python app.py --serve --json luyen_de_vat_ly.json --users users.json
 
-2) Chạy app bằng JSON:
-   python app_luyen_de_json_full.py --json luyen_de_vat_ly.json
+File cần có khi đưa lên Render:
+    app.py
+    luyen_de_vat_ly.json
+    users.json
+    requirements.txt
 
-3) Nếu để cùng thư mục có file luyen_de_vat_ly.json:
-   python app_luyen_de_json_full.py
-
-Không cần pandas, không cần openpyxl. Chỉ dùng thư viện chuẩn Python.
+Đăng nhập lấy từ sheet HOC_VIEN:
+    Tên đăng nhập: MaHS
+    Mật khẩu: MatKhau
 """
-
 from __future__ import annotations
 
 import argparse
 import hashlib
-import html
+import io
 import json
+import math
 import os
 import random
 import re
-import socket
-import sys
-import threading
+import tempfile
 import time
 import unicodedata
-import urllib.parse
 import webbrowser
 import zipfile
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+try:
+    from flask import Flask, Response, jsonify, redirect, render_template_string, request, send_file, session, url_for
+    HAS_FLASK = True
+except ModuleNotFoundError:
+    Flask = Response = jsonify = redirect = render_template_string = request = send_file = session = url_for = None
+    HAS_FLASK = False
+
 # ============================================================
-# PHẦN 1. ĐỌC NHANH XLSX KHÔNG CẦN OPENPYXL
+# 1) ĐỌC NHANH XLSX - KHÔNG CẦN PANDAS, KHÔNG CẦN OPENPYXL
 # ============================================================
 
 NS_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
@@ -140,7 +137,6 @@ class FastXlsxReader:
                 if not target.startswith("xl/"):
                     target = "xl/" + target.lstrip("/")
                 rid_to_target[rid] = target
-
         result: Dict[str, SheetInfo] = {}
         sheets_node = workbook_xml.find(NS_MAIN + "sheets")
         if sheets_node is None:
@@ -179,7 +175,7 @@ class FastXlsxReader:
 
     def iter_rows(self, sheet_name: str) -> Iterator[List[str]]:
         if sheet_name not in self.sheets:
-            raise KeyError(f"Không có sheet {sheet_name!r}. Các sheet: {', '.join(self.sheet_names())}")
+            raise KeyError(f"Không có sheet {sheet_name!r}. Có: {', '.join(self.sheet_names())}")
         with self.zf.open(self.sheets[sheet_name].xml_path) as f:
             for _, elem in ET.iterparse(f, events=("end",)):
                 if elem.tag.endswith("}row"):
@@ -210,12 +206,11 @@ class FastXlsxReader:
                 headers = headers + [f"COL_{i}" for i in range(len(headers) + 1, len(row) + 1)]
             yield dict(zip(headers, row))
 
-
 # ============================================================
-# PHẦN 2. CHUẨN HÓA DỮ LIỆU TỪ GOOGLE SHEETS
+# 2) CHUẨN HÓA DỮ LIỆU
 # ============================================================
 
-ALIASES: Dict[str, List[str]] = {
+QUESTION_ALIASES: Dict[str, List[str]] = {
     "MaDe": ["MaDe", "Mã đề", "Ma De", "MA_DE", "ma_de"],
     "ID": ["ID", "Id", "Mã câu", "MaCau", "Ma Cau"],
     "BoDe": ["BoDe", "Bộ đề", "Bo De", "Bộ Đề"],
@@ -240,33 +235,68 @@ ALIASES: Dict[str, List[str]] = {
     "QuyenTruyCap": ["QuyenTruyCap", "Quyền truy cập", "Quyen", "Goi"],
     "SoCau": ["SoCau", "Số câu", "Số Câu"],
 }
+QUESTION_FIELDS = list(QUESTION_ALIASES.keys())
 
-CANONICAL_FIELDS = [
-    "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap",
-    "MucDo", "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo",
-    "LoiGiai", "Diem", "HinhAnh", "QuyenTruyCap", "SoCau",
-]
+USER_ALIASES: Dict[str, List[str]] = {
+    "MaHS": ["MaHS", "Mã HS", "Mã học sinh", "Username", "TaiKhoan", "Tài khoản"],
+    "MatKhau": ["MatKhau", "Mật khẩu", "Password"],
+    "HoTen": ["HoTen", "Họ tên", "Họ Tên", "TenHS", "Tên HS"],
+    "LopHoc": ["LopHoc", "Lớp học", "Lớp"],
+    "LoaiTaiKhoan": ["LoaiTaiKhoan", "Loại tài khoản", "Quyen", "Quyền", "Goi"],
+    "TrangThai": ["TrangThai", "Trạng thái", "Status"],
+    "SoDienThoai": ["SoDienThoai", "Số điện thoại", "SDT", "Điện thoại"],
+    "NgayDangKy": ["NgayDangKy", "Ngày đăng ký"],
+    "NgayHetHanTrial": ["NgayHetHanTrial", "Ngày hết hạn trial"],
+    "DeviceId": ["DeviceId", "Device ID", "Thiết bị"],
+    "NgayHetHanTaiKhoan": ["NgayHetHanTaiKhoan", "Ngày hết hạn tài khoản", "Hết hạn"],
+}
+USER_FIELDS = list(USER_ALIASES.keys())
 
 
 def strip_accents(s: str) -> str:
     s = str(s or "")
     s = unicodedata.normalize("NFD", s)
-    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-    return s
+    return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
 
 
 def key_norm(s: Any) -> str:
     s = strip_accents(str(s or "").strip().lower())
-    s = re.sub(r"\s+", " ", s)
-    return s
+    return re.sub(r"\s+", " ", s)
 
 
 def clean_value(v: Any) -> str:
     s = str(v or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    # Google Sheet hay biến 9 thành 9.0, 12 thành 12.0.
     if re.fullmatch(r"\d+\.0", s):
         s = s[:-2]
     return s
+
+
+def excel_serial_to_datetime_text(s: str) -> str:
+    s = clean_value(s)
+    if not s:
+        return ""
+    if re.fullmatch(r"\d+(?:\.\d+)?", s):
+        try:
+            n = float(s)
+            if 20000 <= n <= 80000:
+                dt = datetime(1899, 12, 30) + timedelta(days=n)
+                return dt.strftime("%d/%m/%Y %H:%M:%S")
+        except Exception:
+            pass
+    return s
+
+
+def parse_date_guess(s: str) -> Optional[datetime]:
+    s = excel_serial_to_datetime_text(s)
+    if not s:
+        return None
+    fmts = ["%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+    for fmt in fmts:
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+    return None
 
 
 def get_any(row: Dict[str, Any], names: List[str]) -> str:
@@ -278,35 +308,21 @@ def get_any(row: Dict[str, Any], names: List[str]) -> str:
     return ""
 
 
-def canonical_row(row: Dict[str, Any]) -> Dict[str, str]:
-    out: Dict[str, str] = {}
-    for field in CANONICAL_FIELDS:
-        out[field] = get_any(row, ALIASES.get(field, [field]))
-    return out
+def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
+    return {f: get_any(row, QUESTION_ALIASES[f]) for f in QUESTION_FIELDS}
+
+
+def canonical_user(row: Dict[str, Any]) -> Dict[str, str]:
+    u = {f: get_any(row, USER_ALIASES[f]) for f in USER_FIELDS}
+    for f in ["NgayDangKy", "NgayHetHanTrial", "NgayHetHanTaiKhoan"]:
+        u[f] = excel_serial_to_datetime_text(u.get(f, ""))
+    u["LoaiTaiKhoan"] = (u.get("LoaiTaiKhoan") or "FREE").upper().replace(" ", "")
+    u["TrangThai"] = (u.get("TrangThai") or "ON").upper().strip()
+    return u
 
 
 def stable_hash(text: str, n: int = 10) -> str:
     return hashlib.sha1(text.encode("utf-8", errors="ignore")).hexdigest()[:n].upper()
-
-
-def make_group_base(q: Dict[str, str]) -> str:
-    parts = [
-        q.get("Lop", ""), q.get("Mon", ""), q.get("Chuong", ""), q.get("BaiHoc", ""),
-        q.get("DangBaiTap", ""), q.get("BoDe", ""), q.get("De", ""),
-    ]
-    return "|".join(key_norm(x) for x in parts)
-
-
-def make_made(q: Dict[str, str]) -> str:
-    made = clean_value(q.get("MaDe", ""))
-    if made:
-        return made
-    base = make_group_base(q)
-    return "MD_" + stable_hash(base, 10)
-
-
-def is_blank_question(q: Dict[str, str]) -> bool:
-    return not clean_value(q.get("CauHoi"))
 
 
 def normalize_dang(s: str) -> str:
@@ -320,26 +336,24 @@ def normalize_dang(s: str) -> str:
     return "Trắc nghiệm"
 
 
-def build_catalog_from_questions(questions: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def make_made(q: Dict[str, str]) -> str:
+    made = clean_value(q.get("MaDe", ""))
+    if made:
+        return made
+    parts = [q.get("Lop", ""), q.get("Mon", ""), q.get("Chuong", ""), q.get("BaiHoc", ""), q.get("DangBaiTap", ""), q.get("BoDe", ""), q.get("De", "")]
+    return "MD_" + stable_hash("|".join(key_norm(x) for x in parts), 10)
+
+
+def build_catalog(questions: List[Dict[str, str]]) -> List[Dict[str, Any]]:
     groups: Dict[str, Dict[str, Any]] = {}
     for q in questions:
-        made = q["MaDe"]
-        if made not in groups:
-            groups[made] = {
-                "MaDe": made,
-                "Lop": q.get("Lop", ""),
-                "Mon": q.get("Mon", ""),
-                "Chuong": q.get("Chuong", ""),
-                "BaiHoc": q.get("BaiHoc", ""),
-                "DangBaiTap": q.get("DangBaiTap", ""),
-                "BoDe": q.get("BoDe", ""),
-                "De": q.get("De", ""),
-                "SoCau": 0,
-                "MucDo": set(),
-                "Dang": set(),
-                "QuyenTruyCap": set(),
-            }
-        g = groups[made]
+        made = q.get("MaDe") or make_made(q)
+        q["MaDe"] = made
+        g = groups.setdefault(made, {
+            "MaDe": made, "Lop": q.get("Lop", ""), "Mon": q.get("Mon", ""), "Chuong": q.get("Chuong", ""),
+            "BaiHoc": q.get("BaiHoc", ""), "DangBaiTap": q.get("DangBaiTap", ""), "BoDe": q.get("BoDe", ""),
+            "De": q.get("De", ""), "SoCau": 0, "MucDo": set(), "Dang": set(), "QuyenTruyCap": set()
+        })
         g["SoCau"] += 1
         if q.get("MucDo"):
             g["MucDo"].add(q.get("MucDo"))
@@ -347,19 +361,18 @@ def build_catalog_from_questions(questions: List[Dict[str, str]]) -> List[Dict[s
             g["Dang"].add(q.get("Dang"))
         if q.get("QuyenTruyCap"):
             g["QuyenTruyCap"].add(q.get("QuyenTruyCap"))
-    out: List[Dict[str, str]] = []
+    out: List[Dict[str, Any]] = []
     for g in groups.values():
         item = dict(g)
         item["MucDo"] = ", ".join(sorted(g["MucDo"]))
         item["Dang"] = ", ".join(sorted(g["Dang"]))
         item["QuyenTruyCap"] = ", ".join(sorted(g["QuyenTruyCap"]))
-        item["SoCau"] = str(g["SoCau"])
         out.append(item)
     out.sort(key=lambda x: (key_norm(x.get("Mon")), key_norm(x.get("Lop")), key_norm(x.get("Chuong")), key_norm(x.get("BaiHoc")), key_norm(x.get("De"))))
     return out
 
 
-def convert_xlsx_to_json(xlsx_path: str, json_path: str) -> Dict[str, Any]:
+def convert_xlsx_to_json_files(xlsx_path: str, data_json_path: str = "luyen_de_vat_ly.json", users_json_path: str = "users.json") -> Dict[str, Any]:
     t0 = time.time()
     xlsx = Path(xlsx_path)
     if not xlsx.exists():
@@ -372,27 +385,38 @@ def convert_xlsx_to_json(xlsx_path: str, json_path: str) -> Dict[str, Any]:
 
         questions: List[Dict[str, str]] = []
         for row in reader.iter_dicts("Cau_Hoi"):
-            q = canonical_row(row)
-            if is_blank_question(q):
+            q = canonical_question(row)
+            if not clean_value(q.get("CauHoi", "")):
                 continue
             q["Dang"] = normalize_dang(q.get("Dang", ""))
             q["MaDe"] = make_made(q)
-            q["ID"] = q.get("ID") or ("AUTO_" + stable_hash(json.dumps(q, ensure_ascii=False), 10))
+            if not q.get("ID"):
+                q["ID"] = "AUTO_" + stable_hash(json.dumps(q, ensure_ascii=False), 10)
             questions.append(q)
 
-        # Thống kê sheet để thầy biết file đọc được gì.
+        users: List[Dict[str, str]] = []
+        if "HOC_VIEN" in sheets:
+            for row in reader.iter_dicts("HOC_VIEN"):
+                u = canonical_user(row)
+                if not clean_value(u.get("MaHS", "")):
+                    continue
+                if not clean_value(u.get("MatKhau", "")):
+                    # Nếu chưa có mật khẩu thì tạm lấy 6 số cuối SĐT.
+                    phone = re.sub(r"\D", "", u.get("SoDienThoai", ""))
+                    u["MatKhau"] = phone[-6:] if len(phone) >= 6 else "123456"
+                users.append(u)
+
         sheet_stats: Dict[str, Dict[str, int]] = {}
         for s in sheets:
-            count = 0
+            rows = 0
             max_col = 0
             for row in reader.iter_rows(s):
-                count += 1
+                rows += 1
                 max_col = max(max_col, len(row))
-            sheet_stats[s] = {"rows": count, "cols": max_col}
+            sheet_stats[s] = {"rows": rows, "cols": max_col}
 
-    catalog = build_catalog_from_questions(questions)
     data = {
-        "version": "full-json-quiz-1.0",
+        "version": "quiz-json-2.0",
         "meta": {
             "source_file": xlsx.name,
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -400,565 +424,453 @@ def convert_xlsx_to_json(xlsx_path: str, json_path: str) -> Dict[str, Any]:
         },
         "sheet_stats": sheet_stats,
         "questions": questions,
-        "catalog_rows": catalog,
+        "catalog_rows": build_catalog(questions),
     }
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    return data
+    users_data = {
+        "version": "users-json-2.0",
+        "meta": {
+            "source_file": xlsx.name,
+            "source_sheet": "HOC_VIEN",
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        },
+        "users": users,
+    }
+    Path(data_json_path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    Path(users_json_path).write_text(json.dumps(users_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"data": data, "users_data": users_data}
 
+
+def check_json_files(data_json_path: str = "luyen_de_vat_ly.json", users_json_path: str = "users.json") -> str:
+    data = json.loads(Path(data_json_path).read_text(encoding="utf-8"))
+    users_data = json.loads(Path(users_json_path).read_text(encoding="utf-8")) if Path(users_json_path).exists() else {"users": []}
+    questions = data.get("questions", [])
+    catalog = build_catalog(questions)
+    users = users_data.get("users", [])
+    missing_answer = [q for q in questions if normalize_dang(q.get("Dang", "")) != "Tự luận" and not clean_value(q.get("DapAn", ""))]
+    missing_content = [q for q in questions if not clean_value(q.get("CauHoi", ""))]
+    bad_users = [u for u in users if not clean_value(u.get("MaHS", "")) or not clean_value(u.get("MatKhau", ""))]
+    lines = []
+    lines.append("BÁO CÁO KIỂM TRA JSON")
+    lines.append("=" * 40)
+    lines.append(f"File đề: {data_json_path}")
+    lines.append(f"File users: {users_json_path}")
+    lines.append(f"Số câu hỏi: {len(questions)}")
+    lines.append(f"Số đề/thẻ đề: {len(catalog)}")
+    lines.append(f"Số tài khoản HOC_VIEN: {len(users)}")
+    lines.append(f"Câu thiếu nội dung: {len(missing_content)}")
+    lines.append(f"Câu thiếu đáp án, trừ tự luận: {len(missing_answer)}")
+    lines.append(f"Tài khoản thiếu MaHS/MatKhau: {len(bad_users)}")
+    lines.append("")
+    lines.append("Thống kê sheet:")
+    for name, st in data.get("sheet_stats", {}).items():
+        lines.append(f"- {name}: {st.get('rows', 0)} dòng x {st.get('cols', 0)} cột")
+    if missing_answer[:10]:
+        lines.append("")
+        lines.append("10 câu đầu thiếu đáp án:")
+        for q in missing_answer[:10]:
+            lines.append(f"- {q.get('ID')} | {q.get('Mon')} | {q.get('Lop')} | {q.get('CauHoi','')[:80]}")
+    return "\n".join(lines)
 
 # ============================================================
-# PHẦN 3. CHẤM ĐIỂM
+# 3) FLASK APP - ĐĂNG NHẬP + LÀM BÀI
 # ============================================================
 
-def norm_letter(s: str) -> str:
-    s = clean_value(s).upper()
-    m = re.search(r"[ABCD]", s)
-    return m.group(0) if m else ""
+if HAS_FLASK:
+    app = Flask(__name__)
+    app.secret_key = os.environ.get("SECRET_KEY", "doi-mat-khau-secret-key-2026")
+
+    DATA_JSON = os.environ.get("QUIZ_JSON", "luyen_de_vat_ly.json")
+    USERS_JSON = os.environ.get("USERS_JSON", "users.json")
 
 
-def norm_tf_answer(s: str) -> List[str]:
-    s = strip_accents(clean_value(s).upper())
-    s = s.replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
-    # Dấu Đ mất dấu thành D.
-    vals = re.findall(r"[DS]", s)
-    return vals[:4]
+    def load_json_file(path: str, default: Any) -> Any:
+        p = Path(path)
+        if not p.exists():
+            return default
+        return json.loads(p.read_text(encoding="utf-8"))
 
 
-def parse_float_vn(s: str) -> Optional[float]:
-    s = clean_value(s)
-    if not s:
+    def load_data() -> Dict[str, Any]:
+        return load_json_file(DATA_JSON, {"questions": [], "catalog_rows": [], "meta": {}})
+
+
+    def load_users() -> List[Dict[str, str]]:
+        data = load_json_file(USERS_JSON, {"users": []})
+        if isinstance(data, list):
+            return data
+        return data.get("users", [])
+
+
+    def current_user() -> Optional[Dict[str, str]]:
+        ma = session.get("MaHS")
+        if not ma:
+            return None
+        for u in load_users():
+            if key_norm(u.get("MaHS")) == key_norm(ma):
+                return u
         return None
-    s = s.replace(" ", "")
-    # 2.079,9 hoặc 2,079.9 không xử lý quá sâu; ưu tiên dạng VN: 2079,9.
-    if "," in s and "." not in s:
-        s = s.replace(",", ".")
-    else:
-        s = s.replace(",", "")
-    m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
-    if not m:
-        return None
-    try:
-        return float(m.group(0))
-    except Exception:
-        return None
 
 
-def check_answer(q: Dict[str, str], user_answer: Any) -> Tuple[bool, str, str]:
-    dang = normalize_dang(q.get("Dang", ""))
-    correct_raw = clean_value(q.get("DapAn", ""))
+    def role_of(u: Optional[Dict[str, str]]) -> str:
+        if not u:
+            return "GUEST"
+        return (u.get("LoaiTaiKhoan") or "FREE").upper().replace(" ", "")
 
-    if dang == "Trắc nghiệm":
-        correct = norm_letter(correct_raw)
-        chosen = norm_letter(str(user_answer or ""))
-        return bool(correct and chosen and correct == chosen), correct, chosen
 
-    if dang == "Đúng sai":
-        correct_list = norm_tf_answer(correct_raw)
-        if isinstance(user_answer, list):
-            chosen_list = ["Đ" if key_norm(x) in ["d", "dung", "đ", "đúng"] else "S" if key_norm(x) in ["s", "sai"] else "" for x in user_answer]
+    def is_admin(u: Optional[Dict[str, str]]) -> bool:
+        return role_of(u) == "ADMIN" or key_norm(u.get("MaHS", "") if u else "") == "admin"
+
+
+    def is_active_user(u: Dict[str, str]) -> Tuple[bool, str]:
+        if (u.get("TrangThai") or "ON").upper() not in ["ON", "ACTIVE", "1", "TRUE"]:
+            return False, "Tài khoản đang OFF hoặc bị khóa."
+        role = role_of(u)
+        if role in ["ADMIN", "S.VIP", "SVIP"]:
+            return True, ""
+        # Nếu có ngày hết hạn tài khoản thì kiểm tra.
+        exp = parse_date_guess(u.get("NgayHetHanTaiKhoan", ""))
+        if exp and datetime.now() > exp:
+            # Trial có thể vẫn còn hạn.
+            trial = parse_date_guess(u.get("NgayHetHanTrial", ""))
+            if not trial or datetime.now() > trial:
+                return False, "Tài khoản đã hết hạn."
+        return True, ""
+
+
+    def can_use_5050(u: Optional[Dict[str, str]]) -> bool:
+        return role_of(u) in ["VIP", "S.VIP", "SVIP", "ADMIN", "PAID"]
+
+
+    def can_view_solution(u: Optional[Dict[str, str]]) -> bool:
+        return role_of(u) in ["VIP", "S.VIP", "SVIP", "ADMIN", "PAID"]
+
+
+    def norm_letter(s: str) -> str:
+        s = clean_value(s).upper()
+        m = re.search(r"[ABCD]", s)
+        return m.group(0) if m else ""
+
+
+    def norm_tf_answer(s: str) -> List[str]:
+        s = strip_accents(clean_value(s).upper())
+        s = s.replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
+        vals = re.findall(r"[DS]", s)
+        return vals[:4]
+
+
+    def parse_float_vn(s: str) -> Optional[float]:
+        s = clean_value(s)
+        if not s:
+            return None
+        s = s.replace(" ", "")
+        if "," in s and "." not in s:
+            s = s.replace(",", ".")
         else:
-            chosen_list = norm_tf_answer(str(user_answer or ""))
-            chosen_list = ["Đ" if x == "D" else "S" for x in chosen_list]
-        corr = ["Đ" if x == "D" else "S" for x in correct_list]
-        while len(chosen_list) < 4:
-            chosen_list.append("")
-        ok = len(corr) == 4 and chosen_list[:4] == corr[:4]
-        return ok, ",".join(corr), ",".join(chosen_list[:4])
-
-    if dang == "Trả lời ngắn":
-        correct_num = parse_float_vn(correct_raw)
-        chosen_num = parse_float_vn(str(user_answer or ""))
-        tol = parse_float_vn(q.get("SaiSo", ""))
-        if tol is None:
-            tol = 0.0
-        if correct_num is not None and chosen_num is not None:
-            return abs(chosen_num - correct_num) <= tol + 1e-12, correct_raw, str(user_answer or "")
-        # Nếu không phải số thì so khớp chữ.
-        return key_norm(correct_raw) == key_norm(str(user_answer or "")), correct_raw, str(user_answer or "")
-
-    # Tự luận: không tự chấm đúng/sai, chỉ trả lời đã nộp.
-    return False, correct_raw, str(user_answer or "")
+            s = s.replace(",", "")
+        m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
+        if not m:
+            return None
+        try:
+            return float(m.group(0))
+        except Exception:
+            return None
 
 
-# ============================================================
-# PHẦN 4. KHO DỮ LIỆU VÀ API
-# ============================================================
+    def check_answer(q: Dict[str, str], user_answer: Any) -> Tuple[bool, str, str]:
+        dang = normalize_dang(q.get("Dang", ""))
+        correct_raw = clean_value(q.get("DapAn", ""))
+        if dang == "Trắc nghiệm":
+            correct = norm_letter(correct_raw)
+            chosen = norm_letter(str(user_answer or ""))
+            return bool(correct and chosen and correct == chosen), correct, chosen
+        if dang == "Đúng sai":
+            correct_list = norm_tf_answer(correct_raw)
+            corr = ["Đ" if x == "D" else "S" for x in correct_list]
+            if isinstance(user_answer, list):
+                chosen = ["Đ" if key_norm(x) in ["d", "dung", "đ", "đúng"] else "S" if key_norm(x) in ["s", "sai"] else "" for x in user_answer]
+            else:
+                chosen = ["Đ" if x == "D" else "S" for x in norm_tf_answer(str(user_answer or ""))]
+            while len(chosen) < 4:
+                chosen.append("")
+            ok = len(corr) == 4 and chosen[:4] == corr[:4]
+            return ok, ",".join(corr), ",".join(chosen[:4])
+        if dang == "Trả lời ngắn":
+            c = parse_float_vn(correct_raw)
+            a = parse_float_vn(str(user_answer or ""))
+            tol = parse_float_vn(q.get("SaiSo", "")) or 0.0
+            if c is not None and a is not None:
+                return abs(a - c) <= tol + 1e-12, correct_raw, str(user_answer or "")
+            return key_norm(correct_raw) == key_norm(str(user_answer or "")), correct_raw, str(user_answer or "")
+        return False, correct_raw, str(user_answer or "")
 
-class QuizStore:
-    def __init__(self, data: Dict[str, Any]):
-        self.data = data
-        self.questions: List[Dict[str, str]] = data.get("questions", [])
-        self.catalog = build_catalog_from_questions(self.questions)
-        self.by_made: Dict[str, List[Dict[str, str]]] = {}
-        for q in self.questions:
-            made = q.get("MaDe") or make_made(q)
-            q["MaDe"] = made
-            self.by_made.setdefault(made, []).append(q)
-        self.sessions: Dict[str, Dict[str, Any]] = {}
 
-    def meta(self) -> Dict[str, Any]:
+    def quiz_meta() -> Dict[str, Any]:
+        data = load_data()
+        questions = data.get("questions", [])
+        catalog = build_catalog(questions)
         def opts(field: str) -> List[str]:
-            vals = sorted({clean_value(x.get(field, "")) for x in self.catalog if clean_value(x.get(field, ""))}, key=key_norm)
-            return vals
+            return sorted({clean_value(x.get(field, "")) for x in catalog if clean_value(x.get(field, ""))}, key=key_norm)
         return {
-            "meta": self.data.get("meta", {}),
-            "count_questions": len(self.questions),
-            "count_catalog": len(self.catalog),
-            "filters": {
-                "Mon": opts("Mon"),
-                "Lop": opts("Lop"),
-                "Chuong": opts("Chuong"),
-                "BaiHoc": opts("BaiHoc"),
-                "DangBaiTap": opts("DangBaiTap"),
-                "BoDe": opts("BoDe"),
-            },
-            "catalog": self.catalog,
+            "meta": data.get("meta", {}),
+            "count_questions": len(questions),
+            "count_catalog": len(catalog),
+            "filters": {"Mon": opts("Mon"), "Lop": opts("Lop"), "Chuong": opts("Chuong"), "BaiHoc": opts("BaiHoc"), "DangBaiTap": opts("DangBaiTap"), "BoDe": opts("BoDe")},
+            "catalog": catalog,
         }
 
-    def start_quiz(self, made: str) -> Dict[str, Any]:
-        qs = list(self.by_made.get(made, []))
+
+    LOGIN_HTML = r"""
+    <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Đăng nhập luyện đề</title>
+    <style>
+    body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0}.box{max-width:420px;margin:9vh auto;background:white;border-radius:16px;padding:24px;box-shadow:0 10px 25px #0001}.brand{background:#1d4ed8;color:white;padding:14px 20px;border-radius:12px;margin-bottom:16px}input,button{width:100%;box-sizing:border-box;padding:12px;margin:8px 0;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}button{background:#1d4ed8;color:white;font-weight:bold;border:none}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px}.hint{font-size:13px;color:#475569;line-height:1.5}
+    </style></head><body><div class="box"><div class="brand"><b>ỨNG DỤNG LUYỆN ĐỀ</b><br>Đăng nhập bằng tài khoản trong sheet HOC_VIEN</div>
+    {% if error %}<div class="err">{{error}}</div>{% endif %}
+    <form method="post"><label>Mã học sinh / MaHS</label><input name="mahs" placeholder="VD: HS001 hoặc ADMIN" autofocus required>
+    <label>Mật khẩu / MatKhau</label><input name="matkhau" type="password" placeholder="Nhập mật khẩu" required>
+    <button>Đăng nhập</button></form>
+    <div class="hint">Tài khoản lấy từ sheet <b>HOC_VIEN</b>: cột <b>MaHS</b> và <b>MatKhau</b>. ADMIN sẽ thấy thêm công cụ chuyển Excel sang JSON.</div></div></body></html>
+    """
+
+    APP_HTML = r"""
+    <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Luyện đề</title>
+    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]]},svg:{fontCache:"global"}};</script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <style>
+    :root{--blue:#1d4ed8;--bg:#f1f5f9;--border:#dbe4ef;--green:#dcfce7;--red:#fee2e2;--yellow:#fef3c7}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:var(--bg);margin:0;color:#0f172a}.top{background:var(--blue);color:white;padding:12px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center}.top a{color:white}.wrap{padding:12px}.card{background:white;border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 2px 8px #0000000b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.deck{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}.tag{display:inline-block;padding:4px 8px;background:#e0f2fe;border-radius:999px;margin:2px;font-size:12px}.btn{border:none;background:var(--blue);color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600}.btn.gray{background:#64748b}.btn.green{background:#16a34a}.btn.red{background:#dc2626}.btn.light{background:#e2e8f0;color:#0f172a}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}select,input{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px}.quiz{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:12px}.qnav{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.qbtn{padding:8px;border:1px solid #cbd5e1;border-radius:8px;background:white}.qbtn.active{outline:3px solid #93c5fd}.qbtn.ok{background:var(--green)}.qbtn.bad{background:var(--red)}.choice{display:block;border:1px solid #cbd5e1;border-radius:10px;padding:10px;margin:8px 0;background:white}.choice.hidden{opacity:.25;text-decoration:line-through}.choice.correct{background:var(--green);border-color:#22c55e}.choice.wrong{background:var(--red);border-color:#ef4444}.questionbox{min-height:120px;border:1px solid #334155;border-radius:8px;padding:12px;background:white}.solution{background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:10px;margin-top:10px}.muted{color:#64748b}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}@media(max-width:850px){.quiz{grid-template-columns:1fr}.side{order:-1}.qnav{grid-template-columns:repeat(8,1fr)}}
+    </style></head><body>
+    <div class="top"><div><b>ỨNG DỤNG LUYỆN ĐỀ</b> <span class="muted" style="color:#dbeafe">JSON + MathJax</span></div><div>👤 {{u.HoTen}} | {{u.MaHS}} | {{u.LoaiTaiKhoan}} &nbsp; <a href="/logout">Thoát</a></div></div>
+    <div class="wrap">
+    <div class="card row"><button class="btn" onclick="showCatalog()">Mục lục đề</button>{% if admin %}<a class="btn green" style="text-decoration:none" href="/admin/convert">Chuyển Excel sang JSON</a><a class="btn gray" style="text-decoration:none" href="/admin/check">Kiểm tra JSON</a>{% endif %}<span id="info" class="muted"></span></div>
+    <div id="catalogView" class="card"><h3>Mục lục đề</h3><div class="filters"><select id="fMon"><option value="">Tất cả môn</option></select><select id="fLop"><option value="">Tất cả lớp</option></select><select id="fChuong"><option value="">Tất cả chương</option></select><select id="fBaiHoc"><option value="">Tất cả bài học</option></select><select id="fBoDe"><option value="">Tất cả bộ đề</option></select><input id="kw" placeholder="Tìm đề, chương, bài học..."></div><p></p><div id="decks" class="grid"></div></div>
+    <div id="quizView" style="display:none"><div class="quiz"><div class="card"><div class="row" style="justify-content:space-between"><h3 id="qtitle"></h3><div class="row"><button class="btn light" onclick="fifty()">Loại 2 câu sai</button><button class="btn green" onclick="submitQuiz()">Nộp bài</button></div></div><div id="question"></div><div id="choices"></div><div class="row"><button class="btn gray" onclick="prevQ()">← Câu trước</button><button class="btn" onclick="nextQ()">Câu sau →</button></div><div id="solution"></div></div><div class="card side"><b>Bảng câu hỏi</b><div id="qnav" class="qnav" style="margin-top:10px"></div><hr><div id="score"></div></div></div></div>
+    </div>
+    <script>
+    let META=null, CATALOG=[], QUIZ=null, IDX=0, ANSWERS={}, RESULT=null, HIDDEN={};
+    async function api(url, data){let opt=data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{};let r=await fetch(url,opt); if(r.status===401){location='/login'; return null;} return await r.json();}
+    function optionFill(sel, arr, first){sel.innerHTML='<option value="">'+first+'</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
+    function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+    async function loadMeta(){META=await api('/api/meta'); if(!META)return; CATALOG=META.catalog||[]; info.textContent=`Số câu: ${META.count_questions} | Số đề: ${META.count_catalog}`; optionFill(fMon,META.filters.Mon,'Tất cả môn'); optionFill(fLop,META.filters.Lop,'Tất cả lớp'); optionFill(fChuong,META.filters.Chuong,'Tất cả chương'); optionFill(fBaiHoc,META.filters.BaiHoc,'Tất cả bài học'); optionFill(fBoDe,META.filters.BoDe,'Tất cả bộ đề'); renderCatalog();}
+    [fMon,fLop,fChuong,fBaiHoc,fBoDe,kw].forEach(e=>e.addEventListener('input',renderCatalog));
+    function match(c){let k=kw.value.toLowerCase(); return (!fMon.value||c.Mon===fMon.value)&&(!fLop.value||c.Lop===fLop.value)&&(!fChuong.value||c.Chuong===fChuong.value)&&(!fBaiHoc.value||c.BaiHoc===fBaiHoc.value)&&(!fBoDe.value||c.BoDe===fBoDe.value)&&(!k||JSON.stringify(c).toLowerCase().includes(k));}
+    function renderCatalog(){let arr=CATALOG.filter(match); decks.innerHTML=arr.map(c=>`<div class="deck"><b>${esc(c.De||'Đề')}</b><br><span class="tag">${esc(c.Mon)}</span><span class="tag">Lớp ${esc(c.Lop)}</span><span class="tag">${esc(c.SoCau)} câu</span><p><b>Chương:</b> ${esc(c.Chuong||'')}</p><p><b>Bài:</b> ${esc(c.BaiHoc||'')}</p><p><b>Dạng:</b> ${esc(c.DangBaiTap||c.Dang||'')}</p><button class="btn" onclick="startQuiz('${c.MaDe}')">Làm bài</button></div>`).join('')||'<p>Không có đề phù hợp.</p>';}
+    async function startQuiz(made){RESULT=null; ANSWERS={}; HIDDEN={}; IDX=0; QUIZ=await api('/api/start',{MaDe:made}); if(!QUIZ||QUIZ.error){alert(QUIZ?.error||'Lỗi');return;} catalogView.style.display='none'; quizView.style.display='block'; renderQuiz();}
+    function showCatalog(){quizView.style.display='none'; catalogView.style.display='block';}
+    function renderQuiz(){if(!QUIZ)return; let q=QUIZ.questions[IDX]; qtitle.textContent=`Câu ${IDX+1}/${QUIZ.questions.length} | ID: ${q.ID} | ${q.MucDo} - ${q.Dang}`; question.innerHTML=`<div class="questionbox">${q.CauHoi||''}${q.HinhAnh?'<p><img src="'+esc(q.HinhAnh)+'" style="max-width:100%"></p>':''}</div>`; renderChoices(q); renderNav(); renderResult(q); MathJax.typesetPromise();}
+    function renderChoices(q){let dang=q.Dang||'Trắc nghiệm'; let html=''; if(dang.includes('Trắc nghiệm')){['A','B','C','D'].forEach(L=>{let cls='choice'; if(HIDDEN[q.ID]?.includes(L))cls+=' hidden'; if(RESULT){let r=RESULT.details[IDX]; if(r.correct_answer===L)cls+=' correct'; if(r.user_answer===L && !r.is_correct)cls+=' wrong';} html+=`<label class="${cls}"><input type="radio" name="ans" value="${L}" ${ANSWERS[q.ID]===L?'checked':''} onchange="ANSWERS['${q.ID}']='${L}'"> <b>${L}.</b> ${q[L]||''}</label>`})} else if(dang.includes('Đúng sai')){let arr=ANSWERS[q.ID]||['','','','']; ['A','B','C','D'].forEach((L,i)=>{html+=`<div class="choice"><b>${L}.</b> ${q[L]||''}<div><label><input type="radio" name="tf${i}" onchange="setTF('${q.ID}',${i},'Đ')" ${arr[i]==='Đ'?'checked':''}> Đúng</label> <label><input type="radio" name="tf${i}" onchange="setTF('${q.ID}',${i},'S')" ${arr[i]==='S'?'checked':''}> Sai</label></div></div>`})} else {html=`<textarea style="width:100%;min-height:80px;border:1px solid #cbd5e1;border-radius:10px;padding:10px" oninput="ANSWERS['${q.ID}']=this.value">${esc(ANSWERS[q.ID]||'')}</textarea>`} choices.innerHTML=html;}
+    function setTF(id,i,v){let arr=ANSWERS[id]||['','','','']; arr[i]=v; ANSWERS[id]=arr;}
+    function renderNav(){qnav.innerHTML=QUIZ.questions.map((q,i)=>{let cls='qbtn'+(i===IDX?' active':''); if(RESULT){cls+=RESULT.details[i].is_correct?' ok':' bad'} return `<button class="${cls}" onclick="IDX=${i};renderQuiz()">${i+1}</button>`}).join('');}
+    function renderResult(q){if(!RESULT){solution.innerHTML=''; score.innerHTML=`Đã làm: ${Object.keys(ANSWERS).length}/${QUIZ.questions.length}`; return;} let r=RESULT.details[IDX]; score.innerHTML=`<b>Điểm:</b> ${RESULT.score}/${RESULT.total}<br><b>Đúng:</b> ${RESULT.correct_count}/${RESULT.total}`; if(RESULT.can_view_solution){solution.innerHTML=`<div class="solution"><b>Đáp án:</b> ${esc(r.correct_answer)}<br><b>Em chọn:</b> ${esc(r.user_answer||'Chưa chọn')}<hr><b>Lời giải:</b><br>${q.LoiGiai||''}</div>`} else {solution.innerHTML=`<div class="solution">Tài khoản FREE chỉ xem điểm. Cần VIP/S.VIP để xem đáp án và lời giải.</div>`} MathJax.typesetPromise();}
+    function prevQ(){if(IDX>0){IDX--;renderQuiz()}} function nextQ(){if(QUIZ&&IDX<QUIZ.questions.length-1){IDX++;renderQuiz()}}
+    async function fifty(){if(!QUIZ)return; let q=QUIZ.questions[IDX]; let res=await api('/api/fifty',{question_id:q.ID}); if(res.error){alert(res.error);return;} HIDDEN[q.ID]=res.hide||[]; renderQuiz();}
+    async function submitQuiz(){if(!QUIZ)return; if(!confirm('Nộp bài?'))return; RESULT=await api('/api/submit',{session_id:QUIZ.session_id, answers:ANSWERS}); renderQuiz();}
+    loadMeta();
+    </script></body></html>
+    """
+
+    CONVERT_HTML = r"""
+    <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chuyển Excel sang JSON</title>
+    <style>body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0}.box{max-width:760px;margin:40px auto;background:white;border-radius:14px;padding:20px;border:1px solid #dbe4ef}.btn{background:#1d4ed8;color:white;border:none;border-radius:9px;padding:10px 14px;font-weight:bold}input{padding:10px;border:1px solid #cbd5e1;border-radius:8px;width:100%}pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;overflow:auto}</style></head><body><div class="box"><h2>Chuyển Google Sheet Excel sang JSON</h2><p>Công cụ này đọc sheet <b>Cau_Hoi</b> để tạo <b>luyen_de_vat_ly.json</b> và đọc sheet <b>HOC_VIEN</b> để tạo <b>users.json</b>.</p><form method="post" enctype="multipart/form-data"><input type="file" name="xlsx" accept=".xlsx" required><p><button class="btn">Chuyển và tải file ZIP</button></p></form><p><a href="/">← Quay lại app</a></p></div></body></html>
+    """
+
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        error = ""
+        if request.method == "POST":
+            mahs = clean_value(request.form.get("mahs", ""))
+            mk = clean_value(request.form.get("matkhau", ""))
+            for u in load_users():
+                if key_norm(u.get("MaHS")) == key_norm(mahs) and clean_value(u.get("MatKhau")) == mk:
+                    ok, msg = is_active_user(u)
+                    if not ok:
+                        error = msg
+                        break
+                    session["MaHS"] = u.get("MaHS")
+                    return redirect(url_for("index"))
+            else:
+                error = "Sai MaHS hoặc MatKhau."
+        return render_template_string(LOGIN_HTML, error=error)
+
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return redirect(url_for("login"))
+
+
+    @app.route("/")
+    def index():
+        u = current_user()
+        if not u:
+            return redirect(url_for("login"))
+        return render_template_string(APP_HTML, u=u, admin=is_admin(u))
+
+
+    @app.route("/api/meta")
+    def api_meta():
+        if not current_user():
+            return jsonify({"error": "Chưa đăng nhập"}), 401
+        return jsonify(quiz_meta())
+
+
+    @app.route("/api/start", methods=["POST"])
+    def api_start():
+        u = current_user()
+        if not u:
+            return jsonify({"error": "Chưa đăng nhập"}), 401
+        made = clean_value((request.get_json(silent=True) or {}).get("MaDe", ""))
+        data = load_data()
+        qs = [q for q in data.get("questions", []) if clean_value(q.get("MaDe", "")) == made]
         if not qs:
-            raise ValueError("Không có câu hỏi trong đề này")
-        sid = stable_hash(f"{made}|{time.time()}|{random.random()}", 16)
-        self.sessions[sid] = {
-            "made": made,
-            "created": time.time(),
-            "questions": qs,
-            "used_5050": set(),
-        }
-        return {
-            "sid": sid,
-            "questions": [self.public_question(q, i) for i, q in enumerate(qs)],
-        }
+            return jsonify({"error": "Không tìm thấy đề."})
+        sid = stable_hash(f"{u.get('MaHS')}|{made}|{time.time()}|{random.random()}", 16)
+        safe_qs = []
+        for q in qs:
+            x = dict(q)
+            x.pop("DapAn", None)
+            x.pop("LoiGiai", None)
+            safe_qs.append(x)
+        session.setdefault("quiz_sessions", {})[sid] = {"MaDe": made, "question_ids": [q.get("ID") for q in qs], "start": time.time()}
+        session.modified = True
+        return jsonify({"session_id": sid, "questions": safe_qs})
 
-    def public_question(self, q: Dict[str, str], index: int) -> Dict[str, Any]:
-        return {
-            "index": index,
-            "ID": q.get("ID", ""),
-            "MaDe": q.get("MaDe", ""),
-            "Dang": normalize_dang(q.get("Dang", "")),
-            "MucDo": q.get("MucDo", ""),
-            "CauHoi": q.get("CauHoi", ""),
-            "A": q.get("A", ""),
-            "B": q.get("B", ""),
-            "C": q.get("C", ""),
-            "D": q.get("D", ""),
-            "HinhAnh": q.get("HinhAnh", ""),
-        }
 
-    def fifty_fifty(self, sid: str, index: int) -> Dict[str, Any]:
-        ses = self.sessions.get(sid)
-        if not ses:
-            raise ValueError("Phiên làm bài đã hết hạn")
-        if index in ses["used_5050"]:
-            return {"hide": [], "message": "Câu này đã dùng Loại 2 câu sai rồi."}
-        qs: List[Dict[str, str]] = ses["questions"]
-        if not (0 <= index < len(qs)):
-            raise ValueError("Số câu không hợp lệ")
-        q = qs[index]
-        if normalize_dang(q.get("Dang", "")) != "Trắc nghiệm":
-            return {"hide": [], "message": "Chỉ dùng được cho câu trắc nghiệm A-B-C-D."}
+    @app.route("/api/fifty", methods=["POST"])
+    def api_fifty():
+        u = current_user()
+        if not u:
+            return jsonify({"error": "Chưa đăng nhập"}), 401
+        if not can_use_5050(u):
+            return jsonify({"error": "Tài khoản này chưa được dùng tính năng Loại 2 câu sai."})
+        qid = clean_value((request.get_json(silent=True) or {}).get("question_id", ""))
+        data = load_data()
+        q = next((x for x in data.get("questions", []) if clean_value(x.get("ID", "")) == qid), None)
+        if not q or normalize_dang(q.get("Dang", "")) != "Trắc nghiệm":
+            return jsonify({"error": "Chỉ dùng cho câu trắc nghiệm A-B-C-D."})
         correct = norm_letter(q.get("DapAn", ""))
-        letters = [x for x in "ABCD" if clean_value(q.get(x, ""))]
-        wrongs = [x for x in letters if x != correct]
-        random.shuffle(wrongs)
-        hide = wrongs[:2]
-        ses["used_5050"].add(index)
-        return {"hide": hide, "message": "Đã loại 2 câu sai."}
+        wrong = [x for x in ["A", "B", "C", "D"] if x != correct and clean_value(q.get(x, ""))]
+        random.shuffle(wrong)
+        return jsonify({"hide": wrong[:2]})
 
-    def submit(self, sid: str, answers: Dict[str, Any]) -> Dict[str, Any]:
-        ses = self.sessions.get(sid)
-        if not ses:
-            raise ValueError("Phiên làm bài đã hết hạn")
-        qs: List[Dict[str, str]] = ses["questions"]
-        results: List[Dict[str, Any]] = []
+
+    @app.route("/api/submit", methods=["POST"])
+    def api_submit():
+        u = current_user()
+        if not u:
+            return jsonify({"error": "Chưa đăng nhập"}), 401
+        payload = request.get_json(silent=True) or {}
+        sid = clean_value(payload.get("session_id", ""))
+        answers = payload.get("answers", {}) or {}
+        qsess = (session.get("quiz_sessions") or {}).get(sid)
+        if not qsess:
+            return jsonify({"error": "Phiên làm bài không hợp lệ."})
+        ids = qsess.get("question_ids", [])
+        data = load_data()
+        qmap = {q.get("ID"): q for q in data.get("questions", [])}
+        details = []
         correct_count = 0
-        auto_count = 0
-        for i, q in enumerate(qs):
-            ans = answers.get(str(i), "")
-            ok, correct, chosen = check_answer(q, ans)
-            dang = normalize_dang(q.get("Dang", ""))
-            if dang != "Tự luận":
-                auto_count += 1
-                if ok:
-                    correct_count += 1
-            results.append({
-                "index": i,
-                "ID": q.get("ID", ""),
-                "Dang": dang,
-                "ok": ok,
-                "correct": correct,
-                "chosen": chosen,
-                "LoiGiai": q.get("LoiGiai", ""),
-                "DapAn": q.get("DapAn", ""),
-            })
-        score = round(10 * correct_count / auto_count, 2) if auto_count else 0
-        return {
-            "total": len(qs),
-            "auto_count": auto_count,
-            "correct_count": correct_count,
-            "score": score,
-            "results": results,
-        }
-
-
-STORE: Optional[QuizStore] = None
-
-
-def json_response(handler: BaseHTTPRequestHandler, obj: Any, status: int = 200) -> None:
-    raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json; charset=utf-8")
-    handler.send_header("Content-Length", str(len(raw)))
-    handler.end_headers()
-    handler.wfile.write(raw)
-
-
-def read_body_json(handler: BaseHTTPRequestHandler) -> Dict[str, Any]:
-    n = int(handler.headers.get("Content-Length", "0") or "0")
-    raw = handler.rfile.read(n) if n else b"{}"
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except Exception:
-        return {}
-
-
-# ============================================================
-# PHẦN 5. GIAO DIỆN HTML + JAVASCRIPT + MATHJAX
-# ============================================================
-
-INDEX_HTML = r'''<!doctype html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ứng dụng luyện đề Vật lý - Toán học</title>
-  <script>
-    window.MathJax = {
-      tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]},
-      svg: {fontCache: 'global'}
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-  <style>
-    :root{--blue:#1d4ed8;--green:#dcfce7;--green2:#16a34a;--red:#fee2e2;--red2:#dc2626;--yellow:#fff7ed;--border:#d6dee9;--bg:#f5f7fb;--text:#111827}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text);font-size:15px}
-    .top{background:var(--blue);color:#fff;padding:12px 18px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px #0002}
-    .top h1{margin:0;font-size:20px}.top small{opacity:.9}.wrap{padding:14px;max-width:1380px;margin:auto}
-    .panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}.field label{font-weight:700;font-size:12px;color:#374151}
-    select,input,button,textarea{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:700}.btn{background:var(--blue);color:#fff;border-color:var(--blue)}.btn2{background:#eef2ff;color:#1e40af}.btnGreen{background:#dcfce7;color:#166534;border-color:#bbf7d0}.btnRed{background:#fee2e2;color:#991b1b;border-color:#fecaca}.btn:disabled,button:disabled{opacity:.55;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px}.card h3{margin:0 0 8px;font-size:16px;color:#1e3a8a}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px;font-weight:700;margin:2px}.muted{color:#6b7280}.line{height:1px;background:var(--border);margin:10px 0}
-    .quizLayout{display:grid;grid-template-columns:1fr 260px;gap:12px}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:170px;line-height:1.55;font-size:18px}.qid{font-size:20px;font-weight:800;margin-bottom:10px}.options{margin-top:12px}.opt{display:flex;gap:9px;align-items:flex-start;border:1px solid transparent;border-radius:10px;padding:10px;margin:7px 0;background:#fff}.opt:hover{background:#f8fafc}.opt input{margin-top:4px}.optionHidden{opacity:.25;pointer-events:none;text-decoration:line-through}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.tfrow{display:grid;grid-template-columns:36px 1fr 90px 90px;gap:8px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px;margin:8px 0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;background:#fff;border:1px solid var(--border);font-weight:800}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px;display:none}.resultBox{font-size:18px;font-weight:800}.hide{display:none!important}.imgQ{max-width:100%;border:1px solid var(--border);border-radius:8px;margin-top:10px}
-    @media(max-width:900px){.quizLayout{grid-template-columns:1fr}.side{order:-1}.qbox{font-size:16px}.top h1{font-size:17px}}
-  </style>
-</head>
-<body>
-  <div class="top"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><small id="info">Đang nạp dữ liệu...</small></div>
-  <div class="wrap">
-    <div id="home">
-      <div class="panel">
-        <b>Thiết lập luyện tập</b>
-        <div class="row" style="margin-top:10px">
-          <div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div>
-          <div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div>
-          <div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div>
-          <div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div>
-          <div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div>
-          <div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div>
-          <button class="btn" onclick="renderCatalog()">Lọc đề</button>
-        </div>
-      </div>
-      <div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
-    </div>
-
-    <div id="quiz" class="hide">
-      <div class="panel row" style="justify-content:space-between">
-        <div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span></div>
-        <div class="resultBox" id="resultBox"></div>
-      </div>
-      <div class="quizLayout">
-        <div>
-          <div class="panel">
-            <div class="row" style="justify-content:space-between;align-items:center">
-              <div class="qid" id="qid"></div>
-              <div>
-                <button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button>
-                <button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button>
-              </div>
-            </div>
-            <div id="qtext" class="qbox"></div>
-            <div id="options" class="options"></div>
-            <div id="solution" class="solution"></div>
-            <div class="row" style="margin-top:12px;justify-content:space-between">
-              <button onclick="prevQ()">← Câu trước</button>
-              <button onclick="nextQ()">Câu sau →</button>
-            </div>
-          </div>
-        </div>
-        <div class="side panel">
-          <b>Bảng câu hỏi</b>
-          <div id="navNums" class="navNums" style="margin-top:10px"></div>
-          <div class="line"></div>
-          <div class="muted">Màu vàng: đã làm. Sau khi nộp: xanh đúng, đỏ sai.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-<script>
-let META=null, CATALOG=[], SID='', QUESTIONS=[], CUR=0, ANSWERS={}, SUBMITTED=false, RESULTS={};
-function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
-function val(id){return document.getElementById(id).value}
-function setOptions(id, arr){let el=document.getElementById(id); el.innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
-function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
-async function api(url, opts={}){let r=await fetch(url, opts); let j=await r.json(); if(!r.ok||j.error) throw new Error(j.error||'Lỗi API'); return j}
-async function init(){META=await api('/api/meta'); CATALOG=META.catalog; document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề`; setOptions('fMon',META.filters.Mon); setOptions('fLop',META.filters.Lop); setOptions('fChuong',META.filters.Chuong); setOptions('fBaiHoc',META.filters.BaiHoc); setOptions('fBoDe',META.filters.BoDe); renderCatalog()}
-function okFilter(x){let s=val('fSearch').toLowerCase(); let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase(); return (!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
-function renderCatalog(){let list=CATALOG.filter(okFilter); document.getElementById('countCat').textContent=`(${list.length} mục)`; document.getElementById('catalog').innerHTML=list.map(x=>`<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong||'')}</div><div><b>Bài:</b> ${esc(x.BaiHoc||'')}</div><div><b>Dạng:</b> ${esc(x.Dang||'')}</div><div><b>Mức độ:</b> ${esc(x.MucDo||'')}</div><div><b>Bộ đề:</b> ${esc(x.BoDe||'')}</div><div style="text-align:right;margin-top:10px"><button class="btn" onclick="startQuiz('${x.MaDe}')">Làm bài</button></div></div>`).join('')||'<div class="muted">Không có đề phù hợp.</div>'; typeset()}
-async function startQuiz(made){let j=await api('/api/start?made='+encodeURIComponent(made)); SID=j.sid; QUESTIONS=j.questions; CUR=0; ANSWERS={}; SUBMITTED=false; RESULTS={}; document.getElementById('home').classList.add('hide'); document.getElementById('quiz').classList.remove('hide'); document.getElementById('resultBox').textContent=''; let c=CATALOG.find(x=>x.MaDe==made)||{}; document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}`; renderNav(); renderQuestion()}
-function backHome(){document.getElementById('quiz').classList.add('hide'); document.getElementById('home').classList.remove('hide')}
-function saveCurrent(){let q=QUESTIONS[CUR]; if(!q)return; if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`); if(r) ANSWERS[CUR]=r.value} else if(q.Dang=='Đúng sai'){let arr=[]; for(let L of ['A','B','C','D']){let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`); arr.push(r?r.value:'')} ANSWERS[CUR]=arr} else {let el=document.getElementById('shortAns'); if(el) ANSWERS[CUR]=el.value} renderNav()}
-function renderNav(){let html=''; for(let i=0;i<QUESTIONS.length;i++){let cls='num'; if(i==CUR)cls+=' active'; if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered'; if(SUBMITTED&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad'; html+=`<button class="${cls}" onclick="goQ(${i})">${i+1}</button>`} document.getElementById('navNums').innerHTML=html}
-function goQ(i){saveCurrent(); CUR=i; renderQuestion()}
-function prevQ(){if(CUR>0){saveCurrent(); CUR--; renderQuestion()}}
-function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent(); CUR++; renderQuestion()}}
-function renderQuestion(){let q=QUESTIONS[CUR]; renderNav(); document.getElementById('qid').textContent=`Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`; let img=q.HinhAnh?`<br><img class="imgQ" src="${esc(q.HinhAnh)}">`:''; document.getElementById('qtext').innerHTML=esc(q.CauHoi)+img; document.getElementById('solution').style.display='none'; document.getElementById('solution').innerHTML=''; document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'; document.getElementById('btnSubmit').disabled=SUBMITTED; let html=''; if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue; let checked=ANSWERS[CUR]==L?'checked':''; let cls='opt'; if(SUBMITTED&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct'; if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'} html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}} else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','','']; let corr=SUBMITTED&&RESULTS[CUR]?String(RESULTS[CUR].correct).split(','):[]; let chosen=SUBMITTED&&RESULTS[CUR]?String(RESULTS[CUR].chosen).split(','):old; for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx]; if(!q[L])continue; let cls='tfrow'; if(SUBMITTED){if(chosen[idx]&&chosen[idx]==corr[idx])cls+=' correct'; else cls+=' wrong'} html+=`<div class="${cls}"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}} else if(q.Dang=='Trả lời ngắn'){let cls=''; if(SUBMITTED&&RESULTS[CUR]) cls=RESULTS[CUR].ok?'correct':'wrong'; html=`<input id="shortAns" class="${cls}" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`} else {html=`<textarea id="shortAns" style="width:100%;min-height:130px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`} document.getElementById('options').innerHTML=html; if(SUBMITTED&&RESULTS[CUR]){let r=RESULTS[CUR]; document.getElementById('solution').style.display='block'; document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${esc(r.correct||r.DapAn||'')}<br><b>Em chọn:</b> ${esc(r.chosen||'')}<div class="line"></div><b>Lời giải:</b><br>${esc(r.LoiGiai||'Chưa có lời giải.')}`;} typeset()}
-async function use5050(){saveCurrent(); let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})}); for(let L of j.hide||[]){let el=document.getElementById('opt_'+L); if(el)el.classList.add('optionHidden')} document.getElementById('btn5050').disabled=true; if(j.message) alert(j.message)}
-async function submitQuiz(){saveCurrent(); if(!confirm('Nộp bài và xem đáp án/lời giải?'))return; let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})}); SUBMITTED=true; RESULTS={}; for(let r of j.results)RESULTS[r.index]=r; document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count}`; renderQuestion(); renderNav()}
-init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
-</script>
-</body>
-</html>'''
-
-
-class QuizHandler(BaseHTTPRequestHandler):
-    def log_message(self, fmt: str, *args: Any) -> None:
-        return
-
-    def do_GET(self) -> None:
-        global STORE
-        try:
-            parsed = urllib.parse.urlparse(self.path)
-            path = parsed.path
-            query = urllib.parse.parse_qs(parsed.query)
-            if path == "/":
-                raw = INDEX_HTML.encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(raw)))
-                self.end_headers()
-                self.wfile.write(raw)
-                return
-            if path == "/api/meta":
-                json_response(self, STORE.meta())
-                return
-            if path == "/api/start":
-                made = query.get("made", [""])[0]
-                json_response(self, STORE.start_quiz(made))
-                return
-            json_response(self, {"error": "Không tìm thấy đường dẫn"}, 404)
-        except Exception as e:
-            json_response(self, {"error": str(e)}, 500)
-
-    def do_POST(self) -> None:
-        global STORE
-        try:
-            parsed = urllib.parse.urlparse(self.path)
-            body = read_body_json(self)
-            if parsed.path == "/api/fifty":
-                sid = body.get("sid", "")
-                index = int(body.get("index", 0))
-                json_response(self, STORE.fifty_fifty(sid, index))
-                return
-            if parsed.path == "/api/submit":
-                sid = body.get("sid", "")
-                answers = body.get("answers", {})
-                json_response(self, STORE.submit(sid, answers))
-                return
-            json_response(self, {"error": "Không tìm thấy đường dẫn"}, 404)
-        except Exception as e:
-            json_response(self, {"error": str(e)}, 500)
-
-
-
-
-# ============================================================
-# PHẦN 6A. WSGI APP CHO RENDER / GUNICORN
-# ============================================================
-# Render chạy lệnh: gunicorn app_luyen_de_json_full:app
-# Vì vậy file này phải có biến app là một WSGI callable.
-# Phần này KHÔNG cần Flask, chạy trực tiếp với gunicorn.
-
-
-def get_store_for_web() -> QuizStore:
-    """Nạp JSON một lần khi chạy trên hosting."""
-    global STORE
-    if STORE is None:
-        json_path = os.environ.get("JSON_PATH", "") or str(Path(__file__).with_name("luyen_de_vat_ly.json"))
-        data = load_json(json_path)
-        STORE = QuizStore(data)
-    return STORE
-
-
-def _wsgi_send(start_response, status: str, body: bytes, content_type: str):
-    start_response(status, [
-        ("Content-Type", content_type),
-        ("Content-Length", str(len(body))),
-        ("Cache-Control", "no-store"),
-    ])
-    return [body]
-
-
-def _wsgi_json(start_response, obj: Any, code: int = 200):
-    status_map = {200: "200 OK", 400: "400 Bad Request", 404: "404 Not Found", 500: "500 Internal Server Error"}
-    raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-    return _wsgi_send(start_response, status_map.get(code, "200 OK"), raw, "application/json; charset=utf-8")
-
-
-def _wsgi_read_json(environ) -> Dict[str, Any]:
-    try:
-        n = int(environ.get("CONTENT_LENGTH") or "0")
-    except Exception:
-        n = 0
-    raw = environ["wsgi.input"].read(n) if n else b"{}"
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except Exception:
-        return {}
-
-
-def app(environ, start_response):
-    """WSGI application cho gunicorn trên Render."""
-    try:
-        method = (environ.get("REQUEST_METHOD") or "GET").upper()
-        path = environ.get("PATH_INFO") or "/"
-        query = urllib.parse.parse_qs(environ.get("QUERY_STRING") or "")
-        store = get_store_for_web()
-
-        if method == "GET" and path == "/":
-            return _wsgi_send(start_response, "200 OK", INDEX_HTML.encode("utf-8"), "text/html; charset=utf-8")
-
-        if method == "GET" and path == "/api/meta":
-            return _wsgi_json(start_response, store.meta())
-
-        if method == "GET" and path == "/api/start":
-            made = query.get("made", [""])[0]
-            return _wsgi_json(start_response, store.start_quiz(made))
-
-        if method == "POST" and path == "/api/fifty":
-            body = _wsgi_read_json(environ)
-            sid = body.get("sid", "")
-            index = int(body.get("index", 0))
-            return _wsgi_json(start_response, store.fifty_fifty(sid, index))
-
-        if method == "POST" and path == "/api/submit":
-            body = _wsgi_read_json(environ)
-            sid = body.get("sid", "")
-            answers = body.get("answers", {})
-            return _wsgi_json(start_response, store.submit(sid, answers))
-
-        return _wsgi_json(start_response, {"error": "Không tìm thấy đường dẫn"}, 404)
-
-    except Exception as e:
-        return _wsgi_json(start_response, {"error": str(e)}, 500)
-
-
-# ============================================================
-# PHẦN 6. CHẠY CHƯƠNG TRÌNH
-# ============================================================
-
-def find_free_port(start: int = 8765) -> int:
-    for port in range(start, start + 100):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except OSError:
+        for qid in ids:
+            q = qmap.get(qid)
+            if not q:
                 continue
-    raise RuntimeError("Không tìm được cổng trống")
+            ok, corr, chosen = check_answer(q, answers.get(qid))
+            if ok:
+                correct_count += 1
+            details.append({"question_id": qid, "is_correct": ok, "correct_answer": corr, "user_answer": chosen})
+        total = len(details)
+        score = round(10 * correct_count / total, 2) if total else 0
+        return jsonify({"correct_count": correct_count, "total": total, "score": score, "can_view_solution": can_view_solution(u), "details": details})
 
 
-def load_json(json_path: str) -> Dict[str, Any]:
-    with open(json_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    @app.route("/admin/check")
+    def admin_check():
+        u = current_user()
+        if not u or not is_admin(u):
+            return redirect(url_for("login"))
+        report = check_json_files(DATA_JSON, USERS_JSON)
+        return Response(report, mimetype="text/plain; charset=utf-8")
 
 
-def default_paths() -> Tuple[str, str]:
-    here = Path.cwd()
-    json_path = here / "luyen_de_vat_ly.json"
-    xlsx_path = here / "Luyện Đề Vật Lý.xlsx"
-    return str(xlsx_path), str(json_path)
+    @app.route("/admin/convert", methods=["GET", "POST"])
+    def admin_convert():
+        u = current_user()
+        if not u or not is_admin(u):
+            return redirect(url_for("login"))
+        if request.method == "GET":
+            return render_template_string(CONVERT_HTML)
+        f = request.files.get("xlsx")
+        if not f or not f.filename.lower().endswith(".xlsx"):
+            return Response("Vui lòng chọn file .xlsx", status=400)
+        with tempfile.TemporaryDirectory() as td:
+            xlsx_path = Path(td) / "input.xlsx"
+            data_path = Path(td) / "luyen_de_vat_ly.json"
+            users_path = Path(td) / "users.json"
+            f.save(xlsx_path)
+            convert_xlsx_to_json_files(str(xlsx_path), str(data_path), str(users_path))
+            report = check_json_files(str(data_path), str(users_path))
+            mem = io.BytesIO()
+            with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
+                z.write(data_path, "luyen_de_vat_ly.json")
+                z.write(users_path, "users.json")
+                z.writestr("bao_cao_kiem_tra.txt", report)
+            mem.seek(0)
+            return send_file(mem, as_attachment=True, download_name="json_luyen_de_va_users.zip", mimetype="application/zip")
 
+
+# ============================================================
+# 4) CLI DÙNG LOCAL
+# ============================================================
 
 def main() -> None:
-    global STORE
-    parser = argparse.ArgumentParser(description="Ứng dụng luyện đề JSON + MathJax + 50:50")
-    parser.add_argument("input", nargs="?", help="File .json hoặc .xlsx")
-    parser.add_argument("--json", default="", help="Đường dẫn file JSON")
-    parser.add_argument("--convert", default="", help="Chuyển file XLSX sang JSON rồi thoát")
-    parser.add_argument("--port", type=int, default=None, help="Cổng chạy web app. Trên Render sẽ tự lấy biến PORT")
-    parser.add_argument("--host", default="", help="Host chạy web app. Local mặc định 127.0.0.1, Render mặc định 0.0.0.0")
-    parser.add_argument("--no-open", action="store_true", help="Không tự mở trình duyệt")
+    parser = argparse.ArgumentParser(description="Luyện đề JSON + chuyển XLSX sang JSON + users từ HOC_VIEN")
+    parser.add_argument("--convert", help="File Excel .xlsx cần chuyển")
+    parser.add_argument("--json", default="luyen_de_vat_ly.json", help="File JSON đề")
+    parser.add_argument("--users", default="users.json", help="File JSON tài khoản")
+    parser.add_argument("--check", action="store_true", help="Kiểm tra JSON")
+    parser.add_argument("--serve", action="store_true", help="Chạy web app local")
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
 
-    default_xlsx, default_json = default_paths()
-    json_path = args.json or default_json
+    global DATA_JSON, USERS_JSON
+    DATA_JSON = args.json
+    USERS_JSON = args.users
 
     if args.convert:
-        xlsx_path = args.convert
-        print(f"Đang chuyển: {xlsx_path}")
-        data = convert_xlsx_to_json(xlsx_path, json_path)
-        print(f"Đã tạo JSON: {json_path}")
-        print(f"Số câu hỏi: {len(data.get('questions', []))}")
-        print(f"Số đề/thẻ đề: {len(data.get('catalog_rows', []))}")
+        result = convert_xlsx_to_json_files(args.convert, args.json, args.users)
+        print("ĐÃ CHUYỂN XONG")
+        print(f"- File đề: {args.json}")
+        print(f"- File users: {args.users}")
+        print(f"- Số câu hỏi: {len(result['data'].get('questions', []))}")
+        print(f"- Số đề/thẻ đề: {len(result['data'].get('catalog_rows', []))}")
+        print(f"- Số tài khoản HOC_VIEN: {len(result['users_data'].get('users', []))}")
+        print()
+        print(check_json_files(args.json, args.users))
         return
 
-    input_path = args.input or json_path
-    if input_path.lower().endswith(".xlsx"):
-        print("Đang chuyển tạm XLSX sang JSON để chạy cho nhẹ...")
-        data = convert_xlsx_to_json(input_path, json_path)
-    else:
-        if not Path(input_path).exists():
-            if Path(default_xlsx).exists():
-                print("Chưa có JSON, đang tự chuyển từ Luyện Đề Vật Lý.xlsx...")
-                data = convert_xlsx_to_json(default_xlsx, json_path)
-            else:
-                raise FileNotFoundError("Không thấy luyen_de_vat_ly.json hoặc Luyện Đề Vật Lý.xlsx")
-        else:
-            data = load_json(input_path)
+    if args.check:
+        print(check_json_files(args.json, args.users))
+        return
 
-    STORE = QuizStore(data)
-
-    # Chạy local: mở tại 127.0.0.1 và tự tìm cổng trống.
-    # Chạy Render/hosting: bắt buộc lắng nghe tại 0.0.0.0 và đúng cổng PORT do Render cấp.
-    env_port = os.environ.get("PORT")
-    is_hosting = bool(env_port or os.environ.get("RENDER"))
-    port = int(env_port or args.port or 8765)
-    host = args.host or ("0.0.0.0" if is_hosting else "127.0.0.1")
-    if not is_hosting:
-        port = find_free_port(port)
-
-    server = ThreadingHTTPServer((host, port), QuizHandler)
-    url = f"http://127.0.0.1:{port}/" if host == "127.0.0.1" else f"http://0.0.0.0:{port}/"
-    print("=" * 60, flush=True)
-    print("ỨNG DỤNG LUYỆN ĐỀ ĐANG CHẠY", flush=True)
-    print(f"Host: {host}", flush=True)
-    print(f"Cổng: {port}", flush=True)
-    print(f"Địa chỉ local: {url}", flush=True)
-    print(f"Số câu hỏi: {len(STORE.questions)}", flush=True)
-    print(f"Số đề/thẻ đề: {len(STORE.catalog)}", flush=True)
-    print("Nhấn Ctrl+C để tắt.", flush=True)
-    print("=" * 60, flush=True)
-    if (not is_hosting) and (not args.no_open):
-        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nĐã tắt ứng dụng.")
-    finally:
-        server.server_close()
+    if args.serve or True:
+        if not HAS_FLASK:
+            print("Chưa cài Flask. Hãy chạy: pip install -r requirements.txt")
+            return
+        url = f"http://127.0.0.1:{args.port}"
+        print("ỨNG DỤNG LUYỆN ĐỀ ĐANG CHẠY")
+        print(f"- Dữ liệu đề: {DATA_JSON}")
+        print(f"- Dữ liệu users: {USERS_JSON}")
+        print(f"- Link máy này: {url}")
+        print(f"- Link học sinh cùng Wi-Fi: http://IP-MAY-THAY:{args.port}")
+        if not args.no_open:
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+        app.run(host=args.host, port=args.port, debug=False)
 
 
 if __name__ == "__main__":
