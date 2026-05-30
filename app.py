@@ -28,7 +28,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "Lớp học Thầy Minh. Zalo: 0946 1111 07"
+APP_VERSION = "LOGIN_GOOGLE_SHEET_ADMIN_EDIT_TRIAL_FREE_ONLY_FAST_LOGIN_2026_05_30_V8"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -310,7 +310,11 @@ class SheetStore:
         self.ws_results = None
         self.question_headers: List[str] = []
         self.question_col_index: Dict[str, int] = {}
-        self.load()
+        # V8 FAST LOGIN:
+        # Không nạp toàn bộ sheet Cau_Hoi ngay khi mở trang/login.
+        # Login chỉ đọc nhanh sheet HOC_VIEN; dữ liệu đề chỉ nạp khi vào app hoặc ADMIN bấm đồng bộ.
+        self.questions_loaded = False
+        self.users_loaded = False
 
     def connect(self):
         if self.sheet is not None:
@@ -337,7 +341,23 @@ class SheetStore:
         except Exception:
             return None
 
+    def ensure_users_loaded(self, force: bool = False):
+        """Chỉ nạp sheet HOC_VIEN để đăng nhập nhanh, không đọc Cau_Hoi."""
+        if self.users_loaded and self.users and not force:
+            return
+        self.connect()
+        self.ws_users = self.worksheet_or_none("HOC_VIEN")
+        self.load_users()
+        self.users_loaded = True
+
+    def ensure_questions_loaded(self, force: bool = False):
+        """Nạp Cau_Hoi + catalog khi thật sự cần. Lần đầu có thể chậm, các lần sau dùng RAM."""
+        if self.questions_loaded and self.questions and not force:
+            return
+        self.load()
+
     def ensure_ws(self, name: str, headers: List[str]):
+        self.connect()
         ws = self.worksheet_or_none(name)
         if ws is None:
             ws = self.sheet.add_worksheet(title=name, rows=1000, cols=max(10, len(headers)))
@@ -349,6 +369,7 @@ class SheetStore:
 
     def ensure_user_headers(self):
         """Bảo đảm sheet HOC_VIEN có đủ cột để đăng ký dùng thử."""
+        self.connect()
         if self.ws_users is None:
             self.ws_users = self.ensure_ws("HOC_VIEN", USER_REQUIRED_HEADERS)
             return
@@ -401,6 +422,8 @@ class SheetStore:
         ])
         self.load_questions()
         self.load_users()
+        self.questions_loaded = True
+        self.users_loaded = True
         self.loaded_at = now_str()
 
     def load_questions(self):
@@ -477,6 +500,7 @@ class SheetStore:
     def register_trial(self, hoten: str, lop: str, phone: str, password: str, device_id: str) -> Dict[str, Any]:
         self.ensure_user_headers()
         self.load_users()
+        self.users_loaded = True
         phone_digits = re.sub(r"\D", "", phone or "")
         device_id = clean(device_id)
         if len(phone_digits) < 8:
@@ -516,6 +540,7 @@ class SheetStore:
         row = [self.user_header_value(h, record) for h in headers]
         self.ws_users.append_row(row, value_input_option="USER_ENTERED")
         self.load_users()
+        self.users_loaded = True
         user = self.users.get(mahs)
         if not user:
             raise RuntimeError("Đã ghi tài khoản nhưng chưa nạp lại được dữ liệu HOC_VIEN.")
@@ -716,8 +741,10 @@ STORE: Optional[SheetStore] = None
 
 def get_store(force_reload: bool = False) -> SheetStore:
     global STORE
-    if force_reload or STORE is None:
+    if STORE is None:
         STORE = SheetStore()
+    if force_reload:
+        STORE.ensure_questions_loaded(force=True)
     return STORE
 
 
@@ -806,6 +833,8 @@ def version():
     return jsonify({
         "version": APP_VERSION,
         "login_required": True,
+        "fast_login_cache": True,
+        "login_reads_only_hoc_vien": True,
         "trial_register_3_days": True,
         "trial_only_free_exam": True,
         "trial_no_submit_no_score": True,
@@ -823,6 +852,7 @@ def login():
         password = clean(request.form.get("password"))
         try:
             store = get_store()
+            store.ensure_users_loaded()
             user = store.users.get(mahs)
             if not user:
                 # Không phân biệt hoa thường
@@ -895,7 +925,9 @@ def api_meta():
     bad = require_login_json()
     if bad:
         return bad
-    return jsonify(get_store().meta())
+    st = get_store()
+    st.ensure_questions_loaded()
+    return jsonify(st.meta())
 
 @app.route("/api/sync", methods=["POST"])
 def api_sync():
@@ -913,7 +945,9 @@ def api_start():
     if bad:
         return bad
     made = request.args.get("made", "")
-    return jsonify(get_store().start_quiz(made))
+    st = get_store()
+    st.ensure_questions_loaded()
+    return jsonify(st.start_quiz(made))
 
 @app.route("/api/fifty", methods=["POST"])
 def api_fifty():
@@ -946,7 +980,9 @@ def api_question_update():
         return jsonify({"error": "Chỉ ADMIN được sửa câu hỏi"}), 403
     body = request.get_json(silent=True) or {}
     try:
-        return jsonify(get_store().update_question(int(body.get("row", 0)), body.get("updates", {})))
+        st = get_store()
+        st.ensure_questions_loaded()
+        return jsonify(st.update_question(int(body.get("row", 0)), body.get("updates", {})))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
