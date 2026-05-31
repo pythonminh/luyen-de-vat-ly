@@ -30,7 +30,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V10_WORKING_ADMIN_EDIT_DELETE_GS_2026_05_31"
+APP_VERSION = "V10_WORKING_ADMIN_EDIT_DELETE_FAST_GS_2026_05_31"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -588,6 +588,17 @@ class SheetStore:
             self.by_made.setdefault(q["MaDe"], []).append(q)
         self.catalog = self.build_catalog()
 
+    def rebuild_indexes_after_admin_change(self):
+        """Cập nhật lại by_made/catalog từ RAM, không đọc lại toàn bộ Google Sheet.
+        Việc đọc lại toàn bộ Cau_Hoi sau mỗi lần lưu/xóa rất chậm trên Render Free
+        và dễ làm trình duyệt báo Không đọc được phản hồi.
+        """
+        self.by_made = {}
+        for q in self.questions:
+            self.by_made.setdefault(q.get("MaDe", ""), []).append(q)
+        self.catalog = self.build_catalog()
+        self.loaded_at = now_str()
+
     def load_users(self):
         self.users = {}
         if self.ws_users is None:
@@ -880,8 +891,15 @@ class SheetStore:
 
         self.ws_questions.batch_update(batch, value_input_option="USER_ENTERED")
 
-        # Nạp lại dữ liệu sau khi lưu để ADMIN xem đúng ngay.
-        self.load_questions()
+        # Cập nhật ngay trong RAM để tránh đọc lại cả Google Sheet sau khi lưu.
+        for q in self.questions:
+            if int(q.get("_row") or 0) == int(row_number):
+                for field, value in updates.items():
+                    if field in EDITABLE_FIELDS:
+                        q[field] = clean(value)
+                q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+                break
+        self.rebuild_indexes_after_admin_change()
         return {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields}
 
     def delete_question(self, row_number: int, question_id: str = "") -> Dict[str, Any]:
@@ -900,8 +918,17 @@ class SheetStore:
         # Xóa nguyên dòng. Các dòng dưới sẽ tự dồn lên trong Google Sheet.
         self.ws_questions.delete_rows(row_number)
 
-        # Nạp lại dữ liệu để mục lục và câu hỏi không còn câu đã xóa.
-        self.load_questions()
+        # Xóa khỏi RAM và chỉnh lại số dòng các câu phía dưới, không đọc lại cả sheet.
+        new_questions = []
+        for q in self.questions:
+            r = int(q.get("_row") or 0)
+            if r == int(row_number):
+                continue
+            if r > int(row_number):
+                q["_row"] = r - 1
+            new_questions.append(q)
+        self.questions = new_questions
+        self.rebuild_indexes_after_admin_change()
         return {"ok": True, "deleted": True, "row": row_number, "id": actual_id or question_id}
 
 
@@ -1004,7 +1031,7 @@ APP_HTML = r"""
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={};
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function val(id){return document.getElementById(id).value}function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
-async function api(url,opts={}){let r=await fetch(url,opts);let j=await r.json().catch(()=>({error:'Không đọc được phản hồi'}));if(!r.ok||j.error){if(r.status==401)location='/login';throw new Error(j.error||'Lỗi API')}return j}
+async function api(url,opts={}){let r=await fetch(url,opts);let txt=await r.text();let j;try{j=txt?JSON.parse(txt):{};}catch(e){j={error:'Không đọc được phản hồi từ máy chủ. Có thể Render đang timeout hoặc trả về HTML. Mã HTTP: '+r.status+'. Nội dung đầu: '+txt.slice(0,120)}}if(!r.ok||j.error){if(r.status==401)location='/login';throw new Error(j.error||'Lỗi API')}return j}
 function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
 async function init(){META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;if(USER.is_admin)document.getElementById('syncBtn').classList.remove('hide');if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card" style="border-color:#93c5fd;background:#eff6ff"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin:10px 0"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p style="color:red"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
 function okFilter(x){let s=val('fSearch').toLowerCase();let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase();return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
@@ -1043,7 +1070,9 @@ def version():
         "admin_can_view_without_submit": True,
         "admin_can_edit_question": True,
         "admin_can_delete_question": True,
-        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update"]
+        "admin_save_fast_no_full_reload": True,
+        "admin_delete_fast_no_full_reload": True,
+        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
