@@ -31,7 +31,7 @@ from flask import Flask, Response, jsonify, redirect, render_template_string, re
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
 
-APP_VERSION = "GOOGLE_SHEET_AJ_LAZY_IMAGE_REAL_IMAGE_COL_T_2026_05_31_V17"
+APP_VERSION = "GOOGLE_SHEET_AJ_FILTER_HEADER_FULL_DYNAMIC_2026_05_31_V18"
 
 SHEET_NAME_QUESTIONS = os.environ.get("SHEET_QUESTIONS", "Cau_Hoi")
 SHEET_NAME_USERS = os.environ.get("SHEET_USERS", "HOC_VIEN")
@@ -191,23 +191,83 @@ def row_AJ_to_dict(row: List[str], row_number: int) -> Dict[str, str]:
     return d
 
 
-def row_AT_to_dict(row: List[str], row_number: int) -> Dict[str, str]:
+# Các cột A:J dùng cố định để lọc mục lục.
+# Từ K trở đi cho phép đổi thứ tự; app sẽ ưu tiên đọc theo tên tiêu đề.
+# Nếu không có tiêu đề HinhAnh thì mặc định lấy cột T như thầy đang dùng.
+FULL_FIELD_ALIASES = {
+    "CauHoi": ["NoiDung", "Nội dung", "CauHoi", "Câu hỏi", "DeBai", "Đề bài"],
+    "A": ["A", "PhuongAnA", "Phương án A", "LuaChonA", "Lựa chọn A"],
+    "B": ["B", "PhuongAnB", "Phương án B", "LuaChonB", "Lựa chọn B"],
+    "C": ["C", "PhuongAnC", "Phương án C", "LuaChonC", "Lựa chọn C"],
+    "D": ["D", "PhuongAnD", "Phương án D", "LuaChonD", "Lựa chọn D"],
+    "DapAn": ["DapAn", "Đáp án", "Dap an", "Answer"],
+    "SaiSo": ["SaiSo", "Sai số", "Sai so", "Tolerance"],
+    "LoiGiai": ["LoiGiai", "Lời giải", "Loi giai", "Giai", "Giải"],
+    "HinhAnh": ["HinhAnh", "Hình ảnh", "Hinh anh", "LinkAnh", "Link ảnh", "LinkHinh", "Link hình", "Anh", "Ảnh", "Image", "ImageUrl", "URL ảnh"],
+    "QuyenTruyCap": ["QuyenTruyCap", "Quyền truy cập", "Quyen", "Quyền", "LoaiDe", "Loại đề", "Goi", "Gói"],
+}
+
+def _header_map(headers: List[str]) -> Dict[str, int]:
+    out: Dict[str, int] = {}
+    for i, h in enumerate(headers):
+        hn = norm(h)
+        if hn and hn not in out:
+            out[hn] = i
+    return out
+
+def _col_by_header(row: List[str], hmap: Dict[str, int], aliases: List[str], fallback_index: Optional[int] = None) -> str:
+    for name in aliases:
+        idx = hmap.get(norm(name))
+        if idx is not None and idx < len(row):
+            return clean(row[idx])
+    if fallback_index is not None and fallback_index < len(row):
+        return clean(row[fallback_index])
+    return ""
+
+def _looks_like_image_value(v: str) -> bool:
+    v = clean(v)
+    if not v:
+        return False
+    low = v.lower()
+    if "drive.google.com" in low or "docs.google.com" in low:
+        return True
+    if low.startswith("http://") or low.startswith("https://"):
+        return True
+    if re.fullmatch(r"[a-zA-Z0-9_-]{20,}", v):
+        return True
+    if re.search(r"\.(png|jpg|jpeg|webp|gif|svg)(\?|$)", low):
+        return True
+    return False
+
+def row_full_to_dict(row: List[str], row_number: int, headers: List[str]) -> Dict[str, str]:
+    # Đảm bảo ít nhất tới U để fallback T/U không lỗi.
     r = pad(row, 21)
     d = row_AJ_to_dict(r[:10], row_number)
-    d.update({
-        "CauHoi": r[10],
-        "A": r[11],
-        "B": r[12],
-        "C": r[13],
-        "D": r[14],
-        "DapAn": r[15],
-        "SaiSo": r[16],
-        "LoiGiai": r[17],
-        # Theo file GS của thầy: cột T là link hình ảnh.
-        # A=0 ... R=17, S=18, T=19, U=20.
-        "HinhAnh": r[19],
-        "QuyenTruyCap": r[20] or "FREE",
-    })
+    hmap = _header_map(headers)
+    fallback = {
+        "CauHoi": 10,  # K
+        "A": 11,       # L
+        "B": 12,       # M
+        "C": 13,       # N
+        "D": 14,       # O
+        "DapAn": 15,   # P
+        "SaiSo": 16,   # Q
+        "LoiGiai": 17, # R
+        "HinhAnh": 19, # T: theo file hiện tại của thầy
+        "QuyenTruyCap": 20, # U nếu có
+    }
+    for field in ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap"]:
+        d[field] = _col_by_header(r, hmap, FULL_FIELD_ALIASES[field], fallback[field])
+
+    # Nếu tiêu đề chưa chuẩn mà T trống, tự dò các cột sau R xem ô nào giống link/ID ảnh.
+    if not d.get("HinhAnh"):
+        for v in r[18:]:
+            if _looks_like_image_value(v):
+                d["HinhAnh"] = clean(v)
+                break
+
+    if not d.get("QuyenTruyCap"):
+        d["QuyenTruyCap"] = "FREE"
     if not d["ID"]:
         d["ID"] = "AUTO_" + stable_hash(json.dumps(d, ensure_ascii=False), 10)
     return d
@@ -271,16 +331,20 @@ def load_full_rows(force: bool = False) -> Tuple[List[Dict[str, str]], int]:
     with _LOCK:
         if not force and _FULL_ROWS_CACHE["rows"] and time.time() - _FULL_ROWS_CACHE["time"] < 300:
             return _FULL_ROWS_CACHE["rows"], _FULL_ROWS_CACHE["header_row"]
-    rows = get_values_a1(SHEET_NAME_QUESTIONS, "A:U")
+    # Đọc rộng tới AZ để không bị sai khi thầy chèn thêm cột sau J.
+    # A:J vẫn là khóa lọc; K trở đi đọc theo tiêu đề/fallback.
+    rows = get_values_a1(SHEET_NAME_QUESTIONS, "A:AZ")
     header_row = find_header_row(rows)
+    headers = rows[header_row - 1] if rows and header_row - 1 < len(rows) else []
     out: List[Dict[str, str]] = []
     for idx, row in enumerate(rows[header_row:], start=header_row + 1):
-        d = row_AT_to_dict(row, idx)
+        d = row_full_to_dict(row, idx, headers)
         if not d["ID"] and not d["De"] and not d["CauHoi"]:
             continue
         out.append(d)
+    debug_extra = {"full_header_row": header_row, "headers": headers[:30]}
     with _LOCK:
-        _FULL_ROWS_CACHE.update({"time": time.time(), "rows": out, "header_row": header_row})
+        _FULL_ROWS_CACHE.update({"time": time.time(), "rows": out, "header_row": header_row, "debug": debug_extra})
     return out, header_row
 
 
@@ -560,7 +624,7 @@ body{margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#1
 </div><script>
 const ROLE={{role|tojson}}; let META=null,CATALOG=[],SID='',QUESTIONS=[],CUR=0,ANS={},SUB=false,RES={};
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')} function val(id){return document.getElementById(id).value} function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
-async function api(u,o={}){let r=await fetch(u,o); let j=await r.json(); if(!r.ok||j.error)throw new Error(j.error||'Lỗi'); return j}
+async function api(u,o={}){let r=await fetch(u,o); let t=await r.text(); let j=null; try{j=JSON.parse(t)}catch(e){if(r.status==401||t.includes('Đăng nhập học viên')){location.href='/login';return null} throw new Error('Máy chủ trả về HTML, không phải JSON. Hãy tải lại trang hoặc đăng nhập lại.')} if(!r.ok||j.error)throw new Error(j.error||'Lỗi'); return j}
 function setOpts(id,a){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+a.map(x=>`<option>${esc(x)}</option>`).join('')}
 async function init(){try{META=await api('/api/meta'); document.getElementById('loading').classList.add('hide'); CATALOG=META.catalog; document.getElementById('info').textContent=`${META.count_questions||''} dòng | ${META.count_catalog} mục | ${META.mode||''}`; for(let k of ['Mon','Lop','Chuong','BaiHoc','BoDe'])setOpts('f'+k,META.filters[k]||[]); renderCatalog()}catch(e){document.getElementById('loading').textContent='⏳ Đang nạp dữ liệu Google Sheet... '+e.message+' Trang sẽ tự thử lại sau 3 giây.'; setTimeout(init,3000)}}
 function ok(x){let s=val('fSearch').toLowerCase(); let b=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase(); return (!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||b.includes(s))}
@@ -589,10 +653,9 @@ def version():
     return jsonify({
         "version": APP_VERSION,
         "exact_AJ_filter": True,
-        "lazy_AU_quiz": True,
-        "image_real_proxy": True,
-        "image_supports_static_images_number": True,
-        "image_column_T": True,
+        "full_rows_dynamic_header": True,
+        "image_column": "header HinhAnh, fallback T",
+        "quiz_reads_range": "A:AZ",
         "optional_env_GOOGLE_IMAGE_FOLDER_ID": bool(IMAGE_FOLDER_ID),
     })
 
@@ -766,12 +829,32 @@ def api_admin_save_question():
     if row <= 1:
         return jsonify(error="Row không hợp lệ"), 400
     ws = get_ws(SHEET_NAME_QUESTIONS)
-    # K:T tương ứng nội dung -> hình ảnh; I:J mức độ/dạng.
+    # A:J cố định; từ K trở đi tìm cột theo tiêu đề, fallback theo bố cục thường dùng.
+    headers = [clean(x) for x in ws.row_values(1)]
+    hmap = _header_map(headers)
+    def col_letter(idx0: int) -> str:
+        n = idx0 + 1
+        out = ""
+        while n:
+            n, r = divmod(n - 1, 26)
+            out = chr(65 + r) + out
+        return out
+    fallback_idx = {"MucDo":8, "Dang":9, "CauHoi":10, "A":11, "B":12, "C":13, "D":14, "DapAn":15, "SaiSo":16, "LoiGiai":17, "HinhAnh":19, "QuyenTruyCap":20}
+    save_aliases = dict(FULL_FIELD_ALIASES)
+    save_aliases.update({"MucDo":["MucDo", "Mức độ", "Muc do"], "Dang":["Dang", "Dạng" ]})
     updates = []
-    col_map = {"MucDo":"I", "Dang":"J", "CauHoi":"K", "A":"L", "B":"M", "C":"N", "D":"O", "DapAn":"P", "SaiSo":"Q", "LoiGiai":"R", "HinhAnh":"T"}
-    for k, col in col_map.items():
-        if k in body:
-            updates.append({"range": f"{col}{row}", "values": [[clean(body.get(k))]]})
+    for k, aliases in save_aliases.items():
+        if k not in body:
+            continue
+        idx = None
+        for name in aliases:
+            idx = hmap.get(norm(name))
+            if idx is not None:
+                break
+        if idx is None:
+            idx = fallback_idx.get(k)
+        if idx is not None:
+            updates.append({"range": f"{col_letter(idx)}{row}", "values": [[clean(body.get(k))]]})
     if updates:
         ws.batch_update(updates, value_input_option="USER_ENTERED")
         invalidate_question_cache()
