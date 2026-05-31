@@ -1,59 +1,43 @@
 # -*- coding: utf-8 -*-
 """
-APP V16 - Google Sheet luyện đề
-- Đọc mục lục bằng cột A:J để lọc nhanh.
-- Khi làm bài mới đọc A:U. Cột T là HinhAnh, cột U là QuyenTruyCap nếu có.
-- Có đăng nhập, đăng ký TRIAL 3 ngày, phân quyền ADMIN/VIP/SVIP/FREE/TRIAL.
-- ADMIN xem đáp án/lời giải ngay và sửa câu trực tiếp về Google Sheet.
-- Hiển thị hình ảnh thật qua /img: Drive link, Drive file ID, link ảnh, hoặc mã/tên ảnh như 1 -> static/Images/1.png hoặc Drive folder.
+app.py - Ứng dụng luyện đề Google Sheet + đăng nhập + ADMIN sửa câu
+Chạy Render:
+    gunicorn app:app --bind 0.0.0.0:$PORT
+Yêu cầu Environment Variables trên Render:
+    GOOGLE_SHEET_ID
+    GOOGLE_CREDENTIALS_JSON
 """
 from __future__ import annotations
 
-import base64
-import hashlib
-import html
-import io
 import json
-import mimetypes
 import os
+import random
 import re
-import threading
 import time
 import unicodedata
+import hashlib
+import threading
 import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import gspread
-from flask import Flask, Response, jsonify, redirect, render_template_string, request, session, url_for
-from google.auth.transport.requests import AuthorizedSession
-from google.oauth2.service_account import Credentials
+from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
 
-APP_VERSION = "GOOGLE_SHEET_AJ_FILTER_HEADER_FULL_DYNAMIC_2026_05_31_V18"
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
+    gspread = None
+    Credentials = None
 
-SHEET_NAME_QUESTIONS = os.environ.get("SHEET_QUESTIONS", "Cau_Hoi")
-SHEET_NAME_USERS = os.environ.get("SHEET_USERS", "HOC_VIEN")
-SHEET_NAME_RESULTS = os.environ.get("SHEET_RESULTS", "Ket_Qua")
-IMAGE_FOLDER_ID = os.environ.get("GOOGLE_IMAGE_FOLDER_ID", "").strip()
-
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.readonly",
-]
+APP_VERSION = "V10_WORKING_FIX_IMAGE_T_LOAD_QUESTIONS_2026_05_31"
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-change-me")
-
-_LOCK = threading.RLock()
-_CATALOG_CACHE: Dict[str, Any] = {"time": 0, "items": [], "debug": {}}
-_USERS_CACHE: Dict[str, Any] = {"time": 0, "items": {}}
-_FULL_ROWS_CACHE: Dict[str, Any] = {"time": 0, "rows": [], "header_row": 1}
-_ACTIVE_TOKENS: Dict[str, str] = {}
+app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-key-change-me")
 
 # ============================================================
-# TIỆN ÍCH
+# TIỆN ÍCH CHUẨN HÓA
 # ============================================================
 
 def strip_accents(s: Any) -> str:
@@ -62,32 +46,46 @@ def strip_accents(s: Any) -> str:
     return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
 
 
-def norm(s: Any) -> str:
+def key_norm(s: Any) -> str:
     s = strip_accents(str(s or "").strip().lower())
     s = re.sub(r"\s+", " ", s)
-    return s
+    s = s.replace("_", " ").replace("-", " ")
+    return s.strip()
 
 
-def clean(s: Any) -> str:
-    s = str(s or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+def clean(v: Any) -> str:
+    s = str(v or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     if re.fullmatch(r"\d+\.0", s):
         s = s[:-2]
     return s
 
 
 def stable_hash(text: str, n: int = 12) -> str:
-    return hashlib.sha1(text.encode("utf-8", errors="ignore")).hexdigest()[:n]
+    return hashlib.sha1(text.encode("utf-8", errors="ignore")).hexdigest()[:n].upper()
 
 
 def now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def parse_date_any(s: Any) -> Optional[datetime]:
+def parse_datetime_any(s: Any) -> Optional[datetime]:
+    """Đọc ngày giờ từ Google Sheet: 30/05/2026 13:37, 2026-05-30, hoặc serial dạng text."""
     s = clean(s)
     if not s:
         return None
-    for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y"]:
+    # Nếu Google Sheet trả serial ngày dạng số, 1 tương ứng 1899-12-30.
+    try:
+        if re.fullmatch(r"\d+(?:\.\d+)?", s):
+            base = datetime(1899, 12, 30)
+            return base + timedelta(days=float(s))
+    except Exception:
+        pass
+    fmts = [
+        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
+        "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y",
+        "%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M", "%d-%m-%Y",
+    ]
+    for fmt in fmts:
         try:
             return datetime.strptime(s, fmt)
         except Exception:
@@ -95,468 +93,16 @@ def parse_date_any(s: Any) -> Optional[datetime]:
     return None
 
 
-def make_key(row: Dict[str, str]) -> str:
-    parts = [row.get("BoDe", ""), row.get("De", ""), row.get("Lop", ""), row.get("Mon", ""), row.get("Chuong", ""), row.get("BaiHoc", ""), row.get("DangBaiTap", "")]
-    return "MD_" + stable_hash("|".join(norm(x) for x in parts), 12)
+def fmt_datetime(dt: datetime) -> str:
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 
-def normalize_role(s: Any) -> str:
-    k = norm(s)
-    if k in ["admin", "quan tri", "quantri"]:
-        return "ADMIN"
-    if k in ["s.vip", "svip", "s vip", "super vip"]:
-        return "SVIP"
-    if k == "vip":
-        return "VIP"
-    if k in ["trial", "dung thu", "dungthu", "thu"]:
-        return "TRIAL"
-    return "FREE"
+def expired_datetime(s: Any) -> bool:
+    dt = parse_datetime_any(s)
+    return bool(dt and datetime.now() > dt)
 
 
-def is_admin() -> bool:
-    return session.get("role") == "ADMIN"
-
-
-def current_user() -> Dict[str, Any]:
-    if not session.get("mahs"):
-        return {}
-    return {
-        "mahs": session.get("mahs"),
-        "hoten": session.get("hoten", ""),
-        "lop": session.get("lop", ""),
-        "role": session.get("role", "FREE"),
-    }
-
-# ============================================================
-# GOOGLE SHEET
-# ============================================================
-
-def get_credentials() -> Credentials:
-    raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
-    if not raw:
-        raise RuntimeError("Thiếu biến GOOGLE_CREDENTIALS_JSON trên Render")
-    try:
-        info = json.loads(raw)
-    except Exception as e:
-        raise RuntimeError(f"GOOGLE_CREDENTIALS_JSON không phải JSON hợp lệ: {e}")
-    return Credentials.from_service_account_info(info, scopes=SCOPES)
-
-
-def get_book():
-    sheet_id = os.environ.get("GOOGLE_SHEET_ID", "").strip()
-    if not sheet_id:
-        raise RuntimeError("Thiếu biến GOOGLE_SHEET_ID trên Render")
-    gc = gspread.authorize(get_credentials())
-    return gc.open_by_key(sheet_id)
-
-
-def get_ws(name: str):
-    return get_book().worksheet(name)
-
-
-def get_values_a1(sheet: str, a1: str) -> List[List[str]]:
-    ws = get_ws(sheet)
-    vals = ws.get(a1)
-    return [[clean(x) for x in row] for row in vals]
-
-
-def find_header_row(rows: List[List[str]]) -> int:
-    for i, row in enumerate(rows[:10], start=1):
-        joined = "|".join(norm(x) for x in row)
-        if "id" in joined and "bode" in joined and "de" in joined and "lop" in joined:
-            return i
-    return 1
-
-
-def pad(row: List[str], n: int) -> List[str]:
-    return row + [""] * max(0, n - len(row))
-
-
-def row_AJ_to_dict(row: List[str], row_number: int) -> Dict[str, str]:
-    r = pad(row, 10)
-    d = {
-        "Row": str(row_number),
-        "ID": r[0],
-        "BoDe": r[1],
-        "De": r[2],
-        "Lop": r[3],
-        "Mon": r[4],
-        "Chuong": r[5],
-        "BaiHoc": r[6],
-        "DangBaiTap": r[7],
-        "MucDo": r[8],
-        "Dang": r[9],
-    }
-    d["MaDe"] = make_key(d)
-    return d
-
-
-# Các cột A:J dùng cố định để lọc mục lục.
-# Từ K trở đi cho phép đổi thứ tự; app sẽ ưu tiên đọc theo tên tiêu đề.
-# Nếu không có tiêu đề HinhAnh thì mặc định lấy cột T như thầy đang dùng.
-FULL_FIELD_ALIASES = {
-    "CauHoi": ["NoiDung", "Nội dung", "CauHoi", "Câu hỏi", "DeBai", "Đề bài"],
-    "A": ["A", "PhuongAnA", "Phương án A", "LuaChonA", "Lựa chọn A"],
-    "B": ["B", "PhuongAnB", "Phương án B", "LuaChonB", "Lựa chọn B"],
-    "C": ["C", "PhuongAnC", "Phương án C", "LuaChonC", "Lựa chọn C"],
-    "D": ["D", "PhuongAnD", "Phương án D", "LuaChonD", "Lựa chọn D"],
-    "DapAn": ["DapAn", "Đáp án", "Dap an", "Answer"],
-    "SaiSo": ["SaiSo", "Sai số", "Sai so", "Tolerance"],
-    "LoiGiai": ["LoiGiai", "Lời giải", "Loi giai", "Giai", "Giải"],
-    "HinhAnh": ["HinhAnh", "Hình ảnh", "Hinh anh", "LinkAnh", "Link ảnh", "LinkHinh", "Link hình", "Anh", "Ảnh", "Image", "ImageUrl", "URL ảnh"],
-    "QuyenTruyCap": ["QuyenTruyCap", "Quyền truy cập", "Quyen", "Quyền", "LoaiDe", "Loại đề", "Goi", "Gói"],
-}
-
-def _header_map(headers: List[str]) -> Dict[str, int]:
-    out: Dict[str, int] = {}
-    for i, h in enumerate(headers):
-        hn = norm(h)
-        if hn and hn not in out:
-            out[hn] = i
-    return out
-
-def _col_by_header(row: List[str], hmap: Dict[str, int], aliases: List[str], fallback_index: Optional[int] = None) -> str:
-    for name in aliases:
-        idx = hmap.get(norm(name))
-        if idx is not None and idx < len(row):
-            return clean(row[idx])
-    if fallback_index is not None and fallback_index < len(row):
-        return clean(row[fallback_index])
-    return ""
-
-def _looks_like_image_value(v: str) -> bool:
-    v = clean(v)
-    if not v:
-        return False
-    low = v.lower()
-    if "drive.google.com" in low or "docs.google.com" in low:
-        return True
-    if low.startswith("http://") or low.startswith("https://"):
-        return True
-    if re.fullmatch(r"[a-zA-Z0-9_-]{20,}", v):
-        return True
-    if re.search(r"\.(png|jpg|jpeg|webp|gif|svg)(\?|$)", low):
-        return True
-    return False
-
-def row_full_to_dict(row: List[str], row_number: int, headers: List[str]) -> Dict[str, str]:
-    # Đảm bảo ít nhất tới U để fallback T/U không lỗi.
-    r = pad(row, 21)
-    d = row_AJ_to_dict(r[:10], row_number)
-    hmap = _header_map(headers)
-    fallback = {
-        "CauHoi": 10,  # K
-        "A": 11,       # L
-        "B": 12,       # M
-        "C": 13,       # N
-        "D": 14,       # O
-        "DapAn": 15,   # P
-        "SaiSo": 16,   # Q
-        "LoiGiai": 17, # R
-        "HinhAnh": 19, # T: theo file hiện tại của thầy
-        "QuyenTruyCap": 20, # U nếu có
-    }
-    for field in ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap"]:
-        d[field] = _col_by_header(r, hmap, FULL_FIELD_ALIASES[field], fallback[field])
-
-    # Nếu tiêu đề chưa chuẩn mà T trống, tự dò các cột sau R xem ô nào giống link/ID ảnh.
-    if not d.get("HinhAnh"):
-        for v in r[18:]:
-            if _looks_like_image_value(v):
-                d["HinhAnh"] = clean(v)
-                break
-
-    if not d.get("QuyenTruyCap"):
-        d["QuyenTruyCap"] = "FREE"
-    if not d["ID"]:
-        d["ID"] = "AUTO_" + stable_hash(json.dumps(d, ensure_ascii=False), 10)
-    return d
-
-
-def load_catalog(force: bool = False) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    with _LOCK:
-        if not force and _CATALOG_CACHE["items"] and time.time() - _CATALOG_CACHE["time"] < 300:
-            return _CATALOG_CACHE["items"], _CATALOG_CACHE["debug"]
-
-    rows = get_values_a1(SHEET_NAME_QUESTIONS, "A:J")
-    header_row = find_header_row(rows)
-    data_rows = rows[header_row:]
-    groups: Dict[str, Dict[str, Any]] = {}
-    samples: List[Dict[str, str]] = []
-    for idx, row in enumerate(data_rows, start=header_row + 1):
-        d = row_AJ_to_dict(row, idx)
-        if not d["ID"] and not d["De"] and not d["Mon"] and not d["BaiHoc"]:
-            continue
-        if len(samples) < 10:
-            samples.append(d.copy())
-        key = d["MaDe"]
-        if key not in groups:
-            groups[key] = {
-                "MaDe": key,
-                "BoDe": d["BoDe"],
-                "De": d["De"],
-                "Lop": d["Lop"],
-                "Mon": d["Mon"],
-                "Chuong": d["Chuong"],
-                "BaiHoc": d["BaiHoc"],
-                "DangBaiTap": d["DangBaiTap"],
-                "MucDoSet": set(),
-                "DangSet": set(),
-                "Rows": [],
-                "SoCau": 0,
-            }
-        g = groups[key]
-        g["SoCau"] += 1
-        g["Rows"].append(idx)
-        if d["MucDo"]:
-            g["MucDoSet"].add(d["MucDo"])
-        if d["Dang"]:
-            g["DangSet"].add(d["Dang"])
-
-    items: List[Dict[str, Any]] = []
-    for g in groups.values():
-        item = dict(g)
-        item["MucDo"] = ", ".join(sorted(g.pop("MucDoSet"), key=norm))
-        item["Dang"] = ", ".join(sorted(g.pop("DangSet"), key=norm))
-        item["QuyenTruyCap"] = "FREE"  # Mục lục A:J chưa đọc cột T, khi làm bài sẽ kiểm tra T.
-        items.append(item)
-    items.sort(key=lambda x: (norm(x.get("Mon")), norm(x.get("Lop")), norm(x.get("Chuong")), norm(x.get("BaiHoc")), norm(x.get("De"))))
-    debug = {"mode": "EXACT_A_TO_J_FOR_FILTER", "header_row": header_row, "count_rows": len(data_rows), "count_catalog": len(items), "samples": samples, "time": now_str()}
-    with _LOCK:
-        _CATALOG_CACHE.update({"time": time.time(), "items": items, "debug": debug})
-    return items, debug
-
-
-def load_full_rows(force: bool = False) -> Tuple[List[Dict[str, str]], int]:
-    with _LOCK:
-        if not force and _FULL_ROWS_CACHE["rows"] and time.time() - _FULL_ROWS_CACHE["time"] < 300:
-            return _FULL_ROWS_CACHE["rows"], _FULL_ROWS_CACHE["header_row"]
-    # Đọc rộng tới AZ để không bị sai khi thầy chèn thêm cột sau J.
-    # A:J vẫn là khóa lọc; K trở đi đọc theo tiêu đề/fallback.
-    rows = get_values_a1(SHEET_NAME_QUESTIONS, "A:AZ")
-    header_row = find_header_row(rows)
-    headers = rows[header_row - 1] if rows and header_row - 1 < len(rows) else []
-    out: List[Dict[str, str]] = []
-    for idx, row in enumerate(rows[header_row:], start=header_row + 1):
-        d = row_full_to_dict(row, idx, headers)
-        if not d["ID"] and not d["De"] and not d["CauHoi"]:
-            continue
-        out.append(d)
-    debug_extra = {"full_header_row": header_row, "headers": headers[:30]}
-    with _LOCK:
-        _FULL_ROWS_CACHE.update({"time": time.time(), "rows": out, "header_row": header_row, "debug": debug_extra})
-    return out, header_row
-
-
-def load_questions_by_made(made: str) -> List[Dict[str, str]]:
-    rows, _ = load_full_rows(False)
-    qs = [r for r in rows if r.get("MaDe") == made]
-    return qs
-
-
-def invalidate_question_cache():
-    with _LOCK:
-        _CATALOG_CACHE.update({"time": 0, "items": [], "debug": {}})
-        _FULL_ROWS_CACHE.update({"time": 0, "rows": [], "header_row": 1})
-
-
-def load_users(force: bool = False) -> Dict[str, Dict[str, str]]:
-    with _LOCK:
-        if not force and _USERS_CACHE["items"] and time.time() - _USERS_CACHE["time"] < 120:
-            return _USERS_CACHE["items"]
-    rows = get_ws(SHEET_NAME_USERS).get_all_records()
-    users: Dict[str, Dict[str, str]] = {}
-    for r in rows:
-        mahs = clean(r.get("MaHS") or r.get("Mã HS") or r.get("ID") or "")
-        if not mahs:
-            continue
-        phone = clean(r.get("SoDienThoai") or r.get("Số điện thoại") or r.get("SDT") or "")
-        mk = clean(r.get("MatKhau") or r.get("Mật khẩu") or r.get("Password") or "")
-        if not mk:
-            digits = re.sub(r"\D+", "", phone)
-            mk = digits[-6:] if len(digits) >= 6 else "123456"
-        role = normalize_role(r.get("LoaiTaiKhoan") or r.get("Loại tài khoản") or r.get("Role") or "FREE")
-        users[mahs] = {
-            "mahs": mahs,
-            "password": mk,
-            "hoten": clean(r.get("HoTen") or r.get("HọTên") or r.get("Họ tên") or ""),
-            "lop": clean(r.get("Lop") or r.get("Lớp") or ""),
-            "role": role,
-            "status": clean(r.get("TrangThai") or r.get("Trạng thái") or "ON").upper() or "ON",
-            "phone": phone,
-            "device": clean(r.get("DeviceId") or r.get("DeviceID") or ""),
-            "trial_end": clean(r.get("NgayHetHanTrial") or r.get("NgayHetHanTaiKhoan") or r.get("Ngày hết hạn") or ""),
-        }
-    with _LOCK:
-        _USERS_CACHE.update({"time": time.time(), "items": users})
-    return users
-
-
-def append_trial_user(mahs: str, hoten: str, lop: str, phone: str, password: str, device: str) -> None:
-    ws = get_ws(SHEET_NAME_USERS)
-    headers = [clean(x) for x in ws.row_values(1)]
-    if not headers:
-        raise RuntimeError("Sheet HOC_VIEN chưa có hàng tiêu đề")
-    end = datetime.now() + timedelta(days=3)
-    values_map = {
-        "MaHS": mahs,
-        "HoTen": hoten,
-        "Lop": lop,
-        "LoaiTaiKhoan": "TRIAL",
-        "TrangThai": "ON",
-        "SoDienThoai": phone,
-        "MatKhau": password,
-        "NgayDangKy": now_str(),
-        "NgayHetHanTrial": end.strftime("%Y-%m-%d %H:%M:%S"),
-        "DeviceId": device,
-    }
-    row = []
-    for h in headers:
-        hn = norm(h)
-        val = ""
-        for k, v in values_map.items():
-            if norm(k) == hn:
-                val = v
-                break
-        row.append(val)
-    ws.append_row(row, value_input_option="USER_ENTERED")
-    load_users(True)
-
-# ============================================================
-# HÌNH ẢNH
-# ============================================================
-
-def parse_drive_id(src: str) -> str:
-    s = clean(src)
-    if not s:
-        return ""
-    m = re.search(r"/file/d/([a-zA-Z0-9_-]+)", s)
-    if m:
-        return m.group(1)
-    m = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", s)
-    if m:
-        return m.group(1)
-    if re.fullmatch(r"[a-zA-Z0-9_-]{20,}", s):
-        return s
-    return ""
-
-
-def guess_mime(path_or_url: str) -> str:
-    mt = mimetypes.guess_type(path_or_url)[0]
-    return mt or "image/png"
-
-
-def svg_error(message: str) -> bytes:
-    msg = html.escape(message)
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="900" height="110">
-<rect width="100%" height="100%" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
-<text x="18" y="42" font-family="Arial" font-size="18" fill="#9a3412">Không hiển thị được hình ảnh</text>
-<text x="18" y="74" font-family="Arial" font-size="15" fill="#7c2d12">{msg}</text>
-</svg>'''.encode("utf-8")
-
-
-def local_image_candidates(src: str) -> List[Path]:
-    s = clean(src).strip().lstrip("/")
-    roots = [Path(__file__).parent / "static" / "Images", Path(__file__).parent / "static" / "images", Path(__file__).parent / "Images"]
-    cands: List[Path] = []
-    if s:
-        cands.append(Path(__file__).parent / s)
-        for root in roots:
-            cands.append(root / s)
-            if "." not in Path(s).name:
-                for ext in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]:
-                    cands.append(root / f"{s}{ext}")
-    return cands
-
-
-def drive_authed_session() -> AuthorizedSession:
-    return AuthorizedSession(get_credentials())
-
-
-def drive_download_file(file_id: str) -> Tuple[bytes, str]:
-    authed = drive_authed_session()
-    meta_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=name,mimeType"
-    meta = authed.get(meta_url, timeout=20)
-    if meta.status_code >= 400:
-        raise RuntimeError(f"Drive không đọc được file ID {file_id}: {meta.status_code}")
-    mj = meta.json()
-    mime = mj.get("mimeType") or "image/png"
-    dl_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-    r = authed.get(dl_url, timeout=30)
-    if r.status_code >= 400:
-        raise RuntimeError(f"Drive không tải được ảnh: {r.status_code}")
-    return r.content, mime
-
-
-def drive_search_by_name(name: str) -> str:
-    if not IMAGE_FOLDER_ID:
-        return ""
-    names = [name]
-    if "." not in Path(name).name:
-        names += [f"{name}{ext}" for ext in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]]
-    authed = drive_authed_session()
-    for nm in names:
-        q = f"'{IMAGE_FOLDER_ID}' in parents and trashed=false and name='{nm.replace(chr(39), chr(92)+chr(39))}'"
-        url = "https://www.googleapis.com/drive/v3/files?" + urllib.parse.urlencode({"q": q, "fields": "files(id,name,mimeType)", "pageSize": "1"})
-        r = authed.get(url, timeout=20)
-        if r.status_code < 400:
-            files = r.json().get("files", [])
-            if files:
-                return files[0]["id"]
-    return ""
-
-
-def read_image_bytes(src: str) -> Tuple[bytes, str]:
-    s = clean(src)
-    if not s:
-        raise RuntimeError("Cột T:HinhAnh đang trống")
-
-    # 1) File local trong repo: static/Images/1.png, static/Images/hinh1.png...
-    for p in local_image_candidates(s):
-        if p.exists() and p.is_file():
-            return p.read_bytes(), guess_mime(str(p))
-
-    # 2) Drive link hoặc Drive file ID.
-    fid = parse_drive_id(s)
-    if fid:
-        return drive_download_file(fid)
-
-    # 3) Nếu ô chỉ là 1, hinh1... và có GOOGLE_IMAGE_FOLDER_ID thì tìm trong thư mục Drive.
-    fid2 = drive_search_by_name(s)
-    if fid2:
-        return drive_download_file(fid2)
-
-    # 4) Link ảnh trực tiếp.
-    if s.startswith("http://") or s.startswith("https://"):
-        req = urllib.request.Request(s, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = resp.read()
-            mt = resp.headers.get("Content-Type") or guess_mime(s)
-            return data, mt
-
-    raise RuntimeError(f"Cột T:HinhAnh đang là '{s}'. Cần có static/Images/{s}.png hoặc GOOGLE_IMAGE_FOLDER_ID chứa ảnh tên {s}.png, hoặc dán link/file ID Drive.")
-
-# ============================================================
-# CHẤM ĐIỂM
-# ============================================================
-
-def normalize_dang(s: str) -> str:
-    k = norm(s)
-    if "dung sai" in k or k in ["ds", "tf", "true false"]:
-        return "Đúng sai"
-    if "tra loi ngan" in k or k in ["tln", "short"]:
-        return "Trả lời ngắn"
-    if "tu luan" in k or k == "tl":
-        return "Tự luận"
-    return "Trắc nghiệm"
-
-
-def norm_letter(s: str) -> str:
-    m = re.search(r"[ABCD]", clean(s).upper())
-    return m.group(0) if m else ""
-
-
-def parse_float_vn(s: str) -> Optional[float]:
+def parse_float_vn(s: Any) -> Optional[float]:
     s = clean(s).replace(" ", "")
     if not s:
         return None
@@ -565,82 +111,857 @@ def parse_float_vn(s: str) -> Optional[float]:
     else:
         s = s.replace(",", "")
     m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
+    if not m:
+        return None
     try:
-        return float(m.group(0)) if m else None
+        return float(m.group(0))
     except Exception:
         return None
 
 
-def check_answer(q: Dict[str, str], ans: Any) -> Tuple[bool, str, str]:
-    dang = normalize_dang(q.get("Dang", ""))
-    correct_raw = clean(q.get("DapAn", ""))
+def norm_letter(s: Any) -> str:
+    s = clean(s).upper()
+    m = re.search(r"[ABCD]", s)
+    return m.group(0) if m else ""
+
+
+def norm_dang(s: Any) -> str:
+    k = key_norm(s)
+    if any(x in k for x in ["dung sai", "true false", "tf", "ds", "d s"]):
+        return "Đúng sai"
+    if any(x in k for x in ["tra loi ngan", "short", "tln", "shortans"]):
+        return "Trả lời ngắn"
+    if any(x in k for x in ["tu luan", "essay", "tl"]):
+        return "Tự luận"
+    return "Trắc nghiệm"
+
+
+def norm_role(s: Any) -> str:
+    k = key_norm(s).replace(".", "")
+    if "admin" in k:
+        return "ADMIN"
+    if "svip" in k or "s vip" in k or "super" in k:
+        return "S.VIP"
+    if "trial" in k or "dung thu" in k or "thu nghiem" in k:
+        return "TRIAL"
+    if "vip" in k:
+        return "VIP"
+    if "free" in k or "mien phi" in k:
+        return "FREE"
+    return clean(s).upper() or "FREE"
+
+
+def is_admin() -> bool:
+    return session.get("role") == "ADMIN"
+
+
+def is_trial() -> bool:
+    return session.get("role") == "TRIAL"
+
+
+def can_use_5050() -> bool:
+    # Học viên dùng thử KHÔNG dùng 50:50. Chỉ VIP/S.VIP/ADMIN.
+    return session.get("role") in ["VIP", "S.VIP", "ADMIN"]
+
+
+def can_view_solution_after_submit() -> bool:
+    # FREE và TRIAL không xem đáp án/lời giải sau nộp.
+    return session.get("role") in ["VIP", "S.VIP", "ADMIN"]
+
+
+def access_level_from_text(value: Any) -> str:
+    """Chuẩn hóa quyền truy cập đề: FREE hoặc VIP.
+    Nếu cột QuyenTruyCap/Gói để trống thì mặc định là FREE để dễ đưa kho câu lên trước.
+    Chỉ khi ghi rõ VIP / có phí / trả phí / premium thì coi là đề VIP.
+    """
+    k = key_norm(value)
+    if not k:
+        return "FREE"
+    if any(x in k for x in ["vip", "s vip", "svip", "co phi", "tra phi", "premium", "paid", "thu phi"]):
+        return "VIP"
+    return "FREE"
+
+
+def is_free_access(value: Any) -> bool:
+    return access_level_from_text(value) == "FREE"
+
+
+def quiz_access_level(qs: List[Dict[str, Any]]) -> str:
+    # Nếu chỉ cần 1 câu trong đề ghi VIP thì cả đề là VIP.
+    for q in qs:
+        if access_level_from_text(q.get("QuyenTruyCap", "")) == "VIP":
+            return "VIP"
+    return "FREE"
+
+
+def require_login_json():
+    if not session.get("mahs"):
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+    # Chống 2 thiết bị dùng chung tài khoản: token mới đá token cũ trong RAM.
+    store = get_store()
+    mahs = session.get("mahs")
+    token = session.get("session_token")
+    if mahs and token and store.active_tokens.get(mahs) and store.active_tokens.get(mahs) != token:
+        session.clear()
+        return jsonify({"error": "Tài khoản này đã đăng nhập ở thiết bị khác."}), 401
+    return None
+
+# ============================================================
+# ÁNH XẠ CỘT
+# ============================================================
+
+ALIASES: Dict[str, List[str]] = {
+    "MaDe": ["MaDe", "Mã đề", "Ma De", "MA_DE", "ma_de"],
+    "ID": ["ID", "Id", "Mã câu", "MaCau", "Ma Cau"],
+    "BoDe": ["BoDe", "Bộ đề", "Bo De", "Bộ Đề"],
+    "De": ["De", "Đề", "TenDe", "Tên đề", "Tên Đề"],
+    "Lop": ["Lop", "Lớp", "LopHoc", "Lớp học", "Khối"],
+    "Mon": ["Mon", "Môn"],
+    "Chuong": ["Chuong", "Chương", "ChuDe", "Chủ đề", "Chủ Đề"],
+    "BaiHoc": ["BaiHoc", "Bài học", "Bài Học"],
+    "DangBaiTap": ["DangBaiTap", "Dạng bài tập", "Dạng Bài Tập", "Dang Bai Tap"],
+    "MucDo": ["MucDo", "Mức độ", "Mức Độ"],
+    "Dang": ["Dang", "Dạng", "Loai", "Loại", "LoaiCau", "Loại câu"],
+    "CauHoi": ["CauHoi", "NoiDung", "Nội dung", "Câu hỏi", "DeBai", "Đề bài"],
+    "A": ["A", "PA_A", "LuaChonA"],
+    "B": ["B", "PA_B", "LuaChonB"],
+    "C": ["C", "PA_C", "LuaChonC"],
+    "D": ["D", "PA_D", "LuaChonD"],
+    "DapAn": ["DapAn", "Đáp án", "Đáp Án", "Answer"],
+    "SaiSo": ["SaiSo", "Sai số", "Sai Số", "Tolerance"],
+    "LoiGiai": ["LoiGiai", "Lời giải", "Lời Giải", "Giai", "Giải"],
+    "Diem": ["Diem", "Điểm"],
+    "HinhAnh": ["HinhAnh", "Hình ảnh", "Hình Ảnh", "Image", "LinkHinhAnh", "Link hình ảnh", "Link ảnh", "Anh", "Ảnh"],
+    "QuyenTruyCap": ["QuyenTruyCap", "Quyền truy cập", "Quyen", "Goi", "Gói"],
+    # HOC_VIEN
+    "MaHS": ["MaHS", "Mã HS", "Mã học sinh", "TaiKhoan", "Tài khoản", "Username"],
+    "HoTen": ["HoTen", "Họ tên", "Họ Tên", "Tên", "Name"],
+    "MatKhau": ["MatKhau", "Mật khẩu", "Mat Khau", "Password"],
+    "LoaiTaiKhoan": ["LoaiTaiKhoan", "Loại tài khoản", "Loai TK", "Role", "Quyen"],
+    "TrangThai": ["TrangThai", "Trạng thái", "Status"],
+    "SoDienThoai": ["SoDienThoai", "Số điện thoại", "SDT", "SĐT", "Phone"],
+    "DeviceId": ["DeviceId", "DeviceID", "Thiết bị"],
+    "NgayDangKy": ["NgayDangKy", "Ngày đăng ký", "Ngay Dang Ky", "RegisterAt", "CreatedAt"],
+    "NgayHetHanTrial": ["NgayHetHanTrial", "Ngày hết hạn trial", "Ngay Het Han Trial", "TrialUntil", "HetHanDungThu"],
+    "NgayHetHanTaiKhoan": ["NgayHetHanTaiKhoan", "Ngày hết hạn tài khoản", "Ngay Het Han Tai Khoan", "AccountUntil", "HetHanTaiKhoan"],
+}
+
+USER_REQUIRED_HEADERS = [
+    "MaHS", "HoTen", "LopHoc", "LoaiTaiKhoan", "TrangThai", "SoDienThoai",
+    "NgayDangKy", "NgayHetHanTrial", "DeviceId", "NgayHetHanTaiKhoan", "MatKhau"
+]
+
+QUESTION_FIELDS = [
+    "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap",
+    "MucDo", "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo",
+    "LoiGiai", "Diem", "HinhAnh", "QuyenTruyCap",
+]
+
+EDITABLE_FIELDS = ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "MucDo", "Dang", "LoiGiai", "HinhAnh"]
+
+
+def header_map(headers: List[str]) -> Dict[str, int]:
+    return {key_norm(h): i for i, h in enumerate(headers)}
+
+
+def find_col(headers: List[str], canonical: str) -> Optional[int]:
+    mp = header_map(headers)
+    for name in ALIASES.get(canonical, [canonical]):
+        k = key_norm(name)
+        if k in mp:
+            return mp[k]
+    return None
+
+
+def get_field(row: Dict[str, Any], canonical: str) -> str:
+    mp = {key_norm(k): k for k in row.keys()}
+    for name in ALIASES.get(canonical, [canonical]):
+        k = mp.get(key_norm(name))
+        if k is not None:
+            return clean(row.get(k, ""))
+    return ""
+
+
+def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
+    q = {f: get_field(row, f) for f in QUESTION_FIELDS}
+    q["Dang"] = norm_dang(q.get("Dang"))
+    if not q.get("MaDe"):
+        base = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De"])
+        q["MaDe"] = "MD_" + stable_hash(base, 12)
+    if not q.get("ID"):
+        q["ID"] = "AUTO_" + stable_hash(json.dumps(q, ensure_ascii=False), 10)
+    return q
+
+
+def extract_drive_file_id(value: Any) -> str:
+    """Lấy FILE_ID từ link Google Drive hoặc chuỗi file id."""
+    s = clean(value)
+    if not s:
+        return ""
+    # =IMAGE("url") trong Google Sheet
+    m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
+    if m:
+        s = m.group(1)
+    # /file/d/FILE_ID/view
+    m = re.search(r'/d/([A-Za-z0-9_-]{20,})', s)
+    if m:
+        return m.group(1)
+    # open?id=FILE_ID hoặc uc?id=FILE_ID
+    try:
+        pr = urllib.parse.urlparse(s)
+        qs = urllib.parse.parse_qs(pr.query)
+        if qs.get('id') and qs['id'][0]:
+            return qs['id'][0]
+    except Exception:
+        pass
+    # Chuỗi file id thuần
+    if re.fullmatch(r'[A-Za-z0-9_-]{20,}', s):
+        return s
+    return ""
+
+
+def normalize_image_src(value: Any) -> str:
+    """Chuẩn hóa cột hình ảnh để <img> hiện được ngay.
+    - Link Drive dạng xem -> thumbnail public.
+    - File ID Drive -> thumbnail public.
+    - Link ảnh trực tiếp -> giữ nguyên.
+    - Images/abc.png -> /static/Images/abc.png nếu repo có thư mục static.
+    """
+    s = clean(value)
+    if not s:
+        return ""
+    m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
+    if m:
+        s = m.group(1).strip()
+    fid = extract_drive_file_id(s)
+    if fid:
+        return f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
+    if s.startswith('http://') or s.startswith('https://'):
+        return s
+    # Hỗ trợ ảnh local nếu thầy upload vào GitHub: static/Images/tenfile.png
+    if s.startswith('/static/'):
+        return s
+    if s.lower().startswith('static/'):
+        return '/' + s
+    if s.lower().startswith('images/'):
+        return '/static/' + s
+    return s
+
+
+def is_probably_link_or_drive(value: Any) -> bool:
+    s = clean(value)
+    return bool(s.startswith('http://') or s.startswith('https://') or extract_drive_file_id(s))
+
+# ============================================================
+# GOOGLE SHEET CLIENT + DATA STORE
+# ============================================================
+
+class SheetStore:
+    def __init__(self):
+        self.loaded_at = ""
+        self.questions: List[Dict[str, Any]] = []
+        self.catalog: List[Dict[str, Any]] = []
+        self.by_made: Dict[str, List[Dict[str, Any]]] = {}
+        self.users: Dict[str, Dict[str, Any]] = {}
+        self.active_tokens: Dict[str, str] = {}
+        self.quiz_sessions: Dict[str, Dict[str, Any]] = {}
+        self.client = None
+        self.sheet = None
+        self.ws_questions = None
+        self.ws_users = None
+        self.ws_results = None
+        self.question_headers: List[str] = []
+        self.question_col_index: Dict[str, int] = {}
+        # V8 FAST LOGIN:
+        # Không nạp toàn bộ sheet Cau_Hoi ngay khi mở trang/login.
+        # Login chỉ đọc nhanh sheet HOC_VIEN; dữ liệu đề chỉ nạp khi vào app hoặc ADMIN bấm đồng bộ.
+        self.questions_loaded = False
+        self.users_loaded = False
+        # V9 SAFE LOADING:
+        # Không để /api/meta chờ Google Sheet quá lâu rồi bị Render cắt kết nối.
+        # Dữ liệu câu hỏi sẽ nạp nền; trang web hiển thị trạng thái và tự thử lại.
+        self.questions_loading = False
+        self.questions_error = ""
+        self.load_lock = threading.Lock()
+
+    def connect(self):
+        if self.sheet is not None:
+            return
+        if gspread is None or Credentials is None:
+            raise RuntimeError("Thiếu thư viện gspread/google-auth. Hãy kiểm tra requirements.txt")
+        sheet_id = os.environ.get("GOOGLE_SHEET_ID", "").strip()
+        creds_raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
+        if not sheet_id or not creds_raw:
+            raise RuntimeError("Thiếu GOOGLE_SHEET_ID hoặc GOOGLE_CREDENTIALS_JSON trên Render")
+        try:
+            info = json.loads(creds_raw)
+        except json.JSONDecodeError as e:
+            raise RuntimeError("GOOGLE_CREDENTIALS_JSON không phải JSON hợp lệ. Hãy dán toàn bộ file key JSON.") from e
+        if "private_key" in info:
+            info["private_key"] = info["private_key"].replace("\\n", "\n")
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        self.client = gspread.authorize(creds)
+        self.sheet = self.client.open_by_key(sheet_id)
+
+    def worksheet_or_none(self, name: str):
+        try:
+            return self.sheet.worksheet(name)
+        except Exception:
+            return None
+
+    def ensure_users_loaded(self, force: bool = False):
+        """Chỉ nạp sheet HOC_VIEN để đăng nhập nhanh, không đọc Cau_Hoi."""
+        if self.users_loaded and self.users and not force:
+            return
+        self.connect()
+        self.ws_users = self.worksheet_or_none("HOC_VIEN")
+        self.load_users()
+        self.users_loaded = True
+
+    def ensure_questions_loaded(self, force: bool = False):
+        """Nạp Cau_Hoi + catalog khi thật sự cần. Lần đầu có thể chậm, các lần sau dùng RAM."""
+        if self.questions_loaded and self.questions and not force:
+            return
+        with self.load_lock:
+            if self.questions_loaded and self.questions and not force:
+                return
+            self.questions_error = ""
+            self.load()
+
+    def start_questions_background(self, force: bool = False) -> None:
+        """Khởi động nạp dữ liệu nền để tránh request /api/meta bị timeout trên Render Free."""
+        if self.questions_loaded and self.questions and not force:
+            return
+        if self.questions_loading:
+            return
+
+        def worker():
+            self.questions_loading = True
+            self.questions_error = ""
+            try:
+                self.ensure_questions_loaded(force=force)
+            except Exception as e:
+                self.questions_error = str(e)
+            finally:
+                self.questions_loading = False
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def meta_light(self) -> Dict[str, Any]:
+        """Trả về nhanh cho trang chủ. Nếu chưa nạp xong, không bắt trình duyệt chờ Google Sheet."""
+        if not self.questions_loaded:
+            self.start_questions_background(force=False)
+            return {
+                "version": APP_VERSION,
+                "loaded_at": self.loaded_at,
+                "loading": True,
+                "loading_message": "Hệ thống đang khởi động và nạp dữ liệu từ Google Sheet. Nếu dùng Render Free, lần đầu truy cập sau khi app ngủ có thể chờ khoảng 10–40 giây. Trang sẽ tự thử lại, thầy/các em không cần đăng nhập lại.",
+                "load_error": self.questions_error,
+                "count_questions": len(self.questions),
+                "count_catalog": len(self.catalog),
+                "user": current_user_public(),
+                "filters": {"Mon": [], "Lop": [], "Chuong": [], "BaiHoc": [], "BoDe": []},
+                "catalog": [],
+            }
+        m = self.meta()
+        m["loading"] = False
+        m["load_error"] = self.questions_error
+        return m
+
+    def ensure_ws(self, name: str, headers: List[str]):
+        self.connect()
+        ws = self.worksheet_or_none(name)
+        if ws is None:
+            ws = self.sheet.add_worksheet(title=name, rows=1000, cols=max(10, len(headers)))
+            ws.append_row(headers)
+        values = ws.get_all_values()
+        if not values:
+            ws.append_row(headers)
+        return ws
+
+    def ensure_user_headers(self):
+        """Bảo đảm sheet HOC_VIEN có đủ cột để đăng ký dùng thử."""
+        self.connect()
+        if self.ws_users is None:
+            self.ws_users = self.ensure_ws("HOC_VIEN", USER_REQUIRED_HEADERS)
+            return
+        values = self.ws_users.get_all_values()
+        if not values:
+            self.ws_users.append_row(USER_REQUIRED_HEADERS)
+            return
+        headers = list(values[0])
+        existing = {key_norm(h) for h in headers}
+        changed = False
+        for h in USER_REQUIRED_HEADERS:
+            # Riêng LopHoc chấp nhận nếu đã có Lop/Lớp.
+            if h == "LopHoc" and ("lop" in existing or "lop hoc" in existing):
+                continue
+            if key_norm(h) not in existing:
+                headers.append(h)
+                existing.add(key_norm(h))
+                changed = True
+        if changed:
+            self.ws_users.update("1:1", [headers], value_input_option="USER_ENTERED")
+
+    def user_header_value(self, header: str, values: Dict[str, Any]) -> str:
+        """Đổ dữ liệu đăng ký vào đúng cột hiện có của sheet HOC_VIEN."""
+        hn = key_norm(header)
+        for canonical, names in {
+            "MaHS": ALIASES["MaHS"],
+            "HoTen": ALIASES["HoTen"],
+            "Lop": ALIASES["Lop"],
+            "LoaiTaiKhoan": ALIASES["LoaiTaiKhoan"],
+            "TrangThai": ALIASES["TrangThai"],
+            "SoDienThoai": ALIASES["SoDienThoai"],
+            "DeviceId": ALIASES["DeviceId"],
+            "MatKhau": ALIASES["MatKhau"],
+            "NgayDangKy": ALIASES["NgayDangKy"],
+            "NgayHetHanTrial": ALIASES["NgayHetHanTrial"],
+            "NgayHetHanTaiKhoan": ALIASES["NgayHetHanTaiKhoan"],
+        }.items():
+            if hn in {key_norm(x) for x in names}:
+                return clean(values.get(canonical, ""))
+        return ""
+
+    def load(self):
+        self.connect()
+        self.ws_questions = self.worksheet_or_none("Cau_Hoi")
+        if self.ws_questions is None:
+            raise RuntimeError("Không thấy sheet Cau_Hoi")
+        self.ws_users = self.worksheet_or_none("HOC_VIEN")
+        self.ws_results = self.ensure_ws("Ket_Qua", [
+            "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
+        ])
+        self.load_questions()
+        self.load_users()
+        self.questions_loaded = True
+        self.users_loaded = True
+        self.loaded_at = now_str()
+
+    def load_questions(self):
+        values = self.ws_questions.get_all_values()
+        if not values:
+            self.questions = []
+            self.catalog = []
+            self.by_made = {}
+            return
+        self.question_headers = values[0]
+        self.question_col_index = {f: find_col(self.question_headers, f) for f in QUESTION_FIELDS}
+        # Fallback vị trí cột để ADMIN lưu đúng khi tiêu đề chưa khớp alias.
+        fallback_cols = {"CauHoi": 10, "A": 11, "B": 12, "C": 13, "D": 14, "DapAn": 15, "SaiSo": 16, "LoiGiai": 17, "HinhAnh": 19, "QuyenTruyCap": 20}
+        for f, c in fallback_cols.items():
+            if self.question_col_index.get(f) is None and c < len(self.question_headers):
+                self.question_col_index[f] = c
+        self.questions = []
+        for idx, row_vals in enumerate(values[1:], start=2):
+            raw = {self.question_headers[i]: row_vals[i] if i < len(row_vals) else "" for i in range(len(self.question_headers))}
+            q = canonical_question(raw)
+
+            # Fallback đúng theo bố cục thực tế của sheet thầy:
+            # A:J dùng cho lọc; K:R là nội dung/đáp án/lời giải; T là link hình ảnh; U nếu có là quyền truy cập.
+            exact = {
+                "CauHoi": 10, "A": 11, "B": 12, "C": 13, "D": 14,
+                "DapAn": 15, "SaiSo": 16, "LoiGiai": 17,
+            }
+            for field, col0 in exact.items():
+                if not clean(q.get(field)) and col0 < len(row_vals):
+                    q[field] = clean(row_vals[col0])
+
+            # Cột T là link hình ảnh. Ưu tiên T nếu T có link/file ID hợp lệ.
+            if 19 < len(row_vals):
+                t_img = clean(row_vals[19])
+                if is_probably_link_or_drive(t_img) or (t_img and not clean(q.get("HinhAnh"))):
+                    q["HinhAnh"] = t_img
+
+            # Cột U là quyền truy cập nếu có; trống thì FREE.
+            if 20 < len(row_vals) and not clean(q.get("QuyenTruyCap")):
+                q["QuyenTruyCap"] = clean(row_vals[20])
+
+            q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+
+            if not clean(q.get("CauHoi")):
+                continue
+            q["_row"] = idx
+            self.questions.append(q)
+        self.by_made = {}
+        for q in self.questions:
+            self.by_made.setdefault(q["MaDe"], []).append(q)
+        self.catalog = self.build_catalog()
+
+    def load_users(self):
+        self.users = {}
+        if self.ws_users is None:
+            self.users["admin"] = {"mahs": "admin", "hoten": "ADMIN", "lop": "", "role": "ADMIN", "password": "admin123", "status": "ON"}
+            return
+        values = self.ws_users.get_all_values()
+        if not values:
+            self.users["admin"] = {"mahs": "admin", "hoten": "ADMIN", "lop": "", "role": "ADMIN", "password": "admin123", "status": "ON"}
+            return
+        headers = values[0]
+        for row_vals in values[1:]:
+            raw = {headers[i]: row_vals[i] if i < len(row_vals) else "" for i in range(len(headers))}
+            mahs = get_field(raw, "MaHS")
+            if not mahs:
+                continue
+            phone = re.sub(r"\D", "", get_field(raw, "SoDienThoai"))
+            password = get_field(raw, "MatKhau") or (phone[-6:] if len(phone) >= 6 else "123456")
+            role = norm_role(get_field(raw, "LoaiTaiKhoan"))
+            status = (get_field(raw, "TrangThai") or "ON").upper()
+            self.users[mahs] = {
+                "mahs": mahs,
+                "hoten": get_field(raw, "HoTen") or mahs,
+                "lop": get_field(raw, "Lop"),
+                "role": role,
+                "password": password,
+                "status": status,
+                "phone": phone,
+                "device_id": get_field(raw, "DeviceId"),
+                "registered_at": get_field(raw, "NgayDangKy"),
+                "trial_until": get_field(raw, "NgayHetHanTrial"),
+                "account_until": get_field(raw, "NgayHetHanTaiKhoan"),
+            }
+        # Tài khoản dự phòng nếu sheet chưa có ADMIN.
+        if not any(u.get("role") == "ADMIN" for u in self.users.values()):
+            self.users["admin"] = {"mahs": "admin", "hoten": "ADMIN", "lop": "", "role": "ADMIN", "password": "admin123", "status": "ON"}
+
+    def is_user_expired(self, user: Dict[str, Any]) -> Tuple[bool, str]:
+        if user.get("role") == "ADMIN":
+            return False, ""
+        trial_until = user.get("trial_until", "")
+        account_until = user.get("account_until", "")
+        # Tài khoản có hạn chính thức thì kiểm tra ngày hết hạn tài khoản.
+        if account_until and expired_datetime(account_until):
+            return True, f"Tài khoản đã hết hạn ngày {account_until}."
+        # Tài khoản dùng thử thì kiểm tra ngày hết hạn trial.
+        if trial_until and expired_datetime(trial_until):
+            return True, f"Tài khoản dùng thử đã hết hạn ngày {trial_until}."
+        return False, ""
+
+    def register_trial(self, hoten: str, lop: str, phone: str, password: str, device_id: str) -> Dict[str, Any]:
+        self.ensure_user_headers()
+        self.load_users()
+        self.users_loaded = True
+        phone_digits = re.sub(r"\D", "", phone or "")
+        device_id = clean(device_id)
+        if len(phone_digits) < 8:
+            raise RuntimeError("Số điện thoại không hợp lệ. Vui lòng nhập ít nhất 8 chữ số.")
+        if not clean(hoten):
+            raise RuntimeError("Vui lòng nhập họ tên.")
+        if not clean(password) or len(clean(password)) < 4:
+            raise RuntimeError("Mật khẩu cần tối thiểu 4 ký tự.")
+        # Chặn dùng lại số điện thoại hoặc thiết bị để lấy trial nhiều lần.
+        for u in self.users.values():
+            if u.get("phone") and u.get("phone") == phone_digits:
+                raise RuntimeError("Số điện thoại này đã từng đăng ký. Vui lòng đăng nhập hoặc liên hệ giáo viên.")
+            if device_id and u.get("device_id") and clean(u.get("device_id")) == device_id:
+                raise RuntimeError("Thiết bị này đã từng đăng ký dùng thử. Vui lòng đăng nhập hoặc liên hệ giáo viên.")
+        base = "TRIAL_" + stable_hash(phone_digits + device_id + str(time.time()), 8)
+        mahs = base
+        i = 1
+        while mahs in self.users:
+            i += 1
+            mahs = f"{base}_{i}"
+        now = datetime.now()
+        until = now + timedelta(days=3)
+        record = {
+            "MaHS": mahs,
+            "HoTen": clean(hoten),
+            "Lop": clean(lop) or "Chưa khai báo",
+            "LoaiTaiKhoan": "TRIAL",
+            "TrangThai": "ON",
+            "SoDienThoai": phone_digits,
+            "NgayDangKy": fmt_datetime(now),
+            "NgayHetHanTrial": fmt_datetime(until),
+            "DeviceId": device_id,
+            "NgayHetHanTaiKhoan": "",
+            "MatKhau": clean(password),
+        }
+        headers = self.ws_users.get_all_values()[0]
+        row = [self.user_header_value(h, record) for h in headers]
+        self.ws_users.append_row(row, value_input_option="USER_ENTERED")
+        self.load_users()
+        self.users_loaded = True
+        user = self.users.get(mahs)
+        if not user:
+            raise RuntimeError("Đã ghi tài khoản nhưng chưa nạp lại được dữ liệu HOC_VIEN.")
+        return user
+
+    def build_catalog(self) -> List[Dict[str, Any]]:
+        groups: Dict[str, Dict[str, Any]] = {}
+        for q in self.questions:
+            made = q["MaDe"]
+            if made not in groups:
+                groups[made] = {
+                    "MaDe": made,
+                    "Lop": q.get("Lop", ""), "Mon": q.get("Mon", ""), "Chuong": q.get("Chuong", ""),
+                    "BaiHoc": q.get("BaiHoc", ""), "DangBaiTap": q.get("DangBaiTap", ""),
+                    "BoDe": q.get("BoDe", ""), "De": q.get("De", ""),
+                    "SoCau": 0, "MucDoSet": set(), "DangSet": set(), "QuyenTruyCapSet": set()
+                }
+            g = groups[made]
+            g["SoCau"] += 1
+            if q.get("MucDo"):
+                g["MucDoSet"].add(q["MucDo"])
+            if q.get("Dang"):
+                g["DangSet"].add(q["Dang"])
+            access = access_level_from_text(q.get("QuyenTruyCap", ""))
+            g["QuyenTruyCapSet"].add(access)
+        out: List[Dict[str, Any]] = []
+        for g in groups.values():
+            item = dict(g)
+            item["MucDo"] = ", ".join(sorted(item.pop("MucDoSet"), key=key_norm))
+            item["Dang"] = ", ".join(sorted(item.pop("DangSet"), key=key_norm))
+            access_values = sorted(item.pop("QuyenTruyCapSet"), key=key_norm)
+            item["QuyenTruyCap"] = "VIP" if "VIP" in access_values else "FREE"
+            item["IsFree"] = item["QuyenTruyCap"] == "FREE"
+            out.append(item)
+        out.sort(key=lambda x: (key_norm(x.get("Mon")), key_norm(x.get("Lop")), key_norm(x.get("Chuong")), key_norm(x.get("BaiHoc")), key_norm(x.get("De"))))
+        return out
+
+    def meta(self) -> Dict[str, Any]:
+        def opts(field: str) -> List[str]:
+            return sorted({clean(x.get(field, "")) for x in self.catalog if clean(x.get(field, ""))}, key=key_norm)
+        return {
+            "version": APP_VERSION,
+            "loaded_at": self.loaded_at,
+            "count_questions": len(self.questions),
+            "count_catalog": len(self.catalog),
+            "user": current_user_public(),
+            "filters": {"Mon": opts("Mon"), "Lop": opts("Lop"), "Chuong": opts("Chuong"), "BaiHoc": opts("BaiHoc"), "BoDe": opts("BoDe")},
+            "catalog": self.catalog,
+        }
+
+    def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
+        d = {k: q.get(k, "") for k in ["ID", "MaDe", "Dang", "MucDo", "CauHoi", "A", "B", "C", "D", "HinhAnh", "Chuong", "BaiHoc", "De", "QuyenTruyCap"]}
+        d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
+        d["index"] = index
+        if reveal:
+            d["DapAn"] = q.get("DapAn", "")
+            d["LoiGiai"] = q.get("LoiGiai", "")
+            d["SaiSo"] = q.get("SaiSo", "")
+            d["_row"] = q.get("_row", "")
+        return d
+
+    def start_quiz(self, made: str) -> Dict[str, Any]:
+        qs = list(self.by_made.get(made, []))
+        if not qs:
+            raise RuntimeError("Không có câu hỏi trong đề này. Có thể mã đề bị lệch, hãy bấm Đồng bộ dữ liệu.")
+        access_level = quiz_access_level(qs)
+        if is_trial() and access_level != "FREE":
+            raise RuntimeError("Tài khoản dùng thử chỉ mở được đề FREE, không mở được đề VIP.")
+        sid = stable_hash(f"{session.get('mahs')}|{made}|{time.time()}|{random.random()}", 18)
+        self.quiz_sessions[sid] = {"made": made, "mahs": session.get("mahs"), "created": time.time(), "questions": qs, "used_5050": set(), "access_level": access_level}
+        reveal = is_admin()
+        return {
+            "sid": sid,
+            "admin": is_admin(),
+            "is_trial": is_trial(),
+            "access_level": access_level,
+            "can_5050": can_use_5050(),
+            "can_submit_score": not is_trial(),
+            "trial_message": "Tài khoản dùng thử: chỉ luyện đề FREE, không nộp/chấm điểm và không xem đáp án/lời giải." if is_trial() else "",
+            "questions": [self.public_question(q, i, reveal=reveal) for i, q in enumerate(qs)]
+        }
+
+    def check_quiz_session(self, sid: str) -> Dict[str, Any]:
+        ses = self.quiz_sessions.get(sid)
+        if not ses:
+            raise RuntimeError("Phiên làm bài đã hết hạn")
+        if ses.get("mahs") != session.get("mahs"):
+            raise RuntimeError("Phiên làm bài không thuộc tài khoản hiện tại")
+        return ses
+
+    def fifty_fifty(self, sid: str, index: int) -> Dict[str, Any]:
+        if not can_use_5050():
+            raise RuntimeError("Tài khoản này chưa được dùng Loại 2 câu sai")
+        ses = self.check_quiz_session(sid)
+        if index in ses["used_5050"]:
+            return {"hide": [], "message": "Câu này đã dùng Loại 2 câu sai rồi."}
+        qs = ses["questions"]
+        if not (0 <= index < len(qs)):
+            raise RuntimeError("Số câu không hợp lệ")
+        q = qs[index]
+        if norm_dang(q.get("Dang")) != "Trắc nghiệm":
+            return {"hide": [], "message": "Chỉ dùng được cho câu trắc nghiệm A-B-C-D."}
+        correct = norm_letter(q.get("DapAn"))
+        letters = [x for x in "ABCD" if clean(q.get(x))]
+        wrongs = [x for x in letters if x != correct]
+        random.shuffle(wrongs)
+        ses["used_5050"].add(index)
+        return {"hide": wrongs[:2], "message": "Đã loại 2 câu sai."}
+
+    def submit(self, sid: str, answers: Dict[str, Any]) -> Dict[str, Any]:
+        if is_trial():
+            raise RuntimeError("Tài khoản dùng thử không được nộp/chấm điểm. Thầy chỉ cho luyện thử các đề FREE trong 3 ngày.")
+        ses = self.check_quiz_session(sid)
+        qs = ses["questions"]
+        results = []
+        correct_count = 0
+        auto_count = 0
+        reveal = can_view_solution_after_submit() or is_admin()
+        for i, q in enumerate(qs):
+            ans = answers.get(str(i), "")
+            ok, correct, chosen = check_answer(q, ans)
+            if norm_dang(q.get("Dang")) != "Tự luận":
+                auto_count += 1
+                if ok:
+                    correct_count += 1
+            r = {"index": i, "ID": q.get("ID"), "Dang": q.get("Dang"), "ok": ok, "correct": correct, "chosen": chosen}
+            if reveal:
+                r.update({"DapAn": q.get("DapAn", ""), "LoiGiai": q.get("LoiGiai", "")})
+            results.append(r)
+        score = round(10 * correct_count / auto_count, 2) if auto_count else 0
+        self.save_result(ses.get("made"), qs, score, correct_count, auto_count, results)
+        return {"score": score, "correct_count": correct_count, "auto_count": auto_count, "total": len(qs), "show_solution": reveal, "results": results}
+
+    def save_result(self, made: str, qs: List[Dict[str, Any]], score: float, so_dung: int, tong: int, results: List[Dict[str, Any]]):
+        try:
+            u = current_user_public()
+            ten_de = qs[0].get("De") or qs[0].get("BaiHoc") or made if qs else made
+            self.ws_results.append_row([
+                now_str(), u.get("mahs"), u.get("hoten"), u.get("lop"), u.get("role"), made, ten_de, score, so_dung, tong,
+                json.dumps(results, ensure_ascii=False)
+            ], value_input_option="USER_ENTERED")
+        except Exception:
+            pass
+
+    def update_question(self, row_number: int, updates: Dict[str, Any]) -> Dict[str, Any]:
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được sửa câu hỏi")
+        if row_number < 2:
+            raise RuntimeError("Dòng Google Sheet không hợp lệ")
+        batch = []
+        for field, value in updates.items():
+            if field not in EDITABLE_FIELDS:
+                continue
+            col0 = self.question_col_index.get(field)
+            if col0 is None:
+                continue
+            # A1 notation
+            col = col0 + 1
+            a1 = gspread.utils.rowcol_to_a1(row_number, col)
+            batch.append({"range": a1, "values": [[clean(value)]]})
+        if not batch:
+            raise RuntimeError("Không có cột nào phù hợp để cập nhật. Kiểm tra tên cột trong sheet Cau_Hoi.")
+        self.ws_questions.batch_update(batch, value_input_option="USER_ENTERED")
+        self.load_questions()
+        return {"ok": True, "updated": len(batch), "row": row_number}
+
+
+def check_answer(q: Dict[str, Any], user_answer: Any) -> Tuple[bool, str, str]:
+    dang = norm_dang(q.get("Dang"))
+    correct_raw = clean(q.get("DapAn"))
     if dang == "Trắc nghiệm":
         c = norm_letter(correct_raw)
-        ch = norm_letter(str(ans or ""))
+        ch = norm_letter(user_answer)
         return bool(c and ch and c == ch), c, ch
-    if dang == "Trả lời ngắn":
-        cnum = parse_float_vn(correct_raw)
-        anum = parse_float_vn(str(ans or ""))
-        tol = parse_float_vn(q.get("SaiSo", "")) or 0.0
-        if cnum is not None and anum is not None:
-            return abs(cnum - anum) <= tol + 1e-12, correct_raw, str(ans or "")
-        return norm(correct_raw) == norm(ans), correct_raw, str(ans or "")
     if dang == "Đúng sai":
-        # Hỗ trợ đơn giản: đáp án dạng Đ,S,Đ,S hoặc D,S,D,S.
-        def arr(x: Any) -> List[str]:
+        def tf_list(x):
             if isinstance(x, list):
-                return [("Đ" if norm(v) in ["d", "đ", "dung", "đung", "true"] else "S" if norm(v) in ["s", "sai", "false"] else "") for v in x]
-            raw = strip_accents(clean(x).upper()).replace("DUNG", "D").replace("SAI", "S")
-            return ["Đ" if z == "D" else "S" for z in re.findall(r"[DS]", raw)[:4]]
-        c = arr(correct_raw)
-        a = arr(ans)
-        while len(a) < 4:
-            a.append("")
-        return bool(c and a[:len(c)] == c), ",".join(c), ",".join(a[:4])
-    return False, correct_raw, str(ans or "")
+                return ["Đ" if key_norm(v) in ["d", "đ", "dung", "đung", "đúng"] else "S" if key_norm(v) in ["s", "sai"] else "" for v in x][:4]
+            s = strip_accents(clean(x).upper()).replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
+            vals = re.findall(r"[DS]", s)[:4]
+            return ["Đ" if v == "D" else "S" for v in vals]
+        corr = tf_list(correct_raw)
+        chosen = tf_list(user_answer)
+        while len(chosen) < 4:
+            chosen.append("")
+        return len(corr) == 4 and corr == chosen[:4], ",".join(corr), ",".join(chosen[:4])
+    if dang == "Trả lời ngắn":
+        cn = parse_float_vn(correct_raw)
+        un = parse_float_vn(user_answer)
+        tol = parse_float_vn(q.get("SaiSo"))
+        if tol is None:
+            tol = 0.0
+        if cn is not None and un is not None:
+            return abs(cn - un) <= tol + 1e-12, correct_raw, clean(user_answer)
+        return key_norm(correct_raw) == key_norm(user_answer), correct_raw, clean(user_answer)
+    return False, correct_raw, clean(user_answer)
+
+STORE: Optional[SheetStore] = None
+
+def get_store(force_reload: bool = False) -> SheetStore:
+    global STORE
+    if STORE is None:
+        STORE = SheetStore()
+    if force_reload:
+        STORE.ensure_questions_loaded(force=True)
+    return STORE
+
+
+def current_user_public() -> Dict[str, Any]:
+    return {
+        "mahs": session.get("mahs", ""),
+        "hoten": session.get("hoten", ""),
+        "lop": session.get("lop", ""),
+        "role": session.get("role", ""),
+        "is_admin": is_admin(),
+        "is_trial": is_trial(),
+        "can_5050": can_use_5050(),
+        "can_submit_score": not is_trial(),
+        "trial_until": session.get("trial_until", ""),
+        "account_until": session.get("account_until", ""),
+    }
 
 # ============================================================
 # HTML
 # ============================================================
 
-LOGIN_HTML = """
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập</title>
-<style>body{font-family:Arial;background:#f3f6fb;margin:0}.box{max-width:430px;margin:8vh auto;background:#fff;border:1px solid #d6dee9;border-radius:16px;padding:22px;box-shadow:0 8px 28px #0001}.top{background:#1d4ed8;color:#fff;padding:14px 20px;font-weight:800}input,button{width:100%;padding:12px;margin:7px 0;border:1px solid #cbd5e1;border-radius:10px;font-size:15px}button{background:#1d4ed8;color:#fff;font-weight:800}.err{color:#b91c1c;background:#fee2e2;padding:10px;border-radius:10px}.muted{color:#64748b;font-size:13px}.trial{background:#16a34a}</style></head>
-<body><div class="top">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</div><div class="box">
-<h2>Đăng nhập học viên</h2>{% if error %}<div class="err">{{error}}</div>{% endif %}
-<form method="post" action="/login"><input name="mahs" placeholder="Mã học sinh / ADMIN" required><input name="password" placeholder="Mật khẩu" type="password" required><button>Đăng nhập</button></form>
-<hr><h3>Đăng ký dùng thử 3 ngày</h3><p class="muted">Tài khoản dùng thử chỉ mở được đề FREE, không chấm điểm, không xem đáp án/lời giải.</p>
-<form method="post" action="/trial-register"><input name="hoten" placeholder="Họ tên" required><input name="lop" placeholder="Lớp"><input name="phone" placeholder="Số điện thoại" required><input name="password" placeholder="Mật khẩu tự đặt" required><button class="trial">Đăng ký dùng thử</button></form>
-</div></body></html>"""
+LOGIN_HTML = r"""
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập luyện đề</title>
+<style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif}.box{max-width:460px;margin:55px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800}input,button{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}button{background:#1d4ed8;color:white;font-weight:800;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px;margin:8px 0}.ok{background:#dcfce7;color:#166534;padding:10px;border-radius:10px;margin:8px 0}.hint{font-size:13px;color:#64748b;line-height:1.5}.link{display:block;text-align:center;margin-top:12px;color:#1d4ed8;font-weight:800;text-decoration:none}</style></head><body>
+<div class="top">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</div>
+<div class="box"><h2>Đăng nhập học viên</h2>{% if error %}<div class="err">{{error}}</div>{% endif %}{% if msg %}<div class="ok">{{msg}}</div>{% endif %}
+<form method="post"><input type="hidden" name="device_id" id="device_id"><label>Mã học sinh / tài khoản</label><input name="mahs" autofocus required placeholder="VD: HS001 hoặc TRIAL_xxxx"><label>Mật khẩu</label><input name="password" type="password" required placeholder="Nhập mật khẩu"><button>Đăng nhập</button></form>
+<a class="link" href="/register">Đăng ký dùng thử miễn phí 3 ngày</a>
+<div class="hint">Tài khoản lấy từ sheet <b>HOC_VIEN</b>. ADMIN được xem đáp án và sửa câu hỏi trực tiếp. Tài khoản dùng thử chỉ được đăng ký 1 lần theo số điện thoại và thiết bị; chỉ luyện đề FREE, không chấm điểm.</div></div>
+<script>function did(){let k='LDVL_DEVICE_ID';let v=localStorage.getItem(k);if(!v){v='DEV_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem(k,v)}document.getElementById('device_id').value=v}did();</script></body></html>
+"""
 
-INDEX_HTML = r"""
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Luyện đề</title>
-<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+REGISTER_HTML = r"""
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng ký dùng thử</title>
+<style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif}.box{max-width:500px;margin:40px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800}input,button,select{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}button{background:#1d4ed8;color:white;font-weight:800;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px;margin:8px 0}.hint{font-size:13px;color:#64748b;line-height:1.5}.link{display:block;text-align:center;margin-top:12px;color:#1d4ed8;font-weight:800;text-decoration:none}</style></head><body>
+<div class="top">ĐĂNG KÝ DÙNG THỬ 3 NGÀY</div>
+<div class="box"><h2>Tạo tài khoản dùng thử</h2>{% if error %}<div class="err">{{error}}</div>{% endif %}
+<form method="post"><input type="hidden" name="device_id" id="device_id"><label>Họ tên học sinh</label><input name="hoten" required placeholder="Nhập họ tên"><label>Lớp</label><input name="lop" placeholder="VD: 12QT1"><label>Số điện thoại</label><input name="phone" required inputmode="tel" placeholder="Nhập số điện thoại"><label>Mật khẩu</label><input name="password" type="password" required placeholder="Tối thiểu 4 ký tự"><button>Đăng ký và vào làm bài</button></form>
+<a class="link" href="/login">Đã có tài khoản? Đăng nhập</a>
+<div class="hint">Mỗi số điện thoại và mỗi thiết bị chỉ được đăng ký dùng thử 1 lần. Tài khoản dùng thử được dùng 3 ngày, chỉ mở được các đề FREE. Tài khoản dùng thử không mở đề VIP, không nộp/chấm điểm, không xem đáp án/lời giải và không dùng Loại 2 câu sai.</div></div>
+<script>function did(){let k='LDVL_DEVICE_ID';let v=localStorage.getItem(k);if(!v){v='DEV_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem(k,v)}document.getElementById('device_id').value=v}did();</script></body></html>
+"""
+
+APP_HTML = r"""
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Luyện đề</title>
+<script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
-body{margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#111827}.top{background:#1d4ed8;color:#fff;padding:10px 18px;position:sticky;top:0;z-index:10}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid #d6dee9;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-size:12px;font-weight:700}select,input,textarea,button{font-family:inherit;font-size:15px;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px}button{font-weight:800;cursor:pointer}.btn{background:#1d4ed8;color:#fff;border-color:#1d4ed8}.btn2{background:#eef2ff;color:#1d4ed8}.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.red{background:#fee2e2;color:#991b1b;border-color:#fecaca}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{background:#fff;border:1px solid #d6dee9;border-radius:12px;padding:12px}.card h3{margin:0 0 8px;color:#1e3a8a}.tag{display:inline-block;background:#eef2ff;color:#1d4ed8;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:#dbe3ee;margin:10px 0}.muted{color:#64748b}.quiz{display:grid;grid-template-columns:1fr 260px;gap:12px}.qbox{border:1px solid #111;background:#fff;border-radius:8px;padding:14px;min-height:145px;line-height:1.55;font-size:18px}.opt{display:flex;gap:8px;align-items:flex-start;border:1px solid transparent;border-radius:10px;padding:10px;margin:7px 0}.correct{background:#dcfce7!important;border-color:#86efac!important}.wrong{background:#fee2e2!important;border-color:#fecaca!important}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:10px}.imgQ{display:block;max-width:100%;max-height:520px;margin:12px 0;border:1px solid #cbd5e1;border-radius:10px;background:#fff}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;background:#fff}.active{outline:3px solid #93c5fd}.adminbar{background:#ecfdf5;border:1px solid #86efac;color:#166534}.hide{display:none!important}.small{font-size:13px}@media(max-width:900px){.quiz{grid-template-columns:1fr}.qbox{font-size:16px}}
-</style></head><body><div class="top"><b>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</b><span style="float:right">{{hoten}} | {{role}} | <a style="color:white" href="/logout">Thoát</a></span><br><small id="info">Đang nạp...</small></div><div class="wrap">
-<div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div><button class="btn" onclick="renderCatalog()">Lọc đề</button>{% if role=='ADMIN' %}<button class="green" onclick="syncSheet()">ADMIN: Đồng bộ Sheet</button><button class="btn2" onclick="checkSheet()">ADMIN: Kiểm tra Sheet</button>{% endif %}</div></div><div id="loading" class="panel">⏳ Hệ thống đang nạp dữ liệu Google Sheet. Lần đầu Render Free vừa thức dậy có thể chờ 10–40 giây. Trang sẽ tự thử lại, không cần bấm nhiều lần.</div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><pre id="debug" class="small"></pre><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <b id="quizTitle"></b></div><div id="resultBox" style="font-weight:800"></div></div>{% if role=='ADMIN' %}<div class="panel adminbar">ADMIN: Đang ở chế độ soát đề. Thầy xem đáp án/lời giải ngay và có thể sửa câu hỏi trực tiếp.</div>{% endif %}<div class="quiz"><div><div class="panel"><div class="row" style="justify-content:space-between"><h2 id="qid"></h2><div><button id="btn5050" class="green" onclick="use5050()">Loại 2 câu sai</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div>{% if role=='ADMIN' %}<div id="editBox" class="panel"></div>{% endif %}<div class="row" style="justify-content:space-between"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="panel"><b>Bảng câu hỏi</b><div id="nav" class="nav" style="margin-top:10px"></div></div></div></div>
-</div><script>
-const ROLE={{role|tojson}}; let META=null,CATALOG=[],SID='',QUESTIONS=[],CUR=0,ANS={},SUB=false,RES={};
-function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')} function val(id){return document.getElementById(id).value} function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
-async function api(u,o={}){let r=await fetch(u,o); let t=await r.text(); let j=null; try{j=JSON.parse(t)}catch(e){if(r.status==401||t.includes('Đăng nhập học viên')){location.href='/login';return null} throw new Error('Máy chủ trả về HTML, không phải JSON. Hãy tải lại trang hoặc đăng nhập lại.')} if(!r.ok||j.error)throw new Error(j.error||'Lỗi'); return j}
-function setOpts(id,a){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+a.map(x=>`<option>${esc(x)}</option>`).join('')}
-async function init(){try{META=await api('/api/meta'); document.getElementById('loading').classList.add('hide'); CATALOG=META.catalog; document.getElementById('info').textContent=`${META.count_questions||''} dòng | ${META.count_catalog} mục | ${META.mode||''}`; for(let k of ['Mon','Lop','Chuong','BaiHoc','BoDe'])setOpts('f'+k,META.filters[k]||[]); renderCatalog()}catch(e){document.getElementById('loading').textContent='⏳ Đang nạp dữ liệu Google Sheet... '+e.message+' Trang sẽ tự thử lại sau 3 giây.'; setTimeout(init,3000)}}
-function ok(x){let s=val('fSearch').toLowerCase(); let b=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase(); return (!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||b.includes(s))}
-function renderCatalog(){let list=CATALOG.filter(ok); document.getElementById('countCat').textContent=`(${list.length} mục)`; document.getElementById('catalog').innerHTML=list.map(x=>`<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề')}</h3><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><div class="line"></div><b>Chương:</b> ${esc(x.Chuong)}<br><b>Bài:</b> ${esc(x.BaiHoc)}<br><b>Dạng:</b> ${esc(x.Dang)}<br><b>Mức độ:</b> ${esc(x.MucDo)}<br><b>Bộ đề:</b> ${esc(x.BoDe)}<div style="text-align:right;margin-top:10px"><button class="btn" onclick="startQuiz('${x.MaDe}')">Làm bài</button></div></div>`).join('')||'Không có đề phù hợp.'}
-async function syncSheet(){await api('/api/admin/sync',{method:'POST'}); alert('Đã đồng bộ Sheet.'); await init()} async function checkSheet(){let j=await api('/api/admin/check'); document.getElementById('debug').textContent=JSON.stringify(j,null,2)}
-async function startQuiz(made){try{let j=await api('/api/start?made='+encodeURIComponent(made)); SID=j.sid; QUESTIONS=j.questions; CUR=0; ANS={}; SUB=(ROLE=='ADMIN'); RES={}; if(j.results){for(let r of j.results)RES[r.index]=r} document.getElementById('home').classList.add('hide'); document.getElementById('quiz').classList.remove('hide'); document.getElementById('btnSubmit').style.display=(ROLE=='TRIAL'||ROLE=='ADMIN')?'none':''; renderQ()}catch(e){alert(e.message)}}
-function save(){let q=QUESTIONS[CUR]; if(!q)return; if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="a${CUR}"]:checked`); if(r)ANS[CUR]=r.value}else{let el=document.getElementById('shortAns'); if(el)ANS[CUR]=el.value} renderNav()}
-function renderNav(){let h=''; for(let i=0;i<QUESTIONS.length;i++){let c='num'; if(i==CUR)c+=' active'; if(SUB&&RES[i])c+=RES[i].ok?' correct':' wrong'; h+=`<button class="${c}" onclick="goQ(${i})">${i+1}</button>`} document.getElementById('nav').innerHTML=h}
-function goQ(i){save(); CUR=i; renderQ()} function prevQ(){if(CUR>0){save();CUR--;renderQ()}} function nextQ(){if(CUR<QUESTIONS.length-1){save();CUR++;renderQ()}}
-function renderQ(){let q=QUESTIONS[CUR]; renderNav(); document.getElementById('qid').textContent=`Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID} | ${q.MucDo} - ${q.Dang}`; let img=q.HinhAnh?`<img class="imgQ" src="/img?src=${encodeURIComponent(q.HinhAnh)}">`:''; document.getElementById('qtext').innerHTML=esc(q.CauHoi)+img; let h=''; if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue; let cls='opt'; if(SUB&&RES[CUR]){if(RES[CUR].correct==L)cls+=' correct'; if(RES[CUR].chosen==L&&RES[CUR].chosen!=RES[CUR].correct)cls+=' wrong'} h+=`<label id="opt${L}" class="${cls}"><input type="radio" name="a${CUR}" value="${L}" ${ANS[CUR]==L?'checked':''} ${SUB?'disabled':''} onchange="save()"><b>${L}.</b> <span>${esc(q[L])}</span></label>`}}else{h=`<textarea id="shortAns" style="width:100%;min-height:100px" ${SUB?'disabled':''} oninput="save()">${esc(ANS[CUR]||'')}</textarea>`} document.getElementById('options').innerHTML=h; let sol=document.getElementById('solution'); if(SUB&&RES[CUR]){sol.classList.remove('hide'); sol.innerHTML=`<b>Đáp án:</b> ${esc(RES[CUR].correct||RES[CUR].DapAn)}<div class="line"></div><b>Lời giải:</b><br>${esc(RES[CUR].LoiGiai||'Chưa có lời giải')}`}else sol.classList.add('hide'); if(ROLE=='ADMIN')renderEdit(q); typeset()}
-function renderEdit(q){document.getElementById('editBox').innerHTML=`<h3>ADMIN: Sửa câu hỏi</h3><textarea id="eCauHoi" style="width:100%;min-height:80px">${esc(q.CauHoi)}</textarea><div class="row"><input id="eA" value="${esc(q.A)}" placeholder="A"><input id="eB" value="${esc(q.B)}" placeholder="B"><input id="eC" value="${esc(q.C)}" placeholder="C"><input id="eD" value="${esc(q.D)}" placeholder="D"></div><div class="row"><input id="eDapAn" value="${esc(q.DapAn)}" placeholder="Đáp án"><input id="eHinhAnh" value="${esc(q.HinhAnh)}" placeholder="Hình ảnh/link/ID/tên ảnh"><input id="eMucDo" value="${esc(q.MucDo)}" placeholder="Mức độ"><input id="eDang" value="${esc(q.Dang)}" placeholder="Dạng"></div><textarea id="eLoiGiai" style="width:100%;min-height:90px" placeholder="Lời giải">${esc(q.LoiGiai)}</textarea><button class="green" onclick="saveEdit()">Lưu vào Google Sheet</button>`}
-async function saveEdit(){let q=QUESTIONS[CUR]; let payload={row:q.Row,CauHoi:val('eCauHoi'),A:val('eA'),B:val('eB'),C:val('eC'),D:val('eD'),DapAn:val('eDapAn'),HinhAnh:val('eHinhAnh'),MucDo:val('eMucDo'),Dang:val('eDang'),LoiGiai:val('eLoiGiai')}; await api('/api/admin/save-question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); alert('Đã lưu. Bấm đồng bộ nếu cần cập nhật mục lục.'); Object.assign(q,payload); renderQ()}
-async function use5050(){let q=QUESTIONS[CUR]; if(q.Dang!='Trắc nghiệm')return alert('Chỉ dùng cho trắc nghiệm'); if(!(ROLE=='VIP'||ROLE=='SVIP'||ROLE=='ADMIN'))return alert('Chỉ VIP/S.VIP/ADMIN được dùng'); let c=String(q.DapAn||'').match(/[ABCD]/); c=c?c[0]:''; let wrong=['A','B','C','D'].filter(x=>x!=c&&q[x]); wrong.sort(()=>Math.random()-.5); for(let L of wrong.slice(0,2)){let el=document.getElementById('opt'+L); if(el){el.style.opacity=.25; el.style.textDecoration='line-through'}}}
-async function submitQuiz(){save(); if(!confirm('Nộp bài?'))return; let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANS})}); SUB=true; RES={}; for(let r of j.results)RES[r.index]=r; document.getElementById('resultBox').textContent=`Điểm ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count}`; renderQ()}
-function backHome(){document.getElementById('quiz').classList.add('hide'); document.getElementById('home').classList.remove('hide')}
-init();
+:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;font-size:15px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.top h1{font-size:18px;margin:0}.top a{color:#fff}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:#eef2ff;color:#1d4ed8}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px}.card h3{margin:0 0 8px;color:#1e3a8a}.tag{display:inline-block;background:#eef2ff;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:#64748b}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:#fff}.opt:hover{background:#f8fafc}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:#fff}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:#fff;border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}}
+</style></head>
+<body><div class="top"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div><span id="info">Đang nạp...</span> | <span id="me"></span> | <a href="/logout">Thoát</a></div></div>
+<div class="wrap">
+<div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div><button class="btn" onclick="renderCatalog()">Lọc đề</button><button id="syncBtn" class="btnGreen hide" onclick="syncData()">ADMIN: Đồng bộ Sheet</button></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span></div><div id="resultBox" style="font-weight:800;font-size:18px"></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnEdit" class="btn2 hide" onclick="openEdit()">ADMIN: Sửa câu</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="panel"><b>Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div>
+</div><div id="modal" class="modal hide"><div class="modalBox"><h3>ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button onclick="closeEdit()">Hủy</button><button class="btn" onclick="saveEdit()">Lưu vào Google Sheet</button></div></div></div>
+<script>
+let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={};
+function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
+function val(id){return document.getElementById(id).value}function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
+async function api(url,opts={}){let r=await fetch(url,opts);let j=await r.json().catch(()=>({error:'Không đọc được phản hồi'}));if(!r.ok||j.error){if(r.status==401)location='/login';throw new Error(j.error||'Lỗi API')}return j}
+function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
+async function init(){META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;if(USER.is_admin)document.getElementById('syncBtn').classList.remove('hide');if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card" style="border-color:#93c5fd;background:#eff6ff"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin:10px 0"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p style="color:red"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
+function okFilter(x){let s=val('fSearch').toLowerCase();let blob=[x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' ').toLowerCase();return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&(!s||blob.includes(s))}
+function renderCatalog(){let list=CATALOG.filter(okFilter);document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btn" onclick="startQuiz('${x.MaDe}')">Làm bài</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${note}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
+async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
+async function startQuiz(made){try{let j=await api('/api/start?made='+encodeURIComponent(made));SID=j.sid;QUESTIONS=j.questions;CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}`;renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
+function backHome(){document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide')}function saveCurrent(){let q=QUESTIONS[CUR];if(!q||USER.is_admin)return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r)ANSWERS[CUR]=r.value}else if(q.Dang=='Đúng sai'){let arr=[];for(let L of ['A','B','C','D']){let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr}else{let el=document.getElementById('shortAns');if(el)ANSWERS[CUR]=el.value}renderNav()}
+function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if(SUBMITTED&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';html+=`<button class="${cls}" onclick="goQ(${i})">${i+1}</button>`}document.getElementById('navNums').innerHTML=html}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}}
+function renderQuestion(){let q=QUESTIONS[CUR];renderNav();document.getElementById('qid').textContent=`Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=esc(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050;document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if(SUBMITTED&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let corr=String(q.DapAn||'').toUpperCase();for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;html+=`<div class="tfrow"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${SUBMITTED?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let showSol=USER.is_admin||(SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL');document.getElementById('solution').classList.toggle('hide',!showSol);if(showSol){let r=RESULTS[CUR]||{};document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${esc(r.correct||q.DapAn||'')}<br><b>Lời giải:</b><br>${esc(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`}typeset()}
+async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;if(j.message)alert(j.message)}catch(e){alert(e.message)}}
+async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count}`;renderQuestion();renderNav()}
+function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'];document.getElementById('editForm').innerHTML=fields.map(f=>`<div><label><b>${f}</b></label><textarea id="edit_${f}">${String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}</textarea></div>`).join('');document.getElementById('modal').classList.remove('hide')}
+function closeEdit(){document.getElementById('modal').classList.add('hide')}async function saveEdit(){let q=QUESTIONS[CUR];let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row);Object.assign(q,updates);closeEdit();renderQuestion()}
+init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
 </script></body></html>
 """
 
@@ -652,224 +973,168 @@ init();
 def version():
     return jsonify({
         "version": APP_VERSION,
-        "exact_AJ_filter": True,
-        "full_rows_dynamic_header": True,
-        "image_column": "header HinhAnh, fallback T",
-        "quiz_reads_range": "A:AZ",
-        "optional_env_GOOGLE_IMAGE_FOLDER_ID": bool(IMAGE_FOLDER_ID),
+        "login_required": True,
+        "fast_login_cache": True,
+        "login_reads_only_hoc_vien": True,
+        "trial_register_3_days": True,
+        "trial_only_free_exam": True,
+        "trial_no_submit_no_score": True,
+        "base": "V10_SAFE_LOADING_NOTICE_WORKING",
+        "image_column_T_fix": True,
+        "trial_no_vip_exam": True,
+        "admin_can_view_without_submit": True,
+        "admin_can_edit_question": True,
+        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update"]
     })
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "GET":
-        return render_template_string(LOGIN_HTML, error=request.args.get("error", ""))
-    mahs = clean(request.form.get("mahs"))
-    pw = clean(request.form.get("password"))
-    users = load_users(False)
-    u = users.get(mahs)
-    if not u or u.get("password") != pw:
-        return render_template_string(LOGIN_HTML, error="Sai mã học sinh hoặc mật khẩu")
-    if u.get("status") not in ["ON", "ACTIVE", ""]:
-        return render_template_string(LOGIN_HTML, error="Tài khoản đang bị khóa")
-    if u.get("role") == "TRIAL":
-        end = parse_date_any(u.get("trial_end"))
-        if end and datetime.now() > end:
-            return render_template_string(LOGIN_HTML, error="Tài khoản dùng thử đã hết hạn")
-    token = stable_hash(mahs + str(time.time()) + os.urandom(8).hex(), 24)
-    _ACTIVE_TOKENS[mahs] = token
-    session.update({"mahs": mahs, "hoten": u.get("hoten"), "lop": u.get("lop"), "role": u.get("role"), "token": token})
-    return redirect("/")
+    error = ""
+    if request.method == "POST":
+        mahs = clean(request.form.get("mahs"))
+        password = clean(request.form.get("password"))
+        try:
+            store = get_store()
+            store.ensure_users_loaded()
+            user = store.users.get(mahs)
+            if not user:
+                # Không phân biệt hoa thường
+                for k, v in store.users.items():
+                    if key_norm(k) == key_norm(mahs):
+                        user = v
+                        mahs = k
+                        break
+            if not user:
+                error = "Không thấy tài khoản trong sheet HOC_VIEN."
+            elif user.get("status", "ON").upper() not in ["ON", "ACTIVE", "1", "TRUE", "VIP", "ADMIN", "TRIAL"]:
+                error = "Tài khoản đang bị khóa hoặc chưa kích hoạt."
+            elif store.is_user_expired(user)[0]:
+                error = store.is_user_expired(user)[1]
+            elif clean(user.get("password")) != password:
+                error = "Sai mật khẩu."
+            else:
+                token = stable_hash(f"{mahs}|{time.time()}|{random.random()}", 24)
+                store.active_tokens[mahs] = token
+                session.clear()
+                session.update({
+                    "mahs": user.get("mahs"), "hoten": user.get("hoten"), "lop": user.get("lop"),
+                    "role": user.get("role"), "session_token": token,
+                    "trial_until": user.get("trial_until", ""), "account_until": user.get("account_until", "")
+                })
+                return redirect(url_for("home"))
+        except Exception as e:
+            error = str(e)
+    return render_template_string(LOGIN_HTML, error=error, msg=request.args.get("msg", ""))
 
-
-@app.route("/trial-register", methods=["POST"])
-def trial_register():
-    hoten = clean(request.form.get("hoten"))
-    lop = clean(request.form.get("lop"))
-    phone = clean(request.form.get("phone"))
-    password = clean(request.form.get("password")) or "123456"
-    digits = re.sub(r"\D+", "", phone)
-    if len(digits) < 6:
-        return render_template_string(LOGIN_HTML, error="Số điện thoại chưa hợp lệ")
-    users = load_users(True)
-    for u in users.values():
-        if re.sub(r"\D+", "", u.get("phone", "")) == digits:
-            return render_template_string(LOGIN_HTML, error="Số điện thoại này đã đăng ký")
-    mahs = "TRIAL_" + stable_hash(digits + str(time.time()), 8).upper()
-    device = request.headers.get("User-Agent", "")[:80]
-    append_trial_user(mahs, hoten, lop, phone, password, device)
-    return render_template_string(LOGIN_HTML, error=f"Đăng ký thành công. Mã đăng nhập: {mahs}. Mật khẩu: {password}")
-
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    error = ""
+    if request.method == "POST":
+        try:
+            store = get_store()
+            user = store.register_trial(
+                request.form.get("hoten", ""),
+                request.form.get("lop", ""),
+                request.form.get("phone", ""),
+                request.form.get("password", ""),
+                request.form.get("device_id", ""),
+            )
+            token = stable_hash(f"{user.get('mahs')}|{time.time()}|{random.random()}", 24)
+            store.active_tokens[user.get("mahs")] = token
+            session.clear()
+            session.update({
+                "mahs": user.get("mahs"), "hoten": user.get("hoten"), "lop": user.get("lop"),
+                "role": user.get("role"), "session_token": token,
+                "trial_until": user.get("trial_until", ""), "account_until": user.get("account_until", "")
+            })
+            return redirect(url_for("home"))
+        except Exception as e:
+            error = str(e)
+    return render_template_string(REGISTER_HTML, error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/login")
-
-
-def require_login():
-    if not session.get("mahs"):
-        return False
-    # Đá phiên cũ nếu có phiên mới đăng nhập cùng tài khoản.
-    token = _ACTIVE_TOKENS.get(session.get("mahs"))
-    if token and token != session.get("token"):
-        session.clear()
-        return False
-    return True
-
+    return redirect(url_for("login"))
 
 @app.route("/")
 def home():
-    if not require_login():
-        return redirect("/login")
-    return render_template_string(INDEX_HTML, **current_user())
-
+    if not session.get("mahs"):
+        return redirect(url_for("login"))
+    return render_template_string(APP_HTML)
 
 @app.route("/api/meta")
 def api_meta():
-    if not require_login():
-        return jsonify(error="Chưa đăng nhập"), 401
-    items, debug = load_catalog(False)
-    def opts(field: str):
-        return sorted({clean(x.get(field, "")) for x in items if clean(x.get(field, ""))}, key=norm)
-    return jsonify({
-        "mode": debug.get("mode"),
-        "count_catalog": len(items),
-        "count_questions": debug.get("count_rows"),
-        "filters": {"Mon": opts("Mon"), "Lop": opts("Lop"), "Chuong": opts("Chuong"), "BaiHoc": opts("BaiHoc"), "BoDe": opts("BoDe")},
-        "catalog": items,
-    })
+    bad = require_login_json()
+    if bad:
+        return bad
+    st = get_store()
+    return jsonify(st.meta_light())
 
-
-@app.route("/api/admin/sync", methods=["POST"])
-def api_admin_sync():
+@app.route("/api/sync", methods=["POST"])
+def api_sync():
+    bad = require_login_json()
+    if bad:
+        return bad
     if not is_admin():
-        return jsonify(error="Chỉ ADMIN"), 403
-    invalidate_question_cache()
-    load_catalog(True)
-    load_full_rows(True)
-    return jsonify(ok=True, time=now_str())
-
-
-@app.route("/api/admin/check")
-def api_admin_check():
-    if not is_admin():
-        return jsonify(error="Chỉ ADMIN"), 403
-    items, debug = load_catalog(False)
-    return jsonify({"version": APP_VERSION, "catalog_count": len(items), "debug": debug})
-
+        return jsonify({"error": "Chỉ ADMIN được đồng bộ dữ liệu"}), 403
+    st = get_store()
+    st.questions_loaded = False
+    st.start_questions_background(force=True)
+    return jsonify({"ok": True, "loading": True, "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây."})
 
 @app.route("/api/start")
 def api_start():
-    if not require_login():
-        return jsonify(error="Chưa đăng nhập"), 401
-    made = clean(request.args.get("made"))
-    qs = load_questions_by_made(made)
-    if not qs:
-        return jsonify(error="Không có câu hỏi trong đề này hoặc MaDe chưa khớp"), 404
-    role = session.get("role", "FREE")
-    # Quyền truy cập: nếu có câu VIP thì TRIAL/FREE không được mở.
-    access = "FREE"
-    for q in qs:
-        if norm(q.get("QuyenTruyCap")) in ["vip", "s.vip", "svip"]:
-            access = "VIP"
-            break
-    if access == "VIP" and role not in ["VIP", "SVIP", "ADMIN"]:
-        return jsonify(error="Đề này dành cho VIP/S.VIP. Tài khoản hiện tại không được mở."), 403
-    sid = stable_hash(made + session.get("mahs", "") + str(time.time()), 16)
-    session["sid"] = sid
-    session["quiz_made"] = made
-    public = []
-    results = []
-    for i, q in enumerate(qs):
-        qq = {k: q.get(k, "") for k in ["Row","ID","MaDe","Dang","MucDo","CauHoi","A","B","C","D","DapAn","SaiSo","LoiGiai","HinhAnh","QuyenTruyCap"]}
-        qq["Dang"] = normalize_dang(qq.get("Dang", ""))
-        public.append(qq)
-        if role == "ADMIN":
-            results.append({"index": i, "ok": True, "correct": norm_letter(q.get("DapAn")) or q.get("DapAn"), "chosen": "", "DapAn": q.get("DapAn"), "LoiGiai": q.get("LoiGiai")})
-    return jsonify({"sid": sid, "questions": public, "admin": role == "ADMIN", "results": results})
+    bad = require_login_json()
+    if bad:
+        return bad
+    made = request.args.get("made", "")
+    st = get_store()
+    if not st.questions_loaded:
+        st.start_questions_background(force=False)
+        return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
+    return jsonify(st.start_quiz(made))
 
+@app.route("/api/fifty", methods=["POST"])
+def api_fifty():
+    bad = require_login_json()
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(get_store().fifty_fifty(body.get("sid", ""), int(body.get("index", 0))))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route("/api/submit", methods=["POST"])
 def api_submit():
-    if not require_login():
-        return jsonify(error="Chưa đăng nhập"), 401
-    role = session.get("role", "FREE")
-    if role == "TRIAL":
-        return jsonify(error="Tài khoản dùng thử không chấm điểm và không nộp bài."), 403
+    bad = require_login_json()
+    if bad:
+        return bad
     body = request.get_json(silent=True) or {}
-    made = session.get("quiz_made", "")
-    qs = load_questions_by_made(made)
-    answers = body.get("answers", {})
-    results = []
-    correct_count = 0
-    auto_count = 0
-    for i, q in enumerate(qs):
-        ok, correct, chosen = check_answer(q, answers.get(str(i), ""))
-        if normalize_dang(q.get("Dang")) != "Tự luận":
-            auto_count += 1
-            correct_count += 1 if ok else 0
-        results.append({"index": i, "ID": q.get("ID"), "ok": ok, "correct": correct, "chosen": chosen, "DapAn": q.get("DapAn"), "LoiGiai": q.get("LoiGiai")})
-    score = round(10 * correct_count / auto_count, 2) if auto_count else 0
-    # Ghi Ket_Qua nếu có sheet.
     try:
-        ws = get_ws(SHEET_NAME_RESULTS)
-        ws.append_row([now_str(), session.get("mahs"), session.get("hoten"), made, score, correct_count, auto_count], value_input_option="USER_ENTERED")
-    except Exception:
-        pass
-    return jsonify({"score": score, "correct_count": correct_count, "auto_count": auto_count, "results": results})
-
-
-@app.route("/api/admin/save-question", methods=["POST"])
-def api_admin_save_question():
-    if not is_admin():
-        return jsonify(error="Chỉ ADMIN"), 403
-    body = request.get_json(silent=True) or {}
-    row = int(body.get("row") or 0)
-    if row <= 1:
-        return jsonify(error="Row không hợp lệ"), 400
-    ws = get_ws(SHEET_NAME_QUESTIONS)
-    # A:J cố định; từ K trở đi tìm cột theo tiêu đề, fallback theo bố cục thường dùng.
-    headers = [clean(x) for x in ws.row_values(1)]
-    hmap = _header_map(headers)
-    def col_letter(idx0: int) -> str:
-        n = idx0 + 1
-        out = ""
-        while n:
-            n, r = divmod(n - 1, 26)
-            out = chr(65 + r) + out
-        return out
-    fallback_idx = {"MucDo":8, "Dang":9, "CauHoi":10, "A":11, "B":12, "C":13, "D":14, "DapAn":15, "SaiSo":16, "LoiGiai":17, "HinhAnh":19, "QuyenTruyCap":20}
-    save_aliases = dict(FULL_FIELD_ALIASES)
-    save_aliases.update({"MucDo":["MucDo", "Mức độ", "Muc do"], "Dang":["Dang", "Dạng" ]})
-    updates = []
-    for k, aliases in save_aliases.items():
-        if k not in body:
-            continue
-        idx = None
-        for name in aliases:
-            idx = hmap.get(norm(name))
-            if idx is not None:
-                break
-        if idx is None:
-            idx = fallback_idx.get(k)
-        if idx is not None:
-            updates.append({"range": f"{col_letter(idx)}{row}", "values": [[clean(body.get(k))]]})
-    if updates:
-        ws.batch_update(updates, value_input_option="USER_ENTERED")
-        invalidate_question_cache()
-    return jsonify(ok=True, row=row)
-
-
-@app.route("/img")
-def img_route():
-    src = request.args.get("src", "")
-    try:
-        data, mt = read_image_bytes(src)
-        return Response(data, mimetype=mt, headers={"Cache-Control": "public, max-age=3600"})
+        return jsonify(get_store().submit(body.get("sid", ""), body.get("answers", {})))
     except Exception as e:
-        return Response(svg_error(str(e)), mimetype="image/svg+xml")
+        return jsonify({"error": str(e)}), 400
 
+@app.route("/api/question/update", methods=["POST"])
+def api_question_update():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được sửa câu hỏi"}), 403
+    body = request.get_json(silent=True) or {}
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        return jsonify(st.update_question(int(body.get("row", 0)), body.get("updates", {})))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
