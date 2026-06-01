@@ -127,11 +127,12 @@ def norm_letter(s: Any) -> str:
 
 def norm_dang(s: Any) -> str:
     k = key_norm(s)
-    if any(x in k for x in ["dung sai", "true false", "tf", "ds", "d s"]):
+    k2 = k.replace("/", " ").replace("\\", " ").replace("-", " ")
+    if any(x in k2 for x in ["dung sai", "true false", "tf", "ds", "d s"]):
         return "Đúng sai"
-    if any(x in k for x in ["tra loi ngan", "short", "tln", "shortans"]):
+    if any(x in k2 for x in ["tra loi ngan", "short", "tln", "shortans"]):
         return "Trả lời ngắn"
-    if any(x in k for x in ["tu luan", "essay", "tl"]):
+    if any(x in k2 for x in ["tu luan", "essay", "tl"]):
         return "Tự luận"
     return "Trắc nghiệm"
 
@@ -359,7 +360,8 @@ def get_field(row: Dict[str, Any], canonical: str) -> str:
 
 def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q = {f: get_field(row, f) for f in QUESTION_FIELDS}
-    q["Dang"] = norm_dang(q.get("Dang"))
+    # Một số sheet ghi dạng câu ở "Dạng bài tập" thay vì "Dạng".
+    q["Dang"] = norm_dang(q.get("Dang") or q.get("DangBaiTap"))
     if not q.get("De"):
         q["De"] = q.get("BaiHoc", "") or q.get("BoDe", "")
     if not q.get("MaDe"):
