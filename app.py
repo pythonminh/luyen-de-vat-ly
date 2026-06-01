@@ -360,8 +360,6 @@ def get_field(row: Dict[str, Any], canonical: str) -> str:
 
 def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q = {f: get_field(row, f) for f in QUESTION_FIELDS}
-    # Một số sheet ghi dạng câu ở "Dạng bài tập" thay vì "Dạng".
-    q["Dang"] = norm_dang(q.get("Dang") or q.get("DangBaiTap"))
     if not q.get("De"):
         q["De"] = q.get("BaiHoc", "") or q.get("BoDe", "")
     if not q.get("MaDe"):
@@ -642,6 +640,8 @@ class SheetStore:
                 continue
             q = canonical_question(raw)
             apply_sheet_layout_fallback(q, row_vals, self.sheet_col_0)
+            # Chuẩn hóa dạng câu sau khi đã fallback vị trí cột, tránh bị default sai.
+            q["Dang"] = norm_dang(q.get("Dang") or q.get("DangBaiTap"))
             q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
 
             if not clean(q.get("CauHoi")):
