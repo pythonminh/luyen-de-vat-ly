@@ -677,6 +677,9 @@ class SheetStore:
             raise RuntimeError("Thiếu thư viện gspread/google-auth. Hãy kiểm tra requirements.txt")
         creds = self.get_google_creds()
         self.client = gspread.authorize(creds)
+        sheet_id = os.environ.get("GOOGLE_SHEET_ID", "").strip()
+        if not sheet_id:
+            raise RuntimeError("Thiếu GOOGLE_SHEET_ID trên Render")
         self.sheet = self.client.open_by_key(sheet_id)
 
     def worksheet_or_none(self, name: str):
