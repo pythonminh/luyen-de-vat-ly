@@ -17,11 +17,13 @@ import time
 import unicodedata
 import hashlib
 import threading
+import urllib.error
 import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
+from flask import Flask, Response, jsonify, redirect, render_template_string, request, session, url_for
 
 try:
     import gspread
@@ -30,8 +32,11 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V11_DUNGSAI_COL_P_2026_06_01"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+APP_VERSION = "V11_DUNGSAI_COL_P_IMG_T_LATEX_2026_06_01"
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.readonly",
+]
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-key-change-me")
@@ -461,13 +466,10 @@ def apply_sheet_layout_fallback(q: Dict[str, str], row_vals: List[str], layout_c
         dang_raw = clean(row_vals[dang_col])
         if dang_raw:
             q["Dang"] = dang_raw
-    for col0 in (layout_cols.get("HinhAnh"), 19, 16):
-        if col0 is None or col0 >= len(row_vals):
-            continue
-        t_img = clean(row_vals[col0])
-        if is_probably_link_or_drive(t_img) or (t_img and not clean(q.get("HinhAnh"))):
-            q["HinhAnh"] = t_img
-            break
+    # Hình ảnh (cột T trên sheet V1) — luôn lấy đúng cột, tránh nhầm cột Video/Link khác.
+    img_col = layout_cols.get("HinhAnh")
+    if img_col is not None and img_col < len(row_vals):
+        q["HinhAnh"] = clean(row_vals[img_col])
     # U: Quyền truy cập — luôn cột 20 (sau T hình ảnh). Trống = FREE.
     if 20 < len(row_vals) and not clean(q.get("QuyenTruyCap")):
         q["QuyenTruyCap"] = clean(row_vals[20])
@@ -547,9 +549,8 @@ def extract_drive_file_id(value: Any) -> str:
 
 def normalize_image_src(value: Any) -> str:
     """Chuẩn hóa cột hình ảnh để <img> hiện được ngay.
-    - Link Drive dạng xem -> thumbnail public.
-    - File ID Drive -> thumbnail public.
-    - Link ảnh trực tiếp -> giữ nguyên.
+    - Link Google Drive -> proxy /api/drive-img (tránh bị chặn hotlink).
+    - Link ảnh trực tiếp (http/https) -> giữ nguyên.
     - Images/abc.png -> /static/Images/abc.png nếu repo có thư mục static.
     """
     s = clean(value)
@@ -558,18 +559,20 @@ def normalize_image_src(value: Any) -> str:
     m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
     if m:
         s = m.group(1).strip()
+    # lh3.googleusercontent.com thường xem được trực tiếp
+    if "googleusercontent.com" in s and (s.startswith("http://") or s.startswith("https://")):
+        return s
     fid = extract_drive_file_id(s)
     if fid:
-        return f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
-    if s.startswith('http://') or s.startswith('https://'):
+        return f"/api/drive-img/{fid}"
+    if s.startswith("http://") or s.startswith("https://"):
         return s
-    # Hỗ trợ ảnh local nếu thầy upload vào GitHub: static/Images/tenfile.png
-    if s.startswith('/static/'):
+    if s.startswith("/static/"):
         return s
-    if s.lower().startswith('static/'):
-        return '/' + s
-    if s.lower().startswith('images/'):
-        return '/static/' + s
+    if s.lower().startswith("static/"):
+        return "/" + s
+    if s.lower().startswith("images/"):
+        return "/static/" + s
     return s
 
 
@@ -611,10 +614,11 @@ class SheetStore:
         self.questions_loading = False
         self.questions_error = ""
         self.load_lock = threading.Lock()
+        self._google_creds = None
 
-    def connect(self):
-        if self.sheet is not None:
-            return
+    def get_google_creds(self):
+        if self._google_creds is not None:
+            return self._google_creds
         if gspread is None or Credentials is None:
             raise RuntimeError("Thiếu thư viện gspread/google-auth. Hãy kiểm tra requirements.txt")
         sheet_id = os.environ.get("GOOGLE_SHEET_ID", "").strip()
@@ -627,7 +631,51 @@ class SheetStore:
             raise RuntimeError("GOOGLE_CREDENTIALS_JSON không phải JSON hợp lệ. Hãy dán toàn bộ file key JSON.") from e
         if "private_key" in info:
             info["private_key"] = info["private_key"].replace("\\n", "\n")
-        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        self._google_creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        return self._google_creds
+
+    def fetch_drive_image(self, file_id: str) -> Tuple[bytes, str]:
+        """Tải ảnh từ Google Drive qua service account hoặc link public."""
+        from google.auth.transport.requests import Request
+
+        fid = extract_drive_file_id(file_id) or clean(file_id)
+        if not re.fullmatch(r"[A-Za-z0-9_-]{20,}", fid):
+            raise ValueError("File ID Google Drive không hợp lệ")
+
+        creds = self.get_google_creds()
+        creds.refresh(Request())
+        api_url = f"https://www.googleapis.com/drive/v3/files/{urllib.parse.quote(fid)}?alt=media"
+        req = urllib.request.Request(api_url, headers={"Authorization": f"Bearer {creds.token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                ctype = resp.headers.get("Content-Type", "image/jpeg")
+                data = resp.read()
+                if data and "text/html" not in ctype:
+                    return data, ctype
+        except urllib.error.HTTPError:
+            pass
+
+        for pub_url in (
+            f"https://drive.google.com/uc?export=download&id={fid}",
+            f"https://drive.google.com/thumbnail?id={fid}&sz=w1600",
+        ):
+            try:
+                req2 = urllib.request.Request(pub_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req2, timeout=25) as resp2:
+                    ctype = resp2.headers.get("Content-Type", "image/jpeg")
+                    data = resp2.read()
+                    if data and "text/html" not in ctype:
+                        return data, ctype
+            except Exception:
+                continue
+        raise RuntimeError("Không tải được ảnh từ Google Drive. Kiểm tra link cột T và quyền chia sẻ file.")
+
+    def connect(self):
+        if self.sheet is not None:
+            return
+        if gspread is None or Credentials is None:
+            raise RuntimeError("Thiếu thư viện gspread/google-auth. Hãy kiểm tra requirements.txt")
+        creds = self.get_google_creds()
         self.client = gspread.authorize(creds)
         self.sheet = self.client.open_by_key(sheet_id)
 
@@ -1214,10 +1262,10 @@ REGISTER_HTML = r"""
 APP_HTML = r"""
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Luyện đề</title>
-<script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
+<script>window.MathJax={tex:{packages:{'[+]':['ams','boldsymbol','textmacros','newcommand','configmacros','unicode']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},svg:{fontCache:"global"}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
-:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;font-size:15px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.top h1{font-size:18px;margin:0}.top.doing h1{font-size:20px;font-weight:900;letter-spacing:.2px}.top.doing #info{font-size:15px;line-height:1.45;opacity:1}.topSub{margin-top:4px;font-size:14px;opacity:.95}.top a{color:#fff}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:#eef2ff;color:#1d4ed8}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px}.card h3{margin:0 0 8px;color:#1e3a8a}.tag{display:inline-block;background:#eef2ff;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:#64748b}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:#fff}.opt:hover{background:#f8fafc}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px}.quizTimer{display:inline-flex;align-items:center;gap:6px;background:#fef3c7;border:2px solid #f59e0b;color:#92400e;padding:8px 14px;border-radius:10px;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;min-width:110px;justify-content:center}.quizTimer.done{background:#e0e7ff;border-color:#6366f1;color:#3730a3}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:#fff}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:#fff;border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}}
+:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;font-size:15px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.top h1{font-size:18px;margin:0}.top.doing h1{font-size:20px;font-weight:900;letter-spacing:.2px}.top.doing #info{font-size:15px;line-height:1.45;opacity:1}.topSub{margin-top:4px;font-size:14px;opacity:.95}.top a{color:#fff}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:#eef2ff;color:#1d4ed8}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px}.card h3{margin:0 0 8px;color:#1e3a8a}.tag{display:inline-block;background:#eef2ff;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:#64748b}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid #111827;background:#fff;border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px}.ltx-tab{border-collapse:collapse;margin:10px auto;border:1px solid #94a3b8;font-size:16px}.ltx-tab td{border:1px solid #cbd5e1;padding:6px 14px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:#fff}.opt:hover{background:#f8fafc}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-top:12px}.quizTimer{display:inline-flex;align-items:center;gap:6px;background:#fef3c7;border:2px solid #f59e0b;color:#92400e;padding:8px 14px;border-radius:10px;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;min-width:110px;justify-content:center}.quizTimer.done{background:#e0e7ff;border-color:#6366f1;color:#3730a3}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:#fff}.num.active{outline:3px solid #93c5fd}.num.answered{background:#fef3c7}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:#fff;border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}}
 </style></head>
 <body><div class="top" id="topBar"><h1 id="topTitle">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div class="topSub"><span id="info">Đang nạp...</span> | <span id="me"></span> | <a href="/logout">Thoát</a></div></div>
 <div class="wrap">
@@ -1238,7 +1286,12 @@ function tickQuizTimer(){if(!QUIZ_T0)return;QUIZ_ELAPSED=(Date.now()-QUIZ_T0)/10
 function startQuizTimer(){stopQuizTimer();QUIZ_T0=Date.now();QUIZ_ELAPSED=0;let box=document.getElementById('quizTimer');if(box){box.classList.remove('hide','done');tickQuizTimer();TIMER_IV=setInterval(tickQuizTimer,1000)}}
 function stopQuizTimer(){if(TIMER_IV){clearInterval(TIMER_IV);TIMER_IV=null}if(QUIZ_T0){QUIZ_ELAPSED=(Date.now()-QUIZ_T0)/1000;QUIZ_T0=0}tickQuizTimer();return QUIZ_ELAPSED}
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
-function val(id){return document.getElementById(id).value}function typeset(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
+function escPreserveMath(s){let out='',last=0,m;re=/(\$\$[\s\S]*?\$\$|\$[^$\n]*?\$)/g;while((m=re.exec(s))!==null){out+=esc(s.slice(last,m.index));out+=m[0];last=m.index+m[0].length}return out+esc(s.slice(last))}
+function tabularToHtml(_,colSpec,body){let aligns=String(colSpec||'').replace(/[^lcrLCR]/g,'').split('');let rows=String(body||'').replace(/\\hline/g,'').split(/\\\\/).map(r=>r.trim()).filter(Boolean);if(!rows.length)return'';let html='<table class="ltx-tab">';rows.forEach(row=>{let cells=row.split('&').map(c=>c.trim());html+='<tr>';cells.forEach((cell,i)=>{let al=(aligns[i]||'c').toLowerCase();let ta=al==='l'?'left':al==='r'?'right':'center';html+=`<td style="text-align:${ta}">${convertTextMacros(escPreserveMath(cell))}</td>`});html+='</tr>'});return html+'</table>'}
+function convertTabular(s){s=String(s||'');s=s.replace(/(\$\$[\s\S]*?\$\$|\$[^$\n]*?\$)/g,m=>m.replace(/\\begin\{tabular\*?\}\{([^}]*)\}([\s\S]*?)\\end\{tabular\*?\}/gi,tabularToHtml));s=s.replace(/\\begin\{tabular\*?\}\{([^}]*)\}([\s\S]*?)\\end\{tabular\*?\}/gi,tabularToHtml);s=s.replace(/\$\$\s*(<table[\s\S]*?<\/table>)\s*\$\$/g,'$1');s=s.replace(/\$\s*(<table[\s\S]*?<\/table>)\s*\$/g,'$1');return s}
+function convertTextMacros(s){return String(s||'').replace(/\\textit\{([^}]*)\}/g,(_,t)=>'<em>'+esc(t)+'</em>').replace(/\\textbf\{([^}]*)\}/g,(_,t)=>'<strong>'+esc(t)+'</strong>').replace(/\\textrm\{([^}]*)\}/g,(_,t)=>esc(t))}
+function renderContent(s){return convertTextMacros(escPreserveMath(convertTabular(String(s||''))))}
+function val(id){return document.getElementById(id).value}function typeset(){if(window.MathJax&&MathJax.typesetClear)MathJax.typesetClear();if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}
 async function api(url,opts={}){let r=await fetch(url,opts);let txt=await r.text();let j;try{j=txt?JSON.parse(txt):{};}catch(e){j={error:'Không đọc được phản hồi từ máy chủ. Có thể Render đang timeout hoặc trả về HTML. Mã HTTP: '+r.status+'. Nội dung đầu: '+txt.slice(0,120)}}if(!r.ok||j.error){if(r.status==401)location='/login';throw new Error(j.error||'Lỗi API')}return j}
 function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
 async function init(){META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;if(USER.is_admin)document.getElementById('syncBtn').classList.remove('hide');if(META.loading){setTopHomeInfo('Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây');document.getElementById('catalog').innerHTML=`<div class="card" style="border-color:#93c5fd;background:#eff6ff"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin:10px 0"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p style="color:red"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];setTopHomeInfo(`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`);setOptions('fMon',META.filters.Mon);setOptions('fLop',META.filters.Lop);setOptions('fChuong',META.filters.Chuong);setOptions('fBaiHoc',META.filters.BaiHoc);setOptions('fBoDe',META.filters.BoDe);renderCatalog()}
@@ -1252,7 +1305,7 @@ function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='nu
 async function goQ(i){await saveCurrent();CUR=i;renderQuestion()}
 async function prevQ(){if(CUR>0){await saveCurrent();CUR--;renderQuestion()}}
 async function nextQ(){if(CUR<QUESTIONS.length-1){await saveCurrent();CUR++;renderQuestion()}}
-function renderQuestion(){let q=QUESTIONS[CUR];let r=getQResult(CUR);let locked=!!r&&r.ok!=null&&!USER.is_admin;renderNav();let p=q.Phan||'D';let pname=p=='A'?'Trắc nghiệm':p=='B'?'Đúng sai':p=='C'?'Trả lời ngắn':'Tự luận/Chưa phân loại';document.getElementById('qid').textContent=`Phần ${p} (${pname}) | Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=esc(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||locked||isDungSai(q)||q.Dang!='Trắc nghiệm'||!USER.can_5050;document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let canSol=USER.is_admin||(SUBMITTED&&(USER.can_view_solution||USER.is_admin));document.getElementById('btnToggleSol').classList.toggle('hide',!canSol);document.getElementById('btnToggleSol').textContent=(SOL_OPEN[CUR]?'Ẩn lời giải':'📖 Xem lời giải');let fb='';if(r&&r.ok!=null){fb=`<div style="margin:8px 0;padding:10px;border-radius:8px;font-weight:800;${r.ok?'background:var(--green);color:#166534':'background:var(--red);color:#991b1b'}">${r.ok?'✓ Đúng':'✗ Sai'}${!r.ok&&r.correct?` — Đáp án đúng: ${esc(r.correct)}`:''}</div>`}document.getElementById('qFeedback').innerHTML=fb;let corrLetter=(r&&r.correct?String(r.correct).toUpperCase().match(/[ABCD]/)?.[0]:'')||((q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'');let chosenLetter=r&&r.chosen?String(r.chosen).toUpperCase().match(/[ABCD]/)?.[0]||String(r.chosen):'';let html='';if(q.Dang=='Trắc nghiệm'&&!isDungSai(q)){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';if(USER.is_admin&&corrLetter==L)cls+=' correct';if(r&&r.ok!=null){if(corrLetter==L)cls+=' correct';if(chosenLetter==L&&chosenLetter!=corrLetter)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(isDungSai(q)){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;html+=`<div class="tfrow"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${locked||SUBMITTED?'disabled':''} oninput="saveCurrent()" onblur="checkCurrentQuestion()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let showSol=USER.is_admin||(SUBMITTED&&SOL_OPEN[CUR]&&(USER.can_view_solution||USER.is_admin));document.getElementById('solution').classList.toggle('hide',!showSol);if(showSol){let rr=RESULTS[CUR]||{};document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${esc(rr.correct||r?.correct||q.DapAn||'')}<br><b>Lời giải:</b><br>${esc(rr.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`}typeset()}
+function renderQuestion(){let q=QUESTIONS[CUR];let r=getQResult(CUR);let locked=!!r&&r.ok!=null&&!USER.is_admin;renderNav();let p=q.Phan||'D';let pname=p=='A'?'Trắc nghiệm':p=='B'?'Đúng sai':p=='C'?'Trả lời ngắn':'Tự luận/Chưa phân loại';document.getElementById('qid').textContent=`Phần ${p} (${pname}) | Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=renderContent(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.outerHTML='<div style=\\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\\'>Không tải được hình. Kiểm tra cột T (link Drive) và quyền chia sẻ: Anyone with the link.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||locked||isDungSai(q)||q.Dang!='Trắc nghiệm'||!USER.can_5050;document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let canSol=USER.is_admin||(SUBMITTED&&(USER.can_view_solution||USER.is_admin));document.getElementById('btnToggleSol').classList.toggle('hide',!canSol);document.getElementById('btnToggleSol').textContent=(SOL_OPEN[CUR]?'Ẩn lời giải':'📖 Xem lời giải');let fb='';if(r&&r.ok!=null){fb=`<div style="margin:8px 0;padding:10px;border-radius:8px;font-weight:800;${r.ok?'background:var(--green);color:#166534':'background:var(--red);color:#991b1b'}">${r.ok?'✓ Đúng':'✗ Sai'}${!r.ok&&r.correct?` — Đáp án đúng: ${esc(r.correct)}`:''}</div>`}document.getElementById('qFeedback').innerHTML=fb;let corrLetter=(r&&r.correct?String(r.correct).toUpperCase().match(/[ABCD]/)?.[0]:'')||((q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'');let chosenLetter=r&&r.chosen?String(r.chosen).toUpperCase().match(/[ABCD]/)?.[0]||String(r.chosen):'';let html='';if(q.Dang=='Trắc nghiệm'&&!isDungSai(q)){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';if(USER.is_admin&&corrLetter==L)cls+=' correct';if(r&&r.ok!=null){if(corrLetter==L)cls+=' correct';if(chosenLetter==L&&chosenLetter!=corrLetter)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${renderContent(q[L])}</span></label>`}}else if(isDungSai(q)){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;html+=`<div class="tfrow"><b>${L}.</b><div>${renderContent(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${locked||SUBMITTED?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${locked||SUBMITTED?'disabled':''} oninput="saveCurrent()" onblur="checkCurrentQuestion()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let showSol=USER.is_admin||(SUBMITTED&&SOL_OPEN[CUR]&&(USER.can_view_solution||USER.is_admin));document.getElementById('solution').classList.toggle('hide',!showSol);if(showSol){let rr=RESULTS[CUR]||{};document.getElementById('solution').innerHTML=`<b>Đáp án:</b> ${esc(rr.correct||r?.correct||q.DapAn||'')}<br><b>Lời giải:</b><br>${renderContent(rr.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`}typeset()}
 async function use5050(){await saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;if(j.message)alert(j.message)}catch(e){alert(e.message)}}
 async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}await saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;RESULTS={};for(let rr of j.results)RESULTS[rr.index]=rr;stopQuizTimer();document.getElementById('quizTimer').classList.add('done');document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
 function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','Diem','MucDo','Dang','LoiGiai','HinhAnh','QuyenTruyCap'];let labels={CauHoi:'Câu hỏi - cột K',A:'A - cột L',B:'B - cột M',C:'C - cột N',D:'D - cột O',DapAn:'Đáp án - cột P',Diem:'Điểm - cột Q',MucDo:'Mức độ - cột I',Dang:'Dạng - cột J',LoiGiai:'Lời giải - cột R',HinhAnh:'Hình ảnh - cột T',QuyenTruyCap:'Quyền truy cập - cột U (FREE/VIP)'};document.getElementById('editForm').innerHTML=fields.map(f=>{let h=(f=='CauHoi'||f=='LoiGiai')?'150px':'78px';let val=String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));return `<div><label><b>${labels[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${val}</textarea></div>`}).join('');document.getElementById('modal').classList.remove('hide')}
@@ -1278,6 +1331,7 @@ def version():
         "trial_no_submit_no_score": True,
         "base": "V10_SAFE_LOADING_NOTICE_WORKING",
         "image_column_T_fix": True,
+        "drive_img_proxy": True,
         "trial_no_vip_exam": True,
         "admin_can_view_without_submit": True,
         "admin_can_edit_question": True,
@@ -1286,8 +1340,18 @@ def version():
         "admin_delete_fast_no_full_reload": True,
         "instant_check_per_question": True,
         "optional_solution_after_submit": True,
-        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/check-one", "/api/submit", "/api/question/update", "/api/question/delete"]
+        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/check-one", "/api/submit", "/api/question/update", "/api/question/delete", "/api/drive-img/<file_id>"]
     })
+
+@app.route("/api/drive-img/<path:file_id>")
+def api_drive_img(file_id: str):
+    """Proxy ảnh Google Drive — tránh bị trình duyệt chặn hotlink thumbnail."""
+    try:
+        st = get_store()
+        data, ctype = st.fetch_drive_image(file_id)
+        return Response(data, mimetype=ctype, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        return Response(str(e), status=404, mimetype="text/plain; charset=utf-8")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
