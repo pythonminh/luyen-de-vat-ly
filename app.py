@@ -18,6 +18,7 @@ import unicodedata
 import hashlib
 import threading
 import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V36_FILTER_BY_QUESTION_TYPE_2026_06_02"
+APP_VERSION = "V39_AI_KEY_INDEX_LOG_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -204,6 +205,11 @@ def can_use_5050() -> bool:
 def can_view_solution_after_submit() -> bool:
     # FREE và TRIAL không xem đáp án/lời giải sau nộp.
     return session.get("role") in ["VIP", "S.VIP", "ADMIN"]
+
+
+def can_exact_hint() -> bool:
+    role = session.get("role", "")
+    return role in ["S.VIP", "SVIP", "ADMIN"]
 
 
 def access_level_from_text(value: Any) -> str:
@@ -891,6 +897,25 @@ class SheetStore:
             out["rows"] = dungsai_rows_detail(q, answer)
         return out
 
+    def hint_one(self, sid: str, index: int, answer: Any) -> Dict[str, Any]:
+        ses = self.check_quiz_session(sid)
+        qs = ses["questions"]
+        if not (0 <= index < len(qs)):
+            raise RuntimeError("Số câu không hợp lệ")
+        q = qs[index]
+        if can_exact_hint():
+            ok, correct, chosen = check_answer(q, answer)
+            return {
+                "index": index,
+                "exact": True,
+                "hint": f"Đáp án chính xác: {correct}.",
+                "correct": correct,
+                "chosen": chosen,
+                "ok": ok,
+            }
+        hint_text, key_index = ai_hint_from_provider(q, answer)
+        return {"index": index, "exact": False, "hint": hint_text, "key_index": key_index}
+
     def submit(self, sid: str, answers: Dict[str, Any]) -> Dict[str, Any]:
         if is_trial():
             raise RuntimeError("Tài khoản dùng thử không được nộp/chấm điểm. Thầy chỉ cho luyện thử các đề FREE trong 3 ngày.")
@@ -1106,6 +1131,111 @@ def dungsai_rows_detail(q: Dict[str, Any], user_answer: Any) -> List[Dict[str, A
         rows.append({"letter": L, "correct": c, "chosen": ch, "ok": ok if ch else None})
     return rows
 
+
+def ai_hint_fallback(q: Dict[str, Any], user_answer: Any) -> str:
+    dang = effective_dang(q)
+    stem = clean(q.get("CauHoi", ""))
+    topics = []
+    if q.get("Mon"):
+        topics.append(f"Môn: {q.get('Mon')}")
+    if q.get("Chuong"):
+        topics.append(f"Chương: {q.get('Chuong')}")
+    if q.get("BaiHoc"):
+        topics.append(f"Bài: {q.get('BaiHoc')}")
+    base = " | ".join(topics)
+    if dang == "Trắc nghiệm":
+        opts = [f"{L}. {clean(q.get(L))}" for L in "ABCD" if clean(q.get(L))]
+        chosen = norm_letter(user_answer)
+        return (
+            f"{base}\nGợi ý hướng làm: xác định đại lượng chính, chọn công thức nền trước rồi thay số/cân nhắc điều kiện.\n"
+            f"Đề bài: {stem[:240]}\n"
+            f"Phương án: {' ; '.join(opts[:4])}\n"
+            f"Ý đang làm: {chosen or 'chưa chọn'}.\n"
+            "Mẹo: loại các phương án sai đơn vị/dấu/điều kiện trước, sau đó so sánh 2 phương án gần nhất."
+        )
+    if dang == "Đúng sai":
+        chosen = parse_tf_values(user_answer)
+        rows = []
+        for i, L in enumerate("ABCD"):
+            if clean(q.get(L)):
+                cur = chosen[i] if i < len(chosen) else "?"
+                rows.append(f"{L}: đang chọn {cur} | mệnh đề: {clean(q.get(L))[:120]}")
+        return (
+            f"{base}\nGợi ý Đúng/Sai: xét từng mệnh đề độc lập theo định nghĩa, điều kiện áp dụng công thức và dấu.\n"
+            + "\n".join(rows)
+        )
+    if dang == "Trả lời ngắn":
+        return (
+            f"{base}\nGợi ý trả lời ngắn: viết công thức tổng quát, biến đổi để tách đại lượng cần tìm, rồi thay số cẩn thận đơn vị.\n"
+            f"Đề bài: {stem[:260]}"
+        )
+    return f"{base}\nGợi ý tự luận: tách bài thành giả thiết - công thức - biến đổi - kết luận. Đề bài: {stem[:260]}"
+
+
+def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int]:
+    keys = []
+    for name in ["OPENAI_API_KEY", "OPENAI_API_KEY_1", "OPENAI_API_KEY_2", "OPENAI_API_KEY_3"]:
+        v = os.environ.get(name, "").strip()
+        if v:
+            keys.append(v)
+    csv_keys = os.environ.get("OPENAI_API_KEYS", "").strip()
+    if csv_keys:
+        for k in csv_keys.split(","):
+            k = k.strip()
+            if k:
+                keys.append(k)
+    # remove duplicates while preserving order
+    seen = set()
+    uniq_keys = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            uniq_keys.append(k)
+    if not uniq_keys:
+        return ai_hint_fallback(q, user_answer), 0
+    model = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    prompt = {
+        "dang": effective_dang(q),
+        "question": clean(q.get("CauHoi", "")),
+        "options": {L: clean(q.get(L, "")) for L in "ABCD"},
+        "current_answer": user_answer,
+        "muc_do": clean(q.get("MucDo", "")),
+        "mon": clean(q.get("Mon", "")),
+        "chuong": clean(q.get("Chuong", "")),
+        "bai_hoc": clean(q.get("BaiHoc", "")),
+    }
+    sys_prompt = (
+        "Bạn là trợ giảng luyện đề. Hãy đưa gợi ý NGẮN GỌN, đúng trọng tâm câu hiện tại, liên quan công thức và ý học viên đang làm. "
+        "Không tiết lộ đáp án trực tiếp."
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+        ],
+        "temperature": 0.2,
+    }
+    for idx, api_key in enumerate(uniq_keys[:3], start=1):
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=18) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+            txt = (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
+            txt = clean(txt)
+            if txt:
+                print(f"[AI_HINT] using key #{idx}")
+                return txt, idx
+        except Exception:
+            # thử key tiếp theo nếu key hiện tại lỗi/quota
+            continue
+    return ai_hint_fallback(q, user_answer), 0
+
 STORE: Optional[SheetStore] = None
 
 def get_store(force_reload: bool = False) -> SheetStore:
@@ -1173,7 +1303,7 @@ APP_HTML = r"""
 <div id="examStrip" class="examStrip"><span id="examMsg">📢 Thông báo kỳ thi</span><span id="examTimer" class="timer"></span></div>
 <div class="wrap">
 <div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div><button class="btn" onclick="renderCatalog()">Lọc đề</button><button id="syncBtn" class="btnGreen hide" onclick="syncData()">ADMIN: Đồng bộ Sheet</button></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div id="quizActions"><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnRetry" class="btnStartStrong" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnEdit" class="btn2 hide" onclick="openEdit()">ADMIN: Sửa câu</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFs5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button class="btn2" onclick="toggleAnswerInFullscreen()">🔎 Ẩn/Hiện đáp án</button><button class="btn2" onclick="toggleExplainInFullscreen()">📘 Ẩn/Hiện lời giải</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="panel fsNavPanel"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div id="quizActions"><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnRetry" class="btnStartStrong" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnEdit" class="btn2 hide" onclick="openEdit()">ADMIN: Sửa câu</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFs5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button class="btn2" onclick="toggleAnswerInFullscreen()">🔎 Ẩn/Hiện đáp án</button><button class="btn2" onclick="toggleExplainInFullscreen()">📘 Ẩn/Hiện lời giải</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="panel fsNavPanel"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div>
 </div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Chỉ áp dụng câu trắc nghiệm A-B-C-D.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3>ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button class="btn" onclick="saveEdit()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px">Lưu ý: nút xóa sẽ xóa nguyên dòng câu hỏi trong sheet Cau_Hoi và đồng bộ lại dữ liệu.</div></div></div>
 <script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false;
@@ -1287,8 +1417,9 @@ function toggleExplainInFullscreen(){if(!FULLDE_ON)return;let can=USER.is_admin|
 function saveCurrent(){let q=QUESTIONS[CUR];if(!q||USER.is_admin)return;if(LOCKED_Q[CUR])return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r){ANSWERS[CUR]=r.value;LOCKED_Q[CUR]=true;checkCurrentQuestion()}}else if(q.Dang=='Đúng sai'){let arr=[];let req=0;for(let L of ['A','B','C','D']){if(q[L])req++;let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr;let filled=arr.filter(v=>!!v).length;if(req>0&&filled>=req){LOCKED_Q[CUR]=true;checkCurrentQuestion()}}else{let el=document.getElementById('shortAns');if(el)ANSWERS[CUR]=el.value}renderNav();notifyDoneIfNeeded()}
 async function checkCurrentQuestion(){if(USER.is_trial||SUBMITTED)return;let q=QUESTIONS[CUR];if(!q||q.Dang=='Tự luận')return;let ans=ANSWERS[CUR];if(ans==null)return;if(Array.isArray(ans)&&ans.every(v=>!v))return;try{let j=await api('/api/check-one',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});CHECKED[CUR]=j;RESULTS[CUR]=j;if(j.ok){document.getElementById('resultBox').textContent=`Câu ${CUR+1}: Đúng`;document.getElementById('resultBox').style.color='#166534'}else{document.getElementById('resultBox').textContent=`Câu ${CUR+1}: Sai`;document.getElementById('resultBox').style.color='#991b1b'}renderQuestion()}catch(e){}}
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=shortText((QUESTIONS[i]&&QUESTIONS[i].CauHoi)||'',120);html+=`<button class="${cls}" title="${escAttr(tip)}" onclick="goQ(${i})">${i+1}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
-function renderQuestion(){let q=QUESTIONS[CUR];renderNav();let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=esc(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if((SUBMITTED||CHECKED[CUR])&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let rows=((RESULTS[CUR]&&RESULTS[CUR].rows)||[]);for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||CHECKED[CUR])&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let canShowAns=USER.is_admin||SUBMITTED||!!CHECKED[CUR];let canShowExp=USER.is_admin||((SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL')||!!CHECKED[CUR]);let showAns=canShowAns,showExp=canShowExp;if(FULLDE_ON){if(FS_ANS_FORCE!==null)showAns=canShowAns&&FS_ANS_FORCE;if(FS_EXP_FORCE!==null)showExp=canShowExp&&FS_EXP_FORCE}let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns)parts.push(`<b>Đáp án:</b> ${esc(r.correct||q.DapAn||'')}`);if(showExp)parts.push(`<b>Lời giải:</b><br>${esc(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`);document.getElementById('solution').innerHTML=parts.join('<br>')}typeset()}
+function renderQuestion(){let q=QUESTIONS[CUR];renderNav();let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.innerHTML=''}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=esc(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if((SUBMITTED||CHECKED[CUR])&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let rows=((RESULTS[CUR]&&RESULTS[CUR].rows)||[]);for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||CHECKED[CUR])&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let canShowAns=USER.is_admin||SUBMITTED||!!CHECKED[CUR];let canShowExp=USER.is_admin||((SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL')||!!CHECKED[CUR]);let showAns=canShowAns,showExp=canShowExp;if(FULLDE_ON){if(FS_ANS_FORCE!==null)showAns=canShowAns&&FS_ANS_FORCE;if(FS_EXP_FORCE!==null)showExp=canShowExp&&FS_EXP_FORCE}let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns)parts.push(`<b>Đáp án:</b> ${esc(r.correct||q.DapAn||'')}`);if(showExp)parts.push(`<b>Lời giải:</b><br>${esc(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`);document.getElementById('solution').innerHTML=parts.join('<br>')}typeset()}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
+async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');let keyLine=j.key_index?`<div class="muted" style="margin-top:6px;font-size:12px">AI đang dùng key #${j.key_index}</div>`:'';hb.innerHTML=`<b>💡 Gợi ý AI:</b><br>${esc(j.hint||'')}${keyLine}`;typeset()}if(j.exact){document.getElementById('resultBox').textContent=`Gợi ý đặc quyền: ${j.correct||''}`;document.getElementById('resultBox').style.color='#7c2d12'}}catch(e){alert('Không lấy được gợi ý: '+e.message)}}
 async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
 function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'];let labels={CauHoi:'Câu hỏi / Nội dung - lưu cột K',DapAn:'Đáp án - lưu cột P',SaiSo:'Sai số - lưu cột Q',MucDo:'Mức độ - lưu cột I',Dang:'Dạng - lưu cột J',LoiGiai:'Lời giải - lưu cột R',HinhAnh:'Hình ảnh - lưu cột T'};document.getElementById('editForm').innerHTML=fields.map(f=>{let h=(f=='CauHoi'||f=='LoiGiai')?'150px':'78px';let val=String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));return `<div><label><b>${labels[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${val}</textarea></div>`}).join('');document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}async function saveEdit(){let q=QUESTIONS[CUR];let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
@@ -1456,6 +1587,25 @@ def api_check_one():
     body = request.get_json(silent=True) or {}
     try:
         return jsonify(get_store().check_one(body.get("sid", ""), int(body.get("index", 0)), body.get("answer", "")))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/hint", methods=["POST"])
+def api_hint():
+    bad = require_login_json()
+    if bad:
+        return bad
+    data = request.get_json(silent=True) or {}
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    answer = data.get("answer", "")
+    st = get_store()
+    try:
+        return jsonify(st.hint_one(sid, idx, answer))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
