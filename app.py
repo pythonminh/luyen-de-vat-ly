@@ -31,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V47_ADD_AI_MODEL_SELECTOR_2026_06_02"
+APP_VERSION = "V49_ADD_GEMINI_KEY_TEST_BUTTON_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1431,6 +1431,37 @@ def _http_error_message(e: Exception) -> str:
     return clean(str(e))[:220]
 
 
+def test_gemini_key(api_key: str, model: str) -> Tuple[bool, str]:
+    api_key = clean(api_key)
+    model = clean(model) or "gemini-2.0-flash"
+    if not api_key:
+        return False, "Thiếu Gemini API key."
+    body = {
+        "contents": [{"parts": [{"text": "Trả về đúng 1 từ: OK"}]}],
+        "generationConfig": {"temperature": 0},
+    }
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={urllib.parse.quote(api_key)}"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=18) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        cands = (data or {}).get("candidates") or []
+        parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
+        txt = ""
+        if parts and isinstance(parts[0], dict):
+            txt = clean(parts[0].get("text", ""))
+        if txt:
+            return True, f"Key chạy tốt với model {model}."
+        return False, "Gemini phản hồi rỗng."
+    except Exception as e:
+        return False, _http_error_message(e)
+
+
 def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int, str, str]:
 
     cfg = ai_runtime_config()
@@ -1675,9 +1706,10 @@ async function init(){updateExamStrip();META=await api('/api/meta');USER=META.us
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
-function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.style.padding='8px 10px';box.innerHTML=`<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="font-size:12px;font-weight:800;color:var(--heading);min-width:130px">🔑 Key AI</div><div class="field" style="min-width:130px;max-width:170px"><label>Provider</label><select id="aiProvider"><option value="GEMINI">GEMINI</option><option value="AUTO">AUTO</option></select></div><div class="field" style="min-width:190px;max-width:250px"><label>Model</label><select id="aiGeminiModel"><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option></select></div><div class="field" style="flex:1;min-width:280px"><label>Gemini API key</label><input id="aiGeminiKeys" placeholder="Dán key AIza..." /></div><button class="btn" style="min-width:120px" onclick="saveAiConfig()">Lưu key</button></div><div id="aiCfgInfo" class="muted" style="margin-top:6px;font-size:12px"></div>`;home.insertBefore(box,home.firstChild)}
+function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.style.padding='8px 10px';box.innerHTML=`<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="font-size:12px;font-weight:800;color:var(--heading);min-width:130px">🔑 Key AI</div><div class="field" style="min-width:130px;max-width:170px"><label>Provider</label><select id="aiProvider"><option value="GEMINI">GEMINI</option><option value="AUTO">AUTO</option></select></div><div class="field" style="min-width:190px;max-width:250px"><label>Model</label><select id="aiGeminiModel"><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option></select></div><div class="field" style="flex:1;min-width:280px"><label>Gemini API key</label><input id="aiGeminiKeys" placeholder="Dán key AIza..." /></div><button class="btn2" style="min-width:110px" onclick="testAiKey()">Test key</button><button class="btn" style="min-width:120px" onclick="saveAiConfig()">Lưu key</button></div><div id="aiCfgInfo" class="muted" style="margin-top:6px;font-size:12px"></div>`;home.insertBefore(box,home.firstChild)}
 async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'GEMINI';let pm=document.getElementById('aiGeminiModel');if(pm)pm.value=j.gemini_model||'gemini-2.0-flash';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`${j.provider||'GEMINI'} | ${j.gemini_model||'gemini-2.0-flash'} | ${j.gemini_keys_count||0} key`;}
 async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'GEMINI').toUpperCase();let geminiModel=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash');let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';if(!geminiRaw.trim()){alert('Nhập key Gemini.');return;}let body={provider:provider,gemini_model:geminiModel,gemini_keys:geminiRaw};let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu: ${j.provider||'GEMINI'} | ${j.gemini_model||geminiModel} | ${j.gemini_keys_count||0} key`;document.getElementById('aiGeminiKeys').value='';}
+async function testAiKey(){let k=(document.getElementById('aiGeminiKeys')||{}).value||'';let m=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash');if(!k.trim()){alert('Nhập key để test.');return;}try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI',model:m,key:k})});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`✅ ${j.message||'Key chạy tốt.'}`;alert(`✅ ${j.message||'Key chạy tốt.'}`)}catch(e){let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`❌ ${e.message}`;alert('❌ Key lỗi: '+e.message)}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=val('fMucDo');CURRENT_DANG=val('fDang');START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return;}CURRENT_LEVEL=CURRENT_LEVEL||val('fMucDo');CURRENT_DANG=CURRENT_DANG||val('fDang');START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';document.getElementById('startModal').classList.remove('hide')}
@@ -1959,6 +1991,20 @@ def api_hint():
         return jsonify(st.hint_one(sid, idx, answer))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/ai-key-check", methods=["POST"])
+def api_ai_key_check():
+    body = request.get_json(silent=True) or {}
+    provider = clean(body.get("provider", "GEMINI")).upper() or "GEMINI"
+    model = clean(body.get("model", ""))
+    key = clean(body.get("key", ""))
+    if provider != "GEMINI":
+        return jsonify({"error": "Hiện chỉ hỗ trợ test Gemini key."}), 400
+    ok, msg = test_gemini_key(key, model or "gemini-2.0-flash")
+    if ok:
+        return jsonify({"ok": True, "message": msg})
+    return jsonify({"error": msg}), 400
 
 
 def _api_ai_config_handler():
