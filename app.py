@@ -31,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V44_VIP_USES_AI_WHEN_KEY_SAVED_2026_06_02"
+APP_VERSION = "V46_EASY_SINGLE_GEMINI_KEY_INPUT_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1435,7 +1435,7 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
 
     model_openai = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
     model_gemini = os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
-    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"]
+    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-1.5-flash"]
     seen_models: set = set()
     gemini_models: List[str] = []
     for m in gemini_models_raw:
@@ -1573,6 +1573,32 @@ LOGIN_HTML = r"""
 """
 
 
+def login_html_with_ai_panel() -> str:
+    extra = """
+<script>
+(function(){
+  try{
+    var form=document.querySelector('form[method="post"]');
+    if(!form) return;
+    var box=document.createElement('div');
+    box.style.marginTop='8px';
+    box.innerHTML=
+      '<div style="margin-top:6px;padding:8px;border:1px dashed #93c5fd;border-radius:10px;background:#eff6ff">'+
+      '<div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:6px">Tùy chọn: dán 1 key Gemini ngay khi đăng nhập</div>'+
+      '<input type="hidden" name="ai_provider_login" value="GEMINI">'+
+      '<label style="font-size:12px">Gemini API key</label>'+
+      '<textarea name="gemini_keys_login" rows="2" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin:6px 0 8px" placeholder="AIza..."></textarea>'+
+      '<div style="font-size:11px;color:#475569">Bỏ trống nếu chưa cần dùng AI.</div>'+
+      '</div>';
+    var btn=form.querySelector('button');
+    if(btn && btn.parentNode) btn.parentNode.insertBefore(box, btn);
+  }catch(e){}
+})();
+</script>
+"""
+    return LOGIN_HTML.replace("</body></html>", extra + "</body></html>")
+
+
 REGISTER_HTML = r"""
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng ký dùng thử</title>
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
@@ -1640,9 +1666,9 @@ async function init(){updateExamStrip();META=await api('/api/meta');USER=META.us
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
-function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (mỗi học viên tự nhập)</b><div class="muted" style="margin:6px 0 10px">Key chỉ dùng cho tài khoản của bạn. Lấy Gemini: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. VIP/SVIP/ADMIN bấm Gợi ý AI sẽ thấy đáp án chính xác.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="AUTO">AUTO</option><option value="GEMINI">GEMINI</option><option value="OPENAI">OPENAI</option></select></div><div class="field"><label>Gemini key(s)</label><textarea id="aiGeminiKeys" rows="3" placeholder="Mỗi dòng 1 key (AIza...)"></textarea></div><div class="field"><label>OpenAI key(s)</label><textarea id="aiOpenaiKeys" rows="3" placeholder="Mỗi dòng 1 key (sk-...)"></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
-async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'AUTO';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} key | OpenAI: ${j.openai_keys_count||0} key`;}
-async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let body={provider:provider};if(geminiRaw.trim())body.gemini_keys=geminiRaw;if(openaiRaw.trim())body.openai_keys=openaiRaw;let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu key cá nhân. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} | OpenAI: ${j.openai_keys_count||0}`;document.getElementById('aiGeminiKeys').value='';document.getElementById('aiOpenaiKeys').value='';alert(j.message||'Đã lưu key AI cá nhân');}
+function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (nhập cho dễ)</b><div class="muted" style="margin:6px 0 10px">Chỉ cần dán <b>1 key Gemini</b>. Lấy key tại <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="GEMINI">GEMINI</option><option value="AUTO">AUTO</option></select></div><div class="field"><label>Gemini API key</label><textarea id="aiGeminiKeys" rows="2" placeholder="Dán 1 key dạng AIza..."></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
+async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'GEMINI';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Provider: ${j.provider||'GEMINI'} | Gemini: ${j.gemini_keys_count||0} key`;}
+async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'GEMINI').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';if(!geminiRaw.trim()){alert('Nhập 1 key Gemini để lưu.');return;}let body={provider:provider,gemini_keys:geminiRaw};let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu key Gemini cá nhân. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0}`;document.getElementById('aiGeminiKeys').value='';alert(j.message||'Đã lưu key AI cá nhân');}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=val('fMucDo');CURRENT_DANG=val('fDang');START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return;}CURRENT_LEVEL=CURRENT_LEVEL||val('fMucDo');CURRENT_DANG=CURRENT_DANG||val('fDang');START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';document.getElementById('startModal').classList.remove('hide')}
@@ -1760,6 +1786,9 @@ def login():
     if request.method == "POST":
         mahs = clean(request.form.get("mahs"))
         password = clean(request.form.get("password"))
+        ai_provider_login = clean(request.form.get("ai_provider_login"))
+        gemini_keys_login = request.form.get("gemini_keys_login", "")
+        openai_keys_login = request.form.get("openai_keys_login", "")
         try:
             store = get_store()
             store.ensure_users_loaded()
@@ -1788,10 +1817,22 @@ def login():
                     "role": user.get("role"), "session_token": token,
                     "trial_until": user.get("trial_until", ""), "account_until": user.get("account_until", "")
                 })
+                payload: Dict[str, Any] = {}
+                if ai_provider_login:
+                    payload["provider"] = ai_provider_login
+                if clean(gemini_keys_login):
+                    payload["gemini_keys"] = gemini_keys_login
+                if clean(openai_keys_login):
+                    payload["openai_keys"] = openai_keys_login
+                if payload:
+                    try:
+                        update_ai_runtime_config(payload)
+                    except Exception:
+                        pass
                 return redirect(url_for("home"))
         except Exception as e:
             error = str(e)
-    return render_template_string(LOGIN_HTML, error=error, msg=request.args.get("msg", ""))
+    return render_template_string(login_html_with_ai_panel(), error=error, msg=request.args.get("msg", ""))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
