@@ -30,7 +30,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V18_DUNSAI_AUTO_DETECT_2026_06_02"
+APP_VERSION = "V19_FORCE_DS_ON_CLIENT_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -781,6 +781,7 @@ class SheetStore:
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
         d = {k: q.get(k, "") for k in ["ID", "MaDe", "Dang", "MucDo", "CauHoi", "A", "B", "C", "D", "HinhAnh", "Chuong", "BaiHoc", "De", "QuyenTruyCap"]}
+        d["Dang"] = effective_dang(q)
         d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
         d["index"] = index
         if reveal:
