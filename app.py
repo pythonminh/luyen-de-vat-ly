@@ -31,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V44_VIP_USES_AI_WHEN_KEY_SAVED_2026_06_02"
+APP_VERSION = "V46_USER_GEMINI_KEY_PANEL_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1240,8 +1240,27 @@ def current_mahs() -> str:
 def get_user_ai_overrides() -> Dict[str, Any]:
     uid = current_mahs()
     if uid not in AI_USER_OVERRIDES:
-        AI_USER_OVERRIDES[uid] = {"provider": "", "openai_keys": [], "gemini_keys": []}
+        AI_USER_OVERRIDES[uid] = {
+            "provider": "",
+            "openai_keys": [],
+            "gemini_keys": [],
+            "gemini_model": "",
+            "openai_model": "",
+        }
     return AI_USER_OVERRIDES[uid]
+
+
+def _validate_key_format(prefix: str, key: str) -> Optional[str]:
+    k = clean(key)
+    if not k:
+        return None
+    if prefix == "GEMINI":
+        if not k.startswith("AIza"):
+            return "Gemini API key phải bắt đầu bằng AIza (lấy tại Google AI Studio). Key dạng AQ... không dùng được."
+    elif prefix == "OPENAI":
+        if not k.startswith("sk-"):
+            return "OpenAI API key phải bắt đầu bằng sk-."
+    return None
 
 
 def load_ai_keys(prefix: str) -> List[str]:
@@ -1267,7 +1286,6 @@ def load_ai_keys(prefix: str) -> List[str]:
         if k not in seen_local:
             seen_local.add(k)
             uniq_local.append(k)
-    # Theo yêu cầu vận hành hiện tại: chỉ dùng 1 key cho mỗi provider.
     return uniq_local[:1]
 
 
@@ -1278,6 +1296,8 @@ def ai_runtime_config() -> Dict[str, Any]:
         provider = "AUTO"
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
+    gemini_model = clean(ov.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash")).strip() or "gemini-2.0-flash"
+    openai_model = clean(ov.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini")).strip() or "gpt-4o-mini"
     def _mask_list(vals: List[str]) -> List[str]:
         out: List[str] = []
         for v in vals[:3]:
@@ -1295,6 +1315,9 @@ def ai_runtime_config() -> Dict[str, Any]:
         "gemini_keys_raw": gemini_keys[:3],
         "openai_keys_masked": _mask_list(openai_keys),
         "gemini_keys_masked": _mask_list(gemini_keys),
+        "gemini_model": gemini_model,
+        "openai_model": openai_model,
+        "using_user_keys": bool((ov.get("gemini_keys") or ov.get("openai_keys"))),
     }
 
 
@@ -1332,10 +1355,23 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         return uniq[:3]
 
     if "gemini_keys" in payload:
-        # Chỉ giữ 1 key Gemini (key đầu tiên)
-        ov["gemini_keys"] = parse_keys(payload.get("gemini_keys"))[:1]
+        parsed = parse_keys(payload.get("gemini_keys"))[:1]
+        for k in parsed:
+            err = _validate_key_format("GEMINI", k)
+            if err:
+                raise ValueError(err)
+        ov["gemini_keys"] = parsed
     if "openai_keys" in payload:
-        ov["openai_keys"] = parse_keys(payload.get("openai_keys"))[:1]
+        parsed = parse_keys(payload.get("openai_keys"))[:1]
+        for k in parsed:
+            err = _validate_key_format("OPENAI", k)
+            if err:
+                raise ValueError(err)
+        ov["openai_keys"] = parsed
+    if "gemini_model" in payload:
+        ov["gemini_model"] = clean(payload.get("gemini_model"))
+    if "openai_model" in payload:
+        ov["openai_model"] = clean(payload.get("openai_model"))
 
     return ai_runtime_config()
 
@@ -1445,10 +1481,10 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
     provider = cfg["provider"]
     last_error = ""
 
-    model_openai = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
-    model_gemini = os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
-    # Loại model cũ gây lỗi "not found" trên v1beta.
-    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+    ov = get_user_ai_overrides()
+    model_openai = clean(ov.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini")).strip() or "gpt-4o-mini"
+    model_gemini = clean(ov.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash")).strip() or "gemini-2.0-flash"
+    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-2.0-flash-lite"]
     seen_models: set = set()
     gemini_models: List[str] = []
     for m in gemini_models_raw:
@@ -1654,10 +1690,10 @@ async function init(){updateExamStrip();META=await api('/api/meta');USER=META.us
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
-function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (mỗi học viên tự nhập)</b><div class="muted" style="margin:6px 0 10px">Key chỉ dùng cho tài khoản của bạn. Lấy Gemini: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. VIP/SVIP/ADMIN bấm Gợi ý AI sẽ thấy đáp án chính xác.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="AUTO">AUTO</option><option value="GEMINI">GEMINI</option><option value="OPENAI">OPENAI</option></select></div><div class="field"><label>Gemini key(s)</label><textarea id="aiGeminiKeys" rows="3" placeholder="Mỗi dòng 1 key (AIza...)"></textarea></div><div class="field"><label>OpenAI key(s)</label><textarea id="aiOpenaiKeys" rows="3" placeholder="Mỗi dòng 1 key (sk-...)"></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn2" onclick="testAiKey()">Test key</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
-async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'AUTO';let gk=document.getElementById('aiGeminiKeys');if(gk&&Array.isArray(j.gemini_keys_raw))gk.value=j.gemini_keys_raw.join('\n');let ok=document.getElementById('aiOpenaiKeys');if(ok&&Array.isArray(j.openai_keys_raw))ok.value=j.openai_keys_raw.join('\n');let info=document.getElementById('aiCfgInfo');if(info){let gm=(j.gemini_keys_masked||[]).join(', ')||'0';let om=(j.openai_keys_masked||[]).join(', ')||'0';info.textContent=`Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} key [${gm}] | OpenAI: ${j.openai_keys_count||0} key [${om}]`;}}
-async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let body={provider:provider,gemini_keys:geminiRaw,openai_keys:openaiRaw};let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});await loadAiConfig();let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`✅ Đã nhận key từ bạn. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} | OpenAI: ${j.openai_keys_count||0}`;alert(j.message||'Đã lưu key AI cá nhân');}
-async function testAiKey(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let model='';try{if(typeof aiGetModel2026==='function')model=aiGetModel2026()}catch(e){};let body={provider:provider,gemini_keys:geminiRaw,openai_keys:openaiRaw,model:model};let info=document.getElementById('aiCfgInfo');if(info)info.textContent='⏳ Đang test key...';let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(info)info.textContent=(j.ok?'✅ ':'❌ ')+(j.message||'');alert((j.ok?'OK: ':'Lỗi: ')+(j.message||''));}
+function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân</b><div class="muted" style="margin:6px 0 10px">Nhập key Gemini từ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a> (bắt đầu <b>AIza...</b>). Lưu xong bấm <b>Test key</b> rồi <b>Gợi ý AI</b>.</div><div class="row" style="align-items:flex-end;flex-wrap:wrap;gap:8px"><div class="field" style="min-width:140px;max-width:160px"><label>Provider</label><select id="aiProvider"><option value="GEMINI">GEMINI</option><option value="AUTO">AUTO</option><option value="OPENAI">OPENAI</option></select></div><div class="field" style="flex:1;min-width:220px"><label>Gemini API key</label><input id="aiGeminiKeyOne" type="password" placeholder="AIzaSy..." style="width:100%"></div><div class="field" style="min-width:170px;max-width:200px"><label>Model</label><select id="aiGeminiModel"><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option></select></div><div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button type="button" class="btn2" onclick="testAiKey()">Test key</button><button type="button" class="btn" onclick="saveAiConfig()">Lưu key</button></div></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild);}
+async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'GEMINI';let gk=document.getElementById('aiGeminiKeyOne');if(gk){if(Array.isArray(j.gemini_keys_raw)&&j.gemini_keys_raw[0])gk.value=j.gemini_keys_raw[0];else gk.value='';}let gm=document.getElementById('aiGeminiModel');if(gm&&j.gemini_model)gm.value=j.gemini_model;let info=document.getElementById('aiCfgInfo');if(info){let src=j.using_user_keys?'key cá nhân':'key server (ENV)';let gm=(j.gemini_keys_masked||[]).join(', ')||'chưa có';info.textContent=`${src} | ${j.provider||'GEMINI'} | Gemini: ${gm} | model: ${j.gemini_model||'gemini-2.0-flash'}`;}}
+async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'GEMINI').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeyOne')||{}).value||'';let model=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash').trim();if(geminiRaw.trim()&&!geminiRaw.trim().startsWith('AIza')){alert('Gemini key phải bắt đầu bằng AIza. Lấy key tại Google AI Studio.');return;}let body={provider:provider,gemini_model:model};if(geminiRaw.trim())body.gemini_keys=geminiRaw;try{let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});await loadAiConfig();let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`✅ Đã lưu. ${j.message||''}`;alert(j.message||'Đã lưu cấu hình AI');}catch(e){alert(e.message);}}
+async function testAiKey(){let provider=((document.getElementById('aiProvider')||{}).value||'GEMINI').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeyOne')||{}).value||'';let model=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash').trim();if(!geminiRaw.trim()){alert('Nhập Gemini key (AIza...) trước.');return;}if(!geminiRaw.trim().startsWith('AIza')){alert('Key phải bắt đầu bằng AIza.');return;}let body={provider:provider,gemini_keys:geminiRaw,openai_keys:'',model:model};let info=document.getElementById('aiCfgInfo');if(info)info.textContent='⏳ Đang test key...';try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(info)info.textContent=(j.ok?'✅ ':'❌ ')+(j.message||'');alert((j.ok?'OK: ':'Lỗi: ')+(j.message||''));}catch(e){if(info)info.textContent='❌ '+e.message;alert(e.message);}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=val('fMucDo');CURRENT_DANG=val('fDang');START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return;}CURRENT_LEVEL=CURRENT_LEVEL||val('fMucDo');CURRENT_DANG=CURRENT_DANG||val('fDang');START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';document.getElementById('startModal').classList.remove('hide')}
@@ -1732,7 +1768,7 @@ async function checkCurrentQuestion(){if(USER.is_trial||SUBMITTED)return;let q=Q
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=shortText((QUESTIONS[i]&&QUESTIONS[i].CauHoi)||'',120);html+=`<button class="${cls}" title="${escAttr(tip)}" onclick="goQ(${i})">${i+1}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function renderQuestion(){let q=QUESTIONS[CUR];renderNav();let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.innerHTML=''}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=esc(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if((SUBMITTED||CHECKED[CUR])&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${esc(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let rows=((RESULTS[CUR]&&RESULTS[CUR].rows)||[]);for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||CHECKED[CUR])&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${esc(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let canShowAns=USER.is_admin||SUBMITTED||!!CHECKED[CUR];let canShowExp=USER.is_admin||((SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL')||!!CHECKED[CUR]);let showAns=canShowAns,showExp=canShowExp;if(FULLDE_ON){if(FS_ANS_FORCE!==null)showAns=canShowAns&&FS_ANS_FORCE;if(FS_EXP_FORCE!==null)showExp=canShowExp&&FS_EXP_FORCE}let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns)parts.push(`<b>Đáp án:</b> ${esc(r.correct||q.DapAn||'')}`);if(showExp)parts.push(`<b>Lời giải:</b><br>${esc(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`);document.getElementById('solution').innerHTML=parts.join('<br>')}typeset()}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
-async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');let extra='';if(j.exact){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Gợi ý đặc quyền VIP/SVIP/ADMIN (không cần key AI).</div>`;if(!String(j.correct||'').trim())extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Câu này chưa có đáp án trong Sheet (cột P trống).</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chi tiết: ${esc(j.ai_error)}</div>`;if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Bấm <b>← Về mục lục</b> → nhập key ở <b>Key AI cá nhân</b>.</div>`}hb.innerHTML=`<b>💡 Gợi ý AI:</b><br>${esc(j.hint||'')}${extra}`;typeset()}if(j.exact){document.getElementById('resultBox').textContent=`Gợi ý đặc quyền: ${j.correct||'(chưa có đáp án trong Sheet)'}`;document.getElementById('resultBox').style.color='#7c2d12'}}catch(e){alert('Không lấy được gợi ý: '+e.message)}}
+async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');let extra='';if(j.exact){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Gợi ý đặc quyền VIP/SVIP/ADMIN (không cần key AI).</div>`;if(!String(j.correct||'').trim())extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Câu này chưa có đáp án trong Sheet (cột P trống).</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chi tiết: ${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;hb.innerHTML=`<b>💡 Gợi ý AI:</b><br>${esc(j.hint||'')}${extra}`;typeset()}if(j.exact){document.getElementById('resultBox').textContent=`Gợi ý đặc quyền: ${j.correct||'(chưa có đáp án trong Sheet)'}`;document.getElementById('resultBox').style.color='#7c2d12'}}catch(e){alert('Không lấy được gợi ý: '+e.message)}}
 async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
 function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'];let labels={CauHoi:'Câu hỏi / Nội dung - lưu cột K',DapAn:'Đáp án - lưu cột P',SaiSo:'Sai số - lưu cột Q',MucDo:'Mức độ - lưu cột I',Dang:'Dạng - lưu cột J',LoiGiai:'Lời giải - lưu cột R',HinhAnh:'Hình ảnh - lưu cột T'};document.getElementById('editForm').innerHTML=fields.map(f=>{let h=(f=='CauHoi'||f=='LoiGiai')?'150px':'78px';let val=String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));return `<div><label><b>${labels[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${val}</textarea></div>`}).join('');document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}async function saveEdit(){let q=QUESTIONS[CUR];let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
@@ -1936,6 +1972,9 @@ def _api_ai_config_handler():
             "gemini_keys_raw": cfg.get("gemini_keys_raw", []),
             "openai_keys_masked": cfg.get("openai_keys_masked", []),
             "gemini_keys_masked": cfg.get("gemini_keys_masked", []),
+            "gemini_model": cfg.get("gemini_model", "gemini-2.0-flash"),
+            "openai_model": cfg.get("openai_model", "gpt-4o-mini"),
+            "using_user_keys": cfg.get("using_user_keys", False),
             "personal": True,
         })
     body = request.get_json(silent=True) or {}
@@ -1948,6 +1987,7 @@ def _api_ai_config_handler():
             "openai_keys_count": cfg.get("openai_keys", 0),
             "gemini_keys_count": cfg.get("gemini_keys", 0),
             "has_keys": cfg.get("has_keys", False),
+            "gemini_model": cfg.get("gemini_model", ""),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
