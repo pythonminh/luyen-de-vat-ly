@@ -30,7 +30,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V27_NAV_SHOWS_QUESTION_PREVIEW_2026_06_02"
+APP_VERSION = "V28_FIX_FULL_NAV_VISIBLE_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1181,10 +1181,16 @@ function ensureFullModeOverrides(){
   let st=document.createElement('style');
   st.id='LDVL_FS_OVR';
   st.textContent=
+    "body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 220px!important;gap:8px!important;padding:0 8px 8px!important}"+
     "body.fullde-mode #qtext{min-height:0!important;padding:12px!important}"+
     "body.fullde-mode #quiz .quizLayout>div:last-child{overflow:auto!important}"+
+    "body.fullde-mode #quiz .quizLayout>div:last-child>.panel{overflow:auto!important}"+
+    "body.fullde-mode #navNums{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;overflow:auto!important;align-content:start!important}"+
+    "body.fullde-mode #navNums .num{display:block!important;visibility:visible!important;opacity:1!important}"+
     "body.fullde-mode.fsnav-hidden #quiz .quizLayout{grid-template-columns:1fr 0px!important}"+
-    "body.fullde-mode.fsnav-hidden #quiz .quizLayout>div:last-child{display:none!important}";
+    "body.fullde-mode.fsnav-hidden #quiz .quizLayout>div:last-child{display:none!important}"+
+    "@media(max-width:900px){body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 150px!important}body.fullde-mode #navNums{grid-template-columns:repeat(3,minmax(0,1fr))!important}}"+
+    "@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;padding:0 6px 6px!important}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:140px!important}body.fullde-mode #navNums{grid-template-columns:repeat(8,minmax(38px,1fr))!important;overflow-x:auto!important;overflow-y:hidden!important}}";
   document.head.appendChild(st);
 }
 function syncFsNavBtn(){
@@ -1212,8 +1218,8 @@ function ensureNavInfo(){
   if(!info){
     info=document.createElement('div');
     info.id='navInfo';
-    info.className='muted';
-    info.style.cssText='font-size:11px;line-height:1.35;margin:2px 0 8px;padding:6px;border:1px solid var(--border);border-radius:8px;max-height:72px;overflow:auto';
+    info.className='fsNavInfo';
+    info.style.cssText='display:block!important;color:var(--muted)!important;font-size:11px;line-height:1.35;margin:2px 0 8px;padding:6px;border:1px solid var(--border);border-radius:8px;max-height:72px;overflow:auto';
     let nav=document.getElementById('navNums');
     if(nav) panel.insertBefore(info,nav);
   }
