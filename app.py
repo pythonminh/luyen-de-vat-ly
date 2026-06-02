@@ -31,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V49_ADD_GEMINI_KEY_TEST_BUTTON_2026_06_02"
+APP_VERSION = "V44_VIP_USES_AI_WHEN_KEY_SAVED_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1240,7 +1240,7 @@ def current_mahs() -> str:
 def get_user_ai_overrides() -> Dict[str, Any]:
     uid = current_mahs()
     if uid not in AI_USER_OVERRIDES:
-        AI_USER_OVERRIDES[uid] = {"provider": "", "openai_keys": [], "gemini_keys": [], "gemini_model": "", "openai_model": ""}
+        AI_USER_OVERRIDES[uid] = {"provider": "", "openai_keys": [], "gemini_keys": []}
     return AI_USER_OVERRIDES[uid]
 
 
@@ -1257,12 +1257,10 @@ def load_ai_keys(prefix: str) -> List[str]:
         v = os.environ.get(name, "").strip()
         if v:
             keys_local.append(v)
-    csv_keys_local = os.environ.get(f"{prefix}_API_KEYS", "").strip()
-    if csv_keys_local:
-        for k in csv_keys_local.split(","):
-            k = k.strip()
-            if k:
-                keys_local.append(k)
+    for k in os.environ.get(f"{prefix}_API_KEYS", "").split(","):
+        k = k.strip()
+        if k:
+            keys_local.append(k)
     seen_local = set()
     uniq_local: List[str] = []
     for k in keys_local:
@@ -1283,8 +1281,6 @@ def ai_runtime_config() -> Dict[str, Any]:
         "provider": provider,
         "openai_keys": len(openai_keys),
         "gemini_keys": len(gemini_keys),
-        "gemini_model": clean(ov.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash")),
-        "openai_model": clean(ov.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini")),
         "has_keys": bool(openai_keys or gemini_keys),
     }
 
@@ -1326,10 +1322,6 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         ov["gemini_keys"] = parse_keys(payload.get("gemini_keys"))
     if "openai_keys" in payload:
         ov["openai_keys"] = parse_keys(payload.get("openai_keys"))
-    if "gemini_model" in payload:
-        ov["gemini_model"] = clean(payload.get("gemini_model"))
-    if "openai_model" in payload:
-        ov["openai_model"] = clean(payload.get("openai_model"))
 
     return ai_runtime_config()
 
@@ -1431,37 +1423,6 @@ def _http_error_message(e: Exception) -> str:
     return clean(str(e))[:220]
 
 
-def test_gemini_key(api_key: str, model: str) -> Tuple[bool, str]:
-    api_key = clean(api_key)
-    model = clean(model) or "gemini-2.0-flash"
-    if not api_key:
-        return False, "Thiếu Gemini API key."
-    body = {
-        "contents": [{"parts": [{"text": "Trả về đúng 1 từ: OK"}]}],
-        "generationConfig": {"temperature": 0},
-    }
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={urllib.parse.quote(api_key)}"
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=18) as resp:
-            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-        cands = (data or {}).get("candidates") or []
-        parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
-        txt = ""
-        if parts and isinstance(parts[0], dict):
-            txt = clean(parts[0].get("text", ""))
-        if txt:
-            return True, f"Key chạy tốt với model {model}."
-        return False, "Gemini phản hồi rỗng."
-    except Exception as e:
-        return False, _http_error_message(e)
-
-
 def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int, str, str]:
 
     cfg = ai_runtime_config()
@@ -1470,10 +1431,9 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
     provider = cfg["provider"]
     last_error = ""
 
-    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini")) or "gpt-4o-mini"
-    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash")) or "gemini-2.0-flash"
-    # Ưu tiên các model Gemini mới; bỏ 1.5 để tránh lỗi "not found" trên v1beta.
-    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    model_openai = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    model_gemini = os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
+    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"]
     seen_models: set = set()
     gemini_models: List[str] = []
     for m in gemini_models_raw:
@@ -1548,7 +1508,7 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
                         print(f"[AI_HINT][GEMINI] model={gmodel} key=#{idx}")
                         return txt, idx, "GEMINI", ""
                 except Exception as e:
-                    last_error = f"{gmodel}: {_http_error_message(e)}"
+                    last_error = _http_error_message(e)
                     continue
         return "", 0, "GEMINI", last_error
 
@@ -1602,41 +1562,13 @@ LOGIN_HTML = r"""
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập luyện đề</title>
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#0f172a}html[data-theme="dark"] body{background:#0f172a;color:#e2e8f0}html[data-theme="dark"] .box{background:#1e293b;border-color:#334155}html[data-theme="dark"] input{background:#0f172a;color:#e2e8f0;border-color:#475569}html[data-theme="dark"] .hint{color:#94a3b8}.box{max-width:460px;margin:55px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer}input,button{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}button{background:#1d4ed8;color:white;font-weight:800;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px;margin:8px 0}.ok{background:#dcfce7;color:#166534;padding:10px;border-radius:10px;margin:8px 0}.hint{font-size:13px;color:#64748b;line-height:1.5}.link{display:block;text-align:center;margin-top:12px;color:#1d4ed8;font-weight:800;text-decoration:none}</style></head><body>
-<div class="top"><span>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</span><button type="button" class="themeBtn" onclick="(function(){var c=document.documentElement.getAttribute('data-theme')||'light';var d=c!=='dark';document.documentElement.setAttribute('data-theme',d?'dark':'light');try{localStorage.setItem('LDVL_THEME',d?'dark':'light')}catch(e){}event.target.textContent=d?'☀️':'🌙'})()">🌙</button></div>
+<div class="top"><span>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOẠ HỌC</span><button type="button" class="themeBtn" onclick="(function(){var c=document.documentElement.getAttribute('data-theme')||'light';var d=c!=='dark';document.documentElement.setAttribute('data-theme',d?'dark':'light');try{localStorage.setItem('LDVL_THEME',d?'dark':'light')}catch(e){}event.target.textContent=d?'☀️':'🌙'})()">🌙</button></div>
 <div class="box"><h2>Đăng nhập học viên</h2>{% if error %}<div class="err">{{error}}</div>{% endif %}{% if msg %}<div class="ok">{{msg}}</div>{% endif %}
 <form method="post"><input type="hidden" name="device_id" id="device_id"><label>Mã học sinh / tài khoản</label><input name="mahs" autofocus required placeholder="VD: HS001 hoặc TRIAL_xxxx"><label>Mật khẩu</label><input name="password" type="password" required placeholder="Nhập mật khẩu"><button>Đăng nhập</button></form>
 <a class="link" href="/register">Đăng ký dùng thử miễn phí 3 ngày</a>
 <div class="hint">Tài khoản lấy từ sheet <b>HOC_VIEN</b>. ADMIN được xem đáp án và sửa câu hỏi trực tiếp. Tài khoản dùng thử chỉ được đăng ký 1 lần theo số điện thoại và thiết bị; chỉ luyện đề FREE, không chấm điểm.</div></div>
 <script>function did(){let k='LDVL_DEVICE_ID';let v=localStorage.getItem(k);if(!v){v='DEV_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem(k,v)}document.getElementById('device_id').value=v}did();(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';var b=document.querySelector('.themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'}catch(e){}})();</script></body></html>
 """
-
-
-def login_html_with_ai_panel() -> str:
-    extra = """
-<script>
-(function(){
-  try{
-    var form=document.querySelector('form[method="post"]');
-    if(!form) return;
-    var box=document.createElement('div');
-    box.style.marginTop='8px';
-    box.innerHTML=
-      '<div style="margin-top:6px;padding:8px;border:1px dashed #93c5fd;border-radius:10px;background:#eff6ff">'+
-      '<div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:6px">Tùy chọn: dán 1 key Gemini ngay khi đăng nhập</div>'+
-      '<input type="hidden" name="ai_provider_login" value="GEMINI">'+
-      '<label style="font-size:12px">Gemini model</label>'+
-      '<select name="gemini_model_login" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin:6px 0 8px"><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option></select>'+
-      '<label style="font-size:12px">Gemini API key</label>'+
-      '<textarea name="gemini_keys_login" rows="2" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin:6px 0 8px" placeholder="AIza..."></textarea>'+
-      '<div style="font-size:11px;color:#475569">Bỏ trống nếu chưa cần dùng AI.</div>'+
-      '</div>';
-    var btn=form.querySelector('button');
-    if(btn && btn.parentNode) btn.parentNode.insertBefore(box, btn);
-  }catch(e){}
-})();
-</script>
-"""
-    return LOGIN_HTML.replace("</body></html>", extra + "</body></html>")
 
 
 REGISTER_HTML = r"""
@@ -1658,14 +1590,15 @@ APP_HTML = r"""
 <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
-:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.top h1{font-size:18px;margin:0}.top a{color:#fff}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px;color:var(--text)}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text)}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:12px;margin-top:12px;color:var(--text)}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.answered{background:var(--num-answered)}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz{display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;background:var(--bg);padding:0;margin:0;overflow:hidden;width:100vw!important;max-width:none!important}body.fullde-mode #quiz>.panel:first-child{display:none}body.fullde-mode #quiz .quizLayout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:0;width:100%;max-width:none;height:100%;min-height:0;margin:0}body.fullde-mode #quiz .quizLayout>div:first-child{min-width:0;height:100%;display:flex;flex-direction:column}body.fullde-mode #quiz .quizLayout>div:first-child>.panel{flex:1;display:flex;flex-direction:column;margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;width:100%;max-width:none;min-height:0;overflow:auto}body.fullde-mode #quiz .quizLayout>div:last-child{display:flex!important;height:100%;min-height:0}body.fullde-mode #quiz .quizLayout>div:last-child>.panel{margin:0;border-radius:0;border-top:none;border-right:none;border-bottom:none;height:100%;padding:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}body.fullde-mode #quiz .quizLayout>div:last-child .line,body.fullde-mode #quiz .quizLayout>div:last-child .muted{display:none!important}body.fullde-mode #quiz .quizLayout>div:last-child .fsNavTitle{display:block!important;font-size:11px;text-align:center;margin:0 0 4px;font-weight:800;color:var(--muted);flex-shrink:0}body.fullde-mode #navNums{grid-template-columns:repeat(3,1fr);gap:3px;overflow-y:auto;flex:1;align-content:start}body.fullde-mode #navNums .num{padding:4px 0;font-size:11px;line-height:1.1}body.fullde-mode #fsOnlyTools{display:flex;position:sticky;top:0;z-index:5;justify-content:flex-end;gap:8px;flex-wrap:wrap;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0}body.fullde-mode #qid{font-size:15px;padding:0 8px;flex-shrink:0}body.fullde-mode #quiz .quizLayout>div:first-child .row:first-child{flex-shrink:0;padding:4px 8px 0}body.fullde-mode #qtext,body.fullde-mode #options,body.fullde-mode #solution{width:100%}body.fullde-mode #qtext{flex:1;min-height:100px}body.fullde-mode #quizActions{display:none!important}body.fullde-mode #btnRetry,body.fullde-mode #btnEdit,body.fullde-mode #btnSubmit{display:none!important}@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:110px}body.fullde-mode #navNums{grid-template-columns:repeat(8,1fr);overflow-x:auto;overflow-y:hidden}}html:fullscreen,body:fullscreen{background:var(--bg)}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}.examStrip{top:52px;font-size:13px}}
+:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.top h1{font-size:18px;margin:0}.top a{color:#fff}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px;color:var(--text)}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text)}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:12px;margin-top:12px;color:var(--text)}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.answered{background:var(--num-answered)}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
+{display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;background:var(--bg);padding:0;margin:0;overflow:hidden;width:100vw!important;max-width:none!important}body.fullde-mode #quiz>.panel:first-child{display:none}body.fullde-mode #quiz .quizLayout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:0;width:100%;max-width:none;height:100%;min-height:0;margin:0}body.fullde-mode #quiz .quizLayout>div:first-child{min-width:0;height:100%;display:flex;flex-direction:column}body.fullde-mode #quiz .quizLayout>div:first-child>.panel{flex:1;display:flex;flex-direction:column;margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;width:100%;max-width:none;min-height:0;overflow:auto}body.fullde-mode #quiz .quizLayout>div:last-child{display:flex!important;height:100%;min-height:0}body.fullde-mode #quiz .quizLayout>div:last-child>.panel{margin:0;border-radius:0;border-top:none;border-right:none;border-bottom:none;height:100%;padding:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}body.fullde-mode #quiz .quizLayout>div:last-child .line,body.fullde-mode #quiz .quizLayout>div:last-child .muted{display:none!important}body.fullde-mode #quiz .quizLayout>div:last-child .fsNavTitle{display:block!important;font-size:11px;text-align:center;margin:0 0 4px;font-weight:800;color:var(--muted);flex-shrink:0}body.fullde-mode #navNums{grid-template-columns:repeat(3,1fr);gap:3px;overflow-y:auto;flex:1;align-content:start}body.fullde-mode #navNums .num{padding:4px 0;font-size:11px;line-height:1.1}body.fullde-mode #fsOnlyTools{display:flex;position:sticky;top:0;z-index:5;justify-content:flex-end;gap:8px;flex-wrap:wrap;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0}body.fullde-mode #qid{font-size:15px;padding:0 8px;flex-shrink:0}body.fullde-mode #quiz .quizLayout>div:first-child .row:first-child{flex-shrink:0;padding:4px 8px 0}body.fullde-mode #qtext,body.fullde-mode #options,body.fullde-mode #solution{width:100%}body.fullde-mode #qtext{flex:1;min-height:100px}body.fullde-mode #quizActions{display:none!important}body.fullde-mode #btnRetry,body.fullde-mode #btnEdit,body.fullde-mode #btnSubmit{display:none!important}@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:110px}body.fullde-mode #navNums{grid-template-columns:repeat(8,1fr);overflow-x:auto;overflow-y:hidden}}html:fullscreen,body:fullscreen{background:var(--bg)}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}.examStrip{top:52px;font-size:13px}}
 </style></head>
 <body><div class="top"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div><span id="info">Đang nạp...</span> | <span id="me"></span> | <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">📢 Thông báo kỳ thi</span><span id="examTimer" class="timer"></span></div>
 <div class="wrap">
 <div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..."></div><button class="btn" onclick="renderCatalog()">Lọc đề</button><button id="syncBtn" class="btnGreen hide" onclick="syncData()">ADMIN: Đồng bộ Sheet</button></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><button class="btn2" onclick="backHome()">← Về mục lục</button> <span id="quizTitle" style="font-weight:800"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><div class="qid" id="qid"></div><div id="quizActions"><button id="btn5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnRetry" class="btnStartStrong" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnEdit" class="btn2 hide" onclick="openEdit()">ADMIN: Sửa câu</button><button id="btnSubmit" class="btn" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFs5050" class="btnGreen" onclick="use5050()">Loại 2 câu sai</button><button class="btn2" onclick="toggleAnswerInFullscreen()">🔎 Ẩn/Hiện đáp án</button><button class="btn2" onclick="toggleExplainInFullscreen()">📘 Ẩn/Hiện lời giải</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button onclick="prevQ()">← Câu trước</button><button onclick="nextQ()">Câu sau →</button></div></div></div><div class="panel fsNavPanel"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Chỉ áp dụng câu trắc nghiệm A-B-C-D.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3>ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button class="btn" onclick="saveEdit()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px">Lưu ý: nút xóa sẽ xóa nguyên dòng câu hỏi trong sheet Cau_Hoi và đồng bộ lại dữ liệu.</div></div></div>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Chỉ áp dụng câu trắc nghiệm A-B-C-D.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3>ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button class="btn" onclick="saveEdit()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px">Lưu ý: nút xóa sẽ xóa nguyên dòng câu hỏi trong sheet Cau_Hoi và tự động cấu trúc lại bộ nhớ tạm RAM.</div></div></div>
 <script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false;
 const THEME_KEY='LDVL_THEME';
@@ -1673,19 +1606,19 @@ function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAtt
 function toggleTheme(){let cur=document.documentElement.getAttribute('data-theme')||'light';applyTheme(cur==='dark'?'light':'dark')}
 function initTheme(){let t='light';try{t=localStorage.getItem(THEME_KEY)||'light'}catch(e){}applyTheme(t==='dark'?'dark':'light')}
 function enhanceHomeColors(){
-  if(document.getElementById('LDVL_HOME_COLORS'))return;
-  let st=document.createElement('style');
-  st.id='LDVL_HOME_COLORS';
-  st.textContent=
-    ".card{border:1px solid #bfdbfe;border-radius:14px;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:0 8px 22px #1d4ed81a}"+
-    ".card h3{color:#1e40af;font-size:30px;font-weight:900;letter-spacing:.2px}"+
-    ".tag{background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1d4ed8;border:1px solid #93c5fd;padding:4px 10px;font-weight:900}"+
-    ".btnStartStrong{box-shadow:0 10px 22px #4338ca55,0 2px 6px #1e40af55;transform:translateZ(0)}"+
-    ".btnStartStrong:hover{filter:brightness(1.08);transform:translateY(-1px)}"+
-    "html[data-theme='dark'] .card{background:linear-gradient(180deg,#1e293b,#182236);border-color:#334155;box-shadow:0 10px 24px #0005}"+
-    "html[data-theme='dark'] .card h3{color:#93c5fd}"+
-    "html[data-theme='dark'] .tag{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);color:#e0ecff;border-color:#3b82f6}";
-  document.head.appendChild(st);
+    if(document.getElementById('LDVL_HOME_COLORS'))return;
+    let st=document.createElement('style');
+    st.id='LDVL_HOME_COLORS';
+    st.textContent=
+        ".card{border:1px solid #bfdbfe;border-radius:14px;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:0 8px 22px #1d4ed81a}"+
+        ".card h3{color:#1e40af;font-size:30px;font-weight:900;letter-spacing:.2px}"+
+        ".tag{background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1d4ed8;border:1px solid #93c5fd;padding:4px 10px;font-weight:900}"+
+        ".btnStartStrong{box-shadow:0 10px 22px #4338ca55,0 2px 6px #1e40af55;transform:translateZ(0)}"+
+        ".btnStartStrong:hover{filter:brightness(1.08);transform:translateY(-1px)}"+
+        "html[data-theme='dark'] .card{background:linear-gradient(180deg,#1e293b,#182236);border-color:#334155;box-shadow:0 10px 24px #0005}"+
+        "html[data-theme='dark'] .card h3{color:#93c5fd}"+
+        "html[data-theme='dark'] .tag{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);color:#e0ecff;border-color:#3b82f6}";
+    document.head.appendChild(st);
 }
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function escAttr(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -1706,10 +1639,9 @@ async function init(){updateExamStrip();META=await api('/api/meta');USER=META.us
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
-function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.style.padding='8px 10px';box.innerHTML=`<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="font-size:12px;font-weight:800;color:var(--heading);min-width:130px">🔑 Key AI</div><div class="field" style="min-width:130px;max-width:170px"><label>Provider</label><select id="aiProvider"><option value="GEMINI">GEMINI</option><option value="AUTO">AUTO</option></select></div><div class="field" style="min-width:190px;max-width:250px"><label>Model</label><select id="aiGeminiModel"><option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option></select></div><div class="field" style="flex:1;min-width:280px"><label>Gemini API key</label><input id="aiGeminiKeys" placeholder="Dán key AIza..." /></div><button class="btn2" style="min-width:110px" onclick="testAiKey()">Test key</button><button class="btn" style="min-width:120px" onclick="saveAiConfig()">Lưu key</button></div><div id="aiCfgInfo" class="muted" style="margin-top:6px;font-size:12px"></div>`;home.insertBefore(box,home.firstChild)}
-async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'GEMINI';let pm=document.getElementById('aiGeminiModel');if(pm)pm.value=j.gemini_model||'gemini-2.0-flash';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`${j.provider||'GEMINI'} | ${j.gemini_model||'gemini-2.0-flash'} | ${j.gemini_keys_count||0} key`;}
-async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'GEMINI').toUpperCase();let geminiModel=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash');let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';if(!geminiRaw.trim()){alert('Nhập key Gemini.');return;}let body={provider:provider,gemini_model:geminiModel,gemini_keys:geminiRaw};let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu: ${j.provider||'GEMINI'} | ${j.gemini_model||geminiModel} | ${j.gemini_keys_count||0} key`;document.getElementById('aiGeminiKeys').value='';}
-async function testAiKey(){let k=(document.getElementById('aiGeminiKeys')||{}).value||'';let m=((document.getElementById('aiGeminiModel')||{}).value||'gemini-2.0-flash');if(!k.trim()){alert('Nhập key để test.');return;}try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI',model:m,key:k})});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`✅ ${j.message||'Key chạy tốt.'}`;alert(`✅ ${j.message||'Key chạy tốt.'}`)}catch(e){let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`❌ ${e.message}`;alert('❌ Key lỗi: '+e.message)}}
+function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (mỗi học viên tự nhập)</b><div class="muted" style="margin:6px 0 10px">Key chỉ dùng cho tài khoản của bạn. Lấy Gemini: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. VIP/SVIP/ADMIN bấm Gợi ý AI sẽ thấy đáp án chính xác.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="AUTO">AUTO</option><option value="GEMINI">GEMINI</option><option value="OPENAI">OPENAI</option></select></div><div class="field"><label>Gemini key(s)</label><textarea id="aiGeminiKeys" rows="3" placeholder="Mỗi dòng 1 key (AIza...)"></textarea></div><div class="field"><label>OpenAI key(s)</label><textarea id="aiOpenaiKeys" rows="3" placeholder="Mỗi dòng 1 key (sk-...)"></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
+async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'AUTO';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} key | OpenAI: ${j.openai_keys_count||0} key`;}
+async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let body={provider:provider};if(geminiRaw.trim())body.gemini_keys=geminiRaw;if(openaiRaw.trim())body.openai_keys=openaiRaw;let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu key cá nhân. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} | OpenAI: ${j.openai_keys_count||0}`;document.getElementById('aiGeminiKeys').value='';document.getElementById('aiOpenaiKeys').value='';alert(j.message||'Đã lưu key AI cá nhân');}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=val('fMucDo');CURRENT_DANG=val('fDang');START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return;}CURRENT_LEVEL=CURRENT_LEVEL||val('fMucDo');CURRENT_DANG=CURRENT_DANG||val('fDang');START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';document.getElementById('startModal').classList.remove('hide')}
@@ -1719,62 +1651,62 @@ function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');le
 async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||'').trim().toUpperCase();let dg=(dang||'').trim();let url='/api/start?made='+encodeURIComponent(made)+'&shuffle_q='+(shuffleQ?1:0)+'&shuffle_a='+(shuffleA?1:0)+'&level='+encodeURIComponent(lv)+'&dang='+encodeURIComponent(dg);let j=await api(url);SID=j.sid;QUESTIONS=j.questions;CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg;CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức độ: ${lv}`:'';let dgTag=dg?` | Dạng: ${dg}`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateShuffleBadge(j);startQuizTimer();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide')}
 function ensureFullModeOverrides(){
-  if(document.getElementById('LDVL_FS_OVR')) return;
-  let st=document.createElement('style');
-  st.id='LDVL_FS_OVR';
-  st.textContent=
-    "body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 220px!important;gap:8px!important;padding:0 8px 8px!important}"+
-    "body.fullde-mode #qtext{min-height:0!important;padding:12px!important}"+
-    "body.fullde-mode #quiz .quizLayout>div:last-child{overflow:auto!important}"+
-    "body.fullde-mode #quiz .quizLayout>div:last-child>.panel{overflow:auto!important}"+
-    "body.fullde-mode #navNums{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;overflow:auto!important;align-content:start!important}"+
-    "body.fullde-mode #navNums .num{display:block!important;visibility:visible!important;opacity:1!important}"+
-    "body.fullde-mode.fsnav-hidden #quiz .quizLayout{grid-template-columns:1fr 0px!important}"+
-    "body.fullde-mode.fsnav-hidden #quiz .quizLayout>div:last-child{display:none!important}"+
-    "@media(max-width:900px){body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 150px!important}body.fullde-mode #navNums{grid-template-columns:repeat(3,minmax(0,1fr))!important}}"+
-    "@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;padding:0 6px 6px!important}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:140px!important}body.fullde-mode #navNums{grid-template-columns:repeat(8,minmax(38px,1fr))!important;overflow-x:auto!important;overflow-y:hidden!important}}";
-  document.head.appendChild(st);
+    if(document.getElementById('LDVL_FS_OVR')) return;
+    let st=document.createElement('style');
+    st.id='LDVL_FS_OVR';
+    st.textContent=
+        "body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 220px!important;gap:8px!important;padding:0 8px 8px!important}"+
+        "body.fullde-mode #qtext{min-height:0!important;padding:12px!important}"+
+        "body.fullde-mode #quiz .quizLayout>div:last-child{overflow:auto!important}"+
+        "body.fullde-mode #quiz .quizLayout>div:last-child>.panel{overflow:auto!important}"+
+        "body.fullde-mode #navNums{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;overflow:auto!important;align-content:start!important}"+
+        "body.fullde-mode #navNums .num{display:block!important;visibility:visible!important;opacity:1!important}"+
+        "body.fullde-mode.fsnav-hidden #quiz .quizLayout{grid-template-columns:1fr 0px!important}"+
+        "body.fullde-mode.fsnav-hidden #quiz .quizLayout>div:last-child{display:none!important}"+
+        "@media(max-width:900px){body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 150px!important}body.fullde-mode #navNums{grid-template-columns:repeat(3,minmax(0,1fr))!important}}"+
+        "@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;padding:0 6px 6px!important}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:140px!important}body.fullde-mode #navNums{grid-template-columns:repeat(8,minmax(38px,1fr))!important;overflow-x:auto!important;overflow-y:hidden!important}}";
+    document.head.appendChild(st);
 }
 function syncFsNavBtn(){
-  let btn=document.getElementById('btnFsNav');
-  if(btn)btn.textContent=FS_NAV_HIDDEN?'☰ Hiện bảng':'☰ Ẩn bảng';
+    let btn=document.getElementById('btnFsNav');
+    if(btn)btn.textContent=FS_NAV_HIDDEN?'☰ Hiện bảng':'☰ Ẩn bảng';
 }
 function ensureFsNavBtn(){
-  let box=document.getElementById('fsOnlyTools');
-  if(!box)return;
-  let btn=document.getElementById('btnFsNav');
-  if(!btn){
-    btn=document.createElement('button');
-    btn.type='button';
-    btn.id='btnFsNav';
-    btn.className='btn2';
-    btn.onclick=toggleFsNav;
-    box.appendChild(btn);
-  }
-  syncFsNavBtn();
+    let box=document.getElementById('fsOnlyTools');
+    if(!box)return;
+    let btn=document.getElementById('btnFsNav');
+    if(!btn){
+        btn=document.createElement('button');
+        btn.type='button';
+        btn.id='btnFsNav';
+        btn.className='btn2';
+        btn.onclick=toggleFsNav;
+        box.appendChild(btn);
+    }
+    syncFsNavBtn();
 }
 function ensureNavInfo(){
-  let panel=document.querySelector('.fsNavPanel');
-  if(!panel) return null;
-  let title=panel.querySelector('.fsNavTitle');
-  if(title) title.textContent='Bảng câu hỏi';
-  let info=document.getElementById('navInfo');
-  if(!info){
-    info=document.createElement('div');
-    info.id='navInfo';
-    info.className='fsNavInfo';
-    info.style.cssText='display:block!important;color:var(--muted)!important;font-size:11px;line-height:1.35;margin:2px 0 8px;padding:6px;border:1px solid var(--border);border-radius:8px;max-height:72px;overflow:auto';
-    let nav=document.getElementById('navNums');
-    if(nav) panel.insertBefore(info,nav);
-  }
-  return info;
+    let panel=document.querySelector('.fsNavPanel');
+    if(!panel) return null;
+    let title=panel.querySelector('.fsNavTitle');
+    if(title) title.textContent='Bảng câu hỏi';
+    let info=document.getElementById('navInfo');
+    if(!info){
+        info=document.createElement('div');
+        info.id='navInfo';
+        info.className='fsNavInfo';
+        info.style.cssText='display:block!important;color:var(--muted)!important;font-size:11px;line-height:1.35;margin:2px 0 8px;padding:6px;border:1px solid var(--border);border-radius:8px;max-height:72px;overflow:auto';
+        let nav=document.getElementById('navNums');
+        if(nav) panel.insertBefore(info,nav);
+    }
+    return info;
 }
 function toggleFsNav(){
-  if(!FULLDE_ON)return;
-  FS_NAV_HIDDEN=!FS_NAV_HIDDEN;
-  document.body.classList.toggle('fsnav-hidden',FS_NAV_HIDDEN);
-  syncFsNavBtn();
-  renderQuestion();
+    if(!FULLDE_ON)return;
+    FS_NAV_HIDDEN=!FS_NAV_HIDDEN;
+    document.body.classList.toggle('fsnav-hidden',FS_NAV_HIDDEN);
+    syncFsNavBtn();
+    renderQuestion();
 }
 async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}renderQuestion();return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}renderQuestion()}
 function toggleAnswerInFullscreen(){if(!FULLDE_ON)return;let can=USER.is_admin||SUBMITTED||!!CHECKED[CUR];if(!can){alert('Chưa đến chế độ xem đáp án.');return;}FS_ANS_FORCE=FS_ANS_FORCE===true?false:true;renderQuestion()}
@@ -1788,7 +1720,7 @@ async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await 
 async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
 function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'];let labels={CauHoi:'Câu hỏi / Nội dung - lưu cột K',DapAn:'Đáp án - lưu cột P',SaiSo:'Sai số - lưu cột Q',MucDo:'Mức độ - lưu cột I',Dang:'Dạng - lưu cột J',LoiGiai:'Lời giải - lưu cột R',HinhAnh:'Hình ảnh - lưu cột T'};document.getElementById('editForm').innerHTML=fields.map(f=>{let h=(f=='CauHoi'||f=='LoiGiai')?'150px':'78px';let val=String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));return `<div><label><b>${labels[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${val}</textarea></div>`}).join('');document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}async function saveEdit(){let q=QUESTIONS[CUR];let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
-async function deleteQuestion(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return;}let msg='Xóa vĩnh viễn câu này khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nSau khi xóa, các dòng phía dưới trong Google Sheet sẽ tự dồn lên.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: thầy chắc chắn muốn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});alert('Đã xóa câu khỏi Google Sheet.\nDòng đã xóa: '+j.row+'\nID: '+(j.id||''));QUESTIONS.splice(CUR,1);if(QUESTIONS.length===0){closeEdit();backHome();await syncSheet();return;}if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1;closeEdit();renderNav();renderQuestion();}catch(e){alert('Không xóa được: '+e.message)}}
+async function deleteQuestion(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return;}let msg='Xóa vĩnh viễn câu này khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nSau khi xóa, các dòng phía dưới trong Google Sheet sẽ tự dồn lên.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: thầy chắc chắn muốn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});alert('Đã xóa câu khỏi Google Sheet.\nDòng đã xóa: '+j.row+'\nID: '+(j.id||''));QUESTIONS.splice(CUR,1);if(QUESTIONS.length===0){closeEdit();backHome();await syncData();return;}if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1;closeEdit();renderNav();renderQuestion();}catch(e){alert('Không xóa được: '+e.message)}}
 setInterval(updateExamStrip,1000);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&FULLDE_ON){document.body.classList.add('fullde-mode')}if(!document.fullscreenElement){FS_ANS_FORCE=null;FS_EXP_FORCE=null;renderQuestion()}});
 enhanceHomeColors();initTheme();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
@@ -1827,10 +1759,6 @@ def login():
     if request.method == "POST":
         mahs = clean(request.form.get("mahs"))
         password = clean(request.form.get("password"))
-        ai_provider_login = clean(request.form.get("ai_provider_login"))
-        gemini_model_login = clean(request.form.get("gemini_model_login"))
-        gemini_keys_login = request.form.get("gemini_keys_login", "")
-        openai_keys_login = request.form.get("openai_keys_login", "")
         try:
             store = get_store()
             store.ensure_users_loaded()
@@ -1859,24 +1787,10 @@ def login():
                     "role": user.get("role"), "session_token": token,
                     "trial_until": user.get("trial_until", ""), "account_until": user.get("account_until", "")
                 })
-                payload: Dict[str, Any] = {}
-                if ai_provider_login:
-                    payload["provider"] = ai_provider_login
-                if gemini_model_login:
-                    payload["gemini_model"] = gemini_model_login
-                if clean(gemini_keys_login):
-                    payload["gemini_keys"] = gemini_keys_login
-                if clean(openai_keys_login):
-                    payload["openai_keys"] = openai_keys_login
-                if payload:
-                    try:
-                        update_ai_runtime_config(payload)
-                    except Exception:
-                        pass
                 return redirect(url_for("home"))
         except Exception as e:
             error = str(e)
-    return render_template_string(login_html_with_ai_panel(), error=error, msg=request.args.get("msg", ""))
+    return render_template_string(LOGIN_HTML, error=error, msg=request.args.get("msg", ""))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -1993,20 +1907,6 @@ def api_hint():
         return jsonify({"error": str(e)}), 400
 
 
-@app.route("/api/ai-key-check", methods=["POST"])
-def api_ai_key_check():
-    body = request.get_json(silent=True) or {}
-    provider = clean(body.get("provider", "GEMINI")).upper() or "GEMINI"
-    model = clean(body.get("model", ""))
-    key = clean(body.get("key", ""))
-    if provider != "GEMINI":
-        return jsonify({"error": "Hiện chỉ hỗ trợ test Gemini key."}), 400
-    ok, msg = test_gemini_key(key, model or "gemini-2.0-flash")
-    if ok:
-        return jsonify({"ok": True, "message": msg})
-    return jsonify({"error": msg}), 400
-
-
 def _api_ai_config_handler():
     if request.method == "GET":
         cfg = ai_runtime_config()
@@ -2015,8 +1915,6 @@ def _api_ai_config_handler():
             "provider": cfg.get("provider", "AUTO"),
             "openai_keys_count": cfg.get("openai_keys", 0),
             "gemini_keys_count": cfg.get("gemini_keys", 0),
-            "gemini_model": cfg.get("gemini_model", "gemini-2.0-flash"),
-            "openai_model": cfg.get("openai_model", "gpt-4o-mini"),
             "has_keys": cfg.get("has_keys", False),
             "personal": True,
         })
@@ -2029,8 +1927,6 @@ def _api_ai_config_handler():
             "provider": cfg.get("provider", "AUTO"),
             "openai_keys_count": cfg.get("openai_keys", 0),
             "gemini_keys_count": cfg.get("gemini_keys", 0),
-            "gemini_model": cfg.get("gemini_model", "gemini-2.0-flash"),
-            "openai_model": cfg.get("openai_model", "gpt-4o-mini"),
             "has_keys": cfg.get("has_keys", False),
         })
     except Exception as e:
