@@ -1267,7 +1267,8 @@ def load_ai_keys(prefix: str) -> List[str]:
         if k not in seen_local:
             seen_local.add(k)
             uniq_local.append(k)
-    return uniq_local[:3]
+    # Theo yêu cầu vận hành hiện tại: chỉ dùng 1 key cho mỗi provider.
+    return uniq_local[:1]
 
 
 def ai_runtime_config() -> Dict[str, Any]:
@@ -1277,11 +1278,23 @@ def ai_runtime_config() -> Dict[str, Any]:
         provider = "AUTO"
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
+    def _mask_list(vals: List[str]) -> List[str]:
+        out: List[str] = []
+        for v in vals[:3]:
+            if len(v) <= 10:
+                out.append(v)
+            else:
+                out.append(f"{v[:6]}...{v[-4:]}")
+        return out
     return {
         "provider": provider,
         "openai_keys": len(openai_keys),
         "gemini_keys": len(gemini_keys),
         "has_keys": bool(openai_keys or gemini_keys),
+        "openai_keys_raw": openai_keys[:3],
+        "gemini_keys_raw": gemini_keys[:3],
+        "openai_keys_masked": _mask_list(openai_keys),
+        "gemini_keys_masked": _mask_list(gemini_keys),
     }
 
 
@@ -1319,9 +1332,10 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         return uniq[:3]
 
     if "gemini_keys" in payload:
-        ov["gemini_keys"] = parse_keys(payload.get("gemini_keys"))
+        # Chỉ giữ 1 key Gemini (key đầu tiên)
+        ov["gemini_keys"] = parse_keys(payload.get("gemini_keys"))[:1]
     if "openai_keys" in payload:
-        ov["openai_keys"] = parse_keys(payload.get("openai_keys"))
+        ov["openai_keys"] = parse_keys(payload.get("openai_keys"))[:1]
 
     return ai_runtime_config()
 
@@ -1433,7 +1447,8 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
 
     model_openai = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
     model_gemini = os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
-    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"]
+    # Loại model cũ gây lỗi "not found" trên v1beta.
+    gemini_models_raw = [model_gemini, "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
     seen_models: set = set()
     gemini_models: List[str] = []
     for m in gemini_models_raw:
@@ -1639,9 +1654,10 @@ async function init(){updateExamStrip();META=await api('/api/meta');USER=META.us
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';return `<div class="card"><h3>${esc(x.De||x.BaiHoc||'Đề luyện tập')}</h3><div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
-function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (mỗi học viên tự nhập)</b><div class="muted" style="margin:6px 0 10px">Key chỉ dùng cho tài khoản của bạn. Lấy Gemini: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. VIP/SVIP/ADMIN bấm Gợi ý AI sẽ thấy đáp án chính xác.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="AUTO">AUTO</option><option value="GEMINI">GEMINI</option><option value="OPENAI">OPENAI</option></select></div><div class="field"><label>Gemini key(s)</label><textarea id="aiGeminiKeys" rows="3" placeholder="Mỗi dòng 1 key (AIza...)"></textarea></div><div class="field"><label>OpenAI key(s)</label><textarea id="aiOpenaiKeys" rows="3" placeholder="Mỗi dòng 1 key (sk-...)"></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
-async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'AUTO';let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} key | OpenAI: ${j.openai_keys_count||0} key`;}
-async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let body={provider:provider};if(geminiRaw.trim())body.gemini_keys=geminiRaw;if(openaiRaw.trim())body.openai_keys=openaiRaw;let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`Đã lưu key cá nhân. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} | OpenAI: ${j.openai_keys_count||0}`;document.getElementById('aiGeminiKeys').value='';document.getElementById('aiOpenaiKeys').value='';alert(j.message||'Đã lưu key AI cá nhân');}
+function ensureUserAiPanel(){let home=document.getElementById('home');if(!home||document.getElementById('userAiPanel'))return;let box=document.createElement('div');box.className='panel';box.id='userAiPanel';box.innerHTML=`<b>🔑 Key AI cá nhân (mỗi học viên tự nhập)</b><div class="muted" style="margin:6px 0 10px">Key chỉ dùng cho tài khoản của bạn. Lấy Gemini: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. VIP/SVIP/ADMIN bấm Gợi ý AI sẽ thấy đáp án chính xác.</div><div class="row"><div class="field" style="min-width:180px;max-width:240px"><label>AI_PROVIDER</label><select id="aiProvider"><option value="AUTO">AUTO</option><option value="GEMINI">GEMINI</option><option value="OPENAI">OPENAI</option></select></div><div class="field"><label>Gemini key(s)</label><textarea id="aiGeminiKeys" rows="3" placeholder="Mỗi dòng 1 key (AIza...)"></textarea></div><div class="field"><label>OpenAI key(s)</label><textarea id="aiOpenaiKeys" rows="3" placeholder="Mỗi dòng 1 key (sk-...)"></textarea></div></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn2" onclick="loadAiConfig()">Tải trạng thái</button><button class="btn2" onclick="testAiKey()">Test key</button><button class="btn" onclick="saveAiConfig()">Lưu key của tôi</button></div><div id="aiCfgInfo" class="muted" style="margin-top:8px"></div>`;home.insertBefore(box,home.firstChild)}
+async function loadAiConfig(){let j=await api('/api/ai-config');let pv=document.getElementById('aiProvider');if(pv)pv.value=j.provider||'AUTO';let gk=document.getElementById('aiGeminiKeys');if(gk&&Array.isArray(j.gemini_keys_raw))gk.value=j.gemini_keys_raw.join('\n');let ok=document.getElementById('aiOpenaiKeys');if(ok&&Array.isArray(j.openai_keys_raw))ok.value=j.openai_keys_raw.join('\n');let info=document.getElementById('aiCfgInfo');if(info){let gm=(j.gemini_keys_masked||[]).join(', ')||'0';let om=(j.openai_keys_masked||[]).join(', ')||'0';info.textContent=`Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} key [${gm}] | OpenAI: ${j.openai_keys_count||0} key [${om}]`;}}
+async function saveAiConfig(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let body={provider:provider,gemini_keys:geminiRaw,openai_keys:openaiRaw};let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});await loadAiConfig();let info=document.getElementById('aiCfgInfo');if(info)info.textContent=`✅ Đã nhận key từ bạn. Provider: ${j.provider||'AUTO'} | Gemini: ${j.gemini_keys_count||0} | OpenAI: ${j.openai_keys_count||0}`;alert(j.message||'Đã lưu key AI cá nhân');}
+async function testAiKey(){let provider=((document.getElementById('aiProvider')||{}).value||'AUTO').toUpperCase();let geminiRaw=(document.getElementById('aiGeminiKeys')||{}).value||'';let openaiRaw=(document.getElementById('aiOpenaiKeys')||{}).value||'';let model='';try{if(typeof aiGetModel2026==='function')model=aiGetModel2026()}catch(e){};let body={provider:provider,gemini_keys:geminiRaw,openai_keys:openaiRaw,model:model};let info=document.getElementById('aiCfgInfo');if(info)info.textContent='⏳ Đang test key...';let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(info)info.textContent=(j.ok?'✅ ':'❌ ')+(j.message||'');alert((j.ok?'OK: ':'Lỗi: ')+(j.message||''));}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=val('fMucDo');CURRENT_DANG=val('fDang');START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return;}CURRENT_LEVEL=CURRENT_LEVEL||val('fMucDo');CURRENT_DANG=CURRENT_DANG||val('fDang');START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';document.getElementById('startModal').classList.remove('hide')}
@@ -1916,6 +1932,10 @@ def _api_ai_config_handler():
             "openai_keys_count": cfg.get("openai_keys", 0),
             "gemini_keys_count": cfg.get("gemini_keys", 0),
             "has_keys": cfg.get("has_keys", False),
+            "openai_keys_raw": cfg.get("openai_keys_raw", []),
+            "gemini_keys_raw": cfg.get("gemini_keys_raw", []),
+            "openai_keys_masked": cfg.get("openai_keys_masked", []),
+            "gemini_keys_masked": cfg.get("gemini_keys_masked", []),
             "personal": True,
         })
     body = request.get_json(silent=True) or {}
@@ -1933,6 +1953,70 @@ def _api_ai_config_handler():
         return jsonify({"error": str(e)}), 400
 
 
+def _first_key_from_raw(raw: Any) -> str:
+    if isinstance(raw, list):
+        vals = raw
+    else:
+        vals = str(raw or "").splitlines()
+    for x in vals:
+        y = clean(x).strip(",")
+        if not y:
+            continue
+        if "," in y:
+            for z in y.split(","):
+                zz = clean(z)
+                if zz:
+                    return zz
+        else:
+            return y
+    return ""
+
+
+def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str]:
+    p = clean(provider).upper() or "AUTO"
+    k = clean(api_key)
+    if not k:
+        return False, "Chưa có key để test."
+
+    if p == "AUTO":
+        p = "GEMINI" if k.startswith("AIza") else "OPENAI"
+
+    if p == "GEMINI":
+        gmodel = clean(model) or os.environ.get("GEMINI_HINT_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
+        body = {"contents": [{"parts": [{"text": "Trả lời đúng 1 từ: OK"}]}], "generationConfig": {"temperature": 0}}
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={urllib.parse.quote(k)}"
+        req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=18) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+            cands = (data or {}).get("candidates") or []
+            parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
+            txt = clean((parts[0] if parts and isinstance(parts[0], dict) else {}).get("text", ""))
+            if txt:
+                return True, f"Gemini OK với model {gmodel}."
+            return False, "Gemini phản hồi rỗng."
+        except Exception as e:
+            return False, _http_error_message(e)
+
+    omodel = clean(model) or os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    body = {"model": omodel, "messages": [{"role": "user", "content": "Reply with OK only."}], "temperature": 0}
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {k}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=18) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        txt = clean((((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", ""))
+        if txt:
+            return True, f"OpenAI OK với model {omodel}."
+        return False, "OpenAI phản hồi rỗng."
+    except Exception as e:
+        return False, _http_error_message(e)
+
+
 @app.route("/api/ai-config", methods=["GET", "POST"])
 @app.route("/api/admin/ai-config", methods=["GET", "POST"])
 def api_ai_config():
@@ -1940,6 +2024,25 @@ def api_ai_config():
     if bad:
         return bad
     return _api_ai_config_handler()
+
+
+@app.route("/api/ai-key-check", methods=["POST"])
+def api_ai_key_check():
+    bad = require_login_json()
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    provider = clean(body.get("provider", "AUTO")).upper() or "AUTO"
+    model = clean(body.get("model", ""))
+    key = ""
+    if provider in ["AUTO", "GEMINI"]:
+        key = _first_key_from_raw(body.get("gemini_keys"))
+    if not key and provider in ["AUTO", "OPENAI"]:
+        key = _first_key_from_raw(body.get("openai_keys"))
+    if not key:
+        key = clean(body.get("api_key", ""))
+    ok, msg = test_ai_key(provider, key, model)
+    return jsonify({"ok": ok, "message": msg})
 
 
 @app.route("/api/submit", methods=["POST"])
