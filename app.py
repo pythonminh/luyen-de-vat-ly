@@ -31,7 +31,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V39_AI_KEY_INDEX_LOG_2026_06_02"
+APP_VERSION = "V40_ADD_GEMINI_KEYS_SUPPORT_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -1173,27 +1173,34 @@ def ai_hint_fallback(q: Dict[str, Any], user_answer: Any) -> str:
 
 
 def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int]:
-    keys = []
-    for name in ["OPENAI_API_KEY", "OPENAI_API_KEY_1", "OPENAI_API_KEY_2", "OPENAI_API_KEY_3"]:
-        v = os.environ.get(name, "").strip()
-        if v:
-            keys.append(v)
-    csv_keys = os.environ.get("OPENAI_API_KEYS", "").strip()
-    if csv_keys:
-        for k in csv_keys.split(","):
-            k = k.strip()
-            if k:
-                keys.append(k)
-    # remove duplicates while preserving order
-    seen = set()
-    uniq_keys = []
-    for k in keys:
-        if k not in seen:
-            seen.add(k)
-            uniq_keys.append(k)
-    if not uniq_keys:
-        return ai_hint_fallback(q, user_answer), 0
-    model = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    def load_keys(prefix: str) -> List[str]:
+        keys_local: List[str] = []
+        for name in [f"{prefix}_API_KEY", f"{prefix}_API_KEY_1", f"{prefix}_API_KEY_2", f"{prefix}_API_KEY_3"]:
+            v = os.environ.get(name, "").strip()
+            if v:
+                keys_local.append(v)
+        csv_keys_local = os.environ.get(f"{prefix}_API_KEYS", "").strip()
+        if csv_keys_local:
+            for k in csv_keys_local.split(","):
+                k = k.strip()
+                if k:
+                    keys_local.append(k)
+        seen_local = set()
+        uniq_local: List[str] = []
+        for k in keys_local:
+            if k not in seen_local:
+                seen_local.add(k)
+                uniq_local.append(k)
+        return uniq_local[:3]
+
+    openai_keys = load_keys("OPENAI")
+    gemini_keys = load_keys("GEMINI")
+    provider = clean(os.environ.get("AI_PROVIDER", "AUTO")).upper() or "AUTO"
+    if provider not in ["AUTO", "OPENAI", "GEMINI"]:
+        provider = "AUTO"
+
+    model_openai = os.environ.get("OPENAI_HINT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    model_gemini = os.environ.get("GEMINI_HINT_MODEL", "gemini-1.5-flash").strip() or "gemini-1.5-flash"
     prompt = {
         "dang": effective_dang(q),
         "question": clean(q.get("CauHoi", "")),
@@ -1208,32 +1215,85 @@ def ai_hint_from_provider(q: Dict[str, Any], user_answer: Any) -> Tuple[str, int
         "Bạn là trợ giảng luyện đề. Hãy đưa gợi ý NGẮN GỌN, đúng trọng tâm câu hiện tại, liên quan công thức và ý học viên đang làm. "
         "Không tiết lộ đáp án trực tiếp."
     )
-    body = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
-        ],
-        "temperature": 0.2,
-    }
-    for idx, api_key in enumerate(uniq_keys[:3], start=1):
-        req = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
-            data=json.dumps(body).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=18) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-            txt = (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
-            txt = clean(txt)
-            if txt:
-                print(f"[AI_HINT] using key #{idx}")
-                return txt, idx
-        except Exception:
-            # thử key tiếp theo nếu key hiện tại lỗi/quota
-            continue
+    def try_openai() -> Tuple[str, int]:
+        body = {
+            "model": model_openai,
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+            ],
+            "temperature": 0.2,
+        }
+        for idx, api_key in enumerate(openai_keys, start=1):
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/chat/completions",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=18) as resp:
+                    data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                txt = (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
+                txt = clean(txt)
+                if txt:
+                    print(f"[AI_HINT][OPENAI] using key #{idx}")
+                    return txt, idx
+            except Exception:
+                continue
+        return "", 0
+
+    def try_gemini() -> Tuple[str, int]:
+        body = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": sys_prompt},
+                        {"text": json.dumps(prompt, ensure_ascii=False)},
+                    ]
+                }
+            ],
+            "generationConfig": {"temperature": 0.2},
+        }
+        for idx, api_key in enumerate(gemini_keys, start=1):
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_gemini}:generateContent?key={urllib.parse.quote(api_key)}"
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=18) as resp:
+                    data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                cands = (data or {}).get("candidates") or []
+                parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
+                txt = ""
+                if parts and isinstance(parts[0], dict):
+                    txt = clean(parts[0].get("text", ""))
+                if txt:
+                    print(f"[AI_HINT][GEMINI] using key #{idx}")
+                    return txt, idx
+            except Exception:
+                continue
+        return "", 0
+
+    txt, idx = "", 0
+    if provider == "OPENAI":
+        txt, idx = try_openai()
+    elif provider == "GEMINI":
+        txt, idx = try_gemini()
+    else:
+        # AUTO: ưu tiên Gemini nếu có key, fallback OpenAI
+        if gemini_keys:
+            txt, idx = try_gemini()
+            if not txt:
+                txt, idx = try_openai()
+        else:
+            txt, idx = try_openai()
+
+    if txt:
+        return txt, idx
     return ai_hint_fallback(q, user_answer), 0
 
 STORE: Optional[SheetStore] = None
