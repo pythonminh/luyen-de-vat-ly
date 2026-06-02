@@ -30,7 +30,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V17_FULLDE_LAPTOP_FIX_2026_06_02"
+APP_VERSION = "V18_DUNSAI_AUTO_DETECT_2026_06_02"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -134,6 +134,43 @@ def norm_dang(s: Any) -> str:
     if any(x in k for x in ["tu luan", "essay", "tl"]):
         return "Tự luận"
     return "Trắc nghiệm"
+
+
+def parse_tf_values(value: Any) -> List[str]:
+    """Chuẩn hóa đáp án Đ/S thành danh sách 4 phần tử tối đa."""
+    if isinstance(value, list):
+        out = []
+        for v in value:
+            k = key_norm(v)
+            if k in ["d", "đ", "dung", "đung", "đúng", "true", "t"]:
+                out.append("Đ")
+            elif k in ["s", "sai", "false", "f"]:
+                out.append("S")
+        return out[:4]
+    s = strip_accents(clean(value).upper()).replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
+    vals = re.findall(r"[DS]", s)[:4]
+    return ["Đ" if v == "D" else "S" for v in vals]
+
+
+def looks_like_dungsai_answer(value: Any) -> bool:
+    vals = parse_tf_values(value)
+    return len(vals) >= 2
+
+
+def has_tf_statements(q: Dict[str, Any]) -> bool:
+    count = 0
+    for L in ["A", "B", "C", "D"]:
+        if clean(q.get(L)):
+            count += 1
+    return count >= 2
+
+
+def effective_dang(q: Dict[str, Any]) -> str:
+    """Suy luận dạng thực tế, ưu tiên nhận diện Đúng/Sai từ đáp án."""
+    dang = norm_dang(q.get("Dang"))
+    if looks_like_dungsai_answer(q.get("DapAn")) and has_tf_statements(q):
+        return "Đúng sai"
+    return dang
 
 
 def norm_role(s: Any) -> str:
@@ -284,7 +321,7 @@ def get_field(row: Dict[str, Any], canonical: str) -> str:
 
 def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q = {f: get_field(row, f) for f in QUESTION_FIELDS}
-    q["Dang"] = norm_dang(q.get("Dang"))
+    q["Dang"] = effective_dang(q)
     if not q.get("MaDe"):
         base = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De"])
         q["MaDe"] = "MD_" + stable_hash(base, 12)
@@ -998,21 +1035,15 @@ def prepare_quiz_questions(
 
 
 def check_answer(q: Dict[str, Any], user_answer: Any) -> Tuple[bool, str, str]:
-    dang = norm_dang(q.get("Dang"))
+    dang = effective_dang(q)
     correct_raw = clean(q.get("DapAn"))
     if dang == "Trắc nghiệm":
         c = norm_letter(correct_raw)
         ch = norm_letter(user_answer)
         return bool(c and ch and c == ch), c, ch
     if dang == "Đúng sai":
-        def tf_list(x):
-            if isinstance(x, list):
-                return ["Đ" if key_norm(v) in ["d", "đ", "dung", "đung", "đúng"] else "S" if key_norm(v) in ["s", "sai"] else "" for v in x][:4]
-            s = strip_accents(clean(x).upper()).replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
-            vals = re.findall(r"[DS]", s)[:4]
-            return ["Đ" if v == "D" else "S" for v in vals]
-        corr = tf_list(correct_raw)
-        chosen = tf_list(user_answer)
+        corr = parse_tf_values(correct_raw)
+        chosen = parse_tf_values(user_answer)
         while len(chosen) < 4:
             chosen.append("")
         return len(corr) == 4 and corr == chosen[:4], ",".join(corr), ",".join(chosen[:4])
