@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V54_LATEX_LIST_AND_MATH_2026_06_02"
+APP_VERSION = "V55_FIX_BETA_DOLLAR_2026_06_02"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_AI_PROVIDER = "GEMINI"
@@ -80,6 +80,27 @@ def clean(v: Any) -> str:
     if re.fullmatch(r"\d+\.0", s):
         s = s[:-2]
     return s
+
+
+def normalize_latex_text(s: Any) -> str:
+    """Chuẩn hóa kiểu Word ${(\\beta)}$ → $(\\beta)$ để MathJax đọc được."""
+    t = clean(s)
+    if not t:
+        return ""
+    # ${...}$ hoặc ${...}
+    t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}\s*\$", r"$(\1)$", t)
+    t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}", r"$(\1)$", t)
+    # {(\beta)} không có $
+    t = re.sub(r"(?<![$\\])\{\s*\(\s*([^}]+?)\s*\)\s*\}(?![$])", r"$(\1)$", t)
+    # $(\beta)$$ thừa $ cuối
+    t = re.sub(r"(\$[^$\n]+?\$)\$+", r"\1", t)
+
+    def _fix_math_bs(m: re.Match) -> str:
+        inner = m.group(1).replace("\\\\", "\\")
+        return f"${inner}$"
+
+    t = re.sub(r"\$([^$]+)\$", _fix_math_bs, t)
+    return t
 
 
 def stable_hash(text: str, n: int = 12) -> str:
@@ -348,6 +369,11 @@ def get_field(row: Dict[str, Any], canonical: str) -> str:
 
 def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q = {f: get_field(row, f) for f in QUESTION_FIELDS}
+    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+        q[f] = normalize_latex_text(q.get(f, ""))
+    da = clean(q.get("DapAn", ""))
+    if da and any(x in da for x in ("$", "\\", "{", "}")):
+        q["DapAn"] = normalize_latex_text(da)
     q["Dang"] = effective_dang(q)
     if not q.get("MaDe"):
         base = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De"])
@@ -629,7 +655,9 @@ class SheetStore:
             }
             for field, col0 in exact.items():
                 if not clean(q.get(field)) and col0 < len(row_vals):
-                    q[field] = clean(row_vals[col0])
+                    q[field] = normalize_latex_text(row_vals[col0])
+            for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+                q[f] = normalize_latex_text(q.get(f, ""))
 
             # Cột T là link hình ảnh. Ưu tiên T nếu T có link/file ID hợp lệ.
             if 19 < len(row_vals):
@@ -1916,7 +1944,8 @@ function enhanceHomeColors(){
 }
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let d1=s.indexOf('$',i),d2=d1>=0?s.indexOf('$',d1+1):-1;if(d1<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,d1));if(d2<0){out+=esc(s.slice(d1));break}out+=s.slice(d1,d2+1);i=d2+1}return out}
-function renderRichText(s){s=String(s||'').trim();s=s.replace(/\?\?\s*/g,'');s=s.replace(/\$\{([^}]+)\}/g,'$$$1$');s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=escHtmlKeepMath(s);return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>')}
+function normalizeLatexDelimiters(s){s=String(s||'');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return s}
+function renderRichText(s){s=String(s||'').trim();s=s.replace(/\?\?\s*/g,'');s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=escHtmlKeepMath(s);return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>')}
 function escAttr(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function shortText(s,n=90){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n-1)+'…':s}
 function normText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d')}
