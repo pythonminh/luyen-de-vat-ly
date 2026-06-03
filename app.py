@@ -36,12 +36,14 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V55_FIX_BETA_DOLLAR_2026_06_02"
+APP_VERSION = "V57_AI_ADMIN_VIP_PROMPTS_2026_06_02"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_AI_PROVIDER = "GEMINI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
+AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(180, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "380") or 380), 900))
+AI_HINT_VIP_MAX_CHARS = max(280, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "620") or 620), 1500))
 AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(400, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "900") or 900), 2000))
 AI_HINT_ADMIN_MAX_CHARS = max(800, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "2200") or 2200), 6000))
 MAX_AI_KEYS_PER_PROVIDER = max(1, min(int(os.environ.get("AI_MAX_KEYS", "8") or 8), 20))
@@ -82,18 +84,99 @@ def clean(v: Any) -> str:
     return s
 
 
+_LATEX_VN_BREAK = (
+    r"thỏa|mãn|phương|trình|nên|điểm|thuộc|mặt|phẳng|khẳng|tọa|độ|sai|đúng",
+)
+
+
+def _fix_plain_text_gaps(s: str) -> str:
+    if not s:
+        return s
+    s = re.sub(r"(\d)([Nn]ên|[Đđ]iểm)", r"\1 \2", s)
+    s = re.sub(r"(\))([A-Za-zÀ-ỹĐđ])", r"\1 \2", s)
+    return s
+
+
+def _fix_one_math_inner(inner: str) -> str:
+    if not inner:
+        return inner
+    # $(M)(4;5;2) → $(M)$ $(4;5;2)$
+    inner = re.sub(r"\)\s*\((\d[\d;\s,.\-]*)\)", r")$ $(\1)$", inner)
+    inner = re.sub(
+        r"\$\(([^)]+)\)(thuộc|mặt|phẳng|nên|điểm)",
+        r"$(\1)$ $\2",
+        inner,
+        flags=re.I,
+    )
+    # (M)thuộc / (M)nên (không có $ giữa hai cụm)
+    inner = re.sub(
+        rf"\(([^)]+)\)({_LATEX_VN_BREAK})",
+        r"(\1)$ $\2",
+        inner,
+        flags=re.I,
+    )
+    inner = re.sub(
+        rf"(=[\d.\-+]+)\s*({_LATEX_VN_BREAK})",
+        r"\1$ $\2",
+        inner,
+        flags=re.I,
+    )
+    inner = re.sub(
+        rf"(\))({_LATEX_VN_BREAK})",
+        r"\1 \2",
+        inner,
+        flags=re.I,
+    )
+    inner = re.sub(r"(\d)([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})", r"\1 \2", inner)
+    inner = re.sub(r"(\))([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})", r"\1 \2", inner)
+    inner = re.sub(r"\(\((\\?[a-zA-Z]+)\)\)", r"\1", inner)
+    return inner
+
+
+def _fix_merged_inline_math(t: str) -> str:
+    if "$" not in t:
+        return _fix_plain_text_gaps(t)
+    out, i = [], 0
+    while i < len(t):
+        d1 = t.find("$", i)
+        if d1 < 0:
+            out.append(_fix_plain_text_gaps(t[i:]))
+            break
+        out.append(_fix_plain_text_gaps(t[i:d1]))
+        d2 = t.find("$", d1 + 1)
+        if d2 < 0:
+            out.append(t[d1:])
+            break
+        inner = _fix_one_math_inner(t[d1 + 1 : d2])
+        out.append(f"${inner}$")
+        i = d2 + 1
+    return "".join(out)
+
+
+def _strip_latex_list_markup(t: str) -> str:
+    t = re.sub(r"\\begin\s*\{\s*enumerate\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\end\s*\{\s*enumerate\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\begin\s*\{\s*itemize\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\end\s*\{\s*itemize\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\item\s*", "\n• ", t, flags=re.I)
+    t = re.sub(r"\\item(?=[A-Za-zÀ-ỹĐđ])", "\n• ", t, flags=re.I)
+    return t
+
+
 def normalize_latex_text(s: Any) -> str:
-    """Chuẩn hóa kiểu Word ${(\\beta)}$ → $(\\beta)$ để MathJax đọc được."""
+    """Chuẩn hóa LaTeX từ Word/Sheet: ${\\beta}$, \\item, khối $ nuốt tiếng Việt."""
     t = clean(s)
     if not t:
         return ""
-    # ${...}$ hoặc ${...}
+    t = _strip_latex_list_markup(t)
     t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}\s*\$", r"$(\1)$", t)
     t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}", r"$(\1)$", t)
-    # {(\beta)} không có $
     t = re.sub(r"(?<![$\\])\{\s*\(\s*([^}]+?)\s*\)\s*\}(?![$])", r"$(\1)$", t)
-    # $(\beta)$$ thừa $ cuối
+    t = re.sub(r"\$\(\((\\?[a-zA-Z]+)\)\)\$\.?", r"$\\1$.", t)
+    t = re.sub(r"\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)", r"$\\1$", t)
+    t = _fix_merged_inline_math(t)
     t = re.sub(r"(\$[^$\n]+?\$)\$+", r"\1", t)
+    t = re.sub(r"\$\s*\$", " ", t)
 
     def _fix_math_bs(m: re.Match) -> str:
         inner = m.group(1).replace("\\\\", "\\")
@@ -252,6 +335,11 @@ def can_view_solution_after_submit() -> bool:
 def can_exact_hint() -> bool:
     role = session.get("role", "")
     return role in ["VIP", "S.VIP", "SVIP", "ADMIN"]
+
+
+def is_vip_formula_hint() -> bool:
+    """VIP/SVIP: gợi ý công thức thay số — không đưa đáp án cuối trong AI gợi ý."""
+    return session.get("role") in ["VIP", "S.VIP", "SVIP"]
 
 
 def access_level_from_text(value: Any) -> str:
@@ -1014,42 +1102,44 @@ class SheetStore:
                 provider_mode=cfg.get("provider", "AUTO"),
             )
 
-        # Học sinh / VIP: gợi ý ngắn
+        # Học sinh / VIP: gợi ý (VIP chỉ công thức — không đáp án cuối)
+        vip_formula = is_vip_formula_hint()
         if has_keys:
-            hint_text, key_index, provider_used, ai_error = ai_hint_from_provider(q, answer)
+            hint_text, key_index, provider_used, ai_error = ai_hint_from_provider(
+                q, answer, vip_formula_only=vip_formula
+            )
             if provider_used != "FALLBACK":
                 hint_out = hint_text
-                exact_bonus = False
-                correct = ""
-                if can_exact_hint():
-                    ok, correct, chosen = check_answer(q, answer)
-                    exact_bonus = True
-                    if correct:
-                        hint_out = f"{hint_text}\n\n📌 Đáp án chính xác (VIP/SVIP): {correct}"
-                    else:
-                        hint_out = f"{hint_text}\n\n📌 Đáp án trong Sheet (cột P) đang trống."
+                if vip_formula:
+                    hint_out += (
+                        "\n\n📐 Gợi ý VIP: chỉ công thức & cách thay số — "
+                        "em tự tính đến đáp án cuối."
+                    )
                 return {
                     "index": index,
-                    "exact": exact_bonus,
+                    "exact": False,
+                    "vip_formula_only": vip_formula,
                     "hint": hint_out,
-                    "correct": correct,
+                    "correct": "",
                     "key_index": key_index,
                     "provider_used": provider_used,
                     "ai_configured": True,
                     "provider_mode": cfg.get("provider", "AUTO"),
                     "ai_error": "",
                 }
-            # Có key nhưng API lỗi → báo lỗi rõ, VIP vẫn có đáp án Sheet nếu có
-            if can_exact_hint():
-                ok, correct, chosen = check_answer(q, answer)
-                err_note = f" Gemini/OpenAI lỗi: {ai_error}" if ai_error else ""
+            err_note = f" AI lỗi: {ai_error}" if ai_error else ""
+            if vip_formula:
                 return {
                     "index": index,
-                    "exact": True,
-                    "hint": f"Đáp án chính xác: {correct or '(trống trong Sheet)'}.{err_note}",
-                    "correct": correct,
-                    "chosen": chosen,
-                    "ok": ok,
+                    "exact": False,
+                    "vip_formula_only": True,
+                    "hint": (
+                        "Chưa gọi được AI."
+                        + err_note
+                        + "\n\nGợi ý VIP chỉ đưa công thức thay số, không hiện đáp án cuối. "
+                        "Thầy kiểm tra GEMINI_API_KEY trên Render hoặc thử lại sau."
+                    ),
+                    "correct": "",
                     "key_index": 0,
                     "provider_used": "FALLBACK",
                     "ai_configured": True,
@@ -1057,15 +1147,16 @@ class SheetStore:
                     "ai_error": ai_error,
                 }
 
-        if can_exact_hint():
-            ok, correct, chosen = check_answer(q, answer)
+        if vip_formula:
             return {
                 "index": index,
-                "exact": True,
-                "hint": f"Đáp án chính xác: {correct or '(trống trong Sheet)'}.",
-                "correct": correct,
-                "chosen": chosen,
-                "ok": ok,
+                "exact": False,
+                "vip_formula_only": True,
+                "hint": (
+                    "Chưa cấu hình GEMINI_API_KEY trên Render.\n\n"
+                    "Gợi ý VIP chỉ đưa công thức & hướng thay số, không đưa đáp án cuối."
+                ),
+                "correct": "",
                 "ai_configured": False,
                 "provider_mode": cfg.get("provider", "AUTO"),
             }
@@ -1514,7 +1605,9 @@ def gemini_prompt_brand_2026() -> str:
     return "Bạn là trợ giảng luyện đề của Lớp học Thầy Minh, ưu tiên tính chính xác và sư phạm."
 
 
-def build_ai_question_block(q: Dict[str, Any], user_answer: Any) -> str:
+def build_ai_question_block(
+    q: Dict[str, Any], user_answer: Any, *, include_sheet_answer: bool = True
+) -> str:
     dang = effective_dang(q)
     opts = []
     for L in "ABCD":
@@ -1527,25 +1620,31 @@ def build_ai_question_block(q: Dict[str, Any], user_answer: Any) -> str:
         chosen_text = ",".join(parse_tf_values(user_answer))
     else:
         chosen_text = clean(user_answer)
-    return "\n".join(
-        [
-            f"Môn: {clean(q.get('Mon', ''))}",
-            f"Chương: {clean(q.get('Chuong', ''))}",
-            f"Bài học: {clean(q.get('BaiHoc', ''))}",
-            f"Mức độ: {clean(q.get('MucDo', ''))}",
-            f"Dạng câu: {dang}",
-            "",
-            "Đề bài:",
-            clean(q.get("CauHoi", "")),
-            "",
-            "Phương án:",
-            options_text,
-            "",
-            f"Học sinh đang chọn: {chosen_text or '(chưa chọn)'}",
-            f"Đáp án chuẩn tham chiếu nội bộ: {clean(q.get('DapAn', ''))}",
-            f"Lời giải hiện có (nếu có): {clean(q.get('LoiGiai', ''))}",
-        ]
-    )
+    lines = [
+        f"Môn: {clean(q.get('Mon', ''))}",
+        f"Chương: {clean(q.get('Chuong', ''))}",
+        f"Bài học: {clean(q.get('BaiHoc', ''))}",
+        f"Mức độ: {clean(q.get('MucDo', ''))}",
+        f"Dạng câu: {dang}",
+        "",
+        "Đề bài:",
+        clean(q.get("CauHoi", "")),
+        "",
+        "Phương án:",
+        options_text,
+        "",
+        f"Học sinh đang chọn: {chosen_text or '(chưa chọn)'}",
+    ]
+    if include_sheet_answer:
+        lines.extend(
+            [
+                f"Đáp án chuẩn tham chiếu nội bộ (Sheet cột P): {clean(q.get('DapAn', ''))}",
+                f"Lời giải hiện có (Sheet cột R): {clean(q.get('LoiGiai', ''))}",
+            ]
+        )
+    else:
+        lines.append("(Không tiết lộ đáp án Sheet — học sinh tự làm.)")
+    return "\n".join(lines)
 
 
 def trim_ai_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
@@ -1562,7 +1661,7 @@ def trim_ai_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
 
 
 def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
-    block = build_ai_question_block(q, user_answer)
+    block = build_ai_question_block(q, user_answer, include_sheet_answer=True)
     sheet_da = clean(q.get("DapAn", "")) or "(trống)"
     sheet_lg = clean(q.get("LoiGiai", "")) or "(trống)"
     if len(sheet_lg) > 500:
@@ -1571,27 +1670,37 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
         sheet_lg_show = sheet_lg
     return "\n".join(
         [
-            "ADMIN kiểm tra ngân hàng câu — giải bài và đối chiếu với Google Sheet.",
+            "ADMIN kiểm tra ngân hàng câu — nhắc đề, dạy cách làm, đối chiếu Sheet.",
             "",
             gemini_prompt_brand_2026(),
             "",
-            "Trình bày tiếng Việt, theo ĐÚNG 5 mục sau (giữ tiêu đề):",
+            "Trình bày tiếng Việt, theo ĐÚNG 8 mục sau (giữ nguyên tiêu đề số):",
             "",
-            "1. BÀI GIẢI AI",
-            "- Giải đầy đủ có bước, công thức, đơn vị (nếu có tính toán).",
+            "1. NHẮC LẠI ĐỀ",
+            "- Tóm tắt đề bài (giữ số liệu, ký hiệu, yêu cầu cần tìm).",
             "",
-            "2. ĐÁP ÁN AI KẾT LUẬN",
+            "2. ĐỊNH NGHĨA & CÔNG THỨC",
+            "- Định nghĩa/khái niệm then chốt.",
+            "- Công thức cần dùng (kèm điều kiện áp dụng, đơn vị).",
+            "",
+            "3. CÁCH LÀM (LỘ TRÌNH)",
+            "- Liệt kê các bước giải theo thứ tự logic.",
+            "",
+            "4. BÀI GIẢI CHI TIẾT",
+            "- Giải đầy đủ từng bước, thay số, tính toán (nếu có).",
+            "",
+            "5. ĐÁP ÁN AI KẾT LUẬN",
             "- Nêu rõ đáp án cuối (A/B/C/D, số, hoặc Đ/S từng ý).",
             "",
-            "3. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)",
+            "6. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)",
             f"- Sheet đang ghi: {sheet_da}",
             "- Kết luận một dòng: KHỚP / KHÔNG KHỚP / SHEET TRỐNG — và giải thích ngắn.",
             "",
-            "4. ĐÁNH GIÁ LỜI GIẢI SHEET — CỘT R",
+            "7. ĐÁNH GIÁ LỜI GIẢI SHEET — CỘT R",
             f"- Sheet đang ghi: {sheet_lg_show}",
             "- Kết luận một dòng: ĐÚNG / THIẾU / SAI / TRỐNG — và giải thích ngắn.",
             "",
-            "5. ĐỀ XUẤT LỜI GIẢI CHO SHEET",
+            "8. ĐỀ XUẤT LỜI GIẢI CHO SHEET",
             "- Viết lời giải chuẩn để thầy copy vào cột R (nếu Sheet trống hoặc sai).",
             "- Nếu Sheet đã đúng, ghi: «Giữ nguyên lời giải Sheet».",
             "",
@@ -1607,17 +1716,25 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
     dapan = ""
     loigiai = ""
     m2 = re.search(
-        r"2\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=3\.\s*SO KHỚP|\Z)",
+        r"5\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=6\.\s*SO KHỚP|\Z)",
         body,
         re.I | re.S,
     )
+    if not m2:
+        m2 = re.search(
+            r"2\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=3\.\s*SO KHỚP|\Z)",
+            body,
+            re.I | re.S,
+        )
     if m2:
         block = clean(m2.group(1))
         lines = [re.sub(r"^[-•*]\s*", "", x.strip()) for x in block.splitlines() if clean(x)]
         if lines:
             dapan = lines[-1]
             dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
-    m5 = re.search(r"5\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
+    m5 = re.search(r"8\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
+    if not m5:
+        m5 = re.search(r"5\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
     if m5:
         lg = clean(m5.group(1))
         if lg and "giữ nguyên lời giải sheet" not in lg.lower():
@@ -1651,7 +1768,7 @@ def _admin_hint_payload(
 
 
 def build_ai_teacher_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
-    block = build_ai_question_block(q, user_answer)
+    block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
     dang = effective_dang(q)
     dang_note = {
         "Trắc nghiệm": "Gợi ý hướng chọn, không phân tích hết A-D.",
@@ -1674,6 +1791,40 @@ def build_ai_teacher_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
             "- Không lặp lại nguyên đề bài.",
             "- Không nêu thẳng đáp án cuối (chữ A/B/C/D hoặc số kết quả).",
             "- Không kết thúc bằng chữ ký / Zalo.",
+            "",
+            "DỮ LIỆU CÂU:",
+            block,
+        ]
+    )
+
+
+def build_ai_vip_formula_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
+    block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
+    dang = effective_dang(q)
+    dang_note = {
+        "Trắc nghiệm": "Chỉ hướng loại trừ / công thức, không kết luận A/B/C/D đúng.",
+        "Đúng sai": "Chỉ cách xét từng ý bằng công thức, không chốt Đ/S cuối.",
+        "Trả lời ngắn": "Ghi công thức dạng ký hiệu, chỉ rõ biến thay số nào — không tính ra số cuối.",
+        "Tự luận": "Định nghĩa + công thức + 3 bước — không viết lời giải hoàn chỉnh.",
+    }.get(dang, "Công thức thay số, không kết quả cuối.")
+    return "\n".join(
+        [
+            "Viết GỢI Ý VIP/SVIP — chỉ hướng dẫn tự làm, KHÔNG đưa đáp án cuối.",
+            "",
+            gemini_prompt_brand_2026(),
+            "",
+            "Cấu trúc bắt buộc (giữ tiêu đề bullet):",
+            "- ĐỀ: 1–2 câu nhắc lại đề đang hỏi gì (giữ số liệu).",
+            "- ĐỊNH NGHĨA: khái niệm then chốt (ngắn).",
+            "- CÔNG THỨC: ghi công thức ký hiệu; nói rõ biến nào lấy từ đề (KHÔNG thay số ra kết quả).",
+            "- CÁCH LÀM: 2–4 bước em tự thay số và tính tiếp.",
+            "- LƯU Ý: 1 mẹo tránh sai.",
+            "",
+            "QUY TẮC:",
+            f"- {dang_note}",
+            "- Khoảng 100–150 từ, tối đa 6 dòng bullet.",
+            "- TUYỆT ĐỐI KHÔNG: nêu A/B/C/D đúng, số kết quả cuối, «đáp án là», kết luận đúng/sai.",
+            "- Không dùng đáp án Sheet (thầy không cung cấp cho em).",
             "",
             "DỮ LIỆU CÂU:",
             block,
@@ -1719,7 +1870,10 @@ def _http_error_message(e: Exception) -> str:
 
 
 def ai_hint_from_provider(
-    q: Dict[str, Any], user_answer: Any, admin_review: bool = False
+    q: Dict[str, Any],
+    user_answer: Any,
+    admin_review: bool = False,
+    vip_formula_only: bool = False,
 ) -> Tuple[str, int, str, str]:
 
     cfg = ai_runtime_config()
@@ -1727,8 +1881,15 @@ def ai_hint_from_provider(
     gemini_keys = load_ai_keys("GEMINI")
     provider = cfg["provider"]
     last_error = ""
-    max_tokens = AI_HINT_ADMIN_MAX_OUTPUT_TOKENS if admin_review else AI_HINT_MAX_OUTPUT_TOKENS
-    max_chars = AI_HINT_ADMIN_MAX_CHARS if admin_review else AI_HINT_MAX_CHARS
+    if admin_review:
+        max_tokens = AI_HINT_ADMIN_MAX_OUTPUT_TOKENS
+        max_chars = AI_HINT_ADMIN_MAX_CHARS
+    elif vip_formula_only:
+        max_tokens = AI_HINT_VIP_MAX_OUTPUT_TOKENS
+        max_chars = AI_HINT_VIP_MAX_CHARS
+    else:
+        max_tokens = AI_HINT_MAX_OUTPUT_TOKENS
+        max_chars = AI_HINT_MAX_CHARS
 
     model_openai = clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
     model_gemini = clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
@@ -1741,15 +1902,23 @@ def ai_hint_from_provider(
             gemini_models.append(m)
     if admin_review:
         sys_prompt = (
-            "Bạn là chuyên gia kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt, "
-            "giải đầy đủ và đối chiếu đáp án/lời giải trên Sheet."
+            "Bạn là chuyên gia kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt: "
+            "nhắc đề, định nghĩa, công thức, cách làm, bài giải chi tiết, đáp án — "
+            "và đối chiếu Sheet."
         )
         teacher_prompt = build_ai_admin_review_prompt_2026(q, user_answer)
         temp = 0.1
+    elif vip_formula_only:
+        sys_prompt = (
+            "Bạn là trợ giảng VIP. Trả lời tiếng Việt: nhắc đề, định nghĩa, "
+            "công thức để thay số — KHÔNG đưa đáp án cuối hay kết quả tính xong."
+        )
+        teacher_prompt = build_ai_vip_formula_prompt_2026(q, user_answer)
+        temp = 0.12
     else:
         sys_prompt = (
             "Bạn là trợ giảng luyện đề. Trả lời tiếng Việt, NGẮN GỌN (4–5 dòng), "
-            "chỉ gợi ý hướng làm — không viết bài giải dài."
+            "chỉ gợi ý hướng làm — không viết bài giải dài, không đáp án cuối."
         )
         teacher_prompt = build_ai_teacher_prompt_2026(q, user_answer)
         temp = 0.15
@@ -1944,8 +2113,12 @@ function enhanceHomeColors(){
 }
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let d1=s.indexOf('$',i),d2=d1>=0?s.indexOf('$',d1+1):-1;if(d1<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,d1));if(d2<0){out+=esc(s.slice(d1));break}out+=s.slice(d1,d2+1);i=d2+1}return out}
-function normalizeLatexDelimiters(s){s=String(s||'');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return s}
-function renderRichText(s){s=String(s||'').trim();s=s.replace(/\?\?\s*/g,'');s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=escHtmlKeepMath(s);return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>')}
+function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
+function fixPlainTextGaps(s){return String(s||'').replace(/(\d)([Nn]ên|[Đđ]iểm)/g,'$1 $2').replace(/(\))([A-Za-zÀ-ỹĐđ])/g,'$1 $2')}
+function fixOneMathInner(inner){if(!inner)return inner;inner=inner.replace(/\)\s*\((\d[\d;\s,.\-]*)\)/g,')$ $( $1)$');inner=inner.replace(/\$\(([^)]+)\)(thuộc|mặt|phẳng|nên|điểm)/gi,'$( $1)$ $2');inner=inner.replace(/\(([^)]+)\)(thỏa|mãn|phương|trình|nên|điểm|thuộc|mặt|phẳng|khẳng|tọa|độ)/gi,'($1)$ $2');inner=inner.replace(/(=[\d.\-+]+)\s*(nên|điểm|thuộc|mặt|phẳng|khẳng|tọa)/gi,'$1$ $2');inner=inner.replace(/\)(thỏa|mãn|nên|điểm|thuộc|mặt|phẳng)/gi,') $1');inner=inner.replace(/(\d)([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/(\))([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/\(\((\\?[a-zA-Z]+)\)\)/g,'$1');return inner}
+function fixMergedInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return fixPlainTextGaps(t);let out='',i=0;while(i<t.length){let d1=t.indexOf('$',i);if(d1<0){out+=fixPlainTextGaps(t.slice(i));break}out+=fixPlainTextGaps(t.slice(i,d1));let d2=t.indexOf('$',d1+1);if(d2<0){out+=t.slice(d1);break}out+='$'+fixOneMathInner(t.slice(d1+1,d2))+'$';i=d2+1}return out}
+function normalizeLatexDelimiters(s){s=String(s||'');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=fixMergedInlineMath(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return s}
+function renderRichText(s){s=String(s||'').trim();s=s.replace(/\?\?\s*/g,'');s=stripLatexListMarkup(s);s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'<br>• ');s=escHtmlKeepMath(s);return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>')}
 function escAttr(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function shortText(s,n=90){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n-1)+'…':s}
 function normText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d')}
@@ -2039,13 +2212,13 @@ async function checkCurrentQuestion(){if(USER.is_trial||SUBMITTED)return;let q=Q
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=shortText((QUESTIONS[i]&&QUESTIONS[i].CauHoi)||'',120);html+=`<button class="${cls}" title="${escAttr(tip)}" onclick="goQ(${i})">${i+1}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function renderQuestion(){let q=QUESTIONS[CUR];renderNav();let hb=document.getElementById('hintBox');if(hb){if(HINT_BY_Q[CUR])renderHintBox(HINT_BY_Q[CUR]);else{hb.classList.add('hide');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=renderRichText(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let bh=document.getElementById('btnHint');if(bh)bh.textContent=USER.is_admin?'🔍 AI kiểm tra':'💡 Gợi ý AI';let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if((SUBMITTED||CHECKED[CUR])&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${renderRichText(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let rows=((RESULTS[CUR]&&RESULTS[CUR].rows)||[]);for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||CHECKED[CUR])&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${renderRichText(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let canShowAns=USER.is_admin||SUBMITTED||!!CHECKED[CUR];let canShowExp=USER.is_admin||((SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL')||!!CHECKED[CUR]);let showAns=canShowAns,showExp=canShowExp;if(FULLDE_ON){if(FS_ANS_FORCE!==null)showAns=canShowAns&&FS_ANS_FORCE;if(FS_EXP_FORCE!==null)showExp=canShowExp&&FS_EXP_FORCE}let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns)parts.push(`<b>Đáp án:</b> ${renderRichText(r.correct||q.DapAn||'')}`);if(showExp)parts.push(`<b>Lời giải:</b><br>${renderRichText(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`);document.getElementById('solution').innerHTML=parts.join('<br>')}typeset()}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb||!j)return;hb.classList.remove('hide');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':'💡 Gợi ý AI:';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;let sd=esc(j.suggested_dapan||'');let sl=esc(j.suggested_loigiai||'');extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`;if(j.suggested_dapan)extra+=`<div class="muted" style="margin-top:6px;font-size:12px"><b>Gợi ý đáp án:</b> ${sd}</div>`}else if(j.exact){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Gợi ý VIP/SVIP (kèm đáp án Sheet)</div>`;if(!String(j.correct||'').trim())extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cột P trống.</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let body=String(j.hint||'');hb.innerHTML=`<b>${title}</b>${extra}<textarea id="hintAdminBody" class="hintAdminBody" readonly>${body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>`;typeset()}
+function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb||!j)return;hb.classList.remove('hide');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':'💡 Gợi ý AI:';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;let sd=esc(j.suggested_dapan||'');let sl=esc(j.suggested_loigiai||'');extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`;if(j.suggested_dapan)extra+=`<div class="muted" style="margin-top:6px;font-size:12px"><b>Gợi ý đáp án:</b> ${sd}</div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Gợi ý VIP/SVIP: công thức & cách thay số — không đáp án cuối</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let body=String(j.hint||'');hb.innerHTML=`<b>${title}</b>${extra}<textarea id="hintAdminBody" class="hintAdminBody" readonly>${body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>`;typeset()}
 function copyHintAll(){let ta=document.getElementById('hintAdminBody');let t=ta?ta.value:(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].hint)||'';if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard.')).catch(()=>{if(ta){ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn vùng text trong ô rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};if(field==='DapAn')return String(j.suggested_dapan||'').trim();if(field==='LoiGiai'){let v=String(j.suggested_loigiai||'').trim();if(v)return v;let ta=document.getElementById('hintAdminBody');return ta?ta.value.trim():String(j.hint||'').trim()}return ''}
-function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 2).':'Chưa có lời giải đề xuất (mục 5).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
+function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 5).':'Chưa có lời giải đề xuất (mục 8).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
 function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};if(!dapan)dapan=String(j.suggested_dapan||'').trim();if(!loigiai)loigiai=String(j.suggested_loigiai||'').trim();openEdit();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
 async function saveHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let v=hintFieldValue(field);if(!v){alert('Không có nội dung để lưu.');return}let col=field==='DapAn'?'P (đáp án)':'R (lời giải)';if(!confirm('Lưu vào Google Sheet cột '+col+'?\n\n'+v.slice(0,200)+(v.length>200?'…':'')))return;try{let updates={};updates[field]=v;let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});Object.assign(q,updates);if(HINT_BY_Q[CUR]){if(field==='DapAn')HINT_BY_Q[CUR].sheet_dapan=v;if(field==='LoiGiai')HINT_BY_Q[CUR].sheet_loigiai=v}renderQuestion();alert('Đã lưu '+field+' vào Sheet dòng '+j.row)}catch(e){alert('Không lưu được: '+e.message)}}
-async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});HINT_BY_Q[CUR]=j;renderHintBox(j);if(j.exact&&!j.admin_review){document.getElementById('resultBox').textContent=`Gợi ý VIP: ${j.correct||'(chưa có đáp án Sheet)'}`;document.getElementById('resultBox').style.color='#7c2d12'}}catch(e){alert('Không lấy được gợi ý: '+e.message)}}
+async function requestHint(){saveCurrent();try{let ans=ANSWERS[CUR];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans})});HINT_BY_Q[CUR]=j;renderHintBox(j)}catch(e){alert('Không lấy được gợi ý: '+e.message)}}
 async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
 function openEdit(){let q=QUESTIONS[CUR];let fields=['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'];let labels={CauHoi:'Câu hỏi / Nội dung - lưu cột K',DapAn:'Đáp án - lưu cột P',SaiSo:'Sai số - lưu cột Q',MucDo:'Mức độ - lưu cột I',Dang:'Dạng - lưu cột J',LoiGiai:'Lời giải - lưu cột R',HinhAnh:'Hình ảnh - lưu cột T'};document.getElementById('editForm').innerHTML=fields.map(f=>{let h=(f=='CauHoi'||f=='LoiGiai')?'150px':'78px';let val=String(q[f]||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));return `<div><label><b>${labels[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${val}</textarea></div>`}).join('');document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}async function saveEdit(){let q=QUESTIONS[CUR];let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
