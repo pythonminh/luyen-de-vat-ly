@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V75_VIP_DS_AI_DETAIL_2026_06_02"
+APP_VERSION = "V76_FIX_DANG_MCQ_DS_2026_06_02"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -345,8 +345,15 @@ def format_tf_answer_display(q: Dict[str, Any], dapan: Any = None) -> str:
 
 
 def looks_like_dungsai_answer(value: Any) -> bool:
+    """Đáp án có ≥2 mệnh đề Đ/S — không nhầm trắc nghiệm một chữ A/B/C/D."""
+    if value is None or not clean(value):
+        return False
+    raw = strip_accents(clean(value).upper()).strip()
+    if re.fullmatch(r"[ABCD]", raw):
+        return False
     vals = parse_tf_values(value)
-    return len(vals) >= 2
+    filled = [v for v in vals if v in ("Đ", "S")]
+    return len(filled) >= 2
 
 
 def has_tf_statements(q: Dict[str, Any]) -> bool:
@@ -358,11 +365,20 @@ def has_tf_statements(q: Dict[str, Any]) -> bool:
 
 
 def effective_dang(q: Dict[str, Any]) -> str:
-    """Suy luận dạng thực tế, ưu tiên nhận diện Đúng/Sai từ đáp án."""
-    dang = norm_dang(q.get("Dang"))
+    """Suy luận dạng thực tế — ưu tiên cột J (Dang), không đè Trắc nghiệm thành Đ/S."""
+    raw_col = clean(q.get("Dang", ""))
+    dang = norm_dang(raw_col)
+    if dang == "Đúng sai":
+        return "Đúng sai"
+    if dang == "Trả lời ngắn":
+        return "Trả lời ngắn"
+    if dang == "Tự luận":
+        return "Tự luận"
+    if raw_col and dang == "Trắc nghiệm":
+        return "Trắc nghiệm"
     if looks_like_dungsai_answer(q.get("DapAn")) and has_tf_statements(q):
         return "Đúng sai"
-    return dang
+    return "Trắc nghiệm"
 
 
 def norm_role(s: Any) -> str:
@@ -2774,6 +2790,7 @@ def version():
         "mobile_tf_ds_col_v73": True,
         "latex_textbf_md_bold_v74": True,
         "vip_ds_ai_detail_v75": True,
+        "fix_dang_mcq_ds_v76": True,
         "retry_shuffle": True,
         "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
