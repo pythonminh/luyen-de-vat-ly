@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V80_CASCADE_FILTERS_2026_06_05"
+APP_VERSION = "V81_ADMIN_AI_FULL_SOLUTION_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -45,9 +45,9 @@ AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS"
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
 AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(220, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "520") or 520), 1000))
 AI_HINT_VIP_MAX_CHARS = max(350, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "850") or 850), 2000))
-AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(800, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "2400") or 2400), 4096))
-AI_HINT_ADMIN_MAX_CHARS = max(2000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "10000") or 10000), 16000))
-AI_HINT_ADMIN_MAX_CONTINUATIONS = max(0, min(int(os.environ.get("AI_HINT_ADMIN_CONTINUATIONS", "2") or 2), 3))
+AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(2000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "8192") or 8192), 12000))
+AI_HINT_ADMIN_MAX_CHARS = max(6000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "26000") or 26000), 50000))
+AI_HINT_ADMIN_MAX_CONTINUATIONS = max(1, min(int(os.environ.get("AI_HINT_ADMIN_CONTINUATIONS", "4") or 4), 6))
 MAX_AI_KEYS_PER_PROVIDER = max(1, min(int(os.environ.get("AI_MAX_KEYS", "8") or 8), 20))
 GEMINI_HINT_MODEL_FALLBACKS = [
     DEFAULT_GEMINI_HINT_MODEL,
@@ -2076,7 +2076,20 @@ def _admin_hint_has_section(txt: str, section: str) -> bool:
 
 
 def _admin_hint_complete(txt: str) -> bool:
-    return _admin_hint_has_section(txt, "5") and _admin_hint_has_section(txt, "8")
+    """ADMIN phải có đủ 8 mục, đặc biệt mục 4 giải chi tiết, mục 5 đáp án cuối, mục 8 lời giải copy vào Sheet."""
+    txt = clean(txt)
+    if not txt:
+        return False
+    # Chấp nhận phản hồi có đủ 8 mục mới xem là hoàn chỉnh.
+    # Trước đây chỉ kiểm tra mục 5 và 8 nên AI có thể thiếu bài giải chi tiết.
+    for sec in ["1", "2", "3", "4", "5", "6", "7", "8"]:
+        if not _admin_hint_has_section(txt, sec):
+            return False
+    # Mục 5 phải thật sự có kết luận, không chỉ có tiêu đề.
+    m5 = re.search(r"5\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=6\.|\Z)", txt, re.I | re.S)
+    if not m5 or len(clean(m5.group(1))) < 3:
+        return False
+    return True
 
 
 def _merge_admin_continuation(base: str, more: str) -> str:
@@ -2115,13 +2128,15 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
         dang_note = "- Dạng trắc nghiệm: mục 5 phải kết luận một phương án A/B/C/D."
     return "\n".join(
         [
-            "ADMIN kiểm tra ngân hàng câu — nhắc đề, dạy cách làm, đối chiếu Sheet.",
+            "ADMIN kiểm tra ngân hàng câu — PHẢI giải trọn vẹn bài, tính/biện luận ra kết quả cuối, rồi mới đối chiếu Sheet.",
             "",
             gemini_prompt_brand_2026(),
             "",
             "QUAN TRỌNG: BẮT BUỘC viết đủ 8 mục, KHÔNG dừng giữa chừng ở mục 4.",
-            "Ưu tiên hoàn thành mục 5 (đáp án) và mục 8 (lời giải đề xuất).",
-            "Mục 1–3 viết gọn; mục 4–8 đầy đủ nhưng súc tích.",
+            "Mục 4 PHẢI là bài giải đầy đủ: thay số, biến đổi công thức, tính toán, kết luận kết quả cuối.",
+            "Mục 5 PHẢI nêu đáp án/kết quả cuối ngay cả khi Sheet trống hoặc sai.",
+            "Mục 8 PHẢI viết lời giải hoàn chỉnh để copy trực tiếp vào cột R, không chỉ nhận xét.",
+            "Mục 1–3 viết gọn; mục 4–8 đầy đủ, ưu tiên chính xác hơn ngắn gọn.",
             dang_note,
             "",
             "Trình bày tiếng Việt, theo ĐÚNG 8 mục sau (giữ nguyên tiêu đề số):",
@@ -2137,10 +2152,14 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
             "- Liệt kê các bước giải theo thứ tự logic.",
             "",
             "4. BÀI GIẢI CHI TIẾT",
-            "- Giải đầy đủ; nếu nhiều ý thì từng ý ngắn gọn, không lan man.",
+            "- Giải đầy đủ từ giả thiết đến kết quả cuối; có thay số, biến đổi, đơn vị và kết luận.",
+            "- Với trắc nghiệm: vẫn phải giải ra kết quả rồi mới so với A/B/C/D.",
+            "- Với Đúng/Sai: xét lần lượt A, B, C, D và kết luận từng ý.",
+            "- Với trả lời ngắn/tự luận: tính ra số cuối hoặc biểu thức cuối.",
             "",
             "5. ĐÁP ÁN AI KẾT LUẬN",
-            "- Nêu rõ đáp án cuối (A/B/C/D, số, hoặc Đ/S từng ý). BẮT BUỘC có mục này.",
+            "- Nêu rõ đáp án/kết quả cuối (A/B/C/D, số kèm đơn vị, hoặc Đ/S từng ý). BẮT BUỘC có mục này.",
+            "- Không viết kiểu 'cần thêm dữ kiện' nếu đề đã đủ dữ kiện; phải tự giải đến kết quả.",
             "",
             "6. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)",
             f"- Sheet đang ghi: {sheet_da}",
@@ -2410,9 +2429,11 @@ def ai_hint_from_provider(
             gemini_models.append(m)
     if admin_review:
         sys_prompt = (
-            "Bạn là chuyên gia kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt, "
-            "BẮT BUỘC đủ 8 mục theo yêu cầu — đặc biệt mục 5 (đáp án) và mục 8 (lời giải). "
-            "Không dừng giữa mục 4."
+            "Bạn là chuyên gia Vật lý/Toán kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt. "
+            "Nhiệm vụ của ADMIN là GIẢI TRỌN VẸN bài đến kết quả cuối, không chỉ gợi ý. "
+            "BẮT BUỘC đủ 8 mục theo yêu cầu — đặc biệt mục 4 (bài giải chi tiết), "
+            "mục 5 (đáp án/kết quả cuối) và mục 8 (lời giải copy vào Sheet). "
+            "Không dừng giữa mục 4. Nếu là trắc nghiệm vẫn phải tính/biện luận ra kết quả rồi mới chọn A/B/C/D."
         )
         teacher_prompt = build_ai_admin_review_prompt_2026(q, user_answer)
         temp = 0.1
@@ -2446,10 +2467,12 @@ def ai_hint_from_provider(
             if _admin_hint_complete(out):
                 break
             cont_prompt = (
-                "Phản hồi TRƯỚC bị cắt giữa chừng. TIẾP TỤC ngay từ chỗ dừng, "
-                "hoàn thành các mục còn thiếu (ưu tiên mục 5 ĐÁP ÁN AI KẾT LUẬN, "
-                "mục 6, 7, 8). Không lặp lại nội dung đã viết.\n\n"
-                "--- ĐÃ VIẾT ---\n" + out[-4500:]
+                "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục. Hãy TIẾP TỤC ngay từ chỗ dừng, "
+                "hoàn thành đủ các mục còn thiếu. Bắt buộc có mục 4 bài giải chi tiết, "
+                "mục 5 đáp án/kết quả cuối, mục 6, 7 và mục 8 lời giải copy vào Sheet. "
+                "Không lặp lại nội dung đã viết, nhưng nếu thiếu kết quả cuối thì phải tính ra kết quả.\n\n"
+                "--- DỮ LIỆU GỐC CỦA CÂU HỎI ---\n" + teacher_prompt[-6500:] +
+                "\n\n--- ĐÃ VIẾT ---\n" + out[-6500:]
             )
             more, more_finish, err = _gemini_hint_call(
                 api_key, gmodel, sys_prompt, cont_prompt, max_tokens, temp, timeout=40
@@ -2486,7 +2509,7 @@ def ai_hint_from_provider(
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(req, timeout=18) as resp:
+                with urllib.request.urlopen(req, timeout=(45 if admin_review else 18)) as resp:
                     data = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 txt = (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
                 txt = _postprocess_hint_text(clean(txt))
@@ -2504,7 +2527,7 @@ def ai_hint_from_provider(
 
     def try_gemini() -> Tuple[str, int, str, str]:
         nonlocal last_error
-        gem_timeout = 40 if admin_review else 22
+        gem_timeout = 70 if admin_review else 22
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gmodel in gemini_models:
                 txt, finish, err = _gemini_hint_call(
@@ -3092,7 +3115,7 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={urllib.parse.quote(k)}"
             req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
             try:
-                with urllib.request.urlopen(req, timeout=18) as resp:
+                with urllib.request.urlopen(req, timeout=(45 if admin_review else 18)) as resp:
                     data = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 cands = (data or {}).get("candidates") or []
                 parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
@@ -3114,7 +3137,7 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=18) as resp:
+        with urllib.request.urlopen(req, timeout=(45 if admin_review else 18)) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         txt = clean((((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", ""))
         if txt:
