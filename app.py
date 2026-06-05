@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V81_ADMIN_AI_FULL_SOLUTION_2026_06_05"
+APP_VERSION = "V82_FIX_HINT_500_TIMEOUT_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2066,8 +2066,14 @@ def trim_ai_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
 
 def _admin_hint_has_section(txt: str, section: str) -> bool:
     patterns = {
-        "5": r"5\.\s*ĐÁP ÁN AI KẾT LUẬN",
-        "8": r"8\.\s*ĐỀ XUẤT LỜI GIẢI",
+        "1": r"1\.\s*NHẮC LẠI",
+        "2": r"2\.\s*ĐỊNH NGHĨA",
+        "3": r"3\.\s*CÁCH LÀM",
+        "4": r"4\.\s*BÀI GIẢI",
+        "5": r"5\.\s*(?:ĐÁP ÁN AI KẾT LUẬN|ĐÁP ÁN|KẾT LUẬN)",
+        "6": r"6\.\s*SO KHỚP",
+        "7": r"7\.\s*ĐÁNH GIÁ",
+        "8": r"8\.\s*(?:ĐỀ XUẤT LỜI GIẢI|LỜI GIẢI)",
     }
     pat = patterns.get(section)
     if not pat:
@@ -2075,21 +2081,46 @@ def _admin_hint_has_section(txt: str, section: str) -> bool:
     return bool(re.search(pat, str(txt or ""), re.I))
 
 
+def _admin_section_body(txt: str, section: str) -> str:
+    markers = {
+        "4": (r"4\.\s*BÀI GIẢI[^\n]*\n", r"5\.\s"),
+        "5": (r"5\.\s*(?:ĐÁP ÁN AI KẾT LUẬN|ĐÁP ÁN|KẾT LUẬN)[^\n]*\n", r"6\.\s"),
+        "8": (r"8\.\s*(?:ĐỀ XUẤT LỜI GIẢI|LỜI GIẢI)[^\n]*\n", r"\Z"),
+    }
+    spec = markers.get(section)
+    if not spec:
+        return ""
+    m = re.search(spec[0] + r"(.*?)(?=" + spec[1] + r"|\Z)", txt, re.I | re.S)
+    return clean(m.group(1)) if m else ""
+
+
 def _admin_hint_complete(txt: str) -> bool:
-    """ADMIN phải có đủ 8 mục, đặc biệt mục 4 giải chi tiết, mục 5 đáp án cuối, mục 8 lời giải copy vào Sheet."""
+    """Đủ khi có mục 4 (bài giải), 5 (đáp án), 8 (lời giải) với nội dung thật."""
     txt = clean(txt)
     if not txt:
         return False
-    # Chấp nhận phản hồi có đủ 8 mục mới xem là hoàn chỉnh.
-    # Trước đây chỉ kiểm tra mục 5 và 8 nên AI có thể thiếu bài giải chi tiết.
-    for sec in ["1", "2", "3", "4", "5", "6", "7", "8"]:
+    for sec in ("4", "5", "8"):
         if not _admin_hint_has_section(txt, sec):
             return False
-    # Mục 5 phải thật sự có kết luận, không chỉ có tiêu đề.
-    m5 = re.search(r"5\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=6\.|\Z)", txt, re.I | re.S)
-    if not m5 or len(clean(m5.group(1))) < 3:
+    body4 = _admin_section_body(txt, "4")
+    body5 = _admin_section_body(txt, "5")
+    body8 = _admin_section_body(txt, "8")
+    if len(body4) < 20 or not body5.strip():
         return False
-    return True
+    if not body8:
+        return False
+    if re.search(r"giữ nguyên lời giải sheet", body8, re.I):
+        return True
+    return len(body8) >= 12 and not body8.endswith("…")
+
+
+def _admin_hint_needs_continuation(txt: str, finish: str) -> bool:
+    if not clean(txt):
+        return False
+    if _admin_hint_complete(txt):
+        return False
+    fin = clean(finish).upper()
+    return fin in ("MAX_TOKENS", "LENGTH", "RECITATION", "OTHER", "STOP", "")
 
 
 def _merge_admin_continuation(base: str, more: str) -> str:
@@ -2460,11 +2491,16 @@ def ai_hint_from_provider(
         return trim_ai_hint_text(raw, max_chars)
 
     def _continue_admin_gemini(txt: str, finish: str, api_key: str, gmodel: str) -> str:
+        nonlocal last_error
         out = clean(txt)
-        if not admin_review or not out or _admin_hint_complete(out):
+        if not admin_review or not out:
             return out
+        deadline = time.time() + 48
         for step in range(AI_HINT_ADMIN_MAX_CONTINUATIONS):
-            if _admin_hint_complete(out):
+            if not _admin_hint_needs_continuation(out, finish):
+                break
+            if time.time() >= deadline:
+                print(f"[AI_HINT][ADMIN_CONT] step={step+1} stop=deadline")
                 break
             cont_prompt = (
                 "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục. Hãy TIẾP TỤC ngay từ chỗ dừng, "
@@ -2474,11 +2510,16 @@ def ai_hint_from_provider(
                 "--- DỮ LIỆU GỐC CỦA CÂU HỎI ---\n" + teacher_prompt[-6500:] +
                 "\n\n--- ĐÃ VIẾT ---\n" + out[-6500:]
             )
-            more, more_finish, err = _gemini_hint_call(
-                api_key, gmodel, sys_prompt, cont_prompt, max_tokens, temp, timeout=40
-            )
+            try:
+                more, more_finish, err = _gemini_hint_call(
+                    api_key, gmodel, sys_prompt, cont_prompt, max_tokens, temp, timeout=35
+                )
+            except Exception as e:
+                last_error = _http_error_message(e)
+                print(f"[AI_HINT][ADMIN_CONT] step={step+1} err={last_error[:120]}")
+                break
             if err:
-                last_error_local = err
+                last_error = err
                 print(f"[AI_HINT][ADMIN_CONT] step={step+1} err={err[:120]}")
                 break
             if not more:
@@ -2486,8 +2527,6 @@ def ai_hint_from_provider(
             out = _merge_admin_continuation(out, more)
             finish = more_finish
             print(f"[AI_HINT][ADMIN_CONT] step={step+1} model={gmodel} finish={finish}")
-            if _admin_hint_complete(out):
-                break
         return out
 
     def try_openai() -> Tuple[str, int, str, str]:
@@ -2527,7 +2566,7 @@ def ai_hint_from_provider(
 
     def try_gemini() -> Tuple[str, int, str, str]:
         nonlocal last_error
-        gem_timeout = 70 if admin_review else 22
+        gem_timeout = 45 if admin_review else 22
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gmodel in gemini_models:
                 txt, finish, err = _gemini_hint_call(
@@ -2866,6 +2905,7 @@ def version():
         "fix_dang_ds_priority_v77": True,
         "fix_dang_after_load_v78": True,
         "cascade_filters_v80": True,
+        "fix_hint_500_timeout_v82": True,
         "retry_shuffle": True,
         "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
