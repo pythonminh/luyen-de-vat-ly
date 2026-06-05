@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V86_SHARE_PREVIEW_OG_2026_06_05"
+APP_VERSION = "V87_SHARE_TITLE_FORMAT_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2657,26 +2657,30 @@ def catalog_find_by_made(store: Any, made: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def exam_display_title(item: Optional[Dict[str, Any]]) -> str:
+    """Cùng format tiêu đề khi làm bài: Vật lý - Lớp 10 | Bài 1. ..."""
+    if not item:
+        return "Luyện đề Vật lý - Toán học"
+    mon = clean(item.get("Mon"))
+    lop = clean(item.get("Lop"))
+    bai = clean(item.get("BaiHoc") or item.get("De") or "Đề luyện tập")
+    if mon:
+        head = f"{mon} - Lớp {lop}" if lop else mon
+        return f"{head} | {bai}"
+    if lop:
+        return f"Lớp {lop} | {bai}"
+    return bai
+
+
 def exam_share_preview_text(item: Optional[Dict[str, Any]]) -> Tuple[str, str]:
     if not item:
         return "Luyện đề Vật lý - Toán học", "Đăng nhập để làm bài luyện tập trực tuyến."
-    title = clean(item.get("BaiHoc") or item.get("De") or "Đề luyện tập")
-    mon = clean(item.get("Mon"))
-    lop = clean(item.get("Lop"))
+    og_title = exam_display_title(item)
     socau = int(item.get("SoCau") or 0)
     chuong = clean(item.get("Chuong"))
     dang = clean(item.get("Dang"))
     access = clean(item.get("QuyenTruyCap") or "FREE")
-    og_title = title
-    if mon:
-        og_title = f"{title} — {mon}"
-    if socau:
-        og_title += f" ({socau} câu)"
     parts: List[str] = []
-    if mon:
-        parts.append(mon)
-    if lop:
-        parts.append(f"Lớp {lop}")
     if socau:
         parts.append(f"{socau} câu hỏi")
     if chuong:
@@ -2847,12 +2851,13 @@ function enhanceHomeColors(){
         "html[data-theme='dark'] .btnShare{background:#1e3a5f;color:#bfdbfe;border-color:#3b82f6}";
     document.head.appendChild(st);
 }
+function examDisplayTitle(item){item=item||{};let mon=String(item.Mon||'').trim();let lop=String(item.Lop||'').trim();let bai=String(item.BaiHoc||item.De||'Đề luyện tập').trim();if(mon){let head=lop?mon+' - Lớp '+lop:mon;return head+' | '+bai}if(lop)return'Lớp '+lop+' | '+bai;return bai}
 function getShareParams(){let p=new URLSearchParams(location.search);return{de:(p.get('de')||p.get('made')||'').trim(),mon:(p.get('mon')||'').trim(),lop:(p.get('lop')||'').trim(),chuong:(p.get('chuong')||'').trim(),baihoc:(p.get('baihoc')||'').trim(),bode:(p.get('bode')||'').trim(),level:(p.get('level')||'').trim().toUpperCase(),dang:(p.get('dang')||'').trim(),start:p.get('start')==='1',open:p.get('start')!=='1'&&(p.get('open')||'1')!=='0',sq:p.get('sq')==='1',sa:p.get('sa')==='1'}}
 function buildExamShareUrl(item,extra){item=item||{};extra=extra||{};let u=new URL(location.origin+'/share');let de=extra.de||item.MaDe||'';if(de)u.searchParams.set('de',de);if(item.Mon||extra.mon)u.searchParams.set('mon',item.Mon||extra.mon);if(item.Lop||extra.lop)u.searchParams.set('lop',item.Lop||extra.lop);if(item.Chuong||extra.chuong)u.searchParams.set('chuong',item.Chuong||extra.chuong);if(item.BaiHoc||extra.baihoc)u.searchParams.set('baihoc',item.BaiHoc||extra.baihoc);if(item.BoDe||extra.bode)u.searchParams.set('bode',item.BoDe||extra.bode);let lv=extra.level||val('fMucDo')||'';let dg=extra.dang||val('fDang')||'';if(lv)u.searchParams.set('level',lv);if(dg)u.searchParams.set('dang',dg);let auto=extra.start!==0&&extra.start!=='0';if(auto){u.searchParams.set('start','1');if(extra.sq)u.searchParams.set('sq','1');if(extra.sa)u.searchParams.set('sa','1')}else u.searchParams.set('open','1');return u.toString()}
 function clearShareQuery(){let p=new URLSearchParams(location.search);if(!p.get('de')&&!p.get('made'))return;['de','made','mon','lop','chuong','baihoc','bode','level','dang','open','start','sq','sa'].forEach(k=>p.delete(k));let q=p.toString();history.replaceState(null,'',location.pathname+(q?'?'+q:''))}
 function setSel(id,v){let el=document.getElementById(id);if(!el||!v)return;for(let o of el.options){if(o.value===v){el.value=v;return}}let opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v}
 async function copyTextToClipboard(text){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}let ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');document.body.removeChild(ta);return true}catch(e){document.body.removeChild(ta);return false}}
-async function copyExamShareLink(made,withModal){let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}let url=buildExamShareUrl(item,withModal?{start:0,open:1}:{start:1});let ok=await copyTextToClipboard(url);let note=withModal?'Học viên mở link sẽ chọn xáo trộn trước khi làm.':'Học viên mở link sẽ vào làm bài luôn.';alert(ok?'✅ Đã chép link gửi học viên.\n'+note+'\n\n'+url:'Không chép được. Hãy chọn và Ctrl+C:\n\n'+url)}
+async function copyExamShareLink(made,withModal){let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}let url=buildExamShareUrl(item,withModal?{start:0,open:1}:{start:1});let ok=await copyTextToClipboard(url);let ten=examDisplayTitle(item);let socau=item.SoCau?item.SoCau+' câu · ':'';let note=withModal?'Học viên mở link sẽ chọn xáo trộn trước khi làm.':'Học viên mở link sẽ vào làm bài luôn.';alert(ok?'✅ Đã chép link đề:\n'+ten+'\n'+socau+note+'\n\n'+url:'Không chép được. Hãy chọn và Ctrl+C:\n\n'+url)}
 function clearShareTarget(){document.querySelectorAll('.card.shareTarget').forEach(el=>el.classList.remove('shareTarget'))}
 function markShareTarget(made){clearShareTarget();let el=document.getElementById('shareCard_'+made);if(el){el.classList.add('shareTarget');setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),120)}}
 function handleShareDeepLink(){let sp=getShareParams();if(!sp.de)return;let item=CATALOG.find(x=>x.MaDe===sp.de);if(!item){alert('Không tìm thấy đề trong link. Có thể đề đã đổi hoặc cần Đồng bộ Sheet.');return}if(sp.mon||item.Mon)setSel('fMon',sp.mon||item.Mon);refreshFilterOptions();if(sp.lop||item.Lop)setSel('fLop',sp.lop||item.Lop);refreshFilterOptions();if(sp.chuong||item.Chuong)setSel('fChuong',sp.chuong||item.Chuong);refreshFilterOptions();if(sp.baihoc||item.BaiHoc)setSel('fBaiHoc',sp.baihoc||item.BaiHoc);refreshFilterOptions();if(sp.bode||item.BoDe)setSel('fBoDe',sp.bode||item.BoDe);if(sp.level)setSel('fMucDo',sp.level);if(sp.dang)setSel('fDang',sp.dang);renderCatalog();let lv=sp.level||val('fMucDo');let dg=sp.dang||val('fDang');if(sp.start){if(USER.is_trial&&(item.QuyenTruyCap||'FREE')!=='FREE'){markShareTarget(sp.de);alert('Tài khoản dùng thử chỉ mở đề FREE.');return}setTimeout(()=>startQuiz(sp.de,sp.sq,sp.sa,lv,dg),280)}else if(sp.open){markShareTarget(sp.de);setTimeout(()=>openStartModal(sp.de),280)}}
@@ -2912,7 +2917,7 @@ function updateAdminChrome(){let bar=document.getElementById('adminBar');if(!bar
 function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<removedIdx)out[i]=obj[k];else if(i>removedIdx)out[i-1]=obj[k]}return out}ANSWERS=shift(ANSWERS);RESULTS=shift(RESULTS);CHECKED=shift(CHECKED);LOCKED_Q=shift(LOCKED_Q);HINT_BY_Q=shift(HINT_BY_Q)}
 async function init(){updateExamStrip();META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;updateAdminChrome();await loadAiKeyPanel();if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;refreshFilterOptions();renderCatalog();handleShareDeepLink()}
 function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
-function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareUrl=buildExamShareUrl(x);let shareRow=`<div class="shareRow"><span class="shareUrl" title="${esc(shareUrl)}">🔗 Mở link → vào làm bài luôn</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
+function renderCatalog(){let list=CATALOG.filter(okFilter);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareUrl=buildExamShareUrl(x);let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl" title="${esc(shareUrl)}">🔗 ${shareLabel}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
 async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert((j.ok?'✅ ':'❌ ')+(j.message||'')+ver);}catch(e){alert(e.message);}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
@@ -3132,7 +3137,7 @@ def share_exam():
         except Exception:
             pass
     target_url = build_exam_entry_url(request.args)
-    card_title = clean((item or {}).get("BaiHoc") or (item or {}).get("De") or og_title.split(" (")[0])
+    card_title = exam_display_title(item)
     return render_template_string(
         SHARE_HTML,
         og_title=og_title,
@@ -3179,6 +3184,10 @@ def logout():
 @app.route("/")
 def home():
     if not session.get("mahs"):
+        de = clean(request.args.get("de") or request.args.get("made"))
+        if de and is_link_preview_bot():
+            qs = request.query_string.decode("utf-8")
+            return redirect("/share?" + qs if qs else f"/share?de={urllib.parse.quote(de)}")
         fp = request.full_path
         if fp.endswith("?") and not request.args:
             fp = request.path
