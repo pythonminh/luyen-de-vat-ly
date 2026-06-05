@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V82_FIX_HINT_500_TIMEOUT_2026_06_05"
+APP_VERSION = "V83_FIX_TEST_KEY_ADMIN_REVIEW_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2906,6 +2906,7 @@ def version():
         "fix_dang_after_load_v78": True,
         "cascade_filters_v80": True,
         "fix_hint_500_timeout_v82": True,
+        "fix_test_key_admin_review_v83": True,
         "retry_shuffle": True,
         "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
@@ -3155,7 +3156,7 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={urllib.parse.quote(k)}"
             req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
             try:
-                with urllib.request.urlopen(req, timeout=(45 if admin_review else 18)) as resp:
+                with urllib.request.urlopen(req, timeout=18) as resp:
                     data = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 cands = (data or {}).get("candidates") or []
                 parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
@@ -3177,7 +3178,7 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=(45 if admin_review else 18)) as resp:
+        with urllib.request.urlopen(req, timeout=18) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         txt = clean((((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", ""))
         if txt:
