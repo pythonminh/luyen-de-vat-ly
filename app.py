@@ -36,16 +36,18 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V65_CATALOG_GROUP_CHUONG_BAI_2026_06_02"
+APP_VERSION = "V66_ADMIN_AI_FULL_ANSWER_2026_06_02"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_AI_PROVIDER = "GEMINI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
 AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(220, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "520") or 520), 1000))
 AI_HINT_VIP_MAX_CHARS = max(350, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "850") or 850), 2000))
-AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(400, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "900") or 900), 2000))
-AI_HINT_ADMIN_MAX_CHARS = max(800, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "2200") or 2200), 6000))
+AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(800, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "2400") or 2400), 4096))
+AI_HINT_ADMIN_MAX_CHARS = max(2000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "10000") or 10000), 16000))
+AI_HINT_ADMIN_MAX_CONTINUATIONS = max(0, min(int(os.environ.get("AI_HINT_ADMIN_CONTINUATIONS", "2") or 2), 3))
 MAX_AI_KEYS_PER_PROVIDER = max(1, min(int(os.environ.get("AI_MAX_KEYS", "8") or 8), 20))
 GEMINI_HINT_MODEL_FALLBACKS = [
     DEFAULT_GEMINI_HINT_MODEL,
@@ -1877,6 +1879,38 @@ def trim_ai_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
     return cut.rstrip() + "…"
 
 
+def _admin_hint_has_section(txt: str, section: str) -> bool:
+    patterns = {
+        "5": r"5\.\s*ĐÁP ÁN AI KẾT LUẬN",
+        "8": r"8\.\s*ĐỀ XUẤT LỜI GIẢI",
+    }
+    pat = patterns.get(section)
+    if not pat:
+        return False
+    return bool(re.search(pat, str(txt or ""), re.I))
+
+
+def _admin_hint_complete(txt: str) -> bool:
+    return _admin_hint_has_section(txt, "5") and _admin_hint_has_section(txt, "8")
+
+
+def _merge_admin_continuation(base: str, more: str) -> str:
+    base = clean(base)
+    more = clean(more)
+    if not more:
+        return base
+    more = re.sub(r"^1\.\s*NHẮC LẠI ĐỀ[\s\S]*?(?=4\.|5\.|6\.|7\.|8\.)", "", more, flags=re.I)
+    return (base.rstrip() + "\n\n" + more.lstrip()).strip()
+
+
+def _finalize_admin_hint_text(txt: str) -> str:
+    """ADMIN: không cắt ngắn — chỉ giới hạn an toàn rất cao."""
+    txt = clean(txt)
+    if len(txt) <= AI_HINT_ADMIN_MAX_CHARS:
+        return txt
+    return trim_ai_hint_text(txt, AI_HINT_ADMIN_MAX_CHARS)
+
+
 def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
     block = build_ai_question_block(q, user_answer, include_sheet_answer=True)
     sheet_da = clean(q.get("DapAn", "")) or "(trống)"
@@ -1885,11 +1919,25 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
         sheet_lg_show = sheet_lg[:500] + "…"
     else:
         sheet_lg_show = sheet_lg
+    dang = effective_dang(q)
+    dang_note = ""
+    if dang == "Đúng sai":
+        dang_note = (
+            "- Dạng Đúng/Sai: mục 4 phân tích NGẮN từng ý A/B/C/D (2–4 câu/ý); "
+            "mục 5 liệt kê rõ A=Đ/S, B=Đ/S, C=Đ/S, D=Đ/S."
+        )
+    elif dang == "Trắc nghiệm":
+        dang_note = "- Dạng trắc nghiệm: mục 5 phải kết luận một phương án A/B/C/D."
     return "\n".join(
         [
             "ADMIN kiểm tra ngân hàng câu — nhắc đề, dạy cách làm, đối chiếu Sheet.",
             "",
             gemini_prompt_brand_2026(),
+            "",
+            "QUAN TRỌNG: BẮT BUỘC viết đủ 8 mục, KHÔNG dừng giữa chừng ở mục 4.",
+            "Ưu tiên hoàn thành mục 5 (đáp án) và mục 8 (lời giải đề xuất).",
+            "Mục 1–3 viết gọn; mục 4–8 đầy đủ nhưng súc tích.",
+            dang_note,
             "",
             "Trình bày tiếng Việt, theo ĐÚNG 8 mục sau (giữ nguyên tiêu đề số):",
             "",
@@ -1904,10 +1952,10 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
             "- Liệt kê các bước giải theo thứ tự logic.",
             "",
             "4. BÀI GIẢI CHI TIẾT",
-            "- Giải đầy đủ từng bước, thay số, tính toán (nếu có).",
+            "- Giải đầy đủ; nếu nhiều ý thì từng ý ngắn gọn, không lan man.",
             "",
             "5. ĐÁP ÁN AI KẾT LUẬN",
-            "- Nêu rõ đáp án cuối (A/B/C/D, số, hoặc Đ/S từng ý).",
+            "- Nêu rõ đáp án cuối (A/B/C/D, số, hoặc Đ/S từng ý). BẮT BUỘC có mục này.",
             "",
             "6. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)",
             f"- Sheet đang ghi: {sheet_da}",
@@ -1945,10 +1993,13 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
         )
     if m2:
         block = clean(m2.group(1))
-        lines = [re.sub(r"^[-•*]\s*", "", x.strip()) for x in block.splitlines() if clean(x)]
-        if lines:
-            dapan = lines[-1]
-            dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
+        if re.search(r"[ABCD]\s*[:：=]", block, re.I):
+            dapan = block
+        else:
+            lines = [re.sub(r"^[-•*]\s*", "", x.strip()) for x in block.splitlines() if clean(x)]
+            if lines:
+                dapan = lines[-1]
+                dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
     m5 = re.search(r"8\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
     if not m5:
         m5 = re.search(r"5\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
@@ -1970,11 +2021,13 @@ def _admin_hint_payload(
     sug = parse_admin_ai_suggestions(hint)
     if not sug.get("suggested_dapan") and correct_sheet:
         sug["suggested_dapan"] = correct_sheet
+    body_only = str(hint or "").split("📋 Tham chiếu Sheet")[0]
     return {
         "index": index,
         "exact": False,
         "admin_review": True,
         "hint": hint,
+        "hint_truncated": not _admin_hint_complete(body_only),
         "correct": correct_sheet,
         "sheet_dapan": sheet_dapan,
         "sheet_loigiai": sheet_loigiai,
@@ -2093,6 +2146,45 @@ def _http_error_message(e: Exception) -> str:
     return clean(str(e))[:220]
 
 
+def _gemini_hint_call(
+    api_key: str,
+    gmodel: str,
+    sys_prompt: str,
+    user_prompt: str,
+    max_tokens: int,
+    temp: float,
+    timeout: int = 22,
+) -> Tuple[str, str, str]:
+    """Gọi Gemini một lần. Trả về (text, finish_reason, error)."""
+    body = {
+        "contents": [{"parts": [{"text": sys_prompt}, {"text": user_prompt}]}],
+        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens},
+    }
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent"
+        f"?key={urllib.parse.quote(api_key)}"
+    )
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        cands = (data or {}).get("candidates") or []
+        cand0 = cands[0] if cands else {}
+        parts = ((cand0.get("content") or {}).get("parts") or [])
+        txt = ""
+        if parts and isinstance(parts[0], dict):
+            txt = clean(parts[0].get("text", ""))
+        finish = clean(cand0.get("finishReason", ""))
+        return txt, finish, ""
+    except Exception as e:
+        return "", "", _http_error_message(e)
+
+
 def ai_hint_from_provider(
     q: Dict[str, Any],
     user_answer: Any,
@@ -2117,7 +2209,14 @@ def ai_hint_from_provider(
 
     model_openai = clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
     model_gemini = clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
-    gemini_models_raw = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
+    if admin_review:
+        admin_model = (
+            clean(os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)).strip()
+            or DEFAULT_GEMINI_ADMIN_MODEL
+        )
+        gemini_models_raw = [admin_model, model_gemini] + GEMINI_HINT_MODEL_FALLBACKS
+    else:
+        gemini_models_raw = [model_gemini] + GEMINI_HINT_MODEL_FALLBACKS
     seen_models: set = set()
     gemini_models: List[str] = []
     for m in gemini_models_raw:
@@ -2126,9 +2225,9 @@ def ai_hint_from_provider(
             gemini_models.append(m)
     if admin_review:
         sys_prompt = (
-            "Bạn là chuyên gia kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt: "
-            "nhắc đề, định nghĩa, công thức, cách làm, bài giải chi tiết, đáp án — "
-            "và đối chiếu Sheet."
+            "Bạn là chuyên gia kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt, "
+            "BẮT BUỘC đủ 8 mục theo yêu cầu — đặc biệt mục 5 (đáp án) và mục 8 (lời giải). "
+            "Không dừng giữa mục 4."
         )
         teacher_prompt = build_ai_admin_review_prompt_2026(q, user_answer)
         temp = 0.1
@@ -2147,6 +2246,42 @@ def ai_hint_from_provider(
         )
         teacher_prompt = build_ai_teacher_prompt_2026(q, user_answer)
         temp = 0.15
+
+    def _postprocess_hint_text(raw: str) -> str:
+        raw = clean(raw)
+        if admin_review:
+            return _finalize_admin_hint_text(raw)
+        return trim_ai_hint_text(raw, max_chars)
+
+    def _continue_admin_gemini(txt: str, finish: str, api_key: str, gmodel: str) -> str:
+        out = clean(txt)
+        if not admin_review or not out or _admin_hint_complete(out):
+            return out
+        for step in range(AI_HINT_ADMIN_MAX_CONTINUATIONS):
+            if _admin_hint_complete(out):
+                break
+            cont_prompt = (
+                "Phản hồi TRƯỚC bị cắt giữa chừng. TIẾP TỤC ngay từ chỗ dừng, "
+                "hoàn thành các mục còn thiếu (ưu tiên mục 5 ĐÁP ÁN AI KẾT LUẬN, "
+                "mục 6, 7, 8). Không lặp lại nội dung đã viết.\n\n"
+                "--- ĐÃ VIẾT ---\n" + out[-4500:]
+            )
+            more, more_finish, err = _gemini_hint_call(
+                api_key, gmodel, sys_prompt, cont_prompt, max_tokens, temp, timeout=40
+            )
+            if err:
+                last_error_local = err
+                print(f"[AI_HINT][ADMIN_CONT] step={step+1} err={err[:120]}")
+                break
+            if not more:
+                break
+            out = _merge_admin_continuation(out, more)
+            finish = more_finish
+            print(f"[AI_HINT][ADMIN_CONT] step={step+1} model={gmodel} finish={finish}")
+            if _admin_hint_complete(out):
+                break
+        return out
+
     def try_openai() -> Tuple[str, int, str, str]:
         nonlocal last_error
         body = {
@@ -2169,7 +2304,7 @@ def ai_hint_from_provider(
                 with urllib.request.urlopen(req, timeout=18) as resp:
                     data = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 txt = (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
-                txt = trim_ai_hint_text(clean(txt), max_chars)
+                txt = _postprocess_hint_text(clean(txt))
                 if txt:
                     tag = "ADMIN_REVIEW" if admin_review else "OPENAI"
                     print(f"[AI_HINT][{tag}] using key #{idx}")
@@ -2184,48 +2319,27 @@ def ai_hint_from_provider(
 
     def try_gemini() -> Tuple[str, int, str, str]:
         nonlocal last_error
-        body = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": sys_prompt},
-                        {"text": teacher_prompt},
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": temp,
-                "maxOutputTokens": max_tokens,
-            },
-        }
+        gem_timeout = 40 if admin_review else 22
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gmodel in gemini_models:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={urllib.parse.quote(api_key)}"
-                req = urllib.request.Request(
-                    url,
-                    data=json.dumps(body).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
+                txt, finish, err = _gemini_hint_call(
+                    api_key, gmodel, sys_prompt, teacher_prompt, max_tokens, temp, timeout=gem_timeout
                 )
-                try:
-                    with urllib.request.urlopen(req, timeout=22) as resp:
-                        data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-                    cands = (data or {}).get("candidates") or []
-                    parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
-                    txt = ""
-                    if parts and isinstance(parts[0], dict):
-                        txt = clean(parts[0].get("text", ""))
-                    txt = trim_ai_hint_text(txt, max_chars)
-                    if txt:
-                        tag = "ADMIN_REVIEW" if admin_review else "GEMINI"
-                        print(f"[AI_HINT][{tag}] model={gmodel} key=#{idx}")
-                        return txt, idx, "GEMINI", ""
-                except Exception as e:
-                    last_error = _http_error_message(e)
+                if err:
+                    last_error = err
                     if _is_quota_or_rate_error(last_error):
                         print(f"[AI_HINT][GEMINI] key #{idx} quota/rate — thử key tiếp")
                         break
                     continue
+                if not txt:
+                    continue
+                if admin_review:
+                    txt = _continue_admin_gemini(txt, finish, api_key, gmodel)
+                txt = _postprocess_hint_text(txt)
+                if txt:
+                    tag = "ADMIN_REVIEW" if admin_review else "GEMINI"
+                    print(f"[AI_HINT][{tag}] model={gmodel} key=#{idx} finish={finish}")
+                    return txt, idx, "GEMINI", ""
         return "", 0, "GEMINI", last_error
 
     txt, idx, used_provider, err = "", 0, provider, ""
@@ -2315,7 +2429,7 @@ APP_HTML = r"""
 <script>window.MathJax={loader:{load:['[tex]/ams']},tex:{packages:{'[+]':['ams']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
-:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#dcfce7;border:1px solid #86efac;color:#166534;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.adminTopBtn2{background:#ffffff22;border:1px solid #ffffff55;color:#fff}.adminTopBtn:hover{filter:brightness(1.05)}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px;color:var(--text)}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text)}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:12px;margin-top:12px;color:var(--text)}.latex-list{margin:8px 0 8px 22px;padding:0}.latex-list li{margin:6px 0;line-height:1.55}.hintAdminBody{width:100%;min-height:140px;max-height:360px;overflow:auto;font-size:15px;line-height:1.55;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text}.hintAdminActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAdminActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.answered{background:var(--num-answered)}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
+:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#dcfce7;border:1px solid #86efac;color:#166534;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.adminTopBtn2{background:#ffffff22;border:1px solid #ffffff55;color:#fff}.adminTopBtn:hover{filter:brightness(1.05)}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:1420px;margin:auto;padding:12px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.qid{font-size:19px;font-weight:800}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;min-height:150px;line-height:1.55;font-size:18px;color:var(--text)}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text)}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:12px;margin-top:12px;color:var(--text)}.latex-list{margin:8px 0 8px 22px;padding:0}.latex-list li{margin:6px 0;line-height:1.55}.hintAdminBody{width:100%;min-height:160px;max-height:520px;overflow:auto;font-size:15px;line-height:1.55;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text}.hintAdminActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAdminActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.answered{background:var(--num-answered)}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.tfrow{display:grid;grid-template-columns:35px 1fr 85px 85px;gap:7px;border:1px solid var(--border);border-radius:10px;padding:8px;margin:7px 0}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editGrid textarea{min-height:80px;width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
 {display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;background:var(--bg);padding:0;margin:0;overflow:hidden;width:100vw!important;max-width:none!important}body.fullde-mode #quiz>.panel:first-child{display:none}body.fullde-mode #quiz .quizLayout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:0;width:100%;max-width:none;height:100%;min-height:0;margin:0}body.fullde-mode #quiz .quizLayout>div:first-child{min-width:0;height:100%;display:flex;flex-direction:column}body.fullde-mode #quiz .quizLayout>div:first-child>.panel{flex:1;display:flex;flex-direction:column;margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;width:100%;max-width:none;min-height:0;overflow:auto}body.fullde-mode #quiz .quizLayout>div:last-child{display:flex!important;height:100%;min-height:0}body.fullde-mode #quiz .quizLayout>div:last-child>.panel{margin:0;border-radius:0;border-top:none;border-right:none;border-bottom:none;height:100%;padding:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}body.fullde-mode #quiz .quizLayout>div:last-child .line,body.fullde-mode #quiz .quizLayout>div:last-child .muted{display:none!important}body.fullde-mode #quiz .quizLayout>div:last-child .fsNavTitle{display:block!important;font-size:11px;text-align:center;margin:0 0 4px;font-weight:800;color:var(--muted);flex-shrink:0}body.fullde-mode #navNums{grid-template-columns:repeat(3,1fr);gap:3px;overflow-y:auto;flex:1;align-content:start}body.fullde-mode #navNums .num{padding:4px 0;font-size:11px;line-height:1.1}body.fullde-mode #fsOnlyTools{display:flex;position:sticky;top:0;z-index:5;justify-content:flex-end;gap:8px;flex-wrap:wrap;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0}body.fullde-mode #qid{font-size:15px;padding:0 8px;flex-shrink:0}body.fullde-mode #quiz .quizLayout>div:first-child .row:first-child{flex-shrink:0;padding:4px 8px 0}body.fullde-mode #qtext,body.fullde-mode #options,body.fullde-mode #solution,body.fullde-mode #hintBox{width:100%}body.fullde-mode #qtext{flex:1;min-height:100px}body.fullde-mode #hintBox{flex-shrink:0;max-height:38vh;overflow:auto;margin-top:8px}body.fullde-mode #hintBox .hintAdminBody{max-height:28vh;font-size:14px}body.fullde-mode #quizActions{display:none!important}body.fullde-mode #btnRetry,body.fullde-mode #btnEdit,body.fullde-mode #btnSubmit{display:none!important}@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:110px}body.fullde-mode #navNums{grid-template-columns:repeat(8,1fr);overflow-x:auto;overflow-y:hidden}}html:fullscreen,body:fullscreen{background:var(--bg)}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}.examStrip{top:52px;font-size:13px}}
 </style></head>
 <body><div class="top"><div class="topRow"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div class="topRight"><span id="adminBar" class="adminBar hide"><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()">🧪 Test AI</button><button type="button" id="adminEditBtn" class="adminTopBtn adminTopBtn2 hide" onclick="openEdit()">✏️ Sửa câu</button></span><span id="info">Đang nạp...</span> | <span id="me"></span> | <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
@@ -2456,7 +2570,7 @@ async function checkCurrentQuestion(){if(USER.is_trial||SUBMITTED)return;let q=Q
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=shortText((QUESTIONS[i]&&QUESTIONS[i].CauHoi)||'',120);html+=`<button class="${cls}" title="${escAttr(tip)}" onclick="goQ(${i})">${i+1}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function renderQuestion(){let q=QUESTIONS[CUR];renderNav();let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(canAi&&HINT_BY_Q[CUR])renderHintBox(HINT_BY_Q[CUR]);else{hb.classList.add('hide');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;document.getElementById('qtext').innerHTML=renderRichText(q.CauHoi)+(q.HinhAnh?`<br><img class="qimg" style="max-width:100%;margin-top:10px;border:1px solid #d7e0ed;border-radius:8px" src="${esc(q.HinhAnh)}" onerror="this.outerHTML='<div style=\'margin-top:10px;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'">`:'' );document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';document.getElementById('btnEdit').classList.toggle('hide',!USER.is_admin);let bh=document.getElementById('btnHint');let hintLbl=USER.is_admin?'🔍 AI kiểm tra':(USER.is_vip?'💡 Gợi ý AI (VIP)':'💡 Gợi ý AI');if(bh){bh.textContent=hintLbl;bh.classList.toggle('hide',!canAi);bh.disabled=!canAi}let bfh=document.getElementById('btnFsHint');if(bfh){bfh.textContent=hintLbl;bfh.classList.toggle('hide',!canAi);bfh.disabled=!canAi}let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';if((SUBMITTED||CHECKED[CUR])&&RESULTS[CUR]){if(RESULTS[CUR].correct==L)cls+=' correct';if(RESULTS[CUR].chosen==L&&RESULTS[CUR].chosen!=RESULTS[CUR].correct)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><b>${L}.</b><span>${renderRichText(q[L])}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let rows=((RESULTS[CUR]&&RESULTS[CUR].rows)||[]);for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||CHECKED[CUR])&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}html+=`<div class="${cls}"><b>${L}.</b><div>${renderRichText(q[L])}</div><label><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Đúng</label><label><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"> Sai</label></div>`}}else if(q.Dang=='Trả lời ngắn'){html=`<input id="shortAns" style="width:100%;font-size:18px" placeholder="Nhập đáp án..." value="${esc(ANSWERS[CUR]||'')}" ${SUBMITTED?'disabled':''} oninput="saveCurrent()">`}else{html=`<textarea id="shortAns" style="width:100%;min-height:120px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea>`}document.getElementById('options').innerHTML=html;let canShowAns=USER.is_admin||SUBMITTED||!!CHECKED[CUR];let canShowExp=USER.is_admin||((SUBMITTED&&RESULTS[CUR]&&META.user.role!='FREE'&&META.user.role!='TRIAL')||!!CHECKED[CUR]);let showAns=canShowAns,showExp=canShowExp;if(FULLDE_ON){if(FS_ANS_FORCE!==null)showAns=canShowAns&&FS_ANS_FORCE;if(FS_EXP_FORCE!==null)showExp=canShowExp&&FS_EXP_FORCE}let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns)parts.push(`<b>Đáp án:</b> ${renderRichText(r.correct||q.DapAn||'')}`);if(showExp)parts.push(`<b>Lời giải:</b><br>${renderRichText(r.LoiGiai||q.LoiGiai||'Chưa có lời giải.')}`);document.getElementById('solution').innerHTML=parts.join('<br>')}typeset()}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb||!j)return;hb.classList.remove('hide');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':'💡 Gợi ý AI:';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;let sd=esc(j.suggested_dapan||'');let sl=esc(j.suggested_loigiai||'');extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`;if(j.suggested_dapan)extra+=`<div class="muted hintSuggestDapan" style="margin-top:6px;font-size:12px"><b>Gợi ý đáp án:</b> <span class="hintMath">${formatHintDisplay(j.suggested_dapan)}</span></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let body=formatHintDisplay(j.hint||'');hb.innerHTML=`<b>${title}</b>${extra}<div id="hintAdminBody" class="hintAdminBody">${body||'<span class="muted">(trống)</span>'}</div>`;typeset(document.getElementById('hintAdminBody'));if(hb.querySelector('.hintSuggestDapan'))typeset(hb.querySelector('.hintSuggestDapan'))}
+function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb||!j)return;hb.classList.remove('hide');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':'💡 Gợi ý AI:';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ mục 5–8 — bấm lại <b>AI kiểm tra</b> hoặc tăng GEMINI_ADMIN_MODEL trên Render.</div>`;let sd=esc(j.suggested_dapan||'');let sl=esc(j.suggested_loigiai||'');extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`;if(j.suggested_dapan)extra+=`<div class="muted hintSuggestDapan" style="margin-top:6px;font-size:12px"><b>Gợi ý đáp án:</b> <span class="hintMath">${formatHintDisplay(j.suggested_dapan)}</span></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else{extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let body=formatHintDisplay(j.hint||'');hb.innerHTML=`<b>${title}</b>${extra}<div id="hintAdminBody" class="hintAdminBody">${body||'<span class="muted">(trống)</span>'}</div>`;typeset(document.getElementById('hintAdminBody'));if(hb.querySelector('.hintSuggestDapan'))typeset(hb.querySelector('.hintSuggestDapan'))}
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};if(field==='DapAn')return String(j.suggested_dapan||'').trim();if(field==='LoiGiai'){let v=String(j.suggested_loigiai||'').trim();if(v)return v;return hintRawText().trim()}return ''}
 function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 5).':'Chưa có lời giải đề xuất (mục 8).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
@@ -2498,6 +2612,7 @@ def version():
         "admin_delete_chain_no_resync": True,
         "admin_fixed_top_bar": True,
         "catalog_group_chuong_bai": True,
+        "admin_ai_full_answer_v66": True,
         "retry_shuffle": True,
         "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
