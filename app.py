@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V85_AUTO_START_SHARE_LINK_2026_06_05"
+APP_VERSION = "V86_SHARE_PREVIEW_OG_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2648,12 +2648,137 @@ def current_user_public() -> Dict[str, Any]:
         "account_until": session.get("account_until", ""),
     }
 
+
+def catalog_find_by_made(store: Any, made: str) -> Optional[Dict[str, Any]]:
+    m = clean(made)
+    for x in store.catalog:
+        if clean(x.get("MaDe")) == m:
+            return x
+    return None
+
+
+def exam_share_preview_text(item: Optional[Dict[str, Any]]) -> Tuple[str, str]:
+    if not item:
+        return "Luyện đề Vật lý - Toán học", "Đăng nhập để làm bài luyện tập trực tuyến."
+    title = clean(item.get("BaiHoc") or item.get("De") or "Đề luyện tập")
+    mon = clean(item.get("Mon"))
+    lop = clean(item.get("Lop"))
+    socau = int(item.get("SoCau") or 0)
+    chuong = clean(item.get("Chuong"))
+    dang = clean(item.get("Dang"))
+    access = clean(item.get("QuyenTruyCap") or "FREE")
+    og_title = title
+    if mon:
+        og_title = f"{title} — {mon}"
+    if socau:
+        og_title += f" ({socau} câu)"
+    parts: List[str] = []
+    if mon:
+        parts.append(mon)
+    if lop:
+        parts.append(f"Lớp {lop}")
+    if socau:
+        parts.append(f"{socau} câu hỏi")
+    if chuong:
+        parts.append(chuong)
+    if dang:
+        parts.append(dang)
+    if access:
+        parts.append(access)
+    og_desc = " · ".join(parts) if parts else "Bấm để đăng nhập và làm bài."
+    return og_title, og_desc
+
+
+def parse_de_from_next(next_url: str) -> str:
+    u = safe_next_url(next_url)
+    if not u:
+        return ""
+    parsed = urllib.parse.urlparse(u)
+    qs = urllib.parse.parse_qs(parsed.query)
+    return clean((qs.get("de") or qs.get("made") or [""])[0])
+
+
+def is_link_preview_bot() -> bool:
+    ua = (request.headers.get("User-Agent") or "").lower()
+    keys = (
+        "facebookexternalhit", "facebot", "twitterbot", "linkedinbot",
+        "whatsapp", "telegrambot", "slackbot", "discordbot", "zalo",
+        "line-poker", "bingpreview", "crawler", "spider", "preview",
+    )
+    return any(k in ua for k in keys)
+
+
+def build_exam_entry_url(args: Any) -> str:
+    allowed = ("de", "made", "mon", "lop", "chuong", "baihoc", "bode", "level", "dang", "start", "sq", "sa", "open")
+    pairs: List[Tuple[str, str]] = []
+    de = clean(args.get("de") or args.get("made"))
+    if de:
+        pairs.append(("de", de))
+    has_start = clean(args.get("start")) == "1"
+    has_open = clean(args.get("open")) == "1"
+    for k in allowed:
+        if k in ("de", "made"):
+            continue
+        v = clean(args.get(k))
+        if not v:
+            continue
+        pairs.append((k, v))
+        if k == "start":
+            has_start = True
+        if k == "open":
+            has_open = True
+    if not has_start and not has_open:
+        pairs.append(("start", "1"))
+    return "/?" + urllib.parse.urlencode(pairs)
+
+
+def share_og_context(store: Any, de: str) -> Tuple[str, str]:
+    store.ensure_questions_loaded()
+    return exam_share_preview_text(catalog_find_by_made(store, de))
+
 # ============================================================
 # HTML
 # ============================================================
 
+SHARE_HTML = r"""
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ og_title }}</title>
+<meta name="description" content="{{ og_desc }}">
+<meta property="og:title" content="{{ og_title }}">
+<meta property="og:description" content="{{ og_desc }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Luyện đề Vật lý - Toán học">
+<meta property="og:url" content="{{ og_url }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ og_title }}">
+<meta name="twitter:description" content="{{ og_desc }}">
+{% if auto_redirect %}<meta http-equiv="refresh" content="1;url={{ target_url }}">{% endif %}
+<style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#0f172a}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800}.box{max-width:520px;margin:40px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}h1{margin:0 0 10px;font-size:22px;color:#1e3a8a}.meta{color:#64748b;font-size:14px;line-height:1.6;margin:8px 0}.tag{display:inline-block;background:#eef2ff;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.btn{display:inline-block;margin-top:14px;background:#1d4ed8;color:#fff;font-weight:800;text-decoration:none;padding:12px 18px;border-radius:10px}.muted{font-size:13px;color:#64748b;margin-top:12px}</style>
+</head><body>
+<div class="top">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</div>
+<div class="box">
+<h1>{{ card_title }}</h1>
+{% if item %}
+<div>
+{% if item.Mon %}<span class="tag">{{ item.Mon }}</span>{% endif %}
+{% if item.Lop %}<span class="tag">Lớp {{ item.Lop }}</span>{% endif %}
+{% if item.SoCau %}<span class="tag">{{ item.SoCau }} câu</span>{% endif %}
+{% if item.QuyenTruyCap %}<span class="tag">{{ item.QuyenTruyCap }}</span>{% endif %}
+</div>
+<div class="meta">{% if item.Chuong %}<div><b>Chương:</b> {{ item.Chuong }}</div>{% endif %}{% if item.Dang %}<div><b>Dạng:</b> {{ item.Dang }}</div>{% endif %}{% if item.BoDe %}<div><b>Bộ đề:</b> {{ item.BoDe }}</div>{% endif %}</div>
+{% else %}
+<p class="meta">Không tìm thấy thông tin đề. Có thể hệ thống đang nạp dữ liệu hoặc mã đề đã đổi.</p>
+{% endif %}
+<a class="btn" href="{{ target_url }}">🚀 Đăng nhập và làm bài</a>
+<p class="muted">Link này dùng để gửi học viên. Zalo/Messenger sẽ hiện tên đề và số câu ở trên.</p>
+</div>
+{% if auto_redirect %}<script>setTimeout(function(){location.replace({{ target_url_json|safe }});},900);</script>{% endif %}
+</body></html>
+"""
+
 LOGIN_HTML = r"""
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập luyện đề</title>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+{% if og_title %}<title>{{ og_title }}</title><meta name="description" content="{{ og_desc }}"><meta property="og:title" content="{{ og_title }}"><meta property="og:description" content="{{ og_desc }}"><meta property="og:type" content="website"><meta property="og:site_name" content="Luyện đề Vật lý - Toán học">{% if og_url %}<meta property="og:url" content="{{ og_url }}">{% endif %}<meta name="twitter:card" content="summary"><meta name="twitter:title" content="{{ og_title }}"><meta name="twitter:description" content="{{ og_desc }}">{% else %}<title>Đăng nhập luyện đề</title>{% endif %}
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#0f172a}html[data-theme="dark"] body{background:#0f172a;color:#e2e8f0}html[data-theme="dark"] .box{background:#1e293b;border-color:#334155}html[data-theme="dark"] input{background:#0f172a;color:#e2e8f0;border-color:#475569}html[data-theme="dark"] .hint{color:#94a3b8}.box{max-width:460px;margin:55px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer}input,button{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}button{background:#1d4ed8;color:white;font-weight:800;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px;margin:8px 0}.ok{background:#dcfce7;color:#166534;padding:10px;border-radius:10px;margin:8px 0}.hint{font-size:13px;color:#64748b;line-height:1.5}.link{display:block;text-align:center;margin-top:12px;color:#1d4ed8;font-weight:800;text-decoration:none}</style></head><body>
 <div class="top"><span>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOẠ HỌC</span><button type="button" class="themeBtn" onclick="(function(){var c=document.documentElement.getAttribute('data-theme')||'light';var d=c!=='dark';document.documentElement.setAttribute('data-theme',d?'dark':'light');try{localStorage.setItem('LDVL_THEME',d?'dark':'light')}catch(e){}event.target.textContent=d?'☀️':'🌙'})()">🌙</button></div>
@@ -2723,7 +2848,7 @@ function enhanceHomeColors(){
     document.head.appendChild(st);
 }
 function getShareParams(){let p=new URLSearchParams(location.search);return{de:(p.get('de')||p.get('made')||'').trim(),mon:(p.get('mon')||'').trim(),lop:(p.get('lop')||'').trim(),chuong:(p.get('chuong')||'').trim(),baihoc:(p.get('baihoc')||'').trim(),bode:(p.get('bode')||'').trim(),level:(p.get('level')||'').trim().toUpperCase(),dang:(p.get('dang')||'').trim(),start:p.get('start')==='1',open:p.get('start')!=='1'&&(p.get('open')||'1')!=='0',sq:p.get('sq')==='1',sa:p.get('sa')==='1'}}
-function buildExamShareUrl(item,extra){item=item||{};extra=extra||{};let u=new URL(location.origin+location.pathname);let de=extra.de||item.MaDe||'';if(de)u.searchParams.set('de',de);if(item.Mon||extra.mon)u.searchParams.set('mon',item.Mon||extra.mon);if(item.Lop||extra.lop)u.searchParams.set('lop',item.Lop||extra.lop);if(item.Chuong||extra.chuong)u.searchParams.set('chuong',item.Chuong||extra.chuong);if(item.BaiHoc||extra.baihoc)u.searchParams.set('baihoc',item.BaiHoc||extra.baihoc);if(item.BoDe||extra.bode)u.searchParams.set('bode',item.BoDe||extra.bode);let lv=extra.level||val('fMucDo')||'';let dg=extra.dang||val('fDang')||'';if(lv)u.searchParams.set('level',lv);if(dg)u.searchParams.set('dang',dg);let auto=extra.start!==0&&extra.start!=='0';if(auto){u.searchParams.set('start','1');if(extra.sq)u.searchParams.set('sq','1');if(extra.sa)u.searchParams.set('sa','1')}else u.searchParams.set('open','1');return u.toString()}
+function buildExamShareUrl(item,extra){item=item||{};extra=extra||{};let u=new URL(location.origin+'/share');let de=extra.de||item.MaDe||'';if(de)u.searchParams.set('de',de);if(item.Mon||extra.mon)u.searchParams.set('mon',item.Mon||extra.mon);if(item.Lop||extra.lop)u.searchParams.set('lop',item.Lop||extra.lop);if(item.Chuong||extra.chuong)u.searchParams.set('chuong',item.Chuong||extra.chuong);if(item.BaiHoc||extra.baihoc)u.searchParams.set('baihoc',item.BaiHoc||extra.baihoc);if(item.BoDe||extra.bode)u.searchParams.set('bode',item.BoDe||extra.bode);let lv=extra.level||val('fMucDo')||'';let dg=extra.dang||val('fDang')||'';if(lv)u.searchParams.set('level',lv);if(dg)u.searchParams.set('dang',dg);let auto=extra.start!==0&&extra.start!=='0';if(auto){u.searchParams.set('start','1');if(extra.sq)u.searchParams.set('sq','1');if(extra.sa)u.searchParams.set('sa','1')}else u.searchParams.set('open','1');return u.toString()}
 function clearShareQuery(){let p=new URLSearchParams(location.search);if(!p.get('de')&&!p.get('made'))return;['de','made','mon','lop','chuong','baihoc','bode','level','dang','open','start','sq','sa'].forEach(k=>p.delete(k));let q=p.toString();history.replaceState(null,'',location.pathname+(q?'?'+q:''))}
 function setSel(id,v){let el=document.getElementById(id);if(!el||!v)return;for(let o of el.options){if(o.value===v){el.value=v;return}}let opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v}
 async function copyTextToClipboard(text){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}let ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');document.body.removeChild(ta);return true}catch(e){document.body.removeChild(ta);return false}}
@@ -2932,7 +3057,7 @@ def version():
         "fix_hint_500_timeout_v82": True,
         "fix_test_key_admin_review_v83": True,
         "retry_shuffle": True,
-        "routes": ["/login", "/register", "/logout", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
+        "routes": ["/login", "/register", "/logout", "/share", "/api/meta", "/api/start", "/api/submit", "/api/question/update", "/api/question/delete"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -2973,11 +3098,51 @@ def login():
                 return redirect(nxt or url_for("home"))
         except Exception as e:
             error = str(e)
+    next_url = safe_next_url(request.args.get("next", ""))
+    og_title = og_desc = og_url = ""
+    if next_url:
+        de = parse_de_from_next(next_url)
+        if de:
+            try:
+                store = get_store()
+                og_title, og_desc = share_og_context(store, de)
+                og_url = request.url_root.rstrip("/") + next_url
+            except Exception:
+                pass
     return render_template_string(
         LOGIN_HTML,
         error=error,
         msg=request.args.get("msg", ""),
-        next=safe_next_url(request.args.get("next", "")),
+        next=next_url,
+        og_title=og_title,
+        og_desc=og_desc,
+        og_url=og_url,
+    )
+
+@app.route("/share")
+def share_exam():
+    de = clean(request.args.get("de") or request.args.get("made"))
+    store = get_store()
+    item = None
+    og_title, og_desc = "Luyện đề Vật lý - Toán học", "Đăng nhập để làm bài luyện tập trực tuyến."
+    if de:
+        try:
+            og_title, og_desc = share_og_context(store, de)
+            item = catalog_find_by_made(store, de)
+        except Exception:
+            pass
+    target_url = build_exam_entry_url(request.args)
+    card_title = clean((item or {}).get("BaiHoc") or (item or {}).get("De") or og_title.split(" (")[0])
+    return render_template_string(
+        SHARE_HTML,
+        og_title=og_title,
+        og_desc=og_desc,
+        og_url=request.url,
+        target_url=target_url,
+        target_url_json=json.dumps(target_url),
+        card_title=card_title,
+        item=item,
+        auto_redirect=not is_link_preview_bot(),
     )
 
 @app.route("/register", methods=["GET", "POST"])
