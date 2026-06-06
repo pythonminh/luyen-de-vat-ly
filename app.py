@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V100_START_POST_DANG_FILTER_2026_06_05"
+APP_VERSION = "V101_DANG_FILTER_UNIFIED_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -317,7 +317,8 @@ def norm_letter(s: Any) -> str:
 
 
 def norm_dang(s: Any) -> str:
-    k = key_norm(s)
+    t = re.sub(r"[/\\]+", " ", str(s or ""))
+    k = key_norm(t)
     k2 = k.replace(" ", "")
     if (
         "dung sai" in k
@@ -473,10 +474,7 @@ def looks_like_short_answer(q: Dict[str, Any]) -> bool:
 
 
 def question_dang(q: Dict[str, Any]) -> str:
-    """Dạng câu đã chuẩn hóa lúc nạp Sheet — dùng thống nhất cho mục lục, lọc đề, làm bài."""
-    raw = clean(q.get("Dang", ""))
-    if raw:
-        return norm_dang(raw)
+    """Dạng câu chuẩn — luôn suy từ cột J (_DangCol) + đáp án, không tin field Dang đã ghi đè."""
     return norm_dang(effective_dang(q))
 
 
@@ -1090,6 +1088,8 @@ class SheetStore:
         self.rebuild_question_indexes()
 
     def rebuild_question_indexes(self) -> None:
+        for q in self.questions:
+            q["Dang"] = effective_dang(q)
         self.by_made = {}
         self.by_group = {}
         for q in self.questions:
@@ -1301,11 +1301,42 @@ class SheetStore:
             d["_row"] = q.get("_row", "")
         return d
 
-    def start_quiz(self, made: str, shuffle_questions: bool = False, shuffle_options: bool = False, level_filter: str = "", dang_filter: str = "") -> Dict[str, Any]:
+    def resolve_quiz_base(self, made: str) -> List[Dict[str, Any]]:
+        made = clean(made)
         if made.startswith("GRP_"):
-            base_qs = list(self.by_group.get(made, []))
-        else:
-            base_qs = list(self.by_made.get(made, []))
+            qs = list(self.by_group.get(made, []))
+            if qs:
+                return qs
+        qs = list(self.by_made.get(made, []))
+        if qs:
+            return qs
+        for item in self.catalog:
+            if item.get("MaDe") == made or item.get("GroupKey") == made:
+                gk = clean(item.get("GroupKey") or item.get("MaDe"))
+                if gk.startswith("GRP_"):
+                    return list(self.by_group.get(gk, []))
+                return list(self.by_made.get(gk, []))
+        return []
+
+    def catalog_filter_count(self, made: str, level_filter: str = "", dang_filter: str = "") -> Optional[int]:
+        item = next((x for x in self.catalog if x.get("MaDe") == made or x.get("GroupKey") == made), None)
+        if not item:
+            return None
+        fc = item.get("FilterCounts") or {}
+        lv = clean(level_filter).upper()
+        dg = norm_dang(dang_filter) if clean(dang_filter) else ""
+        if lv and dg:
+            combo = fc.get("combo") or {}
+            return int(combo.get(f"{lv}|{dg}", combo.get(f"{lv}|{dang_filter}", 0)) or 0)
+        if dg:
+            dang = fc.get("dang") or {}
+            return int(dang.get(dg, dang.get(dang_filter, 0)) or 0)
+        if lv:
+            return int((fc.get("level") or {}).get(lv, 0) or 0)
+        return None
+
+    def start_quiz(self, made: str, shuffle_questions: bool = False, shuffle_options: bool = False, level_filter: str = "", dang_filter: str = "") -> Dict[str, Any]:
+        base_qs = self.resolve_quiz_base(made)
         if not base_qs:
             raise RuntimeError("Không có câu hỏi trong đề này. Có thể mã đề bị lệch, hãy bấm Đồng bộ dữ liệu.")
         total_in_de = len(base_qs)
@@ -1313,30 +1344,29 @@ class SheetStore:
         qs_source = base_qs
         if level_filter:
             def has_level(q: Dict[str, Any]) -> bool:
-                lv = clean(q.get("MucDo", "")).upper()
-                parts = [p.strip() for p in re.split(r"[,;/|]+", lv) if p.strip()]
-                return level_filter in parts or level_filter in lv
+                return level_filter in question_mucdo_parts(q) or level_filter in clean(q.get("MucDo", "")).upper()
             qs_source = [q for q in base_qs if has_level(q)]
             if not qs_source:
                 raise RuntimeError(f"Đề này không có câu mức độ {level_filter}. Thầy chọn mức khác hoặc để Tất cả.")
-        dang_filter = clean(dang_filter)
+        dang_filter = norm_dang(dang_filter) if clean(dang_filter) else ""
         if dang_filter:
-            dang_norm = norm_dang(dang_filter)
+            dang_norm = dang_filter
             after_level = qs_source
-            qs_source = [q for q in qs_source if question_dang(q) == dang_norm]
+            qs_source = [q for q in qs_source if dang_matches(q, dang_norm)]
             if not qs_source:
-                n_dang_all = sum(1 for q in base_qs if question_dang(q) == dang_norm)
+                n_dang_all = sum(1 for q in base_qs if dang_matches(q, dang_norm))
+                cat_n = self.catalog_filter_count(made, level_filter, dang_norm)
+                hint = f" Mục lục báo {cat_n} câu — bấm Đồng bộ Sheet, Ctrl+F5." if cat_n else ""
                 if level_filter:
                     n_level_all = len(after_level)
                     raise RuntimeError(
                         f"Không có câu mức {level_filter} dạng {dang_filter}. "
                         f"Đề có {n_dang_all} câu {dang_filter} (mức khác) và {n_level_all} câu mức {level_filter} (dạng khác). "
-                        f"Thử bỏ một bộ lọc hoặc chọn Tất cả."
+                        f"Thử bỏ một bộ lọc hoặc chọn Tất cả.{hint}"
                     )
                 raise RuntimeError(
                     f"Không có câu dạng {dang_filter} trong đề này "
-                    f"(đề có {total_in_de} câu, trong đó {n_dang_all} câu {dang_filter}). "
-                    f"Bấm Đồng bộ Sheet rồi thử lại."
+                    f"(đề có {total_in_de} câu, trong đó {n_dang_all} câu {dang_filter}).{hint}"
                 )
         access_level = quiz_access_level(qs_source)
         if is_trial() and access_level != "FREE":
@@ -3049,18 +3079,18 @@ function renderRichText(s){s=String(s||'').trim();s=s.replace(/\?\?\s*/g,'');s=c
 function escAttr(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function shortText(s,n=90){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n-1)+'…':s}
 function normText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d')}
-function normDangClient(s){let k=normText(s||'').replace(/[\/\\-]/g,' ');let k2=k.replace(/\s+/g,'');if(/dung\s*sai|dungsai|d\/s|true\s*false|truefalse/.test(k)||k2.includes('ds')||/\b(ds|tf)\b/.test(k))return 'Đúng sai';if(/tra\s*loi\s*ngan|short|tln|shortans/.test(k))return 'Trả lời ngắn';if(/tu\s*luan|essay/.test(k)||k==='tl')return 'Tự luận';if(/trac\s*nghiem|tracnghiem|mcq|multiple\s*choice/.test(k)||k==='tn'||k==='tn4')return 'Trắc nghiệm';return 'Trắc nghiệm'}
+function normDangClient(s){let t=String(s||'').replace(/[/\\]+/g,' ');let k=normText(t).replace(/[\/\\-]/g,' ');let k2=k.replace(/\s+/g,'');if(/dung\s*sai|dungsai|d\/s|true\s*false|truefalse/.test(k)||k2.includes('ds')||/\b(ds|tf)\b/.test(k))return 'Đúng sai';if(/tra\s*loi\s*ngan|short|tln|shortans/.test(k))return 'Trả lời ngắn';if(/tu\s*luan|essay/.test(k)||k==='tl')return 'Tự luận';if(/trac\s*nghiem|tracnghiem|mcq|multiple\s*choice/.test(k)||k==='tn'||k==='tn4')return 'Trắc nghiệm';return 'Trắc nghiệm'}
 function tfTokenClient(p){let t=normText(p);if(!String(p||'').trim())return '';if(String(p).trim()==='Đ'||String(p).trim()==='D'||t==='d'||t==='dung'||t==='true')return 'Đ';if(String(p).trim()==='S'||t==='s'||t==='sai'||t==='false')return 'S';return ''}
 function parseTfClient(v){let raw=String(v||'').trim();if(!raw)return [];let parts=raw.split(/[,;|/\n]+/).map(x=>x.trim()).filter(Boolean);if(parts.length>=2){let out=parts.map(tfTokenClient);if(out.filter(x=>x==='Đ'||x==='S').length>=2)return out}let s=raw.toUpperCase().replace(/\u0110/g,'D').replace(/\u0111/g,'D').replace(/DUNG/g,'D').replace(/TRUE/g,'D').replace(/SAI/g,'S').replace(/FALSE/g,'S');return (s.match(/[DSĐ]/g)||[]).map(c=>(c==='S'?'S':'Đ')).slice(0,4)}
 function hasOptsClient(q){return ['A','B','C','D'].filter(L=>String((q||{})[L]||'').trim()).length>=2}
 function looksDsAnswer(v){let raw=String(v||'').trim();if(!raw)return false;if(/^[ABCD]$/i.test(raw.replace(/\s/g,'')))return false;return parseTfClient(raw).filter(x=>x==='Đ'||x==='S').length>=2}
 function isMcqLetter(v){let raw=String(v||'').trim().toUpperCase().replace(/\u0110/g,'D');return /^[ABCD]$/.test(raw)}
 function looksShortAnswerClient(q){let d=String((q&&q.DapAn)||'').trim();if(!d)return false;if(isMcqLetter(q.DapAn))return false;if(looksDsAnswer(q.DapAn)&&hasOptsClient(q))return false;let n=d.replace(/\s/g,'').replace(',','.');if(/^-?\d+(\.\d+)?$/.test(n))return true;return d.length<=200}
-function resolveDang(q){if(!q)return 'Trắc nghiệm';let rawCol=String(q.Dang||'').trim();let dc=normDangClient(rawCol);if(dc==='Đúng sai'||dc==='Trắc nghiệm'||dc==='Trả lời ngắn'||dc==='Tự luận')return dc;if(looksDsAnswer(q.DapAn)&&hasOptsClient(q))return 'Đúng sai';if(isMcqLetter(q.DapAn)&&hasOptsClient(q))return 'Trắc nghiệm';if(looksShortAnswerClient(q))return 'Trả lời ngắn';if(rawCol)return dc;return 'Trắc nghiệm'}
-function applyResolvedDang(q){if(!q)return q;let raw=String(q.Dang||'').trim();if(raw){q.Dang=normDangClient(raw);return q}q.Dang=resolveDang(q);return q}
+function resolveDang(q){if(!q)return 'Trắc nghiệm';let rawCol=String(q._DangCol||q.Dang||'').trim();let dc=normDangClient(rawCol);if(dc==='Đúng sai')return 'Đúng sai';if(dc==='Trả lời ngắn')return 'Trả lời ngắn';if(dc==='Tự luận')return 'Tự luận';if(looksDsAnswer(q.DapAn)&&hasOptsClient(q))return 'Đúng sai';if(isMcqLetter(q.DapAn)&&hasOptsClient(q))return 'Trắc nghiệm';if(looksShortAnswerClient(q))return 'Trả lời ngắn';if(dc==='Trắc nghiệm')return 'Trắc nghiệm';if(rawCol)return dc;return 'Trắc nghiệm'}
+function applyResolvedDang(q){if(!q)return q;q.Dang=resolveDang(q);return q}
 function dangSame(a,b){return normDangClient(a)===normDangClient(b)}
 function questionLevelMatch(q,lv){if(!lv)return true;let u=String(q.MucDo||'').toUpperCase();let parts=u.split(/[,;/|]+/).map(x=>x.trim()).filter(Boolean);return parts.includes(lv)||u.includes(lv)}
-function filterQuestionsByDang(qs,dang){dang=String(dang||'').trim();if(!dang)return qs||[];let want=normDangClient(dang);return (qs||[]).filter(q=>{applyResolvedDang(q);return normDangClient(q.Dang)===want})}
+function filterQuestionsByDang(qs,dang){dang=String(dang||'').trim();if(!dang)return qs||[];let want=normDangClient(dang);return (qs||[]).filter(q=>normDangClient(applyResolvedDang(q).Dang)===want)}
 function filterQuestionsByLevel(qs,lv){lv=(lv||'').trim().toUpperCase();if(!lv)return qs||[];return (qs||[]).filter(q=>questionLevelMatch(q,lv))}
 function applyQuizFilters(qs,lv,dg){return filterQuestionsByDang(filterQuestionsByLevel(qs||[],lv),dg)}
 function updateFilterBadge(lv,dg,count){let el=document.getElementById('filterBadge');if(!el)return;if(!lv&&!dg){el.textContent='';el.classList.add('hide');return}let parts=[];if(dg)parts.push(dg);if(lv)parts.push('mức '+lv);el.textContent='🎯 Lọc: '+parts.join(' · ')+(count!=null?' ('+count+' câu)':'');el.classList.remove('hide')}
@@ -3107,10 +3137,10 @@ async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
-async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let lv=CURRENT_LEVEL||(val('fMucDo')||'').trim().toUpperCase();let dg=CURRENT_DANG||(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg)}
+async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg)}
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');if(!el)return;let parts=[];if(j&&j.shuffle_questions)parts.push('Xáo câu');if(j&&j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||CURRENT_LEVEL||val('fMucDo')||'').trim().toUpperCase();let dg=(dang||CURRENT_DANG||val('fDang')||'').trim();let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dg})});if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));let serverFiltered=!!(j.dang_filter||j.level_filter);if((lv||dg)&&!serverFiltered)QUESTIONS=applyQuizFilters(QUESTIONS,lv,dg);if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dg);let msg='Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dg}`;else if(dg)msg+=` dạng ${dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgTag=(dg||j.dang_filter)?` | Dạng: ${dg||j.dang_filter} (${n} câu)`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateFilterBadge(lv,dg||j.dang_filter,n);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
+async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg})});if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(lv||dgNorm||dg){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg='Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Dạng: ${dgShow} (${n} câu)`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateFilterBadge(lv,dgShow,n);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;updateFilterBadge('','',null);document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');updateAdminChrome()}
 function ensureFullModeOverrides(){
     if(document.getElementById('LDVL_FS_OVR')) return;
