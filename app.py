@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V96_FIX_DANG_LEVEL_FILTER_COUNTS_2026_06_05"
+APP_VERSION = "V97_FIX_DANG_FILTER_START_QUIZ_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -471,15 +471,34 @@ def looks_like_short_answer(q: Dict[str, Any]) -> bool:
     return len(dapan) <= 200
 
 
+CANONICAL_DANGS = frozenset({"Đúng sai", "Trắc nghiệm", "Trả lời ngắn", "Tự luận"})
+
+
+def question_dang(q: Dict[str, Any]) -> str:
+    """Dạng câu đã chuẩn hóa lúc nạp Sheet — dùng thống nhất cho mục lục, lọc đề, làm bài."""
+    d = clean(q.get("Dang", ""))
+    if d in CANONICAL_DANGS:
+        return d
+    return effective_dang(q)
+
+
+def dang_matches(q: Dict[str, Any], dang_filter: str) -> bool:
+    if not clean(dang_filter):
+        return True
+    return question_dang(q) == norm_dang(dang_filter)
+
+
 def effective_dang(q: Dict[str, Any]) -> str:
-    """Suy luận dạng câu: đáp án Đ/S hoặc một chữ A-D quyết định, cột J là phụ."""
-    raw_col = clean(q.get("Dang", ""))
+    """Suy luận dạng câu từ cột J gốc (_DangCol) + đáp án; không dùng Dang đã ghi đè."""
+    raw_col = clean(q.get("_DangCol", "")) or clean(q.get("Dang", ""))
     dang_col = norm_dang(raw_col)
     dapan = q.get("DapAn")
     has_opts = has_tf_statements(q)
 
     if dang_col == "Đúng sai":
         return "Đúng sai"
+    if dang_col == "Trắc nghiệm":
+        return "Trắc nghiệm"
     if dang_col == "Trả lời ngắn":
         return "Trả lời ngắn"
     if dang_col == "Tự luận":
@@ -1059,7 +1078,9 @@ class SheetStore:
             if 8 < len(row_vals) and clean(row_vals[8]):
                 q["MucDo"] = clean(row_vals[8])
             if 9 < len(row_vals) and clean(row_vals[9]):
-                q["Dang"] = clean(row_vals[9])
+                q["_DangCol"] = clean(row_vals[9])
+            elif not clean(q.get("_DangCol", "")):
+                q["_DangCol"] = clean(q.get("Dang", ""))
 
             q["Dang"] = effective_dang(q)
 
@@ -1215,7 +1236,7 @@ class SheetStore:
                 }
             g = groups[gk]
             g["SoCau"] += 1
-            ed = clean(q.get("Dang", "")) or effective_dang(q)
+            ed = question_dang(q)
             bump_count(g["DangCounts"], ed)
             for lv in question_mucdo_parts(q):
                 bump_count(g["LevelCounts"], lv)
@@ -1271,7 +1292,7 @@ class SheetStore:
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
         d = {k: q.get(k, "") for k in ["ID", "MaDe", "Dang", "MucDo", "CauHoi", "A", "B", "C", "D", "HinhAnh", "Chuong", "BaiHoc", "De", "QuyenTruyCap"]}
-        d["Dang"] = effective_dang(q)
+        d["Dang"] = question_dang(q)
         d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
         d["index"] = index
         if reveal:
@@ -1302,10 +1323,10 @@ class SheetStore:
         if dang_filter:
             dang_norm = norm_dang(dang_filter)
             after_level = qs_source
-            qs_source = [q for q in qs_source if effective_dang(q) == dang_norm]
+            qs_source = [q for q in qs_source if question_dang(q) == dang_norm]
             if not qs_source:
                 if level_filter:
-                    n_dang_all = sum(1 for q in base_qs if effective_dang(q) == dang_norm)
+                    n_dang_all = sum(1 for q in base_qs if question_dang(q) == dang_norm)
                     n_level_all = len(after_level)
                     raise RuntimeError(
                         f"Không có câu mức {level_filter} dạng {dang_filter}. "
@@ -1342,6 +1363,7 @@ class SheetStore:
             "shuffle_options": shuffle_options,
             "level_filter": level_filter,
             "dang_filter": dang_filter,
+            "question_count": len(qs),
             "trial_message": "Tài khoản dùng thử: chỉ luyện đề FREE, không nộp/chấm điểm và không xem đáp án/lời giải." if is_trial() else "",
             "questions": [self.public_question(q, i, reveal=reveal) for i, q in enumerate(qs)]
         }
@@ -3030,8 +3052,8 @@ function looksDsAnswer(v){let raw=String(v||'').trim();if(!raw)return false;if(/
 function isMcqLetter(v){let raw=String(v||'').trim().toUpperCase().replace(/\u0110/g,'D');return /^[ABCD]$/.test(raw)}
 function looksShortAnswerClient(q){let d=String((q&&q.DapAn)||'').trim();if(!d)return false;if(isMcqLetter(q.DapAn))return false;if(looksDsAnswer(q.DapAn)&&hasOptsClient(q))return false;let n=d.replace(/\s/g,'').replace(',','.');if(/^-?\d+(\.\d+)?$/.test(n))return true;return d.length<=200}
 function resolveDang(q){if(!q)return 'Trắc nghiệm';let rawCol=String(q.Dang||'').trim();let dc=normDangClient(rawCol);if(dc==='Đúng sai'||dc==='Trắc nghiệm'||dc==='Trả lời ngắn'||dc==='Tự luận')return dc;if(looksDsAnswer(q.DapAn)&&hasOptsClient(q))return 'Đúng sai';if(isMcqLetter(q.DapAn)&&hasOptsClient(q))return 'Trắc nghiệm';if(looksShortAnswerClient(q))return 'Trả lời ngắn';if(rawCol)return dc;return 'Trắc nghiệm'}
-function applyResolvedDang(q){if(!q)return q;let dc=normDangClient(q.Dang||'');if(dc==='Đúng sai'||dc==='Trắc nghiệm'||dc==='Trả lời ngắn'||dc==='Tự luận'){q.Dang=dc;return q}q.Dang=resolveDang(q);return q}
-function filterQuestionsByDang(qs,dang){dang=String(dang||'').trim();if(!dang)return qs;let want=normDangClient(dang);return (qs||[]).filter(q=>normDangClient(applyResolvedDang(q).Dang)===want)}
+function applyResolvedDang(q){if(!q)return q;let dc=normDangClient(q.Dang||'');if(dc)q.Dang=dc;return q}
+function filterQuestionsByDang(qs,dang){return qs||[]}
 function isQuestionDone(i){let q=QUESTIONS[i];if(!q)return false;q=applyResolvedDang(q);let a=ANSWERS[i];if(q.Dang=='Trắc nghiệm')return !!String(a||'').trim();if(q.Dang=='Đúng sai'){if(!Array.isArray(a))return false;let req=0;for(let L of ['A','B','C','D'])if(q[L])req++;let filled=a.filter(v=>!!String(v||'').trim()).length;return req>0&&filled>=req}return !!String(a||'').trim()}
 function countDone(){let n=0;for(let i=0;i<QUESTIONS.length;i++)if(isQuestionDone(i))n++;return n}
 function notifyDoneIfNeeded(){if(SUBMITTED||COMPLETED_NOTICE||!QUESTIONS.length)return;let done=countDone();if(done>=QUESTIONS.length){COMPLETED_NOTICE=true;alert('✅ Đã làm hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
@@ -3076,7 +3098,7 @@ function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được m
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg)}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');let parts=[];if(j.shuffle_questions)parts.push('Xáo câu');if(j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||'').trim().toUpperCase();let dg=(dang||'').trim()|| (val('fDang')||'').trim();let url='/api/start?made='+encodeURIComponent(made)+'&shuffle_q='+(shuffleQ?1:0)+'&shuffle_a='+(shuffleA?1:0)+'&level='+encodeURIComponent(lv)+'&dang='+encodeURIComponent(dg);let j=await api(url);if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(dg||j.dang_filter)QUESTIONS=filterQuestionsByDang(QUESTIONS,dg||j.dang_filter);if(!QUESTIONS.length){let msg='Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dg}`;else if(dg)msg+=` dạng ${dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức độ: ${lv}`:'';let dgTag=dg?` | Dạng: ${dg}`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
+async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||'').trim().toUpperCase();let dg=(dang||'').trim()|| (val('fDang')||'').trim();let url='/api/start?made='+encodeURIComponent(made)+'&shuffle_q='+(shuffleQ?1:0)+'&shuffle_a='+(shuffleA?1:0)+'&level='+encodeURIComponent(lv)+'&dang='+encodeURIComponent(dg);let j=await api(url);if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(!QUESTIONS.length){let msg='Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dg}`;else if(dg)msg+=` dạng ${dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let dgTag=dg?` | Dạng: ${dg}`+(j.question_count?` (${j.question_count} câu)`:''):'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');updateAdminChrome()}
 function ensureFullModeOverrides(){
     if(document.getElementById('LDVL_FS_OVR')) return;
