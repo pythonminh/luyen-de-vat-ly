@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V116_CIRCLE_CENTER_FIX_2026_06_06"
+APP_VERSION = "V117_FMTTIME_FIX_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -3372,6 +3372,7 @@ function isMobileQuizUI(){return window.matchMedia('(max-width:768px)').matches|
 function syncMobileQuizToolbar(){let mobile=isMobileQuizUI();document.body.classList.toggle('mobile-quiz-ui',mobile);let act=document.getElementById('quizActions');let fs=document.getElementById('fsOnlyTools');let tbtn=document.getElementById('btnQuizToolsToggle');let showTools=!mobile||MOBILE_QUIZ_TOOLS_OPEN;if(act)act.classList.toggle('quizToolsShow',showTools);if(fs&&mobile)fs.classList.toggle('quizToolsShow',MOBILE_QUIZ_TOOLS_OPEN);else if(fs)fs.classList.remove('quizToolsShow');if(tbtn){tbtn.style.display=mobile?'inline-flex':'none';tbtn.textContent=MOBILE_QUIZ_TOOLS_OPEN?'✕':'☰';tbtn.setAttribute('aria-expanded',MOBILE_QUIZ_TOOLS_OPEN?'true':'false')}if(!mobile)MOBILE_QUIZ_TOOLS_OPEN=false}
 function toggleQuizTools(e){if(e&&e.stopPropagation)e.stopPropagation();if(!isMobileQuizUI())return;MOBILE_QUIZ_TOOLS_OPEN=!MOBILE_QUIZ_TOOLS_OPEN;syncMobileQuizToolbar()}
 function initMobileQuizToolbar(){syncMobileQuizToolbar();if(window._mobileQuizToolbarInited)return;window._mobileQuizToolbarInited=true;window.addEventListener('resize',function(){syncMobileQuizToolbar();if(!document.getElementById('quiz')||document.getElementById('quiz').classList.contains('hide'))return;if(typeof CUR!=='undefined'&&QUESTIONS.length)renderQuestion()});window.addEventListener('orientationchange',function(){setTimeout(function(){syncMobileQuizToolbar();if(!document.getElementById('quiz')||document.getElementById('quiz').classList.contains('hide'))return;if(typeof CUR!=='undefined'&&QUESTIONS.length)renderQuestion()},120)});document.addEventListener('click',function(e){if(!isMobileQuizUI()||!MOBILE_QUIZ_TOOLS_OPEN)return;if(e.target.closest('#quizActions')||e.target.closest('#fsOnlyTools')||e.target.closest('#btnQuizToolsToggle'))return;MOBILE_QUIZ_TOOLS_OPEN=false;syncMobileQuizToolbar()})}
+function fmtTime(sec){sec=Math.max(0,parseInt(sec,10)||0);let h=Math.floor(sec/3600);sec%=3600;let m=Math.floor(sec/60);let s=sec%60;let p=n=>String(n).padStart(2,'0');return h>0?`${p(h)}:${p(m)}:${p(s)}`:`${p(m)}:${p(s)}`}
 function syncQuizTimerText(){let v=fmtTime(QUIZ_ELAPSED);let x=document.getElementById('quizTimerText');if(x)x.textContent=v;let fx=document.getElementById('fsQuizTimerText');if(fx)fx.textContent=v}
 function startQuizTimer(){stopQuizTimer();QUIZ_ELAPSED=0;syncQuizTimerText();QUIZ_TIMER=setInterval(()=>{QUIZ_ELAPSED++;syncQuizTimerText()},1000)}
 function stopQuizTimer(){if(QUIZ_TIMER){clearInterval(QUIZ_TIMER);QUIZ_TIMER=null}}
