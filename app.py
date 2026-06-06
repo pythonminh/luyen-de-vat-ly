@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V94_QUIZ_BACK_TOPBAR_2026_06_05"
+APP_VERSION = "V96_FIX_DANG_LEVEL_FILTER_COUNTS_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -98,7 +98,7 @@ def extract_lesson_number(s: Any) -> int:
 
 def extract_chapter_number(s: Any) -> int:
     t = key_norm(s)
-    m = re.search(r"\bchuong\s*(i{1,3}|iv|vi{0,3}|ix|x|\d+)\b", t)
+    m = re.search(r"\bchuong\s*(viii|vii|vi|iv|iii|ii|ix|x|i|\d+)\b", t)
     if m:
         token = m.group(1)
         if token.isdigit():
@@ -335,6 +335,20 @@ def norm_dang(s: Any) -> str:
     if any(x in k for x in ["trac nghiem", "tracnghiem", "mcq", "multiple choice"]) or k in ("tn", "tn4"):
         return "Trắc nghiệm"
     return "Trắc nghiệm"
+
+
+def bump_count(d: Dict[str, int], key: str) -> None:
+    if not key:
+        return
+    d[key] = int(d.get(key, 0)) + 1
+
+
+def question_mucdo_parts(q: Dict[str, Any]) -> List[str]:
+    lv = clean(q.get("MucDo", "")).upper()
+    parts = [p.strip() for p in re.split(r"[,;/|]+", lv) if p.strip()]
+    if parts:
+        return parts
+    return [lv] if lv else []
 
 
 def _tf_token_to_ds(token: Any) -> str:
@@ -1197,13 +1211,19 @@ class SheetStore:
                     "BoDe": q.get("BoDe", ""), "De": q.get("De", ""),
                     "SoCau": 0, "MucDoSet": set(), "DangSet": set(), "QuyenTruyCapSet": set(),
                     "BoDeSet": set(), "DeSet": set(),
+                    "DangCounts": {}, "LevelCounts": {}, "ComboCounts": {},
                 }
             g = groups[gk]
             g["SoCau"] += 1
+            ed = clean(q.get("Dang", "")) or effective_dang(q)
+            bump_count(g["DangCounts"], ed)
+            for lv in question_mucdo_parts(q):
+                bump_count(g["LevelCounts"], lv)
+                bump_count(g["ComboCounts"], f"{lv}|{ed}")
             if q.get("MucDo"):
                 g["MucDoSet"].add(q["MucDo"])
             if q.get("Dang"):
-                g["DangSet"].add(q["Dang"])
+                g["DangSet"].add(ed)
             if q.get("BoDe"):
                 g["BoDeSet"].add(q["BoDe"])
             if q.get("De"):
@@ -1226,6 +1246,11 @@ class SheetStore:
             access_values = sorted(item.pop("QuyenTruyCapSet"), key=key_norm)
             item["QuyenTruyCap"] = "VIP" if "VIP" in access_values else "FREE"
             item["IsFree"] = item["QuyenTruyCap"] == "FREE"
+            item["FilterCounts"] = {
+                "dang": dict(item.pop("DangCounts")),
+                "level": dict(item.pop("LevelCounts")),
+                "combo": dict(item.pop("ComboCounts")),
+            }
             out.append(item)
         out.sort(key=catalog_sort_key)
         return out
@@ -1276,8 +1301,17 @@ class SheetStore:
         dang_filter = clean(dang_filter)
         if dang_filter:
             dang_norm = norm_dang(dang_filter)
+            after_level = qs_source
             qs_source = [q for q in qs_source if effective_dang(q) == dang_norm]
             if not qs_source:
+                if level_filter:
+                    n_dang_all = sum(1 for q in base_qs if effective_dang(q) == dang_norm)
+                    n_level_all = len(after_level)
+                    raise RuntimeError(
+                        f"Không có câu mức {level_filter} dạng {dang_filter}. "
+                        f"Đề có {n_dang_all} câu {dang_filter} (mức khác) và {n_level_all} câu mức {level_filter} (dạng khác). "
+                        f"Thử bỏ một bộ lọc hoặc chọn Tất cả."
+                    )
                 raise RuntimeError(f"Đề này không có câu dạng {dang_filter}. Thầy chọn dạng khác hoặc để Tất cả.")
         access_level = quiz_access_level(qs_source)
         if is_trial() and access_level != "FREE":
@@ -3014,7 +3048,7 @@ function stopQuizTimer(){if(QUIZ_TIMER){clearInterval(QUIZ_TIMER);QUIZ_TIMER=nul
 async function api(url,opts={}){let r=await fetch(url,opts);let txt=await r.text();let j;try{j=txt?JSON.parse(txt):{};}catch(e){j={error:'Không đọc được phản hồi từ máy chủ. Có thể Render đang timeout hoặc trả về HTML. Mã HTTP: '+r.status+'. Nội dung đầu: '+txt.slice(0,120)}}if(!r.ok||j.error){if(r.status==401){let next=encodeURIComponent(location.pathname+location.search);location='/login?next='+next}throw new Error(j.error||'Lỗi API')}return j}
 function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
 function lessonNum(s){s=normText(s||'');let m=s.match(/\bbai\s*(\d+)/);if(m)return parseInt(m[1],10);m=s.match(/^(\d+)/);return m?parseInt(m[1],10):9999}
-function chapterNum(s){s=normText(s||'');let m=s.match(/\bchuong\s*(i{1,3}|iv|vi{0,3}|ix|x|\d+)/);if(m){let t=m[1];if(/^\d+$/.test(t))return parseInt(t,10);let rom={i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7,viii:8,ix:9,x:10};return rom[t]||9999}return 9999}
+function chapterNum(s){s=normText(s||'');let m=s.match(/\bchuong\s*(viii|vii|vi|iv|iii|ii|ix|x|i|\d+)\b/);if(m){let t=m[1];if(/^\d+$/.test(t))return parseInt(t,10);let rom={i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7,viii:8,ix:9,x:10};return rom[t]||9999}return 9999}
 function catalogSortKey(x){return [normText(x.Mon||''),normText(x.Lop||''),chapterNum(x.Chuong||''),normText(x.Chuong||''),lessonNum(x.BaiHoc||x.De||''),normText(x.BaiHoc||x.De||''),normText(x.BoDe||'')]}
 function compareCatalog(a,b){let ka=catalogSortKey(a),kb=catalogSortKey(b);for(let i=0;i<ka.length;i++){if(ka[i]<kb[i])return -1;if(ka[i]>kb[i])return 1}return 0}
 function uniqField(list,field){let seen=new Set(),out=[];for(let x of list||[]){let v=String((x||{})[field]||'').trim();if(!v||seen.has(v))continue;seen.add(v);out.push(v)}if(field==='BaiHoc')return out.sort((a,b)=>lessonNum(a)-lessonNum(b)||normText(a).localeCompare(normText(b),'vi'));if(field==='Chuong')return out.sort((a,b)=>chapterNum(a)-chapterNum(b)||normText(a).localeCompare(normText(b),'vi'));return out.sort((a,b)=>normText(a).localeCompare(normText(b),'vi'))}
@@ -3031,8 +3065,9 @@ async function clearMyAiKey(){if(!confirm('Xóa key AI đã lưu trên server (c
 function updateAdminChrome(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let qtb=document.getElementById('quizTopBar');if(qtb)qtb.classList.toggle('hide',!inQuiz);let bar=document.getElementById('adminBar');if(!bar)return;let show=!!USER.is_admin;bar.classList.toggle('hide',!show);let eb=document.getElementById('adminEditBtn');if(eb)eb.classList.toggle('hide',!inQuiz);let fsAdmin=show&&inQuiz&&FULLDE_ON;let fss=document.getElementById('btnFsSync');if(fss)fss.classList.toggle('hide',!fsAdmin);let fse=document.getElementById('btnFsEdit');if(fse)fse.classList.toggle('hide',!fsAdmin)}
 function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<removedIdx)out[i]=obj[k];else if(i>removedIdx)out[i-1]=obj[k]}return out}ANSWERS=shift(ANSWERS);RESULTS=shift(RESULTS);CHECKED=shift(CHECKED);LOCKED_Q=shift(LOCKED_Q);HINT_BY_Q=shift(HINT_BY_Q)}
 async function init(){updateExamStrip();META=await api('/api/meta');USER=META.user||{};document.getElementById('me').textContent=`${USER.hoten||''} (${USER.role||''}${USER.trial_until?' - hết trial: '+USER.trial_until:''}${USER.account_until?' - hết hạn: '+USER.account_until:''})`;updateAdminChrome();await loadAiKeyPanel();if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;refreshFilterOptions();renderCatalog();handleShareDeepLink()}
-function okFilter(x){let s=normText(val('fSearch'));let lv=normText(val('fMucDo'));let dang=normText(val('fDang'));let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levels=normText(x.MucDo||'').split(',').map(v=>v.trim()).filter(Boolean);let dangs=normText(x.Dang||'').split(',').map(v=>v.trim()).filter(Boolean);let levelOk=!lv||levels.includes(lv)||normText(x.MucDo||'').includes(lv);let dangOk=!dang||dangs.includes(dang)||normText(x.Dang||'').includes(dang);return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
-function renderCatalog(){let list=CATALOG.filter(okFilter).sort(compareCatalog);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let lvNotice=selectedLv?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dbeafe;border:1px solid #60a5fa;color:#1e40af;font-weight:900">🎯 Đề được lọc theo mức ${esc(selectedLv)}</div>`:'';let dangNotice=selectedDang?`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🧩 Đề được lọc theo dạng ${esc(selectedDang)}</div>`:'';let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl">🔗 ${shareLabel}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${lvNotice}${dangNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
+function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang){let nd=normDangClient(dang);return fc.combo[(lv+'|'+nd)]||fc.combo[(lv+'|'+dang)]||0}if(dang){let nd=normDangClient(dang);return fc.dang[nd]||fc.dang[dang]||0}if(lv)return fc.level[lv]||0;return null}
+function okFilter(x){let s=normText(val('fSearch'));let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();let mc=filterMatchCount(x,lv,dg);if(mc!==null&&mc===0)return false;let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levelOk=!lv||mc!==null||normText(x.MucDo||'').includes(normText(lv));let dangOk=!dg||mc!==null||normText(x.Dang||'').includes(normText(dg));return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
+function renderCatalog(){let list=CATALOG.filter(okFilter).sort(compareCatalog);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let mc=filterMatchCount(x,selectedLv,selectedDang);let filterNotice='';if((selectedLv||selectedDang)&&mc!==null){filterNotice=`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🎯 Có <b>${mc}</b> câu${selectedLv?' · mức '+esc(selectedLv):''}${selectedDang?' · dạng '+esc(selectedDang):''} trong đề này</div>`}let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl">🔗 ${shareLabel}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${filterNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');init()}
 async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert((j.ok?'✅ ':'❌ ')+(j.message||'')+ver);}catch(e){alert(e.message);}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
@@ -3041,7 +3076,7 @@ function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được m
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg)}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');let parts=[];if(j.shuffle_questions)parts.push('Xáo câu');if(j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||'').trim().toUpperCase();let dg=(dang||'').trim()|| (val('fDang')||'').trim();let url='/api/start?made='+encodeURIComponent(made)+'&shuffle_q='+(shuffleQ?1:0)+'&shuffle_a='+(shuffleA?1:0)+'&level='+encodeURIComponent(lv)+'&dang='+encodeURIComponent(dg);let j=await api(url);if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(dg||j.dang_filter)QUESTIONS=filterQuestionsByDang(QUESTIONS,dg||j.dang_filter);if(!QUESTIONS.length){alert('Không có câu dạng '+(dg||j.dang_filter||'')+' trong đề này.');return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức độ: ${lv}`:'';let dgTag=dg?` | Dạng: ${dg}`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
+async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang=''){try{let lv=(level||'').trim().toUpperCase();let dg=(dang||'').trim()|| (val('fDang')||'').trim();let url='/api/start?made='+encodeURIComponent(made)+'&shuffle_q='+(shuffleQ?1:0)+'&shuffle_a='+(shuffleA?1:0)+'&level='+encodeURIComponent(lv)+'&dang='+encodeURIComponent(dg);let j=await api(url);if(getShareParams().de)clearShareQuery();SID=j.sid;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(dg||j.dang_filter)QUESTIONS=filterQuestionsByDang(QUESTIONS,dg||j.dang_filter);if(!QUESTIONS.length){let msg='Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dg}`;else if(dg)msg+=` dạng ${dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=USER.is_admin?'ADMIN: đang xem đáp án/lời giải':(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức độ: ${lv}`:'';let dgTag=dg?` | Dạng: ${dg}`:'';document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`;updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion(); if(j.trial_message) alert(j.trial_message)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');updateAdminChrome()}
 function ensureFullModeOverrides(){
     if(document.getElementById('LDVL_FS_OVR')) return;
