@@ -36,7 +36,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V145_ADMIN_SAVE_BEFORE_CHECK_2026_06_06"
+APP_VERSION = "V146_DS_DAPAN_FROM_LOIGIAI_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2835,7 +2835,8 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
             "Mỗi dòng ≥25 ký tự, có lý do vật lý/toán cụ thể — không viết chung chung."
         )
         step2 = (
-            "Một dòng đáp án cuối: `Đ,S,S,Đ` hoặc `A=Đúng, B=Sai, C=Sai, D=Đúng` "
+            "Một dòng đáp án cuối — PHẢI khớp mục 1 (nếu D. Sai thì không ghi D=Đúng): "
+            "`Đ,Đ,Đ,S` hoặc `A=Đúng · B=Đúng · C=Đúng · D=Sai` "
             f"(Sheet cột P đang: {sheet_da})."
         )
     elif dang == "Trắc nghiệm":
@@ -2879,7 +2880,58 @@ def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> st
 
 
 
-def normalize_ds_loigiai(text: str, q: Optional[Dict[str, Any]] = None) -> str:
+def extract_ds_verdicts_from_loigiai(text: str) -> Dict[str, str]:
+    """Đọc Đúng/Sai từng ý A-D trong lời giải (không dùng cột P Sheet)."""
+    text = clean(text)
+    if not text:
+        return {}
+    out: Dict[str, str] = {}
+    tagged = list(
+        re.finditer(
+            r"(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?",
+            text,
+            re.I | re.M,
+        )
+    )
+    for m in tagged[:4]:
+        letter = m.group(1).upper()
+        verdict = m.group(2)
+        if verdict:
+            out[letter] = "Sai" if verdict.lower().startswith("s") else "Đúng"
+    if len(out) >= 2:
+        return out
+    for m in re.finditer(
+        r"(?:^|\n)\s*([ABCD])(?!\s*[\.\):])\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?",
+        text,
+        re.I | re.M,
+    ):
+        if m.group(2):
+            out[m.group(1).upper()] = (
+                "Sai" if m.group(2).lower().startswith("s") else "Đúng"
+            )
+    return out
+
+
+def format_ds_dapan_from_verdicts(verdicts: Dict[str, str], q: Optional[Dict[str, Any]] = None) -> str:
+    """Chuỗi đáp án P kiểu A=Đúng · B=Sai … để lưu Sheet."""
+    letters = ["A", "B", "C", "D"]
+    if q:
+        letters = [L for L in letters if clean(q.get(L))]
+    bits = [f"{L}={verdicts[L]}" for L in letters if verdicts.get(L)]
+    return " · ".join(bits)
+
+
+def ds_dapan_from_loigiai(loigiai: str, q: Optional[Dict[str, Any]] = None) -> str:
+    """Suy cột P từ lời giải — ưu tiên hơn dòng chốt mục 2 của AI."""
+    vmap = extract_ds_verdicts_from_loigiai(loigiai)
+    if len(vmap) >= 2:
+        return format_ds_dapan_from_verdicts(vmap, q)
+    return ""
+
+
+def normalize_ds_loigiai(
+    text: str, q: Optional[Dict[str, Any]] = None, use_sheet_dapan: bool = True
+) -> str:
     """Chuẩn hóa lời giải Đ/S: A. Đúng — giải thích (mỗi ý một dòng)."""
     text = clean(text)
     if not text:
@@ -2901,7 +2953,7 @@ def normalize_ds_loigiai(text: str, q: Optional[Dict[str, Any]] = None) -> str:
         )
         if line_hits:
             dap_map2: Dict[str, str] = {}
-            if q:
+            if q and use_sheet_dapan:
                 da = clean(q.get("DapAn", ""))
                 compact = re.sub(r"[^DSĐđ]", "", da.upper().replace("Đ", "D"))
                 for i, c in enumerate(compact[:4]):
@@ -2924,7 +2976,7 @@ def normalize_ds_loigiai(text: str, q: Optional[Dict[str, Any]] = None) -> str:
                 return "\n".join(lines2)
         return text
     dap_map: Dict[str, str] = {}
-    if q:
+    if q and use_sheet_dapan:
         da = clean(q.get("DapAn", ""))
         parts = re.findall(r"([ABCD])\s*[=:\-]\s*(Đúng|Sai|Đ|S)", da, re.I)
         if parts:
@@ -2972,6 +3024,10 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
             if lines:
                 dapan = lines[0]
                 dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
+    if loigiai:
+        dapan_from_lg = ds_dapan_from_loigiai(loigiai)
+        if dapan_from_lg:
+            dapan = dapan_from_lg
     if loigiai and dapan:
         return {"suggested_dapan": dapan, "suggested_loigiai": loigiai}
     # Legacy 8 mục
@@ -2998,6 +3054,8 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
         lg4 = _admin_section_body(body, "4")
         if lg4:
             loigiai = lg4
+    if loigiai and not dapan:
+        dapan = ds_dapan_from_loigiai(loigiai)
     return {"suggested_dapan": dapan, "suggested_loigiai": loigiai}
 
 
@@ -3095,7 +3153,12 @@ def _admin_hint_payload(
 ) -> Dict[str, Any]:
     sug = parse_admin_ai_suggestions(hint)
     if q and effective_dang(q) == "Đúng sai" and sug.get("suggested_loigiai"):
-        sug["suggested_loigiai"] = normalize_ds_loigiai(sug["suggested_loigiai"], q)
+        sug["suggested_loigiai"] = normalize_ds_loigiai(
+            sug["suggested_loigiai"], q, use_sheet_dapan=False
+        )
+        dapan_sync = ds_dapan_from_loigiai(sug["suggested_loigiai"], q)
+        if dapan_sync:
+            sug["suggested_dapan"] = dapan_sync
     if not sug.get("suggested_dapan") and correct_sheet:
         sug["suggested_dapan"] = correct_sheet
     if not sug.get("suggested_loigiai") and sheet_loigiai:
@@ -3952,7 +4015,7 @@ function formatMcqAnswerBadge(text){let raw=String(text||'').trim();let m=raw.to
 function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(/(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi)];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
 function finalizeAbcdSolutionChunks(chunks,q,isDs){if(!q)return chunks||[];let letters=['A','B','C','D'].filter(L=>q[L]);if(!letters.length)return chunks||[];let byL={};(chunks||[]).forEach(c=>{byL[c.letter]=c});let tokens=isDs?parseDsAnswerTokens(q.DapAn||''):[];let vMap={};tokens.forEach(t=>vMap[t.letter]=t.verdict);let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];return letters.map(L=>{if(byL[L]){let c=byL[L];if(isDs&&!c.verdict&&vMap[L])return Object.assign({},c,{verdict:vMap[L]});return c}return {letter:L,verdict:isDs?(vMap[L]||''):'',body:''}})}
 function formatAbcdSolutionList(chunks,q,isDs){q=q||{};chunks=finalizeAbcdSolutionChunks(chunks,q,isDs);if(!chunks.length)return '';let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];let stacked=needsAbcdStackedLayout(q,chunks);let listCls='dsSolutionList dsSolutionCompact'+(stacked?' dsSolutionRows':(isDs?' dsSolutionDs':' dsSolutionTn'));return `<div class="${listCls}">${chunks.map(c=>{let headVerdict='';if(c.verdict)headVerdict=`<b class="${c.verdict==='Sai'?'dsVerdictSai':'dsVerdictDung'}">${esc(c.verdict)}</b>`;else if(!isDs&&c.letter===corrMcq)headVerdict=`<b class="dsVerdictDung">✓ Đúng</b>`;else if(!isDs&&corrMcq)headVerdict=`<span class="muted">sai</span>`;let stmt='';if(q[c.letter]&&!c.body){let st=renderRichText(stripOptionPrefix(q[c.letter],c.letter));stmt=stacked?`<div class="dsStmtBlock">${st}</div>`:`<span class="dsStmtInline">${st}</span>`}let body=c.body?`<div class="dsSolutionBody">${formatHintDisplay(c.body)}</div>`:'';if(stacked&&stmt)return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}</div>${stmt}${body}</div>`;return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}${stmt}</div>${body}</div>`}).join('')}</div>`}
-function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function buildDsSolutionPlainLine(c){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');body=body.replace(/\s+/g,' ').trim();if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q){q=q||currentQuestion();let chunks=finalizeAbcdSolutionChunks(extractAbcdSolutionChunks(String(text||'')),q,true);return chunks.map(buildDsSolutionPlainLine).filter(Boolean).join('\n')}function formatDsSolutionPlainList(text,q){q=q||currentQuestion();let chunks=finalizeAbcdSolutionChunks(extractAbcdSolutionChunks(String(text||'')),q,true);if(!chunks.length)return formatHintDisplay(String(text||''));let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);return rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:formatHintDisplay(String(text||''))}function formatDsSolutionRows(text,q){let t=String(text||'').trim();q=q||currentQuestion();if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q);let chunks=extractAbcdSolutionChunks(t);if(chunks.length>=1||(q&&['A','B','C','D'].some(L=>q[L])))return formatAbcdSolutionList(chunks,q,true);return formatHintDisplay(t)}
+function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function buildDsSolutionPlainLine(c){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');body=body.replace(/\s+/g,' ').trim();if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q,forAi){q=q||currentQuestion();let chunks=extractAbcdSolutionChunks(String(text||''));if(forAi){let letters=['A','B','C','D'].filter(L=>q[L]);let byL={};chunks.forEach(c=>{byL[c.letter]=c});chunks=letters.map(L=>byL[L]||{letter:L,verdict:'',body:''})}else chunks=finalizeAbcdSolutionChunks(chunks,q,true);return chunks.map(buildDsSolutionPlainLine).filter(Boolean).join('\n')}function formatDsSolutionPlainList(text,q){q=q||currentQuestion();let chunks=finalizeAbcdSolutionChunks(extractAbcdSolutionChunks(String(text||'')),q,true);if(!chunks.length)return formatHintDisplay(String(text||''));let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);return rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:formatHintDisplay(String(text||''))}function formatDsSolutionRows(text,q){let t=String(text||'').trim();q=q||currentQuestion();if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q);let chunks=extractAbcdSolutionChunks(t);if(chunks.length>=1||(q&&['A','B','C','D'].some(L=>q[L])))return formatAbcdSolutionList(chunks,q,true);return formatHintDisplay(t)}
 function formatMcqSolutionRows(text,q){let t=String(text||'').trim();q=q||currentQuestion();let chunks=extractAbcdSolutionChunks(t);if(chunks.length>=1||q)return formatAbcdSolutionList(chunks,q,false);return formatHintDisplay(t)}
 function formatDsHintText(text,isSolution){text=String(text||'').trim();if(!text)return '';let q=currentQuestion();return isSolution?formatDsSolutionRows(text,q):formatDsAnswerBadges(text)}
 function formatTnHintText(text,isSolution){text=String(text||'').trim();if(!text)return '';return isSolution?formatMcqSolutionRows(text,currentQuestion()):formatMcqAnswerBadge(text)}
@@ -4106,11 +4169,13 @@ function setHintLoading(on,qIndex){HINT_LOADING=!!on;HINT_LOADING_Q=on?qIndex:nu
 function setSimilarLoading(on,qIndex){SIMILAR_LOADING=!!on;SIMILAR_LOADING_Q=on?qIndex:null;syncHintButtons(USER.can_ai_hint!==false)}
 function adminHintNeedsSave(qIdx){qIdx=qIdx==null?CUR:qIdx;let j=HINT_BY_Q[qIdx];return !!(j&&j.admin_review&&!ADMIN_HINT_SAVED[qIdx])}
 function markAdminHintSaved(qIdx){qIdx=qIdx==null?CUR:qIdx;ADMIN_HINT_SAVED[qIdx]=true;if(HINT_BY_Q[qIdx])HINT_BY_Q[qIdx].admin_sheet_confirmed=true}
+function dsDapAnFromSolutionText(text,q){q=q||currentQuestion();let chunks=extractAbcdSolutionChunks(String(text||''));let m={};chunks.forEach(c=>{if(c.verdict)m[c.letter]=c.verdict});let letters=['A','B','C','D'].filter(L=>q[L]);let bits=letters.filter(L=>m[L]).map(L=>`${L}=${m[L]}`);return bits.length?bits.join(' · '):''}
 function hintSection1Raw(){let t=hintRawText().split('📋 Tham chiếu Sheet')[0];let m=t.match(/1\.\s*GIẢI TỪNG Ý[^\n]*\n([\s\S]*?)(?=2\.\s*CHỐT ĐÁP ÁN|\Z)/i);return m?m[1].trim():''}
-function hintAiDapAn(){let j=HINT_BY_Q[CUR]||{};return String(j.suggested_dapan||'').trim()}
-function hintAiLoigiai(){let j=HINT_BY_Q[CUR]||{};let v=String(j.suggested_loigiai||'').trim();if(!v)v=hintSection1Raw();if(isCurrentQuestionDs()&&v){let n=buildDsSolutionCopyText(v,currentQuestion());if(n)return n}return v}
+function hintAiLoigiaiRaw(){let j=HINT_BY_Q[CUR]||{};return String(j.suggested_loigiai||'').trim()||hintSection1Raw()}
+function hintAiDapAn(){if(isCurrentQuestionDs()){let fromLg=dsDapAnFromSolutionText(hintAiLoigiaiRaw(),currentQuestion());if(fromLg)return fromLg}let j=HINT_BY_Q[CUR]||{};return String(j.suggested_dapan||'').trim()}
+function hintAiLoigiai(){let v=hintAiLoigiaiRaw();if(isCurrentQuestionDs()&&v){let n=buildDsSolutionCopyText(v,currentQuestion(),true);if(n)return n}return v}
 function adminLoigiaiMissingLetters(text,q){q=q||currentQuestion();if(!q||q.Dang!=='Đúng sai')return [];let need=['A','B','C','D'].filter(L=>!!q[L]);let found=new Set();String(text||'').split(/\n/).forEach(line=>{let m=line.match(/^\s*([ABCD])\s*[\.\):]/i);if(m)found.add(m[1].toUpperCase())});return need.filter(L=>!found.has(L))}
-function buildHintAnswerCard(j){if(!j)return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';if(j.admin_review&&adminHintNeedsSave())return `<div class="hintAnswerCard hintAnswerPending"><div class="hintAnswerTitle">⏳ Chưa duyệt Sheet</div><div class="muted" style="font-size:13px;line-height:1.45;margin-top:6px">Bấm <b>✏️ Sửa câu (điền AI)</b> → kiểm tra đủ <b>Đáp án (P)</b> và <b>Lời giải (R)</b> → <b>Lưu vào Google Sheet</b>. Sau khi lưu mới so khớp Sheet với AI.</div></div>`;let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if(!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(j.admin_review&&ADMIN_HINT_SAVED[CUR]){sheetDa=String(q.DapAn||sheetDa||'').trim();sheetLg=String(q.LoiGiai||sheetLg||'').trim()}if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();let vipShort=!!(j.vip_detailed&&!j.admin_review);function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t){if(vipShort)return formatHintDisplay(t);if(isDs)return formatDsHintText(t,true);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án:</b> <span class="hintMath hintAnswerMain">${fmtAns(sheetDa||aiDa)}</span></div>`;if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI đề xuất:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`;else if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')===aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow" style="font-size:13px;color:#166534"><b>✓ Đáp án Sheet khớp AI</b></div>`}let lg=sheetLg||aiLg;if(lg){let lgLabel=j.admin_review?'📝 Lời giải (Sheet R):':(vipShort?'📝 Phương hướng:':'📝 Lời giải:');rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>${lgLabel}</b> <span class="hintMath">${fmtSol(sheetLg||lg)}</span></div>`;if(j.admin_review&&sheetLg&&aiLg&&sheetLg.trim()!==aiLg.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>AI đề xuất (mục 1):</b> <span class="hintMath">${fmtSol(aiLg)}</span></div>`}if(!rows)return '';let cardTitle=j.admin_review?'✅ Đã lưu Sheet — so khớp P/R với AI':(vipShort?'✅ Kết quả &amp; phương hướng':'✅ Đáp án &amp; lời giải — so sánh ôn tập');return `<div class="hintAnswerCard"><div class="hintAnswerTitle">${cardTitle}</div>${rows}</div>`}
+function buildHintAnswerCard(j){if(!j)return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';if(j.admin_review&&adminHintNeedsSave())return `<div class="hintAnswerCard hintAnswerPending"><div class="hintAnswerTitle">⏳ Chưa duyệt Sheet</div><div class="muted" style="font-size:13px;line-height:1.45;margin-top:6px">Bấm <b>✏️ Sửa câu (điền AI)</b> → kiểm tra đủ <b>Đáp án (P)</b> và <b>Lời giải (R)</b> → <b>Lưu vào Google Sheet</b>. Sau khi lưu mới so khớp Sheet với AI.</div></div>`;let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(j.admin_review&&isCurrentQuestionDs()){let daFromLg=dsDapAnFromSolutionText(aiLg||hintSection1Raw(),q);if(daFromLg)aiDa=daFromLg}if(!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if(!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(j.admin_review&&ADMIN_HINT_SAVED[CUR]){sheetDa=String(q.DapAn||sheetDa||'').trim();sheetLg=String(q.LoiGiai||sheetLg||'').trim()}if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();let vipShort=!!(j.vip_detailed&&!j.admin_review);function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t){if(vipShort)return formatHintDisplay(t);if(isDs)return formatDsHintText(t,true);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án:</b> <span class="hintMath hintAnswerMain">${fmtAns(sheetDa||aiDa)}</span></div>`;if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI đề xuất:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`;else if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')===aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow" style="font-size:13px;color:#166534"><b>✓ Đáp án Sheet khớp AI</b></div>`}let lg=sheetLg||aiLg;if(lg){let lgLabel=j.admin_review?'📝 Lời giải (Sheet R):':(vipShort?'📝 Phương hướng:':'📝 Lời giải:');rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>${lgLabel}</b> <span class="hintMath">${fmtSol(sheetLg||lg)}</span></div>`;if(j.admin_review&&sheetLg&&aiLg&&sheetLg.trim()!==aiLg.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>AI đề xuất (mục 1):</b> <span class="hintMath">${fmtSol(aiLg)}</span></div>`}if(!rows)return '';let cardTitle=j.admin_review?'✅ Đã lưu Sheet — so khớp P/R với AI':(vipShort?'✅ Kết quả &amp; phương hướng':'✅ Đáp án &amp; lời giải — so sánh ôn tập');return `<div class="hintAnswerCard"><div class="hintAnswerTitle">${cardTitle}</div>${rows}</div>`}
 function buildSheetPreviewCard(){if(!canViewSolutionLive()||USER.is_admin)return '';let q=currentQuestion();if(!q)return '';return buildHintAnswerCard({show_answer:true,vip_detailed:true,sheet_dapan:q.DapAn||'',sheet_loigiai:q.LoiGiai||'',suggested_dapan:q.DapAn||'',suggested_loigiai:q.LoiGiai||''})}
 function buildHintSimilarSection(){if(!USER.can_ai_hint||USER.is_admin)return '';let sim=SIMILAR_BY_Q[CUR];let loading=SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR;let html=`<div class="hintAiActions"><button type="button" class="btn2" id="btnSimilarInline" onclick="requestSimilarQuestion()" ${loading?'disabled':''}>${loading?'⏳ Đang tạo câu tương tự…':'📝 Tạo câu tương tự'}</button></div>`;if(sim&&sim.similar)html+=`<div class="hintSimilarBox" id="hintSimilarBox"><div class="hintSimilarTitle">📝 Câu tương tự (AI)</div><div class="hintSimilarBody hintMath" id="hintSimilarBody">${formatHintDisplay(sim.similar)}</div></div>`;return html}
 function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let title=USER.is_admin?'🔍 AI kiểm tra (ADMIN):':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:');let sub=USER.is_admin?'Gemini giải CHI TIẾT từng ý A/B/C/D + chốt đáp án — thường 20–60 giây…':(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…');let preview=(USER.is_admin?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div></div></div>`;if(preview)typeset(hb.querySelector('.hintAnswerCard'))}
@@ -4119,7 +4184,7 @@ function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa c
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){if(field==='DapAn')return hintAiDapAn();if(field==='LoiGiai')return hintAiLoigiai();return ''}
 function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 2).':'Chưa có lời giải đề xuất (mục 1).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
-function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};if(!dapan)dapan=hintAiDapAn();if(!loigiai)loigiai=hintAiLoigiai();openEdit();syncQuestionModalChrome();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
+function openEditWithHint(dapan='',loigiai=''){if(!dapan)dapan=hintAiDapAn();if(!loigiai)loigiai=hintAiLoigiai();if(isCurrentQuestionDs()&&loigiai){let sync=dsDapAnFromSolutionText(loigiai,QUESTIONS[CUR]);if(sync)dapan=sync}openEdit();syncQuestionModalChrome();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
 async function saveHintField(field){alert('ADMIN: hãy bấm ✏️ Sửa câu (điền AI), kiểm tra đủ Đáp án + Lời giải, rồi Lưu vào Google Sheet — không lưu thẳng từ AI.')}
 async function requestSimilarQuestion(){if(!USER.can_ai_hint){alert('Tạo câu tương tự chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(SIMILAR_LOADING||HINT_LOADING)return;saveCurrent();let qIdx=CUR;setSimilarLoading(true,qIdx);if(HINT_BY_Q[qIdx])renderHintBox(HINT_BY_Q[qIdx]);else{let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b></div></div>'}}try{let j=await api('/api/hint/similar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,...quizRestorePayload()})});SIMILAR_BY_Q[qIdx]=j;if(CUR===qIdx)renderHintBox(HINT_BY_Q[qIdx]||{});let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide'))hb.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){alert('Không tạo được câu tương tự: '+e.message)}finally{if(SIMILAR_LOADING_Q===qIdx){setSimilarLoading(false);if(CUR===qIdx&&(HINT_BY_Q[qIdx]||SIMILAR_BY_Q[qIdx]))renderHintBox(HINT_BY_Q[qIdx]||{})}}}
 async function requestHint(){if(!USER.can_ai_hint){alert('Gợi ý AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(HINT_LOADING||SIMILAR_LOADING){return}saveCurrent();let qIdx=CUR;setHintLoading(true,qIdx);showHintLoadingBox();let rb=document.getElementById('resultBox');if(rb){rb.textContent='⏳ AI đang làm…';rb.style.color='#1d4ed8'}try{let ans=ANSWERS[qIdx];let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,answer:ans,...quizRestorePayload()})});HINT_BY_Q[qIdx]=j;if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;if(CUR===qIdx){renderHintBox(j);if(j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide')){hb.scrollIntoView({behavior:'smooth',block:'nearest'})}}else if(HINT_LOADING_Q===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}}catch(e){if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>❌ Không lấy được gợi ý AI</b><div class="muted" style="margin-top:8px">'+esc(e.message)+'</div>'}}alert('Không lấy được gợi ý: '+e.message)}finally{if(HINT_LOADING_Q===qIdx){setHintLoading(false);syncHintButtons(USER.can_ai_hint!==false)}if(CUR===qIdx&&rb){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}}}
