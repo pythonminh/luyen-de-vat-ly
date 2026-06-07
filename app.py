@@ -37,7 +37,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V163_INFOGRAPHIC_SCI_LAYOUT_2026_06_06"
+APP_VERSION = "V166_INFOGRAPHIC_MODERN_POSTER_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -391,16 +391,15 @@ def infographic_mucdo_highlight_hint(label: str) -> str:
 
 
 def _infographic_notebook_style_rules() -> List[str]:
-    """Quy tắc trình bày vở học sinh + ký hiệu khoa học cho prompt Gemini tạo ảnh."""
+    """Poster giáo dục hiện đại + ký hiệu khoa học cho prompt Gemini tạo ảnh."""
     return [
-        "═══ PHONG CÁCH: TRANG VỞ HỌC SINH (BẮT BUỘC) ═══",
-        "• Nền giấy vở kẻ ngang (lined notebook paper), có lề đỏ bên trái, giấy trắng/ngà nhẹ",
-        "• Chữ VIẾT TAY bằng bút mực xanh hoặc đen — như học sinh lớp 10–12 trình bày bài giải",
-        "• Trình bày KHOA HỌC theo ĐÚNG 4 KHỐI tách rõ (xem mục BỐ CỤC 4 KHỐI) — không trộn đề, phương án, hình, lời giải vào một đống",
-        "• Lời giải: đánh số bước (Bước 1, Bước 2… hoặc 1), 2), 3)…); có thể ghi «Cho:», «KL:», «Đáp án:»",
-        "• Công thức quan trọng: có thể khoanh/box nhẹ hoặc gạch chân — như vở thật",
-        "• Hình vẽ: nét bút, có mũi tên, ghi nhãn F, v, I, R, Δt… đúng chuẩn sách giáo khoa",
-        "• KHÔNG làm poster/digital flashy — phải giống ảnh chụp/scan một TRANG VỞ đã giải xong",
+        "═══ PHONG CÁCH: POSTER GIÁO DỤC HIỆN ĐẠI (BẮT BUỘC) ═══",
+        "• Thiết kế POSTER INFOGRAPHIC đầy đủ màu, hiện đại — gradient, card bo góc, bóng đổ nhẹ, layout sạch như Canva/Pinterest giáo dục",
+        "• Nền poster: gradient tối–sáng (xanh đậm→tím, hoặc navy→cyan) HOẶC nền trắng/xám nhạt với các card màu nổi — phải trông HIỆN ĐẠI, không nhạt nhoà",
+        "• Chữ: tiêu đề vùng font sans-serif đậm, hiện đại; nội dung rõ ràng (có thể viết tay sạch hoặc font tròn dễ đọc) — không nguệch ngoạc",
+        "• Trình bày KHOA HỌC theo ĐÚNG 4 VÙNG tách rõ (xem mục PHÂN VÙNG) — mỗi vùng là một CARD/PANEL màu riêng",
+        "• Lời giải: đánh số bước trong badge/vòng tròn màu (Bước 1, 2…); «Cho:», «KL:», «Đáp án:» trong hộp highlight",
+        "• Hình vẽ: sơ đồ vector phẳng (flat design) nhiều màu, nhãn F, v, I, B⃗… chuẩn SGK",
         "",
         "═══ KÝ HIỆU & CÔNG THỨC (PHẢI ĐÚNG — KHÔNG SAI, KHÔNG LỘ MÃ LATEX) ═══",
         "• Viết ký hiệu Toán-Lý CHUẨN bằng tay, dễ đọc — KHÔNG in raw LaTeX ($, \\frac, \\text, \\cdot…)",
@@ -419,26 +418,45 @@ def _infographic_notebook_style_rules() -> List[str]:
 
 
 def _infographic_scientific_layout_rules() -> List[str]:
-    """Giữ bố cục 4 khối rõ (infographic mẫu) nhưng trình bày khoa học SGK — không poster cartoon."""
+    """Bố cục 4 vùng poster hiện đại — khoa học đúng Sheet."""
     return [
-        "═══ LAYOUT MẪU (GIỮ CẤU TRÚC — PHONG CÁCH KHOA HỌC) ═══",
-        "• GIỮ cấu trúc đã ổn: header «MÔN · CHƯƠNG · BÀI» trên cùng | badge MỨC ĐỘ góc phải | 4 khối xếp dọc tách rõ",
-        "• GIỮ Khối 1 = đề bài | Khối 2 = phương án A B C D (đáp án đúng được nhấn) | Khối 3 = hình | Khối 4 = lời giải từng bước",
-        "• GIỮ phương án xếp gọn từng dòng; TN tô/gạch chân phương án đúng; Đ/S ghi «ĐÚNG»/«SAI» cạnh từng ý",
+        "═══ LAYOUT POSTER HIỆN ĐẠI (GIỮ 4 VÙNG — KHOA HỌC) ═══",
+        "• Header full-width gradient: «MÔN · CHƯƠNG · BÀI» chữ trắng to + badge MỨC ĐỘ 3D/glow góc phải",
+        "• 4 CARD/PANEL xếp dọc — mỗi card bo góc 12–16px, bóng đổ, viền màu, nền gradient riêng:",
+        "  – Card ĐỀ BÀI | Card PHƯƠNG ÁN | Card HÌNH MINH HỌA | Card LỜI GIẢI",
+        "• KHÔNG in chữ «KHỐI 1», «KHỐI 2»… — chỉ tiêu đề «ĐỀ BÀI», «PHƯƠNG ÁN», «HÌNH MINH HỌA», «LỜI GIẢI» trên thanh màu",
+        "• Phương án A/B/C/D: grid 2×2 hoặc xếp dọc trong card — mỗi ô một màu nhẹ; đáp án đúng card nổi bật nhất",
+        "• Đ/S: badge pill «ĐÚNG» xanh neon / «SAI» đỏ cam cạnh từng ý",
         "",
-        "• TRÁNH — KHÔNG vẽ kiểu poster cartoon / marketing:",
-        "  – Không icon clip-art vui (nam châm, cân, thước kẻ, emoji 🔴⚠️✅, hộp WARNING màu vàng)",
-        "  – Không chữ tiếng Anh (CORRECT, INCORRECT, Step, Answer box…)",
-        "  – Không mũi tên flowchart nối lạc giữa các khối như slide thuyết trình",
-        "  – Không nền gradient/pastel nhiều màu — chủ yếu mực xanh/đen trên vở kẻ ngang",
+        "• TRÁNH: emoji, clip-art vui, chữ tiếng Anh, chữ «KHỐI»",
+        "• ID câu, Mã đề: footer nhỏ, opacity thấp",
+    ]
+
+
+def _infographic_vivid_color_rules() -> List[str]:
+    """Palette poster hiện đại đầy đủ màu — bão hòa, gradient, nổi bật."""
+    return [
+        "═══ MÀU SẮC POSTER ĐẦY ĐỦ & HIỆN ĐẠI (BẮT BUỘC) ═══",
+        "• Tổng thể: POSTER GIÁO DỤC hiện đại — màu BÃO HÒA, gradient đầy đủ, tương phản mạnh, nhìn từ xa vẫn rõ",
+        "• Nền toàn poster: gradient dọc đậm (ví dụ #1E3A8A → #7C3AED → #0F172A) hoặc nền sáng #F8FAFC với card màu rực",
         "",
-        "• PHONG CÁCH KHOA HỌC (SGK / vở học sinh giỏi):",
-        "  – Chữ viết tay NHƯNG thẳng hàng, gọn, dễ đọc — không nguệch ngoạc",
-        "  – Tiêu đề mỗi khối: «KHỐI 1 — ĐỀ BÀI», «KHỐI 2 — PHƯƠNG ÁN»… + gạch ngang phân cách",
-        "  – Hình khối 3: sơ đồ kỹ thuật SGK (phân tử + véc-tơ v, mạch điện, trục Oxy, B⃗, lực F⃗) — không hình minh hoạ vui",
-        "  – Lời giải khối 4: «Bước 1:», «Bước 2:» hoặc «1)», «2)»; dùng «Cho:», «Suy luận:», «KL:», «Đáp án:»",
-        "  – Tối đa 1 màu nhấn nhẹ: xanh lá = đúng, đỏ nhạt = sai — không khối màu lòe loẹt",
-        "  – ID câu, Mã đề: ghi nhỏ chân trang, mực nhạt",
+        "• MÀU TỪNG CARD (gradient + viền sáng):",
+        "  – ĐỀ BÀI: gradient xanh dương #2563EB → #3B82F6, chữ trắng, icon nhỏ (nếu có) trắng",
+        "  – PHƯƠNG ÁN: gradient xanh lá #059669 → #10B981 hoặc vàng #EAB308 → #FACC15; ô A/B/C/D xen kẽ màu",
+        "  – HÌNH MINH HỌA: gradient tím cyan #6366F1 → #06B6D4 — sơ đồ flat vector đa màu (xanh/đỏ/cam/hồng)",
+        "  – LỜI GIẢI: gradient cam hồng #F97316 → #EC4899 hoặc tím #8B5CF6 → #A855F7 — bước giải badge tròn đánh số",
+        "",
+        "• NHẤN MẠNH (poster style):",
+        "  – Đáp án đúng TN: card glow vàng #FDE047, viền 3px, scale lớn hơn các ô khác",
+        "  – ĐÚNG: pill xanh #22C55E chữ trắng | SAI: pill đỏ #EF4444 chữ trắng",
+        "  – Công thức: khung glassmorphism (nền trắng 80% opacity, viền cyan)",
+        "  – KL / Đáp án: banner gradient cam→đỏ, chữ trắng đậm",
+        "",
+        "• Badge MỨC ĐỘ: sticker 3D/glow — NB #22C55E · TH #3B82F6 · VD #F59E0B · VDC #DC2626",
+        "• Header: gradient xanh→tím full bleed, chữ trắng bold, có thể thêm pattern hình học mờ (grid, dots)",
+        "• Sơ đồ: flat illustration hiện đại, ≥4 màu, nét sạch, không xám đơn điệu",
+        "• Hiệu ứng: bóng đổ card, bo góc, có thể viền gradient — trông như poster Canva 2024–2026",
+        "• Vẫn KHÔNG: emoji, clip-art trẻ con, tiếng Anh, chữ «KHỐI 1/2/3/4»",
     ]
 
 
@@ -3138,7 +3156,7 @@ def _infographic_dang_spec(dang: str) -> Dict[str, Any]:
                 "Bài giải / lời giải đầy đủ (cột R) — không cắt bớt",
                 "Vùng hình minh họa (cột T nếu có link; nếu không thì vẽ bám đề + lời giải)",
             ],
-            "layout": "KHỐI 1 Đề bài → KHỐI 2 bốn phương án A–D (tô đáp án đúng) → KHỐI 3 hình minh họa → KHỐI 4 lời giải.",
+            "layout": "Đề bài → bốn phương án A–D (tô đáp án đúng) → hình minh họa → lời giải (4 vùng tách rõ).",
         },
         "Đúng sai": {
             "code": "Đ/S",
@@ -3152,7 +3170,7 @@ def _infographic_dang_spec(dang: str) -> Dict[str, Any]:
                 "Bài giải từng ý A. Đúng/Sai — … (cột R) — đủ 4 dòng nếu Sheet có",
                 "Hình minh họa (cột T hoặc vẽ theo đề)",
             ],
-            "layout": "KHỐI 1 đề/câu dẫn → KHỐI 2 bốn mệnh đề A–D kèm Đúng/Sai → KHỐI 3 hình → KHỐI 4 lời giải từng ý.",
+            "layout": "Đề/câu dẫn → bốn mệnh đề A–D kèm Đúng/Sai → hình → lời giải từng ý (4 vùng tách rõ).",
         },
         "Trả lời ngắn": {
             "code": "TLN",
@@ -3165,7 +3183,7 @@ def _infographic_dang_spec(dang: str) -> Dict[str, Any]:
                 "Bài giải / lời giải chi tiết từng bước (cột R)",
                 "Hình minh họa (cột T hoặc vẽ theo đề + bài giải)",
             ],
-            "layout": "KHỐI 1 đề bài → KHỐI 2 khung ĐÁP ÁN (cột P) → KHỐI 3 hình → KHỐI 4 lời giải từng bước.",
+            "layout": "Đề bài → khung ĐÁP ÁN (cột P) → hình → lời giải từng bước (4 vùng tách rõ).",
         },
         "Tự luận": {
             "code": "TL",
@@ -3178,7 +3196,7 @@ def _infographic_dang_spec(dang: str) -> Dict[str, Any]:
                 "Bài giải đầy đủ (cột R)",
                 "Hình minh họa (cột T hoặc vẽ theo đề)",
             ],
-            "layout": "KHỐI 1 đề bài → KHỐI 2 kết quả chính (nếu có) → KHỐI 3 hình → KHỐI 4 lời giải dài.",
+            "layout": "Đề bài → kết quả chính (nếu có) → hình → lời giải dài (4 vùng tách rõ).",
         },
     }
     return specs.get(dang, specs["Trắc nghiệm"])
@@ -3330,8 +3348,8 @@ def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
         ("Mã đề", clean(q.get("MaDe", ""))),
     ]
     lines = [
-        "Bạn vẽ TRANG VỞ HỌC SINH Vật lý/Toán THPT — bố cục 4 khối rõ (đề | phương án | hình | lời giải), trình bày KHOA HỌC như SGK.",
-        "Giữ layout infographic có tiêu đề khối + header Môn/Chương/Bài — NHƯNG không poster cartoon, không icon vui, không tiếng Anh.",
+        "Bạn vẽ POSTER INFOGRAPHIC GIÁO DỤC HIỆN ĐẠI Vật lý/Toán THPT — màu đầy đủ, gradient, 4 card (đề | phương án | hình | lời giải), nổi bật như poster Canva.",
+        "Poster màu bão hòa, hiện đại 2024–2026 — KHÔNG in chữ «KHỐI»; mỗi vùng là card gradient riêng. Nội dung đúng Sheet/SGK.",
         "",
         "═══ LOẠI CÂU (XÁC ĐỊNH RÕ — BẮT BUỘC TUÂN THEO) ═══",
         f"• Dạng: {spec['title']}",
@@ -3348,7 +3366,7 @@ def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
             "═══ MỨC ĐỘ (CỘT I — BẮT BUỘC NỔI BẬT TRÊN INFOGRAPHIC) ═══",
             f"• Giá trị Google Sheet: {mucdo_block}",
             f"• Thiết kế badge: {infographic_mucdo_highlight_hint(mucdo)}",
-            "• Badge «MỨC ĐỘ: …» góc trên phải — khung chữ gọn, viền đơn (NB xanh lá · TH xanh dương · VD cam · VDC đỏ), không sticker 3D",
+            "• Badge «MỨC ĐỘ: …» góc trên phải — sticker 3D glow, màu bão hòa (NB #22C55E · TH #3B82F6 · VD #F59E0B · VDC #DC2626)",
             "• NB = Nhận biết | TH = Thông hiểu | VD = Vận dụng | VDC = Vận dụng cao",
         ]
     )
@@ -3367,48 +3385,47 @@ def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
     )
     block2 = _infographic_block2_phuong_an(q, dang, opts_lines, dapan)
     if dang == "Trắc nghiệm":
-        block2_title = "KHỐI 2 — PHƯƠNG ÁN (cột L–O + đáp án đúng cột P)"
+        block2_title = "VÙNG 2 — PHƯƠNG ÁN (cột L–O + đáp án đúng cột P)"
     elif dang == "Đúng sai":
-        block2_title = "KHỐI 2 — PHƯƠNG ÁN / MỆNH ĐỀ (cột L–O + Đúng/Sai cột P)"
+        block2_title = "VÙNG 2 — PHƯƠNG ÁN / MỆNH ĐỀ (cột L–O + Đúng/Sai cột P)"
     elif dang == "Trả lời ngắn":
-        block2_title = "KHỐI 2 — ĐÁP ÁN (cột P, không có A/B/C/D)"
+        block2_title = "VÙNG 2 — ĐÁP ÁN (cột P, không có A/B/C/D)"
     else:
-        block2_title = "KHỐI 2 — PHƯƠNG ÁN / KẾT QUẢ"
+        block2_title = "VÙNG 2 — PHƯƠNG ÁN / KẾT QUẢ"
     if hinh:
         block3_lines = [
             hinh,
-            "Yêu cầu vẽ: sơ đồ kỹ thuật SGK theo link/mô tả — vectơ, mạch, mô hình phân tử; không icon cartoon, không chữ giải dài.",
+            "Yêu cầu vẽ: flat vector poster hiện đại theo link/mô tả — đa màu, sạch, chuẩn SGK; không clip-art trẻ em, không chữ giải dài.",
         ]
     else:
         block3_lines = [
-            "Sheet chưa có link (cột T) — vẽ sơ đồ kỹ thuật BÁM SÁT đề (Khối 1) và lời giải (Khối 4).",
-            "Chỉ hình vẽ SGK + nhãn (A, B, I₁, Oxy, v⃗, B⃗…). Không clip-art, không chép bài giải vào khối hình.",
+            "Sheet chưa có link (cột T) — vẽ flat vector poster BÁM SÁT đề và lời giải.",
+            "Sơ đồ đa màu hiện đại + nhãn (A, B, I₁, Oxy, v⃗, B⃗…). Không clip-art trẻ em, không chép bài giải vào card hình.",
         ]
     lines.extend(_infographic_notebook_style_rules())
     lines.extend(_infographic_scientific_layout_rules())
+    lines.extend(_infographic_vivid_color_rules())
     lines.extend(
         [
             "",
-            "═══ BỐ CỤC 4 KHỐI TRÊN TRANG VỞ (BẮT BUỘC — TÁCH RÕ, DỄ NHÌN) ═══",
-            "Chia TRANG VỞ thành 4 VÙNG xếp DỌC từ trên xuống. Mỗi vùng có TIÊU ĐỀ IN ĐẬM + đường kẻ ngang ngăn cách — KHÔNG trộn nội dung các khối:",
+            "═══ PHÂN VÙNG 4 CARD TRÊN POSTER (BẮT BUỘC — TÁCH RÕ, HIỆN ĐẠI) ═══",
+            "Poster dọc 3:4 hoặc 4:5 — 4 CARD gradient xếp dọc, bo góc, bóng đổ, tiêu đề trên thanh màu:",
             "",
             "  ┌──────────────────────────────────────────┐",
-            "  │ KHỐI 1 — ĐỀ BÀI                         │",
-            "  │ (chỉ câu hỏi / câu dẫn, không lời giải)  │",
+            "  │ ĐỀ BÀI (câu hỏi / câu dẫn)               │",
             "  ├──────────────────────────────────────────┤",
-            "  │ KHỐI 2 — PHƯƠNG ÁN / MỆNH ĐỀ            │",
-            "  │ (A B C D; TN tô đáp án đúng; Đ/S ghi Đ/S)│",
+            "  │ PHƯƠNG ÁN / MỆNH ĐỀ (A B C D)            │",
             "  ├──────────────────────────────────────────┤",
-            "  │ KHỐI 3 — HÌNH MINH HỌA                  │",
-            "  │ (sơ đồ, vectơ, mạch… — không chữ giải dài)│",
+            "  │ HÌNH MINH HỌA (sơ đồ, vectơ…)            │",
             "  ├──────────────────────────────────────────┤",
-            "  │ KHỐI 4 — LỜI GIẢI                       │",
-            "  │ (bài giải từng bước, đủ cột R)           │",
+            "  │ LỜI GIẢI (từng bước, đủ cột R)           │",
             "  └──────────────────────────────────────────┘",
             "",
+            "• QUAN TRỌNG: KHÔNG in chữ «KHỐI 1», «KHỐI 2», «KHỐI 3», «KHỐI 4» trên ảnh — chỉ phân vùng + (tuỳ chọn) tiêu đề «ĐỀ BÀI»…",
+            "• Các nhãn «VÙNG 1/2/3/4» bên dưới prompt chỉ để bạn biết nội dung — KHÔNG xuất hiện trên ảnh",
             "• Header trên cùng: «MÔN · CHƯƠNG · BÀI» (từ metadata) + badge MỨC ĐỘ góc phải",
-            "• Tỷ lệ ảnh: 3:4 hoặc 4:5 (dọc — giống một trang vở đứng)",
-            "• KHÔNG để đề + phương án + hình + lời giải chen chúc một khối — phải nhìn là thấy 4 phần riêng",
+            "• Tỷ lệ poster: 3:4 hoặc 4:5 (dọc — poster giáo dục in treo tường / share mạng xã hội)",
+            "• KHÔNG trộn đề + phương án + hình + lời giải vào một đống — nhìn là thấy 4 vùng riêng",
             "",
             "═══ METADATA (ghi nhỏ góc trên hoặc dưới badge mức độ) ═══",
         ]
@@ -3421,7 +3438,7 @@ def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
             "",
             "═══ NỘI DUNG SHEET — CHÉP ĐÚNG VÀO TỪNG KHỐI TƯƠNG ỨNG ═══",
             "",
-            "════════ KHỐI 1 — ĐỀ BÀI (cột K) ════════",
+            "════════ VÙNG 1 — ĐỀ BÀI (cột K) [chỉ nội dung prompt, không in «KHỐI» trên ảnh] ════════",
             q_text or "(trống — không tự bịa đề)",
             "",
             f"════════ {block2_title} ════════",
@@ -3431,22 +3448,22 @@ def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
                 else ["(Không có phương án — chỉ ghi đáp án nếu Sheet có cột P)"]
             ),
             "",
-            "════════ KHỐI 3 — HÌNH MINH HỌA (cột T) ════════",
+            "════════ VÙNG 3 — HÌNH MINH HỌA (cột T) ════════",
             *block3_lines,
             "",
-            "════════ KHỐI 4 — LỜI GIẢI (cột R — ĐỦ, KHÔNG CẮT) ════════",
+            "════════ VÙNG 4 — LỜI GIẢI (cột R — ĐỦ, KHÔNG CẮT) ════════",
             loigiai or "(trống — ghi «Chưa có bài giải trên Sheet», không tự viết)",
             "",
             "═══ CHECKLIST TRƯỚC KHI XUẤT ẢNH ═══",
-            f"☑ Đúng dạng {spec['title']} — thứ tự 4 khối: Đề → Phương án → Hình → Lời giải",
+            f"☑ Đúng dạng {spec['title']} — thứ tự 4 vùng: Đề → Phương án → Hình → Lời giải",
             f"☑ Badge MỨC ĐỘ «{mucdo_block}» nổi bật (cột I)",
-            "☑ Layout 4 khối rõ như mẫu — nhưng khoa học SGK, không cartoon/emoji/tiếng Anh",
-            "☑ Khối 3 chỉ sơ đồ kỹ thuật; khối 4 chỉ lời giải từng bước — không trùng, không flowchart lạc",
+            "☑ Poster màu đầy đủ, gradient hiện đại — 4 card nổi bật, KHÔNG chữ «KHỐI»",
+            "☑ Đáp án đúng glow/viền vàng; ĐÚNG-SAI pill màu; sơ đồ flat đa màu; lời giải badge từng bước",
             "☑ Mọi chữ khớp Sheet; lời giải không bị cắt ngắn",
-            "☑ Vở kẻ ngang, mực xanh/đen, chữ viết tay thẳng hàng",
+            "☑ Trông như poster Canva giáo dục 2024–2026 — bão hòa, bóng đổ, bo góc",
             "☑ Ký hiệu α Δ λ Ω v₀ F⃗ 10⁸ m/s… đúng — KHÔNG còn $ \\frac \\text trong ảnh",
             "",
-            "Xuất ảnh TRANG VỞ KHOA HỌC — 4 khối tách rõ, giống vở học sinh giỏi trình bày SGK.",
+            "Xuất ảnh POSTER INFOGRAPHIC HIỆN ĐẠI — màu đầy đủ, 4 card gradient, đúng Sheet, không chữ Khối.",
         ]
     )
     return "\n".join(lines)
@@ -4963,7 +4980,7 @@ APP_HTML = r"""
 <div class="wrap">
 <div id="home"><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div id="idLookupPanel" class="panel"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide"><b>🔑 Key AI của tôi (Gemini)</b><p class="muted" style="margin:6px 0 10px">Chỉ dùng key <b>AIzaSy...</b> từ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (Create API key). <b>Không</b> dùng key <b>AQ...</b> hay key Google Cloud khác. Key của bạn được ưu tiên; không có thì dùng key server Render.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIzaSy...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnQuizAdd" class="btn2 adminQuizAct hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnQuizInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div></div><div class="panel quizQuestionPanel"><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>4 khối tách rõ</b> (Đề → Phương án → Hình → Lời giải), trình bày <b>khoa học như SGK</b> — không poster cartoon. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải), không chữ «Khối». VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div>
 <script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={};
 const THEME_KEY='LDVL_THEME';
@@ -5306,7 +5323,7 @@ function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!Q
 function closeEdit(){document.getElementById('modal').classList.add('hide')}
 function closeInfographicModal(){let m=document.getElementById('infographicModal');if(m)m.classList.add('hide')}
 async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();title.textContent='📊 Infographic · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let parts=['📊 Infographic · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
-function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}navigator.clipboard.writeText(ta.value).then(()=>alert('Đã chép prompt.\n\nDán Gemini tạo ảnh — 4 khối rõ, trình bày khoa học SGK (không cartoon).')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
+function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}navigator.clipboard.writeText(ta.value).then(()=>alert('Đã chép prompt.\n\nDán Gemini — poster hiện đại đầy màu, 4 card gradient, không chữ Khối.')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
 let QUESTION_SAVE_BUSY=false;
 function alertDuplicateSheetReport(dr){if(!dr||!USER.is_admin)return;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let lines=(dr.samples||[]).slice(0,6);alert('⚠ Phát hiện câu TRÙNG trên Google Sheet (Cau_Hoi):\n\n≈ '+extra+' dòng thừa (thường do bấm Thêm câu 2 lần hoặc copy/dán).\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Bấm nút 🧹 Xóa trùng Sheet trên thanh ADMIN để tự xóa (giữ 1 bản / câu).')}
 function showAdminDuplicateSheetNotice(){if(!USER.is_admin||!META||!META.duplicate_report)return;let dr=META.duplicate_report;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let info=document.getElementById('info');if(info&&!String(info.textContent||'').includes('dòng trùng')){info.textContent+=` | ⚠ ${extra} dòng trùng Sheet`;if(dr.samples&&dr.samples.length)info.title=dr.samples.join('\n')}}
