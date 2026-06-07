@@ -37,7 +37,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V160_ID_LOOKUP_COPY_2026_06_06"
+APP_VERSION = "V161_DEDUPE_BATCH_SHEET_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2193,18 +2193,84 @@ class SheetStore:
 
     def _purge_question_row_in_memory(self, row_number: int) -> None:
         """Bỏ câu khỏi RAM và giảm _row các dòng phía dưới sau khi xóa trên Sheet."""
-        row_number = int(row_number)
+        self._purge_question_rows_in_memory([row_number])
+
+    def _purge_question_rows_in_memory(self, row_numbers: List[int]) -> None:
+        """Bỏ nhiều dòng khỏi RAM và cập nhật _row sau khi xóa hàng loạt trên Sheet."""
+        to_del = sorted({int(r) for r in row_numbers if int(r) > 0})
+        if not to_del:
+            return
+        to_del_set = set(to_del)
         new_questions: List[Dict[str, Any]] = []
         for q in self.questions:
             r = int(q.get("_row") or 0)
-            if r == row_number:
+            if r in to_del_set:
                 continue
-            if r > row_number:
+            shift = sum(1 for d in to_del if d < r)
+            if shift:
                 q = dict(q)
-                q["_row"] = r - 1
+                q["_row"] = r - shift
             new_questions.append(q)
         self.questions = new_questions
-        self.patch_quiz_sessions_after_row_delete(row_number)
+        for ses in self.quiz_sessions.values():
+            new_qs: List[Dict[str, Any]] = []
+            for q in ses.get("questions", []):
+                r = int(q.get("_row") or 0)
+                if r in to_del_set:
+                    continue
+                shift = sum(1 for d in to_del if d < r)
+                if shift:
+                    q = dict(q)
+                    q["_row"] = r - shift
+                new_qs.append(q)
+            ses["questions"] = new_qs
+
+    def _batch_delete_question_rows(self, row_numbers: List[int]) -> None:
+        """Xóa nhiều dòng Sheet trong ít request nhất (tránh quota 429). Không dùng AI."""
+        rows = sorted({int(r) for r in row_numbers if int(r) > 0}, reverse=True)
+        if not rows:
+            return
+        self.connect()
+        ws = self.ws_questions
+        sheet_id = ws.id
+        chunk_size = 120
+        for off in range(0, len(rows), chunk_size):
+            chunk = rows[off : off + chunk_size]
+            body = {
+                "requests": [
+                    {
+                        "deleteDimension": {
+                            "range": {
+                                "sheetId": sheet_id,
+                                "dimension": "ROWS",
+                                "startIndex": row - 1,
+                                "endIndex": row,
+                            }
+                        }
+                    }
+                    for row in chunk
+                ]
+            }
+            last_err: Optional[Exception] = None
+            for attempt in range(4):
+                try:
+                    ws.spreadsheet.batch_update(body)
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+                    msg = str(e).lower()
+                    if "429" in msg or "quota" in msg or "rate" in msg:
+                        time.sleep(8 + attempt * 12)
+                        continue
+                    raise
+            if last_err is not None:
+                raise RuntimeError(
+                    "Google Sheet giới hạn ghi (429) — xóa trùng không dùng AI, chỉ gọi API Sheet. "
+                    "Đợi ~1 phút rồi thử lại."
+                ) from last_err
+            if off + chunk_size < len(rows):
+                time.sleep(1.2)
 
     def remove_duplicate_questions(self, dry_run: bool = False) -> Dict[str, Any]:
         """ADMIN xóa các dòng trùng trên Cau_Hoi — giữ bản đầu tiên (số dòng nhỏ nhất)."""
@@ -2231,9 +2297,8 @@ class SheetStore:
             }
 
         with self.add_question_lock:
-            for row in to_delete:
-                self.ws_questions.delete_rows(row)
-                self._purge_question_row_in_memory(row)
+            self._batch_delete_question_rows(to_delete)
+            self._purge_question_rows_in_memory(to_delete)
 
         self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_indexes_after_admin_change()
@@ -5033,7 +5098,7 @@ function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null
 function okFilter(x){let s=normText(val('fSearch'));let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();let mc=filterMatchCount(x,lv,dg);if(mc!==null&&mc===0)return false;let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levelOk=!lv||mc!==null||normText(x.MucDo||'').includes(normText(lv));let dangOk=!dg||mc!==null||normText(x.Dang||'').includes(normText(dg));return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter).sort(compareCatalog);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let mc=filterMatchCount(x,selectedLv,selectedDang);let filterNotice='';if((selectedLv||selectedDang)&&mc!==null){filterNotice=`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🎯 Có <b>${mc}</b> câu${selectedLv?' · mức '+esc(selectedLv):''}${selectedDang?' · dạng '+esc(selectedDang):''} trong đề này</div>`}let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl">🔗 ${shareLabel}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${filterNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');await init();if(USER.is_admin&&META&&META.duplicate_report)alertDuplicateSheetReport(META.duplicate_report)}
-async function dedupeSheetDuplicates(){if(!USER.is_admin)return;try{let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});let n=parseInt(j.would_delete||((j.plan||{}).delete_count),10)||0;if(n<=0){alert(j.message||'Không có dòng trùng trên Sheet.');return}let lines=((j.plan||{}).samples||[]).slice(0,8);let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu (số nhỏ nhất), xóa các bản sao.\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Xóa '+n+' dòng trùng khỏi Google Sheet?';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: xóa vĩnh viễn '+n+' dòng trùng?'))return;let j2=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false})});alert((j2.message||('Đã xóa '+j2.deleted+' dòng trùng.'))+'\n\n✅ Mục lục tự cập nhật — không cần bấm Đồng bộ Sheet thêm.');if(j2.duplicate_report)META=META||{},META.duplicate_report=j2.duplicate_report;await refreshCatalogFromMeta()}catch(e){alert('Không xóa trùng được: '+e.message)}}
+async function dedupeSheetDuplicates(){if(!USER.is_admin)return;try{let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});let n=parseInt(j.would_delete||((j.plan||{}).delete_count),10)||0;if(n<=0){alert(j.message||'Không có dòng trùng trên Sheet.');return}let lines=((j.plan||{}).samples||[]).slice(0,8);let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu (số nhỏ nhất), xóa các bản sao.\n\n(Không dùng AI — chỉ xóa dòng trên Google Sheet.)\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Xóa '+n+' dòng trùng khỏi Google Sheet?';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: xóa vĩnh viễn '+n+' dòng trùng?'))return;let j2=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false})});alert((j2.message||('Đã xóa '+j2.deleted+' dòng trùng.'))+'\n\n✅ Mục lục tự cập nhật — không cần bấm Đồng bộ Sheet thêm.');if(j2.duplicate_report)META=META||{},META.duplicate_report=j2.duplicate_report;await refreshCatalogFromMeta()}catch(e){let m=e.message||'';if(/429|quota|write requests/i.test(m))alert('Không xóa trùng được — Google Sheet giới hạn ghi (429).\n\n🧹 Xóa trùng KHÔNG dùng AI (nút 🧪 Test AI / 💡 AI kiểm tra là chức năng khác).\n\nĐợi ~1 phút rồi bấm lại 🧹 Xóa trùng Sheet.');else alert('Không xóa trùng được: '+m)}}
 async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert((j.ok?'✅ ':'❌ ')+(j.message||'')+ver);}catch(e){alert(e.message);}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
