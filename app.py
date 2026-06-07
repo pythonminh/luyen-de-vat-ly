@@ -36,15 +36,15 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V139_DS_CHECK_WHEN_DONE_2026_06_06"
+APP_VERSION = "V143_VIP_HINT_2STEP_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_AI_PROVIDER = "GEMINI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
-AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(220, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "520") or 520), 1000))
-AI_HINT_VIP_MAX_CHARS = max(350, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "850") or 850), 2000))
+AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(180, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "420") or 420), 800))
+AI_HINT_VIP_MAX_CHARS = max(280, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "700") or 700), 1500))
 AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(2000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "8192") or 8192), 12000))
 AI_HINT_ADMIN_MAX_CHARS = max(6000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "26000") or 26000), 50000))
 AI_HINT_ADMIN_MAX_CONTINUATIONS = max(1, min(int(os.environ.get("AI_HINT_ADMIN_CONTINUATIONS", "6") or 6), 8))
@@ -1658,7 +1658,7 @@ class SheetStore:
                 provider_mode=cfg.get("provider", "AUTO"),
             )
 
-        # VIP / SVIP: giải chi tiết như ADMIN (đủ mục, có đáp án & lời giải gợi ý)
+        # VIP / SVIP: phương hướng ngắn + kết quả cuối (không giải từng phương án)
         def _vip_detailed_hint_response(
             hint_text: str,
             key_index: int,
@@ -1669,14 +1669,10 @@ class SheetStore:
             body = sanitize_hint_math_text(hint_text) or sanitize_hint_math_text(
                 ai_hint_fallback(q, answer)
             )
-            sug = parse_admin_ai_suggestions(body)
-            if effective_dang(q) == "Đúng sai" and sug.get("suggested_loigiai"):
-                sug["suggested_loigiai"] = normalize_ds_loigiai(sug["suggested_loigiai"], q)
+            sug = parse_vip_ai_suggestions(body)
             if not sug.get("suggested_dapan") and correct_sheet:
                 sug["suggested_dapan"] = correct_sheet
-            if not sug.get("suggested_loigiai") and sheet_loigiai:
-                sug["suggested_loigiai"] = sheet_loigiai[:2000]
-            note = "\n\n💎 VIP/SVIP: đáp án + lời giải đầy đủ để so sánh và ôn tập."
+            note = "\n\n💎 VIP/SVIP: phương hướng làm bài + kết quả cuối (không giải từng A/B/C/D)."
             hide_5050: List[str] = []
             if can_use_5050() and effective_dang(q) == "Trắc nghiệm":
                 try:
@@ -1696,17 +1692,18 @@ class SheetStore:
                     "\n\n⚠️ Chưa có key AI — gợi ý cơ bản. "
                     "VIP: vào mục lục → 🔑 Key AI của tôi → dán key AIza... (Google AI Studio) → Lưu key."
                 )
-            if body and not _admin_hint_complete(body.split("💎")[0].strip()):
-                note += "\n\n⚠️ AI có thể chưa đủ mục — bấm lại Gợi ý AI hoặc thử sau vài giây."
+            body_main = body.split("💎")[0].strip()
+            if body_main and not _vip_hint_complete(body_main):
+                note += "\n\n⚠️ AI có thể chưa đủ 2 bước — bấm lại Gợi ý AI."
             return {
                 "index": index,
                 "exact": True,
                 "show_answer": True,
                 "vip_detailed": True,
                 "hint": body + note,
-                "hint_truncated": not _admin_hint_complete(body),
+                "hint_truncated": not _vip_hint_complete(body_main),
                 "suggested_dapan": sug.get("suggested_dapan", ""),
-                "suggested_loigiai": sug.get("suggested_loigiai", ""),
+                "suggested_loigiai": sug.get("suggested_huong", ""),
                 "sheet_dapan": sheet_dapan,
                 "sheet_loigiai": sheet_loigiai[:2000] if sheet_loigiai else "",
                 "hide_5050": hide_5050,
@@ -1720,7 +1717,7 @@ class SheetStore:
 
         if has_keys:
             hint_text, key_index, provider_used, ai_error = ai_hint_from_provider(
-                q, answer, admin_review=True
+                q, answer, vip_short=True
             )
             if provider_used != "FALLBACK":
                 return _vip_detailed_hint_response(
@@ -2589,13 +2586,11 @@ def trim_ai_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
 
 def _admin_hint_has_section(txt: str, section: str) -> bool:
     patterns = {
-        "1": r"1\.\s*NHẮC LẠI",
-        "2": r"2\.\s*ĐỊNH NGHĨA",
-        "3": r"3\.\s*CÁCH LÀM",
+        "1": r"1\.\s*GIẢI TỪNG Ý",
+        "2": r"2\.\s*CHỐT ĐÁP ÁN",
+        # Legacy 8 mục (bản cũ)
         "4": r"4\.\s*BÀI GIẢI",
         "5": r"5\.\s*(?:ĐÁP ÁN AI KẾT LUẬN|ĐÁP ÁN|KẾT LUẬN)",
-        "6": r"6\.\s*SO KHỚP",
-        "7": r"7\.\s*ĐÁNH GIÁ",
         "8": r"8\.\s*(?:ĐỀ XUẤT LỜI GIẢI|LỜI GIẢI)",
     }
     pat = patterns.get(section)
@@ -2606,6 +2601,8 @@ def _admin_hint_has_section(txt: str, section: str) -> bool:
 
 def _admin_section_body(txt: str, section: str) -> str:
     markers = {
+        "1": (r"1\.\s*GIẢI TỪNG Ý[^\n]*\n", r"2\.\s"),
+        "2": (r"2\.\s*CHỐT ĐÁP ÁN[^\n]*\n", r"\Z"),
         "4": (r"4\.\s*BÀI GIẢI[^\n]*\n", r"5\.\s"),
         "5": (r"5\.\s*(?:ĐÁP ÁN AI KẾT LUẬN|ĐÁP ÁN|KẾT LUẬN)[^\n]*\n", r"6\.\s"),
         "8": (r"8\.\s*(?:ĐỀ XUẤT LỜI GIẢI|LỜI GIẢI)[^\n]*\n", r"\Z"),
@@ -2618,10 +2615,15 @@ def _admin_section_body(txt: str, section: str) -> str:
 
 
 def _admin_hint_complete(txt: str) -> bool:
-    """Đủ khi có mục 4 (bài giải), 5 (đáp án), 8 (lời giải) với nội dung thật."""
+    """Đủ khi có mục 1 (giải từng ý) + mục 2 (chốt đáp án)."""
     txt = clean(txt)
     if not txt:
         return False
+    if _admin_hint_has_section(txt, "1") and _admin_hint_has_section(txt, "2"):
+        body1 = _admin_section_body(txt, "1")
+        body2 = _admin_section_body(txt, "2")
+        return len(body1) >= 12 and bool(body2.strip()) and not body1.endswith("…")
+    # Legacy 8 mục
     for sec in ("4", "5", "8"):
         if not _admin_hint_has_section(txt, sec):
             return False
@@ -2645,47 +2647,50 @@ def _admin_hint_needs_continuation(txt: str, finish: str) -> bool:
 
 def _admin_missing_sections(txt: str) -> List[str]:
     txt = clean(txt)
-    missing: List[str] = []
-    for sec in ("1", "2", "3", "4", "5", "6", "7", "8"):
-        if not _admin_hint_has_section(txt, sec):
-            missing.append(sec)
-    body4 = _admin_section_body(txt, "4")
-    if "4" not in missing and len(body4) < 20:
-        missing.append("4")
-    body5 = _admin_section_body(txt, "5")
-    if "5" not in missing and not body5.strip():
-        missing.append("5")
-    body8 = _admin_section_body(txt, "8")
-    if "8" not in missing:
-        if not body8:
+    if _admin_hint_has_section(txt, "1"):
+        missing: List[str] = []
+        if not _admin_hint_has_section(txt, "2"):
+            missing.append("2")
+        body1 = _admin_section_body(txt, "1")
+        if len(body1) < 12:
+            missing.append("1")
+        body2 = _admin_section_body(txt, "2")
+        if not body2.strip() and "2" not in missing:
+            missing.append("2")
+        return missing
+    if _admin_hint_has_section(txt, "4"):
+        missing = []
+        for sec in ("4", "5", "8"):
+            if not _admin_hint_has_section(txt, sec):
+                missing.append(sec)
+        if len(_admin_section_body(txt, "4")) < 20:
+            missing.append("4")
+        if not _admin_section_body(txt, "5").strip():
+            missing.append("5")
+        if not _admin_section_body(txt, "8"):
             missing.append("8")
-        elif not re.search(r"giữ nguyên lời giải sheet", body8, re.I) and len(body8) < 12:
-            missing.append("8")
-    return missing
+        return missing
+    return ["1", "2"]
 
 
 def _admin_continuation_user_prompt(out: str, teacher_prompt: str) -> str:
     return (
-        "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục / sai định dạng. Hãy TIẾP TỤC ngay từ chỗ dừng, "
-        "hoàn thành đủ các mục còn thiếu. Bắt buộc có tiêu đề số "
-        "4. BÀI GIẢI CHI TIẾT, 5. ĐÁP ÁN AI KẾT LUẬN, 6. SO KHỚP, 7. ĐÁNH GIÁ, 8. ĐỀ XUẤT LỜI GIẢI. "
-        "KHÔNG dùng \\begin{enumerate}, \\item hay bullet • làm khung chính.\n\n"
+        "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục. Hãy TIẾP TỤC ngay từ chỗ dừng, "
+        "hoàn thành đủ 2 mục: 1. GIẢI TỪNG Ý và 2. CHỐT ĐÁP ÁN. "
+        "KHÔNG tóm tắt đề. KHÔNG dùng \\begin{enumerate}, \\item hay bullet • làm khung chính.\n\n"
         "--- DỮ LIỆU GỐC ---\n" + teacher_prompt[-6500:] +
         "\n\n--- ĐÃ VIẾT ---\n" + out[-6500:]
     )
 
 
 def _admin_supplement_user_prompt(out: str, teacher_prompt: str, missing: List[str]) -> str:
-    focus = ", ".join(missing) if missing else "4, 5, 6, 7, 8"
+    focus = ", ".join(missing) if missing else "1, 2"
     return (
-        f"Bản ADMIN trước THIẾU hoặc SAI ĐỊNH DẠNG các mục: {focus}. "
-        "Viết CHỈ các mục còn thiếu hoặc cần sửa, đúng tiêu đề số in hoa như mẫu: "
-        "'1. NHẮC LẠI ĐỀ', '4. BÀI GIẢI CHI TIẾT', '5. ĐÁP ÁN AI KẾT LUẬN', "
-        "'6. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)', '7. ĐÁNH GIÁ LỜI GIẢI SHEET — CỘT R', "
-        "'8. ĐỀ XUẤT LỜI GIẢI CHO SHEET'. "
-        "KHÔNG dùng \\begin{enumerate}, \\item hay bullet • thay cho số mục 1–8. "
-        "Mục 4 và 8 (Đ/S): 4 dòng `A. Đúng — ...` `B. Sai — ...` `C. ...` `D. ...`. "
-        "Mục 5 phải nêu đáp án cuối.\n\n"
+        f"Bản ADMIN trước THIẾU hoặc cắt cụt mục: {focus}. "
+        "Viết CHỈ phần còn thiếu, đúng tiêu đề: "
+        "'1. GIẢI TỪNG Ý' (Đ/S: 4 dòng `A. Đúng — ...` `B. Sai — ...` …) và "
+        "'2. CHỐT ĐÁP ÁN' (một dòng đáp án cuối). "
+        "KHÔNG tóm tắt đề. KHÔNG \\begin{enumerate}.\n\n"
         "--- ĐÃ VIẾT ---\n" + out[-8000:] +
         "\n\n--- DỮ LIỆU CÂU ---\n" + teacher_prompt[-4000:]
     )
@@ -2696,8 +2701,7 @@ def _merge_admin_continuation(base: str, more: str) -> str:
     more = clean(more)
     if not more:
         return base
-    more = re.sub(r"^1\.\s*NHẮC LẠI ĐỀ[\s\S]*?(?=4\.|5\.|6\.|7\.|8\.)", "", more, flags=re.I)
-    more = re.sub(r"^\\begin\{enumerate\}[\s\S]*?(?=4\.|5\.|6\.|7\.|8\.)", "", more, flags=re.I)
+    more = re.sub(r"^\\begin\{enumerate\}[\s\S]*?(?=1\.|2\.)", "", more, flags=re.I)
     return (base.rstrip() + "\n\n" + more.lstrip()).strip()
 
 
@@ -2755,77 +2759,44 @@ def _finalize_admin_hint_text(txt: str) -> str:
 def build_ai_admin_review_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
     block = build_ai_question_block(q, user_answer, include_sheet_answer=True)
     sheet_da = clean(q.get("DapAn", "")) or "(trống)"
-    sheet_lg = clean(q.get("LoiGiai", "")) or "(trống)"
-    if len(sheet_lg) > 500:
-        sheet_lg_show = sheet_lg[:500] + "…"
-    else:
-        sheet_lg_show = sheet_lg
     dang = effective_dang(q)
-    dang_note = ""
     if dang == "Đúng sai":
-        dang_note = (
-            "- Dạng Đúng/Sai: mục 4 và mục 8 BẮT BUỘC đúng 4 dòng, mỗi dòng một ý: "
-            "`A. Đúng — giải thích...` / `B. Sai — giải thích...` / `C. Đúng — ...` / `D. Đúng — ...` "
-            "(chữ A/B/C/D, dấu chấm, Đúng hoặc Sai, dấu gạch ngang —, rồi lời giải có $...$); "
-            "mục 5: A=Đúng, B=Sai, C=Đúng, D=Đúng (hoặc tương đương); "
-            "KHÔNG bullet •, KHÔNG gom chung — phải đủ 4 dòng A B C D."
+        step1 = (
+            "Giải và kết luận Đ/S từng ý A B C D — BẮT BUỘC đúng 4 dòng (copy vào cột R Sheet):\n"
+            "`A. Đúng — giải thích có $...$` / `B. Sai — ...` / `C. ...` / `D. ...`"
+        )
+        step2 = (
+            "Một dòng đáp án cuối: `Đ,S,S,Đ` hoặc `A=Đúng, B=Sai, C=Sai, D=Đúng` "
+            f"(Sheet cột P đang: {sheet_da})."
         )
     elif dang == "Trắc nghiệm":
-        dang_note = (
-            "- Dạng trắc nghiệm: mục 5 kết luận một chữ A/B/C/D; "
-            "mục 4 và 8 nên có 4 tiểu mục **A.** **B.** **C.** **D.** — giải thích vì sao đúng/sai từng phương án."
+        step1 = (
+            "Giải/thay số ra kết quả; giải thích ngắn từng phương án **A.** **B.** **C.** **D.** "
+            "(vì sao đúng/sai)."
         )
+        step2 = f"Một chữ A/B/C/D là đáp án đúng (Sheet cột P đang: {sheet_da})."
+    elif dang == "Trả lời ngắn":
+        step1 = "Giải chi tiết: công thức $...$, thay số, biến đổi, tính ra kết quả cuối kèm đơn vị."
+        step2 = f"Một dòng số/biểu thức cuối (Sheet cột P đang: {sheet_da})."
+    else:
+        step1 = "Giải/luận chi tiết đến kết quả cuối."
+        step2 = "Một dòng kết luận đáp án."
     return "\n".join(
         [
-            "ADMIN kiểm tra ngân hàng câu — PHẢI giải trọn vẹn bài, tính/biện luận ra kết quả cuối, rồi mới đối chiếu Sheet.",
+            "ADMIN kiểm tra ngân hàng câu — giải trọn vẹn, không gợi ý chung chung.",
             "",
             gemini_prompt_brand_2026(),
             "",
-            "QUAN TRỌNG: BẮT BUỘC viết đủ 8 mục, KHÔNG dừng giữa chừng ở mục 4.",
-            "KHÔNG dùng \\begin{enumerate}, \\item hay bullet • làm khung chính — chỉ dùng tiêu đề 1. 2. … 8. như bên dưới.",
-            "Mục 4 PHẢI là bài giải đầy đủ: thay số, biến đổi công thức, tính toán, kết luận kết quả cuối.",
-            "Mục 5 PHẢI nêu đáp án/kết quả cuối ngay cả khi Sheet trống hoặc sai.",
-            "Mục 8 PHẢI viết lời giải hoàn chỉnh để copy trực tiếp vào cột R, không chỉ nhận xét.",
-            "Mục 1–3 viết gọn; mục 4–8 đầy đủ, ưu tiên chính xác hơn ngắn gọn.",
-            dang_note,
+            "QUAN TRỌNG: KHÔNG tóm tắt đề, KHÔNG nhắc lại đề bài, KHÔNG viết mục phụ.",
+            "CHỈ 2 mục — giữ nguyên tiêu đề số:",
             "",
-            "Trình bày tiếng Việt, theo ĐÚNG 8 mục sau (giữ nguyên tiêu đề số):",
+            "1. GIẢI TỪNG Ý",
+            step1,
+            "Ngắn gọn, đủ công thức; KHÔNG \\begin{enumerate}, KHÔNG bullet • làm khung.",
             "",
-            "1. NHẮC LẠI ĐỀ",
-            "- Tóm tắt đề bài (giữ số liệu, ký hiệu, yêu cầu cần tìm).",
-            "",
-            "2. ĐỊNH NGHĨA & CÔNG THỨC",
-            "- Định nghĩa/khái niệm then chốt.",
-            "- Công thức cần dùng (kèm điều kiện áp dụng, đơn vị).",
-            "",
-            "3. CÁCH LÀM (LỘ TRÌNH)",
-            "- Liệt kê các bước giải theo thứ tự logic.",
-            "",
-            "4. BÀI GIẢI CHI TIẾT",
-            "- Giải đầy đủ từ giả thiết đến kết quả cuối; có thay số, biến đổi, đơn vị và kết luận.",
-            "- Với trắc nghiệm: giải ra kết quả rồi so A/B/C/D; tiểu mục **A.** **B.** **C.** **D.** giải thích từng phương án.",
-            "- Với Đúng/Sai: BẮT BUỘC 4 dòng `A. Đúng — ...` `B. Sai — ...` `C. Đúng — ...` `D. Đúng — ...` (mỗi ý kết luận Đ/S và giải thích riêng, có $...$).",
-            "- Với trả lời ngắn/tự luận: tính ra số cuối hoặc biểu thức cuối.",
-            "",
-            "5. ĐÁP ÁN AI KẾT LUẬN",
-            "- Nêu rõ đáp án/kết quả cuối (A/B/C/D, số kèm đơn vị, hoặc Đ/S từng ý). BẮT BUỘC có mục này.",
-            "- Không viết kiểu 'cần thêm dữ kiện' nếu đề đã đủ dữ kiện; phải tự giải đến kết quả.",
-            "",
-            "6. SO KHỚP SHEET — CỘT P (ĐÁP ÁN)",
-            f"- Sheet đang ghi: {sheet_da}",
-            "- Kết luận một dòng: KHỚP / KHÔNG KHỚP / SHEET TRỐNG — và giải thích ngắn.",
-            "",
-            "7. ĐÁNH GIÁ LỜI GIẢI SHEET — CỘT R",
-            f"- Sheet đang ghi: {sheet_lg_show}",
-            "- Kết luận một dòng: ĐÚNG / THIẾU / SAI / TRỐNG — và giải thích ngắn.",
-            "",
-            "8. ĐỀ XUẤT LỜI GIẢI CHO SHEET",
-            "- Viết lời giải chuẩn để thầy copy vào cột R (nếu Sheet trống hoặc sai).",
-            "- Với Đúng/Sai: BẮT BUỘC đúng mẫu 4 dòng (copy vào Sheet): "
-            "`A. Đúng — ...` `B. Sai — ...` `C. Đúng — ...` `D. Đúng — ...` — mỗi dòng giải thích riêng, có công thức $...$",
-            "- Với trắc nghiệm: nên có **A.** **B.** **C.** **D.** — giải thích từng phương án, kết luận chữ đúng.",
-            "- KHÔNG dùng bullet • chung chung; phải ghi rõ chữ A B C D từng ý.",
-            "- Nếu Sheet đã đúng, ghi: «Giữ nguyên lời giải Sheet».",
+            "2. CHỐT ĐÁP ÁN",
+            step2,
+            "Tối đa 2–3 dòng; không viết 'cần thêm dữ kiện' nếu đề đủ số liệu.",
             "",
             "DỮ LIỆU CÂU:",
             block,
@@ -2847,6 +2818,36 @@ def normalize_ds_loigiai(text: str, q: Optional[Dict[str, Any]] = None) -> str:
         )
     )
     if not tagged:
+        line_hits = list(
+            re.finditer(
+                r"(?:^|\n)\s*([ABCD])(?!\s*[\.\):])\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+?)\s*$",
+                text,
+                re.I | re.M,
+            )
+        )
+        if line_hits:
+            dap_map2: Dict[str, str] = {}
+            if q:
+                da = clean(q.get("DapAn", ""))
+                compact = re.sub(r"[^DSĐđ]", "", da.upper().replace("Đ", "D"))
+                for i, c in enumerate(compact[:4]):
+                    dap_map2[["A", "B", "C", "D"][i]] = "Sai" if c == "S" else "Đúng"
+            lines2: List[str] = []
+            for m in line_hits[:4]:
+                letter = m.group(1).upper()
+                verdict = m.group(2)
+                body = clean(m.group(3)).strip(" ).\n")
+                body = re.sub(r"\*\*", "", body)
+                if verdict:
+                    vl = "Sai" if verdict.lower().startswith("s") else "Đúng"
+                else:
+                    vl = dap_map2.get(letter, "")
+                if vl:
+                    lines2.append(f"{letter}. {vl} — {body}" if body else f"{letter}. {vl}")
+                elif body:
+                    lines2.append(f"{letter}. — {body}")
+            if lines2:
+                return "\n".join(lines2)
         return text
     dap_map: Dict[str, str] = {}
     if q:
@@ -2883,17 +2884,28 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
     body = str(ai_text or "").split("📋 Tham chiếu Sheet")[0].strip()
     dapan = ""
     loigiai = ""
+    # Format mới: 2 bước
+    body1 = _admin_section_body(body, "1")
+    body2 = _admin_section_body(body, "2")
+    if body1:
+        loigiai = body1
+    if body2:
+        block = clean(body2)
+        if re.search(r"[ABCD]\s*[:：=]", block, re.I):
+            dapan = block.splitlines()[0].strip()
+        else:
+            lines = [re.sub(r"^[-•*]\s*", "", x.strip()) for x in block.splitlines() if clean(x)]
+            if lines:
+                dapan = lines[0]
+                dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
+    if loigiai and dapan:
+        return {"suggested_dapan": dapan, "suggested_loigiai": loigiai}
+    # Legacy 8 mục
     m2 = re.search(
         r"5\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=6\.\s*SO KHỚP|\Z)",
         body,
         re.I | re.S,
     )
-    if not m2:
-        m2 = re.search(
-            r"2\.\s*ĐÁP ÁN AI KẾT LUẬN\s*(.*?)(?=3\.\s*SO KHỚP|\Z)",
-            body,
-            re.I | re.S,
-        )
     if m2:
         block = clean(m2.group(1))
         if re.search(r"[ABCD]\s*[:：=]", block, re.I):
@@ -2904,13 +2916,98 @@ def parse_admin_ai_suggestions(ai_text: str) -> Dict[str, str]:
                 dapan = lines[-1]
                 dapan = re.sub(r"^(đáp án|kết luận)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
     m5 = re.search(r"8\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
-    if not m5:
-        m5 = re.search(r"5\.\s*ĐỀ XUẤT LỜI GIẢI[^\n]*\n(.*)", body, re.I | re.S)
     if m5:
         lg = clean(m5.group(1))
         if lg and "giữ nguyên lời giải sheet" not in lg.lower():
             loigiai = lg
+    if not loigiai:
+        lg4 = _admin_section_body(body, "4")
+        if lg4:
+            loigiai = lg4
     return {"suggested_dapan": dapan, "suggested_loigiai": loigiai}
+
+
+def _vip_section_body(txt: str, section: str) -> str:
+    markers = {
+        "1": (r"1\.\s*PHƯƠNG HƯỚNG LÀM BÀI[^\n]*\n", r"2\.\s"),
+        "2": (r"2\.\s*KẾT QUẢ CUỐI[^\n]*\n", r"\Z"),
+    }
+    spec = markers.get(section)
+    if not spec:
+        return ""
+    m = re.search(spec[0] + r"(.*?)(?=" + spec[1] + r"|\Z)", txt, re.I | re.S)
+    return clean(m.group(1)) if m else ""
+
+
+def _vip_hint_complete(txt: str) -> bool:
+    txt = clean(txt)
+    if not txt:
+        return False
+    if not re.search(r"1\.\s*PHƯƠNG HƯỚNG LÀM BÀI", txt, re.I):
+        return False
+    if not re.search(r"2\.\s*KẾT QUẢ CUỐI", txt, re.I):
+        return False
+    body1 = _vip_section_body(txt, "1")
+    body2 = _vip_section_body(txt, "2")
+    return len(body1) >= 12 and bool(body2.strip())
+
+
+def parse_vip_ai_suggestions(ai_text: str) -> Dict[str, str]:
+    """Tách phương hướng + kết quả cuối từ gợi ý VIP."""
+    body = str(ai_text or "").split("📋 Tham chiếu Sheet")[0].strip()
+    huong = _vip_section_body(body, "1")
+    dapan_raw = _vip_section_body(body, "2")
+    dapan = ""
+    if dapan_raw:
+        block = clean(dapan_raw)
+        lines = [re.sub(r"^[-•*]\s*", "", x.strip()) for x in block.splitlines() if clean(x)]
+        if lines:
+            dapan = lines[0]
+            dapan = re.sub(r"^(đáp án|kết quả)\s*[:：\-]\s*", "", dapan, flags=re.I).strip()
+    return {"suggested_dapan": dapan, "suggested_huong": huong}
+
+
+def build_ai_vip_hint_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
+    block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
+    dang = effective_dang(q)
+    if dang == "Đúng sai":
+        step1 = (
+            "Ghi công thức/bước xét chung (2–4 bước, có $...$). "
+            "KHÔNG giải riêng từng ý A B C D, KHÔNG bullet dài từng phương án."
+        )
+        step2 = "Một dòng: `Đ,S,S,Đ` hoặc `A=Đúng, B=Sai, C=Sai, D=Đúng`."
+    elif dang == "Trắc nghiệm":
+        step1 = (
+            "Công thức đã thay số từ đề + 2–4 bước tính. "
+            "KHÔNG phân tích riêng A B C D từng phương án."
+        )
+        step2 = "Một chữ A/B/C/D."
+    elif dang == "Trả lời ngắn":
+        step1 = "Công thức $...$ + các bước thay số (ngắn gọn)."
+        step2 = "Một dòng số/biểu thức kèm đơn vị."
+    else:
+        step1 = "Phương hướng/luận giải ngắn (2–4 ý)."
+        step2 = "Kết luận một dòng."
+    return "\n".join(
+        [
+            "VIP/SVIP — gợi ý NGẮN, tiết kiệm token.",
+            "",
+            gemini_prompt_brand_2026(),
+            "",
+            "KHÔNG tóm tắt đề dài. KHÔNG giải từng phương án A/B/C/D.",
+            "CHỈ 2 mục (giữ nguyên tiêu đề):",
+            "",
+            "1. PHƯƠNG HƯỚNG LÀM BÀI",
+            step1,
+            "Tối đa 80–120 từ. LaTeX trong $...$ một dòng.",
+            "",
+            "2. KẾT QUẢ CUỐI",
+            step2,
+            "",
+            "DỮ LIỆU CÂU:",
+            block,
+        ]
+    )
 
 
 def _admin_hint_payload(
@@ -3273,6 +3370,7 @@ def ai_hint_from_provider(
     user_answer: Any,
     admin_review: bool = False,
     vip_formula_only: bool = False,
+    vip_short: bool = False,
 ) -> Tuple[str, int, str, str]:
 
     cfg = ai_runtime_config()
@@ -3283,7 +3381,7 @@ def ai_hint_from_provider(
     if admin_review:
         max_tokens = AI_HINT_ADMIN_MAX_OUTPUT_TOKENS
         max_chars = AI_HINT_ADMIN_MAX_CHARS
-    elif vip_formula_only:
+    elif vip_short or vip_formula_only:
         max_tokens = AI_HINT_VIP_MAX_OUTPUT_TOKENS
         max_chars = AI_HINT_VIP_MAX_CHARS
     else:
@@ -3309,14 +3407,22 @@ def ai_hint_from_provider(
     if admin_review:
         sys_prompt = (
             "Bạn là chuyên gia Vật lý/Toán kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt. "
-            "Nhiệm vụ của ADMIN là GIẢI TRỌN VẸN bài đến kết quả cuối, không chỉ gợi ý. "
-            "BẮT BUỘC đủ 8 mục theo yêu cầu — đặc biệt mục 4 (bài giải chi tiết), "
-            "mục 5 (đáp án/kết quả cuối) và mục 8 (lời giải copy vào Sheet). "
-            "Không dùng \\begin{enumerate}, \\item hay bullet • làm cấu trúc chính — chỉ tiêu đề 1.–8. "
-            "Không dừng giữa mục 4. Nếu là trắc nghiệm vẫn phải tính/biện luận ra kết quả rồi mới chọn A/B/C/D."
+            "ADMIN chỉ viết 2 mục: 1. GIẢI TỪNG Ý (lời giải copy vào Sheet) và 2. CHỐT ĐÁP ÁN. "
+            "KHÔNG tóm tắt đề, KHÔNG nhắc lại đề bài, KHÔNG viết thêm mục phụ. "
+            "Không dùng \\begin{enumerate}, \\item hay bullet • làm khung — chỉ tiêu đề 1. và 2. "
+            "Đ/S: mục 1 bắt buộc 4 dòng A. Đúng — ... B. Sai — ... C. ... D. ..."
         )
         teacher_prompt = build_ai_admin_review_prompt_2026(q, user_answer)
         temp = 0.1
+    elif vip_short:
+        sys_prompt = (
+            "Bạn là trợ giảng VIP. Trả lời tiếng Việt, NGẮN GỌN. "
+            "CHỈ 2 mục: 1. PHƯƠNG HƯỚNG LÀM BÀI và 2. KẾT QUẢ CUỐI. "
+            "KHÔNG giải từng phương án A/B/C/D. KHÔNG tóm tắt đề dài. "
+            "LaTeX trong $...$ một dòng."
+        )
+        teacher_prompt = build_ai_vip_hint_prompt_2026(q, user_answer)
+        temp = 0.12
     elif vip_formula_only:
         sys_prompt = (
             "Bạn là trợ giảng VIP. Trả lời tiếng Việt: nhắc đề, định nghĩa, "
@@ -3764,11 +3870,10 @@ function formatDsAnswerBadges(text){let parts=parseDsAnswerTokens(text);if(!part
 function dsTokenLabel(v){let t=String(v||'').trim();if(!t)return '?';if(/^s$/i.test(t)||t==='S')return 'Sai';return 'Đúng'}
 function isQuestionChecked(qIdx){if(SUBMITTED){let r=RESULTS[qIdx];return !!(r&&(r.ok===true||r.ok===false))}return !!CHECKED[qIdx]}
 function getDsCheckRows(q,r,ans){if(r&&Array.isArray(r.rows)&&r.rows.length)return r.rows;let vMap={};parseDsAnswerTokens(String(q.DapAn||'')).forEach(t=>vMap[t.letter]=t.verdict==='Sai'?'S':'Đ');if(!Object.keys(vMap).length){let c=String(q.DapAn||'').toUpperCase().replace(/\u0110/g,'D').replace(/[^DS]/g,'');c.split('').forEach((x,i)=>{let L=['A','B','C','D'][i];if(L&&q[L])vMap[L]=x==='S'?'S':'Đ'})}let old=Array.isArray(ans)?ans.slice():[];while(old.length<4)old.push('');let rows=[];['A','B','C','D'].forEach((L,i)=>{if(!q[L])return;let c=vMap[L]||'';let ch=String(old[i]||'').trim();if(ch==='D'||ch==='d')ch='Đ';rows.push({letter:L,correct:c,chosen:ch,ok:ch?!!(c&&ch===c):null})});return rows}
-function tfRowFeedbackHtml(rr,qIdx){if(!isQuestionChecked(qIdx)||!rr||rr.ok!==true&&rr.ok!==false)return '';if(rr.ok===true)return '<div class="tfRowFb ok">✅ Ý này: <b>Đúng</b></div>';let ans=(canViewSolutionLive()||USER.is_admin)&&rr.correct?` · Đáp án: <b>${dsTokenLabel(rr.correct)}</b>`:'';return `<div class="tfRowFb bad">❌ Ý này: <b>Sai</b>${ans} · Bạn chọn: <b>${dsTokenLabel(rr.chosen)}</b></div>`}
 function formatDsCheckResultBox(qIdx,j,q,ans){let rows=getDsCheckRows(q,j,ans);if(!rows.length)return `<span>Câu ${qIdx+1}: ${j.ok?'✅ Đúng':'❌ Sai'}</span>`;let okN=rows.filter(x=>x.ok===true).length,tot=rows.length;let head=j.ok?`✅ Đúng (${tot}/${tot} ý)`: `❌ Sai (${okN}/${tot} ý đúng)`;let badges=rows.map(r=>{let cls=r.ok===true?'dsCheckOk':(r.ok===false?'dsCheckBad':'');let mark=r.ok===true?'✓':(r.ok===false?'✗':'?');let title='';if(r.ok===false){title=` title="Bạn: ${dsTokenLabel(r.chosen)}`;if(canViewSolutionLive()||USER.is_admin)title+=` · Đáp án: ${dsTokenLabel(r.correct)}`;title+='"' }return `<span class="dsCheckItem ${cls}"${title}>${r.letter} ${mark}</span>`}).join('');return `<div class="dsCheckBox"><div class="dsCheckHead">Câu ${qIdx+1}: ${head}</div><div class="dsCheckRow">${badges}</div></div>`}
 function updateResultBox(qIdx){let rb=document.getElementById('resultBox');if(!rb)return;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return;let r=RESULTS[qIdx]||CHECKED[qIdx];if(SUBMITTED){if(q.Dang==='Đúng sai'&&r&&(r.ok===true||r.ok===false)){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.style.color=r.ok?'#166534':'#991b1b'}return}if(!r||!(r.ok===true||r.ok===false)){rb.textContent='';rb.classList.remove('dsResultRich');return}if(q.Dang==='Đúng sai'){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.style.color=r.ok?'#166534':'#991b1b'}else{rb.classList.remove('dsResultRich');rb.textContent=`Câu ${qIdx+1}: ${r.ok?'✅ Đúng':'❌ Sai'}`;rb.style.color=r.ok?'#166534':'#991b1b'}}
 function formatMcqAnswerBadge(text){let raw=String(text||'').trim();let m=raw.toUpperCase().match(/^([ABCD])$/);if(!m){let lm=raw.match(/(?:đáp án|chọn|kết luận|phương án)[^ABCD]*([ABCD])/i);if(lm)m=[null,lm[1].toUpperCase()]}if(m&&m[1])return `<div class="dsAnswerRow"><div class="dsAnswerItem">${dsCircleHtml(m[1])} <b class="dsVerdictDung">đáp án đúng</b></div></div>`;return formatHintDisplay(raw)}
-function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(/(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi)];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
+function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(/(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi)];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
 function finalizeAbcdSolutionChunks(chunks,q,isDs){if(!q)return chunks||[];let letters=['A','B','C','D'].filter(L=>q[L]);if(!letters.length)return chunks||[];let byL={};(chunks||[]).forEach(c=>{byL[c.letter]=c});let tokens=isDs?parseDsAnswerTokens(q.DapAn||''):[];let vMap={};tokens.forEach(t=>vMap[t.letter]=t.verdict);let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];return letters.map(L=>{if(byL[L]){let c=byL[L];if(isDs&&!c.verdict&&vMap[L])return Object.assign({},c,{verdict:vMap[L]});return c}return {letter:L,verdict:isDs?(vMap[L]||''):'',body:''}})}
 function formatAbcdSolutionList(chunks,q,isDs){q=q||{};chunks=finalizeAbcdSolutionChunks(chunks,q,isDs);if(!chunks.length)return '';let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];let stacked=needsAbcdStackedLayout(q,chunks);let listCls='dsSolutionList dsSolutionCompact'+(stacked?' dsSolutionRows':(isDs?' dsSolutionDs':' dsSolutionTn'));return `<div class="${listCls}">${chunks.map(c=>{let headVerdict='';if(c.verdict)headVerdict=`<b class="${c.verdict==='Sai'?'dsVerdictSai':'dsVerdictDung'}">${esc(c.verdict)}</b>`;else if(!isDs&&c.letter===corrMcq)headVerdict=`<b class="dsVerdictDung">✓ Đúng</b>`;else if(!isDs&&corrMcq)headVerdict=`<span class="muted">sai</span>`;let stmt='';if(q[c.letter]&&!c.body){let st=renderRichText(stripOptionPrefix(q[c.letter],c.letter));stmt=stacked?`<div class="dsStmtBlock">${st}</div>`:`<span class="dsStmtInline">${st}</span>`}let body=c.body?`<div class="dsSolutionBody">${formatHintDisplay(c.body)}</div>`:'';if(stacked&&stmt)return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}</div>${stmt}${body}</div>`;return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}${stmt}</div>${body}</div>`}).join('')}</div>`}
 function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function buildDsSolutionPlainLine(c){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');body=body.replace(/\s+/g,' ').trim();if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q){q=q||currentQuestion();let chunks=finalizeAbcdSolutionChunks(extractAbcdSolutionChunks(String(text||'')),q,true);return chunks.map(buildDsSolutionPlainLine).filter(Boolean).join('\n')}function formatDsSolutionPlainList(text,q){q=q||currentQuestion();let chunks=finalizeAbcdSolutionChunks(extractAbcdSolutionChunks(String(text||'')),q,true);if(!chunks.length)return formatHintDisplay(String(text||''));let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);return rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:formatHintDisplay(String(text||''))}function formatDsSolutionRows(text,q){let t=String(text||'').trim();q=q||currentQuestion();if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q);let chunks=extractAbcdSolutionChunks(t);if(chunks.length>=1||(q&&['A','B','C','D'].some(L=>q[L])))return formatAbcdSolutionList(chunks,q,true);return formatHintDisplay(t)}
@@ -3917,21 +4022,21 @@ function saveCurrent(){let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||USER.is_ad
 async function checkCurrentQuestion(){if(SUBMITTED)return;if(USER.is_trial){alert('Tài khoản dùng thử chỉ luyện đề, không chấm đúng/sai từng câu.');return}let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||q.Dang=='Tự luận')return;let ans=ANSWERS[CUR];if(ans==null)return;if(Array.isArray(ans)&&ans.every(v=>!v))return;if(String(ans).trim()==='')return;try{let j=await api('/api/check-one',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans,...quizRestorePayload()})});CHECKED[CUR]=j;RESULTS[CUR]=j;updateResultBox(CUR);renderQuestion()}catch(e){alert(e.message||'Không kiểm tra được câu này.')}}
 function syncNavButtons(){let af=CUR<=0,al=CUR>=QUESTIONS.length-1;let p=document.getElementById('btnMobilePrev');if(p)p.disabled=af;let n=document.getElementById('btnMobileNext');if(n)n.disabled=al}
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let cls='num';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=shortText((QUESTIONS[i]&&QUESTIONS[i].CauHoi)||'',120);html+=`<button class="${cls}" title="${escAttr(tip)}" onclick="goQ(${i})">${i+1}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}syncNavButtons()}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR)showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML='';qtextEl.classList.add('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div>${tfRowFeedbackHtml(rr,CUR)}</div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,r):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(r.correct||r.DapAn||q.DapAn||''):renderRichText(r.correct||r.DapAn||q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=r.LoiGiai||q.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typeset();syncMobileQuizToolbar();syncVipSolutionButtons();updateResultBox(CUR)}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR)showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';document.getElementById('qid').textContent=`${prefix}Câu ${CUR+1}/${QUESTIONS.length} | ID: ${q.ID||''} | ${q.MucDo||''} - ${q.Dang}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML='';qtextEl.classList.add('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(USER.is_admin&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typeset();syncMobileQuizToolbar();syncVipSolutionButtons();updateResultBox(CUR)}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function hintButtonLabel(){return USER.is_admin?'🔍 AI kiểm tra':(USER.is_vip?'💡 AI':'💡 Gợi ý AI')}
 function syncHintButtons(canAi){let lbl=hintButtonLabel();for(let id of ['btnHint','btnFsHint']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('hide',!canAi);if(HINT_LOADING)continue;b.classList.remove('btnHintLoading');b.textContent=lbl;b.disabled=!canAi||SIMILAR_LOADING}for(let id of ['btnSimilar','btnFsSimilar']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('hide',!canAi);if(SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){b.disabled=true;b.textContent='⏳ Đang tạo…'}else{b.disabled=HINT_LOADING;b.textContent=id==='btnFsSimilar'?'📝 tương tự':'📝 Tạo câu tương tự'}}}
 function setHintLoading(on,qIndex){HINT_LOADING=!!on;HINT_LOADING_Q=on?qIndex:null;let lbl=hintButtonLabel();for(let id of ['btnHint','btnFsHint']){let b=document.getElementById(id);if(!b)continue;if(on){if(!b.dataset.hintLabel)b.dataset.hintLabel=b.textContent||lbl;b.disabled=true;b.classList.add('btnHintLoading');b.innerHTML='<span class="hintSpin"></span> AI đang xử lý…'}else{b.classList.remove('btnHintLoading');b.textContent=b.dataset.hintLabel||lbl;delete b.dataset.hintLabel;b.disabled=SIMILAR_LOADING}}syncHintButtons(USER.can_ai_hint!==false)}
 function setSimilarLoading(on,qIndex){SIMILAR_LOADING=!!on;SIMILAR_LOADING_Q=on?qIndex:null;syncHintButtons(USER.can_ai_hint!==false)}
-function buildHintAnswerCard(j){if(!j)return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if(!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t){if(isDs)return formatDsHintText(t,true);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án đúng:</b> <span class="hintMath hintAnswerMain">${fmtAns(aiDa||sheetDa)}</span></div>`;if(sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`}let lg=aiLg||sheetLg;if(lg)rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>📝 Lời giải:</b> <span class="hintMath">${fmtSol(lg)}</span></div>`;if(!rows)return '';return `<div class="hintAnswerCard"><div class="hintAnswerTitle">✅ Đáp án &amp; lời giải — so sánh ôn tập</div>${rows}</div>`}
+function buildHintAnswerCard(j){if(!j)return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if(!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();let vipShort=!!(j.vip_detailed&&!j.admin_review);function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t){if(vipShort)return formatHintDisplay(t);if(isDs)return formatDsHintText(t,true);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án đúng:</b> <span class="hintMath hintAnswerMain">${fmtAns(aiDa||sheetDa)}</span></div>`;if(sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`}let lg=aiLg||sheetLg;if(lg){let lgLabel=vipShort?'📝 Phương hướng:':'📝 Lời giải:';rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>${lgLabel}</b> <span class="hintMath">${fmtSol(lg)}</span></div>`}if(!rows)return '';let cardTitle=j.admin_review?'✅ Đáp án &amp; lời giải — so sánh ôn tập':(vipShort?'✅ Kết quả &amp; phương hướng':'✅ Đáp án &amp; lời giải — so sánh ôn tập');return `<div class="hintAnswerCard"><div class="hintAnswerTitle">${cardTitle}</div>${rows}</div>`}
 function buildSheetPreviewCard(){if(!canViewSolutionLive())return '';let q=currentQuestion();if(!q)return '';return buildHintAnswerCard({show_answer:true,vip_detailed:true,sheet_dapan:q.DapAn||'',sheet_loigiai:q.LoiGiai||'',suggested_dapan:q.DapAn||'',suggested_loigiai:q.LoiGiai||''})}
 function buildHintSimilarSection(){if(!USER.can_ai_hint)return '';let sim=SIMILAR_BY_Q[CUR];let loading=SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR;let html=`<div class="hintAiActions"><button type="button" class="btn2" id="btnSimilarInline" onclick="requestSimilarQuestion()" ${loading?'disabled':''}>${loading?'⏳ Đang tạo câu tương tự…':'📝 Tạo câu tương tự'}</button></div>`;if(sim&&sim.similar)html+=`<div class="hintSimilarBox" id="hintSimilarBox"><div class="hintSimilarTitle">📝 Câu tương tự (AI)</div><div class="hintSimilarBody hintMath" id="hintSimilarBody">${formatHintDisplay(sim.similar)}</div></div>`;return html}
-function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let title=USER.is_admin?'🔍 AI kiểm tra (ADMIN):':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:');let sub=USER.is_admin?'Gemini đang soạn đáp án + bài giải đủ 8 mục — có thể 30–90 giây (tự tiếp tục nếu bị cắt)…':(USER.is_vip?'Gemini đang soạn đáp án + bài giải đủ 8 mục — thường 15–45 giây…':'Đang phân tích câu hỏi…');let preview=(USER.is_admin||USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():'';hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div></div></div>`;if(preview)typeset(hb.querySelector('.hintAnswerCard'))}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':(j.vip_detailed?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ mục 5–8 — bấm lại <b>AI kiểm tra</b> hoặc tăng GEMINI_ADMIN_MODEL trên Render.</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`}else if(j.vip_detailed){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP/SVIP: đáp án + bài giải đầy đủ để so sánh và ôn tập.</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ mục — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${answerCard}${extra}${bodyHtml}${similarSec}`;typeset(hb.querySelector('.hintAnswerCard'));typeset(hb.querySelector('.dsSolutionList'));typeset(hb.querySelector('.dsSolutionPlainList'));typeset(document.getElementById('hintAdminBody'));typeset(document.getElementById('hintSimilarBody'))}
-function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa có lời giải đề xuất (mục 8).');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép lời giải (đúng mẫu A. Đúng — …).')).catch(()=>alert('Không chép được — thử bấm → Lời giải (R) rồi Ctrl+C.'))}
+function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let title=USER.is_admin?'🔍 AI kiểm tra (ADMIN):':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:');let sub=USER.is_admin?'Gemini giải từng ý + chốt đáp án (2 bước) — thường 15–45 giây…':(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…');let preview=(USER.is_admin||USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():'';hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div></div></div>`;if(preview)typeset(hb.querySelector('.hintAnswerCard'))}
+function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?'🔍 AI kiểm tra (ADMIN):':(j.vip_detailed?'💡 AI VIP:':'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){extra=`<div class="muted" style="margin-top:6px;font-size:12px">Chọn/chép nội dung bên dưới hoặc bấm nút chuyển vào Sheet</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 2 bước — bấm lại <b>AI kiểm tra</b> hoặc thử GEMINI_ADMIN_MODEL trên Render.</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Lời giải (R)</button><button type="button" class="btnGreen" onclick="saveHintField('DapAn')">💾 Lưu đáp án Sheet</button><button type="button" class="btnGreen" onclick="saveHintField('LoiGiai')">💾 Lưu lời giải Sheet</button><button type="button" class="btn" onclick="openEditWithHint()">✏️ Mở Sửa câu</button></div>`}else if(j.vip_detailed){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP/SVIP: đáp án + bài giải đầy đủ để so sánh và ôn tập.</div>`;if(j.key_index)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ mục — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${answerCard}${extra}${bodyHtml}${similarSec}`;typeset(hb.querySelector('.hintAnswerCard'));typeset(hb.querySelector('.dsSolutionList'));typeset(hb.querySelector('.dsSolutionPlainList'));typeset(document.getElementById('hintAdminBody'));typeset(document.getElementById('hintSimilarBody'))}
+function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa có lời giải đề xuất (mục 1).');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép lời giải (đúng mẫu A. Đúng — …).')).catch(()=>alert('Không chép được — thử bấm → Lời giải (R) rồi Ctrl+C.'))}
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};if(field==='DapAn')return String(j.suggested_dapan||'').trim();if(field==='LoiGiai'){let v=String(j.suggested_loigiai||'').trim();if(!v)v=hintRawText().trim();if(isCurrentQuestionDs()&&v){let n=buildDsSolutionCopyText(v,currentQuestion());if(n)return n}return v}return ''}
-function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 5).':'Chưa có lời giải đề xuất (mục 8).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
+function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 2).':'Chưa có lời giải đề xuất (mục 1).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
 function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};if(!dapan)dapan=String(j.suggested_dapan||'').trim();if(!loigiai)loigiai=String(j.suggested_loigiai||'').trim();openEdit();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
 async function saveHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let v=hintFieldValue(field);if(!v){alert('Không có nội dung để lưu.');return}let col=field==='DapAn'?'P (đáp án)':'R (lời giải)';if(!confirm('Lưu vào Google Sheet cột '+col+'?\n\n'+v.slice(0,200)+(v.length>200?'…':'')))return;try{let updates={};updates[field]=v;let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});Object.assign(q,updates);if(HINT_BY_Q[CUR]){if(field==='DapAn')HINT_BY_Q[CUR].sheet_dapan=v;if(field==='LoiGiai')HINT_BY_Q[CUR].sheet_loigiai=v}renderQuestion();alert('Đã lưu '+field+' vào Sheet dòng '+j.row)}catch(e){alert('Không lưu được: '+e.message)}}
 async function requestSimilarQuestion(){if(!USER.can_ai_hint){alert('Tạo câu tương tự chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(SIMILAR_LOADING||HINT_LOADING)return;saveCurrent();let qIdx=CUR;setSimilarLoading(true,qIdx);if(HINT_BY_Q[qIdx])renderHintBox(HINT_BY_Q[qIdx]);else{let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b></div></div>'}}try{let j=await api('/api/hint/similar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,...quizRestorePayload()})});SIMILAR_BY_Q[qIdx]=j;if(CUR===qIdx)renderHintBox(HINT_BY_Q[qIdx]||{});let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide'))hb.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){alert('Không tạo được câu tương tự: '+e.message)}finally{if(SIMILAR_LOADING_Q===qIdx){setSimilarLoading(false);if(CUR===qIdx&&(HINT_BY_Q[qIdx]||SIMILAR_BY_Q[qIdx]))renderHintBox(HINT_BY_Q[qIdx]||{})}}}
@@ -3946,7 +4051,7 @@ function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MOD
 function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}
 async function saveQuestionModal(){if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
-async function saveEdit(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
+async function saveEdit(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,updates})});alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', '));Object.assign(q,updates);if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}closeEdit();renderQuestion()}catch(e){alert('Không lưu được: '+e.message)}}
 async function saveAddQuestion(){let data=readQuestionFormData();if(!String(data.CauHoi||'').trim()){alert('Phải nhập nội dung câu hỏi.');return}try{let j=await api('/api/question/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});let nq=applyResolvedDang(j.question||{});if(!nq._row)nq._row=j.row;let insertAt=Math.min(CUR+1,QUESTIONS.length);QUESTIONS.splice(insertAt,0,nq);insertQuizMaps(insertAt);CUR=insertAt;closeEdit();renderNav();renderQuestion();alert('Đã thêm câu mới vào Google Sheet dòng '+j.row+(j.id?('\nID: '+j.id):''))}catch(e){alert('Không thêm được: '+e.message)}}
 async function deleteQuestion(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return;}let msg='Xóa vĩnh viễn câu này khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nCó thể xóa tiếp câu khác — không cần đồng bộ lại sau mỗi lần xóa.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: thầy chắc chắn muốn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});let deletedRow=parseInt(j.row,10)||0;let removedIdx=CUR;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nBấm Đồng bộ Sheet trên thanh trên nếu cần cập nhật mục lục.');return}if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1;closeEdit();renderNav();renderQuestion();document.getElementById('resultBox').textContent='Đã xóa dòng '+deletedRow+' — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
 setInterval(updateExamStrip,1000);
