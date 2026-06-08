@@ -51,7 +51,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V202_USER_ACCOUNT_CARD_2026_06_05"
+APP_VERSION = "V204_SVIP_GPT_SUBSTITUTION_CHECK_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -62,6 +62,8 @@ AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS"
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
 AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(180, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "420") or 420), 800))
 AI_HINT_VIP_MAX_CHARS = max(280, min(int(os.environ.get("AI_HINT_VIP_MAX_CHARS", "700") or 700), 1500))
+AI_HINT_SVIP_MAX_OUTPUT_TOKENS = max(400, min(int(os.environ.get("AI_HINT_SVIP_MAX_TOKENS", "650") or 650), 1000))
+AI_HINT_SVIP_MAX_CHARS = max(500, min(int(os.environ.get("AI_HINT_SVIP_MAX_CHARS", "1150") or 1150), 2000))
 AI_HINT_ADMIN_MAX_OUTPUT_TOKENS = max(2000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_TOKENS", "8192") or 8192), 12000))
 AI_HINT_ADMIN_MAX_CHARS = max(6000, min(int(os.environ.get("AI_HINT_ADMIN_MAX_CHARS", "26000") or 26000), 50000))
 AI_HINT_ADMIN_MAX_CONTINUATIONS = max(1, min(int(os.environ.get("AI_HINT_ADMIN_CONTINUATIONS", "6") or 6), 8))
@@ -2516,7 +2518,7 @@ class SheetStore:
                 admin_review_mode=review_mode,
             )
 
-        # VIP: Gemini gợi ý ngắn | SVIP: ChatGPT — phương hướng + đáp án cuối
+        # VIP: Gemini gợi ý ngắn | SVIP: ChatGPT — thay số kiểm tra từng ý + đáp án cuối
         svip_user = is_svip()
         def _vip_detailed_hint_response(
             hint_text: str,
@@ -2529,25 +2531,35 @@ class SheetStore:
                 ai_hint_fallback(q, answer)
             )
             sug = parse_vip_ai_suggestions(body)
-            if not sug.get("suggested_dapan") and correct_sheet:
-                sug["suggested_dapan"] = correct_sheet
-            note = (
-                "\n\n💎 SVIP: ChatGPT — phương hướng làm bài + đáp án cuối (không giải từng A/B/C/D)."
-                if svip_user
-                else "\n\n💎 VIP: Gemini — phương hướng làm bài + kết quả cuối (không giải từng A/B/C/D)."
-            )
             hide_5050: List[str] = []
             if can_use_5050() and effective_dang(q) == "Trắc nghiệm":
                 try:
                     ff = self.fifty_fifty(sid, index, restore_payload)
                     hide_5050 = list(ff.get("hide") or [])
-                    if hide_5050:
-                        note += (
-                            f"\n\n🎯 Luyện tập: đã tự loại 2 đáp án sai "
-                            f"({', '.join(hide_5050)})."
-                        )
                 except Exception:
-                    pass
+                    hide_5050 = []
+            final_da, da_warn = reconcile_vip_suggested_dapan(
+                sug.get("suggested_dapan", ""),
+                sheet_dapan,
+                correct_sheet,
+                hide_5050,
+            )
+            if final_da:
+                sug["suggested_dapan"] = final_da
+            elif correct_sheet:
+                sug["suggested_dapan"] = correct_sheet
+            note = (
+                "\n\n💎 SVIP: ChatGPT — thay số vào công thức + kiểm tra từng A/B/C/D, rồi chốt đáp án."
+                if svip_user
+                else "\n\n💎 VIP: Gemini — phương hướng làm bài + kết quả cuối (không giải từng A/B/C/D)."
+            )
+            if hide_5050:
+                note += (
+                    f"\n\n🎯 Luyện tập: đã tự loại 2 đáp án sai "
+                    f"({', '.join(hide_5050)})."
+                )
+            if da_warn:
+                note += f"\n\n{da_warn}"
             if provider_used == "FALLBACK" and ai_error:
                 note += f"\n\n⚠️ AI tạm lỗi: {ai_error[:160]}. Đang hiển thị gợi ý cơ bản."
             elif not ai_configured:
@@ -2556,15 +2568,25 @@ class SheetStore:
                     "VIP: vào mục lục → 🔑 Key AI của tôi → dán key AIza... (Google AI Studio) → Lưu key."
                 )
             body_main = body.split("💎")[0].strip()
-            if body_main and not _vip_hint_complete(body_main):
-                note += "\n\n⚠️ AI có thể chưa đủ 2 bước — bấm lại Gợi ý AI."
+            hint_ok = _vip_hint_complete(
+                body_main, svip_substitution=svip_user
+            )
+            if body_main and not hint_ok:
+                if svip_user:
+                    note += (
+                        "\n\n⚠️ AI có thể chưa kiểm tra đủ 4 phương án A/B/C/D "
+                        "— bấm lại Gợi ý AI."
+                    )
+                else:
+                    note += "\n\n⚠️ AI có thể chưa đủ 2 bước — bấm lại Gợi ý AI."
             return {
                 "index": index,
                 "exact": True,
                 "show_answer": True,
                 "vip_detailed": True,
+                "svip_substitution_check": bool(svip_user),
                 "hint": body + note,
-                "hint_truncated": not _vip_hint_complete(body_main),
+                "hint_truncated": not hint_ok,
                 "suggested_dapan": sug.get("suggested_dapan", ""),
                 "suggested_loigiai": sug.get("suggested_huong", ""),
                 "sheet_dapan": sheet_dapan,
@@ -3611,7 +3633,7 @@ def classify_user_ai_profile(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, 
             label = "SVIP · GPT + đáp án" if oa_ready else "SVIP · GPT (chưa có key)"
         hint = (
             (
-                f"SVIP: Gợi ý AI dùng ChatGPT ({hint_model}) — có đáp án cuối. "
+                f"SVIP: Gợi ý AI dùng ChatGPT ({hint_model}) — thay số kiểm tra từng ý + đáp án cuối. "
                 f"Gemini pool ({server_n} key) chỉ dự phòng khi GPT lỗi."
             )
             if svip_u and not adm
@@ -5095,7 +5117,20 @@ def _vip_section_body(txt: str, section: str) -> str:
     return clean(m.group(1)) if m else ""
 
 
-def _vip_hint_complete(txt: str) -> bool:
+def _svip_hint_has_option_checks(txt: str) -> bool:
+    txt = clean(txt)
+    found = 0
+    for L in "ABCD":
+        if re.search(
+            rf"(?:\*\*)?{L}(?:\*\*)?\s*[\.\):]|(?:^|\n)\s*{L}\s*[\.\)]",
+            txt,
+            re.I | re.M,
+        ):
+            found += 1
+    return found >= 3
+
+
+def _vip_hint_complete(txt: str, *, svip_substitution: bool = False) -> bool:
     txt = clean(txt)
     if not txt:
         return False
@@ -5105,7 +5140,49 @@ def _vip_hint_complete(txt: str) -> bool:
         return False
     body1 = _vip_section_body(txt, "1")
     body2 = _vip_section_body(txt, "2")
+    if svip_substitution:
+        return (
+            len(body1) >= 50
+            and _svip_hint_has_option_checks(body1)
+            and bool(body2.strip())
+        )
     return len(body1) >= 12 and bool(body2.strip())
+
+
+def question_stem_asks_negation(q: Dict[str, Any]) -> bool:
+    """Đề hỏi phương án KHÔNG thuộc / không đúng / không thỏa…"""
+    stem = clean(q.get("CauHoi", "")).lower()
+    return bool(
+        re.search(
+            r"không\s+(?:thuộc|đúng|phải|nằm|có|thỏa|thỏa\s+mãn|sai)",
+            stem,
+        )
+    )
+
+
+def reconcile_vip_suggested_dapan(
+    suggested: str,
+    sheet_dapan: str,
+    correct_sheet: str,
+    hide_5050: Optional[List[str]] = None,
+) -> Tuple[str, str]:
+    """Khi ChatGPT lệch Sheet hoặc trùng phương án đã loại 50-50 — ưu tiên Sheet."""
+    ai_l = norm_letter(suggested)
+    sheet_l = norm_letter(sheet_dapan or correct_sheet)
+    hidden = {norm_letter(x) for x in (hide_5050 or []) if norm_letter(x)}
+    if not sheet_l:
+        return suggested, ""
+    if ai_l and ai_l in hidden:
+        return (
+            sheet_l,
+            f"⚠️ ChatGPT ghi {ai_l} nhưng {ai_l} đã bị loại (50-50 theo Sheet) — đáp án đúng: {sheet_l}.",
+        )
+    if ai_l and ai_l != sheet_l:
+        return (
+            sheet_l,
+            f"⚠️ ChatGPT ghi {ai_l} — Sheet (cột P): {sheet_l}. App ưu tiên Sheet khi kiểm tra.",
+        )
+    return suggested or sheet_l, ""
 
 
 def parse_vip_ai_suggestions(ai_text: str) -> Dict[str, str]:
@@ -5123,39 +5200,97 @@ def parse_vip_ai_suggestions(ai_text: str) -> Dict[str, str]:
     return {"suggested_dapan": dapan, "suggested_huong": huong}
 
 
-def build_ai_vip_hint_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str:
+def build_ai_vip_hint_prompt_2026(
+    q: Dict[str, Any], user_answer: Any, *, svip_hint: bool = False
+) -> str:
     block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
     dang = effective_dang(q)
     if dang == "Đúng sai":
-        step1 = (
-            "Ghi công thức/bước xét chung (2–4 bước, có $...$). "
-            "KHÔNG giải riêng từng ý A B C D, KHÔNG bullet dài từng phương án."
-        )
+        if svip_hint:
+            step1 = (
+                "a) Ghi công thức/điều kiện — đã THAY SỐ cụ thể từ đề.\n"
+                "b) BẮT BUỘC 4 dòng kiểm tra (ngắn, có số):\n"
+                "   **A.** thay số → Đúng/Sai — lý do ngắn\n"
+                "   **B.** ...\n"
+                "   **C.** ...\n"
+                "   **D.** ..."
+            )
+        else:
+            step1 = (
+                "Ghi công thức/bước xét chung (2–4 bước, có $...$). "
+                "KHÔNG giải riêng từng ý A B C D, KHÔNG bullet dài từng phương án."
+            )
         step2 = "Một dòng: `Đ,S,S,Đ` hoặc `A=Đúng, B=Sai, C=Sai, D=Đúng`."
     elif dang == "Trắc nghiệm":
-        step1 = (
-            "Công thức đã thay số từ đề + 2–4 bước tính. "
-            "KHÔNG phân tích riêng A B C D từng phương án."
-        )
-        step2 = "Một chữ A/B/C/D."
+        if svip_hint:
+            step1 = (
+                "a) Ghi công thức/điều kiện — đã THAY SỐ cụ thể từ đề "
+                "(vd mặt phẳng $3x-33y+111=0$ hoặc thế hệ số vào $ax+by+cz+d=0$).\n"
+                "b) BẮT BUỘC 4 dòng kiểm tra (ngắn, có kết quả số):\n"
+                "   **A.** thay tọa độ/số phương án A → tính = ... → thuộc / không thuộc\n"
+                "   **B.** ...\n"
+                "   **C.** ...\n"
+                "   **D.** ...\n"
+                "c) Mục 2 PHẢI khớp dòng **A/B/C/D** ở bước (b)."
+            )
+            if question_stem_asks_negation(q):
+                step1 += (
+                    " ĐỀ HỎI «KHÔNG thuộc / không thỏa» — chọn ý có «không thuộc» "
+                    "(thế vào, kết quả ≠ 0 hoặc không thỏa)."
+                )
+                step2 = (
+                    "Một chữ A/B/C/D — khớp dòng ở (b) là «không thuộc» "
+                    "(không nhầm với phương án thuộc)."
+                )
+            else:
+                step2 = "Một chữ A/B/C/D — khớp dòng ở (b) là «thuộc» / «thỏa»."
+        else:
+            step1 = (
+                "Công thức đã thay số từ đề + 2–4 bước tính. "
+                "KHÔNG phân tích riêng A B C D từng phương án."
+            )
+            if question_stem_asks_negation(q):
+                step1 += (
+                    " ĐỀ HỎI «KHÔNG thuộc / không thỏa» — tìm phương án VI PHẠM điều kiện "
+                    "(thay tọa độ vào, kết quả ≠ 0 hoặc không thỏa)."
+                )
+                step2 = "Một chữ A/B/C/D — phương án KHÔNG thuộc / KHÔNG thỏa (không nhầm với phương án thuộc)."
+            else:
+                step2 = "Một chữ A/B/C/D."
     elif dang == "Trả lời ngắn":
-        step1 = "Công thức $...$ + các bước thay số (ngắn gọn)."
+        if svip_hint:
+            step1 = (
+                "Công thức $...$ đã THAY SỐ từ đề + các bước tính đến kết quả."
+            )
+        else:
+            step1 = "Công thức $...$ + các bước thay số (ngắn gọn)."
         step2 = "Một dòng số/biểu thức kèm đơn vị."
     else:
         step1 = "Phương hướng/luận giải ngắn (2–4 ý)."
         step2 = "Kết luận một dòng."
+    if svip_hint:
+        header = "SVIP — ChatGPT: THAY SỐ vào công thức, KIỂM TRA TỪNG phương án A B C D."
+        rule_line = (
+            "BẮT BUỘC thay hệ số/tọa độ từ đề; mục 1 phải có 4 dòng **A.** **B.** **C.** **D.** "
+            "với kết quả tính số. KHÔNG chỉ nêu phương hướng chung."
+        )
+        word_limit = "Tối đa 150–220 từ. LaTeX trong $...$ một dòng."
+    else:
+        header = "VIP — gợi ý NGẮN, tiết kiệm token."
+        rule_line = "KHÔNG tóm tắt đề dài. KHÔNG giải từng phương án A/B/C/D."
+        word_limit = "Tối đa 80–120 từ. LaTeX trong $...$ một dòng."
     return "\n".join(
         [
-            "VIP/SVIP — gợi ý NGẮN, tiết kiệm token.",
+            header,
             "",
             gemini_prompt_brand_2026(),
             "",
-            "KHÔNG tóm tắt đề dài. KHÔNG giải từng phương án A/B/C/D.",
+            rule_line,
             "CHỈ 2 mục (giữ nguyên tiêu đề):",
             "",
             "1. PHƯƠNG HƯỚNG LÀM BÀI",
             step1,
-            "Tối đa 80–120 từ. LaTeX trong $...$ một dòng.",
+            word_limit,
             "",
             "2. KẾT QUẢ CUỐI",
             step2,
@@ -5566,8 +5701,12 @@ def ai_hint_from_provider(
         max_tokens = int(review_opts["max_tokens"])
         max_chars = int(review_opts["max_chars"])
     elif vip_short or vip_formula_only:
-        max_tokens = AI_HINT_VIP_MAX_OUTPUT_TOKENS
-        max_chars = AI_HINT_VIP_MAX_CHARS
+        if svip_hint:
+            max_tokens = AI_HINT_SVIP_MAX_OUTPUT_TOKENS
+            max_chars = AI_HINT_SVIP_MAX_CHARS
+        else:
+            max_tokens = AI_HINT_VIP_MAX_OUTPUT_TOKENS
+            max_chars = AI_HINT_VIP_MAX_CHARS
     else:
         max_tokens = AI_HINT_MAX_OUTPUT_TOKENS
         max_chars = AI_HINT_MAX_CHARS
@@ -5614,13 +5753,22 @@ def ai_hint_from_provider(
         )
         temp = 0.1
     elif vip_short:
-        sys_prompt = (
-            "Bạn là trợ giảng VIP. Trả lời tiếng Việt, NGẮN GỌN. "
-            "CHỈ 2 mục: 1. PHƯƠNG HƯỚNG LÀM BÀI và 2. KẾT QUẢ CUỐI. "
-            "KHÔNG giải từng phương án A/B/C/D. KHÔNG tóm tắt đề dài. "
-            "LaTeX trong $...$ một dòng."
-        )
-        teacher_prompt = build_ai_vip_hint_prompt_2026(q, user_answer)
+        if svip_hint:
+            sys_prompt = (
+                "Bạn là trợ giảng SVIP (ChatGPT). Trả lời tiếng Việt. "
+                "CHỈ 2 mục: 1. PHƯƠNG HƯỚNG LÀM BÀI và 2. KẾT QUẢ CUỐI. "
+                "Mục 1 BẮT BUỘC: công thức đã THAY SỐ từ đề + kiểm tra TỪNG phương án "
+                "A B C D (4 dòng **A.** **B.** **C.** **D.** có kết quả tính số). "
+                "Mục 2 phải khớp bước kiểm tra mục 1. LaTeX trong $...$ một dòng."
+            )
+        else:
+            sys_prompt = (
+                "Bạn là trợ giảng VIP. Trả lời tiếng Việt, NGẮN GỌN. "
+                "CHỈ 2 mục: 1. PHƯƠNG HƯỚNG LÀM BÀI và 2. KẾT QUẢ CUỐI. "
+                "KHÔNG giải từng phương án A/B/C/D. KHÔNG tóm tắt đề dài. "
+                "LaTeX trong $...$ một dòng."
+            )
+        teacher_prompt = build_ai_vip_hint_prompt_2026(q, user_answer, svip_hint=svip_hint)
         temp = 0.12
     elif vip_formula_only:
         sys_prompt = (
@@ -5672,7 +5820,7 @@ def ai_hint_from_provider(
         oa_timeout = (
             int((review_opts or {}).get("openai_timeout", 70))
             if admin_review
-            else (28 if svip_hint else 18)
+            else (32 if svip_hint else 18)
         )
         oa_keys = openai_keys
         if admin_review and review_opts and review_opts.get("mode") == "fast":
@@ -5823,7 +5971,7 @@ def user_benefits_list() -> List[str]:
         ]
     if is_svip():
         return [
-            "Gợi ý AI ChatGPT — phương hướng + đáp án cuối",
+            "Gợi ý AI ChatGPT — thay số kiểm tra từng ý + đáp án cuối",
             "Xem đáp án & lời giải sau khi làm/chấm câu",
             "Loại 2 đáp án sai (50-50) ở trắc nghiệm",
             "Tạo câu tương tự + infographic (khi trả lời đúng)",
@@ -6549,8 +6697,8 @@ function stopHintLoadingTimer(){if(HINT_WATCHDOG){clearTimeout(HINT_WATCHDOG);HI
 function ensureHintWatchdog(){if(HINT_WATCHDOG||!HINT_LOADING_SINCE)return;let remain=Math.max(500,35000-(Date.now()-HINT_LOADING_SINCE));HINT_WATCHDOG=setTimeout(()=>{if(!HINT_LOADING)return;cancelHintRequest('Quá 35 giây — bấm Hủy hoặc Ctrl+F5 rồi thử lại.')},remain)}
 function beginHintLoadingTimer(){stopHintLoadingTimer();HINT_LOADING_SINCE=Date.now();HINT_LOADING_TICK=setInterval(updateHintLoadingElapsed,500);ensureHintWatchdog();updateHintLoadingElapsed()}
 function cancelHintRequest(msg){let qIdx=HINT_LOADING_Q;stopHintLoadingTimer();abortHintFetch();if(qIdx!=null){setHintLoading(false);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>⏹ Đã dừng soát AI</b><div class="muted" style="margin-top:8px">'+esc(msg||'Đã hủy yêu cầu AI.')+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}let rb=document.getElementById('resultBox');if(rb&&USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải'}}
-function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let adminFast=isAdminViewer()&&adminReviewIsFast();let title=isAdminViewer()?(adminFast?(adminUsesGpt()?'⚡ Soát nhanh GPT:':'⚡ Soát nhanh:'):(adminUsesGpt()?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):')):(svipUsesGpt()?'💡 SVIP — ChatGPT + đáp án:':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:'));let renderNote=isAdminViewer()?'<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">Tối đa ~30s/request. Nếu quay &gt;35s → bấm <b>Hủy</b> hoặc <b>Ctrl+F5</b>.</div>':'';let sub=isAdminViewer()?(adminFast?`2 mục — gpt-4.1-mini — ${adminReviewLoadingNote()}…`:(adminUsesGpt()?`3 mục + DIỄN GIẢI — ${adminAiModelLabel()} — ${adminReviewLoadingNote()}…`:`Phân tích Đúng/Sai — ${adminReviewLoadingNote()}…`)):(svipUsesGpt()?`ChatGPT ${svipAiModelLabel()}: phương hướng + đáp án cuối — thường 10–30 giây…`:(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…'));let preview=(isAdminViewer()?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));let elapsed=hintLoadingSeconds();hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div style="flex:1"><b>Đang gọi AI…</b><div id="hintLoadingElapsed" class="muted" style="margin-top:4px;font-size:12px">Đã chờ ${elapsed} giây…</div><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div>${renderNote}<div style="margin-top:10px"><button type="button" class="btn2" onclick="cancelHintRequest()">⏹ Hủy</button></div></div></div>`;if(preview)typesetQuizMath();updateHintLoadingElapsed()}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?(String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI'?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):'):(j.vip_detailed?(svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'?'💡 SVIP — ChatGPT + đáp án:':'💡 AI VIP:'):'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){let modeLbl=esc(j.admin_review_mode_label||(j.admin_review_mode==='fast'?'Nhanh':'Kỹ'));extra=`<div class="muted" style="margin-top:6px;font-size:12px">ADMIN · chế độ <b>${modeLbl}</b>: bảng <b>Phân tích Đúng/Sai</b> so Sheet P/R → <b>Sửa Sheet</b> nếu lệch → <b>Lưu</b></div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình ADMIN: <b>${esc(j.provider_mode)}</b>${String(j.provider_mode||'').toUpperCase()==='OPENAI'?' · model '+esc(j.admin_review_mode==='fast'?'gpt-4.1-mini':adminAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=` (dự phòng — GPT lỗi/quota)`;else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(adminAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần OPENAI_API_KEY hoặc GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI lỗi/quota — vẫn chép được lời giải Sheet/AI bên dưới vào cột R qua <b>Sửa câu</b>.</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 3 mục (Diễn giải / Giải từng ý / Chốt đáp án) — bấm lại <b>AI kiểm tra</b>.</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btnGreen" onclick="openEditWithHint()">✏️ Sửa câu (điền AI)</button><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Chỉ đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Chỉ lời giải (R)</button><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_detailed){let svipGpt=svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI';extra=`<div class="muted" style="margin-top:6px;font-size:12px">${svipGpt?'SVIP: ChatGPT — phương hướng + đáp án cuối.':'VIP: Gemini — phương hướng + kết quả cuối.'} (không giải từng A/B/C/D)</div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình: <b>${esc(j.provider_mode)}</b>${svipGpt?' · model '+esc(svipAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=' (dự phòng)';else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(svipAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ mục — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(canUnlockInfographic(CUR))extra+=`<div class="hintAiActions"><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let analysisCard=j.admin_review?buildAdminAnalysisCard(j):'';let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${analysisCard}${answerCard}${extra}${bodyHtml}${similarSec}`;typesetQuizMath()}
+function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let adminFast=isAdminViewer()&&adminReviewIsFast();let title=isAdminViewer()?(adminFast?(adminUsesGpt()?'⚡ Soát nhanh GPT:':'⚡ Soát nhanh:'):(adminUsesGpt()?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):')):(svipUsesGpt()?'💡 SVIP — ChatGPT + đáp án:':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:'));let renderNote=isAdminViewer()?'<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">Tối đa ~30s/request. Nếu quay &gt;35s → bấm <b>Hủy</b> hoặc <b>Ctrl+F5</b>.</div>':'';let sub=isAdminViewer()?(adminFast?`2 mục — gpt-4.1-mini — ${adminReviewLoadingNote()}…`:(adminUsesGpt()?`3 mục + DIỄN GIẢI — ${adminAiModelLabel()} — ${adminReviewLoadingNote()}…`:`Phân tích Đúng/Sai — ${adminReviewLoadingNote()}…`)):(svipUsesGpt()?`ChatGPT ${svipAiModelLabel()}: thay số + kiểm tra từng A/B/C/D — thường 15–35 giây…`:(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…'));let preview=(isAdminViewer()?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));let elapsed=hintLoadingSeconds();hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div style="flex:1"><b>Đang gọi AI…</b><div id="hintLoadingElapsed" class="muted" style="margin-top:4px;font-size:12px">Đã chờ ${elapsed} giây…</div><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div>${renderNote}<div style="margin-top:10px"><button type="button" class="btn2" onclick="cancelHintRequest()">⏹ Hủy</button></div></div></div>`;if(preview)typesetQuizMath();updateHintLoadingElapsed()}
+function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?(String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI'?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):'):(j.vip_detailed?(svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'?'💡 SVIP — ChatGPT + đáp án:':'💡 AI VIP:'):'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){let modeLbl=esc(j.admin_review_mode_label||(j.admin_review_mode==='fast'?'Nhanh':'Kỹ'));extra=`<div class="muted" style="margin-top:6px;font-size:12px">ADMIN · chế độ <b>${modeLbl}</b>: bảng <b>Phân tích Đúng/Sai</b> so Sheet P/R → <b>Sửa Sheet</b> nếu lệch → <b>Lưu</b></div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình ADMIN: <b>${esc(j.provider_mode)}</b>${String(j.provider_mode||'').toUpperCase()==='OPENAI'?' · model '+esc(j.admin_review_mode==='fast'?'gpt-4.1-mini':adminAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=` (dự phòng — GPT lỗi/quota)`;else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(adminAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần OPENAI_API_KEY hoặc GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI lỗi/quota — vẫn chép được lời giải Sheet/AI bên dưới vào cột R qua <b>Sửa câu</b>.</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 3 mục (Diễn giải / Giải từng ý / Chốt đáp án) — bấm lại <b>AI kiểm tra</b>.</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btnGreen" onclick="openEditWithHint()">✏️ Sửa câu (điền AI)</button><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Chỉ đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Chỉ lời giải (R)</button><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_detailed){let svipGpt=svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI';extra=`<div class="muted" style="margin-top:6px;font-size:12px">${svipGpt?'SVIP: ChatGPT — thay số vào công thức + kiểm tra từng A/B/C/D.':'VIP: Gemini — phương hướng + kết quả cuối (không giải từng A/B/C/D).'}</div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình: <b>${esc(j.provider_mode)}</b>${svipGpt?' · model '+esc(svipAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=' (dự phòng)';else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(svipAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ ${j.svip_substitution_check?'AI có thể chưa kiểm tra đủ 4 phương án A/B/C/D':'AI có thể chưa đủ mục'} — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(canUnlockInfographic(CUR))extra+=`<div class="hintAiActions"><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let analysisCard=j.admin_review?buildAdminAnalysisCard(j):'';let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${analysisCard}${answerCard}${extra}${bodyHtml}${similarSec}`;typesetQuizMath()}
 function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa có lời giải đề xuất (mục 1).');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép lời giải (đúng mẫu A. Đúng — …).')).catch(()=>alert('Không chép được — thử bấm → Lời giải (R) rồi Ctrl+C.'))}
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(field==='DapAn')return String(a.fix_dapan||'').trim()||hintAiDapAn();if(field==='LoiGiai')return String(a.fix_loigiai||'').trim()||hintAiLoigiai();return ''}
