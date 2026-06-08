@@ -2098,7 +2098,8 @@ class SheetStore:
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
         reveal = reveal or is_admin()
-        public_fields = [     "ID", "MaDe", "BoDe", "De",     "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap",     "Dang", "MucDo",     "CauHoi", "A", "B", "C", "D",     "HinhAnh", "QuyenTruyCap", ] d = {k: q.get(k, "") for k in public_fields}
+        public_fields = [     "ID", "MaDe", "BoDe", "De",     "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap",     "Dang", "MucDo",     "CauHoi", "A", "B", "C", "D",     "HinhAnh", "QuyenTruyCap", ] 
+        d = {k: q.get(k, "") for k in public_fields}
         d["Dang"] = question_dang(q)
         d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
         d["index"] = index
@@ -5670,9 +5671,9 @@ def ai_similar_question_from_provider(q: Dict[str, Any]) -> Tuple[str, int, str,
     gemini_keys = load_ai_keys("GEMINI")
     provider = clean(
     cfg.get("svip_provider" if is_svip() else "provider", cfg.get("provider", "AUTO"))
-).upper()
-if provider not in ("AUTO", "OPENAI", "GEMINI"):
-    provider = "AUTO"
+    ).upper()
+    if provider not in ("AUTO", "OPENAI", "GEMINI"):
+        provider = "AUTO"
     last_error = ""
     max_tokens = AI_HINT_SIMILAR_MAX_OUTPUT_TOKENS
     max_chars = AI_HINT_SIMILAR_MAX_CHARS
