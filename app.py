@@ -15,9 +15,14 @@ Yêu cầu Environment Variables trên Render:
     AI_SVIP_PROVIDER=OPENAI    (tuỳ chọn — SVIP dùng ChatGPT nhận đáp án; VIP vẫn GEMINI)
     OPENAI_API_KEY=sk-...
     OPENAI_ADMIN_MODEL=gpt-4o   (tuỳ chọn — model ADMIN ChatGPT)
+    OPENAI_VISION_MODEL=gpt-4o  (tuỳ chọn — đọc ảnh cột T khi gợi ý/soát)
+    GEMINI_VISION_MODEL=gemini-2.5-flash
+    GEMINI_IMAGE_MODEL=gemini-2.0-flash-preview-image-generation  (vẽ poster infographic)
+    INFOGRAPHIC_HTTP_MAX_SEC=58   (timeout vẽ poster)
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import random
@@ -51,11 +56,18 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V204_SVIP_GPT_SUBSTITUTION_CHECK_2026_06_05"
+APP_VERSION = "V205_AI_VISION_INFOGRAPHIC_GEN_2026_06_05"
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_VISION_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_OPENAI_ADMIN_MODEL = "gpt-4o"
+DEFAULT_OPENAI_VISION_MODEL = "gpt-4o"
+AI_IMAGE_FETCH_TIMEOUT = max(6, min(int(os.environ.get("AI_IMAGE_FETCH_TIMEOUT", "12") or 12), 30))
+AI_IMAGE_MAX_BYTES = max(500_000, min(int(os.environ.get("AI_IMAGE_MAX_BYTES", "4000000") or 4000000), 8_000_000))
+INFOGRAPHIC_HTTP_MAX_SEC = max(35, min(int(os.environ.get("INFOGRAPHIC_HTTP_MAX_SEC", "58") or 58), 120))
 DEFAULT_AI_PROVIDER = "GEMINI"
 DEFAULT_SVIP_AI_PROVIDER = "OPENAI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
@@ -1534,6 +1546,83 @@ def normalize_image_src(value: Any) -> str:
     return s
 
 
+def _guess_image_mime(data: bytes, src: str = "") -> str:
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if data[:4] == b"RIFF" and len(data) > 12 and data[8:12] == b"WEBP":
+        return "image/webp"
+    low = (src or "").lower()
+    if low.endswith(".png"):
+        return "image/png"
+    if low.endswith((".jpg", ".jpeg")):
+        return "image/jpeg"
+    if low.endswith(".gif"):
+        return "image/gif"
+    if low.endswith(".webp"):
+        return "image/webp"
+    return "image/jpeg"
+
+
+def fetch_image_bytes_for_ai(src: str) -> Tuple[Optional[bytes], str, str]:
+    """Tải ảnh cột T để gửi vision API. Trả (bytes, mime, error)."""
+    src = clean(src)
+    if not src:
+        return None, "", ""
+    try:
+        if src.startswith("/static/"):
+            path = os.path.join(APP_DIR, src.lstrip("/").replace("/", os.sep))
+            if not os.path.isfile(path):
+                return None, "", f"Không tìm thấy file local: {src}"
+            with open(path, "rb") as fh:
+                data = fh.read(AI_IMAGE_MAX_BYTES + 1)
+            if len(data) > AI_IMAGE_MAX_BYTES:
+                return None, "", "Ảnh local quá lớn (>4MB)"
+            return data, _guess_image_mime(data, src), ""
+        if src.startswith("http://") or src.startswith("https://"):
+            req = urllib.request.Request(
+                src,
+                headers={"User-Agent": "LuyenDeVatLy/1.0 (AI vision)"},
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=AI_IMAGE_FETCH_TIMEOUT) as resp:
+                data = resp.read(AI_IMAGE_MAX_BYTES + 1)
+            if len(data) > AI_IMAGE_MAX_BYTES:
+                return None, "", "Ảnh từ link quá lớn (>4MB)"
+            if not data:
+                return None, "", "Link ảnh trống"
+            return data, _guess_image_mime(data, src), ""
+        return None, "", f"Link ảnh không hỗ trợ: {src[:80]}"
+    except Exception as e:
+        return None, "", _http_error_message(e)
+
+
+def prepare_question_vision(q: Dict[str, Any]) -> Dict[str, Any]:
+    """Chuẩn bị ảnh minh họa (cột T) cho GPT/Gemini vision."""
+    src = normalize_image_src(q.get("HinhAnh", ""))
+    out: Dict[str, Any] = {
+        "has_image": bool(src),
+        "image_src": src,
+        "image_b64": "",
+        "image_mime": "",
+        "fetch_error": "",
+        "vision_ready": False,
+    }
+    if not src:
+        return out
+    data, mime, err = fetch_image_bytes_for_ai(src)
+    if data and mime:
+        out["image_b64"] = base64.b64encode(data).decode("ascii")
+        out["image_mime"] = mime
+        out["vision_ready"] = True
+    else:
+        out["fetch_error"] = err or "Không tải được ảnh"
+    return out
+
+
 def is_probably_link_or_drive(value: Any) -> bool:
     s = clean(value)
     return bool(s.startswith('http://') or s.startswith('https://') or extract_drive_file_id(s))
@@ -2442,7 +2531,7 @@ class SheetStore:
         if is_admin():
             review_mode = norm_admin_review_mode(admin_review_mode)
             if has_keys:
-                hint_text, key_index, provider_used, ai_error = "", 0, "FALLBACK", ""
+                hint_text, key_index, provider_used, ai_error, vision_meta = "", 0, "FALLBACK", "", {}
                 try:
                     @copy_current_request_context
                     def _admin_ai_hint_worker():
@@ -2458,7 +2547,7 @@ class SheetStore:
 
                     with ThreadPoolExecutor(max_workers=1) as pool:
                         fut = pool.submit(_admin_ai_hint_worker)
-                        hint_text, key_index, provider_used, ai_error = fut.result(
+                        hint_text, key_index, provider_used, ai_error, vision_meta = fut.result(
                             timeout=HINT_HTTP_MAX_SEC
                         )
                 except FuturesTimeout:
@@ -2481,6 +2570,7 @@ class SheetStore:
                         provider_mode=cfg.get("admin_provider", cfg.get("provider", "AUTO")),
                         ai_error=ai_error or "",
                         admin_review_mode=review_mode,
+                        **vision_meta,
                     )
                 err_hint = f"AI lỗi: {ai_error or 'không phản hồi'}.{ _admin_sheet_footer()}"
                 if correct_sheet:
@@ -2526,7 +2616,9 @@ class SheetStore:
             provider_used: str,
             ai_error: str,
             ai_configured: bool,
+            vision_meta: Optional[Dict[str, Any]] = None,
         ) -> Dict[str, Any]:
+            vision_meta = vision_meta or {}
             body = sanitize_hint_math_text(hint_text) or sanitize_hint_math_text(
                 ai_hint_fallback(q, answer)
             )
@@ -2560,6 +2652,11 @@ class SheetStore:
                 )
             if da_warn:
                 note += f"\n\n{da_warn}"
+            if vision_meta.get("vision_used"):
+                vm = clean(vision_meta.get("vision_model", ""))
+                note += f"\n\n📷 Đã gửi ảnh minh họa cho AI đọc" + (f" ({vm})" if vm else "") + "."
+            elif vision_meta.get("has_question_image") and vision_meta.get("image_fetch_error"):
+                note += f"\n\n⚠️ Có link ảnh nhưng không tải được: {vision_meta['image_fetch_error'][:120]}"
             if provider_used == "FALLBACK" and ai_error:
                 note += f"\n\n⚠️ AI tạm lỗi: {ai_error[:160]}. Đang hiển thị gợi ý cơ bản."
             elif not ai_configured:
@@ -2598,15 +2695,19 @@ class SheetStore:
                 "ai_configured": ai_configured,
                 "provider_mode": cfg.get("svip_provider" if svip_user else "provider", "AUTO"),
                 "ai_error": ai_error,
+                **{k: vision_meta.get(k, "") for k in (
+                    "has_question_image", "vision_used", "vision_model",
+                    "image_src", "image_fetch_error",
+                )},
             }
 
         if has_keys:
-            hint_text, key_index, provider_used, ai_error = ai_hint_from_provider(
+            hint_text, key_index, provider_used, ai_error, vision_meta = ai_hint_from_provider(
                 q, answer, vip_short=True, svip_hint=svip_user
             )
             if provider_used != "FALLBACK":
                 return _vip_detailed_hint_response(
-                    hint_text, key_index, provider_used, ai_error, True
+                    hint_text, key_index, provider_used, ai_error, True, vision_meta
                 )
         fb = ai_hint_fallback(q, answer)
         return _vip_detailed_hint_response(fb, 0, "FALLBACK", "", bool(has_keys))
@@ -2669,6 +2770,64 @@ class SheetStore:
             "dang_code": spec.get("code", ""),
             "dang_title": spec.get("title", ""),
             "warnings": warnings,
+        }
+
+    def infographic_generate_one(
+        self,
+        sid: str,
+        index: int,
+        answer: Any = None,
+        restore_payload: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if not can_use_infographic():
+            raise RuntimeError("Infographic chỉ dành tài khoản VIP / SVIP / ADMIN.")
+        ses = self.check_quiz_session(sid, restore_payload)
+        qs = ses["questions"]
+        if not (0 <= index < len(qs)):
+            raise RuntimeError("Số câu không hợp lệ")
+        q = qs[index]
+        if not is_admin():
+            ok, _, _ = check_answer(q, answer)
+            if not ok:
+                raise RuntimeError("Phải trả lời đúng câu này mới mở khóa infographic.")
+        prompt = build_gemini_infographic_prompt(q)
+        vision = prepare_question_vision(q)
+        keys = load_ai_keys("GEMINI")
+        if not keys:
+            raise RuntimeError(
+                "Chưa có GEMINI_API_KEY trên Render — không vẽ poster tự động. "
+                "Dùng «Chép prompt» và dán Gemini thủ công."
+            )
+        ref_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
+        ref_mime = vision.get("image_mime", "") if vision.get("vision_ready") else ""
+        img_b64, mime, err, model_used = "", "", "", ""
+        for idx, api_key in enumerate(keys, start=1):
+            img_b64, mime, err, model_used = gemini_generate_infographic_image(
+                prompt,
+                api_key,
+                ref_b64=ref_b64,
+                ref_mime=ref_mime,
+                timeout=INFOGRAPHIC_HTTP_MAX_SEC - 2,
+            )
+            if img_b64:
+                print(f"[INFOGRAPHIC_GEN] model={model_used} key=#{idx}")
+                break
+            if _is_quota_or_rate_error(err or ""):
+                continue
+        if not img_b64:
+            raise RuntimeError(
+                err
+                or "Gemini không trả ảnh — thử «Chép prompt» và dán Gemini, "
+                "hoặc đặt GEMINI_IMAGE_MODEL=gemini-2.0-flash-preview-image-generation trên Render."
+            )
+        return {
+            "index": index,
+            "id": clean(q.get("ID", "")),
+            "image_data_url": f"data:{mime or 'image/png'};base64,{img_b64}",
+            "model": model_used,
+            "has_reference_image": bool(ref_b64),
+            "mucdo": infographic_mucdo_label(q),
+            "dang": effective_dang(q),
         }
 
     def submit(
@@ -3772,6 +3931,16 @@ def build_ai_question_block(
         "",
         f"Học sinh đang chọn: {chosen_text or '(chưa chọn)'}",
     ]
+    img_src = normalize_image_src(q.get("HinhAnh", ""))
+    if img_src:
+        lines.extend(
+            [
+                "",
+                "Hình minh họa (cột T):",
+                f"Link: {img_src}",
+                "(Ảnh đính kèm riêng — đọc sơ đồ/đồ thị/ hình vẽ trong ảnh khi phân tích.)",
+            ]
+        )
     if include_sheet_answer:
         lines.extend(
             [
@@ -5616,10 +5785,15 @@ def _gemini_hint_call(
     max_tokens: int,
     temp: float,
     timeout: int = 22,
+    image_b64: str = "",
+    image_mime: str = "",
 ) -> Tuple[str, str, str]:
     """Gọi Gemini một lần. Trả về (text, finish_reason, error)."""
+    parts: List[Dict[str, Any]] = [{"text": sys_prompt}, {"text": user_prompt}]
+    if image_b64 and image_mime:
+        parts.append({"inline_data": {"mime_type": image_mime, "data": image_b64}})
     body = {
-        "contents": [{"parts": [{"text": sys_prompt}, {"text": user_prompt}]}],
+        "contents": [{"parts": parts}],
         "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens},
     }
     url, headers = _gemini_request_target(api_key, gmodel)
@@ -5652,13 +5826,27 @@ def _openai_chat_call(
     max_tokens: int,
     temp: float,
     timeout: int = 45,
+    image_b64: str = "",
+    image_mime: str = "",
 ) -> Tuple[str, str, str]:
     """Gọi OpenAI chat một lần. Trả về (text, finish_reason, error)."""
+    user_content: Any = user_prompt
+    if image_b64 and image_mime:
+        user_content = [
+            {"type": "text", "text": user_prompt},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{image_mime};base64,{image_b64}",
+                    "detail": "high",
+                },
+            },
+        ]
     body = {
         "model": model,
         "messages": [
             {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "user", "content": user_content},
         ],
         "temperature": temp,
         "max_tokens": max_tokens,
@@ -5681,6 +5869,65 @@ def _openai_chat_call(
 
 
 
+def gemini_generate_infographic_image(
+    prompt: str,
+    api_key: str,
+    *,
+    ref_b64: str = "",
+    ref_mime: str = "",
+    timeout: int = 55,
+) -> Tuple[str, str, str, str]:
+    """Gọi Gemini tạo poster infographic. Trả (image_b64, mime, error, model_used)."""
+    models_try: List[str] = []
+    primary = (
+        clean(os.environ.get("GEMINI_IMAGE_MODEL", DEFAULT_GEMINI_IMAGE_MODEL)).strip()
+        or DEFAULT_GEMINI_IMAGE_MODEL
+    )
+    for m in [primary, "gemini-2.0-flash-exp-image-generation", DEFAULT_GEMINI_IMAGE_MODEL]:
+        if m and m not in models_try:
+            models_try.append(m)
+    parts: List[Dict[str, Any]] = [{"text": prompt}]
+    if ref_b64 and ref_mime:
+        parts.append({"inline_data": {"mime_type": ref_mime, "data": ref_b64}})
+        parts[0] = {
+            "text": prompt
+            + "\n\n(Ảnh tham chiếu cột T đính kèm — vẽ lại poster đẹp hơn, flat vector hiện đại, giữ đúng nội dung Sheet.)"
+        }
+    last_err = ""
+    for gmodel in models_try:
+        body = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+        }
+        url, headers = _gemini_request_target(api_key, gmodel)
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+            cands = (data or {}).get("candidates") or []
+            cand0 = cands[0] if cands else {}
+            resp_parts = ((cand0.get("content") or {}).get("parts") or [])
+            for p in resp_parts:
+                if not isinstance(p, dict):
+                    continue
+                inline = p.get("inlineData") or p.get("inline_data") or {}
+                b64 = clean(inline.get("data", ""))
+                mime = clean(inline.get("mimeType") or inline.get("mime_type") or "image/png")
+                if b64:
+                    return b64, mime or "image/png", "", gmodel
+            last_err = "Model không trả ảnh trong phản hồi"
+        except Exception as e:
+            last_err = _http_error_message(e)
+            if _is_quota_or_rate_error(last_err):
+                break
+    return "", "", last_err or "Gemini không tạo được ảnh", ""
+
+
 def ai_hint_from_provider(
     q: Dict[str, Any],
     user_answer: Any,
@@ -5689,9 +5936,19 @@ def ai_hint_from_provider(
     vip_short: bool = False,
     svip_hint: bool = False,
     admin_review_mode: str = "full",
-) -> Tuple[str, int, str, str]:
+) -> Tuple[str, int, str, str, Dict[str, Any]]:
 
     cfg = ai_runtime_config()
+    vision = prepare_question_vision(q)
+    img_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
+    img_mime = vision.get("image_mime", "") if vision.get("vision_ready") else ""
+    vision_meta: Dict[str, Any] = {
+        "has_question_image": bool(vision.get("has_image")),
+        "vision_used": bool(img_b64),
+        "vision_model": "",
+        "image_src": vision.get("image_src", ""),
+        "image_fetch_error": vision.get("fetch_error", ""),
+    }
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
     provider = resolve_ai_provider(cfg, admin_review=admin_review, svip_hint=svip_hint)
@@ -5730,6 +5987,16 @@ def ai_hint_from_provider(
         if m and m not in seen_models:
             seen_models.add(m)
             gemini_models.append(m)
+    if img_b64:
+        gv = (
+            clean(os.environ.get("GEMINI_VISION_MODEL", DEFAULT_GEMINI_VISION_MODEL)).strip()
+            or DEFAULT_GEMINI_VISION_MODEL
+        )
+        gemini_models = [gv] + [m for m in gemini_models if m != gv]
+    oa_vision_model = (
+        clean(os.environ.get("OPENAI_VISION_MODEL", DEFAULT_OPENAI_VISION_MODEL)).strip()
+        or DEFAULT_OPENAI_VISION_MODEL
+    )
     if admin_review:
         if review_opts and review_opts.get("mode") == "fast":
             sys_prompt = (
@@ -5785,6 +6052,10 @@ def ai_hint_from_provider(
         )
         teacher_prompt = build_ai_teacher_prompt_2026(q, user_answer)
         temp = 0.15
+    if img_b64:
+        sys_prompt += (
+            " Có ẢNH MINH HỌA đính kèm — đọc sơ đồ/đồ thị/hình vẽ trong ảnh trước khi phân tích."
+        )
 
     def _postprocess_hint_text(raw: str, *, compact_admin: bool = False) -> str:
         raw = clean(raw)
@@ -5820,14 +6091,31 @@ def ai_hint_from_provider(
         oa_timeout = (
             int((review_opts or {}).get("openai_timeout", 70))
             if admin_review
-            else (32 if svip_hint else 18)
+            else (38 if svip_hint and img_b64 else (32 if svip_hint else 18))
         )
+        if img_b64 and not admin_review:
+            oa_timeout = max(oa_timeout, 38)
         oa_keys = openai_keys
         if admin_review and review_opts and review_opts.get("mode") == "fast":
             oa_keys = openai_keys[:1]
+        oa_model = model_openai
+        if img_b64:
+            oa_model = (
+                (cfg.get("openai_admin_model") or oa_vision_model)
+                if admin_review
+                else oa_vision_model
+            )
         for idx, api_key in enumerate(oa_keys, start=1):
             txt, finish, err = _openai_chat_call(
-                api_key, model_openai, sys_prompt, teacher_prompt, max_tokens, temp, timeout=oa_timeout
+                api_key,
+                oa_model,
+                sys_prompt,
+                teacher_prompt,
+                max_tokens,
+                temp,
+                timeout=oa_timeout,
+                image_b64=img_b64,
+                image_mime=img_mime,
             )
             if err:
                 last_error = err
@@ -5842,7 +6130,9 @@ def ai_hint_from_provider(
             txt = _postprocess_hint_text(clean(txt))
             if txt:
                 tag = "ADMIN_REVIEW" if admin_review else "OPENAI"
-                print(f"[AI_HINT][{tag}] using key #{idx}")
+                if img_b64:
+                    vision_meta["vision_model"] = oa_model
+                print(f"[AI_HINT][{tag}] using key #{idx}" + (" +vision" if img_b64 else ""))
                 return txt, idx, "OPENAI", ""
         return "", 0, "OPENAI", last_error
 
@@ -5868,6 +6158,8 @@ def ai_hint_from_provider(
                     call_tokens,
                     temp,
                     timeout=call_timeout,
+                    image_b64=img_b64,
+                    image_mime=img_mime,
                 )
                 if err:
                     last_error = err
@@ -5883,7 +6175,12 @@ def ai_hint_from_provider(
                 if txt:
                     tag = "ADMIN_REVIEW" if admin_review else "GEMINI"
                     mode = " compact" if compact_admin else ""
-                    print(f"[AI_HINT][{tag}] model={gmodel} key=#{idx} finish={finish}{mode}")
+                    if img_b64:
+                        vision_meta["vision_model"] = gmodel
+                    print(
+                        f"[AI_HINT][{tag}] model={gmodel} key=#{idx} finish={finish}{mode}"
+                        + (" +vision" if img_b64 else "")
+                    )
                     return txt, idx, "GEMINI", ""
         return "", 0, "GEMINI", last_error
 
@@ -5934,8 +6231,8 @@ def ai_hint_from_provider(
             txt, idx, used_provider, err = try_openai()
 
     if txt:
-        return txt, idx, used_provider, fallback_note
-    return ai_hint_fallback(q, user_answer), 0, "FALLBACK", err or last_error
+        return txt, idx, used_provider, fallback_note, vision_meta
+    return ai_hint_fallback(q, user_answer), 0, "FALLBACK", err or last_error, vision_meta
 
 STORE: Optional[SheetStore] = None
 
@@ -5971,7 +6268,8 @@ def user_benefits_list() -> List[str]:
         ]
     if is_svip():
         return [
-            "Gợi ý AI ChatGPT — thay số kiểm tra từng ý + đáp án cuối",
+            "Gợi ý AI ChatGPT — đọc ảnh + thay số kiểm tra từng ý",
+            "Vẽ poster infographic (Gemini) khi trả lời đúng",
             "Xem đáp án & lời giải sau khi làm/chấm câu",
             "Loại 2 đáp án sai (50-50) ở trắc nghiệm",
             "Tạo câu tương tự + infographic (khi trả lời đúng)",
@@ -6241,7 +6539,7 @@ APP_HTML = r"""
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div id="idLookupPanel" class="panel"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px">Chỉ dùng key <b>AIzaSy...</b> từ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (Create API key). <b>Không</b> dùng key <b>AQ...</b> hay key Google Cloud khác. Key của bạn được ưu tiên; không có thì dùng key server Render.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIzaSy...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải), không chữ «Khối». VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><script>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={};
 const THEME_KEY='LDVL_THEME';
 function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAttribute('data-theme',dark?'dark':'light');try{localStorage.setItem(THEME_KEY,dark?'dark':'light')}catch(e){}let b=document.getElementById('btnTheme');if(b){b.textContent=dark?'☀️':'🌙';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}let bf=document.getElementById('btnFsTheme');if(bf)bf.textContent=dark?'☀️ Sáng':'🌙 Tối';if(window.MathJax&&MathJax.config&&MathJax.config.svg){MathJax.config.svg.color=dark?'#e2e8f0':'#0f172a';if(MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}}
@@ -6697,8 +6995,8 @@ function stopHintLoadingTimer(){if(HINT_WATCHDOG){clearTimeout(HINT_WATCHDOG);HI
 function ensureHintWatchdog(){if(HINT_WATCHDOG||!HINT_LOADING_SINCE)return;let remain=Math.max(500,35000-(Date.now()-HINT_LOADING_SINCE));HINT_WATCHDOG=setTimeout(()=>{if(!HINT_LOADING)return;cancelHintRequest('Quá 35 giây — bấm Hủy hoặc Ctrl+F5 rồi thử lại.')},remain)}
 function beginHintLoadingTimer(){stopHintLoadingTimer();HINT_LOADING_SINCE=Date.now();HINT_LOADING_TICK=setInterval(updateHintLoadingElapsed,500);ensureHintWatchdog();updateHintLoadingElapsed()}
 function cancelHintRequest(msg){let qIdx=HINT_LOADING_Q;stopHintLoadingTimer();abortHintFetch();if(qIdx!=null){setHintLoading(false);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>⏹ Đã dừng soát AI</b><div class="muted" style="margin-top:8px">'+esc(msg||'Đã hủy yêu cầu AI.')+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}let rb=document.getElementById('resultBox');if(rb&&USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải'}}
-function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let adminFast=isAdminViewer()&&adminReviewIsFast();let title=isAdminViewer()?(adminFast?(adminUsesGpt()?'⚡ Soát nhanh GPT:':'⚡ Soát nhanh:'):(adminUsesGpt()?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):')):(svipUsesGpt()?'💡 SVIP — ChatGPT + đáp án:':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:'));let renderNote=isAdminViewer()?'<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">Tối đa ~30s/request. Nếu quay &gt;35s → bấm <b>Hủy</b> hoặc <b>Ctrl+F5</b>.</div>':'';let sub=isAdminViewer()?(adminFast?`2 mục — gpt-4.1-mini — ${adminReviewLoadingNote()}…`:(adminUsesGpt()?`3 mục + DIỄN GIẢI — ${adminAiModelLabel()} — ${adminReviewLoadingNote()}…`:`Phân tích Đúng/Sai — ${adminReviewLoadingNote()}…`)):(svipUsesGpt()?`ChatGPT ${svipAiModelLabel()}: thay số + kiểm tra từng A/B/C/D — thường 15–35 giây…`:(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…'));let preview=(isAdminViewer()?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));let elapsed=hintLoadingSeconds();hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div style="flex:1"><b>Đang gọi AI…</b><div id="hintLoadingElapsed" class="muted" style="margin-top:4px;font-size:12px">Đã chờ ${elapsed} giây…</div><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div>${renderNote}<div style="margin-top:10px"><button type="button" class="btn2" onclick="cancelHintRequest()">⏹ Hủy</button></div></div></div>`;if(preview)typesetQuizMath();updateHintLoadingElapsed()}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?(String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI'?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):'):(j.vip_detailed?(svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'?'💡 SVIP — ChatGPT + đáp án:':'💡 AI VIP:'):'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){let modeLbl=esc(j.admin_review_mode_label||(j.admin_review_mode==='fast'?'Nhanh':'Kỹ'));extra=`<div class="muted" style="margin-top:6px;font-size:12px">ADMIN · chế độ <b>${modeLbl}</b>: bảng <b>Phân tích Đúng/Sai</b> so Sheet P/R → <b>Sửa Sheet</b> nếu lệch → <b>Lưu</b></div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình ADMIN: <b>${esc(j.provider_mode)}</b>${String(j.provider_mode||'').toUpperCase()==='OPENAI'?' · model '+esc(j.admin_review_mode==='fast'?'gpt-4.1-mini':adminAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=` (dự phòng — GPT lỗi/quota)`;else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(adminAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần OPENAI_API_KEY hoặc GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI lỗi/quota — vẫn chép được lời giải Sheet/AI bên dưới vào cột R qua <b>Sửa câu</b>.</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 3 mục (Diễn giải / Giải từng ý / Chốt đáp án) — bấm lại <b>AI kiểm tra</b>.</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btnGreen" onclick="openEditWithHint()">✏️ Sửa câu (điền AI)</button><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Chỉ đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Chỉ lời giải (R)</button><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_detailed){let svipGpt=svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI';extra=`<div class="muted" style="margin-top:6px;font-size:12px">${svipGpt?'SVIP: ChatGPT — thay số vào công thức + kiểm tra từng A/B/C/D.':'VIP: Gemini — phương hướng + kết quả cuối (không giải từng A/B/C/D).'}</div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình: <b>${esc(j.provider_mode)}</b>${svipGpt?' · model '+esc(svipAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=' (dự phòng)';else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(svipAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ ${j.svip_substitution_check?'AI có thể chưa kiểm tra đủ 4 phương án A/B/C/D':'AI có thể chưa đủ mục'} — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(canUnlockInfographic(CUR))extra+=`<div class="hintAiActions"><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let analysisCard=j.admin_review?buildAdminAnalysisCard(j):'';let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${analysisCard}${answerCard}${extra}${bodyHtml}${similarSec}`;typesetQuizMath()}
+function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let adminFast=isAdminViewer()&&adminReviewIsFast();let title=isAdminViewer()?(adminFast?(adminUsesGpt()?'⚡ Soát nhanh GPT:':'⚡ Soát nhanh:'):(adminUsesGpt()?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):')):(svipUsesGpt()?'💡 SVIP — ChatGPT + đáp án:':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:'));let renderNote=isAdminViewer()?'<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">Tối đa ~30s/request. Nếu quay &gt;35s → bấm <b>Hủy</b> hoặc <b>Ctrl+F5</b>.</div>':'';let sub=isAdminViewer()?(adminFast?`2 mục — gpt-4.1-mini — ${adminReviewLoadingNote()}…`:(adminUsesGpt()?`3 mục + DIỄN GIẢI — ${adminAiModelLabel()} — ${adminReviewLoadingNote()}…`:`Phân tích Đúng/Sai — ${adminReviewLoadingNote()}…`)):(svipUsesGpt()?`ChatGPT ${svipAiModelLabel()}: thay số + kiểm tra từng A/B/C/D — thường 15–35 giây…`:(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…'));let preview=(isAdminViewer()?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));let qImg=String((QUESTIONS[CUR]||{}).HinhAnh||'').trim();let visionNote=(!isAdminViewer()&&qImg)?'<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Câu có hình — AI sẽ đọc ảnh minh họa.</div>':(isAdminViewer()&&qImg?'<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Có ảnh cột T — GPT/Gemini đọc hình khi soát.</div>':'');let elapsed=hintLoadingSeconds();hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div style="flex:1"><b>Đang gọi AI…</b><div id="hintLoadingElapsed" class="muted" style="margin-top:4px;font-size:12px">Đã chờ ${elapsed} giây…</div><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div>${visionNote}${renderNote}<div style="margin-top:10px"><button type="button" class="btn2" onclick="cancelHintRequest()">⏹ Hủy</button></div></div></div>`;if(preview)typesetQuizMath();updateHintLoadingElapsed()}
+function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?(String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI'?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):'):(j.vip_detailed?(svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'?'💡 SVIP — ChatGPT + đáp án:':'💡 AI VIP:'):'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){let modeLbl=esc(j.admin_review_mode_label||(j.admin_review_mode==='fast'?'Nhanh':'Kỹ'));extra=`<div class="muted" style="margin-top:6px;font-size:12px">ADMIN · chế độ <b>${modeLbl}</b>: bảng <b>Phân tích Đúng/Sai</b> so Sheet P/R → <b>Sửa Sheet</b> nếu lệch → <b>Lưu</b></div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình ADMIN: <b>${esc(j.provider_mode)}</b>${String(j.provider_mode||'').toUpperCase()==='OPENAI'?' · model '+esc(j.admin_review_mode==='fast'?'gpt-4.1-mini':adminAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=` (dự phòng — GPT lỗi/quota)`;else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(adminAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần OPENAI_API_KEY hoặc GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI lỗi/quota — vẫn chép được lời giải Sheet/AI bên dưới vào cột R qua <b>Sửa câu</b>.</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 3 mục (Diễn giải / Giải từng ý / Chốt đáp án) — bấm lại <b>AI kiểm tra</b>.</div>`;if(j.vision_used)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Đã đọc ảnh minh họa${j.vision_model?' · '+esc(j.vision_model):''}</div>`;else if(j.has_question_image&&j.image_fetch_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ Có link ảnh nhưng không tải được: ${esc(j.image_fetch_error)}</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btnGreen" onclick="openEditWithHint()">✏️ Sửa câu (điền AI)</button><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Chỉ đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Chỉ lời giải (R)</button><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_detailed){let svipGpt=svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI';extra=`<div class="muted" style="margin-top:6px;font-size:12px">${svipGpt?'SVIP: ChatGPT — thay số vào công thức + kiểm tra từng A/B/C/D.':'VIP: Gemini — phương hướng + kết quả cuối (không giải từng A/B/C/D).'}</div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình: <b>${esc(j.provider_mode)}</b>${svipGpt?' · model '+esc(svipAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=' (dự phòng)';else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(svipAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ ${j.svip_substitution_check?'AI có thể chưa kiểm tra đủ 4 phương án A/B/C/D':'AI có thể chưa đủ mục'} — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.vision_used)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Đã đọc ảnh minh họa${j.vision_model?' · '+esc(j.vision_model):''}</div>`;else if(j.has_question_image&&j.image_fetch_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ Có link ảnh nhưng không tải được: ${esc(j.image_fetch_error)}</div>`;if(canUnlockInfographic(CUR))extra+=`<div class="hintAiActions"><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key — nạp tại 🔑 Key AI của tôi</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let analysisCard=j.admin_review?buildAdminAnalysisCard(j):'';let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${analysisCard}${answerCard}${extra}${bodyHtml}${similarSec}`;typesetQuizMath()}
 function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa có lời giải đề xuất (mục 1).');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép lời giải (đúng mẫu A. Đúng — …).')).catch(()=>alert('Không chép được — thử bấm → Lời giải (R) rồi Ctrl+C.'))}
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(field==='DapAn')return String(a.fix_dapan||'').trim()||hintAiDapAn();if(field==='LoiGiai')return String(a.fix_loigiai||'').trim()||hintAiLoigiai();return ''}
@@ -6728,8 +7026,10 @@ function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MOD
 function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}
 function closeInfographicModal(){let m=document.getElementById('infographicModal');if(m)m.classList.add('hide')}
-async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();title.textContent='📊 Infographic · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let parts=['📊 Infographic · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
+async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');let wrap=document.getElementById('infographicImageWrap');let status=document.getElementById('infographicGenStatus');if(wrap)wrap.classList.add('hide');if(status){status.classList.add('hide');status.textContent=''}if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();title.textContent='📊 Infographic · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let parts=['📊 Infographic · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
 function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}navigator.clipboard.writeText(ta.value).then(()=>alert('Đã chép prompt.\n\nDán Gemini — poster hiện đại đầy màu, 4 card gradient, không chữ Khối.')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
+let INFOGRAPHIC_GEN_BUSY=false;
+async function generateInfographicImage(){if(INFOGRAPHIC_GEN_BUSY)return;if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let btn=document.getElementById('btnGenerateInfographic');let status=document.getElementById('infographicGenStatus');let wrap=document.getElementById('infographicImageWrap');let img=document.getElementById('infographicGeneratedImg');INFOGRAPHIC_GEN_BUSY=true;if(btn){btn.disabled=true;btn.textContent='⏳ Đang vẽ…'}if(status){status.classList.remove('hide');status.textContent='Đang gọi Gemini vẽ poster — thường 30–60 giây…'}try{let j=await api('/api/infographic-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});if(img&&j.image_data_url){img.src=j.image_data_url;if(wrap)wrap.classList.remove('hide')}if(status)status.textContent='✅ Đã vẽ poster'+(j.model?' · '+j.model:'')+(j.has_reference_image?' · có ảnh tham chiếu cột T':'')}catch(e){if(status)status.textContent='❌ '+esc(e.message||e);alert('Không vẽ được poster: '+(e.message||e)+'\n\nVẫn có thể «Chép prompt» và dán Gemini thủ công.')}finally{INFOGRAPHIC_GEN_BUSY=false;if(btn){btn.disabled=false;btn.textContent='🎨 Vẽ poster (Gemini)'}}}
 let QUESTION_SAVE_BUSY=false;
 function alertDuplicateSheetReport(dr){if(!dr||!USER.is_admin)return;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let lines=(dr.samples||[]).slice(0,6);alert('⚠ Phát hiện câu TRÙNG trên Google Sheet (Cau_Hoi):\n\n≈ '+extra+' dòng thừa (thường do bấm Thêm câu 2 lần hoặc copy/dán).\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Bấm nút 🧹 Xóa trùng Sheet trên thanh ADMIN để tự xóa (giữ 1 bản / câu).')}
 function showAdminDuplicateSheetNotice(){if(!USER.is_admin||!META||!META.duplicate_report)return;let dr=META.duplicate_report;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let info=document.getElementById('info');if(info&&!String(info.textContent||'').includes('dòng trùng')){info.textContent+=` | ⚠ ${extra} dòng trùng Sheet`;if(dr.samples&&dr.samples.length)info.title=dr.samples.join('\n')}}
@@ -6787,7 +7087,7 @@ def version():
         "latex_norm_removed_v178": True,
         "admin_toolbar_dedup_v179": True,
         "retry_shuffle": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt"]
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -7087,6 +7387,43 @@ def api_infographic_prompt():
     restore = quiz_restore_payload_from_body(data)
     try:
         return jsonify(st.infographic_prompt_one(sid, idx, answer, restore))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/infographic-generate", methods=["POST"])
+def api_infographic_generate():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not can_use_infographic():
+        return jsonify({"error": "Infographic chỉ dành tài khoản VIP / SVIP / ADMIN."}), 403
+    data = request.get_json(silent=True) or {}
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    answer = data.get("answer", "")
+    st = get_store()
+    restore = quiz_restore_payload_from_body(data)
+
+    def _work():
+        return st.infographic_generate_one(sid, idx, answer, restore)
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            fut = pool.submit(_work)
+            return jsonify(fut.result(timeout=INFOGRAPHIC_HTTP_MAX_SEC))
+    except FuturesTimeout:
+        return jsonify(
+            {
+                "error": (
+                    f"Vẽ poster quá {INFOGRAPHIC_HTTP_MAX_SEC}s — thử lại hoặc "
+                    "dùng «Chép prompt» dán Gemini thủ công."
+                )
+            }
+        ), 504
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
