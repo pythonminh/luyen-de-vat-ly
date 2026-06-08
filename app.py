@@ -2098,7 +2098,7 @@ class SheetStore:
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
         reveal = reveal or is_admin()
-        d = {k: q.get(k, "") for k in ["ID", "MaDe", "Dang", "MucDo", "CauHoi", "A", "B", "C", "D", "HinhAnh", "Chuong", "BaiHoc", "De", "QuyenTruyCap"]}
+        public_fields = [     "ID", "MaDe", "BoDe", "De",     "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap",     "Dang", "MucDo",     "CauHoi", "A", "B", "C", "D",     "HinhAnh", "QuyenTruyCap", ] d = {k: q.get(k, "") for k in public_fields}
         d["Dang"] = question_dang(q)
         d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
         d["index"] = index
@@ -3917,20 +3917,24 @@ def build_ai_question_block(
     else:
         chosen_text = clean(user_answer)
     lines = [
-        f"Môn: {clean(q.get('Mon', ''))}",
-        f"Chương: {clean(q.get('Chuong', ''))}",
-        f"Bài học: {clean(q.get('BaiHoc', ''))}",
-        f"Mức độ: {clean(q.get('MucDo', ''))}",
-        f"Dạng câu: {dang}",
-        "",
-        "Đề bài:",
-        clean(q.get("CauHoi", "")),
-        "",
-        "Phương án:",
-        options_text,
-        "",
-        f"Học sinh đang chọn: {chosen_text or '(chưa chọn)'}",
-    ]
+    f"Môn: {clean(q.get('Mon', '')) or '(không rõ)'}",
+    f"Lớp/Khối: {clean(q.get('Lop', '')) or '(không rõ)'}",
+    f"Bộ đề: {clean(q.get('BoDe', ''))}",
+    f"Đề: {clean(q.get('De', ''))}",
+    f"Chương: {clean(q.get('Chuong', ''))}",
+    f"Bài học: {clean(q.get('BaiHoc', ''))}",
+    f"Dạng bài tập: {clean(q.get('DangBaiTap', ''))}",
+    f"Mức độ: {clean(q.get('MucDo', ''))}",
+    f"Dạng câu: {dang}",
+    "",
+    "Đề bài:",
+    clean(q.get("CauHoi", "")),
+    "",
+    "Phương án:",
+    options_text,
+    "",
+    f"Học sinh đang chọn: {chosen_text or '(chưa chọn)'}",
+]
     img_src = normalize_image_src(q.get("HinhAnh", ""))
     if img_src:
         lines.extend(
