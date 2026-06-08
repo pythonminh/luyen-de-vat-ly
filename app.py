@@ -37,7 +37,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V182_ADMIN_DANG_REGROUP_2026_06_06"
+APP_VERSION = "V184_ADMIN_QUOTA_COMPACT_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -62,6 +62,11 @@ GEMINI_HINT_MODEL_FALLBACKS = [
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
 ]
+ADMIN_SYS_PROMPT_COMPACT = (
+    "Bạn là chuyên gia Vật lý/Toán kiểm tra câu. Trả lời tiếng Việt, NGẮN GỌN (tiết kiệm quota). "
+    "CHỈ 2 mục: 1. GIẢI TÓM TẮT (công thức chính + kết luận ngắn từng ý A/B/C/D) và 2. CHỐT ĐÁP ÁN. "
+    "Không giải dài từng bước. LaTeX trong $...$ một dòng."
+)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 app = Flask(__name__)
@@ -4955,7 +4960,8 @@ def ai_similar_question_from_provider(q: Dict[str, Any]) -> Tuple[str, int, str,
                 if err:
                     last_error = err
                     if _is_quota_or_rate_error(last_error):
-                        break
+                        print(f"[AI_SIMILAR][GEMINI] model={gmodel} key #{idx} quota — thử model/key tiếp")
+                        continue
                     continue
                 txt = _postprocess(txt)
                 if txt:
@@ -5175,10 +5181,13 @@ def ai_hint_from_provider(
         teacher_prompt = build_ai_teacher_prompt_2026(q, user_answer)
         temp = 0.15
 
-    def _postprocess_hint_text(raw: str) -> str:
+    def _postprocess_hint_text(raw: str, *, compact_admin: bool = False) -> str:
         raw = clean(raw)
         if admin_review:
-            return _finalize_admin_hint_text(raw)
+            txt = _finalize_admin_hint_text(raw)
+            if compact_admin:
+                return trim_ai_hint_text(txt, AI_HINT_VIP_MAX_CHARS)
+            return txt
         return trim_ai_hint_text(raw, max_chars)
 
     def _continue_admin_gemini(txt: str, finish: str, api_key: str, gmodel: str) -> str:
@@ -5227,26 +5236,38 @@ def ai_hint_from_provider(
 
     def try_gemini() -> Tuple[str, int, str, str]:
         nonlocal last_error
+        admin_primary = gemini_models[0] if admin_review else ""
         gem_timeout = 70 if admin_review else 22
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gmodel in gemini_models:
+                compact_admin = bool(admin_review and gmodel != admin_primary)
+                call_sys = ADMIN_SYS_PROMPT_COMPACT if compact_admin else sys_prompt
+                call_tokens = AI_HINT_VIP_MAX_OUTPUT_TOKENS if compact_admin else max_tokens
+                call_timeout = 28 if compact_admin else gem_timeout
                 txt, finish, err = _gemini_hint_call(
-                    api_key, gmodel, sys_prompt, teacher_prompt, max_tokens, temp, timeout=gem_timeout
+                    api_key,
+                    gmodel,
+                    call_sys,
+                    teacher_prompt,
+                    call_tokens,
+                    temp,
+                    timeout=call_timeout,
                 )
                 if err:
                     last_error = err
                     if _is_quota_or_rate_error(last_error):
-                        print(f"[AI_HINT][GEMINI] key #{idx} quota/rate — thử key tiếp")
-                        break
+                        print(f"[AI_HINT][GEMINI] model={gmodel} key #{idx} quota — thử model/key tiếp")
+                        continue
                     continue
                 if not txt:
                     continue
-                if admin_review:
+                if admin_review and not compact_admin:
                     txt = _continue_admin_gemini(txt, finish, api_key, gmodel)
-                txt = _postprocess_hint_text(txt)
+                txt = _postprocess_hint_text(txt, compact_admin=compact_admin)
                 if txt:
                     tag = "ADMIN_REVIEW" if admin_review else "GEMINI"
-                    print(f"[AI_HINT][{tag}] model={gmodel} key=#{idx} finish={finish}")
+                    mode = " compact" if compact_admin else ""
+                    print(f"[AI_HINT][{tag}] model={gmodel} key=#{idx} finish={finish}{mode}")
                     return txt, idx, "GEMINI", ""
         return "", 0, "GEMINI", last_error
 
@@ -6376,6 +6397,14 @@ def _build_ai_key_test_summary(details: List[Dict[str, Any]], provider: str = "G
         bad = [d for d in details if not d.get("ok")]
         summary += f" {len(bad)} key lỗi — app sẽ dùng key còn hoạt động."
         summary += "\n" + "\n".join(f"✗ {d.get('label', '')}: {d.get('message', '')}" for d in bad)
+        if prov == "GEMINI":
+            hint_m = clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
+            admin_m = clean(os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)) or DEFAULT_GEMINI_ADMIN_MODEL
+            summary += (
+                f"\n\nℹ️ Test chỉ ping model nhẹ ({hint_m}). "
+                f"AI kiểm tra ADMIN dùng {admin_m} — quota có thể khác. "
+                "Nếu vẫn báo quota: xóa key hết hạn trên Render ENV hoặc bật billing Google AI Studio."
+            )
         return True, summary
     summary = f"0/{total} key OK."
     summary += "\n" + "\n".join(f"✗ {d.get('label', '')}: {d.get('message', '')}" for d in details)
