@@ -2460,21 +2460,46 @@ class SheetStore:
     ) -> Dict[str, Any]:
         if not can_use_5050():
             raise RuntimeError("Tài khoản này chưa được dùng Loại 2 câu sai")
+
         ses = self.check_quiz_session(sid, restore_payload)
+
         if index in ses["used_5050"]:
             return {"hide": [], "message": "Câu này đã dùng Loại 2 câu sai rồi."}
+
         qs = ses["questions"]
         if not (0 <= index < len(qs)):
             raise RuntimeError("Số câu không hợp lệ")
+
         q = qs[index]
-        if norm_dang(q.get("Dang")) != "Trắc nghiệm":
+
+        if effective_dang(q) != "Trắc nghiệm":
             return {"hide": [], "message": "Chỉ dùng được cho câu trắc nghiệm A-B-C-D."}
+
         correct = norm_letter(q.get("DapAn"))
         letters = [x for x in "ABCD" if clean(q.get(x))]
+
+        # Chặn tuyệt đối: không có đáp án đúng thì không loại gì hết.
+        if not correct or correct not in letters:
+            return {
+                "hide": [],
+                "message": "Không loại đáp án: câu này chưa đọc được đáp án đúng từ Sheet. Tránh loại nhầm đáp án đúng.",
+            }
+
         wrongs = [x for x in letters if x != correct]
+
+        if len(wrongs) < 2:
+            return {
+                "hide": [],
+                "message": "Không đủ 2 phương án sai để loại.",
+            }
+
         random.shuffle(wrongs)
         ses["used_5050"].add(index)
-        return {"hide": wrongs[:2], "message": "Đã loại 2 câu sai."}
+
+        return {
+            "hide": wrongs[:2],
+            "message": "Đã loại 2 đáp án sai.",
+        }
 
     def check_one(
         self, sid: str, index: int, answer: Any, restore_payload: Optional[Dict[str, Any]] = None
