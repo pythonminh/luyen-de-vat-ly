@@ -2734,7 +2734,7 @@ class SheetStore:
             "key_index": key_index,
             "provider_used": provider_used,
             "ai_configured": has_keys,
-            "provider_mode": cfg.get("provider", "AUTO"),
+            "provider_mode": cfg.get("svip_provider" if is_svip() else "provider", "AUTO"),
             "ai_error": ai_error,
         }
 
@@ -5608,6 +5608,12 @@ def build_ai_vip_formula_prompt_2026(q: Dict[str, Any], user_answer: Any) -> str
 def build_ai_similar_question_prompt(q: Dict[str, Any]) -> str:
     block = build_ai_question_block(q, "", include_sheet_answer=False)
     dang = effective_dang(q)
+    mon = clean(q.get("Mon", ""))
+    lop = clean(q.get("Lop", ""))
+    chuong = clean(q.get("Chuong", ""))
+    baihoc = clean(q.get("BaiHoc", ""))
+    dangbaitap = clean(q.get("DangBaiTap", ""))
+    mucdo = clean(q.get("MucDo", ""))
     dang_fmt = {
         "Trắc nghiệm": (
             "Viết đủ 4 phương án A, B, C, D (mỗi phương án một dòng). "
@@ -5624,6 +5630,17 @@ def build_ai_similar_question_prompt(q: Dict[str, Any]) -> str:
         [
             "Tạo MỘT câu hỏi TƯƠNG TỰ câu gốc: cùng dạng bài, cùng chủ đề kiến thức, "
             "nhưng ĐỔI số liệu / tình huống / phương trình (không copy y nguyên).",
+            "RÀNG BUỘC BẮT BUỘC — KHÔNG ĐƯỢC VI PHẠM:",
+            f"- Phải giữ đúng MÔN: {mon or '(không rõ — suy từ đề gốc, không tự đổi môn)'}",
+            f"- Phải giữ đúng LỚP/KHỐI: {lop or '(không rõ — suy từ đề gốc)'}",
+            f"- Phải giữ đúng CHƯƠNG: {chuong or '(không rõ)'}",
+            f"- Phải giữ đúng BÀI HỌC: {baihoc or '(không rõ)'}",
+            f"- Phải giữ đúng DẠNG BÀI TẬP: {dangbaitap or '(không rõ)'}",
+            f"- Phải giữ mức độ tương đương: {mucdo or '(không rõ)'}",
+            "- TUYỆT ĐỐI KHÔNG đổi sang môn khác, lớp khác, chương khác.",
+            "- Nếu môn gốc là Toán thì KHÔNG dùng bối cảnh Vật lí như lực, dòng điện, điện trở, nhiệt lượng, dao động.",
+            "- Nếu môn gốc là Vật lí thì KHÔNG đổi thành bài Toán thuần túy ngoài chủ đề đề gốc.",
+            "- Câu mới phải bám sát cấu trúc câu gốc: cùng kiểu hỏi, cùng dạng đáp án, chỉ đổi số liệu/tình huống tương đương.", 
             "",
             gemini_prompt_brand_2026(),
             "",
@@ -5651,19 +5668,23 @@ def ai_similar_question_from_provider(q: Dict[str, Any]) -> Tuple[str, int, str,
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
-    provider = cfg["provider"]
+    provider = clean(
+    cfg.get("svip_provider" if is_svip() else "provider", cfg.get("provider", "AUTO"))
+).upper()
+if provider not in ("AUTO", "OPENAI", "GEMINI"):
+    provider = "AUTO"
     last_error = ""
     max_tokens = AI_HINT_SIMILAR_MAX_OUTPUT_TOKENS
     max_chars = AI_HINT_SIMILAR_MAX_CHARS
-    model_openai = clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
-    model_gemini = clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
+    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
+    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
     gemini_models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
     sys_prompt = (
         "Bạn là giáo viên Vật lý/Toán. Tạo câu hỏi luyện tập tương tự câu gốc. "
         "Trả lời tiếng Việt, có đáp án và lời giải. LaTeX trong $...$ một dòng."
     )
     teacher_prompt = build_ai_similar_question_prompt(q)
-    temp = 0.35
+    temp = 0.15
 
     def _postprocess(raw: str) -> str:
         return trim_ai_hint_text(sanitize_hint_math_text(clean(raw)), max_chars)
