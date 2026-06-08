@@ -33,7 +33,16 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
+from flask import (
+    Flask,
+    copy_current_request_context,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 
 try:
     import gspread
@@ -42,7 +51,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V198_HINT_HARD_STOP_2026_06_05"
+APP_VERSION = "V199_HINT_REQUEST_CTX_2026_06_05"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2433,9 +2442,9 @@ class SheetStore:
             if has_keys:
                 hint_text, key_index, provider_used, ai_error = "", 0, "FALLBACK", ""
                 try:
-                    with ThreadPoolExecutor(max_workers=1) as pool:
-                        fut = pool.submit(
-                            ai_hint_from_provider,
+                    @copy_current_request_context
+                    def _admin_ai_hint_worker():
+                        return ai_hint_from_provider(
                             q,
                             answer,
                             True,
@@ -2444,6 +2453,9 @@ class SheetStore:
                             False,
                             review_mode,
                         )
+
+                    with ThreadPoolExecutor(max_workers=1) as pool:
+                        fut = pool.submit(_admin_ai_hint_worker)
                         hint_text, key_index, provider_used, ai_error = fut.result(
                             timeout=HINT_HTTP_MAX_SEC
                         )
