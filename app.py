@@ -6,7 +6,7 @@ Chạy Render:
 Yêu cầu Environment Variables trên Render:
     GOOGLE_SHEET_ID
     GOOGLE_CREDENTIALS_JSON
-    GEMINI_API_KEY=AIza...
+    GEMINI_API_KEY=AIza...   (hoặc nhiều key cách nhau dấu phẩy / xuống dòng)
     GEMINI_API_KEY_2=AIza...   (tuỳ chọn — tự chuyển khi key 1 hết quota)
     GEMINI_API_KEYS=AIza...,AIza...   (hoặc nhiều key cách nhau dấu phẩy)
     GEMINI_HINT_MODEL=gemini-2.5-flash-lite
@@ -37,7 +37,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V166_INFOGRAPHIC_MODERN_POSTER_2026_06_06"
+APP_VERSION = "V168_ENV_MULTI_GEMINI_KEY_2026_06_06"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
@@ -2856,13 +2856,17 @@ def _validate_key_format(prefix: str, key: str) -> Optional[str]:
 
 
 def load_ai_keys_from_env(prefix: str) -> List[str]:
-    """Key trên Render ENV (dùng chung / dự phòng)."""
+    """Key trên Render ENV (dùng chung / dự phòng). Hỗ trợ nhiều key trong một biến (phẩy/xuống dòng)."""
     keys_local: List[str] = []
     env_names = [f"{prefix}_API_KEY"] + [f"{prefix}_API_KEY_{i}" for i in range(1, 10)]
     for name in env_names:
-        v = clean_ai_key_2026(os.environ.get(name, ""))
-        if v:
-            keys_local.append(v)
+        raw = os.environ.get(name, "")
+        if not str(raw or "").strip():
+            continue
+        for part in re.split(r"[\n,;]+", str(raw)):
+            kk = clean_ai_key_2026(part)
+            if kk:
+                keys_local.append(kk)
     for k in re.split(r"[\n,;]+", os.environ.get(f"{prefix}_API_KEYS", "")):
         kk = clean_ai_key_2026(k)
         if kk:
@@ -5168,7 +5172,8 @@ function onFilterChange(level){if(level==='mon'){let e=document.getElementById('
 function updateExamStrip(){const el=document.getElementById('examStrip');const msg=document.getElementById('examMsg');const tm=document.getElementById('examTimer');if(!el||!msg||!tm)return;const start=new Date('2026-06-11T00:00:00+07:00');const end=new Date('2026-06-12T23:59:59+07:00');const now=new Date();if(now<start){let d=Math.floor((start-now)/1000);let day=Math.floor(d/86400);d%=86400;let h=Math.floor(d/3600);d%=3600;let m=Math.floor(d/60);let s=d%60;msg.textContent='📢 Thông báo: Kỳ thi diễn ra ngày 11-12/06/2026';tm.textContent=`Còn ${day} ngày ${h}h ${m}m ${s}s`;el.classList.remove('hide');return}if(now<=end){msg.textContent='🔥 ĐANG TRONG THỜI GIAN THI 11-12/06/2026';tm.textContent='Chúc các em bình tĩnh, tự tin!';el.classList.remove('hide');return}msg.textContent='✅ Kỳ thi 11-12/06/2026 đã kết thúc';tm.textContent='Tiếp tục luyện tập để nâng điểm.';el.classList.remove('hide')}
 async function loadAiKeyPanel(){let panel=document.getElementById('aiKeyPanel');let st=document.getElementById('aiKeyStatus');if(!panel)return;if(USER.can_save_own_ai_key===false){panel.classList.add('hide');return}panel.classList.remove('hide');try{let j=await api('/api/ai-config');let parts=[];if(j.using_user_keys)parts.push(`Đã lưu ${j.user_gemini_keys||0} key của bạn`);else parts.push('Chưa lưu key — dán AIza... bên dưới');if(j.has_server_keys)parts.push('Server có key dự phòng');if(j.has_keys)parts.push('✅ Có thể dùng Gợi ý AI');else parts.push('⚠️ Chưa có key — cần Lưu key');if(st)st.textContent=parts.join(' · ')}catch(e){if(st)st.textContent='Không tải trạng thái key: '+e.message}}
 async function saveMyAiKey(){if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}let raw=document.getElementById('myApiKeys').value.trim();if(!raw){alert('Dán ít nhất một key AIza...');return}try{let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_keys:raw,provider:'GEMINI'})});alert(j.message||'Đã lưu key.');await loadAiKeyPanel()}catch(e){alert('Không lưu được: '+e.message)}}
-async function testMyAiKey(){if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}let raw=document.getElementById('myApiKeys').value.trim();let body={provider:'GEMINI'};if(raw)body.api_keys=raw;try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert((j.ok?'✅ ':'❌ ')+(j.message||'')+ver)}catch(e){alert(e.message)}}
+function formatAiKeyCheckAlert(j){j=j||{};let msg=(j.ok?'✅ ':'❌ ')+(j.message||'');if(j.details&&j.details.length){let extra=[];for(let d of j.details){let lab=d.label||(d.key_hint?('Key #'+d.index+' ('+d.key_hint+')'):('Key #'+d.index));if(d.source&&!String(lab).includes(d.source))lab+=' — '+d.source;extra.push((d.ok?'✅':'❌')+' '+lab+': '+(d.message||''))}if(extra.length&&!String(msg).includes('Key #'))msg+='\n\n'+extra.join('\n')}return msg}
+async function testMyAiKey(){if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}let raw=document.getElementById('myApiKeys').value.trim();let body={provider:'GEMINI'};if(raw)body.api_keys=raw;try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert(formatAiKeyCheckAlert(j)+ver)}catch(e){alert(e.message)}}
 async function clearMyAiKey(){if(!confirm('Xóa key AI đã lưu trên server (chỉ của tài khoản này)?'))return;try{let j=await api('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear_keys:true})});document.getElementById('myApiKeys').value='';alert(j.message||'Đã xóa key.');await loadAiKeyPanel()}catch(e){alert(e.message)}}
 function updateAdminChrome(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let qtb=document.getElementById('quizTopBar');if(qtb)qtb.classList.toggle('hide',!inQuiz);let bar=document.getElementById('adminBar');if(bar){let show=!!USER.is_admin;bar.classList.toggle('hide',!show);let eb=document.getElementById('adminEditBtn');if(eb)eb.classList.toggle('hide',!inQuiz);let ab=document.getElementById('adminAddBtn');if(ab)ab.classList.toggle('hide',!inQuiz)}let fsAdmin=!!USER.is_admin&&inQuiz;for(let id of ['btnQuizEdit','btnQuizAdd']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!fsAdmin)}let fss=document.getElementById('btnFsSync');if(fss)fss.classList.toggle('hide',!fsAdmin||!FULLDE_ON);let fse=document.getElementById('btnFsEdit');if(fse)fse.classList.toggle('hide',!fsAdmin);let fsa=document.getElementById('btnFsAdd');if(fsa)fsa.classList.toggle('hide',!fsAdmin);let qat=document.getElementById('quizAdminTools');if(qat)qat.classList.toggle('hide',!USER.is_admin||!inQuiz);let qjw=document.getElementById('quizIdJumpWrap');if(qjw)qjw.classList.toggle('hide',!USER.is_admin||!inQuiz);syncInfographicButtons()}
 function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<removedIdx)out[i]=obj[k];else if(i>removedIdx)out[i-1]=obj[k]}return out}ANSWERS=shift(ANSWERS);RESULTS=shift(RESULTS);CHECKED=shift(CHECKED);LOCKED_Q=shift(LOCKED_Q);HINT_BY_Q=shift(HINT_BY_Q);SIMILAR_BY_Q=shift(SIMILAR_BY_Q)}
@@ -5182,7 +5187,7 @@ function okFilter(x){let s=normText(val('fSearch'));let lv=(val('fMucDo')||'').t
 function renderCatalog(){let list=CATALOG.filter(okFilter).sort(compareCatalog);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let mc=filterMatchCount(x,selectedLv,selectedDang);let filterNotice='';if((selectedLv||selectedDang)&&mc!==null){filterNotice=`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🎯 Có <b>${mc}</b> câu${selectedLv?' · mức '+esc(selectedLv):''}${selectedDang?' · dạng '+esc(selectedDang):''} trong đề này</div>`}let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl">🔗 ${shareLabel}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link có xáo trộn</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${filterNotice}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');await init();if(USER.is_admin&&META&&META.duplicate_report)alertDuplicateSheetReport(META.duplicate_report)}
 async function dedupeSheetDuplicates(){if(!USER.is_admin)return;try{let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});let n=parseInt(j.would_delete||((j.plan||{}).delete_count),10)||0;if(n<=0){alert(j.message||'Không có dòng trùng trên Sheet.');return}let lines=((j.plan||{}).samples||[]).slice(0,8);let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu (số nhỏ nhất), xóa các bản sao.\n\n(Không dùng AI — chỉ xóa dòng trên Google Sheet.)\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Xóa '+n+' dòng trùng khỏi Google Sheet?';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: xóa vĩnh viễn '+n+' dòng trùng?'))return;let j2=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false})});alert((j2.message||('Đã xóa '+j2.deleted+' dòng trùng.'))+'\n\n✅ Mục lục tự cập nhật — không cần bấm Đồng bộ Sheet thêm.');if(j2.duplicate_report)META=META||{},META.duplicate_report=j2.duplicate_report;await refreshCatalogFromMeta()}catch(e){let m=e.message||'';if(/429|quota|write requests/i.test(m))alert('Không xóa trùng được — Google Sheet giới hạn ghi (429).\n\n🧹 Xóa trùng KHÔNG dùng AI (nút 🧪 Test AI / 💡 AI kiểm tra là chức năng khác).\n\nĐợi ~1 phút rồi bấm lại 🧹 Xóa trùng Sheet.');else alert('Không xóa trùng được: '+m)}}
-async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert((j.ok?'✅ ':'❌ ')+(j.message||'')+ver);}catch(e){alert(e.message);}}
+async function testServerAiKey(){try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert(formatAiKeyCheckAlert(j)+ver);}catch(e){alert(e.message);}}
 function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
 function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
 function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
@@ -5708,6 +5713,96 @@ def _resolve_runtime_test_key(provider: str) -> Tuple[str, str]:
     return (keys[0] if keys else ""), "OPENAI"
 
 
+def mask_api_key_hint(key: str) -> str:
+    """Hiển thị một phần key để user biết đang nói key nào — không lộ full key."""
+    k = clean_ai_key_2026(key)
+    if not k:
+        return "???"
+    if len(k) <= 14:
+        return k[:6] + "…"
+    return f"{k[:8]}…{k[-4:]}"
+
+
+def _ai_key_test_label(index: int, key: str, source: str = "") -> str:
+    hint = mask_api_key_hint(key)
+    label = f"Key #{index} ({hint})"
+    if source:
+        label += f" — {source}"
+    return label
+
+
+def _build_ai_key_test_summary(details: List[Dict[str, Any]], provider: str = "GEMINI") -> Tuple[bool, str]:
+    if not details:
+        return False, "Không có key để test."
+    ok_count = sum(1 for d in details if d.get("ok"))
+    total = len(details)
+    prov = clean(provider).upper() or "GEMINI"
+    if ok_count == total:
+        return True, f"{ok_count}/{total} key {prov} OK."
+    if ok_count > 0:
+        summary = f"{ok_count}/{total} key OK."
+        bad = [d for d in details if not d.get("ok")]
+        summary += f" {len(bad)} key lỗi — app sẽ dùng key còn hoạt động."
+        summary += "\n" + "\n".join(f"✗ {d.get('label', '')}: {d.get('message', '')}" for d in bad)
+        return True, summary
+    summary = f"0/{total} key OK."
+    summary += "\n" + "\n".join(f"✗ {d.get('label', '')}: {d.get('message', '')}" for d in details)
+    return False, summary
+
+
+def test_ai_key_batch(
+    provider: str,
+    key_items: List[Tuple[str, str]],
+    model: str = "",
+) -> Tuple[bool, str, List[Dict[str, Any]]]:
+    """Test lần lượt từng key — báo rõ số thứ tự, mã che và nguồn (Key của bạn / Render ENV)."""
+    p = clean(provider).upper() or DEFAULT_AI_PROVIDER
+    if p == "AUTO":
+        p = "GEMINI"
+    details: List[Dict[str, Any]] = []
+    for idx, (k, source) in enumerate(key_items, start=1):
+        fmt_err = _validate_key_format(p, k)
+        label = _ai_key_test_label(idx, k, source)
+        if fmt_err:
+            details.append({
+                "index": idx,
+                "ok": False,
+                "message": fmt_err,
+                "key_hint": mask_api_key_hint(k),
+                "source": source,
+                "label": label,
+            })
+            continue
+        ok, msg = test_ai_key(p, k, model)
+        details.append({
+            "index": idx,
+            "ok": ok,
+            "message": msg,
+            "key_hint": mask_api_key_hint(k),
+            "source": source,
+            "label": label,
+        })
+    ok_all, summary = _build_ai_key_test_summary(details, p)
+    return ok_all, summary, details
+
+
+def _runtime_ai_key_items(provider: str) -> List[Tuple[str, str]]:
+    p = clean(provider).upper() or DEFAULT_AI_PROVIDER
+    if p == "AUTO":
+        p = "GEMINI"
+    items: List[Tuple[str, str]] = []
+    seen: set = set()
+    for k in load_user_ai_keys(p):
+        if k not in seen:
+            seen.add(k)
+            items.append((k, "Key của bạn"))
+    for k in load_ai_keys_from_env(p):
+        if k not in seen:
+            seen.add(k)
+            items.append((k, "Render ENV"))
+    return items[:MAX_AI_KEYS_PER_PROVIDER]
+
+
 def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str]:
     p = clean(provider).upper() or "AUTO"
     k = clean(api_key)
@@ -5762,23 +5857,11 @@ def test_all_server_ai_keys(provider: str = "GEMINI", model: str = "") -> Tuple[
     p = clean(provider).upper() or DEFAULT_AI_PROVIDER
     if p == "AUTO":
         p = "GEMINI"
-    keys = load_ai_keys(p)
+    keys = load_ai_keys_from_env(p)
     if not keys:
         return False, "Chưa có key trên Render ENV.", []
-    details: List[Dict[str, Any]] = []
-    ok_count = 0
-    for idx, k in enumerate(keys, start=1):
-        ok, msg = test_ai_key(p, k, model)
-        details.append({"index": idx, "ok": ok, "message": msg})
-        if ok:
-            ok_count += 1
-    if ok_count:
-        summary = f"{ok_count}/{len(keys)} key Gemini OK."
-        if ok_count < len(keys):
-            summary += f" {len(keys) - ok_count} key lỗi/quota — app sẽ tự dùng key còn hoạt động."
-        return True, summary, details
-    first_err = details[0]["message"] if details else "Tất cả key đều lỗi."
-    return False, f"0/{len(keys)} key OK. Lỗi key #1: {first_err}", details
+    items = [(k, "Render ENV") for k in keys]
+    return test_ai_key_batch(p, items, model)
 
 
 @app.route("/api/ai-config", methods=["GET", "POST"])
@@ -5799,23 +5882,47 @@ def test_all_runtime_ai_keys(provider: str = "GEMINI", model: str = "") -> Tuple
     p = clean(provider).upper() or DEFAULT_AI_PROVIDER
     if p == "AUTO":
         p = "GEMINI"
-    keys = load_ai_keys(p)
-    if not keys:
+    items = _runtime_ai_key_items(p)
+    if not items:
         return False, "Chưa có key. Dán key AIza... tại 🔑 Key AI của tôi hoặc cấu hình Render.", []
-    details: List[Dict[str, Any]] = []
-    ok_count = 0
-    for idx, k in enumerate(keys, start=1):
-        ok, msg = test_ai_key(p, k, model)
-        details.append({"index": idx, "ok": ok, "message": msg})
-        if ok:
-            ok_count += 1
-    if ok_count:
-        summary = f"{ok_count}/{len(keys)} key OK."
-        if ok_count < len(keys):
-            summary += f" {len(keys) - ok_count} key lỗi/quota — app tự chuyển key khác."
-        return True, summary, details
-    first_err = details[0]["message"] if details else "Tất cả key đều lỗi."
-    return False, f"0/{len(keys)} key OK. Lỗi key #1: {first_err}", details
+    return test_ai_key_batch(p, items, model)
+
+
+def _keys_from_check_body(body: Dict[str, Any], provider: str) -> List[Tuple[str, str]]:
+    """Lấy danh sách key từ body test — mỗi dòng một key trong ô nhập."""
+    p = clean(provider).upper() or DEFAULT_AI_PROVIDER
+    items: List[Tuple[str, str]] = []
+    seen: set = set()
+    for field in ("api_keys", "gemini_keys", "openai_keys"):
+        raw = body.get(field)
+        if not str(raw or "").strip():
+            continue
+        g_keys, o_keys = parse_api_keys_2026(raw)
+        pick = g_keys if p in ("GEMINI", "AUTO") else o_keys
+        if p == "AUTO" and not pick:
+            pick = o_keys
+        for idx, k in enumerate(pick, start=1):
+            if k in seen:
+                continue
+            seen.add(k)
+            src = "Ô nhập" if len(pick) == 1 else f"Ô nhập (dòng {idx})"
+            items.append((k, src))
+    single = clean_ai_key_2026(body.get("api_key", ""))
+    if single and single not in seen:
+        items.append((single, "Ô nhập"))
+    return items[:MAX_AI_KEYS_PER_PROVIDER]
+
+
+def _ai_key_check_response(ok: bool, msg: str, provider: str, details: List[Dict[str, Any]]) -> Any:
+    return jsonify({
+        "ok": ok,
+        "message": msg,
+        "version": APP_VERSION,
+        "provider_used": provider,
+        "keys_tested": len(details),
+        "keys_ok": sum(1 for d in details if d.get("ok")),
+        "details": details,
+    })
 
 
 @app.route("/api/ai-key-check", methods=["POST"])
@@ -5833,35 +5940,32 @@ def api_ai_key_check():
         model = clean(body.get("gemini_model", ""))
     if not model and provider in ["OPENAI", "AUTO"]:
         model = clean(body.get("openai_model", ""))
-    key = _first_key_from_raw(body.get("api_keys"))
-    if not key:
-        key = _first_key_from_raw(body.get("gemini_keys"))
-    if not key:
-        key = _first_key_from_raw(body.get("openai_keys"))
-    if not key:
-        key = clean(body.get("api_key", ""))
     used_provider = provider
-    if not key:
-        keys = load_ai_keys("GEMINI" if provider in ["GEMINI", "AUTO"] else "OPENAI")
-        if len(keys) >= 1:
-            ok, msg, details = test_all_runtime_ai_keys(provider, model)
-            return jsonify({
-                "ok": ok,
-                "message": msg,
-                "version": APP_VERSION,
-                "provider_used": provider,
-                "keys_tested": len(details),
-                "keys_ok": sum(1 for d in details if d.get("ok")),
-                "details": details,
-            })
-        key, used_provider = _resolve_runtime_test_key(provider)
+    if provider in ["GEMINI", "AUTO"]:
+        used_provider = "GEMINI"
+    elif provider == "OPENAI":
+        used_provider = "OPENAI"
+
+    input_items = _keys_from_check_body(body, provider)
+    if len(input_items) >= 1:
+        ok, msg, details = test_ai_key_batch(used_provider, input_items, model)
+        return _ai_key_check_response(ok, msg, used_provider, details)
+
+    runtime_items = _runtime_ai_key_items(used_provider)
+    if runtime_items:
+        ok, msg, details = test_ai_key_batch(used_provider, runtime_items, model)
+        return _ai_key_check_response(ok, msg, used_provider, details)
+
+    key, used_provider = _resolve_runtime_test_key(provider)
     if not key:
         return jsonify({
             "ok": False,
-            "message": "Chưa có key. Vào 🔑 Key AI của tôi → dán AIza... → Lưu key.",
+            "message": "Chưa có key. Vào 🔑 Key AI của tôi → dán AIza... (mỗi dòng một key) → Lưu key.",
+            "version": APP_VERSION,
+            "details": [],
         })
-    ok, msg = test_ai_key(used_provider, key, model)
-    return jsonify({"ok": ok, "message": msg, "version": APP_VERSION, "provider_used": used_provider})
+    ok, msg, details = test_ai_key_batch(used_provider, [(key, "Key đang dùng")], model)
+    return _ai_key_check_response(ok, msg, used_provider, details)
 
 
 @app.route("/api/submit", methods=["POST"])
