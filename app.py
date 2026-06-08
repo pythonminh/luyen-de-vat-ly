@@ -5918,7 +5918,118 @@ def _openai_chat_call(
     except Exception as e:
         return "", "", _http_error_message(e)
 
+def ai_rewrite_latex_text(field: str, text: str, context: Dict[str, Any]) -> Tuple[str, str]:
+    """ADMIN: dùng AI viết lại nội dung cho đúng LaTeX, không tự lưu Sheet."""
+    field = clean(field)
+    text = clean(text)
+    if not text:
+        raise RuntimeError("Nội dung đang trống.")
 
+    cfg = ai_runtime_config()
+    provider = resolve_ai_provider(cfg, admin_review=True)
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+
+    mon = clean(context.get("Mon", ""))
+    lop = clean(context.get("Lop", ""))
+    chuong = clean(context.get("Chuong", ""))
+    baihoc = clean(context.get("BaiHoc", ""))
+    dang = clean(context.get("Dang", ""))
+    mucdo = clean(context.get("MucDo", ""))
+
+    sys_prompt = (
+        "Bạn là giáo viên Việt Nam chuyên chuẩn hóa đề kiểm tra sang LaTeX. "
+        "Chỉ trả về NỘI DUNG ĐÃ SỬA, không giải thích, không markdown, không ```."
+    )
+
+    user_prompt = "\n".join([
+        "Hãy viết lại nội dung sau cho đúng tiếng Việt và đúng LaTeX.",
+        "",
+        "YÊU CẦU BẮT BUỘC:",
+        "- Giữ nguyên ý nghĩa đề, không tự đổi môn, không tự đổi số liệu.",
+        "- Sửa lỗi LaTeX bị vỡ như $\\{(V)$_{1}}$ thành $V_1$, $\\{(p)$_{1}}$ thành $p_1$.",
+        "- Công thức viết trong $...$.",
+        "- Đơn vị viết dạng $\\mathrm{m^3}$, $\\mathrm{Pa}$, $^\\circ\\mathrm{C}$ nếu cần.",
+        "- Không thêm lời giải, không thêm đáp án, không thêm phương án nếu văn bản gốc không có.",
+        "- Không dùng $$...$$ trong câu hỏi ngắn; chỉ dùng $...$.",
+        "- Chỉ trả về đoạn văn đã sửa.",
+        "",
+        f"Trường đang sửa: {field}",
+        f"Môn: {mon}",
+        f"Lớp: {lop}",
+        f"Chương: {chuong}",
+        f"Bài học: {baihoc}",
+        f"Dạng: {dang}",
+        f"Mức độ: {mucdo}",
+        "",
+        "NỘI DUNG GỐC:",
+        text,
+    ])
+
+    model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
+    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
+
+    last_error = ""
+
+    def postprocess(s: str) -> str:
+        s = clean(s)
+        s = re.sub(r"^```(?:latex|tex|text)?", "", s, flags=re.I).strip()
+        s = re.sub(r"```$", "", s).strip()
+        return normalize_latex_light(s)
+
+    def try_openai() -> Tuple[str, str]:
+        nonlocal last_error
+        for api_key in openai_keys:
+            txt, finish, err = _openai_chat_call(
+                api_key,
+                model_openai,
+                sys_prompt,
+                user_prompt,
+                900,
+                0.05,
+                timeout=35,
+            )
+            if txt:
+                return postprocess(txt), "OPENAI"
+            last_error = err
+        return "", "OPENAI"
+
+    def try_gemini() -> Tuple[str, str]:
+        nonlocal last_error
+        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
+        for api_key in gemini_keys:
+            for gmodel in models:
+                txt, finish, err = _gemini_hint_call(
+                    api_key,
+                    gmodel,
+                    sys_prompt,
+                    user_prompt,
+                    900,
+                    0.05,
+                    timeout=35,
+                )
+                if txt:
+                    return postprocess(txt), "GEMINI"
+                last_error = err
+        return "", "GEMINI"
+
+    if provider == "OPENAI":
+        out, used = try_openai()
+        if not out and gemini_keys:
+            out, used = try_gemini()
+    elif provider == "GEMINI":
+        out, used = try_gemini()
+        if not out and openai_keys:
+            out, used = try_openai()
+    else:
+        out, used = try_openai() if openai_keys else ("", "OPENAI")
+        if not out and gemini_keys:
+            out, used = try_gemini()
+
+    if not out:
+        raise RuntimeError("AI chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
+
+    return out, used
 
 def gemini_generate_infographic_image(
     prompt: str,
@@ -7070,9 +7181,64 @@ function escFormVal(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field)}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='Mon'||f=='Lop'||f=='Chuong'||f=='BaiHoc'||f=='DapAn'||f=='SaiSo'||f=='HinhAnh')?'56px':'78px');return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label><textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='Mon'||f=='Lop'||f=='Chuong'||f=='BaiHoc'||f=='DapAn'||f=='SaiSo'||f=='HinhAnh')?'56px':'78px');let aiTools=''; if(['CauHoi','A','B','C','D','LoiGiai'].includes(f)){   aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0">     <button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button>     <span style="font-size:11px;color:#64748b">Chỉ sửa ô này, chưa lưu Sheet</span>   </div>`; } return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang'].forEach(syncAdminChipGroup)}
-function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}return data}
+function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}return data}async function aiRewriteLatexField(field){
+  if(!USER.is_admin){
+    alert('Chỉ ADMIN được dùng AI viết lại nội dung đề.');
+    return;
+  }
+
+  let el=document.getElementById('edit_'+field);
+  if(!el){
+    alert('Không tìm thấy ô cần sửa.');
+    return;
+  }
+
+  let oldText=String(el.value||'');
+  if(!oldText.trim()){
+    alert('Ô này đang trống.');
+    return;
+  }
+
+  let btn=document.getElementById('btn_ai_rewrite_'+field);
+  let oldBtn=btn?btn.textContent:'';
+
+  if(!confirm('AI sẽ viết lại nội dung ô '+field+' cho đúng LaTeX.\n\nNội dung chỉ thay trong ô nhập, chưa lưu Google Sheet. Tiếp tục?')) return;
+
+  try{
+    if(btn){
+      btn.disabled=true;
+      btn.textContent='⏳ AI đang sửa...';
+    }
+
+    let payload={
+      field:field,
+      text:oldText,
+      context:readQuestionFormData()
+    };
+
+    let j=await api('/api/ai/rewrite-latex',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    if(j.text){
+      el.value=j.text;
+      alert('Đã viết lại bằng '+(j.provider||'AI')+'.\nThầy kiểm tra lại rồi bấm Lưu vào Google Sheet.');
+    }else{
+      alert('AI không trả về nội dung.');
+    }
+  }catch(e){
+    alert('AI sửa LaTeX lỗi: '+e.message);
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent=oldBtn||'🤖 AI viết lại LaTeX';
+    }
+  }
+}
 function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Câu mới được thêm vào cuối sheet Cau_Hoi, cùng mã đề/bài học với câu hiện tại (có thể sửa trước khi lưu).';else if(adminHintNeedsSave())note.textContent='Kiểm tra đủ Đáp án (cột P) và Lời giải (cột R). Câu Đ/S: phải có đủ 4 dòng A. B. C. D. Xong mới bấm Lưu — sau đó app mới so khớp Sheet với AI.';else note.textContent='Xóa liên tiếp được — app tự cập nhật số dòng Sheet. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
 function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MODAL_MODE='edit';renderQuestionForm(QUESTIONS[CUR]||{});syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
 function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
@@ -7849,7 +8015,32 @@ def api_question_lookup():
             "message": "Đang nạp Sheet, thử lại sau vài giây.",
         })
     return jsonify(st.lookup_questions_by_id(qid))
+@app.route("/api/ai/rewrite-latex", methods=["POST"])
+def api_ai_rewrite_latex():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được dùng AI viết lại nội dung đề."}), 403
 
+    body = request.get_json(silent=True) or {}
+    field = clean(body.get("field", ""))
+    text = clean(body.get("text", ""))
+    context = body.get("context") or {}
+
+    if field not in ["CauHoi", "A", "B", "C", "D", "LoiGiai"]:
+        return jsonify({"error": "Chỉ hỗ trợ sửa Câu hỏi, A-D hoặc Lời giải."}), 400
+
+    try:
+        new_text, provider = ai_rewrite_latex_text(field, text, context)
+        return jsonify({
+            "ok": True,
+            "field": field,
+            "text": new_text,
+            "provider": provider,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route("/api/question/update", methods=["POST"])
 def api_question_update():
