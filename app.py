@@ -6,11 +6,14 @@ Chạy Render:
 Yêu cầu Environment Variables trên Render:
     GOOGLE_SHEET_ID
     GOOGLE_CREDENTIALS_JSON
-    GEMINI_API_KEY=AIza...   (hoặc nhiều key cách nhau dấu phẩy / xuống dòng)
-    GEMINI_API_KEY_2=AIza...   (tuỳ chọn — tự chuyển khi key 1 hết quota)
-    GEMINI_API_KEYS=AIza...,AIza...   (hoặc nhiều key cách nhau dấu phẩy)
+    GEMINI_API_KEY=AIza... hoặc AQ....   (hoặc nhiều key cách nhau dấu phẩy / xuống dòng)
+    GEMINI_API_KEY_2=...   (tuỳ chọn — tự chuyển khi key 1 hết quota)
+    GEMINI_API_KEYS=...   (hoặc nhiều key cách nhau dấu phẩy)
     GEMINI_HINT_MODEL=gemini-2.5-flash-lite
     AI_PROVIDER=GEMINI
+    AI_ADMIN_PROVIDER=OPENAI   (tuỳ chọn — ADMIN dùng ChatGPT, VIP vẫn GEMINI)
+    OPENAI_API_KEY=sk-...
+    OPENAI_ADMIN_MODEL=gpt-4o   (tuỳ chọn — model ADMIN ChatGPT)
 """
 from __future__ import annotations
 
@@ -37,10 +40,11 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V184_ADMIN_QUOTA_COMPACT_2026_06_06"
+APP_VERSION = "V186_ADMIN_OPENAI_PROVIDER_2026_06_08"
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
+DEFAULT_OPENAI_ADMIN_MODEL = "gpt-4o"
 DEFAULT_AI_PROVIDER = "GEMINI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
@@ -2382,7 +2386,7 @@ class SheetStore:
                         key_index=key_index,
                         provider_used=provider_used,
                         ai_configured=True,
-                        provider_mode=cfg.get("provider", "AUTO"),
+                        provider_mode=cfg.get("admin_provider", cfg.get("provider", "AUTO")),
                         ai_error="",
                     )
                 err_hint = f"AI lỗi: {ai_error or 'không phản hồi'}.{ _admin_sheet_footer()}"
@@ -2400,11 +2404,11 @@ class SheetStore:
                     key_index=0,
                     provider_used="FALLBACK",
                     ai_configured=True,
-                    provider_mode=cfg.get("provider", "AUTO"),
+                    provider_mode=cfg.get("admin_provider", cfg.get("provider", "AUTO")),
                     ai_error=ai_error,
                 )
             no_key = (
-                "Chưa có GEMINI_API_KEY trên Render — chưa gọi được AI kiểm tra.\n\n"
+                "Chưa có key AI trên Render (GEMINI_API_KEY hoặc OPENAI_API_KEY) — chưa gọi được AI kiểm tra.\n\n"
                 f"Sheet cột P (đáp án): {sheet_dapan or '(trống)'}\n"
                 f"Sheet cột R (lời giải): {sheet_loigiai or '(trống)'}"
             )
@@ -3242,8 +3246,24 @@ def clean_ai_key_2026(k: Any) -> str:
     return s
 
 
+def _is_gemini_api_key(key: str) -> bool:
+    k = clean_ai_key_2026(key)
+    return bool(k and (k.startswith("AIza") or k.startswith("AQ.")))
+
+
+def _gemini_request_target(api_key: str, gmodel: str, action: str = "generateContent") -> Tuple[str, Dict[str, str]]:
+    """AIza dùng ?key=; key mới AQ. dùng header x-goog-api-key."""
+    k = clean_ai_key_2026(api_key)
+    base = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:{action}"
+    headers = {"Content-Type": "application/json"}
+    if k.startswith("AQ."):
+        headers["x-goog-api-key"] = k
+        return base, headers
+    return f"{base}?key={urllib.parse.quote(k)}", headers
+
+
 def parse_api_keys_2026(raw: Any) -> Tuple[List[str], List[str]]:
-    """Tách mảng API_KEYS kiểu GAS: AIza... → Gemini, sk-... → OpenAI."""
+    """Tách mảng API_KEYS kiểu GAS: AIza.../AQ.... → Gemini, sk-... → OpenAI."""
     if isinstance(raw, list):
         vals = raw
     else:
@@ -3254,7 +3274,7 @@ def parse_api_keys_2026(raw: Any) -> Tuple[List[str], List[str]]:
         k = clean_ai_key_2026(x)
         if not k:
             continue
-        if k.startswith("AIza"):
+        if _is_gemini_api_key(k):
             gemini.append(k)
         elif k.startswith("sk-"):
             openai.append(k)
@@ -3278,15 +3298,10 @@ def _validate_key_format(prefix: str, key: str) -> Optional[str]:
     if not k:
         return None
     if prefix == "GEMINI":
-        if k.startswith("AQ."):
+        if not _is_gemini_api_key(k):
             return (
-                "Key AQ... không phải API key Gemini. "
-                "Vào https://aistudio.google.com/apikey → Create API key → copy key dạng AIzaSy..."
-            )
-        if not k.startswith("AIza"):
-            return (
-                "Gemini API key phải bắt đầu bằng AIza (Google AI Studio). "
-                "Không dùng key Google Cloud / OAuth / key AQ..."
+                "Gemini API key phải từ Google AI Studio (AIzaSy... hoặc AQ....). "
+                "Vào https://aistudio.google.com/apikey → Create API key."
             )
     elif prefix == "OPENAI":
         if not k.startswith("sk-"):
@@ -3351,10 +3366,22 @@ def can_save_own_ai_key() -> bool:
     return can_use_ai_hint()
 
 
+def _normalize_ai_provider(raw: Any, default: str = DEFAULT_AI_PROVIDER) -> str:
+    p = clean(raw).upper() or default
+    return p if p in ["AUTO", "OPENAI", "GEMINI"] else default
+
+
+def resolve_ai_provider(cfg: Optional[Dict[str, Any]] = None, *, admin_review: bool = False) -> str:
+    """VIP/học viên dùng AI_PROVIDER; ADMIN có thể tách bằng AI_ADMIN_PROVIDER."""
+    cfg = cfg or ai_runtime_config()
+    env_admin = clean(os.environ.get("AI_ADMIN_PROVIDER", "")).upper()
+    if admin_review and env_admin in ["AUTO", "OPENAI", "GEMINI"]:
+        return env_admin
+    return _normalize_ai_provider(cfg.get("provider"), DEFAULT_AI_PROVIDER)
+
+
 def ai_runtime_config() -> Dict[str, Any]:
-    env_provider = clean(os.environ.get("AI_PROVIDER", DEFAULT_AI_PROVIDER)).upper() or DEFAULT_AI_PROVIDER
-    if env_provider not in ["AUTO", "OPENAI", "GEMINI"]:
-        env_provider = DEFAULT_AI_PROVIDER
+    env_provider = _normalize_ai_provider(os.environ.get("AI_PROVIDER", DEFAULT_AI_PROVIDER))
     ov = get_user_ai_overrides() if current_mahs() not in ("", "_guest") else {}
     user_provider = clean(ov.get("provider", "")).upper()
     provider = user_provider if user_provider in ["AUTO", "OPENAI", "GEMINI"] else env_provider
@@ -3376,6 +3403,14 @@ def ai_runtime_config() -> Dict[str, Any]:
         or clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip()
         or DEFAULT_OPENAI_HINT_MODEL
     )
+    openai_admin_model = (
+        clean(os.environ.get("OPENAI_ADMIN_MODEL", DEFAULT_OPENAI_ADMIN_MODEL)).strip()
+        or DEFAULT_OPENAI_ADMIN_MODEL
+    )
+    admin_provider = resolve_ai_provider(
+        {"provider": provider},
+        admin_review=True,
+    )
 
     def _mask_list(vals: List[str]) -> List[str]:
         out: List[str] = []
@@ -3388,6 +3423,7 @@ def ai_runtime_config() -> Dict[str, Any]:
 
     return {
         "provider": provider,
+        "admin_provider": admin_provider,
         "openai_keys": len(openai_keys),
         "gemini_keys": len(gemini_keys),
         "user_gemini_keys": len(user_g),
@@ -3397,6 +3433,7 @@ def ai_runtime_config() -> Dict[str, Any]:
         "gemini_keys_masked": _mask_list(gemini_keys),
         "gemini_model": gemini_model,
         "openai_model": openai_model,
+        "openai_admin_model": openai_admin_model,
         "using_user_keys": bool(user_g or user_o),
         "has_server_keys": bool(server_g or server_o),
         "can_save_own_key": can_save_own_ai_key(),
@@ -3515,7 +3552,7 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
                     raise ValueError(err)
             ov["openai_keys"] = o_keys
         if not g_keys and not o_keys:
-            raise ValueError("Không nhận diện được key. Dán Gemini (AIza...) hoặc OpenAI (sk-...) mỗi dòng một key.")
+            raise ValueError("Không nhận diện được key. Dán Gemini (AIza.../AQ....) hoặc OpenAI (sk-...) mỗi dòng một key.")
 
     if "gemini_keys" in payload and str(payload.get("gemini_keys") or "").strip():
         parsed, _ = parse_api_keys_2026(payload.get("gemini_keys"))
@@ -5043,14 +5080,11 @@ def _gemini_hint_call(
         "contents": [{"parts": [{"text": sys_prompt}, {"text": user_prompt}]}],
         "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens},
     }
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent"
-        f"?key={urllib.parse.quote(api_key)}"
-    )
+    url, headers = _gemini_request_target(api_key, gmodel)
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -5116,7 +5150,7 @@ def ai_hint_from_provider(
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
-    provider = cfg["provider"]
+    provider = resolve_ai_provider(cfg, admin_review=admin_review)
     last_error = ""
     if admin_review:
         max_tokens = AI_HINT_ADMIN_MAX_OUTPUT_TOKENS
@@ -5128,7 +5162,9 @@ def ai_hint_from_provider(
         max_tokens = AI_HINT_MAX_OUTPUT_TOKENS
         max_chars = AI_HINT_MAX_CHARS
 
-    model_openai = clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
+    model_openai = cfg.get("openai_model") or DEFAULT_OPENAI_HINT_MODEL
+    if admin_review:
+        model_openai = cfg.get("openai_admin_model") or model_openai
     model_gemini = clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
     if admin_review:
         admin_model = (
@@ -5274,10 +5310,20 @@ def ai_hint_from_provider(
     txt, idx, used_provider, err = "", 0, provider, ""
     if provider == "OPENAI":
         txt, idx, used_provider, err = try_openai()
+        if admin_review and not txt and gemini_keys:
+            print("[AI_HINT][ADMIN_REVIEW] OPENAI lỗi — thử GEMINI dự phòng")
+            txt, idx, used_provider, err = try_gemini()
     elif provider == "GEMINI":
         txt, idx, used_provider, err = try_gemini()
+        if admin_review and not txt and openai_keys:
+            print("[AI_HINT][ADMIN_REVIEW] GEMINI lỗi — thử OPENAI dự phòng")
+            txt, idx, used_provider, err = try_openai()
     else:
-        if gemini_keys:
+        if admin_review and openai_keys:
+            txt, idx, used_provider, err = try_openai()
+            if not txt and gemini_keys:
+                txt, idx, used_provider, err = try_gemini()
+        elif gemini_keys:
             txt, idx, used_provider, err = try_gemini()
             if not txt:
                 txt, idx, used_provider, err = try_openai()
@@ -6303,6 +6349,7 @@ def _api_ai_config_handler():
         return jsonify({
             "ok": True,
             "provider": cfg.get("provider", "AUTO"),
+            "admin_provider": cfg.get("admin_provider", cfg.get("provider", "AUTO")),
             "openai_keys_count": cfg.get("openai_keys", 0),
             "gemini_keys_count": cfg.get("gemini_keys", 0),
             "has_keys": cfg.get("has_keys", False),
@@ -6312,6 +6359,7 @@ def _api_ai_config_handler():
             "gemini_keys_masked": cfg.get("gemini_keys_masked", []),
             "gemini_model": cfg.get("gemini_model", DEFAULT_GEMINI_HINT_MODEL),
             "openai_model": cfg.get("openai_model", DEFAULT_OPENAI_HINT_MODEL),
+            "openai_admin_model": cfg.get("openai_admin_model", DEFAULT_OPENAI_ADMIN_MODEL),
             "using_user_keys": cfg.get("using_user_keys", False),
             "has_server_keys": cfg.get("has_server_keys", False),
             "user_gemini_keys": cfg.get("user_gemini_keys", 0),
@@ -6471,7 +6519,7 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
         return False, "Chưa có key để test."
 
     if p == "AUTO":
-        p = "GEMINI" if k.startswith("AIza") else "OPENAI"
+        p = "GEMINI" if _is_gemini_api_key(k) else "OPENAI"
 
     if p == "GEMINI":
         gmodel = clean(model) or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL).strip() or DEFAULT_GEMINI_HINT_MODEL
@@ -6479,8 +6527,8 @@ def test_ai_key(provider: str, api_key: str, model: str = "") -> Tuple[bool, str
         body = {"contents": [{"parts": [{"text": "Trả lời đúng 1 từ: OK"}]}], "generationConfig": {"temperature": 0}}
         last_err = ""
         for gmodel in models_try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={urllib.parse.quote(k)}"
-            req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+            url, headers = _gemini_request_target(k, gmodel)
+            req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(req, timeout=18) as resp:
                     data = json.loads(resp.read().decode("utf-8", errors="ignore"))
