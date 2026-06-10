@@ -6216,17 +6216,19 @@ def ai_hint_from_provider(
         if m and m not in seen_models:
             seen_models.add(m)
             gemini_models.append(m)
-    if img_b64:
+     if img_b64:
         gv = (
             clean(os.environ.get("GEMINI_VISION_MODEL", DEFAULT_GEMINI_VISION_MODEL)).strip()
             or DEFAULT_GEMINI_VISION_MODEL
         )
         gemini_models = [gv] + [m for m in gemini_models if m != gv]
+
     oa_vision_model = (
         clean(os.environ.get("OPENAI_VISION_MODEL", DEFAULT_OPENAI_VISION_MODEL)).strip()
         or DEFAULT_OPENAI_VISION_MODEL
-        )
-     if admin_review:
+    )
+
+    if admin_review:
         review_opts = resolve_admin_review_opts(admin_review_mode)
         fast_admin = (review_opts or {}).get("mode") == "fast"
 
