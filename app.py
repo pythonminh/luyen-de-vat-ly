@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V208_LATEX_SPLIT_PREVIEW_FAST_APPEND_2026_06_10"
+APP_VERSION = "V209_ADMIN_GPT_LEVEL_DETECT_2026_06_10"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -7252,7 +7252,7 @@ APP_HTML = r"""
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div id="idLookupPanel" class="panel"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px">Chỉ dùng key <b>AIzaSy...</b> từ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (Create API key). <b>Không</b> dùng key <b>AQ...</b> hay key Google Cloud khác. Key của bạn được ưu tiên; không có thì dùng key server Render.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIzaSy...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><span class="muted" style="font-size:12px">AI chỉ điền vào form, ADMIN kiểm tra rồi mới lưu Sheet.</span></div><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><span class="muted" style="font-size:12px">AI chỉ điền vào form, ADMIN kiểm tra rồi mới lưu Sheet.</span></div><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="AI" selected>🤖 AI tự nhận diện từng câu</option><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={};
 const THEME_KEY='LDVL_THEME';
 function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAttribute('data-theme',dark?'dark':'light');try{localStorage.setItem(THEME_KEY,dark?'dark':'light')}catch(e){}let b=document.getElementById('btnTheme');if(b){b.textContent=dark?'☀️':'🌙';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}let bf=document.getElementById('btnFsTheme');if(bf)bf.textContent=dark?'☀️ Sáng':'🌙 Tối';if(window.MathJax&&MathJax.config&&MathJax.config.svg){MathJax.config.svg.color=dark?'#e2e8f0':'#0f172a';if(MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}}
@@ -7872,7 +7872,7 @@ function openLatexImportModal(){
   set('latexDefBaiHoc',q.BaiHoc||q.De||'');
   set('latexDefBoDe',q.BoDe||'');
   set('latexDefDe',q.De||'');
-  let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value=q.MucDo||'';
+  let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='AI';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
   setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
   m.classList.remove('hide');
@@ -7887,23 +7887,27 @@ function readLatexImportFile(inp){
   rd.onerror=()=>setLatexImportStatus('Không đọc được file.',true);
   rd.readAsText(f,'utf-8');
 }
-async function latexImportCall(commit){
+async function latexImportCall(commit,levelOverrides){
   let ta=document.getElementById('latexImportText');
   let tex=ta?String(ta.value||''):'';
   if(!tex.trim()){alert('Chưa có nội dung LaTeX.');return null}
   let zipInp=document.getElementById('latexAssetZipInput');
   let zipFile=zipInp&&zipInp.files&&zipInp.files[0]?zipInp.files[0]:null;
-  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX...');
+  let aiLevel=(val('latexDefMucDo')==='AI');
+  levelOverrides=Array.isArray(levelOverrides)?levelOverrides:[];
+  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
   let opts;
   if(zipFile){
     let fd=new FormData();
     fd.append('tex',tex);
     fd.append('defaults',JSON.stringify(currentLatexDefaults()));
     fd.append('commit',commit?'true':'false');
+    fd.append('ai_level',aiLevel?'true':'false');
+    if(levelOverrides.length)fd.append('level_overrides',JSON.stringify(levelOverrides));
     fd.append('assets_zip',zipFile);
     opts={method:'POST',body:fd};
   }else{
-    opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:currentLatexDefaults(),commit:!!commit})};
+    opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:currentLatexDefaults(),commit:!!commit,ai_level:aiLevel,level_overrides:levelOverrides})};
   }
   let j=await api('/api/latex/import',opts);
   return j;
@@ -7914,6 +7918,8 @@ function latexImportSummary(j){
   lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
   lines.push('Đọc được: '+(j.parsed||0)+' câu');
   lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0));
+  if(j.ai_level)lines.push('GPT ADMIN mức độ: '+(j.ai_level_done?'đã nhận diện':'chưa nhận diện')+(j.ai_model?' · '+j.ai_model:''));
+  if(j.ai_level_error)lines.push('Lỗi AI mức độ: '+j.ai_level_error);
   if(j.created!=null)lines.push('Đã chèn mới: '+j.created+' câu'+(j.start_row?' · dòng '+j.start_row+' → '+j.end_row:''));
   if(j.skipped&&j.skipped.length)lines.push('Bỏ qua: '+j.skipped.length+' câu ('+j.skipped.slice(0,5).map(x=>x.reason||x.id||x.index).join('; ')+')');
   if(j.media){lines.push('Media: includegraphics='+((j.media&&j.media.includegraphics)||0)+' · TikZ='+((j.media&&j.media.tikz)||0)+' · đã xử lý='+((j.media&&j.media.resolved)||0));}
@@ -7921,23 +7927,60 @@ function latexImportSummary(j){
   return lines.join('\n');
 }
 function latexImportDangShort(d){d=String(d||'');if(d==='Trắc nghiệm')return 'TN';if(d==='Đúng sai')return 'Đ/S';if(d==='Trả lời ngắn')return 'TLN';if(d==='Tự luận')return 'TL';return d||'—'}
+function latexLevelOptions(selected){
+  selected=String(selected||'').toUpperCase();
+  return ['NB','TH','VD','VDC'].map(x=>`<option value="${x}" ${selected===x?'selected':''}>${x}</option>`).join('');
+}
+function collectLatexLevelOverrides(){
+  let arr=[];
+  document.querySelectorAll('#latexImportPreview select[data-level-index]').forEach(sel=>{
+    let idx=parseInt(sel.getAttribute('data-level-index')||'0');
+    let lv=String(sel.value||'').toUpperCase();
+    if(idx&&['NB','TH','VD','VDC'].includes(lv))arr.push({index:idx,MucDo:lv});
+  });
+  return arr;
+}
+function applyAllLatexAiLevels(){
+  let n=0;
+  document.querySelectorAll('#latexImportPreview select[data-ai-level]').forEach(sel=>{
+    let lv=String(sel.getAttribute('data-ai-level')||'').toUpperCase();
+    if(['NB','TH','VD','VDC'].includes(lv)){sel.value=lv;n++;}
+  });
+  setLatexImportStatus((document.getElementById('latexImportStatus')?.textContent||'')+'\nĐã áp dụng '+n+' mức AI gợi ý vào ô chọn.');
+}
+function setAllLatexLevelsFromDefault(){
+  let lv=String(val('latexDefMucDo')||'').toUpperCase();
+  if(!['NB','TH','VD','VDC'].includes(lv)){alert('Ô Mức độ đang là AI/để trống, không có mức chung để áp dụng.');return;}
+  document.querySelectorAll('#latexImportPreview select[data-level-index]').forEach(sel=>{sel.value=lv});
+  setLatexImportStatus((document.getElementById('latexImportStatus')?.textContent||'')+'\nĐã gán mức '+lv+' cho tất cả câu trong preview.');
+}
 function latexImportQuestionCard(q,i){
   q=q||{};
+  let idx=q.index||i+1;
   let opts='';
   for(let L of ['A','B','C','D']){
     if(String(q[L]||'').trim()) opts+=`<div style="margin:4px 0"><b>${L}.</b> ${escHtmlKeepMath(q[L])}</div>`;
   }
+  let aiLv=String(q._AiMucDo||q.AiMucDo||'').toUpperCase();
+  let aiConf=String(q._AiConfidence||q.AiConfidence||'').trim();
+  let aiReason=String(q._AiReason||q.AiReason||'').trim();
+  let chosen=String(q.MucDo||aiLv||'TH').toUpperCase();
+  if(!['NB','TH','VD','VDC'].includes(chosen)) chosen=aiLv||'TH';
+  let aiBox=aiLv?`<div style="margin-top:6px;padding:7px 9px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:12px"><b>🤖 GPT ADMIN gợi ý:</b> ${esc(aiLv)}${aiConf?' · tin cậy '+esc(aiConf):''}${aiReason?' · '+esc(aiReason):''}</div>`:'';
+  let levelSelect=`<label style="display:flex;align-items:center;gap:6px;font-size:12px"><b>Mức chèn Sheet:</b><select data-level-index="${idx}" data-ai-level="${esc(aiLv)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">${latexLevelOptions(chosen)}</select></label>`;
   let img=q.HinhAnh?`<div class="muted" style="margin-top:6px;font-size:12px">🖼 Hình: ${esc(q.HinhAnh)}</div>`:'';
   let lg=q.LoiGiai?`<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Xem lời giải</summary><div style="margin-top:5px;line-height:1.45">${escHtmlKeepMath(q.LoiGiai)}</div></details>`:'';
   let warn=q.warning?`<div style="margin-top:6px;color:#991b1b;font-size:12px">⚠ ${esc(q.warning)}</div>`:'';
-  return `<div class="latexQCard" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(248,250,252,.75);box-shadow:0 1px 2px rgba(15,23,42,.05)">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-      <b style="color:#0f172a">Câu ${i+1}</b>
+  return `<div class="latexQCard" style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(248,250,252,.88);box-shadow:0 1px 3px rgba(15,23,42,.08)">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <b style="color:#0f172a">Câu ${idx}</b>
       <span class="tag">${esc(latexImportDangShort(q.Dang))}</span>
-      <span class="mucdoBadge ${mucdoBadgeClass(q.MucDo)}">${esc(q.MucDo||'—')}</span>
+      <span class="mucdoBadge ${mucdoBadgeClass(chosen)}">${esc(chosen||'—')}</span>
+      ${levelSelect}
       <span class="muted" style="font-size:11px">ID: ${esc(q.ID||'AUTO')}</span>
     </div>
-    <div style="white-space:normal;line-height:1.5"><b>Đề:</b> ${escHtmlKeepMath(q.CauHoi||'')}</div>
+    ${aiBox}
+    <div style="white-space:normal;line-height:1.5;margin-top:8px"><b>Đề:</b> ${escHtmlKeepMath(q.CauHoi||'')}</div>
     ${opts?`<div style="margin-top:7px;padding-left:4px">${opts}</div>`:''}
     <div style="margin-top:7px"><b>Đáp án:</b> <span style="font-weight:800;color:#166534">${esc(q.DapAn||'—')}</span>${q.SaiSo?` <span class="muted"> · Sai số: ${esc(q.SaiSo)}</span>`:''}</div>
     ${img}${lg}${warn}
@@ -7950,8 +7993,8 @@ function renderLatexImportPreview(j,commitDone=false){
   if(!qs.length){box.classList.add('hide');box.innerHTML='';return;}
   box.classList.remove('hide');
   let title=commitDone?'✅ Câu vừa chèn — xem nhanh ngay trên app':'👁️ Đọc thử — đã tách từng câu để kiểm tra';
-  let buttons=commitDone?`<button type="button" class="btn2" onclick="jumpToLastInsertedLatexQuestions()">👁️ Xem câu vừa chèn</button>`:'';
-  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>${title}</b><span class="muted">${qs.length} câu</span>${buttons}</div>`+qs.map((q,i)=>latexImportQuestionCard(q,i)).join('');
+  let buttons=commitDone?`<button type="button" class="btn2" onclick="jumpToLastInsertedLatexQuestions()">👁️ Xem câu vừa chèn</button>`:`<button type="button" class="btnGreen" onclick="applyAllLatexAiLevels()">🤖 Áp dụng tất cả AI gợi ý</button><button type="button" class="btn2" onclick="setAllLatexLevelsFromDefault()">↩️ Gán mức chung đang chọn</button>`;
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>${title}</b><span class="muted">${qs.length} câu</span><div style="display:flex;gap:6px;flex-wrap:wrap">${buttons}</div></div>`+qs.map((q,i)=>latexImportQuestionCard(q,i)).join('');
   try{typesetQuizMath()}catch(e){}
 }
 function appendLatexInsertedQuestions(j){
@@ -7975,21 +8018,29 @@ function jumpToLastInsertedLatexQuestions(){
 async function previewLatexImport(){
   try{
     let j=await latexImportCall(false);
-    if(j){setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
+    if(j){window.LAST_LATEX_PREVIEW_DATA=j;setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
   }catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
 }
 async function commitLatexImport(){
   try{
-    let pre=await latexImportCall(false);
-    if(!pre)return;
-    renderLatexImportPreview(pre,false);
-    let msg=latexImportSummary(pre)+'\n\nChèn '+(pre.parsed||0)+' câu này vào Google Sheet?';
+    let pre=window.LAST_LATEX_PREVIEW_DATA;
+    if(!pre||!((pre.questions||pre.sample||[]).length)){
+      pre=await latexImportCall(false);
+      if(!pre)return;
+      window.LAST_LATEX_PREVIEW_DATA=pre;
+      setLatexImportStatus(latexImportSummary(pre)+'\n\nĐã đọc thử. Thầy kiểm tra từng câu/mức độ rồi bấm Chèn lần nữa.');
+      renderLatexImportPreview(pre,false);
+      return;
+    }
+    let overrides=collectLatexLevelOverrides();
+    let msg=latexImportSummary(pre)+'\n\nChèn '+(overrides.length||pre.parsed||0)+' câu này vào Google Sheet với mức độ đang chọn trong preview?';
     if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
-    let j=await latexImportCall(true);
+    let j=await latexImportCall(true,overrides);
     setLatexImportStatus(latexImportSummary(j));
     if(j.created>0){
       appendLatexInsertedQuestions(j);
       renderLatexImportPreview(j,true);
+      window.LAST_LATEX_PREVIEW_DATA=null;
       alert('Đã chèn '+j.created+' câu vào Google Sheet. App đã hiện nhanh câu mới, không cần Đồng bộ Sheet.');
     }
   }catch(e){setLatexImportStatus('Lỗi chèn LaTeX: '+e.message,true)}
@@ -8471,6 +8522,190 @@ def short_plain_text(s: Any, n: int = 160) -> str:
     t = re.sub(r"\s+", " ", clean(s))
     return t if len(t) <= n else t[: max(0, n - 1)] + "…"
 
+
+
+
+# ============================================================
+# ADMIN GPT: NHẬN DIỆN MỨC ĐỘ NB/TH/VD/VDC KHI NHẬP LATEX
+# ============================================================
+
+def _norm_mucdo_4(value: Any) -> str:
+    raw = clean(value).upper()
+    if raw in ("NB", "TH", "VD", "VDC"):
+        return raw
+    k = key_norm(value)
+    if "van dung cao" in k or "vdc" in k:
+        return "VDC"
+    if "van dung" in k or re.search(r"\bvd\b", k):
+        return "VD"
+    if "thong hieu" in k or re.search(r"\bth\b", k):
+        return "TH"
+    if "nhan biet" in k or re.search(r"\bnb\b", k):
+        return "NB"
+    return ""
+
+
+def _latex_ai_level_requested(defaults: Dict[str, Any], explicit: Any = None) -> bool:
+    if isinstance(explicit, bool):
+        return explicit
+    if clean(explicit).lower() in ("1", "true", "yes", "on", "ai"):
+        return True
+    raw = clean((defaults or {}).get("MucDo", ""))
+    k = key_norm(raw).replace(" ", "")
+    return raw.upper() in ("AI", "AUTO", "GPT") or "tudong" in k or ("ai" in k and "nhan" in k)
+
+
+def _apply_latex_level_overrides(questions: List[Dict[str, Any]], overrides: Any) -> int:
+    if isinstance(overrides, str):
+        try:
+            overrides = json.loads(overrides or "[]")
+        except Exception:
+            overrides = []
+    if not isinstance(overrides, list):
+        return 0
+    mp: Dict[int, str] = {}
+    for it in overrides:
+        if not isinstance(it, dict):
+            continue
+        try:
+            idx = int(it.get("index") or it.get("idx") or 0)
+        except Exception:
+            idx = 0
+        lv = _norm_mucdo_4(it.get("MucDo") or it.get("mucdo") or it.get("level"))
+        if idx > 0 and lv:
+            mp[idx] = lv
+    n = 0
+    for i, q in enumerate(questions or [], start=1):
+        if i in mp:
+            q["MucDo"] = mp[i]
+            n += 1
+    return n
+
+
+def _latex_level_prompt_items(questions: List[Dict[str, Any]], start_index: int) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for off, q in enumerate(questions, start=0):
+        items.append({
+            "index": start_index + off,
+            "Mon": clean(q.get("Mon", "")),
+            "Lop": clean(q.get("Lop", "")),
+            "Chuong": clean(q.get("Chuong", "")),
+            "BaiHoc": clean(q.get("BaiHoc", "")),
+            "Dang": clean(q.get("Dang", "")),
+            "CauHoi": clean(q.get("CauHoi", ""))[:1800],
+            "A": clean(q.get("A", ""))[:500],
+            "B": clean(q.get("B", ""))[:500],
+            "C": clean(q.get("C", ""))[:500],
+            "D": clean(q.get("D", ""))[:500],
+            "DapAn": clean(q.get("DapAn", ""))[:300],
+            "LoiGiai": clean(q.get("LoiGiai", ""))[:1200],
+        })
+    return items
+
+
+def admin_gpt_classify_latex_levels(questions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Dùng GPT ADMIN sẵn có để gợi ý MucDo NB/TH/VD/VDC từng câu LaTeX."""
+    meta: Dict[str, Any] = {"ai_level": True, "ai_level_done": False, "ai_model": "", "ai_provider": "OPENAI", "ai_level_error": "", "warnings": []}
+    if not questions:
+        return meta
+
+    cfg = ai_runtime_config()
+    openai_keys = load_ai_keys("OPENAI")
+    model = clean(cfg.get("openai_admin_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
+    meta["ai_model"] = model
+    if not openai_keys:
+        meta["ai_level_error"] = "Chưa có OPENAI_API_KEY cho GPT ADMIN."
+        for q in questions:
+            q["_AiMucDo"] = ""
+            q["_AiConfidence"] = ""
+            q["_AiReason"] = meta["ai_level_error"]
+            if _norm_mucdo_4(q.get("MucDo")):
+                q["MucDo"] = _norm_mucdo_4(q.get("MucDo"))
+            else:
+                q["MucDo"] = ""
+        return meta
+
+    sys_prompt = (
+        "Bạn là giáo viên THPT Việt Nam, chuyên phân loại mức độ câu hỏi. "
+        "Chỉ trả JSON hợp lệ, không markdown, không giải thích ngoài JSON."
+    )
+    rules = """
+Phân loại đúng 4 mức:
+NB = Nhận biết: hỏi định nghĩa, khái niệm, đơn vị, công thức trực tiếp, chỉ nhớ là trả lời được.
+TH = Thông hiểu: hiểu bản chất, nhận xét/giải thích/suy luận 1 bước, chưa cần tính toán phức tạp.
+VD = Vận dụng: dùng công thức, thay số, đổi đơn vị, tính toán 2-3 bước hoặc kết hợp vài dữ kiện.
+VDC = Vận dụng cao: nhiều bước, bẫy, đồ thị, cực trị, biến đổi phức tạp, phối hợp nhiều kiến thức.
+
+Yêu cầu JSON:
+{"items":[{"index":1,"MucDo":"NB","confidence":0.90,"reason":"Hỏi khái niệm trực tiếp."}]}
+MucDo chỉ được là NB, TH, VD, VDC. reason tối đa 18 từ.
+""".strip()
+
+    total_ok = 0
+    chunk_size = 25
+    for start in range(0, len(questions), chunk_size):
+        chunk = questions[start : start + chunk_size]
+        items = _latex_level_prompt_items(chunk, start + 1)
+        user_prompt = rules + "\n\nDANH SÁCH CÂU:\n" + json.dumps(items, ensure_ascii=False)
+        last_err = ""
+        obj: Dict[str, Any] = {}
+        for key_i, api_key in enumerate(openai_keys, start=1):
+            txt, finish, err = _openai_chat_call(api_key, model, sys_prompt, user_prompt, 2200, 0.02, timeout=55)
+            if txt:
+                obj = _extract_ai_json_object(txt)
+                if isinstance(obj.get("items"), list):
+                    break
+                last_err = "GPT trả JSON không đúng schema."
+            else:
+                last_err = err
+        ai_items = obj.get("items") if isinstance(obj, dict) else None
+        if not isinstance(ai_items, list):
+            msg = f"GPT ADMIN chưa phân mức được câu {start+1}-{start+len(chunk)}: {last_err or 'không có phản hồi'}"
+            meta["warnings"].append(msg)
+            for q in chunk:
+                q["_AiMucDo"] = ""
+                q["_AiConfidence"] = ""
+                q["_AiReason"] = msg
+                q["MucDo"] = _norm_mucdo_4(q.get("MucDo")) or ""
+            continue
+
+        by_index: Dict[int, Dict[str, Any]] = {}
+        for it in ai_items:
+            if not isinstance(it, dict):
+                continue
+            try:
+                idx = int(it.get("index") or 0)
+            except Exception:
+                idx = 0
+            lv = _norm_mucdo_4(it.get("MucDo") or it.get("level"))
+            if idx and lv:
+                by_index[idx] = it
+
+        for off, q in enumerate(chunk, start=0):
+            idx = start + off + 1
+            it = by_index.get(idx)
+            if not it:
+                q["_AiMucDo"] = ""
+                q["_AiConfidence"] = ""
+                q["_AiReason"] = "GPT chưa trả mức cho câu này."
+                q["MucDo"] = _norm_mucdo_4(q.get("MucDo")) or ""
+                continue
+            lv = _norm_mucdo_4(it.get("MucDo") or it.get("level"))
+            q["MucDo"] = lv
+            q["_AiMucDo"] = lv
+            conf = it.get("confidence", "")
+            try:
+                conf = f"{float(conf):.2f}"
+            except Exception:
+                conf = clean(conf)
+            q["_AiConfidence"] = clean(conf)
+            q["_AiReason"] = clean(it.get("reason") or it.get("ly_do") or "")[:180]
+            total_ok += 1
+
+    meta["ai_level_done"] = total_ok > 0
+    if total_ok < len(questions):
+        meta["ai_level_error"] = f"GPT phân được {total_ok}/{len(questions)} câu."
+    return meta
 
 
 # ============================================================
@@ -9304,6 +9539,8 @@ def api_latex_import():
         return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
 
     asset_zip = None
+    level_overrides: Any = []
+    ai_level_explicit: Any = None
     if request.content_type and "multipart/form-data" in request.content_type:
         tex = request.form.get("tex", "")
         try:
@@ -9311,12 +9548,19 @@ def api_latex_import():
         except Exception:
             defaults = {}
         commit = str(request.form.get("commit", "false")).lower() in ("1", "true", "yes", "on")
+        ai_level_explicit = request.form.get("ai_level", "")
+        try:
+            level_overrides = json.loads(request.form.get("level_overrides", "[]") or "[]")
+        except Exception:
+            level_overrides = []
         asset_zip = request.files.get("assets_zip")
     else:
         body = request.get_json(silent=True) or {}
         tex = body.get("tex", "")
         defaults = body.get("defaults") or {}
         commit = str(body.get("commit", "false")).lower() in ("1", "true", "yes", "on")
+        ai_level_explicit = body.get("ai_level")
+        level_overrides = body.get("level_overrides") or []
 
     if not clean(tex):
         return jsonify({"error": "Chưa có nội dung LaTeX."}), 400
@@ -9324,8 +9568,23 @@ def api_latex_import():
         return jsonify({"error": "File LaTeX quá lớn. Hãy chia nhỏ rồi nhập từng phần."}), 400
 
     try:
+        ai_level = _latex_ai_level_requested(defaults, ai_level_explicit)
+        defaults_for_parse = dict(defaults or {})
+        if ai_level:
+            # Không để giá trị "AI" bị ghi thẳng vào cột MucDo.
+            defaults_for_parse["MucDo"] = ""
         asset_ctx = _build_latex_asset_context(commit, assets_zip=asset_zip)
-        parsed = parse_latex_questions_2026(str(tex), defaults, asset_ctx=asset_ctx)
+        parsed = parse_latex_questions_2026(str(tex), defaults_for_parse, asset_ctx=asset_ctx)
+        ai_meta: Dict[str, Any] = {"ai_level": ai_level, "ai_level_done": False, "ai_model": "", "ai_provider": "OPENAI", "ai_level_error": "", "warnings": []}
+        override_count = _apply_latex_level_overrides(parsed.get("questions", []), level_overrides)
+        if ai_level and not override_count:
+            ai_meta = admin_gpt_classify_latex_levels(parsed.get("questions", []))
+        elif override_count:
+            ai_meta.update({"ai_level_done": False, "ai_level_error": "", "override_count": override_count})
+        if ai_meta.get("warnings"):
+            parsed.setdefault("warnings", [])
+            for w in ai_meta.get("warnings", [])[:10]:
+                parsed["warnings"].append({"index": 0, "warning": clean(w)})
         if not commit:
             # Trả đầy đủ danh sách câu đã tách để ADMIN xem ngay trên modal,
             # không phải nhìn một chuỗi text dính nhau.
@@ -9338,6 +9597,9 @@ def api_latex_import():
                     "MaDe": q.get("MaDe", ""),
                     "Dang": q.get("Dang", ""),
                     "MucDo": q.get("MucDo", ""),
+                    "_AiMucDo": q.get("_AiMucDo", ""),
+                    "_AiConfidence": q.get("_AiConfidence", ""),
+                    "_AiReason": q.get("_AiReason", ""),
                     "CauHoi": q.get("CauHoi", ""),
                     "A": q.get("A", ""),
                     "B": q.get("B", ""),
@@ -9357,6 +9619,12 @@ def api_latex_import():
                 "counts": parsed.get("counts", {}),
                 "warnings": parsed.get("warnings", [])[:30],
                 "media": parsed.get("media", {}),
+                "ai_level": ai_meta.get("ai_level", False),
+                "ai_level_done": ai_meta.get("ai_level_done", False),
+                "ai_provider": ai_meta.get("ai_provider", "OPENAI"),
+                "ai_model": ai_meta.get("ai_model", ""),
+                "ai_level_error": ai_meta.get("ai_level_error", ""),
+                "override_count": ai_meta.get("override_count", 0),
                 "questions": preview_questions,
                 "sample": preview_questions[:8],
             })
@@ -9371,6 +9639,12 @@ def api_latex_import():
             "counts": parsed.get("counts", {}),
             "warnings": parsed.get("warnings", [])[:30],
             "media": parsed.get("media", {}),
+            "ai_level": ai_meta.get("ai_level", False),
+            "ai_level_done": ai_meta.get("ai_level_done", False),
+            "ai_provider": ai_meta.get("ai_provider", "OPENAI"),
+            "ai_model": ai_meta.get("ai_model", ""),
+            "ai_level_error": ai_meta.get("ai_level_error", ""),
+            "override_count": ai_meta.get("override_count", 0),
         })
         return jsonify(res)
     except Exception as e:
