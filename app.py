@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V212_ADMIN_BULK_LEVEL_REVIEW_2026_06_10"
+APP_VERSION = "V214_ADMIN_SAVE_RETRY_ABCD_BULLET_2026_06_10"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -3097,11 +3097,17 @@ class SheetStore:
                     merged_q = dict(qq)
                     break
             merged_q.update({k: clean(v) for k, v in updates.items()})
-            if norm_dang(merged_q.get("Dang", "")) == "Đúng sai" and clean(updates.get("LoiGiai", "")):
+            if effective_dang(merged_q) == "Đúng sai" and clean(updates.get("LoiGiai", "")):
                 inferred_da = _ds_dapan_from_loigiai(updates.get("LoiGiai", ""), merged_q)
                 if inferred_da and (not clean(updates.get("DapAn", "")) or looks_like_dungsai_answer(updates.get("DapAn", ""))):
                     updates["DapAn"] = inferred_da
                     merged_q["DapAn"] = inferred_da
+                else:
+                    # Nếu cột P đã có S,S,D,Đ hoặc Đ/S/Đ/S thì chuẩn hóa thành A=Sai · B=...
+                    display_da = _normalize_ds_dapan_display_from_q(merged_q)
+                    if display_da:
+                        updates["DapAn"] = display_da
+                        merged_q["DapAn"] = display_da
                 fixed_lg = _normalize_ds_loigiai_abcd(updates.get("LoiGiai", ""), merged_q)
                 if fixed_lg:
                     updates["LoiGiai"] = fixed_lg
@@ -3675,6 +3681,53 @@ def _ds_verdict_label(v: str) -> str:
     return "Sai" if v == "S" else ("Đúng" if v == "Đ" else "")
 
 
+def _ds_verdict_from_q_dapan(q: Optional[Dict[str, Any]], letter: str) -> str:
+    """Lấy Đ/S của A/B/C/D từ cột P: S,S,Đ,Đ hoặc A=Sai · B=Đúng..."""
+    if not q:
+        return ""
+    vals = parse_tf_values(q.get("DapAn", ""))
+    idx = "ABCD".find(clean(letter).upper())
+    if 0 <= idx < len(vals):
+        return vals[idx]
+    return ""
+
+
+def _split_four_bullet_items(text: Any) -> Tuple[str, List[str]]:
+    """Tách 4 gạch đầu dòng • ... • ... thành preamble + 4 ý.
+
+    Dùng cho cột R khi AI trả lời dạng:
+    Dựa vào ... ta có: • ý 1. • ý 2. • ý 3. • ý 4.
+    """
+    raw = clean(text).replace("\r", "")
+    if not raw:
+        return "", []
+    # Ưu tiên ký hiệu bullet thật. Cho phép bullet nằm cùng một dòng với câu dẫn.
+    m = re.search(r"[•●▪▫◦]\s+", raw)
+    if m:
+        preamble = clean(raw[:m.start()])
+        parts = [clean(x) for x in re.split(r"\s*[•●▪▫◦]\s+", raw[m.start():]) if clean(x)]
+        return preamble, parts[:4]
+    # Fallback: mỗi dòng bắt đầu bằng dấu -, *, +.
+    markers = list(re.finditer(r"(?:^|\n)\s*[-*+]\s+", raw, re.M))
+    if len(markers) >= 4:
+        preamble = clean(raw[:markers[0].start()])
+        items: List[str] = []
+        for i, mm in enumerate(markers[:4]):
+            start = mm.end()
+            end = markers[i + 1].start() if i + 1 < len(markers) else len(raw)
+            items.append(clean(raw[start:end]))
+        return preamble, items
+    return "", []
+
+
+def _normalize_ds_dapan_display_from_q(q: Dict[str, Any]) -> str:
+    """Chuẩn hóa cột P Đ/S thành A=Sai · B=... nếu có thể."""
+    dapan = clean(q.get("DapAn", ""))
+    if not dapan or not looks_like_dungsai_answer(dapan):
+        return ""
+    return format_tf_answer_display(q, dapan)
+
+
 _DS_LG_TAG_RE = re.compile(
     r"(?:^|\n|[•\-*]\s*|\(\s*|\[\s*)"
     r"(?:\*\*)?(?:phương\s*án\s*)?([ABCD])\s*"
@@ -3689,7 +3742,8 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
 
     Nhận được nhiều kiểu:
     A. Sai — ... | A) Đúng: ... | (A) Sai ... | Phương án A: Đúng ...
-    Nếu không có A/B/C/D mà chỉ có các dòng "Đúng. ... / Sai. ..." thì gán lần lượt A,B,C,D.
+    Đúng. ... / Sai. ... theo thứ tự A-D
+    • ý 1. • ý 2. • ý 3. • ý 4. theo thứ tự A-D (verdict lấy từ cột P nếu có)
     """
     raw = clean(text).replace("\r", "")
     if not raw:
@@ -3714,7 +3768,7 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
                 out[L] = {"verdict": verdict, "body": body}
         return out
 
-    # Fallback: lời giải chỉ ghi theo thứ tự "Đúng. ... Sai. ..." không có A/B/C/D.
+    # Fallback 1: lời giải chỉ ghi theo thứ tự "Đúng. ... Sai. ..." không có A/B/C/D.
     markers = list(re.finditer(r"(?:^|\n|[•\-*]\s*)(Đúng|Sai)\s*[\.\-—:–]\s*", raw, re.I | re.M))
     if markers:
         for i, m in enumerate(markers[:4]):
@@ -3722,8 +3776,15 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
             start = m.end()
             end = markers[i + 1].start() if i + 1 < len(markers) else len(raw)
             out[L] = {"verdict": _ds_verdict_token(m.group(1)), "body": clean(raw[start:end]).strip(" ).\n")}
-    return out
+        return out
 
+    # Fallback 2: bốn bullet đầu dòng / bullet cùng dòng. Gán lần lượt A, B, C, D.
+    _preamble, bullets = _split_four_bullet_items(raw)
+    if len(bullets) >= 2:
+        for i, body in enumerate(bullets[:4]):
+            L = "ABCD"[i]
+            out[L] = {"verdict": "", "body": clean(body).strip(" ).\n")}
+    return out
 
 def _ds_dapan_from_loigiai(text: Any, q: Optional[Dict[str, Any]] = None) -> str:
     chunks = _parse_ds_loigiai_chunks(text)
@@ -3752,6 +3813,13 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
     else:
         mm = re.search(r"(?:^|\n|[•\-*]\s*)(Đúng|Sai)\s*[\.\-—:–]\s*", raw, re.I | re.M)
         first = mm.start() if mm else None
+        if first is None:
+            bm = re.search(r"[•●▪▫◦]\s+", raw)
+            if bm:
+                first = bm.start()
+            else:
+                dash = re.search(r"(?:^|\n)\s*[-*+]\s+", raw, re.M)
+                first = dash.start() if dash else None
     preamble = clean(raw[:first]) if first and first > 0 else ""
     letters = [L for L in "ABCD" if (not q or clean(q.get(L, "")))] or list("ABCD")
     lines = []
@@ -3759,7 +3827,8 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
         c = chunks.get(L)
         if not c:
             continue
-        verdict = _ds_verdict_label(c.get("verdict", ""))
+        verdict_code = c.get("verdict", "") or _ds_verdict_from_q_dapan(q, L)
+        verdict = _ds_verdict_label(verdict_code)
         body = clean(c.get("body", ""))
         if verdict and body:
             lines.append(f"{L}. {verdict} — {body}")
@@ -3770,7 +3839,6 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
     if not lines:
         return raw
     return (preamble + "\n\n" if preamble else "") + "\n".join(lines)
-
 
 def _format_tf_dapan(bits: List[str], original: Any = "") -> str:
     """Ghép lại đáp án Đ/S sau xáo trộn (giữ kiểu gọn hoặc có dấu phẩy)."""
@@ -10005,11 +10073,16 @@ def api_ai_rewrite_full_latex():
             providers.append(provider)
         merged = dict(context)
         merged.update(out)
-        if norm_dang(merged.get("Dang", "")) == "Đúng sai" and clean(merged.get("LoiGiai", "")):
+        if effective_dang(merged) == "Đúng sai" and clean(merged.get("LoiGiai", "")):
             da = _ds_dapan_from_loigiai(merged.get("LoiGiai", ""), merged)
             if da and not clean(merged.get("DapAn", "")):
                 out["DapAn"] = da
                 merged["DapAn"] = da
+            else:
+                display_da = _normalize_ds_dapan_display_from_q(merged)
+                if display_da:
+                    out["DapAn"] = display_da
+                    merged["DapAn"] = display_da
             out["LoiGiai"] = _normalize_ds_loigiai_abcd(merged.get("LoiGiai", ""), merged)
         return jsonify({
             "ok": True,
