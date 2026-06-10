@@ -6216,7 +6216,7 @@ def ai_hint_from_provider(
         if m and m not in seen_models:
             seen_models.add(m)
             gemini_models.append(m)
-     if img_b64:
+    if img_b64:
         gv = (
             clean(os.environ.get("GEMINI_VISION_MODEL", DEFAULT_GEMINI_VISION_MODEL)).strip()
             or DEFAULT_GEMINI_VISION_MODEL
