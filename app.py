@@ -107,8 +107,10 @@ GEMINI_HINT_MODEL_FALLBACKS = [
     "gemini-2.0-flash-lite",
 ]
 ADMIN_SYS_PROMPT_COMPACT = (
-    "Bạn là chuyên gia Vật lý/Toán kiểm tra câu. Trả lời tiếng Việt, NGẮN GỌN (tiết kiệm quota). "
-    "CHỈ 3 mục: 1. DIỄN GIẢI (công thức + tính ngắn), 2. GIẢI TỪNG Ý (A/B/C/D ngắn), 3. CHỐT ĐÁP ÁN. "
+    "Bạn là chuyên gia Vật lý/Toán kiểm tra câu. Trả lời tiếng Việt, NGẮN GỌN. "
+    "Phải nhận đúng dạng câu trước khi giải: Trắc nghiệm, Đúng/Sai, Trả lời ngắn hoặc Tự luận. "
+    "Chỉ dùng A/B/C/D khi câu thật sự là Trắc nghiệm hoặc Đúng/Sai. "
+    "Với Trả lời ngắn: không tạo A/B/C/D, chỉ giải ra kết quả số/biểu thức. "
     "LaTeX trong $...$ một dòng."
 )
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -4735,25 +4737,39 @@ def _admin_missing_sections(
 
 
 def _admin_continuation_user_prompt(
-    out: str, teacher_prompt: str, *, require_diengiai: bool = True
+    out: str,
+    teacher_prompt: str,
+    q: Optional[Dict[str, Any]] = None,
+    *,
+    require_diengiai: bool = True,
 ) -> str:
+    dang = effective_dang(q) if q else ""
+
+    if dang == "Trắc nghiệm":
+        sec2 = "2. GIẢI TỪNG PHƯƠNG ÁN A/B/C/D"
+    elif dang == "Đúng sai":
+        sec2 = "2. GIẢI TỪNG Ý A/B/C/D và kết luận Đúng/Sai"
+    elif dang == "Trả lời ngắn":
+        sec2 = "2. KIỂM TRA PHÉP TÍNH / ĐƠN VỊ / SAI SỐ — không có A/B/C/D"
+    else:
+        sec2 = "2. LỜI GIẢI CHI TIẾT"
+
     if require_diengiai:
-        sections = (
-            "1. DIỄN GIẢI (lý thuyết + công thức + tính chung), "
-            "2. GIẢI TỪNG Ý (CHI TIẾT từng A/B/C/D, có $...$) và 3. CHỐT ĐÁP ÁN"
-        )
+        sections = f"1. DIỄN GIẢI, {sec2}, 3. CHỐT ĐÁP ÁN"
         need = "đủ 3 mục"
     else:
-        sections = "1. GIẢI TỪNG Ý (A/B/C/D) và 2. CHỐT ĐÁP ÁN"
-        need = "đủ 2 mục"
+        sections = f"{sec2}, 3. CHỐT ĐÁP ÁN"
+        need = "đủ các mục còn thiếu"
+
     return (
-        "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục. Hãy TIẾP TỤC ngay từ chỗ dừng, "
-        f"hoàn thành {need}: {sections}. "
-        "KHÔNG tóm tắt đề. KHÔNG gợi ý ngắn kiểu VIP. KHÔNG dùng \\begin{enumerate}, \\item hay bullet • làm khung chính.\n\n"
+        "Phản hồi TRƯỚC bị cắt giữa chừng hoặc thiếu mục. "
+        f"Hãy TIẾP TỤC ngay từ chỗ dừng, hoàn thành {need}: {sections}. "
+        "Phải giữ đúng dạng câu. Nếu là Trả lời ngắn thì TUYỆT ĐỐI không tạo A/B/C/D. "
+        "KHÔNG tóm tắt đề. KHÔNG gợi ý ngắn kiểu VIP. "
+        "KHÔNG dùng \\begin{enumerate}, \\item hay bullet • làm khung chính.\n\n"
         "--- DỮ LIỆU GỐC ---\n" + teacher_prompt[-6500:] +
         "\n\n--- ĐÃ VIẾT ---\n" + out[-6500:]
     )
-
 
 def _admin_supplement_user_prompt(
     out: str,
@@ -4825,7 +4841,7 @@ def _finish_admin_review_text(
             break
         if not _admin_hint_needs_continuation(out, finish, q, strict=strict, require_diengiai=require_dg):
             break
-        cont_prompt = _admin_continuation_user_prompt(out, teacher_prompt, require_diengiai=require_dg)
+        cont_prompt = _admin_continuation_user_prompt(out, teacher_prompt, q, require_diengiai=require_dg)
         more, finish, err = call_fn(cont_prompt, cont_timeout)
         if err:
             print(f"[AI_HINT][ADMIN_CONT] step={step+1} err={err[:120]}")
@@ -4862,7 +4878,58 @@ def _finalize_admin_hint_text(txt: str, max_chars: Optional[int] = None) -> str:
         return txt
     return trim_ai_hint_text(txt, limit)
 
+def admin_review_sys_prompt_2026(q: Dict[str, Any], *, fast: bool = False) -> str:
+    dang = effective_dang(q)
 
+    base = (
+        "Bạn là chuyên gia Vật lý/Toán kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt. "
+        "ADMIN viết lời giải CHI TIẾT để soát đáp án Sheet cột P/R. "
+        "KHÔNG tóm tắt lại đề bài, KHÔNG viết thêm mục phụ, không dùng \\begin{enumerate}, \\item hay bullet • làm khung chính. "
+        "LaTeX trong $...$ một dòng. "
+    )
+
+    if dang == "Trắc nghiệm":
+        rule = (
+            "DẠNG CÂU: TRẮC NGHIỆM. "
+            "Được dùng A/B/C/D. "
+            "Mục 1: diễn giải chung, công thức, thay số. "
+            "Mục 2: phân tích từng phương án A/B/C/D. "
+            "Mục 3: chốt một chữ A/B/C/D và so với Sheet cột P."
+        )
+    elif dang == "Đúng sai":
+        rule = (
+            "DẠNG CÂU: ĐÚNG/SAI. "
+            "Được dùng A/B/C/D vì đây là 4 mệnh đề đúng-sai. "
+            "Mục 1: diễn giải chung. "
+            "Mục 2: bắt buộc 4 dòng A. Đúng/Sai, B. Đúng/Sai, C. Đúng/Sai, D. Đúng/Sai kèm lý do. "
+            "Mục 3: chốt dạng Đ,S,Đ,S hoặc A=Đúng · B=Sai..."
+        )
+    elif dang == "Trả lời ngắn":
+        rule = (
+            "DẠNG CÂU: TRẢ LỜI NGẮN. "
+            "TUYỆT ĐỐI KHÔNG tạo/phân tích A/B/C/D. "
+            "Mục 1: công thức, đổi đơn vị nếu có, thay số và biến đổi. "
+            "Mục 2: kiểm tra phép tính, sai số/đơn vị nếu có. "
+            "Mục 3: chốt một dòng kết quả số/biểu thức, so với Sheet cột P."
+        )
+    else:
+        rule = (
+            "DẠNG CÂU: TỰ LUẬN. "
+            "Không tạo A/B/C/D nếu đề không có phương án. "
+            "Mục 1: lý thuyết/công thức. "
+            "Mục 2: lời giải chi tiết. "
+            "Mục 3: kết luận."
+        )
+
+    if fast:
+        return base + "Bản soát nhanh: ngắn gọn nhưng vẫn đúng dạng câu. " + rule
+
+    return base + (
+        "CHỈ 3 mục hiển thị: "
+        "1. DIỄN GIẢI, "
+        "2. GIẢI / KIỂM TRA THEO ĐÚNG DẠNG CÂU, "
+        "3. CHỐT ĐÁP ÁN. "
+    ) + rule
 def build_ai_admin_review_prompt_2026(
     q: Dict[str, Any], user_answer: Any, mode: str = "full"
 ) -> str:
@@ -6159,24 +6226,12 @@ def ai_hint_from_provider(
         clean(os.environ.get("OPENAI_VISION_MODEL", DEFAULT_OPENAI_VISION_MODEL)).strip()
         or DEFAULT_OPENAI_VISION_MODEL
     )
-    if admin_review:
-        if review_opts and review_opts.get("mode") == "fast":
-            sys_prompt = (
-                "Bạn là chuyên gia Vật lý/Toán. SOÁT NHANH — trả lời NGẮN GỌN tiếng Việt. "
-                "CHỈ 2 mục: 1. GIẢI TỪNG Ý (A/B/C/D), 2. CHỐT ĐÁP ÁN. "
-                "KHÔNG tách mục DIỄN GIẢI riêng. So Sheet P/R — ghi rõ nếu lệch."
-            )
-        else:
-            sys_prompt = (
-                "Bạn là chuyên gia Vật lý/Toán kiểm tra ngân hàng câu hỏi. Trả lời tiếng Việt. "
-                "ADMIN viết lời giải CHI TIẾT — KHÁC hoàn toàn gợi ý VIP ngắn. "
-                "CHỈ 3 mục hiển thị; mục 1+2 gộp thành MỘT lời giải Sheet cột R: "
-                "1. DIỄN GIẢI (lý thuyết + tính chung), 2. GIẢI TỪNG Ý (A/B/C/D), 3. CHỐT ĐÁP ÁN (cột P). "
-                "Đ/S: mục 2 bắt buộc 4 dòng A. Đúng — ... B. Sai — ... C. ... D. ... đủ công thức. "
-                "TN: mục 1 diễn giải + tính; mục 2 phân tích **A.** **B.** **C.** **D.** "
-                "KHÔNG tóm tắt đề, KHÔNG nhắc lại đề bài, KHÔNG viết thêm mục phụ. "
-                "Không dùng \\begin{enumerate}, \\item hay bullet • làm khung — chỉ tiêu đề 1. 2. 3."
-            )
+     if admin_review:
+        review_opts = resolve_admin_review_opts(admin_review_mode)
+        fast_admin = (review_opts or {}).get("mode") == "fast"
+
+        sys_prompt = admin_review_sys_prompt_2026(q, fast=fast_admin)
+
         teacher_prompt = build_ai_admin_review_prompt_2026(
             q, user_answer, mode=(review_opts or {}).get("mode", "full")
         )
