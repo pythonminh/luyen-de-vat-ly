@@ -56,7 +56,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V205_AI_VISION_INFOGRAPHIC_GEN_2026_06_05"
+APP_VERSION = "V206_AI_REPAIR_LATEX_IMPORT_2026_06_10"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
@@ -120,6 +120,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-key-change
 
 # Key AI theo từng học viên (mahs) — mỗi người nhập key riêng
 AI_USER_OVERRIDES: Dict[str, Dict[str, Any]] = {}
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
 
 # ============================================================
 # TIỆN ÍCH CHUẨN HÓA
@@ -1135,6 +1140,11 @@ def require_login_json():
         session.clear()
         return jsonify({"error": "Tài khoản này đã đăng nhập ở thiết bị khác."}), 401
     return None
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
 
 # ============================================================
 # ÁNH XẠ CỘT
@@ -1642,6 +1652,11 @@ def prepare_question_vision(q: Dict[str, Any]) -> Dict[str, Any]:
 def is_probably_link_or_drive(value: Any) -> bool:
     s = clean(value)
     return bool(s.startswith('http://') or s.startswith('https://') or extract_drive_file_id(s))
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
 
 # ============================================================
 # GOOGLE SHEET CLIENT + DATA STORE
@@ -2778,6 +2793,44 @@ class SheetStore:
             "ai_error": ai_error,
         }
 
+    def repair_question_one(
+        self,
+        sid: str,
+        index: int,
+        restore_payload: Optional[Dict[str, Any]] = None,
+        target_dang: str = "",
+        mode: str = "repair",
+    ) -> Dict[str, Any]:
+        """ADMIN: AI khôi phục/bổ sung câu thiếu, chỉ đổ vào form sửa — không tự lưu Sheet."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được dùng AI khôi phục câu thiếu.")
+        ses = self.check_quiz_session(sid, restore_payload)
+        qs = ses["questions"]
+        if not (0 <= index < len(qs)):
+            raise RuntimeError("Số câu không hợp lệ")
+        q = qs[index]
+        cfg = ai_runtime_config()
+        if not cfg.get("has_keys"):
+            raise RuntimeError("Chưa có OPENAI_API_KEY hoặc GEMINI_API_KEY để AI khôi phục câu.")
+        result, key_index, provider_used, ai_error, vision_meta = ai_repair_question_from_provider(
+            q,
+            target_dang=target_dang,
+            mode=mode,
+        )
+        return {
+            "ok": True,
+            "index": index,
+            "id": clean(q.get("ID", "")),
+            "row": q.get("_row", ""),
+            "provider_used": provider_used,
+            "key_index": key_index,
+            "provider_mode": cfg.get("admin_provider", cfg.get("provider", "AUTO")),
+            "ai_error": ai_error,
+            **vision_meta,
+            **result,
+            "message": "AI đã khôi phục/bổ sung câu. ADMIN kiểm tra lại rồi mới bấm Lưu vào Google Sheet.",
+        }
+
     def infographic_prompt_one(
         self,
         sid: str,
@@ -3272,6 +3325,108 @@ class SheetStore:
                 "id": q.get("ID", ""),
                 "question": self.public_question(q, len(self.questions) - 1, reveal=True),
             }
+
+
+    def add_questions_bulk(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """ADMIN nhập nhiều câu hỏi đã parse từ LaTeX vào cuối sheet Cau_Hoi."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được nhập câu hỏi")
+        if not isinstance(items, list) or not items:
+            raise RuntimeError("Không có câu hỏi để nhập.")
+
+        with self.add_question_lock:
+            if not self.question_headers:
+                headers_row = self.ws_questions.row_values(1)
+                self.question_headers = headers_row
+                self.question_col_index = resolve_question_col_index(headers_row)
+
+            headers = list(self.question_headers or [])
+            if not headers:
+                raise RuntimeError("Sheet Cau_Hoi không có tiêu đề cột.")
+
+            min_len = max(len(headers), 20)
+            existing_fp = set()
+            for q in self.questions or []:
+                try:
+                    existing_fp.add(question_content_fingerprint(q))
+                except Exception:
+                    pass
+
+            rows: List[List[str]] = []
+            prepared: List[Dict[str, Any]] = []
+            skipped: List[Dict[str, Any]] = []
+
+            for idx, raw in enumerate(items, start=1):
+                data = {k: clean(v) for k, v in (raw or {}).items()}
+                if not clean(data.get("CauHoi")):
+                    skipped.append({"index": idx, "reason": "Thiếu CauHoi"})
+                    continue
+
+                seed = {f: data.get(f, "") for f in QUESTION_FIELDS}
+                cq = canonical_question(seed)
+                if not clean(data.get("ID")):
+                    data["ID"] = cq.get("ID") or ("LATEX_" + stable_hash(f"{time.time()}|{idx}|{random.random()}", 10))
+                if not clean(data.get("MaDe")):
+                    data["MaDe"] = cq.get("MaDe", "")
+
+                fp = question_content_fingerprint(canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS}))
+                if fp in existing_fp:
+                    skipped.append({"index": idx, "id": data.get("ID", ""), "reason": "Trùng nội dung đã có"})
+                    continue
+                existing_fp.add(fp)
+
+                row: List[str] = []
+                for field in CREATE_QUESTION_FIELDS:
+                    val = clean(data.get(field, ""))
+                    if not val and field in ("ID", "MaDe"):
+                        val = clean(cq.get(field, ""))
+                    if val:
+                        self._write_question_field_to_row(row, min_len, field, val)
+
+                if len(row) < len(headers):
+                    row.extend([""] * (len(headers) - len(row)))
+                elif len(row) > len(headers):
+                    row = row[: len(headers)]
+
+                rows.append(row)
+                prepared.append(data)
+
+            if not rows:
+                return {
+                    "ok": True,
+                    "created": 0,
+                    "skipped": skipped,
+                    "message": "Không có câu mới để nhập.",
+                }
+
+            # append_rows nhanh hơn append_row từng câu, tránh Render timeout khi nhập nhiều câu.
+            self.ws_questions.append_rows(rows, value_input_option="USER_ENTERED")
+            values = self.ws_questions.get_all_values()
+            start_row = max(2, len(values) - len(rows) + 1)
+
+            new_questions: List[Dict[str, Any]] = []
+            for i, row_vals in enumerate(values[start_row - 1 : start_row - 1 + len(rows)], start=start_row):
+                q = self._question_from_sheet_row(i, row_vals)
+                if q:
+                    new_questions.append(q)
+
+            self.questions.extend(new_questions)
+            for q in new_questions:
+                self.patch_quiz_sessions_after_row_add(q)
+
+            self.duplicate_report = analyze_question_duplicates(self.questions)
+            self.rebuild_indexes_after_admin_change()
+
+            return {
+                "ok": True,
+                "created": len(new_questions),
+                "skipped": skipped,
+                "start_row": start_row,
+                "end_row": start_row + len(new_questions) - 1,
+                "ids": [q.get("ID", "") for q in new_questions],
+                "questions": [self.public_question(q, len(self.questions) - len(new_questions) + i, reveal=True) for i, q in enumerate(new_questions)],
+            }
+
 
 
 _OPTION_LABEL_RE = re.compile(r"^\s*([ABCD])\s*[\.\)\]:]\s*", re.I)
@@ -5995,6 +6150,323 @@ def _openai_chat_call(
     except Exception as e:
         return "", "", _http_error_message(e)
 
+def question_repair_target_dang(q: Dict[str, Any], target_dang: Any = "") -> str:
+    """Chọn dạng câu mục tiêu khi AI khôi phục câu thiếu."""
+    td = norm_dang(target_dang) if clean(target_dang) else ""
+    if td in DANG_GROUP_ORDER:
+        return td
+    # Chống lỗi cũ: nếu đáp án là A/B/C/D thì luôn ưu tiên Trắc nghiệm.
+    if is_mcq_letter_answer(q.get("DapAn")) and has_tf_statements(q):
+        return "Trắc nghiệm"
+    return effective_dang(q)
+
+
+def question_missing_report(q: Dict[str, Any], target_dang: Any = "") -> Dict[str, Any]:
+    """Báo các phần thiếu trước khi AI khôi phục."""
+    dang = question_repair_target_dang(q, target_dang)
+    required = ["CauHoi", "DapAn", "LoiGiai"]
+    if dang in ("Trắc nghiệm", "Đúng sai"):
+        required += ["A", "B", "C", "D"]
+    missing = [f for f in required if not clean(q.get(f, ""))]
+    warnings: List[str] = []
+    if dang == "Trắc nghiệm":
+        if clean(q.get("DapAn")) and not is_mcq_letter_answer(q.get("DapAn")):
+            warnings.append("Đáp án hiện tại không phải một chữ A/B/C/D.")
+        if looks_like_dungsai_answer(q.get("DapAn")):
+            warnings.append("Đáp án hiện tại giống Đúng/Sai nhưng dạng mục tiêu là Trắc nghiệm.")
+    elif dang == "Đúng sai":
+        vals = parse_tf_values(q.get("DapAn"))
+        if sum(1 for v in vals if v in ("Đ", "S")) < 2:
+            warnings.append("Đáp án Đ/S hiện tại chưa đủ tối thiểu 2 ý.")
+    elif dang == "Trả lời ngắn":
+        if any(clean(q.get(L, "")) for L in "ABCD"):
+            warnings.append("Trả lời ngắn không cần A/B/C/D; AI sẽ để trống phương án nếu khôi phục.")
+    return {"dang": dang, "missing": missing, "warnings": warnings}
+
+
+def _strip_ai_json_fence(txt: Any) -> str:
+    txt = clean(txt)
+    txt = re.sub(r"^```(?:json)?", "", txt, flags=re.I).strip()
+    txt = re.sub(r"```$", "", txt).strip()
+    return txt
+
+
+def _extract_ai_json_object(txt: Any) -> Dict[str, Any]:
+    """Tách JSON object từ phản hồi AI."""
+    raw = _strip_ai_json_fence(txt)
+    try:
+        obj = json.loads(raw)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        pass
+    a = raw.find("{")
+    b = raw.rfind("}")
+    if a >= 0 and b > a:
+        chunk = raw[a : b + 1]
+        try:
+            obj = json.loads(chunk)
+            return obj if isinstance(obj, dict) else {}
+        except Exception:
+            pass
+    return {}
+
+
+def _coerce_ai_question_result(
+    src_q: Dict[str, Any],
+    obj: Dict[str, Any],
+    *,
+    target_dang: str,
+) -> Dict[str, Any]:
+    """Chuẩn hóa JSON AI thành đúng cột Google Sheet."""
+    payload = obj.get("question") if isinstance(obj.get("question"), dict) else obj
+    out: Dict[str, Any] = {}
+    # Giữ metadata của câu gốc nếu AI không trả về.
+    for f in CREATE_QUESTION_FIELDS:
+        out[f] = clean(payload.get(f, src_q.get(f, "")))
+    out["Dang"] = target_dang
+    # Bắt buộc không để DangBaiTap lấn sang loại câu.
+    if not clean(out.get("DangBaiTap")):
+        out["DangBaiTap"] = clean(src_q.get("DangBaiTap", ""))
+    # Chuẩn hóa text/LaTeX.
+    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+        out[f] = normalize_latex_text(out.get(f, ""))
+    da = clean(out.get("DapAn", ""))
+    warnings: List[str] = []
+    if target_dang == "Trắc nghiệm":
+        letter = norm_letter(da)
+        if letter:
+            out["DapAn"] = letter
+        else:
+            warnings.append("AI chưa trả đáp án trắc nghiệm dạng A/B/C/D.")
+            out["DapAn"] = da
+    elif target_dang == "Đúng sai":
+        vals = parse_tf_values(da)
+        if any(v in ("Đ", "S") for v in vals):
+            parts = []
+            for i, L in enumerate("ABCD"):
+                if clean(out.get(L, "")):
+                    v = vals[i] if i < len(vals) else ""
+                    if v:
+                        parts.append(f"{L}={'Đúng' if v == 'Đ' else 'Sai'}")
+            out["DapAn"] = "; ".join(parts) if parts else da
+        else:
+            warnings.append("AI chưa trả đáp án Đ/S rõ ràng.")
+            out["DapAn"] = da
+    elif target_dang == "Trả lời ngắn":
+        for L in "ABCD":
+            out[L] = ""
+        out["DapAn"] = normalize_latex_light(da)
+    else:
+        out["DapAn"] = normalize_latex_light(da)
+    # ID/MaDe: khôi phục để sửa câu hiện tại thì giữ nguyên ID dòng cũ.
+    if clean(src_q.get("ID")):
+        out["ID"] = clean(src_q.get("ID"))
+    if clean(src_q.get("MaDe")):
+        out["MaDe"] = clean(src_q.get("MaDe"))
+    # Cảnh báo từ AI + cảnh báo hậu kiểm.
+    ai_warning = clean(obj.get("warning") or payload.get("warning") or "")
+    if ai_warning:
+        warnings.insert(0, ai_warning)
+    return {
+        "status": clean(obj.get("status") or payload.get("status") or "OK") or "OK",
+        "repair_level": clean(obj.get("repair_level") or payload.get("repair_level") or "bo_sung"),
+        "warning": "\n".join([w for w in warnings if w]),
+        "question": out,
+        "raw_json": obj,
+    }
+
+
+def build_ai_repair_question_prompt(q: Dict[str, Any], target_dang: str, mode: str = "repair") -> str:
+    """Prompt ADMIN: AI khôi phục câu thiếu, trả JSON để đổ vào form sửa."""
+    src = {f: clean(q.get(f, "")) for f in CREATE_QUESTION_FIELDS}
+    missing = question_missing_report(q, target_dang)
+    mode = clean(mode) or "repair"
+    dang_rules = {
+        "Trắc nghiệm": [
+            "Dang phải là \"Trắc nghiệm\".",
+            "Bắt buộc có 4 phương án A, B, C, D là các lựa chọn trả lời, không phải mệnh đề Đúng/Sai.",
+            "DapAn bắt buộc chỉ là một chữ A hoặc B hoặc C hoặc D.",
+            "Tuyệt đối không chốt kiểu A=Đúng/B=Sai.",
+        ],
+        "Đúng sai": [
+            "Dang phải là \"Đúng sai\".",
+            "A, B, C, D là 4 mệnh đề để xét đúng/sai.",
+            "DapAn dạng chuẩn: A=Đúng; B=Sai; C=Đúng; D=Sai.",
+            "LoiGiai phải giải thích từng ý A, B, C, D.",
+        ],
+        "Trả lời ngắn": [
+            "Dang phải là \"Trả lời ngắn\".",
+            "Không tạo phương án A/B/C/D; để A, B, C, D là chuỗi rỗng.",
+            "DapAn là số/kết quả ngắn, có đơn vị nếu cần; SaiSo nếu đề yêu cầu làm tròn.",
+        ],
+        "Tự luận": [
+            "Dang phải là \"Tự luận\".",
+            "Không bắt buộc A/B/C/D; LoiGiai trình bày theo bước.",
+        ],
+    }.get(target_dang, [])
+    schema = {
+        "status": "OK hoặc NEED_REVIEW",
+        "repair_level": "none | bo_sung_nhe | bo_sung_vua | tao_lai_theo_y_goc | need_review",
+        "warning": "cảnh báo nếu dữ kiện thiếu nặng, để trống nếu chắc chắn",
+        "question": {f: "..." for f in CREATE_QUESTION_FIELDS},
+    }
+    return "\n".join(
+        [
+            "Bạn là ADMIN kiểm định và khôi phục ngân hàng câu hỏi THPT.",
+            "Nhiệm vụ: tái tạo/bổ sung các phần bị thiếu nhưng KHÔNG tự lưu Sheet.",
+            "Chỉ trả về JSON hợp lệ, không markdown, không ```.",
+            "Mọi ký tự backslash LaTeX trong JSON phải escape đúng dạng \\\\.",
+            "",
+            f"CHẾ ĐỘ: {mode}",
+            f"DẠNG CÂU MỤC TIÊU: {target_dang}",
+            "",
+            "QUY TẮC BẮT BUỘC THEO DẠNG:",
+            *(f"- {x}" for x in dang_rules),
+            "",
+            "QUY TẮC AN TOÀN:",
+            "- Ưu tiên giữ nguyên ý gốc, số liệu gốc, môn/lớp/chương/bài/mức độ.",
+            "- Nếu thiếu nhẹ như A/B/C/D, DapAn, LoiGiai thì bổ sung hợp lý và tự giải kiểm tra.",
+            "- Nếu thiếu dữ kiện chính không thể suy chắc chắn, vẫn đề xuất bản hoàn chỉnh nhưng status=NEED_REVIEW và warning ghi rõ phần đã tự bổ sung.",
+            "- Không đổi từ Trắc nghiệm sang Đúng sai hoặc ngược lại khi đã có DẠNG CÂU MỤC TIÊU.",
+            "- Công thức LaTeX dùng $...$ một dòng; không dùng $$...$$.",
+            "- LoiGiai ngắn gọn, đủ để tự học, có công thức thay số nếu cần.",
+            "",
+            "TRƯỜNG ĐANG THIẾU / CẢNH BÁO TRƯỚC KHI KHÔI PHỤC:",
+            json.dumps(missing, ensure_ascii=False),
+            "",
+            "SCHEMA JSON BẮT BUỘC:",
+            json.dumps(schema, ensure_ascii=False, indent=2),
+            "",
+            "DỮ LIỆU CÂU HIỆN TẠI:",
+            json.dumps(src, ensure_ascii=False, indent=2),
+        ]
+    )
+
+
+def ai_repair_question_from_provider(
+    q: Dict[str, Any],
+    *,
+    target_dang: Any = "",
+    mode: str = "repair",
+) -> Tuple[Dict[str, Any], int, str, str, Dict[str, Any]]:
+    """ADMIN: AI khôi phục câu thiếu, trả object để đổ vào form sửa."""
+    cfg = ai_runtime_config()
+    provider = resolve_ai_provider(cfg, admin_review=True)
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+    target = question_repair_target_dang(q, target_dang)
+    vision = prepare_question_vision(q)
+    img_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
+    img_mime = vision.get("image_mime", "") if vision.get("vision_ready") else ""
+    vision_meta: Dict[str, Any] = {
+        "has_question_image": bool(vision.get("has_image")),
+        "vision_used": bool(img_b64),
+        "vision_model": "",
+        "image_src": vision.get("image_src", ""),
+        "image_fetch_error": vision.get("fetch_error", ""),
+    }
+    sys_prompt = (
+        "Bạn là giáo viên ra đề và kiểm định đề THPT. "
+        "Bạn khôi phục câu bị thiếu rất cẩn thận, không nhầm loại câu. "
+        "Chỉ trả JSON hợp lệ, không markdown."
+    )
+    user_prompt = build_ai_repair_question_prompt(q, target, mode=mode)
+    if img_b64:
+        user_prompt += "\n\nCó ảnh minh họa kèm theo: hãy đọc ảnh để bổ sung dữ kiện/phương án/lời giải nếu cần."
+    max_tokens = 2600
+    temp = 0.08
+    model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
+    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)) or DEFAULT_GEMINI_ADMIN_MODEL
+    if img_b64:
+        model_openai = clean(os.environ.get("OPENAI_VISION_MODEL", DEFAULT_OPENAI_VISION_MODEL)) or model_openai
+        model_gemini = clean(os.environ.get("GEMINI_VISION_MODEL", DEFAULT_GEMINI_VISION_MODEL)) or model_gemini
+    last_error = ""
+
+    def postprocess(raw: str) -> Dict[str, Any]:
+        obj = _extract_ai_json_object(raw)
+        if not obj:
+            raise RuntimeError("AI không trả JSON hợp lệ để khôi phục câu.")
+        return _coerce_ai_question_result(q, obj, target_dang=target)
+
+    def try_openai() -> Tuple[Optional[Dict[str, Any]], int, str]:
+        nonlocal last_error
+        for idx, api_key in enumerate(openai_keys, start=1):
+            txt, finish, err = _openai_chat_call(
+                api_key,
+                model_openai,
+                sys_prompt,
+                user_prompt,
+                max_tokens,
+                temp,
+                timeout=45,
+                image_b64=img_b64,
+                image_mime=img_mime,
+            )
+            if txt:
+                try:
+                    vision_meta["vision_model"] = model_openai if img_b64 else ""
+                    return postprocess(txt), idx, ""
+                except Exception as e:
+                    last_error = clean(str(e))
+                    continue
+            last_error = err
+        return None, 0, last_error
+
+    def try_gemini() -> Tuple[Optional[Dict[str, Any]], int, str]:
+        nonlocal last_error
+        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
+        for idx, api_key in enumerate(gemini_keys, start=1):
+            for gmodel in models:
+                txt, finish, err = _gemini_hint_call(
+                    api_key,
+                    gmodel,
+                    sys_prompt,
+                    user_prompt,
+                    max_tokens,
+                    temp,
+                    timeout=45,
+                    image_b64=img_b64,
+                    image_mime=img_mime,
+                )
+                if txt:
+                    try:
+                        vision_meta["vision_model"] = gmodel if img_b64 else ""
+                        return postprocess(txt), idx, ""
+                    except Exception as e:
+                        last_error = clean(str(e))
+                        continue
+                last_error = err
+        return None, 0, last_error
+
+    out: Optional[Dict[str, Any]] = None
+    idx = 0
+    used = provider
+    err = ""
+    if provider == "OPENAI":
+        out, idx, err = try_openai()
+        used = "OPENAI"
+        if not out and gemini_keys:
+            out, idx, err = try_gemini()
+            used = "GEMINI" if out else used
+    elif provider == "GEMINI":
+        out, idx, err = try_gemini()
+        used = "GEMINI"
+        if not out and openai_keys:
+            out, idx, err = try_openai()
+            used = "OPENAI" if out else used
+    else:
+        if openai_keys:
+            out, idx, err = try_openai()
+            used = "OPENAI"
+        if not out and gemini_keys:
+            out, idx, err = try_gemini()
+            used = "GEMINI" if out else used
+    if not out:
+        raise RuntimeError("AI chưa khôi phục được câu: " + (err or last_error or "không có phản hồi."))
+    out["target_dang"] = target
+    out["missing_before"] = question_missing_report(q, target)
+    return out, idx, used, "", vision_meta
+
 def ai_rewrite_latex_text(field: str, text: str, context: Dict[str, Any]) -> Tuple[str, str]:
     """ADMIN: dùng AI viết lại nội dung cho đúng LaTeX, không tự lưu Sheet."""
     field = clean(field)
@@ -6686,6 +7158,11 @@ def render_share_page(de: str, args: Any):
 def share_og_context(store: Any, de: str) -> Tuple[str, str]:
     store.ensure_questions_loaded()
     return exam_share_preview_text(catalog_find_by_made(store, de))
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
 
 # ============================================================
 # HTML
@@ -6767,8 +7244,8 @@ APP_HTML = r"""
 <div id="examStrip" class="examStrip"><span id="examMsg">📢 Thông báo kỳ thi</span><span id="examTimer" class="timer"></span></div>
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div id="idLookupPanel" class="panel"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px">Chỉ dùng key <b>AIzaSy...</b> từ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (Create API key). <b>Không</b> dùng key <b>AQ...</b> hay key Google Cloud khác. Key của bạn được ưu tiên; không có thì dùng key server Render.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIzaSy...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><script>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div></div></div></div></div>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Trắc nghiệm → Đúng/Sai → Trả lời ngắn → Tự luận (xáo câu chỉ trong từng nhóm).</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><span class="muted" style="font-size:12px">AI chỉ điền vào form, ADMIN kiểm tra rồi mới lưu Sheet.</span></div><div id="editForm" class="editGrid"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> sẽ đưa vào cột T dưới dạng đường dẫn gốc để thầy kiểm tra/upload sau.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px"><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={};
 const THEME_KEY='LDVL_THEME';
 function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAttribute('data-theme',dark?'dark':'light');try{localStorage.setItem(THEME_KEY,dark?'dark':'light')}catch(e){}let b=document.getElementById('btnTheme');if(b){b.textContent=dark?'☀️':'🌙';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}let bf=document.getElementById('btnFsTheme');if(bf)bf.textContent=dark?'☀️ Sáng':'🌙 Tối';if(window.MathJax&&MathJax.config&&MathJax.config.svg){MathJax.config.svg.color=dark?'#e2e8f0':'#0f172a';if(MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}}
@@ -7254,6 +7731,45 @@ function normQuyenFormVal(s){let t=normText(s);if(!t)return'FREE';if(/vip|paid|p
 function normMucDoFormVal(s){let u=String(s||'').trim().toUpperCase();if(ADMIN_MUCDO_OPTS.includes(u))return u;if(/\bNB\b/.test(u))return'NB';if(/\bTH\b/.test(u))return'TH';if(/\bVDC\b/.test(u))return'VDC';if(/\bVD\b/.test(u))return'VD';return''}
 function normDangFormVal(s){let d=normDangClient(s);if(ADMIN_DANG_OPTS.includes(d))return d;return d||'Trắc nghiệm'}
 function escFormVal(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+async function aiRepairCurrentQuestion(){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  if(QUESTION_SAVE_BUSY){return}
+  saveCurrent();
+  let q=QUESTIONS[CUR]||{};
+  let target=(typeof resolveDang==='function'?resolveDang(q):(q.Dang||''))||'';
+  let oldBar=document.getElementById('editAiRepairBar');
+  let oldHtml=oldBar?oldBar.innerHTML:'';
+  if(oldBar)oldBar.innerHTML='<span class="hintSpin"></span> <b>AI đang khôi phục câu thiếu…</b><span class="muted" style="font-size:12px"> Không tự lưu Sheet.</span>';
+  try{
+    let j=await api('/api/ai/repair-question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,target_dang:target,mode:'repair',...quizRestorePayload()})});
+    let rq=j.question||{};
+    openEdit();
+    for(let f of QUESTION_FORM_FIELDS){
+      let el=document.getElementById('edit_'+f);
+      if(!el)continue;
+      if(Object.prototype.hasOwnProperty.call(rq,f))el.value=rq[f]||'';
+    }
+    ['QuyenTruyCap','MucDo','Dang'].forEach(syncAdminChipGroup);
+    syncQuestionModalChrome();
+    let note=document.getElementById('editModalNote');
+    if(note){
+      let warn=String(j.warning||'').trim();
+      note.innerHTML='🧩 AI đã khôi phục/bổ sung câu. <b>ADMIN cần kiểm tra lại đáp án và lời giải trước khi lưu.</b>'+(warn?'<br><span style="color:#991b1b">⚠️ '+esc(warn)+'</span>':'');
+    }
+    let hb=document.getElementById('hintBox');
+    if(hb){
+      hb.classList.remove('hide');
+      hb.classList.remove('hintBoxLoading');
+      let miss=(j.missing_before&&j.missing_before.missing)?j.missing_before.missing.join(', '):'';
+      hb.innerHTML='<b>🧩 AI khôi phục câu thiếu</b><div class="muted" style="margin-top:6px">Dạng mục tiêu: <b>'+esc(j.target_dang||target)+'</b>'+(miss?' · Thiếu trước khi sửa: '+esc(miss):'')+'</div>'+(j.warning?'<div class="muted" style="margin-top:6px;color:#991b1b">⚠️ '+esc(j.warning)+'</div>':'')+'<div class="muted" style="margin-top:6px">Đã điền vào form sửa. Kiểm tra rồi bấm <b>Lưu vào Google Sheet</b>.</div>';
+    }
+  }catch(e){
+    alert('AI chưa khôi phục được: '+e.message);
+  }finally{
+    let bar=document.getElementById('editAiRepairBar');
+    if(bar&&oldHtml)bar.innerHTML=oldHtml;
+  }
+}
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field)}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
@@ -7317,6 +7833,97 @@ function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){l
 }
 function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Câu mới được thêm vào cuối sheet Cau_Hoi, cùng mã đề/bài học với câu hiện tại (có thể sửa trước khi lưu).';else if(adminHintNeedsSave())note.textContent='Kiểm tra đủ Đáp án (cột P) và Lời giải (cột R). Câu Đ/S: phải có đủ 4 dòng A. B. C. D. Xong mới bấm Lưu — sau đó app mới so khớp Sheet với AI.';else note.textContent='Xóa liên tiếp được — app tự cập nhật số dòng Sheet. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
 function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MODAL_MODE='edit';renderQuestionForm(QUESTIONS[CUR]||{});syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
+
+function currentLatexDefaults(){
+  let q=(QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
+  return {
+    MaDe:q.MaDe||CURRENT_MADE||'',
+    Mon:val('latexDefMon')||q.Mon||'',
+    Lop:val('latexDefLop')||q.Lop||'',
+    Chuong:val('latexDefChuong')||q.Chuong||'',
+    BaiHoc:val('latexDefBaiHoc')||q.BaiHoc||q.De||'',
+    BoDe:val('latexDefBoDe')||q.BoDe||'',
+    De:val('latexDefDe')||q.De||'',
+    MucDo:val('latexDefMucDo')||q.MucDo||'',
+    QuyenTruyCap:val('latexDefQuyen')||q.QuyenTruyCap||'VIP',
+    Diem:'1'
+  };
+}
+function setLatexImportStatus(msg,err=false){
+  let el=document.getElementById('latexImportStatus');
+  if(el){el.textContent=msg||'';el.style.color=err?'#991b1b':''}
+}
+function openLatexImportModal(){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  let q=(QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
+  let m=document.getElementById('latexImportModal');
+  if(!m){alert('Không tìm thấy modal nhập LaTeX.');return}
+  let set=(id,v)=>{let e=document.getElementById(id);if(e&&!e.value)e.value=v||''};
+  set('latexDefMon',q.Mon||'');
+  set('latexDefLop',q.Lop||'');
+  set('latexDefChuong',q.Chuong||'');
+  set('latexDefBaiHoc',q.BaiHoc||q.De||'');
+  set('latexDefBoDe',q.BoDe||'');
+  set('latexDefDe',q.De||'');
+  let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value=q.MucDo||'';
+  let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
+  setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
+  m.classList.remove('hide');
+}
+function closeLatexImportModal(){
+  let m=document.getElementById('latexImportModal');if(m)m.classList.add('hide');
+}
+function readLatexImportFile(inp){
+  let f=inp&&inp.files&&inp.files[0];if(!f)return;
+  let rd=new FileReader();
+  rd.onload=()=>{let ta=document.getElementById('latexImportText');if(ta)ta.value=String(rd.result||'');setLatexImportStatus('Đã đọc file: '+f.name+' ('+Math.round(f.size/1024)+' KB). Bấm “Đọc thử”.')};
+  rd.onerror=()=>setLatexImportStatus('Không đọc được file.',true);
+  rd.readAsText(f,'utf-8');
+}
+async function latexImportCall(commit){
+  let ta=document.getElementById('latexImportText');
+  let tex=ta?String(ta.value||''):'';
+  if(!tex.trim()){alert('Chưa có nội dung LaTeX.');return null}
+  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX...');
+  let j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:currentLatexDefaults(),commit:!!commit})});
+  return j;
+}
+function latexImportSummary(j){
+  let c=j.counts||{};
+  let lines=[];
+  lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
+  lines.push('Đọc được: '+(j.parsed||0)+' câu');
+  lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0));
+  if(j.created!=null)lines.push('Đã chèn mới: '+j.created+' câu'+(j.start_row?' · dòng '+j.start_row+' → '+j.end_row:''));
+  if(j.skipped&&j.skipped.length)lines.push('Bỏ qua: '+j.skipped.length+' câu ('+j.skipped.slice(0,5).map(x=>x.reason||x.id||x.index).join('; ')+')');
+  if(j.warnings&&j.warnings.length)lines.push('Cảnh báo: '+j.warnings.slice(0,8).map(w=>'#'+(w.index||'?')+' '+(w.warning||w.reason||'')).join(' | '));
+  if(j.sample&&j.sample.length){
+    lines.push('');
+    lines.push('Mẫu đọc thử:');
+    j.sample.forEach((x,i)=>lines.push((i+1)+'. ['+x.Dang+'] '+(x.ID||'')+' · ĐA: '+(x.DapAn||'—')+' · '+(x.CauHoi||'')));
+  }
+  return lines.join('\n');
+}
+async function previewLatexImport(){
+  try{let j=await latexImportCall(false);if(j)setLatexImportStatus(latexImportSummary(j));}
+  catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
+}
+async function commitLatexImport(){
+  try{
+    let pre=await latexImportCall(false);
+    if(!pre)return;
+    let msg=latexImportSummary(pre)+'\n\nChèn '+(pre.parsed||0)+' câu này vào Google Sheet?';
+    if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
+    let j=await latexImportCall(true);
+    setLatexImportStatus(latexImportSummary(j));
+    if(j.created>0){
+      alert('Đã chèn '+j.created+' câu vào Google Sheet.');
+      await syncData();
+    }
+  }catch(e){setLatexImportStatus('Lỗi chèn LaTeX: '+e.message,true)}
+}
+
+
 function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){document.getElementById('modal').classList.add('hide')}
 function closeInfographicModal(){let m=document.getElementById('infographicModal');if(m)m.classList.add('hide')}
@@ -7336,6 +7943,254 @@ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
 </script></body></html>
 """
+
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
+
+# ============================================================
+# NHẬP LATEX TRỰC TIẾP VÀO GOOGLE SHEET
+# ============================================================
+
+_LATEX_EX_RE = re.compile(r"\\begin\s*\{\s*ex\s*\}([\s\S]*?)\\end\s*\{\s*ex\s*\}", re.I)
+_LATEX_INCLUDE_RE = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{\s*([^{}]+?)\s*\}", re.I)
+
+
+def _latex_skip_ws(s: str, pos: int) -> int:
+    n = len(s)
+    while pos < n and s[pos].isspace():
+        pos += 1
+    return pos
+
+
+def _latex_read_braced(s: str, pos: int) -> Tuple[str, int]:
+    """Đọc {...} có lồng ngoặc từ vị trí dấu {."""
+    pos = _latex_skip_ws(s, pos)
+    if pos >= len(s) or s[pos] != "{":
+        raise ValueError("Không tìm thấy dấu { trong LaTeX.")
+    depth = 0
+    out: List[str] = []
+    i = pos
+    while i < len(s):
+        ch = s[i]
+        if ch == "\\":
+            # Giữ nguyên lệnh và ký tự escape kế tiếp.
+            if i + 1 < len(s):
+                if depth >= 1:
+                    out.append(s[i : i + 2])
+                i += 2
+                continue
+        if ch == "{":
+            depth += 1
+            if depth >= 2:
+                out.append(ch)
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return "".join(out), i + 1
+            if depth >= 1:
+                out.append(ch)
+        else:
+            if depth >= 1:
+                out.append(ch)
+        i += 1
+    raise ValueError("Khối {...} LaTeX chưa đóng.")
+
+
+def _latex_find_command_with_brace(s: str, command: str) -> Optional[Tuple[int, int, str]]:
+    m = re.search(r"\\" + re.escape(command) + r"\s*\{", s, re.I)
+    if not m:
+        return None
+    brace_pos = s.find("{", m.start())
+    val, end = _latex_read_braced(s, brace_pos)
+    return m.start(), end, val
+
+
+def _latex_read_command_args(s: str, command: str, max_args: int = 4) -> Optional[Tuple[int, int, List[str]]]:
+    m = re.search(r"\\" + re.escape(command) + r"\b", s, re.I)
+    if not m:
+        return None
+    pos = m.end()
+    args: List[str] = []
+    end = pos
+    for _ in range(max_args):
+        pos = _latex_skip_ws(s, pos)
+        if pos >= len(s) or s[pos] != "{":
+            break
+        val, pos = _latex_read_braced(s, pos)
+        args.append(val)
+        end = pos
+    if not args:
+        return None
+    return m.start(), end, args
+
+
+def _latex_strip_comments_keep_meta(s: str) -> str:
+    """Bỏ comment đầu dòng nhưng không đụng dấu % trong công thức."""
+    lines = []
+    for line in str(s or "").splitlines():
+        if line.lstrip().startswith("%"):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _latex_clean_body(s: Any) -> str:
+    t = clean(s)
+    if not t:
+        return ""
+    # Bỏ tag meta kiểu %[Xuất từ robot...] còn sót ngay đầu câu.
+    t = re.sub(r"^\s*(?:%\[[^\]]*\]\s*)+", "", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    return normalize_latex_text(t.strip())
+
+
+def _latex_extract_images(text: str) -> Tuple[str, str]:
+    imgs = [clean(x) for x in _LATEX_INCLUDE_RE.findall(text or "") if clean(x)]
+    # Gỡ cả block center chứa hình, sau đó gỡ includegraphics lẻ.
+    out = re.sub(
+        r"\\begin\s*\{\s*center\s*\}\s*" + _LATEX_INCLUDE_RE.pattern + r"\s*\\end\s*\{\s*center\s*\}",
+        " ",
+        text or "",
+        flags=re.I,
+    )
+    out = _LATEX_INCLUDE_RE.sub(" ", out)
+    return out, "; ".join(imgs)
+
+
+def _latex_option_clean(opt: str) -> Tuple[str, bool]:
+    raw = clean(opt)
+    is_true = bool(re.search(r"\\True\b", raw, flags=re.I))
+    raw = re.sub(r"\\True\b\s*", "", raw, flags=re.I).strip()
+    return _latex_clean_body(raw), is_true
+
+
+def _latex_meta_id(ex_body: str, idx: int) -> str:
+    m = re.search(r"\[Mã\s*câu\s*:\s*([^\]]+)\]", ex_body, re.I)
+    if not m:
+        m = re.search(r"\[Ma\s*cau\s*:\s*([^\]]+)\]", strip_accents(ex_body), re.I)
+    if m:
+        return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
+    return "LATEX_" + stable_hash(ex_body + str(idx), 12)
+
+
+def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Parse file .tex dạng \\begin{ex} ... \\choice/\\choiceTF/\\shortans/\\loigiai."""
+    defaults = defaults or {}
+    tex = str(tex or "").replace("\r\n", "\n").replace("\r", "\n")
+    blocks = list(_LATEX_EX_RE.finditer(tex))
+    out: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
+
+    for idx, m in enumerate(blocks, start=1):
+        raw_block = m.group(1)
+        try:
+            work = raw_block
+
+            lg = ""
+            lg_cmd = _latex_find_command_with_brace(work, "loigiai")
+            if lg_cmd:
+                work = work[: lg_cmd[0]] + "\n" + work[lg_cmd[1] :]
+                lg = _latex_clean_body(lg_cmd[2])
+
+            # Ưu tiên Trả lời ngắn, rồi Đúng/Sai, rồi Trắc nghiệm.
+            short_cmd = _latex_find_command_with_brace(work, "shortans")
+            tf_cmd = _latex_read_command_args(work, "choiceTF", 4)
+            choice_cmd = _latex_read_command_args(work, "choice", 4)
+
+            q: Dict[str, Any] = {f: clean(defaults.get(f, "")) for f in QUESTION_FIELDS}
+            q["ID"] = clean(defaults.get("ID", "")) or _latex_meta_id(raw_block, idx)
+            if not q.get("QuyenTruyCap"):
+                q["QuyenTruyCap"] = "VIP"
+            if not q.get("Diem"):
+                q["Diem"] = "1"
+            q["LoiGiai"] = lg
+
+            if short_cmd:
+                q_text = work[: short_cmd[0]]
+                q_text, imgs = _latex_extract_images(q_text)
+                q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
+                q["Dang"] = "Trả lời ngắn"
+                q["DangBaiTap"] = q.get("DangBaiTap", "")
+                q["DapAn"] = _latex_clean_body(short_cmd[2])
+                q["A"] = q["B"] = q["C"] = q["D"] = ""
+                if imgs and not q.get("HinhAnh"):
+                    q["HinhAnh"] = imgs
+
+            elif tf_cmd:
+                q_text = work[: tf_cmd[0]]
+                q_text, imgs = _latex_extract_images(q_text)
+                q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
+                q["Dang"] = "Đúng sai"
+                vals = []
+                for L, opt in zip(["A", "B", "C", "D"], tf_cmd[2]):
+                    body, is_true = _latex_option_clean(opt)
+                    q[L] = body
+                    vals.append("Đ" if is_true else "S")
+                while len(vals) < 4:
+                    vals.append("")
+                q["DapAn"] = ",".join(v for v in vals[:4] if v)
+                if imgs and not q.get("HinhAnh"):
+                    q["HinhAnh"] = imgs
+
+            elif choice_cmd:
+                q_text = work[: choice_cmd[0]]
+                q_text, imgs = _latex_extract_images(q_text)
+                q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
+                q["Dang"] = "Trắc nghiệm"
+                true_letter = ""
+                for L, opt in zip(["A", "B", "C", "D"], choice_cmd[2]):
+                    body, is_true = _latex_option_clean(opt)
+                    q[L] = body
+                    if is_true and not true_letter:
+                        true_letter = L
+                q["DapAn"] = true_letter
+                if imgs and not q.get("HinhAnh"):
+                    q["HinhAnh"] = imgs
+
+            else:
+                # Không có lệnh đáp án: vẫn nhập như tự luận để ADMIN sửa tiếp.
+                q_text, imgs = _latex_extract_images(work)
+                q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
+                q["Dang"] = "Tự luận"
+                if imgs and not q.get("HinhAnh"):
+                    q["HinhAnh"] = imgs
+
+            q["Dang"] = effective_dang(q)
+            if q["Dang"] == "Trắc nghiệm" and not is_mcq_letter_answer(q.get("DapAn")):
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Trắc nghiệm chưa tìm thấy \\True."})
+            if q["Dang"] == "Đúng sai" and not looks_like_dungsai_answer(q.get("DapAn")):
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Đúng/Sai chưa đủ đáp án Đ/S."})
+
+            if clean(q.get("CauHoi")):
+                out.append(q)
+            else:
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Không đọc được nội dung câu hỏi."})
+
+        except Exception as e:
+            errors.append({"index": idx, "warning": str(e)})
+
+    counts = {"Trắc nghiệm": 0, "Đúng sai": 0, "Trả lời ngắn": 0, "Tự luận": 0}
+    for q in out:
+        counts[effective_dang(q)] = counts.get(effective_dang(q), 0) + 1
+
+    return {
+        "ok": True,
+        "total_blocks": len(blocks),
+        "parsed": len(out),
+        "counts": counts,
+        "questions": out,
+        "warnings": errors,
+    }
+
+def short_plain_text(s: Any, n: int = 160) -> str:
+    t = re.sub(r"\s+", " ", clean(s))
+    return t if len(t) <= n else t[: max(0, n - 1)] + "…"
+
+
 
 # ============================================================
 # ROUTES
@@ -7659,6 +8514,29 @@ def api_hint_similar():
     restore = quiz_restore_payload_from_body(data)
     try:
         return jsonify(st.similar_one(sid, idx, restore))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/ai/repair-question", methods=["POST"])
+def api_ai_repair_question():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được dùng AI khôi phục câu thiếu"}), 403
+    data = request.get_json(silent=True) or {}
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    target_dang = clean(data.get("target_dang", ""))
+    mode = clean(data.get("mode", "repair")) or "repair"
+    st = get_store()
+    restore = quiz_restore_payload_from_body(data)
+    try:
+        return jsonify(st.repair_question_one(sid, idx, restore, target_dang=target_dang, mode=mode))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -8132,6 +9010,62 @@ def api_question_update():
         return jsonify(st.update_question(int(body.get("row", 0)), body.get("updates", {})))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/latex/import", methods=["POST"])
+def api_latex_import():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
+
+    body = request.get_json(silent=True) or {}
+    tex = body.get("tex", "")
+    defaults = body.get("defaults") or {}
+    commit = str(body.get("commit", "false")).lower() in ("1", "true", "yes", "on")
+
+    if not clean(tex):
+        return jsonify({"error": "Chưa có nội dung LaTeX."}), 400
+    if len(str(tex)) > 900_000:
+        return jsonify({"error": "File LaTeX quá lớn. Hãy chia nhỏ rồi nhập từng phần."}), 400
+
+    try:
+        parsed = parse_latex_questions_2026(str(tex), defaults)
+        if not commit:
+            sample = []
+            for q in parsed.get("questions", [])[:8]:
+                sample.append({
+                    "ID": q.get("ID", ""),
+                    "Dang": q.get("Dang", ""),
+                    "CauHoi": short_plain_text(q.get("CauHoi", ""), 160),
+                    "DapAn": q.get("DapAn", ""),
+                    "HinhAnh": q.get("HinhAnh", ""),
+                })
+            return jsonify({
+                "ok": True,
+                "dry_run": True,
+                "total_blocks": parsed.get("total_blocks", 0),
+                "parsed": parsed.get("parsed", 0),
+                "counts": parsed.get("counts", {}),
+                "warnings": parsed.get("warnings", [])[:30],
+                "sample": sample,
+            })
+
+        st = get_store()
+        st.ensure_questions_loaded()
+        res = st.add_questions_bulk(parsed.get("questions", []))
+        res.update({
+            "dry_run": False,
+            "total_blocks": parsed.get("total_blocks", 0),
+            "parsed": parsed.get("parsed", 0),
+            "counts": parsed.get("counts", {}),
+            "warnings": parsed.get("warnings", [])[:30],
+        })
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 
 @app.route("/api/question/create", methods=["POST"])
 def api_question_create():
