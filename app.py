@@ -9272,7 +9272,7 @@ def api_latex_import():
         return jsonify({"error": "File LaTeX quá lớn. Hãy chia nhỏ rồi nhập từng phần."}), 400
 
     try:
-        asset_ctx = _build_latex_asset_context(commit, asset_zip=asset_zip)
+        asset_ctx = _build_latex_asset_context(commit, assets_zip=asset_zip)
         parsed = parse_latex_questions_2026(str(tex), defaults, asset_ctx=asset_ctx)
         if not commit:
             sample = []
