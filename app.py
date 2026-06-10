@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V219_ADMIN_REWRITE_FULL_QUESTION_LATEX_LE_2026_06_10"
+APP_VERSION = "V220_FORCE_ADMIN_GPT_REWRITE_2026_06_10"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -6485,9 +6485,13 @@ def ai_repair_question_from_provider(
 ) -> Tuple[Dict[str, Any], int, str, str, Dict[str, Any]]:
     """ADMIN: AI khôi phục câu thiếu, trả object để đổ vào form sửa."""
     cfg = ai_runtime_config()
-    provider = resolve_ai_provider(cfg, admin_review=True)
+    # V220: ADMIN viết lại LaTeX bắt buộc dùng GPT ADMIN (OpenAI).
+    # Không dùng Gemini/fallback Gemini vì Gemini dễ rớt hoặc sửa sai LaTeX.
+    provider = "OPENAI"
     openai_keys = load_ai_keys("OPENAI")
-    gemini_keys = load_ai_keys("GEMINI")
+    gemini_keys = []
+    if not openai_keys:
+        raise RuntimeError("Chưa có OPENAI_API_KEY trên Render nên không dùng được GPT ADMIN để viết lại LaTeX.")
     target = question_repair_target_dang(q, target_dang)
     vision = prepare_question_vision(q)
     img_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
@@ -6696,23 +6700,13 @@ def ai_rewrite_latex_text(field: str, text: str, context: Dict[str, Any]) -> Tup
                 last_error = err
         return "", "GEMINI"
 
-    if provider == "OPENAI":
-        out, used = try_openai()
-        if not out and gemini_keys:
-            out, used = try_gemini()
-    elif provider == "GEMINI":
-        out, used = try_gemini()
-        if not out and openai_keys:
-            out, used = try_openai()
-    else:
-        out, used = try_openai() if openai_keys else ("", "OPENAI")
-        if not out and gemini_keys:
-            out, used = try_gemini()
+    # V220: chỉ gọi GPT ADMIN; không thử Gemini dự phòng.
+    out, used = try_openai()
 
     if not out:
-        raise RuntimeError("AI chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
+        raise RuntimeError("GPT ADMIN chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
 
-    return out, used
+    return out, "OPENAI"
 
 
 def ai_rewrite_full_question_latex(q: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
@@ -6720,11 +6714,13 @@ def ai_rewrite_full_question_latex(q: Dict[str, Any]) -> Tuple[Dict[str, Any], s
     q = q or {}
     target = question_repair_target_dang(q, clean(q.get("Dang", "")))
     cfg = ai_runtime_config()
-    provider = resolve_ai_provider(cfg, admin_review=True)
+    # V220: nút “AI viết lại toàn bộ bài” bắt buộc dùng GPT ADMIN (OpenAI).
+    # Không dùng Gemini/fallback Gemini để tránh rớt quota và lỗi đọc LaTeX.
+    provider = "OPENAI"
     openai_keys = load_ai_keys("OPENAI")
-    gemini_keys = load_ai_keys("GEMINI")
-    if not openai_keys and not gemini_keys:
-        raise RuntimeError("Chưa có OPENAI_API_KEY hoặc GEMINI_API_KEY để AI viết lại toàn bộ bài.")
+    gemini_keys = []
+    if not openai_keys:
+        raise RuntimeError("Chưa có OPENAI_API_KEY trên Render nên không dùng được GPT ADMIN để viết lại toàn bộ bài.")
 
     src = {f: clean(q.get(f, "")) for f in CREATE_QUESTION_FIELDS}
     sys_prompt = (
@@ -6736,8 +6732,8 @@ def ai_rewrite_full_question_latex(q: Dict[str, Any]) -> Tuple[Dict[str, Any], s
         "",
         "YÊU CẦU BẮT BUỘC:",
         "- Giữ nguyên ý nghĩa, không tự đổi số liệu, không đổi đáp án đúng nếu không có lý do rõ ràng.",
-        "- Sửa lỗi LaTeX bị vỡ: \mahrm -> \mathrm, frac/sqrt thiếu dấu \, đơn vị km/h, m/s, cm, °C...",
-        "- Phải đọc đúng miền điều kiện như $(5\le x\le 7)$, $x\in[5;7]$, $x\ge0$, $x\le7$.",
+        "- Sửa lỗi LaTeX bị vỡ: \\mahrm -> \\mathrm, frac/sqrt thiếu dấu \\, đơn vị km/h, m/s, cm, °C...",
+        "- Phải đọc đúng miền điều kiện như $(5\\le x\\le 7)$, $x\\in[5;7]$, $x\\ge0$, $x\\le7$.",
         "- Với công thức: dùng $...$ inline, không dùng $$...$$ cho câu ngắn.",
         "- Với Trắc nghiệm: giữ 4 phương án A/B/C/D, DapAn chỉ là A/B/C/D.",
         "- Với Đúng/Sai: A/B/C/D là 4 phát biểu; DapAn dạng A=Đúng; B=Sai; C=Đúng; D=Sai.",
@@ -6801,24 +6797,12 @@ def ai_rewrite_full_question_latex(q: Dict[str, Any]) -> Tuple[Dict[str, Any], s
                     last_error = err
         return None, "GEMINI"
 
-    outq, used = (None, "")
-    if provider == "OPENAI":
-        outq, used = try_openai()
-        if not outq and gemini_keys:
-            outq, used = try_gemini()
-    elif provider == "GEMINI":
-        outq, used = try_gemini()
-        if not outq and openai_keys:
-            outq, used = try_openai()
-    else:
-        if openai_keys:
-            outq, used = try_openai()
-        if not outq and gemini_keys:
-            outq, used = try_gemini()
+    # V220: chỉ gọi GPT ADMIN; không thử Gemini dự phòng.
+    outq, used = try_openai()
 
     if not outq:
-        raise RuntimeError("AI chưa viết lại được toàn bộ bài: " + (last_error or "không có phản hồi."))
-    return outq, used or provider
+        raise RuntimeError("GPT ADMIN chưa viết lại được toàn bộ bài: " + (last_error or "không có phản hồi."))
+    return outq, "OPENAI"
 
 
 def gemini_generate_infographic_image(
@@ -8284,7 +8268,7 @@ function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){l
 
     if(j.text){
       el.value=j.text;
-      alert('Đã viết lại bằng '+(j.provider||'AI')+'.\nThầy kiểm tra lại rồi bấm Lưu vào Google Sheet.');
+      alert('Đã viết lại bằng GPT ADMIN (OpenAI).\nThầy kiểm tra lại rồi bấm Lưu vào Google Sheet.');
     }else{
       alert('AI không trả về nội dung.');
     }
