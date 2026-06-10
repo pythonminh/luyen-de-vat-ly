@@ -829,8 +829,12 @@ def dang_matches(q: Dict[str, Any], dang_filter: str) -> bool:
 
 
 def dang_metadata_raw(q: Dict[str, Any]) -> str:
-    """Cột mô tả dạng câu: J (_DangCol) → H (Dạng bài tập) → header Dang."""
-    for k in ("_DangCol", "DangBaiTap", "Dang"):
+    """
+    Chỉ lấy DẠNG CÂU từ cột Dang / _DangCol.
+    KHÔNG lấy DangBaiTap vì DangBaiTap là dạng bài tập/chuyên đề,
+    không phải loại câu Trắc nghiệm / Đúng sai.
+    """
+    for k in ("_DangCol", "Dang"):
         v = clean(q.get(k, ""))
         if v:
             return v
@@ -838,25 +842,35 @@ def dang_metadata_raw(q: Dict[str, Any]) -> str:
 
 
 def effective_dang(q: Dict[str, Any]) -> str:
-    """Suy luận dạng câu từ cột J/H + đáp án."""
+    """
+    Suy luận dạng câu chắc chắn:
+    - Nếu đáp án là đúng 1 chữ A/B/C/D và có phương án -> Trắc nghiệm.
+    - Nếu đáp án có nhiều Đ/S -> Đúng sai.
+    - Nếu cột Dang ghi rõ Trắc nghiệm/Đúng sai/TLN/Tự luận -> dùng cột Dang.
+    - Nếu đáp án là số/biểu thức -> Trả lời ngắn.
+
+    Lưu ý: DangBaiTap là dạng bài tập/chuyên đề nên không được dùng để ép loại câu.
+    """
+    dapan = q.get("DapAn")
+    has_opts = has_tf_statements(q)
+
+    # ƯU TIÊN CAO NHẤT: đáp án 1 chữ A/B/C/D + có phương án => Trắc nghiệm.
+    # Như vậy AI không bị chuyển nhầm sang chốt Đúng/Sai.
+    if is_mcq_letter_answer(dapan) and has_opts:
+        return "Trắc nghiệm"
+
+    # Đáp án kiểu Đ,S,S,Đ hoặc A=Đúng B=Sai => Đúng sai.
+    if looks_like_dungsai_answer(dapan):
+        return "Đúng sai"
+
+    # Sau khi đã bắt chắc bằng đáp án, mới dùng cột Dang nếu có ghi rõ.
     raw_col = dang_metadata_raw(q)
     if raw_col:
         dang_col = norm_dang(raw_col)
         if dang_col in DANG_GROUP_ORDER:
             return dang_col
 
-    dapan = q.get("DapAn")
-    has_opts = has_tf_statements(q)
-
-    # Đáp án SSĐĐ / Đ,S,... → Đúng sai khi cột J/H trống hoặc không rõ
-    if looks_like_dungsai_answer(dapan):
-        return "Đúng sai"
-
-    # Đáp án một chữ B/D... → trắc nghiệm
-    if is_mcq_letter_answer(dapan) and has_opts:
-        return "Trắc nghiệm"
-
-    # Đáp án số/chữ (không phải A-D, không phải Đ/S) → trả lời ngắn
+    # Đáp án số/biểu thức => Trả lời ngắn.
     if looks_like_short_answer(q):
         return "Trả lời ngắn"
 
@@ -1869,8 +1883,6 @@ class SheetStore:
             dang_raw = row_val(row_vals, cols.get("Dang"))
             if dang_raw:
                 q["_DangCol"] = dang_raw
-            elif clean(q.get("DangBaiTap", "")):
-                q["_DangCol"] = clean(q.get("DangBaiTap", ""))
             elif clean(q.get("Dang", "")):
                 q["_DangCol"] = clean(q.get("Dang", ""))
 
@@ -3153,8 +3165,6 @@ class SheetStore:
         dang_raw = row_val(row_vals, cols.get("Dang"))
         if dang_raw:
             q["_DangCol"] = dang_raw
-        elif clean(q.get("DangBaiTap", "")):
-            q["_DangCol"] = clean(q.get("DangBaiTap", ""))
         elif clean(q.get("Dang", "")):
             q["_DangCol"] = clean(q.get("Dang", ""))
         q["Dang"] = effective_dang(q)
@@ -6939,9 +6949,18 @@ function hasOptsClient(q){return ['A','B','C','D'].filter(L=>String((q||{})[L]||
 function looksDsAnswer(v){let raw=String(v||'').trim();if(!raw)return false;if(/^[ABCD]$/i.test(raw.replace(/\s/g,'')))return false;return parseTfClient(raw).filter(x=>x==='Đ'||x==='S').length>=2}
 function isMcqLetter(v){let raw=String(v||'').trim().toUpperCase().replace(/\u0110/g,'D');return /^[ABCD]$/.test(raw)}
 function looksShortAnswerClient(q){let d=String((q&&q.DapAn)||'').trim();if(!d)return false;if(isMcqLetter(q.DapAn))return false;if(looksDsAnswer(q.DapAn))return false;let n=d.replace(/\s/g,'').replace(',','.');if(/^-?\d+(\.\d+)?$/.test(n))return true;return d.length<=200}
-function dangMetaRaw(q){if(!q)return '';for(let k of ['_DangCol','DangBaiTap','Dang']){let v=String(q[k]||'').trim();if(v)return v}return ''}
+function dangMetaRaw(q){if(!q)return '';for(let k of ['_DangCol','Dang']){let v=String(q[k]||'').trim();if(v)return v}return ''}
 const DANG_GROUP_ORDER_CLIENT=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
-function resolveDang(q){if(!q)return 'Trắc nghiệm';let rawCol=dangMetaRaw(q);let dc=normDangClient(rawCol);if(rawCol&&DANG_GROUP_ORDER_CLIENT.includes(dc))return dc;if(looksDsAnswer(q.DapAn))return 'Đúng sai';if(isMcqLetter(q.DapAn)&&hasOptsClient(q))return 'Trắc nghiệm';if(looksShortAnswerClient(q))return 'Trả lời ngắn';return 'Trắc nghiệm'}
+function resolveDang(q){
+  if(!q)return 'Trắc nghiệm';
+  if(isMcqLetter(q.DapAn)&&hasOptsClient(q))return 'Trắc nghiệm';
+  if(looksDsAnswer(q.DapAn))return 'Đúng sai';
+  let rawCol=dangMetaRaw(q);
+  let dc=normDangClient(rawCol);
+  if(rawCol&&DANG_GROUP_ORDER_CLIENT.includes(dc))return dc;
+  if(looksShortAnswerClient(q))return 'Trả lời ngắn';
+  return 'Trắc nghiệm';
+}
 function applyResolvedDang(q){if(!q)return q;q.Dang=resolveDang(q);return q}
 function dangSame(a,b){return normDangClient(a)===normDangClient(b)}
 function questionLevelMatch(q,lv){if(!lv)return true;let u=String(q.MucDo||'').toUpperCase();let parts=u.split(/[,;/|]+/).map(x=>x.trim()).filter(Boolean);return parts.includes(lv)||u.includes(lv)}
