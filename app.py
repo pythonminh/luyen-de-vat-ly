@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V223_ADMIN_DANGBAITAP_MANUAL_SUGGEST_TEST_2026_06_11"
+APP_VERSION = "V224_ADMIN_DANGBAITAP_SUGGEST_FIXLOAD_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -8578,9 +8578,7 @@ async function adminGenerateAndSyncLearning(kind){
     kind=(kind==='method')?'method':'theory';
     let ctx=currentLearningQuery(kind);
     if(kind==='method'&&isBadDangBaiTapValue(ctx.params.DangBaiTap)){
-        let ok=confirm('Câu này chưa có Dạng bài tập rõ ràng ở cột H.
-
-Cần GPT gán Dạng bài tập trước rồi mới tạo Phương pháp giải để không bị lẫn giữa các câu. Tiếp tục?');
+        let ok=confirm(`Câu này chưa có Dạng bài tập rõ ràng ở cột H.\n\nCần GPT gán Dạng bài tập trước rồi mới tạo Phương pháp giải để không bị lẫn giữa các câu. Tiếp tục?`);
         if(!ok)return;
         let newDang=await adminDetectDangBaiTapAndSave(true);
         if(!newDang)return;
@@ -9799,6 +9797,7 @@ def version():
         "admin_learning_board_v221": True,
         "dangbaitap_auto_method_v222": True,
         "admin_dangbaitap_manual_suggest_v223": True,
+        "admin_dangbaitap_suggest_fixload_v224": True,
         "learning_gpt_admin_only": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import"]
     })
