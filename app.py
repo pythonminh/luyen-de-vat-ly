@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V233_PWA_INSTALL_MOBILE_TEST_2026_06_11"
+APP_VERSION = "V234_PWA_FIX_JINJA_COMMENT_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -7996,7 +7996,7 @@ APP_HTML = r"""
 /* ===== V233 PWA: nút cài app điện thoại ===== */
 #pwaInstallBtn{display:none;background:#facc15;color:#1e293b;border:1px solid #fde68a;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
 #pwaInstallBtn.show{display:inline-flex;align-items:center;gap:4px}
-@media(max-width:760px){#pwaInstallBtn{font-size:11px!important;padding:4px 8px!important;min-height:24px!important}.topRight{gap:4px 6px!important}}
+@media(max-width:760px){ #pwaInstallBtn{font-size:11px!important;padding:4px 8px!important;min-height:24px!important}.topRight{gap:4px 6px!important}}
 
 </style></head>
 <body><div class="top"><div class="topRow"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
@@ -10177,6 +10177,7 @@ def version():
         "pwa_install_v233": True,
         "pwa_manifest_v233": True,
         "pwa_service_worker_v233": True,
+                "pwa_fix_jinja_comment_v234": True,
         "learning_on_off_buttons": True,
         "learning_gpt_admin_only": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
