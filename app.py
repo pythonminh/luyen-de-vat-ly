@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V235_AI_ASSISTANT_ICON_TEST_2026_06_11"
+APP_VERSION = "V237_AI_ASSISTANT_CHAT_THAY_MINH_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -7998,7 +7998,19 @@ APP_HTML = r"""
 .aiAssistPanel{border:1px solid #c4b5fd;background:linear-gradient(180deg,#eef2ff,#ffffff);border-radius:12px;padding:12px;margin-top:8px}
 html[data-theme='dark'] .aiAssistPanel{background:linear-gradient(180deg,#1e1b4b,#0f172a);border-color:#6366f1}
 .aiAssistPanel .aiAssistWarn{font-size:12px;color:#64748b;margin-top:6px;line-height:1.45}
-@media(max-width:760px){.qidLearnBtns .aiAssistBtn,.learningQuickBar .aiAssistBtn{font-size:10.5px!important;padding:5px 7px!important;min-height:26px!important}}
+.aiChatBox{margin-top:12px;border-top:1px dashed #c4b5fd;padding-top:10px}
+.aiChatMsgs{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0;padding-right:4px}
+.aiMsg{border-radius:12px;padding:8px 10px;line-height:1.55;font-size:14px;white-space:pre-wrap}
+.aiMsgUser{align-self:flex-end;max-width:88%;background:#dbeafe;border:1px solid #bfdbfe;color:#0f172a}
+.aiMsgBot{align-self:flex-start;max-width:94%;background:#fff;border:1px solid #c4b5fd;color:#111827}
+.aiChatForm{display:flex;gap:6px;align-items:flex-end}
+.aiChatInput{flex:1;min-height:38px;max-height:92px;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;padding:8px 9px;font-family:inherit;font-size:14px;background:#fff;color:#0f172a}
+.aiChatSend{white-space:nowrap;border:1px solid #4f46e5;background:#4f46e5;color:white;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer}
+.aiChatSend:disabled{opacity:.55;cursor:not-allowed}
+html[data-theme='dark'] .aiMsgUser{background:#172554;border-color:#2563eb;color:#e0f2fe}
+html[data-theme='dark'] .aiMsgBot{background:#111827;border-color:#6366f1;color:#e5e7eb}
+html[data-theme='dark'] .aiChatInput{background:#0f172a;color:#e5e7eb;border-color:#475569}
+@media(max-width:760px){.qidLearnBtns .aiAssistBtn,.learningQuickBar .aiAssistBtn{font-size:10.5px!important;padding:5px 7px!important;min-height:26px!important}.aiChatMsgs{max-height:210px}.aiMsg{font-size:13.5px;padding:7px 9px}.aiChatInput{font-size:13.5px;min-height:34px}.aiChatSend{padding:7px 9px;font-size:12px}}
 
 /* ===== V233 PWA: nút cài app điện thoại ===== */
 #pwaInstallBtn{display:none;background:#facc15;color:#1e293b;border:1px solid #fde68a;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
@@ -8805,12 +8817,27 @@ async function openLearningPanel(kind){
 
 
 let AI_ASSIST_LOADING=false,AI_ASSIST_Q=null;
+let AI_ASSIST_CHAT_LOADING=false;
+let AI_ASSIST_CHAT_BY_Q={};
+function aiChatKey(){return String(CUR||0)}
+function aiChatHistory(){let k=aiChatKey();if(!AI_ASSIST_CHAT_BY_Q[k])AI_ASSIST_CHAT_BY_Q[k]=[];return AI_ASSIST_CHAT_BY_Q[k]}
 function showAiAssistLoading(){
     let hb=document.getElementById('hintBox');if(!hb)return;
     hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');
     CURRENT_LEARNING_KIND='ai_assist';
     syncLearningToggleButtons('ai_assist');
-    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI · Lưu ý tránh sai</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>AI đang đọc câu và viết lưu ý ngắn…</b><div class="muted" style="margin-top:6px;font-size:13px">Không chốt đáp án, không giải ra kết quả. Chỉ nhắc dạng bài, công thức và bẫy dễ sai.</div></div></div>`;
+    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>AI đang đọc câu và viết gợi ý bước làm…</b><div class="muted" style="margin-top:6px;font-size:13px">Không chốt đáp án. Chỉ nhắc mục tiêu câu hỏi, bước làm, công thức, tóm tắt dữ kiện, đổi đơn vị và bẫy dễ sai.</div></div></div>`;
+}
+function renderAiChatMessages(){
+    let box=document.getElementById('aiAssistChatMessages');if(!box)return;
+    let hist=aiChatHistory();
+    if(!hist.length){box.innerHTML='<div class="muted" style="font-size:13px">Em có thể hỏi thêm để hiểu rõ mục tiêu câu hỏi, công thức cần dùng, cách đổi đơn vị hoặc bẫy dễ sai. AI không chốt đáp án.</div>';return}
+    box.innerHTML=hist.map(m=>`<div class="aiMsg ${m.role==='user'?'aiMsgUser':'aiMsgBot'}">${m.role==='user'?esc(m.text||''):formatHintDisplay(m.text||'')}</div>`).join('');
+    try{box.scrollTop=box.scrollHeight}catch(e){}
+    typesetQuizMath();
+}
+function aiAssistChatHtml(){
+    return `<div class="aiChatBox"><b>💬 Hỏi thêm Trợ lý AI thầy Minh</b><div class="muted" style="font-size:12px;margin-top:3px">VIP/S.VIP/ADMIN có thể chat để hỏi rõ mục tiêu, bước làm, công thức và lưu ý. AI không đưa đáp án cuối.</div><div id="aiAssistChatMessages" class="aiChatMsgs"></div><div class="aiChatForm"><textarea id="aiAssistChatInput" class="aiChatInput" placeholder="Ví dụ: Bài này hỏi mục tiêu gì? Cần dùng công thức nào? Đổi đơn vị ra sao?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitAiAssistantChat()}"></textarea><button type="button" id="aiAssistChatSend" class="aiChatSend" onclick="submitAiAssistantChat()">Gửi</button></div></div>`;
 }
 function renderAiAssistPanel(j){
     let hb=document.getElementById('hintBox');if(!hb)return;
@@ -8820,7 +8847,8 @@ function renderAiAssistPanel(j){
     if(j.provider_used)meta+=`<div class="muted" style="font-size:12px;margin-top:6px">AI: ${esc(j.provider_used||'')} ${j.model?(' · '+esc(j.model)) : ''}${j.key_index?(' · key #'+esc(j.key_index)) : ''}</div>`;
     if(j.ai_error)meta+=`<div class="muted" style="font-size:12px;margin-top:4px;color:#991b1b">${esc(j.ai_error)}</div>`;
     hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.classList.add('learningOpen');hb.dataset.learningKind='ai_assist';
-    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI · Lưu ý tránh sai</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="aiAssistPanel"><div style="line-height:1.65;white-space:pre-wrap">${formatHintDisplay(j.note||j.hint||'Chưa có lưu ý.')}</div><div class="aiAssistWarn">Chức năng này chỉ nhắc cách làm và bẫy dễ sai. Không dùng để chốt đáp án. Muốn kiểm đáp án/lời giải cụ thể: ADMIN dùng nút “Soát đề GPT”.</div>${meta}</div>`;
+    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh · Gợi ý cách làm</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="aiAssistPanel"><div style="line-height:1.65;white-space:pre-wrap">${formatHintDisplay(j.note||j.hint||'Chưa có lưu ý.')}</div><div class="aiAssistWarn">Trợ lý AI thầy Minh chỉ gợi ý mục tiêu câu hỏi, bước làm, công thức, tóm tắt dữ kiện, đổi đơn vị và bẫy dễ sai. Không dùng để chốt đáp án. Muốn kiểm đáp án/lời giải cụ thể: ADMIN dùng nút “Soát đề GPT”.</div>${meta}${aiAssistChatHtml()}</div>`;
+    renderAiChatMessages();
     typesetQuizMath();
     try{hb.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
 }
@@ -8835,8 +8863,27 @@ async function requestAiAssistantNote(){
         if(CUR===qIdx)renderAiAssistPanel(j);
     }catch(e){
         let hb=document.getElementById('hintBox');
-        if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không lấy được Trợ lý AI: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestAiAssistantNote()">Thử lại</button></div>`}
+        if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không lấy được Trợ lý AI: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestAiAssistantNote()">Thử lại</button></div>`}
     }finally{AI_ASSIST_LOADING=false;AI_ASSIST_Q=null;}
+}
+async function submitAiAssistantChat(){
+    if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành tài khoản VIP / S.VIP / ADMIN.');return}
+    if(AI_ASSIST_CHAT_LOADING)return;
+    let inp=document.getElementById('aiAssistChatInput');if(!inp)return;
+    let text=String(inp.value||'').trim();
+    if(!text){inp.focus();return}
+    if(text.length>700){alert('Câu hỏi thêm nên ngắn gọn dưới 700 ký tự.');return}
+    saveCurrent();let qIdx=CUR;let hist=aiChatHistory();
+    hist.push({role:'user',text:text});inp.value='';renderAiChatMessages();
+    AI_ASSIST_CHAT_LOADING=true;let btn=document.getElementById('aiAssistChatSend');if(btn){btn.disabled=true;btn.textContent='Đang…'}
+    try{
+        let j=await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,message:text,messages:hist.slice(-8),answer:ANSWERS[qIdx]||'',...quizRestorePayload()}),timeoutMs:50000},1);
+        if(CUR===qIdx){hist.push({role:'assistant',text:j.reply||'Thầy Minh AI chưa có phản hồi.'});renderAiChatMessages();}
+    }catch(e){
+        if(CUR===qIdx){hist.push({role:'assistant',text:'Không trả lời được lúc này: '+(e.message||e)});renderAiChatMessages();}
+    }finally{
+        AI_ASSIST_CHAT_LOADING=false;let b=document.getElementById('aiAssistChatSend');if(b){b.disabled=false;b.textContent='Gửi'}let i=document.getElementById('aiAssistChatInput');if(i)i.focus();
+    }
 }
 
 async function requestHint(){if(!USER.can_ai_hint){alert('Gợi ý AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(HINT_LOADING||SIMILAR_LOADING){return}saveCurrent();let qIdx=CUR;delete HINT_BY_Q[qIdx];setHintLoading(true,qIdx);beginHintLoadingTimer();showHintLoadingBox();let rb=document.getElementById('resultBox');if(rb)rb.style.color='#1d4ed8';let hintTimer=null;let hintDone=false;try{let ans=ANSWERS[qIdx];let hintBody={sid:SID,index:qIdx,answer:ans,...quizRestorePayload()};if(isAdminViewer())hintBody.admin_review_mode=getAdminReviewMode();HINT_ABORT_CTRL=new AbortController();let tms=hintClientTimeoutMs();hintTimer=setTimeout(()=>{abortHintFetch()},tms);let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hintBody),signal:HINT_ABORT_CTRL.signal});HINT_BY_Q[qIdx]=j;if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;hintDone=true;if(hintTimer){clearTimeout(hintTimer);hintTimer=null}finishHintRequest(qIdx,j)}catch(e){let msg=(e&&e.name==='AbortError')?'Quá thời gian chờ. Render Free giới hạn ~30 giây/request — chọn ⚡ Soát nhanh hoặc thử lại.':String(e.message||e);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>❌ Không lấy được gợi ý AI</b><div class="muted" style="margin-top:8px">'+esc(msg)+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}alert('Không lấy được gợi ý: '+msg)}finally{if(!hintDone){if(hintTimer)clearTimeout(hintTimer);stopHintLoadingTimer();HINT_LOADING_SINCE=0;if(HINT_LOADING_Q===qIdx)setHintLoading(false);syncHintButtons(USER.can_ai_hint!==false);if(CUR===qIdx&&rb){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}}}}
@@ -10171,21 +10218,30 @@ def _sanitize_assistant_note_text(txt: Any) -> str:
 def build_ai_assistant_note_prompt(q: Dict[str, Any], user_answer: Any = "") -> str:
     block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
     dang = effective_dang(q)
+    dang_bt = clean(q.get("DangBaiTap", "")) or "chưa gán"
     return "\n".join([
         "Bạn là trợ lý AI học tập cho học sinh THPT.",
-        "Nhiệm vụ: đọc câu hỏi và viết LƯU Ý TRÁNH SAI thật ngắn để học sinh tự làm tốt hơn.",
+        "Nhiệm vụ: đọc câu hỏi và viết GỢI Ý CÁCH LÀM để học sinh tự làm tốt hơn, không chốt đáp án.",
         "",
         "QUY TẮC BẮT BUỘC:",
         "- KHÔNG nêu đáp án A/B/C/D, Đúng/Sai, hoặc kết quả số cuối.",
-        "- KHÔNG thay số giải riêng câu đang mở.",
-        "- KHÔNG viết lời giải đầy đủ.",
-        "- Chỉ nêu: dạng bài, kiến thức/công thức cần nhớ, bẫy dễ sai, cách kiểm nhanh.",
-        "- Viết 4–6 gạch đầu dòng, tiếng Việt dễ hiểu, hơi thân thiện nhưng không dài dòng.",
-        "- Có thể dùng từ 'đừng nhầm', 'coi chừng', 'kiểm tra lại đơn vị', nhưng tránh nói thô tục.",
-        "- Nếu câu có đồ thị/hình: nhắc cách đọc trục, giao điểm, cực trị, chiều tăng/giảm, đơn vị trong hình.",
+        "- KHÔNG thay số tính ra kết quả riêng của câu đang mở.",
+        "- KHÔNG viết lời giải đầy đủ và không loại từng phương án để chốt đáp án.",
+        "- Được nêu công thức TỔNG QUÁT, quy trình làm, lưu ý đổi đơn vị, điều kiện áp dụng và bẫy dễ sai.",
+        "- Nếu cần tóm tắt dữ kiện thì chỉ ghi đại lượng/ký hiệu cần lấy từ đề, không tính kết quả cuối.",
+        "- Nếu có hình/đồ thị/bảng: nhắc cách đọc trục, giao điểm, cực trị, khoảng tăng/giảm, đơn vị trong hình.",
         "- Mỗi công thức đặt trong $...$ một dòng nếu cần.",
         "",
+        "BỐ CỤC TRẢ LỜI BẮT BUỘC, ngắn gọn:",
+        "1. Dạng bài: ...",
+        "2. Tóm tắt cần nhìn: ...",
+        "3. Công thức/kiến thức dùng: ...",
+        "4. Các bước làm: Bước 1...; Bước 2...; Bước 3...",
+        "5. Đổi đơn vị/lưu ý: ...",
+        "6. Bẫy dễ sai: ...",
+        "",
         f"Dạng câu: {dang}",
+        f"Dạng bài tập cột H: {dang_bt}",
         "DỮ LIỆU CÂU:",
         block,
     ])
@@ -10204,14 +10260,14 @@ def ai_assistant_note_from_provider(q: Dict[str, Any], user_answer: Any = "") ->
         provider = "AUTO"
     model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
-    sys_prompt = "Bạn là trợ lý AI học tập. Chỉ nhắc lưu ý tránh sai, không chốt đáp án."
+    sys_prompt = "Bạn là trợ lý AI học tập. Gợi ý các bước làm, công thức, tóm tắt dữ kiện và đổi đơn vị; tuyệt đối không chốt đáp án."
     user_prompt = build_ai_assistant_note_prompt(q, user_answer)
     last_error = ""
 
     def try_openai() -> Tuple[str, int, str, str, str]:
         nonlocal last_error
         for idx, api_key in enumerate(openai_keys, start=1):
-            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 520, 0.15, timeout=35)
+            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 780, 0.15, timeout=35)
             if err:
                 last_error = err
                 if _is_quota_or_rate_error(err):
@@ -10227,7 +10283,7 @@ def ai_assistant_note_from_provider(q: Dict[str, Any], user_answer: Any = "") ->
         models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gm in models:
-                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 520, 0.15, timeout=25)
+                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 780, 0.15, timeout=25)
                 if err:
                     last_error = err
                     continue
@@ -10248,11 +10304,12 @@ def ai_assistant_note_from_provider(q: Dict[str, Any], user_answer: Any = "") ->
         if txt:
             return txt, idx, used, model, ""
     fb = (
-        "• Nhận dạng dạng bài trước khi chọn.\n"
-        "• Gạch dưới đại lượng hỏi và dữ kiện đã cho.\n"
-        "• Chọn đúng công thức theo bài học/dạng bài tập.\n"
-        "• Coi chừng nhầm đơn vị, dấu, chiều biến thiên hoặc đọc sai đồ thị/hình.\n"
-        "• Sau khi chọn, tự kiểm tra xem phương án có hợp lý với hiện tượng/đồ thị không."
+        "1. Dạng bài: Nhận dạng bài học và dạng bài tập trước khi chọn.\n"
+        "2. Tóm tắt cần nhìn: Gạch dưới đại lượng hỏi, dữ kiện đã cho và điều kiện của đề.\n"
+        "3. Công thức/kiến thức dùng: Chọn công thức tổng quát đúng theo bài học/dạng bài tập.\n"
+        "4. Các bước làm: Xác định dữ kiện → đổi đơn vị nếu cần → áp dụng công thức → kiểm tra tính hợp lý.\n"
+        "5. Đổi đơn vị/lưu ý: Coi chừng kg/g, J/kJ, cm/m, phút/giây, °C/K, dấu và chiều biến thiên.\n"
+        "6. Bẫy dễ sai: Không đọc vội phương án; nếu có đồ thị/hình, kiểm tra trục, giao điểm, cực trị và đơn vị."
     )
     return fb, 0, "FALLBACK", "", last_error or "AI chưa phản hồi, đang hiển thị lưu ý cơ bản."
 
@@ -10333,7 +10390,14 @@ def version():
                 "pwa_fix_jinja_comment_v234": True,
         "learning_on_off_buttons": True,
         "learning_gpt_admin_only": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
+        "ai_assistant_icon_v235": True,
+        "ai_assistant_no_answer_v235": True,
+        "ai_assistant_vip_svip_admin_v235": True,
+        "ai_assistant_steps_formula_units_v236": True,
+        "ai_assistant_no_final_answer_v236": True,
+        "ai_assistant_chat_thay_minh_v237": True,
+        "ai_assistant_chat_no_answer_v237": True,
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -10990,6 +11054,116 @@ def api_hint_similar():
         return jsonify({"error": str(e)}), 400
 
 
+
+def _sanitize_assistant_chat_text(txt: Any) -> str:
+    """Lọc phản hồi chat của Trợ lý AI: không cho chốt đáp án/đáp số."""
+    return _sanitize_assistant_note_text(txt)
+
+
+def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: Any = None, user_answer: Any = "") -> str:
+    block = build_ai_question_block(q, user_answer, include_sheet_answer=False)
+    dang = effective_dang(q)
+    dang_bt = clean(q.get("DangBaiTap", "")) or "chưa gán"
+    msg = clean(message)[:800]
+    hist_lines: List[str] = []
+    if isinstance(messages, list):
+        for it in messages[-8:]:
+            if not isinstance(it, dict):
+                continue
+            role = clean(it.get("role", ""))
+            text = clean(it.get("text", it.get("content", "")))[:700]
+            if not text:
+                continue
+            if role == "user":
+                hist_lines.append(f"Học sinh hỏi: {text}")
+            elif role in ("assistant", "bot"):
+                hist_lines.append(f"Trợ lý đã đáp: {text}")
+    return "\n".join([
+        "Bạn nhập vai: TRỢ LÝ AI THẦY MINH trong app luyện đề THPT.",
+        "Phong cách: thân thiện, ngắn gọn, như thầy/cô kèm học sinh; gọi người học là 'em' khi phù hợp.",
+        "Nhiệm vụ: trả lời câu hỏi thêm của học sinh để em hiểu rõ MỤC TIÊU ĐỀ HỎI, dạng bài, công thức cần dùng, các bước làm, đổi đơn vị và bẫy dễ sai.",
+        "",
+        "QUY TẮC BẮT BUỘC:",
+        "- KHÔNG nêu đáp án A/B/C/D, Đúng/Sai, hoặc kết quả số cuối.",
+        "- KHÔNG thay số tính ra kết quả riêng của câu đang mở.",
+        "- KHÔNG viết lời giải đầy đủ; không loại từng phương án để chốt đáp án.",
+        "- Nếu học sinh hỏi trực tiếp 'đáp án là gì', hãy từ chối nhẹ và hướng dẫn cách tự kiểm.",
+        "- Được nêu công thức tổng quát, dấu hiệu nhận biết, quy trình làm, lưu ý đổi đơn vị, điều kiện áp dụng, bẫy dễ sai.",
+        "- Nếu có hình/đồ thị/bảng: nhắc cách đọc trục, giao điểm, cực trị, khoảng tăng/giảm, đơn vị trong hình.",
+        "- Công thức đặt trong $...$ nếu cần.",
+        "- Trả lời tối đa 8 dòng, ưu tiên dạng gạch đầu dòng.",
+        "",
+        f"Dạng câu: {dang}",
+        f"Dạng bài tập cột H: {dang_bt}",
+        "DỮ LIỆU CÂU:",
+        block,
+        "",
+        "LỊCH SỬ CHAT GẦN NHẤT:",
+        "\n".join(hist_lines[-8:]) if hist_lines else "(chưa có)",
+        "",
+        "CÂU HỎI THÊM CỦA HỌC SINH:",
+        msg,
+    ])
+
+
+def ai_assistant_chat_from_provider(q: Dict[str, Any], message: Any, messages: Any = None, user_answer: Any = "") -> Tuple[str, int, str, str, str]:
+    cfg = ai_runtime_config()
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+    if is_admin() or is_svip():
+        provider = clean(cfg.get("admin_provider" if is_admin() else "svip_provider") or "OPENAI").upper()
+    else:
+        provider = clean(cfg.get("provider") or "GEMINI").upper()
+    if provider not in ("OPENAI", "GEMINI", "AUTO"):
+        provider = "AUTO"
+    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
+    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
+    sys_prompt = "Bạn là Trợ lý AI thầy Minh. Chỉ hướng dẫn mục tiêu câu hỏi, bước làm, công thức, đổi đơn vị và bẫy dễ sai; tuyệt đối không chốt đáp án hoặc đáp số."
+    user_prompt = build_ai_assistant_chat_prompt(q, message, messages, user_answer)
+    last_error = ""
+
+    def try_openai() -> Tuple[str, int, str, str, str]:
+        nonlocal last_error
+        for idx, api_key in enumerate(openai_keys, start=1):
+            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 650, 0.12, timeout=35)
+            if err:
+                last_error = err
+                if _is_quota_or_rate_error(err):
+                    break
+                continue
+            txt = _sanitize_assistant_chat_text(txt)
+            if txt:
+                return txt, idx, "OPENAI", model_openai, ""
+        return "", 0, "OPENAI", model_openai, last_error
+
+    def try_gemini() -> Tuple[str, int, str, str, str]:
+        nonlocal last_error
+        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
+        for idx, api_key in enumerate(gemini_keys, start=1):
+            for gm in models:
+                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 650, 0.12, timeout=25)
+                if err:
+                    last_error = err
+                    continue
+                txt = _sanitize_assistant_chat_text(txt)
+                if txt:
+                    return txt, idx, "GEMINI", gm, ""
+        return "", 0, "GEMINI", model_gemini, last_error
+
+    order = [try_openai, try_gemini] if provider == "OPENAI" else ([try_gemini, try_openai] if provider == "GEMINI" else ([try_openai, try_gemini] if (is_admin() or is_svip()) else [try_gemini, try_openai]))
+    for fn in order:
+        txt, idx, used, model, err = fn()
+        if txt:
+            return txt, idx, used, model, ""
+    fb = (
+        "Em hãy xác định trước đề hỏi đại lượng/nhận định nào.\n"
+        "Tiếp theo, gạch chân dữ kiện và chọn công thức tổng quát liên quan.\n"
+        "Kiểm tra đơn vị trước khi thay số, rồi tự so sánh với phương án.\n"
+        "Thầy Minh AI không chốt đáp án ở mục này."
+    )
+    return fb, 0, provider, "", last_error
+
+
 @app.route("/api/ai/assistant-note", methods=["POST"])
 def api_ai_assistant_note():
     bad = require_login_json()
@@ -11024,6 +11198,51 @@ def api_ai_assistant_note():
             "model": model,
             "ai_error": ai_error,
             "message": "Trợ lý AI chỉ nhắc lưu ý tránh sai; không chốt đáp án."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/ai/assistant-chat", methods=["POST"])
+def api_ai_assistant_chat():
+    bad = require_login_json()
+    if bad:
+        return bad
+    bad_ai = require_ai_hint_json()
+    if bad_ai:
+        return bad_ai
+    refresh_session_role_from_store()
+    data = request.get_json(silent=True) or {}
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    message = clean(data.get("message", ""))
+    if not message:
+        return jsonify({"error": "Chưa nhập câu hỏi cho Trợ lý AI."}), 400
+    if len(message) > 800:
+        return jsonify({"error": "Câu hỏi thêm quá dài. Hãy hỏi ngắn gọn hơn."}), 400
+    messages = data.get("messages", [])
+    answer = data.get("answer", "")
+    restore = quiz_restore_payload_from_body(data)
+    try:
+        ses = get_store().check_quiz_session(sid, restore)
+        qs = ses["questions"]
+        if not (0 <= idx < len(qs)):
+            raise RuntimeError("Số câu không hợp lệ")
+        q = qs[idx]
+        reply, key_index, provider_used, model, ai_error = ai_assistant_chat_from_provider(q, message, messages, answer)
+        return jsonify({
+            "ok": True,
+            "index": idx,
+            "reply": reply,
+            "show_answer": False,
+            "key_index": key_index,
+            "provider_used": provider_used,
+            "model": model,
+            "ai_error": ai_error,
+            "message": "Trợ lý AI thầy Minh chỉ hướng dẫn cách nghĩ; không chốt đáp án."
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
