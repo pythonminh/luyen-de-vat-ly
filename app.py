@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V232_MOBILE_ADMIN_COMPACT_BUTTONS_TEST_2026_06_11"
+APP_VERSION = "V233_PWA_INSTALL_MOBILE_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -7792,7 +7792,7 @@ def short_plain_text(s: Any, n: int = 160) -> str:
 # ============================================================
 
 SHARE_HTML = r"""
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
 <title>{{ og_title }}</title>
 <meta name="description" content="{{ og_desc }}">
 <meta property="og:title" content="{{ og_title }}">
@@ -7900,7 +7900,7 @@ LOGIN_HTML = r"""
 
 
 REGISTER_HTML = r"""
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng ký dùng thử</title>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png"><title>Đăng ký dùng thử</title>
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <style>body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#0f172a}html[data-theme="dark"] body{background:#0f172a;color:#e2e8f0}html[data-theme="dark"] .box{background:#1e293b;border-color:#334155}html[data-theme="dark"] input,html[data-theme="dark"] select{background:#0f172a;color:#e2e8f0;border-color:#475569}html[data-theme="dark"] .hint{color:#94a3b8}.box{max-width:500px;margin:40px auto;background:#fff;border:1px solid #d9e2ef;border-radius:16px;padding:24px;box-shadow:0 8px 30px #0001}.top{background:#1d4ed8;color:#fff;padding:16px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer}input,button,select{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}button{background:#1d4ed8;color:white;font-weight:800;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:10px;border-radius:10px;margin:8px 0}.hint{font-size:13px;color:#64748b;line-height:1.5}.link{display:block;text-align:center;margin-top:12px;color:#1d4ed8;font-weight:800;text-decoration:none}</style></head><body>
 <div class="top"><span>ĐĂNG KÝ DÙNG THỬ 3 NGÀY</span><button type="button" class="themeBtn" onclick="(function(){var c=document.documentElement.getAttribute('data-theme')||'light';var d=c!=='dark';document.documentElement.setAttribute('data-theme',d?'dark':'light');try{localStorage.setItem('LDVL_THEME',d?'dark':'light')}catch(e){}event.target.textContent=d?'☀️':'🌙'})()">🌙</button></div>
@@ -7913,7 +7913,7 @@ REGISTER_HTML = r"""
 
 APP_HTML = r"""
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Luyện đề</title>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Luyện đề</title><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <script>window.MathJax={loader:{load:['[tex]/ams']},tex:{packages:{'[+]':['ams']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},svg:{fontCache:"global"},options:{renderActions:{addMenu:[0,0,'']}}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
@@ -7992,8 +7992,14 @@ APP_HTML = r"""
   .adminReviewModeWrap select{max-width:96px!important;font-size:9.6px!important}
 }
 
+
+/* ===== V233 PWA: nút cài app điện thoại ===== */
+#pwaInstallBtn{display:none;background:#facc15;color:#1e293b;border:1px solid #fde68a;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
+#pwaInstallBtn.show{display:inline-flex;align-items:center;gap:4px}
+@media(max-width:760px){#pwaInstallBtn{font-size:11px!important;padding:4px 8px!important;min-height:24px!important}.topRight{gap:4px 6px!important}}
+
 </style></head>
-<body><div class="top"><div class="topRow"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
+<body><div class="top"><div class="topRow"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">📢 Thông báo kỳ thi</span><span id="examTimer" class="timer"></span></div>
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div id="idLookupPanel" class="panel"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px">Chỉ dùng key <b>AIzaSy...</b> từ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (Create API key). <b>Không</b> dùng key <b>AQ...</b> hay key Google Cloud khác. Key của bạn được ưu tiên; không có thì dùng key server Render.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIzaSy...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
@@ -9428,6 +9434,32 @@ async function deleteQuestion(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Khô
 setInterval(updateExamStrip,1000);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&FULLDE_ON){document.body.classList.add('fullde-mode')}if(!document.fullscreenElement){FS_ANS_FORCE=null;FS_EXP_FORCE=null;renderQuestion()}});
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
+
+/* ===== V233 PWA: cài app lên điện thoại ===== */
+let PWA_DEFERRED_PROMPT=null;
+function isStandalonePwa(){try{return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}catch(e){return false}}
+function showPwaInstallBtn(show){let b=document.getElementById('pwaInstallBtn');if(!b)return;if(show && !isStandalonePwa())b.classList.add('show');else b.classList.remove('show')}
+window.addEventListener('beforeinstallprompt',function(e){try{e.preventDefault();PWA_DEFERRED_PROMPT=e;showPwaInstallBtn(true)}catch(err){}});
+window.addEventListener('appinstalled',function(){PWA_DEFERRED_PROMPT=null;showPwaInstallBtn(false);try{localStorage.setItem('LDVL_PWA_INSTALLED','1')}catch(e){}});
+async function installPwaApp(){
+  try{
+    if(PWA_DEFERRED_PROMPT){
+      PWA_DEFERRED_PROMPT.prompt();
+      await PWA_DEFERRED_PROMPT.userChoice;
+      PWA_DEFERRED_PROMPT=null;
+      showPwaInstallBtn(false);
+      return;
+    }
+    alert('Nếu nút cài chưa hiện: trên Android mở Chrome → dấu 3 chấm → Thêm vào màn hình chính. Trên iPhone mở Safari → Chia sẻ → Thêm vào Màn hình chính.');
+  }catch(e){alert('Mở menu trình duyệt → Thêm vào màn hình chính để cài app.');}
+}
+(function initPwa(){
+  try{
+    if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/service-worker.js').catch(function(){})})}
+    showPwaInstallBtn(false);
+  }catch(e){}
+})();
+
 </script></body></html>
 """
 
@@ -10142,9 +10174,12 @@ def version():
         "method_prompt_no_answer_input_v231": True,
         "mobile_admin_compact_buttons_v232": True,
         "admin_buttons_small_mobile_v232": True,
+        "pwa_install_v233": True,
+        "pwa_manifest_v233": True,
+        "pwa_service_worker_v233": True,
         "learning_on_off_buttons": True,
         "learning_gpt_admin_only": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import"]
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -11732,6 +11767,84 @@ def api_question_dedupe():
         return jsonify(st.remove_duplicate_questions(dry_run=dry_run))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# PWA / CÀI APP ĐIỆN THOẠI
+# ============================================================
+
+def _pwa_solid_png(size: int, rgb: Tuple[int, int, int] = (29, 78, 216)) -> bytes:
+    """Tạo icon PNG đơn giản bằng stdlib để không cần thêm thư viện ngoài."""
+    import struct
+    import zlib
+    w = h = int(size)
+    r, g, b = rgb
+    raw = b"".join([b"\x00" + bytes([r, g, b]) * w for _ in range(h)])
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xffffffff)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
+
+@app.route("/manifest.json")
+def pwa_manifest():
+    return jsonify({
+        "name": "Luyện đề AI",
+        "short_name": "Luyện đề AI",
+        "description": "Ứng dụng luyện đề, học lý thuyết và phương pháp giải.",
+        "start_url": "/?source=pwa",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait-primary",
+        "background_color": "#f5f7fb",
+        "theme_color": "#1d4ed8",
+        "categories": ["education"],
+        "lang": "vi",
+        "icons": [
+            {"src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+        ],
+    })
+
+@app.route("/pwa-icon-192.png")
+def pwa_icon_192():
+    return app.response_class(_pwa_solid_png(192), mimetype="image/png")
+
+@app.route("/pwa-icon-512.png")
+def pwa_icon_512():
+    return app.response_class(_pwa_solid_png(512), mimetype="image/png")
+
+@app.route("/offline")
+def pwa_offline():
+    return app.response_class(
+        """<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Mất kết nối</title><style>body{font-family:Arial,sans-serif;margin:0;background:#f5f7fb;color:#0f172a}.box{max-width:520px;margin:60px auto;background:#fff;border:1px solid #d7e0ed;border-radius:16px;padding:20px;box-shadow:0 8px 24px #0001}h2{color:#1d4ed8}</style></head><body><div class='box'><h2>📡 Chưa có mạng</h2><p>App đã được cài, nhưng cần Internet để đồng bộ Google Sheet, làm bài và xem học liệu mới nhất.</p><button onclick='location.reload()' style='padding:10px 14px;border-radius:10px;border:1px solid #1d4ed8;background:#1d4ed8;color:white;font-weight:800'>Thử tải lại</button></div></body></html>""",
+        mimetype="text/html; charset=utf-8",
+    )
+
+@app.route("/service-worker.js")
+def pwa_service_worker():
+    js = """
+const CACHE_NAME = 'luyen-de-ai-v233';
+const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+  if (req.mode === 'navigate') {
+    event.respondWith(fetch(req).catch(() => caches.match('/offline')));
+    return;
+  }
+  if (CORE_ASSETS.includes(url.pathname)) {
+    event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
+  }
+});
+"""
+    return app.response_class(js, mimetype="application/javascript; charset=utf-8")
 
 @app.errorhandler(Exception)
 def handle_error(e):
