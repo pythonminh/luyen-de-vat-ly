@@ -12,7 +12,7 @@ Yêu cầu Environment Variables trên Render:
     GEMINI_HINT_MODEL=gemini-2.5-flash-lite
     AI_PROVIDER=GEMINI
     AI_ADMIN_PROVIDER=OPENAI   (tuỳ chọn — ADMIN dùng ChatGPT, VIP vẫn GEMINI)
-    AI_SVIP_PROVIDER=OPENAI    (tuỳ chọn — SVIP dùng ChatGPT nhận đáp án; VIP vẫn GEMINI)
+    AI_SVIP_PROVIDER=GEMINI    (khuyến nghị — SVIP/VIP chỉ dùng Gemini để tiết kiệm; ChatGPT chỉ ADMIN)
     OPENAI_API_KEY=sk-...
     OPENAI_ADMIN_MODEL=gpt-4o   (tuỳ chọn — model ADMIN ChatGPT)
     OPENAI_VISION_MODEL=gpt-4o  (tuỳ chọn — đọc ảnh cột T khi gợi ý/soát)
@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V237_AI_ASSISTANT_CHAT_THAY_MINH_TEST_2026_06_11"
+APP_VERSION = "V238_ADMIN_GPT_USERS_GEMINI_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -76,7 +76,7 @@ AI_IMAGE_FETCH_TIMEOUT = max(6, min(int(os.environ.get("AI_IMAGE_FETCH_TIMEOUT",
 AI_IMAGE_MAX_BYTES = max(500_000, min(int(os.environ.get("AI_IMAGE_MAX_BYTES", "4000000") or 4000000), 8_000_000))
 INFOGRAPHIC_HTTP_MAX_SEC = max(35, min(int(os.environ.get("INFOGRAPHIC_HTTP_MAX_SEC", "58") or 58), 120))
 DEFAULT_AI_PROVIDER = "GEMINI"
-DEFAULT_SVIP_AI_PROVIDER = "OPENAI"
+DEFAULT_SVIP_AI_PROVIDER = "GEMINI"
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
 AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(180, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "420") or 420), 800))
@@ -4473,17 +4473,19 @@ def resolve_ai_provider(
     admin_review: bool = False,
     svip_hint: bool = False,
 ) -> str:
-    """VIP dùng AI_PROVIDER; SVIP dùng AI_SVIP_PROVIDER; ADMIN dùng AI_ADMIN_PROVIDER."""
-    cfg = cfg or ai_runtime_config()
-    env_admin = clean(os.environ.get("AI_ADMIN_PROVIDER", "")).upper()
-    if admin_review and env_admin in ["AUTO", "OPENAI", "GEMINI"]:
-        return env_admin
-    if svip_hint:
-        env_svip = clean(os.environ.get("AI_SVIP_PROVIDER", DEFAULT_SVIP_AI_PROVIDER)).upper()
-        if env_svip in ["AUTO", "OPENAI", "GEMINI"]:
-            return env_svip
-        return DEFAULT_SVIP_AI_PROVIDER
-    return _normalize_ai_provider(cfg.get("provider"), DEFAULT_AI_PROVIDER)
+    """
+    Quy tắc tiết kiệm V238:
+    - Chỉ ADMIN mới được dùng ChatGPT/OpenAI.
+    - VIP/S.VIP/học sinh chỉ dùng Gemini (AIza... hoặc AQ....).
+    - Soát đề GPT của ADMIN ưu tiên AI_ADMIN_PROVIDER.
+    """
+    cfg = cfg or {}
+    env_admin = clean(os.environ.get("AI_ADMIN_PROVIDER", "OPENAI")).upper()
+    if admin_review or is_admin():
+        if env_admin in ["AUTO", "OPENAI", "GEMINI"]:
+            return env_admin
+        return "OPENAI"
+    return "GEMINI"
 
 
 def ai_runtime_config() -> Dict[str, Any]:
@@ -4491,6 +4493,9 @@ def ai_runtime_config() -> Dict[str, Any]:
     ov = get_user_ai_overrides() if current_mahs() not in ("", "_guest") else {}
     user_provider = clean(ov.get("provider", "")).upper()
     provider = user_provider if user_provider in ["AUTO", "OPENAI", "GEMINI"] else env_provider
+    # V238: không phải ADMIN thì khóa về Gemini để khỏi tốn ChatGPT/OpenAI.
+    if not is_admin():
+        provider = "GEMINI"
 
     user_g = load_user_ai_keys("GEMINI")
     user_o = load_user_ai_keys("OPENAI")
@@ -4670,6 +4675,9 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         return ai_runtime_config()
     provider = clean(payload.get("provider", "")).upper()
     if provider and provider in ["AUTO", "OPENAI", "GEMINI"]:
+        if not is_admin() and provider != "GEMINI":
+            # VIP/S.VIP/học sinh chỉ được dùng Gemini để tiết kiệm OpenAI.
+            provider = "GEMINI"
         ov["provider"] = provider
     elif provider:
         raise ValueError("AI_PROVIDER chỉ nhận AUTO, OPENAI hoặc GEMINI")
@@ -4684,13 +4692,15 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
                     raise ValueError(err)
             ov["gemini_keys"] = g_keys
         if o_keys:
+            if not is_admin():
+                raise ValueError("OpenAI/ChatGPT chỉ dành cho ADMIN. VIP/S.VIP/học sinh chỉ nhập key Gemini AIza... hoặc AQ....")
             for k in o_keys:
                 err = _validate_key_format("OPENAI", k)
                 if err:
                     raise ValueError(err)
             ov["openai_keys"] = o_keys
         if not g_keys and not o_keys:
-            raise ValueError("Không nhận diện được key. Dán Gemini (AIza.../AQ....) hoặc OpenAI (sk-...) mỗi dòng một key.")
+            raise ValueError("Không nhận diện được key. VIP/S.VIP nhập Gemini (AIza.../AQ....); OpenAI (sk-...) chỉ ADMIN.")
 
     if "gemini_keys" in payload and str(payload.get("gemini_keys") or "").strip():
         parsed, _ = parse_api_keys_2026(payload.get("gemini_keys"))
@@ -4700,6 +4710,8 @@ def update_ai_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
                 raise ValueError(err)
         ov["gemini_keys"] = parsed
     if "openai_keys" in payload and str(payload.get("openai_keys") or "").strip():
+        if not is_admin():
+            raise ValueError("OpenAI/ChatGPT chỉ dành cho ADMIN. Học sinh/VIP/S.VIP chỉ dùng Gemini AIza... hoặc AQ....")
         _, parsed = parse_api_keys_2026(payload.get("openai_keys"))
         for k in parsed:
             err = _validate_key_format("OPENAI", k)
@@ -8837,7 +8849,7 @@ function renderAiChatMessages(){
     typesetQuizMath();
 }
 function aiAssistChatHtml(){
-    return `<div class="aiChatBox"><b>💬 Hỏi thêm Trợ lý AI thầy Minh</b><div class="muted" style="font-size:12px;margin-top:3px">VIP/S.VIP/ADMIN có thể chat để hỏi rõ mục tiêu, bước làm, công thức và lưu ý. AI không đưa đáp án cuối.</div><div id="aiAssistChatMessages" class="aiChatMsgs"></div><div class="aiChatForm"><textarea id="aiAssistChatInput" class="aiChatInput" placeholder="Ví dụ: Bài này hỏi mục tiêu gì? Cần dùng công thức nào? Đổi đơn vị ra sao?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitAiAssistantChat()}"></textarea><button type="button" id="aiAssistChatSend" class="aiChatSend" onclick="submitAiAssistantChat()">Gửi</button></div></div>`;
+    return `<div class="aiChatBox"><b>💬 Hỏi thêm Trợ lý AI thầy Minh</b><div class="muted" style="font-size:12px;margin-top:3px">VIP/S.VIP/ADMIN có thể chat để hỏi rõ mục tiêu, bước làm, công thức và lưu ý. VIP/S.VIP dùng Gemini; chỉ ADMIN dùng ChatGPT. AI không đưa đáp án cuối.</div><div id="aiAssistChatMessages" class="aiChatMsgs"></div><div class="aiChatForm"><textarea id="aiAssistChatInput" class="aiChatInput" placeholder="Ví dụ: Bài này hỏi mục tiêu gì? Cần dùng công thức nào? Đổi đơn vị ra sao?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitAiAssistantChat()}"></textarea><button type="button" id="aiAssistChatSend" class="aiChatSend" onclick="submitAiAssistantChat()">Gửi</button></div></div>`;
 }
 function renderAiAssistPanel(j){
     let hb=document.getElementById('hintBox');if(!hb)return;
@@ -10251,13 +10263,13 @@ def ai_assistant_note_from_provider(q: Dict[str, Any], user_answer: Any = "") ->
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
-    # ADMIN/SVIP ưu tiên OpenAI nếu có; VIP ưu tiên Gemini để tiết kiệm, nhưng vẫn là Trợ lý AI.
-    if is_admin() or is_svip():
-        provider = clean(cfg.get("admin_provider" if is_admin() else "svip_provider") or "OPENAI").upper()
+    # V238: Chỉ ADMIN mới được dùng ChatGPT/OpenAI. VIP/S.VIP/học sinh dùng Gemini.
+    if is_admin():
+        provider = clean(cfg.get("admin_provider") or os.environ.get("AI_ADMIN_PROVIDER", "OPENAI") or "OPENAI").upper()
     else:
-        provider = clean(cfg.get("provider") or "GEMINI").upper()
+        provider = "GEMINI"
     if provider not in ("OPENAI", "GEMINI", "AUTO"):
-        provider = "AUTO"
+        provider = "GEMINI"
     model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
     sys_prompt = "Bạn là trợ lý AI học tập. Gợi ý các bước làm, công thức, tóm tắt dữ kiện và đổi đơn vị; tuyệt đối không chốt đáp án."
@@ -10292,13 +10304,16 @@ def ai_assistant_note_from_provider(q: Dict[str, Any], user_answer: Any = "") ->
                     return txt, idx, "GEMINI", gm, ""
         return "", 0, "GEMINI", model_gemini, last_error
 
-    order = []
-    if provider == "OPENAI":
-        order = [try_openai, try_gemini]
-    elif provider == "GEMINI":
-        order = [try_gemini, try_openai]
+    if is_admin():
+        if provider == "OPENAI":
+            order = [try_openai, try_gemini]
+        elif provider == "GEMINI":
+            order = [try_gemini, try_openai]
+        else:
+            order = [try_openai, try_gemini]
     else:
-        order = [try_openai, try_gemini] if (is_admin() or is_svip()) else [try_gemini, try_openai]
+        # Không phải ADMIN: tuyệt đối không fallback sang OpenAI.
+        order = [try_gemini]
     for fn in order:
         txt, idx, used, model, err = fn()
         if txt:
@@ -10397,6 +10412,9 @@ def version():
         "ai_assistant_no_final_answer_v236": True,
         "ai_assistant_chat_thay_minh_v237": True,
         "ai_assistant_chat_no_answer_v237": True,
+        "admin_only_chatgpt_v238": True,
+        "users_gemini_only_v238": True,
+        "gemini_key_aiza_aq_v238": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
@@ -11110,12 +11128,13 @@ def ai_assistant_chat_from_provider(q: Dict[str, Any], message: Any, messages: A
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
-    if is_admin() or is_svip():
-        provider = clean(cfg.get("admin_provider" if is_admin() else "svip_provider") or "OPENAI").upper()
+    # V238: Chỉ ADMIN mới được dùng ChatGPT/OpenAI. VIP/S.VIP/học sinh dùng Gemini.
+    if is_admin():
+        provider = clean(cfg.get("admin_provider") or os.environ.get("AI_ADMIN_PROVIDER", "OPENAI") or "OPENAI").upper()
     else:
-        provider = clean(cfg.get("provider") or "GEMINI").upper()
+        provider = "GEMINI"
     if provider not in ("OPENAI", "GEMINI", "AUTO"):
-        provider = "AUTO"
+        provider = "GEMINI"
     model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
     sys_prompt = "Bạn là Trợ lý AI thầy Minh. Chỉ hướng dẫn mục tiêu câu hỏi, bước làm, công thức, đổi đơn vị và bẫy dễ sai; tuyệt đối không chốt đáp án hoặc đáp số."
@@ -11150,7 +11169,11 @@ def ai_assistant_chat_from_provider(q: Dict[str, Any], message: Any, messages: A
                     return txt, idx, "GEMINI", gm, ""
         return "", 0, "GEMINI", model_gemini, last_error
 
-    order = [try_openai, try_gemini] if provider == "OPENAI" else ([try_gemini, try_openai] if provider == "GEMINI" else ([try_openai, try_gemini] if (is_admin() or is_svip()) else [try_gemini, try_openai]))
+    if is_admin():
+        order = [try_openai, try_gemini] if provider == "OPENAI" else ([try_gemini, try_openai] if provider == "GEMINI" else [try_openai, try_gemini])
+    else:
+        # Không phải ADMIN: tuyệt đối không fallback sang OpenAI.
+        order = [try_gemini]
     for fn in order:
         txt, idx, used, model, err = fn()
         if txt:
@@ -11632,6 +11655,8 @@ def api_ai_key_check():
         return bad_ai
     body = request.get_json(silent=True) or {}
     provider = clean(body.get("provider", DEFAULT_AI_PROVIDER)).upper() or DEFAULT_AI_PROVIDER
+    if not is_admin() and provider in ["OPENAI", "AUTO"]:
+        provider = "GEMINI"
     model = clean(body.get("model", ""))
     if not model and provider in ["GEMINI", "AUTO"]:
         model = clean(body.get("gemini_model", ""))
