@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V224_ADMIN_DANGBAITAP_SUGGEST_FIXLOAD_TEST_2026_06_11"
+APP_VERSION = "V225_ADMIN_ROLE_QUANTRI_FIX_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -1021,7 +1021,17 @@ def sort_questions_by_dang_groups(
 
 def norm_role(s: Any) -> str:
     k = key_norm(s).replace(".", "")
-    if "admin" in k:
+    # Chấp nhận nhiều cách ghi quyền quản trị trong sheet HOC_VIEN:
+    # ADMIN, Admin, Quản trị viên, Quan tri vien, QuanTriVien...
+    k_compact = re.sub(r"[^a-z0-9]+", "", k)
+    if (
+        "admin" in k
+        or "quan tri" in k
+        or "quantri" in k_compact
+        or "quan ly" in k
+        or "quanly" in k_compact
+        or k_compact in {"qtv", "qtri", "administrator"}
+    ):
         return "ADMIN"
     if "svip" in k or "s vip" in k or "super" in k:
         return "S.VIP"
@@ -9797,7 +9807,8 @@ def version():
         "admin_learning_board_v221": True,
         "dangbaitap_auto_method_v222": True,
         "admin_dangbaitap_manual_suggest_v223": True,
-        "admin_dangbaitap_suggest_fixload_v224": True,
+        "admin_role_quantri_fix_v225": True,
+        "admin_role_quantri_fix_v225": True,
         "learning_gpt_admin_only": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import"]
     })
