@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V218_PP_NAV_COLOR_VISIBLE_TEST_2026_06_11"
+APP_VERSION = "V220_LEARNING_ADMIN_CREATE_VISIBLE_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -2146,6 +2146,66 @@ class SheetStore:
                 continue
             hits.append(it)
         return hits
+
+    def _learning_upsert_match_row(self, kind: str, item: Dict[str, Any]) -> int:
+        """Tìm dòng học liệu đã có để cập nhật thay vì append trùng."""
+        fields = LEARNING_METHOD_FIELDS if kind == "method" else LEARNING_THEORY_FIELDS
+        existing = self.method_items if kind == "method" else self.theory_items
+        item_id = clean(item.get("ID", ""))
+        key_fields = ["Mon", "Lop", "Chuong", "BaiHoc"] + (["DangBaiTap"] if kind == "method" else [])
+        # Ưu tiên ID nếu ADMIN cố tình sửa/cập nhật lại một dòng cũ.
+        if item_id:
+            for it in existing:
+                if clean(it.get("ID", "")) == item_id:
+                    try:
+                        return int(it.get("_row") or 0)
+                    except Exception:
+                        return 0
+        def kn(it: Dict[str, Any]) -> Tuple[str, ...]:
+            return tuple(key_norm(it.get(k, "")) for k in key_fields)
+        target = kn(item)
+        if any(target):
+            for it in existing:
+                if kn(it) == target:
+                    try:
+                        return int(it.get("_row") or 0)
+                    except Exception:
+                        return 0
+        return 0
+
+    def save_learning_item(self, kind: str, item: Dict[str, Any]) -> Dict[str, Any]:
+        """ADMIN lưu Ly_Thuyet/Phuong_Phap vào Google Sheet để lần sau gọi lại.
+        Không đụng sheet Cau_Hoi. Nếu trùng khóa Mon-Lop-Chuong-BaiHoc-(DangBaiTap) thì cập nhật dòng cũ.
+        """
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được lưu học liệu")
+        kind = "method" if clean(kind).lower() == "method" else "theory"
+        self.ensure_learning_loaded(force=True)
+        fields = LEARNING_METHOD_FIELDS if kind == "method" else LEARNING_THEORY_FIELDS
+        ws = self.ws_methods if kind == "method" else self.ws_theory
+        item = dict(item or {})
+        # Bảo vệ các cột khóa, chuẩn hóa nhẹ nội dung nhưng giữ LaTeX.
+        for f in fields:
+            item[f] = clean(item.get(f, ""))
+        prefix = "PP" if kind == "method" else "LT"
+        if not item.get("ID"):
+            base = "|".join(item.get(k, "") for k in (["Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap"] if kind == "method" else ["Mon", "Lop", "Chuong", "BaiHoc"]))
+            item["ID"] = f"{prefix}_" + stable_hash(base or json.dumps(item, ensure_ascii=False), 12)
+        item["TrangThai"] = item.get("TrangThai") or "OK"
+        item["NgayCapNhat"] = item.get("NgayCapNhat") or datetime.now().strftime("%d/%m/%Y %H:%M")
+        row_values = [item.get(f, "") for f in fields]
+        row_no = self._learning_upsert_match_row(kind, item)
+        action = "updated" if row_no and row_no >= 2 else "created"
+        if action == "updated":
+            end_col = gspread.utils.rowcol_to_a1(row_no, len(fields))
+            rng = f"A{row_no}:{end_col}"
+            gsheet_call_retry(f"update {kind} learning", ws.update, rng, [row_values], value_input_option="RAW")
+        else:
+            gsheet_call_retry(f"append {kind} learning", ws.append_row, row_values, value_input_option="RAW")
+            row_no = len(ws.get_all_values())
+        self.learning_loaded = False
+        self.load_learning()
+        return {"ok": True, "kind": kind, "action": action, "row": row_no, "item": item}
 
     def load_users(self):
         self.users = {}
@@ -8244,7 +8304,7 @@ async function checkCurrentQuestion(){if(SUBMITTED)return;if(USER.is_trial){aler
 function syncNavButtons(){let af=CUR<=0,al=CUR>=QUESTIONS.length-1;let p=document.getElementById('btnMobilePrev');if(p)p.disabled=af;let n=document.getElementById('btnMobileNext');if(n)n.disabled=al}
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let q=QUESTIONS[i]||{};let sec=quizSectionLabel(i);if(sec){html+=`<div class="navSectionLbl ${navSectionClass(sec)}"><span>${navSectionIcon(sec)}</span><span>${esc(sec)}</span></div>`}let lv=mucdoPrimary(q.MucDo||'');let cls='num '+navMucDoClass(lv);if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=(lv?`${lv} · ${mucdoLabel(lv)} · `:'')+shortText((q&&q.CauHoi)||'',120);html+=`<button class="${cls}" data-level="${escAttr(lv||'')}" title="${escAttr(tip)}" onclick="goQ(${i})"><span class="navLvIcon">${mucdoIcon(lv)}</span><span class="navNumText">${i+1}</span>${lv?`<span class="navLvText">${esc(lv)}</span>`:''}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}syncNavButtons()}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}syncQuestionMucDoChrome(q);renderNav();let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR])showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');let learnBtns=`<span class="qidLearnBtns"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 PP</button></span>`;document.getElementById('qid').innerHTML=`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${solTag?' · '+solTag:''}${learnBtns}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=secLbl?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button></div>`;qtextEl.classList.remove('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button></div>`+renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR)}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}syncQuestionMucDoChrome(q);renderNav();let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR])showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');let adminCreateBtns=USER.is_admin?`<button type="button" class="learnTheoryBtn" onclick="adminGenerateAndSyncLearning('theory')" title="GPT tạo lý thuyết và lưu Google Sheet">🤖 Tạo LT+GGS</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')" title="GPT tạo phương pháp và lưu Google Sheet">🤖 Tạo PP+GGS</button>`:'';let learnBtns=`<span class="qidLearnBtns"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 PP</button>${adminCreateBtns}</span>`;document.getElementById('qid').innerHTML=`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${solTag?' · '+solTag:''}${learnBtns}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=secLbl?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button>${USER.is_admin?`<button type="button" class="learnTheoryBtn" onclick="adminGenerateAndSyncLearning('theory')">🤖 Tạo LT+GGS</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`;qtextEl.classList.remove('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button>${USER.is_admin?`<button type="button" class="learnTheoryBtn" onclick="adminGenerateAndSyncLearning('theory')">🤖 Tạo LT+GGS</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`+renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR)}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProvider(){return String(USER.admin_ai_provider||'').toUpperCase()}
 function adminUsesGpt(){return isAdminViewer()&&adminAiProvider()==='OPENAI'}
@@ -8367,11 +8427,33 @@ function renderLearningPanel(kind,j,ctx){
     }else{
         body=`<div style="margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--surface)"><b>Chưa có học liệu khớp.</b><div class="muted" style="margin-top:6px">Kiểm tra sheet ${kind==='method'?'Phuong_Phap':'Ly_Thuyet'} theo các cột: Mon, Lop, Chuong, BaiHoc${kind==='method'?', DangBaiTap':''}.</div></div>`;
     }
-    let adminTip=USER.is_admin?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn2" onclick="syncData()">🔄 Đồng bộ</button><button type="button" class="btn2" onclick="requestHint()">🔍 Soát GPT câu này</button></div>`:'';
+    let adminTip=USER.is_admin?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="adminGenerateAndSyncLearning('${kind}')">🤖 GPT tạo + lưu GGS</button><button type="button" class="btn2" onclick="syncData()">🔄 Đồng bộ</button><button type="button" class="btn2" onclick="requestHint()">🔍 Soát GPT câu này</button><span class="muted" style="font-size:12px;align-self:center">Lưu vào sheet ${kind==='method'?'Phuong_Phap':'Ly_Thuyet'} để lần sau gọi lại.</span></div>`:'';
     hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');
     hb.innerHTML=`<b>${learningTitle(kind)}</b><div class="muted" style="margin-top:5px;font-size:12px">${esc(scope||'Câu hiện tại chưa đủ thông tin bài học/dạng bài.')}</div>${body}${adminTip}`;
     typesetQuizMath();
     try{hb.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
+}
+async function adminGenerateAndSyncLearning(kind){
+    if(!USER.is_admin){alert('Chỉ ADMIN được tạo và lưu học liệu.');return}
+    kind=(kind==='method')?'method':'theory';
+    let ctx=currentLearningQuery(kind);
+    let sheetName=kind==='method'?'Phuong_Phap':'Ly_Thuyet';
+    let scope=[ctx.params.Mon,ctx.params.Lop,ctx.params.Chuong,ctx.params.BaiHoc,(kind==='method'?ctx.params.DangBaiTap:'')].filter(Boolean).join(' · ');
+    if(!confirm(`GPT sẽ tạo ${learningTitle(kind)} cho:
+${scope||'câu hiện tại'}
+
+Sau đó LƯU vào Google Sheet ${sheetName} để học sinh gọi lại. Tiếp tục?`))return;
+    let hb=document.getElementById('hintBox');
+    if(hb){hb.classList.remove('hide');hb.innerHTML=`<b>${learningTitle(kind)}</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>GPT đang tạo học liệu và lưu vào Google Sheet ${sheetName}…</b><div class="muted" style="margin-top:6px;font-size:13px">Không đụng sheet Cau_Hoi. Nếu trùng bài/dạng, hệ thống cập nhật dòng cũ.</div></div></div>`;}
+    try{
+        let payload={kind:kind,question:ctx.q};
+        let j=await api('/api/learning/generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
+        alert(`✅ Đã ${j.action==='updated'?'cập nhật':'tạo mới'} học liệu vào ${sheetName}, dòng ${j.row}.\nAI: ${j.provider_used||''} ${j.model||''}`);
+        await openLearningPanel(kind);
+    }catch(e){
+        if(hb){hb.classList.remove('hide');hb.innerHTML=`<b>${learningTitle(kind)}</b><div class="muted" style="margin-top:8px;color:#991b1b">Không tạo/lưu được học liệu: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="adminGenerateAndSyncLearning('${kind}')">Thử lại</button></div>`;}
+        alert('Không tạo/lưu được học liệu: '+(e.message||e));
+    }
 }
 async function openLearningPanel(kind){
     saveCurrent();
@@ -9562,7 +9644,10 @@ def version():
         "learning_theory_method_v215": True,
         "learning_ui_buttons_v216": True,
         "level_color_icons_v217": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/latex/import"]
+        "pp_nav_color_v218": True,
+        "learning_ggs_sync_v219": True,
+        "learning_admin_create_visible_v220": True,
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/latex/import"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -9706,6 +9791,246 @@ def _learning_request_args() -> Dict[str, str]:
         "baihoc": val("BaiHoc") or val("baihoc"),
         "dangbaitap": val("DangBaiTap") or val("dangbaitap"),
     }
+
+def _learning_question_from_body(body: Dict[str, Any]) -> Dict[str, Any]:
+    q = body.get("question") if isinstance(body, dict) else {}
+    if not isinstance(q, dict):
+        q = {}
+    out: Dict[str, Any] = {}
+    for f in QUESTION_FIELDS:
+        out[f] = clean(q.get(f, ""))
+    # Nhận thêm query rời nếu client gửi ctx thay vì question đầy đủ.
+    for f in ["Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "MucDo", "Dang", "CauHoi", "DapAn", "LoiGiai"]:
+        if not out.get(f) and isinstance(body, dict):
+            out[f] = clean(body.get(f, ""))
+    out["Dang"] = effective_dang(out)
+    return out
+
+def _learning_ai_prompt(kind: str, q: Dict[str, Any]) -> str:
+    kind = "method" if kind == "method" else "theory"
+    opts = "\n".join([f"{L}. {clean(q.get(L,''))}" for L in "ABCD" if clean(q.get(L,''))])
+    common = f"""Bạn là giáo viên Toán/Vật lí THPT. Tạo học liệu NGẮN GỌN, đúng theo câu hỏi hiện tại để lưu vào Google Sheet.
+Yêu cầu chung:
+- Trả về DUY NHẤT một JSON object hợp lệ, không markdown, không giải thích ngoài JSON.
+- Viết tiếng Việt có dấu.
+- Giữ công thức bằng LaTeX inline $...$.
+- Không bịa thêm đáp án khác câu hỏi.
+- Nội dung đủ để học sinh xem lại nhanh, không quá dài.
+
+THÔNG TIN CÂU HỎI:
+Môn: {clean(q.get('Mon'))}
+Lớp: {clean(q.get('Lop'))}
+Chương: {clean(q.get('Chuong'))}
+Bài học: {clean(q.get('BaiHoc'))}
+Dạng bài tập: {clean(q.get('DangBaiTap'))}
+Mức độ: {clean(q.get('MucDo'))}
+Dạng câu: {clean(q.get('Dang'))}
+Câu hỏi: {clean(q.get('CauHoi'))}
+Phương án:
+{opts}
+Đáp án Sheet: {clean(q.get('DapAn'))}
+Lời giải Sheet: {clean(q.get('LoiGiai'))}
+"""
+    if kind == "theory":
+        return common + """
+Tạo JSON đúng schema sau:
+{
+  "TieuDe": "tên kiến thức chính",
+  "NoiDungTomTat": "2-4 câu tóm tắt lý thuyết",
+  "KienThucTrongTam": "các ý học sinh cần nhớ",
+  "CongThuc": "công thức liên quan, có LaTeX nếu cần",
+  "DonVi": "đơn vị/ký hiệu nếu có, nếu Toán thì ghi điều kiện/ký hiệu",
+  "LuuY": "lưu ý quan trọng",
+  "SaiLamThuongGap": "những lỗi học sinh hay mắc",
+  "ViDuMau": "một ví dụ mẫu rất ngắn cùng dạng"
+}
+"""
+    return common + """
+Tạo JSON đúng schema sau:
+{
+  "TenPhuongPhap": "tên phương pháp giải",
+  "DauHieuNhanBiet": "dấu hiệu nhận ra dạng bài",
+  "CacBuocGiai": "các bước giải rõ ràng, đánh số Bước 1, Bước 2...",
+  "CongThucSuDung": "công thức/công cụ dùng",
+  "MeoNhanh": "mẹo nhanh khi làm trắc nghiệm hoặc kiểm tra kết quả",
+  "LoiSaiThuongGap": "lỗi sai thường gặp",
+  "ViDuMau": "ví dụ mẫu ngắn cùng dạng"
+}
+"""
+
+def _learning_ai_call(prompt: str) -> Tuple[str, str, str]:
+    cfg = ai_runtime_config()
+    provider = resolve_ai_provider(cfg, admin_review=True)
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+    openai_model = clean(cfg.get("openai_admin_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
+    gemini_model = clean(cfg.get("gemini_model") or DEFAULT_GEMINI_ADMIN_MODEL) or DEFAULT_GEMINI_ADMIN_MODEL
+    last_err = ""
+
+    def try_openai() -> Tuple[str, str, str]:
+        nonlocal last_err
+        for k in openai_keys:
+            body = {
+                "model": openai_model,
+                "messages": [
+                    {"role": "system", "content": "Bạn tạo học liệu ngắn gọn cho giáo viên. Chỉ trả JSON hợp lệ."},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.25,
+                "max_tokens": 1600,
+            }
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/chat/completions",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {k}"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=45) as resp:
+                    data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                txt = clean((((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", ""))
+                if txt:
+                    return txt, "OPENAI", openai_model
+                last_err = "OpenAI phản hồi rỗng."
+            except Exception as e:
+                last_err = _http_error_message(e)
+        return "", "OPENAI", openai_model
+
+    def try_gemini() -> Tuple[str, str, str]:
+        nonlocal last_err
+        models_try = [gemini_model] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != gemini_model]
+        for k in gemini_keys:
+            for gm in models_try:
+                url, headers = _gemini_request_target(k, gm)
+                body = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.25, "maxOutputTokens": 1600},
+                }
+                req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+                try:
+                    with urllib.request.urlopen(req, timeout=45) as resp:
+                        data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                    cands = (data or {}).get("candidates") or []
+                    parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
+                    txt = clean((parts[0] if parts and isinstance(parts[0], dict) else {}).get("text", ""))
+                    if txt:
+                        return txt, "GEMINI", gm
+                    last_err = "Gemini phản hồi rỗng."
+                except Exception as e:
+                    last_err = _http_error_message(e)
+        return "", "GEMINI", gemini_model
+
+    order = []
+    if provider == "OPENAI":
+        order = [try_openai, try_gemini]
+    elif provider == "GEMINI":
+        order = [try_gemini, try_openai]
+    else:
+        order = [try_openai, try_gemini] if openai_keys else [try_gemini, try_openai]
+    for fn in order:
+        txt, prov, model = fn()
+        if txt:
+            return txt, prov, model
+    raise RuntimeError(last_err or "Chưa gọi được AI để tạo học liệu.")
+
+def _coerce_learning_item(kind: str, q: Dict[str, Any], obj: Dict[str, Any]) -> Dict[str, Any]:
+    kind = "method" if kind == "method" else "theory"
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+    if kind == "theory":
+        item = {f: "" for f in LEARNING_THEORY_FIELDS}
+        item.update({
+            "Mon": clean(q.get("Mon")),
+            "Lop": clean(q.get("Lop")),
+            "Chuong": clean(q.get("Chuong")),
+            "BaiHoc": clean(q.get("BaiHoc")),
+            "TieuDe": clean(obj.get("TieuDe") or q.get("BaiHoc") or q.get("DangBaiTap") or "Lý thuyết"),
+            "NoiDungTomTat": normalize_latex_light(obj.get("NoiDungTomTat", "")),
+            "KienThucTrongTam": normalize_latex_light(obj.get("KienThucTrongTam", "")),
+            "CongThuc": normalize_latex_light(obj.get("CongThuc", "")),
+            "DonVi": normalize_latex_light(obj.get("DonVi", "")),
+            "LuuY": normalize_latex_light(obj.get("LuuY", "")),
+            "SaiLamThuongGap": normalize_latex_light(obj.get("SaiLamThuongGap", "")),
+            "ViDuMau": normalize_latex_light(obj.get("ViDuMau", "")),
+            "TrangThai": "OK",
+            "NgayCapNhat": now,
+        })
+        item["ID"] = "LT_" + stable_hash("|".join(item.get(k,"") for k in ["Mon","Lop","Chuong","BaiHoc"]), 12)
+        return item
+    item = {f: "" for f in LEARNING_METHOD_FIELDS}
+    item.update({
+        "Mon": clean(q.get("Mon")),
+        "Lop": clean(q.get("Lop")),
+        "Chuong": clean(q.get("Chuong")),
+        "BaiHoc": clean(q.get("BaiHoc")),
+        "DangBaiTap": clean(q.get("DangBaiTap")) or clean(q.get("Dang")),
+        "TenPhuongPhap": clean(obj.get("TenPhuongPhap") or q.get("DangBaiTap") or "Phương pháp giải"),
+        "DauHieuNhanBiet": normalize_latex_light(obj.get("DauHieuNhanBiet", "")),
+        "CacBuocGiai": normalize_latex_light(obj.get("CacBuocGiai", "")),
+        "CongThucSuDung": normalize_latex_light(obj.get("CongThucSuDung", "")),
+        "MeoNhanh": normalize_latex_light(obj.get("MeoNhanh", "")),
+        "LoiSaiThuongGap": normalize_latex_light(obj.get("LoiSaiThuongGap", "")),
+        "ViDuMau": normalize_latex_light(obj.get("ViDuMau", "")),
+        "TrangThai": "OK",
+        "NgayCapNhat": now,
+    })
+    item["ID"] = "PP_" + stable_hash("|".join(item.get(k,"") for k in ["Mon","Lop","Chuong","BaiHoc","DangBaiTap"]), 12)
+    return item
+
+@app.route("/api/learning/generate", methods=["POST"])
+def api_learning_generate():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được tạo học liệu bằng GPT."}), 403
+    body = request.get_json(silent=True) or {}
+    kind = "method" if clean(body.get("kind", "")).lower() == "method" else "theory"
+    q = _learning_question_from_body(body)
+    prompt = _learning_ai_prompt(kind, q)
+    raw, provider, model = _learning_ai_call(prompt)
+    obj = _extract_ai_json_object(raw)
+    if not obj:
+        return jsonify({"error": "AI chưa trả JSON hợp lệ.", "raw": raw[:2000]}), 500
+    item = _coerce_learning_item(kind, q, obj)
+    return jsonify({"ok": True, "kind": kind, "item": item, "provider_used": provider, "model": model})
+
+@app.route("/api/learning/save", methods=["POST"])
+def api_learning_save():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được lưu học liệu vào Google Sheet."}), 403
+    body = request.get_json(silent=True) or {}
+    kind = "method" if clean(body.get("kind", "")).lower() == "method" else "theory"
+    item = body.get("item") if isinstance(body.get("item"), dict) else {}
+    st = get_store()
+    try:
+        res = st.save_learning_item(kind, item)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/learning/generate-save", methods=["POST"])
+def api_learning_generate_save():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được tạo và lưu học liệu."}), 403
+    body = request.get_json(silent=True) or {}
+    kind = "method" if clean(body.get("kind", "")).lower() == "method" else "theory"
+    q = _learning_question_from_body(body)
+    prompt = _learning_ai_prompt(kind, q)
+    raw, provider, model = _learning_ai_call(prompt)
+    obj = _extract_ai_json_object(raw)
+    if not obj:
+        return jsonify({"error": "AI chưa trả JSON hợp lệ.", "raw": raw[:2000]}), 500
+    item = _coerce_learning_item(kind, q, obj)
+    st = get_store()
+    res = st.save_learning_item(kind, item)
+    res.update({"provider_used": provider, "model": model})
+    return jsonify(res)
 
 @app.route("/api/learning/theory", methods=["GET", "POST"])
 def api_learning_theory():
