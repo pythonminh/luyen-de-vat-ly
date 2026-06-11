@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V214_ADMIN_SAVE_RETRY_ABCD_BULLET_2026_06_10"
+APP_VERSION = "V215_LEARNING_THEORY_METHOD_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -1231,6 +1231,22 @@ CREATE_QUESTION_FIELDS = [
     "QuyenTruyCap", "Diem",
 ] + EDITABLE_FIELDS
 
+# ============================================================
+# HỌC LIỆU MỞ RỘNG: LÝ THUYẾT + PHƯƠNG PHÁP
+# Không chèn cột vào Cau_Hoi. Chỉ đọc 2 sheet riêng để tránh lệch dữ liệu.
+# ============================================================
+LEARNING_THEORY_FIELDS = [
+    "ID", "Mon", "Lop", "Chuong", "BaiHoc", "TieuDe", "NoiDungTomTat",
+    "KienThucTrongTam", "CongThuc", "DonVi", "LuuY", "SaiLamThuongGap",
+    "ViDuMau", "TrangThai", "NgayCapNhat",
+]
+
+LEARNING_METHOD_FIELDS = [
+    "ID", "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "TenPhuongPhap",
+    "DauHieuNhanBiet", "CacBuocGiai", "CongThucSuDung", "MeoNhanh",
+    "LoiSaiThuongGap", "ViDuMau", "TrangThai", "NgayCapNhat",
+]
+
 # Cột 1-indexed theo Google Sheet thực tế (I=MucDo … T=HinhAnh).
 SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
     "MucDo": 9,
@@ -1728,6 +1744,12 @@ class SheetStore:
         self.ws_users = None
         self.ws_results = None
         self.ws_latex_rules = None
+        self.ws_theory = None
+        self.ws_methods = None
+        self.theory_items: List[Dict[str, Any]] = []
+        self.method_items: List[Dict[str, Any]] = []
+        self.learning_loaded = False
+        self.learning_error = ""
         self.question_headers: List[str] = []
         self.question_col_index: Dict[str, int] = {}
         # V8 FAST LOGIN:
@@ -1892,7 +1914,11 @@ class SheetStore:
         self.ws_results = self.ensure_ws("Ket_Qua", [
             "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
         ])
+        # 2 sheet học liệu riêng: tạo nếu thiếu, đọc nếu có. Không đụng sheet Cau_Hoi.
+        self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
+        self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
         self.load_questions()
+        self.load_learning()
         self.load_users()
         self.questions_loaded = True
         self.users_loaded = True
@@ -1995,6 +2021,131 @@ class SheetStore:
                     q["_row"] = r - 1
                 new_qs.append(q)
             ses["questions"] = new_qs
+
+    def _read_learning_sheet(self, ws, fields: List[str]) -> List[Dict[str, Any]]:
+        """Đọc một sheet học liệu theo header, bỏ dòng trống.
+        Giữ LaTeX trong $...$ và chuẩn hóa nhẹ để hiển thị ổn trên web.
+        """
+        if ws is None:
+            return []
+        values = ws.get_all_values()
+        if not values:
+            return []
+        headers = values[0]
+        # Map header không dấu/không hoa thường -> index cột
+        mp = {key_norm(h): i for i, h in enumerate(headers)}
+        out: List[Dict[str, Any]] = []
+        for row_idx, row_vals in enumerate(values[1:], start=2):
+            item: Dict[str, Any] = {}
+            nonempty = False
+            for f in fields:
+                col = mp.get(key_norm(f))
+                v = row_val(row_vals, col)
+                if f not in ("ID", "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "TrangThai", "NgayCapNhat"):
+                    v = normalize_latex_light(v)
+                item[f] = v
+                if clean(v):
+                    nonempty = True
+            if not nonempty:
+                continue
+            if not clean(item.get("ID")):
+                base = "|".join(clean(item.get(k, "")) for k in fields[:8]) + f"|{row_idx}"
+                item["ID"] = "HL_" + stable_hash(base, 10)
+            item["_row"] = row_idx
+            out.append(item)
+        return out
+
+    def load_learning(self) -> None:
+        """Nạp Ly_Thuyet + Phuong_Phap vào RAM."""
+        self.learning_error = ""
+        try:
+            if self.ws_theory is None:
+                self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
+            if self.ws_methods is None:
+                self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
+            self.theory_items = self._read_learning_sheet(self.ws_theory, LEARNING_THEORY_FIELDS)
+            self.method_items = self._read_learning_sheet(self.ws_methods, LEARNING_METHOD_FIELDS)
+            self.learning_loaded = True
+        except Exception as e:
+            self.learning_error = str(e)
+            self.learning_loaded = False
+            self.theory_items = []
+            self.method_items = []
+
+    def ensure_learning_loaded(self, force: bool = False) -> None:
+        """Đảm bảo đã nạp 2 sheet học liệu, không bắt buộc nạp lại Cau_Hoi."""
+        if self.learning_loaded and not force:
+            return
+        self.connect()
+        self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
+        self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
+        self.load_learning()
+
+    def _learning_field_match(self, query_value: Any, row_value: Any, field: str = "") -> bool:
+        """So khớp mềm để không lệch: Lớp 12QT1 vẫn khớp dòng học liệu Lop=12."""
+        q = clean(query_value)
+        r = clean(row_value)
+        if not q:
+            return True
+        if not r:
+            return True
+        qn = key_norm(q)
+        rn = key_norm(r)
+        if qn == rn:
+            return True
+        if field == "Lop":
+            qk = derive_khoi(q)
+            rk = derive_khoi(r)
+            if qk and rk and qk == rk:
+                return True
+            if qk and rn == qk:
+                return True
+            if rk and qn == rk:
+                return True
+        return False
+
+    def _learning_status_ok(self, item: Dict[str, Any]) -> bool:
+        st = key_norm(item.get("TrangThai", ""))
+        # Trống vẫn cho hiện để thầy test nhanh; OFF/ẩn thì không hiện.
+        if not st:
+            return True
+        return st not in {"off", "an", "hidden", "hide", "khong hien", "khoa"}
+
+    def get_theory(self, mon: str = "", lop: str = "", chuong: str = "", baihoc: str = "") -> List[Dict[str, Any]]:
+        self.ensure_learning_loaded()
+        hits: List[Dict[str, Any]] = []
+        for it in self.theory_items:
+            if not self._learning_status_ok(it):
+                continue
+            if not self._learning_field_match(mon, it.get("Mon"), "Mon"):
+                continue
+            if not self._learning_field_match(lop, it.get("Lop"), "Lop"):
+                continue
+            if not self._learning_field_match(chuong, it.get("Chuong"), "Chuong"):
+                continue
+            if not self._learning_field_match(baihoc, it.get("BaiHoc"), "BaiHoc"):
+                continue
+            hits.append(it)
+        return hits
+
+    def get_methods(self, mon: str = "", lop: str = "", chuong: str = "", baihoc: str = "", dangbaitap: str = "") -> List[Dict[str, Any]]:
+        self.ensure_learning_loaded()
+        hits: List[Dict[str, Any]] = []
+        for it in self.method_items:
+            if not self._learning_status_ok(it):
+                continue
+            if not self._learning_field_match(mon, it.get("Mon"), "Mon"):
+                continue
+            if not self._learning_field_match(lop, it.get("Lop"), "Lop"):
+                continue
+            if not self._learning_field_match(chuong, it.get("Chuong"), "Chuong"):
+                continue
+            if not self._learning_field_match(baihoc, it.get("BaiHoc"), "BaiHoc"):
+                continue
+            if not self._learning_field_match(dangbaitap, it.get("DangBaiTap"), "DangBaiTap"):
+                continue
+            hits.append(it)
+        return hits
 
     def load_users(self):
         self.users = {}
@@ -2172,6 +2323,12 @@ class SheetStore:
             "filters": {"Mon": opts("Mon"), "Lop": opts("Lop"), "Chuong": opts("Chuong"), "BaiHoc": opts("BaiHoc"), "BoDe": opts("BoDe")},
             "catalog": self.catalog,
             "duplicate_report": self.duplicate_report if is_admin() else {},
+            "learning": {
+                "count_theory": len(self.theory_items),
+                "count_methods": len(self.method_items),
+                "loaded": self.learning_loaded,
+                "error": self.learning_error,
+            },
         }
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
@@ -9279,7 +9436,8 @@ def version():
         "latex_norm_removed_v178": True,
         "admin_toolbar_dedup_v179": True,
         "retry_shuffle": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/latex/import"]
+        "learning_theory_method_v215": True,
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/latex/import"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -9412,6 +9570,50 @@ def api_meta():
     st = get_store()
     return jsonify(st.meta_light())
 
+def _learning_request_args() -> Dict[str, str]:
+    body = request.get_json(silent=True) or {}
+    def val(name: str) -> str:
+        return clean(body.get(name) if isinstance(body, dict) and name in body else request.args.get(name, ""))
+    return {
+        "mon": val("Mon") or val("mon"),
+        "lop": val("Lop") or val("lop"),
+        "chuong": val("Chuong") or val("chuong"),
+        "baihoc": val("BaiHoc") or val("baihoc"),
+        "dangbaitap": val("DangBaiTap") or val("dangbaitap"),
+    }
+
+@app.route("/api/learning/theory", methods=["GET", "POST"])
+def api_learning_theory():
+    bad = require_login_json()
+    if bad:
+        return bad
+    st = get_store()
+    args = _learning_request_args()
+    items = st.get_theory(args["mon"], args["lop"], args["chuong"], args["baihoc"])
+    return jsonify({
+        "ok": True,
+        "count": len(items),
+        "items": items,
+        "query": args,
+        "learning_error": st.learning_error,
+    })
+
+@app.route("/api/learning/method", methods=["GET", "POST"])
+def api_learning_method():
+    bad = require_login_json()
+    if bad:
+        return bad
+    st = get_store()
+    args = _learning_request_args()
+    items = st.get_methods(args["mon"], args["lop"], args["chuong"], args["baihoc"], args["dangbaitap"])
+    return jsonify({
+        "ok": True,
+        "count": len(items),
+        "items": items,
+        "query": args,
+        "learning_error": st.learning_error,
+    })
+
 @app.route("/api/sync", methods=["POST"])
 def api_sync():
     bad = require_login_json()
@@ -9421,6 +9623,7 @@ def api_sync():
         return jsonify({"error": "Chỉ ADMIN được đồng bộ dữ liệu"}), 403
     st = get_store()
     st.questions_loaded = False
+    st.learning_loaded = False
     st.start_questions_background(force=True)
     return jsonify({"ok": True, "loading": True, "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây."})
 
