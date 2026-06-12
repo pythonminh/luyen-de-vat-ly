@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V264_NO_TIMER_NO_OBSERVER_FIX_TEST_2026_06_12"
+APP_VERSION = "V265_HOME_LOAD_FAST_FIX_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -8580,7 +8580,45 @@ function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let 
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
 async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
-async function init(){updateExamStrip();META=await api('/api/meta');USER=META.user||{};renderUserAiProfile(USER);initAdminReviewMode();updateAdminChrome();await loadAiKeyPanel();if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;refreshFilterOptions();renderCatalog();initRpPracticePanel();showAdminDuplicateSheetNotice();handleShareDeepLink();handleQidDeepLink()}
+async function init(){
+  updateExamStrip();
+  let info=document.getElementById('info');
+  let cat=document.getElementById('catalog');
+  let cnt=document.getElementById('countCat');
+  if(info)info.textContent='Đang tải dữ liệu Sheet...';
+  if(cat&&!cat.innerHTML.trim())cat.innerHTML='<div class="muted">Đang tải mục lục đề...</div>';
+  try{
+    // V265: /api/meta là dữ liệu chính. Không chờ API phụ như /api/ai-config,
+    // tránh đứng ở màn hình “Đang nạp...” khi mạng yếu hoặc Render phản hồi chậm.
+    META=await api('/api/meta',{timeoutMs:30000},1);
+  }catch(e){
+    if(info)info.textContent='Chưa nạp được dữ liệu';
+    if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(e.message||e)+'</p><p class="muted">Bấm nút bên dưới để thử lại. Nếu Render mới thức dậy, đợi 10 giây rồi thử lại.</p><button class="btn" onclick="init()">Tải lại dữ liệu</button></div>';
+    if(cnt)cnt.textContent='';
+    return;
+  }
+  USER=META.user||{};
+  renderUserAiProfile(USER);
+  initAdminReviewMode();
+  updateAdminChrome();
+  if(META.loading){
+    if(info)info.textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';
+    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây.</p></div>`;
+    if(cnt)cnt.textContent='';
+    setTimeout(init,3000);
+    return;
+  }
+  CATALOG=META.catalog||[];
+  if(info)info.textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
+  refreshFilterOptions();
+  renderCatalog();
+  initRpPracticePanel();
+  showAdminDuplicateSheetNotice();
+  handleShareDeepLink();
+  handleQidDeepLink();
+  // API cấu hình AI chạy nền, không được chặn giao diện chính.
+  loadAiKeyPanel().catch(function(e){let st=document.getElementById('aiKeyStatus');if(st)st.textContent='Không tải trạng thái key: '+(e&&e.message?e.message:e)});
+}
 function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClient(dang);if(fc.dang[nd]!=null)return fc.dang[nd];let n=0;for(let k in fc.dang)if(normDangClient(k)===nd)n+=fc.dang[k]||0;return n}
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
 function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang)return comboCountLookup(fc,lv,dang);if(dang)return dangCountLookup(fc,dang);if(lv)return fc.level[lv]||0;return null}
@@ -9058,7 +9096,7 @@ document.addEventListener('click',function(ev){
   setTimeout(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
 })();
 
-enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
+enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{let info=document.getElementById('info');if(info)info.textContent='Lỗi tải giao diện';let cat=document.getElementById('catalog');if(cat)cat.innerHTML='<div class="card loadErr"><b>Lỗi:</b> '+esc(e.message||e)+'</div>'})
 
 /* ===== V233 PWA: cài app lên điện thoại ===== */
 let PWA_DEFERRED_PROMPT=null;
