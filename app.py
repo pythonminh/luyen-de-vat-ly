@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V257_BULK_LEVEL_CONTINUE_BATCH_TEST_2026_06_12"
+APP_VERSION = "V259_NAV_GROUP_BY_DANG_ONLY_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -997,25 +997,25 @@ def sort_questions_by_dang_groups(
     *,
     shuffle_within: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Sắp xếp câu theo Dạng câu, rồi tách nhỏ theo mức NB/TH/VD/VDC.
+    """Sắp xếp câu theo LOẠI CÂU בלבד: TN / Đúng-Sai / TLN / Tự luận.
 
-    Mục đích: khi làm chuyên đề, học sinh thấy rõ từng phần
-    Trắc nghiệm · NB, Trắc nghiệm · TH, ... thay vì trộn hết vào nhau.
+    Không tách nhỏ theo NB/TH/VD/VDC nữa, vì các mức độ chỉ là màu trong
+    cùng một dạng. Ví dụ: tất cả câu Trắc nghiệm nằm chung một nhóm;
+    ô số câu vẫn tô màu theo cột I (NB/TH/VD/VDC).
     """
-    buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    buckets: Dict[str, List[Dict[str, Any]]] = {}
     for q in qs:
         d = question_dang(q)
-        lv = _primary_mucdo(q)
-        buckets.setdefault((d, lv), []).append(q)
+        buckets.setdefault(d, []).append(q)
+
     out: List[Dict[str, Any]] = []
     known_dang = list(DANG_GROUP_ORDER)
-    extra_dang = sorted({d for d, _ in buckets.keys() if d not in known_dang}, key=key_norm)
+    extra_dang = sorted([d for d in buckets.keys() if d not in known_dang], key=key_norm)
     for d in known_dang + extra_dang:
-        for lv in MUCDO_GROUP_ORDER:
-            chunk = list(buckets.get((d, lv), []))
-            if shuffle_within and len(chunk) > 1:
-                random.shuffle(chunk)
-            out.extend(chunk)
+        chunk = list(buckets.get(d, []))
+        if shuffle_within and len(chunk) > 1:
+            random.shuffle(chunk)
+        out.extend(chunk)
     return out
 
 
@@ -3664,13 +3664,16 @@ class SheetStore:
             if off + chunk_size < len(rows):
                 time.sleep(1.2)
 
-    def remove_duplicate_questions(self, dry_run: bool = False) -> Dict[str, Any]:
+    def remove_duplicate_questions(self, dry_run: bool = False, max_delete: int = 0) -> Dict[str, Any]:
         """ADMIN xóa các dòng trùng trên Cau_Hoi — giữ bản đầu tiên (số dòng nhỏ nhất)."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được xóa câu trùng")
         plan = plan_sheet_duplicate_removals(self.questions)
-        to_delete: List[int] = plan["rows_to_delete"]
-        if not to_delete:
+        all_to_delete: List[int] = list(plan["rows_to_delete"])
+        to_delete: List[int] = all_to_delete
+        if max_delete and max_delete > 0:
+            to_delete = all_to_delete[:max(1, int(max_delete))]
+        if not all_to_delete:
             return {
                 "ok": True,
                 "dry_run": dry_run,
@@ -3683,8 +3686,8 @@ class SheetStore:
             return {
                 "ok": True,
                 "dry_run": True,
-                "would_delete": len(to_delete),
-                "message": f"Sẽ xóa {len(to_delete)} dòng trùng (giữ {len(plan['rows_to_keep'])} bản).",
+                "would_delete": len(all_to_delete),
+                "message": f"Sẽ xóa {len(all_to_delete)} dòng trùng (giữ {len(plan['rows_to_keep'])} bản).",
                 "plan": plan,
             }
 
@@ -3699,6 +3702,8 @@ class SheetStore:
             "dry_run": False,
             "deleted": len(to_delete),
             "message": f"Đã xóa {len(to_delete)} dòng trùng khỏi Google Sheet (giữ {len(plan['rows_to_keep'])} bản).",
+            "batch_deleted": len(to_delete),
+            "remaining_before_refresh": max(0, len(all_to_delete) - len(to_delete)),
             "plan": plan,
             "duplicate_report": self.duplicate_report,
         }
@@ -8172,7 +8177,7 @@ html[data-theme='dark'] .aiChatInput{background:#0f172a;color:#e5e7eb;border-col
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div class="homeCompactRow"><div id="idLookupPanel" class="panel compactCard compactIdCard"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide compactCard compactKeyCard"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px"><b>VIP/S.VIP muốn dùng Trợ lý AI thì tự lấy Gemini key rồi nhập tại đây.</b><br>Vào <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><b>Google AI Studio → Get API key / Create API key</b></a>, copy key dạng <b>AIza...</b> hoặc <b>AQ...</b>, dán vào ô dưới và bấm <b>Lưu key</b>. ChatGPT/OpenAI chỉ dành cho ADMIN.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIza... hoặc AQ...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel compactCard compactRandomCard"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button type="button" id="btnLearnTheory" class="btn2" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" id="btnLearnMethod" class="btn2" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button type="button" id="btnFsLearnTheory" class="btn2" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" id="btnFsLearnMethod" class="btn2" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>🧑‍💼 ADMIN · Học liệu</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminLTBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Xem Lý thuyết</button><button type="button" class="adminPPBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Xem Phương pháp giải</button><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán Dạng bài tập</button><button type="button" class="adminGenBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="adminGenBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP + lưu GGS</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button></div></div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng + mức độ</b><br><span class="muted">Tách rõ Trắc nghiệm/Đúng-Sai/TLN, bên trong chia NB → TH → VD → VDC.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><button type="button" class="btn2" id="btnAiDetectMucDo" onclick="aiDetectCurrentQuestionLevel()">🎯 AI gợi ý mức độ câu này</button><span class="muted" style="font-size:12px">Chỉ gợi ý vào form, ADMIN kiểm rồi bấm Lưu. Muốn xem/gợi ý hàng loạt: dùng nút 🎯 Gợi ý mức độ trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN chỉ <b>gợi ý</b> NB/TH/VD/VDC cho các câu đang mở trong đề. ADMIN xem nhanh, tick chọn rồi mới ghi cột I Google Sheet. Có thể chấp nhận từng câu hoặc chấp nhận tất cả gợi ý.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="AI" selected>🤖 AI tự nhận diện từng câu</option><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Tách Trắc nghiệm / Đúng-Sai / TLN / Tự luận. Mức NB-TH-VD-VDC chỉ tô màu trong cùng nhóm.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><button type="button" class="btn2" id="btnAiDetectMucDo" onclick="aiDetectCurrentQuestionLevel()">🎯 AI gợi ý mức độ câu này</button><span class="muted" style="font-size:12px">Chỉ gợi ý vào form, ADMIN kiểm rồi bấm Lưu. Muốn xem/gợi ý hàng loạt: dùng nút 🎯 Gợi ý mức độ trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN chỉ <b>gợi ý</b> NB/TH/VD/VDC cho các câu đang mở trong đề. ADMIN xem nhanh, tick chọn rồi mới ghi cột I Google Sheet. Có thể chấp nhận từng câu hoặc chấp nhận tất cả gợi ý.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="AI" selected>🤖 AI tự nhận diện từng câu</option><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
 
 
 /* ===== V254: sửa nút Toán/Vật lí trên thanh xanh - chạy thật trong APP_HTML ===== */
@@ -8582,1412 +8587,53 @@ function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null
 function okFilter(x){let s=normText(val('fSearch'));let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();let mc=filterMatchCount(x,lv,dg);if(mc!==null&&mc===0)return false;let solOnly=document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked;if(solOnly&&(parseInt(x.SolFull,10)||0)<=0)return false;let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levelOk=!lv||mc!==null||normText(x.MucDo||'').includes(normText(lv));let dangOk=!dg||mc!==null||normText(x.Dang||'').includes(normText(dg));return(!val('fMon')||x.Mon==val('fMon'))&&(!val('fLop')||x.Lop==val('fLop'))&&(!val('fChuong')||x.Chuong==val('fChuong'))&&(!val('fBaiHoc')||x.BaiHoc==val('fBaiHoc'))&&(!val('fBoDe')||x.BoDe==val('fBoDe'))&&levelOk&&dangOk&&(!s||blob.includes(s))}
 function renderCatalog(){let list=CATALOG.filter(okFilter).sort(compareCatalog);let selectedLv=(val('fMucDo')||'').toUpperCase();let selectedDang=(val('fDang')||'').trim();document.getElementById('countCat').textContent=`(${list.length} mục)`;document.getElementById('catalog').innerHTML=list.map(x=>{let access=x.QuyenTruyCap||'FREE';let solFull=parseInt(x.SolFull,10)||0;let solPart=parseInt(x.SolPartial,10)||0;let solLine=(solFull||solPart)?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${solFull?`<span class="tag solFullTag">📗 LG đầy đủ: ${solFull}</span>`:''}${solPart?`<span class="tag solPartTag">📝 LG một phần: ${solPart}</span>`:''}</div>`:'';let locked=USER.is_trial&&access!='FREE';let btn=locked?`<button class="btnRed" disabled>Khóa VIP</button>`:`<button class="btnStartStrong" onclick="openStartModal('${x.MaDe}')">🚀 Làm bài + xáo trộn</button>`;let note=locked?`<div class="muted" style="color:#991b1b;margin-top:6px">Tài khoản dùng thử chỉ mở đề FREE.</div>`:'';let hint=locked?'':`<div class="shuffleHint">Có thể chọn: xáo câu, xáo đáp án hoặc xáo cả 2.</div>`;let mc=filterMatchCount(x,selectedLv,selectedDang);let filterNotice='';if((selectedLv||selectedDang)&&mc!==null){filterNotice=`<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:900">🎯 Có <b>${mc}</b> câu${selectedLv?' · mức '+esc(selectedLv):''}${selectedDang?' · dạng '+esc(selectedDang):''} trong đề này</div>`}let title=esc(x.BaiHoc||x.De||'Đề luyện tập');let sub=x.Chuong?`<div class="muted" style="margin-top:4px;font-size:13px">${esc(x.Chuong)}</div>`:'';let mid=String(x.MaDe||'').replace(/'/g,"\\'");let shareLabel=esc(examDisplayTitle(x));let shareRow=`<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${mid}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button></span></div>`;return `<div class="card" id="shareCard_${String(x.MaDe||'').replace(/"/g,'')}"><h3>${title}</h3>${sub}<div><span class="tag">${esc(x.Mon)}</span><span class="tag">Lớp ${esc(x.Lop)}</span><span class="tag">${esc(x.SoCau)} câu</span><span class="tag">${esc(access)}</span></div><div class="line"></div><div><b>Chương:</b> ${esc(x.Chuong)}</div><div><b>Bài:</b> ${esc(x.BaiHoc)}</div><div><b>Dạng:</b> ${esc(x.Dang)}</div><div><b>Mức độ:</b> ${esc(x.MucDo)}</div><div><b>Bộ đề:</b> ${esc(x.BoDe)}</div>${filterNotice}${solLine}${note}${hint}${shareRow}<div style="text-align:right;margin-top:10px">${btn}</div></div>`}).join('')||'<div class="muted">Không có đề phù hợp.</div>';typeset()}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');await init();if(USER.is_admin&&META&&META.duplicate_report)alertDuplicateSheetReport(META.duplicate_report)}
-async function dedupeSheetDuplicates(){if(!USER.is_admin)return;try{let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});let n=parseInt(j.would_delete||((j.plan||{}).delete_count),10)||0;if(n<=0){alert(j.message||'Không có dòng trùng trên Sheet.');return}let lines=((j.plan||{}).samples||[]).slice(0,8);let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu (số nhỏ nhất), xóa các bản sao.\n\n(Không dùng AI — chỉ xóa dòng trên Google Sheet.)\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Xóa '+n+' dòng trùng khỏi Google Sheet?';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: xóa vĩnh viễn '+n+' dòng trùng?'))return;let j2=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false})});alert((j2.message||('Đã xóa '+j2.deleted+' dòng trùng.'))+'\n\n✅ Mục lục tự cập nhật — không cần bấm Đồng bộ Sheet thêm.');if(j2.duplicate_report)META=META||{},META.duplicate_report=j2.duplicate_report;await refreshCatalogFromMeta()}catch(e){let m=e.message||'';if(/429|quota|write requests/i.test(m))alert('Không xóa trùng được — Google Sheet giới hạn ghi (429).\n\n🧹 Xóa trùng KHÔNG dùng AI (nút 🧪 Test AI / 💡 AI kiểm tra là chức năng khác).\n\nĐợi ~1 phút rồi bấm lại 🧹 Xóa trùng Sheet.');else alert('Không xóa trùng được: '+m)}}
-async function testServerAiKey(){try{let parts=[];let ver='';if(USER.is_admin){try{let jO=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'OPENAI'})});if(jO.version)ver=`\n\nPhiên bản server: ${jO.version}`;parts.push('— OPENAI (ADMIN) —\n'+formatAiKeyCheckAlert(jO))}catch(e){parts.push('OPENAI: '+e.message)}}let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI'})});if(!ver&&j.version)ver=`\n\nPhiên bản server: ${j.version}`;parts.push('— GEMINI —\n'+formatAiKeyCheckAlert(j));alert(parts.join('\n\n')+ver)}catch(e){alert(e.message)}}
-function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
-function openStartModal(made){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let gd=document.getElementById('chkGroupDang');if(gd)gd.checked=true;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
-function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}document.getElementById('startModal').classList.remove('hide')}
-async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let gd=document.getElementById('chkGroupDang');let groupBy=gd?gd.checked:true;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg,groupBy)}
-function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
-function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');if(!el)return;let parts=[];if(j&&j.shuffle_questions)parts.push('Xáo câu');if(j&&j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
-function deriveKhoi(lop){let s=String(lop||'').trim();if(!s)return '';let m=s.match(/^(\d{1,2})/);if(m)return m[1];let m2=s.match(/\b(10|11|12)\b/);return m2?m2[1]:''}
-function rpCatalogBase(){return(CATALOG||[]).filter(x=>x.Mon&&x.Lop)}
-function rpFilterCatalog(){let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');return rpCatalogBase().filter(x=>{if(mon&&x.Mon!==mon)return false;if(khoi&&deriveKhoi(x.Lop)!==khoi)return false;if(lop&&x.Lop!==lop)return false;return true})}
-function setRpSelectOptions(selId,opts,cur,ph){let el=document.getElementById(selId);if(!el)return;let keep=cur||el.value;el.innerHTML=(ph||'<option value="">—</option>')+opts.map(v=>`<option value="${escAttr(v)}">${esc(v)}</option>`).join('');if(keep&&opts.includes(keep))el.value=keep}
-function refreshRpScopeOptions(){if(RP_SCOPE_LOCKED)return;let mon=val('rpMon');let base=rpCatalogBase();setRpSelectOptions('rpMon',uniqField(base,'Mon'),mon,'<option value="">— Chọn môn —</option>');let k1=mon?base.filter(x=>x.Mon===mon):[];let khois=[...new Set(k1.map(x=>deriveKhoi(x.Lop)).filter(Boolean))].sort((a,b)=>(Number(a)||0)-(Number(b)||0)||String(a).localeCompare(String(b),'vi'));let khoiEl=document.getElementById('rpKhoi');if(khoiEl){khoiEl.disabled=!mon;khoiEl.classList.toggle('rpLockable',true);setRpSelectOptions('rpKhoi',khois,val('rpKhoi'),'<option value="">— Chọn khối —</option>')}let khoi=val('rpKhoi');let k2=khoi?k1.filter(x=>deriveKhoi(x.Lop)===khoi):[];let lopEl=document.getElementById('rpLop');if(lopEl){lopEl.disabled=!khoi;lopEl.classList.toggle('rpLockable',true);setRpSelectOptions('rpLop',uniqField(k2,'Lop'),val('rpLop'),'<option value="">— Chọn lớp —</option>')}maybeLockRpScope()}
-function onRpScopeChange(level){if(RP_SCOPE_LOCKED)return;if(level==='mon'){setVal('rpKhoi','');setVal('rpLop','')}else if(level==='khoi')setVal('rpLop','');refreshRpScopeOptions()}
-function maybeLockRpScope(){let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');if(!mon||!khoi||!lop)return;RP_SCOPE_LOCKED=true;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.add('rpLocked');['rpMon','rpKhoi','rpLop'].forEach(id=>{let e=document.getElementById(id);if(e)e.disabled=true});let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML=`🔒 Phạm vi: <b>${esc(mon)}</b> · Khối <b>${esc(khoi)}</b> · Lớp <b>${esc(lop)}</b>`;note.classList.remove('hide')}let cw=document.getElementById('rpChuongWrap');if(cw)cw.classList.remove('hide');renderRpChuongList()}
-function unlockRpScope(){RP_SCOPE_LOCKED=false;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.remove('rpLocked');let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='none';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML='';note.classList.add('hide')}let cw=document.getElementById('rpChuongWrap');if(cw)cw.classList.add('hide');refreshRpScopeOptions()}
-function renderRpChuongList(){let list=uniqField(rpFilterCatalog(),'Chuong');let box=document.getElementById('rpChuongList');if(!box)return;let allOn=!!(document.getElementById('rpChuongAll')&&document.getElementById('rpChuongAll').checked);if(!list.length){box.innerHTML='<span class="muted">Chưa có chương trong phạm vi này.</span>';return}box.innerHTML=list.map(c=>`<label class="${allOn?'rpChOn':''}"><input type="checkbox" class="rpChuongCb" value="${escAttr(c)}" ${allOn?'disabled checked':'onchange="syncRpChuongLbl(this)"'}> ${esc(c)}</label>`).join('')}
-function toggleRpChuongAll(){renderRpChuongList()}
-function syncRpChuongLbl(cb){if(!cb)return;let lb=cb.closest('label');if(lb)lb.classList.toggle('rpChOn',cb.checked)}
-function getRpSelectedChuongs(){let allEl=document.getElementById('rpChuongAll');if(allEl&&allEl.checked)return[];let out=[];document.querySelectorAll('.rpChuongCb:checked').forEach(cb=>{if(cb.value)out.push(cb.value)});return out}
-function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l&&deriveKhoi(l)){setVal('rpKhoi',deriveKhoi(l));refreshRpScopeOptions();setVal('rpLop',l);refreshRpScopeOptions()}}
-function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions()}
-async function startRandomPractice(){try{let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');if(!mon||!khoi||!lop){alert('Hãy chọn đủ Môn, Khối và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let allEl=document.getElementById('rpChuongAll');if(allEl&&!allEl.checked&&!chuongs.length){alert('Chọn ít nhất một Chương, hoặc tick «Tất cả chương».');return}let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
-function quizLevelPrimary(q){let u=String((q&&q.MucDo)||'').toUpperCase();if(/\bVDC\b/.test(u))return'VDC';if(/\bVD\b/.test(u))return'VD';if(/\bTH\b/.test(u))return'TH';if(/\bNB\b/.test(u))return'NB';return''}
-function quizSectionKey(q){q=applyResolvedDang(q||{});return String(q.Dang||'')+'|'+quizLevelPrimary(q)}
-function quizSectionTitle(q){q=applyResolvedDang(q||{});let d=String(q.Dang||'').trim();let lv=quizLevelPrimary(q);return d+(lv?' · Mức '+lv:' · Chưa gán mức')}
-function quizSectionLabel(i){if(!GROUP_BY_DANG||!QUESTIONS.length)return null;let q=applyResolvedDang(QUESTIONS[i]);if(i===0)return quizSectionTitle(q);let prev=applyResolvedDang(QUESTIONS[i-1]);return quizSectionKey(q)!==quizSectionKey(prev)?quizSectionTitle(q):null}
-function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Dạng: ${dgShow} (${n} câu)`:'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}`}updateFilterBadge(lv,dgShow,n);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,group_by_dang:groupByDang?1:0})});enterQuizSession(j,made,lv,dgNorm,dg,true)}catch(e){alert('Không mở được đề: '+e.message)}}
-function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};unlockQuizPageScroll();updateFilterBadge('','',null);document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');syncMobileQuizChrome();updateAdminChrome()}
-function ensureFullModeOverrides(){
-    if(document.getElementById('LDVL_FS_OVR')) return;
-    let st=document.createElement('style');
-    st.id='LDVL_FS_OVR';
-    st.textContent=
-        "body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 220px!important;gap:8px!important;padding:0 8px 8px!important}"+
-        "body.fullde-mode #qtext{flex:0 0 auto!important;min-height:0!important;padding:12px!important;overflow:visible!important;font-size:clamp(16px,2.4vw,22px)!important}"+
-        "body.fullde-mode #options{flex:0 0 auto!important;margin-top:8px!important;position:relative!important;z-index:2!important;background:var(--bg)!important}"+
-        "body.fullde-mode .mcqSplit,body.fullde-mode .mcqSplitDs,body.fullde-mode .mcqSplitTln{grid-template-columns:minmax(0,1.2fr) minmax(260px,0.8fr)!important;gap:16px!important}"+
-        "body.fullde-mode .mcqSplitDs{grid-template-columns:minmax(0,1.1fr) minmax(300px,0.9fr)!important}"+
-        "body.fullde-mode .mcqSplitTln{grid-template-columns:minmax(0,1.15fr) minmax(280px,0.85fr)!important}"+
-        "body.fullde-mode .mcqSplitImg .qimg{max-height:min(58vh,480px)!important}"+
-        "body.fullde-mode .mcqSplitDs .mcqSplitImg .qimg{max-height:min(60vh,500px)!important}"+
-        "body.fullde-mode .mcqSplitTln .mcqSplitImg .qimg{max-height:min(62vh,520px)!important}"+
-        "body.fullde-mode .shortAnsInput{font-size:24px!important;width:6em!important;max-width:140px!important}"+
-        "body.fullde-mode .dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}"+
-        "@media(min-width:1200px){body.fullde-mode .dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(4,minmax(0,1fr))!important}body.fullde-mode .mcqSplit{grid-template-columns:minmax(0,1.1fr) minmax(300px,0.9fr)!important}body.fullde-mode .mcqSplitDs{grid-template-columns:minmax(0,1fr) minmax(340px,1fr)!important}body.fullde-mode .mcqSplitTln{grid-template-columns:minmax(0,1.1fr) minmax(320px,0.9fr)!important}}"+
-        "body.fullde-mode #qtext .qimg{max-height:min(42vh,280px)!important;display:block!important;margin:10px auto 12px!important}"+
-        "body.fullde-mode #fsOnlyTools button{font-size:11px!important;padding:4px 7px!important}"+
-        "body.fullde-mode #quiz .quizLayout>div:last-child{overflow:auto!important}"+
-        "body.fullde-mode #quiz .quizLayout>div:last-child>.panel{overflow:auto!important}"+
-        "body.fullde-mode #navNums{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;overflow:auto!important;align-content:start!important}"+
-        "body.fullde-mode #navNums .num{display:block!important;visibility:visible!important;opacity:1!important}"+
-        "body.fullde-mode.fsnav-hidden #quiz .quizLayout{grid-template-columns:1fr 0px!important}"+
-        "body.fullde-mode.fsnav-hidden #quiz .quizLayout>div:last-child{display:none!important}"+
-        "@media(max-width:900px){body.fullde-mode #quiz .quizLayout{grid-template-columns:minmax(0,1fr) 150px!important}body.fullde-mode #navNums{grid-template-columns:repeat(3,minmax(0,1fr))!important}}"+
-        "@media(max-width:768px) and (orientation:portrait){body.fullde-mode .mcqSplit,body.fullde-mode .mcqSplitDs,body.fullde-mode .mcqSplitTln{grid-template-columns:1fr!important}body.fullde-mode .mcqSplitImg .qimg,body.fullde-mode .mcqSplitDs .mcqSplitImg .qimg,body.fullde-mode .mcqSplitTln .mcqSplitImg .qimg{max-height:min(52vh,420px)!important}body.fullde-mode #qtext .qimg{max-height:min(50vh,400px)!important}}"+
-        "@media(orientation:landscape) and (max-height:520px){body.fullde-mode .mcqSplit,body.fullde-mode .mcqSplitDs,body.fullde-mode .mcqSplitTln{grid-template-columns:minmax(0,38%) minmax(0,62%)!important;gap:8px!important}body.fullde-mode .mcqSplitImg .qimg,body.fullde-mode .mcqSplitDs .mcqSplitImg .qimg,body.fullde-mode .mcqSplitTln .mcqSplitImg .qimg{max-height:min(calc(100dvh - 120px),240px)!important}body.fullde-mode .mcqSplitOpts{max-height:none!important;overflow:visible!important}body.fullde-mode .shortAnsCompact .shortAnsQtext{max-height:none!important;overflow:visible!important}body.fullde-mode .shortAnsFieldRow{position:sticky!important;bottom:0!important;background:var(--surface)!important;z-index:5!important}}"+
-        "@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;padding:0 4px 4px!important}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:92px!important}body.fullde-mode #navNums{grid-template-columns:repeat(8,minmax(32px,1fr))!important;overflow-x:auto!important;overflow-y:hidden!important}body.fullde-mode #navNums .num{padding:3px 0!important;font-size:10px!important}body.fullde-mode #fsOnlyTools{gap:3px!important;padding:3px 4px!important}body.fullde-mode #fsOnlyTools button{font-size:9px!important;padding:3px 5px!important}body.fullde-mode #qtext{font-size:14px!important;padding:8px!important}body.fullde-mode #qtext .qimg{max-height:min(34vh,200px)!important}body.fullde-mode .opt{padding:6px 7px!important;font-size:13px!important;margin:3px 0!important}body.fullde-mode .tfrow{grid-template-columns:28px minmax(0,1fr) 34px!important;grid-template-areas:'lbl stmt opts'!important}body.fullde-mode .tfrow .dsCircle{grid-area:lbl!important;justify-self:center!important}body.fullde-mode .tfOpts{flex-direction:column!important;justify-content:flex-start!important;padding-left:0!important;width:34px!important}body.fullde-mode .tfLblFull{display:none!important}body.fullde-mode .tfLblShort{display:inline!important}body.fullde-mode .tfOpt{flex:0!important;width:100%!important;max-width:none!important;min-width:0!important;padding:5px 2px!important;font-size:11px!important;text-align:center!important}body.fullde-mode .tfOpt input{position:absolute!important;opacity:0!important;width:0!important;height:0!important}}";
-    document.head.appendChild(st);
-}
-function syncFsNavBtn(){
-    let btn=document.getElementById('btnFsNav');
-    if(btn)btn.textContent=FS_NAV_HIDDEN?'☰ Hiện bảng':'☰ Ẩn bảng';
-}
-function ensureFsNavBtn(){
-    let box=document.getElementById('fsOnlyTools');
-    if(!box)return;
-    let btn=document.getElementById('btnFsNav');
-    if(!btn){
-        btn=document.createElement('button');
-        btn.type='button';
-        btn.id='btnFsNav';
-        btn.className='btn2';
-        btn.onclick=toggleFsNav;
-        box.appendChild(btn);
-    }
-    syncFsNavBtn();
-}
-function ensureNavInfo(){
-    let panel=document.querySelector('.fsNavPanel');
-    if(!panel) return null;
-    let title=panel.querySelector('.fsNavTitle');
-    if(title) title.textContent='Bảng câu hỏi';
-    let info=document.getElementById('navInfo');
-    if(!info){
-        info=document.createElement('div');
-        info.id='navInfo';
-        info.className='fsNavInfo';
-        info.style.cssText='display:block!important;color:var(--muted)!important;font-size:11px;line-height:1.35;margin:2px 0 8px;padding:6px;border:1px solid var(--border);border-radius:8px;max-height:72px;overflow:auto';
-        let nav=document.getElementById('navNums');
-        if(nav) panel.insertBefore(info,nav);
-    }
-    return info;
-}
-function toggleFsNav(){
-    if(!FULLDE_ON)return;
-    FS_NAV_HIDDEN=!FS_NAV_HIDDEN;
-    document.body.classList.toggle('fsnav-hidden',FS_NAV_HIDDEN);
-    syncFsNavBtn();
-    renderQuestion();
-}
-async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion();return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion()}
-function isAdminViewer(){return !!(USER.is_admin||String(USER.role||'').toUpperCase()==='ADMIN')}
-function canViewSolutionLive(){return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
-function hasAttemptedQuestion(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return false;if(q.Dang==='Tự luận')return isQuestionDone(qIdx);return isQuestionChecked(qIdx)}
-function canShowSolutionNow(){if(!canViewSolutionLive())return false;if(isAdminViewer())return true;return hasAttemptedQuestion(CUR)}
-function canUseInfographicRole(){return !!(USER.is_admin||canViewSolutionLive())}
-function isQuestionCorrect(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;let r=SUBMITTED?RESULTS[qIdx]:(RESULTS[qIdx]||CHECKED[qIdx]);return !!(r&&r.ok===true)}
-function canUnlockInfographic(qIdx){if(!canUseInfographicRole())return false;if(USER.is_admin)return true;return isQuestionCorrect(qIdx)}
-function syncInfographicButtons(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let roleOk=canUseInfographicRole()&&inQuiz;let ready=canUnlockInfographic(CUR);let lockTip='Trả lời đúng câu này mới mở khóa infographic.';for(let spec of [['btnFsInfographic',false],['btnInfographic',true]]){let b=document.getElementById(spec[0]);if(!b)continue;if(spec[1]&&!USER.is_admin){b.classList.add('hide');continue}b.classList.toggle('hide',!roleOk);if(!USER.is_admin||!spec[1]){b.disabled=!ready;b.title=ready?'Tạo prompt infographic chính xác từ Sheet':lockTip;b.classList.toggle('vipSolLocked',!ready)}else{b.disabled=false;b.title='Tạo prompt infographic (ADMIN — không cần làm bài)'}}}
-function syncVipSolutionButtons(){let roleOk=canViewSolutionLive();let ready=canShowSolutionNow();let on=ready&&!!VIP_Q_SHOW_ANS[CUR],ex=ready&&!!VIP_Q_SHOW_EXP[CUR];let mobile=isMobileQuizUI();let lockTip='Làm và chấm câu này trước khi xem đáp án / lời giải.';let mv=document.getElementById('mobileDockVipBtns');if(mv)mv.classList.toggle('hide',!roleOk);let vt=document.getElementById('vipSolBtnsTop');if(vt)vt.classList.toggle('hide',!roleOk||mobile);for(let id of ['btnQuizShowAns','btnQuizShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let id of ['btnFsShowAns','btnFsShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let spec of [['btnMobileShowAns',on,'Ẩn ĐA','Đáp án'],['btnMobileShowExp',ex,'Ẩn LG','Lời giải'],['btnTopShowAns',on,'Ẩn ĐA','Đáp án'],['btnTopShowExp',ex,'Ẩn LG','Lời giải'],['btnQuizShowAns',on,'Ẩn ĐA','Đáp án'],['btnQuizShowExp',ex,'Ẩn LG','Lời giải'],['btnFsShowAns',on,'Ẩn ĐA','Đáp án'],['btnFsShowExp',ex,'Ẩn LG','Lời giải']]){let b=document.getElementById(spec[0]);if(!b)continue;b.classList.toggle('active',spec[1]);b.textContent=spec[1]?spec[2]:spec[3];if(!isAdminViewer()){b.disabled=!ready;b.title=ready?(spec[1]?'Ẩn':'Xem/ẩn')+(spec[0].includes('Exp')?' lời giải':' đáp án'):lockTip;b.classList.toggle('vipSolLocked',!ready)}}}
-function toggleQuestionAnswer(e){if(e&&e.stopPropagation)e.stopPropagation();if(!canViewSolutionLive()){alert('Chỉ VIP / SVIP / ADMIN được xem đáp án khi làm bài.');return}if(!canShowSolutionNow()){alert('Hãy làm và chấm câu này trước khi xem đáp án.');return}VIP_Q_SHOW_ANS[CUR]=!VIP_Q_SHOW_ANS[CUR];renderQuestion()}
-function toggleQuestionExplain(e){if(e&&e.stopPropagation)e.stopPropagation();if(!canViewSolutionLive()){alert('Chỉ VIP / SVIP / ADMIN được xem lời giải khi làm bài.');return}if(!canShowSolutionNow()){alert('Hãy làm và chấm câu này trước khi xem lời giải.');return}VIP_Q_SHOW_EXP[CUR]=!VIP_Q_SHOW_EXP[CUR];renderQuestion()}
-function toggleAnswerInFullscreen(){toggleQuestionAnswer()}
-function toggleExplainInFullscreen(){toggleQuestionExplain()}
-function formatDsAnswerLine(q,r){if(r&&r.correct_display)return formatDsAnswerBadges(r.correct_display);if(r&&Array.isArray(r.rows)&&r.rows.length)return formatDsAnswerBadges(r.rows.map(x=>`${x.letter}=${x.correct==='Đ'?'Đúng':'Sai'}`).join(' · '));if(q.Dang==='Đúng sai'){let bits=[];for(let i=0;i<4;i++){let L=['A','B','C','D'][i];if(!q[L])continue;let v=String(q.DapAn||'').replace(/\u0110/g,'D').replace(/đ/g,'d');let parsed=(v.match(/[DSĐ]/gi)||[]);let c=parsed[i];if(c)c=c.toUpperCase()==='S'?'Sai':(c==='Đ'||c==='D'?'Đúng':c);bits.push(`${L}=${c||'?'}`)}return formatDsAnswerBadges(bits.join(' · '))}return formatHintDisplay(r.correct||q.DapAn||'')}
-function saveShortAnswer(doCheck){let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||USER.is_admin||q.Dang!='Trả lời ngắn')return;if(SUBMITTED)return;let el=document.getElementById('shortAnsInput');if(!el)return;ANSWERS[CUR]=el.value;if(doCheck){if(USER.is_trial){alert('Tài khoản dùng thử chỉ luyện đề, không chấm đúng/sai từng câu.');return}if(!String(ANSWERS[CUR]).trim()){alert('Hãy nhập đáp án trước khi kiểm tra.');return}checkCurrentQuestion()}renderNav();notifyDoneIfNeeded()}
-function saveCurrent(){let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||USER.is_admin)return;if(LOCKED_Q[CUR]&&q.Dang!='Trả lời ngắn')return;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r){ANSWERS[CUR]=r.value;LOCKED_Q[CUR]=true;checkCurrentQuestion()}}else if(q.Dang=='Đúng sai'){let arr=[];let req=0;for(let L of ['A','B','C','D']){if(q[L])req++;let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);arr.push(r?r.value:'')}ANSWERS[CUR]=arr;let filled=arr.filter(v=>!!v).length;if(req>0&&filled>=req){LOCKED_Q[CUR]=true;checkCurrentQuestion()}}else if(q.Dang=='Trả lời ngắn'){saveShortAnswer(false)}else{let el=document.getElementById('essayAns');if(el)ANSWERS[CUR]=el.value}renderNav();notifyDoneIfNeeded()}
-async function checkCurrentQuestion(){if(SUBMITTED)return;if(USER.is_trial){alert('Tài khoản dùng thử chỉ luyện đề, không chấm đúng/sai từng câu.');return}let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||q.Dang=='Tự luận')return;let ans=ANSWERS[CUR];if(ans==null)return;if(Array.isArray(ans)&&ans.every(v=>!v))return;if(String(ans).trim()==='')return;try{let j=await api('/api/check-one',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans,...quizRestorePayload()})});CHECKED[CUR]=j;RESULTS[CUR]=j;updateResultBox(CUR);renderQuestion()}catch(e){alert(e.message||'Không kiểm tra được câu này.')}}
-function syncNavButtons(){let af=CUR<=0,al=CUR>=QUESTIONS.length-1;let p=document.getElementById('btnMobilePrev');if(p)p.disabled=af;let n=document.getElementById('btnMobileNext');if(n)n.disabled=al}
-
-function syncAdminLearningBoard(q){
-    let box=document.getElementById('adminLearningBoard');
-    if(!box)return;
-    if(!USER.is_admin){box.classList.add('hide');return;}
-    box.classList.remove('hide');
-    let scope=document.getElementById('adminLearningScope');
-    if(scope){
-        let parts=[];
-        if(q.Mon)parts.push('Môn: '+esc(q.Mon));
-        if(q.Lop)parts.push('Lớp: '+esc(q.Lop));
-        if(q.Chuong)parts.push('Chương: '+esc(q.Chuong));
-        if(q.BaiHoc)parts.push('Bài: '+esc(q.BaiHoc));
-        if(q.DangBaiTap)parts.push('Dạng BT: '+esc(q.DangBaiTap));
-        let scopeHtml=parts.length?parts.join('<br>'):'Câu này chưa đủ Mon/Lop/Chuong/BaiHoc/DangBaiTap.';
-        let sugg=buildDangBaiTapDatalistHtml('admin_board_dangbaitap_suggestions');
-        scope.innerHTML=scopeHtml+`
-            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #bfdbfe">
-                <b>Cột H · Dạng bài tập</b>
-                <div class="muted" style="font-size:11px;margin:3px 0 5px 0">Nhập tay hoặc chọn gợi ý đã có trong cột H. GPT chỉ ADMIN mới gọi.</div>
-                ${sugg}
-                <input id="learningDangBaiTapInput" list="admin_board_dangbaitap_suggestions" value="${escAttr(q.DangBaiTap||'')}" placeholder="Nhập/chọn dạng bài tập…" style="width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:6px">
-                <button type="button" class="adminSyncBtn" onclick="adminSaveDangBaiTapManual()">💾 Lưu cột H</button>
-            </div>`;
-    }
-}
-function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let q=QUESTIONS[i]||{};let sec=quizSectionLabel(i);if(sec){html+=`<div class="navSectionLbl ${navSectionClass(sec)}"><span>${esc(sec)}</span></div>`}let lv=mucdoPrimary(q.MucDo||'');let cls='num '+navMucDoClass(lv);if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=(lv?`${lv} · ${mucdoLabel(lv)} · `:'')+shortText((q&&q.CauHoi)||'',120);html+=`<button class="${cls}" data-level="${escAttr(lv||'')}" title="${escAttr(tip)}" onclick="goQ(${i})"><span class="navNumText">${i+1}</span></button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}syncNavButtons()}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
-function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}syncQuestionMucDoChrome(q);renderNav();closeLearningPanel(true);syncAdminLearningBoard(q);let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR])showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');let adminCreateBtns=USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)" title="GPT gán dạng bài tập và lưu cột H">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="showTheorySgkNotice()" title="Lý thuyết SGK: ADMIN nhập/dán rồi lưu">📘 Nhập LT SGK</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')" title="GPT tạo phương pháp và lưu Google Sheet">🤖 Tạo PP+GGS</button>`:'';let learnBtns=`<span class="qidLearnBtns"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 PP</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()" title="Dịch câu hỏi sang tiếng Anh">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()" title="AI nhắc lưu ý tránh sai, không chốt đáp án">🧠 Trợ lý AI</button>`:''}${adminCreateBtns}</span>`;document.getElementById('qid').innerHTML=`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${solTag?' · '+solTag:''}${learnBtns}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=secLbl?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`;qtextEl.classList.remove('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`+renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR)}
-async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
-function adminAiProvider(){return String(USER.admin_ai_provider||'').toUpperCase()}
-function adminUsesGpt(){return isAdminViewer()&&adminAiProvider()==='OPENAI'}
-function adminAiModelLabel(){let m=String(USER.openai_admin_model||'gpt-4o').trim();return m||'gpt-4o'}
-function isSvipViewer(){return !!(USER.is_svip||String(USER.role||'').toUpperCase()==='S.VIP')}
-function svipAiProvider(){return String(USER.svip_ai_provider||'OPENAI').toUpperCase()}
-function svipUsesGpt(){return isSvipViewer()&&svipAiProvider()==='OPENAI'}
-function svipAiModelLabel(){let m=String(USER.openai_hint_model||'gpt-4.1-mini').trim();return m||'gpt-4.1-mini'}
-let ADMIN_REVIEW_MODE='full';
-function getAdminReviewMode(){let el=document.getElementById('adminReviewMode')||document.getElementById('adminReviewModeFs');return (el&&el.value)||ADMIN_REVIEW_MODE||'fast'}
-function adminReviewIsFast(){return getAdminReviewMode()==='fast'}
-function adminReviewLoadingNote(){return adminReviewIsFast()?'~8–20 giây (2 mục)':'~20–26 giây (3 mục + DIỄN GIẢI)'}
-function onAdminReviewModeChange(val){ADMIN_REVIEW_MODE=(val==='fast')?'fast':'full';try{localStorage.setItem('adminReviewMode',ADMIN_REVIEW_MODE)}catch(e){}['adminReviewMode','adminReviewModeFs'].forEach(id=>{let el=document.getElementById(id);if(el)el.value=ADMIN_REVIEW_MODE});syncHintButtons(USER.can_ai_hint!==false)}
-function initAdminReviewMode(){try{ADMIN_REVIEW_MODE=localStorage.getItem('adminReviewMode')||'fast'}catch(e){ADMIN_REVIEW_MODE='fast'}if(ADMIN_REVIEW_MODE!=='full')ADMIN_REVIEW_MODE='fast';onAdminReviewModeChange(ADMIN_REVIEW_MODE)}
-function syncAdminReviewModeUI(){let show=!!isAdminViewer();['adminReviewModeWrap','adminReviewModeFsWrap'].forEach(id=>{let w=document.getElementById(id);if(w)w.classList.toggle('hide',!show)})}
-function hintButtonLabel(){if(isAdminViewer()){let fast=adminReviewIsFast();if(adminUsesGpt())return fast?'⚡ Soát nhanh GPT':'🔍 Soát đề GPT';if(adminAiProvider()==='GEMINI')return fast?'⚡ Soát nhanh':'🔍 Soát đề Gemini';return fast?'⚡ Soát nhanh':'🔍 AI soát đề'}if(svipUsesGpt())return '💡 GPT + đáp án';return USER.is_vip?'💡 AI':'💡 Gợi ý AI'}
-function adminQuizStatusLine(){if(!isAdminViewer())return '';let mode=adminReviewIsFast()?'Nhanh':'Kỹ';if(adminUsesGpt()){let ok=USER.admin_openai_ready!==false;return ok?`ADMIN · Soát ${mode} GPT (${adminReviewIsFast()?'gpt-4.1-mini':adminAiModelLabel()})`:`ADMIN · GPT chưa có key Render`}return `ADMIN · Soát ${mode}`}
-function syncHintButtons(canAi){let lbl=hintButtonLabel();syncAdminReviewModeUI();for(let id of ['btnHint','btnFsHint']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('hide',!canAi);if(HINT_LOADING)continue;b.classList.remove('btnHintLoading');b.textContent=lbl;b.disabled=!canAi||SIMILAR_LOADING}for(let id of ['btnSimilar','btnFsSimilar']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('hide',!canAi||!!USER.is_admin);if(SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){b.disabled=true;b.textContent='⏳ Đang tạo…'}else{b.disabled=HINT_LOADING;b.textContent=id==='btnFsSimilar'?'📝 tương tự':'📝 Tạo câu tương tự'}}}
-function setHintLoading(on,qIndex){HINT_LOADING=!!on;HINT_LOADING_Q=on?qIndex:null;let lbl=hintButtonLabel();for(let id of ['btnHint','btnFsHint']){let b=document.getElementById(id);if(!b)continue;if(on){if(!b.dataset.hintLabel)b.dataset.hintLabel=b.textContent||lbl;b.disabled=true;b.classList.add('btnHintLoading');b.innerHTML='<span class="hintSpin"></span> AI đang xử lý…'}else{b.classList.remove('btnHintLoading');b.textContent=b.dataset.hintLabel||lbl;delete b.dataset.hintLabel;b.disabled=SIMILAR_LOADING}}syncHintButtons(USER.can_ai_hint!==false)}
-function setSimilarLoading(on,qIndex){SIMILAR_LOADING=!!on;SIMILAR_LOADING_Q=on?qIndex:null;syncHintButtons(USER.can_ai_hint!==false)}
-function adminHintNeedsSave(qIdx){qIdx=qIdx==null?CUR:qIdx;let j=HINT_BY_Q[qIdx];return !!(j&&j.admin_review&&!ADMIN_HINT_SAVED[qIdx])}
-function markAdminHintSaved(qIdx){qIdx=qIdx==null?CUR:qIdx;ADMIN_HINT_SAVED[qIdx]=true;if(HINT_BY_Q[qIdx])HINT_BY_Q[qIdx].admin_sheet_confirmed=true}
-function dsDapAnFromSolutionText(text,q){q=q||currentQuestion();let chunks=extractAbcdSolutionChunks(String(text||''));let m={};chunks.forEach(c=>{if(c.verdict)m[c.letter]=c.verdict});let letters=['A','B','C','D'].filter(L=>q[L]);let bits=letters.filter(L=>m[L]).map(L=>`${L}=${m[L]}`);return bits.length?bits.join(' · '):''}
-function hintSectionDiengiaiRaw(){let t=hintRawText().split('📋 Tham chiếu Sheet')[0];let m=t.match(/1\.\s*DIỄN GIẢI[^\n]*\n([\s\S]*?)(?=2\.\s*GIẢI TỪNG Ý|\Z)/i);return m?m[1].trim():''}
-function hintSectionTungYRaw(){let t=hintRawText().split('📋 Tham chiếu Sheet')[0];let m3=t.match(/2\.\s*GIẢI TỪNG Ý[^\n]*\n([\s\S]*?)(?=3\.\s*CHỐT ĐÁP ÁN|\Z)/i);if(m3)return m3[1].trim();let m2=t.match(/1\.\s*GIẢI TỪNG Ý[^\n]*\n([\s\S]*?)(?=2\.\s*CHỐT ĐÁP ÁN|\Z)/i);return m2?m2[1].trim():''}
-function hintSection1Raw(){return hintSectionTungYRaw()}
-function hintAiLoigiaiCombined(){let dg=hintSectionDiengiaiRaw();let ty=hintSectionTungYRaw();if(dg&&ty)return dg+'\n\n'+ty;return ty||dg||''}
-function hintLoigiaiFromHintBody(){let t=hintRawText();let m=t.match(/Lời giải Sheet \(cột R\):\s*\n([\s\S]*?)(?=\n\n📋 Tham chiếu Sheet|$)/i);return m?m[1].trim():''}
-function hintAiLoigiaiRaw(){let j=HINT_BY_Q[CUR]||{};let q=QUESTIONS[CUR]||{};if(j.admin_review){let combined=hintAiLoigiaiCombined();if(combined)return combined;let sug=String(j.suggested_loigiai||'').trim();if(sug)return sug}let cand=[String(j.suggested_loigiai||'').trim(),hintAiLoigiaiCombined(),hintSection1Raw(),hintLoigiaiFromHintBody(),String(j.sheet_loigiai||'').trim(),String(q.LoiGiai||'').trim()].filter(Boolean);cand.sort((a,b)=>b.length-a.length);return cand[0]||''}
-function hintAiDapAn(){if(isCurrentQuestionDs()){let fromLg=dsDapAnFromSolutionText(hintAiLoigiaiRaw(),currentQuestion());if(fromLg)return fromLg}let j=HINT_BY_Q[CUR]||{};return String(j.suggested_dapan||'').trim()}
-function hintAiLoigiai(){let v=hintAiLoigiaiRaw();return v?stripLoigiaiMarkdown(v).replace(/\r/g,''):''}
-function adminLoigiaiMissingLetters(text,q){q=q||currentQuestion();if(!q||q.Dang!=='Đúng sai')return [];let need=['A','B','C','D'].filter(L=>!!q[L]);let found=new Set();String(text||'').split(/\n/).forEach(line=>{let m=line.match(/^\s*([ABCD])\s*[\.\):]/i);if(m)found.add(m[1].toUpperCase())});return need.filter(L=>!found.has(L))}
-function buildAdminAnalysisCard(j){if(!j||!j.admin_review)return '';let a=j.admin_analysis;if(!a)return '';let head=a.all_ok?`<div class="adminAnalysisOk">${esc(a.summary||'Sheet khớp AI')}</div>`:`<div class="adminAnalysisWarn">${esc(a.summary||'Có điểm cần sửa')}</div>`;let table='';if(a.rows&&a.rows.length){let trs=a.rows.map(r=>{let cls=r.ok?'adminAnalysisOkRow':'adminAnalysisBadRow';let mark=r.ok?'✓':'✗';let note=r.note?`<div class="muted" style="font-size:11px;margin-top:2px">${esc(r.note)}</div>`:'';return `<tr class="${cls}"><td><b>${esc(r.letter)}</b></td><td>${esc(r.sheet_p||'—')}</td><td>${esc(r.ai||'—')}</td><td>${esc(r.sheet_r||'—')}</td><td>${mark}${note}</td></tr>`}).join('');table=`<table class="adminAnalysisTbl"><thead><tr><th>Ý</th><th>Sheet P</th><th>AI</th><th>Sheet R</th><th></th></tr></thead><tbody>${trs}</tbody></table>`}let fixes='';if(!a.all_ok&&(a.fix_dapan||a.fix_loigiai))fixes=`<div class="hintAiActions" style="margin-top:8px"><button type="button" class="btnGreen" onclick="applyAdminFixAll()">✏️ Sửa Sheet (điền gợi ý AI)</button></div>`;else if(a.all_ok&&adminHintNeedsSave())fixes=`<div class="muted" style="margin-top:8px;font-size:12px">Sheet đã khớp AI — vẫn có thể bấm <b>Lưu</b> nếu vừa chỉnh tay.</div>`;return `<div class="hintAnswerCard adminAnalysisCard"><div class="hintAnswerTitle">🔬 Phân tích Đúng/Sai (ADMIN)</div>${head}${table}${fixes}</div>`}
-function applyAdminFixAll(){if(!USER.is_admin)return;let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};openEditWithHint(String(a.fix_dapan||'').trim(),String(a.fix_loigiai||'').trim())}
-function buildHintAnswerCard(j){if(!j)return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';if((j.vip_detailed||j.show_answer)&&!j.admin_review&&!isAdminViewer()&&!canShowSolutionNow())return `<div class="hintAnswerCard hintAnswerPending"><div class="hintAnswerTitle">🔒 Chưa làm câu</div><div class="muted" style="font-size:13px;line-height:1.45;margin-top:6px">VIP/SVIP: chọn đáp án và <b>chấm câu này</b> (TN/ĐS tự chấm; TLN bấm ✓) trước khi xem <b>Đáp án</b> và <b>Lời giải</b> từ Sheet.</div></div>`;let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(j.admin_review&&isCurrentQuestionDs()){let daFromLg=dsDapAnFromSolutionText(aiLg||hintSection1Raw(),q);if(daFromLg)aiDa=daFromLg}if((j.admin_review||j.show_answer)&&!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if((j.admin_review||j.show_answer)&&!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(j.admin_review&&ADMIN_HINT_SAVED[CUR]){sheetDa=String(q.DapAn||sheetDa||'').trim();sheetLg=String(q.LoiGiai||sheetLg||'').trim()}if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();let vipShort=!!(j.vip_detailed&&!j.admin_review);function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t,fromAi){if(vipShort)return formatHintDisplay(t);if(isDs)return formatDsHintText(t,true,fromAi);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án:</b> <span class="hintMath hintAnswerMain">${fmtAns(sheetDa||aiDa)}</span></div>`;if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI đề xuất:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`;else if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')===aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow" style="font-size:13px;color:#166534"><b>✓ Đáp án Sheet khớp AI</b></div>`}let aiLgRaw=j.admin_review?hintAiLoigiaiRaw():'';let lgShow=j.admin_review?(adminHintNeedsSave()?aiLgRaw:(sheetLg||String(q.LoiGiai||''))):(sheetLg||aiLg);if(lgShow){let lgLabel=j.admin_review?(adminHintNeedsSave()?'📝 Lời giải AI (diễn giải + từng ý):':'📝 Lời giải (Sheet R):'):(vipShort?'📝 Phương hướng:':'📝 Lời giải:');rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>${lgLabel}</b> <span class="hintMath">${fmtSol(lgShow,j.admin_review&&adminHintNeedsSave())}</span></div>`;if(j.admin_review&&adminHintNeedsSave()&&sheetLg&&aiLgRaw&&sheetLg.trim()!==aiLgRaw.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (R) hiện tại:</b> <span class="hintMath">${fmtSol(sheetLg,false)}</span></div>`;else if(j.admin_review&&!adminHintNeedsSave()&&aiLgRaw&&sheetLg&&sheetLg.trim()!==aiLgRaw.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>AI đề xuất (mục 1):</b> <span class="hintMath">${fmtSol(aiLgRaw,true)}</span></div>`}if(!rows)return '';let cardTitle=j.admin_review?(adminHintNeedsSave()?'📋 Đáp án &amp; lời giải (ADMIN — đề xuất lưu Sheet)':'✅ Đã lưu Sheet — so khớp P/R với AI'):(vipShort?'✅ Phương hướng':'✅ Đáp án &amp; lời giải — so sánh ôn tập');let saveNote=(j.admin_review&&adminHintNeedsSave())?`<div class="muted" style="font-size:12px;margin-top:8px;line-height:1.45">So bảng phân tích phía trên → <b>✏️ Sửa Sheet</b> nếu lệch → <b>Lưu vào Google Sheet</b>.</div>`:'';return `<div class="hintAnswerCard"><div class="hintAnswerTitle">${cardTitle}</div>${rows}${saveNote}</div>`}
-function buildSheetPreviewCard(){if(!canViewSolutionLive()||USER.is_admin||!canShowSolutionNow())return '';let q=currentQuestion();if(!q)return '';return buildHintAnswerCard({show_answer:true,vip_detailed:true,sheet_dapan:q.DapAn||'',sheet_loigiai:q.LoiGiai||'',suggested_dapan:q.DapAn||'',suggested_loigiai:q.LoiGiai||''})}
-function buildHintSimilarSection(){if(!USER.can_ai_hint||USER.is_admin)return '';let sim=SIMILAR_BY_Q[CUR];let loading=SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR;let html=`<div class="hintAiActions"><button type="button" class="btn2" id="btnSimilarInline" onclick="requestSimilarQuestion()" ${loading?'disabled':''}>${loading?'⏳ Đang tạo câu tương tự…':'📝 Tạo câu tương tự'}</button></div>`;if(sim&&sim.similar)html+=`<div class="hintSimilarBox" id="hintSimilarBox"><div class="hintSimilarTitle">📝 Câu tương tự (AI)</div><div class="hintSimilarBody hintMath" id="hintSimilarBody">${formatHintDisplay(sim.similar)}</div></div>`;return html}
-function hintClientTimeoutMs(){if(isAdminViewer())return adminReviewIsFast()?32000:35000;return 30000}
-function hintLoadingSeconds(){return HINT_LOADING_SINCE?Math.max(0,Math.floor((Date.now()-HINT_LOADING_SINCE)/1000)):0}
-function updateHintLoadingElapsed(){let s=hintLoadingSeconds();let el=document.getElementById('hintLoadingElapsed');if(el){el.textContent='Đã chờ '+s+' giây…';el.style.color=s>=28?'#9a3412':''}let rb=document.getElementById('resultBox');if(rb&&HINT_LOADING)rb.textContent='⏳ AI đang làm… ('+s+'s)'}
-function abortHintFetch(){if(HINT_ABORT_CTRL){try{HINT_ABORT_CTRL.abort()}catch(e){}HINT_ABORT_CTRL=null}}
-function stopHintLoadingTimer(){if(HINT_WATCHDOG){clearTimeout(HINT_WATCHDOG);HINT_WATCHDOG=null}if(HINT_LOADING_TICK){clearInterval(HINT_LOADING_TICK);HINT_LOADING_TICK=null}}
-function ensureHintWatchdog(){if(HINT_WATCHDOG||!HINT_LOADING_SINCE)return;let remain=Math.max(500,35000-(Date.now()-HINT_LOADING_SINCE));HINT_WATCHDOG=setTimeout(()=>{if(!HINT_LOADING)return;cancelHintRequest('Quá 35 giây — bấm Hủy hoặc Ctrl+F5 rồi thử lại.')},remain)}
-function beginHintLoadingTimer(){stopHintLoadingTimer();HINT_LOADING_SINCE=Date.now();HINT_LOADING_TICK=setInterval(updateHintLoadingElapsed,500);ensureHintWatchdog();updateHintLoadingElapsed()}
-function cancelHintRequest(msg){let qIdx=HINT_LOADING_Q;stopHintLoadingTimer();abortHintFetch();if(qIdx!=null){setHintLoading(false);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>⏹ Đã dừng soát AI</b><div class="muted" style="margin-top:8px">'+esc(msg||'Đã hủy yêu cầu AI.')+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}let rb=document.getElementById('resultBox');if(rb&&USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải'}}
-function showHintLoadingBox(){let hb=document.getElementById('hintBox');if(!hb)return;hb.classList.remove('hide');hb.classList.add('hintBoxLoading');let adminFast=isAdminViewer()&&adminReviewIsFast();let title=isAdminViewer()?(adminFast?(adminUsesGpt()?'⚡ Soát nhanh GPT:':'⚡ Soát nhanh:'):(adminUsesGpt()?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):')):(svipUsesGpt()?'💡 SVIP — ChatGPT gợi ý:':(USER.is_vip?'💡 AI VIP + đáp án:':'💡 Gợi ý AI:'));let renderNote=isAdminViewer()?'<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">Tối đa ~30s/request. Nếu quay &gt;35s → bấm <b>Hủy</b> hoặc <b>Ctrl+F5</b>.</div>':'';let sub=isAdminViewer()?(adminFast?`2 mục — gpt-4.1-mini — ${adminReviewLoadingNote()}…`:(adminUsesGpt()?`3 mục + DIỄN GIẢI — ${adminAiModelLabel()} — ${adminReviewLoadingNote()}…`:`Phân tích Đúng/Sai — ${adminReviewLoadingNote()}…`)):(svipUsesGpt()?`ChatGPT ${svipAiModelLabel()}: thay số + kiểm tra từng A/B/C/D — thường 15–35 giây…`:(USER.is_vip?'Gemini: phương hướng + kết quả cuối — thường 10–25 giây…':'Đang phân tích câu hỏi…'));let preview=(isAdminViewer()?'':((USER.is_vip||USER.can_view_solution_live)?buildSheetPreviewCard():''));let qImg=String((QUESTIONS[CUR]||{}).HinhAnh||'').trim();let visionNote=(!isAdminViewer()&&qImg)?'<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Câu có hình — AI sẽ đọc ảnh minh họa.</div>':(isAdminViewer()&&qImg?'<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Có ảnh cột T — GPT/Gemini đọc hình khi soát.</div>':'');let elapsed=hintLoadingSeconds();hb.innerHTML=`<b>${title}</b>${preview}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div style="flex:1"><b>Đang gọi AI…</b><div id="hintLoadingElapsed" class="muted" style="margin-top:4px;font-size:12px">Đã chờ ${elapsed} giây…</div><div class="muted" style="margin-top:6px;font-size:13px;line-height:1.45">${esc(sub)}</div>${visionNote}${renderNote}<div style="margin-top:10px"><button type="button" class="btn2" onclick="cancelHintRequest()">⏹ Hủy</button></div></div></div>`;if(preview)typesetQuizMath();updateHintLoadingElapsed()}
-function renderHintBox(j){let hb=document.getElementById('hintBox');if(!hb)return;j=j||{};hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');let title=j.admin_review?(String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI'?'🔍 Soát đề GPT (ChatGPT):':'🔍 AI soát đề (ADMIN):'):(j.vip_detailed?(svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'?'💡 SVIP — ChatGPT gợi ý:':'💡 AI VIP:'):'💡 Gợi ý AI:');if(!j.hint&&!j.admin_review&&!j.vip_detailed&&SIMILAR_BY_Q[CUR])title='📝 Câu tương tự (AI)';let extra='';if(j.admin_review){let modeLbl=esc(j.admin_review_mode_label||(j.admin_review_mode==='fast'?'Nhanh':'Kỹ'));extra=`<div class="muted" style="margin-top:6px;font-size:12px">ADMIN · chế độ <b>${modeLbl}</b>: bảng <b>Phân tích Đúng/Sai</b> so Sheet P/R → <b>Sửa Sheet</b> nếu lệch → <b>Lưu</b></div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình ADMIN: <b>${esc(j.provider_mode)}</b>${String(j.provider_mode||'').toUpperCase()==='OPENAI'?' · model '+esc(j.admin_review_mode==='fast'?'gpt-4.1-mini':adminAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=` (dự phòng — GPT lỗi/quota)`;else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(adminAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Cần OPENAI_API_KEY hoặc GEMINI_API_KEY trên Render</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI lỗi/quota — vẫn chép được lời giải Sheet/AI bên dưới vào cột R qua <b>Sửa câu</b>.</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ AI có thể chưa đủ 3 mục (Diễn giải / Giải từng ý / Chốt đáp án) — bấm lại <b>AI kiểm tra</b>.</div>`;if(j.vision_used)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Đã đọc ảnh minh họa${j.vision_model?' · '+esc(j.vision_model):''}</div>`;else if(j.has_question_image&&j.image_fetch_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ Có link ảnh nhưng không tải được: ${esc(j.image_fetch_error)}</div>`;extra+=`<div class="hintAdminActions"><button type="button" class="btnGreen" onclick="openEditWithHint()">✏️ Sửa câu (điền AI)</button><button type="button" class="btn2" onclick="copyHintLoigiai()">📋 Chép lời giải</button><button type="button" class="btn2" onclick="copyHintAll()">📋 Chép toàn bộ</button><button type="button" class="btn2" onclick="applyHintField('DapAn')">→ Chỉ đáp án (P)</button><button type="button" class="btn2" onclick="applyHintField('LoiGiai')">→ Chỉ lời giải (R)</button><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_detailed){let svipGpt=svipUsesGpt()||String(j.provider_mode||'').toUpperCase()==='OPENAI'||String(j.provider_used||'').toUpperCase()==='OPENAI';extra=`<div class="muted" style="margin-top:6px;font-size:12px">${svipGpt?'SVIP: ChatGPT — chỉ gợi ý hướng làm, không chốt đáp án.':'VIP: Gemini — chỉ gợi ý phương hướng, không chốt đáp án.'}</div>`;if(j.provider_mode)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">Cấu hình: <b>${esc(j.provider_mode)}</b>${svipGpt?' · model '+esc(svipAiModelLabel()):''}</div>`;if(j.key_index){let provLine=`AI: ${esc(j.provider_used||'')} | key #${j.key_index}`;if(j.provider_mode&&j.provider_used&&j.provider_mode!==j.provider_used)provLine+=' (dự phòng)';else if(String(j.provider_used||'').toUpperCase()==='OPENAI')provLine+=` · ${esc(svipAiModelLabel())}`;extra+=`<div class="muted" style="margin-top:4px;font-size:12px"><b>${provLine}</b></div>`}else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key Gemini — vào 🔑 Key AI của tôi hoặc https://aistudio.google.com/apikey</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`;if(j.hint_truncated)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ ${j.svip_substitution_check?'AI có thể chưa kiểm tra đủ 4 phương án A/B/C/D':'AI có thể chưa đủ mục'} — bấm lại <b>Gợi ý AI</b>.</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.vision_used)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">📷 Đã đọc ảnh minh họa${j.vision_model?' · '+esc(j.vision_model):''}</div>`;else if(j.has_question_image&&j.image_fetch_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#9a3412">⚠️ Có link ảnh nhưng không tải được: ${esc(j.image_fetch_error)}</div>`;if(canUnlockInfographic(CUR))extra+=`<div class="hintAiActions"><button type="button" class="btn2" onclick="openInfographicPrompt()">📊 Prompt infographic</button></div>`}else if(j.vip_formula_only){extra=`<div class="muted" style="margin-top:6px;font-size:12px">VIP: công thức đã thay số từ đề + tự loại 2 đáp án sai (trắc nghiệm)</div>`;if(j.hide_5050&&j.hide_5050.length)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#1d4ed8">Đã loại: ${esc(j.hide_5050.join(', '))}</div>`;if(j.provider_used==='FALLBACK')extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">AI lỗi hoặc chưa có key — <a href="#" onclick="backHome();return false">🔑 Key AI của tôi</a></div>`;else if(!j.ai_configured)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">Chưa có key Gemini — vào 🔑 Key AI của tôi hoặc https://aistudio.google.com/apikey</div>`}else if(j.key_index){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI: ${esc(j.provider_used||'')} | key #${j.key_index}</div>`}else if(j.hint){extra=`<div class="muted" style="margin-top:6px;font-size:12px">AI fallback${j.ai_configured?' (key lỗi hoặc hết quota)':' (chưa có key)'}</div>`;if(j.ai_error)extra+=`<div class="muted" style="margin-top:4px;font-size:12px;color:#991b1b">${esc(j.ai_error)}</div>`}if(j.message)extra+=`<div class="muted" style="margin-top:4px;font-size:12px">${esc(j.message)}</div>`;let analysisCard=j.admin_review?buildAdminAnalysisCard(j):'';let answerCard=buildHintAnswerCard(j);let similarSec=buildHintSimilarSection();let body=j.hint?formatHintDisplay(j.hint):'';let bodyHtml=body?`<div id="hintAdminBody" class="hintAdminBody">${body}</div>`:'';hb.innerHTML=`<b>${title}</b>${analysisCard}${answerCard}${extra}${bodyHtml}${similarSec}`;typesetQuizMath()}
-function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa có lời giải đề xuất (mục 1).');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép lời giải (đúng mẫu A. Đúng — …).')).catch(()=>alert('Không chép được — thử bấm → Lời giải (R) rồi Ctrl+C.'))}
-function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
-function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(field==='DapAn')return String(a.fix_dapan||'').trim()||hintAiDapAn();if(field==='LoiGiai')return String(a.fix_loigiai||'').trim()||hintAiLoigiai();return ''}
-function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 2).':'Chưa có lời giải đề xuất (mục 1).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
-function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(!dapan)dapan=String(a.fix_dapan||'').trim()||hintAiDapAn();if(!loigiai)loigiai=String(a.fix_loigiai||'').trim()||hintAiLoigiai();if(isCurrentQuestionDs()&&loigiai){let sync=dsDapAnFromSolutionText(loigiai,QUESTIONS[CUR]);if(sync)dapan=sync}openEdit();syncQuestionModalChrome();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
-async function saveHintField(field){alert('ADMIN: hãy bấm ✏️ Sửa câu (điền AI), kiểm tra đủ Đáp án + Lời giải, rồi Lưu vào Google Sheet — không lưu thẳng từ AI.')}
-async function requestSimilarQuestion(){if(!USER.can_ai_hint){alert('Tạo câu tương tự chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(SIMILAR_LOADING||HINT_LOADING)return;saveCurrent();let qIdx=CUR;setSimilarLoading(true,qIdx);if(HINT_BY_Q[qIdx])renderHintBox(HINT_BY_Q[qIdx]);else{let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b></div></div>'}}try{let j=await api('/api/hint/similar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,...quizRestorePayload()})});SIMILAR_BY_Q[qIdx]=j;if(CUR===qIdx)renderHintBox(HINT_BY_Q[qIdx]||{});let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide'))hb.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){alert('Không tạo được câu tương tự: '+e.message)}finally{if(SIMILAR_LOADING_Q===qIdx){setSimilarLoading(false);if(CUR===qIdx&&(HINT_BY_Q[qIdx]||SIMILAR_BY_Q[qIdx]))renderHintBox(HINT_BY_Q[qIdx]||{})}}}
-
-function learningParamValue(q,keys){
-    q=q||{};
-    for(let k of keys){let v=String(q[k]||'').trim();if(v)return v;}
-    return '';
-}
-function currentLearningQuery(kind){
-    let q=applyResolvedDang(QUESTIONS[CUR]||{});
-    let params={
-        Mon:learningParamValue(q,['Mon','mon']),
-        Lop:learningParamValue(q,['Lop','lop']),
-        Chuong:learningParamValue(q,['Chuong','chuong']),
-        BaiHoc:learningParamValue(q,['BaiHoc','baihoc']),
-        DangBaiTap:learningParamValue(q,['DangBaiTap','dangbaitap'])
-    };
-    // Nếu lớp trong Sheet là 12QT1, API vẫn tự khớp khối 12 nhờ backend.
-    let qs=[];
-    for(let k of ['Mon','Lop','Chuong','BaiHoc']){if(params[k])qs.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));}
-    if(kind==='method'&&params.DangBaiTap)qs.push('DangBaiTap='+encodeURIComponent(params.DangBaiTap));
-    return {q:q,params:params,query:qs.join('&')};
-}
-function learningTitle(kind){if(kind==='translate')return '🇬🇧 English';return kind==='method'?'🧭 Phương pháp giải':'📘 Lý thuyết SGK';}
-function showTheorySgkNotice(){alert('Lý thuyết là phần SGK/chuẩn bài học: ADMIN dán hoặc nhập nội dung được phép dùng vào khung Lý thuyết trong Sửa câu, rồi bấm 💾 Lưu LT đang sửa. GPT không tự tạo Lý thuyết để tránh sai và tốn key. GPT chỉ dùng cho Dạng bài tập và Phương pháp giải.');}
-let CURRENT_LEARNING_KIND='';
-let EDIT_THEORY_OPTIONS=[];
-let EDIT_METHOD_OPTIONS=[];
-function syncLearningToggleButtons(kind){
-    try{
-        document.querySelectorAll('[data-learning-toggle]').forEach(btn=>{
-            let active=!!kind && btn.getAttribute('data-learning-toggle')===kind;
-            btn.classList.toggle('learningActive',active);
-            btn.setAttribute('aria-pressed',active?'true':'false');
-        });
-    }catch(e){}
-}
-function closeLearningPanel(silent){
-    let hb=document.getElementById('hintBox');
-    CURRENT_LEARNING_KIND='';
-    if(hb){
-        hb.classList.add('hide');
-        hb.classList.remove('hintBoxLoading');
-        hb.classList.remove('learningOpen');
-        try{delete hb.dataset.learningKind;}catch(e){hb.dataset.learningKind='';}
-        if(!silent)hb.innerHTML='';
-    }
-    syncLearningToggleButtons('');
-}
-function markLearningPanel(kind){
-    CURRENT_LEARNING_KIND=kind||'';
-    let hb=document.getElementById('hintBox');
-    if(hb){
-        hb.classList.add('learningOpen');
-        hb.dataset.learningKind=kind||'';
-    }
-    syncLearningToggleButtons(kind||'');
-}
-function learningHeaderHtml(kind){
-    return `<div class="learningTitleRow"><b>${learningTitle(kind)}</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div>`;
-}
-function showLearningLoading(kind){
-    let hb=document.getElementById('hintBox');if(!hb)return;
-    hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');
-    markLearningPanel(kind);
-    hb.innerHTML=`${learningHeaderHtml(kind)}<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang tải học liệu từ Google Sheet…</b><div class="muted" style="margin-top:6px;font-size:13px">Lấy theo Môn · Lớp · Chương · Bài học${kind==='method'?' · Dạng bài tập':''} của câu hiện tại.</div></div></div>`;
-}
-function normalizeLearningDisplayText(val){
-    let t=String(val||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
-    if(!t)return '';
-    // Nếu GPT trả các bước trên một dòng: "Bước 1: ... Bước 2: ..." thì tự xuống dòng.
-    t=t.replace(/\s*(Bước\s*\d+\s*[:.])/gi,(m,p,off)=>off===0?p:'\n'+p);
-    t=t.replace(/\s*(B\d+\s*[:.])/gi,(m,p,off)=>off===0?p:'\n'+p);
-    t=t.replace(/\n{3,}/g,'\n\n');
-    return t;
-}
-function learningFieldHtml(label,val){
-    val=normalizeLearningDisplayText(val);
-    if(!val)return '';
-    return `<div style="margin-top:8px"><b>${esc(label)}:</b><div style="margin-top:3px;line-height:1.62;white-space:pre-wrap">${formatHintDisplay(val)}</div></div>`;
-}
-function buildTheoryItemHtml(it,idx){
-    return `<div class="learningItem" style="margin-top:${idx?12:8}px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)">
-        <div style="font-weight:900;color:var(--heading)">${esc(it.TieuDe||it.BaiHoc||'Lý thuyết')}</div>
-        <div class="muted" style="font-size:12px;margin-top:3px">${esc([it.Mon,it.Lop,it.Chuong,it.BaiHoc].filter(Boolean).join(' · '))}</div>
-        ${learningFieldHtml('Lý thuyết SGK',it.LyThuyet)}
-        ${learningFieldHtml('Tóm tắt',it.NoiDungTomTat)}
-        ${learningFieldHtml('Kiến thức trọng tâm',it.KienThucTrongTam)}
-        ${learningFieldHtml('Công thức',it.CongThuc)}
-        ${learningFieldHtml('Đơn vị',it.DonVi)}
-        ${learningFieldHtml('Lưu ý',it.LuuY)}
-        ${learningFieldHtml('Sai lầm thường gặp',it.SaiLamThuongGap)}
-        ${learningFieldHtml('Ví dụ mẫu',it.ViDuMau)}
-    </div>`;
-}
-function buildMethodItemHtml(it,idx){
-    return `<div class="learningItem" style="margin-top:${idx?12:8}px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)">
-        <div style="font-weight:900;color:var(--heading)">${esc(it.TenPhuongPhap||it.DangBaiTap||'Phương pháp giải')}</div>
-        <div class="muted" style="font-size:12px;margin-top:3px">${esc([it.Mon,it.Lop,it.Chuong,it.BaiHoc,it.DangBaiTap].filter(Boolean).join(' · '))}</div>
-        ${learningFieldHtml('Dấu hiệu nhận biết',it.DauHieuNhanBiet)}
-        ${learningFieldHtml('Các bước giải',it.CacBuocGiai)}
-        ${learningFieldHtml('Công thức sử dụng',it.CongThucSuDung)}
-        ${learningFieldHtml('Mẹo nhanh',it.MeoNhanh)}
-        ${learningFieldHtml('Lỗi sai thường gặp',it.LoiSaiThuongGap)}
-        ${learningFieldHtml('Ví dụ mẫu',it.ViDuMau)}
-    </div>`;
-}
-function renderLearningPanel(kind,j,ctx){
-    let hb=document.getElementById('hintBox');if(!hb)return;
-    let items=(j&&Array.isArray(j.items))?j.items:[];
-    let params=ctx&&ctx.params?ctx.params:{};
-    let scope=[params.Mon,params.Lop,params.Chuong,params.BaiHoc,(kind==='method'?params.DangBaiTap:'')].filter(Boolean).join(' · ');
-    let body='';
-    if(items.length){
-        body=items.map((it,i)=>kind==='method'?buildMethodItemHtml(it,i):buildTheoryItemHtml(it,i)).join('');
-    }else{
-        body=`<div style="margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--surface)"><b>Chưa có học liệu khớp.</b><div class="muted" style="margin-top:6px">Kiểm tra sheet ${kind==='method'?'Phuong_Phap':'Ly_Thuyet'} theo các cột: Mon, Lop, Chuong, BaiHoc${kind==='method'?', DangBaiTap':''}.</div></div>`;
-    }
-    let adminManualDang='';
-    if(USER.is_admin&&kind==='method'){
-        let sugg=buildDangBaiTapDatalistHtml('learning_dangbaitap_suggestions');
-        adminManualDang=`<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:10px;background:#fff">
-            <b>ADMIN nhập Dạng bài tập cột H</b>
-            <div class="muted" style="font-size:12px;margin:4px 0 6px 0">Nếu cột H đang trống/chưa, nhập hoặc chọn gợi ý đã có trong cột H rồi bấm lưu. GPT chỉ ADMIN mới gọi được.</div>
-            ${sugg}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                <input id="learningDangBaiTapInput" list="learning_dangbaitap_suggestions" value="${escAttr(params.DangBaiTap||'')}" placeholder="Nhập/chọn Dạng bài tập cột H…" style="flex:1;min-width:260px;padding:8px 10px;border:1px solid var(--border);border-radius:10px">
-                <button type="button" class="btnGreen" onclick="adminSaveDangBaiTapManual()">💾 Lưu cột H</button>
-                <button type="button" class="btn2" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán dạng</button>
-            </div>
-        </div>`;
-    }
-    let adminMainBtn=kind==='method'?`<button type="button" class="btnGreen" onclick="adminGenerateAndSyncLearning('method')">🤖 GPT tạo PP + lưu GGS</button>`:`<button type="button" class="btnGreen" onclick="openEdit()">✍️ ADMIN nhập/sửa Lý thuyết</button>`;
-    let adminTip=USER.is_admin?`${adminManualDang}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${kind==='method'?'<button type="button" class="btn2" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán dạng BT</button>':''}${adminMainBtn}<button type="button" class="btn2" onclick="syncData()">🔄 Đồng bộ</button><button type="button" class="btn2" onclick="requestHint()">🔍 Soát GPT câu này</button><span class="muted" style="font-size:12px;align-self:center">Chỉ ADMIN được gọi GPT cho Dạng bài tập/Phương pháp. Lý thuyết SGK do ADMIN nhập; học sinh chỉ xem nội dung đã lưu.</span></div>`:'';
-    hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');
-    markLearningPanel(kind);
-    hb.innerHTML=`${learningHeaderHtml(kind)}<div class="muted" style="margin-top:5px;font-size:12px">${esc(scope||'Câu hiện tại chưa đủ thông tin bài học/dạng bài.')}</div>${body}${adminTip}`;
-    typesetQuizMath();
-    try{hb.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
-}
-
-function getDangBaiTapSuggestions(){
-    let arr=[];
-    try{arr=(META&&Array.isArray(META.dangbaitap_suggestions))?META.dangbaitap_suggestions:[]}catch(e){}
-    if(!arr.length&&META&&META.filters&&Array.isArray(META.filters.DangBaiTap))arr=META.filters.DangBaiTap;
-    if(!arr.length&&Array.isArray(QUESTIONS))arr=QUESTIONS.map(q=>q&&q.DangBaiTap).filter(Boolean);
-    let seen={};let out=[];
-    for(let v of arr){v=String(v||'').trim();if(!v||isBadDangBaiTapValue(v))continue;let k=normText(v);if(seen[k])continue;seen[k]=1;out.push(v)}
-    return out.sort((a,b)=>String(a).localeCompare(String(b),'vi'));
-}
-function buildDangBaiTapDatalistHtml(id){
-    let opts=getDangBaiTapSuggestions().map(v=>`<option value="${escAttr(v)}"></option>`).join('');
-    return `<datalist id="${escAttr(id)}">${opts}</datalist>`;
-}
-async function adminSaveDangBaiTapManual(){
-    if(!USER.is_admin){alert('Chỉ ADMIN được lưu Dạng bài tập.');return}
-    let q=QUESTIONS[CUR]||{};
-    if(!q._row){alert('Không xác định dòng Sheet để lưu cột H.');return}
-    let inp=document.getElementById('learningDangBaiTapInput')||document.getElementById('edit_DangBaiTap');
-    let val=String((inp&&inp.value)||'').trim();
-    if(!val){alert('Thầy nhập Dạng bài tập trước.');return}
-    if(isBadDangBaiTapValue(val)&&!confirm('Dạng bài tập này có vẻ chưa rõ: "'+val+'". Vẫn lưu cột H?'))return;
-    try{
-        let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',updates:{DangBaiTap:val}})});
-        q.DangBaiTap=val;
-        if(META){
-            META.dangbaitap_suggestions=META.dangbaitap_suggestions||[];
-            if(!META.dangbaitap_suggestions.some(x=>normText(x)===normText(val)))META.dangbaitap_suggestions.push(val);
-            META.filters=META.filters||{};META.filters.DangBaiTap=META.filters.DangBaiTap||[];
-            if(!META.filters.DangBaiTap.some(x=>normText(x)===normText(val)))META.filters.DangBaiTap.push(val);
-        }
-        syncAdminLearningBoard(q);
-        renderQuestion();renderNav();
-        alert('✅ Đã lưu Dạng bài tập vào cột H dòng '+(j.row||q._row)+': '+val+'\nBây giờ có thể tạo/gọi Phương pháp giải theo đúng dạng này.');
-    }catch(e){alert('Không lưu được Dạng bài tập: '+(e.message||e));}
-}
-
-function isBadDangBaiTapValue(v){
-    let t=normText(v||'');
-    if(!t)return true;
-    if(['chua','chua gan','chua phan loai','chua co','none','null','khong ro','khac',''].includes(t))return true;
-    if(['trac nghiem','dung sai','tra loi ngan','tu luan','tn','ds','tln','tl'].includes(t))return true;
-    return false;
-}
-async function adminDetectDangBaiTapAndSave(silent){
-    if(!USER.is_admin){alert('Chỉ ADMIN được gán Dạng bài tập.');return ''}
-    let q=QUESTIONS[CUR]||{};
-    if(!q._row){if(!silent)alert('Không xác định dòng Sheet để lưu Dạng bài tập.');return ''}
-    let hb=document.getElementById('hintBox');
-    if(hb){hb.classList.remove('hide');hb.innerHTML='<b>🏷️ GPT gán Dạng bài tập</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang nhận dạng dạng bài tập và lưu vào cột H...</b><div class="muted" style="margin-top:6px">Khóa Phương pháp sẽ là Môn · Lớp · Chương · Bài học · Dạng bài tập.</div></div></div>';}
-    try{
-        let payload={row:q._row,id:q.ID||'',question:q};
-        let j=await api('/api/ai/detect-dangbaitap-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
-        let val=String(j.DangBaiTap||j.dangbaitap||'').trim();
-        if(!val)throw new Error(j.error||'GPT chưa trả Dạng bài tập.');
-        q.DangBaiTap=val;
-        if(hb){hb.innerHTML='<b>🏷️ Đã gán Dạng bài tập</b><div style="margin-top:8px"><b>'+esc(val)+'</b></div>'+(j.reason?'<div class="muted" style="margin-top:6px">'+esc(j.reason)+'</div>':'')+'<div class="muted" style="margin-top:6px">Đã lưu cột H Google Sheet dòng '+esc(j.row||q._row||'')+'. Bây giờ có thể tạo Phương pháp giải đúng khóa.</div>';}
-        syncAdminLearningBoard(q);
-        renderNav();
-        if(!silent)alert('✅ Đã gán Dạng bài tập: '+val+'\nĐã lưu vào cột H Google Sheet.');
-        return val;
-    }catch(e){
-        if(hb){hb.innerHTML='<b>🏷️ GPT gán Dạng bài tập</b><div class="muted" style="margin-top:8px;color:#991b1b">Không gán được: '+esc(e.message||e)+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="adminDetectDangBaiTapAndSave(false)">Thử lại</button></div>';}
-        if(!silent)alert('Không gán được Dạng bài tập: '+(e.message||e));
-        return '';
-    }
-}
-
-async function adminGenerateAndSyncLearning(kind){
-    if(!USER.is_admin){alert('Chỉ ADMIN được tạo và lưu học liệu.');return}
-    kind=(kind==='method')?'method':'theory';
-    let ctx=currentLearningQuery(kind);
-    if(kind==='method'&&isBadDangBaiTapValue(ctx.params.DangBaiTap)){
-        let ok=confirm(`Câu này chưa có Dạng bài tập rõ ràng ở cột H.\n\nCần GPT gán Dạng bài tập trước rồi mới tạo Phương pháp giải để không bị lẫn giữa các câu. Tiếp tục?`);
-        if(!ok)return;
-        let newDang=await adminDetectDangBaiTapAndSave(true);
-        if(!newDang)return;
-        ctx=currentLearningQuery(kind);
-    }
-    let sheetName=kind==='method'?'Phuong_Phap':'Ly_Thuyet';
-    let scope=[ctx.params.Mon,ctx.params.Lop,ctx.params.Chuong,ctx.params.BaiHoc,(kind==='method'?ctx.params.DangBaiTap:'')].filter(Boolean).join(' · ');
-    if(!confirm(`GPT sẽ tạo ${learningTitle(kind)} cho:
-${scope||'câu hiện tại'}
-
-Sau đó LƯU vào Google Sheet ${sheetName} để học sinh gọi lại. Tiếp tục?`))return;
-    let hb=document.getElementById('hintBox');
-    if(hb){hb.classList.remove('hide');hb.innerHTML=`<b>${learningTitle(kind)}</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>GPT đang tạo học liệu và lưu vào Google Sheet ${sheetName}…</b><div class="muted" style="margin-top:6px;font-size:13px">Không đụng sheet Cau_Hoi. Nếu trùng bài/dạng, hệ thống cập nhật dòng cũ.</div></div></div>`;}
-    try{
-        let payload={kind:kind,question:ctx.q};
-        let j=await api('/api/learning/generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
-        alert(`✅ Đã ${j.action==='updated'?'cập nhật':'tạo mới'} học liệu vào ${sheetName}, dòng ${j.row}.\nAI: ${j.provider_used||''} ${j.model||''}`);
-        await openLearningPanel(kind);
-    }catch(e){
-        if(hb){hb.classList.remove('hide');hb.innerHTML=`<b>${learningTitle(kind)}</b><div class="muted" style="margin-top:8px;color:#991b1b">Không tạo/lưu được học liệu: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="adminGenerateAndSyncLearning('${kind}')">Thử lại</button></div>`;}
-        alert('Không tạo/lưu được học liệu: '+(e.message||e));
-    }
-}
-async function openLearningPanel(kind){
-    saveCurrent();
-    kind=(kind==='method')?'method':'theory';
-    let hb0=document.getElementById('hintBox');
-    if(CURRENT_LEARNING_KIND===kind && hb0 && !hb0.classList.contains('hide') && hb0.dataset.learningKind===kind){
-        closeLearningPanel();
-        return;
-    }
-    let ctx=currentLearningQuery(kind);
-    showLearningLoading(kind);
-    try{
-        let url='/api/learning/'+(kind==='method'?'method':'theory')+(ctx.query?('?'+ctx.query):'');
-        let j=await api(url,{method:'GET',timeoutMs:25000},1);
-        renderLearningPanel(kind,j,ctx);
-    }catch(e){
-        let hb=document.getElementById('hintBox');
-        if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');markLearningPanel(kind);hb.innerHTML=`${learningHeaderHtml(kind)}<div class="muted" style="margin-top:8px;color:#991b1b">Không tải được học liệu: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" data-learning-toggle="${kind}" onclick="openLearningPanel('${kind}')">Thử lại</button></div>`;}
-    }
-}
-
-
-/* ===== V242: Bỏ đọc tiếng Việt, chỉ giữ English + dịch tiếng Anh ===== */
-let TTS_ACTIVE=false;
-let TTS_VOICES=[];
-let LAST_ENGLISH_TRANSLATION_TEXT="";
-function refreshTtsVoices(){
-    try{TTS_VOICES=window.speechSynthesis?window.speechSynthesis.getVoices():[]}catch(e){TTS_VOICES=[]}
-    return TTS_VOICES;
-}
-try{
-    if('speechSynthesis' in window){
-        refreshTtsVoices();
-        window.speechSynthesis.onvoiceschanged=refreshTtsVoices;
-    }
-}catch(e){}
-function pickTtsVoice(lang){
-    let voices=refreshTtsVoices();
-    let target=String(lang||'vi-VN').toLowerCase();
-    let base=target.split('-')[0];
-    if(!voices||!voices.length)return null;
-    let exact=voices.find(v=>String(v.lang||'').toLowerCase()===target);
-    if(exact)return exact;
-    let prefix=voices.find(v=>String(v.lang||'').toLowerCase().startsWith(base));
-    if(prefix)return prefix;
-    if(base==='vi'){
-        let vn=voices.find(v=>/việ?t|vietnam|ti[eế]ng vi[eệ]t|google.*vi/i.test(String(v.name||'')+' '+String(v.lang||'')));
-        if(vn)return vn;
-    }
-    if(base==='en'){
-        let en=voices.find(v=>String(v.lang||'').toLowerCase().startsWith('en'));
-        if(en)return en;
-    }
-    return null;
-}
-function plainTextFromHtmlOrLatex(s){
-    let t=String(s||'');
-    try{let d=document.createElement('div');d.innerHTML=t;t=d.textContent||d.innerText||t;}catch(e){}
-    t=t.replace(/\\\(|\\\)|\$|\\\[|\\\]/g,' ')
-       .replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,' $1 trên $2 ')
-       .replace(/\\sqrt\s*\{([^{}]+)\}/g,' căn $1 ')
-       .replace(/\\cdot|\\times/g,' nhân ')
-       .replace(/\\leq/g,' nhỏ hơn hoặc bằng ')
-       .replace(/\\geq/g,' lớn hơn hoặc bằng ')
-       .replace(/\\Delta/g,' delta ')
-       .replace(/\\lambda/g,' lam đa ')
-       .replace(/\\alpha/g,' an pha ')
-       .replace(/\\beta/g,' bê ta ')
-       .replace(/\\pi/g,' pi ')
-       .replace(/\\[a-zA-Z]+/g,' ')
-       .replace(/[{}_^]/g,' ')
-       .replace(/\s+/g,' ').trim();
-    return t;
-}
-function currentQuestionSpeakText(){
-    let q=QUESTIONS[CUR]||{};let bits=[];
-    if(q.CauHoi)bits.push(q.CauHoi);
-    if(q.Dang==='Trắc nghiệm'){
-        for(let L of ['A','B','C','D'])if(q[L])bits.push(`${L}. ${q[L]}`);
-    }else if(q.Dang==='Đúng sai'){
-        for(let L of ['A','B','C','D'])if(q[L])bits.push(`Ý ${L}. ${q[L]}`);
-    }
-    return plainTextFromHtmlOrLatex(bits.join('\n'));
-}
-function speakText(text,lang){
-    text=plainTextFromHtmlOrLatex(text);
-    if(!text){alert('Chưa có văn bản để đọc.');return}
-    if(!('speechSynthesis' in window)){alert('Trình duyệt này chưa hỗ trợ đọc văn bản.');return}
-    try{window.speechSynthesis.cancel();}catch(e){}
-    if(TTS_ACTIVE){TTS_ACTIVE=false;return}
-    let useLang=lang||'vi-VN';
-    let u=new SpeechSynthesisUtterance(text.slice(0,3500));
-    u.lang=useLang;
-    let voice=pickTtsVoice(useLang);
-    if(voice)u.voice=voice;
-    u.rate=(String(useLang).toLowerCase().startsWith('vi')?0.9:0.95);
-    u.pitch=1;
-    u.onend=function(){TTS_ACTIVE=false};u.onerror=function(){TTS_ACTIVE=false};
-    TTS_ACTIVE=true;window.speechSynthesis.speak(u);
-    if(String(useLang).toLowerCase().startsWith('vi')&&!voice){
-        setTimeout(function(){
-            try{
-                let voices=refreshTtsVoices();
-                let hasVi=voices&&voices.some(v=>String(v.lang||'').toLowerCase().startsWith('vi')||/vietnam|việ?t|ti[eế]ng vi[eệ]t/i.test(String(v.name||'')));
-                if(!hasVi&&TTS_ACTIVE){console.warn('Thiết bị chưa có giọng đọc tiếng Việt vi-VN, trình duyệt có thể đọc bằng giọng mặc định.');}
-            }catch(e){}
-        },400);
-    }
-}
-function stopTts(){try{window.speechSynthesis.cancel();}catch(e){}TTS_ACTIVE=false}
-function speakCurrentQuestion(){alert('Đã tắt chức năng đọc tiếng Việt để tránh lỗi giọng đọc trên điện thoại. Vẫn có thể dùng 🇬🇧 English và 🔊 Đọc English.')}
-function extractEnglishText(txt){
-    txt=String(txt||'');
-    let m=txt.match(/English\s*:\s*([\s\S]*?)(?:\n\s*Vocabulary\s*:|\n\s*Notes\s*:|$)/i);
-    return (m?m[1]:txt).trim();
-}
-function speakEnglishTranslation(){
-    let txt=LAST_ENGLISH_TRANSLATION_TEXT||'';
-    if(!txt){
-        try{
-            let hb=document.getElementById('hintBox');
-            txt=hb?(hb.innerText||hb.textContent||''):'';
-        }catch(e){txt=''}
-    }
-    let en=extractEnglishText(txt);
-    if(!en){alert('Chưa có phần English để đọc. Bấm 🇬🇧 English trước.');return}
-    speakText(en,'en-US');
-}
-async function translateCurrentQuestionToEnglish(){
-    saveCurrent();
-    let q=QUESTIONS[CUR]||{};
-    let text=currentQuestionSpeakText();
-    let hb=document.getElementById('hintBox');
-    if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang dịch sang tiếng Anh…</b><div class="muted" style="margin-top:6px;font-size:13px">Nếu đã lưu trong Google Sheet Dich_Anh thì gọi lại; nếu chưa có thì dùng AI theo quyền tài khoản.</div></div></div>`;}
-    try{
-        let payload={sid:SID,index:CUR,type:'CauHoi',text:text,answer:ANSWERS[CUR]||'',...quizRestorePayload()};
-        let j=await api('/api/translate/en',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
-        let tr=j.translation||((j.item||{}).BanDichAnh)||'';
-        let meta=j.cached?'Đã gọi lại từ sheet Dich_Anh':('AI: '+(j.provider_used||'')+' '+(j.model||''));
-        LAST_ENGLISH_TRANSLATION_TEXT=tr||'';
-        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English · Dịch câu hỏi</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="font-size:12px;margin-top:4px">${esc(meta)}</div><div class="learningItem" style="margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;white-space:pre-wrap">${formatHintDisplay(tr)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn2" onclick="speakEnglishTranslation()">🔊 Đọc English</button></div><div class="muted" style="margin-top:8px;font-size:12px">Bản dịch chỉ hỗ trợ đọc hiểu/từ vựng, không giải bài và không chốt đáp án. Chức năng đọc tiếng Việt đã tắt để tránh lỗi giọng trên điện thoại.</div>`;typesetQuizMath();}
-    }catch(e){
-        let msg=String(e.message||e);
-        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không dịch được: ${esc(msg)}</div>${shouldShowGeminiKeyHelp(msg)?geminiKeyHelpHtml():''}<div style="margin-top:8px"><button type="button" class="btn2" onclick="translateCurrentQuestionToEnglish()">Thử lại</button></div>`;}
-    }
-}
-
-
-
-let AI_ASSIST_LOADING=false,AI_ASSIST_Q=null;
-let AI_ASSIST_CHAT_LOADING=false;
-let AI_ASSIST_CHAT_BY_Q={};
-function aiChatKey(){return String(CUR||0)}
-function aiChatHistory(){let k=aiChatKey();if(!AI_ASSIST_CHAT_BY_Q[k])AI_ASSIST_CHAT_BY_Q[k]=[];return AI_ASSIST_CHAT_BY_Q[k]}
-function showAiAssistLoading(){
-    let hb=document.getElementById('hintBox');if(!hb)return;
-    hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');
-    CURRENT_LEARNING_KIND='ai_assist';
-    syncLearningToggleButtons('ai_assist');
-    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>AI đang đọc câu và viết gợi ý bước làm…</b><div class="muted" style="margin-top:6px;font-size:13px">Không chốt đáp án. Chỉ nhắc mục tiêu câu hỏi, bước làm, công thức, tóm tắt dữ kiện, đổi đơn vị và bẫy dễ sai.</div></div></div>`;
-}
-function renderAiChatMessages(){
-    let box=document.getElementById('aiAssistChatMessages');if(!box)return;
-    let hist=aiChatHistory();
-    if(!hist.length){box.innerHTML='<div class="muted" style="font-size:13px">Em có thể hỏi thêm để hiểu rõ mục tiêu câu hỏi, công thức cần dùng, cách đổi đơn vị hoặc bẫy dễ sai. AI không chốt đáp án.</div>';return}
-    box.innerHTML=hist.map(m=>`<div class="aiMsg ${m.role==='user'?'aiMsgUser':'aiMsgBot'}">${m.role==='user'?esc(m.text||''):formatHintDisplay(m.text||'')}</div>`).join('');
-    try{box.scrollTop=box.scrollHeight}catch(e){}
-    typesetQuizMath();
-}
-function aiAssistChatHtml(){
-    return `<div class="aiChatBox"><b>💬 Hỏi thêm Trợ lý AI thầy Minh</b><div class="muted" style="font-size:12px;margin-top:3px">VIP/S.VIP/ADMIN có thể chat để hỏi rõ mục tiêu, bước làm, công thức và lưu ý. VIP/S.VIP dùng Gemini; chỉ ADMIN dùng ChatGPT. AI không đưa đáp án cuối.</div><div id="aiAssistChatMessages" class="aiChatMsgs"></div><div class="aiChatForm"><textarea id="aiAssistChatInput" class="aiChatInput" placeholder="Ví dụ: Bài này hỏi mục tiêu gì? Cần dùng công thức nào? Đổi đơn vị ra sao?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitAiAssistantChat()}"></textarea><button type="button" id="aiAssistChatSend" class="aiChatSend" onclick="submitAiAssistantChat()">Gửi</button></div></div>`;
-}
-function geminiKeyHelpHtml(){
-    return `<div class="aiAssistWarn" style="margin-top:10px"><b>VIP/S.VIP muốn dùng Trợ lý AI cần tự nhập Gemini key.</b><br>1) Bấm <b>Lấy Gemini key</b> → đăng nhập Google → Create API key.<br>2) Copy key dạng <b>AIza...</b> hoặc <b>AQ...</b>.<br>3) Quay lại app → <b>🔑 Key AI của tôi</b> → dán key → <b>Lưu key</b>.<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn2" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">🔑 Lấy Gemini key</a><button type="button" class="btnGreen" onclick="backHome();setTimeout(scrollToAiKeyPanel,250)">📥 Nhập key trong app</button></div></div>`;
-}
-function shouldShowGeminiKeyHelp(msg){msg=String(msg||'').toLowerCase();return msg.includes('key')||msg.includes('api')||msg.includes('gemini')||msg.includes('quota')||msg.includes('chưa có');}
-function renderAiAssistPanel(j){
-    let hb=document.getElementById('hintBox');if(!hb)return;
-    CURRENT_LEARNING_KIND='ai_assist';
-    syncLearningToggleButtons('ai_assist');
-    let meta='';
-    if(j.provider_used)meta+=`<div class="muted" style="font-size:12px;margin-top:6px">AI: ${esc(j.provider_used||'')} ${j.model?(' · '+esc(j.model)) : ''}${j.key_index?(' · key #'+esc(j.key_index)) : ''}</div>`;
-    if(j.ai_error)meta+=`<div class="muted" style="font-size:12px;margin-top:4px;color:#991b1b">${esc(j.ai_error)}</div>`;
-    hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.classList.add('learningOpen');hb.dataset.learningKind='ai_assist';
-    hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh · Gợi ý cách làm</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="aiAssistPanel"><div style="line-height:1.65;white-space:pre-wrap">${formatHintDisplay(j.note||j.hint||'Chưa có lưu ý.')}</div><div class="aiAssistWarn">Trợ lý AI thầy Minh chỉ gợi ý mục tiêu câu hỏi, bước làm, công thức, tóm tắt dữ kiện, đổi đơn vị và bẫy dễ sai. Không dùng để chốt đáp án. Muốn kiểm đáp án/lời giải cụ thể: ADMIN dùng nút “Soát đề GPT”.</div>${meta}${aiAssistChatHtml()}</div>`;
-    renderAiChatMessages();
-    typesetQuizMath();
-    try{hb.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
-}
-async function requestAiAssistantNote(){
-    if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành tài khoản VIP / S.VIP / ADMIN.');return}
-    if(AI_ASSIST_LOADING||HINT_LOADING||SIMILAR_LOADING)return;
-    let hb0=document.getElementById('hintBox');
-    if(CURRENT_LEARNING_KIND==='ai_assist'&&hb0&&!hb0.classList.contains('hide')&&hb0.dataset.learningKind==='ai_assist'){closeLearningPanel();return}
-    saveCurrent();let qIdx=CUR;AI_ASSIST_LOADING=true;AI_ASSIST_Q=qIdx;showAiAssistLoading();
-    try{
-        let j=await api('/api/ai/assistant-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,answer:ANSWERS[qIdx]||'',...quizRestorePayload()}),timeoutMs:50000},1);
-        if(CUR===qIdx)renderAiAssistPanel(j);
-    }catch(e){
-        let hb=document.getElementById('hintBox');
-        if(hb){let msg=String(e.message||e);hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=`<div class="learningTitleRow"><b>🧠 Trợ lý AI thầy Minh</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không lấy được Trợ lý AI: ${esc(msg)}</div>${shouldShowGeminiKeyHelp(msg)?geminiKeyHelpHtml():''}<div style="margin-top:8px"><button type="button" class="btn2" onclick="requestAiAssistantNote()">Thử lại</button></div>`}
-    }finally{AI_ASSIST_LOADING=false;AI_ASSIST_Q=null;}
-}
-async function submitAiAssistantChat(){
-    if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành tài khoản VIP / S.VIP / ADMIN.');return}
-    if(AI_ASSIST_CHAT_LOADING)return;
-    let inp=document.getElementById('aiAssistChatInput');if(!inp)return;
-    let text=String(inp.value||'').trim();
-    if(!text){inp.focus();return}
-    if(text.length>700){alert('Câu hỏi thêm nên ngắn gọn dưới 700 ký tự.');return}
-    saveCurrent();let qIdx=CUR;let hist=aiChatHistory();
-    hist.push({role:'user',text:text});inp.value='';renderAiChatMessages();
-    AI_ASSIST_CHAT_LOADING=true;let btn=document.getElementById('aiAssistChatSend');if(btn){btn.disabled=true;btn.textContent='Đang…'}
-    try{
-        let j=await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,message:text,messages:hist.slice(-8),answer:ANSWERS[qIdx]||'',...quizRestorePayload()}),timeoutMs:50000},1);
-        if(CUR===qIdx){hist.push({role:'assistant',text:j.reply||'Thầy Minh AI chưa có phản hồi.'});renderAiChatMessages();}
-    }catch(e){
-        if(CUR===qIdx){let emsg=String(e.message||e);hist.push({role:'assistant',text:'Không trả lời được lúc này: '+emsg+(shouldShowGeminiKeyHelp(emsg)?'\n\nVIP/S.VIP lấy Gemini key tại https://aistudio.google.com/apikey rồi nhập tại 🔑 Key AI của tôi.':'' )});renderAiChatMessages();}
-    }finally{
-        AI_ASSIST_CHAT_LOADING=false;let b=document.getElementById('aiAssistChatSend');if(b){b.disabled=false;b.textContent='Gửi'}let i=document.getElementById('aiAssistChatInput');if(i)i.focus();
-    }
-}
-
-async function requestHint(){if(!USER.can_ai_hint){alert('Gợi ý AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(HINT_LOADING||SIMILAR_LOADING){return}saveCurrent();let qIdx=CUR;delete HINT_BY_Q[qIdx];setHintLoading(true,qIdx);beginHintLoadingTimer();showHintLoadingBox();let rb=document.getElementById('resultBox');if(rb)rb.style.color='#1d4ed8';let hintTimer=null;let hintDone=false;try{let ans=ANSWERS[qIdx];let hintBody={sid:SID,index:qIdx,answer:ans,...quizRestorePayload()};if(isAdminViewer())hintBody.admin_review_mode=getAdminReviewMode();HINT_ABORT_CTRL=new AbortController();let tms=hintClientTimeoutMs();hintTimer=setTimeout(()=>{abortHintFetch()},tms);let j=await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hintBody),signal:HINT_ABORT_CTRL.signal});HINT_BY_Q[qIdx]=j;if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;hintDone=true;if(hintTimer){clearTimeout(hintTimer);hintTimer=null}finishHintRequest(qIdx,j)}catch(e){let msg=(e&&e.name==='AbortError')?'Quá thời gian chờ. Render Free giới hạn ~30 giây/request — chọn ⚡ Soát nhanh hoặc thử lại.':String(e.message||e);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>❌ Không lấy được gợi ý AI</b><div class="muted" style="margin-top:8px">'+esc(msg)+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}alert('Không lấy được gợi ý: '+msg)}finally{if(!hintDone){if(hintTimer)clearTimeout(hintTimer);stopHintLoadingTimer();HINT_LOADING_SINCE=0;if(HINT_LOADING_Q===qIdx)setHintLoading(false);syncHintButtons(USER.can_ai_hint!==false);if(CUR===qIdx&&rb){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}}}}
-async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS,...quizRestorePayload()})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;renderQuestion();renderNav()}
-const QUESTION_FORM_FIELDS=['MaDe','ID','Mon','Lop','Chuong','BaiHoc','DangBaiTap','QuyenTruyCap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'];
-const QUESTION_FORM_LABELS={MaDe:'Mã đề (MaDe)',ID:'ID câu (để trống = tự tạo)',Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập - cột H',QuyenTruyCap:'Quyền (FREE/VIP)',MucDo:'Mức độ - cột I',Dang:'Dạng câu - cột J',CauHoi:'Câu hỏi / Nội dung - cột K',DapAn:'Đáp án - cột P',SaiSo:'Sai số - cột Q',LoiGiai:'Lời giải - cột R',HinhAnh:'Hình ảnh - cột T',A:'A - cột L',B:'B - cột M',C:'C - cột N',D:'D - cột O'};
-const ADMIN_MUCDO_OPTS=['NB','TH','VD','VDC'];
-const ADMIN_DANG_OPTS=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
-const ADMIN_QUYEN_OPTS=[{v:'FREE',l:'FREE',cls:'adminChipFree'},{v:'VIP',l:'VIP',cls:'adminChipVip'}];
-function normQuyenFormVal(s){let t=normText(s);if(!t)return'FREE';if(/vip|paid|premium|co phi|tra phi|thu phi|svip/.test(t))return'VIP';return'FREE'}
-function normMucDoFormVal(s){let u=String(s||'').trim().toUpperCase();if(ADMIN_MUCDO_OPTS.includes(u))return u;if(/\bNB\b/.test(u))return'NB';if(/\bTH\b/.test(u))return'TH';if(/\bVDC\b/.test(u))return'VDC';if(/\bVD\b/.test(u))return'VD';return''}
-function normDangFormVal(s){let d=normDangClient(s);if(ADMIN_DANG_OPTS.includes(d))return d;return d||'Trắc nghiệm'}
-function escFormVal(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
-
-let ADMIN_LEVEL_REVIEW_ITEMS=[];
-function questionPreviewShort(q){let t=String((q&&q.CauHoi)||'').replace(/\s+/g,' ').trim();return t.length>150?t.slice(0,147)+'…':t}
-function closeBulkLevelReview(){let m=document.getElementById('bulkLevelModal');if(m)m.classList.add('hide')}
-function openBulkLevelReview(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  if(!Array.isArray(QUESTIONS)||!QUESTIONS.length){alert('Hãy mở một đề/chuyên đề trước. Nút này gợi ý mức độ cho các câu đang xem.');return}
-  let m=document.getElementById('bulkLevelModal');if(m)m.classList.remove('hide');
-  ADMIN_LEVEL_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),current_mucdo:normMucDoFormVal(q.MucDo||''),ai_mucdo:'',confidence:'',reason:'',preview:questionPreviewShort(q),selected:false}));
-  renderBulkLevelList();
-  bulkLevelDetectCurrent();
-}
-function renderBulkLevelList(){
-  let box=document.getElementById('bulkLevelList');if(!box)return;
-  if(!ADMIN_LEVEL_REVIEW_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dữ liệu.</div>';return}
-  box.innerHTML=ADMIN_LEVEL_REVIEW_ITEMS.map((it,pos)=>{
-    let ai=normMucDoFormVal(it.ai_mucdo||'');
-    let cur=normMucDoFormVal(it.current_mucdo||'');
-    let checked=it.selected?'checked':'';
-    let opts=ADMIN_MUCDO_OPTS.map(v=>`<option value="${v}" ${(ai||cur)===v?'selected':''}>${v}</option>`).join('');
-    let ok=ai?`<span class="mucdoBadge ${mucdoBadgeClass(ai)}">AI: ${esc(ai)}</span>`:'<span class="muted">AI chưa gợi ý</span>';
-    return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
-        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại: ${cur?`<span class="mucdoBadge ${mucdoBadgeClass(cur)}">${esc(cur)}</span>`:'<span class="mucdoBadge mucdo-empty">—</span>'} · ${ok}</div>
-        <label style="display:flex;gap:6px;align-items:center;font-weight:800"><input type="checkbox" data-bulk-check="${pos}" ${checked} onchange="bulkLevelToggle(${pos},this.checked)"> Chấp nhận</label>
-      </div>
-      <div class="muted" style="font-size:12px;margin-top:4px">ID: ${esc(it.ID||'—')} · dòng Sheet: ${esc(it.row||'—')}${it.confidence?' · tin cậy '+esc(it.confidence):''}</div>
-      <div style="margin-top:6px;line-height:1.45">${esc(it.preview||'')}</div>
-      <div class="muted" style="margin-top:6px">${it.reason?'Lý do: '+esc(it.reason):'GPT sẽ ghi lý do ngắn tại đây.'}</div>
-      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Chốt mức:</span><select data-bulk-level="${pos}" onchange="bulkLevelSet(${pos},this.value)">${opts}</select><button type="button" class="btnSmall" onclick="bulkLevelAcceptOne(${pos})">💾 Chấp nhận câu này</button></div>
-    </div>`;
-  }).join('');
-}
-function bulkLevelToggle(pos,on){if(ADMIN_LEVEL_REVIEW_ITEMS[pos])ADMIN_LEVEL_REVIEW_ITEMS[pos].selected=!!on}
-function bulkLevelSet(pos,lv){if(ADMIN_LEVEL_REVIEW_ITEMS[pos]){ADMIN_LEVEL_REVIEW_ITEMS[pos].ai_mucdo=normMucDoFormVal(lv);ADMIN_LEVEL_REVIEW_ITEMS[pos].selected=!!ADMIN_LEVEL_REVIEW_ITEMS[pos].ai_mucdo;renderBulkLevelList()}}
-function bulkLevelSelectAllAi(){for(let it of ADMIN_LEVEL_REVIEW_ITEMS){it.selected=!!normMucDoFormVal(it.ai_mucdo)}renderBulkLevelList()}
-function bulkLevelSelectNone(){for(let it of ADMIN_LEVEL_REVIEW_ITEMS)it.selected=false;renderBulkLevelList()}
-const BULK_LEVEL_CHUNK_SIZE=20;
-function bulkLevelBuildPayloadForItems(chunkItems){
-  return {questions:chunkItems.map(it=>{
-    let q=QUESTIONS[it.index]||{};
-    return {index:it.index,row:q._row||it.row||'',ID:q.ID||it.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||'',DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''};
-  })};
-}
-function bulkLevelMergeAiItems(items){
-  if(!Array.isArray(items))return 0;
-  let changed=0;
-  for(let raw of items){
-    let idx=parseInt(raw.index,10);
-    let target=ADMIN_LEVEL_REVIEW_ITEMS.find(x=>x.index===idx);
-    if(!target)continue;
-    let ai=normMucDoFormVal(raw.ai_mucdo||raw.MucDo||'');
-    target.ai_mucdo=ai;
-    target.confidence=String(raw.confidence||'');
-    target.reason=String(raw.reason||'');
-    target.preview=raw.preview||target.preview||'';
-    if(ai)target.selected=true;
-    changed++;
-  }
-  return changed;
-}
-async function bulkLevelDetectCurrent(){
-  if(!USER.is_admin)return;
-  if(!QUESTIONS.length){alert('Chưa mở đề.');return}
-  let st=document.getElementById('bulkLevelStatus');
-  let btn=document.getElementById('bulkLevelBtn');let old=btn?btn.textContent:'';
-  let runBtn=document.querySelector('#bulkLevelModal button[onclick="bulkLevelDetectCurrent()"]');let oldRun=runBtn?runBtn.textContent:'';
-  let total=QUESTIONS.length;
+async function dedupeSheetDuplicates(){
+  // V258: xóa trùng Sheet theo lô nhỏ để tránh timeout/quota; luôn báo rõ nếu không có trùng exact.
   try{
-    if(btn){btn.disabled=true;btn.textContent='⏳ GPT mức độ...'}
-    if(runBtn){runBtn.disabled=true;runBtn.textContent='⏳ Đang chạy...'}
-    // Luôn hiển thị đủ danh sách câu trước; câu nào AI xong thì cập nhật dần.
-    if(!ADMIN_LEVEL_REVIEW_ITEMS.length || ADMIN_LEVEL_REVIEW_ITEMS.length!==QUESTIONS.length){
-      ADMIN_LEVEL_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),current_mucdo:normMucDoFormVal(q.MucDo||''),ai_mucdo:'',confidence:'',reason:'',preview:questionPreviewShort(q),selected:false}));
-      renderBulkLevelList();
-    }else{
-      for(let it of ADMIN_LEVEL_REVIEW_ITEMS){it.ai_mucdo='';it.confidence='';it.reason='';it.selected=false}
-      renderBulkLevelList();
-    }
-    let chunks=[];
-    for(let i=0;i<ADMIN_LEVEL_REVIEW_ITEMS.length;i+=BULK_LEVEL_CHUNK_SIZE){
-      chunks.push(ADMIN_LEVEL_REVIEW_ITEMS.slice(i,i+BULK_LEVEL_CHUNK_SIZE));
-    }
-    let detectedTotal=0, doneTotal=0, failed=[];
-    for(let c=0;c<chunks.length;c++){
-      let chunk=chunks[c];
-      if(st)st.textContent=`⏳ GPT ADMIN đang gợi ý mức độ: nhóm ${c+1}/${chunks.length} · câu ${chunk[0].index+1}–${chunk[chunk.length-1].index+1}/${total}\nĐã xử lý ${doneTotal}/${total}. Kết quả sẽ hiện dần, không cần bấm lại.`;
-      try{
-        let j=await api('/api/ai/detect-level-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bulkLevelBuildPayloadForItems(chunk))});
-        bulkLevelMergeAiItems(j.items||[]);
-        detectedTotal+=parseInt(j.detected||0,10)||0;
-        doneTotal+=chunk.length;
-        renderBulkLevelList();
-      }catch(e){
-        failed.push(`Nhóm ${c+1}: ${e.message||e}`);
-        // Không dừng toàn bộ. Chạy tiếp nhóm sau để còn lấy được các câu khác.
-        doneTotal+=chunk.length;
-        for(let it of chunk){it.reason='Nhóm này chưa chạy được: '+(e.message||e);it.selected=false}
-        renderBulkLevelList();
-      }
-      // Nghỉ ngắn để Render/GPT không bị dồn request liên tục.
-      if(c<chunks.length-1)await new Promise(r=>setTimeout(r,450));
-    }
-    if(st){
-      let msg=`✅ GPT gợi ý xong ${detectedTotal}/${total} câu. Xem nhanh rồi bấm Chấp nhận.`;
-      if(chunks.length>1)msg+=`\nĐã chạy tự động ${chunks.length} nhóm, mỗi nhóm tối đa ${BULK_LEVEL_CHUNK_SIZE} câu.`;
-      if(failed.length)msg+=`\n⚠ Có ${failed.length} nhóm lỗi, có thể bấm “Chạy GPT gợi ý lại” để chạy lại.\n`+failed.slice(0,4).join('\n');
-      st.textContent=msg;
-    }
-  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý mức độ hàng loạt được: '+(e.message||e))}
-  finally{if(btn){btn.disabled=false;btn.textContent=old||'🎯 Gợi ý mức độ'}if(runBtn){runBtn.disabled=false;runBtn.textContent=oldRun||'🤖 Chạy GPT gợi ý lại'}}
-}
-function bulkLevelAcceptOne(pos){if(!ADMIN_LEVEL_REVIEW_ITEMS[pos])return;ADMIN_LEVEL_REVIEW_ITEMS.forEach((it,i)=>it.selected=i===pos);bulkLevelApplySelected()}
-async function bulkLevelApplySelected(){
-  let selected=ADMIN_LEVEL_REVIEW_ITEMS.filter(it=>it.selected&&normMucDoFormVal(it.ai_mucdo));
-  if(!selected.length){alert('Chưa tick câu nào có mức AI.');return}
-  if(!confirm('Ghi mức độ cho '+selected.length+' câu vào cột I Google Sheet?'))return;
-  let updates=selected.map(it=>({index:it.index,row:it.row,ID:it.ID,MucDo:normMucDoFormVal(it.ai_mucdo)}));
-  let st=document.getElementById('bulkLevelStatus');
-  try{
-    if(st)st.textContent='⏳ Đang ghi '+updates.length+' mức độ vào Google Sheet...';
-    let j=await api('/api/ai/apply-levels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
-    let byIndex={};(j.items||[]).forEach(it=>{byIndex[parseInt(it.index,10)]=it});
-    for(let up of updates){let q=QUESTIONS[up.index];if(q)q.MucDo=up.MucDo;let it=ADMIN_LEVEL_REVIEW_ITEMS.find(x=>x.index===up.index);if(it){it.current_mucdo=up.MucDo;it.selected=false}}
-    renderBulkLevelList();renderNav();renderQuestion();refreshCatalogFromMeta();
-    if(st)st.textContent='✅ Đã cập nhật '+(j.updated||updates.length)+' câu. App đã đổi mức ngay, không cần Đồng bộ Sheet.';
-  }catch(e){if(st)st.textContent='❌ Không ghi được: '+(e.message||e);alert('Không ghi mức độ được: '+(e.message||e))}
-}
-
-async function aiDetectCurrentQuestionLevel(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  if(QUESTION_SAVE_BUSY){return}
-  let btn=document.getElementById('btnAiDetectMucDo');
-  let oldBtn=btn?btn.textContent:'';
-  let note=document.getElementById('editModalNote');
-  try{
-    if(btn){btn.disabled=true;btn.textContent='⏳ GPT đang nhận dạng...'}
-    let q=readQuestionFormData();
-    q.Dang=normDangFormVal(q.Dang||'');
-    let j=await api('/api/ai/detect-level',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    let lv=normMucDoFormVal(j.MucDo||j.ai_mucdo||'');
-    if(!lv){throw new Error(j.error||j.ai_level_error||'GPT chưa trả mức độ NB/TH/VD/VDC')}
-    setAdminChip('MucDo',lv);
-    let conf=String(j.confidence||j._AiConfidence||'').trim();
-    let reason=String(j.reason||j._AiReason||'').trim();
-    if(note){
-      note.innerHTML='🎯 GPT ADMIN gợi ý mức độ: <b>'+esc(lv)+'</b>'+(conf?' · độ tin cậy '+esc(conf):'')+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+'<br><b>Chưa lưu Sheet.</b> Kiểm tra rồi bấm <b>Lưu vào Google Sheet</b>.';
-    }
-  }catch(e){
-    alert('AI chưa nhận dạng được mức độ: '+e.message);
-    if(note)note.textContent='AI nhận dạng mức độ lỗi hoặc thiếu OPENAI_API_KEY. Có thể chọn tay NB/TH/VD/VDC rồi lưu.';
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent=oldBtn||'🎯 AI nhận dạng mức độ'}
-  }
-}
-
-
-async function aiDetectAndSaveCurrentQuestionLevel(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  if(QUESTION_SAVE_BUSY){return}
-  if(QUESTION_MODAL_MODE==='add'){
-    alert('Câu mới chưa có dòng Sheet. Hãy thêm câu trước, rồi mới AI nhận dạng & lưu mức độ.');
-    return;
-  }
-  let q0=QUESTIONS[CUR]||{};
-  if(!q0._row){alert('Không xác định dòng Sheet của câu này.');return}
-  let btn=document.getElementById('btnAiDetectSaveMucDo');
-  let btn2=document.getElementById('btnAiDetectMucDo');
-  let oldBtn=btn?btn.textContent:'';
-  let note=document.getElementById('editModalNote');
-  try{
-    QUESTION_SAVE_BUSY=true;
-    if(btn){btn.disabled=true;btn.textContent='⏳ GPT nhận dạng & lưu...'}
-    if(btn2){btn2.disabled=true}
-    let q=readQuestionFormData();
-    q.Dang=normDangFormVal(q.Dang||'');
-    let j=await api('/api/ai/detect-level-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q0._row,question:q})});
-    let lv=normMucDoFormVal(j.MucDo||j.ai_mucdo||'');
-    if(!lv){throw new Error(j.error||'GPT chưa trả mức độ NB/TH/VD/VDC')}
-    setAdminChip('MucDo',lv);
-    q0.MucDo=lv;
-    if(j.question){Object.assign(q0,j.question);q0.MucDo=lv;applyResolvedDang(q0)}
-    let conf=String(j.confidence||'').trim();
-    let reason=String(j.reason||'').trim();
-    if(note){
-      note.innerHTML='✅ Đã lưu ngay mức độ <b>'+esc(lv)+'</b> vào Google Sheet dòng <b>'+esc(j.row||q0._row)+'</b>.'+(conf?' · độ tin cậy '+esc(conf):'')+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+'<br><span class="muted">Chỉ cập nhật cột I (Mức độ). Các ô khác chưa bị thay đổi.</span>';
-    }
-    renderNav();
-    // Giữ modal mở để ADMIN bấm câu kế tiếp/kiểm tra tiếp, không bắt đồng bộ Sheet.
-  }catch(e){
-    alert('Không nhận dạng & lưu được mức độ: '+e.message);
-    if(note)note.textContent='AI nhận dạng/lưu mức độ lỗi. Có thể chọn tay NB/TH/VD/VDC rồi bấm Lưu vào Google Sheet.';
-  }finally{
-    QUESTION_SAVE_BUSY=false;
-    if(btn){btn.disabled=false;btn.textContent=oldBtn||'✅ AI nhận dạng & lưu mức độ'}
-    if(btn2){btn2.disabled=false}
-  }
-}
-
-async function aiRepairCurrentQuestion(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  if(QUESTION_SAVE_BUSY){return}
-  saveCurrent();
-  let q=QUESTIONS[CUR]||{};
-  let target=(typeof resolveDang==='function'?resolveDang(q):(q.Dang||''))||'';
-  let oldBar=document.getElementById('editAiRepairBar');
-  let oldHtml=oldBar?oldBar.innerHTML:'';
-  if(oldBar)oldBar.innerHTML='<span class="hintSpin"></span> <b>AI đang khôi phục câu thiếu…</b><span class="muted" style="font-size:12px"> Không tự lưu Sheet.</span>';
-  try{
-    let j=await api('/api/ai/repair-question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,target_dang:target,mode:'repair',...quizRestorePayload()})});
-    let rq=j.question||{};
-    openEdit();
-    for(let f of QUESTION_FORM_FIELDS){
-      let el=document.getElementById('edit_'+f);
-      if(!el)continue;
-      if(Object.prototype.hasOwnProperty.call(rq,f))el.value=rq[f]||'';
-    }
-    ['QuyenTruyCap','MucDo','Dang'].forEach(syncAdminChipGroup);
-    syncQuestionModalChrome();
-    let note=document.getElementById('editModalNote');
-    if(note){
-      let warn=String(j.warning||'').trim();
-      note.innerHTML='🧩 AI đã khôi phục/bổ sung câu. <b>ADMIN cần kiểm tra lại đáp án và lời giải trước khi lưu.</b>'+(warn?'<br><span style="color:#991b1b">⚠️ '+esc(warn)+'</span>':'');
-    }
-    let hb=document.getElementById('hintBox');
-    if(hb){
-      hb.classList.remove('hide');
-      hb.classList.remove('hintBoxLoading');
-      let miss=(j.missing_before&&j.missing_before.missing)?j.missing_before.missing.join(', '):'';
-      hb.innerHTML='<b>🧩 AI khôi phục câu thiếu</b><div class="muted" style="margin-top:6px">Dạng mục tiêu: <b>'+esc(j.target_dang||target)+'</b>'+(miss?' · Thiếu trước khi sửa: '+esc(miss):'')+'</div>'+(j.warning?'<div class="muted" style="margin-top:6px;color:#991b1b">⚠️ '+esc(j.warning)+'</div>':'')+'<div class="muted" style="margin-top:6px">Đã điền vào form sửa. Kiểm tra rồi bấm <b>Lưu vào Google Sheet</b>.</div>';
-    }
-  }catch(e){
-    alert('AI chưa khôi phục được: '+e.message);
-  }finally{
-    let bar=document.getElementById('editAiRepairBar');
-    if(bar&&oldHtml)bar.innerHTML=oldHtml;
-  }
-}
-function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field)}
-function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
-function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-
-function adminSourceRowsForSuggestions(){
-  let out=[];
-  try{(CATALOG||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
-  try{(QUESTIONS||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
-  try{if(META&&META.catalog)(META.catalog||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
-  return out;
-}
-function adminNormKey(v){return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ')}
-function adminUniqueSorted(vals){
-  let seen={},out=[];
-  (vals||[]).forEach(v=>{v=String(v||'').trim();if(!v)return;let k=adminNormKey(v);if(!seen[k]){seen[k]=1;out.push(v)}});
-  return out.sort((a,b)=>adminNormKey(a).localeCompare(adminNormKey(b),'vi'));
-}
-function adminEditVal(f){let el=document.getElementById('edit_'+f);return String((el&&el.value)||'').trim()}
-function adminOptionMatches(row,scopeField,scopeVal){
-  if(!scopeVal)return true;
-  let v=String((row&&row[scopeField])||'').trim();
-  return adminNormKey(v)===adminNormKey(scopeVal);
-}
-function adminTaxonomyOptions(field){
-  let mon=adminEditVal('Mon'), lop=adminEditVal('Lop'), chuong=adminEditVal('Chuong');
-  let rows=adminSourceRowsForSuggestions();
-  let vals=[];
-  rows.forEach(r=>{
-    if(field==='Lop'&&!adminOptionMatches(r,'Mon',mon))return;
-    if(field==='Chuong'&&(!adminOptionMatches(r,'Mon',mon)||!adminOptionMatches(r,'Lop',lop)))return;
-    if(field==='BaiHoc'&&(!adminOptionMatches(r,'Mon',mon)||!adminOptionMatches(r,'Lop',lop)||!adminOptionMatches(r,'Chuong',chuong)))return;
-    let v=String((r&&r[field])||'').trim();
-    if(v)vals.push(v);
-  });
-  return adminUniqueSorted(vals);
-}
-function fillAdminDatalist(id,vals){
-  let dl=document.getElementById(id);if(!dl)return;
-  dl.innerHTML=(vals||[]).map(v=>`<option value="${escAttr(v)}"></option>`).join('');
-}
-function adminSyncTaxonomyDatalists(){
-  fillAdminDatalist('edit_mon_suggestions',adminTaxonomyOptions('Mon'));
-  fillAdminDatalist('edit_lop_suggestions',adminTaxonomyOptions('Lop'));
-  fillAdminDatalist('edit_chuong_suggestions',adminTaxonomyOptions('Chuong'));
-  fillAdminDatalist('edit_baihoc_suggestions',adminTaxonomyOptions('BaiHoc'));
-}
-async function adminRefreshGgsSuggestions(){
-  try{
-    let ok=false;
-    if(typeof refreshCatalogFromMeta==='function') ok=await refreshCatalogFromMeta();
-    adminSyncTaxonomyDatalists();
-    alert(ok?'✅ Đã cập nhật gợi ý từ Google Sheet.':'Đã làm mới gợi ý hiện có. Nếu mới sửa trực tiếp trên Sheet, bấm Đồng bộ Sheet rồi mở lại form.');
-  }catch(e){alert('Không cập nhật được gợi ý: '+(e.message||e))}
-}
-function renderAdminTaxonomyField(f,raw){
-  let info={Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học'}[f]||f;
-  let dl={Mon:'edit_mon_suggestions',Lop:'edit_lop_suggestions',Chuong:'edit_chuong_suggestions',BaiHoc:'edit_baihoc_suggestions'}[f];
-  let ph={Mon:'Chọn/nhập môn từ Google Sheet…',Lop:'Chọn/nhập lớp từ Google Sheet…',Chuong:'Chọn/nhập chương từ Google Sheet…',BaiHoc:'Chọn/nhập bài học từ Google Sheet…'}[f]||'';
-  return `<div class="adminGgsField"><label><b>${esc(info)}</b></label><div class="muted" style="font-size:11px;margin:3px 0 5px 0">Chọn từ dữ liệu đã có trong Google Sheet hoặc nhập mới rồi bấm <b>Lưu vào Google Sheet</b>.</div><input id="edit_${f}" list="${dl}" value="${escAttr(raw)}" placeholder="${escAttr(ph)}" oninput="adminSyncTaxonomyDatalists()" onchange="adminSyncTaxonomyDatalists()" style="width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><datalist id="${dl}"></datalist>${f==='Mon'?'<div style="margin-top:5px"><button type="button" class="btnSmall" onclick="adminRefreshGgsSuggestions()">🔄 Cập nhật gợi ý GGS</button></div>':''}</div>`;
-}
-
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(['Mon','Lop','Chuong','BaiHoc'].includes(f))return renderAdminTaxonomyField(f,raw);if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='DangBaiTap'){let dl=buildDangBaiTapDatalistHtml('edit_dangbaitap_suggestions');return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label><div class="muted" style="font-size:11px;margin:3px 0 5px 0">ADMIN nhập/chọn gợi ý từ các dạng đã có trong cột H. Chỉ ADMIN mới gọi GPT gán dạng; học sinh chỉ xem.</div>${dl}<input id="edit_DangBaiTap" list="edit_dangbaitap_suggestions" value="${escAttr(raw)}" placeholder="Nhập/chọn Dạng bài tập cột H…" style="width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><button type="button" class="btnSmall" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán dạng</button><button type="button" class="btnSmall" onclick="adminSaveDangBaiTapManual()">💾 Lưu cột H</button></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='Mon'||f=='Lop'||f=='Chuong'||f=='BaiHoc'||f=='DapAn'||f=='SaiSo'||f=='HinhAnh')?'56px':'78px');let aiTools=''; if(['CauHoi','A','B','C','D','LoiGiai'].includes(f)){   aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0">     <button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button>     <span style="font-size:11px;color:#64748b">Chỉ sửa ô này, chưa lưu Sheet</span>   </div>`; } return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
-function editLearningScopeFromForm(){
-    let g=f=>{let el=document.getElementById('edit_'+f);return String((el&&el.value)||'').trim()};
-    return {Mon:g('Mon'),Lop:g('Lop'),Chuong:g('Chuong'),BaiHoc:g('BaiHoc'),DangBaiTap:g('DangBaiTap')};
-}
-function editLearningQuestionFromForm(){
-    let q={};
-    for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);q[f]=String((el&&el.value)||'').trim()}
-    if(QUESTIONS&&QUESTIONS[CUR]){q._row=QUESTIONS[CUR]._row||'';q.ID=q.ID||QUESTIONS[CUR].ID||''}
-    return q;
-}
-function editLearningStatus(msg,err=false){let el=document.getElementById('editLearningStatus');if(el){el.textContent=msg||'';el.style.color=err?'#991b1b':'#64748b'}}
-function editLearningField(id,label,h=72){return `<label style="display:block"><b>${label}</b><textarea id="${id}" style="width:100%;min-height:${h}px;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--surface);color:var(--text)"></textarea></label>`}
-function learningOptionLabel(it,kind){
-    if(!it)return '';
-    if(kind==='method')return [it.TenPhuongPhap||it.DangBaiTap||'Phương pháp',it.DangBaiTap,it.BaiHoc].filter(Boolean).join(' · ');
-    return [it.TieuDe||it.BaiHoc||'Lý thuyết',it.BaiHoc,it.Chuong].filter(Boolean).join(' · ');
-}
-function fillSelectOptions(selId,items,kind){
-    let sel=document.getElementById(selId);if(!sel)return;
-    let html='<option value="">— Chọn nội dung đã có để đổ lại —</option>';
-    (items||[]).forEach((it,i)=>{html+=`<option value="${i}">${esc(learningOptionLabel(it,kind))}</option>`});
-    sel.innerHTML=html;
-}
-function applyExistingTheory(){
-    let sel=document.getElementById('editLTExistingSelect');if(!sel)return;
-    let idx=parseInt(sel.value,10);if(isNaN(idx)||idx<0)return;
-    let it=EDIT_THEORY_OPTIONS[idx]||{};
-    setEditFields('editLT_',{TieuDe:it.TieuDe,LyThuyet:it.LyThuyet,NoiDungTomTat:it.NoiDungTomTat,KienThucTrongTam:it.KienThucTrongTam,CongThuc:it.CongThuc,DonVi:it.DonVi,LuuY:it.LuuY,SaiLamThuongGap:it.SaiLamThuongGap,ViDuMau:it.ViDuMau});
-    editLearningStatus('Đã đổ lại Lý thuyết đã có. Kiểm tra rồi bấm Lưu LT nếu muốn cập nhật khóa bài hiện tại.');
-}
-function applyExistingMethod(){
-    let sel=document.getElementById('editPPExistingSelect');if(!sel)return;
-    let idx=parseInt(sel.value,10);if(isNaN(idx)||idx<0)return;
-    let it=EDIT_METHOD_OPTIONS[idx]||{};
-    setEditFields('editPP_',{TenPhuongPhap:it.TenPhuongPhap,DauHieuNhanBiet:it.DauHieuNhanBiet,CacBuocGiai:it.CacBuocGiai,CongThucSuDung:it.CongThucSuDung,MeoNhanh:it.MeoNhanh,LoiSaiThuongGap:it.LoiSaiThuongGap,ViDuMau:it.ViDuMau});
-    editLearningStatus('Đã đổ lại Phương pháp đã có. Phương pháp chỉ nên ghi quy trình/công thức/lưu ý, không thay số giải riêng câu.');
-}
-function buildEditLearningBox(q){
-    if(!USER.is_admin)return '';
-    return `<div style="grid-column:1/-1;margin-top:14px;padding:12px;border:2px solid #bfdbfe;border-radius:14px;background:#f8fbff">
-        <h3 style="margin:0 0 6px 0;color:#1d4ed8">📚 ADMIN · Lý thuyết & Phương pháp giải</h3>
-        <div class="muted" style="font-size:12px;margin-bottom:8px">Lý thuyết lấy theo SGK/nội dung chuẩn do ADMIN nhập hoặc dán vào <b>Ly_Thuyet</b>. Phương pháp giải/quy trình/công thức liên quan lưu ở <b>Phuong_Phap</b>. Học sinh chỉ xem lại, không gọi GPT.</div>
-        <div id="editLearningStatus" class="muted" style="font-size:12px;margin:6px 0"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button type="button" class="btn2" onclick="loadEditLearningData()">🔄 Tải LT/PP từ GGS</button>
-            <button type="button" class="btnGreen" onclick="showTheorySgkNotice()">📘 Nhập/dán LT SGK</button>
-            <button type="button" class="btnGreen" onclick="editGenerateLearning('method')">🤖 GPT tạo PP + lưu</button>
-            <button type="button" class="btn2" onclick="saveEditLearning('theory')">💾 Lưu LT đang sửa</button>
-            <button type="button" class="btn2" onclick="saveEditLearning('method')">💾 Lưu PP đang sửa</button>
-        </div>
-        <div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
-            <div style="padding:10px;border:1px solid #dbeafe;border-radius:12px;background:white">
-                <h4 style="margin:0 0 8px 0;color:#1d4ed8">📚 Lý thuyết SGK — ADMIN tự nhập</h4>
-                <div class="muted" style="font-size:11px;margin-bottom:6px">Cột chính: <b>LyThuyet</b> trong sheet <b>Ly_Thuyet</b>. Thầy dán/ghi nội dung chuẩn SGK ở đây. Học sinh chỉ xem, không gọi GPT.</div>
-                <div style="margin-bottom:8px"><label><b>Gọi lại Lý thuyết đã có</b></label><select id="editLTExistingSelect" onchange="applyExistingTheory()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><option value="">— Chọn nội dung đã có để đổ lại —</option></select><div class="muted" style="font-size:11px;margin-top:3px">Dùng để tái sử dụng lý thuyết trùng bài/chương, khỏi đánh lại.</div></div>
-                ${editLearningField('editLT_TieuDe','Tiêu đề',48)}
-                ${editLearningField('editLT_LyThuyet','Lý thuyết SGK / nội dung chuẩn bài học',220)}
-                <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Mở thêm các ô phụ: tóm tắt, công thức, lưu ý...</summary>
-                <div style="margin-top:8px">
-                ${editLearningField('editLT_NoiDungTomTat','Nội dung tóm tắt',90)}
-                ${editLearningField('editLT_KienThucTrongTam','Kiến thức trọng tâm',90)}
-                ${editLearningField('editLT_CongThuc','Công thức',70)}
-                ${editLearningField('editLT_DonVi','Đơn vị / Điều kiện',60)}
-                ${editLearningField('editLT_LuuY','Lưu ý',70)}
-                ${editLearningField('editLT_SaiLamThuongGap','Sai lầm thường gặp',70)}
-                ${editLearningField('editLT_ViDuMau','Ví dụ mẫu',70)}
-                </div></details>
-            </div>
-            <div style="padding:10px;border:1px solid #fed7aa;border-radius:12px;background:white">
-                <h4 style="margin:0 0 8px 0;color:#c2410c">🧭 Phương pháp giải</h4>
-                <div class="muted" style="font-size:11px;margin-bottom:6px">PP khóa theo <b>Môn + Lớp + Chương + Bài học + Dạng bài tập cột H</b>. Nội dung PP chỉ ghi quy trình, công thức, lưu ý; không thay số giải cụ thể.</div>
-                <div style="margin-bottom:8px"><label><b>Gọi lại Phương pháp đã có</b></label><select id="editPPExistingSelect" onchange="applyExistingMethod()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><option value="">— Chọn phương pháp đã có để đổ lại —</option></select><div class="muted" style="font-size:11px;margin-top:3px">Dùng lại phương pháp cho nhiều câu cùng dạng bài tập, khỏi đánh lại.</div></div>
-                ${editLearningField('editPP_TenPhuongPhap','Tên phương pháp',48)}
-                ${editLearningField('editPP_DauHieuNhanBiet','Dấu hiệu nhận biết',75)}
-                ${editLearningField('editPP_CacBuocGiai','Các bước giải — mỗi bước 1 dòng',115)}
-                ${editLearningField('editPP_CongThucSuDung','Công thức sử dụng',70)}
-                ${editLearningField('editPP_MeoNhanh','Mẹo nhanh',70)}
-                ${editLearningField('editPP_LoiSaiThuongGap','Lỗi sai thường gặp',70)}
-                ${editLearningField('editPP_ViDuMau','Ví dụ mẫu',70)}
-            </div>
-        </div>
-    </div>`;
-}
-function setEditFields(prefix,map){for(let k in map){let el=document.getElementById(prefix+k);if(el)el.value=normalizeLearningDisplayText(map[k]||'')}}
-function readEditFields(prefix,keys){let o={};for(let k of keys){let el=document.getElementById(prefix+k);o[k]=String((el&&el.value)||'').trim()}return o}
-async function loadEditLearningData(){
-    if(!USER.is_admin)return;
-    let p=editLearningScopeFromForm();
-    let qs=['Mon','Lop','Chuong','BaiHoc'].map(k=>encodeURIComponent(k)+'='+encodeURIComponent(p[k]||'')).join('&');
-    // Danh sách gọi lại rộng hơn: cùng Môn/Lớp/Chương; không ép Bài học để tái dùng khi học liệu trùng.
-    let broadQs=['Mon','Lop','Chuong'].map(k=>encodeURIComponent(k)+'='+encodeURIComponent(p[k]||'')).join('&')+'&BaiHoc=';
-    editLearningStatus('Đang tải Lý thuyết/Phương pháp từ Google Sheet...');
-    try{
-        let th=await api('/api/learning/theory?'+qs,{method:'GET',timeoutMs:20000},1);
-        let thBroad=await api('/api/learning/theory?'+broadQs,{method:'GET',timeoutMs:20000},1).catch(()=>({items:[]}));
-        EDIT_THEORY_OPTIONS=[];
-        let seenT={};
-        for(let it of ((th.items||[]).concat(thBroad.items||[]))){let k=normText([it.TieuDe,it.BaiHoc,it.LyThuyet].join('|'));if(!k||seenT[k])continue;seenT[k]=1;EDIT_THEORY_OPTIONS.push(it)}
-        fillSelectOptions('editLTExistingSelect',EDIT_THEORY_OPTIONS,'theory');
-        let it=(th.items&&th.items[0])||{};
-        setEditFields('editLT_',{TieuDe:it.TieuDe,LyThuyet:it.LyThuyet,NoiDungTomTat:it.NoiDungTomTat,KienThucTrongTam:it.KienThucTrongTam,CongThuc:it.CongThuc,DonVi:it.DonVi,LuuY:it.LuuY,SaiLamThuongGap:it.SaiLamThuongGap,ViDuMau:it.ViDuMau});
-        EDIT_METHOD_OPTIONS=[];
-        let pp={items:[]};
-        if(!isBadDangBaiTapValue(p.DangBaiTap)){
-            let qsm=qs+'&DangBaiTap='+encodeURIComponent(p.DangBaiTap||'');
-            pp=await api('/api/learning/method?'+qsm,{method:'GET',timeoutMs:20000},1);
-            let broadMethodQs=broadQs+'&DangBaiTap='+encodeURIComponent(p.DangBaiTap||'');
-            let ppBroad=await api('/api/learning/method?'+broadMethodQs,{method:'GET',timeoutMs:20000},1).catch(()=>({items:[]}));
-            let ppAllSameChapter=await api('/api/learning/method?'+broadQs+'&DangBaiTap=',{method:'GET',timeoutMs:20000},1).catch(()=>({items:[]}));
-            let seenP={};
-            for(let mp of ((pp.items||[]).concat(ppBroad.items||[],ppAllSameChapter.items||[]))){let k=normText([mp.DangBaiTap,mp.TenPhuongPhap,mp.CacBuocGiai,mp.CongThucSuDung].join('|'));if(!k||seenP[k])continue;seenP[k]=1;EDIT_METHOD_OPTIONS.push(mp)}
-            fillSelectOptions('editPPExistingSelect',EDIT_METHOD_OPTIONS,'method');
-            let mp=(pp.items&&pp.items[0])||{};
-            setEditFields('editPP_',{TenPhuongPhap:mp.TenPhuongPhap,DauHieuNhanBiet:mp.DauHieuNhanBiet,CacBuocGiai:mp.CacBuocGiai,CongThucSuDung:mp.CongThucSuDung,MeoNhanh:mp.MeoNhanh,LoiSaiThuongGap:mp.LoiSaiThuongGap,ViDuMau:mp.ViDuMau});
-            editLearningStatus('Đã tải: LT '+((th.items||[]).length?'có':'chưa có')+' · PP '+((pp.items||[]).length?'có':'chưa có')+' · Gợi ý gọi lại LT '+EDIT_THEORY_OPTIONS.length+' / PP '+EDIT_METHOD_OPTIONS.length+'.');
-        }else{
-            fillSelectOptions('editPPExistingSelect',[], 'method');
-            editLearningStatus('Đã tải Lý thuyết. Phương pháp chưa tải vì cột H đang trống/chưa rõ; nhập Dạng bài tập rồi bấm Lưu cột H hoặc GPT tạo PP.');
-        }
-    }catch(e){editLearningStatus('Không tải được học liệu: '+(e.message||e),true)}
-}
-async function saveEditLearning(kind){
-    if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-    kind=kind==='method'?'method':'theory';
-    let p=editLearningScopeFromForm();
-    if(kind==='method'&&isBadDangBaiTapValue(p.DangBaiTap)){alert('Cần nhập Dạng bài tập ở cột H trước khi lưu Phương pháp giải.');return}
-    let now=new Date().toLocaleString('vi-VN',{hour12:false});
-    let item={ID:'',Mon:p.Mon,Lop:p.Lop,Chuong:p.Chuong,BaiHoc:p.BaiHoc,TrangThai:'OK',NgayCapNhat:now};
-    if(kind==='theory')Object.assign(item,readEditFields('editLT_',['TieuDe','LyThuyet','NoiDungTomTat','KienThucTrongTam','CongThuc','DonVi','LuuY','SaiLamThuongGap','ViDuMau']));
-    else Object.assign(item,{DangBaiTap:p.DangBaiTap},readEditFields('editPP_',['TenPhuongPhap','DauHieuNhanBiet','CacBuocGiai','CongThucSuDung','MeoNhanh','LoiSaiThuongGap','ViDuMau']));
-    try{
-        editLearningStatus('Đang lưu '+learningTitle(kind)+' vào Google Sheet...');
-        let j=await api('/api/learning/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,item:item}),timeoutMs:30000},1);
-        editLearningStatus('Đã '+(j.action==='updated'?'cập nhật':'tạo mới')+' '+learningTitle(kind)+' ở dòng '+(j.row||'')+'.');
-        alert('✅ Đã lưu '+learningTitle(kind)+' vào Google Sheet.');
-    }catch(e){editLearningStatus('Không lưu được: '+(e.message||e),true);alert('Không lưu được học liệu: '+(e.message||e))}
-}
-async function editGenerateLearning(kind){
-    if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-    kind=kind==='method'?'method':'theory';
-    if(kind==='theory'){showTheorySgkNotice();return}
-    let q=editLearningQuestionFromForm();
-    if(kind==='method'&&isBadDangBaiTapValue(q.DangBaiTap)){alert('Cần nhập Dạng bài tập cột H trước, hoặc bấm GPT gán dạng.');return}
-    if(!confirm('GPT sẽ tạo '+learningTitle(kind)+' và lưu vào Google Sheet. Học sinh chỉ xem lại, không gọi GPT. Tiếp tục?'))return;
-    try{
-        editLearningStatus('GPT đang tạo '+learningTitle(kind)+' và lưu Google Sheet...');
-        let j=await api('/api/learning/generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,question:q}),timeoutMs:65000},1);
-        editLearningStatus('Đã '+(j.action==='updated'?'cập nhật':'tạo mới')+' '+learningTitle(kind)+' dòng '+(j.row||'')+'. Đang tải lại nội dung...');
-        await loadEditLearningData();
-        alert('✅ Đã tạo và lưu '+learningTitle(kind)+' vào Google Sheet.');
-    }catch(e){editLearningStatus('Không tạo/lưu được: '+(e.message||e),true);alert('Không tạo/lưu được '+learningTitle(kind)+': '+(e.message||e))}
-}
-function renderQuestionForm(q){
-    document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');setTimeout(adminSyncTaxonomyDatalists,0);
-    ['QuyenTruyCap','MucDo','Dang'].forEach(syncAdminChipGroup);
-    let lb=document.getElementById('editLearningBox');
-    if(lb){lb.innerHTML=buildEditLearningBox(q);setTimeout(()=>loadEditLearningData(),80)}
-}
-function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}return data}
-function autoSyncDsLoigiaiAbcd(updates,q){try{q=Object.assign({},q||{},updates||{});if(normDangFormVal(q.Dang)!=='Đúng sai')return updates;let lg=String((updates&&updates.LoiGiai)||'');if(!lg.trim())return updates;let inferred=dsDapAnFromSolutionText(lg,q);if(inferred&&!String(updates.DapAn||'').trim())updates.DapAn=inferred;let fixed=buildDsSolutionCopyText(lg,q,true);if(fixed)updates.LoiGiai=fixed;let da=document.getElementById('edit_DapAn');if(da&&updates.DapAn)da.value=updates.DapAn;let le=document.getElementById('edit_LoiGiai');if(le&&updates.LoiGiai)le.value=updates.LoiGiai;}catch(e){}return updates}
-async function aiRewriteLatexField(field){
-  if(!USER.is_admin){
-    alert('Chỉ ADMIN được dùng AI viết lại nội dung đề.');
-    return;
-  }
-
-  let el=document.getElementById('edit_'+field);
-  if(!el){
-    alert('Không tìm thấy ô cần sửa.');
-    return;
-  }
-
-  let oldText=String(el.value||'');
-  if(!oldText.trim()){
-    alert('Ô này đang trống.');
-    return;
-  }
-
-  let btn=document.getElementById('btn_ai_rewrite_'+field);
-  let oldBtn=btn?btn.textContent:'';
-
-  if(!confirm('AI sẽ viết lại nội dung ô '+field+' cho đúng LaTeX.\n\nNội dung chỉ thay trong ô nhập, chưa lưu Google Sheet. Tiếp tục?')) return;
-
-  try{
-    if(btn){
-      btn.disabled=true;
-      btn.textContent='⏳ AI đang sửa...';
-    }
-
-    let payload={
-      field:field,
-      text:oldText,
-      context:readQuestionFormData()
-    };
-
-    let j=await api('/api/ai/rewrite-latex',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-
-    if(j.text){
-      el.value=j.text;
-      alert('Đã viết lại bằng '+(j.provider||'AI')+'.\nThầy kiểm tra lại rồi bấm Lưu vào Google Sheet.');
-    }else{
-      alert('AI không trả về nội dung.');
-    }
-  }catch(e){
-    alert('AI sửa LaTeX lỗi: '+e.message);
-  }finally{
-    if(btn){
-      btn.disabled=false;
-      btn.textContent=oldBtn||'🤖 AI viết lại LaTeX';
-    }
-  }
-}
-function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Câu mới được thêm vào cuối sheet Cau_Hoi, cùng mã đề/bài học với câu hiện tại (có thể sửa trước khi lưu).';else if(adminHintNeedsSave())note.textContent='Kiểm tra đủ Đáp án (cột P) và Lời giải (cột R). Câu Đ/S: phải có đủ 4 dòng A. B. C. D. Xong mới bấm Lưu — sau đó app mới so khớp Sheet với AI.';else note.textContent='Xóa liên tiếp được — app tự cập nhật số dòng Sheet. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
-function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MODAL_MODE='edit';renderQuestionForm(QUESTIONS[CUR]||{});syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
-
-function currentLatexDefaults(){
-  let q=(QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
-  return {
-    MaDe:q.MaDe||CURRENT_MADE||'',
-    Mon:val('latexDefMon')||q.Mon||'',
-    Lop:val('latexDefLop')||q.Lop||'',
-    Chuong:val('latexDefChuong')||q.Chuong||'',
-    BaiHoc:val('latexDefBaiHoc')||q.BaiHoc||q.De||'',
-    BoDe:val('latexDefBoDe')||q.BoDe||'',
-    De:val('latexDefDe')||q.De||'',
-    MucDo:val('latexDefMucDo')||q.MucDo||'',
-    QuyenTruyCap:val('latexDefQuyen')||q.QuyenTruyCap||'VIP',
-    Diem:'1'
-  };
-}
-function setLatexImportStatus(msg,err=false){
-  let el=document.getElementById('latexImportStatus');
-  if(el){el.textContent=msg||'';el.style.color=err?'#991b1b':''}
-}
-function openLatexImportModal(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  let q=(QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
-  let m=document.getElementById('latexImportModal');
-  if(!m){alert('Không tìm thấy modal nhập LaTeX.');return}
-  let set=(id,v)=>{let e=document.getElementById(id);if(e&&!e.value)e.value=v||''};
-  set('latexDefMon',q.Mon||'');
-  set('latexDefLop',q.Lop||'');
-  set('latexDefChuong',q.Chuong||'');
-  set('latexDefBaiHoc',q.BaiHoc||q.De||'');
-  set('latexDefBoDe',q.BoDe||'');
-  set('latexDefDe',q.De||'');
-  let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='AI';
-  let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
-  setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
-  m.classList.remove('hide');
-}
-function closeLatexImportModal(){
-  let m=document.getElementById('latexImportModal');if(m)m.classList.add('hide');
-}
-function readLatexImportFile(inp){
-  let f=inp&&inp.files&&inp.files[0];if(!f)return;
-  let rd=new FileReader();
-  rd.onload=()=>{let ta=document.getElementById('latexImportText');if(ta)ta.value=String(rd.result||'');setLatexImportStatus('Đã đọc file: '+f.name+' ('+Math.round(f.size/1024)+' KB). Bấm “Đọc thử”.')};
-  rd.onerror=()=>setLatexImportStatus('Không đọc được file.',true);
-  rd.readAsText(f,'utf-8');
-}
-async function latexImportCall(commit,levelOverrides){
-  let ta=document.getElementById('latexImportText');
-  let tex=ta?String(ta.value||''):'';
-  if(!tex.trim()){alert('Chưa có nội dung LaTeX.');return null}
-  let zipInp=document.getElementById('latexAssetZipInput');
-  let zipFile=zipInp&&zipInp.files&&zipInp.files[0]?zipInp.files[0]:null;
-  let aiLevel=(val('latexDefMucDo')==='AI');
-  levelOverrides=Array.isArray(levelOverrides)?levelOverrides:[];
-  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
-  let opts;
-  if(zipFile){
-    let fd=new FormData();
-    fd.append('tex',tex);
-    fd.append('defaults',JSON.stringify(currentLatexDefaults()));
-    fd.append('commit',commit?'true':'false');
-    fd.append('ai_level',aiLevel?'true':'false');
-    if(levelOverrides.length)fd.append('level_overrides',JSON.stringify(levelOverrides));
-    fd.append('assets_zip',zipFile);
-    opts={method:'POST',body:fd};
-  }else{
-    opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:currentLatexDefaults(),commit:!!commit,ai_level:aiLevel,level_overrides:levelOverrides})};
-  }
-  let j=await api('/api/latex/import',opts);
-  return j;
-}
-function latexImportSummary(j){
-  let c=j.counts||{};
-  let lines=[];
-  lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
-  lines.push('Đọc được: '+(j.parsed||0)+' câu');
-  lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0));
-  if(j.ai_level)lines.push('GPT ADMIN mức độ: '+(j.ai_level_done?'đã nhận diện':'chưa nhận diện')+(j.ai_model?' · '+j.ai_model:''));
-  if(j.ai_level_error)lines.push('Lỗi AI mức độ: '+j.ai_level_error);
-  if(j.created!=null)lines.push('Đã chèn mới: '+j.created+' câu'+(j.start_row?' · dòng '+j.start_row+' → '+j.end_row:''));
-  if(j.skipped&&j.skipped.length)lines.push('Bỏ qua: '+j.skipped.length+' câu ('+j.skipped.slice(0,5).map(x=>x.reason||x.id||x.index).join('; ')+')');
-  if(j.media){lines.push('Media: includegraphics='+((j.media&&j.media.includegraphics)||0)+' · TikZ='+((j.media&&j.media.tikz)||0)+' · đã xử lý='+((j.media&&j.media.resolved)||0));}
-  if(j.warnings&&j.warnings.length)lines.push('Cảnh báo: '+j.warnings.slice(0,8).map(w=>'#'+(w.index||'?')+' '+(w.warning||w.reason||'')).join(' | '));
-  return lines.join('\n');
-}
-function latexImportDangShort(d){d=String(d||'');if(d==='Trắc nghiệm')return 'TN';if(d==='Đúng sai')return 'Đ/S';if(d==='Trả lời ngắn')return 'TLN';if(d==='Tự luận')return 'TL';return d||'—'}
-function latexLevelOptions(selected){
-  selected=String(selected||'').toUpperCase();
-  return ['NB','TH','VD','VDC'].map(x=>`<option value="${x}" ${selected===x?'selected':''}>${x}</option>`).join('');
-}
-function collectLatexLevelOverrides(){
-  let arr=[];
-  document.querySelectorAll('#latexImportPreview select[data-level-index]').forEach(sel=>{
-    let idx=parseInt(sel.getAttribute('data-level-index')||'0');
-    let lv=String(sel.value||'').toUpperCase();
-    if(idx&&['NB','TH','VD','VDC'].includes(lv))arr.push({index:idx,MucDo:lv});
-  });
-  return arr;
-}
-function applyAllLatexAiLevels(){
-  let n=0;
-  document.querySelectorAll('#latexImportPreview select[data-ai-level]').forEach(sel=>{
-    let lv=String(sel.getAttribute('data-ai-level')||'').toUpperCase();
-    if(['NB','TH','VD','VDC'].includes(lv)){sel.value=lv;n++;}
-  });
-  setLatexImportStatus((document.getElementById('latexImportStatus')?.textContent||'')+'\nĐã áp dụng '+n+' mức AI gợi ý vào ô chọn.');
-}
-function setAllLatexLevelsFromDefault(){
-  let lv=String(val('latexDefMucDo')||'').toUpperCase();
-  if(!['NB','TH','VD','VDC'].includes(lv)){alert('Ô Mức độ đang là AI/để trống, không có mức chung để áp dụng.');return;}
-  document.querySelectorAll('#latexImportPreview select[data-level-index]').forEach(sel=>{sel.value=lv});
-  setLatexImportStatus((document.getElementById('latexImportStatus')?.textContent||'')+'\nĐã gán mức '+lv+' cho tất cả câu trong preview.');
-}
-function latexImportQuestionCard(q,i){
-  q=q||{};
-  let idx=q.index||i+1;
-  let opts='';
-  for(let L of ['A','B','C','D']){
-    if(String(q[L]||'').trim()) opts+=`<div style="margin:4px 0"><b>${L}.</b> ${escHtmlKeepMath(q[L])}</div>`;
-  }
-  let aiLv=String(q._AiMucDo||q.AiMucDo||'').toUpperCase();
-  let aiConf=String(q._AiConfidence||q.AiConfidence||'').trim();
-  let aiReason=String(q._AiReason||q.AiReason||'').trim();
-  let chosen=String(q.MucDo||aiLv||'TH').toUpperCase();
-  if(!['NB','TH','VD','VDC'].includes(chosen)) chosen=aiLv||'TH';
-  let aiBox=aiLv?`<div style="margin-top:6px;padding:7px 9px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:12px"><b>🤖 GPT ADMIN gợi ý:</b> ${esc(aiLv)}${aiConf?' · tin cậy '+esc(aiConf):''}${aiReason?' · '+esc(aiReason):''}</div>`:'';
-  let levelSelect=`<label style="display:flex;align-items:center;gap:6px;font-size:12px"><b>Mức chèn Sheet:</b><select data-level-index="${idx}" data-ai-level="${esc(aiLv)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">${latexLevelOptions(chosen)}</select></label>`;
-  let img=q.HinhAnh?`<div class="muted" style="margin-top:6px;font-size:12px">🖼 Hình: ${esc(q.HinhAnh)}</div>`:'';
-  let lg=q.LoiGiai?`<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Xem lời giải</summary><div style="margin-top:5px;line-height:1.45">${escHtmlKeepMath(q.LoiGiai)}</div></details>`:'';
-  let warn=q.warning?`<div style="margin-top:6px;color:#991b1b;font-size:12px">⚠ ${esc(q.warning)}</div>`:'';
-  return `<div class="latexQCard" style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(248,250,252,.88);box-shadow:0 1px 3px rgba(15,23,42,.08)">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <b style="color:#0f172a">Câu ${idx}</b>
-      <span class="tag">${esc(latexImportDangShort(q.Dang))}</span>
-      <span class="mucdoBadge ${mucdoBadgeClass(chosen)}">${esc(chosen||'—')}</span>
-      ${levelSelect}
-      <span class="muted" style="font-size:11px">ID: ${esc(q.ID||'AUTO')}</span>
-    </div>
-    ${aiBox}
-    <div style="white-space:normal;line-height:1.5;margin-top:8px"><b>Đề:</b> ${escHtmlKeepMath(q.CauHoi||'')}</div>
-    ${opts?`<div style="margin-top:7px;padding-left:4px">${opts}</div>`:''}
-    <div style="margin-top:7px"><b>Đáp án:</b> <span style="font-weight:800;color:#166534">${esc(q.DapAn||'—')}</span>${q.SaiSo?` <span class="muted"> · Sai số: ${esc(q.SaiSo)}</span>`:''}</div>
-    ${img}${lg}${warn}
-  </div>`;
-}
-function renderLatexImportPreview(j,commitDone=false){
-  let box=document.getElementById('latexImportPreview');
-  if(!box)return;
-  let qs=j.questions||j.sample||[];
-  if(!qs.length){box.classList.add('hide');box.innerHTML='';return;}
-  box.classList.remove('hide');
-  let title=commitDone?'✅ Câu vừa chèn — xem nhanh ngay trên app':'👁️ Đọc thử — đã tách từng câu để kiểm tra';
-  let buttons=commitDone?`<button type="button" class="btn2" onclick="jumpToLastInsertedLatexQuestions()">👁️ Xem câu vừa chèn</button>`:`<button type="button" class="btnGreen" onclick="applyAllLatexAiLevels()">🤖 Áp dụng tất cả AI gợi ý</button><button type="button" class="btn2" onclick="setAllLatexLevelsFromDefault()">↩️ Gán mức chung đang chọn</button>`;
-  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>${title}</b><span class="muted">${qs.length} câu</span><div style="display:flex;gap:6px;flex-wrap:wrap">${buttons}</div></div>`+qs.map((q,i)=>latexImportQuestionCard(q,i)).join('');
-  try{typesetQuizMath()}catch(e){}
-}
-function appendLatexInsertedQuestions(j){
-  let qs=(j&&j.questions)||[];
-  if(!qs.length)return;
-  let start=QUESTIONS.length;
-  for(let q of qs){QUESTIONS.push(applyResolvedDang(q));}
-  if(!CURRENT_MADE&&qs[0]&&qs[0].MaDe)CURRENT_MADE=qs[0].MaDe;
-  if(!ANSWERS)ANSWERS={};
-  if(!RESULTS)RESULTS={};
-  if(!CHECKED)CHECKED={};
-  window.LAST_LATEX_INSERT_START=start;
-  window.LAST_LATEX_INSERT_COUNT=qs.length;
-  renderNav();
-  updateAdminChrome();
-}
-function jumpToLastInsertedLatexQuestions(){
-  let st=window.LAST_LATEX_INSERT_START;
-  if(typeof st==='number'&&st>=0&&QUESTIONS[st]){CUR=st;renderNav();renderQuestion();closeLatexImportModal();}
-}
-async function previewLatexImport(){
-  try{
-    let j=await latexImportCall(false);
-    if(j){window.LAST_LATEX_PREVIEW_DATA=j;setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
-  }catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
-}
-async function commitLatexImport(){
-  try{
-    let pre=window.LAST_LATEX_PREVIEW_DATA;
-    if(!pre||!((pre.questions||pre.sample||[]).length)){
-      pre=await latexImportCall(false);
-      if(!pre)return;
-      window.LAST_LATEX_PREVIEW_DATA=pre;
-      setLatexImportStatus(latexImportSummary(pre)+'\n\nĐã đọc thử. Thầy kiểm tra từng câu/mức độ rồi bấm Chèn lần nữa.');
-      renderLatexImportPreview(pre,false);
+    const btn=document.getElementById('dedupeBtn');
+    if(btn){btn.disabled=true;btn.textContent='⏳ Đang kiểm tra trùng...'}
+    let preview=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+    let n=parseInt(preview.would_delete||((preview.plan||{}).delete_count),10)||0;
+    if(n<=0){
+      alert((preview.message||'Không có dòng trùng exact trên Sheet.')+'\n\nLưu ý: nút này chỉ xóa dòng trùng ID hoặc trùng gần như y hệt nội dung. Các câu cùng chương/bài nhưng nội dung khác sẽ không bị xóa.');
       return;
     }
-    let overrides=collectLatexLevelOverrides();
-    let msg=latexImportSummary(pre)+'\n\nChèn '+(overrides.length||pre.parsed||0)+' câu này vào Google Sheet với mức độ đang chọn trong preview?';
-    if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
-    let j=await latexImportCall(true,overrides);
-    setLatexImportStatus(latexImportSummary(j));
-    if(j.created>0){
-      appendLatexInsertedQuestions(j);
-      renderLatexImportPreview(j,true);
-      window.LAST_LATEX_PREVIEW_DATA=null;
-      alert('Đã chèn '+j.created+' câu vào Google Sheet. App đã hiện nhanh câu mới, không cần Đồng bộ Sheet.');
+    let lines=((preview.plan||{}).samples||[]).slice(0,10);
+    let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu, xóa bản sao phía sau.\nNút này KHÔNG dùng AI, chỉ xóa dòng trên Google Sheet.\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Tiếp tục xóa theo từng lô 40 dòng để tránh treo/quota?';
+    if(!confirm(msg))return;
+    let totalDeleted=0;
+    let round=0;
+    while(true){
+      round++;
+      if(btn){btn.disabled=true;btn.textContent='🧹 Xóa trùng '+totalDeleted+'/'+n}
+      let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false,max_delete:40})});
+      let del=parseInt(j.deleted||j.batch_deleted||0,10)||0;
+      totalDeleted+=del;
+      await refreshCatalogFromMeta();
+      let remain=0;
+      try{
+        let again=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+        remain=parseInt(again.would_delete||((again.plan||{}).delete_count),10)||0;
+      }catch(e){remain=parseInt(j.remaining_before_refresh||0,10)||0;}
+      if(del<=0||remain<=0)break;
+      if(round>=30){
+        alert('Đã xóa '+totalDeleted+' dòng. Còn khoảng '+remain+' dòng, bấm 🧹 Xóa trùng Sheet lần nữa để chạy tiếp.');
+        break;
+      }
+      await new Promise(r=>setTimeout(r,900));
     }
-  }catch(e){setLatexImportStatus('Lỗi chèn LaTeX: '+e.message,true)}
+    alert('✅ Đã xóa trùng xong: '+totalDeleted+' dòng.\n\nMục lục đã tự cập nhật.');
+    await refreshCatalogFromMeta();
+  }catch(e){
+    let m=e.message||String(e||'');
+    if(/429|quota|write requests|rate/i.test(m)) alert('Google Sheet đang giới hạn ghi (429/quota).\n\nĐợi khoảng 1 phút rồi bấm lại 🧹 Xóa trùng Sheet.\nChức năng này không dùng AI.');
+    else alert('Không xóa trùng được: '+m+'\n\nMở Console nếu cần xem lỗi JS/API.');
+  }finally{
+    const btn=document.getElementById('dedupeBtn');
+    if(btn){btn.disabled=false;btn.textContent='🧹 Xóa trùng Sheet'}
+  }
 }
 
-
-
-function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',DangBaiTap:tpl.DangBaiTap||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
-function closeEdit(){document.getElementById('modal').classList.add('hide')}
-function closeInfographicModal(){let m=document.getElementById('infographicModal');if(m)m.classList.add('hide')}
-async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');let wrap=document.getElementById('infographicImageWrap');let status=document.getElementById('infographicGenStatus');if(wrap)wrap.classList.add('hide');if(status){status.classList.add('hide');status.textContent=''}if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();title.textContent='📊 Infographic · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let parts=['📊 Infographic · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
-function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}navigator.clipboard.writeText(ta.value).then(()=>alert('Đã chép prompt.\n\nDán Gemini — poster hiện đại đầy màu, 4 card gradient, không chữ Khối.')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
-let INFOGRAPHIC_GEN_BUSY=false;
-async function generateInfographicImage(){if(INFOGRAPHIC_GEN_BUSY)return;if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let btn=document.getElementById('btnGenerateInfographic');let status=document.getElementById('infographicGenStatus');let wrap=document.getElementById('infographicImageWrap');let img=document.getElementById('infographicGeneratedImg');INFOGRAPHIC_GEN_BUSY=true;if(btn){btn.disabled=true;btn.textContent='⏳ Đang vẽ…'}if(status){status.classList.remove('hide');status.textContent='Đang gọi Gemini vẽ poster — thường 30–60 giây…'}try{let j=await api('/api/infographic-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});if(img&&j.image_data_url){img.src=j.image_data_url;if(wrap)wrap.classList.remove('hide')}if(status)status.textContent='✅ Đã vẽ poster'+(j.model?' · '+j.model:'')+(j.has_reference_image?' · có ảnh tham chiếu cột T':'')}catch(e){if(status)status.textContent='❌ '+esc(e.message||e);alert('Không vẽ được poster: '+(e.message||e)+'\n\nVẫn có thể «Chép prompt» và dán Gemini thủ công.')}finally{INFOGRAPHIC_GEN_BUSY=false;if(btn){btn.disabled=false;btn.textContent='🎨 Vẽ poster (Gemini)'}}}
-let QUESTION_SAVE_BUSY=false;
 function alertDuplicateSheetReport(dr){if(!dr||!USER.is_admin)return;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let lines=(dr.samples||[]).slice(0,6);alert('⚠ Phát hiện câu TRÙNG trên Google Sheet (Cau_Hoi):\n\n≈ '+extra+' dòng thừa (thường do bấm Thêm câu 2 lần hoặc copy/dán).\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Bấm nút 🧹 Xóa trùng Sheet trên thanh ADMIN để tự xóa (giữ 1 bản / câu).')}
 function showAdminDuplicateSheetNotice(){if(!USER.is_admin||!META||!META.duplicate_report)return;let dr=META.duplicate_report;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let info=document.getElementById('info');if(info&&!String(info.textContent||'').includes('dòng trùng')){info.textContent+=` | ⚠ ${extra} dòng trùng Sheet`;if(dr.samples&&dr.samples.length)info.title=dr.samples.join('\n')}}
 async function saveQuestionModal(){if(QUESTION_SAVE_BUSY)return;if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
@@ -10437,6 +9083,73 @@ async function installPwaApp(){
     if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/service-worker.js').catch(function(){})})}
     showPwaInstallBtn(false);
   }catch(e){}
+})();
+
+
+/* ===== V259: Bảng câu hỏi chỉ nhóm theo DẠNG; mức độ chỉ là MÀU ===== */
+(function(){
+  function stripLevelFromSectionText(txt){
+    txt=String(txt||'').replace(/^[\s📂🌱💡🔥🚀▫️]+/g,'').trim();
+    // Trắc nghiệm · Mức NB  → Trắc nghiệm
+    // Đúng sai · Mức VDC    → Đúng sai
+    txt=txt.replace(/\s*[·\-–—|]\s*(mức|muc)\s*(NB|TH|VD|VDC)\b.*$/i,'').trim();
+    txt=txt.replace(/\s*\((mức|muc)\s*(NB|TH|VD|VDC)\).*$/i,'').trim();
+    return txt || 'Dạng câu';
+  }
+  function normalizeNavSectionsByDangOnly(){
+    const box=document.getElementById('navNums');
+    if(!box)return;
+    const labels=Array.from(box.querySelectorAll('.navSectionLbl'));
+    if(!labels.length)return;
+    let seen={};
+    labels.forEach(lb=>{
+      const base=stripLevelFromSectionText(lb.textContent||'');
+      const key=base.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
+      if(seen[key]){
+        lb.style.display='none';
+        lb.setAttribute('data-v259-hidden-duplicate','1');
+      }else{
+        seen[key]=true;
+        lb.style.display='';
+        lb.setAttribute('data-v259-dang-only','1');
+        lb.textContent=base;
+        // không cho màu của nhãn bị kéo theo mức độ cũ; màu chỉ nằm ở ô số câu
+        lb.classList.remove('navSection-nb','navSection-th','navSection-vd','navSection-vdc');
+      }
+    });
+  }
+  window.normalizeNavSectionsByDangOnlyV259 = normalizeNavSectionsByDangOnly;
+  const oldRenderNav = window.renderNav;
+  if(typeof oldRenderNav === 'function'){
+    window.renderNav = function(){
+      const r = oldRenderNav.apply(this, arguments);
+      setTimeout(normalizeNavSectionsByDangOnly,0);
+      return r;
+    };
+  }
+  const oldRenderQuestion = window.renderQuestion;
+  if(typeof oldRenderQuestion === 'function'){
+    window.renderQuestion = function(){
+      const r = oldRenderQuestion.apply(this, arguments);
+      setTimeout(normalizeNavSectionsByDangOnly,0);
+      return r;
+    };
+  }
+  function initObs(){
+    const box=document.getElementById('navNums');
+    if(!box)return false;
+    if(box.__v259Observer)return true;
+    box.__v259Observer = new MutationObserver(function(){normalizeNavSectionsByDangOnly();});
+    box.__v259Observer.observe(box,{childList:true,subtree:true,characterData:true});
+    normalizeNavSectionsByDangOnly();
+    return true;
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    initObs();
+    setTimeout(initObs,500);
+    setTimeout(normalizeNavSectionsByDangOnly,1200);
+  });
+  setInterval(function(){ if(!initObs())return; normalizeNavSectionsByDangOnly(); },2000);
 })();
 
 </script></body></html>
@@ -11335,6 +10048,12 @@ def version():
         "bulk_level_continue_batch_v257": True,
         "bulk_level_chunk_20_v257": True,
         "bulk_level_progressive_render_v257": True,
+        "dedupe_button_batch_fix_v258": True,
+        "dedupe_delete_chunk_40_v258": True,
+        "dedupe_no_ai_exact_notice_v258": True,
+        "nav_group_by_dang_only_v259": True,
+        "nav_keep_level_color_only_v259": True,
+        "quiz_no_split_by_level_v259": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
@@ -13305,9 +12024,13 @@ def api_question_dedupe():
     body = request.get_json(silent=True) or {}
     dry_run = str(body.get("dry_run", "false")).lower() in ("1", "true", "yes")
     try:
+        max_delete = int(body.get("max_delete") or 0)
+    except Exception:
+        max_delete = 0
+    try:
         st = get_store()
         st.ensure_questions_loaded()
-        return jsonify(st.remove_duplicate_questions(dry_run=dry_run))
+        return jsonify(st.remove_duplicate_questions(dry_run=dry_run, max_delete=max_delete))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
