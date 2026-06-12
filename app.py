@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V256_ADMIN_CATEGORY_DROPDOWN_GGS_TEST_2026_06_12"
+APP_VERSION = "V257_BULK_LEVEL_CONTINUE_BATCH_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -9291,22 +9291,80 @@ function bulkLevelToggle(pos,on){if(ADMIN_LEVEL_REVIEW_ITEMS[pos])ADMIN_LEVEL_RE
 function bulkLevelSet(pos,lv){if(ADMIN_LEVEL_REVIEW_ITEMS[pos]){ADMIN_LEVEL_REVIEW_ITEMS[pos].ai_mucdo=normMucDoFormVal(lv);ADMIN_LEVEL_REVIEW_ITEMS[pos].selected=!!ADMIN_LEVEL_REVIEW_ITEMS[pos].ai_mucdo;renderBulkLevelList()}}
 function bulkLevelSelectAllAi(){for(let it of ADMIN_LEVEL_REVIEW_ITEMS){it.selected=!!normMucDoFormVal(it.ai_mucdo)}renderBulkLevelList()}
 function bulkLevelSelectNone(){for(let it of ADMIN_LEVEL_REVIEW_ITEMS)it.selected=false;renderBulkLevelList()}
+const BULK_LEVEL_CHUNK_SIZE=20;
+function bulkLevelBuildPayloadForItems(chunkItems){
+  return {questions:chunkItems.map(it=>{
+    let q=QUESTIONS[it.index]||{};
+    return {index:it.index,row:q._row||it.row||'',ID:q.ID||it.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||'',DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''};
+  })};
+}
+function bulkLevelMergeAiItems(items){
+  if(!Array.isArray(items))return 0;
+  let changed=0;
+  for(let raw of items){
+    let idx=parseInt(raw.index,10);
+    let target=ADMIN_LEVEL_REVIEW_ITEMS.find(x=>x.index===idx);
+    if(!target)continue;
+    let ai=normMucDoFormVal(raw.ai_mucdo||raw.MucDo||'');
+    target.ai_mucdo=ai;
+    target.confidence=String(raw.confidence||'');
+    target.reason=String(raw.reason||'');
+    target.preview=raw.preview||target.preview||'';
+    if(ai)target.selected=true;
+    changed++;
+  }
+  return changed;
+}
 async function bulkLevelDetectCurrent(){
   if(!USER.is_admin)return;
   if(!QUESTIONS.length){alert('Chưa mở đề.');return}
   let st=document.getElementById('bulkLevelStatus');
   let btn=document.getElementById('bulkLevelBtn');let old=btn?btn.textContent:'';
+  let runBtn=document.querySelector('#bulkLevelModal button[onclick="bulkLevelDetectCurrent()"]');let oldRun=runBtn?runBtn.textContent:'';
+  let total=QUESTIONS.length;
   try{
-    if(st)st.textContent='⏳ GPT ADMIN đang gợi ý mức độ cho '+QUESTIONS.length+' câu...';
     if(btn){btn.disabled=true;btn.textContent='⏳ GPT mức độ...'}
-    let payload={questions:QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||'',DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}))};
-    let j=await api('/api/ai/detect-level-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    let items=j.items||[];let byIndex={};items.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
-    ADMIN_LEVEL_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=normMucDoFormVal(it.ai_mucdo||it.MucDo||'');return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),current_mucdo:normMucDoFormVal(q.MucDo||''),ai_mucdo:ai,confidence:String(it.confidence||''),reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai};});
-    if(st)st.textContent='✅ GPT gợi ý xong '+(j.detected||items.length)+'/'+QUESTIONS.length+' câu. Xem nhanh rồi bấm Chấp nhận.'+(j.warning?'\n⚠ '+j.warning:'');
-    renderBulkLevelList();
+    if(runBtn){runBtn.disabled=true;runBtn.textContent='⏳ Đang chạy...'}
+    // Luôn hiển thị đủ danh sách câu trước; câu nào AI xong thì cập nhật dần.
+    if(!ADMIN_LEVEL_REVIEW_ITEMS.length || ADMIN_LEVEL_REVIEW_ITEMS.length!==QUESTIONS.length){
+      ADMIN_LEVEL_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),current_mucdo:normMucDoFormVal(q.MucDo||''),ai_mucdo:'',confidence:'',reason:'',preview:questionPreviewShort(q),selected:false}));
+      renderBulkLevelList();
+    }else{
+      for(let it of ADMIN_LEVEL_REVIEW_ITEMS){it.ai_mucdo='';it.confidence='';it.reason='';it.selected=false}
+      renderBulkLevelList();
+    }
+    let chunks=[];
+    for(let i=0;i<ADMIN_LEVEL_REVIEW_ITEMS.length;i+=BULK_LEVEL_CHUNK_SIZE){
+      chunks.push(ADMIN_LEVEL_REVIEW_ITEMS.slice(i,i+BULK_LEVEL_CHUNK_SIZE));
+    }
+    let detectedTotal=0, doneTotal=0, failed=[];
+    for(let c=0;c<chunks.length;c++){
+      let chunk=chunks[c];
+      if(st)st.textContent=`⏳ GPT ADMIN đang gợi ý mức độ: nhóm ${c+1}/${chunks.length} · câu ${chunk[0].index+1}–${chunk[chunk.length-1].index+1}/${total}\nĐã xử lý ${doneTotal}/${total}. Kết quả sẽ hiện dần, không cần bấm lại.`;
+      try{
+        let j=await api('/api/ai/detect-level-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bulkLevelBuildPayloadForItems(chunk))});
+        bulkLevelMergeAiItems(j.items||[]);
+        detectedTotal+=parseInt(j.detected||0,10)||0;
+        doneTotal+=chunk.length;
+        renderBulkLevelList();
+      }catch(e){
+        failed.push(`Nhóm ${c+1}: ${e.message||e}`);
+        // Không dừng toàn bộ. Chạy tiếp nhóm sau để còn lấy được các câu khác.
+        doneTotal+=chunk.length;
+        for(let it of chunk){it.reason='Nhóm này chưa chạy được: '+(e.message||e);it.selected=false}
+        renderBulkLevelList();
+      }
+      // Nghỉ ngắn để Render/GPT không bị dồn request liên tục.
+      if(c<chunks.length-1)await new Promise(r=>setTimeout(r,450));
+    }
+    if(st){
+      let msg=`✅ GPT gợi ý xong ${detectedTotal}/${total} câu. Xem nhanh rồi bấm Chấp nhận.`;
+      if(chunks.length>1)msg+=`\nĐã chạy tự động ${chunks.length} nhóm, mỗi nhóm tối đa ${BULK_LEVEL_CHUNK_SIZE} câu.`;
+      if(failed.length)msg+=`\n⚠ Có ${failed.length} nhóm lỗi, có thể bấm “Chạy GPT gợi ý lại” để chạy lại.\n`+failed.slice(0,4).join('\n');
+      st.textContent=msg;
+    }
   }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý mức độ hàng loạt được: '+(e.message||e))}
-  finally{if(btn){btn.disabled=false;btn.textContent=old||'🎯 Gợi ý mức độ'}}
+  finally{if(btn){btn.disabled=false;btn.textContent=old||'🎯 Gợi ý mức độ'}if(runBtn){runBtn.disabled=false;runBtn.textContent=oldRun||'🤖 Chạy GPT gợi ý lại'}}
 }
 function bulkLevelAcceptOne(pos){if(!ADMIN_LEVEL_REVIEW_ITEMS[pos])return;ADMIN_LEVEL_REVIEW_ITEMS.forEach((it,i)=>it.selected=i===pos);bulkLevelApplySelected()}
 async function bulkLevelApplySelected(){
@@ -11274,6 +11332,9 @@ def version():
         "top_subject_updates_fmon_rpmon_v255": True,
         "admin_category_dropdown_ggs_v256": True,
         "admin_can_update_mon_lop_chuong_baihoc_v256": True,
+        "bulk_level_continue_batch_v257": True,
+        "bulk_level_chunk_20_v257": True,
+        "bulk_level_progressive_render_v257": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
