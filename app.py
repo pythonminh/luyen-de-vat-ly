@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V247_TWO_SUBJECT_PAGES_BOOK_STYLE_TEST_2026_06_11"
+APP_VERSION = "V248_TWO_SUBJECT_PAGES_FIXLOAD_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -9985,93 +9985,55 @@ function renderCatalog(){
 
 
 
-/* ===== V247: 2 trang riêng Toán / Vật lí + mục lục sách + bộ lọc riêng ===== */
-function v247EnsureCss(){
-  if(document.getElementById('LDVL_TWO_SUBJECT_PAGES_V247'))return;
-  let st=document.createElement('style');st.id='LDVL_TWO_SUBJECT_PAGES_V247';
+/* ===== V248 FIXLOAD: 2 trang riêng Toán / Vật lí, giữ lõi V246 ổn định ===== */
+function v248EnsureSubjectPageCss(){
+  if(document.getElementById('LDVL_TWO_SUBJECT_PAGES_V248'))return;
+  let st=document.createElement('style');st.id='LDVL_TWO_SUBJECT_PAGES_V248';
   st.textContent=`
-  .subjectPagesV247{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
-  .subjectPageBtnV247{border:2px solid #bfdbfe;background:#fff;color:#1e40af;border-radius:16px;padding:10px 16px;font-weight:950;font-size:16px;cursor:pointer;box-shadow:0 1px 4px #1d4ed811;min-width:130px;text-align:center}
-  .subjectPageBtnV247.active{background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border-color:#1d4ed8;box-shadow:0 4px 12px #1d4ed833;transform:translateY(-1px)}
-  .subjectPageBtnV247.math.active{background:linear-gradient(90deg,#7c3aed,#2563eb);border-color:#7c3aed}
-  .subjectPageBtnV247.physics.active{background:linear-gradient(90deg,#0f766e,#2563eb);border-color:#0f766e}
-  .subjectPageSubV247{font-size:11px;opacity:.9;font-weight:800;margin-top:2px}
-  .subjectBookTitleV247{font-weight:950;color:#0f172a;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .subjectBookTitleV247 .subjectName{font-size:18px;color:#1d4ed8}
-  .catalogScopeBox.v247SubjectBox{border:1px solid #bfdbfe!important;background:linear-gradient(180deg,#eff6ff,#fff)!important;border-radius:18px!important;padding:12px!important}
-  .subjectPageFilterTitleV247{margin:10px 0 5px;font-weight:950;color:#334155;font-size:13px}
-  .bookSubjectBlock.singleSubjectV247>.bookSubjectTitle{display:none}
-  @media(max-width:760px){.subjectPagesV247{gap:6px;display:grid;grid-template-columns:1fr 1fr}.subjectPageBtnV247{font-size:14px;padding:9px 8px;min-width:0;border-radius:13px}.subjectBookTitleV247 .subjectName{font-size:16px}.catalogScopeBox.v247SubjectBox{padding:9px!important}.subjectPageFilterTitleV247{font-size:12px}.catalogScopeRow{gap:5px}.catalogChip{font-size:11px;padding:5px 7px}}
-  html[data-theme='dark'] .subjectPageBtnV247{background:#111827;color:#bfdbfe;border-color:#334155}html[data-theme='dark'] .subjectBookTitleV247{color:#e5e7eb}html[data-theme='dark'] .subjectBookTitleV247 .subjectName{color:#93c5fd}html[data-theme='dark'] .catalogScopeBox.v247SubjectBox{background:linear-gradient(180deg,#172554,#0f172a)!important;border-color:#1d4ed8!important}html[data-theme='dark'] .subjectPageFilterTitleV247{color:#cbd5e1}
+  .subjectPagesV248{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 10px}
+  .subjectPageBtnV248{border:2px solid #bfdbfe;background:#fff;color:#1e40af;border-radius:16px;padding:10px 12px;font-weight:950;font-size:16px;cursor:pointer;box-shadow:0 1px 4px #1d4ed811;text-align:center;min-height:56px}
+  .subjectPageBtnV248.active{background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border-color:#1d4ed8;box-shadow:0 4px 12px #1d4ed833;transform:translateY(-1px)}
+  .subjectPageBtnV248.math.active{background:linear-gradient(90deg,#7c3aed,#2563eb);border-color:#7c3aed}
+  .subjectPageBtnV248.physics.active{background:linear-gradient(90deg,#0f766e,#2563eb);border-color:#0f766e}
+  .subjectPageSubV248{font-size:11px;opacity:.9;font-weight:800;margin-top:2px}.subjectPageTitleV248{font-weight:950;color:#1e3a8a;margin-bottom:8px}.catalogScopeBox.subjectV248{border:1px solid #bfdbfe!important;background:linear-gradient(180deg,#eff6ff,#fff)!important;border-radius:18px!important;padding:12px!important}
+  @media(max-width:760px){.subjectPagesV248{gap:6px}.subjectPageBtnV248{font-size:14px;padding:8px 6px;border-radius:13px;min-height:50px}.catalogScopeBox.subjectV248{padding:9px!important}.subjectPageTitleV248{font-size:13px}.catalogScopeRow{gap:5px}.catalogChip{font-size:11px;padding:5px 7px}}
+  html[data-theme='dark'] .subjectPageBtnV248{background:#111827;color:#bfdbfe;border-color:#334155}html[data-theme='dark'] .subjectPageTitleV248{color:#bfdbfe}html[data-theme='dark'] .catalogScopeBox.subjectV248{background:linear-gradient(180deg,#172554,#0f172a)!important;border-color:#1d4ed8!important}
   `;
   document.head.appendChild(st);
 }
-function v247SubjectKind(mon){let k=normText(mon||''); if(k.includes('toan')||k.includes('math'))return 'math'; if(k.includes('vat li')||k.includes('vat ly')||k.includes('physics')||k==='ly')return 'physics'; return 'other'}
-function v247SubjectLabel(mon){let kind=v247SubjectKind(mon); if(kind==='math')return '📐 Toán'; if(kind==='physics')return '⚛️ Vật lí'; return '📘 '+(mon||'Môn khác')}
-function v247SubjectShort(mon){let kind=v247SubjectKind(mon); if(kind==='math')return 'Toán'; if(kind==='physics')return 'Vật lí'; return mon||'Môn khác'}
-function v247Subjects(){
-  let arr=uniqField(CATALOG||[],'Mon').filter(Boolean);
-  arr.sort((a,b)=>{let ka=v247SubjectKind(a),kb=v247SubjectKind(b);let pa=ka==='math'?0:ka==='physics'?1:2;let pb=kb==='math'?0:kb==='physics'?1:2;if(pa!==pb)return pa-pb;return normText(a).localeCompare(normText(b))});
-  return arr;
-}
-function v247DefaultSubject(){let s=v247Subjects();let saved='';try{saved=localStorage.getItem('LDVL_SUBJECT_PAGE_V247')||''}catch(e){};if(saved&&s.includes(saved))return saved;let math=s.find(x=>v247SubjectKind(x)==='math');if(math)return math;let phys=s.find(x=>v247SubjectKind(x)==='physics');if(phys)return phys;return s[0]||''}
-function v247EnsureSubjectSelected(){let subjects=v247Subjects();let cur=val('fMon')||'';if(!cur||!subjects.includes(cur)){let d=v247DefaultSubject();if(d)setVal('fMon',d)}try{if(val('fMon'))localStorage.setItem('LDVL_SUBJECT_PAGE_V247',val('fMon'))}catch(e){};return val('fMon')||''}
-function v247ClearSubjectFilters(){window.CATALOG_SELECTED_KHOI='';setVal('fLop','');setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','');setVal('fMucDo','');setVal('fDang','');setVal('fSearch','')}
-function v247SelectSubject(mon){setVal('fMon',mon||'');try{localStorage.setItem('LDVL_SUBJECT_PAGE_V247',mon||'')}catch(e){};v247ClearSubjectFilters();refreshFilterOptions();renderCatalog();try{syncRpFromMainFilters&&syncRpFromMainFilters()}catch(e){}}
-function v245SelectMon(v){v247SelectSubject(v)}
-function v247RenderSubjectPages(){
-  v247EnsureCss();
-  let box=v245EnsureCatalogScopeBox(); if(!box)return;
-  box.classList.add('v247SubjectBox');
-  let curMon=v247EnsureSubjectSelected();
-  let subjects=v247Subjects();
-  let tabs=subjects.map(m=>{let kind=v247SubjectKind(m);let active=m===curMon?' active':'';let count=(CATALOG||[]).filter(x=>x.Mon===m).length;let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);return `<button type="button" class="subjectPageBtnV247 ${kind}${active}" onclick="v247SelectSubject(${JSON.stringify(m)})"><div>${esc(v247SubjectLabel(m))}</div><div class="subjectPageSubV247">${count} đề · ${qs} câu</div></button>`}).join('');
-  let base=(CATALOG||[]).filter(x=>!curMon||x.Mon===curMon);
-  let curKhoi=window.CATALOG_SELECTED_KHOI||'';let curCh=val('fChuong')||'';let curBai=val('fBaiHoc')||'';
-  let khois=[...new Set(base.map(x=>deriveKhoi(x.Lop)).filter(Boolean))].sort((a,b)=>(parseInt(a)||999)-(parseInt(b)||999)||String(a).localeCompare(String(b)));
-  let chBase=curKhoi?base.filter(x=>deriveKhoi(x.Lop)===curKhoi):base;
-  let chuongs=sortFieldValues?sortFieldValues('Chuong',uniqField(chBase,'Chuong')):uniqField(chBase,'Chuong');
-  let baiBase=curCh?chBase.filter(x=>x.Chuong===curCh):chBase;
-  let bais=sortFieldValues?sortFieldValues('BaiHoc',uniqField(baiBase,'BaiHoc')):uniqField(baiBase,'BaiHoc');
-  box.innerHTML=`<div class="subjectBookTitleV247">📚 Trang môn học: <span class="subjectName">${esc(v247SubjectShort(curMon))}</span><span class="muted">Mỗi trang có mục lục sách và bộ lọc riêng.</span></div><div class="subjectPagesV247">${tabs}</div><div class="subjectPageFilterTitleV247">Lọc nhanh trong trang ${esc(v247SubjectShort(curMon))}</div><div id="catalogKhoiTabs" class="catalogScopeRow"></div><div id="catalogChuongTabs" class="catalogScopeRow"></div><div id="catalogBaiTabs" class="catalogScopeRow"></div><div class="catalogAdvancedHint">Bộ lọc chi tiết bên dưới: Lớp, Chương, Bài học, Mức độ, Loại câu hỏi, Dạng bài tập, Bộ đề, Tìm nhanh.</div>`;
+function v248SubjectKind(mon){let k=normText(mon||''); if(k.includes('toan')||k.includes('math'))return 'math'; if(k.includes('vat li')||k.includes('vat ly')||k.includes('physics')||k==='ly')return 'physics'; return 'other'}
+function v248SubjectLabel(mon){let kind=v248SubjectKind(mon); if(kind==='math')return '📐 Toán'; if(kind==='physics')return '⚛️ Vật lí'; return '📘 '+(mon||'Môn khác')}
+function v248Subjects(){let arr=uniqField(CATALOG||[],'Mon').filter(Boolean);arr.sort((a,b)=>{let ka=v248SubjectKind(a),kb=v248SubjectKind(b);let pa=ka==='math'?0:ka==='physics'?1:2;let pb=kb==='math'?0:kb==='physics'?1:2;if(pa!==pb)return pa-pb;return normText(a).localeCompare(normText(b),'vi')});return arr}
+function v248DefaultSubject(){let s=v248Subjects();let saved='';try{saved=localStorage.getItem('LDVL_SUBJECT_PAGE_V248')||localStorage.getItem('LDVL_SUBJECT_PAGE_V247')||''}catch(e){};if(saved&&s.includes(saved))return saved;let math=s.find(x=>v248SubjectKind(x)==='math');if(math)return math;let phys=s.find(x=>v248SubjectKind(x)==='physics');if(phys)return phys;return s[0]||''}
+function v248EnsureSubject(){let subjects=v248Subjects();let cur=val('fMon')||'';if(!cur||!subjects.includes(cur)){let d=v248DefaultSubject();if(d)setVal('fMon',d)}try{if(val('fMon'))localStorage.setItem('LDVL_SUBJECT_PAGE_V248',val('fMon'))}catch(e){};return val('fMon')||''}
+function v248ClearSubjectFilters(){window.CATALOG_SELECTED_KHOI='';setVal('fLop','');setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','');setVal('fMucDo','');setVal('fDang','');setVal('fSearch','')}
+function v248SelectSubject(mon){setVal('fMon',mon||'');try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon||'')}catch(e){};v248ClearSubjectFilters();refreshFilterOptions();renderCatalog();try{syncRpFromMainFilters&&syncRpFromMainFilters()}catch(e){}}
+var V248_ORIG_REFRESH_FILTER_OPTIONS = refreshFilterOptions;
+refreshFilterOptions = function(){v248EnsureSubject();V248_ORIG_REFRESH_FILTER_OPTIONS();v248EnsureSubject();v245RenderCatalogScopeTabs();};
+v245SelectMon = function(v){v248SelectSubject(v)};
+v245RenderCatalogScopeTabs = function(){
+  v248EnsureSubjectPageCss();
+  v245EnsureCatalogScopeBox();
+  let box=document.getElementById('catalogScopeBox'); if(!box)return;
+  box.classList.add('subjectV248');
+  let curMon=v248EnsureSubject();
+  let subjects=v248Subjects();
+  let tabs=subjects.map(m=>{let kind=v248SubjectKind(m);let active=m===curMon?' active':'';let count=(CATALOG||[]).filter(x=>x.Mon===m).length;let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);return `<button type="button" class="subjectPageBtnV248 ${kind}${active}" onclick="v248SelectSubject(${JSON.stringify(m)})"><div>${esc(v248SubjectLabel(m))}</div><div class="subjectPageSubV248">${count} đề · ${qs} câu</div></button>`}).join('');
+  let curKhoi=window.CATALOG_SELECTED_KHOI||'', curCh=val('fChuong')||'', curBai=val('fBaiHoc')||'';
+  box.innerHTML=`<div class="subjectPageTitleV248">📚 Trang môn học riêng</div><div class="subjectPagesV248">${tabs}</div><div id="catalogKhoiTabs" class="catalogScopeRow"></div><div id="catalogChuongTabs" class="catalogScopeRow"></div><div id="catalogBaiTabs" class="catalogScopeRow"></div><div class="catalogAdvancedHint">Trong từng trang có mục lục sách và bộ lọc riêng: Lớp, Chương, Bài học, Mức độ, Loại câu hỏi, Dạng bài tập, Bộ đề, Tìm nhanh.</div>`;
+  let monList=(CATALOG||[]).filter(x=>!curMon||x.Mon===curMon);
+  let khois=Array.from(new Set(monList.map(x=>deriveKhoi(x.Lop)).filter(Boolean))).sort((a,b)=>(parseInt(a)||999)-(parseInt(b)||999)||String(a).localeCompare(String(b),'vi'));
+  let khBase=curKhoi?monList.filter(x=>deriveKhoi(x.Lop)===curKhoi):monList;
+  let chuongs=uniqField(khBase,'Chuong');
+  let chBase=curCh?khBase.filter(x=>x.Chuong===curCh):khBase;
+  let bais=uniqField(chBase,'BaiHoc');
   let khoiWrap=document.getElementById('catalogKhoiTabs'),chWrap=document.getElementById('catalogChuongTabs'),baiWrap=document.getElementById('catalogBaiTabs');
   if(khoiWrap)khoiWrap.innerHTML='<span class="catalogScopeLabel">Khối</span>'+v245Chip('Tất cả','',!curKhoi,"v245SelectKhoi('')",'khoi')+khois.map(k=>v245Chip('Khối '+k,k,curKhoi===k,`v245SelectKhoi(${JSON.stringify(k)})`,'khoi')).join('');
   if(chWrap)chWrap.innerHTML='<span class="catalogScopeLabel">Chương</span>'+v245Chip('Tất cả','',!curCh,"v245SelectChuong('')",'chapter')+chuongs.map(c=>v245Chip(c,c,curCh===c,`v245SelectChuong(${JSON.stringify(c)})`,'chapter')).join('');
   if(baiWrap)baiWrap.innerHTML='<span class="catalogScopeLabel">Bài</span>'+v245Chip('Tất cả','',!curBai,"v245SelectBai('')",'lesson')+bais.slice(0,42).map(b=>v245Chip(b,b,curBai===b,`v245SelectBai(${JSON.stringify(b)})`,'lesson')).join('')+(bais.length>42?`<span class="muted" style="font-size:12px">+${bais.length-42} bài, dùng bộ lọc Bài học bên dưới.</span>`:'');
-}
-function v245RenderCatalogScopeTabs(){v247RenderSubjectPages()}
-function refreshFilterOptions(){
-  v246EnsureDangBaiTapFilter();
-  let curMon=v247EnsureSubjectSelected();
-  setOptionsKeep('fMon',v247Subjects(),curMon);
-  let base=(CATALOG||[]).filter(x=>!curMon||x.Mon===curMon);
-  if(window.CATALOG_SELECTED_KHOI)base=base.filter(x=>deriveKhoi(x.Lop)===window.CATALOG_SELECTED_KHOI);
-  setOptionsKeep('fLop',uniqField(base,'Lop'),val('fLop'));
-  setOptionsKeep('fChuong',uniqField(v246ListForOptions('chuong'),'Chuong'),val('fChuong'));
-  setOptionsKeep('fBaiHoc',uniqField(v246ListForOptions('baihoc'),'BaiHoc'),val('fBaiHoc'));
-  setOptionsKeep('fDangBaiTap',uniqField(v246ListForOptions('dangbaitap'),'DangBaiTap'),val('fDangBaiTap'));
-  setOptionsKeep('fBoDe',uniqField(v246ListForOptions('bode'),'BoDe'),val('fBoDe'));
-  v247RenderSubjectPages();
-}
-function onFilterChange(level){
-  v246EnsureDangBaiTapFilter();
-  if(level==='mon'){try{localStorage.setItem('LDVL_SUBJECT_PAGE_V247',val('fMon')||'')}catch(e){};window.CATALOG_SELECTED_KHOI='';setVal('fLop','');setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','')}
-  else if(level==='lop'){window.CATALOG_SELECTED_KHOI='';setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','')}
-  else if(level==='chuong'){setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','')}
-  else if(level==='baihoc'){setVal('fDangBaiTap','');setVal('fBoDe','')}
-  else if(level==='dangbaitap'){setVal('fBoDe','')}
-  if(level!=='extra')refreshFilterOptions(); else v247RenderSubjectPages();
-  renderCatalog();
-}
-function renderCatalog(){
-  v246EnsureDangBaiTapFilter();
-  let curMon=v247EnsureSubjectSelected();
-  v247RenderSubjectPages();
-  let list=(CATALOG||[]).filter(v246ItemMatchesFilter).sort(compareCatalog);let c=document.getElementById('countCat');if(c)c.textContent=`(${list.length} mục)`;let target=document.getElementById('catalog');if(!target)return;
-  target.className=''; target.style.marginTop='10px';
-  target.innerHTML=v246IntroHtml(list).replace('Mục lục kiểu sách','Mục lục sách · '+esc(v247SubjectShort(curMon)))+v246BookHtml(list).replace('bookSubjectBlock','bookSubjectBlock singleSubjectV247');
-  try{typeset()}catch(e){}
-}
+};
+var V248_ORIG_RENDER_CATALOG = renderCatalog;
+renderCatalog = function(){v248EnsureSubject();V248_ORIG_RENDER_CATALOG();};
 
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
 
@@ -10973,9 +10935,9 @@ def version():
         "book_tabs_filters_v246": True,
         "catalog_book_view_v246": True,
         "catalog_dangbaitap_filter_v246": True,
-        "two_subject_pages_v247": True,
-        "subject_pages_book_style_v247": True,
-        "subject_separate_filters_v247": True,
+        "two_subject_pages_v248": True,
+        "two_subject_pages_fixload_v248": True,
+        "subject_pages_keep_v246_core_v248": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
