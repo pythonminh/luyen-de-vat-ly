@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V251_HOME_COMPACT_ONE_ROW_TEST_2026_06_11"
+APP_VERSION = "V252_ENGLISH_TTS_BUTTON_FIX_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -8949,6 +8949,7 @@ async function openLearningPanel(kind){
 /* ===== V242: Bỏ đọc tiếng Việt, chỉ giữ English + dịch tiếng Anh ===== */
 let TTS_ACTIVE=false;
 let TTS_VOICES=[];
+let LAST_ENGLISH_TRANSLATION_TEXT="";
 function refreshTtsVoices(){
     try{TTS_VOICES=window.speechSynthesis?window.speechSynthesis.getVoices():[]}catch(e){TTS_VOICES=[]}
     return TTS_VOICES;
@@ -9039,6 +9040,18 @@ function extractEnglishText(txt){
     let m=txt.match(/English\s*:\s*([\s\S]*?)(?:\n\s*Vocabulary\s*:|\n\s*Notes\s*:|$)/i);
     return (m?m[1]:txt).trim();
 }
+function speakEnglishTranslation(){
+    let txt=LAST_ENGLISH_TRANSLATION_TEXT||'';
+    if(!txt){
+        try{
+            let hb=document.getElementById('hintBox');
+            txt=hb?(hb.innerText||hb.textContent||''):'';
+        }catch(e){txt=''}
+    }
+    let en=extractEnglishText(txt);
+    if(!en){alert('Chưa có phần English để đọc. Bấm 🇬🇧 English trước.');return}
+    speakText(en,'en-US');
+}
 async function translateCurrentQuestionToEnglish(){
     saveCurrent();
     let q=QUESTIONS[CUR]||{};
@@ -9050,7 +9063,8 @@ async function translateCurrentQuestionToEnglish(){
         let j=await api('/api/translate/en',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
         let tr=j.translation||((j.item||{}).BanDichAnh)||'';
         let meta=j.cached?'Đã gọi lại từ sheet Dich_Anh':('AI: '+(j.provider_used||'')+' '+(j.model||''));
-        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English · Dịch câu hỏi</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="font-size:12px;margin-top:4px">${esc(meta)}</div><div class="learningItem" style="margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;white-space:pre-wrap">${formatHintDisplay(tr)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn2" onclick="speakText(extractEnglishText(${JSON.stringify(tr)}),'en-US')">🔊 Đọc English</button></div><div class="muted" style="margin-top:8px;font-size:12px">Bản dịch chỉ hỗ trợ đọc hiểu/từ vựng, không giải bài và không chốt đáp án. Chức năng đọc tiếng Việt đã tắt để tránh lỗi giọng trên điện thoại.</div>`;typesetQuizMath();}
+        LAST_ENGLISH_TRANSLATION_TEXT=tr||'';
+        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English · Dịch câu hỏi</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="font-size:12px;margin-top:4px">${esc(meta)}</div><div class="learningItem" style="margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;white-space:pre-wrap">${formatHintDisplay(tr)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn2" onclick="speakEnglishTranslation()">🔊 Đọc English</button></div><div class="muted" style="margin-top:8px;font-size:12px">Bản dịch chỉ hỗ trợ đọc hiểu/từ vựng, không giải bài và không chốt đáp án. Chức năng đọc tiếng Việt đã tắt để tránh lỗi giọng trên điện thoại.</div>`;typesetQuizMath();}
     }catch(e){
         let msg=String(e.message||e);
         if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không dịch được: ${esc(msg)}</div>${shouldShowGeminiKeyHelp(msg)?geminiKeyHelpHtml():''}<div style="margin-top:8px"><button type="button" class="btn2" onclick="translateCurrentQuestionToEnglish()">Thử lại</button></div>`;}
@@ -11016,6 +11030,8 @@ def version():
         "hide_top_khoi_chuong_bai_chips_v250": True,
         "home_compact_one_row_v251": True,
         "home_tools_one_row_v251": True,
+        "english_tts_button_fix_v252": True,
+        "english_tts_safe_onclick_v252": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
