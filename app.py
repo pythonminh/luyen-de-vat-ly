@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V239_VIP_SVIP_GEMINI_KEY_PROMPT_TEST_2026_06_11"
+APP_VERSION = "V240_TTS_ENGLISH_TRANSLATE_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -1259,6 +1259,13 @@ LEARNING_METHOD_FIELDS = [
     "LoiSaiThuongGap", "ViDuMau", "TrangThai", "NgayCapNhat",
 ]
 
+# Bản dịch tiếng Anh lưu riêng để gọi lại, tránh tốn AI nhiều lần.
+TRANSLATION_EN_FIELDS = [
+    "ID", "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap",
+    "LoaiNoiDung", "NoiDungGoc", "BanDichAnh", "TuVung", "GhiChu",
+    "NgayCapNhat", "NguoiTao",
+]
+
 # Cột 1-indexed theo Google Sheet thực tế (H=DangBaiTap, I=MucDo … T=HinhAnh).
 SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
     "DangBaiTap": 8,
@@ -1759,10 +1766,14 @@ class SheetStore:
         self.ws_latex_rules = None
         self.ws_theory = None
         self.ws_methods = None
+        self.ws_translate_en = None
         self.theory_items: List[Dict[str, Any]] = []
         self.method_items: List[Dict[str, Any]] = []
+        self.translate_en_items: List[Dict[str, Any]] = []
         self.learning_loaded = False
         self.learning_error = ""
+        self.translate_en_loaded = False
+        self.translate_en_error = ""
         self.question_headers: List[str] = []
         self.question_col_index: Dict[str, int] = {}
         # V8 FAST LOGIN:
@@ -2236,6 +2247,85 @@ class SheetStore:
         self.learning_loaded = False
         self.load_learning()
         return {"ok": True, "kind": kind, "action": action, "row": row_no, "item": item}
+
+    def ensure_translate_en_loaded(self, force: bool = False) -> None:
+        """Đảm bảo có sheet Dich_Anh và nạp bản dịch tiếng Anh đã lưu."""
+        if self.translate_en_loaded and not force:
+            return
+        self.connect()
+        self.ws_translate_en = self.ensure_ws("Dich_Anh", TRANSLATION_EN_FIELDS)
+        try:
+            self.translate_en_items = self._read_learning_sheet(self.ws_translate_en, TRANSLATION_EN_FIELDS)
+            self.translate_en_loaded = True
+            self.translate_en_error = ""
+        except Exception as e:
+            self.translate_en_items = []
+            self.translate_en_loaded = False
+            self.translate_en_error = str(e)
+
+    def _translation_hash(self, text: Any) -> str:
+        t = re.sub(r"\s+", " ", clean(text))
+        return stable_hash(t, 16)
+
+    def get_translation_en_cached(self, *, text: str, mon: str = "", lop: str = "", chuong: str = "", baihoc: str = "", dangbaitap: str = "", loai: str = "") -> Optional[Dict[str, Any]]:
+        self.ensure_translate_en_loaded()
+        h = self._translation_hash(text)
+        target_type = key_norm(loai)
+        for it in self.translate_en_items:
+            if not self._learning_status_ok(it):
+                continue
+            if h and clean(it.get("ID", "")).endswith(h):
+                return it
+            if target_type and key_norm(it.get("LoaiNoiDung", "")) != target_type:
+                continue
+            if not self._learning_field_match(mon, it.get("Mon"), "Mon"):
+                continue
+            if not self._learning_field_match(lop, it.get("Lop"), "Lop"):
+                continue
+            if not self._learning_field_match(chuong, it.get("Chuong"), "Chuong"):
+                continue
+            if not self._learning_field_match(baihoc, it.get("BaiHoc"), "BaiHoc"):
+                continue
+            if dangbaitap and not self._learning_field_match(dangbaitap, it.get("DangBaiTap"), "DangBaiTap"):
+                continue
+            if key_norm(it.get("NoiDungGoc", "")) == key_norm(text):
+                return it
+        return None
+
+    def save_translation_en_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        """Lưu bản dịch tiếng Anh vào sheet Dich_Anh để lần sau gọi lại."""
+        if not (is_admin() or can_use_ai_hint()):
+            raise RuntimeError("Chỉ tài khoản có quyền AI mới được lưu bản dịch")
+        self.ensure_translate_en_loaded(force=True)
+        fields = TRANSLATION_EN_FIELDS
+        ws = self.ws_translate_en
+        item = dict(item or {})
+        for f in fields:
+            item[f] = clean(item.get(f, ""))
+        if not item.get("ID"):
+            item["ID"] = "EN_" + self._translation_hash(item.get("NoiDungGoc", ""))
+        item["NgayCapNhat"] = item.get("NgayCapNhat") or datetime.now().strftime("%d/%m/%Y %H:%M")
+        item["NguoiTao"] = item.get("NguoiTao") or clean(session.get("mahs", "")) or ""
+        row_values = [item.get(f, "") for f in fields]
+        row_no = 0
+        for it in self.translate_en_items:
+            if clean(it.get("ID", "")) == item["ID"]:
+                try:
+                    row_no = int(it.get("_row") or 0)
+                except Exception:
+                    row_no = 0
+                break
+        action = "updated" if row_no and row_no >= 2 else "created"
+        if action == "updated":
+            end_col = gspread.utils.rowcol_to_a1(row_no, len(fields))
+            rng = f"A{row_no}:{end_col}"
+            gsheet_call_retry("update translation en", ws.update, rng, [row_values], value_input_option="RAW")
+        else:
+            gsheet_call_retry("append translation en", ws.append_row, row_values, value_input_option="RAW")
+            row_no = len(ws.get_all_values())
+        self.translate_en_loaded = False
+        self.ensure_translate_en_loaded(force=True)
+        return {"ok": True, "action": action, "row": row_no, "item": item}
 
     def load_users(self):
         self.users = {}
@@ -7874,6 +7964,10 @@ html[data-theme='dark'] .learningQuickBar{background:#0f172a}html[data-theme='da
   .learningCloseBtn{padding:7px 10px!important;font-size:13px!important;min-width:72px!important}
 }
 
+
+/* V240: nút đọc/dịch nhỏ gọn */
+.learningQuickBar .btn2, .qidLearnBtns .btn2{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:900}
+@media(max-width:640px){.learningQuickBar .btn2,.qidLearnBtns .btn2{padding:4px 7px;font-size:11px}.learningItem{font-size:14px}}
 </style>
 </head><body>
 <div class="top">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</div>
@@ -8517,7 +8611,7 @@ function syncAdminLearningBoard(q){
 }
 function renderNav(){let html='';for(let i=0;i<QUESTIONS.length;i++){let q=QUESTIONS[i]||{};let sec=quizSectionLabel(i);if(sec){html+=`<div class="navSectionLbl ${navSectionClass(sec)}"><span>${navSectionIcon(sec)}</span><span>${esc(sec)}</span></div>`}let lv=mucdoPrimary(q.MucDo||'');let cls='num '+navMucDoClass(lv);if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';let tip=(lv?`${lv} · ${mucdoLabel(lv)} · `:'')+shortText((q&&q.CauHoi)||'',120);html+=`<button class="${cls}" data-level="${escAttr(lv||'')}" title="${escAttr(tip)}" onclick="goQ(${i})"><span class="navLvIcon">${mucdoIcon(lv)}</span><span class="navNumText">${i+1}</span>${lv?`<span class="navLvText">${esc(lv)}</span>`:''}</button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(FULLDE_ON){let active=nav.querySelector('.num.active');if(active&&active.scrollIntoView)active.scrollIntoView({block:'nearest',inline:'nearest'})}syncNavButtons()}function goQ(i){saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}syncQuestionMucDoChrome(q);renderNav();closeLearningPanel(true);syncAdminLearningBoard(q);let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR])showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');let adminCreateBtns=USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)" title="GPT gán dạng bài tập và lưu cột H">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="showTheorySgkNotice()" title="Lý thuyết SGK: ADMIN nhập/dán rồi lưu">📘 Nhập LT SGK</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')" title="GPT tạo phương pháp và lưu Google Sheet">🤖 Tạo PP+GGS</button>`:'';let learnBtns=`<span class="qidLearnBtns"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 PP</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()" title="AI nhắc lưu ý tránh sai, không chốt đáp án">🧠 Trợ lý AI</button>`:''}${adminCreateBtns}</span>`;document.getElementById('qid').innerHTML=`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${solTag?' · '+solTag:''}${learnBtns}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=secLbl?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`;qtextEl.classList.remove('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`+renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR)}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}syncQuestionMucDoChrome(q);renderNav();closeLearningPanel(true);syncAdminLearningBoard(q);let canAi=USER.can_ai_hint!==false;let hb=document.getElementById('hintBox');if(hb){if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR])showHintLoadingBox();else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');let adminCreateBtns=USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)" title="GPT gán dạng bài tập và lưu cột H">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="showTheorySgkNotice()" title="Lý thuyết SGK: ADMIN nhập/dán rồi lưu">📘 Nhập LT SGK</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')" title="GPT tạo phương pháp và lưu Google Sheet">🤖 Tạo PP+GGS</button>`:'';let learnBtns=`<span class="qidLearnBtns"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 PP</button><button type="button" class="btn2" onclick="speakCurrentQuestion()" title="Đọc câu hỏi bằng giọng đọc điện thoại">🔊 Đọc</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()" title="Dịch câu hỏi sang tiếng Anh">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()" title="AI nhắc lưu ý tránh sai, không chốt đáp án">🧠 Trợ lý AI</button>`:''}${adminCreateBtns}</span>`;document.getElementById('qid').innerHTML=`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${solTag?' · '+solTag:''}${learnBtns}`;let qImgHtml=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=secLbl?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button><button type="button" class="btn2" onclick="speakCurrentQuestion()">🔊 Đọc</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`;qtextEl.classList.remove('hide')}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+`<div class="learningQuickBar"><button type="button" class="learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Lý thuyết</button><button type="button" class="learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Phương pháp giải</button><button type="button" class="btn2" onclick="speakCurrentQuestion()">🔊 Đọc</button><button type="button" class="btn2" data-learning-toggle="translate" onclick="translateCurrentQuestionToEnglish()">🇬🇧 English</button>${canAi?`<button type="button" class="aiAssistBtn" data-learning-toggle="ai_assist" onclick="requestAiAssistantNote()">🧠 Trợ lý AI</button>`:''}${USER.is_admin?`<button type="button" class="learnMethodBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Gán dạng BT</button><button type="button" class="learnTheoryBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="learnMethodBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP+GGS</button>`:''}</div>`+renderRichText(stripImmini(q.CauHoi))+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderRichText(stripOptionPrefix(q[L],L))}</span></label>`}}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderRichText(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="mcqSplitOpts">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${q.Dang==='Đúng sai'?formatDsSolutionRows(lg,q):(q.Dang==='Trắc nghiệm'?formatMcqSolutionRows(lg,q):formatHintDisplay(lg))}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR)}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProvider(){return String(USER.admin_ai_provider||'').toUpperCase()}
 function adminUsesGpt(){return isAdminViewer()&&adminAiProvider()==='OPENAI'}
@@ -8593,7 +8687,7 @@ function currentLearningQuery(kind){
     if(kind==='method'&&params.DangBaiTap)qs.push('DangBaiTap='+encodeURIComponent(params.DangBaiTap));
     return {q:q,params:params,query:qs.join('&')};
 }
-function learningTitle(kind){return kind==='method'?'🧭 Phương pháp giải':'📘 Lý thuyết SGK';}
+function learningTitle(kind){if(kind==='translate')return '🇬🇧 English';return kind==='method'?'🧭 Phương pháp giải':'📘 Lý thuyết SGK';}
 function showTheorySgkNotice(){alert('Lý thuyết là phần SGK/chuẩn bài học: ADMIN dán hoặc nhập nội dung được phép dùng vào khung Lý thuyết trong Sửa câu, rồi bấm 💾 Lưu LT đang sửa. GPT không tự tạo Lý thuyết để tránh sai và tốn key. GPT chỉ dùng cho Dạng bài tập và Phương pháp giải.');}
 let CURRENT_LEARNING_KIND='';
 let EDIT_THEORY_OPTIONS=[];
@@ -8826,6 +8920,75 @@ async function openLearningPanel(kind){
         if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');markLearningPanel(kind);hb.innerHTML=`${learningHeaderHtml(kind)}<div class="muted" style="margin-top:8px;color:#991b1b">Không tải được học liệu: ${esc(e.message||e)}</div><div style="margin-top:8px"><button type="button" class="btn2" data-learning-toggle="${kind}" onclick="openLearningPanel('${kind}')">Thử lại</button></div>`;}
     }
 }
+
+
+/* ===== V240: Đọc văn bản + dịch tiếng Anh ===== */
+let TTS_ACTIVE=false;
+function plainTextFromHtmlOrLatex(s){
+    let t=String(s||'');
+    try{let d=document.createElement('div');d.innerHTML=t;t=d.textContent||d.innerText||t;}catch(e){}
+    t=t.replace(/\\\(|\\\)|\$|\\\[|\\\]/g,' ')
+       .replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,' $1 trên $2 ')
+       .replace(/\\sqrt\s*\{([^{}]+)\}/g,' căn $1 ')
+       .replace(/\\cdot|\\times/g,' nhân ')
+       .replace(/\\leq/g,' nhỏ hơn hoặc bằng ')
+       .replace(/\\geq/g,' lớn hơn hoặc bằng ')
+       .replace(/\\Delta/g,' delta ')
+       .replace(/\\lambda/g,' lam đa ')
+       .replace(/\\alpha/g,' an pha ')
+       .replace(/\\beta/g,' bê ta ')
+       .replace(/\\pi/g,' pi ')
+       .replace(/\\[a-zA-Z]+/g,' ')
+       .replace(/[{}_^]/g,' ')
+       .replace(/\s+/g,' ').trim();
+    return t;
+}
+function currentQuestionSpeakText(){
+    let q=QUESTIONS[CUR]||{};let bits=[];
+    if(q.CauHoi)bits.push(q.CauHoi);
+    if(q.Dang==='Trắc nghiệm'){
+        for(let L of ['A','B','C','D'])if(q[L])bits.push(`${L}. ${q[L]}`);
+    }else if(q.Dang==='Đúng sai'){
+        for(let L of ['A','B','C','D'])if(q[L])bits.push(`Ý ${L}. ${q[L]}`);
+    }
+    return plainTextFromHtmlOrLatex(bits.join('\n'));
+}
+function speakText(text,lang){
+    text=plainTextFromHtmlOrLatex(text);
+    if(!text){alert('Chưa có văn bản để đọc.');return}
+    if(!('speechSynthesis' in window)){alert('Trình duyệt này chưa hỗ trợ đọc văn bản.');return}
+    try{window.speechSynthesis.cancel();}catch(e){}
+    if(TTS_ACTIVE){TTS_ACTIVE=false;return}
+    let u=new SpeechSynthesisUtterance(text.slice(0,3500));
+    u.lang=lang||'vi-VN';u.rate=0.95;u.pitch=1;
+    u.onend=function(){TTS_ACTIVE=false};u.onerror=function(){TTS_ACTIVE=false};
+    TTS_ACTIVE=true;window.speechSynthesis.speak(u);
+}
+function stopTts(){try{window.speechSynthesis.cancel();}catch(e){}TTS_ACTIVE=false}
+function speakCurrentQuestion(){speakText(currentQuestionSpeakText(),'vi-VN')}
+function extractEnglishText(txt){
+    txt=String(txt||'');
+    let m=txt.match(/English\s*:\s*([\s\S]*?)(?:\n\s*Vocabulary\s*:|\n\s*Notes\s*:|$)/i);
+    return (m?m[1]:txt).trim();
+}
+async function translateCurrentQuestionToEnglish(){
+    saveCurrent();
+    let q=QUESTIONS[CUR]||{};
+    let text=currentQuestionSpeakText();
+    let hb=document.getElementById('hintBox');
+    if(hb){hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang dịch sang tiếng Anh…</b><div class="muted" style="margin-top:6px;font-size:13px">Nếu đã lưu trong Google Sheet Dich_Anh thì gọi lại; nếu chưa có thì dùng AI theo quyền tài khoản.</div></div></div>`;}
+    try{
+        let payload={sid:SID,index:CUR,type:'CauHoi',text:text,answer:ANSWERS[CUR]||'',...quizRestorePayload()};
+        let j=await api('/api/translate/en',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:60000},1);
+        let tr=j.translation||((j.item||{}).BanDichAnh)||'';
+        let meta=j.cached?'Đã gọi lại từ sheet Dich_Anh':('AI: '+(j.provider_used||'')+' '+(j.model||''));
+        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English · Dịch câu hỏi</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="font-size:12px;margin-top:4px">${esc(meta)}</div><div class="learningItem" style="margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;white-space:pre-wrap">${formatHintDisplay(tr)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn2" onclick="speakText(extractEnglishText(${JSON.stringify(tr)}),'en-US')">🔊 Đọc English</button><button type="button" class="btn2" onclick="speakCurrentQuestion()">🔊 Đọc tiếng Việt</button></div><div class="muted" style="margin-top:8px;font-size:12px">Bản dịch chỉ hỗ trợ đọc hiểu/từ vựng, không giải bài và không chốt đáp án.</div>`;typesetQuizMath();}
+    }catch(e){
+        let msg=String(e.message||e);
+        if(hb){hb.classList.remove('hide');markLearningPanel('translate');hb.innerHTML=`<div class="learningTitleRow"><b>🇬🇧 English</b><button type="button" class="learningCloseBtn" onclick="closeLearningPanel()">Tắt</button></div><div class="muted" style="margin-top:8px;color:#991b1b">Không dịch được: ${esc(msg)}</div>${shouldShowGeminiKeyHelp(msg)?geminiKeyHelpHtml():''}<div style="margin-top:8px"><button type="button" class="btn2" onclick="translateCurrentQuestionToEnglish()">Thử lại</button></div>`;}
+    }
+}
+
 
 
 let AI_ASSIST_LOADING=false,AI_ASSIST_Q=null;
@@ -10422,7 +10585,10 @@ def version():
         "vip_svip_key_prompt_v239": True,
         "gemini_key_link_aistudio_v239": True,
         "users_self_key_required_hint_v239": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
+        "tts_browser_v240": True,
+        "translate_english_v240": True,
+        "translate_sheet_cache_v240": True,
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -11276,6 +11442,192 @@ def api_ai_assistant_chat():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+
+
+def _strip_html_for_ai_text(raw: Any) -> str:
+    t = clean(raw)
+    t = re.sub(r"<[^>]+>", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def _sanitize_translation_text(txt: Any) -> str:
+    t = sanitize_hint_math_text(clean(txt))
+    t = re.sub(r"```(?:json)?", "", t, flags=re.I).strip()
+    if len(t) > 5000:
+        t = t[:5000].rstrip() + "…"
+    return t
+
+
+def build_translate_en_prompt(text: str, loai: str, q: Dict[str, Any]) -> str:
+    meta = " · ".join([clean(q.get(k, "")) for k in ["Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap"] if clean(q.get(k, ""))])
+    return "\n".join([
+        "Bạn là trợ lý tiếng Anh học thuật cho học sinh THPT Việt Nam.",
+        "Nhiệm vụ: chuyển nội dung sang tiếng Anh rõ, đúng thuật ngữ Toán/Lý, giữ LaTeX/công thức trong $...$ nếu có.",
+        "Không giải bài, không chốt đáp án, không thêm lời giải. Chỉ dịch và giải thích từ vựng cần thiết.",
+        "Trả lời đúng cấu trúc:",
+        "English:",
+        "<bản dịch tiếng Anh>",
+        "",
+        "Vocabulary:",
+        "- term: nghĩa tiếng Việt ngắn",
+        "",
+        "Notes:",
+        "- lưu ý cách hiểu/cách đọc đơn vị nếu có",
+        "",
+        f"Loại nội dung: {loai}",
+        f"Ngữ cảnh: {meta}",
+        "Nội dung cần dịch:",
+        text,
+    ])
+
+
+def translate_en_from_provider(text: str, loai: str, q: Dict[str, Any]) -> Tuple[str, int, str, str, str]:
+    cfg = ai_runtime_config()
+    # ADMIN được dùng OpenAI/ChatGPT theo AI_ADMIN_PROVIDER; người dùng còn lại chỉ Gemini và phải có key riêng.
+    if is_admin():
+        provider = clean(cfg.get("admin_provider") or os.environ.get("AI_ADMIN_PROVIDER", "OPENAI") or "OPENAI").upper()
+        gemini_keys = load_ai_keys("GEMINI")
+        openai_keys = load_ai_keys("OPENAI")
+    else:
+        provider = "GEMINI"
+        # VIP/S.VIP tự nhập key để không tốn key hệ thống.
+        gemini_keys = load_user_ai_keys("GEMINI")
+        openai_keys = []
+    if provider not in ("OPENAI", "GEMINI", "AUTO"):
+        provider = "GEMINI"
+    if not is_admin() and not gemini_keys:
+        return "", 0, "GEMINI", "", "VIP/S.VIP muốn dịch tiếng Anh bằng AI cần tự nhập Gemini key."
+    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
+    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
+    sys_prompt = "Bạn dịch sang tiếng Anh học thuật, giữ công thức, không giải bài và không chốt đáp án."
+    user_prompt = build_translate_en_prompt(text, loai, q)
+    last_error = ""
+
+    def try_openai() -> Tuple[str, int, str, str, str]:
+        nonlocal last_error
+        for idx, api_key in enumerate(openai_keys, start=1):
+            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 900, 0.1, timeout=35)
+            if err:
+                last_error = err
+                continue
+            txt = _sanitize_translation_text(txt)
+            if txt:
+                return txt, idx, "OPENAI", model_openai, ""
+        return "", 0, "OPENAI", model_openai, last_error
+
+    def try_gemini() -> Tuple[str, int, str, str, str]:
+        nonlocal last_error
+        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
+        for idx, api_key in enumerate(gemini_keys, start=1):
+            for gm in models:
+                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 900, 0.1, timeout=28)
+                if err:
+                    last_error = err
+                    continue
+                txt = _sanitize_translation_text(txt)
+                if txt:
+                    return txt, idx, "GEMINI", gm, ""
+        return "", 0, "GEMINI", model_gemini, last_error
+
+    if is_admin():
+        order = [try_openai, try_gemini] if provider == "OPENAI" else ([try_gemini, try_openai] if provider == "GEMINI" else [try_openai, try_gemini])
+    else:
+        order = [try_gemini]
+    for fn in order:
+        txt, idx, used, model, err = fn()
+        if txt:
+            return txt, idx, used, model, ""
+    return "", 0, provider, "", last_error or "AI chưa phản hồi."
+
+
+@app.route("/api/translate/en", methods=["POST"])
+def api_translate_en():
+    bad = require_login_json()
+    if bad:
+        return bad
+    refresh_session_role_from_store()
+    data = request.get_json(silent=True) or {}
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    loai = clean(data.get("type") or data.get("loai") or "CauHoi") or "CauHoi"
+    text = _strip_html_for_ai_text(data.get("text", ""))
+    restore = quiz_restore_payload_from_body(data)
+    q: Dict[str, Any] = {}
+    try:
+        if sid:
+            ses = get_store().check_quiz_session(sid, restore)
+            qs = ses.get("questions") or []
+            if 0 <= idx < len(qs):
+                q = qs[idx]
+    except Exception:
+        q = {}
+    if not text and q:
+        if loai == "CauHoi":
+            bits = [clean(q.get("CauHoi", ""))]
+            for L in "ABCD":
+                if clean(q.get(L, "")):
+                    bits.append(f"{L}. {clean(q.get(L, ''))}")
+            text = "\n".join(bits)
+        elif loai == "LoiGiai":
+            text = clean(q.get("LoiGiai", ""))
+    if not text:
+        return jsonify({"error": "Chưa có văn bản để dịch."}), 400
+    if len(text) > 6000:
+        text = text[:6000]
+    store = get_store()
+    cached = store.get_translation_en_cached(
+        text=text,
+        mon=clean(q.get("Mon", data.get("Mon", ""))),
+        lop=clean(q.get("Lop", data.get("Lop", ""))),
+        chuong=clean(q.get("Chuong", data.get("Chuong", ""))),
+        baihoc=clean(q.get("BaiHoc", data.get("BaiHoc", ""))),
+        dangbaitap=clean(q.get("DangBaiTap", data.get("DangBaiTap", ""))),
+        loai=loai,
+    )
+    if cached and clean(cached.get("BanDichAnh", "")):
+        return jsonify({"ok": True, "cached": True, "item": cached, "translation": cached.get("BanDichAnh", ""), "vocabulary": cached.get("TuVung", ""), "notes": cached.get("GhiChu", "")})
+    if not can_use_ai_hint():
+        return jsonify({"error": "Tài khoản này chỉ xem bản dịch đã lưu. Muốn dịch AI cần VIP/S.VIP tự nhập Gemini key hoặc ADMIN."}), 403
+    translated, key_index, provider_used, model, ai_error = translate_en_from_provider(text, loai, q)
+    if not translated:
+        return jsonify({"error": ai_error or "Không dịch được bằng AI.", "key_required": (not is_admin())}), 400
+    item = {
+        "ID": "EN_" + store._translation_hash(text),
+        "Mon": clean(q.get("Mon", data.get("Mon", ""))),
+        "Lop": clean(q.get("Lop", data.get("Lop", ""))),
+        "Chuong": clean(q.get("Chuong", data.get("Chuong", ""))),
+        "BaiHoc": clean(q.get("BaiHoc", data.get("BaiHoc", ""))),
+        "DangBaiTap": clean(q.get("DangBaiTap", data.get("DangBaiTap", ""))),
+        "LoaiNoiDung": loai,
+        "NoiDungGoc": text,
+        "BanDichAnh": translated,
+        "TuVung": "",
+        "GhiChu": "Dịch AI; không giải bài, không chốt đáp án.",
+        "NguoiTao": clean(session.get("mahs", "")),
+    }
+    saved = {}
+    try:
+        saved = store.save_translation_en_item(item)
+    except Exception as e:
+        saved = {"ok": False, "error": str(e)}
+    return jsonify({
+        "ok": True,
+        "cached": False,
+        "translation": translated,
+        "item": item,
+        "saved": saved,
+        "key_index": key_index,
+        "provider_used": provider_used,
+        "model": model,
+        "ai_error": ai_error,
+        "message": "Bản dịch tiếng Anh chỉ để học từ vựng/đọc hiểu; không giải bài và không chốt đáp án.",
+    })
 
 
 @app.route("/api/ai/repair-question", methods=["POST"])
