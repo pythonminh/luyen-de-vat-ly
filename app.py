@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V254_TOP_SUBJECT_BUTTON_FIX_TEST_2026_06_12"
+APP_VERSION = "V255_TOP_SUBJECT_FORCE_FIX_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -10217,6 +10217,85 @@ function v250RenderSubjectOnlyTabs(){
 }
 v245RenderCatalogScopeTabs = v250RenderSubjectOnlyTabs;
 
+
+
+/* ===== V255: ép nút Toán/Vật lí trên thanh xanh đổi đúng Môn =====
+   Lỗi cũ: V248 giữ localStorage LDVL_SUBJECT_PAGE_V248 nên nút trên thanh xanh bị kéo lại môn cũ.
+   Cách sửa: nút trên thanh xanh gọi thẳng v248SelectSubject(mon) và cập nhật cả fMon + rpMon. */
+function v255SubjectNorm(s){
+  try{return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}catch(e){return String(s||'').toLowerCase().trim()}
+}
+function v255KindOfSubject(s){
+  let n=v255SubjectNorm(s);
+  if(n.includes('toan')||n.includes('math'))return 'math';
+  if(n.includes('vat li')||n.includes('vat ly')||n.includes('vatli')||n.includes('vatly')||n==='ly'||n.includes('physics'))return 'physics';
+  return '';
+}
+function v255FindSubjectByKind(kind){
+  let arr=[];
+  try{let sel=document.getElementById('fMon'); if(sel){for(let o of sel.options){let v=String(o.value||'').trim(); if(v)arr.push(v);}}}catch(e){}
+  try{for(let x of (CATALOG||[])){let v=String((x&&x.Mon)||'').trim(); if(v&&!arr.some(a=>v255SubjectNorm(a)===v255SubjectNorm(v)))arr.push(v);}}catch(e){}
+  for(let v of arr){ if(v255KindOfSubject(v)===kind)return v; }
+  return kind==='math'?'Toán':(kind==='physics'?'Vật lí':'');
+}
+function v255SetSelectByText(id, text){
+  let el=document.getElementById(id); if(!el)return false;
+  let target=v255SubjectNorm(text); let found='';
+  for(let o of el.options){
+    if(v255SubjectNorm(o.value)===target || v255SubjectNorm(o.textContent)===target || v255KindOfSubject(o.value)===v255KindOfSubject(text)) {found=o.value;break;}
+  }
+  el.value=found || text || '';
+  try{el.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}
+  return !!found;
+}
+function v255SelectTopSubject(kind){
+  let mon=v255FindSubjectByKind(kind);
+  if(!mon){try{localStorage.setItem('LDVL_PENDING_SUBJECT_V255',kind)}catch(e){};return false;}
+  try{
+    localStorage.setItem('LDVL_TOP_SUBJECT_V255',kind);
+    localStorage.setItem('LDVL_TOP_SUBJECT_V254',kind);
+    localStorage.setItem('LDVL_TOP_SUBJECT_V253',kind);
+    localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon); // khóa lõi V248 không kéo lại Toán
+  }catch(e){}
+  function applyNow(){
+    try{window.CATALOG_SELECTED_KHOI=''}catch(e){}
+    ['fLop','fChuong','fBaiHoc','fBoDe','fDangBaiTap','fMucDo','fDang','fSearch'].forEach(id=>{let el=document.getElementById(id); if(el)el.value='';});
+    v255SetSelectByText('fMon',mon);
+    try{ if(typeof v248SelectSubject==='function') v248SelectSubject(mon); else { if(typeof refreshFilterOptions==='function')refreshFilterOptions(); v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog(); } }catch(e){try{v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog();}catch(_){}}
+    try{v255SetSelectByText('rpMon',mon); if(typeof onRpScopeChange==='function')onRpScopeChange('mon');}catch(e){}
+    v255SyncTopSubject();
+  }
+  let quiz=document.getElementById('quiz');
+  let inQuiz=quiz&&!quiz.classList.contains('hide');
+  if(inQuiz&&typeof backHome==='function'){backHome();setTimeout(applyNow,160);} else applyNow();
+  return false;
+}
+// Ghi đè hàm cũ để inline onclick hiện tại vẫn chạy đúng.
+function v253SelectSubject(kind){return v255SelectTopSubject(kind)}
+function v254ApplySubject(kind){return v255SelectTopSubject(kind)}
+function v255SyncTopSubject(){
+  try{
+    let cur=(document.getElementById('fMon')&&document.getElementById('fMon').value)||'';
+    let kind=v255KindOfSubject(cur);
+    if(!kind){try{kind=localStorage.getItem('LDVL_TOP_SUBJECT_V255')||localStorage.getItem('LDVL_TOP_SUBJECT_V254')||localStorage.getItem('LDVL_TOP_SUBJECT_V253')||''}catch(e){}}
+    let bm=document.getElementById('topSubjectMathV253'),bp=document.getElementById('topSubjectPhysicsV253');
+    if(bm)bm.classList.toggle('active',kind==='math');
+    if(bp)bp.classList.toggle('active',kind==='physics');
+  }catch(e){}
+}
+document.addEventListener('click',function(ev){
+  let btn=ev.target&&ev.target.closest?ev.target.closest('#topSubjectMathV253,#topSubjectPhysicsV253'):null;
+  if(!btn)return;
+  ev.preventDefault(); ev.stopPropagation();
+  v255SelectTopSubject(btn.id==='topSubjectMathV253'?'math':'physics');
+},true);
+(function(){
+  let oldRender=window.renderCatalog;
+  if(typeof oldRender==='function')window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v255SyncTopSubject,0);return r};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(v255SyncTopSubject,300);setTimeout(v255SyncTopSubject,1300)});
+  setInterval(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
+})();
+
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
 
 /* ===== V233 PWA: cài app lên điện thoại ===== */
@@ -11133,6 +11212,8 @@ def version():
         "catalog_subject_tabs_moved_to_header_v253": True,
         "top_subject_button_fix_v254": True,
         "header_subject_click_works_v254": True,
+        "top_subject_force_fix_v255": True,
+        "top_subject_updates_fmon_rpmon_v255": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
@@ -13163,7 +13244,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v233';
+const CACHE_NAME = 'luyen-de-ai-v255';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
