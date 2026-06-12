@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V262_MOBILE_UI_CLEAN_TEST_2026_06_12"
+APP_VERSION = "V263_STABLE_ROLLBACK_NO_FREEZE_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -8171,71 +8171,6 @@ html[data-theme='dark'] .aiChatInput{background:#0f172a;color:#e5e7eb;border-col
 
 /* ===== V253: Tab Toán / Vật lí đưa lên thanh trên, phù hợp điện thoại ===== */
 .topRowV253{gap:6px 10px}.topSubjectTabsV253{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.topSubjectBtnV253{border:1px solid #ffffff66!important;background:#ffffff1f!important;color:#fff!important;border-radius:999px!important;padding:7px 14px!important;font-size:13px!important;font-weight:950!important;line-height:1!important;white-space:nowrap;min-height:32px;box-shadow:none!important}.topSubjectBtnV253.active{background:#fff!important;color:#1d4ed8!important;border-color:#fff!important}.topSubjectBtnV253.math.active{color:#6d28d9!important}.topSubjectBtnV253.physics.active{color:#0f766e!important}.topSubjectToggleV253{border:1px solid #ffffff55!important;background:#ffffff22!important;color:#fff!important;border-radius:999px!important;padding:6px 10px!important;font-size:12px!important;font-weight:900!important;line-height:1!important;white-space:nowrap;width:auto!important;min-height:30px}.topSubjectTabsV253.subjectTabsHiddenV253{display:none!important}.catalogScopeBox.subjectV248{display:none!important}@media(max-width:760px){.top{padding:7px 8px!important}.topRowV253{display:grid!important;grid-template-columns:1fr auto;gap:6px!important;align-items:center}.topRowV253 h1{font-size:13px!important;min-width:0!important;line-height:1.25!important}.topSubjectTabsV253{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr;gap:6px;width:100%;order:2}.topSubjectTabsV253.subjectTabsHiddenV253{display:none!important}.topSubjectBtnV253{width:100%!important;min-height:34px!important;font-size:13px!important;padding:8px 8px!important}.topSubjectToggleV253{order:1;grid-column:2;font-size:11px!important;padding:6px 8px!important}.topRight{grid-column:1/-1;order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:2px}.topRight>*{flex-shrink:0}.adminBar{flex-wrap:nowrap!important;overflow-x:visible!important}.examStrip{top:96px!important;font-size:12px!important;padding:6px 8px!important}.wrap{padding-top:8px!important}}@media(min-width:761px){.topSubjectToggleV253{display:inline-flex;align-items:center}.topRight{margin-left:auto}}html[data-theme="dark"] .topSubjectBtnV253.active{background:#dbeafe!important;color:#1e3a8a!important}
-
-
-/* ===== V262: Giao diện mobile gọn, ít icon, app-like ===== */
-#mobileToolsV262{display:none}
-@media(max-width:760px){
-  :root{--radius-mobile:16px;--tap:40px}
-  body{background:#eef5ff!important;font-size:15px!important}
-  .top{padding:6px 8px!important;background:linear-gradient(135deg,#1d4ed8,#2563eb 55%,#0f766e)!important;box-shadow:0 3px 12px #0f172a24!important}
-  .topRowV253{display:grid!important;grid-template-columns:1fr auto;gap:6px!important;align-items:center!important}
-  .topRowV253 h1{display:none!important}
-  .topSubjectTabsV253{grid-column:1/2!important;order:1!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;width:100%!important;min-width:0!important}
-  .topSubjectTabsV253.subjectTabsHiddenV253{display:none!important}
-  .topSubjectBtnV253{min-height:38px!important;border-radius:14px!important;font-size:14px!important;padding:8px 6px!important;background:#ffffff22!important;border:1px solid #ffffff55!important;box-shadow:0 1px 4px #0001!important}
-  .topSubjectBtnV253.active{background:#fff!important;color:#1d4ed8!important;box-shadow:0 2px 9px #0002!important}
-  .topSubjectToggleV253{grid-column:2/3!important;order:1!important;min-height:38px!important;border-radius:14px!important;padding:8px 9px!important;font-size:11px!important;max-width:82px!important;overflow:hidden;text-overflow:ellipsis}
-  .topRight{grid-column:1/-1!important;order:2!important;display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:2px 0 1px!important;align-items:center!important}
-  .topRight::-webkit-scrollbar,.adminBar::-webkit-scrollbar,.quizToolsRow::-webkit-scrollbar{display:none}
-  #mobileToolsV262{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-height:30px!important;border-radius:999px!important;border:1px solid #ffffff66!important;background:#ffffff22!important;color:#fff!important;font-size:12px!important;font-weight:900!important;padding:5px 10px!important;white-space:nowrap!important}
-  body:not(.mobileToolsOpenV262) #adminBar:not(.hide),
-  body:not(.mobileToolsOpenV262) #quizTopBar:not(.hide),
-  body:not(.mobileToolsOpenV262) #info,
-  body:not(.mobileToolsOpenV262) #aiProfileBadge{display:none!important}
-  body.mobileToolsOpenV262 #adminBar:not(.hide),body.mobileToolsOpenV262 #quizTopBar:not(.hide){display:inline-flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:5px!important}
-  .adminTopBtn,.themeBtn,#pwaInstallBtn,.topRight a{min-height:30px!important;border-radius:999px!important;font-size:11px!important;padding:5px 9px!important;line-height:1!important;white-space:nowrap!important;box-shadow:none!important}
-  #pwaInstallBtn{display:none!important}
-  .topRight a{display:inline-flex!important;align-items:center;text-decoration:none;border:1px solid #ffffff55;background:#ffffff22;color:#fff!important;flex:0 0 auto}
-  #topUserChip{font-size:10px!important;border-radius:999px!important;padding:5px 8px!important;background:#ffffff22!important;border:1px solid #ffffff44!important;color:#fff!important;max-width:130px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap!important}
-  #btnTheme{width:32px!important;min-width:32px!important;padding:5px 0!important}
-  .examStrip{top:82px!important;padding:6px 10px!important;font-size:12px!important;border-radius:0!important;background:#fff!important;color:#0f766e!important;box-shadow:0 2px 8px #0000000a!important}
-  .wrap{padding:8px!important}
-  .panel,.card{border-radius:var(--radius-mobile)!important;border-color:#dbeafe!important;box-shadow:0 2px 10px #1e3a8a0d!important;background:#fff!important}
-  .homeToolsRowV251{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
-  .homeToolsRowV251>.panel{margin-bottom:0!important}
-  .row{gap:7px!important}
-  .field{min-width:calc(50% - 8px)!important;flex:1 1 calc(50% - 8px)!important}
-  .field label{font-size:11px!important;color:#334155!important}
-  select,input,textarea{min-height:var(--tap)!important;border-radius:13px!important;font-size:14px!important;background:#f8fafc!important;border-color:#cbd5e1!important}
-  button,.btn,.btn2,.btnGreen,.btnRed{border-radius:13px!important;min-height:36px!important;font-size:13px!important;padding:7px 10px!important;line-height:1.15!important;box-shadow:none!important}
-  .btnStartStrong{border-radius:15px!important;min-height:42px!important;box-shadow:0 6px 16px #2563eb30!important}
-  .quizLayout{grid-template-columns:1fr!important;gap:8px!important}
-  .quizQuestionPanel{border-radius:18px!important;padding:10px!important;box-shadow:0 2px 12px #1e40af12!important}
-  .quizQuestionPanel:before{width:5px!important;border-radius:5px 0 0 5px!important}
-  .quizQuestionPanel:after{right:8px!important;top:7px!important;font-size:10px!important;padding:3px 7px!important}
-  .quizToolbarStrip{position:sticky!important;top:124px!important;z-index:7!important;background:#eef5ffdd!important;backdrop-filter:blur(6px);padding:5px 0!important;margin-bottom:6px!important}
-  .quizToolsRow{background:#ffffffcc!important;border:1px solid #dbeafe!important;border-radius:999px!important;padding:5px!important;overflow-x:auto!important;gap:5px!important}
-  .quizToolsRow button,#quizActions button,.quizNavRow button{border-radius:999px!important;min-height:28px!important;font-size:11px!important;padding:5px 8px!important;flex:0 0 auto!important}
-  .qidLearnBtns,.learningQuickBar{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:6px!important;margin:8px 0!important;padding:6px!important;background:#f8fafc!important;border:1px solid #dbeafe!important;border-radius:14px!important}
-  .qidLearnBtns button,.learningQuickBar button{min-height:36px!important;border-radius:12px!important;font-size:12px!important;padding:7px 6px!important;white-space:normal!important}
-  .qbox{font-size:16px!important;line-height:1.55!important;border-radius:15px!important;padding:12px!important}
-  .opt{border-radius:15px!important;margin:7px 0!important;padding:10px 11px!important;font-size:15px!important;background:#fff!important;border:1px solid #e2e8f0!important}
-  .opt .badge{width:28px!important;height:28px!important;min-width:28px!important;border-radius:999px!important;display:inline-flex!important;align-items:center;justify-content:center;font-size:14px!important}
-  #navNums{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:7px!important}
-  #navNums .num{border-radius:13px!important;min-height:38px!important;font-size:15px!important;font-weight:950!important;padding:8px 0!important}
-  #navNums h3,#navNums .navGroupTitle,.navTitle,.fsNavTitle{font-size:12px!important;margin:8px 0 4px!important;color:#334155!important}
-  .modal{padding:8px!important;align-items:flex-end!important}
-  .modalBox{border-radius:18px 18px 0 0!important;max-height:88vh!important;padding:12px!important}
-  .editGrid{grid-template-columns:1fr!important;gap:8px!important}
-}
-@media(max-width:420px){
-  .field{min-width:100%!important;flex:1 1 100%!important}
-  #navNums{grid-template-columns:repeat(4,1fr)!important}
-  .qidLearnBtns,.learningQuickBar{grid-template-columns:1fr 1fr!important}
-  .qidLearnBtns button:nth-child(3),.learningQuickBar button:nth-child(3){grid-column:1/-1!important}
-}
-
 </style></head>
 <body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh</span><span id="examTimer" class="timer hide"></span></div>
@@ -8645,101 +8580,7 @@ function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let 
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
 async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
-async function init(){
-  updateExamStrip();
-
-  try {
-    META = await api('/api/meta');
-  } catch(e) {
-    const info = document.getElementById('info');
-    const catalog = document.getElementById('catalog');
-    const countCat = document.getElementById('countCat');
-
-    if (info) info.textContent = 'Không gọi được /api/meta';
-    if (countCat) countCat.textContent = '';
-    if (catalog) {
-      catalog.innerHTML = `
-        <div class="card loadCard">
-          <h3>❌ Không kết nối được máy chủ</h3>
-          <p><b>Lỗi:</b> ${esc(e.message || e)}</p>
-          <p>Thầy mở Render → Logs để xem lỗi thật.</p>
-          <button class="btn" onclick="init()">Thử lại</button>
-        </div>
-      `;
-    }
-    return;
-  }
-
-  USER = META.user || {};
-  renderUserAiProfile(USER);
-  initAdminReviewMode();
-  updateAdminChrome();
-  await loadAiKeyPanel();
-
-  if (META.loading) {
-    const info = document.getElementById('info');
-    const catalog = document.getElementById('catalog');
-    const countCat = document.getElementById('countCat');
-
-    const err = META.load_error || META.error || '';
-
-    if (info) {
-      info.textContent = err
-        ? 'Lỗi nạp Google Sheet'
-        : 'Đang nạp Google Sheet...';
-    }
-
-    if (countCat) countCat.textContent = '';
-
-    if (catalog) {
-      catalog.innerHTML = `
-        <div class="card loadCard">
-          <h3>${err ? '❌ Không nạp được Google Sheet' : '⏳ Hệ thống đang khởi động'}</h3>
-
-          ${
-            err
-              ? `
-                <p class="loadErr"><b>Lỗi:</b> ${esc(err)}</p>
-                <p>Kiểm tra 3 chỗ sau:</p>
-                <ul>
-                  <li>Google Sheet có tab <b>Cau_Hoi</b> chưa?</li>
-                  <li>Service account đã được Share quyền <b>Editor</b> chưa?</li>
-                  <li>Render đã nhập đúng <b>GOOGLE_SHEET_ID</b> và <b>GOOGLE_CREDENTIALS_JSON</b> chưa?</li>
-                </ul>
-                <button class="btn" onclick="init()">Thử nạp lại</button>
-              `
-              : `
-                <p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p>
-                <p>${esc(META.loading_message || 'Đang nạp dữ liệu từ Google Sheet...')}</p>
-                <div class="loadWarn">
-                  Lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet có thể chậm.
-                </div>
-                <p class="muted">Trang sẽ tự thử lại sau 3 giây.</p>
-              `
-          }
-        </div>
-      `;
-    }
-
-    // Có lỗi thì DỪNG, không lặp "Đang nạp..." mãi.
-    if (!err) setTimeout(init, 3000);
-    return;
-  }
-
-  CATALOG = META.catalog || [];
-
-  const info = document.getElementById('info');
-  if (info) {
-    info.textContent = `${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
-  }
-
-  refreshFilterOptions();
-  renderCatalog();
-  initRpPracticePanel();
-  showAdminDuplicateSheetNotice();
-  handleShareDeepLink();
-  handleQidDeepLink();
-}
+async function init(){updateExamStrip();META=await api('/api/meta');USER=META.user||{};renderUserAiProfile(USER);initAdminReviewMode();updateAdminChrome();await loadAiKeyPanel();if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;refreshFilterOptions();renderCatalog();initRpPracticePanel();showAdminDuplicateSheetNotice();handleShareDeepLink();handleQidDeepLink()}
 function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClient(dang);if(fc.dang[nd]!=null)return fc.dang[nd];let n=0;for(let k in fc.dang)if(normDangClient(k)===nd)n+=fc.dang[k]||0;return n}
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
 function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang)return comboCountLookup(fc,lv,dang);if(dang)return dangCountLookup(fc,dang);if(lv)return fc.level[lv]||0;return null}
@@ -9215,52 +9056,6 @@ document.addEventListener('click',function(ev){
   if(typeof oldRender==='function')window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v255SyncTopSubject,0);return r};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(v255SyncTopSubject,300);setTimeout(v255SyncTopSubject,1300)});
   setInterval(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
-})();
-
-
-
-/* ===== V262: mobile UI helpers ===== */
-(function(){
-  function stripLeadingEmoji(txt){
-    try{return String(txt||'').replace(/^[\s\u200d\ufe0f]*(?:[\u2600-\u27BF]|[\uD83C-\uDBFF][\uDC00-\uDFFF])\ufe0f?\s*/g,'').trim()}catch(e){return txt}
-  }
-  function compactMobileLabels(){
-    if(!window.matchMedia || !window.matchMedia('(max-width:760px)').matches) return;
-    document.querySelectorAll('.adminTopBtn,.quizToolsRow button,#quizActions button,.qidLearnBtns button,.learningQuickBar button,#fsOnlyTools button').forEach(function(b){
-      if(!b || b.dataset.v262Cleaned) return;
-      var t=(b.textContent||'').trim();
-      var nt=stripLeadingEmoji(t)
-        .replace('Gợi ý mức độ','Mức độ')
-        .replace('Đồng bộ Sheet','Đồng bộ')
-        .replace('Xóa trùng Sheet','Xóa trùng')
-        .replace('Test GPT+Gemini','Test AI')
-        .replace('Phương pháp giải','Phương pháp')
-        .replace('Trợ lý AI','Trợ lý')
-        .replace('Lý thuyết','Lý thuyết');
-      if(nt && nt!==t) b.textContent=nt;
-      b.dataset.v262Cleaned='1';
-    });
-  }
-  function installMobileToolsToggle(){
-    var topRight=document.querySelector('.topRight');
-    if(!topRight || document.getElementById('mobileToolsV262')) return;
-    var btn=document.createElement('button');
-    btn.type='button'; btn.id='mobileToolsV262'; btn.textContent='Công cụ';
-    btn.onclick=function(){
-      document.body.classList.toggle('mobileToolsOpenV262');
-      btn.textContent=document.body.classList.contains('mobileToolsOpenV262')?'Ẩn công cụ':'Công cụ';
-      try{localStorage.setItem('LDVL_MOBILE_TOOLS_OPEN_V262',document.body.classList.contains('mobileToolsOpenV262')?'1':'0')}catch(e){}
-    };
-    topRight.insertBefore(btn, topRight.firstChild);
-    try{ if(localStorage.getItem('LDVL_MOBILE_TOOLS_OPEN_V262')==='1'){document.body.classList.add('mobileToolsOpenV262');btn.textContent='Ẩn công cụ'} }catch(e){}
-  }
-  function run(){installMobileToolsToggle(); compactMobileLabels();}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-  window.addEventListener('resize',function(){setTimeout(run,80)});
-  var oldUpdate=window.updateAdminChrome;
-  if(typeof oldUpdate==='function'){
-    window.updateAdminChrome=function(){var r=oldUpdate.apply(this,arguments); setTimeout(run,30); return r;};
-  }
 })();
 
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
@@ -10256,10 +10051,8 @@ def version():
         "nav_observer_no_interval_v260": True,
         "welcome_banner_v261": True,
         "exam_countdown_removed_v261": True,
-        "mobile_ui_clean_v262": True,
-        "mobile_tools_toggle_v262": True,
-        "mobile_icons_simplified_v262": True,
-        "mobile_app_like_cards_v262": True,
+        "stable_rollback_no_freeze_v263": True,
+        "mobile_ui_clean_removed_v263": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
@@ -12294,7 +12087,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v262';
+const CACHE_NAME = 'luyen-de-ai-v263';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
