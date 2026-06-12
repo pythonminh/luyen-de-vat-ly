@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V255_TOP_SUBJECT_FORCE_FIX_TEST_2026_06_12"
+APP_VERSION = "V256_ADMIN_CATEGORY_DROPDOWN_GGS_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -1234,7 +1234,7 @@ QUESTION_FIELDS = [
     "LoiGiai", "Diem", "HinhAnh", "QuyenTruyCap",
 ]
 
-EDITABLE_FIELDS = ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "MucDo", "Dang", "DangBaiTap", "LoiGiai", "HinhAnh", "QuyenTruyCap"]
+EDITABLE_FIELDS = ["Mon", "Lop", "Chuong", "BaiHoc", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "MucDo", "Dang", "DangBaiTap", "LoiGiai", "HinhAnh", "QuyenTruyCap"]
 
 CREATE_QUESTION_FIELDS = [
     "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap",
@@ -9437,7 +9437,65 @@ async function aiRepairCurrentQuestion(){
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field)}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='DangBaiTap'){let dl=buildDangBaiTapDatalistHtml('edit_dangbaitap_suggestions');return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label><div class="muted" style="font-size:11px;margin:3px 0 5px 0">ADMIN nhập/chọn gợi ý từ các dạng đã có trong cột H. Chỉ ADMIN mới gọi GPT gán dạng; học sinh chỉ xem.</div>${dl}<input id="edit_DangBaiTap" list="edit_dangbaitap_suggestions" value="${escAttr(raw)}" placeholder="Nhập/chọn Dạng bài tập cột H…" style="width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><button type="button" class="btnSmall" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán dạng</button><button type="button" class="btnSmall" onclick="adminSaveDangBaiTapManual()">💾 Lưu cột H</button></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='Mon'||f=='Lop'||f=='Chuong'||f=='BaiHoc'||f=='DapAn'||f=='SaiSo'||f=='HinhAnh')?'56px':'78px');let aiTools=''; if(['CauHoi','A','B','C','D','LoiGiai'].includes(f)){   aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0">     <button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button>     <span style="font-size:11px;color:#64748b">Chỉ sửa ô này, chưa lưu Sheet</span>   </div>`; } return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+
+function adminSourceRowsForSuggestions(){
+  let out=[];
+  try{(CATALOG||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
+  try{(QUESTIONS||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
+  try{if(META&&META.catalog)(META.catalog||[]).forEach(x=>{if(x)out.push(x)})}catch(e){}
+  return out;
+}
+function adminNormKey(v){return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ')}
+function adminUniqueSorted(vals){
+  let seen={},out=[];
+  (vals||[]).forEach(v=>{v=String(v||'').trim();if(!v)return;let k=adminNormKey(v);if(!seen[k]){seen[k]=1;out.push(v)}});
+  return out.sort((a,b)=>adminNormKey(a).localeCompare(adminNormKey(b),'vi'));
+}
+function adminEditVal(f){let el=document.getElementById('edit_'+f);return String((el&&el.value)||'').trim()}
+function adminOptionMatches(row,scopeField,scopeVal){
+  if(!scopeVal)return true;
+  let v=String((row&&row[scopeField])||'').trim();
+  return adminNormKey(v)===adminNormKey(scopeVal);
+}
+function adminTaxonomyOptions(field){
+  let mon=adminEditVal('Mon'), lop=adminEditVal('Lop'), chuong=adminEditVal('Chuong');
+  let rows=adminSourceRowsForSuggestions();
+  let vals=[];
+  rows.forEach(r=>{
+    if(field==='Lop'&&!adminOptionMatches(r,'Mon',mon))return;
+    if(field==='Chuong'&&(!adminOptionMatches(r,'Mon',mon)||!adminOptionMatches(r,'Lop',lop)))return;
+    if(field==='BaiHoc'&&(!adminOptionMatches(r,'Mon',mon)||!adminOptionMatches(r,'Lop',lop)||!adminOptionMatches(r,'Chuong',chuong)))return;
+    let v=String((r&&r[field])||'').trim();
+    if(v)vals.push(v);
+  });
+  return adminUniqueSorted(vals);
+}
+function fillAdminDatalist(id,vals){
+  let dl=document.getElementById(id);if(!dl)return;
+  dl.innerHTML=(vals||[]).map(v=>`<option value="${escAttr(v)}"></option>`).join('');
+}
+function adminSyncTaxonomyDatalists(){
+  fillAdminDatalist('edit_mon_suggestions',adminTaxonomyOptions('Mon'));
+  fillAdminDatalist('edit_lop_suggestions',adminTaxonomyOptions('Lop'));
+  fillAdminDatalist('edit_chuong_suggestions',adminTaxonomyOptions('Chuong'));
+  fillAdminDatalist('edit_baihoc_suggestions',adminTaxonomyOptions('BaiHoc'));
+}
+async function adminRefreshGgsSuggestions(){
+  try{
+    let ok=false;
+    if(typeof refreshCatalogFromMeta==='function') ok=await refreshCatalogFromMeta();
+    adminSyncTaxonomyDatalists();
+    alert(ok?'✅ Đã cập nhật gợi ý từ Google Sheet.':'Đã làm mới gợi ý hiện có. Nếu mới sửa trực tiếp trên Sheet, bấm Đồng bộ Sheet rồi mở lại form.');
+  }catch(e){alert('Không cập nhật được gợi ý: '+(e.message||e))}
+}
+function renderAdminTaxonomyField(f,raw){
+  let info={Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học'}[f]||f;
+  let dl={Mon:'edit_mon_suggestions',Lop:'edit_lop_suggestions',Chuong:'edit_chuong_suggestions',BaiHoc:'edit_baihoc_suggestions'}[f];
+  let ph={Mon:'Chọn/nhập môn từ Google Sheet…',Lop:'Chọn/nhập lớp từ Google Sheet…',Chuong:'Chọn/nhập chương từ Google Sheet…',BaiHoc:'Chọn/nhập bài học từ Google Sheet…'}[f]||'';
+  return `<div class="adminGgsField"><label><b>${esc(info)}</b></label><div class="muted" style="font-size:11px;margin:3px 0 5px 0">Chọn từ dữ liệu đã có trong Google Sheet hoặc nhập mới rồi bấm <b>Lưu vào Google Sheet</b>.</div><input id="edit_${f}" list="${dl}" value="${escAttr(raw)}" placeholder="${escAttr(ph)}" oninput="adminSyncTaxonomyDatalists()" onchange="adminSyncTaxonomyDatalists()" style="width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><datalist id="${dl}"></datalist>${f==='Mon'?'<div style="margin-top:5px"><button type="button" class="btnSmall" onclick="adminRefreshGgsSuggestions()">🔄 Cập nhật gợi ý GGS</button></div>':''}</div>`;
+}
+
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(['Mon','Lop','Chuong','BaiHoc'].includes(f))return renderAdminTaxonomyField(f,raw);if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='DangBaiTap'){let dl=buildDangBaiTapDatalistHtml('edit_dangbaitap_suggestions');return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label><div class="muted" style="font-size:11px;margin:3px 0 5px 0">ADMIN nhập/chọn gợi ý từ các dạng đã có trong cột H. Chỉ ADMIN mới gọi GPT gán dạng; học sinh chỉ xem.</div>${dl}<input id="edit_DangBaiTap" list="edit_dangbaitap_suggestions" value="${escAttr(raw)}" placeholder="Nhập/chọn Dạng bài tập cột H…" style="width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><button type="button" class="btnSmall" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán dạng</button><button type="button" class="btnSmall" onclick="adminSaveDangBaiTapManual()">💾 Lưu cột H</button></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='Mon'||f=='Lop'||f=='Chuong'||f=='BaiHoc'||f=='DapAn'||f=='SaiSo'||f=='HinhAnh')?'56px':'78px');let aiTools=''; if(['CauHoi','A','B','C','D','LoiGiai'].includes(f)){   aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0">     <button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button>     <span style="font-size:11px;color:#64748b">Chỉ sửa ô này, chưa lưu Sheet</span>   </div>`; } return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function editLearningScopeFromForm(){
     let g=f=>{let el=document.getElementById('edit_'+f);return String((el&&el.value)||'').trim()};
     return {Mon:g('Mon'),Lop:g('Lop'),Chuong:g('Chuong'),BaiHoc:g('BaiHoc'),DangBaiTap:g('DangBaiTap')};
@@ -9591,7 +9649,7 @@ async function editGenerateLearning(kind){
     }catch(e){editLearningStatus('Không tạo/lưu được: '+(e.message||e),true);alert('Không tạo/lưu được '+learningTitle(kind)+': '+(e.message||e))}
 }
 function renderQuestionForm(q){
-    document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');
+    document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');setTimeout(adminSyncTaxonomyDatalists,0);
     ['QuyenTruyCap','MucDo','Dang'].forEach(syncAdminChipGroup);
     let lb=document.getElementById('editLearningBox');
     if(lb){lb.innerHTML=buildEditLearningBox(q);setTimeout(()=>loadEditLearningData(),80)}
@@ -9875,7 +9933,7 @@ let QUESTION_SAVE_BUSY=false;
 function alertDuplicateSheetReport(dr){if(!dr||!USER.is_admin)return;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let lines=(dr.samples||[]).slice(0,6);alert('⚠ Phát hiện câu TRÙNG trên Google Sheet (Cau_Hoi):\n\n≈ '+extra+' dòng thừa (thường do bấm Thêm câu 2 lần hoặc copy/dán).\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Bấm nút 🧹 Xóa trùng Sheet trên thanh ADMIN để tự xóa (giữ 1 bản / câu).')}
 function showAdminDuplicateSheetNotice(){if(!USER.is_admin||!META||!META.duplicate_report)return;let dr=META.duplicate_report;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let info=document.getElementById('info');if(info&&!String(info.textContent||'').includes('dòng trùng')){info.textContent+=` | ⚠ ${extra} dòng trùng Sheet`;if(dr.samples&&dr.samples.length)info.title=dr.samples.join('\n')}}
 async function saveQuestionModal(){if(QUESTION_SAVE_BUSY)return;if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
-async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let updates={};for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','DangBaiTap','QuyenTruyCap','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\nVẫn lưu Sheet?'))return;QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;Object.assign(q,updates);applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.'))}catch(e){alert('Không lưu được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
+async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let updates={};for(let f of ['Mon','Lop','Chuong','BaiHoc','CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','DangBaiTap','QuyenTruyCap','LoiGiai','HinhAnh'])updates[f]=document.getElementById('edit_'+f).value;updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\nVẫn lưu Sheet?'))return;QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;Object.assign(q,updates);applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.'))}catch(e){alert('Không lưu được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
 async function saveAddQuestion(){if(QUESTION_SAVE_BUSY)return;let data=readQuestionFormData();if(!String(data.CauHoi||'').trim()){alert('Phải nhập nội dung câu hỏi.');return}QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang thêm…'}try{let j=await api('/api/question/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});let nq=applyResolvedDang(j.question||{});if(!nq._row)nq._row=j.row;let insertAt=Math.min(CUR+1,QUESTIONS.length);QUESTIONS.splice(insertAt,0,nq);insertQuizMaps(insertAt);CUR=regroupQuestionsByDang(nq._row);closeEdit();renderNav();renderQuestion();refreshCatalogFromMeta();alert('Đã thêm câu mới vào Google Sheet dòng '+j.row+(j.id?('\nID: '+j.id):''))}catch(e){alert('Không thêm được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
 async function deleteQuestion(){let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return;}let msg='Xóa vĩnh viễn câu này khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nApp tự cập nhật — không cần bấm Đồng bộ Sheet sau mỗi lần xóa.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: thầy chắc chắn muốn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});let deletedRow=parseInt(j.row,10)||0;let removedIdx=CUR;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);refreshCatalogFromMeta();if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nMục lục đã tự cập nhật — không cần Đồng bộ Sheet.');return}if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1;closeEdit();renderNav();renderQuestion();document.getElementById('resultBox').textContent='Đã xóa dòng '+deletedRow+' — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
 setInterval(updateExamStrip,1000);
@@ -11214,6 +11272,8 @@ def version():
         "header_subject_click_works_v254": True,
         "top_subject_force_fix_v255": True,
         "top_subject_updates_fmon_rpmon_v255": True,
+        "admin_category_dropdown_ggs_v256": True,
+        "admin_can_update_mon_lop_chuong_baihoc_v256": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
