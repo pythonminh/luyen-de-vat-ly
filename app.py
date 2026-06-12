@@ -8645,7 +8645,101 @@ function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let 
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
 async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
-async function init(){updateExamStrip();META=await api('/api/meta');USER=META.user||{};renderUserAiProfile(USER);initAdminReviewMode();updateAdminChrome();await loadAiKeyPanel();if(META.loading){document.getElementById('info').textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';document.getElementById('catalog').innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>. Trang sẽ tự tải lại sau vài giây.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây. Không cần đăng nhập lại.</p></div>`;document.getElementById('countCat').textContent='';setTimeout(init,3000);return;}CATALOG=META.catalog||[];document.getElementById('info').textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;refreshFilterOptions();renderCatalog();initRpPracticePanel();showAdminDuplicateSheetNotice();handleShareDeepLink();handleQidDeepLink()}
+async function init(){
+  updateExamStrip();
+
+  try {
+    META = await api('/api/meta');
+  } catch(e) {
+    const info = document.getElementById('info');
+    const catalog = document.getElementById('catalog');
+    const countCat = document.getElementById('countCat');
+
+    if (info) info.textContent = 'Không gọi được /api/meta';
+    if (countCat) countCat.textContent = '';
+    if (catalog) {
+      catalog.innerHTML = `
+        <div class="card loadCard">
+          <h3>❌ Không kết nối được máy chủ</h3>
+          <p><b>Lỗi:</b> ${esc(e.message || e)}</p>
+          <p>Thầy mở Render → Logs để xem lỗi thật.</p>
+          <button class="btn" onclick="init()">Thử lại</button>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  USER = META.user || {};
+  renderUserAiProfile(USER);
+  initAdminReviewMode();
+  updateAdminChrome();
+  await loadAiKeyPanel();
+
+  if (META.loading) {
+    const info = document.getElementById('info');
+    const catalog = document.getElementById('catalog');
+    const countCat = document.getElementById('countCat');
+
+    const err = META.load_error || META.error || '';
+
+    if (info) {
+      info.textContent = err
+        ? 'Lỗi nạp Google Sheet'
+        : 'Đang nạp Google Sheet...';
+    }
+
+    if (countCat) countCat.textContent = '';
+
+    if (catalog) {
+      catalog.innerHTML = `
+        <div class="card loadCard">
+          <h3>${err ? '❌ Không nạp được Google Sheet' : '⏳ Hệ thống đang khởi động'}</h3>
+
+          ${
+            err
+              ? `
+                <p class="loadErr"><b>Lỗi:</b> ${esc(err)}</p>
+                <p>Kiểm tra 3 chỗ sau:</p>
+                <ul>
+                  <li>Google Sheet có tab <b>Cau_Hoi</b> chưa?</li>
+                  <li>Service account đã được Share quyền <b>Editor</b> chưa?</li>
+                  <li>Render đã nhập đúng <b>GOOGLE_SHEET_ID</b> và <b>GOOGLE_CREDENTIALS_JSON</b> chưa?</li>
+                </ul>
+                <button class="btn" onclick="init()">Thử nạp lại</button>
+              `
+              : `
+                <p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p>
+                <p>${esc(META.loading_message || 'Đang nạp dữ liệu từ Google Sheet...')}</p>
+                <div class="loadWarn">
+                  Lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet có thể chậm.
+                </div>
+                <p class="muted">Trang sẽ tự thử lại sau 3 giây.</p>
+              `
+          }
+        </div>
+      `;
+    }
+
+    // Có lỗi thì DỪNG, không lặp "Đang nạp..." mãi.
+    if (!err) setTimeout(init, 3000);
+    return;
+  }
+
+  CATALOG = META.catalog || [];
+
+  const info = document.getElementById('info');
+  if (info) {
+    info.textContent = `${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
+  }
+
+  refreshFilterOptions();
+  renderCatalog();
+  initRpPracticePanel();
+  showAdminDuplicateSheetNotice();
+  handleShareDeepLink();
+  handleQidDeepLink();
+}
 function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClient(dang);if(fc.dang[nd]!=null)return fc.dang[nd];let n=0;for(let k in fc.dang)if(normDangClient(k)===nd)n+=fc.dang[k]||0;return n}
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
 function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang)return comboCountLookup(fc,lv,dang);if(dang)return dangCountLookup(fc,dang);if(lv)return fc.level[lv]||0;return null}
