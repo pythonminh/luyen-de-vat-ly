@@ -61,7 +61,8 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V265_HOME_LOAD_FAST_FIX_TEST_2026_06_12"
+APP_VERSION = "V266_LOAD_STUCK_FIX_2026_06_12"
+SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -1786,6 +1787,7 @@ class SheetStore:
         # Dữ liệu câu hỏi sẽ nạp nền; trang web hiển thị trạng thái và tự thử lại.
         self.questions_loading = False
         self.questions_error = ""
+        self.questions_load_started_at = 0.0
         self.load_lock = threading.Lock()
         self.add_question_lock = threading.Lock()
         self.duplicate_report: Dict[str, Any] = {}
@@ -1832,7 +1834,15 @@ class SheetStore:
             if self.questions_loaded and self.questions and not force:
                 return
             self.questions_error = ""
-            self.load()
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(self.load)
+                try:
+                    fut.result(timeout=SHEET_LOAD_TIMEOUT_SEC)
+                except FuturesTimeout:
+                    raise RuntimeError(
+                        f"Nạp Google Sheet quá {SHEET_LOAD_TIMEOUT_SEC}s. "
+                        "Kiểm tra GOOGLE_SHEET_ID và GOOGLE_CREDENTIALS_JSON trên Render."
+                    ) from None
 
     def start_questions_background(self, force: bool = False) -> None:
         """Khởi động nạp dữ liệu nền để tránh request /api/meta bị timeout trên Render Free."""
@@ -1845,6 +1855,7 @@ class SheetStore:
                 return
             self.questions_loading = True
             self.questions_error = ""
+            self.questions_load_started_at = time.time()
 
         def worker():
             try:
@@ -1853,17 +1864,29 @@ class SheetStore:
                 self.questions_error = str(e)
             finally:
                 self.questions_loading = False
+                self.questions_load_started_at = 0.0
 
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
         """Trả về nhanh cho trang chủ. Nếu chưa nạp xong, không bắt trình duyệt chờ Google Sheet."""
         if not self.questions_loaded:
+            # Phòng worker treo: sau timeout + 15s thì cho phép khởi động lại nạp nền.
+            if self.questions_loading and self.questions_load_started_at:
+                if time.time() - self.questions_load_started_at > SHEET_LOAD_TIMEOUT_SEC + 15:
+                    self.questions_loading = False
+                    self.questions_load_started_at = 0.0
+                    if not self.questions_error:
+                        self.questions_error = (
+                            f"Nạp Sheet quá {SHEET_LOAD_TIMEOUT_SEC}s — đang thử lại. "
+                            "Nếu lặp lại: kiểm tra biến môi trường Google trên Render."
+                        )
             self.start_questions_background(force=False)
             return {
                 "version": APP_VERSION,
                 "loaded_at": self.loaded_at,
                 "loading": True,
+                "questions_loading": self.questions_loading,
                 "loading_message": "Hệ thống đang khởi động và nạp dữ liệu từ Google Sheet. Nếu dùng Render Free, lần đầu truy cập sau khi app ngủ có thể chờ khoảng 10–40 giây. Trang sẽ tự thử lại, thầy/các em không cần đăng nhập lại.",
                 "load_error": self.questions_error,
                 "count_questions": len(self.questions),
@@ -8584,7 +8607,10 @@ function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let 
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
 async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+let INIT_POLL_COUNT=0;
+const INIT_POLL_MAX=45;
 async function init(){
+  INIT_POLL_COUNT++;
   updateExamStrip();
   let info=document.getElementById('info');
   let cat=document.getElementById('catalog');
@@ -8606,12 +8632,20 @@ async function init(){
   initAdminReviewMode();
   updateAdminChrome();
   if(META.loading){
-    if(info)info.textContent='Đang nạp Google Sheet... lần đầu có thể chờ 10–40 giây';
-    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Trang sẽ tự thử lại sau 3 giây.</p></div>`;
+    let waited=INIT_POLL_COUNT*3;
+    let errHint=META.load_error?(' · '+META.load_error):'';
+    if(info)info.textContent='Đang nạp Sheet… '+waited+'s'+errHint;
+    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
     if(cnt)cnt.textContent='';
+    if(INIT_POLL_COUNT>=INIT_POLL_MAX){
+      if(info)info.textContent='Không nạp được Sheet sau '+waited+'s';
+      if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(META.load_error||'Server không phản hồi kịp hoặc thiếu cấu hình Google trên Render.')+'</p><p class="muted">Kiểm tra Environment: <b>GOOGLE_SHEET_ID</b>, <b>GOOGLE_CREDENTIALS_JSON</b>. Render Free vừa ngủ có thể cần chờ 1–2 phút.</p><button class="btn" onclick="INIT_POLL_COUNT=0;init()">Thử lại</button></div>';
+      return;
+    }
     setTimeout(init,3000);
     return;
   }
+  INIT_POLL_COUNT=0;
   CATALOG=META.catalog||[];
   if(info)info.textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
   refreshFilterOptions();
@@ -9100,7 +9134,9 @@ document.addEventListener('click',function(ev){
   setTimeout(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
 })();
 
-enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{let info=document.getElementById('info');if(info)info.textContent='Lỗi tải giao diện';let cat=document.getElementById('catalog');if(cat)cat.innerHTML='<div class="card loadErr"><b>Lỗi:</b> '+esc(e.message||e)+'</div>'})
+(function(){try{let i=document.getElementById('info');if(i)i.textContent='Đang kết nối server…'}catch(e){}})();
+try{enhanceHomeColors();initTheme();initMobileQuizToolbar()}catch(e){console.error(e)}
+init().catch(e=>{let info=document.getElementById('info');if(info)info.textContent='Lỗi tải giao diện';let cat=document.getElementById('catalog');if(cat)cat.innerHTML='<div class="card loadErr"><b>Lỗi:</b> '+esc(e.message||e)+'</div>'})
 
 /* ===== V233 PWA: cài app lên điện thoại ===== */
 let PWA_DEFERRED_PROMPT=null;
@@ -12130,7 +12166,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v263';
+const CACHE_NAME = 'luyen-de-ai-v266';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
@@ -12157,6 +12193,23 @@ self.addEventListener('fetch', event => {
 @app.errorhandler(Exception)
 def handle_error(e):
     return jsonify({"error": str(e)}), 500
+
+def _schedule_store_warmup() -> None:
+    """Nạp Google Sheet ngay khi worker Gunicorn khởi động — giảm chờ lần đầu user vào app."""
+    if not os.environ.get("GOOGLE_SHEET_ID", "").strip():
+        return
+
+    def _run():
+        time.sleep(0.3)
+        try:
+            get_store().start_questions_background(force=False)
+        except Exception:
+            pass
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+_schedule_store_warmup()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
