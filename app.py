@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V263_STABLE_ROLLBACK_NO_FREEZE_TEST_2026_06_12"
+APP_VERSION = "V264_NO_TIMER_NO_OBSERVER_FIX_TEST_2026_06_12"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -8020,7 +8020,7 @@ function v253SyncTopSubject(){try{let cur=document.getElementById('fMon')?val('f
   let bm=document.getElementById('topSubjectMathV253'),bp=document.getElementById('topSubjectPhysicsV253');if(bm)bm.classList.toggle('active',kind==='math');if(bp)bp.classList.toggle('active',kind==='physics');}catch(e){}}
 function v253SetSubjectTabsVisible(show){let box=document.getElementById('topSubjectTabsV253'),btn=document.getElementById('topSubjectToggleV253');if(!box)return;box.classList.toggle('subjectTabsHiddenV253',!show);if(btn)btn.textContent=show?'Ẩn môn':'Hiện môn';try{localStorage.setItem('LDVL_TOP_SUBJECT_VISIBLE_V253',show?'1':'0')}catch(e){}}
 function v253ToggleSubjectTabs(){let box=document.getElementById('topSubjectTabsV253');let show=!(box&&box.classList.contains('subjectTabsHiddenV253'));v253SetSubjectTabsVisible(!show)}
-(function(){let oldRender=window.renderCatalog;if(typeof oldRender==='function'){window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v253SyncTopSubject,0);return r}}let oldRefresh=window.refreshFilterOptions;if(typeof oldRefresh==='function'){window.refreshFilterOptions=function(){let r=oldRefresh.apply(this,arguments);setTimeout(v253SyncTopSubject,0);return r}}document.addEventListener('DOMContentLoaded',function(){let visible='1';try{visible=localStorage.getItem('LDVL_TOP_SUBJECT_VISIBLE_V253')||'1'}catch(e){}v253SetSubjectTabsVisible(visible!=='0');setTimeout(v253SyncTopSubject,300);setTimeout(v253SyncTopSubject,1200);});setInterval(v253SyncTopSubject,2500);})();
+(function(){let oldRender=window.renderCatalog;if(typeof oldRender==='function'){window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v253SyncTopSubject,0);return r}}let oldRefresh=window.refreshFilterOptions;if(typeof oldRefresh==='function'){window.refreshFilterOptions=function(){let r=oldRefresh.apply(this,arguments);setTimeout(v253SyncTopSubject,0);return r}}document.addEventListener('DOMContentLoaded',function(){let visible='1';try{visible=localStorage.getItem('LDVL_TOP_SUBJECT_VISIBLE_V253')||'1'}catch(e){}v253SetSubjectTabsVisible(visible!=='0');setTimeout(v253SyncTopSubject,300);setTimeout(v253SyncTopSubject,1200);});setTimeout(v253SyncTopSubject,2500);})();
 
 </script></body></html>
 """
@@ -8252,7 +8252,7 @@ function v253ToggleSubjectTabs(){let box=document.getElementById('topSubjectTabs
 (function(){
   document.addEventListener('click',function(ev){let btn=ev.target&&ev.target.closest?ev.target.closest('#topSubjectMathV253,#topSubjectPhysicsV253'):null;if(!btn)return;ev.preventDefault();v253SelectSubject(btn.id==='topSubjectMathV253'?'math':'physics');},true);
   document.addEventListener('DOMContentLoaded',function(){let visible='1';try{visible=localStorage.getItem('LDVL_TOP_SUBJECT_VISIBLE_V253')||'1'}catch(e){};v253SetSubjectTabsVisible(visible!=='0');setTimeout(v254SyncTopSubject,500);setTimeout(v254SyncTopSubject,1600);});
-  let t=setInterval(function(){v254SyncTopSubject();let pending='';try{pending=localStorage.getItem('LDVL_PENDING_SUBJECT_V254')||''}catch(e){};if(pending&&document.getElementById('fMon')&&v254SubjectOptions().length){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V254')}catch(e){};v254ApplySubject(pending)}},1500);
+  setTimeout(function(){v254SyncTopSubject();let pending='';try{pending=localStorage.getItem('LDVL_PENDING_SUBJECT_V254')||''}catch(e){};if(pending&&document.getElementById('fMon')&&v254SubjectOptions().length){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V254')}catch(e){};v254ApplySubject(pending)}},1500);
 })();
 
 let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',START_IS_RETRY=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={};
@@ -9055,7 +9055,7 @@ document.addEventListener('click',function(ev){
   let oldRender=window.renderCatalog;
   if(typeof oldRender==='function')window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v255SyncTopSubject,0);return r};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(v255SyncTopSubject,300);setTimeout(v255SyncTopSubject,1300)});
-  setInterval(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
+  setTimeout(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
 })();
 
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
@@ -9086,62 +9086,63 @@ async function installPwaApp(){
 })();
 
 
-/* ===== V260: Bảng câu hỏi nhóm theo DẠNG, không treo =====
-   Mức độ chỉ còn màu của ô số câu. Không dùng setInterval liên tục. */
+/* ===== V264: Bảng câu hỏi nhóm theo DẠNG - không setInterval, không MutationObserver ===== */
 (function(){
-  function stripLevelFromSectionTextV260(txt){
+  function stripLevelFromSectionTextV264(txt){
     txt=String(txt||'').replace(/^[\s📂🌱💡🔥🚀▫️]+/g,'').trim();
     txt=txt.replace(/\s*[·\-–—|]\s*(mức|muc)\s*(NB|TH|VD|VDC)\b.*$/i,'').trim();
     txt=txt.replace(/\s*\((mức|muc)\s*(NB|TH|VD|VDC)\).*$/i,'').trim();
     return txt || 'Dạng câu';
   }
-  function keyV260(t){
+  function keyV264(t){
     return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
   }
-  function normalizeNavSectionsByDangOnlyV260(){
-    const box=document.getElementById('navNums');
-    if(!box)return;
-    const labels=Array.from(box.querySelectorAll('.navSectionLbl'));
-    if(!labels.length)return;
-    const seen={};
-    labels.forEach(lb=>{
-      const base=stripLevelFromSectionTextV260(lb.textContent||'');
-      const k=keyV260(base);
-      lb.classList.remove('navSection-nb','navSection-th','navSection-vd','navSection-vdc');
-      if(seen[k]){
-        lb.style.display='none';
-        lb.dataset.v260Hidden='1';
-      }else{
-        seen[k]=true;
-        lb.style.display='';
-        if(lb.textContent!==base) lb.textContent=base;
-        lb.dataset.v260DangOnly='1';
-      }
-    });
-  }
-  window.normalizeNavSectionsByDangOnlyV260=normalizeNavSectionsByDangOnlyV260;
-  let navObsV260=null;
-  function installNavObserverV260(){
-    const box=document.getElementById('navNums');
-    if(!box)return false;
-    if(navObsV260)return true;
-    let busy=false;
-    navObsV260=new MutationObserver(function(){
-      if(busy)return;
-      busy=true;
-      requestAnimationFrame(function(){
-        try{ normalizeNavSectionsByDangOnlyV260(); }
-        finally{ busy=false; }
+  function normalizeNavSectionsByDangOnlyV264(){
+    try{
+      const box=document.getElementById('navNums');
+      if(!box)return;
+      const labels=Array.from(box.querySelectorAll('.navSectionLbl'));
+      if(!labels.length)return;
+      const seen={};
+      labels.forEach(lb=>{
+        const base=stripLevelFromSectionTextV264(lb.textContent||'');
+        const k=keyV264(base);
+        lb.classList.remove('navSection-nb','navSection-th','navSection-vd','navSection-vdc');
+        if(seen[k]){
+          lb.style.display='none';
+          lb.dataset.v264Hidden='1';
+        }else{
+          seen[k]=true;
+          lb.style.display='';
+          if((lb.textContent||'')!==base) lb.textContent=base;
+          lb.dataset.v264DangOnly='1';
+        }
       });
-    });
-    navObsV260.observe(box,{childList:true});
-    normalizeNavSectionsByDangOnlyV260();
-    return true;
+    }catch(e){}
   }
+  window.normalizeNavSectionsByDangOnlyV260=normalizeNavSectionsByDangOnlyV264;
+  window.normalizeNavSectionsByDangOnlyV264=normalizeNavSectionsByDangOnlyV264;
+
+  function runV264(){ setTimeout(normalizeNavSectionsByDangOnlyV264,0); }
+
   document.addEventListener('DOMContentLoaded',function(){
-    installNavObserverV260();
-    setTimeout(installNavObserverV260,500);
-    setTimeout(normalizeNavSectionsByDangOnlyV260,1000);
+    runV264();
+    setTimeout(normalizeNavSectionsByDangOnlyV264,700);
+  });
+
+  ['renderQuestion','renderNav','renderNavNums','updateNav'].forEach(function(fn){
+    try{
+      const old=window[fn];
+      if(typeof old==='function' && !old.__v264Wrapped){
+        const wrap=function(){
+          const r=old.apply(this,arguments);
+          runV264();
+          return r;
+        };
+        wrap.__v264Wrapped=true;
+        window[fn]=wrap;
+      }
+    }catch(e){}
   });
 })();
 
