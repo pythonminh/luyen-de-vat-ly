@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V248_TWO_SUBJECT_PAGES_FIXLOAD_TEST_2026_06_11"
+APP_VERSION = "V250_TWO_SUBJECT_CLEAN_TABS_TEST_2026_06_11"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -10007,7 +10007,27 @@ function v248Subjects(){let arr=uniqField(CATALOG||[],'Mon').filter(Boolean);arr
 function v248DefaultSubject(){let s=v248Subjects();let saved='';try{saved=localStorage.getItem('LDVL_SUBJECT_PAGE_V248')||localStorage.getItem('LDVL_SUBJECT_PAGE_V247')||''}catch(e){};if(saved&&s.includes(saved))return saved;let math=s.find(x=>v248SubjectKind(x)==='math');if(math)return math;let phys=s.find(x=>v248SubjectKind(x)==='physics');if(phys)return phys;return s[0]||''}
 function v248EnsureSubject(){let subjects=v248Subjects();let cur=val('fMon')||'';if(!cur||!subjects.includes(cur)){let d=v248DefaultSubject();if(d)setVal('fMon',d)}try{if(val('fMon'))localStorage.setItem('LDVL_SUBJECT_PAGE_V248',val('fMon'))}catch(e){};return val('fMon')||''}
 function v248ClearSubjectFilters(){window.CATALOG_SELECTED_KHOI='';setVal('fLop','');setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','');setVal('fMucDo','');setVal('fDang','');setVal('fSearch','')}
-function v248SelectSubject(mon){setVal('fMon',mon||'');try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon||'')}catch(e){};v248ClearSubjectFilters();refreshFilterOptions();renderCatalog();try{syncRpFromMainFilters&&syncRpFromMainFilters()}catch(e){}}
+function v248SelectSubject(mon){
+  // V249: đổi Trang Toán/Vật lí thật sự, không bị refreshFilterOptions kéo về Trang Toán.
+  mon=String(mon||'').trim();
+  try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon)}catch(e){}
+  // Xóa bộ lọc con trước, rồi mới đặt lại fMon để tránh reset nhầm.
+  window.CATALOG_SELECTED_KHOI='';
+  setVal('fLop','');
+  setVal('fChuong','');
+  setVal('fBaiHoc','');
+  setVal('fDangBaiTap','');
+  setVal('fBoDe','');
+  setVal('fMucDo','');
+  setVal('fDang','');
+  setVal('fSearch','');
+  setVal('fMon',mon);
+  refreshFilterOptions();
+  setVal('fMon',mon); // khóa lại môn sau khi dropdown được nạp lại
+  try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon)}catch(e){}
+  renderCatalog();
+  try{syncRpFromMainFilters&&syncRpFromMainFilters()}catch(e){}
+}
 var V248_ORIG_REFRESH_FILTER_OPTIONS = refreshFilterOptions;
 refreshFilterOptions = function(){v248EnsureSubject();V248_ORIG_REFRESH_FILTER_OPTIONS();v248EnsureSubject();v245RenderCatalogScopeTabs();};
 v245SelectMon = function(v){v248SelectSubject(v)};
@@ -10018,7 +10038,7 @@ v245RenderCatalogScopeTabs = function(){
   box.classList.add('subjectV248');
   let curMon=v248EnsureSubject();
   let subjects=v248Subjects();
-  let tabs=subjects.map(m=>{let kind=v248SubjectKind(m);let active=m===curMon?' active':'';let count=(CATALOG||[]).filter(x=>x.Mon===m).length;let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);return `<button type="button" class="subjectPageBtnV248 ${kind}${active}" onclick="v248SelectSubject(${JSON.stringify(m)})"><div>${esc(v248SubjectLabel(m))}</div><div class="subjectPageSubV248">${count} đề · ${qs} câu</div></button>`}).join('');
+  let tabs=subjects.map(m=>{let kind=v248SubjectKind(m);let active=m===curMon?' active':'';let count=(CATALOG||[]).filter(x=>x.Mon===m).length;let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);return `<button type="button" class="subjectPageBtnV248 ${kind}${active}" data-subject-v249="${escAttr(m)}" onclick="v248SelectSubject(${JSON.stringify(m)})"><div>${esc(v248SubjectLabel(m))}</div><div class="subjectPageSubV248">${count} đề · ${qs} câu</div></button>`}).join('');
   let curKhoi=window.CATALOG_SELECTED_KHOI||'', curCh=val('fChuong')||'', curBai=val('fBaiHoc')||'';
   box.innerHTML=`<div class="subjectPageTitleV248">📚 Trang môn học riêng</div><div class="subjectPagesV248">${tabs}</div><div id="catalogKhoiTabs" class="catalogScopeRow"></div><div id="catalogChuongTabs" class="catalogScopeRow"></div><div id="catalogBaiTabs" class="catalogScopeRow"></div><div class="catalogAdvancedHint">Trong từng trang có mục lục sách và bộ lọc riêng: Lớp, Chương, Bài học, Mức độ, Loại câu hỏi, Dạng bài tập, Bộ đề, Tìm nhanh.</div>`;
   let monList=(CATALOG||[]).filter(x=>!curMon||x.Mon===curMon);
@@ -10034,6 +10054,34 @@ v245RenderCatalogScopeTabs = function(){
 };
 var V248_ORIG_RENDER_CATALOG = renderCatalog;
 renderCatalog = function(){v248EnsureSubject();V248_ORIG_RENDER_CATALOG();};
+// V249: bắt click bằng delegation phòng trường hợp inline onclick bị PWA/cache chặn.
+document.addEventListener('click',function(ev){
+  let btn=ev.target&&ev.target.closest?ev.target.closest('[data-subject-v249]'):null;
+  if(!btn)return;
+  ev.preventDefault();
+  v248SelectSubject(btn.getAttribute('data-subject-v249')||'');
+});
+
+
+
+/* ===== V250: chỉ giữ 2 tab môn lớn; bỏ dải Khối/Chương/Bài phía trên vì đã có bộ lọc bên dưới ===== */
+function v250RenderSubjectOnlyTabs(){
+  v248EnsureSubjectPageCss();
+  v245EnsureCatalogScopeBox();
+  let box=document.getElementById('catalogScopeBox'); if(!box)return;
+  box.classList.add('subjectV248');
+  let curMon=v248EnsureSubject();
+  let subjects=v248Subjects();
+  let tabs=subjects.map(m=>{
+    let kind=v248SubjectKind(m);
+    let active=m===curMon?' active':'';
+    let count=(CATALOG||[]).filter(x=>x.Mon===m).length;
+    let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);
+    return `<button type="button" class="subjectPageBtnV248 ${kind}${active}" data-subject-v249="${escAttr(m)}" onclick="v248SelectSubject(${JSON.stringify(m)})"><div>${esc(v248SubjectLabel(m))}</div><div class="subjectPageSubV248">${count} mục · ${qs} câu</div></button>`;
+  }).join('');
+  box.innerHTML=`<div class="subjectPagesV248">${tabs}</div><div class="catalogAdvancedHint">Chọn <b>Trang Toán</b> hoặc <b>Trang Vật lí</b>. Lọc chi tiết bằng các ô bên dưới: Lớp, Chương, Bài học, Mức độ, Loại câu hỏi, Dạng bài tập, Bộ đề, Tìm nhanh.</div>`;
+}
+v245RenderCatalogScopeTabs = v250RenderSubjectOnlyTabs;
 
 enhanceHomeColors();initTheme();initMobileQuizToolbar();init().catch(e=>{document.body.innerHTML='<pre style="padding:20px;color:red">'+e.message+'</pre>'})
 
@@ -10938,6 +10986,10 @@ def version():
         "two_subject_pages_v248": True,
         "two_subject_pages_fixload_v248": True,
         "subject_pages_keep_v246_core_v248": True,
+        "two_subject_switch_fix_v249": True,
+        "subject_switch_click_delegation_v249": True,
+        "two_subject_clean_tabs_v250": True,
+        "hide_top_khoi_chuong_bai_chips_v250": True,
         "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
