@@ -1838,12 +1838,15 @@ class SheetStore:
         """Khởi động nạp dữ liệu nền để tránh request /api/meta bị timeout trên Render Free."""
         if self.questions_loaded and self.questions and not force:
             return
-        if self.questions_loading:
-            return
-
-        def worker():
+        with self.load_lock:
+            if self.questions_loaded and self.questions and not force:
+                return
+            if self.questions_loading:
+                return
             self.questions_loading = True
             self.questions_error = ""
+
+        def worker():
             try:
                 self.ensure_questions_loaded(force=force)
             except Exception as e:
@@ -1981,16 +1984,17 @@ class SheetStore:
             # Nội dung / đáp án: đọc đúng cột theo tiêu đề (G=Dạng, I=Câu hỏi hoặc J=Dạng, K=Câu hỏi...).
             for field in ("CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"):
                 v = row_val(row_vals, cols.get(field))
-                if not v:
-                    continue
                 if field in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
-                    q[field] = normalize_latex_text(v)
-                elif field == "DapAn" and any(x in v for x in ("$", "\\", "{", "}")):
-                    q[field] = normalize_latex_text(v)
-                else:
+                    q[field] = normalize_latex_text(v if v else q.get(field, ""))
+                elif field == "DapAn":
+                    if not v:
+                        continue
+                    if any(x in v for x in ("$", "\\", "{", "}")):
+                        q[field] = normalize_latex_text(v)
+                    else:
+                        q[field] = v
+                elif v:
                     q[field] = v
-            for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
-                q[f] = normalize_latex_text(q.get(f, ""))
 
             # Cột T (index 19) hoặc cột HinhAnh theo header.
             t_col = cols.get("HinhAnh", 19 if len(self.question_headers) > 19 else None)
