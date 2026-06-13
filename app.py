@@ -62,7 +62,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V298_CATALOG_LIVE_REFRESH_2026_06_12"
+APP_VERSION = "V299_DBT_MAX6_PER_LESSON_2026_06_12"
 SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -1381,6 +1381,7 @@ SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
 
 # Giá trị đặc biệt: lọc câu chưa có DangBaiTap hợp lệ (cột H trống / chưa gán).
 DBT_FILTER_UNCLASSIFIED = "__CHUA_PHAN_LOAI__"
+DBT_MAX_TYPES_PER_LESSON = 6
 
 
 def header_map(headers: List[str]) -> Dict[str, int]:
@@ -9595,6 +9596,91 @@ async function bulkLevelApplySelected(){
 
 let ADMIN_DBT_REVIEW_ITEMS=[];
 let BULK_DBT_BUSY=false;
+const DBT_MAX_PER_LESSON=6;
+function bulkDbtScopeKey(it){return [normText(it.Mon||''),normText(it.Chuong||''),normText(it.BaiHoc||'')].join('|')}
+function bulkDbtNearestCanonical(name,canonicals){
+  if(!canonicals||!canonicals.length)return name;
+  let best=canonicals[0],bestSc=-1;
+  for(let c of canonicals){let sc=dbtSimilarity(name,c);if(sc>bestSc){bestSc=sc;best=c}}
+  return bestSc>=0.35?best:canonicals[0];
+}
+function bulkDbtConsolidateItems(items){
+  if(!items||!items.length)return {merged:0,items,canonical:{}};
+  let byLesson={};
+  items.forEach(it=>{(byLesson[bulkDbtScopeKey(it)]=byLesson[bulkDbtScopeKey(it)]||[]).push(it)});
+  let merged=0,canonical={};
+  for(let [sk,group] of Object.entries(byLesson)){
+    let buckets={};
+    group.forEach(it=>{
+      let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
+      if(!v||adminDbtIsBadValue(v))return;
+      let k=normText(v);
+      if(!buckets[k])buckets[k]={name:v,count:0};
+      buckets[k].count++;
+    });
+    let remap={};
+    for(let k in buckets)remap[k]=buckets[k].name;
+    function distNames(){let seen={},out=[];for(let k in remap){let dn=normText(remap[k]);if(!seen[dn]){seen[dn]=1;out.push(remap[k])}}return out}
+    while(distNames().length>DBT_MAX_PER_LESSON){
+      let agg={};
+      for(let k in remap){let dn=normText(remap[k]);agg[dn]=(agg[dn]||0)+1}
+      let ranked=Object.entries(agg).sort((a,b)=>a[1]-b[1]||(a[0].length-b[0].length));
+      let victimN=ranked[0][0];
+      let victimDisplay=Object.values(remap).find(v=>normText(v)===victimN)||ranked[0][0];
+      let others=[];let seenO={};
+      for(let k in remap){if(normText(remap[k])===victimN)continue;let ko=normText(remap[k]);if(!seenO[ko]){seenO[ko]=1;others.push(remap[k])}}
+      let target=bulkDbtNearestCanonical(victimDisplay,others);
+      for(let k in remap){if(normText(remap[k])===victimN)remap[k]=target}
+    }
+    canonical[sk]=distNames().slice(0,DBT_MAX_PER_LESSON);
+    group.forEach(it=>{
+      let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
+      let k=normText(v);
+      if(!k||!remap[k])return;
+      let nv=remap[k];
+      if(normText(nv)!==k){
+        it.ai_dbt=nv;it.DangBaiTap=nv;it.matched_existing=true;
+        it.reason=String(it.reason||'').trim();
+        if(it.reason.indexOf('gộp về')<0)it.reason=(it.reason?it.reason+' ':'')+'(gộp về «'+nv+'» — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài)';
+        merged++;
+      }
+    });
+  }
+  return {merged,items,canonical};
+}
+function bulkDbtRebuildLessonCanonical(items){
+  let byLesson={};
+  (items||[]).forEach(it=>{
+    let sk=bulkDbtScopeKey(it);
+    let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
+    if(!v||adminDbtIsBadValue(v))return;
+    (byLesson[sk]=byLesson[sk]||[]).push(v);
+  });
+  let c={};
+  for(let [sk,vals] of Object.entries(byLesson)){
+    let counts={},seen={};
+    vals.forEach(v=>{let k=normText(v);counts[k]=(counts[k]||0)+1;if(!seen[k])seen[k]=v});
+    c[sk]=Object.values(seen).sort((a,b)=>(counts[normText(b)]||0)-(counts[normText(a)]||0)).slice(0,DBT_MAX_PER_LESSON);
+  }
+  window.__BULK_DBT_LESSON_CANON=c;
+  return c;
+}
+function bulkDbtLessonCanonicalForItem(it){
+  let sk=bulkDbtScopeKey(it);
+  return ((window.__BULK_DBT_LESSON_CANON||{})[sk]||[]).slice(0,DBT_MAX_PER_LESSON);
+}
+function bulkDbtMergeLessonContext(ctx,items){
+  ctx=ctx||{};
+  (items||[]).forEach(it=>{
+    let sk=bulkDbtScopeKey(it);
+    let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
+    if(!v||adminDbtIsBadValue(v))return;
+    let lst=ctx[sk]=ctx[sk]||[];
+    if(!lst.some(x=>normText(x)===normText(v)))lst.push(v);
+    if(lst.length>DBT_MAX_PER_LESSON)ctx[sk]=lst.slice(0,DBT_MAX_PER_LESSON);
+  });
+  return ctx;
+}
 function bulkDbtChosen(it){return String((it&&it.ai_dbt)||'').trim()}
 function bulkDbtSyncRowFromDom(pos){
   let it=ADMIN_DBT_REVIEW_ITEMS[pos];if(!it)return;
@@ -9624,7 +9710,10 @@ function bulkDbtOptsHtml(it,pos){
   let cur=String(it.current_dbt||'').trim();
   let seen={},opts=[];
   function add(v){v=String(v||'').trim();if(!v)return;let k=normText(v);if(seen[k])return;seen[k]=1;opts.push(v)}
-  add(ai);add(cur);for(let s of (it.suggestions||[]))add(s);
+  add(ai);add(cur);
+  for(let s of bulkDbtLessonCanonicalForItem(it))add(s);
+  for(let s of (it.suggestions||[]))add(s);
+  if(opts.length>DBT_MAX_PER_LESSON+2)opts=opts.slice(0,DBT_MAX_PER_LESSON+2);
   if(!opts.length)return `<input type="text" data-bulk-dbt="${pos}" value="${escAttr(ai||cur)}" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)" oninput="bulkDbtInput(${pos},this.value)" />`;
   let selPick=ai||cur;
   let optHtml=opts.map(v=>`<option value="${escAttr(v)}"${bulkDbtOptSelected(ai,cur,v)?' selected':''}>${esc(v)}</option>`).join('');
@@ -9718,21 +9807,27 @@ async function bulkDbtDetectCurrent(){
   const BATCH=6;
   try{
     if(btn){btn.disabled=true;btn.textContent='⏳ GPT Dạng BT...'}
-    let allItems=[],detected=0,warnings=[];
+    let allItems=[],detected=0,warnings=[],mergedTotal=0,lessonCtx={};
     for(let s=0;s<QUESTIONS.length;s+=BATCH){
       let end=Math.min(s+BATCH,QUESTIONS.length);
-      if(st)st.textContent='⏳ GPT gợi ý Dạng BT: câu '+(s+1)+'–'+end+' / '+QUESTIONS.length+' (lô '+(Math.floor(s/BATCH)+1)+'/'+Math.ceil(QUESTIONS.length/BATCH)+') — đợi xong mới tick';
-      let payload={questions:QUESTIONS.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j))};
+      if(st)st.textContent='⏳ GPT gợi ý Dạng BT: câu '+(s+1)+'–'+end+' / '+QUESTIONS.length+' (lô '+(Math.floor(s/BATCH)+1)+'/'+Math.ceil(QUESTIONS.length/BATCH)+') — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài';
+      let payload={questions:QUESTIONS.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j)),lesson_dbt_context:lessonCtx};
       let j=await api('/api/ai/detect-dangbaitap-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:85000});
       (j.items||[]).forEach(it=>allItems.push(it));
       detected+=parseInt(j.detected||0,10)||0;
+      mergedTotal+=parseInt(j.dbt_merged||0,10)||0;
+      lessonCtx=bulkDbtMergeLessonContext(lessonCtx,j.items||[]);
       if(j.warning)warnings.push(String(j.warning));
     }
+    let cons=bulkDbtConsolidateItems(allItems);
+    allItems=cons.items||allItems;
+    mergedTotal+=parseInt(cons.merged||0,10)||0;
+    bulkDbtRebuildLessonCanonical(allItems);
     let byIndex={};allItems.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
-    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:(it.suggestions&&it.suggestions.length)?it.suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false};});
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();let canon=bulkDbtLessonCanonicalForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});let sug=(canon&&canon.length)?canon:((it.suggestions&&it.suggestions.length)?it.suggestions.slice(0,DBT_MAX_PER_LESSON):adminDangBaiTapSuggestionsForQuestion(q));return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:sug,reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false};});
     let tick=ADMIN_DBT_REVIEW_ITEMS.filter(x=>x.selected).length;
     let warn=warnings.filter(Boolean).join(' · ');
-    if(st)st.textContent='✅ GPT gợi ý xong '+detected+'/'+QUESTIONS.length+' câu · đã tick '+tick+' câu. Kiểm tra rồi bấm 💾 Chấp nhận.'+(warn?'\n⚠ '+warn:'');
+    if(st)st.textContent='✅ GPT gợi ý xong '+detected+'/'+QUESTIONS.length+' câu · tối đa '+DBT_MAX_PER_LESSON+' dạng/bài · đã tick '+tick+' câu.'+(mergedTotal?' · gộp '+mergedTotal+' câu loãng.':'')+(warn?'\n⚠ '+warn:'');
     renderBulkDbtList();
   }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý Dạng bài tập hàng loạt được: '+(e.message||e)+'\n\nNếu lỗi timeout: đợi vài giây rồi bấm «Chạy GPT gợi ý lại» — app sẽ chạy từng lô nhỏ.')}
   finally{bulkDbtSetBusy(false);if(btn){btn.disabled=false;btn.textContent=old||'🏷️ Gợi ý Dạng BT'};renderBulkDbtList()}
@@ -10005,9 +10100,9 @@ function adminDbtScopeFromForm(q){q=q||readQuestionFormData()||{};return{mon:Str
 function adminDbtIsBadValue(v){let t=normText(v);if(!t)return true;if(t.includes('chua gan')||t.includes('chua phan loai')||t.includes('chua co'))return true;return['chua','none','null','khac','khong ro','trac nghiem','dung sai','tra loi ngan','tu luan','tn','ds','tln','tl'].includes(t)}
 function adminDbtScopeMatches(item,scope,level){if(scope.mon&&normText(item.Mon||'')!==normText(scope.mon))return false;if(level==='mon')return true;if(scope.chuong&&normText(item.Chuong||'')!==normText(scope.chuong))return false;if(level==='chuong')return true;if(scope.bai&&normText(item.BaiHoc||'')!==normText(scope.bai))return false;return true}
 function adminDbtScopeLabel(scope,level){scope=scope||{};let parts=[];if(scope.mon)parts.push(scope.mon);if(scope.chuong)parts.push(shortText(scope.chuong,40));if(scope.bai)parts.push(shortText(scope.bai,40));if(!parts.length)return'Chọn Môn / Chương / Bài học ở trên để gợi ý dạng chính xác.';let lvl=level==='bai'?'đúng bài này':(level==='chuong'?'cùng chương':(level==='mon'?'cùng môn':'—'));return'📍 Gợi ý theo '+parts.join(' · ')+' ('+lvl+')'}
-function adminDangBaiTapOptions(q){let scope=adminDbtScopeFromForm(q);let curVal=String((q&&q.DangBaiTap)||'').trim();let seen={},counts={};function bump(v,n){v=String(v||'').trim();if(!v||adminDbtIsBadValue(v))return;let k=normText(v);counts[k]=(counts[k]||0)+(n||1);if(!seen[k]){seen[k]=v}}function collectItem(item,level){if(!adminDbtScopeMatches(item,scope,level))return;let fc=(item.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object'&&!Array.isArray(fc)){for(let [k,c] of Object.entries(fc))bump(k,parseInt(c,10)||1)}let raw=String(item.DangBaiTap||'');if(raw)for(let part of raw.split(/[,;|]+/))bump(part.trim(),1)}let level='none';for(let c of (CATALOG||[]))collectItem(c,'bai');if(Object.keys(seen).length){level='bai'}else if(scope.chuong){for(let c of (CATALOG||[]))collectItem(c,'chuong');if(Object.keys(seen).length)level='chuong'}if(!Object.keys(seen).length&&scope.mon){for(let c of (CATALOG||[]))collectItem(c,'mon');if(Object.keys(seen).length)level='mon'}for(let qq of (QUESTIONS||[])){if(adminDbtScopeMatches(qq,scope,'bai'))bump(qq.DangBaiTap,1);else if(scope.chuong&&adminDbtScopeMatches(qq,scope,'chuong'))bump(qq.DangBaiTap,1);else if(scope.mon&&adminDbtScopeMatches(qq,scope,'mon'))bump(qq.DangBaiTap,1)}if(curVal&&!seen[normText(curVal)])bump(curVal,0);let opts=Object.values(seen).sort((a,b)=>{let ca=counts[normText(a)]||0,cb=counts[normText(b)]||0;if(cb!==ca)return cb-ca;return a.localeCompare(b,'vi')});return{opts,scopeLabel:adminDbtScopeLabel(scope,level),scopeLevel:level}}
-function adminDangBaiTapSuggestions(){try{let pack=adminDangBaiTapOptions(readQuestionFormData());return(pack.opts||[]).slice(0,50)}catch(e){return []}}
-function adminDangBaiTapSuggestionsForQuestion(q){try{let pack=adminDangBaiTapOptions(q||{});return(pack.opts||[]).slice(0,50)}catch(e){return []}}
+function adminDangBaiTapOptions(q){let scope=adminDbtScopeFromForm(q);let curVal=String((q&&q.DangBaiTap)||'').trim();let seen={},counts={};function bump(v,n){v=String(v||'').trim();if(!v||adminDbtIsBadValue(v))return;let k=normText(v);counts[k]=(counts[k]||0)+(n||1);if(!seen[k]){seen[k]=v}}function collectItem(item,level){if(!adminDbtScopeMatches(item,scope,level))return;let fc=(item.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object'&&!Array.isArray(fc)){for(let [k,c] of Object.entries(fc))bump(k,parseInt(c,10)||1)}let raw=String(item.DangBaiTap||'');if(raw)for(let part of raw.split(/[,;|]+/))bump(part.trim(),1)}let level='none';for(let c of (CATALOG||[]))collectItem(c,'bai');if(Object.keys(seen).length){level='bai'}else if(scope.chuong){for(let c of (CATALOG||[]))collectItem(c,'chuong');if(Object.keys(seen).length)level='chuong'}if(!Object.keys(seen).length&&scope.mon){for(let c of (CATALOG||[]))collectItem(c,'mon');if(Object.keys(seen).length)level='mon'}for(let qq of (QUESTIONS||[])){if(adminDbtScopeMatches(qq,scope,'bai'))bump(qq.DangBaiTap,1);else if(scope.chuong&&adminDbtScopeMatches(qq,scope,'chuong'))bump(qq.DangBaiTap,1);else if(scope.mon&&adminDbtScopeMatches(qq,scope,'mon'))bump(qq.DangBaiTap,1)}if(curVal&&!seen[normText(curVal)])bump(curVal,0);let opts=Object.values(seen).sort((a,b)=>{let ca=counts[normText(a)]||0,cb=counts[normText(b)]||0;if(cb!==ca)return cb-ca;return a.localeCompare(b,'vi')});if(level==='bai')opts=opts.slice(0,DBT_MAX_PER_LESSON);return{opts,scopeLabel:adminDbtScopeLabel(scope,level),scopeLevel:level}}
+function adminDangBaiTapSuggestions(){try{let pack=adminDangBaiTapOptions(readQuestionFormData());return(pack.opts||[]).slice(0,pack.scopeLevel==='bai'?DBT_MAX_PER_LESSON:50)}catch(e){return []}}
+function adminDangBaiTapSuggestionsForQuestion(q){try{let pack=adminDangBaiTapOptions(q||{});return(pack.opts||[]).slice(0,pack.scopeLevel==='bai'?DBT_MAX_PER_LESSON:50)}catch(e){return []}}
 function adminDbtAiSyncNote(j){j=j||{};let dbt=String(j.DangBaiTap||'').trim();let raw=String(j.ai_raw||'').trim();if(j.matched_existing&&raw&&raw!==dbt)return '<br><span class="muted">🔗 Đồng bộ về dạng có sẵn: <b>'+esc(dbt)+'</b>'+(raw!==dbt?' (GPT gợi ý: '+esc(raw)+')':'')+'</span>';if(!j.matched_existing&&dbt)return '<br><span class="muted">🆕 Dạng mới — chưa có trong danh sách phạm vi này.</span>';return ''}
 function adminDbtFindMatch(val,opts){val=String(val||'').trim();if(!val)return null;for(let x of opts||[]){if(normText(x)===normText(val))return x}return null}
 function adminDbtCheckDuplicateHint(){let inp=document.getElementById('edit_DangBaiTap');let hint=document.getElementById('edit_DangBaiTap_dup');if(!inp||!hint)return;let raw=String(inp.value||'').trim();if(!raw){hint.textContent='';hint.classList.add('hide');return}let sel=document.getElementById('edit_DangBaiTap_pick');let near='';if(sel){for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(!v||v==='__custom__'||normText(v)===normText(raw))continue;if(normText(v).includes(normText(raw))||normText(raw).includes(normText(v))){near=v;break}}}if(near){hint.innerHTML='⚠ Có thể trùng với «'+esc(near)+'» — nên chọn dạng có sẵn.';hint.classList.remove('hide')}else{hint.textContent='';hint.classList.add('hide')}}
@@ -11579,11 +11674,18 @@ def _dangbaitap_bulk_prompt_items(
     start_index: int,
     store: "SheetStore",
     meta_sug: List[str],
+    lesson_types_assigned: Optional[Dict[str, List[str]]] = None,
 ) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
+    lesson_types_assigned = lesson_types_assigned or {}
     for off, q in enumerate(questions, start=0):
-        scoped, scope_level = _scoped_dangbaitap_suggestions(store, q, limit=25)
-        suggestions = _merge_dangbaitap_suggestions(scoped, meta_sug, limit=25)
+        scoped, scope_level = _scoped_dangbaitap_suggestions(store, q, limit=DBT_MAX_TYPES_PER_LESSON)
+        suggestions = _merge_dangbaitap_suggestions(
+            list(lesson_types_assigned.get(_lesson_scope_key(q)) or [])[:DBT_MAX_TYPES_PER_LESSON],
+            scoped,
+            meta_sug,
+            limit=DBT_MAX_TYPES_PER_LESSON,
+        )
         opts = {L: clean(q.get(L, ""))[:400] for L in "ABCD" if clean(q.get(L, ""))}
         items.append({
             "index": start_index + off,
@@ -11596,13 +11698,19 @@ def _dangbaitap_bulk_prompt_items(
             "DangBaiTap_current": clean(q.get("DangBaiTap", "")),
             "scope_level": scope_level,
             "dbt_existing": suggestions,
+            "lesson_dbt_cap": DBT_MAX_TYPES_PER_LESSON,
+            "lesson_dbt_already_used": list(lesson_types_assigned.get(_lesson_scope_key(q)) or [])[:DBT_MAX_TYPES_PER_LESSON],
             "CauHoi": clean(q.get("CauHoi", ""))[:1500],
             "options": opts,
         })
     return items
 
 
-def admin_gpt_classify_dangbaitap_bulk(questions: List[Dict[str, Any]], store: "SheetStore") -> Dict[str, Any]:
+def admin_gpt_classify_dangbaitap_bulk(
+    questions: List[Dict[str, Any]],
+    store: "SheetStore",
+    lesson_dbt_context: Optional[Dict[str, List[str]]] = None,
+) -> Dict[str, Any]:
     """Dùng GPT ADMIN gợi ý DangBaiTap (cột H) cho nhiều câu."""
     meta: Dict[str, Any] = {
         "ai_dbt": True,
@@ -11637,25 +11745,37 @@ def admin_gpt_classify_dangbaitap_bulk(questions: List[Dict[str, Any]], store: "
         "Bạn là giáo viên THPT Việt Nam, chuyên phân loại Dạng bài tập (cột H). "
         "Chỉ trả JSON hợp lệ, không markdown, không giải thích ngoài JSON."
     )
-    rules = """
+    rules = f"""
 Nhiệm vụ: đặt tên DẠNG BÀI TẬP (DangBaiTap) cho từng câu — KHÔNG phải dạng câu TN/ĐS/TLN.
 
 Quy tắc:
 - Mỗi câu có dbt_existing: nếu khớp → trả ĐÚNG NGUYÊN VĂN tên trong danh sách (used_existing=true).
 - Tên mới: 4-12 từ, cụ thể, dùng cho nhiều câu cùng phương pháp (used_existing=false).
+- Trong CÙNG một Bài học (Mon+Chuong+BaiHoc): tối đa {DBT_MAX_TYPES_PER_LESSON} tên dạng KHÁC NHAU cho cả bài.
+- Ưu tiên tái dùng dbt_existing và lesson_dbt_already_used — gom câu cùng phương pháp, không tách quá chi tiết.
+- Nếu lesson_dbt_already_used đã có {DBT_MAX_TYPES_PER_LESSON} dạng → BẮT BUỘC gán câu mới vào một trong các dạng đó.
 - Không trả 'Trắc nghiệm', 'Đúng sai', 'Trả lời ngắn', 'Tự luận'.
 - Không nêu đáp án/kết quả cuối.
 
 JSON:
-{"items":[{"index":1,"DangBaiTap":"tên dạng","reason":"lý do ngắn","used_existing":true}]}
+{{"items":[{{"index":1,"DangBaiTap":"tên dạng","reason":"lý do ngắn","used_existing":true}}]}}
 reason tối đa 20 từ.
 """.strip()
+
+    lesson_types_assigned: Dict[str, List[str]] = {}
+    if lesson_dbt_context:
+        for sk, names in lesson_dbt_context.items():
+            if not isinstance(names, list):
+                continue
+            lesson_types_assigned[str(sk)] = [
+                clean(x) for x in names if clean(x) and not _is_bad_dangbaitap_value(x)
+            ][:DBT_MAX_TYPES_PER_LESSON]
 
     total_ok = 0
     chunk_size = 6
     for start in range(0, len(questions), chunk_size):
         chunk = questions[start : start + chunk_size]
-        items = _dangbaitap_bulk_prompt_items(chunk, start + 1, store, meta_sug)
+        items = _dangbaitap_bulk_prompt_items(chunk, start + 1, store, meta_sug, lesson_types_assigned)
         sug_by_idx: Dict[int, List[str]] = {}
         for it in items:
             try:
@@ -11719,7 +11839,21 @@ reason tối đa 20 từ.
             q["_AiMatchedExisting"] = bool(matched_existing)
             if synced_from and synced_from != ai_raw:
                 q["_AiReason"] = (q["_AiReason"] + f" (đồng bộ «{synced_from}»)").strip()[:180]
+            sk = _lesson_scope_key(q)
+            lst = lesson_types_assigned.setdefault(sk, [])
+            kn_val = key_norm(val)
+            if not any(key_norm(x) == kn_val for x in lst):
+                lst.append(val)
+            if len(lst) > DBT_MAX_TYPES_PER_LESSON:
+                lst[:] = lst[:DBT_MAX_TYPES_PER_LESSON]
             total_ok += 1
+
+    cons = _consolidate_dangbaitap_per_lesson(questions, DBT_MAX_TYPES_PER_LESSON)
+    if cons.get("merged"):
+        meta["warnings"].append(
+            f"Đã gộp {cons['merged']} câu về tối đa {DBT_MAX_TYPES_PER_LESSON} dạng/bài cho gọn."
+        )
+    meta["dbt_lesson_consolidation"] = cons
 
     meta["ai_dbt_done"] = total_ok > 0
     if total_ok < len(questions):
@@ -12377,6 +12511,147 @@ def _catalog_item_dbt_values(item: Dict[str, Any]) -> List[str]:
     return out
 
 
+def _lesson_scope_key(q: Dict[str, Any]) -> str:
+    return "|".join([
+        key_norm(clean(q.get("Mon", ""))),
+        key_norm(clean(q.get("Chuong", ""))),
+        key_norm(clean(q.get("BaiHoc", ""))),
+    ])
+
+
+def _dbt_similarity_py(a: str, b: str) -> float:
+    a, b = key_norm(a), key_norm(b)
+    if not a or not b:
+        return 0.0
+    if a == b or a in b or b in a:
+        return 0.9
+    ta, tb = set(a.split()), set(b.split())
+    if not ta or not tb:
+        return 0.0
+    ov = len(ta & tb)
+    return ov / min(len(ta), len(tb))
+
+
+def _nearest_dbt_canonical(name: str, canonicals: List[str]) -> str:
+    if not canonicals:
+        return name
+    best = canonicals[0]
+    best_sc = -1.0
+    for c in canonicals:
+        sc = _dbt_similarity_py(name, c)
+        if sc > best_sc:
+            best_sc = sc
+            best = c
+    return best if best_sc >= 0.35 else canonicals[0]
+
+
+def _consolidate_dangbaitap_per_lesson(
+    questions: List[Dict[str, Any]], max_types: int = DBT_MAX_TYPES_PER_LESSON
+) -> Dict[str, Any]:
+    """Gom tối đa max_types dạng BT/khối bài học — gán lại _AiDangBaiTap cho câu bị loãng."""
+    merged_total = 0
+    lesson_stats: Dict[str, Any] = {}
+    by_lesson: Dict[str, List[Dict[str, Any]]] = {}
+    for q in questions:
+        by_lesson.setdefault(_lesson_scope_key(q), []).append(q)
+
+    for sk, group in by_lesson.items():
+        buckets: Dict[str, Tuple[str, int]] = {}
+        for q in group:
+            v = clean(q.get("_AiDangBaiTap") or "")
+            if not v or _is_bad_dangbaitap_value(v):
+                continue
+            kn = key_norm(v)
+            if kn not in buckets:
+                buckets[kn] = (v, 0)
+            buckets[kn] = (buckets[kn][0], buckets[kn][1] + 1)
+
+        if len(buckets) <= max_types:
+            lesson_stats[sk] = {
+                "types": len(buckets),
+                "merged": 0,
+                "canonical": [buckets[k][0] for k in buckets],
+            }
+            continue
+
+        remap: Dict[str, str] = {kn: buckets[kn][0] for kn in buckets}
+
+        def dist_names() -> List[str]:
+            seen: set = set()
+            out: List[str] = []
+            for kn in remap:
+                dn = key_norm(remap[kn])
+                if dn not in seen:
+                    seen.add(dn)
+                    out.append(remap[kn])
+            return out
+
+        while len(dist_names()) > max_types:
+            agg: Dict[str, int] = {}
+            for kn in remap:
+                dn = key_norm(remap[kn])
+                agg[dn] = agg.get(dn, 0) + 1
+            ranked = sorted(agg.items(), key=lambda x: (x[1], len(x[0])))
+            victim_n = ranked[0][0]
+            victim_display = next(remap[kn] for kn in remap if key_norm(remap[kn]) == victim_n)
+            others_unique: List[str] = []
+            seen_o: set = set()
+            for kn in remap:
+                if key_norm(remap[kn]) == victim_n:
+                    continue
+                ko = key_norm(remap[kn])
+                if ko not in seen_o:
+                    seen_o.add(ko)
+                    others_unique.append(remap[kn])
+            target = _nearest_dbt_canonical(victim_display, others_unique)
+            for kn in list(remap.keys()):
+                if key_norm(remap[kn]) == victim_n:
+                    remap[kn] = target
+
+        canonical = dist_names()[:max_types]
+        n_merge = 0
+        for q in group:
+            v = clean(q.get("_AiDangBaiTap") or "")
+            kn = key_norm(v)
+            if kn not in remap:
+                continue
+            new_v = remap[kn]
+            if key_norm(new_v) != kn:
+                q["_AiDangBaiTap"] = new_v
+                q["_AiReason"] = (
+                    clean(q.get("_AiReason", ""))
+                    + f" (gộp về «{new_v}» — tối đa {max_types} dạng/bài)"
+                ).strip()[:180]
+                q["_AiMatchedExisting"] = True
+                n_merge += 1
+                merged_total += 1
+
+        lesson_stats[sk] = {"types": len(canonical), "merged": n_merge, "canonical": canonical}
+
+    return {"merged": merged_total, "lessons": lesson_stats}
+
+
+def _lesson_dbt_canonical_from_questions(
+    questions: List[Dict[str, Any]], max_types: int = DBT_MAX_TYPES_PER_LESSON
+) -> Dict[str, List[str]]:
+    by_lesson: Dict[str, Dict[str, Tuple[str, int]]] = {}
+    for q in questions:
+        sk = _lesson_scope_key(q)
+        v = clean(q.get("_AiDangBaiTap") or q.get("DangBaiTap") or "")
+        if not v or _is_bad_dangbaitap_value(v):
+            continue
+        kn = key_norm(v)
+        bucket = by_lesson.setdefault(sk, {})
+        if kn not in bucket:
+            bucket[kn] = (v, 0)
+        bucket[kn] = (bucket[kn][0], bucket[kn][1] + 1)
+    out: Dict[str, List[str]] = {}
+    for sk, bucket in by_lesson.items():
+        ordered = sorted(bucket.keys(), key=lambda k: (-bucket[k][1], bucket[k][0].lower()))
+        out[sk] = [bucket[k][0] for k in ordered[:max_types]]
+    return out
+
+
 def _scoped_dangbaitap_suggestions(store: "SheetStore", q: Dict[str, Any], limit: int = 50) -> Tuple[List[str], str]:
     mon = clean(q.get("Mon", ""))
     chuong = clean(q.get("Chuong", ""))
@@ -12492,8 +12767,9 @@ def _resolve_dangbaitap_to_suggestions(raw: str, suggestions: List[str]) -> Tupl
 
 
 def _detect_dangbaitap_prompt(q: Dict[str, Any], dangbaitap_suggestions: Optional[List[str]] = None, scope_level: str = "") -> str:
+    sug_limit = DBT_MAX_TYPES_PER_LESSON if scope_level == "bai" else 50
     sug = [clean(x) for x in (dangbaitap_suggestions or []) if clean(x)]
-    sug = [x for x in sug if not _is_bad_dangbaitap_value(x)][:50]
+    sug = [x for x in sug if not _is_bad_dangbaitap_value(x)][:sug_limit]
     scope_note = ""
     if scope_level == "bai":
         scope_note = " (ưu tiên cao nhất — cùng Môn + Chương + Bài học)"
@@ -12513,13 +12789,16 @@ def _detect_dangbaitap_prompt(q: Dict[str, Any], dangbaitap_suggestions: Optiona
     else:
         sug_block = "\n\n(Chưa có dạng nào trong phạm vi Môn/Chương/Bài — có thể đặt tên mới ngắn gọn, 4-12 từ.)\n"
     opts = "\n".join([f"{L}. {clean(q.get(L,''))}" for L in "ABCD" if clean(q.get(L,''))])
+    cap_note = ""
+    if scope_level == "bai":
+        cap_note = f"\n- Trong cùng Bài học: tối đa {DBT_MAX_TYPES_PER_LESSON} dạng khác nhau — ưu tiên gom câu cùng phương pháp, tái dùng tên có sẵn.\n"
     return f"""Bạn là giáo viên THPT đang phân loại ngân hàng câu hỏi.
 Nhiệm vụ: đặt tên DẠNG BÀI TẬP ngắn gọn, cụ thể, để lưu vào cột DangBaiTap và dùng làm khóa gọi Phương pháp giải.
 
 Yêu cầu:
 - Trả về DUY NHẤT một JSON object hợp lệ, không markdown.
 - Không trả 'Trắc nghiệm', 'Đúng sai', 'Trả lời ngắn', 'Tự luận' vì đó là DẠNG CÂU, không phải dạng bài tập.
-- Tên dạng nên 4-12 từ, đủ cụ thể, dùng được cho nhiều câu cùng phương pháp.
+- Tên dạng nên 4-12 từ, đủ cụ thể, dùng được cho nhiều câu cùng phương pháp.{cap_note}
 - Ưu tiên tên như: Tiệm cận ngang hàm phân thức; Đọc số nghiệm từ đồ thị; Xác định li độ, vận tốc, gia tốc...
 - Không nêu đáp án/đáp số/kết quả cuối; chỉ Soát đề GPT mới được chốt đáp án.{sug_block}
 
@@ -14068,6 +14347,9 @@ def api_ai_detect_dangbaitap_bulk():
         return jsonify({"error": "Chỉ ADMIN được dùng GPT gợi ý Dạng bài tập hàng loạt."}), 403
     body = request.get_json(silent=True) or {}
     raw_qs = body.get("questions") or []
+    lesson_dbt_context = body.get("lesson_dbt_context") or {}
+    if not isinstance(lesson_dbt_context, dict):
+        lesson_dbt_context = {}
     if not isinstance(raw_qs, list) or not raw_qs:
         return jsonify({"error": "Chưa có danh sách câu để gợi ý."}), 400
     if len(raw_qs) > 12:
@@ -14092,7 +14374,8 @@ def api_ai_detect_dangbaitap_bulk():
     try:
         st = get_store()
         st.ensure_questions_loaded()
-        meta = admin_gpt_classify_dangbaitap_bulk(qs, st)
+        meta = admin_gpt_classify_dangbaitap_bulk(qs, st, lesson_dbt_context=lesson_dbt_context)
+        lesson_canonical = _lesson_dbt_canonical_from_questions(qs, DBT_MAX_TYPES_PER_LESSON)
         items: List[Dict[str, Any]] = []
         detected = 0
         for q, m, raw in zip(qs, meta_rows, raw_qs):
@@ -14102,10 +14385,13 @@ def api_ai_detect_dangbaitap_bulk():
             preview = clean(q.get("CauHoi", ""))
             if len(preview) > 160:
                 preview = preview[:157].rstrip() + "…"
-            try:
-                scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=25)
-            except Exception:
-                scoped = []
+            sk = _lesson_scope_key(q)
+            scoped = lesson_canonical.get(sk) or []
+            if not scoped:
+                try:
+                    scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=DBT_MAX_TYPES_PER_LESSON)
+                except Exception:
+                    scoped = []
             items.append({
                 "index": m.get("index"),
                 "row": m.get("row"),
@@ -14120,8 +14406,9 @@ def api_ai_detect_dangbaitap_bulk():
                 "matched_existing": bool(q.get("_AiMatchedExisting")),
                 "reason": clean(q.get("_AiReason", "")),
                 "preview": preview,
-                "suggestions": scoped[:25],
+                "suggestions": scoped[:DBT_MAX_TYPES_PER_LESSON],
             })
+        cons = meta.get("dbt_lesson_consolidation") or {}
         return jsonify({
             "ok": True,
             "items": items,
@@ -14130,6 +14417,8 @@ def api_ai_detect_dangbaitap_bulk():
             "ai_provider": meta.get("ai_provider", "OPENAI"),
             "ai_model": meta.get("ai_model", ""),
             "warning": clean(meta.get("ai_dbt_error", "")),
+            "dbt_merged": int(cons.get("merged") or 0),
+            "lesson_dbt_context": lesson_canonical,
         })
     except Exception as e:
         return jsonify({"error": str(e), "ok": False}), 400
@@ -14534,7 +14823,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v298';
+const CACHE_NAME = 'luyen-de-ai-v299';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
