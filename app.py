@@ -41,7 +41,7 @@ import subprocess
 import uuid
 from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from flask import (
     Flask,
@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V289_ADMIN_META_PICK_DROPDOWN_2026_06_12"
+APP_VERSION = "V290_AI_DBT_SYNC_EXISTING_2026_06_12"
 SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -9284,7 +9284,7 @@ function renderAiAssistPanel(){let hb=document.getElementById('hintBox');if(!hb|
 async function requestAssistantNote(){if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành VIP / SVIP / ADMIN.');return}if(ASSISTANT_LOADING)return;saveCurrent();let qIdx=CUR;ASSISTANT_LOADING=true;renderAiAssistPanel();try{let j=await api('/api/ai/assistant-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,answer:ANSWERS[qIdx],...quizRestorePayload()})});let st=ASSISTANT_BY_Q[qIdx]||{messages:[]};st.note=j.note||'';ASSISTANT_BY_Q[qIdx]=st;if(CUR===qIdx)renderAiAssistPanel()}catch(e){alert('Không gọi được Trợ lý AI: '+(e.message||e))}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
 async function sendAssistantChat(){if(!USER.can_ai_hint)return;if(ASSISTANT_LOADING)return;let inp=document.getElementById('aiChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=ASSISTANT_BY_Q[qIdx]||{note:'',messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});if(inp)inp.value='';ASSISTANT_BY_Q[qIdx]=st;ASSISTANT_LOADING=true;renderAiAssistPanel();try{let j=await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,message:msg,messages:st.messages.slice(0,-1),answer:ANSWERS[qIdx],...quizRestorePayload()})});st.messages.push({role:'assistant',text:j.reply||''});ASSISTANT_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'❌ '+(e.message||e)});ASSISTANT_BY_Q[qIdx]=st}finally{ASSISTANT_LOADING=false;if(CUR===qIdx){renderAiAssistPanel();let box=document.getElementById('aiChatMsgs');if(box)box.scrollTop=box.scrollHeight}}}
 function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let parts=[q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].filter(x=>String(x||'').trim());scope.textContent=parts.length?parts.join(' · '):'Chưa có metadata bài/chương.'}}
-async function adminDetectDangBaiTapAndSave(autoOnly){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!q._row&&!autoOnly){alert('Câu chưa có dòng Sheet — không lưu được Dạng bài tập.');return}if(!confirm('GPT gán Dạng bài tập cho câu này và lưu Sheet?'))return;try{let j=await api('/api/ai/detect-dangbaitap-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',question:q,dangbaitap_suggestions:((META&&META.filters&&META.filters.DangBaiTap)||[]).slice(0,40)})});if(j.DangBaiTap){q.DangBaiTap=j.DangBaiTap;LEARNING_CACHE={};renderQuestion();alert('Đã gán Dạng bài tập: '+j.DangBaiTap+(j.reason?'\n'+j.reason:''))}}catch(e){alert('Không gán được: '+(e.message||e))}}
+async function adminDetectDangBaiTapAndSave(autoOnly){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!q._row&&!autoOnly){alert('Câu chưa có dòng Sheet — không lưu được Dạng bài tập.');return}if(!confirm('GPT gán Dạng bài tập cho câu này và lưu Sheet?'))return;try{let j=await api('/api/ai/detect-dangbaitap-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',question:q,dangbaitap_suggestions:adminDangBaiTapSuggestionsForQuestion(q)})});if(j.DangBaiTap){q.DangBaiTap=j.DangBaiTap;LEARNING_CACHE={};renderQuestion();let sync=j.matched_existing?' (đồng bộ dạng có sẵn)':'';alert('Đã gán Dạng bài tập: '+j.DangBaiTap+sync+(j.reason?'\n'+j.reason:''))}}catch(e){alert('Không gán được: '+(e.message||e))}}
 async function adminGenerateAndSyncLearning(kind){if(!USER.is_admin)return;kind=(kind==='method')?'method':'theory';if(kind==='theory'){alert('Lý thuyết SGK phải do ADMIN nhập tay vào sheet Ly_Thuyet; GPT chỉ tạo Phương pháp giải.');return}let q=QUESTIONS[CUR]||{};if(!confirm('GPT tạo Phương pháp giải và lưu Google Sheet?'))return;try{let j=await api('/api/learning/generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'method',question:q})});LEARNING_CACHE={};if(j.DangBaiTap&&q){q.DangBaiTap=j.DangBaiTap;renderQuestion()}let extra=j.question_dangbaitap_updated?('\nĐã gán Dạng bài tập cột H: '+j.DangBaiTap):'';alert('Đã lưu học liệu'+(j.row?(' dòng '+j.row):'')+'.'+extra);if(LEARNING_OPEN_KIND==='method')loadLearningPanelContent('method',true)}catch(e){alert('Không tạo/lưu được: '+(e.message||e))}}
 function translateEnStore(qIdx){qIdx=qIdx==null?CUR:qIdx;if(!TRANSLATE_BY_Q[qIdx])TRANSLATE_BY_Q[qIdx]={};return TRANSLATE_BY_Q[qIdx]}
 function parseTranslateEnParts(raw,vocab,notes){let t=String(raw||'').trim();let english=t,vocabulary=String(vocab||'').trim(),notesOut=String(notes||'').trim();if(!vocabulary&&!notesOut){let m=t.match(/English:\s*\n?([\s\S]*?)(?=\n\s*Vocabulary:|\n\s*Notes:|\Z)/i);if(m)english=m[1].trim();m=t.match(/Vocabulary:\s*\n?([\s\S]*?)(?=\n\s*Notes:|\Z)/i);if(m)vocabulary=m[1].trim();m=t.match(/Notes:\s*\n?([\s\S]*)$/i);if(m)notesOut=m[1].trim()}return {english:english||t,vocabulary,notes:notesOut}}
@@ -9495,7 +9495,9 @@ function adminDbtIsBadValue(v){let t=normText(v);if(!t)return true;if(t.includes
 function adminDbtScopeMatches(item,scope,level){if(scope.mon&&normText(item.Mon||'')!==normText(scope.mon))return false;if(level==='mon')return true;if(scope.chuong&&normText(item.Chuong||'')!==normText(scope.chuong))return false;if(level==='chuong')return true;if(scope.bai&&normText(item.BaiHoc||'')!==normText(scope.bai))return false;return true}
 function adminDbtScopeLabel(scope,level){scope=scope||{};let parts=[];if(scope.mon)parts.push(scope.mon);if(scope.chuong)parts.push(shortText(scope.chuong,40));if(scope.bai)parts.push(shortText(scope.bai,40));if(!parts.length)return'Chọn Môn / Chương / Bài học ở trên để gợi ý dạng chính xác.';let lvl=level==='bai'?'đúng bài này':(level==='chuong'?'cùng chương':(level==='mon'?'cùng môn':'—'));return'📍 Gợi ý theo '+parts.join(' · ')+' ('+lvl+')'}
 function adminDangBaiTapOptions(q){let scope=adminDbtScopeFromForm(q);let curVal=String((q&&q.DangBaiTap)||'').trim();let seen={},counts={};function bump(v,n){v=String(v||'').trim();if(!v||adminDbtIsBadValue(v))return;let k=normText(v);counts[k]=(counts[k]||0)+(n||1);if(!seen[k]){seen[k]=v}}function collectItem(item,level){if(!adminDbtScopeMatches(item,scope,level))return;let fc=(item.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object'&&!Array.isArray(fc)){for(let [k,c] of Object.entries(fc))bump(k,parseInt(c,10)||1)}let raw=String(item.DangBaiTap||'');if(raw)for(let part of raw.split(/[,;|]+/))bump(part.trim(),1)}let level='none';for(let c of (CATALOG||[]))collectItem(c,'bai');if(Object.keys(seen).length){level='bai'}else if(scope.chuong){for(let c of (CATALOG||[]))collectItem(c,'chuong');if(Object.keys(seen).length)level='chuong'}if(!Object.keys(seen).length&&scope.mon){for(let c of (CATALOG||[]))collectItem(c,'mon');if(Object.keys(seen).length)level='mon'}for(let qq of (QUESTIONS||[])){if(adminDbtScopeMatches(qq,scope,'bai'))bump(qq.DangBaiTap,1);else if(scope.chuong&&adminDbtScopeMatches(qq,scope,'chuong'))bump(qq.DangBaiTap,1);else if(scope.mon&&adminDbtScopeMatches(qq,scope,'mon'))bump(qq.DangBaiTap,1)}if(curVal&&!seen[normText(curVal)])bump(curVal,0);let opts=Object.values(seen).sort((a,b)=>{let ca=counts[normText(a)]||0,cb=counts[normText(b)]||0;if(cb!==ca)return cb-ca;return a.localeCompare(b,'vi')});return{opts,scopeLabel:adminDbtScopeLabel(scope,level),scopeLevel:level}}
-function adminDangBaiTapSuggestions(){try{let pack=adminDangBaiTapOptions(readQuestionFormData());return(pack.opts||[]).slice(0,40)}catch(e){return []}}
+function adminDangBaiTapSuggestions(){try{let pack=adminDangBaiTapOptions(readQuestionFormData());return(pack.opts||[]).slice(0,50)}catch(e){return []}}
+function adminDangBaiTapSuggestionsForQuestion(q){try{let pack=adminDangBaiTapOptions(q||{});return(pack.opts||[]).slice(0,50)}catch(e){return []}}
+function adminDbtAiSyncNote(j){j=j||{};let dbt=String(j.DangBaiTap||'').trim();let raw=String(j.ai_raw||'').trim();if(j.matched_existing&&raw&&raw!==dbt)return '<br><span class="muted">🔗 Đồng bộ về dạng có sẵn: <b>'+esc(dbt)+'</b>'+(raw!==dbt?' (GPT gợi ý: '+esc(raw)+')':'')+'</span>':'';if(!j.matched_existing&&dbt)return '<br><span class="muted">🆕 Dạng mới — chưa có trong danh sách phạm vi này.</span>':'';return ''}
 function adminDbtFindMatch(val,opts){val=String(val||'').trim();if(!val)return null;for(let x of opts||[]){if(normText(x)===normText(val))return x}return null}
 function adminDbtCheckDuplicateHint(){let inp=document.getElementById('edit_DangBaiTap');let hint=document.getElementById('edit_DangBaiTap_dup');if(!inp||!hint)return;let raw=String(inp.value||'').trim();if(!raw){hint.textContent='';hint.classList.add('hide');return}let sel=document.getElementById('edit_DangBaiTap_pick');let near='';if(sel){for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(!v||v==='__custom__'||normText(v)===normText(raw))continue;if(normText(v).includes(normText(raw))||normText(raw).includes(normText(v))){near=v;break}}}if(near){hint.innerHTML='⚠ Có thể trùng với «'+esc(near)+'» — nên chọn dạng có sẵn.';hint.classList.remove('hide')}else{hint.textContent='';hint.classList.add('hide')}}
 function adminDbtPickChange(){let sel=document.getElementById('edit_DangBaiTap_pick');let inp=document.getElementById('edit_DangBaiTap');let note=document.getElementById('edit_DangBaiTap_hint');if(!sel||!inp)return;let v=String(sel.value||'');if(v==='__custom__'){inp.classList.remove('hide');inp.focus();if(note)note.textContent='Gõ tên dạng mới — tránh trùng hoặc gần giống tên đã có.';adminDbtCheckDuplicateHint();return}if(v){inp.value=v;inp.classList.add('hide');if(note)note.textContent='Đã chọn dạng có sẵn — tên thống nhất, không trùng.'}else{inp.value='';inp.classList.remove('hide');if(note)note.textContent='Chọn dạng có sẵn hoặc gõ mới bên dưới.'}adminDbtCheckDuplicateHint()}
@@ -9523,7 +9525,7 @@ async function aiDetectCurrentQuestionDangBaiTap(){
     let conf=String(j.confidence||'').trim();
     let reason=String(j.reason||'').trim();
     if(note){
-      note.innerHTML='🏷️ GPT ADMIN gợi ý Dạng bài tập: <b>'+esc(dbt)+'</b>'+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+'<br><b>Chưa lưu Sheet.</b> Kiểm tra rồi bấm <b>Lưu vào Google Sheet</b>.';
+      note.innerHTML='🏷️ GPT ADMIN gợi ý Dạng bài tập: <b>'+esc(dbt)+'</b>'+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+adminDbtAiSyncNote(j)+'<br><b>Chưa lưu Sheet.</b> Kiểm tra rồi bấm <b>Lưu vào Google Sheet</b>.';
     }
   }catch(e){
     alert('AI chưa nhận Dạng bài tập: '+e.message);
@@ -9561,7 +9563,7 @@ async function aiDetectAndSaveCurrentQuestionDangBaiTap(){
     LEARNING_CACHE={};
     let reason=String(j.reason||'').trim();
     if(note){
-      note.innerHTML='✅ Đã lưu Dạng bài tập <b>'+esc(dbt)+'</b> vào Google Sheet dòng <b>'+esc(j.row||q0._row)+'</b> (cột H).'+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+'<br><span class="muted">Chỉ cập nhật cột H. Các ô khác chưa bị thay đổi.</span>';
+      note.innerHTML='✅ Đã lưu Dạng bài tập <b>'+esc(dbt)+'</b> vào Google Sheet dòng <b>'+esc(j.row||q0._row)+'</b> (cột H).'+adminDbtAiSyncNote(j)+(reason?'<br><span class="muted">Lý do: '+esc(reason)+'</span>':'')+'<br><span class="muted">Chỉ cập nhật cột H. Các ô khác chưa bị thay đổi.</span>';
     }
     renderNav();
   }catch(e){
@@ -11686,10 +11688,158 @@ def _is_bad_dangbaitap_value(v: Any) -> bool:
     return False
 
 
-def _detect_dangbaitap_prompt(q: Dict[str, Any], dangbaitap_suggestions: Optional[List[str]] = None) -> str:
+def _catalog_item_dbt_values(item: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    fc = (item.get("FilterCounts") or {}).get("dangbaitap") or {}
+    if isinstance(fc, dict):
+        for k in fc:
+            v = clean(k)
+            if v and not _is_bad_dangbaitap_value(v):
+                out.append(v)
+    raw = clean(item.get("DangBaiTap", ""))
+    if raw:
+        for part in re.split(r"[,;|]+", raw):
+            v = clean(part)
+            if v and not _is_bad_dangbaitap_value(v):
+                out.append(v)
+    return out
+
+
+def _scoped_dangbaitap_suggestions(store: "SheetStore", q: Dict[str, Any], limit: int = 50) -> Tuple[List[str], str]:
+    mon = clean(q.get("Mon", ""))
+    chuong = clean(q.get("Chuong", ""))
+    bai = clean(q.get("BaiHoc", ""))
+
+    def matches(item: Dict[str, Any], level: str) -> bool:
+        if mon and key_norm(item.get("Mon", "")) != key_norm(mon):
+            return False
+        if level == "mon":
+            return True
+        if chuong and key_norm(item.get("Chuong", "")) != key_norm(chuong):
+            return False
+        if level == "chuong":
+            return True
+        if bai and key_norm(item.get("BaiHoc", "")) != key_norm(bai):
+            return False
+        return True
+
+    counts: Dict[str, int] = {}
+    canon: Dict[str, str] = {}
+    level = "none"
+
+    def bump(vals: List[str], weight: int = 1) -> None:
+        for v in vals:
+            k = key_norm(v)
+            counts[k] = counts.get(k, 0) + max(weight, 0) or 1
+            if k not in canon:
+                canon[k] = v
+
+    for item in store.catalog:
+        if matches(item, "bai"):
+            bump(_catalog_item_dbt_values(item))
+    if counts:
+        level = "bai"
+    elif chuong:
+        for item in store.catalog:
+            if matches(item, "chuong"):
+                bump(_catalog_item_dbt_values(item))
+        if counts:
+            level = "chuong"
+    if not counts and mon:
+        for item in store.catalog:
+            if matches(item, "mon"):
+                bump(_catalog_item_dbt_values(item))
+        if counts:
+            level = "mon"
+
+    for qq in store.questions:
+        dbt = clean(qq.get("DangBaiTap", ""))
+        if not dbt or _is_bad_dangbaitap_value(dbt):
+            continue
+        if matches(qq, "bai"):
+            bump([dbt])
+        elif chuong and matches(qq, "chuong"):
+            bump([dbt])
+        elif mon and matches(qq, "mon"):
+            bump([dbt])
+
+    cur = clean(q.get("DangBaiTap", ""))
+    if cur and not _is_bad_dangbaitap_value(cur):
+        bump([cur], 0)
+
+    ordered = sorted(canon.keys(), key=lambda k: (-counts.get(k, 0), canon[k].lower()))
+    return [canon[k] for k in ordered[:limit]], level
+
+
+def _merge_dangbaitap_suggestions(*lists: Iterable[str], limit: int = 50) -> List[str]:
+    seen: set = set()
+    out: List[str] = []
+    for lst in lists:
+        for x in lst or []:
+            v = clean(x)
+            if not v or _is_bad_dangbaitap_value(v):
+                continue
+            k = key_norm(v)
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(v)
+            if len(out) >= limit:
+                return out
+    return out
+
+
+def _resolve_dangbaitap_to_suggestions(raw: str, suggestions: List[str]) -> Tuple[str, Optional[str], bool]:
+    """Chuẩn hóa tên AI về dạng đã có trong ngân hàng (tránh trùng gần giống)."""
+    raw = clean(raw)
+    if not raw or not suggestions:
+        return raw, None, False
+    rn = key_norm(raw)
+    for s in suggestions:
+        if key_norm(s) == rn:
+            return s, s, True
+    best: Optional[str] = None
+    best_score = -1
+    for s in suggestions:
+        sn = key_norm(s)
+        if rn in sn or sn in rn:
+            score = min(len(rn), len(sn))
+            if score > best_score:
+                best_score = score
+                best = s
+    if best:
+        return best, best, True
+    raw_tokens = set(rn.split())
+    if len(raw_tokens) >= 2:
+        for s in suggestions:
+            st = set(key_norm(s).split())
+            overlap = len(raw_tokens & st)
+            if overlap >= 2 and overlap >= max(2, int(len(raw_tokens) * 0.55)):
+                return s, s, True
+    return raw, None, False
+
+
+def _detect_dangbaitap_prompt(q: Dict[str, Any], dangbaitap_suggestions: Optional[List[str]] = None, scope_level: str = "") -> str:
     sug = [clean(x) for x in (dangbaitap_suggestions or []) if clean(x)]
-    sug = [x for x in sug if not _is_bad_dangbaitap_value(x)][:40]
-    sug_block = ("\nGợi ý tên đã dùng trong ngân hàng (ưu tiên chọn trùng nếu phù hợp):\n" + "\n".join(f"- {x}" for x in sug)) if sug else ""
+    sug = [x for x in sug if not _is_bad_dangbaitap_value(x)][:50]
+    scope_note = ""
+    if scope_level == "bai":
+        scope_note = " (ưu tiên cao nhất — cùng Môn + Chương + Bài học)"
+    elif scope_level == "chuong":
+        scope_note = " (cùng Môn + Chương)"
+    elif scope_level == "mon":
+        scope_note = " (cùng Môn)"
+    if sug:
+        sug_block = (
+            f"\n\n★ DANH SÁCH DẠNG BÀI TẬP ĐÃ CÓ TRONG NGÂN HÀNG{scope_note} — BẮT BUỘC ƯU TIÊN:\n"
+            + "\n".join(f"{i+1}. {x}" for i, x in enumerate(sug))
+            + "\n\nQuy tắc đồng bộ tên:\n"
+            "- Nếu câu thuộc một dạng trong danh sách trên → trả về ĐÚNG NGUYÊN VĂN tên đó (copy y hệt, không đổi dấu/hoa thường).\n"
+            "- Chỉ đặt tên mới khi KHÔNG có dạng nào trong danh sách phù hợp.\n"
+            "- Không tạo biến thể gần giống (vd đã có «Xác định li độ» thì không trả «Xác định li độ dao động»).\n"
+        )
+    else:
+        sug_block = "\n\n(Chưa có dạng nào trong phạm vi Môn/Chương/Bài — có thể đặt tên mới ngắn gọn, 4-12 từ.)\n"
     opts = "\n".join([f"{L}. {clean(q.get(L,''))}" for L in "ABCD" if clean(q.get(L,''))])
     return f"""Bạn là giáo viên THPT đang phân loại ngân hàng câu hỏi.
 Nhiệm vụ: đặt tên DẠNG BÀI TẬP ngắn gọn, cụ thể, để lưu vào cột DangBaiTap và dùng làm khóa gọi Phương pháp giải.
@@ -11698,7 +11848,7 @@ Yêu cầu:
 - Trả về DUY NHẤT một JSON object hợp lệ, không markdown.
 - Không trả 'Trắc nghiệm', 'Đúng sai', 'Trả lời ngắn', 'Tự luận' vì đó là DẠNG CÂU, không phải dạng bài tập.
 - Tên dạng nên 4-12 từ, đủ cụ thể, dùng được cho nhiều câu cùng phương pháp.
-- Ưu tiên tên như: Tiệm cận ngang hàm phân thức; Đọc số nghiệm từ đồ thị; Bài toán hàng rào diện tích; Tính nhiệt lượng nóng chảy; Cân bằng nhiệt; Phóng xạ hạt nhân...
+- Ưu tiên tên như: Tiệm cận ngang hàm phân thức; Đọc số nghiệm từ đồ thị; Xác định li độ, vận tốc, gia tốc...
 - Không nêu đáp án/đáp số/kết quả cuối; chỉ Soát đề GPT mới được chốt đáp án.{sug_block}
 
 THÔNG TIN CÂU:
@@ -11716,8 +11866,9 @@ Phương án:
 
 Schema:
 {{
-  "DangBaiTap": "tên dạng bài tập cụ thể",
-  "reason": "lý do rất ngắn"
+  "DangBaiTap": "tên dạng — copy nguyên văn từ danh sách nếu khớp",
+  "reason": "lý do rất ngắn",
+  "used_existing": true hoặc false
 }}
 """
 
@@ -11731,38 +11882,52 @@ def api_ai_detect_dangbaitap_update():
         return jsonify({"error": "Chỉ ADMIN được gán Dạng bài tập."}), 403
     body = request.get_json(silent=True) or {}
     q = _learning_question_from_body(body)
-    suggestions = body.get("dangbaitap_suggestions") or []
-    if not isinstance(suggestions, list):
-        suggestions = []
-    if not suggestions:
-        try:
-            st0 = get_store()
-            st0.ensure_questions_loaded()
-            meta0 = st0.meta() or {}
-            suggestions = ((meta0.get("filters") or {}).get("DangBaiTap") or [])[:40]
-        except Exception:
-            suggestions = []
+    client_sug = body.get("dangbaitap_suggestions") or []
+    if not isinstance(client_sug, list):
+        client_sug = []
+    st = get_store()
+    st.ensure_questions_loaded()
+    scoped_sug, scope_level = _scoped_dangbaitap_suggestions(st, q, limit=50)
+    meta_sug: List[str] = []
+    try:
+        meta_sug = ((st.meta() or {}).get("filters") or {}).get("DangBaiTap") or []
+    except Exception:
+        meta_sug = []
+    suggestions = _merge_dangbaitap_suggestions(scoped_sug, client_sug, meta_sug, limit=50)
     save_sheet = body.get("save", True)
     if save_sheet is False or str(save_sheet).lower() in ("0", "false", "no"):
         save_sheet = False
     else:
         save_sheet = True
-    prompt = _detect_dangbaitap_prompt(q, suggestions)
+    prompt = _detect_dangbaitap_prompt(q, suggestions, scope_level=scope_level)
     raw, provider, model = _learning_ai_call(prompt)
     obj = _extract_ai_json_object(raw)
-    val = clean((obj or {}).get("DangBaiTap") or (obj or {}).get("dangbaitap") or "")
-    if not val or _is_bad_dangbaitap_value(val):
+    ai_raw = clean((obj or {}).get("DangBaiTap") or (obj or {}).get("dangbaitap") or "")
+    if not ai_raw or _is_bad_dangbaitap_value(ai_raw):
         return jsonify({"error": "GPT chưa trả Dạng bài tập hợp lệ.", "raw": raw[:2000]}), 500
+    val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(ai_raw, suggestions)
     row = int(body.get("row") or q.get("_row") or 0)
     qid = clean(body.get("id") or body.get("ID") or q.get("ID") or "")
-    res = {"ok": True, "DangBaiTap": val, "reason": clean((obj or {}).get("reason", "")), "provider_used": provider, "model": model, "saved": False}
+    res = {
+        "ok": True,
+        "DangBaiTap": val,
+        "ai_raw": ai_raw,
+        "synced_from": synced_from or "",
+        "matched_existing": bool(matched_existing),
+        "scope_level": scope_level,
+        "suggestion_count": len(suggestions),
+        "reason": clean((obj or {}).get("reason", "")),
+        "provider_used": provider,
+        "model": model,
+        "saved": False,
+    }
     if save_sheet and row >= 2:
-        st = get_store()
         upd = st.update_question(row, {"DangBaiTap": val}, qid)
         res.update({"row": upd.get("row", row), "fields": upd.get("fields", [])})
         res["saved"] = True
     elif not save_sheet:
-        res.update({"message": "GPT gợi ý Dạng bài tập, chưa lưu Sheet."})
+        sync_note = f" (đồng bộ từ «{synced_from}»)" if synced_from and synced_from != ai_raw else ""
+        res.update({"message": f"GPT gợi ý Dạng bài tập{sync_note}, chưa lưu Sheet."})
     else:
         res.update({"warning": "Chưa có dòng Sheet nên chỉ trả gợi ý, chưa lưu."})
     return jsonify(res)
@@ -11827,6 +11992,8 @@ def api_learning_generate_save():
     res.update({"provider_used": provider, "model": model})
     dbt_item = clean(item.get("DangBaiTap", ""))
     if kind == "method" and dbt_item and not _is_bad_dangbaitap_value(dbt_item):
+        scoped_sug, _ = _scoped_dangbaitap_suggestions(st, q, limit=50)
+        dbt_item, _, _ = _resolve_dangbaitap_to_suggestions(dbt_item, scoped_sug)
         row_q = int(q.get("_row") or body.get("row") or 0)
         cur_dbt = clean(q.get("DangBaiTap", ""))
         if row_q >= 2 and (not cur_dbt or _is_bad_dangbaitap_value(cur_dbt)):
@@ -13574,7 +13741,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v289';
+const CACHE_NAME = 'luyen-de-ai-v290';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
