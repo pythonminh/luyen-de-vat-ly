@@ -62,7 +62,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V296_EARLY_BOOT_NO_CACHE_2026_06_12"
+APP_VERSION = "V297_BULK_DBT_CHUNKED_2026_06_12"
 SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -9705,6 +9705,9 @@ function bulkDbtSelectAllAi(){
   if(!n)alert('Chưa có gợi ý nào để tick.\n\n• Đợi GPT chạy xong\n• Hoặc bấm «🤖 Chạy GPT gợi ý lại»\n• Hoặc chọn Dạng BT ở ô «Chốt dạng» từng câu');
 }
 function bulkDbtSelectNone(){for(let it of ADMIN_DBT_REVIEW_ITEMS)it.selected=false;renderBulkDbtList()}
+function bulkDbtQuestionPayload(q,i){
+  return {index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||''};
+}
 async function bulkDbtDetectCurrent(){
   if(!USER.is_admin)return;
   if(!QUESTIONS.length){alert('Chưa mở đề.');return}
@@ -9712,17 +9715,26 @@ async function bulkDbtDetectCurrent(){
   let btn=document.getElementById('bulkDbtBtn');let old=btn?btn.textContent:'';
   bulkDbtSetBusy(true);
   renderBulkDbtList();
+  const BATCH=6;
   try{
-    if(st)st.textContent='⏳ GPT ADMIN đang gợi ý Dạng bài tập cho '+QUESTIONS.length+' câu... (có thể 1–3 phút, đợi xong mới tick)';
     if(btn){btn.disabled=true;btn.textContent='⏳ GPT Dạng BT...'}
-    let payload={questions:QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||''}))};
-    let j=await api('/api/ai/detect-dangbaitap-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    let items=j.items||[];let byIndex={};items.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
+    let allItems=[],detected=0,warnings=[];
+    for(let s=0;s<QUESTIONS.length;s+=BATCH){
+      let end=Math.min(s+BATCH,QUESTIONS.length);
+      if(st)st.textContent='⏳ GPT gợi ý Dạng BT: câu '+(s+1)+'–'+end+' / '+QUESTIONS.length+' (lô '+(Math.floor(s/BATCH)+1)+'/'+Math.ceil(QUESTIONS.length/BATCH)+') — đợi xong mới tick';
+      let payload={questions:QUESTIONS.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j))};
+      let j=await api('/api/ai/detect-dangbaitap-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:85000});
+      (j.items||[]).forEach(it=>allItems.push(it));
+      detected+=parseInt(j.detected||0,10)||0;
+      if(j.warning)warnings.push(String(j.warning));
+    }
+    let byIndex={};allItems.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
     ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:(it.suggestions&&it.suggestions.length)?it.suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false};});
     let tick=ADMIN_DBT_REVIEW_ITEMS.filter(x=>x.selected).length;
-    if(st)st.textContent='✅ GPT gợi ý xong '+(j.detected||0)+'/'+QUESTIONS.length+' câu · đã tick '+tick+' câu. Kiểm tra rồi bấm 💾 Chấp nhận.'+(j.warning?'\n⚠ '+j.warning:'');
+    let warn=warnings.filter(Boolean).join(' · ');
+    if(st)st.textContent='✅ GPT gợi ý xong '+detected+'/'+QUESTIONS.length+' câu · đã tick '+tick+' câu. Kiểm tra rồi bấm 💾 Chấp nhận.'+(warn?'\n⚠ '+warn:'');
     renderBulkDbtList();
-  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý Dạng bài tập hàng loạt được: '+(e.message||e))}
+  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý Dạng bài tập hàng loạt được: '+(e.message||e)+'\n\nNếu lỗi timeout: đợi vài giây rồi bấm «Chạy GPT gợi ý lại» — app sẽ chạy từng lô nhỏ.')}
   finally{bulkDbtSetBusy(false);if(btn){btn.disabled=false;btn.textContent=old||'🏷️ Gợi ý Dạng BT'};renderBulkDbtList()}
 }
 function bulkDbtAcceptOne(pos){if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;ADMIN_DBT_REVIEW_ITEMS.forEach((it,i)=>it.selected=i===pos);bulkDbtApplySelected()}
@@ -11571,7 +11583,7 @@ reason tối đa 20 từ.
 """.strip()
 
     total_ok = 0
-    chunk_size = 15
+    chunk_size = 6
     for start in range(0, len(questions), chunk_size):
         chunk = questions[start : start + chunk_size]
         items = _dangbaitap_bulk_prompt_items(chunk, start + 1, store, meta_sug)
@@ -11587,7 +11599,7 @@ reason tối đa 20 từ.
         last_err = ""
         obj: Dict[str, Any] = {}
         for api_key in openai_keys:
-            txt, finish, err = _openai_chat_call(api_key, model, sys_prompt, user_prompt, 3200, 0.02, timeout=75)
+            txt, finish, err = _openai_chat_call(api_key, model, sys_prompt, user_prompt, 2800, 0.02, timeout=45)
             if txt:
                 obj = _extract_ai_json_object(txt)
                 if isinstance(obj.get("items"), list):
@@ -13989,8 +14001,8 @@ def api_ai_detect_dangbaitap_bulk():
     raw_qs = body.get("questions") or []
     if not isinstance(raw_qs, list) or not raw_qs:
         return jsonify({"error": "Chưa có danh sách câu để gợi ý."}), 400
-    if len(raw_qs) > 60:
-        return jsonify({"error": "Tối đa 60 câu/lần để tránh chậm. Hãy lọc theo chuyên đề/bài trước."}), 400
+    if len(raw_qs) > 12:
+        return jsonify({"error": "Tối đa 12 câu/lần (Render timeout). App tự gọi nhiều lô — không gửi >12 câu một request."}), 400
     qs: List[Dict[str, Any]] = []
     meta_rows: List[Dict[str, Any]] = []
     for i, raw in enumerate(raw_qs):
@@ -14008,44 +14020,50 @@ def api_ai_detect_dangbaitap_bulk():
         meta_rows.append({"index": idx, "row": clean(raw.get("row") or raw.get("_row") or ""), "ID": clean(raw.get("ID", ""))})
     if not qs:
         return jsonify({"error": "Không đọc được câu hỏi hợp lệ."}), 400
-    st = get_store()
-    st.ensure_questions_loaded()
-    meta = admin_gpt_classify_dangbaitap_bulk(qs, st)
-    items: List[Dict[str, Any]] = []
-    detected = 0
-    for q, m, raw in zip(qs, meta_rows, raw_qs):
-        dbt = clean(q.get("_AiDangBaiTap") or "")
-        if dbt:
-            detected += 1
-        preview = clean(q.get("CauHoi", ""))
-        if len(preview) > 160:
-            preview = preview[:157].rstrip() + "…"
-        scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=25)
-        items.append({
-            "index": m.get("index"),
-            "row": m.get("row"),
-            "ID": m.get("ID") or clean(q.get("ID", "")),
-            "Mon": clean(q.get("Mon", "")),
-            "Chuong": clean(q.get("Chuong", "")),
-            "BaiHoc": clean(q.get("BaiHoc", "")),
-            "Dang": q.get("Dang", ""),
-            "DangBaiTap": dbt,
-            "ai_dbt": dbt,
-            "current_dbt": clean(raw.get("DangBaiTap", "")),
-            "matched_existing": bool(q.get("_AiMatchedExisting")),
-            "reason": clean(q.get("_AiReason", "")),
-            "preview": preview,
-            "suggestions": scoped[:25],
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        meta = admin_gpt_classify_dangbaitap_bulk(qs, st)
+        items: List[Dict[str, Any]] = []
+        detected = 0
+        for q, m, raw in zip(qs, meta_rows, raw_qs):
+            dbt = clean(q.get("_AiDangBaiTap") or "")
+            if dbt:
+                detected += 1
+            preview = clean(q.get("CauHoi", ""))
+            if len(preview) > 160:
+                preview = preview[:157].rstrip() + "…"
+            try:
+                scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=25)
+            except Exception:
+                scoped = []
+            items.append({
+                "index": m.get("index"),
+                "row": m.get("row"),
+                "ID": m.get("ID") or clean(q.get("ID", "")),
+                "Mon": clean(q.get("Mon", "")),
+                "Chuong": clean(q.get("Chuong", "")),
+                "BaiHoc": clean(q.get("BaiHoc", "")),
+                "Dang": q.get("Dang", ""),
+                "DangBaiTap": dbt,
+                "ai_dbt": dbt,
+                "current_dbt": clean(raw.get("DangBaiTap", "")),
+                "matched_existing": bool(q.get("_AiMatchedExisting")),
+                "reason": clean(q.get("_AiReason", "")),
+                "preview": preview,
+                "suggestions": scoped[:25],
+            })
+        return jsonify({
+            "ok": True,
+            "items": items,
+            "detected": detected,
+            "total": len(items),
+            "ai_provider": meta.get("ai_provider", "OPENAI"),
+            "ai_model": meta.get("ai_model", ""),
+            "warning": clean(meta.get("ai_dbt_error", "")),
         })
-    return jsonify({
-        "ok": True,
-        "items": items,
-        "detected": detected,
-        "total": len(items),
-        "ai_provider": meta.get("ai_provider", "OPENAI"),
-        "ai_model": meta.get("ai_model", ""),
-        "warning": clean(meta.get("ai_dbt_error", "")),
-    })
+    except Exception as e:
+        return jsonify({"error": str(e), "ok": False}), 400
 
 
 @app.route("/api/ai/apply-dangbaitap", methods=["POST"])
@@ -14447,7 +14465,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v296';
+const CACHE_NAME = 'luyen-de-ai-v297';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
