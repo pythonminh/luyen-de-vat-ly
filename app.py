@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V291_FIX_JS_SYNTAX_HANG_2026_06_12"
+APP_VERSION = "V292_BULK_DANG_BAI_TAP_2026_06_12"
 SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -3868,6 +3868,54 @@ class SheetStore:
         if not batch:
             raise RuntimeError("Không có câu hợp lệ để cập nhật mức độ.")
         gsheet_call_retry("batch_update Cau_Hoi MucDo", self.ws_questions.batch_update, batch, value_input_option="RAW")
+        self.rebuild_indexes_after_admin_change()
+        return {"ok": True, "updated": len(batch), "items": out_items}
+
+    def update_question_dangbaitap_bulk(self, updates: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """ADMIN duyệt hàng loạt Dạng bài tập: ghi nhanh cột H (DangBaiTap) cho nhiều câu."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được cập nhật Dạng bài tập hàng loạt")
+        fixed_col = SHEET_QUESTION_FIXED_COL_1.get("DangBaiTap", 8)
+        by_row: Dict[int, Dict[str, Any]] = {}
+        for q in self.questions:
+            try:
+                r = int(q.get("_row") or 0)
+            except Exception:
+                r = 0
+            if r >= 2:
+                by_row[r] = q
+        batch = []
+        out_items = []
+        seen = set()
+        for up in updates or []:
+            try:
+                row = int(up.get("row") or 0)
+            except Exception:
+                row = 0
+            if row < 2 or row in seen:
+                continue
+            seen.add(row)
+            dbt = clean(up.get("DangBaiTap") or up.get("dangbaitap") or "")
+            if not dbt or _is_bad_dangbaitap_value(dbt):
+                continue
+            q = by_row.get(row)
+            if not q:
+                continue
+            want_id = clean(up.get("ID") or up.get("id") or "")
+            if want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
+                raise RuntimeError(f"Dòng {row} không khớp ID trong RAM. Hãy bấm Đồng bộ Sheet rồi thử lại.")
+            a1 = gspread.utils.rowcol_to_a1(row, fixed_col)
+            batch.append({"range": a1, "values": [[dbt]]})
+            q["DangBaiTap"] = dbt
+            out_items.append({
+                "index": up.get("index"),
+                "row": row,
+                "ID": clean(q.get("ID", "")),
+                "DangBaiTap": dbt,
+            })
+        if not batch:
+            raise RuntimeError("Không có câu hợp lệ để cập nhật Dạng bài tập.")
+        gsheet_call_retry("batch_update Cau_Hoi DangBaiTap", self.ws_questions.batch_update, batch, value_input_option="RAW")
         self.rebuild_indexes_after_admin_change()
         return {"ok": True, "updated": len(batch), "items": out_items}
 
@@ -8540,12 +8588,12 @@ html[data-theme='dark'] .translateEnVocab{background:#422006;border-color:#ca8a0
 /* ===== V253: Tab Toán / Vật lí đưa lên thanh trên, phù hợp điện thoại ===== */
 .topRowV253{gap:6px 10px}.topSubjectTabsV253{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.topSubjectBtnV253{border:1px solid #ffffff66!important;background:#ffffff1f!important;color:#fff!important;border-radius:999px!important;padding:7px 14px!important;font-size:13px!important;font-weight:950!important;line-height:1!important;white-space:nowrap;min-height:32px;box-shadow:none!important}.topSubjectBtnV253.active{background:#fff!important;color:#1d4ed8!important;border-color:#fff!important}.topSubjectBtnV253.math.active{color:#6d28d9!important}.topSubjectBtnV253.physics.active{color:#0f766e!important}.topSubjectToggleV253{border:1px solid #ffffff55!important;background:#ffffff22!important;color:#fff!important;border-radius:999px!important;padding:6px 10px!important;font-size:12px!important;font-weight:900!important;line-height:1!important;white-space:nowrap;width:auto!important;min-height:30px}.topSubjectTabsV253.subjectTabsHiddenV253{display:none!important}.catalogScopeBox.subjectV248{display:none!important}@media(max-width:760px){.top{padding:7px 8px!important}.topRowV253{display:grid!important;grid-template-columns:1fr auto;gap:6px!important;align-items:center}.topRowV253 h1{font-size:13px!important;min-width:0!important;line-height:1.25!important}.topSubjectTabsV253{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr;gap:6px;width:100%;order:2}.topSubjectTabsV253.subjectTabsHiddenV253{display:none!important}.topSubjectBtnV253{width:100%!important;min-height:34px!important;font-size:13px!important;padding:8px 8px!important}.topSubjectToggleV253{order:1;grid-column:2;font-size:11px!important;padding:6px 8px!important}.topRight{grid-column:1/-1;order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:2px}.topRight>*{flex-shrink:0}.adminBar{flex-wrap:nowrap!important;overflow-x:visible!important}.examStrip{top:96px!important;font-size:12px!important;padding:6px 8px!important}.wrap{padding-top:8px!important}}@media(min-width:761px){.topSubjectToggleV253{display:inline-flex;align-items:center}.topRight{margin-left:auto}}html[data-theme="dark"] .topSubjectBtnV253.active{background:#dbeafe!important;color:#1e3a8a!important}
 </style></head>
-<body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
+<body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT ADMIN gợi ý Dạng bài tập cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu cột H">🏷️ Gợi ý Dạng BT</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh</span><span id="examTimer" class="timer hide"></span></div>
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div class="panel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div class="homeCompactRow"><div id="idLookupPanel" class="panel compactCard compactIdCard"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide compactCard compactKeyCard"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px"><b>VIP/S.VIP muốn dùng Trợ lý AI thì tự lấy Gemini key rồi nhập tại đây.</b><br>Vào <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><b>Google AI Studio → Get API key / Create API key</b></a>, copy key dạng <b>AIza...</b> hoặc <b>AQ...</b>, dán vào ô dưới và bấm <b>Lưu key</b>. ChatGPT/OpenAI chỉ dành cho ADMIN.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIza... hoặc AQ...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel compactCard compactRandomCard"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div></div><div id="adminComposePanel" class="panel hide adminComposePanel"><b>🛠 ADMIN: Tạo đề theo chủ đề &amp; mức độ</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Chọn <b>Môn · Khối · Lớp · Chương</b> ở khối <b>Tự luyện ngẫu nhiên</b> bên trên, rồi nhập số câu cần lấy trong ma trận <b>Dạng × Mức độ</b>. Ô xám = số câu có sẵn trong Sheet.</p><div id="acScopeNote" class="acScopeNote hide"></div><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field"><label>Lọc mức (tuỳ chọn)</label><select id="acLevelFilter" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả mức</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Bài học (tuỳ chọn)</label><select id="acBaiHoc" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả bài</option></select></div><button type="button" class="btn2" onclick="refreshAdminComposeMatrix()">🔄 Cập nhật ma trận</button></div><div id="acMatrixWrap" class="acMatrixWrap"><div class="muted" style="padding:12px">Chọn đủ Môn/Khối/Lớp rồi bấm «Cập nhật ma trận».</div></div><div class="acToolbar"><button type="button" class="btn2" onclick="acPresetStandard28()">📋 Đề chuẩn 28 (18 TN · 4 Đ/S · 6 TLN)</button><button type="button" class="btn2" onclick="acClearMatrixInputs()">🗑 Xóa nhập</button><button type="button" class="btnStartStrong" onclick="startAdminComposeExam()">🛠 Ghép đề ADMIN</button></div><div id="acComposeStatus" class="muted" style="margin-top:8px;font-size:12px"></div></div><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnEdit" class="btn2" onclick="openEdit()">✏️ Sửa câu</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()">➕ Thêm câu</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()">📊 Infographic</button></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div class="quizNavRow hide-mobile"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide hide-mobile" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary hide-mobile" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button type="button" id="btnLearnTheory" class="btn2" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" id="btnLearnMethod" class="btn2" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button><button type="button" id="btnTranslateEn" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="Dịch sang tiếng Anh — học từ vựng">🇬🇧 Dịch EN</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button type="button" id="btnFsLearnTheory" class="btn2" data-learning-toggle="theory" onclick="openLearningPanel('theory')" title="Xem lý thuyết đúng bài">📚 Lý thuyết</button><button type="button" id="btnFsLearnMethod" class="btn2" data-learning-toggle="method" onclick="openLearningPanel('method')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button><button type="button" id="btnFsTranslateEn" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="Dịch sang tiếng Anh">🇬🇧 Dịch EN</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div class="muted">ADMIN vào đề sẽ thấy đáp án/lời giải ngay và được sửa câu.</div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>🧑‍💼 ADMIN · Học liệu</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminLTBtn" data-learning-toggle="theory" onclick="openLearningPanel('theory')">📚 Xem Lý thuyết</button><button type="button" class="adminPPBtn" data-learning-toggle="method" onclick="openLearningPanel('method')">🧭 Xem Phương pháp giải</button><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ GPT gán Dạng bài tập</button><button type="button" class="adminGenBtn" onclick="openEdit()">✍️ Nhập/Sửa LT</button><button type="button" class="adminGenBtn" onclick="adminGenerateAndSyncLearning('method')">🤖 Tạo PP + lưu GGS</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button></div></div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div id="startDangBaiTapBox" class="hide" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><div style="font-weight:800;margin-bottom:6px">📋 Chọn dạng bài tập</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.4">Làm một dạng cụ thể hoặc <b>tất cả</b> câu trong chuyên đề bài này.</p><div id="startDangBaiTapList" class="startDbtList"></div></div><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Tách Trắc nghiệm / Đúng-Sai / TLN / Tự luận. Mức NB-TH-VD-VDC chỉ tô màu trong cùng nhóm.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><button type="button" class="btn2" id="btnAiDetectMucDo" onclick="aiDetectCurrentQuestionLevel()">🎯 AI gợi ý mức độ</button><button type="button" class="btn2" id="btnAiDetectSaveMucDo" onclick="aiDetectAndSaveCurrentQuestionLevel()">✅ AI mức độ & lưu I</button><button type="button" class="btn2" id="btnAiDetectDangBaiTap" onclick="aiDetectCurrentQuestionDangBaiTap()">🏷️ AI gợi ý Dạng bài tập</button><button type="button" class="btn2" id="btnAiDetectSaveDangBaiTap" onclick="aiDetectAndSaveCurrentQuestionDangBaiTap()">✅ AI Dạng BT & lưu H</button><span class="muted" style="font-size:12px">Gợi ý vào form hoặc lưu thẳng cột H/I. Hàng loạt mức độ: nút 🎯 Gợi ý mức độ trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN chỉ <b>gợi ý</b> NB/TH/VD/VDC cho các câu đang mở trong đề. ADMIN xem nhanh, tick chọn rồi mới ghi cột I Google Sheet. Có thể chấp nhận từng câu hoặc chấp nhận tất cả gợi ý.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="AI" selected>🤖 AI tự nhận diện từng câu</option><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
+</div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div id="startDangBaiTapBox" class="hide" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><div style="font-weight:800;margin-bottom:6px">📋 Chọn dạng bài tập</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.4">Làm một dạng cụ thể hoặc <b>tất cả</b> câu trong chuyên đề bài này.</p><div id="startDangBaiTapList" class="startDbtList"></div></div><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Tách Trắc nghiệm / Đúng-Sai / TLN / Tự luận. Mức NB-TH-VD-VDC chỉ tô màu trong cùng nhóm.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 AI khôi phục câu thiếu</button><button type="button" class="btn2" id="btnAiDetectMucDo" onclick="aiDetectCurrentQuestionLevel()">🎯 AI gợi ý mức độ</button><button type="button" class="btn2" id="btnAiDetectSaveMucDo" onclick="aiDetectAndSaveCurrentQuestionLevel()">✅ AI mức độ & lưu I</button><button type="button" class="btn2" id="btnAiDetectDangBaiTap" onclick="aiDetectCurrentQuestionDangBaiTap()">🏷️ AI gợi ý Dạng bài tập</button><button type="button" class="btn2" id="btnAiDetectSaveDangBaiTap" onclick="aiDetectAndSaveCurrentQuestionDangBaiTap()">✅ AI Dạng BT & lưu H</button><span class="muted" style="font-size:12px">Gợi ý vào form hoặc lưu thẳng cột H/I. Hàng loạt: 🎯 Gợi ý mức độ · 🏷️ Gợi ý Dạng BT trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN chỉ <b>gợi ý</b> NB/TH/VD/VDC cho các câu đang mở trong đề. ADMIN xem nhanh, tick chọn rồi mới ghi cột I Google Sheet. Có thể chấp nhận từng câu hoặc chấp nhận tất cả gợi ý.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="bulkDbtModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🏷️ ADMIN: GPT gợi ý Dạng bài tập hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> Dạng bài tập (cột H) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. GPT ưu tiên khớp tên dạng đã có trong cùng Môn/Chương/Bài.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" onclick="bulkDbtDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" onclick="bulkDbtSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkDbtSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" onclick="bulkDbtApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkDbtList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkDbtReview()">Đóng</button><button type="button" class="btn" onclick="bulkDbtApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="AI" selected>🤖 AI tự nhận diện từng câu</option><option value="">Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div><script>
 
 
 /* ===== V254: sửa nút Toán/Vật lí trên thanh xanh - chạy thật trong APP_HTML ===== */
@@ -9416,6 +9464,84 @@ async function bulkLevelApplySelected(){
     renderBulkLevelList();renderNav();renderQuestion();refreshCatalogFromMeta();
     if(st)st.textContent='✅ Đã cập nhật '+(j.updated||updates.length)+' câu. App đã đổi mức ngay, không cần Đồng bộ Sheet.';
   }catch(e){if(st)st.textContent='❌ Không ghi được: '+(e.message||e);alert('Không ghi mức độ được: '+(e.message||e))}
+}
+
+let ADMIN_DBT_REVIEW_ITEMS=[];
+function closeBulkDbtReview(){let m=document.getElementById('bulkDbtModal');if(m)m.classList.add('hide')}
+function openBulkDbtReview(){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  if(!Array.isArray(QUESTIONS)||!QUESTIONS.length){alert('Hãy mở một đề/chuyên đề trước. Nút này gợi ý Dạng bài tập cho các câu đang xem.');return}
+  let m=document.getElementById('bulkDbtModal');if(m)m.classList.remove('hide');
+  ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false}));
+  renderBulkDbtList();
+  bulkDbtDetectCurrent();
+}
+function bulkDbtOptsHtml(it,pos){
+  let ai=String(it.ai_dbt||'').trim();
+  let cur=String(it.current_dbt||'').trim();
+  let seen={},opts=[];
+  function add(v){v=String(v||'').trim();if(!v)return;let k=normText(v);if(seen[k])return;seen[k]=1;opts.push(v)}
+  add(ai);add(cur);for(let s of (it.suggestions||[]))add(s);
+  if(!opts.length)return `<input type="text" data-bulk-dbt="${pos}" value="${escAttr(ai||cur)}" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)" oninput="bulkDbtInput(${pos},this.value)" />`;
+  return `<select data-bulk-dbt="${pos}" onchange="bulkDbtSet(${pos},this.value)" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)">${opts.map(v=>`<option value="${escAttr(v)}" ${(ai||cur)===v?'selected':''}>${esc(v)}</option>`).join('')}<option value="__custom__">✏️ Nhập khác…</option></select>`;
+}
+function renderBulkDbtList(){
+  let box=document.getElementById('bulkDbtList');if(!box)return;
+  if(!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dữ liệu.</div>';return}
+  box.innerHTML=ADMIN_DBT_REVIEW_ITEMS.map((it,pos)=>{
+    let ai=String(it.ai_dbt||'').trim();
+    let cur=String(it.current_dbt||'').trim();
+    let checked=it.selected?'checked':'';
+    let ok=ai?`<span class="tag" style="background:#dcfce7;color:#166534">AI: ${esc(ai)}</span>${it.matched_existing?' <span class="muted">(dạng có sẵn)</span>':''}`:'<span class="muted">AI chưa gợi ý</span>';
+    return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại: ${cur?`<b>${esc(cur)}</b>`:'<span class="muted">—</span>'} · ${ok}</div>
+        <label style="display:flex;gap:6px;align-items:center;font-weight:800"><input type="checkbox" data-bulk-dbt-check="${pos}" ${checked} onchange="bulkDbtToggle(${pos},this.checked)"> Chấp nhận</label>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:4px">ID: ${esc(it.ID||'—')} · dòng Sheet: ${esc(it.row||'—')}${it.Mon?' · '+esc(it.Mon):''}${it.BaiHoc?' · '+esc(it.BaiHoc):''}</div>
+      <div style="margin-top:6px;line-height:1.45">${esc(it.preview||'')}</div>
+      <div class="muted" style="margin-top:6px">${it.reason?'Lý do: '+esc(it.reason):'GPT sẽ ghi lý do ngắn tại đây.'}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Chốt dạng:</span>${bulkDbtOptsHtml(it,pos)}<button type="button" class="btnSmall" onclick="bulkDbtAcceptOne(${pos})">💾 Chấp nhận câu này</button></div>
+    </div>`;
+  }).join('');
+}
+function bulkDbtToggle(pos,on){if(ADMIN_DBT_REVIEW_ITEMS[pos])ADMIN_DBT_REVIEW_ITEMS[pos].selected=!!on}
+function bulkDbtSet(pos,v){if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;if(v==='__custom__'){let nv=prompt('Nhập Dạng bài tập:',ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt||ADMIN_DBT_REVIEW_ITEMS[pos].current_dbt||'');if(nv===null)return;v=String(nv).trim()}ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();ADMIN_DBT_REVIEW_ITEMS[pos].selected=!!ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt;renderBulkDbtList()}
+function bulkDbtInput(pos,v){if(ADMIN_DBT_REVIEW_ITEMS[pos]){ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();ADMIN_DBT_REVIEW_ITEMS[pos].selected=!!ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt}}
+function bulkDbtSelectAllAi(){for(let it of ADMIN_DBT_REVIEW_ITEMS){it.selected=!!String(it.ai_dbt||'').trim()}renderBulkDbtList()}
+function bulkDbtSelectNone(){for(let it of ADMIN_DBT_REVIEW_ITEMS)it.selected=false;renderBulkDbtList()}
+async function bulkDbtDetectCurrent(){
+  if(!USER.is_admin)return;
+  if(!QUESTIONS.length){alert('Chưa mở đề.');return}
+  let st=document.getElementById('bulkDbtStatus');
+  let btn=document.getElementById('bulkDbtBtn');let old=btn?btn.textContent:'';
+  try{
+    if(st)st.textContent='⏳ GPT ADMIN đang gợi ý Dạng bài tập cho '+QUESTIONS.length+' câu...';
+    if(btn){btn.disabled=true;btn.textContent='⏳ GPT Dạng BT...'}
+    let payload={questions:QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||''}))};
+    let j=await api('/api/ai/detect-dangbaitap-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    let items=j.items||[];let byIndex={};items.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:(it.suggestions&&it.suggestions.length)?it.suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai};});
+    if(st)st.textContent='✅ GPT gợi ý xong '+(j.detected||items.length)+'/'+QUESTIONS.length+' câu. Xem nhanh rồi bấm Chấp nhận.'+(j.warning?'\n⚠ '+j.warning:'');
+    renderBulkDbtList();
+  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý Dạng bài tập hàng loạt được: '+(e.message||e))}
+  finally{if(btn){btn.disabled=false;btn.textContent=old||'🏷️ Gợi ý Dạng BT'}}
+}
+function bulkDbtAcceptOne(pos){if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;ADMIN_DBT_REVIEW_ITEMS.forEach((it,i)=>it.selected=i===pos);bulkDbtApplySelected()}
+async function bulkDbtApplySelected(){
+  let selected=ADMIN_DBT_REVIEW_ITEMS.filter(it=>it.selected&&String(it.ai_dbt||'').trim());
+  if(!selected.length){alert('Chưa tick câu nào có Dạng bài tập AI.');return}
+  if(!confirm('Ghi Dạng bài tập cho '+selected.length+' câu vào cột H Google Sheet?'))return;
+  let updates=selected.map(it=>({index:it.index,row:it.row,ID:it.ID,DangBaiTap:String(it.ai_dbt||'').trim()}));
+  let st=document.getElementById('bulkDbtStatus');
+  try{
+    if(st)st.textContent='⏳ Đang ghi '+updates.length+' Dạng bài tập vào Google Sheet...';
+    let j=await api('/api/ai/apply-dangbaitap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
+    for(let up of updates){let q=QUESTIONS[up.index];if(q)q.DangBaiTap=up.DangBaiTap;let it=ADMIN_DBT_REVIEW_ITEMS.find(x=>x.index===up.index);if(it){it.current_dbt=up.DangBaiTap;it.selected=false}}
+    LEARNING_CACHE={};
+    renderBulkDbtList();renderNav();renderQuestion();refreshCatalogFromMeta();
+    if(st)st.textContent='✅ Đã cập nhật '+(j.updated||updates.length)+' câu (cột H). App đã đổi ngay, không cần Đồng bộ Sheet.';
+  }catch(e){if(st)st.textContent='❌ Không ghi được: '+(e.message||e);alert('Không ghi Dạng bài tập được: '+(e.message||e))}
 }
 
 async function aiDetectCurrentQuestionLevel(){
@@ -11062,6 +11188,158 @@ MucDo chỉ được là NB, TH, VD, VDC. reason tối đa 18 từ.
     return meta
 
 
+def _dangbaitap_bulk_prompt_items(
+    questions: List[Dict[str, Any]],
+    start_index: int,
+    store: "SheetStore",
+    meta_sug: List[str],
+) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for off, q in enumerate(questions, start=0):
+        scoped, scope_level = _scoped_dangbaitap_suggestions(store, q, limit=25)
+        suggestions = _merge_dangbaitap_suggestions(scoped, meta_sug, limit=25)
+        opts = {L: clean(q.get(L, ""))[:400] for L in "ABCD" if clean(q.get(L, ""))}
+        items.append({
+            "index": start_index + off,
+            "Mon": clean(q.get("Mon", "")),
+            "Lop": clean(q.get("Lop", "")),
+            "Chuong": clean(q.get("Chuong", "")),
+            "BaiHoc": clean(q.get("BaiHoc", "")),
+            "Dang": clean(q.get("Dang", "")),
+            "MucDo": clean(q.get("MucDo", "")),
+            "DangBaiTap_current": clean(q.get("DangBaiTap", "")),
+            "scope_level": scope_level,
+            "dbt_existing": suggestions,
+            "CauHoi": clean(q.get("CauHoi", ""))[:1500],
+            "options": opts,
+        })
+    return items
+
+
+def admin_gpt_classify_dangbaitap_bulk(questions: List[Dict[str, Any]], store: "SheetStore") -> Dict[str, Any]:
+    """Dùng GPT ADMIN gợi ý DangBaiTap (cột H) cho nhiều câu."""
+    meta: Dict[str, Any] = {
+        "ai_dbt": True,
+        "ai_dbt_done": False,
+        "ai_model": "",
+        "ai_provider": "OPENAI",
+        "ai_dbt_error": "",
+        "warnings": [],
+    }
+    if not questions:
+        return meta
+
+    cfg = ai_runtime_config()
+    openai_keys = load_ai_keys("OPENAI")
+    model = clean(cfg.get("openai_admin_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
+    meta["ai_model"] = model
+    meta_sug: List[str] = []
+    try:
+        meta_sug = ((store.meta() or {}).get("filters") or {}).get("DangBaiTap") or []
+    except Exception:
+        meta_sug = []
+
+    if not openai_keys:
+        meta["ai_dbt_error"] = "Chưa có OPENAI_API_KEY cho GPT ADMIN."
+        for q in questions:
+            q["_AiDangBaiTap"] = ""
+            q["_AiReason"] = meta["ai_dbt_error"]
+            q["_AiMatchedExisting"] = False
+        return meta
+
+    sys_prompt = (
+        "Bạn là giáo viên THPT Việt Nam, chuyên phân loại Dạng bài tập (cột H). "
+        "Chỉ trả JSON hợp lệ, không markdown, không giải thích ngoài JSON."
+    )
+    rules = """
+Nhiệm vụ: đặt tên DẠNG BÀI TẬP (DangBaiTap) cho từng câu — KHÔNG phải dạng câu TN/ĐS/TLN.
+
+Quy tắc:
+- Mỗi câu có dbt_existing: nếu khớp → trả ĐÚNG NGUYÊN VĂN tên trong danh sách (used_existing=true).
+- Tên mới: 4-12 từ, cụ thể, dùng cho nhiều câu cùng phương pháp (used_existing=false).
+- Không trả 'Trắc nghiệm', 'Đúng sai', 'Trả lời ngắn', 'Tự luận'.
+- Không nêu đáp án/kết quả cuối.
+
+JSON:
+{"items":[{"index":1,"DangBaiTap":"tên dạng","reason":"lý do ngắn","used_existing":true}]}
+reason tối đa 20 từ.
+""".strip()
+
+    total_ok = 0
+    chunk_size = 15
+    for start in range(0, len(questions), chunk_size):
+        chunk = questions[start : start + chunk_size]
+        items = _dangbaitap_bulk_prompt_items(chunk, start + 1, store, meta_sug)
+        sug_by_idx: Dict[int, List[str]] = {}
+        for it in items:
+            try:
+                idx = int(it.get("index") or 0)
+            except Exception:
+                idx = 0
+            if idx:
+                sug_by_idx[idx] = list(it.get("dbt_existing") or [])
+        user_prompt = rules + "\n\nDANH SÁCH CÂU:\n" + json.dumps(items, ensure_ascii=False)
+        last_err = ""
+        obj: Dict[str, Any] = {}
+        for api_key in openai_keys:
+            txt, finish, err = _openai_chat_call(api_key, model, sys_prompt, user_prompt, 3200, 0.02, timeout=75)
+            if txt:
+                obj = _extract_ai_json_object(txt)
+                if isinstance(obj.get("items"), list):
+                    break
+                last_err = "GPT trả JSON không đúng schema."
+            else:
+                last_err = err
+        ai_items = obj.get("items") if isinstance(obj, dict) else None
+        if not isinstance(ai_items, list):
+            msg = f"GPT ADMIN chưa gợi ý Dạng BT câu {start+1}-{start+len(chunk)}: {last_err or 'không có phản hồi'}"
+            meta["warnings"].append(msg)
+            for q in chunk:
+                q["_AiDangBaiTap"] = ""
+                q["_AiReason"] = msg
+                q["_AiMatchedExisting"] = False
+            continue
+
+        by_index: Dict[int, Dict[str, Any]] = {}
+        for it in ai_items:
+            if not isinstance(it, dict):
+                continue
+            try:
+                idx = int(it.get("index") or 0)
+            except Exception:
+                idx = 0
+            ai_raw = clean(it.get("DangBaiTap") or it.get("dangbaitap") or "")
+            if idx and ai_raw and not _is_bad_dangbaitap_value(ai_raw):
+                by_index[idx] = it
+
+        for off, q in enumerate(chunk, start=0):
+            idx = start + off + 1
+            it = by_index.get(idx)
+            if not it:
+                q["_AiDangBaiTap"] = ""
+                q["_AiReason"] = "GPT chưa trả Dạng bài tập cho câu này."
+                q["_AiMatchedExisting"] = False
+                continue
+            ai_raw = clean(it.get("DangBaiTap") or it.get("dangbaitap") or "")
+            suggestions = _merge_dangbaitap_suggestions(sug_by_idx.get(idx, []), meta_sug, limit=50)
+            val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(ai_raw, suggestions)
+            if not val:
+                q["_AiDangBaiTap"] = ""
+                q["_AiReason"] = "GPT trả Dạng bài tập không hợp lệ."
+                q["_AiMatchedExisting"] = False
+                continue
+            q["_AiDangBaiTap"] = val
+            q["_AiReason"] = clean(it.get("reason") or "")[:180]
+            q["_AiMatchedExisting"] = bool(matched_existing)
+            if synced_from and synced_from != ai_raw:
+                q["_AiReason"] = (q["_AiReason"] + f" (đồng bộ «{synced_from}»)").strip()[:180]
+            total_ok += 1
+
+    meta["ai_dbt_done"] = total_ok > 0
+    if total_ok < len(questions):
+        meta["ai_dbt_error"] = f"GPT gợi ý được {total_ok}/{len(questions)} câu."
+    return meta
+
 
 def _sanitize_assistant_note_text(txt: Any) -> str:
     """Gỡ mọi dấu hiệu chốt đáp án/kết quả trong trợ lý AI học sinh."""
@@ -11315,6 +11593,8 @@ def version():
         "bulk_level_continue_batch_v257": True,
         "bulk_level_chunk_20_v257": True,
         "bulk_level_progressive_render_v257": True,
+        "bulk_dangbaitap_review_v292": True,
+        "bulk_dbt_chunk_15_v292": True,
         "dedupe_button_batch_fix_v258": True,
         "dedupe_delete_chunk_40_v258": True,
         "dedupe_no_ai_exact_notice_v258": True,
@@ -11327,7 +11607,7 @@ def version():
         "exam_countdown_removed_v261": True,
         "stable_rollback_no_freeze_v263": True,
         "mobile_ui_clean_removed_v263": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-dangbaitap-update", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-level-bulk", "/api/ai/apply-levels", "/api/ai/detect-dangbaitap-update", "/api/ai/detect-dangbaitap-bulk", "/api/ai/apply-dangbaitap", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -13385,6 +13665,98 @@ def api_ai_apply_levels():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/ai/detect-dangbaitap-bulk", methods=["POST"])
+def api_ai_detect_dangbaitap_bulk():
+    """ADMIN: GPT gợi ý DangBaiTap cho nhiều câu đang xem. Không lưu Sheet."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được dùng GPT gợi ý Dạng bài tập hàng loạt."}), 403
+    body = request.get_json(silent=True) or {}
+    raw_qs = body.get("questions") or []
+    if not isinstance(raw_qs, list) or not raw_qs:
+        return jsonify({"error": "Chưa có danh sách câu để gợi ý."}), 400
+    if len(raw_qs) > 60:
+        return jsonify({"error": "Tối đa 60 câu/lần để tránh chậm. Hãy lọc theo chuyên đề/bài trước."}), 400
+    qs: List[Dict[str, Any]] = []
+    meta_rows: List[Dict[str, Any]] = []
+    for i, raw in enumerate(raw_qs):
+        if not isinstance(raw, dict):
+            continue
+        q: Dict[str, Any] = {}
+        for f in QUESTION_FIELDS:
+            q[f] = clean(raw.get(f, ""))
+        q["Dang"] = effective_dang(q)
+        qs.append(q)
+        try:
+            idx = int(raw.get("index", i))
+        except Exception:
+            idx = i
+        meta_rows.append({"index": idx, "row": clean(raw.get("row") or raw.get("_row") or ""), "ID": clean(raw.get("ID", ""))})
+    if not qs:
+        return jsonify({"error": "Không đọc được câu hỏi hợp lệ."}), 400
+    st = get_store()
+    st.ensure_questions_loaded()
+    meta = admin_gpt_classify_dangbaitap_bulk(qs, st)
+    items: List[Dict[str, Any]] = []
+    detected = 0
+    for q, m, raw in zip(qs, meta_rows, raw_qs):
+        dbt = clean(q.get("_AiDangBaiTap") or "")
+        if dbt:
+            detected += 1
+        preview = clean(q.get("CauHoi", ""))
+        if len(preview) > 160:
+            preview = preview[:157].rstrip() + "…"
+        scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=25)
+        items.append({
+            "index": m.get("index"),
+            "row": m.get("row"),
+            "ID": m.get("ID") or clean(q.get("ID", "")),
+            "Mon": clean(q.get("Mon", "")),
+            "Chuong": clean(q.get("Chuong", "")),
+            "BaiHoc": clean(q.get("BaiHoc", "")),
+            "Dang": q.get("Dang", ""),
+            "DangBaiTap": dbt,
+            "ai_dbt": dbt,
+            "current_dbt": clean(raw.get("DangBaiTap", "")),
+            "matched_existing": bool(q.get("_AiMatchedExisting")),
+            "reason": clean(q.get("_AiReason", "")),
+            "preview": preview,
+            "suggestions": scoped[:25],
+        })
+    return jsonify({
+        "ok": True,
+        "items": items,
+        "detected": detected,
+        "total": len(items),
+        "ai_provider": meta.get("ai_provider", "OPENAI"),
+        "ai_model": meta.get("ai_model", ""),
+        "warning": clean(meta.get("ai_dbt_error", "")),
+    })
+
+
+@app.route("/api/ai/apply-dangbaitap", methods=["POST"])
+def api_ai_apply_dangbaitap():
+    """ADMIN: sau khi xem gợi ý hàng loạt, chấp nhận các DangBaiTap được tick và ghi cột H."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được chấp nhận/cập nhật Dạng bài tập."}), 403
+    body = request.get_json(silent=True) or {}
+    updates = body.get("updates") or []
+    if not isinstance(updates, list) or not updates:
+        return jsonify({"error": "Chưa chọn câu nào để cập nhật."}), 400
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        result = st.update_question_dangbaitap_bulk(updates)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 @app.route("/api/ai/detect-level", methods=["POST"])
 def api_ai_detect_level():
     """ADMIN: dùng GPT ADMIN nhận dạng lại mức độ NB/TH/VD/VDC cho 1 câu đang sửa.
@@ -13740,7 +14112,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v291';
+const CACHE_NAME = 'luyen-de-ai-v292';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
