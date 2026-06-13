@@ -61,7 +61,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V290_AI_DBT_SYNC_EXISTING_2026_06_12"
+APP_VERSION = "V291_FIX_JS_SYNTAX_HANG_2026_06_12"
 SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -9000,8 +9000,7 @@ async function init(){
   INIT_POLL_COUNT=0;
   CATALOG=META.catalog||[];
   if(info)info.textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
-  refreshFilterOptions();
-  renderCatalog();
+  try{refreshFilterOptions();renderCatalog();}catch(e){console.error('renderCatalog',e);if(cat)cat.innerHTML='<div class="card loadErr"><b>Lỗi hiển thị mục lục:</b> '+esc(e.message||e)+'</div>'}
   try{initRpPracticePanel()}catch(e){console.error('initRpPracticePanel',e)}
   try{initAdminComposePanel()}catch(e){console.error('initAdminComposePanel',e)}
   showAdminDuplicateSheetNotice();
@@ -9497,7 +9496,7 @@ function adminDbtScopeLabel(scope,level){scope=scope||{};let parts=[];if(scope.m
 function adminDangBaiTapOptions(q){let scope=adminDbtScopeFromForm(q);let curVal=String((q&&q.DangBaiTap)||'').trim();let seen={},counts={};function bump(v,n){v=String(v||'').trim();if(!v||adminDbtIsBadValue(v))return;let k=normText(v);counts[k]=(counts[k]||0)+(n||1);if(!seen[k]){seen[k]=v}}function collectItem(item,level){if(!adminDbtScopeMatches(item,scope,level))return;let fc=(item.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object'&&!Array.isArray(fc)){for(let [k,c] of Object.entries(fc))bump(k,parseInt(c,10)||1)}let raw=String(item.DangBaiTap||'');if(raw)for(let part of raw.split(/[,;|]+/))bump(part.trim(),1)}let level='none';for(let c of (CATALOG||[]))collectItem(c,'bai');if(Object.keys(seen).length){level='bai'}else if(scope.chuong){for(let c of (CATALOG||[]))collectItem(c,'chuong');if(Object.keys(seen).length)level='chuong'}if(!Object.keys(seen).length&&scope.mon){for(let c of (CATALOG||[]))collectItem(c,'mon');if(Object.keys(seen).length)level='mon'}for(let qq of (QUESTIONS||[])){if(adminDbtScopeMatches(qq,scope,'bai'))bump(qq.DangBaiTap,1);else if(scope.chuong&&adminDbtScopeMatches(qq,scope,'chuong'))bump(qq.DangBaiTap,1);else if(scope.mon&&adminDbtScopeMatches(qq,scope,'mon'))bump(qq.DangBaiTap,1)}if(curVal&&!seen[normText(curVal)])bump(curVal,0);let opts=Object.values(seen).sort((a,b)=>{let ca=counts[normText(a)]||0,cb=counts[normText(b)]||0;if(cb!==ca)return cb-ca;return a.localeCompare(b,'vi')});return{opts,scopeLabel:adminDbtScopeLabel(scope,level),scopeLevel:level}}
 function adminDangBaiTapSuggestions(){try{let pack=adminDangBaiTapOptions(readQuestionFormData());return(pack.opts||[]).slice(0,50)}catch(e){return []}}
 function adminDangBaiTapSuggestionsForQuestion(q){try{let pack=adminDangBaiTapOptions(q||{});return(pack.opts||[]).slice(0,50)}catch(e){return []}}
-function adminDbtAiSyncNote(j){j=j||{};let dbt=String(j.DangBaiTap||'').trim();let raw=String(j.ai_raw||'').trim();if(j.matched_existing&&raw&&raw!==dbt)return '<br><span class="muted">🔗 Đồng bộ về dạng có sẵn: <b>'+esc(dbt)+'</b>'+(raw!==dbt?' (GPT gợi ý: '+esc(raw)+')':'')+'</span>':'';if(!j.matched_existing&&dbt)return '<br><span class="muted">🆕 Dạng mới — chưa có trong danh sách phạm vi này.</span>':'';return ''}
+function adminDbtAiSyncNote(j){j=j||{};let dbt=String(j.DangBaiTap||'').trim();let raw=String(j.ai_raw||'').trim();if(j.matched_existing&&raw&&raw!==dbt)return '<br><span class="muted">🔗 Đồng bộ về dạng có sẵn: <b>'+esc(dbt)+'</b>'+(raw!==dbt?' (GPT gợi ý: '+esc(raw)+')':'')+'</span>';if(!j.matched_existing&&dbt)return '<br><span class="muted">🆕 Dạng mới — chưa có trong danh sách phạm vi này.</span>';return ''}
 function adminDbtFindMatch(val,opts){val=String(val||'').trim();if(!val)return null;for(let x of opts||[]){if(normText(x)===normText(val))return x}return null}
 function adminDbtCheckDuplicateHint(){let inp=document.getElementById('edit_DangBaiTap');let hint=document.getElementById('edit_DangBaiTap_dup');if(!inp||!hint)return;let raw=String(inp.value||'').trim();if(!raw){hint.textContent='';hint.classList.add('hide');return}let sel=document.getElementById('edit_DangBaiTap_pick');let near='';if(sel){for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(!v||v==='__custom__'||normText(v)===normText(raw))continue;if(normText(v).includes(normText(raw))||normText(raw).includes(normText(v))){near=v;break}}}if(near){hint.innerHTML='⚠ Có thể trùng với «'+esc(near)+'» — nên chọn dạng có sẵn.';hint.classList.remove('hide')}else{hint.textContent='';hint.classList.add('hide')}}
 function adminDbtPickChange(){let sel=document.getElementById('edit_DangBaiTap_pick');let inp=document.getElementById('edit_DangBaiTap');let note=document.getElementById('edit_DangBaiTap_hint');if(!sel||!inp)return;let v=String(sel.value||'');if(v==='__custom__'){inp.classList.remove('hide');inp.focus();if(note)note.textContent='Gõ tên dạng mới — tránh trùng hoặc gần giống tên đã có.';adminDbtCheckDuplicateHint();return}if(v){inp.value=v;inp.classList.add('hide');if(note)note.textContent='Đã chọn dạng có sẵn — tên thống nhất, không trùng.'}else{inp.value='';inp.classList.remove('hide');if(note)note.textContent='Chọn dạng có sẵn hoặc gõ mới bên dưới.'}adminDbtCheckDuplicateHint()}
@@ -13741,7 +13740,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v290';
+const CACHE_NAME = 'luyen-de-ai-v291';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
