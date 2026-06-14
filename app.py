@@ -12423,6 +12423,7 @@ async function aiAdminFixLoigiai(formatMode){
       }
       refreshEditHinhAnhPreview();renderEditQuestionPreview();
       alert('Đã chỉnh LG ('+(labels[formatMode]||formatMode)+') bằng '+(j.provider||'AI')+'.\nKiểm tra rồi bấm Lưu.');
+    }
   }catch(e){alert('AI chỉnh lời giải lỗi: '+e.message)}
   finally{if(btn){btn.disabled=false;btn.textContent=oldBtn||('📝 LG '+(labels[formatMode]||''))}}
 }
