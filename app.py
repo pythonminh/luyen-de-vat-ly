@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V306t_MINI_CALC_2026_06_12"
+APP_VERSION = "V306u_FIX_JINJA_CSS_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -10233,7 +10233,7 @@ html[data-theme='dark'] .aiChatInput{background:#0f172a;color:#e5e7eb;border-col
 #hintBox.learningOpen.aiAssistOpen .learningTitleRow{cursor:default!important}
 #hintBox.learningOpen.aiAssistOpen .learningPanelBody{max-height:min(44vh,400px);touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #hintBox.learningOpen.aiAssistOpen .aiChatMsgs{max-height:none!important;overflow:visible!important}
-@media(max-width:760px){#hintBox.learningOpen.aiAssistOpen .learningPanelBody{max-height:min(38vh,320px)}}
+@media(max-width:760px){ #hintBox.learningOpen.aiAssistOpen .learningPanelBody{max-height:min(38vh,320px)}}
 
 /* ===== V240/V275: Dịch tiếng Anh ===== */
 .qidLearnBtns .translateEnBtn,.learningQuickBar .translateEnBtn,#quizActions .translateEnBtn,#fsOnlyTools .translateEnBtn{background:#fef9c3!important;color:#854d0e!important;border:1px solid #fde047!important}
@@ -10515,7 +10515,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V306t';
+    window.__LDVL_V='V306u';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -17809,7 +17809,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v306t';
+const CACHE_NAME = 'luyen-de-ai-v306u';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
