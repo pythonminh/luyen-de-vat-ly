@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307r_FIX_LATEX_IMPORT_APPEND_READ_2026_06_12"
+APP_VERSION = "V307t_FIX_SHEET_ROW_ALIGN_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -4796,25 +4796,81 @@ class SheetStore:
             "duplicate_report": self.duplicate_report,
         }
 
+    def delete_questions_rows_admin(self, row_numbers: List[int]) -> Dict[str, Any]:
+        """ADMIN xóa nhiều dòng Cau_Hoi theo số dòng (dùng sau bảng trùng ≥70%)."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được xóa câu hỏi")
+        rows = sorted({int(r) for r in row_numbers if int(r) > 1}, reverse=True)
+        if not rows:
+            return {"ok": True, "deleted": 0, "rows": [], "message": "Không có dòng để xóa."}
+        with self.add_question_lock:
+            self._batch_delete_question_rows(rows)
+            self._purge_question_rows_in_memory(rows)
+        self.duplicate_report = analyze_question_duplicates(self.questions)
+        self.rebuild_indexes_after_admin_change()
+        return {
+            "ok": True,
+            "deleted": len(rows),
+            "rows": sorted(rows),
+            "message": f"Đã xóa {len(rows)} câu khỏi Google Sheet.",
+        }
+
+    def _question_field_col0(self, field: str) -> Optional[int]:
+        """Một cột 0-indexed cho mỗi field — ưu tiên bố cục I–T, không ghi trùng 2 cột."""
+        headers = list(self.question_headers or [])
+        fixed = SHEET_QUESTION_FIXED_COL_1.get(field)
+        if fixed is not None:
+            idx = fixed - 1
+            if idx < len(headers):
+                if not clean(headers[idx]) or header_matches_field(headers, idx, field):
+                    return idx
+            else:
+                return idx
+        cols = self.question_col_index or {}
+        if field in cols:
+            return cols[field]
+        if fixed is not None:
+            return fixed - 1
+        return None
+
+    def _build_question_row(self, data: Dict[str, Any], cq: Optional[Dict[str, Any]] = None) -> List[str]:
+        """Dựng một dòng Sheet khớp tiêu đề hàng 1 — mỗi ô đúng cột, không thừa khoảng trống giữa."""
+        headers = list(self.question_headers or [])
+        n = len(headers) if headers else max(SHEET_QUESTION_FIXED_COL_1.values(), default=22)
+        row = [""] * n
+        seed_cq = cq if cq is not None else canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS})
+        for field in CREATE_QUESTION_FIELDS:
+            val = clean(data.get(field, ""))
+            if not val and field in ("ID", "MaDe"):
+                val = clean(seed_cq.get(field, ""))
+            if not val:
+                continue
+            col0 = self._question_field_col0(field)
+            if col0 is None:
+                continue
+            while len(row) <= col0:
+                row.extend([""] * (col0 + 1 - len(row)))
+            row[col0] = val
+        if headers:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+            elif len(row) > len(headers):
+                row = row[: len(headers)]
+        return row
+
     def _write_question_field_to_row(
         self, row: List[str], min_len: int, field: str, value: str
     ) -> None:
         value = clean(value)
         if not value:
             return
-        cols = self.question_col_index or {}
-        col0 = cols.get(field)
-        if col0 is not None:
-            while len(row) <= col0:
-                row.append("")
-            row[col0] = value
-        fixed = SHEET_QUESTION_FIXED_COL_1.get(field)
-        if fixed is not None:
-            idx = fixed - 1
-            while len(row) <= idx:
-                row.append("")
-            row[idx] = value
-        if len(row) < min_len:
+        col0 = self._question_field_col0(field)
+        if col0 is None:
+            return
+        while len(row) <= col0:
+            row.append("")
+        row[col0] = value
+        if min_len and len(row) < min_len:
             row.extend([""] * (min_len - len(row)))
 
     def _question_from_sheet_row(self, row_number: int, row_vals: List[str]) -> Optional[Dict[str, Any]]:
@@ -5000,18 +5056,7 @@ class SheetStore:
             if not clean(data.get("MaDe")):
                 data["MaDe"] = cq.get("MaDe", "")
 
-            row: List[str] = []
-            min_len = max(len(headers), 22)
-            for field in CREATE_QUESTION_FIELDS:
-                val = clean(data.get(field, ""))
-                if not val and field in ("ID", "MaDe"):
-                    val = clean(cq.get(field, ""))
-                if val:
-                    self._write_question_field_to_row(row, min_len, field, val)
-            if len(row) < len(headers):
-                row.extend([""] * (len(headers) - len(row)))
-            elif len(row) > len(headers):
-                row = row[: len(headers)]
+            row = self._build_question_row(data, cq)
 
             gsheet_call_retry("append_row Cau_Hoi", self.ws_questions.append_row, row, value_input_option="RAW")
             values = gsheet_call_retry("get_all_values Cau_Hoi", self.ws_questions.get_all_values)
@@ -5053,7 +5098,6 @@ class SheetStore:
             if not headers:
                 raise RuntimeError("Sheet Cau_Hoi không có tiêu đề cột.")
 
-            min_len = max(len(headers), 22)
             existing_fp = set()
             for q in self.questions or []:
                 try:
@@ -5085,18 +5129,7 @@ class SheetStore:
                     continue
                 existing_fp.add(fp)
 
-                row: List[str] = []
-                for field in CREATE_QUESTION_FIELDS:
-                    val = clean(data.get(field, ""))
-                    if not val and field in ("ID", "MaDe"):
-                        val = clean(cq.get(field, ""))
-                    if val:
-                        self._write_question_field_to_row(row, min_len, field, val)
-
-                if len(row) < len(headers):
-                    row.extend([""] * (len(headers) - len(row)))
-                elif len(row) > len(headers):
-                    row = row[: len(headers)]
+                row = self._build_question_row(data, cq)
 
                 rows.append(row)
                 prepared.append(data)
@@ -10149,6 +10182,13 @@ SHARE_HTML = r"""
 .dangSimWarn .dangSimAi{margin-top:8px;padding:8px;border-radius:8px;background:#fff;border:1px solid #fde68a;color:#713f12;font-size:12.5px;line-height:1.55}
 html[data-theme='dark'] .dangSimWarn{background:#422006;border-color:#b45309;color:#fde68a}
 html[data-theme='dark'] .dangSimWarn .dangSimAi{background:#1c1917;border-color:#92400e;color:#fef3c7}
+.dangSimPair{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px;background:var(--surface)}
+.dangSimPairHead{font-weight:800;margin-bottom:4px;line-height:1.35}
+.dangSimPairSnip{color:var(--muted);font-size:11px;line-height:1.35;margin-top:4px}
+.dangSimPairActs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.dangSimPairActs label{display:inline-flex;gap:5px;align-items:center;font-size:11px;font-weight:700;cursor:pointer}
+#dangSimModal .modalBox{max-width:min(920px,96vw)}
+#dangSimList{max-height:min(58vh,520px);overflow:auto;margin:10px 0;padding-right:4px}
 html[data-theme='dark'] .adminLearningBoard{background:#0f172a;border-color:#3b82f6;color:#bfdbfe}
 html[data-theme='dark'] .adminLearningBoard h4{color:#bfdbfe}
 html[data-theme='dark'] .adminLearningBoard .adminLearnScope{color:#94a3b8}
@@ -10771,7 +10811,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307r';
+    window.__LDVL_V='V307t';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11750,8 +11790,16 @@ async function requestAssistantNote(){if(!USER.can_ai_hint){alert('Trợ lý AI 
 async function sendAssistantChat(){if(!USER.can_ai_hint)return;if(ASSISTANT_LOADING)return;let inp=document.getElementById('aiChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=ASSISTANT_BY_Q[qIdx]||{note:'',messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';ASSISTANT_BY_Q[qIdx]=st;ASSISTANT_LOADING=true;syncAiAssistChatUi(st);try{let chatBody={sid:SID,index:qIdx,message:msg,messages:st.messages.slice(0,-1),answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-chat',chatBody):await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});st.messages.push({role:'assistant',text:j.reply||''});ASSISTANT_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'❌ '+(e.message||e)});ASSISTANT_BY_Q[qIdx]=st}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
 function dangSimilarityCacheKey(q){q=q||{};return [q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].map(x=>normText(String(x||''))).join('|')}
 async function loadDangSimilarityReport(q,force,withAi){if(!USER.is_admin||!q||!String(q.DangBaiTap||'').trim())return null;let key=dangSimilarityCacheKey(q);if(!force&&DANG_SIMILARITY_CACHE[key]&&!withAi)return DANG_SIMILARITY_CACHE[key];if(DANG_SIMILARITY_LOADING&&!force)return DANG_SIMILARITY_CACHE[key]||null;DANG_SIMILARITY_LOADING=true;try{let body={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',MaDe:q.MaDe||CURRENT_MADE||'',ID:q.ID||'',with_ai:!!withAi};let j=withAi?await adminApiPost('/api/admin/dang-similarity',body):await api('/api/admin/dang-similarity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});DANG_SIMILARITY_CACHE[key]=j;return j}catch(e){return {ok:false,error:e.message||String(e),summary:'Không phân tích được: '+(e.message||e)}}finally{DANG_SIMILARITY_LOADING=false}}
-function renderDangSimilarityWarnHtml(report,q){if(!report||!USER.is_admin)return '';let warns=(report.current_warnings&&report.current_warnings.length)?report.current_warnings:[];if(!warns.length&&report.pair_count>0){warns=(report.pairs||[]).slice(0,4).map(p=>p.suggestion||'')}if(!warns.length&&!report.pair_count)return '';let head=report.pair_count?('<b>⚠️ Trùng lặp trong dạng ≥70%</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>'):('<b>✅ Đa dạng trong dạng</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>');let list=warns.length?('<ul>'+warns.slice(0,5).map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'):'';let ai=report.ai_advice?('<div class="dangSimAi"><b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(report.ai_advice)+'</div>'):'';let btn=report.pair_count?'<div style="margin-top:8px"><button type="button" class="btn2" onclick="adminAnalyzeDangSimilarity(true)">🤖 Gợi ý AI xóa/gộp</button></div>':'';return '<div class="dangSimWarn">'+head+list+ai+btn+'</div>'}
-async function adminAnalyzeDangSimilarity(withAi){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!String(q.DangBaiTap||'').trim()){alert('Câu chưa có Dạng bài tập (cột H).');return}let rep=await loadDangSimilarityReport(q,true,!!withAi);if(!rep){alert('Không phân tích được.');return}if(LEARNING_OPEN_KIND==='method'){let hb=document.getElementById('hintBox');if(hb&&hb.classList.contains('learningOpen')){let items=(LEARNING_CACHE[learningCacheKey('method',q)]||{}).items||[];renderLearningPanel('method',items,(LEARNING_CACHE[learningCacheKey('method',q)]||{}).meta||{})}}let lines=[rep.summary||''];(rep.pairs||[]).slice(0,12).forEach(p=>{if(p.suggestion)lines.push('• '+p.suggestion)});if(rep.ai_advice)lines.push('\n🤖 Gợi ý AI:\n'+rep.ai_advice);alert(lines.join('\n'))}
+function renderDangSimilarityWarnHtml(report,q){if(!report||!USER.is_admin)return '';let warns=(report.current_warnings&&report.current_warnings.length)?report.current_warnings:[];if(!warns.length&&report.pair_count>0){warns=(report.pairs||[]).slice(0,4).map(p=>p.suggestion||'')}if(!warns.length&&!report.pair_count)return '';let head=report.pair_count?('<b>⚠️ Trùng lặp trong dạng ≥70%</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>'):('<b>✅ Đa dạng trong dạng</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>');let list=warns.length?('<ul>'+warns.slice(0,5).map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'):'';let ai=report.ai_advice?('<div class="dangSimAi"><b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(report.ai_advice)+'</div>'):'';let btn=report.pair_count?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="adminAnalyzeDangSimilarity(false)">🗑️ Xóa/gộp trùng</button><button type="button" class="btn2" onclick="adminAnalyzeDangSimilarity(true)">🤖 Gợi ý AI</button></div>':'';return '<div class="dangSimWarn">'+head+list+ai+btn+'</div>'}
+function dangSimDefaultDeleteRow(pair){let ra=parseInt(pair.row_a,10)||0,rb=parseInt(pair.row_b,10)||0;if(pair.kind!=='question_question')return 0;if(ra&&rb)return ra>=rb?ra:rb;return rb||ra}
+function ensureDangSimModal(){let m=document.getElementById('dangSimModal');if(m)return m;m=document.createElement('div');m.id='dangSimModal';m.className='modal hide';m.innerHTML='<div class="modalBox"><h3 id="dangSimTitle">⚠️ Trùng lặp trong dạng</h3><div id="dangSimSummary" class="muted" style="font-size:13px;line-height:1.45"></div><div id="dangSimAiBox" class="dangSimAi hide"></div><div id="dangSimList"></div><div id="dangSimStatus" class="muted" style="font-size:12px;margin-top:8px"></div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="btn2" onclick="closeDangSimilarityModal()">Đóng</button><button type="button" class="btn2" id="dangSimAiBtn" onclick="adminAnalyzeDangSimilarity(true)">🤖 Gợi ý AI</button><button type="button" class="btnGreen" id="dangSimDeleteBtn" onclick="executeDangSimilarityDelete()">🗑️ Xóa các câu đã chọn</button></div></div>';document.body.appendChild(m);return m}
+function closeDangSimilarityModal(){let m=document.getElementById('dangSimModal');if(m)m.classList.add('hide')}
+function renderDangSimilarityModal(rep){window.DANG_SIM_MODAL_REPORT=rep||null;ensureDangSimModal();let m=document.getElementById('dangSimModal');let sum=document.getElementById('dangSimSummary');let list=document.getElementById('dangSimList');let aiBox=document.getElementById('dangSimAiBox');let st=document.getElementById('dangSimStatus');if(!m||!sum||!list)return;if(sum)sum.textContent=rep.summary||'';if(aiBox){if(rep.ai_advice){aiBox.classList.remove('hide');aiBox.innerHTML='<b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(rep.ai_advice)}else{aiBox.classList.add('hide');aiBox.innerHTML=''}}if(st)st.textContent='Tick câu sẽ xóa (mặc định giữ dòng nhỏ hơn — câu cũ hơn). Có thể bấm «Xem» để mở câu trước khi xóa.';let pairs=(rep.pairs||[]).filter(p=>p.kind==='question_question');if(!pairs.length){list.innerHTML='<div class="muted">Không có cặp câu–câu để xóa tự động. Cặp câu–khung PP cần sửa khung Phương pháp thủ công.</div>'}else{list.innerHTML=pairs.map((p,i)=>{let pct=Math.round(parseFloat(p.similarity||0)*100);let delRow=dangSimDefaultDeleteRow(p);let keepRow=delRow===(parseInt(p.row_a,10)||0)?(parseInt(p.row_b,10)||0):(parseInt(p.row_a,10)||0);let delId=delRow===(parseInt(p.row_a,10)||0)?(p.id_a||''):(p.id_b||'');let snip=esc(shortText(p.snippet_a||'',90));return `<div class="dangSimPair" data-pair="${i}"><div class="dangSimPairHead">${pct}% · ${esc(p.id_a||'?')} (dòng ${p.row_a||'?'}) ↔ ${esc(p.id_b||'?')} (dòng ${p.row_b||'?'})</div><div class="dangSimPairSnip">${snip}</div><div class="dangSimPairActs"><label><input type="checkbox" class="dangSimDelChk" data-del-row="${delRow}" data-del-id="${escAttr(delId)}" checked> Xóa dòng ${delRow} · ${esc(delId||'—')} (giữ dòng ${keepRow})</label><button type="button" class="btn2 btnSmall" onclick="jumpDangSimQuestion(${parseInt(p.row_a,10)||0})">👁 A</button><button type="button" class="btn2 btnSmall" onclick="jumpDangSimQuestion(${parseInt(p.row_b,10)||0})">👁 B</button></div></div>`}).join('')}m.classList.remove('hide');try{typesetQuizMath()}catch(e){}}
+function jumpDangSimQuestion(row){row=parseInt(row,10)||0;if(!row)return;let idx=QUESTIONS.findIndex(q=>parseInt(q._row,10)===row);if(idx<0){alert('Câu dòng '+row+' không có trong phiên làm bài hiện tại.\nMở đề chứa câu này hoặc tìm trên Google Sheet.');return}saveCurrent();CUR=idx;renderNav();renderQuestion();closeDangSimilarityModal()}
+function collectDangSimDeleteRows(){let rows=[];document.querySelectorAll('#dangSimList .dangSimDelChk:checked').forEach(ch=>{let r=parseInt(ch.getAttribute('data-del-row'),10)||0;if(r>1)rows.push(r)});return [...new Set(rows)]}
+function purgeLocalQuestionsAfterDeletes(rows){let dels=new Set(rows.map(r=>parseInt(r,10)).filter(r=>r>1));if(!dels.size)return;let removedIdx=[];for(let i=QUESTIONS.length-1;i>=0;i--){if(dels.has(parseInt(QUESTIONS[i]._row,10)||0))removedIdx.push(i)}removedIdx.sort((a,b)=>b-a);for(let i of removedIdx){QUESTIONS.splice(i,1);reindexQuizMaps(i)}for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;let shift=[...dels].filter(d=>d<r).length;if(shift)qq._row=r-shift}if(CUR>=QUESTIONS.length)CUR=Math.max(0,QUESTIONS.length-1)}
+async function executeDangSimilarityDelete(){if(!USER.is_admin)return;let rows=collectDangSimDeleteRows();if(!rows.length){alert('Chưa tick câu nào để xóa.');return}if(!confirm('Xóa '+rows.length+' câu khỏi Google Sheet?\n\nDòng: '+rows.sort((a,b)=>a-b).join(', ')+'\n\nHành động không hoàn tác.'))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;let btn=document.getElementById('dangSimDeleteBtn');let st=document.getElementById('dangSimStatus');if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}if(st)st.textContent='⏳ Đang xóa '+rows.length+' dòng trên Google Sheet…';try{let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});purgeLocalQuestionsAfterDeletes(j.rows||rows);DANG_SIMILARITY_CACHE={};if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||0)+' câu.'));renderNav();renderQuestion();refreshCatalogFromMeta();let q=QUESTIONS[CUR]||{};if(String(q.DangBaiTap||'').trim()){let rep=await loadDangSimilarityReport(q,true,false);if(rep&&rep.pair_count)renderDangSimilarityModal(rep);else closeDangSimilarityModal()}else closeDangSimilarityModal();alert(j.message||('Đã xóa '+(j.deleted||0)+' câu.'))}catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa các câu đã chọn'}}}
+async function adminAnalyzeDangSimilarity(withAi){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!String(q.DangBaiTap||'').trim()){alert('Câu chưa có Dạng bài tập (cột H).');return}let rep=await loadDangSimilarityReport(q,true,!!withAi);if(!rep){alert('Không phân tích được.');return}if(LEARNING_OPEN_KIND==='method'){let hb=document.getElementById('hintBox');if(hb&&hb.classList.contains('learningOpen')){let items=(LEARNING_CACHE[learningCacheKey('method',q)]||{}).items||[];renderLearningPanel('method',items,(LEARNING_CACHE[learningCacheKey('method',q)]||{}).meta||{})}}renderDangSimilarityModal(rep)}
 function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let parts=[q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].filter(x=>String(x||'').trim());scope.textContent=parts.length?parts.join(' · '):'Chưa có metadata bài/chương.'}}
 async function adminDetectDangBaiTapAndSave(autoOnly){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!q._row&&!autoOnly){alert('Câu chưa có dòng Sheet — không lưu được Dạng bài tập.');return}if(!confirm('GPT gán Dạng bài tập cho câu này và lưu Sheet?'))return;try{let j=await adminApiPost('/api/ai/detect-dangbaitap-update',{row:q._row,id:q.ID||'',question:q,dangbaitap_suggestions:adminDangBaiTapSuggestionsForQuestion(q)});if(j.DangBaiTap){q.DangBaiTap=j.DangBaiTap;LEARNING_CACHE={};renderQuestion();let sync=j.matched_existing?' (đồng bộ dạng có sẵn)':'';alert('Đã gán Dạng bài tập: '+j.DangBaiTap+sync+(j.reason?'\n'+j.reason:''))}}catch(e){alert('Không gán được: '+(e.message||e))}}
 async function adminGenerateAndSyncLearning(kind){if(!USER.is_admin)return;kind=(kind==='method')?'method':'theory';if(kind==='theory'){alert('Lý thuyết SGK phải do ADMIN nhập tay vào sheet Ly_Thuyet; GPT chỉ tạo Phương pháp giải.');return}let q=QUESTIONS[CUR]||{};if(!confirm('GPT tạo Phương pháp giải và lưu Google Sheet?'))return;try{let j=await adminApiPost('/api/learning/generate-save',{kind:'method',question:q});LEARNING_CACHE={};if(j.DangBaiTap&&q){q.DangBaiTap=j.DangBaiTap;renderQuestion()}let extra=j.question_dangbaitap_updated?('\nĐã gán Dạng bài tập cột H: '+j.DangBaiTap):'';alert('Đã lưu học liệu'+(j.row?(' dòng '+j.row):'')+'.'+extra);if(LEARNING_OPEN_KIND==='method')loadLearningPanelContent('method',true)}catch(e){alert('Không tạo/lưu được: '+(e.message||e))}}
@@ -17513,6 +17561,26 @@ def api_admin_dang_similarity():
             report["ai_advice_error"] = str(e)
     return jsonify(report)
 
+@app.route("/api/admin/dang-similarity-delete", methods=["POST"])
+def api_admin_dang_similarity_delete():
+    """ADMIN: xóa các dòng câu đã chọn từ bảng trùng ≥70% trong dạng BT."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xóa câu trùng dạng."}), 403
+    body = request.get_json(silent=True) or {}
+    rows_in = body.get("rows") or body.get("delete_rows") or []
+    if not isinstance(rows_in, list) or not rows_in:
+        return jsonify({"error": "Chưa chọn dòng cần xóa."}), 400
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        result = st.delete_questions_rows_admin(rows_in)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 @app.route("/api/admin/merge-dangbaitap", methods=["POST"])
 def api_admin_merge_dangbaitap():
     """ADMIN: gộp nhiều tên DangBaiTap thành một tên mới (cột H) trong chuyên đề."""
@@ -18137,7 +18205,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307r';
+const CACHE_NAME = 'luyen-de-ai-v307t';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
