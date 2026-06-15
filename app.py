@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307w_SHEET_WRITE_COL_A_2026_06_12"
+APP_VERSION = "V307x_AI_GEN_JSON_FIX_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -8425,23 +8425,74 @@ def _strip_ai_json_fence(txt: Any) -> str:
     return txt
 
 
+def _repair_latex_json_escapes(s: str) -> str:
+    """Sửa backslash LaTeX trong chuỗi JSON (\\omega, \\frac…) để json.loads đọc được."""
+    out: List[str] = []
+    in_str = False
+    esc = False
+    i = 0
+    while i < len(s):
+        ch = s[i]
+        if not in_str:
+            out.append(ch)
+            if ch == '"':
+                in_str = True
+                esc = False
+            i += 1
+            continue
+        if esc:
+            out.append(ch)
+            esc = False
+            i += 1
+            continue
+        if ch == "\\":
+            nxt = s[i + 1] if i + 1 < len(s) else ""
+            if nxt in '"\\/bfnrtu':
+                out.append(ch)
+                esc = True
+            else:
+                out.append("\\\\")
+            i += 1
+            continue
+        if ch == '"':
+            in_str = False
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _json_loads_ai_lenient(raw: str) -> Any:
+    """Đọc JSON từ phản hồi AI — thử nhiều cách (object, array, sửa LaTeX)."""
+    raw = _strip_ai_json_fence(raw)
+    if not raw:
+        return None
+    chunks: List[str] = [raw]
+    a, b = raw.find("{"), raw.rfind("}")
+    if a >= 0 and b > a:
+        chunks.append(raw[a: b + 1])
+    a2, b2 = raw.find("["), raw.rfind("]")
+    if a2 >= 0 and b2 > a2:
+        chunks.append(raw[a2: b2 + 1])
+    seen: set = set()
+    for chunk in chunks:
+        if not chunk or chunk in seen:
+            continue
+        seen.add(chunk)
+        for variant in (chunk, _repair_latex_json_escapes(chunk)):
+            try:
+                return json.loads(variant)
+            except Exception:
+                pass
+    return None
+
+
 def _extract_ai_json_object(txt: Any) -> Dict[str, Any]:
     """Tách JSON object từ phản hồi AI."""
-    raw = _strip_ai_json_fence(txt)
-    try:
-        obj = json.loads(raw)
-        return obj if isinstance(obj, dict) else {}
-    except Exception:
-        pass
-    a = raw.find("{")
-    b = raw.rfind("}")
-    if a >= 0 and b > a:
-        chunk = raw[a : b + 1]
-        try:
-            obj = json.loads(chunk)
-            return obj if isinstance(obj, dict) else {}
-        except Exception:
-            pass
+    parsed = _json_loads_ai_lenient(str(txt or ""))
+    if isinstance(parsed, dict):
+        return parsed
+    if isinstance(parsed, list):
+        return {"questions": [x for x in parsed if isinstance(x, dict)]}
     return {}
 
 
@@ -8826,21 +8877,16 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
 
 
 def _extract_ai_question_list(txt: Any) -> List[Dict[str, Any]]:
-    obj = _extract_ai_json_object(txt)
-    items: Any = obj.get("questions") if isinstance(obj, dict) else None
-    if isinstance(items, list):
-        return [x for x in items if isinstance(x, dict)]
-    if isinstance(obj.get("question"), dict):
-        return [obj.get("question")]
-    raw = _strip_ai_json_fence(txt)
-    a, b = raw.find("["), raw.rfind("]")
-    if a >= 0 and b > a:
-        try:
-            arr = json.loads(raw[a:b + 1])
-            if isinstance(arr, list):
-                return [x for x in arr if isinstance(x, dict)]
-        except Exception:
-            pass
+    parsed = _json_loads_ai_lenient(str(txt or ""))
+    if isinstance(parsed, list):
+        return [x for x in parsed if isinstance(x, dict)]
+    if isinstance(parsed, dict):
+        for key in ("questions", "items", "cau_hoi", "CauHoi"):
+            items = parsed.get(key)
+            if isinstance(items, list):
+                return [x for x in items if isinstance(x, dict)]
+        if isinstance(parsed.get("question"), dict):
+            return [parsed.get("question")]
     return []
 
 
@@ -8856,7 +8902,7 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
     for f in ("MaDe", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "MucDo", "Dang", "QuyenTruyCap", "Diem"):
         data[f] = clean(spec.get(f, ""))
     requested_nlvl = norm_nang_luc_vat_ly(spec.get("NangLucVatLy", ""))
-    data["NangLucVatLy"] = requested_nlvl or norm_nang_luc_vat_ly((raw or {}).get("NangLucVatLy", ""))
+    data["NangLucVatLy"] = requested_nlvl or norm_nang_luc_vat_ly((raw or {}).get("NangLucVatLy", "")) or "NLVL01"
     data["ID"] = "AIQ_" + stable_hash(
         f"{spec.get('request_id')}|{spec.get('offset', 0)}|{ordinal}|{data.get('CauHoi')}|{time.time()}|{random.random()}",
         14,
@@ -8870,7 +8916,7 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
     if not data["CauHoi"]:
         return None, "Thiếu nội dung câu hỏi"
     if not data.get("NangLucVatLy"):
-        return None, "Thiếu mã năng lực vật lí NLVL01–NLVL06"
+        data["NangLucVatLy"] = "NLVL01"
 
     dang = spec["Dang"]
     if dang == "Trắc nghiệm":
@@ -8974,7 +9020,9 @@ def ai_generate_question_batch_from_provider(
     )
     user_prompt = build_ai_generate_questions_prompt(spec, references)
     count = int(spec.get("count") or 1)
-    max_tokens = min(10000, max(2600, count * 1450))
+    dang = spec.get("Dang") or ""
+    per_q = 2400 if dang == "Đúng sai" else (2000 if dang == "Tự luận" else 1500)
+    max_tokens = min(12000, max(3200, count * per_q))
     temp = 0.22
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
     model_gemini = clean(os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)) or DEFAULT_GEMINI_ADMIN_MODEL
@@ -9035,7 +9083,14 @@ def ai_generate_question_batch_from_provider(
 
     raw_items = _extract_ai_question_list(raw_text)
     if not raw_items:
-        raise RuntimeError("AI trả về dữ liệu không đúng JSON questions[].")
+        preview = short_plain_text(raw_text, 300)
+        prov = "Gemini" if used_provider == "GEMINI" else "GPT"
+        raise RuntimeError(
+            "AI trả về dữ liệu không đúng JSON questions[]. "
+            f"({prov} — hay gặp với câu Đúng/Sai có công thức $...$). "
+            "Thử: giảm Số lượng câu xuống 2–3, chọn Năng lực vật lí, hoặc bấm lại khi hết quota. "
+            + (f"Đầu phản hồi AI: {preview}" if preview else "AI không trả nội dung.")
+        )
     questions: List[Dict[str, Any]] = []
     warnings: List[str] = []
     seen: set = set()
@@ -10869,7 +10924,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307w';
+    window.__LDVL_V='V307x';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -18425,7 +18480,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307w';
+const CACHE_NAME = 'luyen-de-ai-v307x';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
