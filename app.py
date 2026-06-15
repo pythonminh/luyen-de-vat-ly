@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307t_FIX_SHEET_ROW_ALIGN_2026_06_12"
+APP_VERSION = "V307w_SHEET_WRITE_COL_A_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -1437,8 +1437,16 @@ TRANSLATION_EN_FIELDS = [
     "NgayCapNhat", "NguoiTao",
 ]
 
-# Cột 1-indexed theo Google Sheet thực tế (H=DangBaiTap, I=MucDo … T=HinhAnh).
-SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
+# Bố cục chuẩn cột A–V khi GHI dòng mới vào Cau_Hoi (1-indexed).
+# A=MaDe, B=ID … G=Chuong, H=DangBaiTap, I=MucDo, J=Dang, K=CauHoi …
+SHEET_QUESTION_WRITE_COL_1: Dict[str, int] = {
+    "MaDe": 1,
+    "ID": 2,
+    "BoDe": 3,
+    "De": 4,
+    "Lop": 5,
+    "Mon": 6,
+    "Chuong": 7,
     "DangBaiTap": 8,
     "MucDo": 9,
     "Dang": 10,
@@ -1450,7 +1458,19 @@ SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
     "DapAn": 16,
     "SaiSo": 17,
     "LoiGiai": 18,
+    "Diem": 19,
     "HinhAnh": 20,
+    "QuyenTruyCap": 21,
+    "NangLucVatLy": 22,
+}
+
+# Alias cho chỗ ghi theo cột cố định I–T (sửa câu, batch MucDo/DangBaiTap).
+SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
+    k: v for k, v in SHEET_QUESTION_WRITE_COL_1.items()
+    if k in {
+        "DangBaiTap", "MucDo", "Dang", "CauHoi", "A", "B", "C", "D",
+        "DapAn", "SaiSo", "LoiGiai", "HinhAnh",
+    }
 }
 
 # Giá trị đặc biệt: lọc câu chưa có DangBaiTap hợp lệ (cột H trống / chưa gán).
@@ -2013,6 +2033,7 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
             "duplicate_groups": 0,
             "delete_count": 0,
             "samples": [],
+            "clusters": [],
         }
 
     parent = {r: r for r in rows_data}
@@ -2072,12 +2093,14 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
         )
 
     rows_to_delete = sorted(set(rows_to_delete), reverse=True)
+    cluster_list = [sorted(members) for members in clusters.values() if len(members) >= 2]
     return {
         "rows_to_delete": rows_to_delete,
         "rows_to_keep": sorted(set(rows_to_keep)),
         "duplicate_groups": group_count,
         "delete_count": len(rows_to_delete),
         "samples": samples[:12],
+        "clusters": cluster_list,
     }
 
 
@@ -4293,12 +4316,12 @@ class SheetStore:
             pass
 
     def _question_id_col_1(self) -> int:
-        """Cột ID trong sheet Cau_Hoi, mặc định A nếu header không đọc được."""
+        """Cột ID trong sheet Cau_Hoi — mặc định B (cột 2)."""
         try:
             col0 = find_col(self.question_headers or [], "ID")
-            return int(col0) + 1 if col0 is not None else 1
+            return int(col0) + 1 if col0 is not None else 2
         except Exception:
-            return 1
+            return 2
 
     def _find_sheet_row_by_question_id(self, question_id: str) -> Optional[int]:
         """Tìm lại dòng thật trên Google Sheet theo ID để tránh ghi nhầm sau khi Sheet bị sort/chèn/xóa."""
@@ -4815,29 +4838,74 @@ class SheetStore:
             "message": f"Đã xóa {len(rows)} câu khỏi Google Sheet.",
         }
 
-    def _question_field_col0(self, field: str) -> Optional[int]:
-        """Một cột 0-indexed cho mỗi field — ưu tiên bố cục I–T, không ghi trùng 2 cột."""
+    def _question_sheet_row_width(self) -> int:
         headers = list(self.question_headers or [])
-        fixed = SHEET_QUESTION_FIXED_COL_1.get(field)
-        if fixed is not None:
-            idx = fixed - 1
-            if idx < len(headers):
-                if not clean(headers[idx]) or header_matches_field(headers, idx, field):
-                    return idx
-            else:
-                return idx
+        canon = max(SHEET_QUESTION_WRITE_COL_1.values(), default=22)
+        return max(len(headers), canon, max(SHEET_QUESTION_FIXED_COL_1.values(), default=22))
+
+    def _next_question_sheet_row(self) -> int:
+        """Dòng trống kế tiếp (theo cột A)."""
+        try:
+            col_a = gsheet_call_retry("col_values Cau_Hoi A", self.ws_questions.col_values, 1) or []
+            return max(2, len(col_a) + 1)
+        except Exception:
+            try:
+                vals = gsheet_call_retry("get_all_values Cau_Hoi tail", self.ws_questions.get_all_values) or []
+                return max(2, len(vals) + 1)
+            except Exception:
+                return 2
+
+    def _pad_question_sheet_row(self, row: List[str]) -> List[str]:
+        width = self._question_sheet_row_width()
+        r = list(row or [])
+        if len(r) < width:
+            r.extend([""] * (width - len(r)))
+        elif len(r) > width:
+            r = r[:width]
+        return r
+
+    def _append_question_rows_at_col_a(self, rows: List[List[str]]) -> int:
+        """Ghi dòng mới bắt đầu từ cột A — tránh lệch cột."""
+        if not rows:
+            return 0
+        padded = [self._pad_question_sheet_row(r) for r in rows]
+        width = max(len(r) for r in padded)
+        padded = [r + [""] * (width - len(r)) if len(r) < width else r[:width] for r in padded]
+        start_row = self._next_question_sheet_row()
+        end_row = start_row + len(padded) - 1
+        a1 = gspread.utils.rowcol_to_a1(start_row, 1)
+        b1 = gspread.utils.rowcol_to_a1(end_row, width)
+        gsheet_call_retry(
+            f"update Cau_Hoi {a1}:{b1}",
+            self.ws_questions.update,
+            f"{a1}:{b1}",
+            padded,
+            value_input_option="RAW",
+        )
+        return start_row
+
+    def _question_field_col0(self, field: str) -> Optional[int]:
+        """Cột 0-indexed khi ghi dòng mới — A=MaDe, B=ID, … theo bố cục chuẩn."""
+        if field in SHEET_QUESTION_WRITE_COL_1:
+            return SHEET_QUESTION_WRITE_COL_1[field] - 1
+        headers = list(self.question_headers or [])
+        if field == "BaiHoc":
+            cols = self.question_col_index or {}
+            if "BaiHoc" in cols:
+                return cols["BaiHoc"]
+            c = find_col(headers, "BaiHoc")
+            if c is not None:
+                return c
+            return None
         cols = self.question_col_index or {}
         if field in cols:
             return cols[field]
-        if fixed is not None:
-            return fixed - 1
         return None
 
     def _build_question_row(self, data: Dict[str, Any], cq: Optional[Dict[str, Any]] = None) -> List[str]:
-        """Dựng một dòng Sheet khớp tiêu đề hàng 1 — mỗi ô đúng cột, không thừa khoảng trống giữa."""
-        headers = list(self.question_headers or [])
-        n = len(headers) if headers else max(SHEET_QUESTION_FIXED_COL_1.values(), default=22)
-        row = [""] * n
+        """Dựng một dòng Sheet — MaDe ở cột A, mỗi field đúng một ô."""
+        width = self._question_sheet_row_width()
+        row = [""] * width
         seed_cq = cq if cq is not None else canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS})
         for field in CREATE_QUESTION_FIELDS:
             val = clean(data.get(field, ""))
@@ -4848,15 +4916,10 @@ class SheetStore:
             col0 = self._question_field_col0(field)
             if col0 is None:
                 continue
-            while len(row) <= col0:
+            if col0 >= len(row):
                 row.extend([""] * (col0 + 1 - len(row)))
             row[col0] = val
-        if headers:
-            if len(row) < len(headers):
-                row.extend([""] * (len(headers) - len(row)))
-            elif len(row) > len(headers):
-                row = row[: len(headers)]
-        return row
+        return self._pad_question_sheet_row(row)
 
     def _write_question_field_to_row(
         self, row: List[str], min_len: int, field: str, value: str
@@ -5058,13 +5121,18 @@ class SheetStore:
 
             row = self._build_question_row(data, cq)
 
-            gsheet_call_retry("append_row Cau_Hoi", self.ws_questions.append_row, row, value_input_option="RAW")
-            values = gsheet_call_retry("get_all_values Cau_Hoi", self.ws_questions.get_all_values)
-            new_row = len(values)
-            row_vals = values[-1] if values else row
-            q = self._question_from_sheet_row(new_row, row_vals)
+            start_row = self._append_question_rows_at_col_a([row])
+            row_vals = self._read_appended_question_rows(start_row, 1)
+            q = row_vals[0] if row_vals else None
+            if not q:
+                vals = gsheet_call_retry("get_all_values Cau_Hoi row", self.ws_questions.get_all_values) or []
+                row_vals = vals[start_row - 1] if len(vals) >= start_row else row
+                q = self._question_from_sheet_row(start_row, row_vals)
+            if not q:
+                q = self._question_from_prepared_data(start_row, data)
             if not q:
                 raise RuntimeError("Đã thêm dòng nhưng không đọc lại được câu hỏi — kiểm tra Sheet.")
+            new_row = int(q.get("_row") or start_row)
             self.questions.append(q)
             self.patch_quiz_sessions_after_row_add(q)
             self.duplicate_report = analyze_question_duplicates(self.questions)
@@ -5153,17 +5221,7 @@ class SheetStore:
                     "message": msg,
                 }
 
-            row_count_before = int(getattr(self.ws_questions, "row_count", 0) or 0)
-            # append_rows nhanh hơn append_row từng câu, tránh Render timeout khi nhập nhiều câu.
-            append_resp = gsheet_call_retry(
-                "append_rows Cau_Hoi",
-                self.ws_questions.append_rows,
-                rows,
-                value_input_option="RAW",
-            )
-            start_row = _gsheet_append_response_start_row(append_resp, row_count_before + 1)
-            if start_row <= 1:
-                start_row = max(2, row_count_before + 1)
+            start_row = self._append_question_rows_at_col_a(rows)
 
             new_questions: List[Dict[str, Any]] = self._read_appended_question_rows(start_row, len(rows))
 
@@ -10811,7 +10869,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307t';
+    window.__LDVL_V='V307w';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11940,7 +11998,108 @@ async function bulkLevelApplySelected(){
 
 let ADMIN_DBT_REVIEW_ITEMS=[];
 let BULK_DBT_BUSY=false;
+let BULK_DBT_DUP_FILTER='all';
+let BULK_DBT_DUP_READY=false;
 const DBT_MAX_PER_LESSON=6;
+function bulkDbtApplyDupMarks(marks){
+  marks=marks||{};
+  let rowToIdx={};
+  ADMIN_DBT_REVIEW_ITEMS.forEach((it,pos)=>{let r=parseInt(it.row,10)||0;if(r>1)rowToIdx[r]=pos});
+  ADMIN_DBT_REVIEW_ITEMS.forEach(it=>{it.dup_type='';it.dup_keep=true;it.dup_mates=[];it.dup_delete=false});
+  for(let [rs,m] of Object.entries(marks)){
+    let r=parseInt(rs,10)||0,pos=rowToIdx[r];
+    if(pos==null||!ADMIN_DBT_REVIEW_ITEMS[pos])continue;
+    let it=ADMIN_DBT_REVIEW_ITEMS[pos];
+    it.dup_type=String(m.dup_type||'content');
+    it.dup_keep=!!m.dup_keep;
+    it.dup_mates=(m.dup_rows||[]).filter(x=>x!==r).map(x=>{let p=rowToIdx[x];return p!=null?(ADMIN_DBT_REVIEW_ITEMS[p].index+1):x});
+  }
+}
+function ensureBulkDbtDupBar(){
+  let rerun=document.getElementById('bulkDbtRerunBtn');if(!rerun||!rerun.parentNode)return;
+  if(!document.getElementById('bulkDbtDupScanBtn')){
+    let wrap=document.createElement('span');wrap.id='bulkDbtDupBar';wrap.style.cssText='display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:4px';
+    function mkBtn(id,txt,fn,style){let b=document.createElement('button');b.type='button';b.className='btn2';b.id=id;b.textContent=txt;if(style)b.style.cssText=style;b.onclick=fn;return b}
+    wrap.appendChild(mkBtn('bulkDbtDupScanBtn','🔍 Quét trùng',()=>bulkDbtRunDupScan()));
+    wrap.appendChild(mkBtn('bulkDbtDupFilterBtn','Chỉ trùng',()=>bulkDbtSetDupFilter('dup')));
+    wrap.appendChild(mkBtn('bulkDbtDupAllBtn','📋 Tất cả',()=>bulkDbtSetDupFilter('all')));
+    wrap.appendChild(mkBtn('bulkDbtDupTickBtn','✓ Tick bản trùng',()=>bulkDbtTickDupCopies()));
+    wrap.appendChild(mkBtn('bulkDbtDupDelBtn','🗑️ Xóa trùng đã tick',()=>bulkDbtDeleteDupTicked(),'border-color:#fca5a5;color:#991b1b'));
+    let mergeBtn=rerun.nextElementSibling;
+    if(mergeBtn)mergeBtn.parentNode.insertBefore(wrap,mergeBtn.nextSibling);else rerun.parentNode.appendChild(wrap);
+  }
+  if(!document.getElementById('bulkDbtDupStatus')){
+    let st=document.getElementById('bulkDbtStatus'),el=document.createElement('div');el.id='bulkDbtDupStatus';el.className='hide';
+    el.style.cssText='font-size:12px;margin:6px 0;padding:6px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:700';
+    if(st&&st.parentNode)st.parentNode.insertBefore(el,st.nextSibling);else{let list=document.getElementById('bulkDbtList');if(list&&list.parentNode)list.parentNode.insertBefore(el,list)}
+  }
+}
+async function bulkDbtRunDupScan(){
+  if(BULK_DBT_BUSY){alert('Đợi GPT gợi ý xong rồi mới quét trùng.');return}
+  if(!ADMIN_DBT_REVIEW_ITEMS.length)return;
+  let rows=ADMIN_DBT_REVIEW_ITEMS.map(it=>parseInt(it.row,10)).filter(r=>r>1);
+  if(!rows.length){alert('Chưa có dòng Sheet — bấm 🔄 Đồng bộ Sheet trước.');return}
+  let el=document.getElementById('bulkDbtDupStatus'),btn=document.getElementById('bulkDbtDupScanBtn');
+  if(el){el.classList.remove('hide');el.textContent='⏳ Đang quét trùng…'}
+  if(btn)btn.disabled=true;
+  try{
+    let j=await api('/api/admin/dbt-review-dup-scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
+    BULK_DBT_DUP_READY=true;
+    bulkDbtApplyDupMarks(j.marks||{});
+    if(el)el.textContent=(j.copy_count?('🔁 '+j.copy_count+' bản trùng · '+j.group_count+' nhóm — tick «Xóa trùng» rồi 🗑️'):'✅ Không có trùng trong '+rows.length+' câu đang xem.');
+    renderBulkDbtList();
+  }catch(e){
+    BULK_DBT_DUP_READY=false;
+    if(el)el.textContent='❌ '+(e.message||e);
+    alert('Quét trùng lỗi: '+(e.message||e));
+  }finally{if(btn)btn.disabled=false}
+}
+function bulkDbtSetDupFilter(mode){
+  BULK_DBT_DUP_FILTER=(mode==='dup'||mode==='all')?mode:'all';
+  if(mode==='dup'&&!BULK_DBT_DUP_READY){alert('Bấm «🔍 Quét trùng» trước khi lọc.');BULK_DBT_DUP_FILTER='all'}
+  let f=document.getElementById('bulkDbtDupFilterBtn'),a=document.getElementById('bulkDbtDupAllBtn');
+  if(f)f.style.fontWeight=BULK_DBT_DUP_FILTER==='dup'?'800':'';
+  if(a)a.style.fontWeight=BULK_DBT_DUP_FILTER==='all'?'800':'';
+  renderBulkDbtList();
+}
+function bulkDbtToggleDupDelete(pos,on){if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;ADMIN_DBT_REVIEW_ITEMS[pos].dup_delete=!!on}
+async function bulkDbtTickDupCopies(){
+  if(BULK_DBT_BUSY){alert('Đợi GPT xong rồi thử lại.');return}
+  if(!BULK_DBT_DUP_READY)await bulkDbtRunDupScan();
+  if(!BULK_DBT_DUP_READY)return;
+  let n=0;
+  for(let it of ADMIN_DBT_REVIEW_ITEMS){if(it.dup_type&&!it.dup_keep){it.dup_delete=true;n++}}
+  if(!n){alert('Không có bản trùng cần xóa.');return}
+  BULK_DBT_DUP_FILTER='dup';
+  let f=document.getElementById('bulkDbtDupFilterBtn');if(f)f.style.fontWeight='800';
+  renderBulkDbtList();
+}
+async function bulkDbtDeleteDupTicked(){
+  if(!USER.is_admin)return;
+  if(BULK_DBT_BUSY){alert('Đợi GPT xong rồi mới xóa.');return}
+  if(!BULK_DBT_DUP_READY)await bulkDbtRunDupScan();
+  let rows=ADMIN_DBT_REVIEW_ITEMS.filter(it=>it.dup_delete&&it.dup_type&&!it.dup_keep&&(parseInt(it.row,10)||0)>1).map(it=>parseInt(it.row,10));
+  if(!rows.length){alert('Chưa tick câu trùng.\n\nBấm «✓ Tick bản trùng» hoặc tick «Xóa trùng» trên card đỏ.');return}
+  rows=[...new Set(rows)].sort((a,b)=>a-b);
+  if(!confirm('Xóa '+rows.length+' bản trùng khỏi Google Sheet?\n\nDòng: '+rows.join(', ')+'\n\nGiữ bản có dòng Sheet nhỏ nhất.'))return;
+  if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;
+  let btn=document.getElementById('bulkDbtDupDelBtn'),st=document.getElementById('bulkDbtStatus');
+  let oldById={};ADMIN_DBT_REVIEW_ITEMS.forEach(it=>{let k=String(it.ID||'').trim()||('_i'+it.index);oldById[k]=it});
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}
+  try{
+    if(st)st.textContent='⏳ Đang xóa '+rows.length+' bản trùng…';
+    let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
+    purgeLocalQuestionsAfterDeletes(j.rows||rows);
+    BULK_DBT_DUP_FILTER='all';BULK_DBT_DUP_READY=false;
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let old=oldById[String(q.ID||'').trim()||('_i'+i)]||{};return {index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:String(old.ai_dbt||q.DangBaiTap||'').trim(),matched_existing:!!old.matched_existing,suggestions:old.suggestions||adminDangBaiTapSuggestionsForQuestion(q),reason:String(old.reason||''),preview:questionPreviewShort(q),selected:!!old.selected&&!!String(old.ai_dbt||q.DangBaiTap||'').trim(),saved:!!old.saved,dup_delete:false}});
+    renderNav();renderQuestion();refreshCatalogFromMeta();
+    if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||rows.length)+' bản trùng.'));
+    let el=document.getElementById('bulkDbtDupStatus');if(el){el.textContent='Đã xóa trùng — bấm «🔍 Quét trùng» lại nếu cần.';el.classList.remove('hide')}
+    renderBulkDbtList();
+  }catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}
+  finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa trùng đã tick'}}
+}
+function bulkDbtListEntries(){return ADMIN_DBT_REVIEW_ITEMS.map((it,pos)=>({it,pos})).filter(({it})=>BULK_DBT_DUP_FILTER!=='dup'||!!it.dup_type)}
 function bulkDbtScopeKey(it){return [normText(it.Mon||''),normText(it.Chuong||''),normText(it.BaiHoc||'')].join('|')}
 function bulkDbtNearestCanonical(name,canonicals){
   if(!canonicals||!canonicals.length)return name;
@@ -12037,7 +12196,7 @@ function bulkDbtSyncRowFromDom(pos){
 function bulkDbtSyncAllFromDom(){for(let i=0;i<ADMIN_DBT_REVIEW_ITEMS.length;i++)bulkDbtSyncRowFromDom(i)}
 function bulkDbtSetBusy(on){
   BULK_DBT_BUSY=!!on;
-  ['bulkDbtRerunBtn','bulkDbtSelectAllBtn','bulkDbtApplyBtnTop','bulkDbtApplyBtnBot'].forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!!on});
+  ['bulkDbtRerunBtn','bulkDbtSelectAllBtn','bulkDbtApplyBtnTop','bulkDbtApplyBtnBot','bulkDbtDupScanBtn','bulkDbtDupFilterBtn','bulkDbtDupAllBtn','bulkDbtDupTickBtn','bulkDbtDupDelBtn'].forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!!on});
 }
 function bulkDbtOptSelected(ai,cur,v){let pick=String(ai||cur||'').trim();if(!pick||!v)return false;return pick===v||normText(pick)===normText(v)}
 function closeBulkDbtReview(){let m=document.getElementById('bulkDbtModal');if(m)m.classList.add('hide')}
@@ -12045,7 +12204,10 @@ function openBulkDbtReview(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
   if(!Array.isArray(QUESTIONS)||!QUESTIONS.length){alert('Hãy mở một đề/chuyên đề trước. Nút này gợi ý Dạng bài tập cho các câu đang xem.');return}
   let m=document.getElementById('bulkDbtModal');if(m)m.classList.remove('hide');
-  ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false,saved:false}));
+  BULK_DBT_DUP_FILTER='all';
+  BULK_DBT_DUP_READY=false;
+  ensureBulkDbtDupBar();
+  ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false,saved:false,dup_delete:false}));
   renderBulkDbtList();
   bulkDbtDetectCurrent();
 }
@@ -12068,16 +12230,26 @@ function renderBulkDbtList(){
   let box=document.getElementById('bulkDbtList');if(!box)return;
   if(BULK_DBT_BUSY&&!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted" style="padding:20px;text-align:center">⏳ Đang chờ GPT...</div>';return}
   if(!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dữ liệu.</div>';return}
-  box.innerHTML=ADMIN_DBT_REVIEW_ITEMS.map((it,pos)=>{
+  let entries=bulkDbtListEntries();
+  if(BULK_DBT_DUP_FILTER==='dup'&&!entries.length){
+    box.innerHTML='<div class="muted" style="padding:16px;line-height:1.5">'+(BULK_DBT_DUP_READY?'Không có câu trùng trong đề này.':'Chưa quét trùng — bấm «🔍 Quét trùng» trước.<br>Hoặc bấm «📋 Tất cả» để xem lại toàn bộ.')+'</div>';
+    return;
+  }
+  box.innerHTML=entries.map(({it,pos})=>{
     let ai=String(it.ai_dbt||'').trim();
     let cur=String(it.current_dbt||'').trim();
     let checked=it.selected?'checked':'';
     let ok=ai?`<span class="tag" style="background:#dcfce7;color:#166534">AI: ${esc(ai)}</span>${it.matched_existing?' <span class="muted">(dạng có sẵn)</span>':''}`:'<span class="muted">AI chưa gợi ý</span>';
     let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ Đã lưu Sheet</span>`:'';
-    let border=it.saved?'border:2px solid #86efac;background:#f0fdf4':(it.selected?'border:2px solid #93c5fd;background:#eff6ff':'border:1px solid var(--border);background:var(--bg)');
+    let dupBox='';
+    if(BULK_DBT_DUP_READY&&it.dup_type){
+      dupBox=it.dup_keep?` <span class="tag" style="background:#fef3c7;color:#92400e">⚠️ Trùng (giữ · dòng ${esc(it.row||'?')})</span>`:` <span class="tag" style="background:#fee2e2;color:#991b1b">🔁 Trùng câu ${it.dup_mates.join(', ')}</span>`;
+      if(!it.dup_keep)dupBox+=` <label style="display:inline-flex;gap:4px;align-items:center;font-weight:800;cursor:pointer;color:#991b1b"><input type="checkbox" data-bulk-dbt-dupdel="${pos}" ${it.dup_delete?'checked':''} ${BULK_DBT_BUSY?'disabled':''} onchange="bulkDbtToggleDupDelete(${pos},this.checked)"> Xóa trùng</label>`;
+    }
+    let border=it.saved?'border:2px solid #86efac;background:#f0fdf4':(BULK_DBT_DUP_READY&&it.dup_type&&!it.dup_keep?'border:2px solid #fca5a5;background:#fff7f7':(it.selected?'border:2px solid #93c5fd;background:#eff6ff':'border:1px solid var(--border);background:var(--bg)'));
     return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;${border};border-radius:10px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
-        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại: ${cur?`<b style="color:#166534">${esc(cur)}</b>`:'<span class="muted">—</span>'} · ${ok}${saved}</div>
+        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại: ${cur?`<b style="color:#166534">${esc(cur)}</b>`:'<span class="muted">—</span>'} · ${ok}${saved}${dupBox}</div>
         <label style="display:flex;gap:6px;align-items:center;font-weight:800;cursor:pointer"><input type="checkbox" data-bulk-dbt-check="${pos}" ${checked} ${BULK_DBT_BUSY?'disabled':''} onchange="bulkDbtToggle(${pos},this.checked)"> Chấp nhận</label>
       </div>
       <div class="muted" style="font-size:12px;margin-top:4px">ID: ${esc(it.ID||'—')} · dòng Sheet: ${esc(it.row||'—')}${it.Mon?' · '+esc(it.Mon):''}${it.BaiHoc?' · '+esc(it.BaiHoc):''}</div>
@@ -12168,7 +12340,7 @@ async function bulkDbtDetectCurrent(){
     mergedTotal+=parseInt(cons.merged||0,10)||0;
     bulkDbtRebuildLessonCanonical(allItems);
     let byIndex={};allItems.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
-    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();let canon=bulkDbtLessonCanonicalForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});let sug=(canon&&canon.length)?canon:((it.suggestions&&it.suggestions.length)?it.suggestions.slice(0,DBT_MAX_PER_LESSON):adminDangBaiTapSuggestionsForQuestion(q));return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:sug,reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false};});
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();let canon=bulkDbtLessonCanonicalForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});let sug=(canon&&canon.length)?canon:((it.suggestions&&it.suggestions.length)?it.suggestions.slice(0,DBT_MAX_PER_LESSON):adminDangBaiTapSuggestionsForQuestion(q));return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:sug,reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false,dup_delete:false};});
     let tick=ADMIN_DBT_REVIEW_ITEMS.filter(x=>x.selected).length;
     let warn=warnings.filter(Boolean).join(' · ');
     if(st)st.textContent='✅ GPT gợi ý xong '+detected+'/'+QUESTIONS.length+' câu · tối đa '+DBT_MAX_PER_LESSON+' dạng/bài · đã tick '+tick+' câu.'+(mergedTotal?' · gộp '+mergedTotal+' câu loãng.':'')+(warn?'\n⚠ '+warn:'');
@@ -17561,6 +17733,54 @@ def api_admin_dang_similarity():
             report["ai_advice_error"] = str(e)
     return jsonify(report)
 
+@app.route("/api/admin/dbt-review-dup-scan", methods=["POST"])
+def api_admin_dbt_review_dup_scan():
+    """ADMIN: quét trùng ID/nội dung trong danh sách dòng đang duyệt Dạng BT."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN."}), 403
+    body = request.get_json(silent=True) or {}
+    rows_in = body.get("rows") or []
+    if not isinstance(rows_in, list):
+        return jsonify({"error": "Thiếu danh sách dòng Sheet."}), 400
+    row_set = sorted({int(r) for r in rows_in if int(r or 0) > 1})
+    if not row_set:
+        return jsonify({"marks": {}, "copy_count": 0, "group_count": 0})
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        want = set(row_set)
+        subset = [q for q in st.questions if int(q.get("_row") or 0) in want]
+        plan = plan_sheet_duplicate_removals(subset)
+        marks: Dict[str, Any] = {}
+        for cluster in plan.get("clusters") or []:
+            if len(cluster) < 2:
+                continue
+            keep = cluster[0]
+            for r in cluster:
+                if r not in want:
+                    continue
+                marks[str(r)] = {
+                    "dup_type": "content",
+                    "dup_keep": r == keep,
+                    "dup_rows": cluster,
+                }
+        copy_count = sum(1 for m in marks.values() if not m.get("dup_keep"))
+        group_count = sum(
+            1 for c in (plan.get("clusters") or [])
+            if len(c) >= 2 and any(r in want for r in c)
+        )
+        return jsonify({
+            "marks": marks,
+            "copy_count": copy_count,
+            "group_count": group_count,
+            "samples": (plan.get("samples") or [])[:8],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 @app.route("/api/admin/dang-similarity-delete", methods=["POST"])
 def api_admin_dang_similarity_delete():
     """ADMIN: xóa các dòng câu đã chọn từ bảng trùng ≥70% trong dạng BT."""
@@ -18205,7 +18425,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307t';
+const CACHE_NAME = 'luyen-de-ai-v307w';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
