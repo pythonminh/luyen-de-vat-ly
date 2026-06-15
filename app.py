@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307n_CALC_DESKTOP_AI_CHAT_INPUT_2026_06_12"
+APP_VERSION = "V307o_MINI_CALC_FULLSCREEN_DESKTOP_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -10285,27 +10285,26 @@ html[data-theme='dark'] .translateEnVocab{background:#422006;border-color:#ca8a0
 .miniCalcPanel{margin:0 0 10px;padding:0;border:1px dashed #6ee7b7;border-radius:10px;background:linear-gradient(180deg,#f0fdf4,#ffffff);position:relative;z-index:2}
 .miniCalcBackdrop{position:fixed;inset:0;z-index:10034;background:rgba(15,23,42,.45);touch-action:none}
 .miniCalcBackdrop.hide{display:none!important}
-body.mini-calc-open:not(.mobile-quiz-ui) #miniCalcPanel{position:relative;z-index:5;max-height:min(72vh,560px);overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 0 10px}
-body.mobile-quiz-ui.mini-calc-open{overflow:hidden!important;overscroll-behavior:none!important}
-body.mobile-quiz-ui.mini-calc-open #miniCalcPanel{position:fixed!important;inset:0!important;left:0!important;right:0!important;top:0!important;bottom:0!important;width:100vw!important;max-width:100vw!important;height:100dvh!important;height:100svh!important;min-height:-webkit-fill-available!important;max-height:none!important;margin:0!important;border:none!important;border-radius:0!important;z-index:10120!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;box-shadow:none!important;touch-action:auto!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcHead{flex-shrink:0;padding:12px 14px 10px;padding-top:calc(12px + env(safe-area-inset-top))}
-body.mobile-quiz-ui.mini-calc-open .miniCalcHead b{font-size:16px}
-body.mobile-quiz-ui.mini-calc-open .miniCalcCloseBtn{min-height:40px!important;padding:8px 16px!important;font-size:14px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcShell{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px calc(12px + env(safe-area-inset-bottom));touch-action:pan-y!important;-webkit-overflow-scrolling:touch}
-body.mobile-quiz-ui.mini-calc-open .miniCalcDisplayZone{flex:0 0 auto;max-height:min(32vh,240px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcKeysZone{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;gap:5px;overflow-y:scroll!important;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y!important;scrollbar-width:thin}
-body.mobile-quiz-ui.mini-calc-open .miniCalcHint{display:none}
-body.mobile-quiz-ui.mini-calc-open .miniCalcMemBar{margin-bottom:4px}
-body.mobile-quiz-ui.mini-calc-open .miniCalcMemLbl{font-size:10px}
-body.mobile-quiz-ui.mini-calc-open .miniCalcLine{font-size:16px!important;min-height:40px!important;padding:8px 10px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcFracNum,body.mobile-quiz-ui.mini-calc-open .miniCalcFracDen{font-size:17px!important;min-height:24px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcSciRow button{min-height:36px!important;font-size:11px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
-body.mobile-quiz-ui.mini-calc-open .miniCalcTopBtn,body.mobile-quiz-ui.mini-calc-open .miniCalcDpadBtn,body.mobile-quiz-ui.mini-calc-open .miniCalcMemLblBtn,body.mobile-quiz-ui.mini-calc-open .miniCalcVar,body.mobile-quiz-ui.mini-calc-open .miniCalcIns{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
-body.mobile-quiz-ui.mini-calc-open .miniCalcMemLblBtn{min-height:34px!important;font-size:12px!important;font-weight:900!important;padding:4px 2px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow button{min-height:54px!important;font-size:21px!important;border-radius:12px!important;padding:12px 4px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent;user-select:none}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcDelKey,body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcAcKey{font-size:16px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid .miniCalcMem,body.mobile-quiz-ui.mini-calc-open .miniCalcGrid .miniCalcVar{font-size:13px!important;min-height:46px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcIns{flex-shrink:0;min-height:48px!important;font-size:15px!important;margin-top:4px!important}
+body.mini-calc-open{overflow:hidden!important;overscroll-behavior:none!important}
+body.mini-calc-open #miniCalcPanel{position:fixed!important;inset:0!important;left:0!important;right:0!important;top:0!important;bottom:0!important;width:100vw!important;max-width:100vw!important;height:100dvh!important;height:100svh!important;min-height:-webkit-fill-available!important;max-height:none!important;margin:0!important;border:none!important;border-radius:0!important;z-index:10120!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;box-shadow:none!important;touch-action:auto!important}
+body.mini-calc-open .miniCalcHead{flex-shrink:0;padding:12px 14px 10px;padding-top:calc(12px + env(safe-area-inset-top))}
+body.mini-calc-open .miniCalcHead b{font-size:16px}
+body.mini-calc-open .miniCalcCloseBtn{min-height:40px!important;padding:8px 16px!important;font-size:14px!important}
+body.mini-calc-open .miniCalcShell{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px calc(12px + env(safe-area-inset-bottom));touch-action:pan-y!important;-webkit-overflow-scrolling:touch}
+body.mini-calc-open .miniCalcDisplayZone{flex:0 0 auto;max-height:min(32vh,240px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y!important}
+body.mini-calc-open .miniCalcKeysZone{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;gap:5px;overflow-y:scroll!important;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y!important;scrollbar-width:thin}
+body.mini-calc-open .miniCalcHint{display:none}
+body.mini-calc-open .miniCalcMemBar{margin-bottom:4px}
+body.mini-calc-open .miniCalcMemLbl{font-size:10px}
+body.mini-calc-open .miniCalcLine{font-size:16px!important;min-height:40px!important;padding:8px 10px!important}
+body.mini-calc-open .miniCalcFracNum,body.mini-calc-open .miniCalcFracDen{font-size:17px!important;min-height:24px!important}
+body.mini-calc-open .miniCalcGrid.miniCalcSciRow button{min-height:36px!important;font-size:11px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
+body.mini-calc-open .miniCalcTopBtn,body.mini-calc-open .miniCalcDpadBtn,body.mini-calc-open .miniCalcMemLblBtn,body.mini-calc-open .miniCalcVar,body.mini-calc-open .miniCalcIns{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
+body.mini-calc-open .miniCalcMemLblBtn{min-height:34px!important;font-size:12px!important;font-weight:900!important;padding:4px 2px!important}
+body.mini-calc-open .miniCalcGrid.miniCalcNumRow button{min-height:54px!important;font-size:21px!important;border-radius:12px!important;padding:12px 4px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent;user-select:none}
+body.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcDelKey,body.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcAcKey{font-size:16px!important}
+body.mini-calc-open .miniCalcGrid .miniCalcMem,body.mini-calc-open .miniCalcGrid .miniCalcVar{font-size:13px!important;min-height:46px!important}
+body.mini-calc-open .miniCalcIns{flex-shrink:0;min-height:48px!important;font-size:15px!important;margin-top:4px!important}
 body.mobile-quiz-ui .learningQuickBar .miniCalcBtn{order:-1!important;min-height:32px!important;font-size:12px!important;font-weight:900!important}
 .miniCalcHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px 6px;border-bottom:1px solid #a7f3d0;position:sticky;top:0;z-index:3;background:linear-gradient(180deg,#ecfdf5,#f0fdf4)}
 .miniCalcHead b{font-size:13px;color:#047857}
@@ -10328,11 +10327,11 @@ html[data-theme='dark'] .miniCalcCloseBtn{background:#0f172a!important;color:#6e
 .miniCalcResultBig{font-size:1.05em;font-weight:900;letter-spacing:.02em}
 html[data-theme='dark'] .miniCalcRowL{color:#94a3b8}
 html[data-theme='dark'] .miniCalcLineFormula{color:#94a3b8}
-body.mobile-quiz-ui.mini-calc-open .miniCalcRowR{font-size:18px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcRowL{font-size:12px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcLineValue{font-size:22px!important;min-height:42px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcLineFormula{font-size:12px!important;min-height:24px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcTape.miniCalcScreen{min-height:120px;padding:8px 12px 10px}
+body.mini-calc-open .miniCalcRowR{font-size:18px!important}
+body.mini-calc-open .miniCalcRowL{font-size:12px!important}
+body.mini-calc-open .miniCalcLineValue{font-size:22px!important;min-height:42px!important}
+body.mini-calc-open .miniCalcLineFormula{font-size:12px!important;min-height:24px!important}
+body.mini-calc-open .miniCalcTape.miniCalcScreen{min-height:120px;padding:8px 12px 10px}
 html[data-theme='dark'] .miniCalcTape.miniCalcScreen{border-color:#10b981;background:#0f172a}
 .miniCalcScreen .miniCalcLine{border:none!important;border-radius:0!important;background:transparent!important;outline:none!important;box-shadow:none!important;min-height:26px;padding:2px 4px!important;line-height:1.4!important;cursor:text}
 .miniCalcScreen .miniCalcLine+.miniCalcLine{border-top:none!important}
@@ -10356,13 +10355,13 @@ html[data-theme='dark'] .miniCalcScreen .miniCalcLineOn{background:rgba(6,78,59,
 .miniCalcGrid.miniCalcNumRow .miniCalcEq{background:#ecfdf5!important;color:#047857!important;border-color:#6ee7b7!important}
 .miniCalcGrid.miniCalcNumRow .miniCalcAnsKey{font-size:13px!important}
 html[data-theme='dark'] .miniCalcGrid.miniCalcNumRow button{background:#f8fafc!important;color:#0f172a!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcTopBtn{min-height:42px!important;font-size:11px!important;min-width:58px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcDpad{max-width:none;gap:6px}
-body.mobile-quiz-ui.mini-calc-open .miniCalcDpadBtn{min-height:40px!important;font-size:14px!important;border-radius:10px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcSciRow button{min-height:36px!important;font-size:11px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow button{min-height:54px!important;font-size:21px!important;border-radius:12px!important;padding:12px 4px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcDelKey,body.mobile-quiz-ui.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcAcKey{font-size:16px!important}
-body.mobile-quiz-ui.mini-calc-open .miniCalcTape.miniCalcScreen{min-height:72px;padding:8px 12px 10px}
+body.mini-calc-open .miniCalcTopBtn{min-height:42px!important;font-size:11px!important;min-width:58px!important}
+body.mini-calc-open .miniCalcDpad{max-width:none;gap:6px}
+body.mini-calc-open .miniCalcDpadBtn{min-height:40px!important;font-size:14px!important;border-radius:10px!important}
+body.mini-calc-open .miniCalcGrid.miniCalcSciRow button{min-height:36px!important;font-size:11px!important}
+body.mini-calc-open .miniCalcGrid.miniCalcNumRow button{min-height:54px!important;font-size:21px!important;border-radius:12px!important;padding:12px 4px!important}
+body.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcDelKey,body.mini-calc-open .miniCalcGrid.miniCalcNumRow .miniCalcAcKey{font-size:16px!important}
+body.mini-calc-open .miniCalcTape.miniCalcScreen{min-height:72px;padding:8px 12px 10px}
 .miniCalcLine{font-family:ui-monospace,Consolas,monospace;font-size:13.5px;font-weight:700;text-align:right!important;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-height:30px;line-height:1.35;word-break:break-all;color:var(--text);cursor:text;touch-action:manipulation;position:relative}
 .miniCalcLineOn{outline:2px solid #059669!important;background:#ecfdf5!important}
 html[data-theme='dark'] .miniCalcLineOn{background:#064e3b!important}
@@ -10631,7 +10630,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307n';
+    window.__LDVL_V='V307o';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11475,7 +11474,7 @@ async function saveHintField(field){alert('ADMIN: hãy bấm ✏️ Sửa câu (
  * CSS: [CSS-LEARNING-PANEL]  #hintBox.learningOpen, .learningPanelBody
  * ========================================================================== */
 function learningCacheKey(kind,q){q=q||{};return kind+'|'+[q.Mon||'',q.Lop||'',q.Chuong||'',q.BaiHoc||'',kind==='method'?(q.DangBaiTap||''):''].join('|')}
-function ensureLearningQuickBar(){let qtextEl=document.getElementById('qtext');if(!qtextEl)return;let host=qtextEl.parentNode;if(!host)return;let bar=document.getElementById('learningQuickBar');if(!bar){bar=document.createElement('div');bar.id='learningQuickBar';bar.className='learningQuickBar';if(qtextEl.nextSibling)host.insertBefore(bar,qtextEl.nextSibling);else host.appendChild(bar)}let canAi=USER.can_ai_hint!==false;let html='<button type="button" class="btn2 miniCalcBtn" onclick="toggleMiniCalc()" title="Mở máy tính toàn màn hình (điện thoại)">🔢 MT</button><button type="button" class="btn2 learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel(\'method\')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button>';if(canAi)html+='<button type="button" class="btn2 aiAssistBtn" data-learning-toggle="assistant" onclick="toggleAiAssistPanel()" title="Trợ lý AI — lưu ý tránh sai, hỏi thêm">🤖 Trợ lý AI</button>';html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">🇬🇧 Dịch EN</button>';bar.innerHTML=html;ensureMiniCalcPanel();let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));bar.classList.toggle('hide',!inQuiz)}
+function ensureLearningQuickBar(){let qtextEl=document.getElementById('qtext');if(!qtextEl)return;let host=qtextEl.parentNode;if(!host)return;let bar=document.getElementById('learningQuickBar');if(!bar){bar=document.createElement('div');bar.id='learningQuickBar';bar.className='learningQuickBar';if(qtextEl.nextSibling)host.insertBefore(bar,qtextEl.nextSibling);else host.appendChild(bar)}let canAi=USER.can_ai_hint!==false;let html='<button type="button" class="btn2 miniCalcBtn" onclick="toggleMiniCalc()" title="Mở máy tính toàn màn hình">🔢 MT</button><button type="button" class="btn2 learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel(\'method\')" title="Xem phương pháp giải đúng dạng">🧭 Phương pháp</button>';if(canAi)html+='<button type="button" class="btn2 aiAssistBtn" data-learning-toggle="assistant" onclick="toggleAiAssistPanel()" title="Trợ lý AI — lưu ý tránh sai, hỏi thêm">🤖 Trợ lý AI</button>';html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">🇬🇧 Dịch EN</button>';bar.innerHTML=html;ensureMiniCalcPanel();let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));bar.classList.toggle('hide',!inQuiz)}
 function miniCalcVars(){return ['A','B','C','D','E','F','G','H']}
 function miniCalcSubstMem(s,mem){s=String(s||'');if(!s||!mem)return s;miniCalcVars().forEach(function(L){let mv=String(mem[L]||'').trim();if(!mv)return;let sub=miniCalcNormExpr(mv);if(!sub)return;s=s.replace(new RegExp('(^|[^a-zA-Z$])'+L+'(?![a-zA-Z])','g'),'$1('+sub+')')});return s}
 function miniCalcUseVar(st,ln,L){ln=ln|0;let mv=String(st.mem[L]||'').trim();if(st.mode==='STO'){let v=String(st.results[ln]||st.lines[ln]||'').trim(),dec=String(st.decExtras[ln]||'').trim();if(dec)st.mem[L]=dec;else{let num=miniCalcEvalExpr(v);st.mem[L]=num!=null?miniCalcFmtNum(num):(v||'0')}st.mode='';st._memMsg='Đã lưu '+L+' = '+st.mem[L]}else{if(miniCalcHasResult(st,ln))miniCalcMaybeNewEntry(st,'0');if(st.mode==='ALPHA'){if(mv){miniCalcInsertInLine(st,mv);renderMiniCalcTape();st._memMsg='Gọi '+L}else st._memMsg='Ô '+L+' trống — STO trước';st.mode=''}else if(mv){miniCalcInsertInLine(st,mv);renderMiniCalcTape();st._memMsg='Gọi '+L}else st._memMsg='STO→'+L+' lưu · ALPHA→'+L+' gọi'}}
@@ -11517,12 +11516,12 @@ function miniCalcDelBefore(st){miniCalcClearDec(st,st.line|0);let ln=st.line|0,v
 function miniCalcTapLine(row,e){let st=miniCalcState();let ln=parseInt(row.getAttribute('data-ln'),10)||0;if(miniCalcHasResult(st,ln))miniCalcClearResult(st,ln);st.line=ln;let txt=String(st.lines[ln]||'');if(!txt){st.cursor=0;renderMiniCalcTape();syncMiniCalcDisplay();return}let tgt=e&&e.target;if(tgt){let fracEl=tgt.closest('.miniCalcFrac');if(fracEl){let fracs=[],i=0;while(i<txt.length){if(txt.charAt(i)==='⟦'){let end=txt.indexOf('⟧',i);if(end<0)break;let inner=txt.slice(i+1,end),pipe=inner.indexOf('|');fracs.push({start:i,end,num:pipe>=0?inner.slice(0,pipe):inner,den:pipe>=0?inner.slice(pipe+1):''});i=end+1}else i++}let all=row.querySelectorAll('.miniCalcFrac'),idx=Array.from(all).indexOf(fracEl);if(idx>=0&&fracs[idx]){let f=fracs[idx],den=tgt.closest('.miniCalcFracDen');st.cursor=den?f.start+1+f.num.length+1+f.den.length:f.start+1+f.num.length;renderMiniCalcTape();syncMiniCalcDisplay();return}}}let rect=row.getBoundingClientRect(),x=(e&&e.clientX!=null?e.clientX:rect.left)-rect.left,probe=document.createElement('span');probe.style.cssText='position:fixed;visibility:hidden;font:700 13.5px ui-monospace,Consolas,monospace;white-space:pre';document.body.appendChild(probe);let best=txt.length;for(let i=0;i<=txt.length;i++){probe.textContent=miniCalcToExpr(txt.slice(0,i))||' ';let w=probe.getBoundingClientRect().width;if(w<=x+2)best=i}document.body.removeChild(probe);st.cursor=best;renderMiniCalcTape();syncMiniCalcDisplay()}
 function bindMiniCalcPanel(panel){if(!panel)return;if(panel._miniCalcClickFn)panel.removeEventListener('click',panel._miniCalcClickFn);panel._miniCalcClickFn=function(e){let row=e.target.closest('[data-ln]');if(row&&!e.target.closest('[data-k]')){miniCalcTapLine(row,e);return}let b=e.target.closest('[data-k]');if(b)miniCalcTap(b.getAttribute('data-k'),e)};panel.addEventListener('click',panel._miniCalcClickFn);panel._miniCalcBound=true}
 function ensureMiniCalcBackdrop(){let bd=document.getElementById('miniCalcBackdrop');if(!bd){bd=document.createElement('div');bd.id='miniCalcBackdrop';bd.className='miniCalcBackdrop hide';bd.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggleMiniCalc()});document.body.appendChild(bd)}return bd}
-function ensureMiniCalcPanel(){let bar=document.getElementById('learningQuickBar');if(!bar||!bar.parentNode)return;ensureMiniCalcBackdrop();let host=bar.parentNode,panel=document.getElementById('miniCalcPanel');if(!panel){panel=document.createElement('div');panel.id='miniCalcPanel';panel.className='miniCalcPanel hide';if(bar.nextSibling)host.insertBefore(panel,bar.nextSibling);else host.appendChild(panel)}if(!panel.querySelector('#miniCalcTape')||panel.getAttribute('data-calc-v')!=='307m'){panel.setAttribute('data-calc-v','307m');panel.innerHTML=miniCalcPanelHtml();bindMiniCalcPanel(panel)}else if(!panel._miniCalcBound)bindMiniCalcPanel(panel);syncMiniCalcUI()}
-function toggleMiniCalc(){MINI_CALC_OPEN=!MINI_CALC_OPEN;ensureMiniCalcPanel();syncMiniCalcUI();if(MINI_CALC_OPEN){let panel=document.getElementById('miniCalcPanel');if(panel&&!isMobileQuizUI())setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'nearest'})},50)}}
+function ensureMiniCalcPanel(){let bar=document.getElementById('learningQuickBar');if(!bar||!bar.parentNode)return;ensureMiniCalcBackdrop();let host=bar.parentNode,panel=document.getElementById('miniCalcPanel');if(!panel){panel=document.createElement('div');panel.id='miniCalcPanel';panel.className='miniCalcPanel hide';if(bar.nextSibling)host.insertBefore(panel,bar.nextSibling);else host.appendChild(panel)}if(!panel.querySelector('#miniCalcTape')||panel.getAttribute('data-calc-v')!=='307o'){panel.setAttribute('data-calc-v','307o');panel.innerHTML=miniCalcPanelHtml();bindMiniCalcPanel(panel)}else if(!panel._miniCalcBound)bindMiniCalcPanel(panel);syncMiniCalcUI()}
+function toggleMiniCalc(){MINI_CALC_OPEN=!MINI_CALC_OPEN;ensureMiniCalcPanel();syncMiniCalcUI()}
 function miniCalcEmptyMem(){let m={};miniCalcVars().forEach(L=>{m[L]=''});return m}
 function miniCalcState(qIdx){qIdx=qIdx==null?CUR:qIdx;if(!MINI_CALC_BY_Q[qIdx])MINI_CALC_BY_Q[qIdx]={lines:['','','',''],results:['','','',''],decLines:['','','',''],decExtras:['','','',''],line:0,cursor:0,mode:'',angMode:'DEG',xGuess:0,mem:miniCalcEmptyMem()};let st=MINI_CALC_BY_Q[qIdx];if(!st.mem)st.mem=miniCalcEmptyMem();if(!st.lines||st.lines.length<4)st.lines=['','','',''];if(!st.results||st.results.length<4)st.results=['','','',''];if(!st.decLines||st.decLines.length<4)st.decLines=['','','',''];if(!st.decExtras||st.decExtras.length<4)st.decExtras=['','','',''];if(st.lastExpr){st.lines[0]=st.lastExpr;st.lastExpr=''}if(st.resultDisp){st.results[0]=st.resultDisp;st.resultDisp=''}if(st.decExtra){st.decExtras[0]=st.decExtra;st.decExtra=''}if(!st.angMode)st.angMode='DEG';if(st.xGuess==null)st.xGuess=0;return st}
-function miniCalcMountPanel(){let panel=document.getElementById('miniCalcPanel'),bar=document.getElementById('learningQuickBar');if(!panel||!bar||!bar.parentNode)return;if(MINI_CALC_OPEN&&isMobileQuizUI()){if(!panel._calcAnchor){panel._calcAnchor=document.createComment('miniCalcAnchor');if(bar.nextSibling)bar.parentNode.insertBefore(panel._calcAnchor,bar.nextSibling);else bar.parentNode.appendChild(panel._calcAnchor)}if(panel.parentNode!==document.body)document.body.appendChild(panel)}else if(panel._calcAnchor&&panel._calcAnchor.parentNode&&panel.parentNode===document.body)panel._calcAnchor.parentNode.insertBefore(panel,panel._calcAnchor)}
-function syncMiniCalcUI(){let mob=isMobileQuizUI();let btn=document.querySelector('.miniCalcBtn');if(btn){btn.classList.toggle('miniCalcActive',!!MINI_CALC_OPEN);btn.textContent=MINI_CALC_OPEN?'✕ MT':'🔢 MT';btn.title=MINI_CALC_OPEN?'Ẩn máy tính':(mob?'Mở máy tính toàn màn hình':'Mở máy tính nhập nhanh')}miniCalcMountPanel();let panel=document.getElementById('miniCalcPanel'),bd=document.getElementById('miniCalcBackdrop');if(panel)panel.classList.toggle('hide',!MINI_CALC_OPEN);if(bd)bd.classList.add('hide');document.body.classList.toggle('mini-calc-open',!!MINI_CALC_OPEN);if(MINI_CALC_OPEN)syncMiniCalcDisplay()}
+function miniCalcMountPanel(){let panel=document.getElementById('miniCalcPanel'),bar=document.getElementById('learningQuickBar');if(!panel||!bar||!bar.parentNode)return;if(MINI_CALC_OPEN){if(!panel._calcAnchor){panel._calcAnchor=document.createComment('miniCalcAnchor');if(bar.nextSibling)bar.parentNode.insertBefore(panel._calcAnchor,bar.nextSibling);else bar.parentNode.appendChild(panel._calcAnchor)}if(panel.parentNode!==document.body)document.body.appendChild(panel)}else if(panel._calcAnchor&&panel._calcAnchor.parentNode&&panel.parentNode===document.body)panel._calcAnchor.parentNode.insertBefore(panel,panel._calcAnchor)}
+function syncMiniCalcUI(){let mob=isMobileQuizUI();let btn=document.querySelector('.miniCalcBtn');if(btn){btn.classList.toggle('miniCalcActive',!!MINI_CALC_OPEN);btn.textContent=MINI_CALC_OPEN?'✕ MT':'🔢 MT';btn.title=MINI_CALC_OPEN?'Ẩn máy tính':'Mở máy tính toàn màn hình'}miniCalcMountPanel();let panel=document.getElementById('miniCalcPanel'),bd=document.getElementById('miniCalcBackdrop');if(panel)panel.classList.toggle('hide',!MINI_CALC_OPEN);if(bd)bd.classList.toggle('hide',!MINI_CALC_OPEN);document.body.classList.toggle('mini-calc-open',!!MINI_CALC_OPEN);if(MINI_CALC_OPEN){lockQuizPageScroll();syncMiniCalcDisplay()}else unlockQuizPageScroll()}
 function renderMiniCalcTape(){let st=miniCalcState();miniCalcEnsureDec(st);let tape=document.getElementById('miniCalcTape');if(!tape)return;for(let i=0;i<4;i++){let row=tape.querySelector('[data-ln="'+i+'"]');if(!row)continue;let buf=String(st.lines[i]||''),res=String(st.results[i]||''),dec=String(st.decExtras[i]||''),on=i===(st.line|0),left='',right='';if(res){left='<span class="miniCalcExprShow">'+miniCalcVisualLine(buf,false,0,'')+'</span>';if(/^(-?)⟦/.test(res)||/√/.test(res))right=miniCalcVisualLine(res,false,0,'');else right='<span class="miniCalcResultBig">'+miniCalcFmtDisplay(res)+'</span>';if(dec)right+='<span class="miniCalcLineDec">'+miniCalcFmtDecHtml(dec)+'</span>'}else{left=on?miniCalcVisualLine(buf,true,on?st.cursor:0,''):(buf?miniCalcVisualLine(buf,false,0,''):'·');right='·'}row.innerHTML='<span class="miniCalcRowL">'+left+'</span><span class="miniCalcRowR">'+right+'</span>';row.classList.toggle('miniCalcLineEmpty',!buf&&!res);row.classList.toggle('miniCalcLineOn',on)}miniCalcVars().forEach(L=>{let el=document.getElementById('miniCalcMem'+L);if(el){let v=String(st.mem[L]||'').trim();el.classList.toggle('hasVal',!!v);el.classList.toggle('miniCalcMemPick',st.mode==='STO'||st.mode==='ALPHA');el.title=v?(L+': '+v+' · STO lưu / ALPHA gọi'):('STO lưu vào '+L+' / ALPHA gọi '+L)}});let bs=document.getElementById('miniCalcBtnSTO'),ba=document.getElementById('miniCalcBtnALPHA'),ang=document.getElementById('miniCalcBtnANG');if(bs)bs.classList.toggle('miniCalcModeOn',st.mode==='STO');if(ba)ba.classList.toggle('miniCalcModeOn',st.mode==='ALPHA');if(ang){ang.textContent=st.angMode||'DEG';ang.classList.toggle('miniCalcModeOn',true);ang.title='Bấm đổi DEG ↔ RAD'}}
 function syncMiniCalcDisplay(){renderMiniCalcTape();let hint=document.getElementById('miniCalcHint'),st=miniCalcState(),el=document.getElementById('shortAnsInput');if(!hint)return;let mode=st.mode==='STO'?' · STO → bấm A–H để lưu':(st.mode==='ALPHA'?' · ALPHA → bấm A–H để gọi':'');let frac=miniCalcFracAt(st.lines[st.line]||'',miniCalcGetCursor(st)),fs=frac?(frac.slot==='num'?' · TỬ':' · MẪU'):'';let ang=' · '+(st.angMode||'DEG');let msg=st._memMsg||'';if(!el)hint.textContent='▥ phân số · DEG/RAD · STO/ALPHA A–H'+mode;else if(SUBMITTED||el.disabled)hint.textContent='Đã nộp bài.';else hint.textContent=(msg||ang+fs+mode+' · SOLVE: 12+3x hoặc 2*x+3=7 · ▲▼ đổi dòng')}
 function miniCalcToExpr(s){s=miniCalcLegacyFrac(String(s||''));return s.replace(/(-?)⟦([^|⟦⟧]*)\|([^⟧]*)\⟧/g,function(_m,sg,a,b){return sg+'('+a+')/('+b+')'})}
@@ -17985,7 +17984,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307n';
+const CACHE_NAME = 'luyen-de-ai-v307o';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
