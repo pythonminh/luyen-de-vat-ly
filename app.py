@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307x_AI_GEN_JSON_FIX_2026_06_12"
+APP_VERSION = "V307z_AI_GEN_NO_NLVL_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -140,6 +140,8 @@ AI_HINT_SIMILAR_MAX_CHARS = max(
     800, min(int(os.environ.get("AI_HINT_SIMILAR_MAX_CHARS", "3500") or 3500), 6000)
 )
 AI_GENERATE_BATCH_MAX = max(1, min(int(os.environ.get("AI_GENERATE_BATCH_MAX", "4") or 4), 6))
+# Chỉ các trường AI cần sinh — metadata (MaDe, Mon, Lớp…) server tự gán từ form.
+AI_GEN_OUTPUT_FIELDS = ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"]
 AI_GENERATE_TOTAL_MAX = max(1, min(int(os.environ.get("AI_GENERATE_TOTAL_MAX", "30") or 30), 60))
 MAX_AI_KEYS_PER_PROVIDER = max(1, min(int(os.environ.get("AI_MAX_KEYS", "8") or 8), 20))
 GEMINI_HINT_MODEL_FALLBACKS = [
@@ -4128,7 +4130,7 @@ class SheetStore:
             allow_gpt_fallback=allow,
         )
         result["spec"] = {k: norm_spec.get(k, "") for k in (
-            "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "NangLucVatLy", "Dang",
+            "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "Dang",
             "MucDo", "BoDe", "De", "MaDe", "QuyenTruyCap", "count", "offset"
         )}
         return result
@@ -8809,7 +8811,7 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
     count = int(spec.get("count") or 1)
     dang = spec["Dang"]
     answer_plan = _ai_generation_answer_plan(spec)
-    schema_question = {f: "" for f in CREATE_QUESTION_FIELDS}
+    schema_question = {f: "" for f in AI_GEN_OUTPUT_FIELDS}
     schema = {"questions": [schema_question]}
     dang_rules = {
         "Trắc nghiệm": [
@@ -8845,24 +8847,20 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
         "Không tạo hình ảnh, không viện dẫn hình/bảng chưa được cung cấp, không thiếu dữ kiện.",
         "Mỗi câu phải có đáp án và lời giải đã được tự kiểm tra.",
         "",
-        "METADATA PHẢI GIỮ NGUYÊN CHO TẤT CẢ CÂU:",
-        json.dumps({k: spec[k] for k in ("MaDe", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "NangLucVatLy", "MucDo", "Dang", "QuyenTruyCap", "Diem")}, ensure_ascii=False, indent=2),
+        "METADATA (server tự gán — KHÔNG ghi lại MaDe, Mon, Lop, Chuong, BaiHoc, DangBaiTap, MucDo, Dang, QuyenTruyCap, BoDe, De, ID, HinhAnh trong JSON):",
+        json.dumps({k: spec[k] for k in ("Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "MucDo", "Dang", "QuyenTruyCap")}, ensure_ascii=False),
+        "Mỗi phần tử trong questions[] CHỈ gồm: CauHoi, A, B, C, D, DapAn, SaiSo, LoiGiai.",
         "",
         "QUY TẮC THEO DẠNG CÂU:",
         *(f"- {x}" for x in dang_rules),
         f"- Kế hoạch đáp án cho {count} câu theo đúng thứ tự: {plan_text}",
-        "",
-        "PHÂN LOẠI NĂNG LỰC VẬT LÍ:",
-        "- NLVL01: nhận biết/trình bày kiến thức; NLVL02: phân tích/giải thích/phản biện; NLVL03: đặt vấn đề/dự đoán/giả thuyết; NLVL04: dụng cụ/biến số/quy trình/thực hiện; NLVL05: xử lí dữ liệu/đồ thị/thực nghiệm để kết luận; NLVL06: vận dụng thực tiễn/đánh giá/thiết kế/giải pháp.",
         "",
         "YÊU CẦU CHẤT LƯỢNG:",
         "- Cùng Dạng bài tập nhưng thay đổi số liệu/tình huống/cách hỏi để các câu không lặp mẫu máy móc.",
         "- Mức NB: nhận biết trực tiếp; TH: hiểu và biến đổi ngắn; VD: vận dụng nhiều bước; VDC: tổng hợp hoặc có bẫy hợp lý.",
         "- Số liệu đẹp, đơn vị chuẩn, kết quả hợp lý; không tạo phương án vô nghĩa.",
         "- Nội dung phù hợp chương trình THPT và đúng Môn/Lớp đã chỉ định.",
-        "- Trường NangLucVatLy phải là đúng một mã NLVL01–NLVL06. Nếu metadata đã chỉ định mã thì câu phải thực sự đánh giá đúng năng lực đó; nếu để trống thì tự phân loại theo hoạt động tư duy chủ đạo.",
-        "- Không đồng nhất NangLucVatLy với MucDo hoặc Dang. Bài toán tính trực tiếp thường NLVL01; dữ liệu/đồ thị làm căn cứ chính thường NLVL05; chỉ dùng NLVL06 khi có yêu cầu thực tiễn/giải pháp.",
-        "- ID để trống; server sẽ tự tạo. HinhAnh để trống.",
+        "- Không ghi ID, MaDe, HinhAnh — server tự tạo.",
         f"- Yêu cầu thêm của ADMIN: {extra}",
         "",
         "KHÔNG ĐƯỢC TẠO LẠI CÁC CÂU CÓ NỘI DUNG GẦN GIỐNG:",
@@ -8876,17 +8874,101 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
     ])
 
 
+def _normalize_ai_gen_raw(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Chuẩn hóa key AI hay trả lệch (cau_hoi, dap_an…)."""
+    raw = dict(raw or {})
+    alias = {
+        "cauhoi": "CauHoi", "cau_hoi": "CauHoi", "noidung": "CauHoi", "de_bai": "CauHoi",
+        "loigiai": "LoiGiai", "loi_giai": "LoiGiai", "giai": "LoiGiai",
+        "dapan": "DapAn", "dap_an": "DapAn", "answer": "DapAn",
+        "nanglucvatly": "NangLucVatLy", "nang_luc_vat_ly": "NangLucVatLy", "nlvl": "NangLucVatLy",
+    }
+    out = dict(raw)
+    for k, v in raw.items():
+        canon = alias.get(key_norm(k))
+        if canon:
+            out[canon] = v
+    return out
+
+
+def _salvage_ai_question_dicts(raw: str) -> List[Dict[str, Any]]:
+    """Cứu các object câu hỏi hoàn chỉnh khi JSON bị cắt cụt giữa chừng."""
+    raw = _strip_ai_json_fence(raw)
+    if not raw:
+        return []
+    m = re.search(r'"questions"\s*:\s*\[', raw, flags=re.I)
+    start = m.end() - 1 if m else raw.find("[")
+    if start < 0:
+        return []
+    out: List[Dict[str, Any]] = []
+    i = start + 1
+    n = len(raw)
+    while i < n:
+        while i < n and raw[i] in " \t\n\r,":
+            i += 1
+        if i >= n or raw[i] == "]":
+            break
+        if raw[i] != "{":
+            i += 1
+            continue
+        depth = 0
+        in_str = False
+        esc = False
+        j = i
+        while j < n:
+            ch = raw[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+                j += 1
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    chunk = raw[i: j + 1]
+                    parsed_obj: Optional[Dict[str, Any]] = None
+                    for variant in (chunk, _repair_latex_json_escapes(chunk)):
+                        try:
+                            obj = json.loads(variant)
+                            if isinstance(obj, dict):
+                                parsed_obj = obj
+                                break
+                        except Exception:
+                            pass
+                    if parsed_obj:
+                        norm = _normalize_ai_gen_raw(parsed_obj)
+                        if clean(norm.get("CauHoi", "")) or any(clean(norm.get(L, "")) for L in "ABCD"):
+                            out.append(norm)
+                    i = j + 1
+                    break
+            j += 1
+        else:
+            break
+    return out
+
+
 def _extract_ai_question_list(txt: Any) -> List[Dict[str, Any]]:
     parsed = _json_loads_ai_lenient(str(txt or ""))
     if isinstance(parsed, list):
-        return [x for x in parsed if isinstance(x, dict)]
+        return [_normalize_ai_gen_raw(x) for x in parsed if isinstance(x, dict)]
     if isinstance(parsed, dict):
         for key in ("questions", "items", "cau_hoi", "CauHoi"):
             items = parsed.get(key)
             if isinstance(items, list):
-                return [x for x in items if isinstance(x, dict)]
+                return [_normalize_ai_gen_raw(x) for x in items if isinstance(x, dict)]
         if isinstance(parsed.get("question"), dict):
-            return [parsed.get("question")]
+            return [_normalize_ai_gen_raw(parsed.get("question"))]
+    salvaged = _salvage_ai_question_dicts(str(txt or ""))
+    if salvaged:
+        return salvaged
     return []
 
 
@@ -8898,11 +8980,12 @@ def _format_tf_answer_standard(value: Any) -> str:
 
 
 def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordinal: int) -> Tuple[Optional[Dict[str, Any]], str]:
-    data = {f: clean((raw or {}).get(f, "")) for f in CREATE_QUESTION_FIELDS}
+    raw = _normalize_ai_gen_raw(raw or {})
+    data = {f: clean(raw.get(f, "")) for f in CREATE_QUESTION_FIELDS}
     for f in ("MaDe", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "MucDo", "Dang", "QuyenTruyCap", "Diem"):
         data[f] = clean(spec.get(f, ""))
     requested_nlvl = norm_nang_luc_vat_ly(spec.get("NangLucVatLy", ""))
-    data["NangLucVatLy"] = requested_nlvl or norm_nang_luc_vat_ly((raw or {}).get("NangLucVatLy", "")) or "NLVL01"
+    data["NangLucVatLy"] = requested_nlvl or ""
     data["ID"] = "AIQ_" + stable_hash(
         f"{spec.get('request_id')}|{spec.get('offset', 0)}|{ordinal}|{data.get('CauHoi')}|{time.time()}|{random.random()}",
         14,
@@ -8915,8 +8998,6 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
         data[f] = normalize_latex_light(data.get(f, ""))
     if not data["CauHoi"]:
         return None, "Thiếu nội dung câu hỏi"
-    if not data.get("NangLucVatLy"):
-        data["NangLucVatLy"] = "NLVL01"
 
     dang = spec["Dang"]
     if dang == "Trắc nghiệm":
@@ -8971,9 +9052,7 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
         if missing_meta:
             raise RuntimeError(f"Câu {i}: thiếu metadata " + ", ".join(missing_meta) + ".")
         data["MucDo"] = clean(data.get("MucDo", "")).upper()
-        data["NangLucVatLy"] = norm_nang_luc_vat_ly(data.get("NangLucVatLy", ""))
-        if not data.get("NangLucVatLy") or data["NangLucVatLy"] not in NANG_LUC_VAT_LY:
-            raise RuntimeError(f"Câu {i}: NangLucVatLy phải là NLVL01–NLVL06.")
+        data["NangLucVatLy"] = norm_nang_luc_vat_ly(data.get("NangLucVatLy", ""))  # tùy chọn — GPT tạo ngân hàng không bắt buộc
         if data["MucDo"] not in ("NB", "TH", "VD", "VDC"):
             raise RuntimeError(f"Câu {i}: MucDo phải là NB/TH/VD/VDC.")
         data["Dang"] = norm_dang(data.get("Dang"))
@@ -9021,75 +9100,88 @@ def ai_generate_question_batch_from_provider(
     user_prompt = build_ai_generate_questions_prompt(spec, references)
     count = int(spec.get("count") or 1)
     dang = spec.get("Dang") or ""
-    per_q = 2400 if dang == "Đúng sai" else (2000 if dang == "Tự luận" else 1500)
-    max_tokens = min(12000, max(3200, count * per_q))
+    per_q = 2800 if dang == "Đúng sai" else (2200 if dang == "Tự luận" else 1600)
+    max_tokens = min(12000, max(4000, count * per_q))
+    gen_timeout = 75
     temp = 0.22
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
     model_gemini = clean(os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)) or DEFAULT_GEMINI_ADMIN_MODEL
     last_error = ""
     raw_text = ""
+    last_finish = ""
     used_provider = "GEMINI"
     key_index = 0
     model_used = ""
     gemini_saw_quota = False
 
-    def try_openai() -> bool:
-        nonlocal last_error, raw_text, used_provider, key_index, model_used
+    def try_openai(tok: int) -> bool:
+        nonlocal last_error, raw_text, used_provider, key_index, model_used, last_finish
         for idx, api_key in enumerate(openai_keys, start=1):
             txt, finish, err = _openai_chat_call(
-                api_key, model_openai, sys_prompt, user_prompt, max_tokens, temp, timeout=55
+                api_key, model_openai, sys_prompt, user_prompt, tok, temp, timeout=gen_timeout
             )
             if txt:
                 raw_text = txt
+                last_finish = finish
                 used_provider = "OPENAI"
                 key_index = idx
                 model_used = model_openai
                 return True
             last_error = err or finish or last_error
+            last_finish = finish or last_finish
         return False
 
-    def try_gemini() -> bool:
-        nonlocal last_error, raw_text, used_provider, key_index, model_used, gemini_saw_quota
+    def try_gemini(tok: int) -> bool:
+        nonlocal last_error, raw_text, used_provider, key_index, model_used, gemini_saw_quota, last_finish
         models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
         for idx, api_key in enumerate(gemini_keys, start=1):
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key, gmodel, sys_prompt, user_prompt, max_tokens, temp, timeout=55
+                    api_key, gmodel, sys_prompt, user_prompt, tok, temp, timeout=gen_timeout
                 )
                 if txt:
                     raw_text = txt
+                    last_finish = finish
                     used_provider = "GEMINI"
                     key_index = idx
                     model_used = gmodel
                     return True
                 last_error = err or finish or last_error
+                last_finish = finish or last_finish
                 if _is_quota_or_rate_error(last_error):
                     gemini_saw_quota = True
         return False
 
-    ok = False
-    fp = admin_ai_resolve_force(force_provider)
-    if fp == "OPENAI":
-        ok = try_openai()
-    else:
-        ok = try_gemini()
-        if not ok:
-            if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
-                raise AdminGeminiQuotaError(last_error, openai_available=True)
-            if allow_gpt_fallback and openai_keys:
-                ok = try_openai()
+    def call_provider(tok: int) -> bool:
+        fp = admin_ai_resolve_force(force_provider)
+        if fp == "OPENAI":
+            return try_openai(tok)
+        if try_gemini(tok):
+            return True
+        if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+            raise AdminGeminiQuotaError(last_error, openai_available=True)
+        if allow_gpt_fallback and openai_keys:
+            return try_openai(tok)
+        return False
+
+    ok = call_provider(max_tokens)
     if not ok:
         raise RuntimeError("AI chưa tạo được câu: " + (last_error or "không có phản hồi."))
 
     raw_items = _extract_ai_question_list(raw_text)
+    if not raw_items and raw_text:
+        retry_tok = min(12000, max(max_tokens * 2, 7000))
+        if retry_tok > max_tokens and call_provider(retry_tok):
+            raw_items = _extract_ai_question_list(raw_text)
     if not raw_items:
         preview = short_plain_text(raw_text, 300)
         prov = "Gemini" if used_provider == "GEMINI" else "GPT"
+        cut = "MAX_TOKENS" in (last_finish or "").upper() or "LENGTH" in (last_finish or "").upper()
+        hint = "Phản hồi bị cắt giữa chừng — " if cut else ""
         raise RuntimeError(
-            "AI trả về dữ liệu không đúng JSON questions[]. "
-            f"({prov} — hay gặp với câu Đúng/Sai có công thức $...$). "
-            "Thử: giảm Số lượng câu xuống 2–3, chọn Năng lực vật lí, hoặc bấm lại khi hết quota. "
-            + (f"Đầu phản hồi AI: {preview}" if preview else "AI không trả nội dung.")
+            hint + "AI trả về dữ liệu không đúng JSON questions[]. "
+            f"({prov}). Thử bấm lại hoặc chọn GPT khi hết quota Gemini. "
+            + (f"Đầu phản hồi: {preview}" if preview else "AI không trả nội dung.")
         )
     questions: List[Dict[str, Any]] = []
     warnings: List[str] = []
@@ -10858,7 +10950,6 @@ body.theoryEditorOpen{overflow:hidden!important}
     <label class="aiGenWide">Dạng bài tập (cột H) *<input id="agDangBaiTap" list="agDangBaiTapList" placeholder="VD: Sai số của phép đo gián tiếp"><datalist id="agDangBaiTapList"></datalist></label>
     <label>Dạng câu hỏi *<select id="agDang"><option>Trắc nghiệm</option><option>Đúng sai</option><option>Trả lời ngắn</option><option>Tự luận</option></select></label>
     <label>Mức độ *<select id="agMucDo"><option>NB</option><option>TH</option><option selected>VD</option><option>VDC</option></select></label>
-    <label class="aiGenWide">Năng lực vật lí<select id="agNangLucVatLy"><option value="">AI tự phân loại</option><option value="NLVL01">NLVL01 · Nhận biết, trình bày</option><option value="NLVL02">NLVL02 · Phân tích, giải thích, phản biện</option><option value="NLVL03">NLVL03 · Vấn đề và giả thuyết</option><option value="NLVL04">NLVL04 · Kế hoạch và thực hiện tìm hiểu</option><option value="NLVL05">NLVL05 · Xử lí dữ liệu, kết luận</option><option value="NLVL06">NLVL06 · Vận dụng thực tiễn, giải pháp</option></select></label>
     <label>Số lượng câu *<input id="agCount" type="number" min="1" max="30" value="5"></label>
     <label>Bộ đề<input id="agBoDe" value="Ngân hàng AI"></label>
     <label class="aiGenWide">Tên đề / nhóm câu<input id="agDe" placeholder="Tự lấy theo Bài học · Dạng bài tập"></label>
@@ -10924,7 +11015,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307x';
+    window.__LDVL_V='V307z';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11573,10 +11664,10 @@ function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair 
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
 function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview()}
-function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),NangLucVatLy:val('agNangLucVatLy'),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
+function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
-function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.NangLucVatLy||'Chưa phân loại NLVL')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
+function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
 function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
@@ -18480,7 +18571,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307x';
+const CACHE_NAME = 'luyen-de-ai-v307z';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
