@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307q_FIX_MOBILE_QUIZ_UI_SLIM_2026_06_12"
+APP_VERSION = "V307r_FIX_LATEX_IMPORT_APPEND_READ_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2265,6 +2265,40 @@ def gsheet_call_retry(label: str, fn, *args, **kwargs):
                 raise
             time.sleep(min(0.8 * (2 ** attempt) + random.random() * 0.35, 5.0))
     raise last_err
+
+
+def _parse_gsheet_updated_start_row(updated_range: Any) -> Optional[int]:
+    """Lấy số dòng đầu từ updatedRange sau append_rows (vd. Cau_Hoi!A4080:W4089)."""
+    s = clean(updated_range or "")
+    if not s:
+        return None
+    m = re.search(r"!?[A-Za-z0-9_' ]*!?([A-Z]+)(\d+)", s)
+    if not m:
+        return None
+    try:
+        return int(m.group(2))
+    except Exception:
+        return None
+
+
+def _gsheet_append_response_start_row(resp: Any, fallback: int) -> int:
+    """Đọc dòng bắt đầu từ phản hồi gspread append_rows / append_row."""
+    try:
+        if isinstance(resp, dict):
+            upd = resp.get("updates") or {}
+            sr = _parse_gsheet_updated_start_row(upd.get("updatedRange") or upd.get("updated_range"))
+            if sr:
+                return sr
+        upd = getattr(resp, "updates", None) or getattr(resp, "update", None)
+        if upd is not None:
+            sr = _parse_gsheet_updated_start_row(
+                getattr(upd, "updated_range", None) or getattr(upd, "updatedRange", None)
+            )
+            if sr:
+                return sr
+    except Exception:
+        pass
+    return max(2, int(fallback or 2))
 
 class SheetStore:
     def __init__(self):
@@ -4824,6 +4858,77 @@ class SheetStore:
         q["_row"] = row_number
         return q
 
+    def _question_from_prepared_data(self, row_number: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Dựng câu hỏi từ dict đã chuẩn bị khi đọc lại Sheet sau append bị lệch."""
+        seed = {f: clean((data or {}).get(f, "")) for f in QUESTION_FIELDS}
+        q = canonical_question(seed)
+        for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+            q[f] = normalize_latex_text(q.get(f, ""))
+        da = clean(q.get("DapAn", ""))
+        if da and any(x in da for x in ("$", "\\", "{", "}")):
+            q["DapAn"] = normalize_latex_text(da)
+        q["Dang"] = effective_dang(q)
+        q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
+        q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+        if not clean(q.get("CauHoi")):
+            return None
+        q["_row"] = row_number
+        return q
+
+    def _extend_fingerprints_from_sheet_tail(self, existing_fp: set, lookback: int = 48) -> None:
+        """Bổ sung fingerprint từ vài chục dòng cuối Sheet — tránh chèn trùng khi RAM chưa kịp nạp."""
+        if not self.ws_questions:
+            return
+        try:
+            total = int(getattr(self.ws_questions, "row_count", 0) or 0)
+            if total < 2:
+                return
+            start = max(2, total - max(lookback, 8) + 1)
+            end = total
+            last_col = max(len(self.question_headers or []), 22, max(SHEET_QUESTION_FIXED_COL_1.values()))
+            a1 = gspread.utils.rowcol_to_a1(start, 1)
+            b1 = gspread.utils.rowcol_to_a1(end, last_col)
+            block = gsheet_call_retry(
+                f"batch_get Cau_Hoi tail {start}-{end}",
+                self.ws_questions.get,
+                f"{a1}:{b1}",
+            )
+            rows_block = list(block or []) if isinstance(block, list) else []
+            for off, row_vals in enumerate(rows_block):
+                q = self._question_from_sheet_row(start + off, list(row_vals or []))
+                if not q:
+                    continue
+                try:
+                    existing_fp.add(question_content_fingerprint(q))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _read_appended_question_rows(self, start_row: int, count: int) -> List[Dict[str, Any]]:
+        """Đọc chính xác các dòng vừa append — không quét cả sheet 4000+ dòng."""
+        out: List[Dict[str, Any]] = []
+        if not self.ws_questions or count <= 0 or start_row < 2:
+            return out
+        try:
+            end_row = start_row + count - 1
+            last_col = max(len(self.question_headers or []), 22, max(SHEET_QUESTION_FIXED_COL_1.values()))
+            a1 = gspread.utils.rowcol_to_a1(start_row, 1)
+            b1 = gspread.utils.rowcol_to_a1(end_row, last_col)
+            block = gsheet_call_retry(
+                f"batch_get Cau_Hoi append {start_row}-{end_row}",
+                self.ws_questions.get,
+                f"{a1}:{b1}",
+            )
+            rows_block = list(block or []) if isinstance(block, list) else []
+            for off, row_vals in enumerate(rows_block):
+                q = self._question_from_sheet_row(start_row + off, list(row_vals or []))
+                if q:
+                    out.append(q)
+        except Exception:
+            pass
+        return out
+
     def patch_quiz_sessions_after_row_add(self, new_q: Dict[str, Any]) -> None:
         made = clean(new_q.get("MaDe"))
         new_row = int(new_q.get("_row") or 0)
@@ -4955,6 +5060,7 @@ class SheetStore:
                     existing_fp.add(question_content_fingerprint(q))
                 except Exception:
                     pass
+            self._extend_fingerprints_from_sheet_tail(existing_fp)
 
             rows: List[List[str]] = []
             prepared: List[Dict[str, Any]] = []
@@ -4996,23 +5102,49 @@ class SheetStore:
                 prepared.append(data)
 
             if not rows:
+                dup_n = sum(1 for s in skipped if "Trùng" in clean(s.get("reason", "")))
+                msg = "Không có câu mới để nhập."
+                if dup_n and dup_n == len(skipped):
+                    msg = (
+                        f"Không chèn được: {dup_n} câu trùng nội dung đã có trên Sheet "
+                        f"(cùng mã đề + câu hỏi). Kiểm tra Google Sheet hoặc đổi Tên đề / Mã đề."
+                    )
+                elif skipped:
+                    msg = "Không có câu mới để nhập. " + "; ".join(
+                        clean(s.get("reason", "")) for s in skipped[:4] if clean(s.get("reason", ""))
+                    )
                 return {
                     "ok": True,
                     "created": 0,
                     "skipped": skipped,
-                    "message": "Không có câu mới để nhập.",
+                    "message": msg,
                 }
 
+            row_count_before = int(getattr(self.ws_questions, "row_count", 0) or 0)
             # append_rows nhanh hơn append_row từng câu, tránh Render timeout khi nhập nhiều câu.
-            gsheet_call_retry("append_rows Cau_Hoi", self.ws_questions.append_rows, rows, value_input_option="RAW")
-            values = gsheet_call_retry("get_all_values Cau_Hoi", self.ws_questions.get_all_values)
-            start_row = max(2, len(values) - len(rows) + 1)
+            append_resp = gsheet_call_retry(
+                "append_rows Cau_Hoi",
+                self.ws_questions.append_rows,
+                rows,
+                value_input_option="RAW",
+            )
+            start_row = _gsheet_append_response_start_row(append_resp, row_count_before + 1)
+            if start_row <= 1:
+                start_row = max(2, row_count_before + 1)
 
-            new_questions: List[Dict[str, Any]] = []
-            for i, row_vals in enumerate(values[start_row - 1 : start_row - 1 + len(rows)], start=start_row):
-                q = self._question_from_sheet_row(i, row_vals)
-                if q:
-                    new_questions.append(q)
+            new_questions: List[Dict[str, Any]] = self._read_appended_question_rows(start_row, len(rows))
+
+            if len(new_questions) < len(rows):
+                have = {int(q.get("_row") or 0) for q in new_questions}
+                for off, data in enumerate(prepared):
+                    rn = start_row + off
+                    if rn in have:
+                        continue
+                    q = self._question_from_prepared_data(rn, data)
+                    if q:
+                        new_questions.append(q)
+
+            new_questions.sort(key=lambda x: int(x.get("_row") or 0))
 
             self.questions.extend(new_questions)
             for q in new_questions:
@@ -5025,8 +5157,8 @@ class SheetStore:
                 "ok": True,
                 "created": len(new_questions),
                 "skipped": skipped,
-                "start_row": start_row,
-                "end_row": start_row + len(new_questions) - 1,
+                "start_row": start_row if new_questions else None,
+                "end_row": (start_row + len(new_questions) - 1) if new_questions else None,
                 "ids": [q.get("ID", "") for q in new_questions],
                 "questions": [self.public_question(q, len(self.questions) - len(new_questions) + i, reveal=True) for i, q in enumerate(new_questions)],
             }
@@ -10639,7 +10771,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307q';
+    window.__LDVL_V='V307r';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -12808,6 +12940,7 @@ function latexImportSummary(j){
   if(j.ai_level)lines.push('GPT ADMIN mức độ: '+(j.ai_level_done?'đã nhận diện':'chưa nhận diện')+(j.ai_model?' · '+j.ai_model:''));
   if(j.ai_level_error)lines.push('Lỗi AI mức độ: '+j.ai_level_error);
   if(j.created!=null)lines.push('Đã chèn mới: '+j.created+' câu'+(j.start_row?' · dòng '+j.start_row+' → '+j.end_row:''));
+  if(j.message)lines.push(String(j.message));
   if(j.theory_groups_count)lines.push('Khung Dạng bài tập: '+j.theory_groups_count+' khung dn/note/vidu');
   if(j.theory_saved&&j.theory_saved.length)lines.push('Đã lưu Phuong_Phap: '+j.theory_saved.length+' khung');
   if(j.theory_errors&&j.theory_errors.length)lines.push('Lỗi khung: '+j.theory_errors.slice(0,5).join(' | '));
@@ -12936,6 +13069,10 @@ async function commitLatexImport(){
       renderLatexImportPreview(j,true);
       window.LAST_LATEX_PREVIEW_DATA=null;
       alert('Đã chèn '+(j.created||0)+' câu và lưu '+((j.theory_saved||[]).length)+' khung Dạng bài tập vào Google Sheet.');
+    }else{
+      let why=j.message||'';
+      if(!why&&j.skipped&&j.skipped.length)why='Bỏ qua '+j.skipped.length+' câu: '+j.skipped.slice(0,4).map(x=>x.reason||x.id||('#'+x.index)).join('; ');
+      alert(why||'Không chèn được câu nào. Kiểm tra ô trạng thái bên dưới.');
     }
   }catch(e){setLatexImportStatus('Lỗi chèn LaTeX: '+e.message,true)}
 }
@@ -18000,7 +18137,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307q';
+const CACHE_NAME = 'luyen-de-ai-v307r';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
