@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307az_TIKZ_AUTO_SPLIT_2026_06_12"
+APP_VERSION = "V307ba_MERGE_INLINE_MATH_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -398,10 +398,36 @@ def _latex_structure_ok(t: str) -> bool:
     return True
 
 
+def _merge_adjacent_inline_math(t: str) -> str:
+    """Gộp $...$ $...$ liền nhau (chỉ khoảng trắng giữa) — tránh MathJax lỗi."""
+    if not t or "$" not in t:
+        return t
+
+    def _repl(m: re.Match) -> str:
+        gap = m.group(2)
+        if re.search(r"[A-Za-zÀ-ỹĐđ]", gap):
+            return m.group(0)
+        a = m.group(1)[1:-1].strip()
+        b = m.group(3)[1:-1].strip()
+        sep = " " if gap.strip() else ""
+        return f"${a}{sep}{b}$"
+
+    prev = None
+    while prev != t:
+        prev = t
+        t = re.sub(
+            r"(\$[^$\n]+?\$)(\s+)(\$[^$\n]+?\$)",
+            _repl,
+            t,
+        )
+    return t
+
+
 def _fix_surplus_dollar_signs(t: str) -> str:
     """Gỡ $ thừa / lệch cặp — lỗi Word/Sheet hay gặp nhất."""
     if not t or "$" not in t:
         return t
+    t = _merge_adjacent_inline_math(t)
     # $$$... → $$ hoặc $
     t = re.sub(r"\${3,}", "$$", t)
     # $$...$$ một dòng ngắn (inline lỡ gõ $$) → $...$
@@ -411,7 +437,7 @@ def _fix_surplus_dollar_signs(t: str) -> str:
     t = re.sub(r"\$([^$\n]+?)\$\$(?!\$)", r"$\1$", t)
     # $..$ rồi còn $ dính ngay sau
     t = re.sub(r"(\$[^$\n]+?\$)\$+", r"\1", t)
-    # $ $10^{5}$ → $10^{5}$ (bỏ $ rỗng đầu, giữ công thức)
+    # $ $10^{5}$ → $10^{5}$ (sau merge_adjacent — không còn $...$ $...$)
     t = re.sub(r"\$\s+\$(?=[^$\n])", "$", t)
     # $ $ thật sự rỗng
     t = re.sub(r"\$\s+\$(?=\s|$)", " ", t)
@@ -512,6 +538,7 @@ def normalize_latex_light(s: Any) -> str:
     t = re.sub(r"\$\s*\n+\s*\$", "", t)
     t = re.sub(r"\$\s*\n+\s*([^$\n]+?)\s*\n+\s*\$", r"$(\1)$", t)
     t = re.sub(r"\$\s*\n+([^$\n]+?)\s*\$", r"$(\1)$", t)
+    t = _merge_adjacent_inline_math(t)
     if _latex_structure_ok(t):
         return _fix_math_bs_in_pairs(t)
     t = _fix_surplus_dollar_signs(t)
@@ -530,6 +557,7 @@ def normalize_latex_text(s: Any) -> str:
     if _latex_structure_ok(t) and not _latex_needs_heavy_normalize(t):
         return normalize_latex_light(t)
     t = _strip_latex_list_markup(t)
+    t = _merge_adjacent_inline_math(t)
     t = _fix_surplus_dollar_signs(t)
     t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}\s*\$", r"$(\1)$", t)
     t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}", r"$(\1)$", t)
@@ -12448,13 +12476,14 @@ function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;
 function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let span=findLatexMathSpan(s,i);if(!span){out+=esc(s.slice(i));break}if(span.end<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,span.start));out+=s.slice(span.start,span.end+1);i=span.end+1}return out}
 function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
+function mergeAdjacentInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return t;let prev=null;while(prev!==t){prev=t;t=t.replace(/(\$[^$\n]+?\$)(\s+)(\$[^$\n]+?\$)/g,function(m,g1,gap,g3){if(/[A-Za-zÀ-ỹĐđ]/.test(gap))return m;let a=g1.slice(1,-1).trim(),b=g3.slice(1,-1).trim();return '$'+a+(gap.trim()?' ':'')+b+'$'})}return t}
 function fixPlainTextGaps(s){return String(s||'').replace(/(\d)([Nn]ên|[Đđ]iểm)/g,'$1 $2').replace(/(\))([A-Za-zÀ-ỹĐđ])/g,'$1 $2')}
 function fixOneMathInner(inner){if(!inner)return inner;inner=inner.replace(/\)\s*\((\d[\d;\s,.\-]*)\)/g,')$ $( $1)$');inner=inner.replace(/\$\(([^)]+)\)(thuộc|mặt|phẳng|nên|điểm)/gi,'$( $1)$ $2');inner=inner.replace(/\(([^)]+)\)(thỏa|mãn|phương|trình|nên|điểm|thuộc|mặt|phẳng|khẳng|tọa|độ)/gi,'($1)$ $2');inner=inner.replace(/(=[\d.\-+]+)\s*(nên|điểm|thuộc|mặt|phẳng|khẳng|tọa)/gi,'$1$ $2');inner=inner.replace(/\)(thỏa|mãn|nên|điểm|thuộc|mặt|phẳng)/gi,') $1');inner=inner.replace(/(\d)([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/(\))([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/\(\((\\?[a-zA-Z]+)\)\)/g,'$1');return inner}
 function latexDollarCount(s){s=String(s||'');let n=0;for(let i=0;i<s.length;i++){if(s[i]==='$'&&s[i+1]==='$'){i++;continue}if(s[i]==='$')n++}return n}
 function latexStructureOk(s){s=String(s||'');if(latexDollarCount(s)%2)return false;let plain=s.replace(/\$\$[^$]*\$\$/g,'').replace(/\$[^$]*\$/g,'');return !/\\(?:text|mathrm|frac|sqrt|left|right|times|cdot|pm|mp|leq|geq|neq|approx|,)/.test(plain)}
-function fixSurplusDollars(s){s=String(s||'');if(s.indexOf('$')<0)return s;s=s.replace(/\${3,}/g,'$$');s=s.replace(/\$\$([^$\n]{1,160}?)\$\$/g,'$$$1$');s=s.replace(/\$\$([^$\n]+?)\$(?!\$)/g,'$$$1$');s=s.replace(/\$([^$\n]+?)\$\$(?!\$)/g,'$$$1$');s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s+\$(?=[^$\n])/g,'$');s=s.replace(/\$\s+\$(?=\s|$)/g,' ');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/(?<=\s)\$(?=\s)/g,'');s=s.replace(/(\$[^$\n]+?\$)\.(\$)(?=\s|$|[A-Za-zÀ-ỹĐđ])/g,'$1.');s=s.replace(/(\$[^$\n]+?\$)([,.;:])\$(?=\s|$)/g,'$1$2');if(s.endsWith('$')&&latexDollarCount(s)%2===1)s=s.slice(0,-1);return s}
+function fixSurplusDollars(s){s=String(s||'');if(s.indexOf('$')<0)return s;s=mergeAdjacentInlineMath(s);s=s.replace(/\${3,}/g,'$$');s=s.replace(/\$\$([^$\n]{1,160}?)\$\$/g,'$$$1$');s=s.replace(/\$\$([^$\n]+?)\$(?!\$)/g,'$$$1$');s=s.replace(/\$([^$\n]+?)\$\$(?!\$)/g,'$$$1$');s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s+\$(?=[^$\n])/g,'$');s=s.replace(/\$\s+\$(?=\s|$)/g,' ');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/(?<=\s)\$(?=\s)/g,'');s=s.replace(/(\$[^$\n]+?\$)\.(\$)(?=\s|$|[A-Za-zÀ-ỹĐđ])/g,'$1.');s=s.replace(/(\$[^$\n]+?\$)([,.;:])\$(?=\s|$)/g,'$1$2');if(s.endsWith('$')&&latexDollarCount(s)%2===1)s=s.slice(0,-1);return s}
 function fixMergedInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return fixPlainTextGaps(t);let out='',i=0,n=t.length;while(i<n){if(t[i]!=='$'){let d1=t.indexOf('$',i);if(d1<0){out+=fixPlainTextGaps(t.slice(i));break}out+=fixPlainTextGaps(t.slice(i,d1));i=d1;continue}if(i+1<n&&t[i+1]==='$'){let end=t.indexOf('$$',i+2);if(end>=0){out+=t.slice(i,end+2);i=end+2;continue}}let d2=t.indexOf('$',i+1);if(d2<0){let rest=t.slice(i+1);if(String(rest).trim()&&(rest.indexOf('\\')>=0||rest.indexOf('{')>=0))out+='$'+fixOneMathInner(rest)+'$';else out+=fixPlainTextGaps(rest);break}let inner=t.slice(i+1,d2);if(!String(inner).trim()){i=d2+1;continue}while(d2+1<n&&t[d2+1]==='$'&&(d2+2>=n||t[d2+2]!=='$'))d2++;out+='$'+fixOneMathInner(t.slice(i+1,d2))+'$';i=d2+1}return out}
-function normalizeLatexDelimiters(s){s=String(s||'');s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|acute)|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return s}
+function normalizeLatexDelimiters(s){s=String(s||'');s=mergeAdjacentInlineMath(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|acute)|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return s}
 function readLatexBracedContent(s,bracePos){if(bracePos<0||bracePos>=s.length||s[bracePos]!=='{')return null;let depth=0;for(let i=bracePos;i<s.length;i++){let c=s[i];if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0)return{content:s.slice(bracePos+1,i),end:i}}}return null}
 function normalizeLatexTextCmds(s){s=String(s||'');s=s.replace(/\\{2,}(textbf|textit|emph|underline)\s*\{/gi,'\\$1{');s=s.replace(/(^|[^\\$])(textbf|textit|emph|underline)\s*\{/gi,'$1\\$2{');return s}
 function replaceLatexFmtInPlain(s){s=normalizeLatexTextCmds(s);let cmds=[{re:/\\textbf\s*\{/gi,o:'@@B@@',c:'@@/B@@'},{re:/\\textit\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\emph\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\underline\s*\{/gi,o:'@@U@@',c:'@@/U@@'}];let loop=true;while(loop){loop=false;for(let cmd of cmds){cmd.re.lastIndex=0;let m=cmd.re.exec(s);if(!m)continue;let idx=m.index,bracePos=idx+m[0].length-1,got=readLatexBracedContent(s,bracePos);if(!got)continue;let inner=replaceLatexFmtInPlain(got.content);s=s.slice(0,idx)+cmd.o+inner+cmd.c+s.slice(got.end+1);loop=true;break}}return s}
