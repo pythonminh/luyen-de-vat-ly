@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ap_DRIVE_SETUP_HINT_2026_06_12"
+APP_VERSION = "V307aq_DRIVE_SIMPLE_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -164,6 +164,7 @@ SCOPES = [
 ]
 _GOOGLE_SA_CREDS = None
 _DRIVE_UPLOAD_FOLDER_CACHE = ""
+DEFAULT_DRIVE_IMAGES_FOLDER_ID = "1QSVzBMuklr6JGqAvAJ9oa8jX2hxQLV3f"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-key-change-me")
@@ -2323,8 +2324,11 @@ def _drive_upload_folder_id() -> str:
 
     default_name = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_NAME", "Anh_Luyen_De"))
     found = _drive_find_folder_by_name(default_name)
-    _DRIVE_UPLOAD_FOLDER_CACHE = found
-    return found
+    if found:
+        _DRIVE_UPLOAD_FOLDER_CACHE = found
+        return found
+    _DRIVE_UPLOAD_FOLDER_CACHE = DEFAULT_DRIVE_IMAGES_FOLDER_ID
+    return _DRIVE_UPLOAD_FOLDER_CACHE
 
 
 def _drive_set_public(file_id: str, token: str) -> None:
@@ -2409,6 +2413,46 @@ def _publish_png_to_drive(png_path: str, filename: str = "") -> Tuple[str, str]:
         return "", _drive_setup_hint("Upload Drive thất bại")
     except Exception as e:
         return "", _drive_setup_hint(f"Upload lỗi: {str(e)[:100]}")
+
+
+def _remember_drive_folder_from_url(value: Any) -> None:
+    global _DRIVE_UPLOAD_FOLDER_CACHE
+    fid = extract_drive_folder_id(value)
+    if fid:
+        _DRIVE_UPLOAD_FOLDER_CACHE = fid
+
+
+def _upload_static_latex_image_to_drive(src: str) -> str:
+    """Ảnh TikZ tạm /static/latex_assets/ → upload Drive trước khi ghi Sheet."""
+    s = clean(src)
+    if not s:
+        return ""
+    path = s if s.startswith("/") else ("/" + s if s.lower().startswith("static/") else s)
+    if "/static/latex_assets/" not in path.lower():
+        return ""
+    abs_path = os.path.join(APP_DIR, path.lstrip("/").replace("/", os.sep))
+    if not os.path.isfile(abs_path):
+        return ""
+    url, _ = _publish_png_to_drive(abs_path, os.path.basename(abs_path))
+    return normalize_image_src(url) if url else ""
+
+
+def _finalize_hinhanh_for_sheet(value: Any) -> str:
+    """Chuẩn hóa cột T trước khi ghi Sheet: bỏ link folder, đẩy ảnh tạm lên Drive."""
+    s = clean(value)
+    if not s:
+        return ""
+    if is_drive_folder_url(s):
+        _remember_drive_folder_from_url(s)
+        return ""
+    if s.lower().startswith("tikzraw:"):
+        return s
+    low = s.lower()
+    if low.startswith("/static/latex_assets/") or low.startswith("static/latex_assets/"):
+        uploaded = _upload_static_latex_image_to_drive(s)
+        if uploaded:
+            return uploaded
+    return normalize_image_src(s)
 
 
 def _guess_image_mime(data: bytes, src: str = "") -> str:
@@ -4741,6 +4785,9 @@ class SheetStore:
         except Exception:
             pass
 
+        if "HinhAnh" in updates:
+            updates["HinhAnh"] = _finalize_hinhanh_for_sheet(updates.get("HinhAnh"))
+
         batch = []
         updated_fields = []
         for field, value in updates.items():
@@ -5340,7 +5387,10 @@ class SheetStore:
         row = [""] * width
         seed_cq = cq if cq is not None else canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS})
         for field in CREATE_QUESTION_FIELDS:
-            val = clean(data.get(field, ""))
+            if field == "HinhAnh":
+                val = _finalize_hinhanh_for_sheet(data.get(field, ""))
+            else:
+                val = clean(data.get(field, ""))
             if not val and field in ("ID", "MaDe"):
                 val = clean(seed_cq.get(field, ""))
             if not val:
@@ -9591,7 +9641,7 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
     if spec.get("wants_tikz") or ai_gen_wants_tikz(spec):
         hinh, tz_warn = _process_ai_gen_tikz({**raw, **data}, ordinal)
         if hinh:
-            data["HinhAnh"] = normalize_image_src(hinh)
+            data["HinhAnh"] = _finalize_hinhanh_for_sheet(hinh)
         if tz_warn:
             data["_ai_tikz_warning"] = tz_warn
     data["Dang"] = spec["Dang"]
@@ -9677,7 +9727,7 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
             data["MaDe"] = "AI_" + stable_hash(f"{data.get('De')}|{data.get('BaiHoc')}|{time.time()}", 12)
         data.pop("_ai_tikz_warning", None)
         data.pop("Tikz", None)
-        data["HinhAnh"] = normalize_image_src(data.get("HinhAnh", ""))
+        data["HinhAnh"] = _finalize_hinhanh_for_sheet(data.get("HinhAnh", ""))
         data["QuyenTruyCap"] = access_level_from_text(data.get("QuyenTruyCap", "VIP"))
         out.append(data)
     return out
@@ -11638,7 +11688,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ap';
+    window.__LDVL_V='V307aq';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11919,7 +11969,7 @@ function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+Stri
 function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
 function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
 function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. File Drive cần quyền Anyone with link.</div>\'}"'}
-function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr">Cột T đang là <b>link thư mục</b> Drive — cần link <b>file ảnh</b> dạng <code>drive.google.com/thumbnail?id=…</code></div>';src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
+function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
 function isTlnImgSplit(q){return !!(q&&q.Dang==='Trả lời ngắn'&&String(q.HinhAnh||'').trim())}
 function mcqUsesSplit(q){return usesImgSplit(q)}
@@ -12302,7 +12352,7 @@ function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair 
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
 function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview();loadAgDriveSetup()}
-async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Đã thấy thư mục «'+(j.folder_name||'Anh_Luyen_De')+'» trên Drive.':'⚠️ Chưa upload được lên Drive — làm 3 bước sau:';box.innerHTML=`<b>📁 Ảnh TikZ → Google Drive</b><div style="margin-top:6px">${ok}</div><ol style="margin:8px 0 0 18px;padding:0"><li>Mở thư mục <b>${esc(j.folder_name||'Anh_Luyen_De')}</b> trên Google Drive</li><li>Bấm <b>Chia sẻ</b> → thêm email <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Editor</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy</button></li><li>Deploy V307ap → <b>Tạo lại câu</b> có TikZ — cột T sẽ là <code>drive.google.com/thumbnail?id=…</code></li></ol>${j.folder_id?`<div class="muted" style="margin-top:6px;font-size:12px">Folder ID: ${esc(j.folder_id)}</div>`:''}`}catch(e){}}
+async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Thư mục ảnh sẵn sàng — TikZ sẽ tự lên Drive khi Lưu.':'⚠️ Chưa upload được — làm <b>1 lần</b>:';box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div><ol style="margin:8px 0 0 18px;padding:0"><li>Mở folder <b>${esc(j.folder_name||'Anh_Luyen_De')}</b> trên Drive → <b>Chia sẻ</b></li><li>Thêm <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Editor</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy email</button></li></ol><div class="muted" style="margin-top:6px;font-size:12px">Sau đó: tạo câu có TikZ → <b>để trống cột T</b> → Lưu Sheet.</div>`}catch(e){}}
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
@@ -13969,7 +14019,7 @@ async function aiRepairCurrentQuestion(){
   }
 }
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field);if(field==='Dang'){if(normDangFormVal(value)==='Đúng sai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData()));if(typeof renderEditQuestionPreview==='function')renderEditQuestionPreview()}}
-function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let raw=el?el.value:'';let src=normalizeImageSrcClient(raw);if(!src){box.innerHTML='<span class="muted" style="font-size:12px">Chưa có link — dán URL Drive/ảnh vào ô trên (Ctrl+V).</span>';return}let warn='';if(/^\/static\/latex_assets\//i.test(String(raw||'')))warn='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-size:12px">⚠ Ảnh đang ở <b>server tạm</b> (mất khi deploy). Chia sẻ thư mục <b>Anh_Luyen_De</b> cho service account rồi <b>tạo lại câu</b> để lên Drive.</div>';box.innerHTML=warn+buildQimgHtml(src)}
+function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let raw=el?el.value:'';if(isDriveFolderUrl(raw)){box.innerHTML='<div style="padding:10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-size:13px">✅ Đã nhận thư mục <b>Anh_Luyen_De</b>.<br><b>Để trống cột T</b> — câu có TikZ sẽ tự có link ảnh khi Lưu.<br><span class="muted" style="font-size:12px">Link thư mục không ghi vào Sheet.</span></div>';return}let src=normalizeImageSrcClient(raw);if(!src){box.innerHTML='<span class="muted" style="font-size:12px">'+(String(raw||'').trim()?'':'<b>Để trống</b> nếu dùng TikZ (app tự điền). Hoặc dán link <b>file ảnh</b> Drive.')+'</span>';return}let warn='';if(/^\/static\/latex_assets\//i.test(String(raw||'')))warn='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-size:12px">⏳ Ảnh tạm — khi <b>Lưu</b> app tự upload lên Drive (chia sẻ folder cho service account 1 lần).</div>';box.innerHTML=warn+buildQimgHtml(src)}
 function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=normalizeImageSrcClient(q.HinhAnh);return applyResolvedDang(q)}
 function renderEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;let q=adminEditFormQuestion();let dang=q.Dang||'Trắc nghiệm';let head='<div style="font-weight:800;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">👁 Xem trước câu <span class="tag">'+esc(dang)+'</span></div>';let img=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let body=renderRichText(stripImmini(q.CauHoi||''))||'<span class="muted">(Chưa có nội dung câu hỏi)</span>';let opts='';if(dang==='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="opt"><span>'+dsCircleHtml(L)+'</span><span>'+renderRichText(stripOptionPrefix(q[L],L))+'</span></div>'}}else if(dang==='Đúng sai'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="tfrow">'+dsCircleHtml(L)+'<div class="tfStmt">'+renderRichText(q[L])+'</div></div>'}}else if(dang==='Trả lời ngắn'){opts='<div class="shortAnsBox shortAnsCompact"><div class="muted">Đáp số P: <b>'+(renderRichText(q.DapAn||'—'))+'</b>'+(q.SaiSo?' · ±'+esc(q.SaiSo):'')+'</div></div>'}let sol='';if(q.DapAn||q.LoiGiai){let daPart='';if(q.DapAn){if(dang==='Trắc nghiệm')daPart='<div><b>Đáp án:</b> '+formatMcqAnswerBadge(q.DapAn)+'</div>';else if(dang==='Đúng sai')daPart='<div><b>Đáp án:</b> '+formatDsAnswerBadges(q.DapAn)+'</div>';else daPart='<div><b>P:</b> '+renderRichText(q.DapAn)+'</div>'}let lgPart='';if(q.LoiGiai){let lgBody=formatLoigiaiByDang(q.LoiGiai,q,dang);lgPart='<div style="margin-top:6px"><b>Lời giải:</b><br>'+lgBody+'</div>'}sol='<div class="solution" style="margin-top:10px;font-size:13px">'+daPart+lgPart+'</div>'}box.innerHTML=head+'<div class="qbox adminEditPreviewQ">'+body+(splitImg?'':img)+'</div>'+(splitImg?'<div class="adminEditPreviewImg">'+img+'</div>':'')+opts+sol;typeset([box])}
 function toggleEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;box.classList.toggle('hide');let btn=document.getElementById('btnEditTogglePreview');if(btn)btn.textContent=box.classList.contains('hide')?'👁 Bật xem trước':'👁 Ẩn xem trước'}
@@ -13982,7 +14032,7 @@ function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer
 async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link ảnh</button><span class="muted" style="font-size:11px;align-self:center">Drive / https / Images/...</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview()">${escFormVal(raw)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link ảnh</button><span class="muted" style="font-size:11px;align-self:center">Để trống = TikZ tự điền · hoặc link file ảnh</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview()" placeholder="Để trống nếu AI vẽ TikZ — app tự điền link ảnh khi Lưu">${escFormVal(raw)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){ensureEditAdminPreviewBar();document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);refreshEditHinhAnhPreview();bindEditFormLivePreview();renderEditQuestionPreview()}
 async function adminPasteImageUrl(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let el=document.getElementById('edit_HinhAnh');if(el){el.value=String(txt).trim();refreshEditHinhAnhPreview();renderEditQuestionPreview()}}catch(e){let el=document.getElementById('edit_HinhAnh');if(el){el.focus();alert('Bấm vào ô Hình ảnh rồi Ctrl+V dán link.')}}}
 function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}return data}
@@ -19776,7 +19826,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ap';
+const CACHE_NAME = 'luyen-de-ai-v307aq';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
