@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ai_DS_LOIGIAI_FORM_SYNC_2026_06_12"
+APP_VERSION = "V307aj_AI_GEN_TIKZ_GRAPH_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2186,6 +2186,8 @@ def normalize_image_src(value: Any) -> str:
         return '/' + s
     if s.lower().startswith('images/'):
         return '/static/' + s
+    if s.lower().startswith('tikzraw:'):
+        return s
     return s
 
 
@@ -9027,7 +9029,68 @@ def normalize_ai_generation_spec(raw: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(avoid, list):
         avoid = []
     out["avoid_stems"] = [short_plain_text(x, 180) for x in avoid if clean(x)][:40]
+    out["wants_tikz"] = ai_gen_wants_tikz(out)
     return out
+
+
+def ai_gen_wants_tikz(spec: Dict[str, Any]) -> bool:
+    """ADMIN yêu cầu đồ thị / TikZ trong form tạo ngân hàng."""
+    blob = " ".join([
+        clean(spec.get("extra_instruction", "")),
+        clean(spec.get("DangBaiTap", "")),
+        clean(spec.get("BaiHoc", "")),
+    ])
+    kn = key_norm(blob)
+    keys = (
+        "tikz", "do thi", "dong thi", "hinh ve", "hinh anh", "graph", "bieu do",
+        "ve anh", "ve do thi", "minh hoa bang hinh", "co hinh", "nhu hinh",
+    )
+    return any(k in kn for k in keys)
+
+
+def ai_gen_output_fields_for_spec(spec: Dict[str, Any]) -> List[str]:
+    out = list(AI_GEN_OUTPUT_FIELDS)
+    if ai_gen_wants_tikz(spec):
+        out.append("Tikz")
+    return out
+
+
+def _extract_tikz_block(text: str) -> str:
+    m = _LATEX_TIKZ_RE.search(clean(text))
+    return m.group(0) if m else ""
+
+
+def _process_ai_gen_tikz(raw: Dict[str, Any], ordinal: int) -> Tuple[str, str]:
+    """Biên dịch TikZ → PNG (cột T) hoặc lưu tikzraw:… nếu server chưa có pdflatex."""
+    candidates = [
+        clean(raw.get("Tikz", "")),
+        clean(raw.get("HinhAnh", "")),
+    ]
+    for f in ("CauHoi", "LoiGiai", "A", "B", "C", "D"):
+        candidates.append(_extract_tikz_block(clean(raw.get(f, ""))))
+    tikz_code = ""
+    for c in candidates:
+        block = _extract_tikz_block(c) if c else ""
+        if block:
+            tikz_code = block
+            break
+    if not tikz_code:
+        return "", "Chưa có \\begin{tikzpicture}…\\end{tikzpicture} — không vẽ được đồ thị."
+    ctx = _build_latex_asset_context(commit=True)
+    url = _compile_tikz_to_png(tikz_code, ctx, ordinal, 1)
+    if url:
+        return url, ""
+    import base64
+    enc = base64.urlsafe_b64encode(tikz_code.encode("utf-8")).decode("ascii")
+    warn = ""
+    for w in (ctx.get("warnings") or []):
+        warn = clean(w.get("warning", ""))
+        if warn:
+            break
+    return (
+        f"tikzraw:{enc}",
+        warn or "TikZ chưa biên dịch PNG — đã lưu mã vào cột T. Server cần pdflatex để tự xuất ảnh.",
+    )
 
 
 def _ai_generation_answer_plan(spec: Dict[str, Any]) -> List[str]:
@@ -9045,7 +9108,9 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
     count = int(spec.get("count") or 1)
     dang = spec["Dang"]
     answer_plan = _ai_generation_answer_plan(spec)
-    schema_question = {f: "" for f in AI_GEN_OUTPUT_FIELDS}
+    out_fields = ai_gen_output_fields_for_spec(spec)
+    wants_tikz = "Tikz" in out_fields
+    schema_question = {f: "" for f in out_fields}
     schema = {"questions": [schema_question]}
     dang_rules = {
         "Trắc nghiệm": [
@@ -9073,17 +9138,18 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
     avoid_text = "\n".join(f"- {x}" for x in spec.get("avoid_stems", [])[:40]) or "- Không có."
     plan_text = json.dumps(answer_plan, ensure_ascii=False) if answer_plan else "Không áp dụng."
     extra = spec.get("extra_instruction") or "Không có yêu cầu thêm."
-    return "\n".join([
+    fields_line = f"Mỗi phần tử trong questions[] CHỈ gồm: {', '.join(out_fields)}."
+    meta_skip = "MaDe, Mon, Lop, Chuong, BaiHoc, DangBaiTap, MucDo, Dang, QuyenTruyCap, BoDe, De, ID, HinhAnh"
+    lines = [
         "Bạn là giáo viên THPT Việt Nam chuyên xây dựng ngân hàng câu hỏi chính xác.",
         f"Hãy tạo ĐÚNG {count} câu hỏi MỚI, không trùng nhau, theo đúng metadata bên dưới.",
         "Chỉ trả về MỘT JSON object hợp lệ; không markdown, không ``` và không viết thêm lời giải thích ngoài JSON.",
         "Mọi backslash LaTeX trong JSON phải escape đúng. Công thức chỉ dùng $...$ trên một dòng, không dùng $$...$$.",
-        "Không tạo hình ảnh, không viện dẫn hình/bảng chưa được cung cấp, không thiếu dữ kiện.",
         "Mỗi câu phải có đáp án và lời giải đã được tự kiểm tra.",
         "",
-        "METADATA (server tự gán — KHÔNG ghi lại MaDe, Mon, Lop, Chuong, BaiHoc, DangBaiTap, MucDo, Dang, QuyenTruyCap, BoDe, De, ID, HinhAnh trong JSON):",
+        f"METADATA (server tự gán — KHÔNG ghi lại {meta_skip} trong JSON):",
         json.dumps({k: spec[k] for k in ("Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "MucDo", "Dang", "QuyenTruyCap")}, ensure_ascii=False),
-        "Mỗi phần tử trong questions[] CHỈ gồm: CauHoi, A, B, C, D, DapAn, SaiSo, LoiGiai.",
+        fields_line,
         "",
         "QUY TẮC THEO DẠNG CÂU:",
         *(f"- {x}" for x in dang_rules),
@@ -9094,7 +9160,6 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
         "- Mức NB: nhận biết trực tiếp; TH: hiểu và biến đổi ngắn; VD: vận dụng nhiều bước; VDC: tổng hợp hoặc có bẫy hợp lý.",
         "- Số liệu đẹp, đơn vị chuẩn, kết quả hợp lý; không tạo phương án vô nghĩa.",
         "- Nội dung phù hợp chương trình THPT và đúng Môn/Lớp đã chỉ định.",
-        "- Không ghi ID, MaDe, HinhAnh — server tự tạo.",
         f"- Yêu cầu thêm của ADMIN: {extra}",
         "",
         "KHÔNG ĐƯỢC TẠO LẠI CÁC CÂU CÓ NỘI DUNG GẦN GIỐNG:",
@@ -9105,7 +9170,23 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
         "",
         "SCHEMA JSON BẮT BUỘC:",
         json.dumps(schema, ensure_ascii=False, indent=2),
-    ])
+    ]
+    if wants_tikz:
+        tikz_insert = [
+            "",
+            "ĐỒ THỊ / HÌNH TIKZ (BẮT BUỘC):",
+            "- Trường Tikz chứa đúng một khối \\begin{tikzpicture}...\\end{tikzpicture}.",
+            "- Vẽ đồ thị d–t, v–t, sơ đồ lực… rõ ràng: trục, mốc, đơn vị; số liệu khớp đề và lời giải.",
+            "- Chỉ được viết «như hình vẽ»/«theo đồ thị» khi đã có Tikz đầy đủ.",
+            "- Không ghi URL ảnh; server tự biên dịch Tikz → PNG (cột HinhAnh).",
+            "- Không nhét \\begin{tikzpicture} vào CauHoi — chỉ ghi trong Tikz.",
+        ]
+        lines[5:5] = tikz_insert
+    else:
+        lines.insert(5, "Không tạo hình ảnh, không viện dẫn hình/bảng chưa được cung cấp, không thiếu dữ kiện.")
+        no_hinh_idx = next(i for i, x in enumerate(lines) if x.startswith("- Nội dung phù hợp"))
+        lines.insert(no_hinh_idx + 1, "- Không ghi ID, MaDe, HinhAnh — server tự tạo.")
+    return "\n".join(lines)
 
 
 def _flatten_ai_dapan(value: Any) -> str:
@@ -9166,6 +9247,7 @@ def _normalize_ai_gen_raw(raw: Dict[str, Any]) -> Dict[str, Any]:
         "loigiai": "LoiGiai", "loi_giai": "LoiGiai", "giai": "LoiGiai",
         "dapan": "DapAn", "dap_an": "DapAn", "answer": "DapAn",
         "nanglucvatly": "NangLucVatLy", "nang_luc_vat_ly": "NangLucVatLy", "nlvl": "NangLucVatLy",
+        "tikz": "Tikz", "tikz_code": "Tikz", "hinhanh": "HinhAnh",
     }
     out = dict(raw)
     for k, v in raw.items():
@@ -9277,6 +9359,12 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
         14,
     )
     data["HinhAnh"] = ""
+    if spec.get("wants_tikz") or ai_gen_wants_tikz(spec):
+        hinh, tz_warn = _process_ai_gen_tikz({**raw, **data}, ordinal)
+        if hinh:
+            data["HinhAnh"] = normalize_image_src(hinh)
+        if tz_warn:
+            data["_ai_tikz_warning"] = tz_warn
     data["Dang"] = spec["Dang"]
     data["MucDo"] = spec["MucDo"]
     data["QuyenTruyCap"] = spec["QuyenTruyCap"]
@@ -9358,6 +9446,9 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
             data["ID"] = "AIQ_" + stable_hash(f"save|{i}|{data['CauHoi']}|{time.time()}|{random.random()}", 14)
         if not data["MaDe"]:
             data["MaDe"] = "AI_" + stable_hash(f"{data.get('De')}|{data.get('BaiHoc')}|{time.time()}", 12)
+        data.pop("_ai_tikz_warning", None)
+        data.pop("Tikz", None)
+        data["HinhAnh"] = normalize_image_src(data.get("HinhAnh", ""))
         data["QuyenTruyCap"] = access_level_from_text(data.get("QuyenTruyCap", "VIP"))
         out.append(data)
     return out
@@ -9383,8 +9474,12 @@ def ai_generate_question_batch_from_provider(
     user_prompt = build_ai_generate_questions_prompt(spec, references)
     count = int(spec.get("count") or 1)
     dang = spec.get("Dang") or ""
+    wants_tikz = bool(spec.get("wants_tikz")) or ai_gen_wants_tikz(spec)
     per_q = 2800 if dang == "Đúng sai" else (2200 if dang == "Tự luận" else 1600)
-    max_tokens = min(12000, max(4000, count * per_q))
+    if wants_tikz:
+        per_q += 1200
+    tok_cap = 16000 if wants_tikz else 12000
+    max_tokens = min(tok_cap, max(4000, count * per_q))
     gen_timeout = 75
     temp = 0.22
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
@@ -9453,7 +9548,7 @@ def ai_generate_question_batch_from_provider(
 
     raw_items = _extract_ai_question_list(raw_text)
     if not raw_items and raw_text:
-        retry_tok = min(12000, max(max_tokens * 2, 7000))
+        retry_tok = min(tok_cap, max(max_tokens * 2, 7000))
         if retry_tok > max_tokens and call_provider(retry_tok):
             raw_items = _extract_ai_question_list(raw_text)
     if not raw_items:
@@ -9474,6 +9569,8 @@ def ai_generate_question_batch_from_provider(
         if not q:
             warnings.append(f"Câu {idx}: {err}")
             continue
+        if q.get("_ai_tikz_warning"):
+            warnings.append(f"Câu {idx}: {q['_ai_tikz_warning']}")
         fp = question_content_fingerprint(canonical_question({f: q.get(f, "") for f in QUESTION_FIELDS}))
         if fp in seen:
             warnings.append(f"Câu {idx}: trùng nội dung trong cùng đợt")
@@ -11251,7 +11348,7 @@ body.theoryEditorOpen{overflow:hidden!important}
     <label class="aiGenWide">Tên đề / nhóm câu<input id="agDe" placeholder="Tự lấy theo Bài học · Dạng bài tập"></label>
     <label>Quyền<select id="agQuyen"><option>VIP</option><option>FREE</option></select></label>
     <label>Điểm/câu<input id="agDiem" placeholder="Có thể để trống"></label>
-    <label class="aiGenFull">Yêu cầu thêm<textarea id="agExtra" rows="2" placeholder="VD: số liệu đẹp; không cần hình; ưu tiên bài tính toán thực tế..."></textarea></label>
+    <label class="aiGenFull">Yêu cầu thêm<textarea id="agExtra" rows="2" placeholder="VD: vẽ ảnh tikz đồ thị kèm theo; số liệu đẹp; ưu tiên bài tính toán thực tế..."></textarea></label>
   </div>
   <div class="aiGenToolbar">
     <button type="button" class="btnStartStrong" id="agGenerateBtn" onclick="generateAiQuestionBank()">🤖 Tạo câu hỏi</button>
@@ -11311,7 +11408,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ai';
+    window.__LDVL_V='V307aj';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11585,7 +11682,7 @@ function formatHintDisplay(s){s=String(s||'').trim();if(!s)return '';s=s.replace
 function dsCircleHtml(L){return `<span class="dsCircle" aria-label="Ý ${L}">${L}</span>`}
 function stripOptionPrefix(text,L){text=String(text||'').trim();if(!text)return text;let m=text.match(new RegExp('^\\s*'+L+'\\s*[\\.\\)\\:]\\s*','i'));if(m)return text.slice(m[0].length).trim();let any=text.match(/^\s*[ABCD]\s*[\.\)\:]\s*/i);if(any)return text.slice(any[0].length).trim();return text}
 function stripImmini(text){text=String(text||'').trim();let m=text.match(/\\immini\s*\{([\s\S]*)\}\s*$/i);if(m)return m[1].trim();return text.replace(/^\\immini\s*\{/i,'').replace(/\}\s*$/,'').trim()}
-function buildQimgHtml(src){return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa" onerror="this.parentElement.outerHTML='<div class=\\'qimgErr\\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'"></div>`}
+function buildQimgHtml(src){src=String(src||'').trim();if(!src)return '';if(/^tikzraw:/i.test(src)){try{let b=src.replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let code=decodeURIComponent(escape(atob(b)));return `<div class="qimgWrap tikzRawWrap"><div class="muted" style="font-size:12px;margin-bottom:6px;font-weight:800">📐 TikZ — xem trước mã (chưa biên dịch PNG)</div><pre class="tikzRawCode" style="white-space:pre-wrap;font-size:11px;max-height:280px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px">${esc(code)}</pre></div>`}catch(e){return `<div class="qimgErr">Không đọc được mã TikZ.</div>`}}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa" onerror="this.parentElement.outerHTML='<div class=\\'qimgErr\\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'"></div>`}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
 function isTlnImgSplit(q){return !!(q&&q.Dang==='Trả lời ngắn'&&String(q.HinhAnh||'').trim())}
 function mcqUsesSplit(q){return usesImgSplit(q)}
@@ -11971,7 +12068,7 @@ function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePa
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
-function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
+function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(q.HinhAnh)}</div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
 function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
@@ -13634,7 +13731,7 @@ async function aiRepairCurrentQuestion(){
   }
 }
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field);if(field==='Dang'){if(normDangFormVal(value)==='Đúng sai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData()));if(typeof renderEditQuestionPreview==='function')renderEditQuestionPreview()}}
-function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let fid='';let dm=s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);if(dm)fid=dm[1];if(fid)return 'https://drive.google.com/thumbnail?id='+fid+'&sz=w1600';if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
+function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let fid='';let dm=s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);if(dm)fid=dm[1];if(fid)return 'https://drive.google.com/thumbnail?id='+fid+'&sz=w1600';if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
 function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let src=normalizeImageSrcClient(el?el.value:'');if(!src){box.innerHTML='<span class="muted" style="font-size:12px">Chưa có link — dán URL Drive/ảnh vào ô trên (Ctrl+V).</span>';return}box.innerHTML=buildQimgHtml(src)}
 function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=normalizeImageSrcClient(q.HinhAnh);return applyResolvedDang(q)}
 function renderEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;let q=adminEditFormQuestion();let dang=q.Dang||'Trắc nghiệm';let head='<div style="font-weight:800;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">👁 Xem trước câu <span class="tag">'+esc(dang)+'</span></div>';let img=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let body=renderRichText(stripImmini(q.CauHoi||''))||'<span class="muted">(Chưa có nội dung câu hỏi)</span>';let opts='';if(dang==='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="opt"><span>'+dsCircleHtml(L)+'</span><span>'+renderRichText(stripOptionPrefix(q[L],L))+'</span></div>'}}else if(dang==='Đúng sai'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="tfrow">'+dsCircleHtml(L)+'<div class="tfStmt">'+renderRichText(q[L])+'</div></div>'}}else if(dang==='Trả lời ngắn'){opts='<div class="shortAnsBox shortAnsCompact"><div class="muted">Đáp số P: <b>'+(renderRichText(q.DapAn||'—'))+'</b>'+(q.SaiSo?' · ±'+esc(q.SaiSo):'')+'</div></div>'}let sol='';if(q.DapAn||q.LoiGiai){let daPart='';if(q.DapAn){if(dang==='Trắc nghiệm')daPart='<div><b>Đáp án:</b> '+formatMcqAnswerBadge(q.DapAn)+'</div>';else if(dang==='Đúng sai')daPart='<div><b>Đáp án:</b> '+formatDsAnswerBadges(q.DapAn)+'</div>';else daPart='<div><b>P:</b> '+renderRichText(q.DapAn)+'</div>'}let lgPart='';if(q.LoiGiai){let lgBody=formatLoigiaiByDang(q.LoiGiai,q,dang);lgPart='<div style="margin-top:6px"><b>Lời giải:</b><br>'+lgBody+'</div>'}sol='<div class="solution" style="margin-top:10px;font-size:13px">'+daPart+lgPart+'</div>'}box.innerHTML=head+'<div class="qbox adminEditPreviewQ">'+body+(splitImg?'':img)+'</div>'+(splitImg?'<div class="adminEditPreviewImg">'+img+'</div>':'')+opts+sol;typeset([box])}
@@ -19232,7 +19329,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ai';
+const CACHE_NAME = 'luyen-de-ai-v307aj';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
