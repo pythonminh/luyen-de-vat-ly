@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ag_AI_GEN_SHEET_COL_FIX_2026_06_12"
+APP_VERSION = "V307ah_DBT_ORDER_PERSIST_FIX_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2359,6 +2359,7 @@ class SheetStore:
         self.ws_theory = None
         self.ws_methods = None
         self.ws_translate_en = None
+        self.ws_dbt_orders = None
         self.theory_items: List[Dict[str, Any]] = []
         self.method_items: List[Dict[str, Any]] = []
         self.translate_en_items: List[Dict[str, Any]] = []
@@ -3159,6 +3160,98 @@ class SheetStore:
         out.sort(key=catalog_sort_key)
         return out
 
+    def apply_dbt_orders_to_catalog(self, orders: Optional[Dict[str, List[str]]] = None) -> None:
+        """Áp lại thứ tự Dạng BT lên catalog RAM — sau khi ADMIN lưu thứ tự."""
+        orders = orders if orders is not None else load_dbt_orders()
+        if not self.catalog:
+            return
+        for item in self.catalog:
+            made_key = clean(item.get("MaDe", ""))
+            if not made_key:
+                continue
+            dbt_counts = (item.get("FilterCounts") or {}).get("dangbaitap") or {}
+            if not isinstance(dbt_counts, dict) or not dbt_counts:
+                continue
+            item["DbtOrder"] = ordered_dbt_names(
+                made_key,
+                {k: int(v or 0) for k, v in dbt_counts.items()},
+                orders,
+            )
+            item["DangBaiTap"] = ", ".join(item["DbtOrder"])
+
+    def ensure_dbt_order_sheet(self):
+        if self.ws_dbt_orders is None and self.sheet is not None:
+            self.ws_dbt_orders = self.ensure_ws("DBT_ThuTu", ["MaDe", "ThuTu", "CapNhat"])
+        return self.ws_dbt_orders
+
+    def read_dbt_orders_from_sheet(self) -> Dict[str, List[str]]:
+        """Đọc thứ tự Dạng BT từ sheet DBT_ThuTu (bền vững trên Render)."""
+        ws = self.ensure_dbt_order_sheet()
+        if ws is None:
+            return {}
+        try:
+            rows = gsheet_call_retry("get_all_values DBT_ThuTu", ws.get_all_values) or []
+        except Exception:
+            return {}
+        if not rows:
+            return {}
+        out: Dict[str, List[str]] = {}
+        for row in rows[1:]:
+            if not row:
+                continue
+            made = clean(row[0] if len(row) > 0 else "")
+            if not made:
+                continue
+            raw = clean(row[1] if len(row) > 1 else "")
+            names: List[str] = []
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        names = [clean(x) for x in parsed if clean(x) and not _is_bad_dangbaitap_value(x)]
+                except Exception:
+                    names = [
+                        clean(x) for x in re.split(r"\|\|\||\n", raw)
+                        if clean(x) and not _is_bad_dangbaitap_value(x)
+                    ]
+            if names:
+                out[made] = names
+        return out
+
+    def upsert_dbt_order_on_sheet(self, made: str, names: List[str]) -> None:
+        made = clean(made)
+        if not made or not self.sheet:
+            return
+        ws = self.ensure_dbt_order_sheet()
+        if ws is None:
+            return
+        payload = json.dumps(names, ensure_ascii=False)
+        stamp = now_str()
+        try:
+            rows = gsheet_call_retry("get_all_values DBT_ThuTu upsert", ws.get_all_values) or []
+        except Exception:
+            rows = []
+        target_row = 0
+        for i, row in enumerate(rows[1:], start=2):
+            if clean(row[0] if row else "") == made:
+                target_row = i
+                break
+        if target_row:
+            gsheet_call_retry(
+                "update DBT_ThuTu row",
+                ws.update,
+                f"A{target_row}:C{target_row}",
+                [[made, payload, stamp]],
+                value_input_option="RAW",
+            )
+        else:
+            gsheet_call_retry(
+                "append_row DBT_ThuTu",
+                ws.append_row,
+                [made, payload, stamp],
+                value_input_option="RAW",
+            )
+
     def meta(self) -> Dict[str, Any]:
         def opts(field: str) -> List[str]:
             vals = list({clean(x.get(field, "")) for x in self.catalog if clean(x.get(field, ""))})
@@ -3180,6 +3273,7 @@ class SheetStore:
 
         dbt_options = dangbaitap_opts()
         dbt_orders = load_dbt_orders()
+        self.apply_dbt_orders_to_catalog(dbt_orders)
         return {
             "version": APP_VERSION,
             "loaded_at": self.loaded_at,
@@ -11204,7 +11298,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ag';
+    window.__LDVL_V='V307ah';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11754,10 +11848,17 @@ function catalogDbtCounts(item){
 }
 function getDbtOrderList(made,item){
   item=item||(CATALOG.find(x=>String(x.MaDe||'')===String(made||''))||{});
-  let ord=item.DbtOrder||item.dbt_order;
-  if(Array.isArray(ord)&&ord.length)return ord.slice();
   let mo=(META&&META.dbt_orders)||{};
   if(made&&mo[made]&&mo[made].length)return mo[made].slice();
+  let ord=item.DbtOrder||item.dbt_order;
+  if(Array.isArray(ord)&&ord.length)return ord.slice();
+  return [];
+}
+function getLessonDbtOrderList(entries){
+  for(let x of entries||[]){
+    let ord=getDbtOrderList(x.MaDe,x);
+    if(ord.length)return ord;
+  }
   return [];
 }
 function sortDbtPairs(pairs,made,item){
@@ -11786,7 +11887,7 @@ function patchCatalogDbtOrderLocal(made,order){
   return scope;
 }
 function catalogUnclassifiedCount(item){item=item||{};let fc=(item.FilterCounts||{}).dangbaitap||{};let n=parseInt((fc&&fc[DBT_UNCLASSIFIED])||0,10)||0;if(n)return n;let total=parseInt(item.SoCau,10)||0;let classified=catalogDbtCounts(item).reduce((a,x)=>a+(x[1]||0),0);return Math.max(0,total-classified)}
-function v246MergeDbtCounts(entries){let mp={};let uncls=0;for(let x of entries||[]){let fc=(x.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object')uncls+=parseInt(fc[DBT_UNCLASSIFIED],10)||0;for(let [k,v] of catalogDbtCounts(x)){mp[k]=(mp[k]||0)+(parseInt(v,10)||0)}}if(!uncls){let total=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);uncls=Math.max(0,total-Object.values(mp).reduce((a,n)=>a+n,0))}let primary=entries[0]||{};return {pairs:sortDbtPairs(Object.entries(mp).filter(x=>x[0]),primary.MaDe||'',primary),unclassified:uncls}}
+function v246MergeDbtCounts(entries){let mp={};let uncls=0;for(let x of entries||[]){let fc=(x.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object')uncls+=parseInt(fc[DBT_UNCLASSIFIED],10)||0;for(let [k,v] of catalogDbtCounts(x)){mp[k]=(mp[k]||0)+(parseInt(v,10)||0)}}if(!uncls){let total=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);uncls=Math.max(0,total-Object.values(mp).reduce((a,n)=>a+n,0))}let primary=entries[0]||{};let lessonOrd=getLessonDbtOrderList(entries);let sortItem=lessonOrd.length?Object.assign({},primary,{DbtOrder:lessonOrd}):primary;return {pairs:sortDbtPairs(Object.entries(mp).filter(x=>x[0]),primary.MaDe||'',sortItem),unclassified:uncls}}
 function getStartModalDangBaiTap(){let el=document.querySelector('input[name="startDbtPick"]:checked');return el?String(el.value||''):''}
 function renderStartDangBaiTapPicker(made,preselect){
   let box=document.getElementById('startDangBaiTapBox');let list=document.getElementById('startDangBaiTapList');if(!box||!list)return;
@@ -16097,24 +16198,31 @@ def _is_bad_dangbaitap_value(v: Any) -> bool:
 
 
 def load_dbt_orders() -> Dict[str, List[str]]:
-    """ADMIN: thứ tự hiển thị Dạng BT theo MaDe — lưu file JSON trên server."""
+    """ADMIN: thứ tự hiển thị Dạng BT theo MaDe — ưu tiên sheet DBT_ThuTu, fallback file JSON."""
+    merged: Dict[str, List[str]] = {}
     try:
         if os.path.isfile(DBT_ORDER_FILE):
             with open(DBT_ORDER_FILE, encoding="utf-8") as f:
                 obj = json.load(f)
             raw = obj.get("orders") if isinstance(obj, dict) else obj
             if isinstance(raw, dict):
-                out: Dict[str, List[str]] = {}
                 for k, v in raw.items():
                     if not isinstance(v, list):
                         continue
                     names = [clean(x) for x in v if clean(x) and not _is_bad_dangbaitap_value(x)]
                     if names:
-                        out[clean(k)] = names
-                return out
+                        merged[clean(k)] = names
     except Exception:
         pass
-    return {}
+    try:
+        st = get_store()
+        if st.sheet is not None:
+            sheet_orders = st.read_dbt_orders_from_sheet()
+            if sheet_orders:
+                merged.update(sheet_orders)
+    except Exception:
+        pass
+    return merged
 
 
 def save_dbt_orders(orders: Dict[str, List[str]]) -> None:
@@ -16124,6 +16232,27 @@ def save_dbt_orders(orders: Dict[str, List[str]]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DBT_ORDER_FILE)
+
+
+def save_dbt_order_one(made: str, names: List[str], orders: Optional[Dict[str, List[str]]] = None) -> Dict[str, List[str]]:
+    """Lưu thứ tự một MaDe — file JSON + sheet DBT_ThuTu + cập nhật catalog RAM."""
+    made = clean(made)
+    names = [clean(x) for x in (names or []) if clean(x) and not _is_bad_dangbaitap_value(x)]
+    orders = dict(orders if orders is not None else load_dbt_orders())
+    if names:
+        orders[made] = names
+    elif made in orders:
+        del orders[made]
+    save_dbt_orders(orders)
+    try:
+        st = get_store()
+        if made and names:
+            st.upsert_dbt_order_on_sheet(made, names)
+        if st.catalog:
+            st.apply_dbt_orders_to_catalog(orders)
+    except Exception:
+        pass
+    return orders
 
 
 def ordered_dbt_names(
@@ -16174,8 +16303,7 @@ def patch_dbt_order_after_merge(made: str, old_names: List[str], new_name: str) 
         else:
             new_lst.append(name)
     if replaced:
-        orders[made] = new_lst
-        save_dbt_orders(orders)
+        save_dbt_order_one(made, new_lst, orders)
 
 
 def _catalog_item_dbt_values(item: Dict[str, Any]) -> List[str]:
@@ -18304,10 +18432,15 @@ def api_admin_dbt_order():
     if not isinstance(raw_order, list):
         return jsonify({"error": "Danh sách thứ tự không hợp lệ."}), 400
     names = [clean(x) for x in raw_order if clean(x) and not _is_bad_dangbaitap_value(x)]
-    orders = load_dbt_orders()
-    orders[made] = names
-    save_dbt_orders(orders)
-    return jsonify({"ok": True, "made": made, "order": names, "message": "Đã lưu thứ tự Dạng bài tập."})
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        orders = save_dbt_order_one(made, names)
+    except Exception as e:
+        orders = load_dbt_orders()
+        orders[made] = names
+        save_dbt_orders(orders)
+    return jsonify({"ok": True, "made": made, "order": names, "message": "Đã lưu thứ tự Dạng bài tập (Google Sheet DBT_ThuTu)."})
 
 
 
@@ -19084,7 +19217,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ag';
+const CACHE_NAME = 'luyen-de-ai-v307ah';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
