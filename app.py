@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307aw_IMG_DOWNLOAD_2026_06_12"
+APP_VERSION = "V307ay_TIKZ_EDITABLE_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -2221,9 +2221,17 @@ def normalize_image_src(value: Any) -> str:
     - File ID Drive -> thumbnail public.
     - Link ảnh trực tiếp -> giữ nguyên.
     - Images/abc.png -> /static/Images/abc.png nếu repo có thư mục static.
+    - Ô T nhiều dòng: dòng 1 = link ảnh, dòng 2 = tikzraw:… (ưu tiên ảnh khi hiển thị).
     """
     s = clean(value)
     if not s:
+        return ""
+    if "\n" in s or "\r" in s:
+        img, _tz = _parse_hinhanh_cell(s)
+        if img and not img.lower().startswith("tikzraw:"):
+            return normalize_image_src(img)
+        if img:
+            return img
         return ""
     m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
     if m:
@@ -2672,6 +2680,12 @@ def _finalize_hinhanh_for_sheet(value: Any) -> Tuple[str, str]:
     if is_drive_folder_url(s):
         _remember_drive_folder_from_url(s)
         return "", ""
+    if "\n" in s or "\r" in s:
+        img, tz = _parse_hinhanh_cell(s)
+        img_clean = img if img and not img.lower().startswith("tikzraw:") else ""
+        built = _build_hinhanh_cell(img_clean, tz)
+        if built:
+            return built, ""
     if s.lower().startswith("tikzraw:"):
         return s, ""
     low = s.lower()
@@ -9781,8 +9795,58 @@ def _extract_tikz_block(text: str) -> str:
     return m.group(0) if m else ""
 
 
+def _encode_tikzraw(tikz_code: str) -> str:
+    code = clean(tikz_code)
+    if not code:
+        return ""
+    enc = base64.urlsafe_b64encode(code.encode("utf-8")).decode("ascii")
+    return f"tikzraw:{enc}"
+
+
+def _parse_hinhanh_cell(value: Any) -> Tuple[str, str]:
+    """Tách cột T: (link ảnh hoặc tikzraw, mã TikZ thuần để sửa)."""
+    s = clean(value)
+    if not s:
+        return "", ""
+    lines = [ln.strip() for ln in re.split(r"[\r\n]+", s) if ln.strip()]
+    img = ""
+    tikz = ""
+    for ln in lines:
+        low = ln.lower()
+        if low.startswith("tikzraw:"):
+            tikz = _decode_tikzraw_src(ln) or tikz
+        elif not img and (
+            extract_drive_file_id(ln)
+            or ln.startswith("http://")
+            or ln.startswith("https://")
+            or ln.startswith("/static/")
+            or ln.lower().startswith("static/")
+        ):
+            img = ln
+    if not tikz and len(lines) == 1 and lines[0].lower().startswith("tikzraw:"):
+        tikz = _decode_tikzraw_src(lines[0])
+        return lines[0], tikz
+    if not img and tikz:
+        return _encode_tikzraw(tikz), tikz
+    return img, tikz
+
+
+def _build_hinhanh_cell(image_link: str, tikz_code: str) -> str:
+    parts: List[str] = []
+    img = clean(image_link)
+    tz = clean(tikz_code)
+    if img and not img.lower().startswith("tikzraw:"):
+        norm = normalize_image_src(img)
+        parts.append(norm or img)
+    if tz:
+        tr = _encode_tikzraw(tz)
+        if tr:
+            parts.append(tr)
+    return "\n".join(parts)
+
+
 def _process_ai_gen_tikz(raw: Dict[str, Any], ordinal: int) -> Tuple[str, str]:
-    """Biên dịch TikZ → PNG (cột T) hoặc lưu tikzraw:… nếu server chưa có pdflatex."""
+    """Lưu mã TikZ (tikzraw) vào cột T — có thể sửa lại; thử biên dịch chỉ để báo lỗi."""
     candidates = [
         clean(raw.get("Tikz", "")),
         clean(raw.get("HinhAnh", "")),
@@ -9797,30 +9861,21 @@ def _process_ai_gen_tikz(raw: Dict[str, Any], ordinal: int) -> Tuple[str, str]:
             break
     if not tikz_code:
         return "", "Chưa có \\begin{tikzpicture}…\\end{tikzpicture} — không vẽ được đồ thị."
+    enc_line = _encode_tikzraw(tikz_code)
     ctx = _build_latex_asset_context(commit=True)
     url = _compile_tikz_to_png(tikz_code, ctx, ordinal, 1)
-    if url:
-        warn = ""
-        if url.startswith("/static/"):
-            for w in (ctx.get("warnings") or []):
-                wtxt = clean(w.get("warning", ""))
-                if wtxt:
-                    warn = wtxt
-                    break
-            if not warn:
-                warn = _drive_setup_hint("Ảnh tạm trên server — chưa lên Drive")
-        return url, warn
-    import base64
-    enc = base64.urlsafe_b64encode(tikz_code.encode("utf-8")).decode("ascii")
     warn = ""
-    for w in (ctx.get("warnings") or []):
-        warn = clean(w.get("warning", ""))
-        if warn:
-            break
-    return (
-        f"tikzraw:{enc}",
-        warn or "TikZ chưa biên dịch PNG — đã lưu mã tạm; trang sẽ tự vẽ khi xem.",
-    )
+    if url:
+        warn = "Mã TikZ đã lưu — có thể sửa trong form trước khi tải ảnh lên Drive."
+    else:
+        for w in (ctx.get("warnings") or []):
+            wtxt = clean(w.get("warning", ""))
+            if wtxt:
+                warn = wtxt
+                break
+        if not warn:
+            warn = "TikZ chưa biên dịch thử — trang sẽ tự vẽ khi xem; vẫn sửa được mã."
+    return enc_line, warn
 
 
 def _ai_generation_answer_plan(spec: Dict[str, Any]) -> List[str]:
@@ -10179,7 +10234,11 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
         if not data["MaDe"]:
             data["MaDe"] = "AI_" + stable_hash(f"{data.get('De')}|{data.get('BaiHoc')}|{time.time()}", 12)
         data.pop("_ai_tikz_warning", None)
-        data.pop("Tikz", None)
+        tikz_extra = clean(data.pop("Tikz", None) or "")
+        if tikz_extra:
+            img_link, _ = _parse_hinhanh_cell(data.get("HinhAnh", ""))
+            img_clean = img_link if img_link and not img_link.lower().startswith("tikzraw:") else ""
+            data["HinhAnh"] = _build_hinhanh_cell(img_clean, tikz_extra)
         data["HinhAnh"], hz = _finalize_hinhanh_for_sheet(data.get("HinhAnh", ""))
         if hz:
             data["_hinhanh_warning"] = hz
@@ -12086,7 +12145,7 @@ body.theoryEditorOpen{overflow:hidden!important}
     <label>Điểm/câu<input id="agDiem" placeholder="Có thể để trống"></label>
     <label class="aiGenFull">Yêu cầu thêm<textarea id="agExtra" rows="2" placeholder="VD: vẽ ảnh tikz đồ thị kèm theo; số liệu đẹp; ưu tiên bài tính toán thực tế..."></textarea></label>
   </div>
-  <div id="agDriveSetup" class="hide" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid #fcd34d;background:#fffbeb;font-size:13px;line-height:1.5"></div>
+  <div id="agDriveSetup" class="hide" style="display:none"></div>
   <div class="aiGenToolbar">
     <button type="button" class="btnStartStrong" id="agGenerateBtn" onclick="generateAiQuestionBank()">🤖 Tạo câu hỏi</button>
     <button type="button" class="btn2" onclick="applyAiGenJsonEdit()">↻ Áp dụng JSON đã sửa</button>
@@ -12145,7 +12204,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307aw';
+    window.__LDVL_V='V307ax';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -12420,11 +12479,17 @@ function dsCircleHtml(L){return `<span class="dsCircle" aria-label="Ý ${L}">${L
 function stripOptionPrefix(text,L){text=String(text||'').trim();if(!text)return text;let m=text.match(new RegExp('^\\s*'+L+'\\s*[\\.\\)\\:]\\s*','i'));if(m)return text.slice(m[0].length).trim();let any=text.match(/^\s*[ABCD]\s*[\.\)\:]\s*/i);if(any)return text.slice(any[0].length).trim();return text}
 function stripImmini(text){text=String(text||'').trim();let m=text.match(/\\immini\s*\{([\s\S]*)\}\s*$/i);if(m)return m[1].trim();return text.replace(/^\\immini\s*\{/i,'').replace(/\}\s*$/,'').trim()}
 function tikzRawCodeFallback(src,msg){try{let b=src.replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let code=decodeURIComponent(escape(atob(b)));let note=msg?`<div class="muted" style="font-size:12px;color:#b45309;margin-bottom:6px">${esc(msg)}</div>`:'';return `<div class="qimgWrap tikzRawWrap">${note}<div class="muted" style="font-size:12px;margin-bottom:6px;font-weight:800">📐 TikZ</div><pre class="tikzRawCode" style="white-space:pre-wrap;font-size:11px;max-height:280px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px">${esc(code)}</pre></div>`}catch(e){return `<div class="qimgErr">Không đọc được mã TikZ.</div>`}}
+function decodeTikzRawClient(src){try{let b=String(src||'').replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';return decodeURIComponent(escape(atob(b)))}catch(e){return ''}}
+function encodeTikzRawClient(code){if(!String(code||'').trim())return '';try{return 'tikzraw:'+btoa(unescape(encodeURIComponent(String(code)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}catch(e){return ''}}
+function parseHinhanhCellClient(raw){let s=String(raw||'').trim();if(!s)return {img:'',tikz:''};let lines=s.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);let img='',tikz='';for(let ln of lines){if(/^tikzraw:/i.test(ln))tikz=decodeTikzRawClient(ln)||tikz;else if(!img&&(extractDriveFidClient(ln)||/^https?:\/\//i.test(ln)||/^\/static\//i.test(ln)||/^static\//i.test(ln)))img=ln}if(!tikz&&lines.length===1&&/^tikzraw:/i.test(lines[0])){tikz=decodeTikzRawClient(lines[0]);return {img:lines[0],tikz}}if(!img&&tikz)return {img:encodeTikzRawClient(tikz),tikz};return {img,tikz}}
+function buildHinhanhCellClient(img,tikz){let parts=[];let i=String(img||'').trim();let t=String(tikz||'').trim();if(i&&!/^tikzraw:/i.test(i))parts.push(i);if(t){let tr=encodeTikzRawClient(t);if(tr)parts.push(tr)}return parts.join('\n')}
+function adminMergedHinhAnhFromForm(){let imgEl=document.getElementById('edit_HinhAnh');let tzEl=document.getElementById('edit_Tikz');return buildHinhanhCellClient(imgEl?imgEl.value:'',tzEl?tzEl.value:'')}
+function adminPreviewHinhAnhSrc(){let merged=adminMergedHinhAnhFromForm();if(!merged)return '';let parsed=parseHinhanhCellClient(merged);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return normalizeImageSrcClient(merged)}
 async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url){let url=normalizeImageSrcClient(j.url);let wrap=document.createElement('div');wrap.className='qimgWrap';wrap.innerHTML=`<img class="qimg" src="${esc(url)}" alt="Đồ thị TikZ"${qimgOnErrorAttr()}>`;box.replaceWith(wrap);if(typeof typeset==='function')typeset(wrap.parentElement||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
 function isDriveFolderUrl(s){s=String(s||'').toLowerCase();return s.includes('drive.google.com')&&(s.includes('/folders/')||s.includes('/fold'))}
 function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+String(fid||'').trim()+'&sz=w1600'}
 function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
-function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
+function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/[\r\n]/.test(s)){let parsed=parseHinhanhCellClient(s);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return normalizeImageSrcClient(parsed.img);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return ''}if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
 function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. File Drive cần quyền Anyone with link.</div>\'}"'}
 function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
@@ -12837,12 +12902,14 @@ function agFilteredCatalog(stage){let list=CATALOG||[];let mon=val('agMon'),lop=
 function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair of catalogDbtCounts(x)){let d=String(pair&&pair[0]||'').trim();if(d&&!out.includes(d))out.push(d)}}catch(e){let d=String(x&&x.DangBaiTap||'').trim();if(d&&!out.includes(d))out.push(d)}}return out.sort((a,b)=>a.localeCompare(b,'vi'))}
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
-function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview();loadAgDriveSetup()}
-async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});window.__GAS_DRIVE_SCRIPT=j.gas_script||'';box.classList.remove('hide');let ok=j.ok?'✅ Upload Drive OK — TikZ tự lên folder khi Lưu.':'⚠️ Tài khoản robot không upload được (không có ổ Drive riêng)';let gas=j.gas_configured?' · Apps Script: <b style="color:#166534">đã cấu hình</b>':' · Apps Script: <b style="color:#b91c1c">chưa cấu hình</b>';let diag=j.folder_drive_name?`<div style="margin-top:4px;font-size:12px">Folder: <b>${esc(j.folder_drive_name)}</b>${gas}</div>`:'';let fix=j.fix_hint?`<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;font-size:13px">${esc(j.fix_hint)}</div>`:'';let err=j.upload_error?`<div class="muted" style="margin-top:6px;font-size:11px;word-break:break-word">${esc(String(j.upload_error).slice(0,280))}</div>`:'';let gasSteps=(!j.ok&&!j.gas_configured)?`<div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #93c5fd;font-size:13px"><b>✅ Sửa 1 lần — Apps Script (upload bằng Gmail của thầy)</b><ol style="margin:8px 0 0 18px;padding:0;line-height:1.45"><li><a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> → Dự án mới → dán mã (Copy bên dưới)</li><li>Triển khai → Ứng dụng web → Thực thi: <b>Tôi</b> · Truy cập: <b>Bất kỳ ai</b></li><li>Render → Environment → <code>GOOGLE_DRIVE_GAS_UPLOAD_URL</code> = URL web app</li><li>Deploy <b>V307au</b> → Ctrl+Shift+R → Lưu câu TikZ</li></ol><button type="button" class="btn2" style="margin-top:6px" onclick="navigator.clipboard&&navigator.clipboard.writeText(window.__GAS_DRIVE_SCRIPT||'').then(()=>alert('Đã copy mã Apps Script'))">📋 Copy mã GAS</button></div>`:'';box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div>${diag}${fix}${err}${gasSteps}<div class="muted" style="margin-top:6px;font-size:12px">Folder ID: ${esc(j.folder_id||'')}</div>`}catch(e){}}
+function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview()}
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
-function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(q.HinhAnh)}</div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
+function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderRichText(q[L])}</div>`;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let tikzCode=parsed.tikz||q.Tikz||'';let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(adminPreviewHinhAnhSrcFromCell(q.HinhAnh))}</div>`:'';let tikzEdit=tikzCode?`<div class="aiGenTikzEdit" style="margin:8px 0"><div style="font-size:12px;font-weight:800;margin-bottom:4px">📐 TikZ (sửa được)</div><textarea class="aiGenTikzTa" data-idx="${i}" rows="7" style="width:100%;font-family:monospace;font-size:11px" oninput="aiGenTikzInput(${i},this)">${escFormVal(tikzCode)}</textarea><button type="button" class="btnSmall btn2" style="margin-top:4px" onclick="aiGenRerenderTikz(${i})">🔄 Vẽ lại xem trước</button></div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${tikzEdit}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
+function adminPreviewHinhAnhSrcFromCell(cell){let parsed=parseHinhanhCellClient(cell||'');if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return normalizeImageSrcClient(cell||'')}
+function aiGenTikzInput(i,el){let q=AI_GEN_QUESTIONS[i];if(!q||!el)return;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let img=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';q.HinhAnh=buildHinhanhCellClient(img,el.value);syncAiGenJson()}
+async function aiGenRerenderTikz(i){let ta=document.querySelector('.aiGenTikzTa[data-idx="'+i+'"]');if(ta)aiGenTikzInput(i,ta);renderAiGenPreview()}
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
 function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
@@ -14505,24 +14572,25 @@ async function aiRepairCurrentQuestion(){
   }
 }
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field);if(field==='Dang'){if(normDangFormVal(value)==='Đúng sai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData()));if(typeof renderEditQuestionPreview==='function')renderEditQuestionPreview()}}
-function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let raw=el?el.value:'';if(isDriveFolderUrl(raw)){box.innerHTML='<div style="padding:10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-size:13px">✅ Đã nhận thư mục <b>Anh_Luyen_De</b>.<br><b>Để trống cột T</b> — câu có TikZ sẽ tự có link ảnh khi Lưu.<br><span class="muted" style="font-size:12px">Link thư mục không ghi vào Sheet.</span></div>';return}let src=normalizeImageSrcClient(raw);if(!src){box.innerHTML='<span class="muted" style="font-size:12px">'+(String(raw||'').trim()?'':'<b>Để trống</b> nếu dùng TikZ (app tự điền). Hoặc dán link <b>file ảnh</b> Drive.')+'</span>';return}let warn='';if(/^\/static\/latex_assets\//i.test(String(raw||'')))warn='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;font-size:12px">💾 Bấm <b>Lưu ảnh (img)</b> → kéo lên folder <b>Anh_Luyen_De</b> → Lấy liên kết → dán vào ô trên → Lưu Sheet.</div>';box.innerHTML=warn+buildQimgHtml(src)}
-function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=normalizeImageSrcClient(q.HinhAnh);return applyResolvedDang(q)}
+function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let raw=adminMergedHinhAnhFromForm();if(isDriveFolderUrl(el?el.value:'')){box.innerHTML='<div style="padding:10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-size:13px">✅ Đã nhận thư mục <b>Anh_Luyen_De</b>.<br><b>Để trống cột T</b> — câu có TikZ sẽ tự có link ảnh khi Lưu.<br><span class="muted" style="font-size:12px">Link thư mục không ghi vào Sheet.</span></div>';return}let src=adminPreviewHinhAnhSrc();if(!src){box.innerHTML='<span class="muted" style="font-size:12px">'+(String(raw||'').trim()?'':'<b>Sửa TikZ bên dưới</b> hoặc dán link <b>file ảnh</b> Drive vào ô trên.')+'</span>';return}box.innerHTML=buildQimgHtml(src)}
+function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=adminPreviewHinhAnhSrc();return applyResolvedDang(q)}
 function renderEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;let q=adminEditFormQuestion();let dang=q.Dang||'Trắc nghiệm';let head='<div style="font-weight:800;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">👁 Xem trước câu <span class="tag">'+esc(dang)+'</span></div>';let img=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let body=renderRichText(stripImmini(q.CauHoi||''))||'<span class="muted">(Chưa có nội dung câu hỏi)</span>';let opts='';if(dang==='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="opt"><span>'+dsCircleHtml(L)+'</span><span>'+renderRichText(stripOptionPrefix(q[L],L))+'</span></div>'}}else if(dang==='Đúng sai'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="tfrow">'+dsCircleHtml(L)+'<div class="tfStmt">'+renderRichText(q[L])+'</div></div>'}}else if(dang==='Trả lời ngắn'){opts='<div class="shortAnsBox shortAnsCompact"><div class="muted">Đáp số P: <b>'+(renderRichText(q.DapAn||'—'))+'</b>'+(q.SaiSo?' · ±'+esc(q.SaiSo):'')+'</div></div>'}let sol='';if(q.DapAn||q.LoiGiai){let daPart='';if(q.DapAn){if(dang==='Trắc nghiệm')daPart='<div><b>Đáp án:</b> '+formatMcqAnswerBadge(q.DapAn)+'</div>';else if(dang==='Đúng sai')daPart='<div><b>Đáp án:</b> '+formatDsAnswerBadges(q.DapAn)+'</div>';else daPart='<div><b>P:</b> '+renderRichText(q.DapAn)+'</div>'}let lgPart='';if(q.LoiGiai){let lgBody=formatLoigiaiByDang(q.LoiGiai,q,dang);lgPart='<div style="margin-top:6px"><b>Lời giải:</b><br>'+lgBody+'</div>'}sol='<div class="solution" style="margin-top:10px;font-size:13px">'+daPart+lgPart+'</div>'}box.innerHTML=head+'<div class="qbox adminEditPreviewQ">'+body+(splitImg?'':img)+'</div>'+(splitImg?'<div class="adminEditPreviewImg">'+img+'</div>':'')+opts+sol;typeset([box])}
 function toggleEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;box.classList.toggle('hide');let btn=document.getElementById('btnEditTogglePreview');if(btn)btn.textContent=box.classList.contains('hide')?'👁 Bật xem trước':'👁 Ẩn xem trước'}
 function setEditDangQuick(dang){setAdminChip('Dang',dang);renderEditQuestionPreview()}
 function bindEditFormLivePreview(){document.querySelectorAll('#editForm textarea, #editForm input').forEach(el=>{el.oninput=function(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}})}
 function ensureEditAdminPreviewBar(){let form=document.getElementById('editForm');if(!form)return;if(!document.getElementById('editAdminPreviewBar')){let bar=document.createElement('div');bar.id='editAdminPreviewBar';bar.className='editAdminPreviewBar';bar.innerHTML='<div style="font-weight:800;margin-bottom:6px">📋 Dán câu & xem trước</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.45">Máy tính: <b>Ctrl+V</b> vào ô dưới hoặc bấm «Dán clipboard» — app tự tách Câu hỏi / A–D / P / R / link ảnh. Chọn <b>Dạng câu</b> rồi xem giống lúc làm bài.</p><textarea id="editPasteBuffer" class="editAdminPasteBox" placeholder="Dán cả câu từ Word, PDF, LaTeX, Messenger…&#10;VD:&#10;Một vật dao động...&#10;A. 2 Hz&#10;B. 4 Hz&#10;...&#10;Đáp án: B"></textarea><div class="row" style="margin-bottom:8px"><button type="button" class="btn2 btnSmall" onclick="adminApplyPasteBuffer()">↪ Tách vào form</button><button type="button" class="btn2 btnSmall" onclick="adminPasteFromClipboard()">📋 Dán clipboard</button><button type="button" class="btn2 btnSmall" id="btnEditTogglePreview" onclick="toggleEditQuestionPreview()">👁 Ẩn xem trước</button></div><div class="row"><span class="muted" style="font-size:12px;font-weight:800">Dạng nhanh:</span><button type="button" class="adminChip mucdo-th btnSmall" onclick="setEditDangQuick(\'Trắc nghiệm\')">TN</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Đúng sai\')">Đ/S</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Trả lời ngắn\')">TLN</button></div>';form.parentNode.insertBefore(bar,form)}if(!document.getElementById('editQuestionPreview')){let prev=document.createElement('div');prev.id='editQuestionPreview';prev.className='editQuestionPreview';form.parentNode.insertBefore(prev,form)}}
-function adminFillQuestionForm(data){if(!data)return;for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh']){if(data[f]==null)continue;let el=document.getElementById('edit_'+f);if(el)el.value=data[f]}if(data.Dang)setAdminChip('Dang',normDangFormVal(data.Dang))}
+function adminFillQuestionForm(data){if(!data)return;for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai']){if(data[f]==null)continue;let el=document.getElementById('edit_'+f);if(el)el.value=data[f]}if(data.HinhAnh!=null){let parsed=parseHinhanhCellClient(data.HinhAnh);let imgEl=document.getElementById('edit_HinhAnh');let tzEl=document.getElementById('edit_Tikz');if(imgEl)imgEl.value=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';if(tzEl)tzEl.value=parsed.tikz||''}if(data.Dang)setAdminChip('Dang',normDangFormVal(data.Dang))}
 function adminParsePastedQuestion(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw)return null;let work=raw,out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Dang:''};let loiM=work.match(/(?:^|\n)\s*(?:Lời giải|LoiGiai|LG|Giải|Hướng dẫn giải)\s*[:：]?\s*\n([\s\S]*)$/i);if(loiM){out.LoiGiai=loiM[1].trim();work=work.slice(0,loiM.index).trim()}let imgM=work.match(/(?:Hình(?: ảnh)?|HinhAnh|Image|Link\s*ảnh|Cột T)\s*[:：]?\s*(https?:\S+|drive[^\s]+)/i);if(imgM){out.HinhAnh=imgM[1].trim();work=work.replace(imgM[0],'').trim()}let ssM=work.match(/(?:Sai số|SaiSo|±)\s*[:：]?\s*([0-9.,]+)/i);if(ssM)out.SaiSo=ssM[1].trim();let daM=work.match(/(?:Đáp án|DapAn|ĐA|Answer|Chọn|Đ\/S|P\s*[:=])\s*[:：]?\s*([^\n]+)/i);if(daM){out.DapAn=daM[1].trim().replace(/^[.:]\s*/,'');work=work.replace(daM[0],'').trim()}let opts={};let optRe=/^[ \t]*([ABCD])[.)]\s*(.+)$/gim,m;while((m=optRe.exec(work))){let L=m[1].toUpperCase(),t=m[2].trim();opts[L]=opts[L]?(opts[L]+'\n'+t):t}work=work.replace(/^[ \t]*[ABCD][.)]\s*.+$/gim,'').trim();work=work.replace(/(?:Câu hỏi|CauHoi|Nội dung)\s*[:：]?\s*/i,'').trim();out.CauHoi=work;out.A=opts.A||'';out.B=opts.B||'';out.C=opts.C||'';out.D=opts.D||'';if(looksDsAnswer(out.DapAn))out.Dang='Đúng sai';else if(isMcqLetter(out.DapAn)&&hasOptsClient(out))out.Dang='Trắc nghiệm';else if(out.DapAn&&String(out.DapAn).trim()&&!hasOptsClient(out))out.Dang='Trả lời ngắn';else if(hasOptsClient(out))out.Dang='Trắc nghiệm';else out.Dang='Trắc nghiệm';if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D)return null;return out}
 function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer');if(!ta||!String(ta.value||'').trim()){alert('Chưa có nội dung để tách — dán câu vào ô trên.');return}let parsed=adminParsePastedQuestion(ta.value);if(!parsed){alert('Không tách được — thử định dạng:\nCâu hỏi...\nA. ... B. ...\nĐáp án: B');return}adminFillQuestionForm(parsed);refreshEditHinhAnhPreview();renderEditQuestionPreview();alert('Đã tách vào form ('+(parsed.Dang||'TN')+'). Kiểm tra LaTeX và bấm Lưu.')}
 async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview()" placeholder="Sau khi Lưu ảnh (img) và upload Drive — dán link thumbnail vào đây">${escFormVal(raw)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){ensureEditAdminPreviewBar();document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);refreshEditHinhAnhPreview();bindEditFormLivePreview();renderEditQuestionPreview()}
-async function adminDownloadHinhAnh(){let el=document.getElementById('edit_HinhAnh');let raw=el?String(el.value||'').trim():'';let src=normalizeImageSrcClient(raw);if(!src){alert('Chưa có ảnh.\n\nTạo câu có TikZ trước, hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô Hình ảnh → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
+async function adminRerenderTikz(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
+async function adminDownloadHinhAnh(){let raw=adminMergedHinhAnhFromForm();let src=adminPreviewHinhAnhSrc();if(!src){alert('Chưa có ảnh.\n\nNhập mã TikZ hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô link Drive (giữ mã TikZ ở trên) → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
 async function adminPasteImageUrl(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let el=document.getElementById('edit_HinhAnh');if(el){el.value=String(txt).trim();refreshEditHinhAnhPreview();renderEditQuestionPreview()}}catch(e){let el=document.getElementById('edit_HinhAnh');if(el){el.focus();alert('Bấm vào ô Hình ảnh rồi Ctrl+V dán link.')}}}
-function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}return data}
+function readQuestionFormData(){let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}data.HinhAnh=adminMergedHinhAnhFromForm();return data}
 function formatDsDapanForEdit(text,q){let tokens=parseDsAnswerTokens(text||'');let letters=['A','B','C','D'].filter(L=>q&&q[L]);if(tokens.length>=2)return tokens.filter(t=>!letters.length||letters.includes(t.letter)).map(t=>`${t.letter}=${t.verdict}`).join('; ');return String(text||'')}
 function syncDsEditFormFields(q){q=q||{};if(normDangFormVal(q.Dang)!=='Đúng sai')return;let merged=Object.assign({},q);try{merged=Object.assign(merged,readQuestionFormData())}catch(e){}let daEl=document.getElementById('edit_DapAn');let lgEl=document.getElementById('edit_LoiGiai');if(daEl){let fmt=formatDsDapanForEdit(daEl.value||merged.DapAn,merged);if(fmt){daEl.value=fmt;merged.DapAn=fmt}}if(lgEl){let lg=String(lgEl.value||'').trim();if(lg){let fixed=buildDsSolutionCopyText(lg,merged,true);if(fixed)lgEl.value=fixed}}}
 function autoSyncDsLoigiaiAbcd(updates,q){try{q=Object.assign({},q||{},updates||{});if(normDangFormVal(q.Dang)!=='Đúng sai')return updates;let da=String((updates&&updates.DapAn)!=null?updates.DapAn:(q.DapAn||'')).trim();if(da){let fmt=formatDsDapanForEdit(da,q);if(fmt)updates.DapAn=fmt}let lg=String((updates&&updates.LoiGiai)||'').trim();if(!lg.trim()){let daEl=document.getElementById('edit_DapAn');if(daEl&&updates.DapAn)daEl.value=updates.DapAn;return updates}q=Object.assign({},q,updates);let fixed=buildDsSolutionCopyText(lg,q,true);if(fixed)updates.LoiGiai=fixed;let daEl=document.getElementById('edit_DapAn');if(daEl&&updates.DapAn)daEl.value=updates.DapAn;let le=document.getElementById('edit_LoiGiai');if(le&&updates.LoiGiai)le.value=updates.LoiGiai;}catch(e){}return updates}
@@ -20357,7 +20425,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307aw';
+const CACHE_NAME = 'luyen-de-ai-v307ax';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
