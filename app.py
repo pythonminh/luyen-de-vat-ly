@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307aj_AI_GEN_TIKZ_GRAPH_2026_06_12"
+APP_VERSION = "V307ak_TIKZ_CLOUD_RENDER_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -9089,7 +9089,7 @@ def _process_ai_gen_tikz(raw: Dict[str, Any], ordinal: int) -> Tuple[str, str]:
             break
     return (
         f"tikzraw:{enc}",
-        warn or "TikZ chưa biên dịch PNG — đã lưu mã vào cột T. Server cần pdflatex để tự xuất ảnh.",
+        warn or "TikZ chưa biên dịch PNG — đã lưu mã tạm; trang sẽ tự vẽ khi xem.",
     )
 
 
@@ -11408,7 +11408,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307aj';
+    window.__LDVL_V='V307ak';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11682,7 +11682,9 @@ function formatHintDisplay(s){s=String(s||'').trim();if(!s)return '';s=s.replace
 function dsCircleHtml(L){return `<span class="dsCircle" aria-label="Ý ${L}">${L}</span>`}
 function stripOptionPrefix(text,L){text=String(text||'').trim();if(!text)return text;let m=text.match(new RegExp('^\\s*'+L+'\\s*[\\.\\)\\:]\\s*','i'));if(m)return text.slice(m[0].length).trim();let any=text.match(/^\s*[ABCD]\s*[\.\)\:]\s*/i);if(any)return text.slice(any[0].length).trim();return text}
 function stripImmini(text){text=String(text||'').trim();let m=text.match(/\\immini\s*\{([\s\S]*)\}\s*$/i);if(m)return m[1].trim();return text.replace(/^\\immini\s*\{/i,'').replace(/\}\s*$/,'').trim()}
-function buildQimgHtml(src){src=String(src||'').trim();if(!src)return '';if(/^tikzraw:/i.test(src)){try{let b=src.replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let code=decodeURIComponent(escape(atob(b)));return `<div class="qimgWrap tikzRawWrap"><div class="muted" style="font-size:12px;margin-bottom:6px;font-weight:800">📐 TikZ — xem trước mã (chưa biên dịch PNG)</div><pre class="tikzRawCode" style="white-space:pre-wrap;font-size:11px;max-height:280px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px">${esc(code)}</pre></div>`}catch(e){return `<div class="qimgErr">Không đọc được mã TikZ.</div>`}}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa" onerror="this.parentElement.outerHTML='<div class=\\'qimgErr\\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'"></div>`}
+function tikzRawCodeFallback(src,msg){try{let b=src.replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let code=decodeURIComponent(escape(atob(b)));let note=msg?`<div class="muted" style="font-size:12px;color:#b45309;margin-bottom:6px">${esc(msg)}</div>`:'';return `<div class="qimgWrap tikzRawWrap">${note}<div class="muted" style="font-size:12px;margin-bottom:6px;font-weight:800">📐 TikZ</div><pre class="tikzRawCode" style="white-space:pre-wrap;font-size:11px;max-height:280px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px">${esc(code)}</pre></div>`}catch(e){return `<div class="qimgErr">Không đọc được mã TikZ.</div>`}}
+async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url){let wrap=document.createElement('div');wrap.className='qimgWrap';wrap.innerHTML=`<img class="qimg" src="${esc(j.url)}" alt="Đồ thị TikZ">`;box.replaceWith(wrap);if(typeof typeset==='function')typeset(wrap.parentElement||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
+function buildQimgHtml(src){src=String(src||'').trim();if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa" onerror="this.parentElement.outerHTML='<div class=\\'qimgErr\\'>Không tải được hình. Kiểm tra cột T hoặc quyền chia sẻ ảnh.</div>'"></div>`}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
 function isTlnImgSplit(q){return !!(q&&q.Dang==='Trả lời ngắn'&&String(q.HinhAnh||'').trim())}
 function mcqUsesSplit(q){return usesImgSplit(q)}
@@ -14904,44 +14906,168 @@ def _resolve_includegraphics_path(raw_path: str, ctx: Optional[Dict[str, Any]], 
     return clean(raw_path)
 
 
+def _tikz_standalone_document(tikz_code: str) -> str:
+    """Gói TikZ vào standalone; tự thêm pgfplots khi có \\begin{axis}."""
+    code = clean(tikz_code)
+    uses_axis = bool(re.search(r"\\begin\s*\{\s*axis\s*\}", code, re.I)) or "\\addplot" in code
+    lines = [
+        r"\documentclass[tikz,border=3pt]{standalone}",
+        r"\usepackage[utf8]{inputenc}",
+        r"\usepackage[T5]{fontenc}",
+        r"\usepackage[vietnamese]{babel}",
+        r"\usepackage{amsmath,amssymb}",
+        r"\usepackage{tikz}",
+        r"\usetikzlibrary{arrows.meta,calc,angles,quotes,patterns,decorations.pathmorphing,decorations.markings,intersections,positioning,shapes.geometric}",
+    ]
+    if uses_axis:
+        lines.extend([r"\usepackage{pgfplots}", r"\pgfplotsset{compat=1.18}"])
+    lines.extend([r"\begin{document}", code, r"\end{document}", ""])
+    return "\n".join(lines)
+
+
+def _decode_tikzraw_src(src: str) -> str:
+    s = clean(src)
+    if not s:
+        return ""
+    if s.lower().startswith("tikzraw:"):
+        enc = s[8:].strip()
+        pad = "=" * ((4 - len(enc) % 4) % 4)
+        try:
+            return base64.urlsafe_b64decode(enc + pad).decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    block = _extract_tikz_block(s)
+    return block or s
+
+
+def _compile_tikz_pdf_via_cloud(tex_doc: str) -> Tuple[bytes, str]:
+    """Biên dịch LaTeX → PDF qua latex.ytotech.com (Render không cần cài TeX)."""
+    payload = json.dumps({
+        "compiler": "pdflatex",
+        "resources": [{"main": True, "content": tex_doc}],
+    }).encode("utf-8")
+    try:
+        req = urllib.request.Request(
+            "https://latex.ytotech.com/builds/sync",
+            data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": "LDVL-TikZ/1"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=75) as resp:
+            data = resp.read()
+        if data[:4] == b"%PDF":
+            return data, ""
+        try:
+            err = json.loads(data.decode("utf-8", errors="replace"))
+            log = err.get("logs") or err.get("message") or str(err)
+            return b"", str(log)[:320]
+        except Exception:
+            return b"", "Dịch vụ LaTeX trả lỗi không xác định."
+    except Exception as e:
+        return b"", f"Không gọi được dịch vụ biên dịch LaTeX: {str(e)[:200]}"
+
+
+def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> str:
+    """Chuyển PDF → PNG (PyMuPDF hoặc pdftoppm)."""
+    if not pdf_bytes or not ctx:
+        return ""
+    png_path = os.path.join(ctx["root"], name + ".png")
+    try:
+        import fitz  # pymupdf
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if doc.page_count < 1:
+            return ""
+        page = doc.load_page(0)
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+        pix.save(png_path)
+        ctx["media"]["resolved"] += 1
+        return _asset_url_for(ctx["batch"], os.path.basename(png_path))
+    except ImportError:
+        pass
+    except Exception as e:
+        ctx.setdefault("warnings", []).append({"index": name, "warning": "PDF→PNG: " + str(e)[:160]})
+        return ""
+    pdftoppm = shutil.which("pdftoppm")
+    if not pdftoppm:
+        return ""
+    tmp_pdf = os.path.join(ctx["root"], name + ".pdf")
+    out_prefix = os.path.join(ctx["root"], name)
+    try:
+        with open(tmp_pdf, "wb") as f:
+            f.write(pdf_bytes)
+        subprocess.run(
+            [pdftoppm, "-png", "-singlefile", "-r", "220", tmp_pdf, out_prefix],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=25,
+            check=True,
+        )
+        if os.path.exists(png_path):
+            ctx["media"]["resolved"] += 1
+            return _asset_url_for(ctx["batch"], os.path.basename(png_path))
+    except Exception as e:
+        ctx.setdefault("warnings", []).append({"index": name, "warning": "pdftoppm: " + str(e)[:160]})
+    return ""
+
+
 def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int, tikz_no: int) -> str:
     if ctx:
         ctx["media"]["tikz"] += 1
     if not ctx:
         return ""
-    pdflatex = shutil.which("pdflatex")
-    pdftoppm = shutil.which("pdftoppm")
-    if not pdflatex or not pdftoppm:
-        ctx.setdefault("warnings", []).append({"index": idx, "warning": "Có TikZ nhưng Render chưa có pdflatex/pdftoppm nên chưa biên dịch được PNG."})
+    tikz_code = clean(tikz_code)
+    if not tikz_code:
         return ""
+    tex_doc = _tikz_standalone_document(tikz_code)
     name = f"tikz_q{idx}_{tikz_no}_{uuid.uuid4().hex[:6]}"
-    workdir = os.path.join(ctx["root"], "_tikz_build", name)
-    os.makedirs(workdir, exist_ok=True)
-    tex_path = os.path.join(workdir, name + ".tex")
-    tex_doc = r"""
-\documentclass[tikz,border=3pt]{standalone}
-\usepackage[utf8]{inputenc}
-\usepackage[T5]{fontenc}
-\usepackage[vietnamese]{babel}
-\usepackage{amsmath,amssymb}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,calc,angles,quotes,patterns,decorations.pathmorphing,decorations.markings,intersections,positioning,shapes.geometric}
-\begin{document}
-""" + "\n" + tikz_code + "\n" + r"\end{document}" + "\n"
-    with open(tex_path, "w", encoding="utf-8") as f:
-        f.write(tex_doc)
-    try:
-        subprocess.run([pdflatex, "-interaction=nonstopmode", "-halt-on-error", tex_path], cwd=workdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=35, check=True)
-        pdf_path = os.path.join(workdir, name + ".pdf")
-        out_prefix = os.path.join(ctx["root"], name)
-        subprocess.run([pdftoppm, "-png", "-singlefile", "-r", "220", pdf_path, out_prefix], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=25, check=True)
-        png_path = out_prefix + ".png"
-        if os.path.exists(png_path):
-            ctx["media"]["resolved"] += 1
-            return _asset_url_for(ctx["batch"], os.path.basename(png_path))
-    except Exception as e:
-        # Giữ file .tex nguồn để ADMIN có thể tải/kiểm tra nếu cần.
-        ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ chưa biên dịch được: " + str(e)[:180]})
+
+    pdflatex = shutil.which("pdflatex")
+    if pdflatex:
+        workdir = os.path.join(ctx["root"], "_tikz_build", name)
+        os.makedirs(workdir, exist_ok=True)
+        tex_path = os.path.join(workdir, name + ".tex")
+        with open(tex_path, "w", encoding="utf-8") as f:
+            f.write(tex_doc)
+        try:
+            subprocess.run(
+                [pdflatex, "-interaction=nonstopmode", "-halt-on-error", tex_path],
+                cwd=workdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=45,
+                check=True,
+            )
+            pdf_path = os.path.join(workdir, name + ".pdf")
+            if os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as pf:
+                    url = _pdf_bytes_to_png_file(pf.read(), ctx, name)
+                if url:
+                    return url
+                pdftoppm = shutil.which("pdftoppm")
+                if pdftoppm:
+                    out_prefix = os.path.join(ctx["root"], name)
+                    subprocess.run(
+                        [pdftoppm, "-png", "-singlefile", "-r", "220", pdf_path, out_prefix],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=25,
+                        check=True,
+                    )
+                    png_path = out_prefix + ".png"
+                    if os.path.exists(png_path):
+                        ctx["media"]["resolved"] += 1
+                        return _asset_url_for(ctx["batch"], os.path.basename(png_path))
+        except Exception as e:
+            ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ local: " + str(e)[:180]})
+
+    pdf_bytes, cloud_err = _compile_tikz_pdf_via_cloud(tex_doc)
+    if pdf_bytes:
+        url = _pdf_bytes_to_png_file(pdf_bytes, ctx, name)
+        if url:
+            return url
+    if cloud_err:
+        ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ cloud: " + cloud_err[:220]})
     return ""
 
 
@@ -19190,6 +19316,26 @@ def api_latex_import():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/tikz/render", methods=["POST"])
+def api_tikz_render():
+    """Biên dịch TikZ (hoặc tikzraw:…) thành PNG để hiển thị đồ thị khi làm bài."""
+    body = request.get_json(silent=True) or {}
+    src = clean(body.get("src", body.get("tikz", body.get("HinhAnh", ""))))
+    tikz_code = _decode_tikzraw_src(src)
+    if not tikz_code or "tikzpicture" not in tikz_code.lower():
+        return jsonify({"ok": False, "error": "Không có mã TikZ hợp lệ."}), 400
+    ctx = _build_latex_asset_context(commit=True)
+    url = _compile_tikz_to_png(tikz_code, ctx, 1, 1)
+    if url:
+        return jsonify({"ok": True, "url": url})
+    warn = ""
+    for w in (ctx.get("warnings") or []):
+        warn = clean(w.get("warning", ""))
+        if warn:
+            break
+    return jsonify({"ok": False, "error": warn or "Chưa biên dịch được TikZ."}), 500
+
+
 @app.route("/api/admin/ai-generate-questions", methods=["POST"])
 def api_admin_ai_generate_questions():
     bad = require_login_json()
@@ -19329,7 +19475,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307aj';
+const CACHE_NAME = 'luyen-de-ai-v307ak';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
