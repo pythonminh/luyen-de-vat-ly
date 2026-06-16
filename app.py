@@ -67,7 +67,33 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307at_DRIVE_PERM_CHECK_2026_06_12"
+APP_VERSION = "V307av_IMG_DEDUPE_2026_06_12"
+
+GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var secret = String(body.secret || '');
+    var expected = PropertiesService.getScriptProperties().getProperty('UPLOAD_SECRET') || '';
+    if (expected && secret !== expected) {
+      return ContentService.createTextOutput(JSON.stringify({ok:false,error:'Sai secret'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    var folderId = body.folder_id || '1QSVzBMuklr6JGqAvAJ9oa8jX2hxQLV3f';
+    var folder = DriveApp.getFolderById(folderId);
+    var bytes = Utilities.base64Decode(body.b64);
+    var blob = Utilities.newBlob(bytes, 'image/png', body.name || 'tikz.png');
+    var file = folder.createFile(blob);
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: true,
+      id: file.getId(),
+      url: 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1600'
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}"""
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2277,8 +2303,19 @@ def _drive_upload_fix_hint(detail: str) -> str:
             "Chưa BẬT Google Drive API trong Google Cloud (cùng project với service account). "
             "Vào console.cloud.google.com → APIs & Services → Library → tìm «Google Drive API» → Enable → đợi 2 phút."
         )
+    if "service accounts do not have storage" in d or (
+        "service account" in d and "storage quota" in d
+    ):
+        return (
+            "Tài khoản robot không có ổ Drive — không phải Drive của bạn đầy. "
+            "Dùng Google Apps Script upload (panel AI có hướng dẫn) hoặc upload ảnh tay → dán link cột T."
+        )
     if "storagequota" in d.replace(" ", ""):
-        return "Hết dung lượng Google Drive — xóa bớt file trong folder Anh_Luyen_De."
+        return (
+            "Không phải Drive của bạn đầy — service account chưa ghi được vào folder "
+            f"(Google hay báo «hết dung lượng» khi SA không upload được). "
+            f"Chia sẻ lại folder {DEFAULT_DRIVE_IMAGES_FOLDER_ID} cho {email} quyền Biên tập viên."
+        )
     if "403" in d or "forbidden" in d or "insufficient" in d or "not granted" in d:
         return (
             f"Folder {DEFAULT_DRIVE_IMAGES_FOLDER_ID}: Google API chưa cho {email} ghi. "
@@ -2448,6 +2485,75 @@ def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> 
     return file_id
 
 
+def _is_sa_storage_quota_error(detail: str) -> bool:
+    d = clean(detail).lower()
+    return "storagequota" in d.replace(" ", "") or "service accounts do not have storage" in d
+
+
+def _gas_upload_configured() -> bool:
+    return bool(clean(os.environ.get("GOOGLE_DRIVE_GAS_UPLOAD_URL", "")))
+
+
+def _publish_png_via_gas(png_bytes: bytes, filename: str) -> Tuple[str, str]:
+    """Upload PNG qua Apps Script (chạy bằng tài khoản Gmail của thầy — không bị lỗi SA quota)."""
+    url = clean(os.environ.get("GOOGLE_DRIVE_GAS_UPLOAD_URL", ""))
+    if not url or not png_bytes:
+        return "", ""
+    secret = clean(os.environ.get("GOOGLE_DRIVE_GAS_SECRET", ""))
+    folder = _drive_upload_folder_id()
+    payload = json.dumps({
+        "secret": secret,
+        "folder_id": folder,
+        "name": filename or f"tikz_{uuid.uuid4().hex[:8]}.png",
+        "b64": base64.b64encode(png_bytes).decode("ascii"),
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        if data.get("ok") and clean(data.get("url", "")):
+            return normalize_image_src(clean(data.get("url", ""))), ""
+        return "", clean(data.get("error", "Apps Script upload thất bại"))
+    except Exception as e:
+        return "", _drive_api_error_detail(e)
+
+
+def _publish_png_bytes_to_drive(png_bytes: bytes, filename: str = "") -> Tuple[str, str]:
+    """Upload PNG: GAS (nếu cấu hình) hoặc service account."""
+    name = filename or f"tikz_{uuid.uuid4().hex[:8]}.png"
+    if _gas_upload_configured():
+        gas_url, gas_err = _publish_png_via_gas(png_bytes, name)
+        if gas_url:
+            return gas_url, ""
+        if gas_err:
+            return "", f"Apps Script: {gas_err}"
+    folder = _drive_upload_folder_id()
+    if not folder:
+        return "", _drive_setup_hint("Chưa có folder ID")
+    sa_err = ""
+    try:
+        file_id = _drive_upload_png_bytes(png_bytes, name, folder)
+        if file_id:
+            return _drive_direct_image_url(file_id), ""
+        sa_err = _drive_setup_hint("Upload Drive thất bại")
+    except Exception as e:
+        sa_err = _drive_api_error_detail(e)
+    if _is_sa_storage_quota_error(sa_err):
+        if not _gas_upload_configured():
+            return "", (
+                sa_err
+                + " — Cần cấu hình Apps Script upload (panel AI → hướng dẫn 5 phút). "
+                "Hoặc upload ảnh tay → dán link cột T."
+            )
+    hint = _drive_upload_fix_hint(sa_err)
+    return "", sa_err + (f" — {hint}" if hint else "")
+
+
 def _google_service_account_email() -> str:
     try:
         info = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON", "") or "{}")
@@ -2469,20 +2575,14 @@ def _drive_setup_hint(detail: str = "") -> str:
 
 
 def _publish_png_to_drive(png_path: str, filename: str = "") -> Tuple[str, str]:
-    """Upload PNG TikZ → thư mục Anh_Luyen_De → link thumbnail. Trả (url, lỗi)."""
-    folder = _drive_upload_folder_id()
-    if not folder:
-        return "", _drive_setup_hint("Chưa tìm thấy thư mục trên Drive")
+    """Upload PNG TikZ → Drive (GAS hoặc service account). Trả (url, lỗi)."""
     if not png_path or not os.path.exists(png_path):
         return "", "Không có file PNG để upload."
     name = filename or os.path.basename(png_path) or f"tikz_{uuid.uuid4().hex[:8]}.png"
     try:
         with open(png_path, "rb") as f:
             data = f.read()
-        file_id = _drive_upload_png_bytes(data, name, folder)
-        if file_id:
-            return _drive_direct_image_url(file_id), ""
-        return "", _drive_setup_hint("Upload Drive thất bại")
+        return _publish_png_bytes_to_drive(data, name)
     except Exception as e:
         detail = _drive_api_error_detail(e)
         hint = _drive_upload_fix_hint(detail)
@@ -2497,7 +2597,17 @@ def _remember_drive_folder_from_url(value: Any) -> None:
 
 
 def _drive_test_upload() -> Tuple[bool, str]:
-    """Thử upload PNG 1×1 để kiểm tra quyền ghi folder."""
+    """Thử upload PNG 1×1."""
+    if _gas_upload_configured():
+        png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+            b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        url, err = _publish_png_bytes_to_drive(png, f"_ldvl_test_{uuid.uuid4().hex[:6]}.png")
+        if url:
+            return True, ""
+        return False, err or "Upload thử thất bại"
     folder = _drive_upload_folder_id()
     if not folder:
         return False, "Chưa có folder ID"
@@ -2519,9 +2629,17 @@ def _drive_test_upload() -> Tuple[bool, str]:
         fid = _drive_upload_png_bytes(png, f"_ldvl_test_{uuid.uuid4().hex[:6]}.png", folder)
         if fid:
             return True, ""
-        return False, _drive_setup_hint("Upload thử thất bại")
+        url, err = _publish_png_bytes_to_drive(png, f"_ldvl_test_{uuid.uuid4().hex[:6]}.png")
+        if url:
+            return True, ""
+        return False, err or _drive_setup_hint("Upload thử thất bại")
     except Exception as e:
         detail = _drive_api_error_detail(e)
+        if _is_sa_storage_quota_error(detail):
+            url, err = _publish_png_bytes_to_drive(png, f"_ldvl_test_{uuid.uuid4().hex[:6]}.png")
+            if url:
+                return True, ""
+            return False, err or detail
         hint = _drive_upload_fix_hint(detail)
         return False, detail + (f" — {hint}" if hint else "")
 
@@ -2617,6 +2735,130 @@ def fetch_image_bytes_for_ai(src: str) -> Tuple[Optional[bytes], str, str]:
         return None, "", f"Link ảnh không hỗ trợ: {src[:80]}"
     except Exception as e:
         return None, "", _http_error_message(e)
+
+
+def _image_bytes_md5(data: bytes) -> str:
+    return hashlib.md5(data).hexdigest() if data else ""
+
+
+def _drive_rename_file(file_id: str, name: str) -> str:
+    fid = clean(file_id)
+    nm = clean(name)
+    if not fid or not nm:
+        return "Thiếu file_id hoặc tên"
+    try:
+        token = _google_access_token()
+        body = json.dumps({"name": nm}).encode("utf-8")
+        qs = urllib.parse.urlencode({"supportsAllDrives": "true"})
+        req = urllib.request.Request(
+            f"https://www.googleapis.com/drive/v3/files/{fid}?{qs}",
+            data=body,
+            method="PATCH",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=30)
+        return ""
+    except Exception as e:
+        return _drive_api_error_detail(e)
+
+
+def analyze_hinhanh_duplicate_groups(
+    questions: List[Dict[str, Any]], *, max_sources: int = 400
+) -> Dict[str, Any]:
+    """Nhóm ảnh cột T trùng nội dung (MD5) — khác link/file_id nhưng cùng pixel."""
+    src_cache: Dict[str, Tuple[str, str]] = {}
+    refs: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
+    seen_err: set = set()
+
+    for q in questions or []:
+        raw = clean(q.get("HinhAnh", ""))
+        src = normalize_image_src(raw)
+        if not src or src.lower().startswith("tikzraw:"):
+            continue
+        key = src.lower()
+        if key not in src_cache:
+            if len(src_cache) >= max(50, int(max_sources)):
+                continue
+            data, _, err = fetch_image_bytes_for_ai(src)
+            if err or not data:
+                src_cache[key] = ("", err or "Không tải được ảnh")
+            else:
+                src_cache[key] = (_image_bytes_md5(data), "")
+        h, err = src_cache[key]
+        if err or not h:
+            if key not in seen_err:
+                errors.append({"row": q.get("_row"), "id": q.get("ID", ""), "src": src, "error": err or "trống"})
+                seen_err.add(key)
+            continue
+        refs.append({
+            "row": int(q.get("_row") or 0),
+            "id": clean(q.get("ID", "")),
+            "hinhanh": src,
+            "raw_hinhanh": raw,
+            "file_id": extract_drive_file_id(src) or "",
+            "hash": h,
+        })
+
+    by_hash: Dict[str, List[Dict[str, Any]]] = {}
+    for r in refs:
+        by_hash.setdefault(r["hash"], []).append(r)
+
+    groups: List[Dict[str, Any]] = []
+    total_updates = 0
+    for h, items in by_hash.items():
+        by_url: Dict[str, List[Dict[str, Any]]] = {}
+        for it in items:
+            by_url.setdefault(it["hinhanh"], []).append(it)
+        if len(by_url) < 2:
+            continue
+        canon_url = sorted(by_url.keys(), key=lambda u: (0 if extract_drive_file_id(u) else 1, u))[0]
+        canon_fid = extract_drive_file_id(canon_url) or ""
+        if canon_fid:
+            canon_url = _drive_direct_image_url(canon_fid)
+        updates: List[Dict[str, Any]] = []
+        dup_file_ids: List[str] = []
+        dup_urls: List[str] = []
+        for u, rows in by_url.items():
+            if normalize_image_src(u) == normalize_image_src(canon_url):
+                continue
+            dup_urls.append(u)
+            fid = extract_drive_file_id(u) or ""
+            if fid and fid != canon_fid:
+                dup_file_ids.append(fid)
+            for it in rows:
+                if int(it.get("row") or 0) < 2:
+                    continue
+                updates.append({
+                    "row": it["row"],
+                    "id": it["id"],
+                    "old": it["raw_hinhanh"],
+                    "new": canon_url,
+                })
+        if not updates:
+            continue
+        total_updates += len(updates)
+        groups.append({
+            "hash": h,
+            "canonical_url": canon_url,
+            "canonical_file_id": canon_fid,
+            "suggested_name": f"img_{h[:12]}.png",
+            "updates": updates,
+            "duplicate_file_ids": sorted(set(dup_file_ids)),
+            "duplicate_urls": dup_urls,
+            "variant_count": len(by_url),
+            "row_count": len(items),
+        })
+
+    groups.sort(key=lambda g: (-len(g["updates"]), g["hash"]))
+    return {
+        "groups": groups,
+        "group_count": len(groups),
+        "total_row_updates": total_updates,
+        "scanned_sources": len(src_cache),
+        "errors": errors[:40],
+        "error_count": len(errors),
+    }
 
 
 def prepare_question_vision(q: Dict[str, Any]) -> Dict[str, Any]:
@@ -5412,6 +5654,93 @@ class SheetStore:
             "remaining_before_refresh": max(0, len(all_to_delete) - len(to_delete)),
             "plan": plan,
             "duplicate_report": self.duplicate_report,
+        }
+
+    def dedupe_hinhanh_images(
+        self,
+        dry_run: bool = True,
+        *,
+        rename: bool = False,
+        max_sources: int = 400,
+    ) -> Dict[str, Any]:
+        """ADMIN gộp ảnh trùng nội dung: cập nhật cột T → 1 link chuẩn, giữ link Drive (đổi tên file không mất link)."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được gộp ảnh trùng")
+        report = analyze_hinhanh_duplicate_groups(self.questions, max_sources=max_sources)
+        if not report.get("groups"):
+            return {
+                "ok": True,
+                "dry_run": dry_run,
+                "message": "Không có ảnh trùng nội dung (cùng file ảnh, khác link) cần gộp.",
+                **report,
+            }
+        if dry_run:
+            samples = [
+                f"{g['hash'][:8]}… → {len(g['updates'])} dòng → {g['canonical_url'][:72]}"
+                for g in report["groups"][:10]
+            ]
+            return {
+                "ok": True,
+                "dry_run": True,
+                "message": (
+                    f"Sẽ gộp {report['group_count']} nhóm ảnh — cập nhật {report['total_row_updates']} dòng cột T. "
+                    "Link Drive giữ nguyên (theo file_id). Có thể đổi tên file trên Drive sau."
+                ),
+                "samples": samples,
+                **report,
+            }
+
+        col0 = self._question_field_col0("HinhAnh")
+        if col0 is None:
+            col0 = (self.question_col_index or {}).get("HinhAnh", 19)
+        col_1 = int(col0) + 1
+
+        batch: List[Dict[str, Any]] = []
+        rename_errors: List[str] = []
+        renamed = 0
+        updated_rows = 0
+        for g in report["groups"]:
+            for up in g.get("updates") or []:
+                row = int(up.get("row") or 0)
+                if row < 2:
+                    continue
+                a1 = gspread.utils.rowcol_to_a1(row, col_1)
+                batch.append({"range": a1, "values": [[clean(up.get("new", ""))]]})
+            if rename and g.get("canonical_file_id"):
+                err = _drive_rename_file(g["canonical_file_id"], g.get("suggested_name", ""))
+                if err:
+                    rename_errors.append(f"{g['canonical_file_id']}: {err}")
+                else:
+                    renamed += 1
+
+        if not batch:
+            return {"ok": False, "message": "Không có dòng hợp lệ để cập nhật.", **report}
+
+        with self.add_question_lock:
+            for off in range(0, len(batch), 40):
+                chunk = batch[off : off + 40]
+                gsheet_call_retry("batch_update HinhAnh dedupe", self.ws_questions.batch_update, chunk, value_input_option="RAW")
+                updated_rows += len(chunk)
+                if off + 40 < len(batch):
+                    time.sleep(1.0)
+
+            by_row = {int(q.get("_row") or 0): q for q in self.questions if int(q.get("_row") or 0) >= 2}
+            for g in report["groups"]:
+                canon = clean(g.get("canonical_url", ""))
+                for up in g.get("updates") or []:
+                    row = int(up.get("row") or 0)
+                    q = by_row.get(row)
+                    if q is not None:
+                        q["HinhAnh"] = canon
+
+        return {
+            "ok": True,
+            "dry_run": False,
+            "updated_rows": updated_rows,
+            "renamed_files": renamed,
+            "rename_errors": rename_errors[:10],
+            "message": f"Đã gộp ảnh: cập nhật {updated_rows} ô cột T." + (f" Đổi tên {renamed} file trên Drive." if rename else ""),
+            **report,
         }
 
     def delete_questions_rows_admin(self, row_numbers: List[int]) -> Dict[str, Any]:
@@ -11735,7 +12064,7 @@ body.theoryEditorOpen{overflow:hidden!important}
  .theoryEditorFooter{grid-template-columns:1fr;padding-left:8px;padding-right:8px;gap:6px}.theoryEditorStatus{max-height:34px;overflow:auto}.theoryEditorFooterBtns{display:grid;grid-template-columns:1fr 1fr;width:100%}.theoryEditorFooterBtns button{width:100%;font-size:13px;padding:8px 6px}
 }
 </style></head>
-<body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT ADMIN gợi ý Dạng bài tập cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu cột H">🏷️ Gợi ý Dạng BT</button><button type="button" id="bulkNlvlBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkNlvlReview()" title="GPT ADMIN gợi ý Năng lực vật lí cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🧠 Gợi ý Năng lực</button><button type="button" id="dangTheoryTopBtn" class="adminTopBtn adminTopBtn2" onclick="openDangTheoryEditor()" title="Soạn khung lý thuyết dùng chung cho Dạng bài tập của câu đang mở">📘 Khung Dạng BT</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
+<body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT ADMIN gợi ý mức độ cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🎯 Gợi ý mức độ</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT ADMIN gợi ý Dạng bài tập cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu cột H">🏷️ Gợi ý Dạng BT</button><button type="button" id="bulkNlvlBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkNlvlReview()" title="GPT ADMIN gợi ý Năng lực vật lí cho nhiều câu đang xem, ADMIN duyệt rồi mới lưu">🧠 Gợi ý Năng lực</button><button type="button" id="dangTheoryTopBtn" class="adminTopBtn adminTopBtn2" onclick="openDangTheoryEditor()" title="Soạn khung lý thuyết dùng chung cho Dạng bài tập của câu đang mở">📘 Khung Dạng BT</button><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ Sheet</button><button type="button" id="dedupeBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng Sheet</button><button type="button" id="dedupeImgBtn" class="adminTopBtn adminTopBtn2" onclick="dedupeHinhAnhImages()" title="Gộp ảnh trùng nội dung — cập nhật cột T, không mất link Drive">🖼 Gộp ảnh trùng</button><button type="button" id="testAiBtn" class="adminTopBtn adminTopBtn2" onclick="testServerAiKey()" title="Test OPENAI (ADMIN GPT) + GEMINI">🧪 Test GPT+Gemini</button></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh</span><span id="examTimer" class="timer hide"></span></div>
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Mức độ</label><select id="fMucDo" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div class="homeCompactRow"><div id="idLookupPanel" class="panel compactCard compactIdCard"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide compactCard compactKeyCard"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px"><b>VIP/S.VIP muốn dùng Trợ lý AI thì tự lấy Gemini key rồi nhập tại đây.</b><br>Vào <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><b>Google AI Studio → Get API key / Create API key</b></a>, copy key dạng <b>AIza...</b> hoặc <b>AQ...</b>, dán vào ô dưới và bấm <b>Lưu key</b>. ChatGPT/OpenAI chỉ dành cho ADMIN.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIza... hoặc AQ...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel compactCard compactRandomCard"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div></div><div id="adminComposePanel" class="panel hide adminComposePanel"><b>🛠 ADMIN: Tạo đề theo chủ đề &amp; mức độ</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Chọn <b>Môn · Khối · Lớp · Chương</b> ở khối <b>Tự luyện ngẫu nhiên</b> bên trên, rồi nhập số câu cần lấy trong ma trận <b>Dạng × Mức độ</b>. Ô xám = số câu có sẵn trong Sheet.</p><div id="acScopeNote" class="acScopeNote hide"></div><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field"><label>Lọc mức (tuỳ chọn)</label><select id="acLevelFilter" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả mức</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Bài học (tuỳ chọn)</label><select id="acBaiHoc" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả bài</option></select></div><button type="button" class="btn2" onclick="refreshAdminComposeMatrix()">🔄 Cập nhật ma trận</button></div><div id="acMatrixWrap" class="acMatrixWrap"><div class="muted" style="padding:12px">Chọn đủ Môn/Khối/Lớp rồi bấm «Cập nhật ma trận».</div></div><div class="acToolbar"><button type="button" class="btn2" onclick="acPresetStandard28()">📋 Đề chuẩn 28 (18 TN · 4 Đ/S · 6 TLN)</button><button type="button" class="btn2" onclick="acClearMatrixInputs()">🗑 Xóa nhập</button><button type="button" class="btnStartStrong" onclick="startAdminComposeExam()">🛠 Ghép đề ADMIN</button></div><div id="acComposeStatus" class="muted" style="margin-top:8px;font-size:12px"></div></div>
@@ -11816,7 +12145,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307at';
+    window.__LDVL_V='V307av';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -12358,6 +12687,35 @@ async function dedupeSheetDuplicates(){
     if(btn){btn.disabled=false;btn.textContent='🧹 Xóa trùng Sheet'}
   }
 }
+async function dedupeHinhAnhImages(){
+  try{
+    const btn=document.getElementById('dedupeImgBtn');
+    if(btn){btn.disabled=true;btn.textContent='⏳ Đang quét ảnh...'}
+    let preview=await api('/api/admin/dedupe-hinhanh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true}),timeoutMs:120000});
+    let n=parseInt(preview.total_row_updates,10)||0;
+    if(n<=0){
+      alert((preview.message||'Không có ảnh trùng nội dung cần gộp.')+'\n\nChỉ gộp ảnh GIỐNG HỆT (cùng file ảnh). Ảnh «gần giống» nhưng khác pixel sẽ không gộp tự động.');
+      return;
+    }
+    let lines=(preview.samples||[]).slice(0,8);
+    let msg='Phát hiện '+preview.group_count+' nhóm ảnh trùng — sẽ cập nhật '+n+' dòng cột T.\n\n'
+      +'Giữ 1 link Drive chuẩn (file_id) — link cũ trỏ về ảnh giống hệt sẽ đổi sang link chuẩn.\n'
+      +'Đổi tên file trên Drive KHÔNG làm mất link (chỉ đổi tên hiển thị).\n\n'
+      +(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')
+      +'Tiếp tục gộp và cập nhật Sheet?';
+    if(!confirm(msg))return;
+    let rename=confirm('Đổi tên file ảnh chuẩn trên Drive thành img_<hash>.png?\n\nOK = đổi tên · Hủy = chỉ cập nhật cột T');
+    if(btn)btn.textContent='⏳ Đang gộp...';
+    let j=await api('/api/admin/dedupe-hinhanh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false,rename}),timeoutMs:120000});
+    alert('✅ '+(j.message||'Đã gộp ảnh trùng.')+'\n\nSau khi gộp, có thể xóa file ảnh thừa trên Drive (file_id trong báo cáo) — chỉ xóa khi chắc không còn dòng Sheet nào trỏ tới.');
+    await refreshCatalogFromMeta();
+  }catch(e){
+    alert('Không gộp ảnh được: '+(e.message||e));
+  }finally{
+    const btn=document.getElementById('dedupeImgBtn');
+    if(btn){btn.disabled=false;btn.textContent='🖼 Gộp ảnh trùng'}
+  }
+}
 
 function alertDuplicateSheetReport(dr){if(!dr||!USER.is_admin)return;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let lines=(dr.samples||[]).slice(0,6);alert('⚠ Phát hiện câu TRÙNG trên Google Sheet (Cau_Hoi):\n\n≈ '+extra+' dòng thừa (thường do bấm Thêm câu 2 lần hoặc copy/dán).\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Bấm nút 🧹 Xóa trùng Sheet trên thanh ADMIN để tự xóa (giữ 1 bản / câu).')}
 function showAdminDuplicateSheetNotice(){if(!USER.is_admin||!META||!META.duplicate_report)return;let dr=META.duplicate_report;let extra=parseInt(dr.extra_duplicate_rows,10)||0;if(extra<=0)return;let info=document.getElementById('info');if(info&&!String(info.textContent||'').includes('dòng trùng')){info.textContent+=` | ⚠ ${extra} dòng trùng Sheet`;if(dr.samples&&dr.samples.length)info.title=dr.samples.join('\n')}}
@@ -12480,7 +12838,7 @@ function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair 
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
 function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview();loadAgDriveSetup()}
-async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Upload Drive OK — TikZ tự lên folder khi Lưu.':('⚠️ Upload Drive thất bại');let diag=j.folder_drive_name?`Folder Drive: <b>${esc(j.folder_drive_name)}</b> · ghi được: ${j.can_add_children?'có':'KHÔNG'}${j.sa_role?` · SA: <b>${esc(j.sa_role)}</b>`:(j.sa_role_error?` · SA: <span style="color:#b91c1c">chưa thấy</span>`:'')}`:'';let fix=j.fix_hint?`<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;font-size:13px"><b>Cách sửa:</b> ${esc(j.fix_hint)}</div>`:'';let err=j.upload_error||j.inspect_error||j.sa_role_error?`<div class="muted" style="margin-top:6px;font-size:12px">${esc(j.upload_error||j.inspect_error||j.sa_role_error||'')}</div>`:'';box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div>${diag}${fix}${err}${j.ok?'':`<ol style="margin:8px 0 0 18px;padding:0"><li>Mở <a href="${esc(j.folder_url||'#')}" target="_blank" rel="noopener">${esc(j.folder_name||'Anh_Luyen_De')}</a> → <b>Chia sẻ</b></li><li>Thêm <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Biên tập viên</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy email</button></li><li>Deploy <b>V307as</b> → Ctrl+Shift+R</li></ol>`}<div class="muted" style="margin-top:6px;font-size:12px">ID: ${esc(j.folder_id||'')}</div>`}catch(e){}}
+async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});window.__GAS_DRIVE_SCRIPT=j.gas_script||'';box.classList.remove('hide');let ok=j.ok?'✅ Upload Drive OK — TikZ tự lên folder khi Lưu.':'⚠️ Tài khoản robot không upload được (không có ổ Drive riêng)';let gas=j.gas_configured?' · Apps Script: <b style="color:#166534">đã cấu hình</b>':' · Apps Script: <b style="color:#b91c1c">chưa cấu hình</b>';let diag=j.folder_drive_name?`<div style="margin-top:4px;font-size:12px">Folder: <b>${esc(j.folder_drive_name)}</b>${gas}</div>`:'';let fix=j.fix_hint?`<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;font-size:13px">${esc(j.fix_hint)}</div>`:'';let err=j.upload_error?`<div class="muted" style="margin-top:6px;font-size:11px;word-break:break-word">${esc(String(j.upload_error).slice(0,280))}</div>`:'';let gasSteps=(!j.ok&&!j.gas_configured)?`<div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #93c5fd;font-size:13px"><b>✅ Sửa 1 lần — Apps Script (upload bằng Gmail của thầy)</b><ol style="margin:8px 0 0 18px;padding:0;line-height:1.45"><li><a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> → Dự án mới → dán mã (Copy bên dưới)</li><li>Triển khai → Ứng dụng web → Thực thi: <b>Tôi</b> · Truy cập: <b>Bất kỳ ai</b></li><li>Render → Environment → <code>GOOGLE_DRIVE_GAS_UPLOAD_URL</code> = URL web app</li><li>Deploy <b>V307au</b> → Ctrl+Shift+R → Lưu câu TikZ</li></ol><button type="button" class="btn2" style="margin-top:6px" onclick="navigator.clipboard&&navigator.clipboard.writeText(window.__GAS_DRIVE_SCRIPT||'').then(()=>alert('Đã copy mã Apps Script'))">📋 Copy mã GAS</button></div>`:'';box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div>${diag}${fix}${err}${gasSteps}<div class="muted" style="margin-top:6px;font-size:12px">Folder ID: ${esc(j.folder_id||'')}</div>`}catch(e){}}
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
@@ -19811,6 +20169,8 @@ def api_admin_drive_images_setup():
         "inspect_error": inspect_err,
         "upload_error": upload_err,
         "fix_hint": fix_hint,
+        "gas_configured": _gas_upload_configured(),
+        "gas_script": GAS_DRIVE_UPLOAD_SCRIPT,
         "hint": fix_hint or upload_err or inspect_err or _drive_setup_hint(folder_err) if (folder_err or not upload_ok) else _drive_setup_hint(),
     })
 
@@ -19921,6 +20281,28 @@ def api_question_dedupe():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/admin/dedupe-hinhanh", methods=["POST"])
+def api_admin_dedupe_hinhanh():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được gộp ảnh trùng."}), 403
+    body = request.get_json(silent=True) or {}
+    dry_run = str(body.get("dry_run", "true")).lower() in ("1", "true", "yes")
+    rename = str(body.get("rename", "false")).lower() in ("1", "true", "yes")
+    try:
+        max_sources = int(body.get("max_sources") or 400)
+    except Exception:
+        max_sources = 400
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        return jsonify(st.dedupe_hinhanh_images(dry_run=dry_run, rename=rename, max_sources=max_sources))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 # ============================================================
 # PWA / CÀI APP ĐIỆN THOẠI
 # ============================================================
@@ -19974,7 +20356,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307at';
+const CACHE_NAME = 'luyen-de-ai-v307av';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
