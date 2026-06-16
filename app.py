@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307z_AI_GEN_NO_NLVL_2026_06_12"
+APP_VERSION = "V307ab_DS_LOIGIAI_DEDUP_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -759,6 +759,19 @@ def _tf_token_to_ds(token: Any) -> str:
 
 def parse_tf_values(value: Any) -> List[str]:
     """Chuẩn hóa đáp án Đ/S thành danh sách 4 phần tử (A,B,C,D)."""
+    if isinstance(value, dict):
+        mp = {"a": 0, "b": 1, "c": 2, "d": 3}
+        out = ["", "", "", ""]
+        for k, v in value.items():
+            idx = mp.get(clean(k).lower()[:1])
+            if idx is None:
+                continue
+            tok = _tf_token_to_ds(v)
+            if tok:
+                out[idx] = tok
+        if sum(1 for x in out if x) >= 2:
+            return out
+
     if isinstance(value, list):
         out = [_tf_token_to_ds(v) for v in value]
         while len(out) < 4:
@@ -769,10 +782,11 @@ def parse_tf_values(value: Any) -> List[str]:
     if not raw:
         return ["", "", "", ""]
 
-    low = strip_accents(raw).lower()
+    # key_norm: Đúng → dung (strip_accents một mình để lại đung → regex không khớp)
+    low = key_norm(raw)
     letter_hits = re.findall(
-        r"(?:^|[\s;,|]+)(?:[\[\(]?\s*([abcd])\s*[\]\)]?\s*[-.:=]?\s*)"
-        r"(đúng|dung|d|đ|sai|s|true|false)\b",
+        r"(?:^|[\s;,|·]+)(?:[\[\(]?\s*([abcd])\s*[\]\)]?\s*[-.:=]?\s*)"
+        r"(dung|d|sai|s|true|false)\b",
         low,
         re.I,
     )
@@ -797,11 +811,10 @@ def parse_tf_values(value: Any) -> List[str]:
                 out.append("")
             return out[:4]
 
-    s = strip_accents(raw).upper()
-    s = s.replace("\u0110", "D").replace("\u0111", "D")
-    s = s.replace("DUNG", "D").replace("TRUE", "D").replace("SAI", "S").replace("FALSE", "S")
-    vals = re.findall(r"[DS]", s)[:4]
-    out = ["Đ" if v == "D" else "S" for v in vals]
+    s = key_norm(raw).replace(" ", "")
+    s = s.replace("dung", "d").replace("true", "d").replace("false", "s").replace("sai", "s")
+    vals = re.findall(r"[ds]", s)[:4]
+    out = ["Đ" if v == "d" else "S" for v in vals]
     while len(out) < 4:
         out.append("")
     return out[:4]
@@ -5325,6 +5338,25 @@ def _ds_verdict_label(v: str) -> str:
     return "Sai" if v == "S" else ("Đúng" if v == "Đ" else "")
 
 
+def _strip_ds_body_leading_verdict(body: str, verdict_label: str = "") -> str:
+    """Bỏ nhãn Đúng/Sai lặp ở đầu phần thân (AI hay ghi A. Đúng. … hoặc A. Đúng — Đúng. …)."""
+    body = clean(body)
+    if not body:
+        return ""
+    m = re.match(
+        r"^(?:\*\*)?(Đúng|Sai|Đ|D|S|True|False)\b\s*[\-—:–\.\)]*\s*",
+        body,
+        flags=re.I,
+    )
+    if not m:
+        return body
+    if verdict_label:
+        got = _ds_verdict_label(_ds_verdict_token(m.group(1)))
+        if got and got != verdict_label:
+            return body
+    return clean(body[m.end():]) or body
+
+
 def _ds_verdict_from_q_dapan(q: Optional[Dict[str, Any]], letter: str) -> str:
     """Lấy Đ/S của A/B/C/D từ cột P: S,S,Đ,Đ hoặc A=Sai · B=Đúng..."""
     if not q:
@@ -5402,12 +5434,13 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
             body = clean(raw[start:end]).strip(" ).\n")
             body = re.sub(r"\*\*", "", body).strip()
             verdict = _ds_verdict_token(m.group(2) or "")
-            # Nếu tag không bắt được verdict nhưng body bắt đầu bằng Đúng/Sai thì lấy ra.
             if not verdict:
                 mm = re.match(r"^(Đúng|Sai|Đ|D|S)\b\s*[\-—:–\.]?\s*(.*)$", body, flags=re.I)
                 if mm:
                     verdict = _ds_verdict_token(mm.group(1))
                     body = clean(mm.group(2)) or body
+            if verdict:
+                body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
             if body or verdict:
                 out[L] = {"verdict": verdict, "body": body}
         return out
@@ -5474,6 +5507,8 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
         verdict_code = c.get("verdict", "") or _ds_verdict_from_q_dapan(q, L)
         verdict = _ds_verdict_label(verdict_code)
         body = clean(c.get("body", ""))
+        if verdict:
+            body = _strip_ds_body_leading_verdict(body, verdict)
         if verdict and body:
             lines.append(f"{L}. {verdict} — {body}")
         elif verdict:
@@ -7513,7 +7548,7 @@ def normalize_ds_loigiai(
     if not text:
         return ""
     tag_pat = (
-        r"(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?"
+        r"(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–\.]\s*)?"
     )
     first_tag = re.search(tag_pat, text, re.I | re.M)
     preamble = ""
@@ -7548,6 +7583,8 @@ def normalize_ds_loigiai(
                 else:
                     vl = dap_map2.get(letter, "")
                 if vl:
+                    body = _strip_ds_body_leading_verdict(body, vl)
+                if vl:
                     lines2.append(f"{letter}. {vl} — {body}" if body else f"{letter}. {vl}")
                 elif body:
                     lines2.append(f"{letter}. — {body}")
@@ -7579,6 +7616,8 @@ def normalize_ds_loigiai(
         end = tagged[i + 1].start() if i + 1 < len(tagged) else len(ds_body)
         chunk = clean(ds_body[start:end]).strip(" ).\n")
         chunk = re.sub(r"\*\*", "", chunk)
+        if vl:
+            chunk = _strip_ds_body_leading_verdict(chunk, vl)
         if vl:
             lines.append(f"{letter}. {vl} — {chunk}" if chunk else f"{letter}. {vl}")
         elif chunk:
@@ -8823,7 +8862,7 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
         "Đúng sai": [
             "A, B, C, D là bốn mệnh đề độc lập để xét Đúng/Sai.",
             "DapAn ghi đúng mẫu A=Đúng; B=Sai; C=Đúng; D=Sai.",
-            "LoiGiai bắt buộc có bốn dòng A., B., C., D., mỗi dòng nêu Đúng/Sai và giải thích.",
+            "LoiGiai: đúng 4 dòng `A. Đúng — giải thích` (mỗi dòng chỉ một lần Đúng/Sai, KHÔNG viết A. Đúng — Đúng. …).",
         ],
         "Trả lời ngắn": [
             "A, B, C, D phải để trống.",
@@ -8874,6 +8913,56 @@ def build_ai_generate_questions_prompt(spec: Dict[str, Any], references: List[Di
     ])
 
 
+def _flatten_ai_dapan(value: Any) -> str:
+    """AI hay trả DapAn dạng object/list thay vì chuỗi A=Đúng; B=Sai…"""
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        parts = []
+        for L in "ABCD":
+            v = value.get(L)
+            if v is None:
+                v = value.get(L.lower())
+            if v is not None and clean(v) != "":
+                parts.append(f"{L}={clean(v)}")
+        return "; ".join(parts) if parts else ""
+    if isinstance(value, list):
+        vals = [_tf_token_to_ds(v) for v in value[:4]]
+        if sum(1 for x in vals if x) >= 2:
+            return "; ".join(
+                f"{L}={'Đúng' if vals[i] == 'Đ' else 'Sai'}"
+                for i, L in enumerate("ABCD")
+                if i < len(vals) and vals[i]
+            )
+    return clean(value)
+
+
+def _resolve_ai_ds_dapan(data: Dict[str, Any]) -> str:
+    """Gộp đáp án Đ/S từ DapAn + LoiGiai khi AI trả lệch format."""
+    letters = [L for L in "ABCD" if clean(data.get(L))]
+    if len(letters) < 4:
+        return ""
+    dapan_raw = data.get("DapAn")
+    if isinstance(dapan_raw, (dict, list)):
+        dapan_raw = _flatten_ai_dapan(dapan_raw)
+    da = _format_tf_answer_standard(dapan_raw)
+    if da:
+        return da
+    lg_da = _format_tf_answer_standard(ds_dapan_from_loigiai(clean(data.get("LoiGiai", "")), data))
+    if lg_da:
+        return lg_da
+    merged: Dict[str, str] = {}
+    for i, L in enumerate("ABCD"):
+        vals = parse_tf_values(dapan_raw)
+        if i < len(vals) and vals[i] in ("Đ", "S"):
+            merged[L] = "Đúng" if vals[i] == "Đ" else "Sai"
+    for L, v in extract_ds_verdicts_from_loigiai(clean(data.get("LoiGiai", ""))).items():
+        merged.setdefault(L, v)
+    if all(merged.get(L) for L in letters):
+        return "; ".join(f"{L}={merged[L]}" for L in letters)
+    return ""
+
+
 def _normalize_ai_gen_raw(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Chuẩn hóa key AI hay trả lệch (cau_hoi, dap_an…)."""
     raw = dict(raw or {})
@@ -8888,6 +8977,8 @@ def _normalize_ai_gen_raw(raw: Dict[str, Any]) -> Dict[str, Any]:
         canon = alias.get(key_norm(k))
         if canon:
             out[canon] = v
+    if isinstance(out.get("DapAn"), (dict, list)):
+        out["DapAn"] = _flatten_ai_dapan(out.get("DapAn"))
     return out
 
 
@@ -9012,10 +9103,7 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
         missing = [L for L in "ABCD" if not data[L]]
         if missing:
             return None, "Thiếu mệnh đề " + ", ".join(missing)
-        da = _format_tf_answer_standard(data["DapAn"])
-        if not da:
-            # Thử suy từ lời giải nếu AI ghi đáp án trong từng dòng A-D.
-            da = _format_tf_answer_standard(ds_dapan_from_loigiai(data["LoiGiai"]))
+        da = _resolve_ai_ds_dapan(data)
         if not da:
             return None, "Đáp án Đúng/Sai chưa đủ 4 ý"
         data["DapAn"] = da
@@ -11015,7 +11103,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307z';
+    window.__LDVL_V='V307ab';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11313,7 +11401,7 @@ function formatLoigiaiPreambleHtml(preamble){let p=String(preamble||'').trim();i
 function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
 function finalizeAbcdSolutionChunks(chunks,q,isDs,skipSheet){if(!q)return chunks||[];let letters=['A','B','C','D'].filter(L=>q[L]);if(!letters.length)return chunks||[];let byL={};(chunks||[]).forEach(c=>{byL[c.letter]=c});let tokens=isDs&&!skipSheet?parseDsAnswerTokens(q.DapAn||''):[];let vMap={};tokens.forEach(t=>vMap[t.letter]=t.verdict);let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];return letters.map(L=>{if(byL[L]){let c=byL[L];if(isDs&&!skipSheet&&!c.verdict&&vMap[L])return Object.assign({},c,{verdict:vMap[L]});return c}return {letter:L,verdict:isDs&&!skipSheet?(vMap[L]||''):'',body:''}})}
 function formatAbcdSolutionList(chunks,q,isDs){q=q||{};if(!isDs&&(q.Dang==='Trắc nghiệm'||(isMcqLetter(q.DapAn)&&hasOptsClient(q)))){let lines=(chunks||[]).map(c=>buildDsSolutionPlainLine(c,true)).filter(Boolean);return formatMcqSolutionRows(lines.join('\n'),q)}chunks=finalizeAbcdSolutionChunks(chunks,q,isDs);if(!chunks.length)return '';let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];let stacked=needsAbcdStackedLayout(q,chunks);let listCls='dsSolutionList dsSolutionCompact'+(stacked?' dsSolutionRows':(isDs?' dsSolutionDs':' dsSolutionTn'));return `<div class="${listCls}">${chunks.map(c=>{let headVerdict='';if(c.verdict)headVerdict=`<b class="${c.verdict==='Sai'?'dsVerdictSai':'dsVerdictDung'}">${esc(c.verdict)}</b>`;else if(!isDs&&c.letter===corrMcq)headVerdict=`<b class="dsVerdictDung">✓ Đúng</b>`;else if(!isDs&&corrMcq)headVerdict=`<span class="muted">sai</span>`;let stmt='';if(q[c.letter]&&!c.body){let st=renderRichText(stripOptionPrefix(q[c.letter],c.letter));stmt=stacked?`<div class="dsStmtBlock">${st}</div>`:`<span class="dsStmtInline">${st}</span>`}let body=c.body?`<div class="dsSolutionBody">${formatHintDisplay(c.body)}</div>`:'';if(stacked&&stmt)return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}</div>${stmt}${body}</div>`;return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}${stmt}</div>${body}</div>`}).join('')}</div>`}
-function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function buildDsSolutionPlainLine(c,keepBreaks){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');if(!keepBreaks)body=body.replace(/\s+/g,' ').trim();else body=body.trim();if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q,forAi){q=q||currentQuestion();let t=String(text||'');let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);if(forAi){let letters=['A','B','C','D'].filter(L=>q[L]);let byL={};chunks.forEach(c=>{byL[c.letter]=c});chunks=letters.map(L=>byL[L]||{letter:L,verdict:'',body:''})}else chunks=finalizeAbcdSolutionChunks(chunks,q,true,false);let lines=chunks.map(c=>buildDsSolutionPlainLine(c,!!forAi)).filter(Boolean).join('\n');if(pre&&lines)return pre+'\n\n'+lines;return lines||pre}function formatDsSolutionPlainList(text,q,fromAi){q=q||currentQuestion();let t=String(text||'').trim();let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);chunks=finalizeAbcdSolutionChunks(chunks,q,true,!!fromAi);if(!chunks.length)return pre?formatLoigiaiPreambleHtml(pre):formatHintDisplay(t);let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);let list=rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:'';if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}function formatDsSolutionRows(text,q,fromAi){let t=String(text||'').trim();q=q||currentQuestion();if(q&&(q.Dang==='Trắc nghiệm'||(isMcqLetter(q.DapAn)&&hasOptsClient(q))))return formatMcqSolutionRows(t,q);let pre=splitLoigiaiPreamble(t);if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q,!!fromAi);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q,!!fromAi);let chunks=extractAbcdSolutionChunks(t);let list='';if(chunks.length>=1)list=formatAbcdSolutionList(chunks,q,true);else if(!pre&&q&&['A','B','C','D'].some(L=>q[L]))list=formatAbcdSolutionList(chunks,q,true);if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}
+function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function stripDsBodyLeadingVerdict(body,v){body=String(body||'').trim();if(!body)return '';let m=body.match(/^(?:\*\*)?(Đúng|Sai|Đ|D|S|True|False)\b\s*[\-—:–\.\)]*\s*/i);if(!m)return body;let got=dsVerdictLabel(m[1]);if(v&&got&&got!==v)return body;return body.slice(m[0].length).trim()||body}function buildDsSolutionPlainLine(c,keepBreaks){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');if(!keepBreaks)body=body.replace(/\s+/g,' ').trim();else body=body.trim();if(v)body=stripDsBodyLeadingVerdict(body,v);if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q,forAi){q=q||currentQuestion();let t=String(text||'');let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);if(forAi){let letters=['A','B','C','D'].filter(L=>q[L]);let byL={};chunks.forEach(c=>{byL[c.letter]=c});chunks=letters.map(L=>byL[L]||{letter:L,verdict:'',body:''})}else chunks=finalizeAbcdSolutionChunks(chunks,q,true,false);let lines=chunks.map(c=>buildDsSolutionPlainLine(c,!!forAi)).filter(Boolean).join('\n');if(pre&&lines)return pre+'\n\n'+lines;return lines||pre}function formatDsSolutionPlainList(text,q,fromAi){q=q||currentQuestion();let t=String(text||'').trim();let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);chunks=finalizeAbcdSolutionChunks(chunks,q,true,!!fromAi);if(!chunks.length)return pre?formatLoigiaiPreambleHtml(pre):formatHintDisplay(t);let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);let list=rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:'';if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}function formatDsSolutionRows(text,q,fromAi){let t=String(text||'').trim();q=q||currentQuestion();if(q&&(q.Dang==='Trắc nghiệm'||(isMcqLetter(q.DapAn)&&hasOptsClient(q))))return formatMcqSolutionRows(t,q);let pre=splitLoigiaiPreamble(t);if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q,!!fromAi);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q,!!fromAi);let chunks=extractAbcdSolutionChunks(t);let list='';if(chunks.length>=1)list=formatAbcdSolutionList(chunks,q,true);else if(!pre&&q&&['A','B','C','D'].some(L=>q[L]))list=formatAbcdSolutionList(chunks,q,true);if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}
 function loigiaiStripAbcdTail(text){let t=String(text||'').trim();if(!t)return '';let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(!tagged.length)return t;return t.slice(0,tagged[0].index).trim()}
 function mcqCorrectLetter(q){return String((q&&q.DapAn)||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1]||''}
 function mcqTnBodyIsTrivial(body){let b=String(body||'').trim();if(!b)return true;b=b.replace(/[\*#]/g,'').trim().toLowerCase();b=b.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return /^(sai|dung|d|a|b|c)$/.test(b)||b.length<12}
@@ -18571,7 +18659,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307z';
+const CACHE_NAME = 'luyen-de-ai-v307ab';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
