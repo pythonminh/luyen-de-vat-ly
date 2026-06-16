@@ -7,6 +7,7 @@ Yêu cầu Environment Variables trên Render:
     GOOGLE_SHEET_ID
     GOOGLE_CREDENTIALS_JSON
     GOOGLE_DRIVE_IMAGES_FOLDER_ID   (ID thư mục Drive chứa ảnh TikZ — chia sẻ Editor cho email service account)
+    GOOGLE_DRIVE_IMAGES_FOLDER_NAME (mặc định Anh_Luyen_De — tự tìm nếu chưa set ID)
     GEMINI_API_KEY=AIza... hoặc AQ....   (hoặc nhiều key cách nhau dấu phẩy / xuống dòng)
     GEMINI_API_KEY_2=...   (tuỳ chọn — tự chuyển khi key 1 hết quota)
     GEMINI_API_KEYS=...   (hoặc nhiều key cách nhau dấu phẩy)
@@ -66,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307an_DRIVE_DIRECT_LH3_2026_06_12"
+APP_VERSION = "V307ao_DRIVE_THUMBNAIL_FOLDER_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2140,6 +2141,20 @@ def dedupe_questions_by_row(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
+def is_drive_folder_url(value: Any) -> bool:
+    """Cột T phải là link FILE ảnh — không phải thư mục Drive."""
+    s = clean(value).lower()
+    if "drive.google.com" not in s:
+        return False
+    return "/folders/" in s or "/fold" in s
+
+
+def extract_drive_folder_id(value: Any) -> str:
+    s = clean(value)
+    m = re.search(r"/folders/([A-Za-z0-9_-]{20,})", s, flags=re.I)
+    return m.group(1) if m else ""
+
+
 def extract_drive_file_id(value: Any) -> str:
     """Lấy FILE_ID từ link Google Drive hoặc chuỗi file id."""
     s = clean(value)
@@ -2149,6 +2164,8 @@ def extract_drive_file_id(value: Any) -> str:
     m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
     if m:
         s = m.group(1)
+    if is_drive_folder_url(s):
+        return ""
     # lh3.googleusercontent.com/d/FILE_ID=w1200
     m = re.search(r'googleusercontent\.com/d/([A-Za-z0-9_-]{20,})', s, flags=re.I)
     if m:
@@ -2184,6 +2201,8 @@ def normalize_image_src(value: Any) -> str:
     m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
     if m:
         s = m.group(1).strip()
+    if is_drive_folder_url(s):
+        return ""
     fid = extract_drive_file_id(s)
     if fid:
         return _drive_direct_image_url(fid)
@@ -2227,11 +2246,29 @@ def _google_access_token() -> str:
 
 
 def _drive_direct_image_url(file_id: str) -> str:
-    """Link ảnh Drive trực tiếp (lh3) — cùng dạng link thầy dán vào cột T."""
+    """Link thumbnail Drive — giống cột T Sheet (https://drive.google.com/thumbnail?id=…)."""
     fid = extract_drive_file_id(file_id) or clean(file_id)
     if not fid:
         return ""
-    return f"https://lh3.googleusercontent.com/d/{fid}=w1600"
+    return f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
+
+
+def _drive_find_folder_by_name(name: str) -> str:
+    if not clean(name):
+        return ""
+    try:
+        token = _google_access_token()
+        q = urllib.parse.quote(
+            f"mimeType='application/vnd.google-apps.folder' and name='{clean(name)}' and trashed=false"
+        )
+        url = f"https://www.googleapis.com/drive/v3/files?q={q}&fields=files(id,name)&pageSize=3"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        files = data.get("files") or []
+        return clean(files[0].get("id", "")) if files else ""
+    except Exception:
+        return ""
 
 
 def _drive_proxy_image_url(file_id: str) -> str:
@@ -2250,33 +2287,44 @@ def _drive_thumbnail_fallback_url(file_id: str) -> str:
 
 
 def _drive_upload_folder_id() -> str:
-    """Thư mục Drive để lưu PNG TikZ — lấy từ env hoặc thư mục cha của file mẫu."""
+    """Thư mục Drive lưu PNG TikZ — ưu tiên env, mặc định tìm Anh_Luyen_De."""
     global _DRIVE_UPLOAD_FOLDER_CACHE
     if _DRIVE_UPLOAD_FOLDER_CACHE:
         return _DRIVE_UPLOAD_FOLDER_CACHE
-    cfg = (
-        clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_ID", ""))
-        or clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_URL", ""))
-    )
-    fid = extract_drive_file_id(cfg) or cfg
-    if not fid:
-        return ""
-    try:
-        token = _google_access_token()
-        req = urllib.request.Request(
-            f"https://www.googleapis.com/drive/v3/files/{fid}?fields=id,mimeType,parents",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8", errors="replace"))
-        if data.get("mimeType") == "application/vnd.google-apps.folder":
-            _DRIVE_UPLOAD_FOLDER_CACHE = data["id"]
-        else:
+
+    folder_url = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_URL", ""))
+    fid = extract_drive_folder_id(folder_url)
+    if fid:
+        _DRIVE_UPLOAD_FOLDER_CACHE = fid
+        return fid
+
+    cfg = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_ID", ""))
+    if cfg:
+        fid = extract_drive_folder_id(cfg) or extract_drive_file_id(cfg) or cfg
+        try:
+            token = _google_access_token()
+            req = urllib.request.Request(
+                f"https://www.googleapis.com/drive/v3/files/{fid}?fields=id,mimeType,parents",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            if data.get("mimeType") == "application/vnd.google-apps.folder":
+                _DRIVE_UPLOAD_FOLDER_CACHE = data["id"]
+                return _DRIVE_UPLOAD_FOLDER_CACHE
             parents = data.get("parents") or []
-            _DRIVE_UPLOAD_FOLDER_CACHE = parents[0] if parents else ""
-    except Exception:
-        _DRIVE_UPLOAD_FOLDER_CACHE = ""
-    return _DRIVE_UPLOAD_FOLDER_CACHE
+            if parents:
+                _DRIVE_UPLOAD_FOLDER_CACHE = parents[0]
+                return _DRIVE_UPLOAD_FOLDER_CACHE
+        except Exception:
+            pass
+        _DRIVE_UPLOAD_FOLDER_CACHE = fid
+        return fid
+
+    default_name = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_NAME", "Anh_Luyen_De"))
+    found = _drive_find_folder_by_name(default_name)
+    _DRIVE_UPLOAD_FOLDER_CACHE = found
+    return found
 
 
 def _drive_set_public(file_id: str, token: str) -> None:
@@ -2325,7 +2373,7 @@ def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> 
 
 
 def _publish_png_to_drive(png_path: str, filename: str = "") -> str:
-    """Đẩy PNG TikZ lên Drive → link lh3.googleusercontent.com cho cột T."""
+    """Upload PNG TikZ → thư mục Anh_Luyen_De → link thumbnail cho cột T."""
     folder = _drive_upload_folder_id()
     if not folder or not png_path or not os.path.exists(png_path):
         return ""
@@ -11558,7 +11606,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307an';
+    window.__LDVL_V='V307ao';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11833,13 +11881,13 @@ function dsCircleHtml(L){return `<span class="dsCircle" aria-label="Ý ${L}">${L
 function stripOptionPrefix(text,L){text=String(text||'').trim();if(!text)return text;let m=text.match(new RegExp('^\\s*'+L+'\\s*[\\.\\)\\:]\\s*','i'));if(m)return text.slice(m[0].length).trim();let any=text.match(/^\s*[ABCD]\s*[\.\)\:]\s*/i);if(any)return text.slice(any[0].length).trim();return text}
 function stripImmini(text){text=String(text||'').trim();let m=text.match(/\\immini\s*\{([\s\S]*)\}\s*$/i);if(m)return m[1].trim();return text.replace(/^\\immini\s*\{/i,'').replace(/\}\s*$/,'').trim()}
 function tikzRawCodeFallback(src,msg){try{let b=src.replace(/^tikzraw:/i,'').trim().replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let code=decodeURIComponent(escape(atob(b)));let note=msg?`<div class="muted" style="font-size:12px;color:#b45309;margin-bottom:6px">${esc(msg)}</div>`:'';return `<div class="qimgWrap tikzRawWrap">${note}<div class="muted" style="font-size:12px;margin-bottom:6px;font-weight:800">📐 TikZ</div><pre class="tikzRawCode" style="white-space:pre-wrap;font-size:11px;max-height:280px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px">${esc(code)}</pre></div>`}catch(e){return `<div class="qimgErr">Không đọc được mã TikZ.</div>`}}
-async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url){let wrap=document.createElement('div');wrap.className='qimgWrap';wrap.innerHTML=`<img class="qimg" src="${esc(j.url)}" alt="Đồ thị TikZ">`;box.replaceWith(wrap);if(typeof typeset==='function')typeset(wrap.parentElement||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
-function driveLh3Url(fid){return 'https://lh3.googleusercontent.com/d/'+String(fid||'').trim()+'=w1600'}
+async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url){let url=normalizeImageSrcClient(j.url);let wrap=document.createElement('div');wrap.className='qimgWrap';wrap.innerHTML=`<img class="qimg" src="${esc(url)}" alt="Đồ thị TikZ"${qimgOnErrorAttr()}>`;box.replaceWith(wrap);if(typeof typeset==='function')typeset(wrap.parentElement||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
+function isDriveFolderUrl(s){s=String(s||'').toLowerCase();return s.includes('drive.google.com')&&(s.includes('/folders/')||s.includes('/fold'))}
 function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+String(fid||'').trim()+'&sz=w1600'}
-function extractDriveFidClient(s){s=String(s||'').trim();if(!s)return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
-function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;let fid=extractDriveFidClient(s);if(fid)return driveLh3Url(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
-function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. Kiểm tra quyền chia sẻ Drive.</div>\'}" referrerpolicy="no-referrer"'}
-function buildQimgHtml(src){src=normalizeImageSrcClient(String(src||'').trim());if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
+function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
+function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
+function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. File Drive cần quyền Anyone with link.</div>\'}"'}
+function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr">Cột T đang là <b>link thư mục</b> Drive — cần link <b>file ảnh</b> dạng <code>drive.google.com/thumbnail?id=…</code></div>';src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
 function isTlnImgSplit(q){return !!(q&&q.Dang==='Trả lời ngắn'&&String(q.HinhAnh||'').trim())}
 function mcqUsesSplit(q){return usesImgSplit(q)}
@@ -13888,7 +13936,6 @@ async function aiRepairCurrentQuestion(){
   }
 }
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field);if(field==='Dang'){if(normDangFormVal(value)==='Đúng sai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData()));if(typeof renderEditQuestionPreview==='function')renderEditQuestionPreview()}}
-function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/^tikzraw:/i.test(s))return s;let fid=extractDriveFidClient(s);if(fid)return driveLh3Url(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
 function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let src=normalizeImageSrcClient(el?el.value:'');if(!src){box.innerHTML='<span class="muted" style="font-size:12px">Chưa có link — dán URL Drive/ảnh vào ô trên (Ctrl+V).</span>';return}box.innerHTML=buildQimgHtml(src)}
 function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=normalizeImageSrcClient(q.HinhAnh);return applyResolvedDang(q)}
 function renderEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;let q=adminEditFormQuestion();let dang=q.Dang||'Trắc nghiệm';let head='<div style="font-weight:800;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">👁 Xem trước câu <span class="tag">'+esc(dang)+'</span></div>';let img=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let body=renderRichText(stripImmini(q.CauHoi||''))||'<span class="muted">(Chưa có nội dung câu hỏi)</span>';let opts='';if(dang==='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="opt"><span>'+dsCircleHtml(L)+'</span><span>'+renderRichText(stripOptionPrefix(q[L],L))+'</span></div>'}}else if(dang==='Đúng sai'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="tfrow">'+dsCircleHtml(L)+'<div class="tfStmt">'+renderRichText(q[L])+'</div></div>'}}else if(dang==='Trả lời ngắn'){opts='<div class="shortAnsBox shortAnsCompact"><div class="muted">Đáp số P: <b>'+(renderRichText(q.DapAn||'—'))+'</b>'+(q.SaiSo?' · ±'+esc(q.SaiSo):'')+'</div></div>'}let sol='';if(q.DapAn||q.LoiGiai){let daPart='';if(q.DapAn){if(dang==='Trắc nghiệm')daPart='<div><b>Đáp án:</b> '+formatMcqAnswerBadge(q.DapAn)+'</div>';else if(dang==='Đúng sai')daPart='<div><b>Đáp án:</b> '+formatDsAnswerBadges(q.DapAn)+'</div>';else daPart='<div><b>P:</b> '+renderRichText(q.DapAn)+'</div>'}let lgPart='';if(q.LoiGiai){let lgBody=formatLoigiaiByDang(q.LoiGiai,q,dang);lgPart='<div style="margin-top:6px"><b>Lời giải:</b><br>'+lgBody+'</div>'}sol='<div class="solution" style="margin-top:10px;font-size:13px">'+daPart+lgPart+'</div>'}box.innerHTML=head+'<div class="qbox adminEditPreviewQ">'+body+(splitImg?'':img)+'</div>'+(splitImg?'<div class="adminEditPreviewImg">'+img+'</div>':'')+opts+sol;typeset([box])}
@@ -19664,7 +19711,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307an';
+const CACHE_NAME = 'luyen-de-ai-v307ao';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
