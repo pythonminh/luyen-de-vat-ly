@@ -65,7 +65,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ac_CHAPTER_DBT_BOARD_2026_06_12"
+APP_VERSION = "V307ad_CHAPTER_DBT_CLICK_FIX_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -11105,7 +11105,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ac';
+    window.__LDVL_V='V307ad';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -11542,6 +11542,7 @@ async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.lo
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=45;
 async function init(){
+  ensureChapterDbtClickBindings();
   INIT_POLL_COUNT++;
   updateExamStrip();
   let info=document.getElementById('info');
@@ -12915,6 +12916,23 @@ async function applyDbtMerge(){
 }
 
 let CHAPTER_DBT_BOARD={mon:'',khoi:'',chuong:'',lessons:[]};
+function ensureChapterDbtClickBindings(){
+  if(window.__CHAPTER_DBT_CLICK_BOUND)return;
+  window.__CHAPTER_DBT_CLICK_BOUND=true;
+  document.addEventListener('click',function(e){
+    let chBtn=e.target.closest('.bookChapterDbtBtn');
+    if(chBtn){
+      e.preventDefault();
+      openChapterDbtBoard(chBtn.getAttribute('data-mon')||'',chBtn.getAttribute('data-khoi')||'',chBtn.getAttribute('data-chuong')||'');
+      return;
+    }
+    let gptBtn=e.target.closest('.chapterDbtGptBtn');
+    if(gptBtn){
+      e.preventDefault();
+      chapterDbtOpenLessonGpt(gptBtn.getAttribute('data-made')||'');
+    }
+  });
+}
 function closeChapterDbtBoard(){let m=document.getElementById('chapterDbtModal');if(m)m.classList.add('hide')}
 function chapterDbtLessonNames(entries,made){
   let item=(entries&&entries[0])||{};
@@ -12976,7 +12994,7 @@ function renderChapterDbtBoard(){
       return `<div class="chapterDbtRow"><span class="chapterDbtRowNum">${ni+1}</span><label style="display:flex;gap:6px;align-items:center;flex:1;cursor:pointer"><input type="checkbox" ${picked?'checked':''} onchange="chapterDbtTogglePick(${li},${ni},this.checked)"> <span class="chapterDbtRowName"><b>${esc(name)}</b>${cnt?(' · '+cnt+' câu'):''}</span></label><span><button type="button" class="btnSmall" onclick="chapterDbtMove(${li},${ni},-1)" ${ni===0?'disabled':''}>↑</button><button type="button" class="btnSmall" onclick="chapterDbtMove(${li},${ni},1)" ${ni===L.names.length-1?'disabled':''}>↓</button></span></div>`;
     }).join('');
     let uncls=L.unclassified?(` · <span style="color:#b45309">${L.unclassified} câu chưa phân loại</span>`):'';
-    return `<div class="chapterDbtLesson"><div class="chapterDbtLessonHead"><div><span>${esc(L.baiHoc)}</span> <small>${L.soCau||0} câu · ${(L.names||[]).length} dạng${uncls}</small></div><div class="chapterDbtLessonTools"><button type="button" class="btnSmall" onclick="chapterDbtSaveLessonOrder(${li})">💾 Lưu thứ tự</button><button type="button" class="btnSmall" onclick="chapterDbtOpenLessonGpt('${escAttr(L.made)}')">🏷️ GPT gợi ý</button><button type="button" class="btnSmall" onclick="openStartModal('${String(L.made||'').replace(/'/g,"\\'")}','')">📂 Mở đề</button></div></div><div class="chapterDbtRows">${rows||'<div class="muted" style="padding:8px">Chưa có dạng BT — bấm GPT gợi ý.</div>'}</div><div class="chapterDbtMergeBar"><span style="font-weight:800">Gộp/đổi tên tick:</span><input type="text" id="chapterDbtMergeName_${li}" placeholder="Tên mới thống nhất (cột H)" oninput="chapterDbtMergePreview(${li})" /><button type="button" class="btnSmall" onclick="chapterDbtPickLongest(${li})">📏 Tên dài nhất</button><button type="button" class="btn" onclick="chapterDbtApplyMerge(${li})">💾 Gộp &amp; lưu</button><span class="muted" id="chapterDbtMergeHint_${li}" style="font-size:11px"></span></div></div>`;
+    return `<div class="chapterDbtLesson"><div class="chapterDbtLessonHead"><div><span>${esc(L.baiHoc)}</span> <small>${L.soCau||0} câu · ${(L.names||[]).length} dạng${uncls}</small></div><div class="chapterDbtLessonTools"><button type="button" class="btnSmall" onclick="chapterDbtSaveLessonOrder(${li})">💾 Lưu thứ tự</button><button type="button" class="btnSmall chapterDbtGptBtn" data-made="${escAttr(L.made)}">🏷️ GPT gợi ý</button><button type="button" class="btnSmall" onclick="openStartModal('${String(L.made||'').replace(/'/g,"\\'")}','')">📂 Mở đề</button></div></div><div class="chapterDbtRows">${rows||'<div class="muted" style="padding:8px">Chưa có dạng BT — bấm GPT gợi ý.</div>'}</div><div class="chapterDbtMergeBar"><span style="font-weight:800">Gộp/đổi tên tick:</span><input type="text" id="chapterDbtMergeName_${li}" placeholder="Tên mới thống nhất (cột H)" oninput="chapterDbtMergePreview(${li})" /><button type="button" class="btnSmall" onclick="chapterDbtPickLongest(${li})">📏 Tên dài nhất</button><button type="button" class="btn" onclick="chapterDbtApplyMerge(${li})">💾 Gộp &amp; lưu</button><span class="muted" id="chapterDbtMergeHint_${li}" style="font-size:11px"></span></div></div>`;
   }).join('');
   let st=document.getElementById('chapterDbtStatus');if(st&&!st.textContent)st.textContent='Tick ≥2 tên để gộp · tick 1 tên + tên mới để đổi tên · ↑↓ rồi Lưu thứ tự.';
 }
@@ -13757,7 +13775,7 @@ function v246EnsureBookCss(){
   .bookIntroStats{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.bookStat{display:inline-flex;align-items:center;gap:4px;border:1px solid #bfdbfe;background:#fff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:850;color:#1e40af}
   .bookShelfV246{display:block}.bookSubjectBlock{margin:12px 0 16px}.bookSubjectTitle{padding:11px 12px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;box-shadow:0 2px 8px #1d4ed833;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookSubjectTitle small{font-size:12px;opacity:.95;font-weight:800}
   .bookGradeBlock{margin:10px 0 12px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 4px #0f172a0f}.bookGradeHead{padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookGradeHead .bookMini{font-size:12px;color:#64748b;font-weight:800}
-  .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
+  .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;position:relative;z-index:2}.bookChapterHead .bookChapterDbtBtn{flex-shrink:0;cursor:pointer;position:relative;z-index:3}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
   .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtBtn{border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:850;cursor:pointer;line-height:1.35;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:960px!important}.chapterDbtBody{max-height:min(62vh,560px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
   .bookLessonCard.selectedLesson{outline:2px solid #1d4ed8;background:#f8fbff}.bookLessonCard.catalogFlash{outline:3px solid #22c55e!important;box-shadow:0 0 0 4px #bbf7d088!important;animation:catalogFlashPulse .85s ease-in-out 2}@keyframes catalogFlashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.bookEmpty{padding:14px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc}
   html[data-theme='dark'] .bookIntroV246{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}html[data-theme='dark'] .bookIntroTitle{color:#bfdbfe}html[data-theme='dark'] .bookStat{background:#0f172a;border-color:#334155;color:#bfdbfe}html[data-theme='dark'] .bookGradeBlock,html[data-theme='dark'] .bookLessonCard{background:#111827;border-color:#334155}html[data-theme='dark'] .bookGradeHead{background:#1e293b;color:#e5e7eb}html[data-theme='dark'] .bookChapterBlock{background:#0f172a;border-color:#1d4ed8}html[data-theme='dark'] .bookChapterHead{background:#1e3a5f;color:#bfdbfe}html[data-theme='dark'] .bookLessonTitle{color:#e5e7eb}html[data-theme='dark'] .bookTag{background:#1e293b;border-color:#475569;color:#cbd5e1}
@@ -13836,7 +13854,7 @@ function v246BookHtml(list){
   let byMon=v246GroupBy(list,x=>x.Mon||'Chưa rõ môn');
   for(let [mon,monList] of byMon){let monQ=monList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);html+=`<section class="bookSubjectBlock"><div class="bookSubjectTitle"><span>${esc(mon)}</span><small>${monList.length} thẻ · ${monQ} câu</small></div>`;let byKhoi=v246GroupBy(monList,x=>'Khối '+(deriveKhoi(x.Lop)||'khác'));
     for(let [khoiLabel,khoiList] of byKhoi){let khoi=khoiLabel.replace(/^Khối\s*/,'');let kQ=khoiList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);html+=`<div class="bookGradeBlock"><div class="bookGradeHead"><span>${esc(khoiLabel)}</span><span class="bookMini">${khoiList.length} thẻ · ${kQ} câu</span></div>`;let byChuong=v246GroupBy(khoiList,x=>x.Chuong||'Chưa rõ chương');
-      for(let [chuong,chList] of byChuong){let chQ=chList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let chAdminBtn=(USER&&USER.is_admin)?`<button type="button" class="bookExamBtn bookChapterDbtBtn" onclick="openChapterDbtBoard(${JSON.stringify(mon)},${JSON.stringify(khoi)},${JSON.stringify(chuong)})" title="ADMIN: gom, gộp, sắp thứ tự dạng BT cả chương">🏷️ Quản lý dạng BT</button>`:'';html+=`<div class="bookChapterBlock"><div class="bookChapterHead"><span>${esc(chuong)}</span><small>${chList.length} thẻ · ${chQ} câu</small>${chAdminBtn}</div><div class="bookLessonList">`;let byBai=v246GroupBy(chList,x=>x.BaiHoc||x.De||'Chưa rõ bài');
+      for(let [chuong,chList] of byChuong){let chQ=chList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let chAdminBtn=(USER&&USER.is_admin)?`<button type="button" class="bookExamBtn bookChapterDbtBtn" data-mon="${escAttr(mon)}" data-khoi="${escAttr(khoi)}" data-chuong="${escAttr(chuong)}" title="ADMIN: gom, gộp, sắp thứ tự dạng BT cả chương">🏷️ Quản lý dạng BT</button>`:'';html+=`<div class="bookChapterBlock"><div class="bookChapterHead"><span>${esc(chuong)}</span><small>${chList.length} thẻ · ${chQ} câu</small>${chAdminBtn}</div><div class="bookLessonList">`;let byBai=v246GroupBy(chList,x=>x.BaiHoc||x.De||'Chưa rõ bài');
         for(let [bai,baiList] of byBai){html+=v246LessonCard(mon,khoi,chuong,bai,baiList)}
         html+='</div></div>';
       }
@@ -13850,6 +13868,7 @@ function v246IntroHtml(list){let qs=list.reduce((a,x)=>a+(parseInt(x.SoCau,10)||
   return `<div class="bookIntroV246"><div class="bookIntroTitle">📚 Mục lục kiểu sách ${scope?`<span class="tag">${esc(scope)}</span>`:''}</div><div class="muted" style="font-size:13px;line-height:1.45">Trong từng tab, app gom đề theo <b>Môn → Khối/Lớp → Chương → Bài</b>. Có thể lọc tiếp theo <b>Lớp, Chương, Bài, Mức độ, Loại câu hỏi, Dạng bài tập</b>.</div><div class="bookIntroStats"><span class="bookStat">${mons} môn</span><span class="bookStat">${khois} khối</span><span class="bookStat">${chuongs} chương</span><span class="bookStat">${bais} bài</span><span class="bookStat">${dbt} dạng BT</span><span class="bookStat">${qs} câu</span></div></div>`;
 }
 function renderCatalog(){
+  ensureChapterDbtClickBindings();
   v246EnsureDangBaiTapFilter();
   v245RenderCatalogScopeTabs();
   let list=(CATALOG||[]).filter(v246ItemMatchesFilter).sort(compareCatalog);let c=document.getElementById('countCat');if(c)c.textContent=`(${list.length} mục)`;let target=document.getElementById('catalog');if(!target)return;
@@ -18815,7 +18834,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ac';
+const CACHE_NAME = 'luyen-de-ai-v307ad';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
