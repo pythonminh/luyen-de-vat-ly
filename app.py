@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ao_DRIVE_THUMBNAIL_FOLDER_2026_06_12"
+APP_VERSION = "V307ap_DRIVE_SETUP_HINT_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2372,21 +2372,43 @@ def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> 
     return file_id
 
 
-def _publish_png_to_drive(png_path: str, filename: str = "") -> str:
-    """Upload PNG TikZ → thư mục Anh_Luyen_De → link thumbnail cho cột T."""
-    folder = _drive_upload_folder_id()
-    if not folder or not png_path or not os.path.exists(png_path):
+def _google_service_account_email() -> str:
+    try:
+        info = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON", "") or "{}")
+        return clean(info.get("client_email", ""))
+    except Exception:
         return ""
+
+
+def _drive_folder_display_name() -> str:
+    return clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_NAME", "Anh_Luyen_De")) or "Anh_Luyen_De"
+
+
+def _drive_setup_hint(detail: str = "") -> str:
+    email = _google_service_account_email()
+    folder = _drive_folder_display_name()
+    who = email or "(mở GOOGLE_CREDENTIALS_JSON → client_email)"
+    base = f"Chia sẻ thư mục Drive «{folder}» quyền Editor cho: {who}"
+    return f"{detail} — {base}" if detail else base
+
+
+def _publish_png_to_drive(png_path: str, filename: str = "") -> Tuple[str, str]:
+    """Upload PNG TikZ → thư mục Anh_Luyen_De → link thumbnail. Trả (url, lỗi)."""
+    folder = _drive_upload_folder_id()
+    if not folder:
+        return "", _drive_setup_hint("Chưa tìm thấy thư mục trên Drive")
+    if not png_path or not os.path.exists(png_path):
+        return "", "Không có file PNG để upload."
     name = filename or os.path.basename(png_path) or f"tikz_{uuid.uuid4().hex[:8]}.png"
     try:
         with open(png_path, "rb") as f:
             data = f.read()
         file_id = _drive_upload_png_bytes(data, name, folder)
         if file_id:
-            return _drive_direct_image_url(file_id)
-    except Exception:
-        pass
-    return ""
+            return _drive_direct_image_url(file_id), ""
+        return "", _drive_setup_hint("Upload Drive thất bại")
+    except Exception as e:
+        return "", _drive_setup_hint(f"Upload lỗi: {str(e)[:100]}")
 
 
 def _guess_image_mime(data: bytes, src: str = "") -> str:
@@ -9277,7 +9299,16 @@ def _process_ai_gen_tikz(raw: Dict[str, Any], ordinal: int) -> Tuple[str, str]:
     ctx = _build_latex_asset_context(commit=True)
     url = _compile_tikz_to_png(tikz_code, ctx, ordinal, 1)
     if url:
-        return url, ""
+        warn = ""
+        if url.startswith("/static/"):
+            for w in (ctx.get("warnings") or []):
+                wtxt = clean(w.get("warning", ""))
+                if wtxt:
+                    warn = wtxt
+                    break
+            if not warn:
+                warn = _drive_setup_hint("Ảnh tạm trên server — chưa lên Drive")
+        return url, warn
     import base64
     enc = base64.urlsafe_b64encode(tikz_code.encode("utf-8")).decode("ascii")
     warn = ""
@@ -11548,6 +11579,7 @@ body.theoryEditorOpen{overflow:hidden!important}
     <label>Điểm/câu<input id="agDiem" placeholder="Có thể để trống"></label>
     <label class="aiGenFull">Yêu cầu thêm<textarea id="agExtra" rows="2" placeholder="VD: vẽ ảnh tikz đồ thị kèm theo; số liệu đẹp; ưu tiên bài tính toán thực tế..."></textarea></label>
   </div>
+  <div id="agDriveSetup" class="hide" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid #fcd34d;background:#fffbeb;font-size:13px;line-height:1.5"></div>
   <div class="aiGenToolbar">
     <button type="button" class="btnStartStrong" id="agGenerateBtn" onclick="generateAiQuestionBank()">🤖 Tạo câu hỏi</button>
     <button type="button" class="btn2" onclick="applyAiGenJsonEdit()">↻ Áp dụng JSON đã sửa</button>
@@ -11606,7 +11638,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ao';
+    window.__LDVL_V='V307ap';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -12269,7 +12301,8 @@ function agFilteredCatalog(stage){let list=CATALOG||[];let mon=val('agMon'),lop=
 function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair of catalogDbtCounts(x)){let d=String(pair&&pair[0]||'').trim();if(d&&!out.includes(d))out.push(d)}}catch(e){let d=String(x&&x.DangBaiTap||'').trim();if(d&&!out.includes(d))out.push(d)}}return out.sort((a,b)=>a.localeCompare(b,'vi'))}
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
-function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview()}
+function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview();loadAgDriveSetup()}
+async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Đã thấy thư mục «'+(j.folder_name||'Anh_Luyen_De')+'» trên Drive.':'⚠️ Chưa upload được lên Drive — làm 3 bước sau:';box.innerHTML=`<b>📁 Ảnh TikZ → Google Drive</b><div style="margin-top:6px">${ok}</div><ol style="margin:8px 0 0 18px;padding:0"><li>Mở thư mục <b>${esc(j.folder_name||'Anh_Luyen_De')}</b> trên Google Drive</li><li>Bấm <b>Chia sẻ</b> → thêm email <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Editor</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy</button></li><li>Deploy V307ap → <b>Tạo lại câu</b> có TikZ — cột T sẽ là <code>drive.google.com/thumbnail?id=…</code></li></ol>${j.folder_id?`<div class="muted" style="margin-top:6px;font-size:12px">Folder ID: ${esc(j.folder_id)}</div>`:''}`}catch(e){}}
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
@@ -13936,7 +13969,7 @@ async function aiRepairCurrentQuestion(){
   }
 }
 function setAdminChip(field,value){let el=document.getElementById('edit_'+field);if(el)el.value=value;syncAdminChipGroup(field);if(field==='Dang'){if(normDangFormVal(value)==='Đúng sai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData()));if(typeof renderEditQuestionPreview==='function')renderEditQuestionPreview()}}
-function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let src=normalizeImageSrcClient(el?el.value:'');if(!src){box.innerHTML='<span class="muted" style="font-size:12px">Chưa có link — dán URL Drive/ảnh vào ô trên (Ctrl+V).</span>';return}box.innerHTML=buildQimgHtml(src)}
+function refreshEditHinhAnhPreview(){let box=document.getElementById('edit_HinhAnhPreview');let el=document.getElementById('edit_HinhAnh');if(!box)return;let raw=el?el.value:'';let src=normalizeImageSrcClient(raw);if(!src){box.innerHTML='<span class="muted" style="font-size:12px">Chưa có link — dán URL Drive/ảnh vào ô trên (Ctrl+V).</span>';return}let warn='';if(/^\/static\/latex_assets\//i.test(String(raw||'')))warn='<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-size:12px">⚠ Ảnh đang ở <b>server tạm</b> (mất khi deploy). Chia sẻ thư mục <b>Anh_Luyen_De</b> cho service account rồi <b>tạo lại câu</b> để lên Drive.</div>';box.innerHTML=warn+buildQimgHtml(src)}
 function adminEditFormQuestion(){let q=readQuestionFormData();q.Dang=normDangFormVal(q.Dang||'');q.HinhAnh=normalizeImageSrcClient(q.HinhAnh);return applyResolvedDang(q)}
 function renderEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;let q=adminEditFormQuestion();let dang=q.Dang||'Trắc nghiệm';let head='<div style="font-weight:800;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">👁 Xem trước câu <span class="tag">'+esc(dang)+'</span></div>';let img=q.HinhAnh?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let body=renderRichText(stripImmini(q.CauHoi||''))||'<span class="muted">(Chưa có nội dung câu hỏi)</span>';let opts='';if(dang==='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="opt"><span>'+dsCircleHtml(L)+'</span><span>'+renderRichText(stripOptionPrefix(q[L],L))+'</span></div>'}}else if(dang==='Đúng sai'){for(let L of ['A','B','C','D']){if(!q[L])continue;opts+='<div class="tfrow">'+dsCircleHtml(L)+'<div class="tfStmt">'+renderRichText(q[L])+'</div></div>'}}else if(dang==='Trả lời ngắn'){opts='<div class="shortAnsBox shortAnsCompact"><div class="muted">Đáp số P: <b>'+(renderRichText(q.DapAn||'—'))+'</b>'+(q.SaiSo?' · ±'+esc(q.SaiSo):'')+'</div></div>'}let sol='';if(q.DapAn||q.LoiGiai){let daPart='';if(q.DapAn){if(dang==='Trắc nghiệm')daPart='<div><b>Đáp án:</b> '+formatMcqAnswerBadge(q.DapAn)+'</div>';else if(dang==='Đúng sai')daPart='<div><b>Đáp án:</b> '+formatDsAnswerBadges(q.DapAn)+'</div>';else daPart='<div><b>P:</b> '+renderRichText(q.DapAn)+'</div>'}let lgPart='';if(q.LoiGiai){let lgBody=formatLoigiaiByDang(q.LoiGiai,q,dang);lgPart='<div style="margin-top:6px"><b>Lời giải:</b><br>'+lgBody+'</div>'}sol='<div class="solution" style="margin-top:10px;font-size:13px">'+daPart+lgPart+'</div>'}box.innerHTML=head+'<div class="qbox adminEditPreviewQ">'+body+(splitImg?'':img)+'</div>'+(splitImg?'<div class="adminEditPreviewImg">'+img+'</div>':'')+opts+sol;typeset([box])}
 function toggleEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;box.classList.toggle('hide');let btn=document.getElementById('btnEditTogglePreview');if(btn)btn.textContent=box.classList.contains('hide')?'👁 Bật xem trước':'👁 Ẩn xem trước'}
@@ -15184,9 +15217,11 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> 
         pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
         pix.save(png_path)
         ctx["media"]["resolved"] += 1
-        drive_url = _publish_png_to_drive(png_path, os.path.basename(png_path))
+        drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
         if drive_url:
             return drive_url
+        if drive_err:
+            ctx.setdefault("warnings", []).append({"index": name, "warning": drive_err})
         return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except ImportError:
         pass
@@ -15210,9 +15245,11 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> 
         )
         if os.path.exists(png_path):
             ctx["media"]["resolved"] += 1
-            drive_url = _publish_png_to_drive(png_path, os.path.basename(png_path))
+            drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
             if drive_url:
                 return drive_url
+            if drive_err:
+                ctx.setdefault("warnings", []).append({"index": name, "warning": drive_err})
             return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except Exception as e:
         ctx.setdefault("warnings", []).append({"index": name, "warning": "pdftoppm: " + str(e)[:160]})
@@ -15265,9 +15302,11 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
                     png_path = out_prefix + ".png"
                     if os.path.exists(png_path):
                         ctx["media"]["resolved"] += 1
-                        drive_url = _publish_png_to_drive(png_path, os.path.basename(png_path))
+                        drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
                         if drive_url:
                             return drive_url
+                        if drive_err:
+                            ctx.setdefault("warnings", []).append({"index": idx, "warning": drive_err})
                         return _asset_url_for(ctx["batch"], os.path.basename(png_path))
         except Exception as e:
             ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ local: " + str(e)[:180]})
@@ -19552,6 +19591,32 @@ def api_drive_image(file_ref: str):
         return redirect(_drive_thumbnail_fallback_url(fid), code=302)
 
 
+@app.route("/api/admin/drive-images-setup", methods=["GET"])
+def api_admin_drive_images_setup():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN."}), 403
+    folder_id = ""
+    folder_err = ""
+    try:
+        global _DRIVE_UPLOAD_FOLDER_CACHE
+        _DRIVE_UPLOAD_FOLDER_CACHE = ""
+        folder_id = _drive_upload_folder_id()
+        if not folder_id:
+            folder_err = "Chưa tìm thấy thư mục"
+    except Exception as e:
+        folder_err = str(e)[:200]
+    return jsonify({
+        "ok": bool(folder_id),
+        "service_account_email": _google_service_account_email(),
+        "folder_name": _drive_folder_display_name(),
+        "folder_id": folder_id,
+        "hint": _drive_setup_hint(folder_err) if folder_err else _drive_setup_hint(),
+    })
+
+
 @app.route("/api/tikz/render", methods=["POST"])
 def api_tikz_render():
     """Biên dịch TikZ (hoặc tikzraw:…) thành PNG để hiển thị đồ thị khi làm bài."""
@@ -19711,7 +19776,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ao';
+const CACHE_NAME = 'luyen-de-ai-v307ap';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
