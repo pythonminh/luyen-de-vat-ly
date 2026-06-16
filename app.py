@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307ar_DRIVE_FOLDER_FIX_2026_06_12"
+APP_VERSION = "V307at_DRIVE_PERM_CHECK_2026_06_12"
 
 # =============================================================================
 # BẢN ĐỒ FILE app.py — Ctrl+F các tag để nhảy nhanh
@@ -2254,6 +2254,95 @@ def _drive_direct_image_url(file_id: str) -> str:
     return f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
 
 
+def _drive_api_error_detail(exc: Exception) -> str:
+    if isinstance(exc, urllib.error.HTTPError):
+        try:
+            raw = exc.read().decode("utf-8", errors="replace")
+            data = json.loads(raw)
+            msg = clean((data.get("error") or {}).get("message", ""))
+            if msg:
+                return msg
+            return raw[:400]
+        except Exception:
+            code = getattr(exc, "code", "")
+            return f"HTTP {code}: {getattr(exc, 'reason', exc)}"
+    return str(exc)[:400]
+
+
+def _drive_upload_fix_hint(detail: str) -> str:
+    d = clean(detail).lower()
+    email = _google_service_account_email() or "service account"
+    if "has not been used" in d or "accessnotconfigured" in d or "drive api" in d:
+        return (
+            "Chưa BẬT Google Drive API trong Google Cloud (cùng project với service account). "
+            "Vào console.cloud.google.com → APIs & Services → Library → tìm «Google Drive API» → Enable → đợi 2 phút."
+        )
+    if "storagequota" in d.replace(" ", ""):
+        return "Hết dung lượng Google Drive — xóa bớt file trong folder Anh_Luyen_De."
+    if "403" in d or "forbidden" in d or "insufficient" in d or "not granted" in d:
+        return (
+            f"Folder {DEFAULT_DRIVE_IMAGES_FOLDER_ID}: Google API chưa cho {email} ghi. "
+            "Xóa email khỏi Chia sẻ → thêm lại Biên tập viên → đợi 2 phút. "
+            "Kiểm tra URL folder có đúng ID trên không."
+        )
+    return ""
+
+
+def _drive_folder_inspect(folder_id: str) -> Tuple[Optional[Dict[str, Any]], str]:
+    fid = clean(folder_id)
+    if not fid:
+        return None, "Thiếu folder ID"
+    try:
+        token = _google_access_token()
+        qs = urllib.parse.urlencode({
+            "fields": "id,name,mimeType,shared,capabilities(canAddChildren,canEdit)",
+            "supportsAllDrives": "true",
+        })
+        req = urllib.request.Request(
+            f"https://www.googleapis.com/drive/v3/files/{fid}?{qs}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        caps = data.get("capabilities") or {}
+        return {
+            "id": clean(data.get("id", fid)),
+            "name": clean(data.get("name", "")),
+            "shared": bool(data.get("shared")),
+            "can_add_children": bool(caps.get("canAddChildren")),
+            "can_edit": bool(caps.get("canEdit")),
+        }, ""
+    except Exception as e:
+        return None, _drive_api_error_detail(e)
+
+
+def _drive_sa_folder_role(folder_id: str) -> Tuple[str, str]:
+    """Kiểm tra Google API có thấy service account trên folder không."""
+    email = _google_service_account_email().lower()
+    fid = clean(folder_id)
+    if not email or not fid:
+        return "", "Thiếu service account hoặc folder ID"
+    try:
+        token = _google_access_token()
+        qs = urllib.parse.urlencode({
+            "fields": "permissions(emailAddress,role,type)",
+            "supportsAllDrives": "true",
+            "pageSize": "100",
+        })
+        req = urllib.request.Request(
+            f"https://www.googleapis.com/drive/v3/files/{fid}/permissions?{qs}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        for p in data.get("permissions") or []:
+            if clean(p.get("emailAddress", "")).lower() == email:
+                return clean(p.get("role", "")), ""
+        return "", f"Google API chưa thấy {email} trong quyền folder — xóa rồi chia sẻ lại."
+    except Exception as e:
+        return "", _drive_api_error_detail(e)
+
+
 def _drive_find_folder_by_name(name: str) -> str:
     if not clean(name):
         return ""
@@ -2279,29 +2368,6 @@ def _drive_find_folder_by_name(name: str) -> str:
         return ""
 
 
-def _drive_folder_accessible(folder_id: str) -> bool:
-    fid = clean(folder_id)
-    if not fid:
-        return False
-    try:
-        token = _google_access_token()
-        qs = urllib.parse.urlencode({"fields": "id,mimeType,capabilities", "supportsAllDrives": "true"})
-        req = urllib.request.Request(
-            f"https://www.googleapis.com/drive/v3/files/{fid}?{qs}",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8", errors="replace"))
-        if data.get("mimeType") != "application/vnd.google-apps.folder":
-            return False
-        caps = data.get("capabilities") or {}
-        if "canAddChildren" in caps:
-            return bool(caps.get("canAddChildren"))
-        return True
-    except Exception:
-        return False
-
-
 def _drive_proxy_image_url(file_id: str) -> str:
     """URL ảnh Drive hiển thị được trong <img> (proxy qua server)."""
     fid = extract_drive_file_id(file_id) or clean(file_id)
@@ -2318,38 +2384,26 @@ def _drive_thumbnail_fallback_url(file_id: str) -> str:
 
 
 def _drive_upload_folder_id() -> str:
-    """Thư mục Drive lưu PNG TikZ — ưu tiên env, mặc định tìm Anh_Luyen_De."""
+    """Thư mục Drive lưu PNG TikZ — luôn dùng folder ID cố định (không đoán theo tên)."""
     global _DRIVE_UPLOAD_FOLDER_CACHE
     if _DRIVE_UPLOAD_FOLDER_CACHE:
         return _DRIVE_UPLOAD_FOLDER_CACHE
 
-    folder_url = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_URL", ""))
-    fid = extract_drive_folder_id(folder_url)
-    if fid:
-        _DRIVE_UPLOAD_FOLDER_CACHE = fid
-        return fid
+    fid = extract_drive_folder_id(clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_URL", "")))
+    if not fid:
+        raw = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_ID", ""))
+        fid = extract_drive_folder_id(raw) or raw
+    if not fid:
+        fid = DEFAULT_DRIVE_IMAGES_FOLDER_ID
 
-    cfg = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_ID", "")) or DEFAULT_DRIVE_IMAGES_FOLDER_ID
-    if cfg:
-        fid = extract_drive_folder_id(cfg) or extract_drive_file_id(cfg) or cfg
-        if _drive_folder_accessible(fid):
-            _DRIVE_UPLOAD_FOLDER_CACHE = fid
-            return fid
-
-    default_name = clean(os.environ.get("GOOGLE_DRIVE_IMAGES_FOLDER_NAME", "Anh_Luyen_De"))
-    found = _drive_find_folder_by_name(default_name)
-    if found and _drive_folder_accessible(found):
-        _DRIVE_UPLOAD_FOLDER_CACHE = found
-        return found
-
-    _DRIVE_UPLOAD_FOLDER_CACHE = DEFAULT_DRIVE_IMAGES_FOLDER_ID
-    return _DRIVE_UPLOAD_FOLDER_CACHE
+    _DRIVE_UPLOAD_FOLDER_CACHE = fid
+    return fid
 
 
 def _drive_set_public(file_id: str, token: str) -> None:
     body = json.dumps({"type": "anyone", "role": "reader"}).encode("utf-8")
     req = urllib.request.Request(
-        f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions",
+        f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions?supportsAllDrives=true",
         data=body,
         method="POST",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
@@ -2361,7 +2415,7 @@ def _drive_set_public(file_id: str, token: str) -> None:
 
 
 def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> str:
-    """Upload PNG lên Drive; trả file_id hoặc ''."""
+    """Upload PNG lên Drive; trả file_id hoặc raise RuntimeError."""
     if not png_bytes or not folder_id:
         return ""
     token = _google_access_token()
@@ -2383,8 +2437,11 @@ def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> 
             "Content-Type": f"multipart/related; boundary={boundary}",
         },
     )
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        data = json.loads(resp.read().decode("utf-8", errors="replace"))
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except Exception as e:
+        raise RuntimeError(_drive_api_error_detail(e)) from e
     file_id = clean(data.get("id", ""))
     if file_id:
         _drive_set_public(file_id, token)
@@ -2427,7 +2484,9 @@ def _publish_png_to_drive(png_path: str, filename: str = "") -> Tuple[str, str]:
             return _drive_direct_image_url(file_id), ""
         return "", _drive_setup_hint("Upload Drive thất bại")
     except Exception as e:
-        return "", _drive_setup_hint(f"Upload lỗi: {str(e)[:100]}")
+        detail = _drive_api_error_detail(e)
+        hint = _drive_upload_fix_hint(detail)
+        return "", detail + (f" — {hint}" if hint else "")
 
 
 def _remember_drive_folder_from_url(value: Any) -> None:
@@ -2442,6 +2501,15 @@ def _drive_test_upload() -> Tuple[bool, str]:
     folder = _drive_upload_folder_id()
     if not folder:
         return False, "Chưa có folder ID"
+    info, ierr = _drive_folder_inspect(folder)
+    if ierr:
+        hint = _drive_upload_fix_hint(ierr)
+        return False, ierr + (f" — {hint}" if hint else "")
+    if info and not info.get("can_add_children"):
+        return False, (
+            f"Folder «{info.get('name') or folder}»: service account chưa có quyền ghi. "
+            + (_drive_upload_fix_hint("403 forbidden") or _drive_setup_hint())
+        )
     png = (
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
         b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
@@ -2453,7 +2521,9 @@ def _drive_test_upload() -> Tuple[bool, str]:
             return True, ""
         return False, _drive_setup_hint("Upload thử thất bại")
     except Exception as e:
-        return False, _drive_setup_hint(f"Upload thử: {str(e)[:120]}")
+        detail = _drive_api_error_detail(e)
+        hint = _drive_upload_fix_hint(detail)
+        return False, detail + (f" — {hint}" if hint else "")
 
 
 def _upload_static_latex_image_to_drive(src: str) -> Tuple[str, str]:
@@ -11746,7 +11816,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307ar';
+    window.__LDVL_V='V307at';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -12410,7 +12480,7 @@ function agDbtValues(list){let out=[];for(let x of (list||[])){try{for(let pair 
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(CATALOG||[],'Mon'),mon,'— Chọn môn —');let byMon=(CATALOG||[]).filter(x=>!val('agMon')||x.Mon===val('agMon'));agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=byMon.filter(x=>!val('agLop')||x.Lop===val('agLop'));agSetOptions('agChuong',uniqField(byLop,'Chuong'),chuong,'— Chọn chương —');let byCh=byLop.filter(x=>!val('agChuong')||x.Chuong===val('agChuong'));agSetOptions('agBaiHoc',uniqField(byCh,'BaiHoc'),bai,'— Chọn bài học —');let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=byCh.filter(x=>!val('agBaiHoc')||x.BaiHoc===val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
 function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}renderAiGenPreview();loadAgDriveSetup()}
-async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Upload Drive OK — TikZ tự lên folder khi Lưu.':('⚠️ Upload Drive thất bại'+(j.upload_error?(': '+j.upload_error):''));box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div>${j.ok?'':`<ol style="margin:8px 0 0 18px;padding:0"><li>Mở folder <b>${esc(j.folder_name||'Anh_Luyen_De')}</b> → <b>Chia sẻ</b></li><li>Thêm <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Editor</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy email</button></li><li>Deploy <b>V307ar</b> → Ctrl+Shift+R → tạo lại câu TikZ</li></ol>`}<div class="muted" style="margin-top:6px;font-size:12px">Folder: ${esc(j.folder_id||'')} · Để trống cột T khi dùng TikZ.</div>`}catch(e){}}
+async function loadAgDriveSetup(){let box=document.getElementById('agDriveSetup');if(!box||!USER||!USER.is_admin)return;try{let j=await api('/api/admin/drive-images-setup',{method:'GET'});box.classList.remove('hide');let ok=j.ok?'✅ Upload Drive OK — TikZ tự lên folder khi Lưu.':('⚠️ Upload Drive thất bại');let diag=j.folder_drive_name?`Folder Drive: <b>${esc(j.folder_drive_name)}</b> · ghi được: ${j.can_add_children?'có':'KHÔNG'}${j.sa_role?` · SA: <b>${esc(j.sa_role)}</b>`:(j.sa_role_error?` · SA: <span style="color:#b91c1c">chưa thấy</span>`:'')}`:'';let fix=j.fix_hint?`<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;font-size:13px"><b>Cách sửa:</b> ${esc(j.fix_hint)}</div>`:'';let err=j.upload_error||j.inspect_error||j.sa_role_error?`<div class="muted" style="margin-top:6px;font-size:12px">${esc(j.upload_error||j.inspect_error||j.sa_role_error||'')}</div>`:'';box.innerHTML=`<b>📁 Ảnh TikZ → Drive (cột T tự điền)</b><div style="margin-top:6px">${ok}</div>${diag}${fix}${err}${j.ok?'':`<ol style="margin:8px 0 0 18px;padding:0"><li>Mở <a href="${esc(j.folder_url||'#')}" target="_blank" rel="noopener">${esc(j.folder_name||'Anh_Luyen_De')}</a> → <b>Chia sẻ</b></li><li>Thêm <code style="background:#fef3c7;padding:2px 6px;border-radius:4px">${esc(j.service_account_email||'')}</code> quyền <b>Biên tập viên</b> <button type="button" class="btn2" style="padding:2px 8px;font-size:11px;margin-left:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escAttr(j.service_account_email||'')}').then(()=>alert('Đã copy email'))">Copy email</button></li><li>Deploy <b>V307as</b> → Ctrl+Shift+R</li></ol>`}<div class="muted" style="margin-top:6px;font-size:12px">ID: ${esc(j.folder_id||'')}</div>`}catch(e){}}
 function aiGenPayload(count,offset){let p={Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
@@ -19710,6 +19780,10 @@ def api_admin_drive_images_setup():
     folder_err = ""
     upload_ok = False
     upload_err = ""
+    inspect: Optional[Dict[str, Any]] = None
+    inspect_err = ""
+    sa_role = ""
+    sa_role_err = ""
     try:
         global _DRIVE_UPLOAD_FOLDER_CACHE
         _DRIVE_UPLOAD_FOLDER_CACHE = ""
@@ -19717,17 +19791,27 @@ def api_admin_drive_images_setup():
         if not folder_id:
             folder_err = "Chưa tìm thấy thư mục"
         else:
+            inspect, inspect_err = _drive_folder_inspect(folder_id)
+            sa_role, sa_role_err = _drive_sa_folder_role(folder_id)
             upload_ok, upload_err = _drive_test_upload()
     except Exception as e:
-        folder_err = str(e)[:200]
+        folder_err = _drive_api_error_detail(e)
+    fix_hint = _drive_upload_fix_hint(upload_err or inspect_err or sa_role_err or folder_err)
     return jsonify({
         "ok": bool(upload_ok),
-        "folder_accessible": bool(folder_id),
+        "folder_accessible": bool(inspect),
+        "can_add_children": bool((inspect or {}).get("can_add_children")),
+        "sa_role": sa_role,
+        "sa_role_error": sa_role_err,
+        "folder_drive_name": clean((inspect or {}).get("name", "")),
         "service_account_email": _google_service_account_email(),
         "folder_name": _drive_folder_display_name(),
         "folder_id": folder_id,
+        "folder_url": f"https://drive.google.com/drive/folders/{folder_id}" if folder_id else "",
+        "inspect_error": inspect_err,
         "upload_error": upload_err,
-        "hint": upload_err or _drive_setup_hint(folder_err) if (folder_err or not upload_ok) else _drive_setup_hint(),
+        "fix_hint": fix_hint,
+        "hint": fix_hint or upload_err or inspect_err or _drive_setup_hint(folder_err) if (folder_err or not upload_ok) else _drive_setup_hint(),
     })
 
 
@@ -19890,7 +19974,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ar';
+const CACHE_NAME = 'luyen-de-ai-v307at';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
