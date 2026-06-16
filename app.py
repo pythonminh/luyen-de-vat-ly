@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bd_ASSISTANT_STEPS_ANSWER_DANG_2026_06_12"
+APP_VERSION = "V307bf_ASSISTANT_REAL_SOLVE_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -132,6 +132,16 @@ DEFAULT_GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
 DEFAULT_OPENAI_HINT_MODEL = "gpt-4.1-mini"
 DEFAULT_OPENAI_ADMIN_MODEL = "gpt-4o"
 DEFAULT_OPENAI_VISION_MODEL = "gpt-4o"
+DEFAULT_ASSISTANT_GEMINI_MODEL = (
+    str(os.environ.get("ASSISTANT_GEMINI_MODEL", "")).strip() or DEFAULT_GEMINI_ADMIN_MODEL
+)
+ASSISTANT_NOTE_MAX_TOKENS = max(
+    800, min(int(os.environ.get("ASSISTANT_NOTE_MAX_TOKENS", "1200") or 1200), 2000)
+)
+ASSISTANT_CHAT_MAX_TOKENS = max(
+    500, min(int(os.environ.get("ASSISTANT_CHAT_MAX_TOKENS", "850") or 850), 1500)
+)
+ASSISTANT_HTTP_MAX_SEC = max(22, min(int(os.environ.get("ASSISTANT_HTTP_MAX_SEC", "55") or 55), 90))
 AI_IMAGE_FETCH_TIMEOUT = max(6, min(int(os.environ.get("AI_IMAGE_FETCH_TIMEOUT", "12") or 12), 30))
 AI_IMAGE_MAX_BYTES = max(500_000, min(int(os.environ.get("AI_IMAGE_MAX_BYTES", "4000000") or 4000000), 8_000_000))
 INFOGRAPHIC_HTTP_MAX_SEC = max(35, min(int(os.environ.get("INFOGRAPHIC_HTTP_MAX_SEC", "58") or 58), 120))
@@ -416,8 +426,28 @@ def assistant_question_from_session(
 
 
 def assistant_fallback_note(q: Dict[str, Any]) -> str:
+    return assistant_sheet_fallback_note(q)
+
+
+def assistant_sheet_fallback_note(q: Dict[str, Any]) -> str:
+    """Fallback bám Sheet — ưu tiên lời giải cột R thay vì mẫu chung chung."""
+    lg = clean(q.get("LoiGiai", ""))
     dang = effective_dang(q)
     code = assistant_dang_code(dang)
+    ans = assistant_format_final_answer(q)
+    cau = clean(q.get("CauHoi", ""))
+    if lg:
+        lg_show = lg[:2200] + ("…" if len(lg) > 2200 else "")
+        parts = [
+            f"1. Đọc lại đề ({code}):",
+            cau or "(xem đề trên)",
+            "",
+            f"2. Các bước làm (theo lời giải Sheet cột R):",
+            lg_show,
+            "",
+            f"3. Đáp án cuối cùng: {ans}",
+        ]
+        return "\n".join(parts)
     kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
     cond = "MXĐ, miền giá trị, đơn vị góc" if kind == "math" else "đổi đơn vị SI, điều kiện áp dụng"
     steps = (
@@ -425,15 +455,284 @@ def assistant_fallback_note(q: Dict[str, Any]) -> str:
         if kind == "math"
         else "Gạch dữ kiện → đổi đơn vị nếu cần → áp dụng công thức → kiểm tra"
     )
-    ans = assistant_format_final_answer(q)
     return "\n".join([
-        f"1. Đọc lại đề ({code}): {clean(q.get('CauHoi', ''))[:200] or '(xem đề trên)'}…",
+        f"1. Đọc lại đề ({code}): {cau[:200] or '(xem đề trên)'}{'…' if len(cau) > 200 else ''}",
         f"2. Dạng bài: {clean(q.get('DangBaiTap', '')) or 'nhận dạng theo chương bài'}",
         f"3. Các bước làm: {steps}.",
         f"4. Lưu ý: {cond}.",
         "5. Bẫy dễ sai: đọc vội đề, bỏ điều kiện, nhầm loại câu TN/Đ/S/TLN.",
         f"6. Đáp án cuối cùng: {ans}",
     ])
+
+
+def assistant_ensure_final_answer_line(txt: str, q: Dict[str, Any]) -> str:
+    """Chốt dòng đáp án cuối khớp Sheet cột P."""
+    t = clean(txt)
+    if not t:
+        return t
+    ans = assistant_format_final_answer(q)
+    if not ans or ans.startswith("(chưa"):
+        return t
+    final_line = f"Đáp án cuối cùng: {ans}"
+    pat = re.compile(r"(?im)^\s*đáp\s*án\s*cuối\s*cùng\s*[:：].*$")
+    kept = [ln for ln in t.splitlines() if not pat.match(ln)]
+    body = "\n".join(kept).rstrip()
+    return f"{body}\n\n{final_line}" if body else final_line
+
+
+def assistant_gemini_models(cfg: Optional[Dict[str, Any]] = None) -> List[str]:
+    cfg = cfg or ai_runtime_config()
+    primary = (
+        clean(cfg.get("gemini_model"))
+        or clean(os.environ.get("ASSISTANT_GEMINI_MODEL", ""))
+        or DEFAULT_ASSISTANT_GEMINI_MODEL
+    )
+    raw = [primary, DEFAULT_ASSISTANT_GEMINI_MODEL, DEFAULT_GEMINI_ADMIN_MODEL] + GEMINI_HINT_MODEL_FALLBACKS
+    out: List[str] = []
+    seen: set = set()
+    for m in raw:
+        m = clean(m)
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+def assistant_provider_try_order() -> List[str]:
+    """SVIP ưu tiên GPT pool server (nếu có); VIP Gemini flash rồi GPT dự phòng."""
+    oa_pool = bool(load_ai_keys_from_env("OPENAI"))
+    if is_svip() and oa_pool:
+        return ["OPENAI", "GEMINI"]
+    if oa_pool:
+        return ["GEMINI", "OPENAI"]
+    return ["GEMINI"]
+
+
+def assistant_run_vip_ai(
+    q: Dict[str, Any],
+    sys_prompt: str,
+    user_prompt: str,
+    *,
+    max_tokens: int,
+    temp: float,
+) -> Tuple[str, int, str, str, str]:
+    """Gọi AI cho VIP/SVIP: model mạnh hơn flash-lite, có vision, GPT dự phòng."""
+    cfg = ai_runtime_config()
+    vision = prepare_question_vision(q)
+    img_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
+    img_mime = vision.get("image_mime", "") if vision.get("vision_ready") else ""
+    sys_use = sys_prompt
+    if img_b64:
+        sys_use += " Có ẢNH MINH HỌA đính kèm — đọc hình/đồ thị trước khi phân tích."
+
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+    model_openai = clean(cfg.get("openai_model") or DEFAULT_OPENAI_HINT_MODEL) or DEFAULT_OPENAI_HINT_MODEL
+    oa_model = (
+        clean(os.environ.get("OPENAI_VISION_MODEL", DEFAULT_OPENAI_VISION_MODEL))
+        if img_b64
+        else model_openai
+    )
+    gemini_models = assistant_gemini_models(cfg)
+    if img_b64:
+        gv = clean(os.environ.get("GEMINI_VISION_MODEL", DEFAULT_GEMINI_VISION_MODEL)) or DEFAULT_GEMINI_VISION_MODEL
+        gemini_models = [gv] + [m for m in gemini_models if m != gv]
+
+    last_error = ""
+
+    def _try_gemini() -> Tuple[str, int, str, str]:
+        nonlocal last_error
+        for idx, api_key in enumerate(gemini_keys, start=1):
+            for gm in gemini_models:
+                txt, _finish, err = _gemini_hint_call(
+                    api_key,
+                    gm,
+                    sys_use,
+                    user_prompt,
+                    max_tokens,
+                    temp,
+                    timeout=40 if img_b64 else 34,
+                    image_b64=img_b64,
+                    image_mime=img_mime,
+                )
+                if err:
+                    last_error = err
+                    continue
+                if clean(txt):
+                    return clean(txt), idx, "GEMINI", gm
+        return "", 0, "GEMINI", ""
+
+    def _try_openai() -> Tuple[str, int, str, str]:
+        nonlocal last_error
+        for idx, api_key in enumerate(openai_keys, start=1):
+            txt, _finish, err = _openai_chat_call(
+                api_key,
+                oa_model,
+                sys_use,
+                user_prompt,
+                max_tokens,
+                temp,
+                timeout=42 if img_b64 else 36,
+                image_b64=img_b64,
+                image_mime=img_mime,
+            )
+            if err:
+                last_error = err
+                if _is_quota_or_rate_error(err):
+                    break
+                continue
+            if clean(txt):
+                return clean(txt), idx, "OPENAI", oa_model
+        return "", 0, "OPENAI", oa_model
+
+    for prov in assistant_provider_try_order():
+        if prov == "GEMINI" and gemini_keys:
+            txt, idx, used, model = _try_gemini()
+            if txt:
+                return txt, idx, used, model, ""
+        elif prov == "OPENAI" and openai_keys:
+            txt, idx, used, model = _try_openai()
+            if txt:
+                return txt, idx, used, model, ""
+
+    return "", 0, "", "", last_error or "AI chưa phản hồi"
+
+
+def assistant_compact_sys_prompt(q: Dict[str, Any], *, chat: bool = False) -> str:
+    kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
+    dcode = assistant_dang_code(effective_dang(q))
+    subject = "Toán" if kind == "math" else ("Vật lí" if kind == "physics" else "THPT")
+    role = "trả lời hỏi thêm" if chat else "giải bài"
+    return (
+        f"Bạn là thầy Minh dạy {subject}. {role.capitalize()} câu {dcode}: "
+        "đọc đề, các bước tính CỤ THỂ (ghi công thức, thay số từ đề), chốt đáp án cuối đúng loại "
+        f"{dcode}. Tiếng Việt. Công thức trong $...$."
+    )
+
+
+def build_ai_assistant_compact_prompt(
+    q: Dict[str, Any],
+    user_answer: Any = "",
+    *,
+    chat_message: str = "",
+    messages: Any = None,
+) -> str:
+    dang = effective_dang(q)
+    code = assistant_dang_code(dang)
+    ref = assistant_format_final_answer(q)
+    block = build_ai_question_block(
+        q, user_answer, include_sheet_answer=True, include_loigiai=False
+    )
+    if dang == "Trắc nghiệm":
+        ans_rule = "Đáp án cuối cùng: một chữ A/B/C/D"
+    elif dang == "Đúng sai":
+        ans_rule = "Đáp án cuối cùng: A=Đúng · B=Sai · … (đủ các ý có trong đề)"
+    else:
+        ans_rule = "Đáp án cuối cùng: số hoặc biểu thức (kèm đơn vị nếu có)"
+    lg = clean(q.get("LoiGiai", ""))
+    lg_part = ""
+    if lg and not chat_message:
+        lg_part = (
+            "\n\nLời giải Sheet (cột R) — trình bày lại các bước, không bỏ phép tính:\n"
+            + (lg[:1600] + ("…" if len(lg) > 1600 else ""))
+        )
+    lines = [
+        f"Giải câu {code} — BẮT BUỘC có bước tính từ số trong đề (không chỉ liệt kê chung chung).",
+        "",
+        "Bố cục:",
+        "1. Đọc lại đề (1–2 câu)",
+        "2. Các bước làm: Bước 1…; Bước 2…; Bước 3… (công thức + thay số)",
+        f"3. {ans_rule} — khớp Sheet: {ref}",
+        "",
+        block,
+    ]
+    if lg_part:
+        lines.append(lg_part)
+    if chat_message:
+        hist_lines: List[str] = []
+        if isinstance(messages, list):
+            for it in messages[-6:]:
+                if not isinstance(it, dict):
+                    continue
+                role = clean(it.get("role", ""))
+                text = clean(it.get("text", it.get("content", "")))[:500]
+                if not text:
+                    continue
+                if role == "user":
+                    hist_lines.append(f"Học sinh: {text}")
+                elif role in ("assistant", "bot"):
+                    hist_lines.append(f"Trợ lý: {text}")
+        lines.extend(["", "LỊCH SỬ CHAT:", "\n".join(hist_lines) if hist_lines else "(chưa có)"])
+        lines.extend(["", "Học sinh hỏi thêm:", clean(chat_message)[:800]])
+    return "\n".join(lines)
+
+
+def assistant_no_keys_message(q: Dict[str, Any]) -> str:
+    tail = assistant_sheet_fallback_note(q)
+    return "\n".join([
+        "⚠️ Chưa có key AI — không giải tự động được.",
+        "VIP: mục lục → 🔑 Key AI của tôi → dán key Gemini (AIza...) từ Google AI Studio → Lưu.",
+        "",
+        tail,
+    ])
+
+
+def assistant_wrap_fallback_note(q: Dict[str, Any], ai_error: str) -> str:
+    body = assistant_sheet_fallback_note(q)
+    err = clean(ai_error) or "AI không phản hồi"
+    if clean(q.get("LoiGiai", "")):
+        head = f"⚠️ AI tạm lỗi ({err[:120]}). Đang hiển thị lời giải Sheet:"
+    else:
+        head = (
+            f"⚠️ AI chưa giải được ({err[:120]}). "
+            "Đang hiển thị khung tạm — bấm 🔄 hoặc nạp key Gemini trong 🔑 Key AI của tôi."
+        )
+    return head + "\n\n" + body
+
+
+def assistant_invoke_ai(
+    q: Dict[str, Any],
+    user_answer: Any,
+    *,
+    chat: bool = False,
+    chat_message: str = "",
+    messages: Any = None,
+    max_tokens: int,
+) -> Tuple[str, int, str, str, str]:
+    """Thử prompt đầy đủ rồi prompt gọn; trả về (text, key_idx, provider, model, error)."""
+    cfg = ai_runtime_config()
+    if not cfg.get("has_keys"):
+        return "", 0, "FALLBACK", "", "Chưa có key AI (GEMINI_API_KEY hoặc key cá nhân VIP)"
+
+    if chat:
+        sys_full = assistant_sys_prompt_for_question(q, chat=True)
+        user_full = build_ai_assistant_chat_prompt(q, chat_message, messages, user_answer)
+        sys_compact = assistant_compact_sys_prompt(q, chat=True)
+        user_compact = build_ai_assistant_compact_prompt(
+            q, user_answer, chat_message=chat_message, messages=messages
+        )
+    else:
+        sys_full = assistant_sys_prompt_for_question(q, chat=False)
+        user_full = build_ai_assistant_note_prompt(q, user_answer)
+        sys_compact = assistant_compact_sys_prompt(q, chat=False)
+        user_compact = build_ai_assistant_compact_prompt(q, user_answer)
+
+    sanitize = _sanitize_assistant_chat_text if chat else _sanitize_assistant_note_text
+    attempts = [
+        (sys_full, user_full, max_tokens, 0.12),
+        (sys_compact, user_compact, min(max_tokens, 1100), 0.1),
+    ]
+    last_error = ""
+    for sys_p, user_p, mtok, temp in attempts:
+        txt, idx, used, model, err = assistant_run_vip_ai(
+            q, sys_p, user_p, max_tokens=mtok, temp=temp
+        )
+        last_error = err or last_error
+        txt = sanitize(txt)
+        if txt:
+            txt = assistant_ensure_final_answer_line(txt, q)
+            return txt, idx, used, model, ""
+    return "", 0, "", "", last_error
 
 
 def assistant_fallback_chat(q: Dict[str, Any]) -> str:
@@ -7357,7 +7656,11 @@ def gemini_prompt_brand_2026() -> str:
 
 
 def build_ai_question_block(
-    q: Dict[str, Any], user_answer: Any, *, include_sheet_answer: bool = True
+    q: Dict[str, Any],
+    user_answer: Any,
+    *,
+    include_sheet_answer: bool = True,
+    include_loigiai: bool = True,
 ) -> str:
     dang = effective_dang(q)
     mon = effective_question_mon(q)
@@ -7409,12 +7712,19 @@ def build_ai_question_block(
             ]
         )
     if include_sheet_answer:
-        lines.extend(
-            [
-                f"Đáp án chuẩn tham chiếu nội bộ (Sheet cột P): {clean(q.get('DapAn', ''))}",
-                f"Lời giải hiện có (Sheet cột R): {clean(q.get('LoiGiai', ''))}",
-            ]
-        )
+        sheet_lines = [
+            f"Đáp án chuẩn tham chiếu nội bộ (Sheet cột P): {clean(q.get('DapAn', ''))}",
+        ]
+        saiso = clean(q.get("SaiSo", ""))
+        if saiso:
+            sheet_lines.append(f"Sai số cho phép (Sheet cột Q): {saiso}")
+        if include_loigiai:
+            sheet_lines.append(f"Lời giải hiện có (Sheet cột R): {clean(q.get('LoiGiai', ''))}")
+        else:
+            sheet_lines.append(
+                "(Không gửi lời giải Sheet — tự suy luận từng bước từ đề; đáp án cuối khớp cột P.)"
+            )
+        lines.extend(sheet_lines)
     else:
         lines.append("(Không tiết lộ đáp án Sheet — học sinh tự làm.)")
     return "\n".join(lines)
@@ -13502,7 +13812,7 @@ function openLearningPanel(kind){kind='method';if(LEARNING_OPEN_KIND===kind){if(
 function toggleAiAssistPanel(){if(LEARNING_OPEN_KIND==='assistant'){closeLearningPanel();return}if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành VIP / SVIP / ADMIN.');return}LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='assistant';renderAiAssistPanel();let st=ASSISTANT_BY_Q[CUR]||{};if(!st.note&&!ASSISTANT_LOADING)requestAssistantNote()}
 function aiAssistTitleHtml(){return '<div class="learningTitleRow aiAssistTitleRow"><b>🤖 Trợ lý AI thầy Minh</b><div class="learningTitleBtns"><button type="button" class="learningCloseBtn" onclick="closeLearningPanel(event)">✕</button></div></div>'}
 function syncAiAssistChatUi(st){st=st||ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};let inp=document.getElementById('aiChatInput'),btn=document.getElementById('aiChatSend'),msgs=document.getElementById('aiChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;let lock=ASSISTANT_LOADING&&!st.note;inp.disabled=!!lock;inp.placeholder=lock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…'}if(btn)btn.disabled=!!ASSISTANT_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
-function renderAiAssistPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='assistant')return;let st=ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};ASSISTANT_BY_Q[CUR]=st;let oldInp=document.getElementById('aiChatInput');if(oldInp)st.chatDraft=oldInp.value;let noteHtml='';if(ASSISTANT_LOADING&&!st.note)noteHtml='<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi Trợ lý AI…</b></div></div>';else if(st.note){noteHtml='<div class="aiAssistPanel"><b>💡 Hướng dẫn làm bài</b><div class="hintMath" style="margin-top:6px">'+formatHintDisplay(st.note)+'</div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối (TN / Đ/S / TLN).</div>'+(ASSISTANT_LOADING?'':'<div style="margin-top:6px"><button type="button" class="btn2" style="font-size:11px!important;padding:4px 8px!important" onclick="requestAssistantNote()">🔄 Lấy lại</button></div>')+'</div>'}else if(!ASSISTANT_LOADING){noteHtml='<div class="muted" style="margin-top:4px;line-height:1.45">Chưa có hướng dẫn — bấm 🔄 bên dưới để thử lại.</div><div style="margin-top:6px"><button type="button" class="btn2 aiAssistBtn" onclick="requestAssistantNote()">🔄 Thử lại</button></div>'}let msgs=(st.messages||[]).map(m=>'<div class="aiMsg aiMsg-'+(m.role==='user'?'user':'bot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');let chatLock=ASSISTANT_LOADING&&!st.note;let chatBox='<div class="aiChatBox"><div class="aiChatMsgs" id="aiChatMsgs">'+(msgs||'<div class="muted">Hỏi thêm: «Bước 1 em làm sao?», «Đáp án là gì?»</div>')+'</div><div class="aiChatForm"><textarea id="aiChatInput" class="aiChatInput" rows="2" placeholder="'+(chatLock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…')+'"'+(chatLock?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendAssistantChat()}"></textarea><button type="button" id="aiChatSend" class="aiChatSend" onclick="sendAssistantChat()"'+(ASSISTANT_LOADING?' disabled':'')+'>Gửi</button></div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối theo TN / Đ/S / TLN.</div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','aiAssistOpen');hb.classList.remove('learningCollapsed');hb.setAttribute('data-ai-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+aiAssistTitleHtml()+'<div class="learningPanelBody aiAssistBody">'+noteHtml+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncAiAssistChatUi(st)}
+function renderAiAssistPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='assistant')return;let st=ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};ASSISTANT_BY_Q[CUR]=st;let oldInp=document.getElementById('aiChatInput');if(oldInp)st.chatDraft=oldInp.value;let noteHtml='';if(ASSISTANT_LOADING&&!st.note)noteHtml='<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi Trợ lý AI…</b></div></div>';else if(st.note){noteHtml='<div class="aiAssistPanel"><b>💡 Hướng dẫn làm bài</b><div class="hintMath" style="margin-top:6px">'+formatHintDisplay(st.note)+'</div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối (TN / Đ/S / TLN).</div>'+(st.is_fallback?'<div class="aiAssistWarn" style="color:#b45309;margin-top:6px">⚠️ AI chưa giải tự động'+(st.ai_error?(' — '+esc(st.ai_error)):'')+'. Nạp key Gemini hoặc bấm 🔄.</div>':(st.provider_used&&st.provider_used!=='FALLBACK'?'<div class="muted" style="font-size:11px;margin-top:4px">AI: '+esc(st.provider_used)+(st.ai_model?' · '+esc(st.ai_model):'')+'</div>':''))+(ASSISTANT_LOADING?'':'<div style="margin-top:6px"><button type="button" class="btn2" style="font-size:11px!important;padding:4px 8px!important" onclick="requestAssistantNote()">🔄 Lấy lại</button></div>')+'</div>'}else if(!ASSISTANT_LOADING){noteHtml='<div class="muted" style="margin-top:4px;line-height:1.45">Chưa có hướng dẫn — bấm 🔄 bên dưới để thử lại.</div><div style="margin-top:6px"><button type="button" class="btn2 aiAssistBtn" onclick="requestAssistantNote()">🔄 Thử lại</button></div>'}let msgs=(st.messages||[]).map(m=>'<div class="aiMsg aiMsg-'+(m.role==='user'?'user':'bot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');let chatLock=ASSISTANT_LOADING&&!st.note;let chatBox='<div class="aiChatBox"><div class="aiChatMsgs" id="aiChatMsgs">'+(msgs||'<div class="muted">Hỏi thêm: «Bước 1 em làm sao?», «Đáp án là gì?»</div>')+'</div><div class="aiChatForm"><textarea id="aiChatInput" class="aiChatInput" rows="2" placeholder="'+(chatLock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…')+'"'+(chatLock?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendAssistantChat()}"></textarea><button type="button" id="aiChatSend" class="aiChatSend" onclick="sendAssistantChat()"'+(ASSISTANT_LOADING?' disabled':'')+'>Gửi</button></div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối theo TN / Đ/S / TLN.</div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','aiAssistOpen');hb.classList.remove('learningCollapsed');hb.setAttribute('data-ai-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+aiAssistTitleHtml()+'<div class="learningPanelBody aiAssistBody">'+noteHtml+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncAiAssistChatUi(st)}
 function renderLearningField(label,val){if(!String(val||'').trim())return '';return '<div style="margin-top:8px"><b>'+esc(label)+'</b><div class="learningItem hintMath">'+formatHintDisplay(val)+'</div></div>'}
 function renderLearningItem(kind,it){it=it||{};let head=kind==='method'?esc(it.TenPhuongPhap||it.DangBaiTap||'Phương pháp'):esc(it.TieuDe||'Lý thuyết');let body='';if(kind==='theory'){body=[renderLearningField('Lý thuyết SGK',it.LyThuyet),renderLearningField('Tóm tắt',it.NoiDungTomTat),renderLearningField('Kiến thức trọng tâm',it.KienThucTrongTam),renderLearningField('Công thức',it.CongThuc),renderLearningField('Đơn vị',it.DonVi),renderLearningField('Lưu ý',it.LuuY),renderLearningField('Sai lầm thường gặp',it.SaiLamThuongGap),renderLearningField('Ví dụ mẫu',it.ViDuMau)].join('')}else{body=[renderLearningField('Dấu hiệu nhận biết',it.DauHieuNhanBiet),renderLearningField('Các bước giải',it.CacBuocGiai),renderLearningField('Công thức sử dụng',it.CongThucSuDung),renderLearningField('Mẹo nhanh',it.MeoNhanh),renderLearningField('Lỗi sai thường gặp',it.LoiSaiThuongGap),renderLearningField('Ví dụ mẫu',it.ViDuMau)].join('')}return '<div class="learningItem" style="margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)"><b>'+head+'</b>'+body+'</div>'}
 function theoryLearningLatexHtml(q,items){let item=exactTheoryLearningItem(items||[],q);let src='';if(item){src=normalizeTheoryLatexSourceClient(item.NoiDungLaTeX||'');if(!src&&/\\begin\s*\{\s*(dn|note|vidu)/i.test(String(item.LyThuyet||'')))src=normalizeTheoryLatexSourceClient(item.LyThuyet);if(!src)src=normalizeTheoryLatexSourceClient(theorySourceFromLegacyTheoryItem(item))}if(!src)return '';let actions=USER.is_admin?'<div class="dangTheoryActions" style="margin:0 0 10px"><button type="button" class="btn2" onclick="openTheoryLearningEditor(event)">✏️ Soạn / sửa khung Lý thuyết</button></div>':'';return actions+'<div class="learningTheoryLatex">'+renderTheoryLatexBlocks(src)+'</div>'}function methodLearningLatexHtml(q,entry){
@@ -13552,8 +13862,8 @@ function renderLearningPanel(kind,items,meta){
   typesetQuizMath().then(()=>{let b=document.querySelector('#hintBox .learningPanelBody');if(b)b.scrollTop=0});
 }
 async function loadLearningPanelContent(kind,force){kind='method';let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!==kind)return;let q=applyResolvedDang(QUESTIONS[CUR]||{});let cacheKey=learningCacheKey(kind,q);let title=kind==='method'?'🧭 Phương pháp giải':'📚 Lý thuyết';if(!force&&LEARNING_CACHE[cacheKey]){if(kind==='method'){let cached=LEARNING_CACHE[cacheKey],items=cached.items||[];if(!DANG_THEORY_CACHE[dangTheoryKey(q)])DANG_THEORY_CACHE[dangTheoryKey(q)]={item:exactDangTheoryItem(items,q),meta:cached.meta||{}};hideDangTheoryHost()}renderLearningPanel(kind,LEARNING_CACHE[cacheKey].items||[],LEARNING_CACHE[cacheKey].meta||{});return}if(LEARNING_LOADING)return;LEARNING_LOADING=kind;hb.classList.remove('hide');hb.classList.add('learningOpen');hb.classList.remove('hintBoxLoading');hb.classList.toggle('learningCollapsed',false);hb.innerHTML='<div class="learningPanelShell">'+learningPanelTitleHtml(title)+'<div class="learningPanelBody"><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang tải học liệu…</b></div></div></div></div>';try{let body={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||''};if(kind==='method')body.DangBaiTap=q.DangBaiTap||'';let url=kind==='method'?'/api/learning/method':'/api/learning/theory';let j=await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});LEARNING_CACHE[cacheKey]={items:j.items||[],meta:j};if(kind==='method'){let entry={item:exactDangTheoryItem(j.items||[],q),meta:j};DANG_THEORY_CACHE[dangTheoryKey(q)]=entry;hideDangTheoryHost();if(j.similarity_report)DANG_SIMILARITY_CACHE[dangSimilarityCacheKey(q)]=j.similarity_report}if(LEARNING_OPEN_KIND===kind)renderLearningPanel(kind,j.items||[],j)}catch(e){if(LEARNING_OPEN_KIND===kind)hb.innerHTML='<div class="learningPanelShell">'+learningPanelTitleHtml(title)+'<div class="learningPanelBody"><div class="muted" style="margin-top:8px">Không tải được học liệu: '+esc(e.message||e)+'</div></div></div>'}finally{LEARNING_LOADING=false}}
-async function requestAssistantNote(){if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành VIP / SVIP / ADMIN.');return}if(ASSISTANT_LOADING)return;saveCurrent();let qIdx=CUR;ASSISTANT_LOADING=true;renderAiAssistPanel();try{let noteBody={sid:SID,index:qIdx,answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-note',noteBody):await api('/api/ai/assistant-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(noteBody)});let st=ASSISTANT_BY_Q[qIdx]||{messages:[]};st.note=j.note||'';ASSISTANT_BY_Q[qIdx]=st;if(CUR===qIdx)renderAiAssistPanel()}catch(e){alert('Không gọi được Trợ lý AI: '+(e.message||e))}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
-async function sendAssistantChat(){if(!USER.can_ai_hint)return;if(ASSISTANT_LOADING)return;let inp=document.getElementById('aiChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=ASSISTANT_BY_Q[qIdx]||{note:'',messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';ASSISTANT_BY_Q[qIdx]=st;ASSISTANT_LOADING=true;syncAiAssistChatUi(st);try{let chatBody={sid:SID,index:qIdx,message:msg,messages:st.messages.slice(0,-1),answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-chat',chatBody):await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});st.messages.push({role:'assistant',text:j.reply||''});ASSISTANT_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'❌ '+(e.message||e)});ASSISTANT_BY_Q[qIdx]=st}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
+async function requestAssistantNote(){if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành VIP / SVIP / ADMIN.');return}if(ASSISTANT_LOADING)return;saveCurrent();let qIdx=CUR;ASSISTANT_LOADING=true;renderAiAssistPanel();try{let noteBody={sid:SID,index:qIdx,answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-note',noteBody):await api('/api/ai/assistant-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(noteBody)});let st=ASSISTANT_BY_Q[qIdx]||{messages:[]};st.note=j.note||'';st.provider_used=j.provider_used||'';st.ai_model=j.model||'';st.ai_error=j.ai_error||'';st.is_fallback=String(j.provider_used||'').toUpperCase()==='FALLBACK';ASSISTANT_BY_Q[qIdx]=st;if(CUR===qIdx)renderAiAssistPanel()}catch(e){alert('Không gọi được Trợ lý AI: '+(e.message||e))}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
+async function sendAssistantChat(){if(!USER.can_ai_hint)return;if(ASSISTANT_LOADING)return;let inp=document.getElementById('aiChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=ASSISTANT_BY_Q[qIdx]||{note:'',messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';ASSISTANT_BY_Q[qIdx]=st;ASSISTANT_LOADING=true;syncAiAssistChatUi(st);try{let chatBody={sid:SID,index:qIdx,message:msg,messages:st.messages.slice(0,-1),answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-chat',chatBody):await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});st.messages.push({role:'assistant',text:j.reply||''});st.provider_used=j.provider_used||st.provider_used||'';st.ai_error=j.ai_error||'';st.is_fallback=String(j.provider_used||'').toUpperCase()==='FALLBACK';ASSISTANT_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'❌ '+(e.message||e)});ASSISTANT_BY_Q[qIdx]=st}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
 function dangSimilarityCacheKey(q){q=q||{};return [q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].map(x=>normText(String(x||''))).join('|')}
 async function loadDangSimilarityReport(q,force,withAi){if(!USER.is_admin||!q||!String(q.DangBaiTap||'').trim())return null;let key=dangSimilarityCacheKey(q);if(!force&&DANG_SIMILARITY_CACHE[key]&&!withAi)return DANG_SIMILARITY_CACHE[key];if(DANG_SIMILARITY_LOADING&&!force)return DANG_SIMILARITY_CACHE[key]||null;DANG_SIMILARITY_LOADING=true;try{let body={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',MaDe:q.MaDe||CURRENT_MADE||'',ID:q.ID||'',with_ai:!!withAi};let j=withAi?await adminApiPost('/api/admin/dang-similarity',body):await api('/api/admin/dang-similarity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});DANG_SIMILARITY_CACHE[key]=j;return j}catch(e){return {ok:false,error:e.message||String(e),summary:'Không phân tích được: '+(e.message||e)}}finally{DANG_SIMILARITY_LOADING=false}}
 function renderDangSimilarityWarnHtml(report,q){if(!report||!USER.is_admin)return '';let warns=(report.current_warnings&&report.current_warnings.length)?report.current_warnings:[];if(!warns.length&&report.pair_count>0){warns=(report.pairs||[]).slice(0,4).map(p=>p.suggestion||'')}if(!warns.length&&!report.pair_count)return '';let head=report.pair_count?('<b>⚠️ Trùng lặp trong dạng ≥70%</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>'):('<b>✅ Đa dạng trong dạng</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>');let list=warns.length?('<ul>'+warns.slice(0,5).map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'):'';let ai=report.ai_advice?('<div class="dangSimAi"><b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(report.ai_advice)+'</div>'):'';let btn=report.pair_count?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="adminAnalyzeDangSimilarity(false)">🗑️ Xóa/gộp trùng</button><button type="button" class="btn2" onclick="adminAnalyzeDangSimilarity(true)">🤖 Gợi ý AI</button></div>':'';return '<div class="dangSimWarn">'+head+list+ai+btn+'</div>'}
@@ -17002,7 +17312,9 @@ def _sanitize_assistant_note_text(txt: Any) -> str:
 
 
 def build_ai_assistant_note_prompt(q: Dict[str, Any], user_answer: Any = "") -> str:
-    block = build_ai_question_block(q, user_answer, include_sheet_answer=True)
+    block = build_ai_question_block(
+        q, user_answer, include_sheet_answer=True, include_loigiai=False
+    )
     dang = effective_dang(q)
     dang_bt = clean(q.get("DangBaiTap", "")) or "chưa gán"
     kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
@@ -17025,6 +17337,7 @@ def build_ai_assistant_note_prompt(q: Dict[str, Any], user_answer: Any = "") -> 
         "- Được nêu công thức, thay số từng bước, lưu ý " + unit_note + " và bẫy dễ sai.",
         "- Cuối bài BẮT BUỘC có dòng «Đáp án cuối cùng: …» khớp đáp án Sheet cột P.",
         f"- Đáp án tham chiếu Sheet (cột P): {ref_ans}",
+        "- KHÔNG bịa đáp án — suy luận từ đề bài và phương án; nếu không chắc thì nêu bước kiểm tra.",
         "- Nếu có hình/đồ thị: đọc trục, giao điểm, cực trị, đơn vị trong hình.",
         "- Công thức đặt trong $...$ khi cần.",
         "",
@@ -17045,20 +17358,16 @@ def ai_assistant_note_from_provider(
     allow_gpt_fallback: bool = False,
 ) -> Tuple[str, int, str, str, str]:
     cfg = ai_runtime_config()
-    openai_keys = load_ai_keys("OPENAI")
-    gemini_keys = load_ai_keys("GEMINI")
-    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
-    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
-    sys_prompt = assistant_sys_prompt_for_question(q, chat=False)
-    user_prompt = build_ai_assistant_note_prompt(q, user_answer)
     last_error = ""
 
     if is_admin():
+        sys_prompt = assistant_sys_prompt_for_question(q, chat=False)
+        user_prompt = build_ai_assistant_note_prompt(q, user_answer)
         try:
             txt, used, model, idx = admin_ai_call_text(
                 sys_prompt,
                 user_prompt,
-                max_tokens=1000,
+                max_tokens=ASSISTANT_NOTE_MAX_TOKENS,
                 temp=0.15,
                 timeout=35,
                 force_provider=force_provider,
@@ -17066,47 +17375,28 @@ def ai_assistant_note_from_provider(
             )
             txt = _sanitize_assistant_note_text(txt)
             if txt:
+                txt = assistant_ensure_final_answer_line(txt, q)
                 return txt, idx, used, model, ""
         except AdminGeminiQuotaError:
             raise
         except Exception as e:
             last_error = clean(str(e))
 
-    def try_openai() -> Tuple[str, int, str, str, str]:
-        nonlocal last_error
-        for idx, api_key in enumerate(openai_keys, start=1):
-            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 1000, 0.15, timeout=35)
-            if err:
-                last_error = err
-                if _is_quota_or_rate_error(err):
-                    break
-                continue
-            txt = _sanitize_assistant_note_text(txt)
-            if txt:
-                return txt, idx, "OPENAI", model_openai, ""
-        return "", 0, "OPENAI", model_openai, last_error
-
-    def try_gemini() -> Tuple[str, int, str, str, str]:
-        nonlocal last_error
-        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
-        for idx, api_key in enumerate(gemini_keys, start=1):
-            for gm in models:
-                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 1000, 0.15, timeout=25)
-                if err:
-                    last_error = err
-                    continue
-                txt = _sanitize_assistant_note_text(txt)
-                if txt:
-                    return txt, idx, "GEMINI", gm, ""
-        return "", 0, "GEMINI", model_gemini, last_error
-
-    if not is_admin():
-        for fn in [try_gemini]:
-            txt, idx, used, model, err = fn()
-            if txt:
-                return txt, idx, used, model, ""
-    fb = assistant_fallback_note(q)
-    return fb, 0, "FALLBACK", "", last_error or "AI chưa phản hồi, đang hiển thị lưu ý cơ bản."
+    txt, idx, used, model, err = assistant_invoke_ai(
+        q, user_answer, chat=False, max_tokens=ASSISTANT_NOTE_MAX_TOKENS
+    )
+    last_error = err or last_error
+    if txt:
+        return txt, idx, used, model, ""
+    if not cfg.get("has_keys"):
+        return assistant_no_keys_message(q), 0, "FALLBACK", "", last_error
+    return (
+        assistant_wrap_fallback_note(q, last_error),
+        0,
+        "FALLBACK",
+        "",
+        last_error or "AI chưa phản hồi",
+    )
 
 # ============================================================
 # ROUTES
@@ -18474,7 +18764,9 @@ def _sanitize_assistant_chat_text(txt: Any) -> str:
 
 
 def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: Any = None, user_answer: Any = "") -> str:
-    block = build_ai_question_block(q, user_answer, include_sheet_answer=True)
+    block = build_ai_question_block(
+        q, user_answer, include_sheet_answer=True, include_loigiai=False
+    )
     dang = effective_dang(q)
     dang_bt = clean(q.get("DangBaiTap", "")) or "chưa gán"
     kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
@@ -18538,20 +18830,17 @@ def ai_assistant_chat_from_provider(
     allow_gpt_fallback: bool = False,
 ) -> Tuple[str, int, str, str, str]:
     cfg = ai_runtime_config()
-    openai_keys = load_ai_keys("OPENAI")
-    gemini_keys = load_ai_keys("GEMINI")
-    model_openai = clean(cfg.get("openai_model") or os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip() or DEFAULT_OPENAI_HINT_MODEL
-    model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip() or DEFAULT_GEMINI_HINT_MODEL
-    sys_prompt = assistant_sys_prompt_for_question(q, chat=True)
-    user_prompt = build_ai_assistant_chat_prompt(q, message, messages, user_answer)
+    msg = clean(message)
     last_error = ""
 
     if is_admin():
+        sys_prompt = assistant_sys_prompt_for_question(q, chat=True)
+        user_prompt = build_ai_assistant_chat_prompt(q, msg, messages, user_answer)
         try:
             txt, used, model, idx = admin_ai_call_text(
                 sys_prompt,
                 user_prompt,
-                max_tokens=650,
+                max_tokens=ASSISTANT_CHAT_MAX_TOKENS,
                 temp=0.12,
                 timeout=35,
                 force_provider=force_provider,
@@ -18565,40 +18854,29 @@ def ai_assistant_chat_from_provider(
         except Exception as e:
             last_error = clean(str(e))
 
-    def try_openai() -> Tuple[str, int, str, str, str]:
-        nonlocal last_error
-        for idx, api_key in enumerate(openai_keys, start=1):
-            txt, finish, err = _openai_chat_call(api_key, model_openai, sys_prompt, user_prompt, 650, 0.12, timeout=35)
-            if err:
-                last_error = err
-                if _is_quota_or_rate_error(err):
-                    break
-                continue
-            txt = _sanitize_assistant_chat_text(txt)
-            if txt:
-                return txt, idx, "OPENAI", model_openai, ""
-        return "", 0, "OPENAI", model_openai, last_error
-
-    def try_gemini() -> Tuple[str, int, str, str, str]:
-        nonlocal last_error
-        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
-        for idx, api_key in enumerate(gemini_keys, start=1):
-            for gm in models:
-                txt, finish, err = _gemini_hint_call(api_key, gm, sys_prompt, user_prompt, 650, 0.12, timeout=25)
-                if err:
-                    last_error = err
-                    continue
-                txt = _sanitize_assistant_chat_text(txt)
-                if txt:
-                    return txt, idx, "GEMINI", gm, ""
-        return "", 0, "GEMINI", model_gemini, last_error
-
-    if not is_admin():
-        for fn in [try_gemini]:
-            txt, idx, used, model, err = fn()
-            if txt:
-                return txt, idx, used, model, ""
+    txt, idx, used, model, err = assistant_invoke_ai(
+        q,
+        user_answer,
+        chat=True,
+        chat_message=msg,
+        messages=messages,
+        max_tokens=ASSISTANT_CHAT_MAX_TOKENS,
+    )
+    last_error = err or last_error
+    if txt:
+        return txt, idx, used, model, ""
+    if not cfg.get("has_keys"):
+        return (
+            "⚠️ Chưa có key AI — không trả lời chat được. Nạp key Gemini trong 🔑 Key AI của tôi.\n\n"
+            + assistant_fallback_chat(q),
+            0,
+            "FALLBACK",
+            "",
+            last_error,
+        )
     fb = assistant_fallback_chat(q)
+    if last_error:
+        fb = f"⚠️ AI tạm lỗi ({last_error[:120]}).\n\n" + fb
     return fb, 0, "FALLBACK", "", last_error
 
 
@@ -18627,9 +18905,24 @@ def api_ai_assistant_note():
         store = get_store()
         q = assistant_question_from_session(store, ses, qs, idx)
         force, allow = admin_ai_body_params(data)
-        note, key_index, provider_used, model, ai_error = ai_assistant_note_from_provider(
-            q, answer, force_provider=force, allow_gpt_fallback=allow
-        )
+
+        @copy_current_request_context
+        def _assistant_note_worker():
+            return ai_assistant_note_from_provider(
+                q, answer, force_provider=force, allow_gpt_fallback=allow
+            )
+
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(_assistant_note_worker)
+                note, key_index, provider_used, model, ai_error = fut.result(
+                    timeout=ASSISTANT_HTTP_MAX_SEC
+                )
+        except FuturesTimeout:
+            note = assistant_wrap_fallback_note(
+                q, f"Quá {ASSISTANT_HTTP_MAX_SEC}s — thử bấm 🔄 Lấy lại."
+            )
+            key_index, provider_used, model, ai_error = 0, "FALLBACK", "", "timeout"
         return jsonify({
             "ok": True,
             "index": idx,
@@ -18680,9 +18973,26 @@ def api_ai_assistant_chat():
         store = get_store()
         q = assistant_question_from_session(store, ses, qs, idx)
         force, allow = admin_ai_body_params(data)
-        reply, key_index, provider_used, model, ai_error = ai_assistant_chat_from_provider(
-            q, message, messages, answer, force_provider=force, allow_gpt_fallback=allow
-        )
+
+        @copy_current_request_context
+        def _assistant_chat_worker():
+            return ai_assistant_chat_from_provider(
+                q, message, messages, answer,
+                force_provider=force, allow_gpt_fallback=allow,
+            )
+
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(_assistant_chat_worker)
+                reply, key_index, provider_used, model, ai_error = fut.result(
+                    timeout=ASSISTANT_HTTP_MAX_SEC
+                )
+        except FuturesTimeout:
+            reply = (
+                f"⚠️ Quá {ASSISTANT_HTTP_MAX_SEC}s — thử hỏi ngắn hơn hoặc bấm 🔄 Lấy lại.\n\n"
+                + assistant_fallback_chat(q)
+            )
+            key_index, provider_used, model, ai_error = 0, "FALLBACK", "", "timeout"
         return jsonify({
             "ok": True,
             "index": idx,
