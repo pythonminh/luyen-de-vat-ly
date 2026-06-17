@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307br_LATEX_BOOK_THEORY_2026_06_17"
+APP_VERSION = "V307bs_THEORY_MATH_RENDER_2026_06_17"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -4102,7 +4102,9 @@ class SheetStore:
             for f in fields:
                 col = mp.get(key_norm(f))
                 v = row_val(row_vals, col)
-                if f not in ("ID", "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "TrangThai", "NgayCapNhat"):
+                if f == "NoiDungLaTeX":
+                    v = normalize_method_latex_source(v)
+                elif f not in ("ID", "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "TrangThai", "NgayCapNhat"):
                     v = normalize_latex_light(v)
                 item[f] = v
                 if clean(v):
@@ -13028,7 +13030,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307br';
+    window.__LDVL_V='V307bs';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -13297,8 +13299,9 @@ function notifyDoneIfNeeded(){if(SUBMITTED||COMPLETED_NOTICE||!QUESTIONS.length)
 function val(id){let el=document.getElementById(id);return el?el.value:''}
 function typeset(els){if(!window.MathJax)return Promise.resolve();let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):null;let run=()=>{try{if(list&&list.length&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list&&list.length?list:undefined).catch(()=>{});if(MathJax.typeset){try{MathJax.typeset(list&&list.length?list:undefined)}catch(e){}}return Promise.resolve()};if(MathJax.startup&&MathJax.startup.promise)return MathJax.startup.promise.then(run);return run()}
 function typesetTheoryMath(){
-  let els=[document.getElementById('theoryEditorPreview'),document.getElementById('dangTheoryHost')];
+  let els=[document.getElementById('theoryEditorPreview'),document.getElementById('baiTheoryHost'),document.getElementById('dangTheoryHost')];
   document.querySelectorAll('.theoryEnvContent,.learningMethodLatex,.learningTheoryLatex').forEach(el=>els.push(el));
+  els=[...new Set(els.filter(Boolean))];
   return typeset(els);
 }
 function typesetQuizMath(){return typeset([document.getElementById('qtext'),document.getElementById('options'),document.getElementById('solution'),document.getElementById('hintBox')]).then(()=>typesetTheoryMath())}
@@ -16079,7 +16082,8 @@ function afterBaiTheoryPrefetch(q,jOrCached){
   if(!body){host.classList.add('hide');host.innerHTML='';return}
   let label='📚 Lý thuyết bài: '+String(q.BaiHoc||q.Chuong||'Bài học').trim();
   host.innerHTML=buildInlineTheoryCardHtml('baiTheoryCard',label,body,getBaiTheoryCardOpen(q));
-  host.classList.remove('hide');typesetTheoryMath();
+  host.classList.remove('hide');
+  typesetTheoryMath().catch(()=>{});
 }
 function afterDangTheoryPrefetch(q,entry,j){
   let key=dangTheoryKey(q),cacheKey=learningCacheKey('method',q);
@@ -16092,7 +16096,8 @@ function afterDangTheoryPrefetch(q,entry,j){
   if(!body){host.classList.add('hide');host.innerHTML='';return}
   let label='📘 Khung dạng: '+String(q.DangBaiTap||'').trim();
   host.innerHTML=buildInlineTheoryCardHtml('dangTheoryCard',label,body,getTheoryCardOpen(q));
-  host.classList.remove('hide');typesetTheoryMath();
+  host.classList.remove('hide');
+  typesetTheoryMath().catch(()=>{});
 }
 async function syncBaiTheoryCard(force){
   let hosts=ensureTheoryHosts(),host=hosts.bai,q=QUESTIONS[CUR]||{};if(!host)return;
@@ -16149,8 +16154,42 @@ function normalizeTheoryLatexSourceClient(src){
      .replace(/\\end\s*\{\s*dinhnghia\s*\}/gi,'\\end{dn}');
   return t.replace(/[ \t]+\n/g,'\n').replace(/\n{4,}/g,'\n\n\n').trim();
 }
+function foldLoigiaiClient(s){
+  s=String(s||'');let out='',i=0,n=s.length;
+  while(i<n){
+    let rest=s.slice(i),m=rest.match(/\\loigiai\b/i);
+    if(!m){out+=s.slice(i);break}
+    let idx=i+m.index;
+    out+=s.slice(i,idx);
+    let bracePos=idx+m[0].length;
+    while(bracePos<n&&/\s/.test(s[bracePos]))bracePos++;
+    let got=readLatexBracedContent(s,bracePos);
+    if(!got){out+=s.slice(idx,bracePos);i=bracePos;continue}
+    out+='\n\n@@B@@Lời giải:@@/B@@\n'+got.content;
+    i=got.end+1;
+  }
+  return out;
+}
+function preprocessTheoryBody(s){
+  s=String(s||'').trim();
+  s=s.replace(/^\s*%\[[^\]]*\]\s*/gm,'');
+  s=s.replace(/%\[[0-9A-Za-z]+[^\]]*\]/g,'');
+  s=foldLoigiaiClient(s);
+  s=applyFmtOutsideMath(s,function(seg){
+    seg=seg.replace(/\\hfill\b/g,'');
+    seg=seg.replace(/\\lq\s*\\lq/gi,'«').replace(/\\rq\s*\\rq/gi,'»');
+    seg=seg.replace(/\\lq\b/gi,'«').replace(/\\rq\b/gi,'»');
+    seg=seg.replace(/\\,/g,' ');
+    seg=seg.replace(/\{,\}/g,',');
+    seg=seg.replace(/\\indam\s*\{/gi,'\\textbf{');
+    seg=seg.replace(/\\\\\s*/g,'\n');
+    seg=seg.replace(/\\dots\b/gi,'…').replace(/\\ldots\b/gi,'…');
+    return seg;
+  });
+  return s;
+}
 function theoryDisplayText(s){
-  let t=String(s||'').replace(/\r\n?/g,'\n');
+  let t=preprocessTheoryBody(s);
   t=t.replace(/\\begin\s*\{\s*(enumerate|itemize)\s*\}(?:\[[^\]]*\])?/gi,'')
      .replace(/\\end\s*\{\s*(enumerate|itemize)\s*\}/gi,'')
      .replace(/\\item\s*/gi,'\n• ');
@@ -18157,6 +18196,10 @@ def normalize_method_latex_source(v: Any) -> str:
     ]
     for pattern, repl in replacements:
         t = re.sub(pattern, repl, t, flags=re.I)
+    t = re.sub(r"%\[[^\]]*\]", "", t)
+    t = re.sub(r"\\hfill\b", "", t)
+    t = _latex_fold_loigiai_in_content(t)
+    t = _latex_convert_robot_text_cmds(t)
     t = re.sub(r"[ \t]+\n", "\n", t)
     t = re.sub(r"\n{4,}", "\n\n\n", t)
     return t.strip()
