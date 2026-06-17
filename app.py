@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bf_ASSISTANT_REAL_SOLVE_2026_06_12"
+APP_VERSION = "V307bg_TIKZ_CACHE_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -13115,13 +13115,18 @@ function parseHinhanhCellClient(raw){let s=String(raw||'').trim();if(!s)return {
 function buildHinhanhCellClient(img,tikz){let parts=[];let i=String(img||'').trim();let t=String(tikz||'').trim();if(i&&!/^tikzraw:/i.test(i))parts.push(i);if(t){let tr=encodeTikzRawClient(t);if(tr)parts.push(tr)}return parts.join('\n')}
 function adminMergedHinhAnhFromForm(){let imgEl=document.getElementById('edit_HinhAnh');let tzEl=document.getElementById('edit_Tikz');return buildHinhanhCellClient(imgEl?imgEl.value:'',tzEl?tzEl.value:'')}
 function adminPreviewHinhAnhSrc(){let merged=adminMergedHinhAnhFromForm();if(!merged)return '';let parsed=parseHinhanhCellClient(merged);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return normalizeImageSrcClient(merged)}
-async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url){let url=normalizeImageSrcClient(j.url);let wrap=document.createElement('div');wrap.className='qimgWrap';wrap.innerHTML=`<img class="qimg" src="${esc(url)}" alt="Đồ thị TikZ"${qimgOnErrorAttr()}>`;box.replaceWith(wrap);if(typeof typeset==='function')typeset(wrap.parentElement||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
+function tikzCacheStorageKey(src){let h=0,s=String(src||'');for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return 'ldvl_tikz_'+Math.abs(h).toString(36)}
+function tikzImgFromCacheClient(src){if(!src)return '';let m=window.TIKZ_IMG_CACHE;if(m&&m.has(src))return m.get(src);try{let u=sessionStorage.getItem(tikzCacheStorageKey(src));if(u){if(!m)window.TIKZ_IMG_CACHE=new Map();window.TIKZ_IMG_CACHE.set(src,u);return u}}catch(e){}return ''}
+function tikzCacheRememberClient(src,url){if(!src||!url)return;try{let m=window.TIKZ_IMG_CACHE||(window.TIKZ_IMG_CACHE=new Map());m.set(src,url);sessionStorage.setItem(tikzCacheStorageKey(src),url)}catch(e){}}
+function tikzRenderFetch(src){if(!src)return Promise.resolve(null);let cached=tikzImgFromCacheClient(src);if(cached)return Promise.resolve({ok:true,url:cached,cached:true});let inflight=window.TIKZ_RENDER_INFLIGHT||(window.TIKZ_RENDER_INFLIGHT=new Map());if(inflight.has(src))return inflight.get(src);let p=api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})}).then(j=>{if(j&&j.ok&&j.url)tikzCacheRememberClient(src,j.url);return j}).finally(()=>inflight.delete(src));inflight.set(src,p);return p}
+function tikzImgHtmlFromUrl(url,alt){return `<div class="qimgWrap"><img class="qimg" src="${esc(normalizeImageSrcClient(url))}" alt="${esc(alt||'Đồ thị TikZ')}"${qimgOnErrorAttr()}></div>`}
+async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await tikzRenderFetch(src);if(j&&j.ok&&j.url){let wrap=document.createElement('div');wrap.innerHTML=tikzImgHtmlFromUrl(j.url);let node=wrap.firstElementChild;if(node)box.replaceWith(node);if(typeof typeset==='function')typeset((node&&node.parentElement)||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
 function isDriveFolderUrl(s){s=String(s||'').toLowerCase();return s.includes('drive.google.com')&&(s.includes('/folders/')||s.includes('/fold'))}
 function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+String(fid||'').trim()+'&sz=w1600'}
 function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
 function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/[\r\n]/.test(s)){let parsed=parseHinhanhCellClient(s);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return normalizeImageSrcClient(parsed.img);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return ''}if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
 function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. File Drive cần quyền Anyone with link.</div>\'}"'}
-function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return `<div class="qimgWrap"><img class="qimg" src="${esc(src)}" alt="Hình minh họa"${qimgOnErrorAttr()}></div>`}
+function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';if(/[\r\n]/.test(raw)){let parsed=parseHinhanhCellClient(raw);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return tikzImgHtmlFromUrl(normalizeImageSrcClient(parsed.img),'Hình minh họa')}src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let cached=tikzImgFromCacheClient(src);if(cached)return tikzImgHtmlFromUrl(cached);let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return tikzImgHtmlFromUrl(src,'Hình minh họa')}
 function usesImgSplit(q){if(!q||!String(q.HinhAnh||'').trim())return false;return q.Dang==='Trắc nghiệm'||q.Dang==='Đúng sai'||q.Dang==='Trả lời ngắn'}
 function isTlnImgSplit(q){return !!(q&&q.Dang==='Trả lời ngắn'&&String(q.HinhAnh||'').trim())}
 function mcqUsesSplit(q){return usesImgSplit(q)}
@@ -15218,7 +15223,7 @@ function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normF
 function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){ensureEditAdminPreviewBar();document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);adminExtractTikzFromFormFields();refreshEditHinhAnhPreview();bindEditFormLivePreview();renderEditQuestionPreview()}
 async function adminRerenderTikz(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
-async function adminDownloadHinhAnh(){let raw=adminMergedHinhAnhFromForm();let src=adminPreviewHinhAnhSrc();if(!src){alert('Chưa có ảnh.\n\nNhập mã TikZ hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await api('/api/tikz/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({src})});if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô link Drive (giữ mã TikZ ở trên) → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
+async function adminDownloadHinhAnh(){let raw=adminMergedHinhAnhFromForm();let src=adminPreviewHinhAnhSrc();if(!src){alert('Chưa có ảnh.\n\nNhập mã TikZ hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await tikzRenderFetch(src);if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô link Drive (giữ mã TikZ ở trên) → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
 async function adminPasteImageUrl(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let el=document.getElementById('edit_HinhAnh');if(el){el.value=String(txt).trim();refreshEditHinhAnhPreview();renderEditQuestionPreview()}}catch(e){let el=document.getElementById('edit_HinhAnh');if(el){el.focus();alert('Bấm vào ô Hình ảnh rồi Ctrl+V dán link.')}}}
 function readQuestionFormData(){adminExtractTikzFromFormFields();let data={};for(let f of QUESTION_FORM_FIELDS){let el=document.getElementById('edit_'+f);data[f]=el?(el.value||''):''}data.HinhAnh=adminMergedHinhAnhFromForm();return data}
 function formatDsDapanForEdit(text,q){let tokens=parseDsAnswerTokens(text||'');let letters=['A','B','C','D'].filter(L=>q&&q[L]);if(tokens.length>=2)return tokens.filter(t=>!letters.length||letters.includes(t.letter)).map(t=>`${t.letter}=${t.verdict}`).join('; ');return String(text||'')}
@@ -16395,6 +16400,51 @@ def _tikz_standalone_document(tikz_code: str) -> str:
     return "\n".join(lines)
 
 
+TIKZ_CACHE_SUBDIR = "_tikz_cache"
+
+
+def _tikz_normalize_for_cache(tikz_code: str) -> str:
+    return re.sub(r"\s+", " ", clean(tikz_code)).strip()
+
+
+def _tikz_cache_key(tikz_code: str) -> str:
+    return stable_hash(_tikz_normalize_for_cache(tikz_code), 16)
+
+
+def _tikz_cache_dir() -> str:
+    d = os.path.join(LATEX_ASSET_DIR, TIKZ_CACHE_SUBDIR)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _tikz_cache_png_path(tikz_code: str) -> str:
+    return os.path.join(_tikz_cache_dir(), _tikz_cache_key(tikz_code) + ".png")
+
+
+def _tikz_cache_png_url(tikz_code: str) -> str:
+    path = _tikz_cache_png_path(tikz_code)
+    try:
+        if os.path.isfile(path) and os.path.getsize(path) > 80:
+            key = _tikz_cache_key(tikz_code)
+            return "/static/latex_assets/" + TIKZ_CACHE_SUBDIR + "/" + key + ".png"
+    except Exception:
+        pass
+    return ""
+
+
+def _tikz_promote_to_cache(tikz_code: str, png_path: str) -> str:
+    if not tikz_code or not png_path or not os.path.isfile(png_path):
+        return ""
+    try:
+        if os.path.getsize(png_path) < 80:
+            return ""
+        dest = _tikz_cache_png_path(tikz_code)
+        shutil.copy2(png_path, dest)
+        return _tikz_cache_png_url(tikz_code)
+    except Exception:
+        return ""
+
+
 def _decode_tikzraw_src(src: str) -> str:
     s = clean(src)
     if not s:
@@ -16492,15 +16542,28 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> 
 
 
 def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int, tikz_no: int) -> str:
-    if ctx:
-        ctx["media"]["tikz"] += 1
-    if not ctx:
-        return ""
     tikz_code = clean(tikz_code)
     if not tikz_code:
         return ""
+    cached = _tikz_cache_png_url(tikz_code)
+    if cached:
+        if ctx:
+            ctx["media"]["tikz"] += 1
+            ctx["media"]["resolved"] += 1
+        return cached
+    if not ctx:
+        return ""
+    if ctx:
+        ctx["media"]["tikz"] += 1
     tex_doc = _tikz_standalone_document(tikz_code)
-    name = f"tikz_q{idx}_{tikz_no}_{uuid.uuid4().hex[:6]}"
+    name = f"tikz_{_tikz_cache_key(tikz_code)}"
+
+    def _prefer_cache_url(url: str) -> str:
+        if not url:
+            return ""
+        png_path = os.path.join(ctx["root"], name + ".png")
+        cache_url = _tikz_promote_to_cache(tikz_code, png_path)
+        return cache_url or url
 
     pdflatex = shutil.which("pdflatex")
     if pdflatex:
@@ -16523,7 +16586,7 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
                 with open(pdf_path, "rb") as pf:
                     url = _pdf_bytes_to_png_file(pf.read(), ctx, name)
                 if url:
-                    return url
+                    return _prefer_cache_url(url)
                 pdftoppm = shutil.which("pdftoppm")
                 if pdftoppm:
                     out_prefix = os.path.join(ctx["root"], name)
@@ -16539,10 +16602,10 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
                         ctx["media"]["resolved"] += 1
                         drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
                         if drive_url:
-                            return drive_url
+                            return _prefer_cache_url(drive_url)
                         if drive_err:
                             ctx.setdefault("warnings", []).append({"index": idx, "warning": drive_err})
-                        return _asset_url_for(ctx["batch"], os.path.basename(png_path))
+                        return _prefer_cache_url(_asset_url_for(ctx["batch"], os.path.basename(png_path)))
         except Exception as e:
             ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ local: " + str(e)[:180]})
 
@@ -16550,7 +16613,7 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
     if pdf_bytes:
         url = _pdf_bytes_to_png_file(pdf_bytes, ctx, name)
         if url:
-            return url
+            return _prefer_cache_url(url)
     if cloud_err:
         ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ cloud: " + cloud_err[:220]})
     return ""
@@ -20881,10 +20944,13 @@ def api_tikz_render():
     tikz_code = _decode_tikzraw_src(src)
     if not tikz_code or "tikzpicture" not in tikz_code.lower():
         return jsonify({"ok": False, "error": "Không có mã TikZ hợp lệ."}), 400
+    cached = _tikz_cache_png_url(tikz_code)
+    if cached:
+        return jsonify({"ok": True, "url": cached, "cached": True})
     ctx = _build_latex_asset_context(commit=True)
     url = _compile_tikz_to_png(tikz_code, ctx, 1, 1)
     if url:
-        return jsonify({"ok": True, "url": url})
+        return jsonify({"ok": True, "url": url, "cached": bool(_tikz_cache_png_url(tikz_code))})
     warn = ""
     for w in (ctx.get("warnings") or []):
         warn = clean(w.get("warning", ""))
