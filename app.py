@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bi_DS_ABCD_LOIGIAI_2026_06_12"
+APP_VERSION = "V307bj_DS_STRIP_LEGACY_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -2284,6 +2284,10 @@ def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q["Dang"] = effective_dang(q)
     if q["Dang"] == "Trắc nghiệm":
         q["LoiGiai"] = _strip_tn_loigiai_ds_lines(q.get("LoiGiai", ""), q.get("DapAn", ""))
+    elif q["Dang"] == "Đúng sai":
+        lg = _normalize_ds_loigiai_abcd(q.get("LoiGiai", ""), q)
+        if lg:
+            q["LoiGiai"] = lg
     q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
     if not q.get("MaDe"):
         base = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De"])
@@ -7045,6 +7049,28 @@ _DS_BULLET_VERDICT_HEAD_RE = re.compile(
 )
 
 
+_DS_LEGACY_VERDICT_BLOCK_RE = re.compile(
+    r"(?:^|\n|[•●▪▫◦]\s*)(?:ch\s+)?(?:\\textbf\s*\{\s*)?(?:Đúng|Sai)\s*[\.\-—:–]\s*",
+    re.I | re.M,
+)
+
+
+def _ds_loigiai_intro_only(text: Any) -> str:
+    """Giữ đoạn mở đầu thật — gỡ khối Sai./Đúng. (hoặc bullet) trùng với A–D."""
+    t = clean(text).replace("\r", "")
+    if not t:
+        return ""
+    markers = list(_DS_LEGACY_VERDICT_BLOCK_RE.finditer(t))
+    if len(markers) >= 2:
+        return clean(t[: markers[0].start()])
+    if len(markers) == 1:
+        head = clean(t[: markers[0].start()])
+        if head and not _DS_LEGACY_VERDICT_BLOCK_RE.search(head):
+            return head
+        return ""
+    return t
+
+
 def _parse_itemchoice_bullet_chunks(raw: str) -> Dict[str, Dict[str, str]]:
     """• ch \\textbf{Sai}. … → A/B/C/D theo thứ tự."""
     markers = list(_DS_ITEMCHOICE_BULLET_RE.finditer(raw))
@@ -7143,10 +7169,10 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
     chunks = _parse_ds_loigiai_chunks(raw)
     if not chunks:
         return raw
-    first = None
     m = _DS_LG_TAG_RE.search(raw)
     if m:
         first = m.start()
+        preamble = _ds_loigiai_intro_only(raw[:first])
     else:
         ic = _DS_ITEMCHOICE_BULLET_RE.search(raw)
         if ic:
@@ -7161,7 +7187,7 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
                 else:
                     dash = re.search(r"(?:^|\n)\s*[-*+]\s+", raw, re.M)
                     first = dash.start() if dash else None
-    preamble = clean(raw[:first]) if first and first > 0 else ""
+        preamble = _ds_loigiai_intro_only(raw[:first]) if first and first > 0 else ""
     letters = [L for L in "ABCD" if (not q or clean(q.get(L, "")))] or list("ABCD")
     lines = []
     for L in letters:
@@ -9236,7 +9262,7 @@ def normalize_ds_loigiai(
     preamble = ""
     body = text
     if first_tag:
-        preamble = clean(text[: first_tag.start()]).strip()
+        preamble = _ds_loigiai_intro_only(text[: first_tag.start()])
         body = text[first_tag.start() :]
     tagged = list(re.finditer(tag_pat, body, re.I | re.M))
     if not tagged:
@@ -13302,7 +13328,8 @@ function formatDsCheckResultBox(qIdx,j,q,ans){let rows=getDsCheckRows(q,j,ans);i
 function updateResultBox(qIdx){let rb=document.getElementById('resultBox');if(!rb)return;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return;let r=RESULTS[qIdx]||CHECKED[qIdx];if(SUBMITTED){if(q.Dang==='Đúng sai'&&r&&(r.ok===true||r.ok===false)){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.style.color=r.ok?'#166534':'#991b1b'}return}if(!r||!(r.ok===true||r.ok===false)){rb.textContent='';rb.classList.remove('dsResultRich');return}if(q.Dang==='Đúng sai'){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.style.color=r.ok?'#166534':'#991b1b'}else{rb.classList.remove('dsResultRich');rb.textContent=`Câu ${qIdx+1}: ${r.ok?'✅ Đúng':'❌ Sai'}`;rb.style.color=r.ok?'#166534':'#991b1b'}}
 function formatMcqAnswerBadge(text){let raw=String(text||'').trim();let m=raw.toUpperCase().match(/^([ABCD])$/);if(!m){let lm=raw.match(/(?:đáp án|chọn|kết luận|phương án)[^ABCD]*([ABCD])/i);if(lm)m=[null,lm[1].toUpperCase()]}if(m&&m[1])return `<div class="dsAnswerRow"><div class="dsAnswerItem">${dsCircleHtml(m[1])} <b class="dsVerdictDung">đáp án đúng</b></div></div>`;return formatHintDisplay(raw)}
 function loigiaiAbcdTagRx(){return /(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi}
-function splitLoigiaiPreamble(text){let t=String(text||'').replace(/\r/g,'').trim();if(!t)return '';let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1)return t.slice(0,tagged[0].index).trim();let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])/gim)];if(lineTagged.length>=1)return t.slice(0,lineTagged[0].index).trim();return t}
+function stripDsLoigiaiLegacyBlocks(t){t=String(t||'').trim();if(!t)return '';let leg=/(?:^|\n|[•●▪▫◦]\s*)(?:ch\s+)?(?:\\textbf\s*\{\s*)?(?:Đúng|Sai)\s*[\.\-—:–]\s*/gi;let ms=[...t.matchAll(leg)];if(ms.length>=2)return t.slice(0,ms[0].index).trim();if(ms.length===1){let head=t.slice(0,ms[0].index).trim();if(head&&!leg.test(head))return head;return ''}return t}
+function splitLoigiaiPreamble(text){let t=String(text||'').replace(/\r/g,'').trim();if(!t)return '';let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1)return stripDsLoigiaiLegacyBlocks(t.slice(0,tagged[0].index).trim());let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])/gim)];if(lineTagged.length>=1)return stripDsLoigiaiLegacyBlocks(t.slice(0,lineTagged[0].index).trim());return stripDsLoigiaiLegacyBlocks(t)}
 function formatLoigiaiPreambleHtml(preamble){let p=String(preamble||'').trim();if(!p)return '';return `<div class="loigiaiPreamble" style="margin-bottom:12px;line-height:1.55">${formatHintDisplay(p)}</div>`}
 function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let choiceRx=/(?:^|\n)\s*[•●▪▫◦]\s*(?:ch\s+)?(?:\\textbf\s*\{\s*)?(Đúng|Sai)(?:\s*\})?\s*[\.\-—:–]\s*/gi;let choiceMk=[];let cm;while((cm=choiceRx.exec(t))!==null)choiceMk.push({verdict:cm[1],start:cm.index+cm[0].length,head:cm.index});if(choiceMk.length>=2){return choiceMk.map((mk,i)=>{let end=i+1<choiceMk.length?choiceMk[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
 function finalizeAbcdSolutionChunks(chunks,q,isDs,skipSheet){if(!q)return chunks||[];let letters=['A','B','C','D'].filter(L=>q[L]);if(!letters.length)return chunks||[];let byL={};(chunks||[]).forEach(c=>{byL[c.letter]=c});let tokens=isDs&&!skipSheet?parseDsAnswerTokens(q.DapAn||''):[];let vMap={};tokens.forEach(t=>vMap[t.letter]=t.verdict);let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];return letters.map(L=>{if(byL[L]){let c=byL[L];if(isDs&&!skipSheet&&!c.verdict&&vMap[L])return Object.assign({},c,{verdict:vMap[L]});return c}return {letter:L,verdict:isDs&&!skipSheet?(vMap[L]||''):'',body:''}})}
