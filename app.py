@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bg_TIKZ_CACHE_2026_06_12"
+APP_VERSION = "V307bi_DS_ABCD_LOIGIAI_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -893,6 +893,8 @@ def _fix_one_math_inner(inner: str) -> str:
         inner,
         flags=re.I,
     )
+    inner = re.sub(r"\s+\^\{", "^{", inner)
+    inner = re.sub(r"(\d)\s+\^", r"\1^", inner)
     return inner
 
 
@@ -1032,8 +1034,63 @@ def _strip_latex_list_markup(t: str) -> str:
     t = re.sub(r"\\end\s*\{\s*enumerate\s*\}", "", t, flags=re.I)
     t = re.sub(r"\\begin\s*\{\s*itemize\s*\}", "", t, flags=re.I)
     t = re.sub(r"\\end\s*\{\s*itemize\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\begin\s*\{\s*itemchoice\s*\}", "", t, flags=re.I)
+    t = re.sub(r"\\end\s*\{\s*itemchoice\s*\}", "", t, flags=re.I)
+    t = re.sub(r"(?:^|\n)\s*•\s*ch\s+", "\n• ", t, flags=re.I)
+    t = re.sub(r"•\s*ch\s+", "• ", t, flags=re.I)
     t = re.sub(r"\\item\s*", "\n• ", t, flags=re.I)
     t = re.sub(r"\\item(?=[A-Za-zÀ-ỹĐđ])", "\n• ", t, flags=re.I)
+    return t
+
+
+_LATEX_UNITS_BETWEEN_MATH = (
+    r"rad|deg|m|km|cm|mm|μm|nm|"
+    r"s|ms|min|h|"
+    r"kg|g|mg|"
+    r"N|J|W|Pa|kPa|MPa|"
+    r"Hz|V|A|Ω|mol"
+)
+
+
+def _merge_broken_dfrac_sqrt(t: str) -> str:
+    """$\\cot 3x=-\\dfrac{1}$ $(\\sqrt{3})$ → $\\cot 3x=-\\dfrac{1}{\\sqrt{3}}$."""
+    if not t or "$" not in t:
+        return t
+    prev = None
+    while prev != t:
+        prev = t
+        t = re.sub(
+            r"(\$[^$\n]*?-?)\\dfrac\{(\d+)\}\$\s*\$\(\\sqrt\{([^}]+)\}\)\$",
+            r"\1\\dfrac{\2}{\\sqrt{\3}}$",
+            t,
+        )
+    return re.sub(r"\$\(\s*\\", r"$\\", t)
+
+
+def _merge_unit_between_math(t: str) -> str:
+    """$\\frac{3\\pi}{4}$ rad$=\\left(... → $\\frac{3\\pi}{4}\\,\\mathrm{rad}=\\left(...$"""
+    if not t or "$" not in t:
+        return t
+    units = _LATEX_UNITS_BETWEEN_MATH
+
+    def _repl(m: re.Match) -> str:
+        a = m.group(1)[1:-1].strip()
+        u = m.group(2).strip()
+        b = m.group(3)[1:-1].strip()
+        if not b.startswith("="):
+            return m.group(0)
+        inner = f"{a}\\,\\mathrm{{{u}}}{b}"
+        return f"${_fix_one_math_inner(inner)}$"
+
+    prev = None
+    while prev != t:
+        prev = t
+        t = re.sub(
+            rf"(\$[^$\n]+?\$)\s*({units})\s*(\$[^$\n]*=[^$\n]*\$)",
+            _repl,
+            t,
+            flags=re.I,
+        )
     return t
 
 
@@ -1048,7 +1105,15 @@ def _latex_needs_heavy_normalize(t: str) -> bool:
     """Chỉ chạy gộp khối $ / sửa Word khi text thật sự lỗi — tránh phá prose tiếng Việt."""
     if not t:
         return False
-    if re.search(r"\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|acute)", t, re.I):
+    if re.search(r"\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|begin\s*\{itemchoice|acute)", t, re.I):
+        return True
+    if re.search(r"•\s*ch\s+", t, re.I):
+        return True
+    if re.search(
+        rf"\$[^$\n]+\$\s*(?:{_LATEX_UNITS_BETWEEN_MATH})\s*\$",
+        t,
+        re.I,
+    ):
         return True
     if re.search(r"\$\{|\$\$[^$]", t):
         return True
@@ -1090,6 +1155,8 @@ def normalize_latex_text(s: Any) -> str:
     if _latex_structure_ok(t) and not _latex_needs_heavy_normalize(t):
         return normalize_latex_light(t)
     t = _strip_latex_list_markup(t)
+    t = _merge_broken_dfrac_sqrt(t)
+    t = _merge_unit_between_math(t)
     t = _merge_adjacent_inline_math(t)
     t = _fix_surplus_dollar_signs(t)
     t = re.sub(r"\$\{\s*([^}$\n]+?)\s*\}\s*\$", r"$(\1)$", t)
@@ -1134,6 +1201,34 @@ def _fix_broken_latex_patterns(t: str) -> str:
     )
     return t
 
+
+
+def _normalize_question_latex_field(field: str, value: Any) -> str:
+    v = clean(value)
+    if not v:
+        return ""
+    if field == "DapAn" and not any(x in v for x in ("$", "\\", "{", "}")):
+        return v
+    if field in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "DapAn", "SaiSo"):
+        return normalize_latex_text(v)
+    return v
+
+
+def _normalize_question_latex_updates(
+    updates: Dict[str, Any],
+    q: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    out = dict(updates or {})
+    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "DapAn", "SaiSo"):
+        if f in out:
+            out[f] = _normalize_question_latex_field(f, out.get(f))
+    merged = dict(q or {})
+    merged.update({k: clean(v) for k, v in out.items()})
+    if "LoiGiai" in out and clean(out.get("LoiGiai")) and effective_dang(merged) == "Đúng sai":
+        fixed = _normalize_ds_loigiai_abcd(out["LoiGiai"], merged)
+        if fixed:
+            out["LoiGiai"] = fixed
+    return out
 
 
 def stable_hash(text: str, n: int = 12) -> str:
@@ -5710,26 +5805,43 @@ class SheetStore:
                         != clean(merged_q.get("HinhAnh", ""))
                     ):
                         updates[f] = patch.get(f, "")
-            if effective_dang(merged_q) == "Đúng sai" and clean(updates.get("LoiGiai", "")):
-                inferred_da = _ds_dapan_from_loigiai(updates.get("LoiGiai", ""), merged_q)
-                if inferred_da and (not clean(updates.get("DapAn", "")) or looks_like_dungsai_answer(updates.get("DapAn", ""))):
-                    updates["DapAn"] = inferred_da
-                    merged_q["DapAn"] = inferred_da
-                else:
-                    # Nếu cột P đã có S,S,D,Đ hoặc Đ/S/Đ/S thì chuẩn hóa thành A=Sai · B=...
-                    display_da = _normalize_ds_dapan_display_from_q(merged_q)
-                    if display_da:
-                        updates["DapAn"] = display_da
-                        merged_q["DapAn"] = display_da
-                fixed_lg = _normalize_ds_loigiai_abcd(updates.get("LoiGiai", ""), merged_q)
-                if fixed_lg:
-                    updates["LoiGiai"] = fixed_lg
         except Exception:
             pass
 
         hinhanh_warn = ""
         if "HinhAnh" in updates:
             updates["HinhAnh"], hinhanh_warn = _finalize_hinhanh_for_sheet(updates.get("HinhAnh"))
+
+        merged_for_norm: Dict[str, Any] = {}
+        try:
+            for qq in self.questions:
+                try:
+                    same_row2 = int(qq.get("_row") or 0) == int(row_number)
+                except Exception:
+                    same_row2 = False
+                same_id2 = bool(expected_id and clean(qq.get("ID", "")) == expected_id)
+                if same_row2 or same_id2:
+                    merged_for_norm = dict(qq)
+                    break
+            merged_for_norm.update({k: clean(v) for k, v in updates.items()})
+        except Exception:
+            merged_for_norm = dict(updates or {})
+
+        updates = _normalize_question_latex_updates(updates, merged_for_norm)
+        try:
+            if effective_dang(merged_for_norm) == "Đúng sai" and clean(updates.get("LoiGiai", "")):
+                inferred_da = _ds_dapan_from_loigiai(updates.get("LoiGiai", ""), merged_for_norm)
+                if inferred_da and (
+                    not clean(updates.get("DapAn", ""))
+                    or looks_like_dungsai_answer(updates.get("DapAn", ""))
+                ):
+                    updates["DapAn"] = inferred_da
+                elif not clean(updates.get("DapAn", "")):
+                    display_da = _normalize_ds_dapan_display_from_q(merged_for_norm)
+                    if display_da:
+                        updates["DapAn"] = display_da
+        except Exception:
+            pass
 
         batch = []
         updated_fields = []
@@ -6853,7 +6965,7 @@ def _strip_ds_body_leading_verdict(body: str, verdict_label: str = "") -> str:
     if not body:
         return ""
     m = re.match(
-        r"^(?:\*\*)?(Đúng|Sai|Đ|D|S|True|False)\b\s*[\-—:–\.\)]*\s*",
+        r"^(?:\*\*)?(?:\\textbf\s*\{\s*)?(Đúng|Sai|Đ|D|S|True|False)(?:\s*\})?\s*[\-—:–\.\)]*\s*",
         body,
         flags=re.I,
     )
@@ -6921,6 +7033,36 @@ _DS_LG_TAG_RE = re.compile(
     re.I | re.M,
 )
 
+_DS_ITEMCHOICE_BULLET_RE = re.compile(
+    r"(?:^|\n)\s*[•●▪▫◦]\s*(?:ch\s+)?"
+    r"(?:\\textbf\s*\{\s*)?(Đúng|Sai)(?:\s*\})?\s*[\.\-—:–]\s*",
+    re.I | re.M,
+)
+
+_DS_BULLET_VERDICT_HEAD_RE = re.compile(
+    r"^(?:ch\s+)?(?:\\textbf\s*\{\s*)?(Đúng|Sai)(?:\s*\})?\s*[\.\-—:–]\s*",
+    re.I,
+)
+
+
+def _parse_itemchoice_bullet_chunks(raw: str) -> Dict[str, Dict[str, str]]:
+    """• ch \\textbf{Sai}. … → A/B/C/D theo thứ tự."""
+    markers = list(_DS_ITEMCHOICE_BULLET_RE.finditer(raw))
+    if len(markers) < 2:
+        return {}
+    out: Dict[str, Dict[str, str]] = {}
+    for i, m in enumerate(markers[:4]):
+        L = "ABCD"[i]
+        start = m.end()
+        end = markers[i + 1].start() if i + 1 < len(markers) else len(raw)
+        body = clean(raw[start:end]).strip(" ).\n")
+        body = re.sub(r"\\textbf\{[^}]*\}", "", body).strip()
+        verdict = _ds_verdict_token(m.group(1))
+        if verdict:
+            body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
+        out[L] = {"verdict": verdict, "body": body}
+    return out
+
 
 def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
     """Tách cột R thành {A:{verdict:'Đ/S', body:'...'}, ...}.
@@ -6954,6 +7096,10 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
                 out[L] = {"verdict": verdict, "body": body}
         return out
 
+    choice_chunks = _parse_itemchoice_bullet_chunks(raw)
+    if choice_chunks:
+        return choice_chunks
+
     # Fallback 1: lời giải chỉ ghi theo thứ tự "Đúng. ... Sai. ..." không có A/B/C/D.
     markers = list(re.finditer(r"(?:^|\n|[•\-*]\s*)(Đúng|Sai)\s*[\.\-—:–]\s*", raw, re.I | re.M))
     if markers:
@@ -6969,7 +7115,12 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
     if len(bullets) >= 2:
         for i, body in enumerate(bullets[:4]):
             L = "ABCD"[i]
-            out[L] = {"verdict": "", "body": clean(body).strip(" ).\n")}
+            verdict = ""
+            vm = _DS_BULLET_VERDICT_HEAD_RE.match(body)
+            if vm:
+                verdict = _ds_verdict_token(vm.group(1))
+                body = clean(body[vm.end():]).strip(" ).\n")
+            out[L] = {"verdict": verdict, "body": clean(body).strip(" ).\n")}
     return out
 
 def _ds_dapan_from_loigiai(text: Any, q: Optional[Dict[str, Any]] = None) -> str:
@@ -6997,15 +7148,19 @@ def _normalize_ds_loigiai_abcd(text: Any, q: Optional[Dict[str, Any]] = None) ->
     if m:
         first = m.start()
     else:
-        mm = re.search(r"(?:^|\n|[•\-*]\s*)(Đúng|Sai)\s*[\.\-—:–]\s*", raw, re.I | re.M)
-        first = mm.start() if mm else None
-        if first is None:
-            bm = re.search(r"[•●▪▫◦]\s+", raw)
-            if bm:
-                first = bm.start()
-            else:
-                dash = re.search(r"(?:^|\n)\s*[-*+]\s+", raw, re.M)
-                first = dash.start() if dash else None
+        ic = _DS_ITEMCHOICE_BULLET_RE.search(raw)
+        if ic:
+            first = ic.start()
+        else:
+            mm = re.search(r"(?:^|\n|[•\-*]\s*)(Đúng|Sai)\s*[\.\-—:–]\s*", raw, re.I | re.M)
+            first = mm.start() if mm else None
+            if first is None:
+                bm = re.search(r"[•●▪▫◦]\s+", raw)
+                if bm:
+                    first = bm.start()
+                else:
+                    dash = re.search(r"(?:^|\n)\s*[-*+]\s+", raw, re.M)
+                    first = dash.start() if dash else None
     preamble = clean(raw[:first]) if first and first > 0 else ""
     letters = [L for L in "ABCD" if (not q or clean(q.get(L, "")))] or list("ABCD")
     lines = []
@@ -13026,7 +13181,9 @@ function handleShareDeepLink(){let sp=getShareParams();if(!sp.de)return;let item
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let span=findLatexMathSpan(s,i);if(!span){out+=esc(s.slice(i));break}if(span.end<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,span.start));out+=s.slice(span.start,span.end+1);i=span.end+1}return out}
-function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
+function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/(?:^|\n)\s*•\s*ch\s+/gi,'\n• ');s=s.replace(/•\s*ch\s+/gi,'• ');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
+function mergeBrokenDfracSqrt(s){if(String(s||'').indexOf('$')<0)return String(s||'');let t=String(s||''),prev=null;while(prev!==t){prev=t;t=t.replace(/(\$[^$\n]*?-?)\\dfrac\{(\d+)\}\$\s*\$\(\\sqrt\{([^}]+)\}\)\$/g,function(_,pre,n,rt){return pre+'\\dfrac{'+n+'}{\\sqrt{'+rt+'}}$'})}return t.replace(/\$\(\s*\\/g,'$\\')}
+function mergeUnitBetweenMath(s){let units='rad|deg|m|km|cm|mm|s|ms|kg|g|N|J|W|Pa|kPa|Hz|V|A';return String(s||'').replace(new RegExp('(\\\\$[^$\\n]+?\\\\$)\\\\s*('+units+')\\\\s*(\\\\$[^$\\n]*=[^$\\n]*\\\\$)','gi'),function(m,g1,u,g3){let a=g1.slice(1,-1).trim(),b=g3.slice(1,-1).trim();if(!b.startsWith('='))return m;return '$'+fixOneMathInner(a+'\\,\\mathrm{'+u+'}'+b)+'$'})}
 function trimInlineMathSpaces(t){if(String(t||'').indexOf('$')<0)return String(t||'');return String(t||'').replace(/\$([^$\n]+?)\$/g,function(_,inner){return '$'+String(inner).trim()+'$'})}
 function mergeAdjacentInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return t;let prev=null;while(prev!==t){prev=t;t=t.replace(/(\$[^$\n]+?\$)(\s+)(\$[^$\n]+?\$)/g,function(m,g1,gap,g3){if(/[A-Za-zÀ-ỹĐđ]/.test(gap))return m;let a=g1.slice(1,-1).trim(),b=g3.slice(1,-1).trim();return '$'+a+(gap.trim()?' ':'')+b+'$'})}return t}
 function fixPlainTextGaps(s){return String(s||'').replace(/(\d)([Nn]ên|[Đđ]iểm)/g,'$1 $2').replace(/(\))([A-Za-zÀ-ỹĐđ])/g,'$1 $2')}
@@ -13035,7 +13192,7 @@ function latexDollarCount(s){s=String(s||'');let n=0;for(let i=0;i<s.length;i++)
 function latexStructureOk(s){s=String(s||'');if(latexDollarCount(s)%2)return false;let plain=s.replace(/\$\$[^$]*\$\$/g,'').replace(/\$[^$]*\$/g,'');return !/\\(?:text|mathrm|frac|sqrt|left|right|times|cdot|pm|mp|leq|geq|neq|approx|,)/.test(plain)}
 function fixSurplusDollars(s){s=String(s||'');if(s.indexOf('$')<0)return s;s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=s.replace(/\${3,}/g,'$$');s=s.replace(/\$\$([^$\n]{1,160}?)\$\$/g,'$$$1$');s=s.replace(/\$\$([^$\n]+?)\$(?!\$)/g,'$$$1$');s=s.replace(/\$([^$\n]+?)\$\$(?!\$)/g,'$$$1$');s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s+\$(?=[^$\n])/g,'$');s=s.replace(/\$\s+\$(?=\s|$)/g,' ');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/(\$[^$\n]+?\$)\.(\$)(?=\s|$|[A-Za-zÀ-ỹĐđ])/g,'$1.');s=s.replace(/(\$[^$\n]+?\$)([,.;:])\$(?=\s|$)/g,'$1$2');if(s.endsWith('$')&&latexDollarCount(s)%2===1)s=s.slice(0,-1);return s}
 function fixMergedInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return fixPlainTextGaps(t);let out='',i=0,n=t.length;while(i<n){if(t[i]!=='$'){let d1=t.indexOf('$',i);if(d1<0){out+=fixPlainTextGaps(t.slice(i));break}out+=fixPlainTextGaps(t.slice(i,d1));i=d1;continue}if(i+1<n&&t[i+1]==='$'){let end=t.indexOf('$$',i+2);if(end>=0){out+=t.slice(i,end+2);i=end+2;continue}}let d2=t.indexOf('$',i+1);if(d2<0){let rest=t.slice(i+1);if(String(rest).trim()&&(rest.indexOf('\\')>=0||rest.indexOf('{')>=0))out+='$'+fixOneMathInner(rest)+'$';else out+=fixPlainTextGaps(rest);break}let inner=t.slice(i+1,d2);if(!String(inner).trim()){i=d2+1;continue}while(d2+1<n&&t[d2+1]==='$'&&(d2+2>=n||t[d2+2]!=='$'))d2++;out+='$'+fixOneMathInner(t.slice(i+1,d2))+'$';i=d2+1}return out}
-function normalizeLatexDelimiters(s){s=String(s||'');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|acute)|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return trimInlineMathSpaces(s)}
+function normalizeLatexDelimiters(s){s=String(s||'');s=stripLatexListMarkup(s);s=mergeBrokenDfracSqrt(s);s=mergeUnitBetweenMath(s);s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|begin\s*\{itemchoice|acute)|•\s*ch\s+|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])|(?:rad|deg|m|s)\s*\$[^$\n]*=/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return trimInlineMathSpaces(s)}
 function readLatexBracedContent(s,bracePos){if(bracePos<0||bracePos>=s.length||s[bracePos]!=='{')return null;let depth=0;for(let i=bracePos;i<s.length;i++){let c=s[i];if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0)return{content:s.slice(bracePos+1,i),end:i}}}return null}
 function normalizeLatexTextCmds(s){s=String(s||'');s=s.replace(/\\{2,}(textbf|textit|emph|underline)\s*\{/gi,'\\$1{');s=s.replace(/(^|[^\\$])(textbf|textit|emph|underline)\s*\{/gi,'$1\\$2{');return s}
 function replaceLatexFmtInPlain(s){s=normalizeLatexTextCmds(s);let cmds=[{re:/\\textbf\s*\{/gi,o:'@@B@@',c:'@@/B@@'},{re:/\\textit\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\emph\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\underline\s*\{/gi,o:'@@U@@',c:'@@/U@@'}];let loop=true;while(loop){loop=false;for(let cmd of cmds){cmd.re.lastIndex=0;let m=cmd.re.exec(s);if(!m)continue;let idx=m.index,bracePos=idx+m[0].length-1,got=readLatexBracedContent(s,bracePos);if(!got)continue;let inner=replaceLatexFmtInPlain(got.content);s=s.slice(0,idx)+cmd.o+inner+cmd.c+s.slice(got.end+1);loop=true;break}}return s}
@@ -13147,7 +13304,7 @@ function formatMcqAnswerBadge(text){let raw=String(text||'').trim();let m=raw.to
 function loigiaiAbcdTagRx(){return /(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi}
 function splitLoigiaiPreamble(text){let t=String(text||'').replace(/\r/g,'').trim();if(!t)return '';let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1)return t.slice(0,tagged[0].index).trim();let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])/gim)];if(lineTagged.length>=1)return t.slice(0,lineTagged[0].index).trim();return t}
 function formatLoigiaiPreambleHtml(preamble){let p=String(preamble||'').trim();if(!p)return '';return `<div class="loigiaiPreamble" style="margin-bottom:12px;line-height:1.55">${formatHintDisplay(p)}</div>`}
-function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
+function extractAbcdSolutionChunks(text){let t=String(text||'').replace(/\r/g,'');let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length>=1){let out=[];for(let i=0;i<tagged.length;i++){let start=tagged[i].index+tagged[i][0].length;let end=i+1<tagged.length?tagged[i+1].index:t.length;out.push({letter:tagged[i][1].toUpperCase(),verdict:tagged[i][2]?dsVerdictLabel(tagged[i][2]):'',body:t.slice(start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')})}return out.slice(0,4)}let lineTagged=[...t.matchAll(/(?:^|\n)\s*(?:\*\*)?([ABCD])(?!\s*[\.\):])(?:\s+(?:(Đúng|Sai)\s*[\-—:–]\s*)?(.+))?$/gim)];if(lineTagged.length>=1){return lineTagged.slice(0,4).map(m=>({letter:m[1].toUpperCase(),verdict:m[2]?dsVerdictLabel(m[2]):'',body:(m[3]||'').trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}))}t=t.replace(/\(\s*•\s*/g,'\n• ').replace(/\s*•\s*/g,'\n• ');let choiceRx=/(?:^|\n)\s*[•●▪▫◦]\s*(?:ch\s+)?(?:\\textbf\s*\{\s*)?(Đúng|Sai)(?:\s*\})?\s*[\.\-—:–]\s*/gi;let choiceMk=[];let cm;while((cm=choiceRx.exec(t))!==null)choiceMk.push({verdict:cm[1],start:cm.index+cm[0].length,head:cm.index});if(choiceMk.length>=2){return choiceMk.map((mk,i)=>{let end=i+1<choiceMk.length?choiceMk[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}let markers=[];let rx=/(?:^|\n|[•\-\*]\s*)(Đúng|Sai)\.\s*/gi,m;while((m=rx.exec(t))!==null)markers.push({verdict:m[1],start:m.index+m[0].length,head:m.index});if(markers.length>=1){return markers.map((mk,i)=>{let end=i+1<markers.length?markers[i+1].head:t.length;return {letter:['A','B','C','D'][i]||String(i+1),verdict:dsVerdictLabel(mk.verdict),body:t.slice(mk.start,end).trim().replace(/^[\)\s.,]+|[\(\s.,]+$/g,'')}}).slice(0,4)}return []}
 function finalizeAbcdSolutionChunks(chunks,q,isDs,skipSheet){if(!q)return chunks||[];let letters=['A','B','C','D'].filter(L=>q[L]);if(!letters.length)return chunks||[];let byL={};(chunks||[]).forEach(c=>{byL[c.letter]=c});let tokens=isDs&&!skipSheet?parseDsAnswerTokens(q.DapAn||''):[];let vMap={};tokens.forEach(t=>vMap[t.letter]=t.verdict);let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];return letters.map(L=>{if(byL[L]){let c=byL[L];if(isDs&&!skipSheet&&!c.verdict&&vMap[L])return Object.assign({},c,{verdict:vMap[L]});return c}return {letter:L,verdict:isDs&&!skipSheet?(vMap[L]||''):'',body:''}})}
 function formatAbcdSolutionList(chunks,q,isDs){q=q||{};if(!isDs&&(q.Dang==='Trắc nghiệm'||(isMcqLetter(q.DapAn)&&hasOptsClient(q)))){let lines=(chunks||[]).map(c=>buildDsSolutionPlainLine(c,true)).filter(Boolean);return formatMcqSolutionRows(lines.join('\n'),q)}chunks=finalizeAbcdSolutionChunks(chunks,q,isDs);if(!chunks.length)return '';let corrMcq=String(q.DapAn||'').trim().toUpperCase().match(/^([ABCD])$/)?.[1];let stacked=needsAbcdStackedLayout(q,chunks);let listCls='dsSolutionList dsSolutionCompact'+(stacked?' dsSolutionRows':(isDs?' dsSolutionDs':' dsSolutionTn'));return `<div class="${listCls}">${chunks.map(c=>{let headVerdict='';if(c.verdict)headVerdict=`<b class="${c.verdict==='Sai'?'dsVerdictSai':'dsVerdictDung'}">${esc(c.verdict)}</b>`;else if(!isDs&&c.letter===corrMcq)headVerdict=`<b class="dsVerdictDung">✓ Đúng</b>`;else if(!isDs&&corrMcq)headVerdict=`<span class="muted">sai</span>`;let stmt='';if(q[c.letter]&&!c.body){let st=renderRichText(stripOptionPrefix(q[c.letter],c.letter));stmt=stacked?`<div class="dsStmtBlock">${st}</div>`:`<span class="dsStmtInline">${st}</span>`}let body=c.body?`<div class="dsSolutionBody">${formatHintDisplay(c.body)}</div>`:'';if(stacked&&stmt)return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}</div>${stmt}${body}</div>`;return `<div class="dsSolutionItem"><div class="dsSolutionHead">${dsCircleHtml(c.letter)} ${headVerdict}${stmt}</div>${body}</div>`}).join('')}</div>`}
 function stripLoigiaiMarkdown(s){return String(s||'').replace(/\*\*/g,'').replace(/^#+\s+/gm,'').trim()}function stripDsBodyLeadingVerdict(body,v){body=String(body||'').trim();if(!body)return '';let m=body.match(/^(?:\*\*)?(Đúng|Sai|Đ|D|S|True|False)\b\s*[\-—:–\.\)]*\s*/i);if(!m)return body;let got=dsVerdictLabel(m[1]);if(v&&got&&got!==v)return body;return body.slice(m[0].length).trim()||body}function buildDsSolutionPlainLine(c,keepBreaks){let v=c.verdict||'';let body=stripLoigiaiMarkdown(c.body||'');if(!keepBreaks)body=body.replace(/\s+/g,' ').trim();else body=body.trim();if(v)body=stripDsBodyLeadingVerdict(body,v);if(!v&&!body)return '';return v?(body?`${c.letter}. ${v} — ${body}`:`${c.letter}. ${v}`):(body?`${c.letter}. — ${body}`:`${c.letter}.`)}function buildDsSolutionCopyText(text,q,forAi){q=q||currentQuestion();let t=String(text||'');let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);if(forAi){let letters=['A','B','C','D'].filter(L=>q[L]);let byL={};chunks.forEach(c=>{byL[c.letter]=c});chunks=letters.map(L=>byL[L]||{letter:L,verdict:'',body:''});chunks=finalizeAbcdSolutionChunks(chunks,q,true,false)}else chunks=finalizeAbcdSolutionChunks(chunks,q,true,false);let lines=chunks.map(c=>buildDsSolutionPlainLine(c,!!forAi)).filter(Boolean).join('\n');if(pre&&lines)return pre+'\n\n'+lines;return lines||pre}function formatDsSolutionPlainList(text,q,fromAi){q=q||currentQuestion();let t=String(text||'').trim();let pre=splitLoigiaiPreamble(t);let chunks=extractAbcdSolutionChunks(t);chunks=finalizeAbcdSolutionChunks(chunks,q,true,!!fromAi);if(!chunks.length)return pre?formatLoigiaiPreambleHtml(pre):formatHintDisplay(t);let rows=chunks.map(c=>{let v=c.verdict||'';let rawBody=stripLoigiaiMarkdown(c.body||'');if(!v&&!rawBody)return '';let vCls=v==='Sai'?'dsVerdictSai':'dsVerdictDung';let head=v?`<span class="dsPlainHead"><b class="${vCls}">${esc(c.letter)}. ${esc(v)}</b> — </span>`:`<span class="dsPlainHead"><b>${esc(c.letter)}.</b> </span>`;let body=rawBody?`<span class="dsPlainBody">${formatHintDisplay(rawBody)}</span>`:'';return `<div class="dsSolutionPlainRow">${head}${body}</div>`}).filter(Boolean);let list=rows.length?`<div class="dsSolutionPlainList">${rows.join('')}</div>`:'';if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}function formatDsSolutionRows(text,q,fromAi){let t=String(text||'').trim();q=q||currentQuestion();if(q&&(q.Dang==='Trắc nghiệm'||(isMcqLetter(q.DapAn)&&hasOptsClient(q))))return formatMcqSolutionRows(t,q);let pre=splitLoigiaiPreamble(t);if(q&&q.Dang==='Đúng sai')return formatDsSolutionPlainList(t,q,!!fromAi);if(!t&&isCurrentQuestionDs())return formatDsSolutionPlainList('',q,!!fromAi);let chunks=extractAbcdSolutionChunks(t);let list='';if(chunks.length>=1)list=formatAbcdSolutionList(chunks,q,true);else if(!pre&&q&&['A','B','C','D'].some(L=>q[L]))list=formatAbcdSolutionList(chunks,q,true);if(pre&&list)return formatLoigiaiPreambleHtml(pre)+list;if(list)return list;if(pre)return formatLoigiaiPreambleHtml(pre);return formatHintDisplay(t)}
@@ -15220,7 +15377,7 @@ function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer
 async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX (AI)</button><button type="button" id="btn_norm_LoiGiai" class="btnSmall btn2" onclick="normalizeLatexField('LoiGiai')">⚡ Chuẩn hóa</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><button type="button" id="btn_norm_${f}" class="btnSmall btn2" onclick="normalizeLatexField('${f}')">⚡ Chuẩn hóa</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){ensureEditAdminPreviewBar();document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);adminExtractTikzFromFormFields();refreshEditHinhAnhPreview();bindEditFormLivePreview();renderEditQuestionPreview()}
 async function adminRerenderTikz(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
 async function adminDownloadHinhAnh(){let raw=adminMergedHinhAnhFromForm();let src=adminPreviewHinhAnhSrc();if(!src){alert('Chưa có ảnh.\n\nNhập mã TikZ hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await tikzRenderFetch(src);if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô link Drive (giữ mã TikZ ở trên) → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
@@ -15229,6 +15386,29 @@ function readQuestionFormData(){adminExtractTikzFromFormFields();let data={};for
 function formatDsDapanForEdit(text,q){let tokens=parseDsAnswerTokens(text||'');let letters=['A','B','C','D'].filter(L=>q&&q[L]);if(tokens.length>=2)return tokens.filter(t=>!letters.length||letters.includes(t.letter)).map(t=>`${t.letter}=${t.verdict}`).join('; ');return String(text||'')}
 function syncDsEditFormFields(q){q=q||{};if(normDangFormVal(q.Dang)!=='Đúng sai')return;let merged=Object.assign({},q);try{merged=Object.assign(merged,readQuestionFormData())}catch(e){}let daEl=document.getElementById('edit_DapAn');let lgEl=document.getElementById('edit_LoiGiai');if(daEl){let fmt=formatDsDapanForEdit(daEl.value||merged.DapAn,merged);if(fmt){daEl.value=fmt;merged.DapAn=fmt}}if(lgEl){let lg=String(lgEl.value||'').trim();if(lg){let fixed=buildDsSolutionCopyText(lg,merged,true);if(fixed)lgEl.value=fixed}}}
 function autoSyncDsLoigiaiAbcd(updates,q){try{q=Object.assign({},q||{},updates||{});if(normDangFormVal(q.Dang)!=='Đúng sai')return updates;let da=String((updates&&updates.DapAn)!=null?updates.DapAn:(q.DapAn||'')).trim();if(da){let fmt=formatDsDapanForEdit(da,q);if(fmt)updates.DapAn=fmt}let lg=String((updates&&updates.LoiGiai)||'').trim();if(!lg.trim()){let daEl=document.getElementById('edit_DapAn');if(daEl&&updates.DapAn)daEl.value=updates.DapAn;return updates}q=Object.assign({},q,updates);let fixed=buildDsSolutionCopyText(lg,q,true);if(fixed)updates.LoiGiai=fixed;let daEl=document.getElementById('edit_DapAn');if(daEl&&updates.DapAn)daEl.value=updates.DapAn;let le=document.getElementById('edit_LoiGiai');if(le&&updates.LoiGiai)le.value=updates.LoiGiai;}catch(e){}return updates}
+async function normalizeLatexField(field){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  let el=document.getElementById('edit_'+field);
+  if(!el){alert('Không tìm thấy ô.');return}
+  let oldText=String(el.value||'');
+  if(!oldText.trim()){alert('Ô đang trống.');return}
+  let btn=document.getElementById('btn_norm_'+field);
+  let oldBtn=btn?btn.textContent:'';
+  try{
+    if(btn){btn.disabled=true;btn.textContent='⏳...'}
+    let j=await api('/api/admin/normalize-latex',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field,text:oldText,context:readQuestionFormData()})});
+    if(j&&j.text!=null){
+      el.value=j.text;
+      if(field==='LoiGiai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData(),{LoiGiai:el.value}));
+      if(['CauHoi','A','B','C','D','LoiGiai','HinhAnh'].includes(field)){
+        refreshEditHinhAnhPreview();
+        renderEditQuestionPreview();
+      }
+      alert(j.changed?'✅ Đã chuẩn hóa LaTeX (không cần AI).':'✓ Đã kiểm tra — LaTeX ổn, không cần sửa.')
+    }
+  }catch(e){alert('Chuẩn hóa lỗi: '+(e.message||e))}
+  finally{if(btn){btn.disabled=false;btn.textContent=oldBtn||'⚡ Chuẩn hóa'}}
+}
 async function aiRewriteLatexField(field){
   if(!USER.is_admin){
     alert('Chỉ ADMIN được dùng AI viết lại nội dung đề.');
@@ -19827,6 +20007,30 @@ def api_question_lookup():
             "message": "Đang nạp Sheet, thử lại sau vài giây.",
         })
     return jsonify(st.lookup_questions_by_id(qid))
+
+
+@app.route("/api/admin/normalize-latex", methods=["POST"])
+def api_admin_normalize_latex():
+    """ADMIN: chuẩn hóa LaTeX tức thì (không AI) — itemchoice, $...$ lệch, đơn vị rad/m…"""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được chuẩn hóa LaTeX."}), 403
+    body = request.get_json(silent=True) or {}
+    field = clean(body.get("field", ""))
+    context = body.get("context") or {}
+    text = clean(body.get("text", ""))
+    if not text:
+        return jsonify({"ok": True, "text": "", "changed": False})
+    fixed = normalize_latex_text(text)
+    if field == "LoiGiai" and effective_dang(context) == "Đúng sai":
+        lg = _normalize_ds_loigiai_abcd(fixed, context)
+        if lg:
+            fixed = lg
+    return jsonify({"ok": True, "text": fixed, "changed": fixed != text})
+
+
 @app.route("/api/ai/rewrite-latex", methods=["POST"])
 def api_ai_rewrite_latex():
     bad = require_login_json()
