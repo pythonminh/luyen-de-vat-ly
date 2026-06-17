@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bm_LATEX_EQUIV_2026_06_12"
+APP_VERSION = "V307bn_LATEX_IMPORT_EX_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -12996,7 +12996,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bm';
+    window.__LDVL_V='V307bn';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -16647,12 +16647,33 @@ def _latex_read_braced(s: str, pos: int) -> Tuple[str, int]:
     raise ValueError("Khối {...} LaTeX chưa đóng.")
 
 
+def _latex_skip_optional_brackets(s: str, pos: int) -> int:
+    """Bỏ qua [tuỳ chọn] sau lệnh LaTeX (vd. \\shortans[oly]{...})."""
+    while pos < len(s):
+        pos = _latex_skip_ws(s, pos)
+        if pos >= len(s) or s[pos] != "[":
+            break
+        depth = 0
+        while pos < len(s):
+            if s[pos] == "[":
+                depth += 1
+            elif s[pos] == "]":
+                depth -= 1
+                if depth == 0:
+                    pos += 1
+                    break
+            pos += 1
+    return pos
+
+
 def _latex_find_command_with_brace(s: str, command: str) -> Optional[Tuple[int, int, str]]:
-    m = re.search(r"\\" + re.escape(command) + r"\s*\{", s, re.I)
+    m = re.search(r"\\" + re.escape(command) + r"\b", s, re.I)
     if not m:
         return None
-    brace_pos = s.find("{", m.start())
-    val, end = _latex_read_braced(s, brace_pos)
+    pos = _latex_skip_optional_brackets(s, m.end())
+    if pos >= len(s) or s[pos] != "{":
+        return None
+    val, end = _latex_read_braced(s, pos)
     return m.start(), end, val
 
 
@@ -16660,7 +16681,7 @@ def _latex_read_command_args(s: str, command: str, max_args: int = 4) -> Optiona
     m = re.search(r"\\" + re.escape(command) + r"\b", s, re.I)
     if not m:
         return None
-    pos = m.end()
+    pos = _latex_skip_optional_brackets(s, m.end())
     args: List[str] = []
     end = pos
     for _ in range(max_args):
@@ -16723,6 +16744,21 @@ def _latex_meta_id(ex_body: str, idx: int) -> str:
     if m:
         return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
     return "LATEX_" + stable_hash(ex_body + str(idx), 12)
+
+
+_LATEX_EX_TAG_MUCDO_RE = re.compile(r"\[0D1([NHVD])(\d)", re.I)
+
+
+def _latex_ex_mucdo(raw_block: str, defaults: Optional[Dict[str, Any]] = None) -> str:
+    """Đọc mức độ từ tag %[0D1N1-1] trong \\begin{ex} (N→NB, H→TH, V→VD, D→VDC)."""
+    defaults = defaults or {}
+    preset = clean(defaults.get("MucDo", "")).upper()
+    if preset in ("NB", "TH", "VD", "VDC"):
+        return preset
+    m = _LATEX_EX_TAG_MUCDO_RE.search(str(raw_block or ""))
+    if not m:
+        return ""
+    return {"N": "NB", "H": "TH", "V": "VD", "D": "VDC"}.get(m.group(1).upper(), "")
 
 
 _LATEX_DANGBT_RE = re.compile(r"\\dangbt\s*\{([^{}]+)\}", re.I)
@@ -16814,6 +16850,9 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             if marker_dbt:
                 q["DangBaiTap"] = marker_dbt
             q["ID"] = clean(defaults.get("ID", "")) or _latex_meta_id(raw_block, idx)
+            tag_mucdo = _latex_ex_mucdo(raw_block, defaults)
+            if tag_mucdo:
+                q["MucDo"] = tag_mucdo
             if not q.get("QuyenTruyCap"):
                 q["QuyenTruyCap"] = "VIP"
             if not q.get("Diem"):
