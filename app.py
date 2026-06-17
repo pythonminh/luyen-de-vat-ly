@@ -27,6 +27,7 @@ Yêu cầu Environment Variables trên Render:
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 import random
@@ -56,6 +57,7 @@ from flask import (
     redirect,
     render_template_string,
     request,
+    send_file,
     session,
     url_for,
 )
@@ -67,7 +69,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bv_THEORY_ADMIN_EDIT_2026_06_17"
+APP_VERSION = "V307bw_ANDROID_OFFLINE_2026_06_17"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -12528,7 +12530,7 @@ REGISTER_HTML = r"""
 
 APP_HTML = r"""
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Luyện đề</title><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Luyện đề</title><script>window.LDVL_OFFLINE=false;</script><script src="/offline-shim.js"></script><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <script>window.MathJax={loader:{load:['[tex]/ams']},tex:{packages:{'[+]':['ams']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},svg:{fontCache:"global"},options:{renderActions:{addMenu:[0,0,'']}}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
@@ -13057,7 +13059,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bv';
+    window.__LDVL_V='V307bw';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -21564,6 +21566,268 @@ def api_admin_dedupe_hinhanh():
         st = get_store()
         st.ensure_questions_loaded()
         return jsonify(st.dedupe_hinhanh_images(dry_run=dry_run, rename=rename, max_sources=max_sources))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# ANDROID OFFLINE — gói dữ liệu + shim API
+# ============================================================
+
+def _offline_learning_key(fields: List[str], item: Dict[str, Any]) -> str:
+    return "|".join(key_norm(item.get(f, "")) for f in fields)
+
+
+def _offline_session_ctx():
+    """Ngữ cảnh Flask giả lập ADMIN offline khi xuất gói."""
+    return {
+        "mahs": "OFFLINE",
+        "hoten": "Học offline",
+        "lop": "",
+        "role": "ADMIN",
+        "session_token": "offline_pack",
+        "trial_until": "",
+        "account_until": "",
+    }
+
+
+def render_offline_app_html() -> str:
+    html = APP_HTML
+    html = html.replace(
+        "<script>window.LDVL_OFFLINE=false;</script>",
+        "<script>window.LDVL_OFFLINE=true;</script>",
+        1,
+    )
+    html = html.replace("<title>Luyện đề</title>", "<title>Luyện đề Offline</title>", 1)
+    return html
+
+
+def build_offline_pack_data(st: Any) -> Dict[str, Any]:
+    """Xuất meta + đề + học liệu để nhúng vào APK Android."""
+    st.ensure_questions_loaded(force=True)
+    st.ensure_learning_loaded(force=True)
+    with app.test_request_context("/"):
+        session.clear()
+        session.update(_offline_session_ctx())
+        meta = st.meta()
+        meta["loading"] = False
+        meta["load_error"] = ""
+        meta["user"] = {
+            "mahs": "OFFLINE",
+            "hoten": "Học offline (APK)",
+            "lop": "",
+            "role": "ADMIN",
+            "role_label": "ADMIN",
+            "benefits": ["Làm bài offline", "Xem đáp án & lời giải", "Lý thuyết đã tải"],
+            "is_admin": True,
+            "is_trial": False,
+            "is_vip": True,
+            "is_svip": True,
+            "can_5050": True,
+            "can_submit_score": True,
+            "can_ai_hint": False,
+            "can_view_solution_live": True,
+            "can_save_own_ai_key": False,
+            "ai_has_keys": False,
+            "ai_using_user_keys": False,
+            "ai_user_gemini_keys": 0,
+            "trial_until": "",
+            "account_until": "",
+            "ai_profile": "OFFLINE",
+            "ai_profile_label": "Offline",
+            "ai_profile_hint": "Chế độ offline — không có AI. Cập nhật gói qua máy tính rồi cài lại APK.",
+            "ai_show_key_panel": False,
+        }
+        decks: Dict[str, Any] = {}
+        deck_errors: List[str] = []
+        for item in st.catalog or []:
+            made = clean(item.get("MaDe"))
+            if not made:
+                continue
+            try:
+                decks[made] = st.start_quiz(
+                    made,
+                    shuffle_questions=False,
+                    shuffle_options=False,
+                    group_by_dang=True,
+                )
+            except Exception as e:
+                deck_errors.append(f"{made}: {e}")
+        theory: Dict[str, Any] = {}
+        for it in st.theory_items or []:
+            if not st._learning_status_ok(it):
+                continue
+            k = _offline_learning_key(["Mon", "Lop", "Chuong", "BaiHoc"], it)
+            theory.setdefault(k, {"ok": True, "items": [], "count": 0})
+            theory[k]["items"].append(dict(it))
+            theory[k]["count"] = len(theory[k]["items"])
+        methods: Dict[str, Any] = {}
+        for it in st.method_items or []:
+            if not st._learning_status_ok(it):
+                continue
+            k = _offline_learning_key(["Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap"], it)
+            methods.setdefault(k, {"ok": True, "items": [], "count": 0})
+            methods[k]["items"].append(dict(it))
+            methods[k]["count"] = len(methods[k]["items"])
+    return {
+        "version": APP_VERSION,
+        "built_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "meta": meta,
+        "decks": decks,
+        "theory": theory,
+        "methods": methods,
+        "deck_errors": deck_errors,
+        "stats": {
+            "catalog": len(st.catalog or []),
+            "decks_ok": len(decks),
+            "theory_keys": len(theory),
+            "method_keys": len(methods),
+        },
+    }
+
+
+def build_offline_pack_zip(st: Any) -> bytes:
+    """ZIP gồm index.html + pack/data.json + manifest để giải nén vào assets Android."""
+    pack = build_offline_pack_data(st)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("www/index.html", render_offline_app_html())
+        zf.writestr("www/offline-shim.js", OFFLINE_SHIM_JS)
+        zf.writestr(
+            "www/manifest.json",
+            json.dumps(
+                {
+                    "name": "Luyện đề Offline",
+                    "short_name": "Luyện đề",
+                    "start_url": "/?source=apk",
+                    "display": "standalone",
+                    "theme_color": "#1d4ed8",
+                    "background_color": "#f5f7fb",
+                },
+                ensure_ascii=False,
+            ),
+        )
+        zf.writestr("www/pack/data.json", json.dumps(pack, ensure_ascii=False))
+        zf.writestr(
+            "README.txt",
+            "Giải nén vào android/app/src/main/assets/\n"
+            "Sau đó chạy: cd android && gradlew.bat assembleDebug\n",
+        )
+    return buf.getvalue()
+
+
+OFFLINE_SHIM_JS = r"""
+(function(){
+  if(!window.LDVL_OFFLINE)return;
+  let pack=null,sessions={};
+  function jsonResp(obj,status){status=status||200;return new Response(JSON.stringify(obj),{status,headers:{'Content-Type':'application/json'}})}
+  function readBody(opts){try{if(!opts||!opts.body)return{};return JSON.parse(opts.body)}catch(e){return{}}}
+  function normKey(parts){return (parts||[]).map(x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d')).join('|')}
+  function normLetter(v){let s=String(v||'').trim().toUpperCase().replace(/\u0110/g,'D');return /^[ABCD]$/.test(s)?s:''}
+  function parseTfVals(v){if(typeof parseTfClient==='function')return parseTfClient(v);return[]}
+  function parseFloatVn(v){let s=String(v||'').trim().replace(/\s/g,'').replace(',','.');if(!s)return null;let n=parseFloat(s);return isNaN(n)?null:n}
+  function effDang(q){if(typeof resolveDang==='function')return resolveDang(q);return String((q&&q.Dang)||'Trắc nghiệm')}
+  function gradeOne(q,ans){
+    let dang=effDang(q),cor=String((q&&q.DapAn)||'').trim(),chosen=String(ans==null?'':ans).trim();
+    if(dang==='Trắc nghiệm'){let c=normLetter(cor),ch=normLetter(chosen);return{ok:!!(c&&ch&&c===ch),correct:c,chosen:ch}}
+    if(dang==='Đúng sai'){
+      let corr=parseTfVals(cor),sel=parseTfVals(ans),bitsC=[],bitsS=[];
+      for(let i=0;i<4;i++){let L='ABCD'[i];if(!String(q[L]||'').trim())continue;bitsC.push(corr[i]||'');bitsS.push(sel[i]||'')}
+      let ok=bitsC.length>=2&&bitsC.every(Boolean)&&bitsS.every(Boolean)&&bitsC.join(',')===bitsS.join(',');
+      return{ok,correct:cor,chosen:bitsS.join(',')}
+    }
+    if(dang==='Trả lời ngắn'){
+      let cn=parseFloatVn(cor),un=parseFloatVn(chosen),tol=parseFloatVn(q.SaiSo);if(tol==null)tol=0;
+      if(cn!=null&&un!=null)return{ok:Math.abs(cn-un)<=tol+1e-12,correct:cor,chosen}
+      return{ok:normKey([cor])===normKey([chosen]),correct:cor,chosen}
+    }
+    return{ok:false,correct:cor,chosen}
+  }
+  async function ensurePack(){
+    if(pack)return pack;
+    let r=await fetch('/pack/data.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('Thiếu gói offline /pack/data.json — chạy build_offline_pack.py trước khi đóng APK.');
+    pack=await r.json();return pack;
+  }
+  function routeOffline(path,opts){
+    opts=opts||{};let method=String(opts.method||'GET').toUpperCase(),body=readBody(opts);
+    if(path==='/api/meta'||path==='/api/meta/')return jsonResp(pack.meta||{});
+    if(path==='/api/ai-config')return jsonResp({has_keys:false,using_user_keys:false,user_gemini_keys:0,has_server_keys:false,ai_show_key_panel:false});
+    if(path==='/api/start'&&(method==='POST'||method==='GET')){
+      let made=String(body.made||body.MaDe||'').trim();
+      let deck=(pack.decks||{})[made];
+      if(!deck)return jsonResp({error:'Đề «'+made+'» không có trong gói offline.'},404);
+      let sid=deck.sid||('off_'+made);sessions[sid]=deck;return jsonResp(Object.assign({},deck,{sid}));
+    }
+    if(path==='/api/learning/theory'&&method==='POST'){
+      let k=normKey([body.Mon||body.mon,body.Lop||body.lop,body.Chuong||body.chuong,body.BaiHoc||body.baihoc]);
+      return jsonResp((pack.theory||{})[k]||{ok:true,count:0,items:[]});
+    }
+    if(path==='/api/learning/method'&&method==='POST'){
+      let k=normKey([body.Mon||body.mon,body.Lop||body.lop,body.Chuong||body.chuong,body.BaiHoc||body.baihoc,body.DangBaiTap||body.dangbaitap]);
+      return jsonResp((pack.methods||{})[k]||{ok:true,count:0,items:[]});
+    }
+    if(path==='/api/check-one'&&method==='POST'){
+      let ses=sessions[body.sid];if(!ses)return jsonResp({error:'Phiên làm bài hết hạn — mở lại đề.'},400);
+      let idx=parseInt(body.index,10)||0,qs=ses.questions||[],q=qs[idx];
+      if(!q)return jsonResp({error:'Câu không hợp lệ'},400);
+      let g=gradeOne(q,body.answer),out={index:idx,ID:q.ID,Dang:q.Dang,ok:g.ok,correct:g.correct,chosen:g.chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''};
+      return jsonResp(out);
+    }
+    if(path==='/api/submit'&&method==='POST'){
+      let ses=sessions[body.sid];if(!ses)return jsonResp({error:'Phiên làm bài hết hạn.'},400);
+      let qs=ses.questions||[],answers=body.answers||{},results=[],correct=0,auto=0;
+      for(let i=0;i<qs.length;i++){let q=qs[i];if(effDang(q)==='Tự luận')continue;auto++;let g=gradeOne(q,answers[i]);if(g.ok)correct++;results.push({index:i,ok:g.ok,correct:g.correct,chosen:g.chosen})}
+      let score=auto?Math.round(correct/auto*100)/10:0;
+      return jsonResp({score,correct_count:correct,auto_count:auto,results});
+    }
+    if(path.startsWith('/api/'))return jsonResp({error:'Offline: chức năng này cần mạng ('+path+').'},503);
+    return null;
+  }
+  const origFetch=window.fetch;
+  window.fetch=async function(url,opts){
+    await ensurePack().catch(()=>{});
+  if(pack){
+      let u=typeof url==='string'?url:(url&&url.url)||'';
+      try{
+        let p=new URL(u,location.origin).pathname;
+        let off=routeOffline(p,opts||{});
+        if(off)return off;
+      }catch(e){}
+    }
+    return origFetch.apply(this,arguments);
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    let bar=document.getElementById('info');
+    if(bar&&pack&&pack.built_at)bar.textContent='📴 Offline APK · gói '+pack.built_at+' · '+((pack.stats&&pack.stats.decks_ok)||0)+' đề';
+  });
+})();
+"""
+
+
+@app.route("/offline-shim.js")
+def offline_shim_js():
+    return app.response_class(OFFLINE_SHIM_JS, mimetype="application/javascript; charset=utf-8")
+
+
+@app.route("/api/admin/offline-pack", methods=["POST"])
+def api_admin_offline_pack():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xuất gói offline APK."}), 403
+    try:
+        st = get_store()
+        blob = build_offline_pack_zip(st)
+        pack = build_offline_pack_data(st)
+        fname = f"luyen-de-offline-{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+        return send_file(
+            io.BytesIO(blob),
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=fname,
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
