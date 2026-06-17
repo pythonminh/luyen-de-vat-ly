@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bu_THEORY_MATH_STABLE_2026_06_17"
+APP_VERSION = "V307bv_THEORY_ADMIN_EDIT_2026_06_17"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -4276,6 +4276,26 @@ class SheetStore:
         self.load_learning()
         return {"ok": True, "kind": kind, "action": action, "row": row_no, "item": item}
 
+    def delete_learning_item(self, kind: str, item: Dict[str, Any]) -> Dict[str, Any]:
+        """ADMIN xóa một dòng Ly_Thuyet / Phuong_Phap khỏi Google Sheet."""
+        if not is_admin():
+            raise RuntimeError("Chỉ ADMIN được xóa học liệu")
+        kind = "method" if clean(kind).lower() == "method" else "theory"
+        self.ensure_learning_loaded(force=True)
+        ws = self.ws_methods if kind == "method" else self.ws_theory
+        item = dict(item or {})
+        fields = LEARNING_METHOD_FIELDS if kind == "method" else LEARNING_THEORY_FIELDS
+        for f in fields:
+            if f in item:
+                item[f] = clean(item.get(f, ""))
+        row_no = self._learning_upsert_match_row(kind, item)
+        if not row_no or row_no < 2:
+            raise RuntimeError("Không tìm thấy dòng học liệu trên Google Sheet.")
+        gsheet_call_retry(f"delete {kind} learning", ws.delete_rows, row_no)
+        self.learning_loaded = False
+        self.load_learning()
+        return {"ok": True, "kind": kind, "deleted": True, "row": row_no}
+
     def ensure_translate_en_loaded(self, force: bool = False) -> None:
         """Đảm bảo có sheet Dich_Anh và nạp bản dịch tiếng Anh đã lưu."""
         if self.translate_en_loaded and not force:
@@ -4678,7 +4698,7 @@ class SheetStore:
             d["DapAn"] = q.get("DapAn", "")
             d["LoiGiai"] = q.get("LoiGiai", "")
             d["SaiSo"] = q.get("SaiSo", "")
-            d["_row"] = q.get("_row", "")
+            d["_row"] = int(q.get("_row") or 0)
         return d
 
     def _lookup_match_item(self, q: Dict[str, Any]) -> Dict[str, Any]:
@@ -12872,6 +12892,12 @@ html[data-theme='dark'] .aiGenStatus{background:#0f172acc}.aiGenRemove{padding:4
 .dangTheoryHost{margin:8px 0 12px;max-width:100%;min-width:0}
 .dangTheoryCard{border:1px solid #93c5fd;border-radius:13px;background:linear-gradient(180deg,#eff6ff,#ffffff);overflow:hidden;box-shadow:0 3px 12px #1d4ed81a}
 html[data-theme="dark"] .dangTheoryCard{background:linear-gradient(180deg,#172554,#1e293b);border-color:#3b82f6}
+.dangTheorySummaryRow{display:flex;align-items:stretch;gap:0}
+.dangTheorySummaryRow .dangTheorySummary{flex:1;min-width:0;border-radius:0}
+.theoryCardAdminBar{display:flex;gap:5px;align-items:center;padding:6px 8px;flex-shrink:0;border-left:1px solid #bfdbfe;background:#f8fbff}
+html[data-theme="dark"] .theoryCardAdminBar{background:#0f172a;border-left-color:#334155}
+.theoryCardAdminBtn{font-size:11px!important;padding:6px 8px!important;width:auto!important;white-space:nowrap;min-height:34px}
+.theoryCardDelBtn{background:#fee2e2!important;color:#991b1b!important;border-color:#fecaca!important}
 .dangTheorySummary{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border:0;border-radius:0;background:transparent;color:var(--text);text-align:left;font-size:14px;cursor:pointer}
 .dangTheorySummaryText{flex:1;min-width:0;line-height:1.35;overflow-wrap:anywhere}
 .dangTheoryChevron{flex:0 0 auto;font-size:15px;transition:transform .18s ease}
@@ -13023,6 +13049,7 @@ body.theoryEditorOpen{overflow:hidden!important}
     <div id="theoryEditorStatus" class="theoryEditorStatus">Nội dung chỉ được lưu vào Sheet sau khi bấm “Lưu Google Sheet”.</div>
     <div class="theoryEditorFooterBtns">
       <button type="button" class="btn2" onclick="saveDangTheoryDraftNow()">💾 Lưu nháp máy</button>
+      <button type="button" id="theoryEditorDeleteBtn" class="btn2 theoryCardDelBtn" onclick="deleteLearningEditorSheet()">🗑 Xóa Sheet</button>
       <button type="button" id="theoryEditorSaveBtn" class="btn" onclick="saveDangTheoryToSheet()">✅ Lưu Google Sheet</button>
     </div>
   </div>
@@ -13030,7 +13057,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bu';
+    window.__LDVL_V='V307bv';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -16052,9 +16079,16 @@ function ensureTheoryHosts(){
   return {bai,dang};
 }
 function ensureDangTheoryHost(){return ensureTheoryHosts().dang}
-function buildInlineTheoryCardHtml(cardId,label,body,isOpen){
+function theoryCardAdminBarHtml(kind){
+  if(!USER||!USER.is_admin)return '';
+  let openFn=kind==='theory'?'openTheoryLearningEditor(event)':'openDangTheoryEditor(event)';
+  let delFn=kind==='theory'?'deleteBaiTheoryFromSheet(event)':'deleteDangTheoryFromSheet(event)';
+  return '<span class="theoryCardAdminBar" onclick="event.stopPropagation()"><button type="button" class="btn2 theoryCardAdminBtn" title="Soạn / sửa khung" onclick="'+openFn+';return false;">✏️ Sửa</button><button type="button" class="btn2 theoryCardAdminBtn theoryCardDelBtn" title="Xóa khỏi Google Sheet" onclick="'+delFn+';return false;">🗑 Xóa</button></span>';
+}
+function buildInlineTheoryCardHtml(cardId,label,body,isOpen,adminKind){
   if(!body)return '';
-  return '<div id="'+escAttr(cardId)+'" class="dangTheoryCard'+(isOpen?' isOpen':'')+'"><button type="button" class="dangTheorySummary" onclick="toggleInlineTheoryCard(\''+escAttr(cardId)+'\')"><span class="dangTheorySummaryText">'+esc(label)+'</span><span class="dangTheoryChevron">▼</span></button><div class="dangTheoryBody">'+body+'</div></div>';
+  let adminBar=adminKind?theoryCardAdminBarHtml(adminKind):'';
+  return '<div id="'+escAttr(cardId)+'" class="dangTheoryCard'+(isOpen?' isOpen':'')+'"><div class="dangTheorySummaryRow"><button type="button" class="dangTheorySummary" onclick="toggleInlineTheoryCard(\''+escAttr(cardId)+'\')"><span class="dangTheorySummaryText">'+esc(label)+'</span><span class="dangTheoryChevron">▼</span></button>'+adminBar+'</div><div class="dangTheoryBody">'+body+'</div></div>';
 }
 function baiTheoryCardOpenKey(q){return 'LDVL_BAI_THEORY_OPEN|'+theoryLearningKey(q)}
 function getBaiTheoryCardOpen(q){
@@ -16088,7 +16122,7 @@ function afterBaiTheoryPrefetch(q,jOrCached){
   let body=theoryLearningLatexHtml(q,items);
   if(!body){host.classList.add('hide');host.innerHTML='';return}
   let label='📚 Lý thuyết bài: '+String(q.BaiHoc||q.Chuong||'Bài học').trim();
-  host.innerHTML=buildInlineTheoryCardHtml('baiTheoryCard',label,body,getBaiTheoryCardOpen(q));
+  host.innerHTML=buildInlineTheoryCardHtml('baiTheoryCard',label,body,getBaiTheoryCardOpen(q),'theory');
   host.classList.remove('hide');
   typesetTheoryMath().catch(()=>{});
 }
@@ -16102,7 +16136,7 @@ function afterDangTheoryPrefetch(q,entry,j){
   let body=methodLearningLatexHtml(q,entry||DANG_THEORY_CACHE[key]||{item:exactDangTheoryItem((j&&j.items)||[],q)});
   if(!body){host.classList.add('hide');host.innerHTML='';return}
   let label='📘 Khung dạng: '+String(q.DangBaiTap||'').trim();
-  host.innerHTML=buildInlineTheoryCardHtml('dangTheoryCard',label,body,getTheoryCardOpen(q));
+  host.innerHTML=buildInlineTheoryCardHtml('dangTheoryCard',label,body,getTheoryCardOpen(q),'method');
   host.classList.remove('hide');
   typesetTheoryMath().catch(()=>{});
 }
@@ -16294,7 +16328,8 @@ function onDangTheoryInput(){THEORY_EDITOR_DIRTY=true;clearTimeout(THEORY_EDITOR
 function saveDangTheoryDraftSilent(){try{if(!THEORY_EDITOR_Q)return;let el=document.getElementById('theoryLatexInput');localStorage.setItem(learningLatexDraftKey(THEORY_EDITOR_Q),String(el?el.value:''));setTheoryEditorStatus('Đã tự lưu nháp trên thiết bị · chưa lưu Google Sheet.',false)}catch(e){}}
 function saveDangTheoryDraftNow(){saveDangTheoryDraftSilent();setTheoryEditorStatus('Đã lưu nháp trên thiết bị này.',false)}
 async function openDangTheoryEditor(ev){
-  if(ev&&ev.stopPropagation)ev.stopPropagation();if(!USER.is_admin){alert('Chỉ ADMIN được soạn khung Dạng bài tập.');return}
+  if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation()}
+  if(!USER.is_admin){alert('Chỉ ADMIN được soạn khung Dạng bài tập.');return}
   let q=QUESTIONS[CUR]||{};if(!q||!String(q.DangBaiTap||'').trim()){alert('Hãy mở một câu đã có Dạng bài tập (cột H) trước.');return}
   THEORY_EDITOR_KIND='method';THEORY_EDITOR_Q=Object.assign({},q);THEORY_EDITOR_ITEM=null;THEORY_EDITOR_DIRTY=false;syncTheoryViewportHeight();syncTheoryEditorChrome();
   let overlay=document.getElementById('dangTheoryEditor');overlay.classList.remove('hide');overlay.setAttribute('aria-hidden','false');document.body.classList.add('theoryEditorOpen');
@@ -16311,7 +16346,8 @@ async function openDangTheoryEditor(ev){
   setTimeout(()=>{inp.focus();inp.scrollIntoView({block:'center'})},220)
 }
 async function openTheoryLearningEditor(ev){
-  if(ev&&ev.stopPropagation)ev.stopPropagation();if(!USER.is_admin){alert('Chỉ ADMIN được soạn khung Lý thuyết.');return}
+  if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation()}
+  if(!USER.is_admin){alert('Chỉ ADMIN được soạn khung Lý thuyết.');return}
   let q=QUESTIONS[CUR]||{};if(!q||!String(q.BaiHoc||'').trim()){alert('Hãy mở câu đã có Bài học (metadata Mon/Lớp/Chương/Bài học).');return}
   THEORY_EDITOR_KIND='theory';THEORY_EDITOR_Q=Object.assign({},q);THEORY_EDITOR_ITEM=null;THEORY_EDITOR_DIRTY=false;syncTheoryViewportHeight();syncTheoryEditorChrome();
   let overlay=document.getElementById('dangTheoryEditor');overlay.classList.remove('hide');overlay.setAttribute('aria-hidden','false');document.body.classList.add('theoryEditorOpen');
@@ -16331,10 +16367,43 @@ function closeDangTheoryEditor(force){
   if(!force&&THEORY_EDITOR_DIRTY&&!confirm('Nội dung đang soạn chưa lưu Google Sheet. Đóng nhưng vẫn giữ bản nháp trên thiết bị?'))return;
   saveDangTheoryDraftSilent();let overlay=document.getElementById('dangTheoryEditor');if(overlay){overlay.classList.add('hide');overlay.setAttribute('aria-hidden','true')}document.body.classList.remove('theoryEditorOpen');THEORY_EDITOR_Q=null;THEORY_EDITOR_ITEM=null;THEORY_EDITOR_KIND='method';THEORY_EDITOR_DIRTY=false
 }
+async function deleteLearningFromSheet(kind,ev,qOverride){
+  if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation()}
+  if(!USER.is_admin)return;
+  let q=qOverride||QUESTIONS[CUR]||{};
+  kind=kind==='method'?'method':'theory';
+  let label=kind==='theory'?('Lý thuyết bài «'+(q.BaiHoc||'')+'»'):('Khung dạng «'+(q.DangBaiTap||'')+'»');
+  if(!confirm('Xóa '+label+' khỏi Google Sheet?'))return;
+  if(!confirm('Xác nhận lần 2: xóa vĩnh viễn dòng Ly_Thuyet/Phuong_Phap?'))return;
+  let it={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||''};
+  if(kind==='method')it.DangBaiTap=q.DangBaiTap||'';
+  try{
+    let j=await api('/api/learning/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,item:it})});
+    if(typeof LEARNING_CACHE!=='undefined')LEARNING_CACHE={};
+    DANG_THEORY_CACHE={};
+    try{localStorage.removeItem(learningLatexDraftKey(q))}catch(e){}
+    if(kind==='method')await syncDangTheoryCard(true);else await syncBaiTheoryCard(true);
+    if(LEARNING_OPEN_KIND===kind)loadLearningPanelContent(kind,true);
+    alert('Đã xóa dòng '+(j.row||'?')+' trên sheet.');
+    return j;
+  }catch(e){alert('Không xóa được: '+(e.message||e));throw e}
+}
+function deleteBaiTheoryFromSheet(ev){return deleteLearningFromSheet('theory',ev)}
+function deleteDangTheoryFromSheet(ev){return deleteLearningFromSheet('method',ev)}
+async function deleteLearningEditorSheet(){
+  if(!USER.is_admin||!THEORY_EDITOR_Q)return;
+  let kind=THEORY_EDITOR_KIND==='theory'?'theory':'method';
+  try{await deleteLearningFromSheet(kind,null,THEORY_EDITOR_Q);closeDangTheoryEditor(true)}catch(e){}
+}
 async function saveDangTheoryToSheet(){
   if(!USER.is_admin||!THEORY_EDITOR_Q)return;let btn=document.getElementById('theoryEditorSaveBtn'),inp=document.getElementById('theoryLatexInput');let src=normalizeTheoryLatexSourceClient(inp?inp.value:'');
-  if(!src){alert('Khung đang trống.');return}let blocks=parseTheoryLatexBlocks(src);if(!blocks.length){alert('Chưa tìm thấy môi trường dn, note hoặc vidu.');return}
-  let q=THEORY_EDITOR_Q,it=Object.assign({},THEORY_EDITOR_ITEM||{}),kind=THEORY_EDITOR_KIND==='theory'?'theory':'method';
+  let q=THEORY_EDITOR_Q,kind=THEORY_EDITOR_KIND==='theory'?'theory':'method';
+  if(!String(src||'').trim()){
+    if(!confirm('Khung đang trống. Xóa học liệu này khỏi Google Sheet?'))return;
+    try{await deleteLearningFromSheet(kind,null,q);closeDangTheoryEditor(true)}catch(e){}
+    return;
+  }
+  let blocks=parseTheoryLatexBlocks(src);if(!blocks.length){alert('Chưa tìm thấy môi trường dn, note hoặc vidu.');return}
   it.Mon=q.Mon||'';it.Lop=q.Lop||'';it.Chuong=q.Chuong||'';it.BaiHoc=q.BaiHoc||'';it.NoiDungLaTeX=src;it.TrangThai='OK';
   if(kind==='theory'){it.TieuDe=(document.getElementById('theoryEditorTitle').value||q.BaiHoc||'').trim()}else{it.DangBaiTap=q.DangBaiTap||'';it.TenPhuongPhap=(document.getElementById('theoryEditorTitle').value||q.DangBaiTap||'').trim()}
   let sheetName=kind==='theory'?'Ly_Thuyet':'Phuong_Phap';
@@ -18854,6 +18923,23 @@ def api_learning_save():
         return jsonify(res)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/learning/delete", methods=["POST"])
+def api_learning_delete():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xóa học liệu."}), 403
+    body = request.get_json(silent=True) or {}
+    kind = "method" if clean(body.get("kind", "")).lower() == "method" else "theory"
+    item = body.get("item") if isinstance(body.get("item"), dict) else {}
+    st = get_store()
+    try:
+        res = st.delete_learning_item(kind, item)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route("/api/learning/generate-save", methods=["POST"])
 def api_learning_generate_save():
