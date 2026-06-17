@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bl_ADMIN_SLIM_2026_06_12"
+APP_VERSION = "V307bm_LATEX_EQUIV_2026_06_12"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -912,7 +912,7 @@ def _latex_dollar_count(t: str) -> int:
 
 
 def _latex_structure_ok(t: str) -> bool:
-    """True nếu $ cân bằng và không còn \\text/\\, lẻ ngoài khối $...$."""
+    """True nếu $ cân bằng và không còn lệnh \\... lẻ ngoài khối $...$."""
     if not t:
         return True
     if _latex_dollar_count(t) % 2 != 0:
@@ -920,9 +920,48 @@ def _latex_structure_ok(t: str) -> bool:
     plain = t
     plain = re.sub(r"\$\$[^$]*\$\$", "", plain)
     plain = re.sub(r"\$[^$]*\$", "", plain)
-    if re.search(r"\\(?:text|mathrm|frac|sqrt|left|right|times|cdot|pm|mp|leq|geq|neq|approx|,)", plain):
+    if re.search(r"\\[a-zA-Z]", plain):
         return False
     return True
+
+
+def _is_orphan_math_segment(s: str) -> bool:
+    """Đoạn giữa hai khối $...$ chỉ là công thức (không phải câu tiếng Việt)."""
+    s = clean(s)
+    if not s:
+        return False
+    if re.search(r"[À-ỹĐđ]{3,}", s):
+        return False
+    if re.search(r"\\[a-zA-Z]", s):
+        return True
+    if re.search(r"[=_^{}\\]", s) and not re.search(r"[A-Za-zÀ-ỹĐđ]{4,}", s):
+        return True
+    return False
+
+
+def _merge_equiv_chain_math(t: str) -> str:
+    """$\\sin 2x=1$\\Leftrightarrow 2x=...$\\Leftrightarrow x=...$ → một khối $...$."""
+    if not t or "$" not in t:
+        return t
+    prev = None
+    while prev != t:
+        prev = t
+
+        def _repl(m: re.Match) -> str:
+            mid = m.group(2)
+            if not _is_orphan_math_segment(mid):
+                return m.group(0)
+            a = m.group(1)[1:-1].strip()
+            b = m.group(3)[1:-1].strip()
+            return f"${a}{mid.strip()}{b}$"
+
+        t = re.sub(
+            r"(\$[^$\n]+?\$)([^$]+?)(\$[^$\n]+?\$)",
+            _repl,
+            t,
+            count=1,
+        )
+    return t
 
 
 def _merge_adjacent_inline_math(t: str) -> str:
@@ -1119,6 +1158,12 @@ def _latex_needs_heavy_normalize(t: str) -> bool:
         return True
     if re.search(r"\$\s+\$(?=[^$\n])", t):
         return True
+    if re.search(
+        r"\$[^$\n]*\$[^$]*\\(?:Leftrightarrow|Rightarrow|leftrightarrow|dfrac|tfrac|frac|sqrt|sin|cos|tan|cot|log|ln|pi|alpha|beta|theta)",
+        t,
+        re.I,
+    ):
+        return True
     if not _latex_structure_ok(t):
         return True
     return False
@@ -1135,6 +1180,7 @@ def normalize_latex_light(s: Any) -> str:
     t = re.sub(r"\$\s*\n+\s*\$", "", t)
     t = re.sub(r"\$\s*\n+\s*([^$\n]+?)\s*\n+\s*\$", r"$(\1)$", t)
     t = re.sub(r"\$\s*\n+([^$\n]+?)\s*\$", r"$(\1)$", t)
+    t = _merge_equiv_chain_math(t)
     t = _merge_adjacent_inline_math(t)
     t = _trim_inline_math_spaces(t)
     if _latex_structure_ok(t):
@@ -1155,6 +1201,7 @@ def normalize_latex_text(s: Any) -> str:
     if _latex_structure_ok(t) and not _latex_needs_heavy_normalize(t):
         return normalize_latex_light(t)
     t = _strip_latex_list_markup(t)
+    t = _merge_equiv_chain_math(t)
     t = _merge_broken_dfrac_sqrt(t)
     t = _merge_unit_between_math(t)
     t = _merge_adjacent_inline_math(t)
@@ -12949,7 +12996,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bl';
+    window.__LDVL_V='V307bm';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -15134,7 +15181,7 @@ async function normalizeLatexField(field){
         refreshEditHinhAnhPreview();
         renderEditQuestionPreview();
       }
-      alert(j.changed?'✅ Đã chuẩn hóa LaTeX (không cần AI).':'✓ Đã kiểm tra — LaTeX ổn, không cần sửa.')
+      alert(j.still_broken?'⚠ Vẫn còn LaTeX lệch — thử «Sửa LaTeX (AI)».':(j.changed?'✅ Đã chuẩn hóa LaTeX (không cần AI).':'✓ Đã kiểm tra — LaTeX ổn, không cần sửa.'))
     }
   }catch(e){alert('Chuẩn hóa lỗi: '+(e.message||e))}
   finally{if(btn){btn.disabled=false;btn.textContent=oldBtn||'⚡ Chuẩn hóa'}}
@@ -19756,7 +19803,13 @@ def api_admin_normalize_latex():
     fixed = normalize_latex_text(text)
     if field == "LoiGiai" and effective_dang(context) == "Đúng sai":
         fixed = normalize_ds_loigiai(fixed, context)
-    return jsonify({"ok": True, "text": fixed, "changed": fixed != text})
+    still_broken = not _latex_structure_ok(fixed)
+    return jsonify({
+        "ok": True,
+        "text": fixed,
+        "changed": fixed != text,
+        "still_broken": still_broken,
+    })
 
 
 @app.route("/api/ai/rewrite-latex", methods=["POST"])
