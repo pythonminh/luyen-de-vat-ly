@@ -67,7 +67,7 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
-APP_VERSION = "V307bs_THEORY_MATH_RENDER_2026_06_17"
+APP_VERSION = "V307bu_THEORY_MATH_STABLE_2026_06_17"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -13030,7 +13030,7 @@ body.theoryEditorOpen{overflow:hidden!important}
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bs';
+    window.__LDVL_V='V307bu';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -13225,7 +13225,7 @@ function clearShareTarget(){document.querySelectorAll('.card.shareTarget').forEa
 function markShareTarget(made){clearShareTarget();let el=document.getElementById('shareCard_'+made);if(el){el.classList.add('shareTarget');setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),120)}}
 function handleShareDeepLink(){let sp=getShareParams();if(!sp.de)return;let item=CATALOG.find(x=>x.MaDe===sp.de);if(!item){alert('Không tìm thấy đề trong link. Có thể đề đã đổi hoặc cần Đồng bộ Sheet.');return}if(item.Mon)setSel('fMon',item.Mon);refreshFilterOptions();if(item.Lop)setSel('fLop',item.Lop);refreshFilterOptions();if(item.Chuong)setSel('fChuong',item.Chuong);refreshFilterOptions();if(item.BaiHoc)setSel('fBaiHoc',item.BaiHoc);refreshFilterOptions();if(item.BoDe)setSel('fBoDe',item.BoDe);if(sp.level)setSel('fMucDo',sp.level);if(sp.dang)setSel('fDang',sp.dang);renderCatalog();let lv=sp.level||val('fMucDo');let dg=sp.dang||val('fDang');if(sp.start){if(USER.is_trial&&(item.QuyenTruyCap||'FREE')!=='FREE'){markShareTarget(sp.de);alert('Tài khoản dùng thử chỉ mở đề FREE.');return}setTimeout(()=>startQuiz(sp.de,sp.sq,sp.sa,lv,dg),280)}else if(sp.open){markShareTarget(sp.de);setTimeout(()=>openStartModal(sp.de),280)}}
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
-function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
+function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){if(i+1<n&&(s[i+1]==='{'||s[i+1]==='}')){i+=2;continue}i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let span=findLatexMathSpan(s,i);if(!span){out+=esc(s.slice(i));break}if(span.end<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,span.start));out+=s.slice(span.start,span.end+1);i=span.end+1}return out}
 function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/(?:^|\n)\s*•\s*ch\s+/gi,'\n• ');s=s.replace(/•\s*ch\s+/gi,'• ');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
 function mergeBrokenDfracSqrt(s){if(String(s||'').indexOf('$')<0)return String(s||'');let t=String(s||''),prev=null;while(prev!==t){prev=t;t=t.replace(/(\$[^$\n]*?-?)\\dfrac\{(\d+)\}\$\s*\$\(\\sqrt\{([^}]+)\}\)\$/g,function(_,pre,n,rt){return pre+'\\dfrac{'+n+'}{\\sqrt{'+rt+'}}$'})}return t.replace(/\$\(\s*\\/g,'$\\')}
@@ -13236,7 +13236,7 @@ function fixPlainTextGaps(s){return String(s||'').replace(/(\d)([Nn]ên|[Đđ]i�
 function fixOneMathInner(inner){if(!inner)return inner;inner=inner.replace(/\)\s*\((\d[\d;\s,.\-]*)\)/g,')$ $( $1)$');inner=inner.replace(/\$\(([^)]+)\)(thuộc|mặt|phẳng|nên|điểm)/gi,'$( $1)$ $2');inner=inner.replace(/\(([^)]+)\)(thỏa|mãn|phương|trình|nên|điểm|thuộc|mặt|phẳng|khẳng|tọa|độ)/gi,'($1)$ $2');inner=inner.replace(/(=[\d.\-+]+)\s*(nên|điểm|thuộc|mặt|phẳng|khẳng|tọa)/gi,'$1$ $2');inner=inner.replace(/\)(thỏa|mãn|nên|điểm|thuộc|mặt|phẳng)/gi,') $1');inner=inner.replace(/(\d)([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/(\))([A-Za-zÀ-ỹĐđ][a-zà-ỹà-ỹ]{2,})/g,'$1 $2');inner=inner.replace(/\(\((\\?[a-zA-Z]+)\)\)/g,'$1');return inner}
 function latexDollarCount(s){s=String(s||'');let n=0;for(let i=0;i<s.length;i++){if(s[i]==='$'&&s[i+1]==='$'){i++;continue}if(s[i]==='$')n++}return n}
 function latexStructureOk(s){s=String(s||'');if(latexDollarCount(s)%2)return false;let plain=s.replace(/\$\$[^$]*\$\$/g,'').replace(/\$[^$]*\$/g,'');return !/\\(?:text|mathrm|frac|sqrt|left|right|times|cdot|pm|mp|leq|geq|neq|approx|,)/.test(plain)}
-function fixSurplusDollars(s){s=String(s||'');if(s.indexOf('$')<0)return s;s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=s.replace(/\${3,}/g,'$$');s=s.replace(/\$\$([^$\n]{1,160}?)\$\$/g,'$$$1$');s=s.replace(/\$\$([^$\n]+?)\$(?!\$)/g,'$$$1$');s=s.replace(/\$([^$\n]+?)\$\$(?!\$)/g,'$$$1$');s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s+\$(?=[^$\n])/g,'$');s=s.replace(/\$\s+\$(?=\s|$)/g,' ');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/(\$[^$\n]+?\$)\.(\$)(?=\s|$|[A-Za-zÀ-ỹĐđ])/g,'$1.');s=s.replace(/(\$[^$\n]+?\$)([,.;:])\$(?=\s|$)/g,'$1$2');if(s.endsWith('$')&&latexDollarCount(s)%2===1)s=s.slice(0,-1);return s}
+function fixSurplusDollars(s){s=String(s||'');if(s.indexOf('$')<0)return s;s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=s.replace(/\${3,}/g,'$$');s=s.replace(/\$\$([^$\n]{1,160}?)\$\$/g,'$$$1$');s=s.replace(/\$\$([^$\n]+?)\$(?!\$)/g,'$$$1$');s=s.replace(/\$([^$\n]+?)\$\$(?!\$)/g,'$$$1$');s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s+\$(?=[^$\n])/g,'$');s=s.replace(/\$\s+\$(?=\s|$)/g,' ');s=s.replace(/\$\s*\$/g,' ');s=s.replace(/(\$[^$\n]+?\$)\.(\$)(?=\s|$|[A-Za-zÀ-ỹĐđ])/g,'$1.');if(s.endsWith('$')&&latexDollarCount(s)%2===1)s=s.slice(0,-1);return s}
 function fixMergedInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return fixPlainTextGaps(t);let out='',i=0,n=t.length;while(i<n){if(t[i]!=='$'){let d1=t.indexOf('$',i);if(d1<0){out+=fixPlainTextGaps(t.slice(i));break}out+=fixPlainTextGaps(t.slice(i,d1));i=d1;continue}if(i+1<n&&t[i+1]==='$'){let end=t.indexOf('$$',i+2);if(end>=0){out+=t.slice(i,end+2);i=end+2;continue}}let d2=t.indexOf('$',i+1);if(d2<0){let rest=t.slice(i+1);if(String(rest).trim()&&(rest.indexOf('\\')>=0||rest.indexOf('{')>=0))out+='$'+fixOneMathInner(rest)+'$';else out+=fixPlainTextGaps(rest);break}let inner=t.slice(i+1,d2);if(!String(inner).trim()){i=d2+1;continue}while(d2+1<n&&t[d2+1]==='$'&&(d2+2>=n||t[d2+2]!=='$'))d2++;out+='$'+fixOneMathInner(t.slice(i+1,d2))+'$';i=d2+1}return out}
 function normalizeLatexDelimiters(s){s=String(s||'');s=stripLatexListMarkup(s);s=mergeBrokenDfracSqrt(s);s=mergeUnitBetweenMath(s);s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|begin\s*\{itemchoice|acute)|•\s*ch\s+|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])|(?:rad|deg|m|s)\s*\$[^$\n]*=/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+String(inner).replace(/\\\\/g,'\\')+'$'});return trimInlineMathSpaces(s)}
 function readLatexBracedContent(s,bracePos){if(bracePos<0||bracePos>=s.length||s[bracePos]!=='{')return null;let depth=0;for(let i=bracePos;i<s.length;i++){let c=s[i];if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0)return{content:s.slice(bracePos+1,i),end:i}}}return null}
@@ -13298,11 +13298,18 @@ function countDone(){let n=0;for(let i=0;i<QUESTIONS.length;i++)if(isQuestionDon
 function notifyDoneIfNeeded(){if(SUBMITTED||COMPLETED_NOTICE||!QUESTIONS.length)return;let done=countDone();if(done>=QUESTIONS.length){COMPLETED_NOTICE=true;alert('✅ Đã làm hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function val(id){let el=document.getElementById(id);return el?el.value:''}
 function typeset(els){if(!window.MathJax)return Promise.resolve();let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):null;let run=()=>{try{if(list&&list.length&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list&&list.length?list:undefined).catch(()=>{});if(MathJax.typeset){try{MathJax.typeset(list&&list.length?list:undefined)}catch(e){}}return Promise.resolve()};if(MathJax.startup&&MathJax.startup.promise)return MathJax.startup.promise.then(run);return run()}
+let _theoryTypesetTimer=0;
 function typesetTheoryMath(){
-  let els=[document.getElementById('theoryEditorPreview'),document.getElementById('baiTheoryHost'),document.getElementById('dangTheoryHost')];
-  document.querySelectorAll('.theoryEnvContent,.learningMethodLatex,.learningTheoryLatex').forEach(el=>els.push(el));
-  els=[...new Set(els.filter(Boolean))];
-  return typeset(els);
+  return new Promise(resolve=>{
+    if(_theoryTypesetTimer)clearTimeout(_theoryTypesetTimer);
+    _theoryTypesetTimer=setTimeout(()=>{
+      _theoryTypesetTimer=0;
+      let els=[...document.querySelectorAll('.theoryEnvContent,.learningMethodLatex,.learningTheoryLatex')];
+      let ep=document.getElementById('theoryEditorPreview');if(ep)els.push(ep);
+      els=[...new Set(els.filter(Boolean))];
+      requestAnimationFrame(()=>{typeset(els).then(resolve).catch(()=>resolve())});
+    },48);
+  });
 }
 function typesetQuizMath(){return typeset([document.getElementById('qtext'),document.getElementById('options'),document.getElementById('solution'),document.getElementById('hintBox')]).then(()=>typesetTheoryMath())}
 function formatHintDisplay(s){s=String(s||'').trim();if(!s)return '';s=s.replace(/\$\$\s*/g,'$');s=s.replace(/\s*\$\$/g,'$');s=s.replace(/\$\s*\n+\s*\$/g,'');s=s.replace(/\$\s*\n+\s*([^$\n]+?)\s*\n+\s*\$/g,'$( $1 )$');s=s.replace(/\$\s*\n+([^$\n]+?)\s*\$/g,'$( $1 )$');s=s.replace(/\$\s*\$/g,'');s=s.replace(/^###\s+(.+)$/gm,'@@B@@$1@@/B@@');return renderRichText(s)}
@@ -16175,6 +16182,8 @@ function preprocessTheoryBody(s){
   s=s.replace(/^\s*%\[[^\]]*\]\s*/gm,'');
   s=s.replace(/%\[[0-9A-Za-z]+[^\]]*\]/g,'');
   s=foldLoigiaiClient(s);
+  s=s.replace(/\\begin\s*\{\s*(center|figure|minipage)\s*\}/gi,'');
+  s=s.replace(/\\end\s*\{\s*(center|figure|minipage)\s*\}/gi,'');
   s=applyFmtOutsideMath(s,function(seg){
     seg=seg.replace(/\\hfill\b/g,'');
     seg=seg.replace(/\\lq\s*\\lq/gi,'«').replace(/\\rq\s*\\rq/gi,'»');
@@ -16183,19 +16192,44 @@ function preprocessTheoryBody(s){
     seg=seg.replace(/\{,\}/g,',');
     seg=seg.replace(/\\indam\s*\{/gi,'\\textbf{');
     seg=seg.replace(/\\\\\s*/g,'\n');
-    seg=seg.replace(/\\dots\b/gi,'…').replace(/\\ldots\b/gi,'…');
     return seg;
   });
   return s;
 }
-function theoryDisplayText(s){
-  let t=preprocessTheoryBody(s);
+function theorySplitTikzSegments(s){
+  s=String(s||'');let re=/\\begin\s*\{\s*tikzpicture\s*\}[\s\S]*?\\end\s*\{\s*tikzpicture\s*\}/gi;
+  let segs=[],blocks=[],last=0,m,uid=Date.now().toString(36);
+  while((m=re.exec(s))){
+    if(m.index>last)segs.push({type:'text',content:s.slice(last,m.index)});
+    blocks.push(m[0]);segs.push({type:'tikz',idx:blocks.length-1,uid:uid+'_'+blocks.length});
+    last=m.index+m[0].length;
+  }
+  if(last<s.length)segs.push({type:'text',content:s.slice(last)});
+  if(!blocks.length)segs=[{type:'text',content:s}];
+  return {segs,blocks};
+}
+function theoryRenderTextChunk(t){
+  t=String(t||'');
   t=t.replace(/\\begin\s*\{\s*(enumerate|itemize)\s*\}(?:\[[^\]]*\])?/gi,'')
      .replace(/\\end\s*\{\s*(enumerate|itemize)\s*\}/gi,'')
      .replace(/\\item\s*/gi,'\n• ');
+  if(!t.trim())return '';
   if(typeof renderRichText==='function')return renderRichText(t);
   if(typeof formatHintDisplay==='function')return formatHintDisplay(t);
   return esc(t).replace(/\n/g,'<br>');
+}
+function theoryDisplayText(s){
+  let split=theorySplitTikzSegments(preprocessTheoryBody(s)),html='';
+  for(let seg of split.segs){
+    if(seg.type==='text'){html+=theoryRenderTextChunk(seg.content);continue}
+    let tz=split.blocks[seg.idx]||'';
+    if(!tz)continue;
+    let id='theoryTikz_'+seg.uid;
+    let enc=encodeTikzRawClient(tz);
+    html+=`<div class="theoryTikzSlot qimgWrap tikzRawWrap" id="${escAttr(id)}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ biểu đồ…</div></div>`;
+    setTimeout(()=>renderTikzRawToImg(enc,id),0);
+  }
+  return html;
 }
 function parseTheoryLatexBlocks(src){
   let t=normalizeTheoryLatexSourceClient(src),out=[];
