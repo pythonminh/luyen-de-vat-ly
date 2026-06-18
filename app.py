@@ -69,6 +69,18 @@ except Exception:  # Cho phép app vẫn mở nếu chưa cài gspread local
     gspread = None
     Credentials = None
 
+# Nạp biến môi trường từ file .env khi chạy local (GitHub Desktop/VS Code).
+# Trên Render, các Environment Variables vẫn được ưu tiên và không bị ghi đè.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(
+        dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        override=False,
+    )
+except Exception:
+    pass
+
 APP_VERSION = "V307bw_ANDROID_OFFLINE_2026_06_17"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -2995,18 +3007,58 @@ def normalize_image_src(value: Any) -> str:
     return s
 
 
+def _load_google_service_account_info() -> Dict[str, Any]:
+    """
+    Đọc service account theo hai cách:
+    1) GOOGLE_CREDENTIALS_JSON: dùng trên Render.
+    2) GOOGLE_CREDENTIALS_FILE: đường dẫn file JSON khi chạy local.
+
+    Không cần và không nên commit file JSON hoặc .env lên GitHub.
+    """
+    creds_raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
+    creds_file = os.environ.get("GOOGLE_CREDENTIALS_FILE", "").strip()
+
+    if creds_raw:
+        try:
+            info = json.loads(creds_raw)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                "GOOGLE_CREDENTIALS_JSON không phải JSON hợp lệ. "
+                "Trên Render hãy dán toàn bộ nội dung file service-account.json."
+            ) from e
+    elif creds_file:
+        path = creds_file
+        if not os.path.isabs(path):
+            path = os.path.join(APP_DIR, path)
+        if not os.path.isfile(path):
+            raise RuntimeError(f"Không tìm thấy GOOGLE_CREDENTIALS_FILE: {path}")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                info = json.load(f)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"File service account không phải JSON hợp lệ: {path}") from e
+    else:
+        raise RuntimeError(
+            "Thiếu thông tin Google. Trên Render cần GOOGLE_CREDENTIALS_JSON; "
+            "chạy local có thể dùng GOOGLE_CREDENTIALS_FILE=service-account.json trong file .env."
+        )
+
+    if not isinstance(info, dict):
+        raise RuntimeError("Thông tin service account phải là một JSON object.")
+    if "private_key" in info:
+        info["private_key"] = str(info["private_key"]).replace("\\n", "\n")
+    if not clean(info.get("client_email")) or not clean(info.get("private_key")):
+        raise RuntimeError("Service account JSON thiếu client_email hoặc private_key.")
+    return info
+
+
 def _google_service_account_creds():
     global _GOOGLE_SA_CREDS
     if _GOOGLE_SA_CREDS is not None:
         return _GOOGLE_SA_CREDS
     if Credentials is None:
         raise RuntimeError("Thiếu google-auth")
-    creds_raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
-    if not creds_raw:
-        raise RuntimeError("Thiếu GOOGLE_CREDENTIALS_JSON")
-    info = json.loads(creds_raw)
-    if "private_key" in info:
-        info["private_key"] = info["private_key"].replace("\\n", "\n")
+    info = _load_google_service_account_info()
     _GOOGLE_SA_CREDS = Credentials.from_service_account_info(info, scopes=SCOPES)
     return _GOOGLE_SA_CREDS
 
@@ -3304,7 +3356,7 @@ def _publish_png_bytes_to_drive(png_bytes: bytes, filename: str = "") -> Tuple[s
 
 def _google_service_account_email() -> str:
     try:
-        info = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON", "") or "{}")
+        info = _load_google_service_account_info()
         return clean(info.get("client_email", ""))
     except Exception:
         return ""
@@ -3760,20 +3812,27 @@ class SheetStore:
         if self.sheet is not None:
             return
         if gspread is None or Credentials is None:
-            raise RuntimeError("Thiếu thư viện gspread/google-auth. Hãy kiểm tra requirements.txt")
+            raise RuntimeError(
+                "Thiếu thư viện gspread/google-auth. "
+                "Chạy: pip install -r requirements.txt"
+            )
         sheet_id = os.environ.get("GOOGLE_SHEET_ID", "").strip()
-        creds_raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
-        if not sheet_id or not creds_raw:
-            raise RuntimeError("Thiếu GOOGLE_SHEET_ID hoặc GOOGLE_CREDENTIALS_JSON trên Render")
-        try:
-            info = json.loads(creds_raw)
-        except json.JSONDecodeError as e:
-            raise RuntimeError("GOOGLE_CREDENTIALS_JSON không phải JSON hợp lệ. Hãy dán toàn bộ file key JSON.") from e
-        if "private_key" in info:
-            info["private_key"] = info["private_key"].replace("\\n", "\n")
+        if not sheet_id:
+            raise RuntimeError(
+                "Thiếu GOOGLE_SHEET_ID. Hãy khai báo trong Render Environment "
+                "hoặc trong file .env khi chạy local."
+            )
+        info = _load_google_service_account_info()
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         self.client = gspread.authorize(creds)
-        self.sheet = self.client.open_by_key(sheet_id)
+        try:
+            self.sheet = self.client.open_by_key(sheet_id)
+        except Exception as e:
+            email = clean(info.get("client_email", "")) or "service account"
+            raise RuntimeError(
+                f"Không mở được Google Sheet ID={sheet_id}. "
+                f"Hãy chia sẻ Sheet quyền Editor cho {email}. Lỗi gốc: {e}"
+            ) from e
 
     def worksheet_or_none(self, name: str):
         try:
