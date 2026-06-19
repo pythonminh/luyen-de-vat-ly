@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V307bz_DECK_MERGE_UPDATE_2026_05_29"
+APP_VERSION = "V307c0_JS_CATCH_FIX_2026_05_29"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -13270,7 +13270,7 @@ body:not(.fullde-mode):not(.mini-calc-open):not(.theoryEditorOpen) {
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bw';
+    window.__LDVL_V='V307c0';
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -13970,7 +13970,23 @@ async function deckCacheClearAll(){try{let db=await deckIdbOpen();let prefix=Str
 async function deckCacheListRecords(){let out=[];try{let db=await deckIdbOpen();let prefix=String((USER&&USER.mahs)||'guest')+'|';await new Promise(function(res,rej){let req=db.transaction(DECK_IDB_STORE,'readonly').objectStore(DECK_IDB_STORE).openCursor();req.onsuccess=function(){let cur=req.result;if(cur){if(String(cur.value.key||'').startsWith(prefix))out.push(cur.value);cur.continue()}else res()};req.onerror=function(){rej(req.error)}})}catch(e){}out.sort(function(a,b){return(b.saved_at||0)-(a.saved_at||0)});return out}
 function deckCacheIsSaved(made){return DECK_CACHE_KEYS.has(String(made||'').trim())}
 function deckPendingUpdate(made){return DECK_UPDATE_PENDING[String(made||'').trim()]||null}
-async function scanDeckUpdatesFromCatalog(){DECK_UPDATE_PENDING={};try{let recs=await deckCacheListRecords();for(let r of recs){let item=(CATALOG||[]).find(function(x){return x.MaDe===r.made});if(!item)continue;let catCount=parseInt(item.SoCau,10)||0;let localCount=(r.deck&&r.deck.questions&&r.deck.questions.length)||r.question_count||0;if(catCount>localCount){DECK_UPDATE_PENDING[r.made]={newCount:catCount-localCount,localCount:localCount,serverCount:catCount,source:'catalog'}}else if((META&&META.loaded_at)&&r.sheet_loaded_at&&META.loaded_at!==r.sheet_loaded_at&&catCount===localCount){DECK_UPDATE_PENDING[r.made]={newCount:0,localCount:localCount,serverCount:catCount,source:'sheet',hint:'Sheet da dong bo'}}}}catch(e){}}
+async function scanDeckUpdatesFromCatalog(){
+  DECK_UPDATE_PENDING={};
+  try{
+    let recs=await deckCacheListRecords();
+    for(let r of recs){
+      let item=(CATALOG||[]).find(function(x){return x.MaDe===r.made});
+      if(!item)continue;
+      let catCount=parseInt(item.SoCau,10)||0;
+      let localCount=(r.deck&&r.deck.questions&&r.deck.questions.length)||r.question_count||0;
+      if(catCount>localCount){
+        DECK_UPDATE_PENDING[r.made]={newCount:catCount-localCount,localCount:localCount,serverCount:catCount,source:'catalog'};
+      }else if((META&&META.loaded_at)&&r.sheet_loaded_at&&META.loaded_at!==r.sheet_loaded_at&&catCount===localCount){
+        DECK_UPDATE_PENDING[r.made]={newCount:0,localCount:localCount,serverCount:catCount,source:'sheet',hint:'Sheet da dong bo'};
+      }
+    }
+  }catch(e){}
+}
 async function fetchFreshDeckPayload(made){let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made:made,shuffle_q:0,shuffle_a:0,group_by_dang:1})});if(!j||!j.questions||!j.questions.length)throw new Error('Đề trống hoặc chưa nạp Sheet');return j}
 async function deckCacheMarkSavedButtons(){await deckCacheRefreshIndex();await scanDeckUpdatesFromCatalog();document.querySelectorAll('.bookDeckSaveBtn').forEach(function(btn){let m=btn.getAttribute('data-deck-made')||'';let on=deckCacheIsSaved(m);let pend=deckPendingUpdate(m);btn.classList.toggle('saved',on&&!pend);btn.classList.toggle('hasUpdate',!!(on&&pend&&(pend.newCount>0||pend.source==='sheet')));if(on&&pend&&(pend.newCount>0||pend.source==='sheet')){btn.innerHTML='🔄 Cập nhật'+(pend.newCount>0?('<span class="bookDeckNewBadge">+'+pend.newCount+'</span>'):'');btn.title='Sheet có câu mới/sửa — bấm để thêm câu mới, không trùng ID'}else if(on){btn.textContent='✅ Đã lưu';btn.title='Đề đã lưu — mở «Chuyên đề» sẽ nhanh hơn'}else{btn.textContent='📥 Lưu máy';btn.title='Tải đề vào bộ nhớ máy — mở nhanh lần sau'}});updateDeckCacheBar()}
 function updateDeckCacheBar(){let bar=document.getElementById('deckCacheBar');if(!bar)return;let n=DECK_CACHE_KEYS.size;let upd=Object.keys(DECK_UPDATE_PENDING).filter(function(m){let p=DECK_UPDATE_PENDING[m];return p&&(p.newCount>0||p.source==='sheet')}).length;let title=bar.querySelector('.deckCacheBarTitle');if(title){if(upd)title.textContent='📲 '+n+' đề lưu · 🆕 '+upd+' đề có cập nhật — bấm «🔄 Cập nhật» hoặc «Cập nhật đề đã lưu»';else title.textContent=n?('📲 Đã lưu '+n+' đề — mở «Chuyên đề» (không xáo trộn) để nhanh.'):('📲 Chưa lưu đề — bấm «📥 Lưu máy» ở từng bài.')}bar.classList.toggle('hide',false)}
@@ -22471,7 +22487,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307bz';
+const CACHE_NAME = 'luyen-de-ai-v307c0';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
