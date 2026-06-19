@@ -23,11 +23,12 @@ Yêu cầu Environment Variables trên Render:
     INFOGRAPHIC_HTTP_MAX_SEC=58   (timeout vẽ poster)
     AI_GENERATE_BATCH_MAX=4       (ADMIN: số câu AI tạo mỗi đợt)
     AI_GENERATE_TOTAL_MAX=30      (ADMIN: số câu tối đa mỗi lần lưu)
-    OPENCLAW_ENABLED=1            (bật /api/openclaw-chat — chỉ máy có CLI openclaw)
+    OPENCLAW_ENABLED=1            (bật CLI local — Render tự fallback Gemini/GPT nếu không có CLI)
     OPENCLAW_CMD=openclaw         (tuỳ chọn — đường dẫn lệnh openclaw)
     OPENCLAW_AGENT=main           (tuỳ chọn — --agent)
     OPENCLAW_SESSION_KEY=agent:main:web
     OPENCLAW_TIMEOUT_SEC=600      (timeout gọi openclaw agent)
+    OPENCLAW_THINKING=minimal     (off|minimal|low — càng thấp càng nhanh)
 """
 from __future__ import annotations
 
@@ -240,6 +241,7 @@ OPENCLAW_CMD = str(os.environ.get("OPENCLAW_CMD", "openclaw")).strip() or "openc
 OPENCLAW_AGENT = str(os.environ.get("OPENCLAW_AGENT", "main")).strip() or "main"
 OPENCLAW_SESSION_KEY = str(os.environ.get("OPENCLAW_SESSION_KEY", "agent:main:web")).strip() or "agent:main:web"
 OPENCLAW_TIMEOUT_SEC = max(30, min(int(os.environ.get("OPENCLAW_TIMEOUT_SEC", "600") or 600), 900))
+OPENCLAW_THINKING = str(os.environ.get("OPENCLAW_THINKING", "minimal")).strip().lower() or "minimal"
 
 
 def _openclaw_cli_probe() -> bool:
@@ -273,19 +275,36 @@ def _openclaw_cli_probe() -> bool:
 
 
 def openclaw_resolve_enabled() -> bool:
-    """Kiểm tra lại mỗi request — tránh server cũ / PATH khác lúc khởi động."""
+    """CLI openclaw thật sự gọi được (local)."""
     global OPENCLAW_ENABLED, OPENCLAW_CLI_AVAILABLE
     env_flag = str(os.environ.get("OPENCLAW_ENABLED", "")).strip().lower()
     if env_flag in ("0", "false", "no", "off"):
         OPENCLAW_ENABLED = False
         return False
-    if env_flag in ("1", "true", "yes", "on"):
-        OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
-        OPENCLAW_ENABLED = True
-        return True
     OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
+    if env_flag in ("1", "true", "yes", "on"):
+        OPENCLAW_ENABLED = OPENCLAW_CLI_AVAILABLE
+        return OPENCLAW_ENABLED
     OPENCLAW_ENABLED = OPENCLAW_CLI_AVAILABLE
     return OPENCLAW_ENABLED
+
+
+def openclaw_cloud_fallback_ready() -> bool:
+    """Render / điện thoại: không có CLI — dùng Gemini/GPT server (tự động)."""
+    return bool(ai_runtime_config().get("has_keys"))
+
+
+def openclaw_effective_enabled() -> bool:
+    """UI + API: CLI local hoặc cloud fallback."""
+    return openclaw_resolve_enabled() or openclaw_cloud_fallback_ready()
+
+
+def openclaw_mode() -> str:
+    if openclaw_resolve_enabled():
+        return "cli"
+    if openclaw_cloud_fallback_ready():
+        return "cloud"
+    return "off"
 
 
 OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
@@ -293,7 +312,7 @@ _openclaw_env = str(os.environ.get("OPENCLAW_ENABLED", "")).strip().lower()
 if _openclaw_env in ("0", "false", "no", "off"):
     OPENCLAW_ENABLED = False
 elif _openclaw_env in ("1", "true", "yes", "on"):
-    OPENCLAW_ENABLED = True
+    OPENCLAW_ENABLED = OPENCLAW_CLI_AVAILABLE
 else:
     OPENCLAW_ENABLED = OPENCLAW_CLI_AVAILABLE
 
@@ -11770,38 +11789,14 @@ def ai_repair_question_from_provider(
     out["missing_before"] = question_missing_report(q, target)
     return out, idx, used, "", vision_meta
 
-def ai_rewrite_latex_text(
-    field: str,
-    text: str,
-    context: Dict[str, Any],
-    *,
-    force_provider: str = "",
-    allow_gpt_fallback: bool = False,
-) -> Tuple[str, str]:
-    """ADMIN: dùng AI viết lại nội dung cho đúng LaTeX, không tự lưu Sheet."""
-    field = clean(field)
-    text = clean(text)
-    if not text:
-        raise RuntimeError("Nội dung đang trống.")
-
-    cfg = ai_runtime_config()
-    openai_keys = load_ai_keys("OPENAI")
-    gemini_keys = load_ai_keys("GEMINI")
-    gemini_saw_quota = False
-
+def build_latex_rewrite_user_prompt(field: str, text: str, context: Dict[str, Any]) -> str:
     mon = clean(context.get("Mon", ""))
     lop = clean(context.get("Lop", ""))
     chuong = clean(context.get("Chuong", ""))
     baihoc = clean(context.get("BaiHoc", ""))
     dang = clean(context.get("Dang", ""))
     mucdo = clean(context.get("MucDo", ""))
-
-    sys_prompt = (
-        "Bạn là giáo viên Việt Nam chuyên chuẩn hóa đề kiểm tra sang LaTeX. "
-        "Chỉ trả về NỘI DUNG ĐÃ SỬA, không giải thích, không markdown, không ```."
-    )
-
-    user_prompt = "\n".join([
+    return "\n".join([
         "Hãy viết lại nội dung sau cho đúng tiếng Việt và đúng LaTeX.",
         "",
         "YÊU CẦU BẮT BUỘC:",
@@ -11825,16 +11820,47 @@ def ai_rewrite_latex_text(
         text,
     ])
 
+
+def _postprocess_latex_rewrite_text(s: str) -> str:
+    s = clean(s)
+    s = re.sub(r"^```(?:latex|tex|text)?", "", s, flags=re.I).strip()
+    s = re.sub(r"```$", "", s).strip()
+    return normalize_latex_light(s)
+
+
+def ai_rewrite_latex_text(
+    field: str,
+    text: str,
+    context: Dict[str, Any],
+    *,
+    force_provider: str = "",
+    allow_gpt_fallback: bool = False,
+) -> Tuple[str, str]:
+    """ADMIN: dùng AI viết lại nội dung cho đúng LaTeX, không tự lưu Sheet."""
+    field = clean(field)
+    text = clean(text)
+    if not text:
+        raise RuntimeError("Nội dung đang trống.")
+
+    cfg = ai_runtime_config()
+    openai_keys = load_ai_keys("OPENAI")
+    gemini_keys = load_ai_keys("GEMINI")
+    gemini_saw_quota = False
+
+    sys_prompt = (
+        "Bạn là giáo viên Việt Nam chuyên chuẩn hóa đề kiểm tra sang LaTeX. "
+        "Chỉ trả về NỘI DUNG ĐÃ SỬA, không giải thích, không markdown, không ```."
+    )
+
+    user_prompt = build_latex_rewrite_user_prompt(field, text, context)
+
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
 
     last_error = ""
 
     def postprocess(s: str) -> str:
-        s = clean(s)
-        s = re.sub(r"^```(?:latex|tex|text)?", "", s, flags=re.I).strip()
-        s = re.sub(r"```$", "", s).strip()
-        return normalize_latex_light(s)
+        return _postprocess_latex_rewrite_text(s)
 
     def try_openai() -> Tuple[str, str]:
         nonlocal last_error
@@ -11889,6 +11915,33 @@ def ai_rewrite_latex_text(
         raise RuntimeError("AI chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
 
     return out, used
+
+
+def openclaw_rewrite_latex_text(field: str, text: str, context: Dict[str, Any]) -> Tuple[str, str]:
+    """ADMIN: sửa LaTeX qua OpenClaw CLI — không tự lưu Sheet."""
+    field = clean(field)
+    text = clean(text)
+    if not text:
+        raise RuntimeError("Nội dung đang trống.")
+    if not openclaw_resolve_enabled():
+        raise RuntimeError(
+            "OpenClaw chưa bật. Chạy app local, bật gateway openclaw, set OPENCLAW_ENABLED=1, restart Flask."
+        )
+    user_prompt = "\n".join([
+        "Bạn là giáo viên Việt Nam chuyên chuẩn hóa đề kiểm tra sang LaTeX.",
+        "Chỉ trả về NỘI DUNG ĐÃ SỬA, không giải thích, không markdown, không ```.",
+        "",
+        build_latex_rewrite_user_prompt(field, text, context),
+    ])
+    who = key_norm(session.get("mahs", "")) or "admin"
+    sk = f"{OPENCLAW_SESSION_KEY}:ldvl:{who}:latex-edit:{key_norm(field)}"
+    reply, err, _elapsed = openclaw_agent_reply(user_prompt, session_key=sk)
+    if err:
+        raise RuntimeError(err)
+    out = _postprocess_latex_rewrite_text(reply)
+    if not out:
+        raise RuntimeError("OpenClaw không trả về nội dung.")
+    return out, "OPENCLAW"
 
 
 def ai_admin_fix_loigiai(
@@ -12509,9 +12562,10 @@ def current_user_public() -> Dict[str, Any]:
         "can_5050": can_use_5050(),
         "can_submit_score": not is_trial(),
         "can_ai_hint": can_use_ai_hint(),
-        "openclaw_enabled": openclaw_resolve_enabled(),
+        "openclaw_enabled": openclaw_effective_enabled(),
+        "openclaw_mode": openclaw_mode(),
         "openclaw_cli_available": OPENCLAW_CLI_AVAILABLE,
-        "can_openclaw_chat": openclaw_resolve_enabled(),
+        "can_openclaw_chat": True,
         "can_view_solution_live": can_view_solution_live(),
         "can_save_own_ai_key": can_save_own_ai_key(),
         "ai_has_keys": bool(cfg.get("has_keys")),
@@ -13002,6 +13056,9 @@ html[data-theme='dark'] .aiChatInput{background:#0f172a;color:#e5e7eb;border-col
 .openclawChatBox{border-top-color:#fca5a5!important}
 .openclawChatSend{background:#dc2626!important;border-color:#dc2626!important}
 .openclawChatSend:hover{filter:brightness(1.05)}
+.openclawBtnOff{opacity:.72!important;border-style:dashed!important}
+.openclawLatexBtn{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fca5a5!important}
+.openclawLatexBtn:disabled{opacity:.65}
 #hintBox.learningOpen.openclawOpen .learningTitleRow{cursor:default!important}
 #hintBox.learningOpen.openclawOpen .learningPanelBody{max-height:min(44vh,400px);touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column}
 #hintBox.learningOpen.openclawOpen .openclawBody>.openclawChatBox{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:4px}
@@ -14687,7 +14744,7 @@ async function saveHintField(field){alert('ADMIN: hãy bấm ✏️ Sửa câu (
  * CSS: [CSS-LEARNING-PANEL]  #hintBox.learningOpen, .learningPanelBody
  * ========================================================================== */
 function learningCacheKey(kind,q){q=q||{};return kind+'|'+[q.Mon||'',q.Lop||'',q.Chuong||'',q.BaiHoc||'',kind==='method'?(q.DangBaiTap||''):''].join('|')}
-function ensureLearningQuickBar(){let qtextEl=document.getElementById('qtext');if(!qtextEl)return;let host=qtextEl.parentNode;if(!host)return;let bar=document.getElementById('learningQuickBar');if(!bar){bar=document.createElement('div');bar.id='learningQuickBar';bar.className='learningQuickBar';if(qtextEl.nextSibling)host.insertBefore(bar,qtextEl.nextSibling);else host.appendChild(bar)}let canAi=USER.can_ai_hint!==false;let mob=isMobileQuizUI();let lblCalc=mob?'🔢 MT':'🔢 MT';let lblTheory=mob?'📚 LT':'📚 Lý thuyết';let lblMethod=mob?'🧭 PP':'🧭 Phương pháp';let lblAi=mob?'🤖 AI':'🤖 Trợ lý AI';let lblEn=mob?'🇬🇧 EN':'🇬🇧 Dịch EN';let lblOc=mob?'🦞 OC':'🦞 OpenClaw';let html='<button type="button" class="btn2 miniCalcBtn" onclick="toggleMiniCalc()" title="Mở máy tính toàn màn hình">'+lblCalc+'</button><button type="button" class="btn2 learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel(\'theory\')" title="Xem lý thuyết theo bài học">'+lblTheory+'</button><button type="button" class="btn2 learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel(\'method\')" title="Xem phương pháp giải đúng dạng">'+lblMethod+'</button>';if(canAi)html+='<button type="button" class="btn2 aiAssistBtn" data-learning-toggle="assistant" onclick="toggleAiAssistPanel()" title="Trợ lý AI — hướng dẫn bước làm + đáp án (TN/Đ/S/TLN)">'+lblAi+'</button>';if(USER.can_openclaw_chat!==false)html+='<button type="button" class="btn2 openclawBtn" data-learning-toggle="openclaw" onclick="toggleOpenClawPanel()" title="Chat OpenClaw CONTROL qua backend">'+lblOc+'</button>';html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">'+lblEn+'</button>';bar.innerHTML=html;ensureMiniCalcPanel();let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));bar.classList.toggle('hide',!inQuiz)}
+function ensureLearningQuickBar(){let qtextEl=document.getElementById('qtext');if(!qtextEl)return;let host=qtextEl.parentNode;if(!host)return;let bar=document.getElementById('learningQuickBar');if(!bar){bar=document.createElement('div');bar.id='learningQuickBar';bar.className='learningQuickBar';if(qtextEl.nextSibling)host.insertBefore(bar,qtextEl.nextSibling);else host.appendChild(bar)}let canAi=USER.can_ai_hint!==false;let mob=isMobileQuizUI();let lblCalc=mob?'🔢 MT':'🔢 MT';let lblTheory=mob?'📚 LT':'📚 Lý thuyết';let lblMethod=mob?'🧭 PP':'🧭 Phương pháp';let lblAi=mob?'🤖 AI':'🤖 Trợ lý AI';let lblEn=mob?'🇬🇧 EN':'🇬🇧 Dịch EN';let lblOc=mob?'🦞 OC':'🦞 OpenClaw';let html='<button type="button" class="btn2 miniCalcBtn" onclick="toggleMiniCalc()" title="Mở máy tính toàn màn hình">'+lblCalc+'</button><button type="button" class="btn2 learnTheoryBtn" data-learning-toggle="theory" onclick="openLearningPanel(\'theory\')" title="Xem lý thuyết theo bài học">'+lblTheory+'</button><button type="button" class="btn2 learnMethodBtn" data-learning-toggle="method" onclick="openLearningPanel(\'method\')" title="Xem phương pháp giải đúng dạng">'+lblMethod+'</button>';if(canAi)html+='<button type="button" class="btn2 aiAssistBtn" data-learning-toggle="assistant" onclick="toggleAiAssistPanel()" title="Trợ lý AI — hướng dẫn bước làm + đáp án (TN/Đ/S/TLN)">'+lblAi+'</button>';html+='<button type="button" class="btn2 openclawBtn'+(USER.openclaw_enabled===false?' openclawBtnOff':'')+'" data-learning-toggle="openclaw" onclick="toggleOpenClawPanel()" title="Chat OpenClaw CONTROL qua backend">'+lblOc+'</button>';html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="toggleTranslatePanel()" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">'+lblEn+'</button>';bar.innerHTML=html;ensureMiniCalcPanel();let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));bar.classList.toggle('hide',!inQuiz)}
 function miniCalcVars(){return ['A','B','C','D','E','F','G','H']}
 function miniCalcSubstMem(s,mem){s=String(s||'');if(!s||!mem)return s;miniCalcVars().forEach(function(L){let mv=String(mem[L]||'').trim();if(!mv)return;let sub=miniCalcNormExpr(mv);if(!sub)return;s=s.replace(new RegExp('(^|[^a-zA-Z$])'+L+'(?![a-zA-Z])','g'),'$1('+sub+')')});return s}
 function miniCalcUseVar(st,ln,L){ln=ln|0;let mv=String(st.mem[L]||'').trim();if(st.mode==='STO'){let v=String(st.results[ln]||st.lines[ln]||'').trim(),dec=String(st.decExtras[ln]||'').trim();if(dec)st.mem[L]=dec;else{let num=miniCalcEvalExpr(v);st.mem[L]=num!=null?miniCalcFmtNum(num):(v||'0')}st.mode='';st._memMsg='Đã lưu '+L+' = '+st.mem[L]}else{if(miniCalcHasResult(st,ln))miniCalcMaybeNewEntry(st,'0');if(st.mode==='ALPHA'){if(mv){miniCalcInsertInLine(st,mv);renderMiniCalcTape();st._memMsg='Gọi '+L}else st._memMsg='Ô '+L+' trống — STO trước';st.mode=''}else if(mv){miniCalcInsertInLine(st,mv);renderMiniCalcTape();st._memMsg='Gọi '+L}else st._memMsg='STO→'+L+' lưu · ALPHA→'+L+' gọi'}}
@@ -14771,11 +14828,11 @@ function openclawTitleHtml(){return '<div class="learningTitleRow openclawTitleR
 function plainQuizText(s){return String(s||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()}
 function buildOpenClawQuizContext(){let q=applyResolvedDang(QUESTIONS[CUR]||{});let parts=['Câu '+(CUR+1)+'/'+QUESTIONS.length];if(q.Mon)parts.push('Môn: '+q.Mon);if(q.Dang)parts.push('Loại câu: '+q.Dang);if(q.DangBaiTap)parts.push('Dạng BT: '+q.DangBaiTap);if(q.CauHoi)parts.push('Đề: '+plainQuizText(q.CauHoi).slice(0,2200));return parts.join('\n')}
 function openclawOutboundMessage(userMsg){return buildOpenClawQuizContext()+'\n\n---\nHọc sinh hỏi: '+String(userMsg||'').trim()}
-function toggleOpenClawPanel(){if(LEARNING_OPEN_KIND==='openclaw'){closeLearningPanel();return}LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='openclaw';refreshOpenClawStatus().then(()=>renderOpenClawPanel()).catch(()=>renderOpenClawPanel())}
-async function refreshOpenClawStatus(){try{let j=await api('/api/openclaw/status');USER.openclaw_enabled=!!j.enabled;USER.openclaw_cli_available=!!j.cli_available;USER.can_openclaw_chat=!!j.enabled;return j}catch(e){USER.openclaw_enabled=false;USER.can_openclaw_chat=false;throw e}}
+function toggleOpenClawPanel(){if(LEARNING_OPEN_KIND==='openclaw'){closeLearningPanel();return}LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='openclaw';refreshOpenClawStatus().then(()=>{ensureLearningQuickBar();renderOpenClawPanel()}).catch(()=>{ensureLearningQuickBar();renderOpenClawPanel()})}
+async function refreshOpenClawStatus(){try{let j=await api('/api/openclaw/status');USER.openclaw_enabled=!!j.enabled;USER.openclaw_mode=j.mode||'';USER.openclaw_cli_available=!!j.cli_available;return j}catch(e){USER.openclaw_enabled=false;USER.openclaw_mode='';return null}}
 function syncOpenClawChatUi(st){st=st||OPENCLAW_BY_Q[CUR]||{messages:[]};let inp=document.getElementById('openclawChatInput'),btn=document.getElementById('openclawChatSend'),msgs=document.getElementById('openclawChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;inp.disabled=!!OPENCLAW_LOADING;inp.placeholder=OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…'}if(btn)btn.disabled=!!OPENCLAW_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
-function renderOpenClawPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='openclaw')return;let st=OPENCLAW_BY_Q[CUR]||{messages:[]};OPENCLAW_BY_Q[CUR]=st;let oldInp=document.getElementById('openclawChatInput');if(oldInp)st.chatDraft=oldInp.value;let enabled=USER.openclaw_enabled===true;let intro=enabled?'<div class="openclawIntro muted">🦞 OpenClaw CONTROL — chat qua backend (session riêng theo câu, token không lộ).</div>':'<div class="openclawIntro openclawWarn">⚠️ Server hiện <b>chưa bật OpenClaw</b>. Chạy app trên <b>máy local</b> có CLI <code>openclaw</code> + gateway đang chạy, set <b>OPENCLAW_ENABLED=1</b>, restart Flask, Ctrl+F5. (Render/cloud không hỗ trợ.)</div>';let msgs=(st.messages||[]).map(m=>'<div class="aiMsg '+(m.role==='user'?'aiMsgUser':'aiMsgBot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');if(OPENCLAW_LOADING)msgs+='<div class="aiMsg aiMsgBot"><span class="hintSpin"></span> OpenClaw đang trả lời…</div>';let chatBox='<div class="aiChatBox openclawChatBox"><div class="aiChatMsgs" id="openclawChatMsgs">'+(msgs||'<div class="muted">Hỏi OpenClaw: «Em làm bước 1 sao?», «Giải thích công thức này»…</div>')+'</div><div class="aiChatForm"><textarea id="openclawChatInput" class="aiChatInput" rows="2" placeholder="'+(OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…')+'"'+(OPENCLAW_LOADING?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendOpenClawChat()}"></textarea><button type="button" id="openclawChatSend" class="aiChatSend openclawChatSend" onclick="sendOpenClawChat()"'+(OPENCLAW_LOADING?' disabled':'')+'>Gửi</button></div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','openclawOpen');hb.classList.remove('learningCollapsed','aiAssistOpen');hb.setAttribute('data-openclaw-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+openclawTitleHtml()+'<div class="learningPanelBody openclawBody">'+intro+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncOpenClawChatUi(st)}
-async function sendOpenClawChat(){if(OPENCLAW_LOADING)return;let inp=document.getElementById('openclawChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=OPENCLAW_BY_Q[qIdx]||{messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=true;renderOpenClawPanel();try{let j=await api('/api/openclaw-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,sid:SID,index:qIdx,...quizRestorePayload()})});st.messages.push({role:'assistant',text:j.reply||''});st.provider=j.provider||'OPENCLAW';st.error='';USER.openclaw_enabled=true;USER.can_openclaw_chat=true}catch(e){USER.openclaw_enabled=false;USER.can_openclaw_chat=false;st.messages.push({role:'assistant',text:'⚠️ '+(e.message||e)});st.error=e.message||''}OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=false;if(CUR===qIdx)renderOpenClawPanel()}
+function renderOpenClawPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='openclaw')return;let st=OPENCLAW_BY_Q[CUR]||{messages:[]};OPENCLAW_BY_Q[CUR]=st;let oldInp=document.getElementById('openclawChatInput');if(oldInp)st.chatDraft=oldInp.value;let enabled=USER.openclaw_enabled===true;let ocMode=USER.openclaw_mode||'';let intro=enabled?(ocMode==='cloud'?'<div class="openclawIntro muted">🦞 OpenClaw — <b>chế độ cloud</b> (Render/điện thoại): tự dùng Gemini/GPT server, nhanh hơn CLI local.</div>':'<div class="openclawIntro muted">🦞 OpenClaw CLI local — mỗi lần gửi ≈ <b>20–60 giây</b>. Lần đầu kèm đề; các lần sau nhẹ hơn.</div>'):'<div class="openclawIntro openclawWarn">⚠️ Server chưa có OpenClaw. Trên <b>Render</b>: thêm <code>GEMINI_API_KEY</code> trong Environment → redeploy. Local: cài <code>openclaw</code> + gateway.</div>';let msgs=(st.messages||[]).map(m=>'<div class="aiMsg '+(m.role==='user'?'aiMsgUser':'aiMsgBot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');if(OPENCLAW_LOADING)msgs+='<div class="aiMsg aiMsgBot"><span class="hintSpin"></span> OpenClaw đang chạy agent… (thường 20–60 giây, đừng bấm Gửi lại)</div>';let chatBox='<div class="aiChatBox openclawChatBox"><div class="aiChatMsgs" id="openclawChatMsgs">'+(msgs||'<div class="muted">Hỏi OpenClaw: «Em làm bước 1 sao?», «Giải thích công thức này»…</div>')+'</div><div class="aiChatForm"><textarea id="openclawChatInput" class="aiChatInput" rows="2" placeholder="'+(OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…')+'"'+(OPENCLAW_LOADING?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendOpenClawChat()}"></textarea><button type="button" id="openclawChatSend" class="aiChatSend openclawChatSend" onclick="sendOpenClawChat()"'+(OPENCLAW_LOADING?' disabled':'')+'>Gửi</button></div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','openclawOpen');hb.classList.remove('learningCollapsed','aiAssistOpen');hb.setAttribute('data-openclaw-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+openclawTitleHtml()+'<div class="learningPanelBody openclawBody">'+intro+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncOpenClawChatUi(st)}
+async function sendOpenClawChat(){if(OPENCLAW_LOADING)return;let inp=document.getElementById('openclawChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=OPENCLAW_BY_Q[qIdx]||{messages:[]};st.messages=st.messages||[];let includeContext=!st.contextSent;st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=true;renderOpenClawPanel();try{let j=await api('/api/openclaw-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,sid:SID,index:qIdx,answer:ANSWERS[qIdx],include_context:includeContext,messages:st.messages.slice(0,-1),...quizRestorePayload()})});let reply=j.reply||'';if(j.elapsed_ms&&!/⏱/.test(reply))reply+='\n\n<i style="color:#94a3b8;font-size:11px">⏱ '+Math.round(j.elapsed_ms/1000)+'s'+(j.mode==='cloud'?' · cloud':'')+'</i>';st.messages.push({role:'assistant',text:reply});st.provider=j.provider||'OPENCLAW';st.openclaw_mode=j.mode||'';st.error='';st.contextSent=true;USER.openclaw_enabled=true;USER.openclaw_mode=j.mode||USER.openclaw_mode||'';ensureLearningQuickBar()}catch(e){USER.openclaw_enabled=false;st.messages.push({role:'assistant',text:'⚠️ '+(e.message||e)});st.error=e.message||'';ensureLearningQuickBar()}OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=false;if(CUR===qIdx)renderOpenClawPanel()}
 function syncAiAssistChatUi(st){st=st||ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};let inp=document.getElementById('aiChatInput'),btn=document.getElementById('aiChatSend'),msgs=document.getElementById('aiChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;let lock=ASSISTANT_LOADING&&!st.note;inp.disabled=!!lock;inp.placeholder=lock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…'}if(btn)btn.disabled=!!ASSISTANT_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
 function renderAiAssistPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='assistant')return;let st=ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};ASSISTANT_BY_Q[CUR]=st;let oldInp=document.getElementById('aiChatInput');if(oldInp)st.chatDraft=oldInp.value;let noteHtml='';if(ASSISTANT_LOADING&&!st.note)noteHtml='<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi Trợ lý AI…</b></div></div>';else if(st.note){noteHtml='<div class="aiAssistPanel"><b>💡 Hướng dẫn làm bài</b><div class="hintMath" style="margin-top:6px">'+formatHintDisplay(st.note)+'</div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối (TN / Đ/S / TLN).</div>'+(st.is_fallback?'<div class="aiAssistWarn" style="color:#b45309;margin-top:6px">⚠️ AI chưa giải tự động'+(st.ai_error?(' — '+esc(st.ai_error)):'')+'. Nạp key Gemini hoặc bấm 🔄.</div>':(st.provider_used&&st.provider_used!=='FALLBACK'?'<div class="muted" style="font-size:11px;margin-top:4px">AI: '+esc(st.provider_used)+(st.ai_model?' · '+esc(st.ai_model):'')+'</div>':''))+(ASSISTANT_LOADING?'':'<div style="margin-top:6px"><button type="button" class="btn2" style="font-size:11px!important;padding:4px 8px!important" onclick="requestAssistantNote()">🔄 Lấy lại</button></div>')+'</div>'}else if(!ASSISTANT_LOADING){noteHtml='<div class="muted" style="margin-top:4px;line-height:1.45">Chưa có hướng dẫn — bấm 🔄 bên dưới để thử lại.</div><div style="margin-top:6px"><button type="button" class="btn2 aiAssistBtn" onclick="requestAssistantNote()">🔄 Thử lại</button></div>'}let msgs=(st.messages||[]).map(m=>'<div class="aiMsg aiMsg-'+(m.role==='user'?'user':'bot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');let chatLock=ASSISTANT_LOADING&&!st.note;let chatBox='<div class="aiChatBox"><div class="aiChatMsgs" id="aiChatMsgs">'+(msgs||'<div class="muted">Hỏi thêm: «Bước 1 em làm sao?», «Đáp án là gì?»</div>')+'</div><div class="aiChatForm"><textarea id="aiChatInput" class="aiChatInput" rows="2" placeholder="'+(chatLock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…')+'"'+(chatLock?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendAssistantChat()}"></textarea><button type="button" id="aiChatSend" class="aiChatSend" onclick="sendAssistantChat()"'+(ASSISTANT_LOADING?' disabled':'')+'>Gửi</button></div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối theo TN / Đ/S / TLN.</div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','aiAssistOpen');hb.classList.remove('learningCollapsed');hb.setAttribute('data-ai-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+aiAssistTitleHtml()+'<div class="learningPanelBody aiAssistBody">'+noteHtml+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncAiAssistChatUi(st)}
 function renderLearningField(label,val){if(!String(val||'').trim())return '';return '<div style="margin-top:8px"><b>'+esc(label)+'</b><div class="learningItem hintMath">'+formatHintDisplay(val)+'</div></div>'}
@@ -15946,7 +16003,7 @@ function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer
 async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
-function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX (AI)</button><button type="button" id="btn_norm_LoiGiai" class="btnSmall btn2" onclick="normalizeLatexField('LoiGiai')">⚡ Chuẩn hóa</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><button type="button" id="btn_norm_${f}" class="btnSmall btn2" onclick="normalizeLatexField('${f}')">⚡ Chuẩn hóa</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
+function renderQuestionFormField(f,q){let raw=String((q&&q[f])||'');if(f==='QuyenTruyCap')return renderAdminChipGroup(f,ADMIN_QUYEN_OPTS,raw,normQuyenFormVal);if(f==='MucDo'){let chips=ADMIN_MUCDO_OPTS.map(v=>{let on=normMucDoFormVal(raw)===v?' adminChipOn':'';return `<button type="button" class="adminChip ${mucdoBadgeClass(v)}${on}" data-chip-field="MucDo" data-chip-value="${v}" onclick="setAdminChip('MucDo','${v}')">${v}</button>`}).join('');let cur=normMucDoFormVal(raw);return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS.MucDo}</b></label><input type="hidden" id="edit_MucDo" value="${escAttr(cur)}"><div class="adminChipRow">${chips}<button type="button" class="adminChip${cur?'':' adminChipOn'}" data-chip-field="MucDo" data-chip-value="" onclick="setAdminChip('MucDo','')">—</button></div></div>`}if(f==='Dang')return renderAdminChipGroup(f,ADMIN_DANG_OPTS,raw,normDangFormVal);if(f==='NangLucVatLy')return renderAdminChipGroup(f,ADMIN_NLVL_OPTS,raw,normNangLucVatLyFormVal);if(ADMIN_META_PICK_FIELDS.includes(f))return renderAdminMetaPickField(f,q);if(f==='DangBaiTap')return renderAdminDangBaiTapField(q);if(f==='HinhAnh'){let parsed=parseHinhanhCellClient(raw);let imgShow=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';let tikzShow=parsed.tikz||'';return `<div class="adminImgField"><label><b>${QUESTION_FORM_LABELS.HinhAnh}</b></label><div style="font-size:11px;color:#64748b;margin:4px 0 6px">📐 <b>Mã TikZ</b> — sửa xong bấm «Vẽ lại». Dòng trên = link Drive sau khi upload.</div><textarea style="min-height:120px;font-family:monospace;font-size:11px" id="edit_Tikz" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="\\begin{tikzpicture}...\\end{tikzpicture}">${escFormVal(tikzShow)}</textarea><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 5px 0"><button type="button" class="btnSmall btn2" onclick="adminRerenderTikz()">🔄 Vẽ lại</button><button type="button" class="btnSmall btn2" onclick="adminDownloadHinhAnh()">💾 Lưu ảnh (img)</button><button type="button" class="btnSmall btn2" onclick="adminPasteImageUrl()">📋 Dán link Drive</button><span class="muted" style="font-size:11px;align-self:center">Tải img → upload Anh_Luyen_De → dán link</span></div><textarea style="min-height:56px" id="edit_HinhAnh" oninput="refreshEditHinhAnhPreview();renderEditQuestionPreview()" placeholder="Link thumbnail Drive (tùy chọn — mã TikZ vẫn giữ ở dòng trên)">${escFormVal(imgShow)}</textarea><div id="edit_HinhAnhPreview" class="adminImgPreview"></div></div>`}let h=(f=='CauHoi'||f=='LoiGiai')?'150px':((f=='MaDe'||f=='ID'||f=='DapAn'||f=='SaiSo')?'56px':'78px');let aiTools=''; if(f==='LoiGiai'){aiTools=`<div class="adminLgAiTools"><div style="font-size:11px;color:#64748b;margin-bottom:4px">AI chỉnh LG (Gemini trước): TN = chỉ giải phương án đúng · Đ/S = giải từng ý A–D</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 4px 0"><button type="button" id="btn_ai_lg_tn" class="btnSmall" onclick="aiAdminFixLoigiai('tn')">📝 LG Trắc nghiệm</button><button type="button" id="btn_ai_lg_ds" class="btnSmall" onclick="aiAdminFixLoigiai('ds')">📝 LG Đúng/Sai</button><button type="button" id="btn_ai_lg_tln" class="btnSmall" onclick="aiAdminFixLoigiai('tln')">📝 LG Trả lời ngắn</button><button type="button" id="btn_ai_rewrite_LoiGiai" class="btnSmall" onclick="aiRewriteLatexField('LoiGiai')">🔤 Sửa LaTeX (AI)</button><button type="button" id="btn_norm_LoiGiai" class="btnSmall btn2" onclick="normalizeLatexField('LoiGiai')">⚡ Chuẩn hóa</button><button type="button" id="btn_oc_rewrite_LoiGiai" class="btnSmall openclawLatexBtn" onclick="openclawRewriteLatexField('LoiGiai')">🦞 OpenClaw</button></div><span style="font-size:11px;color:#64748b">Chưa lưu Sheet</span></div>`}else if(['CauHoi','A','B','C','D'].includes(f)){aiTools=`<div style="display:flex;gap:6px;align-items:center;margin:4px 0 5px 0"><button type="button" id="btn_ai_rewrite_${f}" class="btnSmall" onclick="aiRewriteLatexField('${f}')">🤖 AI viết lại LaTeX</button><button type="button" id="btn_norm_${f}" class="btnSmall btn2" onclick="normalizeLatexField('${f}')">⚡ Chuẩn hóa</button><button type="button" id="btn_oc_rewrite_${f}" class="btnSmall openclawLatexBtn" onclick="openclawRewriteLatexField('${f}')">🦞 OpenClaw</button><span style="font-size:11px;color:#64748b">Gemini trước · chưa lưu Sheet</span></div>`} return `<div><label><b>${QUESTION_FORM_LABELS[f]||f}</b></label>${aiTools}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
 function renderQuestionForm(q){ensureEditAdminPreviewBar();document.getElementById('editForm').innerHTML=QUESTION_FORM_FIELDS.map(f=>renderQuestionFormField(f,q)).join('');['QuyenTruyCap','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);adminExtractTikzFromFormFields();refreshEditHinhAnhPreview();bindEditFormLivePreview();renderEditQuestionPreview()}
 async function adminRerenderTikz(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
 async function adminDownloadHinhAnh(){let raw=adminMergedHinhAnhFromForm();let src=adminPreviewHinhAnhSrc();if(!src){alert('Chưa có ảnh.\n\nNhập mã TikZ hoặc dán link ảnh vào ô Hình ảnh.');return}if(/^tikzraw:/i.test(src)){try{let j=await tikzRenderFetch(src);if(j&&j.ok&&j.url)src=normalizeImageSrcClient(j.url);else{alert('Chưa vẽ được TikZ: '+(j&&j.error||''));return}}catch(e){alert('Lỗi vẽ TikZ: '+(e.message||e));return}}let url=src;if(url.startsWith('/'))url=location.origin+url;let fname='img.png';let m=String(raw||src).match(/([A-Za-z0-9_.-]+\.(png|jpe?g|gif|webp))$/i);if(m)fname=m[1].replace(/[^\w.\-]+/g,'_');if(!/^img/i.test(fname))fname='img_'+fname;try{let resp=await fetch(url,{credentials:'same-origin'});if(!resp.ok)throw new Error('HTTP '+resp.status);let blob=await resp.blob();let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);alert('Đã tải '+fname+'\n\n1. Kéo file lên folder Anh_Luyen_De trên Drive\n2. Chuột phải → Lấy liên kết\n3. Dán vào ô link Drive (giữ mã TikZ ở trên) → Lưu Sheet')}catch(e){window.open(url,'_blank');alert('Mở ảnh tab mới — chuột phải → Lưu ảnh thành img.png\n\nRồi upload Drive và dán link cột T.')}}
@@ -16029,6 +16086,27 @@ async function aiRewriteLatexField(field){
       btn.textContent=oldBtn||'🤖 AI viết lại LaTeX';
     }
   }
+}
+async function openclawRewriteLatexField(field){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  let el=document.getElementById('edit_'+field);
+  if(!el){alert('Không tìm thấy ô cần sửa.');return}
+  let oldText=String(el.value||'');
+  if(!oldText.trim()){alert('Ô này đang trống.');return}
+  let btn=document.getElementById('btn_oc_rewrite_'+field);
+  let oldBtn=btn?btn.textContent:'';
+  if(!confirm('OpenClaw sẽ viết lại nội dung ô '+field+' cho đúng LaTeX.\n\nThường mất 20–60 giây. Chỉ thay trong ô nhập, chưa lưu Sheet. Tiếp tục?'))return;
+  try{
+    if(btn){btn.disabled=true;btn.textContent='⏳ OpenClaw...'}
+    let j=await api('/api/openclaw/rewrite-latex',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field:field,text:oldText,context:readQuestionFormData()})});
+    if(j.text){
+      el.value=j.text;
+      if(field==='LoiGiai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData(),{LoiGiai:el.value}));
+      if(['CauHoi','A','B','C','D','LoiGiai','HinhAnh'].includes(field)){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
+      alert('Đã viết lại bằng '+(j.provider||'AI')+(j.mode==='cloud'?' (cloud tự động)':' (OpenClaw CLI)')+'.\nThầy kiểm tra lại rồi bấm Lưu vào Google Sheet.');
+    }else{alert('OpenClaw không trả về nội dung.')}
+  }catch(e){alert('OpenClaw sửa LaTeX lỗi: '+(e.message||e))}
+  finally{if(btn){btn.disabled=false;btn.textContent=oldBtn||'🦞 OpenClaw'}}
 }
 async function aiAdminFixLoigiai(formatMode){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
@@ -19052,13 +19130,16 @@ def ai_assistant_note_from_provider(
     )
 
 
-def openclaw_agent_reply(message: str, session_key: str = "") -> Tuple[str, str]:
-    """Gọi CLI openclaw agent — trả (reply, error)."""
+def openclaw_agent_reply(message: str, session_key: str = "") -> Tuple[str, str, int]:
+    """Gọi CLI openclaw agent — trả (reply, error, elapsed_ms)."""
+    import time
+
+    t0 = time.perf_counter()
     msg = clean(message)
     if not msg:
-        return "", "Chưa nhập message."
+        return "", "Chưa nhập message.", 0
     if len(msg) > 12000:
-        return "", "Message quá dài."
+        return "", "Message quá dài.", 0
     sk = clean(session_key) or OPENCLAW_SESSION_KEY
     args = [
         OPENCLAW_CMD,
@@ -19071,6 +19152,8 @@ def openclaw_agent_reply(message: str, session_key: str = "") -> Tuple[str, str]
         msg,
         "--json",
     ]
+    if OPENCLAW_THINKING:
+        args.extend(["--thinking", OPENCLAW_THINKING])
     proc_args = (["cmd", "/c"] + args) if os.name == "nt" else args
     try:
         proc = subprocess.run(
@@ -19082,21 +19165,25 @@ def openclaw_agent_reply(message: str, session_key: str = "") -> Tuple[str, str]
             errors="replace",
         )
     except subprocess.TimeoutExpired:
-        return "", f"Quá {OPENCLAW_TIMEOUT_SEC}s khi gọi OpenClaw."
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        return "", f"Quá {OPENCLAW_TIMEOUT_SEC}s khi gọi OpenClaw.", elapsed_ms
     except FileNotFoundError:
-        return "", f"Không tìm thấy lệnh {OPENCLAW_CMD!r}."
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        return "", f"Không tìm thấy lệnh {OPENCLAW_CMD!r}.", elapsed_ms
     except Exception as e:
-        return "", str(e)
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        return "", str(e), elapsed_ms
+    elapsed_ms = int((time.perf_counter() - t0) * 1000)
     if proc.returncode != 0:
         err = (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
-        return "", err or "OpenClaw trả lỗi."
+        return "", err or "OpenClaw trả lỗi.", elapsed_ms
     stdout = (proc.stdout or "").strip()
     if not stdout:
-        return "", "OpenClaw không trả nội dung."
+        return "", "OpenClaw không trả nội dung.", elapsed_ms
     reply = openclaw_parse_reply(stdout)
     if reply.startswith("⚠️ OpenClaw:"):
-        return "", reply.replace("⚠️ OpenClaw:", "").strip()
-    return reply or stdout, ""
+        return "", reply.replace("⚠️ OpenClaw:", "").strip(), elapsed_ms
+    return reply or stdout, "", elapsed_ms
 
 
 def openclaw_parse_reply(stdout: str) -> str:
@@ -19153,33 +19240,94 @@ def openclaw_session_key_for(mahs: str = "", sid: str = "", q_idx: int = -1) -> 
     return f"{base}:ldvl:{who}"
 
 
-def openclaw_quiz_context_block(q: Dict[str, Any], q_idx: int, total: int) -> str:
-    parts = [f"Câu {q_idx + 1}/{max(total, 1)}"]
-    mon = clean(q.get("Mon", ""))
-    if mon:
-        parts.append(f"Môn: {mon}")
-    dang = effective_dang(q)
-    if dang:
-        parts.append(f"Loại câu: {dang}")
-    dbt = clean(q.get("DangBaiTap", ""))
-    if dbt:
-        parts.append(f"Dạng BT: {dbt}")
-    md = clean(q.get("MucDo", ""))
-    if md:
-        parts.append(f"Mức độ: {md}")
-    stem = _openclaw_plain_text(q.get("CauHoi", ""))[:2200]
-    if stem:
-        parts.append(f"Đề: {stem}")
-    return "\n".join(parts)
+def openclaw_quiz_context_block(q: Dict[str, Any], q_idx: int, total: int, user_answer: Any = "") -> str:
+    """Gói đủ đề, phương án, đáp án Sheet, lời giải — OpenClaw không cần hỏi lại nội dung."""
+    header = "\n".join([
+        f"[App luyện đề Thầy Minh — Câu {q_idx + 1}/{max(total, 1)}]",
+        "Bạn đã có đủ nội dung câu hỏi, đáp án và lời giải bên dưới.",
+        "Trả lời trực tiếp câu hỏi của học sinh; KHÔNG yêu cầu họ gửi lại đề.",
+        "",
+    ])
+    block = build_ai_question_block(
+        q, user_answer, include_sheet_answer=True, include_loigiai=True
+    )
+    return header + block
 
 
-def openclaw_compose_message(user_message: str, q: Optional[Dict[str, Any]], q_idx: int, total: int) -> str:
+def openclaw_compose_message(
+    user_message: str,
+    q: Optional[Dict[str, Any]],
+    q_idx: int,
+    total: int,
+    user_answer: Any = "",
+    *,
+    include_full_context: bool = True,
+) -> str:
     user = clean(user_message)
     if not user:
         return ""
     if q is not None and q_idx >= 0:
-        return f"{openclaw_quiz_context_block(q, q_idx, total)}\n\n---\nHọc sinh hỏi: {user}"
+        if include_full_context:
+            ctx = openclaw_quiz_context_block(q, q_idx, total, user_answer)
+            return f"{ctx}\n\n---\nHọc sinh hỏi: {user}"
+        return (
+            f"[Tiếp tục câu {q_idx + 1}/{max(total, 1)} — nội dung đề đã có trong session OpenClaw]\n\n"
+            f"Học sinh hỏi: {user}"
+        )
     return user
+
+
+def openclaw_resolve_question_from_request(
+    data: Dict[str, Any],
+) -> Tuple[Optional[Dict[str, Any]], int, int, Any, str]:
+    """Lấy câu hỏi + index từ body API OpenClaw."""
+    sid = clean(data.get("sid", ""))
+    try:
+        q_idx = int(data.get("index", -1))
+    except Exception:
+        q_idx = -1
+    answer = data.get("answer", "")
+    restore = quiz_restore_payload_from_body(data)
+    q: Optional[Dict[str, Any]] = None
+    total = 0
+    if sid:
+        try:
+            store = get_store()
+            ses = store.check_quiz_session(sid, restore)
+            qs = ses["questions"]
+            total = len(qs)
+            if 0 <= q_idx < total:
+                q = assistant_question_from_session(store, ses, qs, q_idx)
+        except Exception:
+            pass
+    if q is None and restore and restore.get("questions"):
+        qs = restore["questions"]
+        total = len(qs)
+        if 0 <= q_idx < total:
+            q = question_for_ai_prompt(dict(qs[q_idx]))
+    return q, q_idx, total, answer, sid
+
+
+def openclaw_chat_cloud_fallback(
+    q: Dict[str, Any],
+    user_msg: str,
+    messages: Any,
+    answer: Any,
+) -> Tuple[str, str, int]:
+    """Render / mobile: Gemini-GPT thay CLI khi không có openclaw local."""
+    import time
+
+    t0 = time.perf_counter()
+    reply, _idx, provider, _model, err = ai_assistant_chat_from_provider(
+        q, user_msg, messages, answer
+    )
+    elapsed_ms = int((time.perf_counter() - t0) * 1000)
+    if not reply:
+        raise RuntimeError(err or "AI cloud chưa trả lời.")
+    tag = provider or "CLOUD"
+    if tag != "OPENCLAW":
+        reply = reply + f"\n\n_(🦞 cloud · {tag} · Render/mobile)_"
+    return reply, tag, elapsed_ms
 
 # ============================================================
 # ROUTES
@@ -20841,18 +20989,23 @@ def api_openclaw_status():
     bad = require_login_json()
     if bad:
         return bad
-    enabled = openclaw_resolve_enabled()
+    mode = openclaw_mode()
+    enabled = mode != "off"
+    if mode == "cli":
+        msg = "OpenClaw CLI local — chat qua backend."
+    elif mode == "cloud":
+        msg = "Render/mobile: tự dùng Gemini/GPT server (không cần CLI trên máy)."
+    else:
+        msg = "Chưa có OpenClaw CLI và chưa có key AI server — nạp GEMINI_API_KEY trên Render."
     return jsonify({
         "ok": True,
         "enabled": enabled,
+        "mode": mode,
         "cli_available": OPENCLAW_CLI_AVAILABLE,
+        "cloud_fallback": mode == "cloud",
         "agent": OPENCLAW_AGENT,
         "session_key_default": OPENCLAW_SESSION_KEY,
-        "message": (
-            "OpenClaw sẵn sàng — chat qua backend."
-            if enabled
-            else "OpenClaw chưa bật trên server này. Chạy app local (máy có CLI openclaw) hoặc set OPENCLAW_ENABLED=1 rồi restart app."
-        ),
+        "message": msg,
     })
 
 
@@ -20861,48 +21014,63 @@ def api_openclaw_chat():
     bad = require_login_json()
     if bad:
         return bad
-    if not openclaw_resolve_enabled():
+    mode = openclaw_mode()
+    if mode == "off":
         return jsonify({
             "error": (
-                "OpenClaw chưa bật trên server này. "
-                "Nếu thầy chạy local: mở terminal → openclaw (gateway) → restart app Flask → Ctrl+F5 trình duyệt. "
-                "Render/cloud không có CLI openclaw."
+                "Chưa dùng được 🦞 OpenClaw trên server này. "
+                "Trên Render: thêm GEMINI_API_KEY (hoặc OPENAI_API_KEY) trong Environment → redeploy."
             ),
             "cli_available": OPENCLAW_CLI_AVAILABLE,
             "enabled": False,
+            "mode": "off",
         }), 503
     data = request.get_json(silent=True) or {}
     user_msg = clean(data.get("message", ""))
     if not user_msg:
         return jsonify({"error": "Chưa nhập message."}), 400
-    sid = clean(data.get("sid", ""))
-    try:
-        q_idx = int(data.get("index", -1))
-    except Exception:
-        q_idx = -1
-    restore = quiz_restore_payload_from_body(data)
-    q: Optional[Dict[str, Any]] = None
-    total = 0
-    if sid:
+    q, q_idx, total, answer, sid = openclaw_resolve_question_from_request(data)
+    messages = data.get("messages", [])
+    if mode == "cloud":
+        if q is None:
+            return jsonify({"error": "Không đọc được câu hỏi — mở lại đề rồi thử."}), 400
         try:
-            ses = get_store().check_quiz_session(sid, restore)
-            qs = ses["questions"]
-            total = len(qs)
-            if 0 <= q_idx < total:
-                q = qs[q_idx]
-        except Exception:
-            pass
-    full_msg = openclaw_compose_message(user_msg, q, q_idx, total)
+            reply, provider, elapsed_ms = openclaw_chat_cloud_fallback(
+                q, user_msg, messages, answer
+            )
+        except AdminGeminiQuotaError as e:
+            return admin_ai_quota_json(e)
+        except Exception as e:
+            return jsonify({"error": str(e), "mode": "cloud"}), 400
+        return jsonify({
+            "ok": True,
+            "reply": reply,
+            "index": q_idx,
+            "provider": provider,
+            "mode": "cloud",
+            "elapsed_ms": elapsed_ms,
+        })
+    include_full_context = data.get("include_context", True)
+    if isinstance(include_full_context, str):
+        include_full_context = include_full_context.strip().lower() not in ("0", "false", "no", "off")
+    else:
+        include_full_context = bool(include_full_context)
+    full_msg = openclaw_compose_message(
+        user_msg, q, q_idx, total, answer, include_full_context=include_full_context
+    )
     sk = openclaw_session_key_for(session.get("mahs", ""), sid, q_idx)
-    reply, err = openclaw_agent_reply(full_msg, session_key=sk)
+    reply, err, elapsed_ms = openclaw_agent_reply(full_msg, session_key=sk)
     if err:
-        return jsonify({"error": err, "session_key": sk}), 500
+        return jsonify({"error": err, "session_key": sk, "elapsed_ms": elapsed_ms, "mode": "cli"}), 500
     return jsonify({
         "ok": True,
         "reply": reply,
         "index": q_idx,
         "session_key": sk,
         "provider": "OPENCLAW",
+        "mode": "cli",
+        "elapsed_ms": elapsed_ms,
+        "include_context": include_full_context,
     })
 
 
@@ -21762,6 +21930,46 @@ def api_ai_rewrite_latex():
             "field": field,
             "text": new_text,
             "provider": provider,
+        })
+    except AdminGeminiQuotaError as e:
+        return admin_ai_quota_json(e)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/openclaw/rewrite-latex", methods=["POST"])
+def api_openclaw_rewrite_latex():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được dùng OpenClaw sửa LaTeX."}), 403
+    body = request.get_json(silent=True) or {}
+    field = clean(body.get("field", ""))
+    text = clean(body.get("text", ""))
+    context = body.get("context") or {}
+    if field not in ["CauHoi", "A", "B", "C", "D", "LoiGiai"]:
+        return jsonify({"error": "Chỉ hỗ trợ sửa Câu hỏi, A-D hoặc Lời giải."}), 400
+    if not text:
+        return jsonify({"error": "Nội dung đang trống."}), 400
+    mode = openclaw_mode()
+    if mode == "off":
+        return jsonify({
+            "error": "Chưa có OpenClaw CLI và chưa có key AI trên server (Render: thêm GEMINI_API_KEY).",
+            "enabled": False,
+            "mode": "off",
+        }), 503
+    try:
+        if mode == "cli":
+            new_text, provider = openclaw_rewrite_latex_text(field, text, context)
+        else:
+            new_text, provider = ai_rewrite_latex_text(field, text, context)
+        return jsonify({
+            "ok": True,
+            "field": field,
+            "text": new_text,
+            "provider": provider,
+            "mode": mode,
         })
     except AdminGeminiQuotaError as e:
         return admin_ai_quota_json(e)
