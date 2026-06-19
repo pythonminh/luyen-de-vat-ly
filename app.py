@@ -244,11 +244,20 @@ OPENCLAW_TIMEOUT_SEC = max(30, min(int(os.environ.get("OPENCLAW_TIMEOUT_SEC", "6
 
 def _openclaw_cli_probe() -> bool:
     """Tự phát hiện CLI openclaw khi chạy local."""
+    cmd = OPENCLAW_CMD
+    if os.path.isabs(cmd) or os.sep in cmd:
+        found = cmd if os.path.isfile(cmd) else ""
+    else:
+        found = shutil.which(cmd) or ""
+    if not found and os.name == "nt" and not cmd.lower().endswith(".cmd"):
+        found = shutil.which(cmd + ".cmd") or ""
+    if not found:
+        return False
     try:
         proc_args = (
-            ["cmd", "/c", OPENCLAW_CMD, "--version"]
+            ["cmd", "/c", found, "--version"]
             if os.name == "nt"
-            else [OPENCLAW_CMD, "--version"]
+            else [found, "--version"]
         )
         proc = subprocess.run(
             proc_args,
@@ -261,6 +270,22 @@ def _openclaw_cli_probe() -> bool:
         return proc.returncode == 0 and bool((proc.stdout or proc.stderr or "").strip())
     except Exception:
         return False
+
+
+def openclaw_resolve_enabled() -> bool:
+    """Kiểm tra lại mỗi request — tránh server cũ / PATH khác lúc khởi động."""
+    global OPENCLAW_ENABLED, OPENCLAW_CLI_AVAILABLE
+    env_flag = str(os.environ.get("OPENCLAW_ENABLED", "")).strip().lower()
+    if env_flag in ("0", "false", "no", "off"):
+        OPENCLAW_ENABLED = False
+        return False
+    if env_flag in ("1", "true", "yes", "on"):
+        OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
+        OPENCLAW_ENABLED = True
+        return True
+    OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
+    OPENCLAW_ENABLED = OPENCLAW_CLI_AVAILABLE
+    return OPENCLAW_ENABLED
 
 
 OPENCLAW_CLI_AVAILABLE = _openclaw_cli_probe()
@@ -12484,9 +12509,9 @@ def current_user_public() -> Dict[str, Any]:
         "can_5050": can_use_5050(),
         "can_submit_score": not is_trial(),
         "can_ai_hint": can_use_ai_hint(),
-        "openclaw_enabled": OPENCLAW_ENABLED,
+        "openclaw_enabled": openclaw_resolve_enabled(),
         "openclaw_cli_available": OPENCLAW_CLI_AVAILABLE,
-        "can_openclaw_chat": OPENCLAW_ENABLED,
+        "can_openclaw_chat": openclaw_resolve_enabled(),
         "can_view_solution_live": can_view_solution_live(),
         "can_save_own_ai_key": can_save_own_ai_key(),
         "ai_has_keys": bool(cfg.get("has_keys")),
@@ -14746,10 +14771,11 @@ function openclawTitleHtml(){return '<div class="learningTitleRow openclawTitleR
 function plainQuizText(s){return String(s||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()}
 function buildOpenClawQuizContext(){let q=applyResolvedDang(QUESTIONS[CUR]||{});let parts=['Câu '+(CUR+1)+'/'+QUESTIONS.length];if(q.Mon)parts.push('Môn: '+q.Mon);if(q.Dang)parts.push('Loại câu: '+q.Dang);if(q.DangBaiTap)parts.push('Dạng BT: '+q.DangBaiTap);if(q.CauHoi)parts.push('Đề: '+plainQuizText(q.CauHoi).slice(0,2200));return parts.join('\n')}
 function openclawOutboundMessage(userMsg){return buildOpenClawQuizContext()+'\n\n---\nHọc sinh hỏi: '+String(userMsg||'').trim()}
-function toggleOpenClawPanel(){if(LEARNING_OPEN_KIND==='openclaw'){closeLearningPanel();return}LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='openclaw';renderOpenClawPanel()}
+function toggleOpenClawPanel(){if(LEARNING_OPEN_KIND==='openclaw'){closeLearningPanel();return}LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='openclaw';refreshOpenClawStatus().then(()=>renderOpenClawPanel()).catch(()=>renderOpenClawPanel())}
+async function refreshOpenClawStatus(){try{let j=await api('/api/openclaw/status');USER.openclaw_enabled=!!j.enabled;USER.openclaw_cli_available=!!j.cli_available;USER.can_openclaw_chat=!!j.enabled;return j}catch(e){USER.openclaw_enabled=false;USER.can_openclaw_chat=false;throw e}}
 function syncOpenClawChatUi(st){st=st||OPENCLAW_BY_Q[CUR]||{messages:[]};let inp=document.getElementById('openclawChatInput'),btn=document.getElementById('openclawChatSend'),msgs=document.getElementById('openclawChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;inp.disabled=!!OPENCLAW_LOADING;inp.placeholder=OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…'}if(btn)btn.disabled=!!OPENCLAW_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
-function renderOpenClawPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='openclaw')return;let st=OPENCLAW_BY_Q[CUR]||{messages:[]};OPENCLAW_BY_Q[CUR]=st;let oldInp=document.getElementById('openclawChatInput');if(oldInp)st.chatDraft=oldInp.value;let enabled=USER.openclaw_enabled!==false;let intro=enabled?'<div class="openclawIntro muted">🦞 OpenClaw CONTROL — chat qua backend (session riêng theo câu, token không lộ).</div>':'<div class="openclawIntro openclawWarn">OpenClaw chưa sẵn sàng trên server. Chạy app trên máy có CLI <code>openclaw</code> hoặc set <b>OPENCLAW_ENABLED=1</b>. <a href="/openclaw" target="_blank" rel="noopener">Hướng dẫn</a></div>';let msgs=(st.messages||[]).map(m=>'<div class="aiMsg '+(m.role==='user'?'aiMsgUser':'aiMsgBot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');if(OPENCLAW_LOADING)msgs+='<div class="aiMsg aiMsgBot"><span class="hintSpin"></span> OpenClaw đang trả lời…</div>';let chatBox='<div class="aiChatBox openclawChatBox"><div class="aiChatMsgs" id="openclawChatMsgs">'+(msgs||'<div class="muted">Hỏi OpenClaw: «Em làm bước 1 sao?», «Giải thích công thức này»…</div>')+'</div><div class="aiChatForm"><textarea id="openclawChatInput" class="aiChatInput" rows="2" placeholder="'+(OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…')+'"'+(OPENCLAW_LOADING?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendOpenClawChat()}"></textarea><button type="button" id="openclawChatSend" class="aiChatSend openclawChatSend" onclick="sendOpenClawChat()"'+(OPENCLAW_LOADING?' disabled':'')+'>Gửi</button></div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','openclawOpen');hb.classList.remove('learningCollapsed','aiAssistOpen');hb.setAttribute('data-openclaw-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+openclawTitleHtml()+'<div class="learningPanelBody openclawBody">'+intro+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncOpenClawChatUi(st)}
-async function sendOpenClawChat(){if(OPENCLAW_LOADING)return;let inp=document.getElementById('openclawChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=OPENCLAW_BY_Q[qIdx]||{messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=true;renderOpenClawPanel();try{let j=await api('/api/openclaw-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,sid:SID,index:qIdx,...quizRestorePayload()})});st.messages.push({role:'assistant',text:j.reply||''});st.provider=j.provider||'OPENCLAW';st.error='';if(j.enabled!==false)USER.openclaw_enabled=true}catch(e){st.messages.push({role:'assistant',text:'⚠️ '+(e.message||e)});st.error=e.message||''}OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=false;if(CUR===qIdx)renderOpenClawPanel()}
+function renderOpenClawPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='openclaw')return;let st=OPENCLAW_BY_Q[CUR]||{messages:[]};OPENCLAW_BY_Q[CUR]=st;let oldInp=document.getElementById('openclawChatInput');if(oldInp)st.chatDraft=oldInp.value;let enabled=USER.openclaw_enabled===true;let intro=enabled?'<div class="openclawIntro muted">🦞 OpenClaw CONTROL — chat qua backend (session riêng theo câu, token không lộ).</div>':'<div class="openclawIntro openclawWarn">⚠️ Server hiện <b>chưa bật OpenClaw</b>. Chạy app trên <b>máy local</b> có CLI <code>openclaw</code> + gateway đang chạy, set <b>OPENCLAW_ENABLED=1</b>, restart Flask, Ctrl+F5. (Render/cloud không hỗ trợ.)</div>';let msgs=(st.messages||[]).map(m=>'<div class="aiMsg '+(m.role==='user'?'aiMsgUser':'aiMsgBot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');if(OPENCLAW_LOADING)msgs+='<div class="aiMsg aiMsgBot"><span class="hintSpin"></span> OpenClaw đang trả lời…</div>';let chatBox='<div class="aiChatBox openclawChatBox"><div class="aiChatMsgs" id="openclawChatMsgs">'+(msgs||'<div class="muted">Hỏi OpenClaw: «Em làm bước 1 sao?», «Giải thích công thức này»…</div>')+'</div><div class="aiChatForm"><textarea id="openclawChatInput" class="aiChatInput" rows="2" placeholder="'+(OPENCLAW_LOADING?'OpenClaw đang trả lời…':'Hỏi OpenClaw về câu này…')+'"'+(OPENCLAW_LOADING?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendOpenClawChat()}"></textarea><button type="button" id="openclawChatSend" class="aiChatSend openclawChatSend" onclick="sendOpenClawChat()"'+(OPENCLAW_LOADING?' disabled':'')+'>Gửi</button></div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','openclawOpen');hb.classList.remove('learningCollapsed','aiAssistOpen');hb.setAttribute('data-openclaw-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+openclawTitleHtml()+'<div class="learningPanelBody openclawBody">'+intro+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncOpenClawChatUi(st)}
+async function sendOpenClawChat(){if(OPENCLAW_LOADING)return;let inp=document.getElementById('openclawChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=OPENCLAW_BY_Q[qIdx]||{messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=true;renderOpenClawPanel();try{let j=await api('/api/openclaw-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,sid:SID,index:qIdx,...quizRestorePayload()})});st.messages.push({role:'assistant',text:j.reply||''});st.provider=j.provider||'OPENCLAW';st.error='';USER.openclaw_enabled=true;USER.can_openclaw_chat=true}catch(e){USER.openclaw_enabled=false;USER.can_openclaw_chat=false;st.messages.push({role:'assistant',text:'⚠️ '+(e.message||e)});st.error=e.message||''}OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=false;if(CUR===qIdx)renderOpenClawPanel()}
 function syncAiAssistChatUi(st){st=st||ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};let inp=document.getElementById('aiChatInput'),btn=document.getElementById('aiChatSend'),msgs=document.getElementById('aiChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;let lock=ASSISTANT_LOADING&&!st.note;inp.disabled=!!lock;inp.placeholder=lock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…'}if(btn)btn.disabled=!!ASSISTANT_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
 function renderAiAssistPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='assistant')return;let st=ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};ASSISTANT_BY_Q[CUR]=st;let oldInp=document.getElementById('aiChatInput');if(oldInp)st.chatDraft=oldInp.value;let noteHtml='';if(ASSISTANT_LOADING&&!st.note)noteHtml='<div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi Trợ lý AI…</b></div></div>';else if(st.note){noteHtml='<div class="aiAssistPanel"><b>💡 Hướng dẫn làm bài</b><div class="hintMath" style="margin-top:6px">'+formatHintDisplay(st.note)+'</div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối (TN / Đ/S / TLN).</div>'+(st.is_fallback?'<div class="aiAssistWarn" style="color:#b45309;margin-top:6px">⚠️ AI chưa giải tự động'+(st.ai_error?(' — '+esc(st.ai_error)):'')+'. Nạp key Gemini hoặc bấm 🔄.</div>':(st.provider_used&&st.provider_used!=='FALLBACK'?'<div class="muted" style="font-size:11px;margin-top:4px">AI: '+esc(st.provider_used)+(st.ai_model?' · '+esc(st.ai_model):'')+'</div>':''))+(ASSISTANT_LOADING?'':'<div style="margin-top:6px"><button type="button" class="btn2" style="font-size:11px!important;padding:4px 8px!important" onclick="requestAssistantNote()">🔄 Lấy lại</button></div>')+'</div>'}else if(!ASSISTANT_LOADING){noteHtml='<div class="muted" style="margin-top:4px;line-height:1.45">Chưa có hướng dẫn — bấm 🔄 bên dưới để thử lại.</div><div style="margin-top:6px"><button type="button" class="btn2 aiAssistBtn" onclick="requestAssistantNote()">🔄 Thử lại</button></div>'}let msgs=(st.messages||[]).map(m=>'<div class="aiMsg aiMsg-'+(m.role==='user'?'user':'bot')+'">'+formatHintDisplay(m.text||'')+'</div>').join('');let chatLock=ASSISTANT_LOADING&&!st.note;let chatBox='<div class="aiChatBox"><div class="aiChatMsgs" id="aiChatMsgs">'+(msgs||'<div class="muted">Hỏi thêm: «Bước 1 em làm sao?», «Đáp án là gì?»</div>')+'</div><div class="aiChatForm"><textarea id="aiChatInput" class="aiChatInput" rows="2" placeholder="'+(chatLock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…')+'"'+(chatLock?' disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendAssistantChat()}"></textarea><button type="button" id="aiChatSend" class="aiChatSend" onclick="sendAssistantChat()"'+(ASSISTANT_LOADING?' disabled':'')+'>Gửi</button></div><div class="aiAssistWarn">Đọc đề → các bước làm → đáp án cuối theo TN / Đ/S / TLN.</div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','aiAssistOpen');hb.classList.remove('learningCollapsed');hb.setAttribute('data-ai-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+aiAssistTitleHtml()+'<div class="learningPanelBody aiAssistBody">'+noteHtml+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath();syncAiAssistChatUi(st)}
 function renderLearningField(label,val){if(!String(val||'').trim())return '';return '<div style="margin-top:8px"><b>'+esc(label)+'</b><div class="learningItem hintMath">'+formatHintDisplay(val)+'</div></div>'}
@@ -19067,15 +19093,46 @@ def openclaw_agent_reply(message: str, session_key: str = "") -> Tuple[str, str]
     stdout = (proc.stdout or "").strip()
     if not stdout:
         return "", "OpenClaw không trả nội dung."
+    reply = openclaw_parse_reply(stdout)
+    if reply.startswith("⚠️ OpenClaw:"):
+        return "", reply.replace("⚠️ OpenClaw:", "").strip()
+    return reply or stdout, ""
+
+
+def openclaw_parse_reply(stdout: str) -> str:
+    """Parse JSON output openclaw agent --json (format 2026.x)."""
+    raw = (stdout or "").strip()
+    if not raw:
+        return ""
     try:
-        data = json.loads(stdout)
-        if isinstance(data, dict):
-            reply = clean(data.get("text") or data.get("reply") or "")
-            if reply:
-                return reply, ""
+        data = json.loads(raw)
     except Exception:
-        pass
-    return stdout, ""
+        return raw
+    if not isinstance(data, dict):
+        return raw
+    direct = clean(data.get("text") or data.get("reply") or "")
+    if direct:
+        return direct
+    result = data.get("result")
+    if isinstance(result, dict):
+        payloads = result.get("payloads") or []
+        if isinstance(payloads, list):
+            parts: List[str] = []
+            for item in payloads:
+                if isinstance(item, dict):
+                    t = clean(item.get("text") or "")
+                    if t:
+                        parts.append(t)
+            if parts:
+                return "\n\n".join(parts)
+        msg = clean(result.get("message") or result.get("text") or "")
+        if msg:
+            return msg
+    if clean(data.get("status", "")).lower() == "error":
+        err = clean(data.get("error") or data.get("message") or "")
+        if err:
+            return f"⚠️ OpenClaw: {err}"
+    return raw
 
 
 def _openclaw_plain_text(raw: Any) -> str:
@@ -20784,16 +20841,17 @@ def api_openclaw_status():
     bad = require_login_json()
     if bad:
         return bad
+    enabled = openclaw_resolve_enabled()
     return jsonify({
         "ok": True,
-        "enabled": OPENCLAW_ENABLED,
+        "enabled": enabled,
         "cli_available": OPENCLAW_CLI_AVAILABLE,
         "agent": OPENCLAW_AGENT,
         "session_key_default": OPENCLAW_SESSION_KEY,
         "message": (
-            "OpenClaw sẵn sàng."
-            if OPENCLAW_ENABLED
-            else "OpenClaw chưa bật — cài CLI hoặc set OPENCLAW_ENABLED=1."
+            "OpenClaw sẵn sàng — chat qua backend."
+            if enabled
+            else "OpenClaw chưa bật trên server này. Chạy app local (máy có CLI openclaw) hoặc set OPENCLAW_ENABLED=1 rồi restart app."
         ),
     })
 
@@ -20803,13 +20861,15 @@ def api_openclaw_chat():
     bad = require_login_json()
     if bad:
         return bad
-    if not OPENCLAW_ENABLED:
+    if not openclaw_resolve_enabled():
         return jsonify({
             "error": (
-                "OpenClaw chưa bật. Cài CLI openclaw hoặc set OPENCLAW_ENABLED=1. "
-                "Xem /openclaw."
+                "OpenClaw chưa bật trên server này. "
+                "Nếu thầy chạy local: mở terminal → openclaw (gateway) → restart app Flask → Ctrl+F5 trình duyệt. "
+                "Render/cloud không có CLI openclaw."
             ),
             "cli_available": OPENCLAW_CLI_AVAILABLE,
+            "enabled": False,
         }), 503
     data = request.get_json(silent=True) or {}
     user_msg = clean(data.get("message", ""))
