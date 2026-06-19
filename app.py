@@ -8598,6 +8598,12 @@ def _admin_section_markers(txt: str) -> Dict[str, Tuple[str, str]]:
             "tung_y": (rf"2\.\s*{ty_pat}[^\n]*\n", r"3\.\s"),
             "chot": (r"3\.\s*CHỐT ĐÁP ÁN[^\n]*\n", r"\Z"),
         }
+    # AI đôi khi bỏ mục 1 DIỄN GIẢI nhưng vẫn đánh số 2, 3
+    if re.search(rf"2\.\s*{ty_pat}", txt, re.I) and re.search(r"3\.\s*CHỐT ĐÁP ÁN", txt, re.I):
+        return {
+            "tung_y": (rf"2\.\s*{ty_pat}[^\n]*\n", r"3\.\s"),
+            "chot": (r"3\.\s*CHỐT ĐÁP ÁN[^\n]*\n", r"\Z"),
+        }
     return {
         "tung_y": (rf"1\.\s*{ty_pat}[^\n]*\n", r"2\.\s"),
         "chot": (r"2\.\s*CHỐT ĐÁP ÁN[^\n]*\n", r"\Z"),
@@ -9458,7 +9464,7 @@ def build_admin_review_analysis(
         issues.append("Lời giải R Sheet khác đề xuất AI")
         fix_loigiai = ai_lg
     elif not fix_loigiai:
-        fix_loigiai = sheet_lg
+        fix_loigiai = sheet_lg or ai_lg
 
     if dang == "Trắc nghiệm" and fix_loigiai:
         fix_loigiai = _strip_tn_loigiai_ds_lines(
@@ -14433,7 +14439,8 @@ function hintSection1Raw(){return hintSectionTungYRaw()}
 function hintAiLoigiaiCombined(){let dg=hintSectionDiengiaiRaw();let ty=hintSectionTungYRaw();if(dg&&ty)return dg+'\n\n'+ty;return ty||dg||''}
 function hintLoigiaiFromHintBody(){let t=hintRawText();let m=t.match(/Lời giải Sheet \(cột R\):\s*\n([\s\S]*?)(?=\n\n📋 Tham chiếu Sheet|$)/i);return m?m[1].trim():''}
 function hintAiLoigiaiRaw(){let j=HINT_BY_Q[CUR]||{};let q=QUESTIONS[CUR]||{};if(j.admin_review){let combined=hintAiLoigiaiCombined();if(combined)return combined;let sug=String(j.suggested_loigiai||'').trim();if(sug)return sug}let cand=[String(j.suggested_loigiai||'').trim(),hintAiLoigiaiCombined(),hintSection1Raw(),hintLoigiaiFromHintBody(),String(j.sheet_loigiai||'').trim(),String(q.LoiGiai||'').trim()].filter(Boolean);cand.sort((a,b)=>b.length-a.length);return cand[0]||''}
-function hintAiDapAn(){if(isCurrentQuestionDs()){let fromLg=dsDapAnFromSolutionText(hintAiLoigiaiRaw(),currentQuestion());if(fromLg)return fromLg}let j=HINT_BY_Q[CUR]||{};return String(j.suggested_dapan||'').trim()}
+function hintSectionChotRaw(){let t=hintRawText().split('📋 Tham chiếu Sheet')[0];let m=t.match(/3\.\s*CHỐT ĐÁP ÁN[^\n]*\n([\s\S]*?)(?=\n\n📋|\Z)/i);if(m)return m[1].trim();m=t.match(/2\.\s*CHỐT ĐÁP ÁN[^\n]*\n([\s\S]*?)(?=\n\n📋|\Z)/i);return m?m[1].trim():''}
+function hintAiDapAn(){if(isCurrentQuestionDs()){let fromLg=dsDapAnFromSolutionText(hintAiLoigiaiRaw(),currentQuestion());if(fromLg)return fromLg}let j=HINT_BY_Q[CUR]||{};let da=String(j.suggested_dapan||'').trim();if(da)return da;let chot=hintSectionChotRaw();if(chot){let m=chot.match(/(?:chọn|đáp án|kết luận)\s*[:：]?\s*([ABCD])\b/i)||chot.match(/\b([ABCD])\s*[\.\):]/i)||chot.match(/\b([ABCD])\b/);if(m)return m[1].toUpperCase()}return ''}
 function hintAiLoigiai(){let v=hintAiLoigiaiRaw();return v?stripLoigiaiMarkdown(v).replace(/\r/g,''):''}
 function adminLoigiaiMissingLetters(text,q){q=q||currentQuestion();if(!q||q.Dang!=='Đúng sai')return [];let need=['A','B','C','D'].filter(L=>!!q[L]);let found=new Set();String(text||'').split(/\n/).forEach(line=>{let m=line.match(/^\s*([ABCD])\s*[\.\):]/i);if(m)found.add(m[1].toUpperCase())});return need.filter(L=>!found.has(L))}
 function buildAdminAnalysisCard(j){if(!j||!j.admin_review)return '';let a=j.admin_analysis;if(!a)return '';let head=a.all_ok?`<div class="adminAnalysisOk">${esc(a.summary||'Sheet khớp AI')}</div>`:`<div class="adminAnalysisWarn">${esc(a.summary||'Có điểm cần sửa')}</div>`;let table='';if(a.rows&&a.rows.length){let trs=a.rows.map(r=>{let cls=r.ok?'adminAnalysisOkRow':'adminAnalysisBadRow';let mark=r.ok?'✓':'✗';let note=r.note?`<div class="muted" style="font-size:11px;margin-top:2px">${esc(r.note)}</div>`:'';return `<tr class="${cls}"><td><b>${esc(r.letter)}</b></td><td>${esc(r.sheet_p||'—')}</td><td>${esc(r.ai||'—')}</td><td>${esc(r.sheet_r||'—')}</td><td>${mark}${note}</td></tr>`}).join('');table=`<table class="adminAnalysisTbl"><thead><tr><th>Ý</th><th>Sheet P</th><th>AI</th><th>Sheet R</th><th></th></tr></thead><tbody>${trs}</tbody></table>`}let fixes='';if(!a.all_ok&&(a.fix_dapan||a.fix_loigiai))fixes=`<div class="hintAiActions" style="margin-top:8px"><button type="button" class="btnGreen" onclick="applyAdminFixAll()">✏️ Sửa Sheet (điền gợi ý AI)</button></div>`;else if(a.all_ok&&adminHintNeedsSave())fixes=`<div class="muted" style="margin-top:8px;font-size:12px">Sheet đã khớp AI — vẫn có thể bấm <b>Lưu</b> nếu vừa chỉnh tay.</div>`;return `<div class="hintAnswerCard adminAnalysisCard"><div class="hintAnswerTitle">🔬 Phân tích Đúng/Sai (ADMIN)</div>${head}${table}${fixes}</div>`}
@@ -14455,7 +14462,7 @@ function copyHintLoigiai(){let t=hintFieldValue('LoiGiai');if(!t){alert('Chưa c
 function copyHintAll(){let t=hintRawText();if(!t){alert('Chưa có nội dung.');return}navigator.clipboard.writeText(t).then(()=>alert('Đã chép vào clipboard (text gốc có $...$).')).catch(()=>{let el=document.getElementById('hintAdminBody');if(el){let r=document.createRange();r.selectNodeContents(el);let sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');alert('Đã chép vùng hiển thị (Ctrl+C).')}catch(e){alert('Chọn text trong ô gợi ý rồi Ctrl+C.')}}})}
 function hintFieldValue(field){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(field==='DapAn')return String(a.fix_dapan||'').trim()||hintAiDapAn();if(field==='LoiGiai')return String(a.fix_loigiai||'').trim()||hintAiLoigiai();return ''}
 function applyHintField(field){if(!USER.is_admin){alert('Chỉ ADMIN.');return}let v=hintFieldValue(field);if(!v){alert(field==='DapAn'?'Chưa tách được đáp án AI (mục 2).':'Chưa có lời giải đề xuất (mục 1).');return}openEditWithHint(field==='DapAn'?v:'',field==='LoiGiai'?v:'')}
-function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(!dapan)dapan=String(a.fix_dapan||'').trim()||hintAiDapAn();if(!loigiai)loigiai=String(a.fix_loigiai||'').trim()||hintAiLoigiai();if(isCurrentQuestionDs()&&loigiai){let sync=dsDapAnFromSolutionText(loigiai,QUESTIONS[CUR]);if(sync)dapan=sync}if(isCurrentQuestionTn()&&loigiai)loigiai=normalizeTnLoigiaiPlain(loigiai,QUESTIONS[CUR]);openEdit();syncQuestionModalChrome();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el)el.value=loigiai}}
+function openEditWithHint(dapan='',loigiai=''){let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};if(!dapan)dapan=String(a.fix_dapan||'').trim()||hintAiDapAn();if(!loigiai)loigiai=String(a.fix_loigiai||'').trim()||hintAiLoigiai();if(isCurrentQuestionDs()&&loigiai){let sync=dsDapAnFromSolutionText(loigiai,QUESTIONS[CUR]);if(sync)dapan=sync}if(isCurrentQuestionTn()&&loigiai)loigiai=normalizeTnLoigiaiPlain(loigiai,QUESTIONS[CUR])||loigiai;openEdit();syncQuestionModalChrome();if(dapan){let el=document.getElementById('edit_DapAn');if(el)el.value=dapan}if(loigiai){let el=document.getElementById('edit_LoiGiai');if(el){el.value=loigiai;let updates=autoSyncDsLoigiaiAbcd({LoiGiai:loigiai},readQuestionFormData());if(updates&&updates.LoiGiai)el.value=updates.LoiGiai}}renderEditQuestionPreview();let prev=document.getElementById('editQuestionPreview');if(prev&&typeof typeset==='function')typeset([prev])}
 async function saveHintField(field){alert('ADMIN: hãy bấm ✏️ Sửa câu (điền AI), kiểm tra đủ Đáp án + Lời giải, rồi Lưu vào Google Sheet — không lưu thẳng từ AI.')}
 
 /* ==========================================================================
@@ -15854,20 +15861,34 @@ function applyEditHintField(field){
     }
   }
 }
-function applyEditHintAll(){
-  if(!USER.is_admin)return;
+function applyEditHintAll(opts){
+  opts=opts||{};
+  if(!USER.is_admin)return false;
   let da=hintFieldValue('DapAn');
   let lg=hintFieldValue('LoiGiai');
-  if(!da&&!lg){alert('Chưa có kết quả soát đề — bấm 🔍 Soát đề trước.');return}
-  if(da){let el=document.getElementById('edit_DapAn');if(el)el.value=da}
+  if(!da&&!lg){
+    if(!opts.silent)alert('Chưa có kết quả soát đề — bấm 🔍 Soát đề trước.');
+    return false;
+  }
+  if(isCurrentQuestionDs()&&lg){let sync=dsDapAnFromSolutionText(lg,QUESTIONS[CUR]);if(sync)da=sync}
+  if(isCurrentQuestionTn()&&lg)lg=normalizeTnLoigiaiPlain(lg,QUESTIONS[CUR])||lg;
+  let filled=[];
+  if(da){
+    let el=document.getElementById('edit_DapAn');
+    if(el&&(!opts.onlyIfEmpty||!String(el.value||'').trim())){el.value=da;filled.push('P')}
+  }
   if(lg){
     let el=document.getElementById('edit_LoiGiai');
-    if(el){
+    if(el&&(!opts.onlyIfEmpty||!String(el.value||'').trim())){
       el.value=lg;
       let updates=autoSyncDsLoigiaiAbcd({LoiGiai:lg},readQuestionFormData());
       if(updates&&updates.LoiGiai)el.value=updates.LoiGiai;
+      filled.push('R');
     }
   }
+  if(filled.length){renderEditQuestionPreview();let prev=document.getElementById('editQuestionPreview');if(prev&&typeof typeset==='function')typeset([prev])}
+  if(!opts.silent&&filled.length)alert('Đã điền cột '+filled.join(' + ')+' từ kết quả soát đề.');
+  return filled.length>0;
 }
 async function requestHintFromEditModal(){
   if(!isAdminViewer())return;
@@ -15883,6 +15904,7 @@ async function requestHintFromEditModal(){
     HINT_BY_Q[qIdx]=j;
     if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;
     renderEditHintResult(j);
+    applyEditHintAll({silent:true,onlyIfEmpty:true});
     syncQuestionModalChrome();
   }catch(e){
     if(box){box.innerHTML='<div class="muted">❌ '+esc(e.message||e)+'</div>'}
@@ -15891,7 +15913,7 @@ async function requestHintFromEditModal(){
     syncEditHintButtonLabel();
   }
 }
-function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let soat=document.getElementById('editAdminSoatBar');if(soat)soat.classList.toggle('hide',isAdd||!isAdminViewer());syncAdminReviewModeUI();syncEditHintButtonLabel();if(!isAdd&&isAdminViewer())renderEditHintResult(HINT_BY_Q[CUR]);let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Dán cả câu (Ctrl+V) ở khung trên → Tách vào form → chọn TN/Đ/S/TLN → xem trước + ảnh → Lưu Sheet.';else if(adminHintNeedsSave())note.textContent='Soát đề ở trên → kiểm tra P/R → bấm → P / → R hoặc 📋 Điền P/R → Lưu Sheet.';else note.textContent='Soát đề AI nằm ngay trên form. Xóa liên tiếp được — chỉ Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
+function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let soat=document.getElementById('editAdminSoatBar');if(soat)soat.classList.toggle('hide',isAdd||!isAdminViewer());syncAdminReviewModeUI();syncEditHintButtonLabel();if(!isAdd&&isAdminViewer())renderEditHintResult(HINT_BY_Q[CUR]);let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Dán cả câu (Ctrl+V) ở khung trên → Tách vào form → chọn TN/Đ/S/TLN → xem trước + ảnh → Lưu Sheet.';else if(adminHintNeedsSave())note.textContent='Soát đề ở trên — app tự điền P/R vào ô trống. Kiểm tra cột R rồi Lưu Sheet.';else note.textContent='Soát đề AI nằm ngay trên form. Xóa liên tiếp được — chỉ Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
 
 /* ==========================================================================
  * [JS-ADMIN-EDIT] Sửa / thêm câu hỏi → Google Sheet Cau_Hoi
@@ -15902,7 +15924,7 @@ function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=d
  * Lưu:      saveEdit() / saveAddQuestion()  — API /api/admin/save-question
  * HTML:     #modal, #edit_* fields, #btnSaveQuestion
  * ========================================================================== */
-function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MODAL_MODE='edit';renderQuestionForm(QUESTIONS[CUR]||{});syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
+function openEdit(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}QUESTION_MODAL_MODE='edit';renderQuestionForm(QUESTIONS[CUR]||{});syncQuestionModalChrome();if(isAdminViewer()&&HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review)applyEditHintAll({silent:true,onlyIfEmpty:true});document.getElementById('modal').classList.remove('hide')}
 
 function currentLatexDefaults(){
   let q=(QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
