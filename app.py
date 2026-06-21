@@ -13865,22 +13865,7 @@ html[data-theme='dark'] .learningPlusMenu{
 }
 html[data-theme='dark'] .learnPromptBtn{color:#cbd5e1!important}
 html[data-theme='dark'] .learnPlusBtn{background:#1f2937!important;color:#e5e7eb!important;border-color:#475569!important}
-@media(max-width:760px){
-    .learningPlusMenu{
-        grid-template-columns:repeat(2,minmax(0,1fr))!important;
-        gap:6px!important;
-        padding:8px!important;
-    }
-    .learningPlusMenu button{
-        height:38px!important;
-        min-height:38px!important;
-        font-size:11px!important;
-    }
-    .learnPromptBtn{
-        max-width:140px!important;
-        font-size:11.5px!important;
-    }
-}
+
 
 /* ===== V313: Tool chips trượt ngang, gọn hơn ===== */
 .learnCompactBar{
@@ -14010,19 +13995,7 @@ html[data-theme='dark'] .openclawQuickBtn{
     color:#bbf7d0!important;
     border-color:#166534!important;
 }
-@media(max-width:760px){
-    .learnCompactBar{gap:3px!important;padding:3px!important}
-    .learnPromptBtn{max-width:118px!important;padding:0 9px!important;font-size:11px!important}
-    .learningPlusMenu{width:calc(100vw - 42px)!important;padding:6px!important}
-    .learningPlusMenu button,
-    .openclawQuickBtn,
-    #hintBox.learningOpen.openclawOpen .openclawQuickBtn{
-        height:27px!important;
-        min-height:27px!important;
-        padding:0 10px!important;
-        font-size:10.5px!important;
-    }
-}
+
 
 /* ===== V314: Menu công cụ nằm cùng một hàng với nút mở ===== */
 .learningQuickBar{
@@ -14127,19 +14100,7 @@ html[data-theme='dark'] .openclawQuickBtn{
     white-space:nowrap!important;
     display:block!important;
 }
-@media(max-width:760px){
-    .topTitleBrand{
-        gap:6px!important;
-    }
-    .topBrandAvatar{
-        width:28px!important;
-        height:28px!important;
-        border-width:1.5px!important;
-    }
-    .topBrandText{
-        max-width:calc(100vw - 96px)!important;
-    }
-}
+
 @media(max-width:760px){
     .learningQuickBar{
         gap:5px!important;
@@ -14468,17 +14429,7 @@ html[data-theme='dark'] .miniCalcHead span{color:#94a3b8!important}
         width:auto!important;
         max-width:none!important;
     }
-    .learningQuickBar .learningPlusMenu button,
-    .learningQuickBar button{
-        min-width:auto!important;
-        height:24px!important;
-        min-height:24px!important;
-        max-height:24px!important;
-        padding:0 7px!important;
-        border-radius:999px!important;
-        font-size:9.6px!important;
-        line-height:1!important;
-    }
+    
     .learningQuickBar .miniCalcBtn{
         min-width:auto!important;
     }
@@ -16160,13 +16111,11 @@ function ensureLearningQuickBar(){
   let lblOc=mob?'Gemini':'Gemini';
   let lblPrompt=mob?'AI':'Công cụ AI';
   let lblCalc=mob?'▦':'▦ Máy tính';
-  let lblTranslate=mob?'EN':'🇬🇧 Dịch';
-  let lblInternet=mob?'Net':'🔎 AI Internet';
+  let lblTranslate=mob?'🇬🇧 Dịch':'🇬🇧 Dịch';
+  let lblInternet=mob?'🔎 AI Internet':'🔎 AI Internet';
   let promptTitle=canAi?'Mở menu Gemini và AI Internet':'Mở công cụ học tập';
   let html='<div class="learnCompactBar">'
-    +'<button type="button" id="learningPlusBtn" class="learnPlusBtn" onclick="toggleLearningPlusMenu(event)" title="Mở công cụ" aria-label="Mở công cụ" aria-expanded="false">+</button>'
     +'<button type="button" class="learnPromptBtn teacherAiBtn" onclick="toggleLearningPlusMenu(event)" title="'+promptTitle+'"><span class="teacherAiAvatar"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt=""></span><span class="teacherAiLabel">'+lblPrompt+'</span></button>'
-    +'<button type="button" class="learnMicBtn" onclick="toggleLearningPlusMenu(event)" title="Mở menu công cụ">⋯</button>'
     +'</div><div id="learningPlusMenu" class="learningPlusMenu hide">'
     +'<button type="button" class="btn2 miniCalcBtn toolCalcBtn" onclick="learnMenuAction(toggleMiniCalc)" title="Mở máy tính khoa học">'+lblCalc+'</button>';
   if(canAi)html+='<button type="button" class="btn2 openclawBtn" data-learning-toggle="openclaw" onclick="learnMenuAction(toggleOpenClawPanel)" title="Gemini — dùng key AI của người dùng để hỏi nhanh và chat hỗ trợ">◇ '+lblOc+'</button>';
