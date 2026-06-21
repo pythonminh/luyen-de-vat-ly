@@ -14311,6 +14311,146 @@ html[data-theme='dark'] .miniCalcHead span{color:#94a3b8!important}
     }
 }
 
+/* ===== V315: Điện thoại - thu nhỏ thêm thanh Công cụ AI ===== */
+@media(max-width:760px){
+    .learningQuickBar{
+        gap:3px!important;
+        margin:4px 0 6px!important;
+        padding:2px 0 3px!important;
+    }
+    .learnCompactBar{
+        gap:2px!important;
+        padding:2px!important;
+        border-radius:12px!important;
+    }
+    .learnPlusBtn,
+    .learnMicBtn{
+        width:24px!important;
+        min-width:24px!important;
+        height:24px!important;
+        min-height:24px!important;
+        max-height:24px!important;
+        border-radius:8px!important;
+        font-size:13px!important;
+    }
+    .learnPromptBtn{
+        max-width:96px!important;
+        height:24px!important;
+        min-height:24px!important;
+        max-height:24px!important;
+        padding:0 7px!important;
+        border-radius:8px!important;
+        font-size:9.8px!important;
+        line-height:1!important;
+    }
+    .learningQuickBar .learningPlusMenu{
+        gap:4px!important;
+        padding:3px!important;
+        width:auto!important;
+        max-width:none!important;
+    }
+    .learningQuickBar .learningPlusMenu button,
+    .learningQuickBar button{
+        min-width:auto!important;
+        height:24px!important;
+        min-height:24px!important;
+        max-height:24px!important;
+        padding:0 7px!important;
+        border-radius:999px!important;
+        font-size:9.6px!important;
+        line-height:1!important;
+    }
+    .learningQuickBar .miniCalcBtn{
+        min-width:auto!important;
+    }
+}
+
+/* ===== V316: Điện thoại rất hẹp - thanh Công cụ AI siêu gọn, không che đề ===== */
+@media(max-width:760px){
+    body.mobile-quiz-ui .learningQuickBar{
+        display:flex!important;
+        flex-wrap:nowrap!important;
+        align-items:center!important;
+        gap:2px!important;
+        max-width:100%!important;
+        max-height:28px!important;
+        margin:2px 0 4px!important;
+        padding:1px 0 2px!important;
+        overflow-x:auto!important;
+        overflow-y:hidden!important;
+        -webkit-overflow-scrolling:touch!important;
+        scrollbar-width:none!important;
+    }
+    body.mobile-quiz-ui .learningQuickBar::-webkit-scrollbar{display:none!important}
+    body.mobile-quiz-ui .learnCompactBar{
+        flex:0 0 auto!important;
+        gap:1px!important;
+        padding:1px!important;
+        border-radius:10px!important;
+        max-height:24px!important;
+        box-shadow:none!important;
+    }
+    body.mobile-quiz-ui .learnPlusBtn,
+    body.mobile-quiz-ui .learnMicBtn{
+        width:20px!important;
+        min-width:20px!important;
+        height:20px!important;
+        min-height:20px!important;
+        max-height:20px!important;
+        border-radius:6px!important;
+        font-size:11px!important;
+    }
+    body.mobile-quiz-ui .learnPromptBtn{
+        width:32px!important;
+        max-width:32px!important;
+        height:20px!important;
+        min-height:20px!important;
+        max-height:20px!important;
+        padding:0 4px!important;
+        border-radius:6px!important;
+        font-size:9px!important;
+        line-height:1!important;
+    }
+    body.mobile-quiz-ui .learningQuickBar .learningPlusMenu{
+        flex:0 0 auto!important;
+        display:flex!important;
+        flex-wrap:nowrap!important;
+        align-items:center!important;
+        gap:2px!important;
+        min-width:0!important;
+        max-width:calc(100vw - 86px)!important;
+        height:24px!important;
+        max-height:24px!important;
+        padding:1px!important;
+        overflow-x:auto!important;
+        overflow-y:hidden!important;
+        -webkit-overflow-scrolling:touch!important;
+        scrollbar-width:none!important;
+    }
+    body.mobile-quiz-ui .learningQuickBar .learningPlusMenu.hide{display:none!important}
+    body.mobile-quiz-ui .learningQuickBar .learningPlusMenu::-webkit-scrollbar{display:none!important}
+    body.mobile-quiz-ui .learningQuickBar .learningPlusMenu button,
+    body.mobile-quiz-ui .learningQuickBar button{
+        flex:0 0 auto!important;
+        width:auto!important;
+        min-width:0!important;
+        height:20px!important;
+        min-height:20px!important;
+        max-height:20px!important;
+        padding:0 5px!important;
+        border-radius:6px!important;
+        font-size:8.8px!important;
+        line-height:1!important;
+        white-space:nowrap!important;
+    }
+    body.mobile-quiz-ui .learningQuickBar .miniCalcBtn{
+        width:24px!important;
+        max-width:24px!important;
+        padding:0!important;
+        overflow:hidden!important;
+    }
+}
+
 /* Calculator contrast pass: clean, readable Casio-like surface */
 body.mini-calc-open #miniCalcPanel{
     background:#eef2f7!important;
@@ -15861,16 +16001,20 @@ function ensureLearningQuickBar(){
   let canAi=USER.can_ai_hint!==false;
   let mob=typeof isMobileQuizUI==='function'&&isMobileQuizUI();
   let lblOc=mob?'Gemini':'Gemini';
+  let lblPrompt=mob?'AI':'Công cụ AI';
+  let lblCalc=mob?'▦':'▦ Máy tính';
+  let lblTranslate=mob?'EN':'🇬🇧 Dịch';
+  let lblInternet=mob?'Net':'🔎 AI Internet';
   let promptTitle=canAi?'Mở menu Gemini và AI Internet':'Mở công cụ học tập';
   let html='<div class="learnCompactBar">'
     +'<button type="button" id="learningPlusBtn" class="learnPlusBtn" onclick="toggleLearningPlusMenu(event)" title="Mở công cụ" aria-label="Mở công cụ" aria-expanded="false">+</button>'
-    +'<button type="button" class="learnPromptBtn" onclick="toggleLearningPlusMenu(event)" title="'+promptTitle+'">Công cụ AI</button>'
+    +'<button type="button" class="learnPromptBtn" onclick="toggleLearningPlusMenu(event)" title="'+promptTitle+'">'+lblPrompt+'</button>'
     +'<button type="button" class="learnMicBtn" onclick="toggleLearningPlusMenu(event)" title="Mở menu công cụ">⋯</button>'
     +'</div><div id="learningPlusMenu" class="learningPlusMenu hide">'
-    +'<button type="button" class="btn2 miniCalcBtn toolCalcBtn" onclick="learnMenuAction(toggleMiniCalc)" title="Mở máy tính khoa học">▦ Máy tính</button>';
+    +'<button type="button" class="btn2 miniCalcBtn toolCalcBtn" onclick="learnMenuAction(toggleMiniCalc)" title="Mở máy tính khoa học">'+lblCalc+'</button>';
   if(canAi)html+='<button type="button" class="btn2 openclawBtn" data-learning-toggle="openclaw" onclick="learnMenuAction(toggleOpenClawPanel)" title="Gemini — dùng key AI của người dùng để hỏi nhanh và chat hỗ trợ">◇ '+lblOc+'</button>';
-  html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="learnMenuAction(toggleTranslatePanel)" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">🇬🇧 Dịch</button>';
-  html+='<button type="button" class="btn2 googleAiModeBtn" onclick="openGoogleAiMode()" title="AI Internet — xem prompt/LaTeX trước, chưa chạy Google">🔎 AI Internet</button>';
+  html+='<button type="button" class="btn2 translateEnBtn" data-learning-toggle="translate" onclick="learnMenuAction(toggleTranslatePanel)" title="'+(USER.is_admin?'Dịch & đọc EN (GPT/Gemini ADMIN)':'Dịch & đọc EN bằng Gemini key của bạn')+'">'+lblTranslate+'</button>';
+  html+='<button type="button" class="btn2 googleAiModeBtn" onclick="openGoogleAiMode()" title="AI Internet — xem prompt/LaTeX trước, chưa chạy Google">'+lblInternet+'</button>';
   html+='</div>';
   bar.innerHTML=html;
   ensureOpenClawQuickBar(host,canAi);
@@ -24181,7 +24325,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v307ax';
+const CACHE_NAME = 'luyen-de-ai-v316-mobile-ai-tiny';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
