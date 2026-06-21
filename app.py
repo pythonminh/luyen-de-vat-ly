@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V307bw_ANDROID_OFFLINE_2026_06_17"
+APP_VERSION = "V321_CARTOON_TEACHER_ICON_2026_06_21"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -13809,9 +13809,55 @@ html[data-theme='dark'] .learningQuickBar .translateEnBtn{
 }
 .googleAiModeLatexText{min-height:82px!important;font-family:Consolas,monospace!important}
 .googleAiModeActions{display:flex!important;flex-wrap:wrap!important;gap:8px!important;justify-content:flex-end!important}
+.googleAiCopyPrimary,.googleAiCopyOpenPrimary{background:#1d4ed8!important;color:#fff!important;border-color:#1d4ed8!important}
 html[data-theme='dark'] .googleAiModeCard{background:#111827!important;color:#e5e7eb!important;border-color:#334155!important}
 html[data-theme='dark'] .googleAiModeHelp{color:#cbd5e1!important}
 html[data-theme='dark'] .googleAiModeText{background:#0f172a!important;color:#e5e7eb!important;border-color:#334155!important}
+@media(max-width:760px){
+    .googleAiModeModal{
+        align-items:flex-start!important;
+        padding:10px 8px!important;
+        padding-top:calc(10px + env(safe-area-inset-top))!important;
+    }
+    .googleAiModeCard{
+        width:calc(100vw - 16px)!important;
+        max-height:calc(100dvh - 26px - env(safe-area-inset-top))!important;
+        padding:10px!important;
+        gap:6px!important;
+        border-radius:12px!important;
+        overflow:auto!important;
+    }
+    .googleAiModeHead{font-size:16px!important}
+    .googleAiModeHead button{
+        width:30px!important;
+        min-width:30px!important;
+        height:30px!important;
+        font-size:18px!important;
+    }
+    .googleAiModeHelp{font-size:12px!important;line-height:1.3!important}
+    .googleAiModeText{
+        min-height:92px!important;
+        font-size:11px!important;
+        line-height:1.32!important;
+        padding:7px!important;
+    }
+    .googleAiModeLatexText{min-height:58px!important}
+    .googleAiModeActions{
+        display:grid!important;
+        grid-template-columns:1fr 1fr!important;
+        gap:6px!important;
+        justify-content:stretch!important;
+    }
+    .googleAiModeActions button{
+        width:100%!important;
+        min-height:34px!important;
+        padding:6px 8px!important;
+        font-size:13px!important;
+        border-radius:9px!important;
+        line-height:1.15!important;
+    }
+    .googleAiCopyOpenPrimary{grid-column:1/-1!important}
+}
 html[data-theme='dark'] .learnCompactBar,
 html[data-theme='dark'] .learningPlusMenu{
     background:#111827!important;
@@ -14020,6 +14066,79 @@ html[data-theme='dark'] .openclawQuickBtn{
     min-height:30px!important;
     max-height:30px!important;
     margin:0!important;
+}
+.learnPromptBtn.teacherAiBtn{
+    gap:6px!important;
+    min-width:118px!important;
+    padding:0 9px!important;
+}
+.teacherAiAvatar{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:24px!important;
+    height:24px!important;
+    min-width:24px!important;
+    border-radius:50%!important;
+    overflow:hidden!important;
+    border:1px solid #93c5fd!important;
+    background:#fff!important;
+    box-shadow:0 1px 3px rgba(15,23,42,.16)!important;
+}
+.teacherAiAvatar img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    display:block!important;
+}
+.teacherAiLabel{
+    line-height:1!important;
+}
+.topTitleBrand{
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    min-width:0!important;
+    overflow:hidden!important;
+}
+.topBrandAvatar{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex:0 0 auto!important;
+    width:34px!important;
+    height:34px!important;
+    border-radius:50%!important;
+    overflow:hidden!important;
+    border:2px solid rgba(255,255,255,.88)!important;
+    background:#fff!important;
+    box-shadow:0 2px 8px rgba(15,23,42,.22)!important;
+}
+.topBrandAvatar img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    display:block!important;
+}
+.topBrandText{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    display:block!important;
+}
+@media(max-width:760px){
+    .topTitleBrand{
+        gap:6px!important;
+    }
+    .topBrandAvatar{
+        width:28px!important;
+        height:28px!important;
+        border-width:1.5px!important;
+    }
+    .topBrandText{
+        max-width:calc(100vw - 96px)!important;
+    }
 }
 @media(max-width:760px){
     .learningQuickBar{
@@ -14401,15 +14520,36 @@ html[data-theme='dark'] .miniCalcHead span{color:#94a3b8!important}
         font-size:11px!important;
     }
     body.mobile-quiz-ui .learnPromptBtn{
-        width:32px!important;
-        max-width:32px!important;
-        height:20px!important;
-        min-height:20px!important;
-        max-height:20px!important;
-        padding:0 4px!important;
-        border-radius:6px!important;
-        font-size:9px!important;
+        width:24px!important;
+        max-width:24px!important;
+        height:24px!important;
+        min-height:24px!important;
+        max-height:24px!important;
+        padding:0!important;
+        border-radius:50%!important;
+        font-size:0!important;
         line-height:1!important;
+        border:1px solid #93c5fd!important;
+        background:#fff!important;
+        overflow:hidden!important;
+    }
+    body.mobile-quiz-ui .learnPromptBtn.teacherAiBtn{
+        min-width:24px!important;
+        width:24px!important;
+        max-width:24px!important;
+    }
+    body.mobile-quiz-ui .teacherAiAvatar{
+        width:24px!important;
+        height:24px!important;
+        min-width:24px!important;
+        border:none!important;
+        box-shadow:none!important;
+    }
+    body.mobile-quiz-ui .teacherAiLabel{
+        display:none!important;
+    }
+    body.mobile-quiz-ui .learnMicBtn{
+        display:none!important;
     }
     body.mobile-quiz-ui .learningQuickBar .learningPlusMenu{
         flex:0 0 auto!important;
@@ -14418,7 +14558,7 @@ html[data-theme='dark'] .miniCalcHead span{color:#94a3b8!important}
         align-items:center!important;
         gap:2px!important;
         min-width:0!important;
-        max-width:calc(100vw - 86px)!important;
+        max-width:calc(100vw - 58px)!important;
         height:24px!important;
         max-height:24px!important;
         padding:1px!important;
@@ -14747,7 +14887,7 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
 }
 
 </style></head>
-<body><div class="top"><div class="topRow topRowV253"><h1>ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><button type="button" id="topCompactToggle" class="topSubjectToggleV253 topCompactToggle" onclick="toggleHomeTopCompact()" title="Thu gọn/mở rộng phần đầu trang">Gọn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ</button><button type="button" id="topLatexImportBtn" class="adminTopBtn adminTopBtn2" onclick="openLatexImportModal()" title="Nhập file .tex vào Google Sheet">📥 LaTeX</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT gợi ý Dạng bài tập hàng loạt">🏷️ Dạng BT</button><span class="adminMoreWrap"><button type="button" id="adminMoreBtn" class="adminTopBtn adminTopBtn2" onclick="toggleAdminMoreMenu(event)" title="Công cụ ADMIN thêm">⋯</button><div id="adminMoreMenu" class="adminMoreMenu hide"><button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button><button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button><button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button></div></span></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
+<body><div class="top"><div class="topRow topRowV253"><h1 class="topTitleBrand"><span class="topBrandAvatar"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt=""></span><span class="topBrandText">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</span></h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><button type="button" id="topSubjectToggleV253" class="topSubjectToggleV253" onclick="v253ToggleSubjectTabs()" title="Ẩn/hiện tab Toán - Vật lí">Ẩn môn</button><button type="button" id="topCompactToggle" class="topSubjectToggleV253 topCompactToggle" onclick="toggleHomeTopCompact()" title="Thu gọn/mở rộng phần đầu trang">Gọn</button><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ</button><button type="button" id="topLatexImportBtn" class="adminTopBtn adminTopBtn2" onclick="openLatexImportModal()" title="Nhập file .tex vào Google Sheet">📥 LaTeX</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT gợi ý Dạng bài tập hàng loạt">🏷️ Dạng BT</button><span class="adminMoreWrap"><button type="button" id="adminMoreBtn" class="adminTopBtn adminTopBtn2" onclick="toggleAdminMoreMenu(event)" title="Công cụ ADMIN thêm">⋯</button><div id="adminMoreMenu" class="adminMoreMenu hide"><button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button><button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button><button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button></div></span></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
 <div id="examStrip" class="examStrip"><span id="examMsg">🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh</span><span id="examTimer" class="timer hide"></span></div>
 <div class="wrap">
 <div id="home"><div id="userAccountCard" class="userAccountCard hide"></div><div id="aiProfileBanner" class="aiProfileBanner hide"></div><div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">Tất cả</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div><div class="homeCompactRow"><div id="idLookupPanel" class="panel compactCard compactIdCard"><b>🔎 Tìm theo ID câu</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Mỗi câu có <b>ID</b> (vd. <code>AUTO_caab355259</code>) trên thanh khi làm bài — học sinh tra cứu, ADMIN mở để sửa nhanh.</p><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label>ID câu</label><input id="fIdLookup" placeholder="AUTO_... hoặc một phần ID" onkeydown="if(event.key==='Enter')lookupQuestionById()"></div><button type="button" class="btn" onclick="lookupQuestionById()">Tìm</button></div><div id="idLookupResult" style="margin-top:10px"></div></div><div id="aiKeyPanel" class="panel hide compactCard compactKeyCard"><b>🔑 Key AI của tôi (Gemini)</b><div id="aiProfileDetail" class="aiProfileBanner aiProfileBannerOk hide" style="margin:8px 0 10px"></div><p class="muted" style="margin:6px 0 10px"><b>VIP/S.VIP muốn dùng Gemini thì tự lấy Gemini key rồi nhập tại đây.</b><br>Vào <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><b>Google AI Studio → Get API key / Create API key</b></a>, copy key dạng <b>AIza...</b> hoặc <b>AQ...</b>, dán vào ô dưới và bấm <b>Lưu key</b>. ChatGPT/OpenAI chỉ dành cho ADMIN.</p><textarea id="myApiKeys" rows="3" style="width:100%;min-height:72px;font-family:Consolas,monospace" placeholder="AIza... hoặc AQ...&#10;(có thể nhiều dòng — tự đổi khi hết quota)"></textarea><div class="row" style="margin-top:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="testMyAiKey()">🧪 Test key</button><button type="button" class="btnGreen" onclick="saveMyAiKey()">💾 Lưu key</button><button type="button" class="btn2" onclick="clearMyAiKey()">🗑 Xóa key của tôi</button></div><div id="aiKeyStatus" class="muted" style="margin-top:8px;font-size:13px"></div></div><div class="panel practiceRandomPanel compactCard compactRandomCard"><b>🎲 Tự luyện ngẫu nhiên</b><p class="muted" style="margin:6px 0 8px">Ghép đề <b>28 câu</b> (18 TN · 4 Đ/S · 6 TLN). Chọn <b>Môn · Khối · Lớp</b> — khóa sau khi chọn đủ; sau đó chọn một hoặc nhiều <b>Chương</b> (hoặc tất cả).</p><div class="row" style="margin-top:8px;flex-wrap:wrap"><div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn môn —</option></select></div><div class="field"><label>Khối <span class="muted">*</span></label><select id="rpKhoi" onchange="onRpScopeChange('khoi')" disabled><option value="">— Chọn khối —</option></select></div><div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn lớp —</option></select></div><div class="field" style="align-self:flex-end"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi Môn/Khối/Lớp</button></div></div><div id="rpScopeNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:13px"></div><div id="rpChuongWrap" class="hide" style="margin-top:8px"><b>Chương</b><label style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;font-size:13px"><input type="checkbox" id="rpChuongAll" checked onchange="toggleRpChuongAll()"> <b>Tất cả chương</b> trong phạm vi đã chọn</label><div id="rpChuongList" class="rpChuongList"></div></div><label style="display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:13px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ lấy câu có <b>lời giải đầy đủ</b> 📗</label><button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện ngẫu nhiên</button><div class="muted" style="margin-top:8px;font-size:12px;line-height:1.45">📗 LG đầy đủ = có đáp án + lời giải đủ từng dạng. Khối suy từ cột Lớp (vd. 12QT1 → Khối 12).</div></div></div><div id="adminComposePanel" class="panel hide adminComposePanel"><b>🛠 ADMIN: Tạo đề theo chủ đề &amp; mức độ</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Chọn <b>Môn · Khối · Lớp · Chương</b> ở khối <b>Tự luyện ngẫu nhiên</b> bên trên, rồi nhập số câu cần lấy trong ma trận <b>Dạng × Mức độ</b>. Ô xám = số câu có sẵn trong Sheet.</p><div id="acScopeNote" class="acScopeNote hide"></div><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field"><label>Lọc mức (tuỳ chọn)</label><select id="acLevelFilter" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả mức</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Bài học (tuỳ chọn)</label><select id="acBaiHoc" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả bài</option></select></div><button type="button" class="btn2" onclick="refreshAdminComposeMatrix()">🔄 Cập nhật ma trận</button></div><div id="acMatrixWrap" class="acMatrixWrap"><div class="muted" style="padding:12px">Chọn đủ Môn/Khối/Lớp rồi bấm «Cập nhật ma trận».</div></div><div class="acToolbar"><button type="button" class="btn2" onclick="acPresetStandard28()">📋 Đề chuẩn 28 (18 TN · 4 Đ/S · 6 TLN)</button><button type="button" class="btn2" onclick="acClearMatrixInputs()">🗑 Xóa nhập</button><button type="button" class="btnStartStrong" onclick="startAdminComposeExam()">🛠 Ghép đề ADMIN</button></div><div id="acComposeStatus" class="muted" style="margin-top:8px;font-size:12px"></div></div>
@@ -15920,11 +16060,11 @@ function ensureGoogleAiModeModal(){
   modal.className='googleAiModeModal hide';
   modal.innerHTML='<div class="googleAiModeCard" role="dialog" aria-modal="true" aria-labelledby="googleAiModeTitle">'
     +'<div class="googleAiModeHead"><span id="googleAiModeTitle">AI Internet</span><button type="button" onclick="closeGoogleAiModeModal()" title="Đóng">×</button></div>'
-    +'<p class="googleAiModeHelp">Bấm AI Internet chỉ mở hộp này, chưa gửi sang Google. Chỉ tốn lượt khi bấm nút Mở Google AI Mode.</p>'
+    +'<p class="googleAiModeHelp">Bấm <b>Chép & mở Google</b>: app chép prompt trước, rồi trên điện thoại mở Google cùng tab để bấm Back là quay lại app.</p>'
     +'<textarea id="googleAiModePromptText" class="googleAiModeText" spellcheck="false"></textarea>'
     +'<p class="googleAiModeHelp"><b>LaTeX câu hiện tại</b> — dùng để chép nhanh về Word/LaTeX hoặc dán lại cho AI.</p>'
     +'<textarea id="googleAiModeLatexText" class="googleAiModeText googleAiModeLatexText" spellcheck="false"></textarea>'
-    +'<div class="googleAiModeActions"><button type="button" class="btn2" onclick="copyGoogleAiModeLatexFromModal()">📄 Chép LaTeX</button><button type="button" class="btn2" onclick="copyGoogleAiModePromptFromModal()">📋 Chép prompt</button><button type="button" class="btn" onclick="openGoogleAiModeTab()">🔎 Mở Google AI Mode</button></div>'
+    +'<div class="googleAiModeActions"><button type="button" class="btn2" onclick="copyGoogleAiModeLatexFromModal()">📄 Chép LaTeX</button><button type="button" class="btn2 googleAiCopyPrimary" onclick="copyGoogleAiModePromptFromModal()">📋 Chép prompt</button><button type="button" class="btn googleAiCopyOpenPrimary" onclick="copyAndOpenGoogleAiMode()">↗ Chép & mở Google</button><button type="button" class="btn2 googleAiOpenExternalBtn" onclick="openGoogleAiModeTab()">↗ Mở Google</button></div>'
     +'</div>';
   modal.addEventListener('click',function(ev){if(ev.target===modal)closeGoogleAiModeModal()});
   document.body.appendChild(modal);
@@ -15956,7 +16096,24 @@ function openGoogleAiModeTab(prompt){
     let ta=document.getElementById('googleAiModePromptText');
     prompt=ta?ta.value:'';
   }
-  window.open(googleAiModeSearchUrl(prompt),'_blank','noopener');
+  try{if(typeof saveCurrent==='function')saveCurrent()}catch(e){}
+  let url=googleAiModeSearchUrl(prompt);
+  if(typeof isMobileQuizUI==='function'&&isMobileQuizUI()){
+    window.location.assign(url);
+    return;
+  }
+  window.open(url,'_blank','noopener');
+}
+async function copyAndOpenGoogleAiMode(){
+  let ta=document.getElementById('googleAiModePromptText');
+  let txt=ta?ta.value:'';
+  let ok=await copyTextBestEffort(txt);
+  if(!ok&&ta){
+    ta.focus();ta.select();
+    alert('Trình duyệt chặn chép tự động. Hãy bấm Chép prompt hoặc chọn nội dung rồi copy thủ công.');
+    return;
+  }
+  openGoogleAiModeTab(txt);
 }
 async function openGoogleAiMode(){
   closeLearningPlusMenu();
@@ -16008,7 +16165,7 @@ function ensureLearningQuickBar(){
   let promptTitle=canAi?'Mở menu Gemini và AI Internet':'Mở công cụ học tập';
   let html='<div class="learnCompactBar">'
     +'<button type="button" id="learningPlusBtn" class="learnPlusBtn" onclick="toggleLearningPlusMenu(event)" title="Mở công cụ" aria-label="Mở công cụ" aria-expanded="false">+</button>'
-    +'<button type="button" class="learnPromptBtn" onclick="toggleLearningPlusMenu(event)" title="'+promptTitle+'">'+lblPrompt+'</button>'
+    +'<button type="button" class="learnPromptBtn teacherAiBtn" onclick="toggleLearningPlusMenu(event)" title="'+promptTitle+'"><span class="teacherAiAvatar"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt=""></span><span class="teacherAiLabel">'+lblPrompt+'</span></button>'
     +'<button type="button" class="learnMicBtn" onclick="toggleLearningPlusMenu(event)" title="Mở menu công cụ">⋯</button>'
     +'</div><div id="learningPlusMenu" class="learningPlusMenu hide">'
     +'<button type="button" class="btn2 miniCalcBtn toolCalcBtn" onclick="learnMenuAction(toggleMiniCalc)" title="Mở máy tính khoa học">'+lblCalc+'</button>';
@@ -24325,7 +24482,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v316-mobile-ai-tiny';
+const CACHE_NAME = 'luyen-de-ai-v321-cartoon-teacher-icon';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
