@@ -41,6 +41,7 @@ import urllib.parse
 import urllib.request
 import tempfile
 import zipfile
+from xml.etree import ElementTree as ET
 import shutil
 import subprocess
 import uuid
@@ -977,12 +978,55 @@ def _latex_structure_ok(t: str) -> bool:
     return True
 
 
+def _has_vietnamese_text(t: str) -> bool:
+    """Có ký tự tiếng Việt — một chữ có dấu là đủ (không cần 4 ký tự liên tiếp)."""
+    return bool(re.search(r"[À-ỹà-ỹăâêôơưđĂÂÊÔƠƯĐ]", t or ""))
+
+
+def _is_latex_prose_content(t: str) -> bool:
+    """Prose / câu hỏi — không bọc cả khối bằng $...$."""
+    if not t:
+        return False
+    if _has_vietnamese_text(t):
+        return True
+    if re.search(r"\\(?:begin|end|item)\b", t, re.I):
+        return True
+    if re.search(r"(?:^|\n)\s*•\s+", t):
+        return True
+    words = re.findall(r"[A-Za-z]{2,}", t)
+    if len(words) >= 6 and " " in t:
+        return True
+    return False
+
+
+def _latex_paren_delims_to_dollar(t: str) -> str:
+    """\\( … \\) → $…$ ; \\[ … \\] → $$…$$ (display nhiều dòng)."""
+    if not t or ("\\(" not in t and "\\[" not in t):
+        return t
+
+    def _inline(m: re.Match) -> str:
+        return f"${m.group(1).strip()}$"
+
+    t = re.sub(r"\\\((.+?)\\\)", _inline, t)
+    t = re.sub(
+        r"\\\[(.+?)\\\]",
+        lambda m: (
+            f"$${m.group(1).strip()}$$"
+            if "\n" in m.group(1)
+            else f"${m.group(1).strip()}$"
+        ),
+        t,
+        flags=re.S,
+    )
+    return t
+
+
 def _is_orphan_math_segment(s: str) -> bool:
     """Đoạn giữa hai khối $...$ chỉ là công thức (không phải câu tiếng Việt)."""
     s = clean(s)
     if not s:
         return False
-    if re.search(r"[À-ỹĐđ]{3,}", s):
+    if _has_vietnamese_text(s):
         return False
     if re.search(r"\\[a-zA-Z]", s):
         return True
@@ -1378,6 +1422,7 @@ def normalize_latex_light(s: Any) -> str:
     t = _latex_convert_robot_text_cmds(t)
     orig = t
     t = _fix_heva_latex(t)
+    t = _wrap_vn_context_numbers_in_math(t)
     t = _normalize_display_math_delimiters(t)
     t = _merge_equiv_chain_math(t)
     t = _merge_adjacent_inline_math(t)
@@ -1385,12 +1430,12 @@ def normalize_latex_light(s: Any) -> str:
     t = _apply_sanitize_to_math_segments(t)
     t = _fix_heva_latex(t)
     if _latex_structure_ok(t):
-        return t
+        return _space_around_inline_math_in_prose(t)
     t = _fix_surplus_dollar_signs(t)
     t = _apply_sanitize_to_math_segments(t)
     if not _latex_structure_ok(t) and _latex_structure_ok(orig):
-        return orig
-    return t
+        return _space_around_inline_math_in_prose(orig)
+    return _space_around_inline_math_in_prose(t)
 
 
 def normalize_latex_text(s: Any) -> str:
@@ -1398,6 +1443,9 @@ def normalize_latex_text(s: Any) -> str:
     t = clean(s)
     if not t:
         return ""
+    t = _latex_paren_delims_to_dollar(t)
+    if re.search(r"\\(?:begin\s*\{|\\item\b)", t, re.I):
+        t = _strip_latex_list_markup(t)
     t = _wrap_bare_latex_math(t)
     t = _latex_convert_robot_text_cmds(t)
     t = _fix_heva_latex(t)
@@ -1428,6 +1476,7 @@ def normalize_latex_text(s: Any) -> str:
     t = _fix_broken_latex_patterns(t)
     if not _latex_structure_ok(t) and _latex_structure_ok(orig):
         return orig
+    t = _space_around_inline_math_in_prose(t)
     return _trim_inline_math_spaces(t)
 
 
@@ -1647,6 +1696,12 @@ def _latex_action_strip_left_right(t: str) -> str:
 def _latex_action_add_dollar_points(t: str) -> str:
     def _plain(seg: str) -> str:
         seg = re.sub(
+            r"\b(tháng|thang|năm|nam|ngày|ngay)\s+(\d{1,4})\b",
+            r"\1 $\2$",
+            seg,
+            flags=re.I,
+        )
+        seg = re.sub(
             r"(?<!\$)(?<![A-Za-z])([A-Z])(?=[\s,;,]|$)(?![$])",
             r"$\1$",
             seg,
@@ -1663,9 +1718,8 @@ def _latex_action_add_dollar_points(t: str) -> str:
 
 
 def _latex_action_separate_dollar_text(t: str) -> str:
-    t = re.sub(r"([A-Za-zÀ-ỹĐđ0-9])\$", r"\1 $", t)
-    t = re.sub(r"\$([A-Za-zÀ-ỹĐđ0-9])", r"$ \1", t)
-    return t
+    t = _wrap_vn_context_numbers_in_math(t)
+    return _space_around_inline_math_in_prose(t)
 
 
 def _latex_action_fix_degree_zero(t: str) -> str:
@@ -1853,6 +1907,7 @@ LATEX_NORMALIZE_ACTIONS: Dict[str, Callable[[str], str]] = {
 LATEX_NORMALIZE_CATALOG: List[Dict[str, str]] = [
     {"id": "full", "label": "⚡ Tất cả (chuẩn hóa đầy đủ)", "group": "Tổng hợp"},
     {"id": "light", "label": "Chuẩn hóa nhẹ (không gộp khối $)", "group": "Tổng hợp"},
+    {"id": "loigiai_abcd", "label": "📋 LG TN/Đ-S → A B C D từng ý", "group": "Lời giải"},
     {"id": "wrap_long_lines", "label": "↵ Cắt dòng câu / công thức dài", "group": "Dòng & khoảng trắng"},
     {"id": "strip_mathpix_space", "label": "Xóa khoảng trắng Mathpix", "group": "Dòng & khoảng trắng"},
     {"id": "separate_dollar_text", "label": "Tách $ dính văn bản", "group": "Dòng & khoảng trắng"},
@@ -1922,11 +1977,64 @@ def _fix_bare_trig_latex(t: str) -> str:
     return t
 
 
+def _space_around_inline_math_in_prose(t: str) -> str:
+    """Thêm khoảng trắng quanh $...$ trong câu tiếng Việt; gỡ $•$ lỗi."""
+    if not t:
+        return t
+    t = re.sub(r"\$\s*•\s*\$", "•", t)
+    if "$" not in t:
+        return t
+    out: List[str] = []
+    i, n = 0, len(t)
+    while i < n:
+        if t[i] != "$":
+            d = t.find("$", i)
+            if d < 0:
+                out.append(t[i:])
+                break
+            out.append(t[i:d])
+            i = d
+            continue
+        d = t.find("$", i + 1)
+        if d < 0:
+            out.append(t[i:])
+            break
+        inner = t[i + 1 : d].strip()
+        chunk = f"${inner}$"
+        if out and out[-1] and not out[-1][-1].isspace() and out[-1][-1] not in "«(":
+            out.append(" ")
+        out.append(chunk)
+        i = d + 1
+        if i < n and not t[i].isspace() and t[i] not in "$«»,.;:!?)]":
+            out.append(" ")
+    return "".join(out)
+
+
+def _wrap_vn_context_numbers_in_math(t: str) -> str:
+    """Bọc số sau tháng/năm/ngày: «tháng 6» → «tháng $6$» (chỉ ngoài khối $)."""
+    if not t:
+        return t
+
+    def _plain(seg: str) -> str:
+        return re.sub(
+            r"\b(tháng|thang|năm|nam|ngày|ngay)\s+(\d{1,4})\b",
+            r"\1 $\2$",
+            seg,
+            flags=re.I,
+        )
+
+    return _latex_map_segments(t, on_plain=_plain)
+
+
 def _looks_like_bare_latex_chunk(s: str) -> bool:
     s = clean(s)
     if not s:
         return False
-    if re.search(r"[À-ỹĐđ]{4,}", s):
+    if _has_vietnamese_text(s):
+        return False
+    if re.search(r"\\(?:begin|end|item)\b", s, re.I):
+        return False
+    if re.search(r"\\begin\s*\{", s, re.I):
         return False
     if "\\" in s:
         return True
@@ -2086,7 +2194,7 @@ def _wrap_bare_latex_in_plain(seg: str) -> str:
 def _wrap_bare_latex_math(t: str) -> str:
     if not t or "$" in t:
         return t
-    if re.search(r"[À-ỹĐđ]{4,}", t):
+    if _is_latex_prose_content(t):
         return t
     if not (
         re.search(r"\\[a-zA-Z]", t)
@@ -2160,10 +2268,16 @@ def _normalize_question_latex_updates(
             out[f] = _normalize_question_latex_field(f, out.get(f))
     merged = dict(q or {})
     merged.update({k: clean(v) for k, v in out.items()})
-    if "LoiGiai" in out and clean(out.get("LoiGiai")) and effective_dang(merged) == "Đúng sai":
-        fixed = normalize_ds_loigiai(out["LoiGiai"], merged)
-        if fixed:
-            out["LoiGiai"] = fixed
+    if "LoiGiai" in out and clean(out.get("LoiGiai")):
+        dang = effective_dang(merged)
+        if dang == "Đúng sai":
+            fixed = normalize_ds_loigiai(out["LoiGiai"], merged)
+            if fixed:
+                out["LoiGiai"] = fixed
+        elif dang == "Trắc nghiệm" and _loigiai_has_splittable_chunks(out["LoiGiai"]):
+            fixed = normalize_tn_loigiai_abcd(out["LoiGiai"], merged)
+            if fixed:
+                out["LoiGiai"] = fixed
     return out
 
 
@@ -8588,6 +8702,152 @@ def _ds_loigiai_already_canonical(raw: str) -> bool:
         return False
     pre = raw[: tagged[0].start()]
     return len(list(_DS_LEGACY_VERDICT_BLOCK_RE.finditer(pre))) < 2
+
+
+_SUB_LETTER_LG_RE = re.compile(
+    r"(?:^|\n|[•\-\*]\s*|\(\s*)([abcd])\s*[\.\):]\s*",
+    re.I | re.M,
+)
+
+
+def _parse_loigiai_subletter_chunks(text: Any) -> Dict[str, str]:
+    """Tách lời giải dạng a) b) c) d) — trả về khóa A/B/C/D."""
+    raw = clean(text).replace("\r", "")
+    if not raw:
+        return {}
+    tagged = list(_SUB_LETTER_LG_RE.finditer(raw))
+    if not tagged:
+        return {}
+    out: Dict[str, str] = {}
+    for i, m in enumerate(tagged[:4]):
+        letter = m.group(1).upper()
+        start = m.end()
+        end = tagged[i + 1].start() if i + 1 < len(tagged) else len(raw)
+        body = clean(raw[start:end]).strip(" ).\n")
+        body = re.sub(r"\*\*", "", body)
+        if body:
+            out[letter] = body
+    return out
+
+
+def _loigiai_preamble_before_first_tag(raw: str, tag_re: re.Pattern) -> str:
+    m = tag_re.search(raw)
+    if not m:
+        return ""
+    return clean(raw[: m.start()])
+
+
+def _loigiai_has_splittable_chunks(text: Any) -> bool:
+    raw = clean(text)
+    if not raw:
+        return False
+    if len(_parse_ds_loigiai_chunks(raw)) >= 2:
+        return True
+    if len(_parse_loigiai_bodies_by_letter(raw)) >= 2:
+        return True
+    if len(_parse_loigiai_subletter_chunks(raw)) >= 2:
+        return True
+    _pre, bullets = _split_four_bullet_items(raw)
+    return len(bullets) >= 2
+
+
+def _format_loigiai_plain_abcd_lines(
+    chunks: Dict[str, str],
+    letters: Optional[List[str]] = None,
+) -> List[str]:
+    letters = letters or [L for L in "ABCD" if L in chunks] or list("ABCD")
+    lines: List[str] = []
+    for L in letters:
+        body = clean(chunks.get(L, ""))
+        if body:
+            lines.append(f"{L}. {body}")
+    return lines
+
+
+def normalize_tn_loigiai_abcd(
+    text: Any,
+    q: Optional[Dict[str, Any]] = None,
+) -> str:
+    """TN: gom lời giải lộn xộn thành A. … B. … (hoặc giữ intro + ý đúng nếu chỉ một ý)."""
+    raw = clean(text).replace("\r", "")
+    if not raw:
+        return ""
+    ds_chunks = _parse_ds_loigiai_chunks(raw)
+    has_verdict = any(clean(c.get("verdict", "")) for c in ds_chunks.values())
+    if ds_chunks and has_verdict:
+        lines: List[str] = []
+        first = _ds_loigiai_body_start(raw)
+        preamble = _ds_loigiai_intro_only(raw[:first]) if first > 0 else ""
+        letters = [L for L in "ABCD" if (not q or clean(q.get(L, "")))] or list("ABCD")
+        for L in letters:
+            c = ds_chunks.get(L)
+            if not c:
+                continue
+            verdict = _ds_verdict_label(clean(c.get("verdict", "")))
+            body = clean(c.get("body", ""))
+            if verdict:
+                body = _strip_ds_body_leading_verdict(body, verdict)
+            if verdict and body:
+                lines.append(f"{L}. {verdict} — {body}")
+            elif body:
+                lines.append(f"{L}. {body}")
+        if lines:
+            return (preamble + "\n\n" if preamble else "") + "\n".join(lines)
+
+    by_letter = _parse_loigiai_bodies_by_letter(raw)
+    if not by_letter:
+        by_letter = _parse_loigiai_subletter_chunks(raw)
+    if by_letter:
+        if len(by_letter) == 1:
+            dap = norm_letter((q or {}).get("DapAn", ""))
+            only_L = next(iter(by_letter.keys()))
+            if dap and only_L != dap:
+                pass
+            else:
+                preamble = _loigiai_preamble_before_first_tag(raw, _DS_LG_TAG_RE)
+                body = by_letter[only_L]
+                parts = [p for p in (preamble, body) if p]
+                if parts:
+                    return "\n\n".join(parts)
+        preamble = _loigiai_preamble_before_first_tag(raw, _DS_LG_TAG_RE)
+        if not preamble:
+            preamble = _loigiai_preamble_before_first_tag(raw, _SUB_LETTER_LG_RE)
+        lines = _format_loigiai_plain_abcd_lines(by_letter)
+        if lines:
+            return (preamble + "\n\n" if preamble else "") + "\n".join(lines)
+
+    preamble, bullets = _split_four_bullet_items(raw)
+    if len(bullets) >= 2:
+        lines = [
+            f"{'ABCD'[i]}. {clean(b)}"
+            for i, b in enumerate(bullets[:4])
+            if clean(b)
+        ]
+        if lines:
+            return (preamble + "\n\n" if preamble else "") + "\n".join(lines)
+
+    return raw
+
+
+def normalize_loigiai_abcd(
+    text: Any,
+    q: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Chuẩn hóa lời giải TN / Đ-S thành từng dòng A–D."""
+    q = q or {}
+    raw = clean(text).replace("\r", "")
+    if not raw:
+        return ""
+    dang = effective_dang(q)
+    if dang == "Đúng sai":
+        return normalize_ds_loigiai(
+            raw,
+            q,
+            use_sheet_dapan=looks_like_dungsai_answer(q.get("DapAn", "")),
+        )
+    if dang == "Trắc nghiệm":
+        return normalize_tn_loigiai_abcd(raw, q)
+    return raw
 
 
 def normalize_ds_loigiai(
@@ -16379,7 +16639,7 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
 </div><div id="startModal" class="modal hide"><div class="modalBox" style="max-width:520px"><h3 id="startModalTitle">Thiết lập làm bài</h3><p class="muted">Chọn cách xáo trộn để tự rèn luyện. Có thể giữ nguyên thứ tự như đề gốc.</p><p id="startFilterNote" class="hide" style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-weight:800;font-size:13px"></p><div id="startDangBaiTapBox" class="hide" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><div style="font-weight:800;margin-bottom:6px">📋 Chọn dạng bài tập</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.4">Làm một dạng cụ thể hoặc <b>tất cả</b> câu trong chuyên đề bài này.</p><div id="startDangBaiTapList" class="startDbtList"></div><div id="startDbtMergeBar" class="hide" style="margin-top:8px"><button type="button" class="btn2" onclick="openDbtOrderModal(CURRENT_MADE)">↕ Thứ tự dạng BT</button><button type="button" class="btn2" onclick="openDbtMergeModal(CURRENT_MADE)">🔀 ADMIN: Gộp &amp; đổi tên dạng BT</button></div></div><div style="display:flex;flex-direction:column;gap:10px;margin:14px 0"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleQ"> <span><b>Xáo trộn câu hỏi</b><br><span class="muted">Đổi thứ tự các câu trong đề.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkGroupDang" checked> <span><b>Nhóm theo dạng câu</b><br><span class="muted">Tách Trắc nghiệm / Đúng-Sai / TLN / Tự luận. Mức NB-TH-VD-VDC chỉ tô màu trong cùng nhóm.</span></span></label><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:10px"><input type="checkbox" id="chkShuffleA"> <span><b>Xáo trộn đáp án</b><br><span class="muted">Xáo trộn các ý A-B-C-D (trắc nghiệm + đúng/sai); mỗi ý vẫn ghép đúng đáp án/lời giải.</span></span></label></div><div class="row" style="justify-content:flex-end;gap:8px"><button onclick="closeStartModal()">Hủy</button><button class="btn2" onclick="pickShufflePreset('none')">Giữ nguyên</button><button class="btn" onclick="confirmStartQuiz()">Bắt đầu</button></div></div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAdminSoatBar" class="editAdminSoatBar row hide" style="gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><span style="font-weight:800">🔍 Soát đề AI</span><label class="adminReviewModeWrap" id="adminReviewModeEditWrap">Chế độ <select id="adminReviewModeEdit" onchange="onAdminReviewModeChange(this.value)"><option value="fast">⚡ Nhanh</option><option value="full">🔍 Kỹ</option></select></label><button type="button" id="btnEditHint" class="btnGreen" onclick="requestHintFromEditModal()">🔍 Soát đề</button><button type="button" class="btn2" onclick="applyEditHintAll()">📋 Điền P/R</button><button type="button" class="btn2" onclick="applyEditHintField('DapAn')">→ P</button><button type="button" class="btn2" onclick="applyEditHintField('LoiGiai')">→ R</button></div><div id="editHintResult" class="editHintResult hide"></div><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 Khôi phục câu</button><button type="button" class="btn2" id="btnAiDetectDangBaiTap" onclick="aiDetectCurrentQuestionDangBaiTap()">🏷️ Gợi ý Dạng BT</button><button type="button" class="btn2" id="btnAiDetectSaveDangBaiTap" onclick="aiDetectAndSaveCurrentQuestionDangBaiTap()">💾 Lưu Dạng BT</button><button type="button" class="btn2" id="btnAiDetectLevel" onclick="aiDetectCurrentQuestionLevel()">🎯 Gợi ý mức độ</button><button type="button" class="btn2" id="btnAiDetectSaveLevel" onclick="aiDetectAndSaveCurrentQuestionLevel()">💾 Lưu mức độ</button><span class="muted" style="font-size:12px">Mức độ (I) · Năng lực (V): chip bên dưới hoặc AI ở đây. Hàng loạt: 🎯 Mức độ · 🏷️ Dạng BT trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkDbtModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🏷️ ADMIN: GPT gợi ý Dạng bài tập hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> Dạng bài tập (cột H) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. GPT ưu tiên khớp tên dạng đã có trong cùng Môn/Chương/Bài.</p><div id="bulkDbtGuideBox" style="margin:8px 0 12px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><div style="font-weight:800;margin-bottom:6px">📝 ADMIN tóm tắt dạng bài tập</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.45">Liệt kê các dạng BT của bài (mỗi dòng một dạng, hoặc «<b>Tên dạng</b>: mô tả ngắn»). GPT đọc tóm tắt này cùng dạng đã có trong ngân hàng để <b>ép phân bổ</b> đúng dạng — tối đa 6 dạng/bài.</p><textarea id="bulkDbtAdminGuide" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid var(--border);font-family:inherit;line-height:1.45" placeholder="VD:
 Tìm giá trị lớn nhất biểu thức lượng giác
 Xác định tập xác định của hàm số
-Chứng minh mệnh đề phủ định"></textarea><div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" onclick="bulkDbtLoadCatalogGuide()">📋 Lấy từ danh mục bài</button><button type="button" class="btn2" onclick="bulkDbtSaveAdminGuide()">💾 Lưu tóm tắt</button><span id="bulkDbtGuideHint" class="muted" style="font-size:12px"></span></div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkDbtRerunBtn" onclick="bulkDbtDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btn2" onclick="openDbtMergeModal(CURRENT_MADE||'')">🔀 Gộp dạng BT</button><button type="button" class="btnGreen" id="bulkDbtSelectAllBtn" onclick="bulkDbtSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkDbtSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkDbtApplyBtnTop" onclick="bulkDbtApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkDbtList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkDbtReview()">Đóng</button><button type="button" class="btn" id="bulkDbtApplyBtnBot" onclick="bulkDbtApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> mức độ NB/TH/VD/VDC (cột I) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. Tối đa 80 câu/lần gọi API — app tự chạy từng lô nhỏ.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkLevelRerunBtn" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" id="bulkLevelSelectAllBtn" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkLevelApplyBtnTop" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" id="bulkLevelApplyBtnBot" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="dbtOrderModal" class="modal hide"><div class="modalBox" style="max-width:560px"><h3>↕ ADMIN: Thứ tự Dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Sắp xếp thứ tự hiển thị các dạng BT trên <b>mục lục</b> và <b>modal làm bài</b>. Dùng ↑↓ rồi bấm Lưu — học sinh thấy đúng thứ tự bạn chọn.</p><div id="dbtOrderScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtOrderList" class="dbtOrderList"></div><div id="dbtOrderStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeDbtOrderModal()">Đóng</button><button type="button" class="btn" onclick="saveDbtOrder()">💾 Lưu thứ tự</button></div></div></div><div id="dbtMergeModal" class="modal hide"><div class="modalBox" style="max-width:720px"><h3>🔀 ADMIN: Gộp &amp; đổi tên dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Tick <b>≥2 tên giống nhau</b> để gộp, hoặc <b>1 tên</b> + tên mới để đổi tên → lưu cột H Google Sheet. App gợi ý nhóm tên gần giống — bấm nhóm để tick nhanh.</p><div id="dbtMergeScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtMergeSuggest" class="dbtMergeSuggestRow"></div><div id="dbtMergeList" class="dbtMergeList"></div><div style="margin-top:10px"><label style="font-weight:800;display:block;margin-bottom:4px">Tên mới sau khi gộp (cột H)</label><input type="text" id="dbtMergeNewName" class="adminDbtInput" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border)" placeholder="VD: Chu kỳ, tần số, tần số góc dao động" oninput="dbtMergePreview()" /></div><div id="dbtMergeStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeDbtMergeModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="dbtMergePickLongestName()">📏 Dùng tên dài nhất</button><button type="button" class="btn" onclick="applyDbtMerge()">💾 Gộp &amp; lưu Sheet</button></div></div></div></div><div id="chapterDbtModal" class="modal hide"><div class="modalBox chapterDbtModalBox"><h3>🏷️ ADMIN: Quản lý Dạng BT theo Chương</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Xem <b>tất cả bài</b> trong chương: gộp/đổi tên dạng (cột H), sắp thứ tự <b>↑↓ trong cùng bài</b>, mở đề để GPT gợi ý. <b>Chưa chuyển dạng sang bài khác</b> — muốn đổi bài học của câu: mở đề → Sửa câu.</p><div id="chapterDbtScope" class="muted" style="margin-bottom:8px;font-size:13px;font-weight:800"></div><div id="chapterDbtSuggest" class="chapterDbtSuggest hide"></div><div id="chapterDbtBody" class="chapterDbtBody"></div><div id="chapterDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeChapterDbtBoard()">Đóng</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button></div></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+Chứng minh mệnh đề phủ định"></textarea><div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" onclick="bulkDbtLoadCatalogGuide()">📋 Lấy từ danh mục bài</button><button type="button" class="btn2" onclick="bulkDbtSaveAdminGuide()">💾 Lưu tóm tắt</button><span id="bulkDbtGuideHint" class="muted" style="font-size:12px"></span></div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkDbtRerunBtn" onclick="bulkDbtDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btn2" onclick="openDbtMergeModal(CURRENT_MADE||'')">🔀 Gộp dạng BT</button><button type="button" class="btnGreen" id="bulkDbtSelectAllBtn" onclick="bulkDbtSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkDbtSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkDbtApplyBtnTop" onclick="bulkDbtApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkDbtList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkDbtReview()">Đóng</button><button type="button" class="btn" id="bulkDbtApplyBtnBot" onclick="bulkDbtApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> mức độ NB/TH/VD/VDC (cột I) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. Tối đa 80 câu/lần gọi API — app tự chạy từng lô nhỏ.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkLevelRerunBtn" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" id="bulkLevelSelectAllBtn" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkLevelApplyBtnTop" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" id="bulkLevelApplyBtnBot" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="dbtOrderModal" class="modal hide"><div class="modalBox" style="max-width:560px"><h3>↕ ADMIN: Thứ tự Dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Sắp xếp thứ tự hiển thị các dạng BT trên <b>mục lục</b> và <b>modal làm bài</b>. Dùng ↑↓ rồi bấm Lưu — học sinh thấy đúng thứ tự bạn chọn.</p><div id="dbtOrderScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtOrderList" class="dbtOrderList"></div><div id="dbtOrderStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeDbtOrderModal()">Đóng</button><button type="button" class="btn" onclick="saveDbtOrder()">💾 Lưu thứ tự</button></div></div></div><div id="dbtMergeModal" class="modal hide"><div class="modalBox" style="max-width:720px"><h3>🔀 ADMIN: Gộp &amp; đổi tên dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Tick <b>≥2 tên giống nhau</b> để gộp, hoặc <b>1 tên</b> + tên mới để đổi tên → lưu cột H Google Sheet. App gợi ý nhóm tên gần giống — bấm nhóm để tick nhanh.</p><div id="dbtMergeScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtMergeSuggest" class="dbtMergeSuggestRow"></div><div id="dbtMergeList" class="dbtMergeList"></div><div style="margin-top:10px"><label style="font-weight:800;display:block;margin-bottom:4px">Tên mới sau khi gộp (cột H)</label><input type="text" id="dbtMergeNewName" class="adminDbtInput" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border)" placeholder="VD: Chu kỳ, tần số, tần số góc dao động" oninput="dbtMergePreview()" /></div><div id="dbtMergeStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeDbtMergeModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="dbtMergePickLongestName()">📏 Dùng tên dài nhất</button><button type="button" class="btn" onclick="applyDbtMerge()">💾 Gộp &amp; lưu Sheet</button></div></div></div></div><div id="chapterDbtModal" class="modal hide"><div class="modalBox chapterDbtModalBox"><h3>🏷️ ADMIN: Quản lý Dạng BT theo Chương</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Xem <b>tất cả bài</b> trong chương: gộp/đổi tên dạng (cột H), sắp thứ tự <b>↑↓ trong cùng bài</b>, mở đề để GPT gợi ý. <b>Chưa chuyển dạng sang bài khác</b> — muốn đổi bài học của câu: mở đề → Sửa câu.</p><div id="chapterDbtScope" class="muted" style="margin-bottom:8px;font-size:13px;font-weight:800"></div><div id="chapterDbtSuggest" class="chapterDbtSuggest hide"></div><div id="chapterDbtBody" class="chapterDbtBody"></div><div id="chapterDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeChapterDbtBoard()">Đóng</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button></div></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX / Word vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Chọn file <b>.tex</b> hoặc <b>.docx</b> (Word), hoặc dán nội dung. <b>LaTeX:</b> <code>\begin{ex}</code>, <code>\choice</code>… <b>Word:</b> <code>Câu 1…</code>, <code>A.</code> <code>B.</code>…, <code>Đáp án: B</code> — app tự tách và <b>Chuẩn hóa LaTeX</b>. Ảnh <code>\includegraphics</code> / ZIP phụ trợ như trước.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex / Word (.docx)</b><br><input type="file" id="latexFileInput" accept=".tex,.txt,.docx" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán LaTeX hoặc văn bản Word (Câu 1…, A. B. C. D., Đáp án…) tại đây…"></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -16655,7 +16915,7 @@ function fixMergedInlineMath(t){t=String(t||'');if(t.indexOf('$')<0)return fixPl
 function convertHevaInner(inner){inner=String(inner||'').trim();if(!inner)return '\\left\\{\\right.';inner=inner.replace(/\\\\/g,'\n');inner=inner.replace(/\s\\&/g,'\n');let parts=inner.split(/\n|\s+(?=\\?&[a-zA-Z0-9\\(_])/);let lines=parts.map(p=>p.replace(/^\&\s*/,'').trim()).filter(Boolean);if(!lines.length)lines=[inner.replace(/^\&\s*/,'')];let body=lines.map(line=>{if(line.indexOf('&')<0&&/[^=<>!]=[^=]/.test(line))return line.replace(/([^=<>!])=/,'$1 &=');return line}).join(' \\newline ');return '\\left\\{ \\begin{aligned} '+body+' \\end{aligned} \\right.'}
 function fixHevaLatex(s){s=String(s||'');if(!/\\heva/i.test(s))return s;let out='',i=0;while(i<s.length){let tail=s.slice(i),m=tail.match(/\\heva/i);if(!m){out+=tail;break}let hit=i+m.index;out+=s.slice(i,hit);let brace=s.indexOf('{',hit+5);if(brace<0){out+=s.slice(hit);break}let got=readLatexBracedContent(s,brace);if(!got){out+=s.slice(hit,brace+1);i=brace+1;continue}out+=convertHevaInner(got.content);i=got.end+1}return out}
 function sanitizeLatexMathInner(inner){inner=fixHevaLatex(String(inner||''));while(inner.indexOf('\\\\\\\\')>=0)inner=inner.replace(/\\\\\\\\/g,'\\\\');inner=inner.replace(/\\text\s*\{\s*(sin|cos|tan|cot|ln|log)\s*\}/gi,'\\$1');inner=inner.replace(/(^|[^\\A-Za-z])([0-9]+)\s*pi\b/gi,'$1$2\\pi');inner=inner.replace(/(^|[^\\A-Za-z])pi\b/gi,'$1\\pi');let lc=(inner.match(/\\left\b/g)||[]).length,rc=(inner.match(/\\right\b/g)||[]).length;if(lc!==rc){inner=inner.replace(/\\left\s*/g,'').replace(/\\right\s*/g,'')}return inner}
-function fixBareTrigLatex(s){s=String(s||'');s=s.replace(/\(sin\^2\)/gi,'\\sin^2');s=s.replace(/\(cos\^2\)/gi,'\\cos^2');s=s.replace(/\(tan\^2\)/gi,'\\tan^2');s=s.replace(/\(cot\^2\)/gi,'\\cot^2');s=s.replace(/\{\\?(cos|sin|tan|cot)\s*\^2\s*\}2\\alpha/gi,(m,c)=>'\\'+c.toLowerCase()+'^2\\alpha');s=s.replace(/\{\s*\\?(sin|cos|tan|cot)\s+\^?\s*2\s*\}/gi,(m,c)=>'\\'+c.toLowerCase()+'^2');s=s.replace(/\\(cos|sin|tan|cot)\^22\\alpha/gi,(m,c)=>'\\'+c.toLowerCase()+'^2\\alpha');return s}function wrapBareLatexMath(s){s=String(s||'').trim();if(!s||s.indexOf('$')>=0)return s;if(/[À-ỹĐđ]{4,}/.test(s))return s;if(!(/\\[a-zA-Z]|[\^_=]|\((?:sin|cos|tan|cot)/i.test(s)))return s;return '$'+fixBareTrigLatex(s)+'$'}function normalizeLatexDelimiters(s){s=String(s||'');s=applyPlainLinebreaksOutsideMath(s);s=fixHevaLatex(s);s=wrapBareLatexMath(s);s=stripLatexListMarkup(s);s=mergeBrokenDfracSqrt(s);s=mergeUnitBetweenMath(s);s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|begin\s*\{itemchoice|acute)|•\s*ch\s+|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])|(?:rad|deg|m|s)\s*\$[^$\n]*=/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+sanitizeLatexMathInner(inner)+'$'});return trimInlineMathSpaces(s)}
+function spaceAroundInlineMathInProse(t){t=String(t||'');t=t.replace(/\$\s*•\s*\$/g,'•');if(t.indexOf('$')<0)return t;let out=[],i=0,n=t.length;while(i<n){if(t[i]!=='$'){let d=t.indexOf('$',i);if(d<0){out.push(t.slice(i));break}out.push(t.slice(i,d));i=d;continue}let d=t.indexOf('$',i+1);if(d<0){out.push(t.slice(i));break}let inner=t.slice(i+1,d).trim();let chunk='$'+inner+'$';if(out.length&&out[out.length-1]&&!/\s$/.test(out[out.length-1])&&!/[«(]$/.test(out[out.length-1]))out.push(' ');out.push(chunk);i=d+1;if(i<n&&!/\s/.test(t[i])&&!/[«»$,.;:!?)]/.test(t[i]))out.push(' ')}return out.join('')}function wrapVnContextNumbersInMath(t){return String(t||'').replace(/\b(tháng|thang|năm|nam|ngày|ngay)\s+(\d{1,4})\b/gi,function(_,w,n){return w+' $'+n+'$'})}function fixBareTrigLatex(s){s=String(s||'');s=s.replace(/\(sin\^2\)/gi,'\\sin^2');s=s.replace(/\(cos\^2\)/gi,'\\cos^2');s=s.replace(/\(tan\^2\)/gi,'\\tan^2');s=s.replace(/\(cot\^2\)/gi,'\\cot^2');s=s.replace(/\{\\?(cos|sin|tan|cot)\s*\^2\s*\}2\\alpha/gi,(m,c)=>'\\'+c.toLowerCase()+'^2\\alpha');s=s.replace(/\{\s*\\?(sin|cos|tan|cot)\s+\^?\s*2\s*\}/gi,(m,c)=>'\\'+c.toLowerCase()+'^2');s=s.replace(/\\(cos|sin|tan|cot)\^22\\alpha/gi,(m,c)=>'\\'+c.toLowerCase()+'^2\\alpha');return s}function hasVietnameseText(s){return /[À-ỹà-ỹăâêôơưđĂÂÊÔƠƯĐ]/.test(String(s||''))}function isLatexProseContent(s){s=String(s||'');if(hasVietnameseText(s))return true;if(/\\(?:begin|end|item)\b/i.test(s))return true;if(/(?:^|\n)\s*•\s+/.test(s))return true;return (s.match(/[A-Za-z]{2,}/g)||[]).length>=6&&s.indexOf(' ')>=0}function latexParenToDollar(s){s=String(s||'');if(!s||s.indexOf('\\(')<0&&s.indexOf('\\[')<0)return s;s=s.replace(/\\\((.+?)\\\)/g,function(_,x){return '$'+String(x).trim()+'$'});s=s.replace(/\\\[(.+?)\\\]/gs,function(_,x){x=String(x).trim();return x.indexOf('\n')>=0?'$$'+x+'$$':'$'+x+'$'});return s}function wrapBareLatexMath(s){s=String(s||'').trim();if(!s||s.indexOf('$')>=0)return s;if(isLatexProseContent(s))return s;if(!(/\\[a-zA-Z]|[\^_=]|\((?:sin|cos|tan|cot)/i.test(s)))return s;return '$'+fixBareTrigLatex(s)+'$'}function normalizeLatexDelimiters(s){s=String(s||'');s=applyPlainLinebreaksOutsideMath(s);s=fixHevaLatex(s);s=latexParenToDollar(s);if(/\\(?:begin\s*\{|\\item\b)/i.test(s))s=stripLatexListMarkup(s);s=wrapBareLatexMath(s);s=stripLatexListMarkup(s);s=mergeBrokenDfracSqrt(s);s=mergeUnitBetweenMath(s);s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixSurplusDollars(s);let heavy=/\\(?:item|begin\s*\{enumerate|begin\s*\{itemize|begin\s*\{itemchoice|acute)|•\s*ch\s+|\$\{|\$\$[^$]|\$\s+\$(?=[^$\n])|(?:rad|deg|m|s)\s*\$[^$\n]*=/.test(s)||!latexStructureOk(s);if(heavy){s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}\s*\$/g,'$( $1 )$');s=s.replace(/\$\{\s*([^}$\n]+?)\s*\}/g,'$( $1 )$');s=s.replace(/\{\s*\(\s*([^}]+?)\s*\)\s*\}/g,function(m,g1,off,full){if(off>0&&full[off-1]==='$')return m;if(off+m.length<full.length&&full[off+m.length]==='$')return m;return '$( '+g1+' )$'});s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)\$\.?/g,'$$$1$.');s=s.replace(/\$\(\((\\?[a-zA-Z]+)\)\)(?!\$)/g,'$$$1$');s=mergeAdjacentInlineMath(s);s=trimInlineMathSpaces(s);s=fixMergedInlineMath(s);s=fixSurplusDollars(s);s=s.replace(/(\$[^$\n]+?\$)\$+/g,'$1');s=s.replace(/\$\s*\$/g,' ')}s=s.replace(/\$([^$]*)\$/g,function(_,inner){return '$'+sanitizeLatexMathInner(inner)+'$'});s=wrapVnContextNumbersInMath(s);s=spaceAroundInlineMathInProse(s);return trimInlineMathSpaces(s)}
 function readLatexBracedContent(s,bracePos){if(bracePos<0||bracePos>=s.length||s[bracePos]!=='{')return null;let depth=0;for(let i=bracePos;i<s.length;i++){let c=s[i];if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0)return{content:s.slice(bracePos+1,i),end:i}}}return null}
 function normalizeLatexTextCmds(s){s=String(s||'');s=s.replace(/\\{2,}(textbf|textit|emph|underline)\s*\{/gi,'\\$1{');s=s.replace(/(^|[^\\$])(textbf|textit|emph|underline)\s*\{/gi,'$1\\$2{');return s}
 function replaceLatexFmtInPlain(s){s=normalizeLatexTextCmds(s);let cmds=[{re:/\\textbf\s*\{/gi,o:'@@B@@',c:'@@/B@@'},{re:/\\textit\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\emph\s*\{/gi,o:'@@I@@',c:'@@/I@@'},{re:/\\underline\s*\{/gi,o:'@@U@@',c:'@@/U@@'}];let loop=true;while(loop){loop=false;for(let cmd of cmds){cmd.re.lastIndex=0;let m=cmd.re.exec(s);if(!m)continue;let idx=m.index,bracePos=idx+m[0].length-1,got=readLatexBracedContent(s,bracePos);if(!got)continue;let inner=replaceLatexFmtInPlain(got.content);s=s.slice(0,idx)+cmd.o+inner+cmd.c+s.slice(got.end+1);loop=true;break}}return s}
@@ -19447,7 +19707,10 @@ async function normalizeLatexField(field,action){
     let j=await api('/api/admin/normalize-latex',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(j&&j.text!=null){
       el.value=j.text;
-      if(field==='LoiGiai')syncDsEditFormFields(Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData(),{LoiGiai:el.value}));
+      if(field==='LoiGiai'){
+        let form=Object.assign({},QUESTIONS[CUR]||{},readQuestionFormData(),{LoiGiai:el.value});
+        if(normDangFormVal(form.Dang)==='Đúng sai')syncDsEditFormFields(form);
+      }
       if(['CauHoi','A','B','C','D','LoiGiai','HinhAnh'].includes(field)){
         refreshEditHinhAnhPreview();
         renderEditQuestionPreview();
@@ -19650,31 +19913,48 @@ function openLatexImportModal(){
   set('latexDefDe',scope.De);
   let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
-  setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
+  setLatexImportStatus('Chọn file .tex / .docx hoặc dán nội dung. Bấm «Đọc thử» trước khi chèn.');
+  window._latexImportWordFile=null;
+  let fi=document.getElementById('latexFileInput');if(fi)fi.value='';
   m.classList.remove('hide');
   closeAdminMoreMenu();
 }
 function closeLatexImportModal(){
   let m=document.getElementById('latexImportModal');if(m)m.classList.add('hide');
+  window._latexImportWordFile=null;
 }
 function readLatexImportFile(inp){
   let f=inp&&inp.files&&inp.files[0];if(!f)return;
+  let low=String(f.name||'').toLowerCase();
+  if(low.endsWith('.docx')){
+    window._latexImportWordFile=f;
+    setLatexImportStatus('Đã chọn Word: '+f.name+' ('+Math.round(f.size/1024)+' KB). Bấm «Đọc thử».');
+    return;
+  }
+  if(low.endsWith('.doc')){
+    window._latexImportWordFile=null;
+    alert('Chỉ hỗ trợ .docx.\nTrong Word: F12 → Lưu thành «Word Document (*.docx)».');
+    if(inp)inp.value='';
+    return;
+  }
+  window._latexImportWordFile=null;
   let rd=new FileReader();
-  rd.onload=()=>{let ta=document.getElementById('latexImportText');if(ta)ta.value=String(rd.result||'');setLatexImportStatus('Đã đọc file: '+f.name+' ('+Math.round(f.size/1024)+' KB). Bấm “Đọc thử”.')};
+  rd.onload=()=>{let ta=document.getElementById('latexImportText');if(ta)ta.value=String(rd.result||'');setLatexImportStatus('Đã đọc file: '+f.name+' ('+Math.round(f.size/1024)+' KB). Bấm «Đọc thử».')};
   rd.onerror=()=>setLatexImportStatus('Không đọc được file.',true);
   rd.readAsText(f,'utf-8');
 }
 async function latexImportCall(commit,levelOverrides){
   let ta=document.getElementById('latexImportText');
   let tex=ta?String(ta.value||''):'';
-  if(!tex.trim()){alert('Chưa có nội dung LaTeX.');return null}
+  let wordFile=window._latexImportWordFile||null;
+  if(!tex.trim()&&!wordFile){alert('Chưa có nội dung — dán LaTeX/Word hoặc chọn file .tex / .docx.');return null}
   let zipInp=document.getElementById('latexAssetZipInput');
   let zipFile=zipInp&&zipInp.files&&zipInp.files[0]?zipInp.files[0]:null;
   let aiLevel=(val('latexDefMucDo')==='AI');
   levelOverrides=Array.isArray(levelOverrides)?levelOverrides:[];
-  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
+  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':('⏳ Đang đọc'+(wordFile?' Word':'')+(wordFile?'':' LaTeX')+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...')));
   let j;
-  if(zipFile){
+  if(zipFile||wordFile){
     let buildFd=useGpt=>{
       let fd=new FormData();
       fd.append('tex',tex);
@@ -19682,7 +19962,8 @@ async function latexImportCall(commit,levelOverrides){
       fd.append('commit',commit?'true':'false');
       fd.append('ai_level',aiLevel?'true':'false');
       if(levelOverrides.length)fd.append('level_overrides',JSON.stringify(levelOverrides));
-      fd.append('assets_zip',zipFile);
+      if(zipFile)fd.append('assets_zip',zipFile);
+      if(wordFile)fd.append('word_file',wordFile);
       if(useGpt){fd.set('admin_ai_provider','OPENAI');fd.set('admin_ai_allow_gpt_fallback','true')}
       return fd;
     };
@@ -19698,7 +19979,9 @@ async function latexImportCall(commit,levelOverrides){
 function latexImportSummary(j){
   let c=j.counts||{};
   let lines=[];
-  lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
+  if(j.source==='word')lines.push('Nguồn: Microsoft Word (.docx / văn bản dán)');
+  if(j.source==='word')lines.push('Khối câu: '+(j.total_blocks||0));
+  else lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
   lines.push('Đọc được: '+(j.parsed||0)+' câu');
   lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0));
   if(j.ai_level)lines.push('GPT ADMIN mức độ: '+(j.ai_level_done?'đã nhận diện':'chưa nhận diện')+(j.ai_model?' · '+j.ai_model:''));
@@ -19813,7 +20096,7 @@ function jumpToLastInsertedLatexQuestions(){
 async function previewLatexImport(){
   try{
     let j=await latexImportCall(false);
-    if(j){window.LAST_LATEX_PREVIEW_DATA=j;setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
+    if(j){window.LAST_LATEX_PREVIEW_DATA=j;if(j.extracted_text){let ta=document.getElementById('latexImportText');if(ta)ta.value=String(j.extracted_text||'')}setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
   }catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
 }
 async function commitLatexImport(){
@@ -21190,6 +21473,7 @@ def _latex_clean_body(s: Any) -> str:
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = re.sub(r"[ \t]{2,}", " ", t)
     t = _latex_convert_robot_text_cmds(t.strip())
+    t = _latex_paren_delims_to_dollar(t)
     return normalize_latex_text(t)
 
 
@@ -21483,6 +21767,361 @@ def parse_latex_theory_groups_2026(tex: str, defaults: Optional[Dict[str, Any]] 
         item["ID"] = "PP_" + stable_hash("|".join(item.get(k, "") for k in ["Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap"]), 12)
         items.append(item)
     return items
+
+
+# ============================================================
+# NHẬP WORD (.docx) — TÁCH CÂU NHƯ «DÁN CẢ CÂU»
+# ============================================================
+
+_QUESTION_HEAD_SPLIT_RE = re.compile(
+    r"(?=^\s*(?:"
+    r"Câu|CAU|câu|"
+    r"Question|QUESTION|"
+    r"Bài|BAI|Bai"
+    r")\s*\d+\s*[.:)\-]\s*)",
+    re.I | re.M,
+)
+
+
+def _xml_local_tag(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1] if "}" in tag else tag
+
+
+def _omml_children_latex(node: ET.Element) -> str:
+    return "".join(_omml_to_latex(c) for c in node)
+
+
+def _omml_to_latex(node: ET.Element) -> str:
+    tag = _xml_local_tag(node.tag)
+    if tag == "r":
+        return _omml_children_latex(node)
+    if tag == "t":
+        return (node.text or "").replace("\n", " ").strip()
+    if tag == "f":
+        num = den = ""
+        for c in node:
+            lt = _xml_local_tag(c.tag)
+            if lt == "num":
+                num = _omml_children_latex(c)
+            elif lt == "den":
+                den = _omml_children_latex(c)
+        if num or den:
+            return f"\\frac{{{num}}}{{{den}}}"
+        return ""
+    if tag == "sSup":
+        base = sup = ""
+        for c in node:
+            lt = _xml_local_tag(c.tag)
+            if lt == "e":
+                base = _omml_children_latex(c)
+            elif lt == "sup":
+                sup = _omml_children_latex(c)
+        return f"{base}^{{{sup}}}" if base else (f"^{{{sup}}}" if sup else "")
+    if tag == "sSub":
+        base = sub = ""
+        for c in node:
+            lt = _xml_local_tag(c.tag)
+            if lt == "e":
+                base = _omml_children_latex(c)
+            elif lt == "sub":
+                sub = _omml_children_latex(c)
+        return f"{base}_{{{sub}}}" if base else (f"_{{{sub}}}" if sub else "")
+    if tag == "sSubSup":
+        base = sub = sup = ""
+        for c in node:
+            lt = _xml_local_tag(c.tag)
+            if lt == "e":
+                base = _omml_children_latex(c)
+            elif lt == "sub":
+                sub = _omml_children_latex(c)
+            elif lt == "sup":
+                sup = _omml_children_latex(c)
+        if base:
+            out = base
+            if sub:
+                out += f"_{{{sub}}}"
+            if sup:
+                out += f"^{{{sup}}}"
+            return out
+        return ""
+    if tag == "rad":
+        deg = body = ""
+        for c in node:
+            lt = _xml_local_tag(c.tag)
+            if lt == "deg":
+                deg = _omml_children_latex(c)
+            elif lt == "e":
+                body = _omml_children_latex(c)
+        if deg:
+            return f"\\sqrt[{deg}]{{{body}}}"
+        return f"\\sqrt{{{body}}}" if body else ""
+    if tag == "d":
+        inner = _omml_children_latex(node)
+        return f"\\left({inner}\\right)" if inner else ""
+    if tag == "acc":
+        base = ""
+        for c in node:
+            if _xml_local_tag(c.tag) == "e":
+                base = _omml_children_latex(c)
+        return f"\\overline{{{base}}}" if base else ""
+    if tag in ("oMath", "oMathPara", "e"):
+        return _omml_children_latex(node)
+    return _omml_children_latex(node)
+
+
+def _docx_inline_to_text(node: ET.Element) -> str:
+    tag = _xml_local_tag(node.tag)
+    if tag == "t":
+        return node.text or ""
+    if tag == "tab":
+        return "\t"
+    if tag in ("br", "cr"):
+        return "\n"
+    if tag in ("oMath", "oMathPara"):
+        latex = _omml_to_latex(node).strip()
+        return f" ${latex}$ " if latex else ""
+    if tag == "r":
+        return "".join(_docx_inline_to_text(c) for c in node)
+    out: List[str] = []
+    for c in node:
+        out.append(_docx_inline_to_text(c))
+    return "".join(out)
+
+
+def _docx_paragraph_to_text(p: ET.Element) -> str:
+    return "".join(_docx_inline_to_text(c) for c in p).strip()
+
+
+def _docx_table_to_text(tbl: ET.Element) -> str:
+    rows: List[str] = []
+    for tr in tbl.iter():
+        if _xml_local_tag(tr.tag) != "tr":
+            continue
+        cells: List[str] = []
+        for tc in tr:
+            if _xml_local_tag(tc.tag) != "tc":
+                continue
+            cell_parts: List[str] = []
+            for p in tc.iter():
+                if _xml_local_tag(p.tag) == "p":
+                    t = _docx_paragraph_to_text(p)
+                    if t:
+                        cell_parts.append(t)
+            cells.append(" ".join(cell_parts).strip())
+        if any(cells):
+            rows.append("\t".join(cells))
+    return "\n".join(rows)
+
+
+def docx_bytes_to_text(data: bytes) -> str:
+    """Đọc .docx → chữ + công thức OMML (Word) bọc $...$."""
+    if not data:
+        raise ValueError("File Word trống.")
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            xml_bytes = zf.read("word/document.xml")
+    except Exception as exc:
+        raise ValueError(f"Không đọc được file .docx: {exc}") from exc
+    try:
+        root = ET.fromstring(xml_bytes)
+    except Exception as exc:
+        raise ValueError(f"XML Word lỗi: {exc}") from exc
+    body = None
+    for el in root.iter():
+        if _xml_local_tag(el.tag) == "body":
+            body = el
+            break
+    if body is None:
+        body = root
+    lines: List[str] = []
+    for child in body:
+        lt = _xml_local_tag(child.tag)
+        if lt == "p":
+            line = _docx_paragraph_to_text(child)
+            lines.append(line)
+        elif lt == "tbl":
+            tbl_txt = _docx_table_to_text(child)
+            if tbl_txt:
+                lines.append(tbl_txt)
+    text = "\n".join(lines)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def split_word_question_chunks(text: str) -> List[str]:
+    text = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return []
+    chunks = _QUESTION_HEAD_SPLIT_RE.split(text)
+    chunks = [c.strip() for c in chunks if c.strip()]
+    if len(chunks) >= 2:
+        return chunks
+    chunks2 = re.split(r"\n\s*\n\s*\n+", text)
+    chunks2 = [c.strip() for c in chunks2 if c.strip()]
+    if len(chunks2) >= 2:
+        return chunks2
+    return [text]
+
+
+def _has_mcq_options_blob(blob: Dict[str, Any]) -> bool:
+    return any(clean(blob.get(L)) for L in "ABCD")
+
+
+def parse_pasted_question(raw: Any) -> Optional[Dict[str, Any]]:
+    """Tách một câu từ Word/PDF dán — cùng logic ô «Dán cả câu» trên trình duyệt."""
+    work = str(raw or "").replace("\r", "").strip()
+    if not work:
+        return None
+    out: Dict[str, str] = {
+        "CauHoi": "",
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": "",
+        "DapAn": "",
+        "SaiSo": "",
+        "LoiGiai": "",
+        "HinhAnh": "",
+        "Dang": "",
+    }
+    loi_m = re.search(
+        r"(?:^|\n)\s*(?:Lời giải|LoiGiai|LG|Giải|Hướng dẫn giải)\s*[:：]?\s*\n([\s\S]*)$",
+        work,
+        re.I,
+    )
+    if loi_m:
+        out["LoiGiai"] = loi_m.group(1).strip()
+        work = work[: loi_m.start()].strip()
+    img_m = re.search(
+        r"(?:Hình(?: ảnh)?|HinhAnh|Image|Link\s*ảnh|Cột T)\s*[:：]?\s*(https?:\S+|drive[^\s]+)",
+        work,
+        re.I,
+    )
+    if img_m:
+        out["HinhAnh"] = img_m.group(1).strip()
+        work = work.replace(img_m.group(0), "").strip()
+    ss_m = re.search(r"(?:Sai số|SaiSo|±)\s*[:：]?\s*([0-9.,]+)", work, re.I)
+    if ss_m:
+        out["SaiSo"] = ss_m.group(1).strip()
+    da_m = re.search(
+        r"(?:Đáp án|DapAn|ĐA|Answer|Chọn|Đ/S|P\s*[:=])\s*[:：]?\s*([^\n]+)",
+        work,
+        re.I,
+    )
+    if da_m:
+        out["DapAn"] = re.sub(r"^[.:]\s*", "", da_m.group(1).strip())
+        work = work.replace(da_m.group(0), "").strip()
+    opts: Dict[str, str] = {}
+    for m in re.finditer(r"^[ \t]*([ABCD])[.)]\s*(.+)$", work, re.I | re.M):
+        letter = m.group(1).upper()
+        chunk = m.group(2).strip()
+        opts[letter] = (opts[letter] + "\n" + chunk).strip() if opts.get(letter) else chunk
+    work = re.sub(r"^[ \t]*[ABCD][.)]\s*.+$", "", work, flags=re.I | re.M).strip()
+    work = re.sub(r"(?:Câu hỏi|CauHoi|Nội dung)\s*[:：]?\s*", "", work, flags=re.I).strip()
+    out["CauHoi"] = work
+    for L in "ABCD":
+        out[L] = opts.get(L, "")
+    if looks_like_dungsai_answer(out.get("DapAn")):
+        out["Dang"] = "Đúng sai"
+    elif is_mcq_letter_answer(out.get("DapAn")) and _has_mcq_options_blob(out):
+        out["Dang"] = "Trắc nghiệm"
+    elif clean(out.get("DapAn")) and not _has_mcq_options_blob(out):
+        out["Dang"] = "Trả lời ngắn"
+    elif _has_mcq_options_blob(out):
+        out["Dang"] = "Trắc nghiệm"
+    else:
+        out["Dang"] = "Trắc nghiệm"
+    if not clean(out.get("CauHoi")) and not _has_mcq_options_blob(out):
+        return None
+    return out
+
+
+def _word_question_id(idx: int, chunk: str) -> str:
+    return "WORD_" + stable_hash(f"{idx}|{chunk[:240]}", 10)
+
+
+def _finalize_word_question(q: Dict[str, Any], defaults: Dict[str, Any], idx: int, chunk: str) -> Dict[str, Any]:
+    for f in QUESTION_FIELDS:
+        if f not in q:
+            q[f] = clean(defaults.get(f, ""))
+    if not clean(q.get("ID")):
+        q["ID"] = _word_question_id(idx, chunk)
+    if not clean(q.get("QuyenTruyCap")):
+        q["QuyenTruyCap"] = clean(defaults.get("QuyenTruyCap", "")) or "VIP"
+    if not clean(q.get("Diem")):
+        q["Diem"] = clean(defaults.get("Diem", "")) or "1"
+    if not clean(q.get("MucDo")):
+        q["MucDo"] = clean(defaults.get("MucDo", ""))
+    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+        q[f] = normalize_latex_text(q.get(f, ""))
+    da = clean(q.get("DapAn", ""))
+    if da and any(x in da for x in ("$", "\\", "{", "}")):
+        q["DapAn"] = normalize_latex_text(da)
+    q["Dang"] = effective_dang(q)
+    q["HinhAnh"] = normalize_image_src(q.get("HinhAnh", ""))
+    return q
+
+
+def parse_word_questions_bulk(text: str, defaults: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Tách nhiều câu từ Word / văn bản dán (Câu 1…, A. B. C. D., Đáp án…)."""
+    defaults = defaults or {}
+    chunks = split_word_question_chunks(str(text or ""))
+    out: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
+    for idx, chunk in enumerate(chunks, start=1):
+        try:
+            parsed = parse_pasted_question(chunk)
+            if not parsed:
+                errors.append({"index": idx, "warning": "Không tách được câu (thiếu nội dung)."})
+                continue
+            q = _finalize_word_question(dict(parsed), defaults, idx, chunk)
+            if not clean(q.get("CauHoi")):
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Không đọc được nội dung câu hỏi."})
+                continue
+            if q["Dang"] == "Trắc nghiệm" and not is_mcq_letter_answer(q.get("DapAn")):
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Trắc nghiệm chưa có đáp án A/B/C/D."})
+            if q["Dang"] == "Đúng sai" and not looks_like_dungsai_answer(q.get("DapAn")):
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Đúng/Sai chưa đủ đáp án Đ/S."})
+            out.append(q)
+        except Exception as exc:
+            errors.append({"index": idx, "warning": str(exc)})
+    counts = {"Trắc nghiệm": 0, "Đúng sai": 0, "Trả lời ngắn": 0, "Tự luận": 0}
+    for q in out:
+        counts[effective_dang(q)] = counts.get(effective_dang(q), 0) + 1
+    return {
+        "ok": True,
+        "source": "word",
+        "total_blocks": len(chunks),
+        "parsed": len(out),
+        "counts": counts,
+        "questions": out,
+        "warnings": errors,
+        "media": {"includegraphics": 0, "tikz": 0, "resolved": 0},
+    }
+
+
+def _import_tex_from_request(tex: str, word_file: Any) -> Tuple[str, str]:
+    """Trả (nội_dung, nguồn: latex|word). Ưu tiên file Word nếu có."""
+    if word_file and getattr(word_file, "filename", ""):
+        fname = str(word_file.filename or "").lower()
+        if fname.endswith(".doc") and not fname.endswith(".docx"):
+            raise ValueError("Chỉ hỗ trợ .docx. Trong Word: F12 → Lưu thành «Word Document (*.docx)».")
+        if not fname.endswith(".docx"):
+            raise ValueError("File Word phải là .docx.")
+        raw = word_file.read()
+        if not raw:
+            raise ValueError("File Word trống.")
+        extracted = docx_bytes_to_text(raw)
+        if not clean(extracted):
+            raise ValueError("Không đọc được chữ trong file Word (có thể chỉ có ảnh/công thức dạng ảnh).")
+        return extracted, "word"
+    body = str(tex or "").replace("\r\n", "\n").replace("\r", "\n")
+    if not clean(body):
+        raise ValueError("Chưa có nội dung — dán LaTeX/Word hoặc chọn file .tex / .docx.")
+    if _LATEX_EX_RE.search(body):
+        return body, "latex"
+    return body, "word"
 
 
 def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = None, asset_ctx: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -25055,8 +25694,19 @@ def api_admin_normalize_latex():
         fixed = apply_latex_normalize_with_selection(full, action, selection)
     else:
         fixed = apply_latex_normalize_with_selection(text, action, None)
-    if field == "LoiGiai" and effective_dang(context) == "Đúng sai":
-        fixed = normalize_ds_loigiai(fixed, context)
+    if action == "loigiai_abcd":
+        base = normalize_latex_light(fixed)
+        fixed = normalize_loigiai_abcd(base, context)
+    elif field == "LoiGiai":
+        dang = effective_dang(context)
+        if dang == "Đúng sai":
+            fixed = normalize_ds_loigiai(
+                fixed,
+                context,
+                use_sheet_dapan=looks_like_dungsai_answer(context.get("DapAn", "")),
+            )
+        elif dang == "Trắc nghiệm" and action == "full" and _loigiai_has_splittable_chunks(fixed):
+            fixed = normalize_tn_loigiai_abcd(fixed, context)
     still_broken = not _latex_structure_ok(fixed)
     orig_cmp = clean(selection.get("full") if selection else text)
     action_label = next(
@@ -26019,6 +26669,7 @@ def api_latex_import():
         return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
 
     asset_zip = None
+    word_file = None
     level_overrides: Any = []
     ai_level_explicit: Any = None
     ai_body: Dict[str, Any] = {}
@@ -26035,6 +26686,7 @@ def api_latex_import():
         except Exception:
             level_overrides = []
         asset_zip = request.files.get("assets_zip")
+        word_file = request.files.get("word_file")
         ai_body = {
             "admin_ai_provider": request.form.get("admin_ai_provider", ""),
             "admin_ai_allow_gpt_fallback": request.form.get("admin_ai_allow_gpt_fallback", ""),
@@ -26048,10 +26700,13 @@ def api_latex_import():
         level_overrides = body.get("level_overrides") or []
         ai_body = body
 
-    if not clean(tex):
-        return jsonify({"error": "Chưa có nội dung LaTeX."}), 400
+    try:
+        tex, import_source = _import_tex_from_request(tex, word_file)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
     if len(str(tex)) > 900_000:
-        return jsonify({"error": "File LaTeX quá lớn. Hãy chia nhỏ rồi nhập từng phần."}), 400
+        return jsonify({"error": "Nội dung quá lớn. Hãy chia nhỏ rồi nhập từng phần."}), 400
 
     try:
         ai_level = _latex_ai_level_requested(defaults, ai_level_explicit)
@@ -26060,9 +26715,14 @@ def api_latex_import():
             # Không để giá trị "AI" bị ghi thẳng vào cột MucDo.
             defaults_for_parse["MucDo"] = ""
         asset_ctx = _build_latex_asset_context(commit, assets_zip=asset_zip)
-        parsed = parse_latex_questions_2026(str(tex), defaults_for_parse, asset_ctx=asset_ctx)
-        theory_groups = parse_latex_theory_groups_2026(str(tex), defaults_for_parse)
-        theory_lessons = parse_latex_lesson_theory_2026(str(tex), defaults_for_parse)
+        if import_source == "latex":
+            parsed = parse_latex_questions_2026(str(tex), defaults_for_parse, asset_ctx=asset_ctx)
+            theory_groups = parse_latex_theory_groups_2026(str(tex), defaults_for_parse)
+            theory_lessons = parse_latex_lesson_theory_2026(str(tex), defaults_for_parse)
+        else:
+            parsed = parse_word_questions_bulk(str(tex), defaults_for_parse)
+            theory_groups = []
+            theory_lessons = []
         ai_meta: Dict[str, Any] = {"ai_level": ai_level, "ai_level_done": False, "ai_model": "", "ai_provider": "OPENAI", "ai_level_error": "", "warnings": []}
         override_count = _apply_latex_level_overrides(parsed.get("questions", []), level_overrides)
         if ai_level and not override_count:
@@ -26110,6 +26770,8 @@ def api_latex_import():
             return jsonify({
                 "ok": True,
                 "dry_run": True,
+                "source": import_source,
+                "extracted_text": tex if import_source == "word" else "",
                 "total_blocks": parsed.get("total_blocks", 0),
                 "parsed": parsed.get("parsed", 0),
                 "counts": parsed.get("counts", {}),
@@ -26175,6 +26837,7 @@ def api_latex_import():
                 lesson_errors.append(f"{lesson_item.get('BaiHoc', '')}: {exc}")
         res.update({
             "dry_run": False,
+            "source": import_source,
             "total_blocks": parsed.get("total_blocks", 0),
             "parsed": parsed.get("parsed", 0),
             "counts": parsed.get("counts", {}),
