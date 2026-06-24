@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V322t_FIX_UNIT_BACKSLASH_SPACE_2026_06_24"
+APP_VERSION = "V322u_FIX_MOBILE_UI_TABS_2026_06_24"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -14613,39 +14613,39 @@ html[data-theme="dark"] .homePracticeSetupPanel>b{
 /* Nhóm môn — tab pill Toán / Vật lí */
 .topSubjectTabsV253{
   display:inline-flex!important;
-  gap:5px!important;
-  background:#eef2ff!important;
+  gap:4px!important;
+  background:rgba(255,255,255,0.15)!important;
   border-radius:10px!important;
   padding:3px!important;
-  border:1px solid #c7d2fe!important;
+  border:1px solid rgba(255,255,255,0.3)!important;
 }
 html[data-theme="dark"] .topSubjectTabsV253{
-  background:#1e3a5f!important;
-  border-color:#3b82f6!important;
+  background:rgba(255,255,255,0.1)!important;
+  border-color:rgba(255,255,255,0.2)!important;
 }
 .topSubjectBtnV253{
   padding:6px 14px!important;
-  border-radius:8px!important;
+  border-radius:7px!important;
   font-weight:900!important;
   font-size:13px!important;
   border:none!important;
   cursor:pointer!important;
   background:transparent!important;
-  color:#4338ca!important;
+  color:rgba(255,255,255,0.85)!important;
   transition:background .15s,color .15s!important;
 }
 html[data-theme="dark"] .topSubjectBtnV253{
-  color:#93c5fd!important;
+  color:rgba(255,255,255,0.85)!important;
 }
 .topSubjectBtnV253.math.active,.topSubjectBtnV253.math[data-active="1"]{
-  background:linear-gradient(135deg,#1d4ed8,#4f46e5)!important;
-  color:#fff!important;
-  box-shadow:0 2px 8px #1d4ed844!important;
+  background:#fff!important;
+  color:#4f46e5!important;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2)!important;
 }
 .topSubjectBtnV253.physics.active,.topSubjectBtnV253.physics[data-active="1"]{
-  background:linear-gradient(135deg,#0891b2,#0e7490)!important;
-  color:#fff!important;
-  box-shadow:0 2px 8px #0891b244!important;
+  background:#fff!important;
+  color:#0891b2!important;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2)!important;
 }
 
 /* Nhãn select gọn, đẹp */
@@ -14811,7 +14811,7 @@ body.user-is-admin .quizToolsRow{width:100%!important}
   #quizActions button{flex:0 0 auto!important}
   .adminReviewModeWrap{font-size:10px!important;gap:3px!important;padding:0!important;margin:0!important}
   .adminReviewModeWrap select{font-size:10px!important;padding:3px 5px!important;height:26px!important;max-width:118px!important;border-radius:6px!important}
-  body.mobile-quiz-ui #homePracticeSetupPanel{display:none!important}
+  body.mobile-quiz-ui.quiz-session-active #homePracticeSetupPanel{display:none!important}
   body.mobile-quiz-ui #btnSimilar,body.mobile-quiz-ui #btnFsSimilar,body.mobile-quiz-ui #btnSimilarInline{display:none!important}
   body.mobile-quiz-ui .adminReviewModeWrap>label.muted{display:none!important}
   body.mobile-quiz-ui .editAdminSoatBar>span[style*="font-weight"]{display:none!important}
