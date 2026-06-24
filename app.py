@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V322u_FIX_MOBILE_UI_TABS_2026_06_24"
+APP_VERSION = "V323c_NO_AUTORUN_BULKDBT_2026_06_24"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -2463,28 +2463,91 @@ def norm_letter(s: Any) -> str:
     return m.group(0) if m else ""
 
 
-def norm_dang(s: Any) -> str:
-    t = re.sub(r"[/\\]+", " ", str(s or ""))
+def norm_dang_explain(s: Any) -> Tuple[str, str]:
+    """Chuẩn hóa tên dạng câu, trả về (dang_chuan, ly_do).
+
+    Dùng khi cần log lý do chuyển đổi (đọc file Word, LaTeX import, sync).
+    Giá trị chuẩn: "Trắc nghiệm" | "Đúng sai" | "Trả lời ngắn" | "Tự luận"
+
+    Ví dụ:
+        norm_dang_explain("d/s")        → ("Đúng sai",    "alias 'd/s' → Đúng sai")
+        norm_dang_explain("TN4")        → ("Trắc nghiệm", "alias 'tn4' → Trắc nghiệm")
+        norm_dang_explain("MCQ_custom") → ("Trắc nghiệm", "⚠ không nhận ra 'MCQ_custom' → mặc định Trắc nghiệm")
+    """
+    raw = str(s or "").strip()
+    if not raw:
+        return "Trắc nghiệm", "trống → mặc định Trắc nghiệm"
+
+    # Chuẩn hoá: bỏ dấu phân cách, lowercase, bỏ dấu tiếng Việt
+    t = re.sub(r"[/\\|.]+", " ", raw)
     k = key_norm(t)
     k2 = k.replace(" ", "")
-    if (
-        "dung sai" in k
-        or "dungsai" in k2
-        or "d/s" in k2
-        or re.search(r"\b(ds|tf)\b", k)
-        or "true false" in k
-        or "truefalse" in k2
-    ):
-        return "Đúng sai"
-    if any(x in k for x in ["tra loi ngan", "short", "tln", "shortans"]):
-        return "Trả lời ngắn"
-    if any(x in k for x in ["tu luan", "essay"]) or k == "tl":
-        return "Tự luận"
-    if any(x in k for x in ["trac nghiem", "tracnghiem", "mcq", "multiple choice"]) or k in ("tn", "tn4"):
-        return "Trắc nghiệm"
-    if k2 in ("ds", "d/s") or k == "ds":
-        return "Đúng sai"
-    return "Trắc nghiệm"
+
+    # ── ĐÚng SAI ─────────────────────────────────────────────────────────────
+    _DS_PHRASES = ["dung sai", "true false", "truefalse", "dungsai"]
+    _DS_EXACT   = {"ds", "tf", "d/s", "dungsai", "truefalse", "t/f", "ds4", "dsai"}
+    for alias in _DS_PHRASES:
+        if alias in k:
+            return "Đúng sai", f"keyword '{alias}' → Đúng sai"
+    if k2 in _DS_EXACT or k in _DS_EXACT:
+        return "Đúng sai", f"alias '{raw}' → Đúng sai"
+    if re.search(r"\b(ds|tf)\b", k):
+        m = re.search(r"\b(ds|tf)\b", k).group(0)  # type: ignore[union-attr]
+        return "Đúng sai", f"abbrev '\\b{m}\\b' → Đúng sai"
+
+    # ── TRẢ LỜI NGẮN ─────────────────────────────────────────────────────────
+    _TLN_PHRASES = ["tra loi ngan", "short answer", "shortanswer",
+                    "dien vao cho trong", "dien so", "viet so", "dien khuyet"]
+    _TLN_EXACT   = {"tln", "short", "shortans", "sa", "fill", "fillin",
+                    "dien", "tln4", "tln5"}
+    for alias in _TLN_PHRASES:
+        if alias in k:
+            return "Trả lời ngắn", f"keyword '{alias}' → Trả lời ngắn"
+    if k2 in _TLN_EXACT or k in _TLN_EXACT:
+        return "Trả lời ngắn", f"alias '{raw}' → Trả lời ngắn"
+
+    # ── TỰ LUẬN ──────────────────────────────────────────────────────────────
+    _TL_PHRASES = ["tu luan", "essay", "bai luan", "tu luan dai"]
+    _TL_EXACT   = {"tl", "tl1", "tl2"}
+    for alias in _TL_PHRASES:
+        if alias in k:
+            return "Tự luận", f"keyword '{alias}' → Tự luận"
+    if k2 in _TL_EXACT or k in _TL_EXACT:
+        return "Tự luận", f"alias '{raw}' → Tự luận"
+
+    # ── TRẮC NGHIỆM ──────────────────────────────────────────────────────────
+    _TN_PHRASES = ["trac nghiem", "tracnghiem", "multiple choice", "multiplechoice",
+                   "4 lua chon", "bon lua chon", "4 phuong an", "bon phuong an",
+                   "chon dap an", "chon mot dap an"]
+    _TN_EXACT   = {"tn", "tn4", "tn5", "mcq", "mcq4", "mc", "tnkq", "tnbb", "tn1"}
+    for alias in _TN_PHRASES:
+        if alias in k:
+            return "Trắc nghiệm", f"keyword '{alias}' → Trắc nghiệm"
+    if k2 in _TN_EXACT or k in _TN_EXACT:
+        return "Trắc nghiệm", f"alias '{raw}' → Trắc nghiệm"
+
+    # ── Fallback: chuỗi gốc chứa tên chuẩn (có/không dấu) ───────────────────
+    _std_map = {
+        "trắc nghiệm": "Trắc nghiệm", "trac nghiem": "Trắc nghiệm",
+        "đúng sai":    "Đúng sai",    "dung sai":    "Đúng sai",
+        "trả lời ngắn": "Trả lời ngắn", "tra loi ngan": "Trả lời ngắn",
+        "tự luận":     "Tự luận",     "tu luan":     "Tự luận",
+    }
+    for pat, val in _std_map.items():
+        if pat in k:
+            return val, f"substring '{pat}' → {val}"
+
+    # Không nhận ra — cảnh báo nhưng không crash, về Trắc nghiệm
+    return "Trắc nghiệm", f"⚠ không nhận ra '{raw}' → mặc định Trắc nghiệm"
+
+
+def norm_dang(s: Any) -> str:
+    """Chuẩn hóa tên dạng câu về 4 giá trị chuẩn (wrapper của norm_dang_explain).
+
+    Giá trị chuẩn: "Trắc nghiệm" | "Đúng sai" | "Trả lời ngắn" | "Tự luận"
+    Dùng norm_dang_explain() khi cần lý do chuyển đổi để log/cảnh báo.
+    """
+    return norm_dang_explain(s)[0]
 
 
 def bump_count(d: Dict[str, int], key: str) -> None:
@@ -2792,6 +2855,7 @@ def effective_dang(q: Dict[str, Any]) -> str:
     - Nếu đáp án là số/biểu thức -> Trả lời ngắn.
 
     Lưu ý: DangBaiTap là dạng bài tập/chuyên đề nên không được dùng để ép loại câu.
+    Khi cột Dang có giá trị lạ (không nhận ra), gắn q["_DangWarn"] để log/cảnh báo.
     """
     dapan = q.get("DapAn")
     has_opts = has_tf_statements(q)
@@ -2808,8 +2872,11 @@ def effective_dang(q: Dict[str, Any]) -> str:
     # Sau khi đã bắt chắc bằng đáp án, mới dùng cột Dang nếu có ghi rõ.
     raw_col = dang_metadata_raw(q)
     if raw_col:
-        dang_col = norm_dang(raw_col)
+        dang_col, dang_reason = norm_dang_explain(raw_col)
         if dang_col in DANG_GROUP_ORDER:
+            # Gắn cảnh báo vào câu nếu Dang lạ (để api_sync / import có thể log)
+            if "⚠" in dang_reason:
+                q["_DangWarn"] = f"Dang '{raw_col}' → '{dang_col}' ({dang_reason})"
             return dang_col
 
     # Đáp án số/biểu thức => Trả lời ngắn.
@@ -11653,6 +11720,14 @@ def _is_quota_or_rate_error(msg: str) -> bool:
             "exceeded your current",
             "429",
             "too many requests",
+            "account is not active",
+            "check your billing",
+            "billing details",
+            "payment required",
+            "402",
+            "account has been deactivated",
+            "insufficient_quota",
+            "billing",
         ]
     )
 
@@ -11706,12 +11781,17 @@ def admin_ai_call_text(
     allow_gpt_fallback: bool = False,
     image_b64: str = "",
     image_mime: str = "",
+    extra_anthropic_key: str = "",
 ) -> Tuple[str, str, str, int]:
     """ADMIN: Anthropic → Gemini → GPT (theo thứ tự ưu tiên / quota). Trả (text, provider, model, key_index)."""
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI") if is_admin() else []
     gemini_keys = load_ai_keys("GEMINI")
     anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
+    # Thêm key từ client (localStorage) nếu chưa có trong server config
+    if extra_anthropic_key and _is_anthropic_api_key(extra_anthropic_key):
+        if extra_anthropic_key not in anthropic_keys:
+            anthropic_keys = [extra_anthropic_key] + anthropic_keys
     gemini_saw_quota = False
     last_error = ""
     model_openai = (
@@ -11813,6 +11893,11 @@ def admin_ai_call_text(
     txt, prov, model, ki = try_gemini()
     if txt:
         return txt, prov, model, ki
+    # Nếu Gemini lỗi billing/quota → thử Claude nếu chưa thử (không có key trước đó)
+    if gemini_saw_quota and anthropic_keys and not anthropic_keys:
+        txt, prov, model, ki = try_anthropic()
+        if txt:
+            return txt, prov, model, ki
     if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
         raise AdminGeminiQuotaError(last_error, openai_available=True)
     if allow_gpt_fallback and openai_keys:
@@ -14602,12 +14687,14 @@ html[data-theme="dark"] .homePracticeSetupPanel>b{
   background:linear-gradient(135deg,#1e3a8a,#312e81);
 }
 
-/* Nội dung bên trong */
+/* Row filter — wrap nhiều field */
 .homePracticeSetupPanel .row{
-  padding:14px 14px 12px!important;
+  padding:12px 14px 12px!important;
   margin-top:0!important;
   background:var(--surface);
-  gap:10px!important;
+  gap:8px 10px!important;
+  flex-wrap:wrap!important;
+  align-items:flex-end!important;
 }
 
 /* Nhóm môn — tab pill Toán / Vật lí */
@@ -14699,11 +14786,13 @@ html[data-theme="dark"] .topSubjectBtnV253{
 #fBaiHoc{border-left:3px solid #059669!important}
 #fBoDe{border-left:3px solid #f59e0b!important}
 #fDang{border-left:3px solid #e11d48!important}
+#fDangBaiTap{border-left:3px solid #d97706!important}
 html[data-theme="dark"] #fLop{border-left-color:#a78bfa!important}
 html[data-theme="dark"] #fChuong{border-left-color:#22d3ee!important}
 html[data-theme="dark"] #fBaiHoc{border-left-color:#34d399!important}
 html[data-theme="dark"] #fBoDe{border-left-color:#fbbf24!important}
 html[data-theme="dark"] #fDang{border-left-color:#fb7185!important}
+html[data-theme="dark"] #fDangBaiTap{border-left-color:#fbbf24!important}
 
 /* Nhóm "Môn" trên top bar — pill nổi bật hơn */
 .topTitleBrand{display:flex;align-items:center;gap:8px}
@@ -14735,8 +14824,9 @@ html[data-theme="dark"] #fDang{border-left-color:#fb7185!important}
   .learningCloseBtn{padding:7px 10px!important;font-size:13px!important;min-width:72px!important}
 }
 
-:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px;overflow-x:hidden;width:100%;max-width:100vw}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002;width:100%;max-width:100vw}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#dcfce7;border:1px solid #86efac;color:#166534;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.adminTopBtn2{background:#ffffff22;border:1px solid #ffffff55;color:#fff}.adminTopBtn:hover{filter:brightness(1.05)}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:1420px;margin:auto;padding:12px;width:100%;min-width:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.quizHeadRow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:nowrap}.btnQuizToolsToggle{display:none;width:auto;margin:0;padding:6px 10px;font-size:18px;line-height:1;border-radius:8px;background:var(--btn2-bg);color:var(--btn2-color);border:1px solid var(--border);flex-shrink:0;cursor:pointer;font-weight:800}.quizActionsPanel{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:0}.quizToolbarStrip{background:transparent;border:none;padding:0;margin:0 0 8px;box-shadow:none}.quizToolbarHead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;flex-wrap:wrap}.quizToolbarHead .qid{flex:1;min-width:0;margin:0}.quizAdminTools{display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap;justify-content:flex-end}.adminReviewModeWrap{display:inline-flex;align-items:center;gap:6px;font-size:12px;flex-shrink:0}.adminReviewModeWrap select{padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface);color:var(--text);max-width:176px}.quizAdminTools .btn2,.adminQuizAct,#btnQuizEdit.adminQuizAct{background:#1e40af!important;color:#fff!important;border-color:#1d4ed8!important;font-weight:700!important}
-#btnQuizEdit.adminQuizAct{flex-shrink:0}.editAdminSoatBar .btnGreen{font-size:12px!important;padding:6px 10px!important}.editHintResult{max-height:min(36vh,240px);overflow:auto;margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;line-height:1.45}.editAdminPreviewBar{margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.editAdminPreviewBar .row{gap:6px;align-items:center;margin-bottom:8px}.editAdminPasteBox{width:100%;min-height:64px;font-size:13px;line-height:1.45;margin:6px 0}.editQuestionPreview{margin:0 0 12px;padding:12px;border:2px solid #93c5fd;border-radius:10px;background:var(--surface);max-height:min(52vh,420px);overflow:auto}.editQuestionPreview .opt{margin:4px 0;padding:6px 8px}.adminImgField textarea{min-height:56px!important}.adminImgPreview{margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;background:var(--bg);min-height:48px}.adminImgPreview .qimg{max-height:min(36vh,280px)}.adminLgAiTools{margin:4px 0 5px 0}.adminLgAiTools .btnSmall{font-size:11px!important;padding:4px 8px!important}.latexNormWrap{position:relative;display:inline-flex;gap:2px;align-items:center;flex-shrink:0}.latexNormMore{min-width:28px!important;padding:4px 6px!important;font-weight:800}.latexNormMenu{position:absolute;top:100%;left:0;z-index:120;min-width:min(320px,92vw);max-width:min(380px,96vw);max-height:min(62vh,420px);overflow:auto;margin-top:4px;padding:6px 0;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 8px 28px #0000002a}.latexNormMenu.hide{display:none!important}.latexNormGroupTitle{font-size:10px;font-weight:800;color:var(--muted);padding:6px 12px 4px;text-transform:uppercase;letter-spacing:.04em}.latexNormItem{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:7px 12px;font-size:12px;line-height:1.35;cursor:pointer}.latexNormItem:hover{background:var(--btn2-bg)}body.user-is-admin #btnRetry{display:none!important}.quizAdminTools button{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap}.quizToolsRow{display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;padding-bottom:2px}.quizToolsRow .quizNavRow{display:flex;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;flex-shrink:0;justify-content:flex-start}.quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;justify-content:flex-start;width:auto;flex:1;min-width:0;border:none;background:transparent;padding:0}.quizToolsRow #quizActions button,.quizToolsRow .quizNavRow button,.quizToolsRow .quizNavRow .btnNavWide{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap;flex-shrink:0;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto}.quizToolbarStrip .btnGreen,.quizToolbarStrip .btnStartStrong,.quizToolbarStrip .btn{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important;box-shadow:none!important;transform:none!important;filter:none!important}.quizToolbarStrip .btnGreen:hover,.quizToolbarStrip .btnStartStrong:hover,.quizToolbarStrip .btn:hover{filter:brightness(0.98)!important;transform:none!important}.quizToolbarStrip .btnSolToggle.active,.quizToolbarStrip .btnMobileSolToggle.active,.btnSolToggle.active,.btnMobileSolToggle.active{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;font-weight:800}.btnMobileSolToggle.vipSolLocked,.btnSolToggle.vipSolLocked{opacity:.45;cursor:not-allowed}.quizQuestionPanel{margin-top:0;position:relative;overflow:hidden}.quizQuestionPanel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:#cbd5e1}.quizQuestionPanel:after{content:attr(data-level-label);position:absolute;right:8px;top:6px;font-size:10px;font-weight:900;letter-spacing:.2px;padding:2px 7px;border-radius:999px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;pointer-events:none;z-index:5;max-width:3.2em;text-align:center;line-height:1.2;white-space:nowrap}.quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:46px!important}.quizQuestionPanel.mucdoPanel-nb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-th{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-nb:before{background:#22c55e}.quizQuestionPanel.mucdoPanel-th:before{background:#3b82f6}.quizQuestionPanel.mucdoPanel-vd:before{background:#f97316}.quizQuestionPanel.mucdoPanel-vdc:before{background:#ef4444}.quizQuestionPanel.mucdoPanel-nb:after{content:attr(data-level-label);background:#dcfce7;color:#166534;border-color:#86efac}.quizQuestionPanel.mucdoPanel-th:after{content:attr(data-level-label);background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.quizQuestionPanel.mucdoPanel-vd:after{content:attr(data-level-label);background:#ffedd5;color:#c2410c;border-color:#fdba74}.quizQuestionPanel.mucdoPanel-vdc:after{content:attr(data-level-label);background:#fee2e2;color:#991b1b;border-color:#fca5a5}.quizQuestionPanel.mucdoPanel-empty:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:clamp(10px,2.5vw,14px)!important}body.mobile-quiz-ui #qid .mucdoFull,body.mobile-quiz-ui #qid .mucdoIcon{display:none!important}body.mobile-quiz-ui #qid .mucdoBadge{font-size:10px!important;padding:1px 6px!important;line-height:1.25!important;border-width:1px!important}#qid .mucdoFull{display:none!important}#qid .mucdoIcon{display:none!important}#qid .mucdoBadge{font-size:11px!important;padding:2px 7px!important}.quizToolsRow .btnNavPrimary{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important}.quizNavRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}.btnNavMini{display:none;width:auto;margin:0;padding:8px 14px;font-size:18px;font-weight:800;border-radius:8px;min-width:44px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}.btnNavMini.btnNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}.btnNavWide{width:auto;margin:0}@media(max-width:768px),(orientation:landscape) and (max-height:520px){.btnQuizToolsToggle{display:inline-flex!important;align-items:center;justify-content:center}.quizHeadRow{flex-wrap:wrap;align-items:center}.qid{font-size:13px;line-height:1.3;flex:1;min-width:0;width:100%}.quizToolbarStrip{margin-bottom:6px}body.mobile-quiz-ui .quizToolbarStrip{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important}body.mobile-quiz-ui .quizToolbarHead{flex:1 1 auto!important;min-width:0!important;margin-bottom:0!important;flex-wrap:nowrap!important;align-items:center!important;overflow:hidden!important}body.mobile-quiz-ui .quizToolbarHead .qid{width:auto!important;white-space:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;font-size:11px!important;line-height:1.2!important}body.mobile-quiz-ui:not(.fullde-mode) .quizToolsRow{flex-shrink:0!important;overflow:visible!important;padding-bottom:0!important}body.mobile-quiz-ui.fullde-mode .quizToolsRow{display:none!important}body.mobile-quiz-ui.mobile-quiz-tools-open .quizToolbarStrip{flex-wrap:wrap!important}body.mobile-quiz-ui.mobile-quiz-tools-open:not(.fullde-mode) .quizToolsRow{width:100%!important}.quizToolsRow .quizNavRow.hide-mobile{display:none!important}body.mobile-quiz-ui:not(.fullde-mode):not(.mobile-quiz-tools-open) .quizToolsRow .quizActionsPanel{display:none!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow{flex-wrap:wrap!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:wrap!important;width:100%;overflow:visible}.quizToolsRow .quizActionsPanel{flex-wrap:nowrap!important;overflow-x:auto;width:100%}.quizToolsRow #quizActions button{font-size:10px!important;padding:3px 6px!important}#quizActions button,.quizNavRow .btnNavWide,.shortAnsBtn{font-size:10px!important;padding:3px 6px!important;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto;margin:0}body.fullde-mode #fsOnlyTools{display:flex!important;flex-wrap:wrap;gap:3px!important;padding:4px 6px!important;margin:0 0 4px!important;border-bottom:1px solid var(--border);border-radius:0;background:var(--surface);width:100%}body.fullde-mode #fsOnlyTools button{font-size:10px!important;padding:3px 6px!important}body.mobile-quiz-ui.fullde-mode #fsOnlyTools{flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;flex-shrink:0!important;width:auto!important;margin:0!important;padding:0!important;border:none!important;background:transparent!important}body.mobile-quiz-ui.fullde-mode:not(.mobile-quiz-tools-open) #fsOnlyTools>:not(:nth-child(-n+2)){display:none!important}body.mobile-quiz-ui.fullde-mode.mobile-quiz-tools-open #fsOnlyTools{width:100%!important}body.mobile-quiz-ui.fullde-mode #fsQuizTimer,body.mobile-quiz-ui.fullde-mode #btnFsNav{display:none!important}.btnFsToolsToggle{font-weight:800!important;flex-shrink:0!important}.btnNavMini{display:inline-flex!important;align-items:center;justify-content:center}.btnNavWide.hide-mobile{display:none!important}#quiz>.panel.row{padding:8px 10px;font-size:13px}#quiz>.panel.row #resultBox{font-size:14px!important}#quiz>.panel.row .quizTimer{font-size:12px;padding:3px 8px}.panel{padding:10px;margin-bottom:8px}.quizLayout{grid-template-columns:1fr!important;gap:8px!important}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn:not(.dsSolutionRows),.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}}body.mobile-quiz-ui .dsSolutionTn:not(.dsSolutionRows),body.mobile-quiz-ui .dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionItem{padding:5px 7px}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionHead{gap:4px}body.mobile-quiz-ui .dsSolutionCompact .dsStmtInline{font-size:13px;line-height:1.35}body.mobile-quiz-ui .mcqSplitOpts,body.mobile-quiz-ui .mcqSplitWrap .mcqSplitOpts{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui .shortAnsCompact .shortAnsQtext{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui #qtext,body.mobile-quiz-ui #options,body.mobile-quiz-ui #solution,body.mobile-quiz-ui #hintBox{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;max-width:100%}body.mobile-quiz-ui .qbox,body.mobile-quiz-ui .solution,body.mobile-quiz-ui .hintAdminBody,body.mobile-quiz-ui .dsSolutionBody,body.mobile-quiz-ui .dsStmtBlock{overflow-x:auto;-webkit-overflow-scrolling:touch}html.mobile-quiz-ui,body.mobile-quiz-ui{overscroll-behavior-y:auto;touch-action:auto}html.mobile-quiz-ui:not(.quiz-session-active),body.mobile-quiz-ui:not(.quiz-session-active){height:auto!important;min-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:auto!important;touch-action:auto!important;-webkit-overflow-scrolling:touch!important}body.mobile-quiz-ui:not(.quiz-session-active){position:static!important}body.mobile-quiz-ui:not(.quiz-session-active) .wrap,body.mobile-quiz-ui:not(.quiz-session-active) #home{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;touch-action:auto!important}body.quiz-scroll-lock{overscroll-behavior-y:none}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 56px)!important;overflow:hidden!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz>.panel.row{flex-shrink:0!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child{flex:1 1 auto!important;min-height:0!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child>.panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;max-height:none!important}body.mobile-quiz-ui #quiz{overscroll-behavior:contain}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:first-child>.panel{overflow:hidden!important;display:flex!important;flex-direction:column!important;min-height:0!important;flex:1!important}body.fullde-mode.mobile-quiz-ui #qtext{flex:0 0 auto!important;max-height:min(42vh,320px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;position:sticky!important;top:0!important;z-index:4!important;background:var(--surface)!important;box-shadow:0 2px 10px #00000014}body.fullde-mode.mobile-quiz-ui #options{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding-bottom:16px!important}.mobileNavDock{display:none}.mobileNavBody{display:contents}@media(max-width:768px),(orientation:landscape) and (max-height:520px){body.mobile-quiz-ui .mobileNavDock{display:flex!important;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}body.mobile-quiz-ui .mobileDockTimer{margin:0!important;font-size:12px!important;white-space:nowrap;flex-shrink:0;padding:4px 6px!important}body.mobile-quiz-ui .mobileDockNavGroup{display:flex!important;align-items:center;gap:4px;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini{display:inline-flex!important;align-items:center;justify-content:center;width:34px;min-width:34px;height:34px;padding:0;font-size:20px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;line-height:1;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini.btnMobileNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}body.mobile-quiz-ui .btnMobileNavMini:disabled{opacity:.35;cursor:default}body.mobile-quiz-ui .mobileDockMid{display:flex!important;gap:4px;flex:1;justify-content:center;align-items:center;min-width:0}body.mobile-quiz-ui .btnMobileSolToggle{padding:5px 6px;font-size:10px;font-weight:800;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;flex:1;max-width:76px;cursor:pointer;line-height:1.2;white-space:nowrap}body.mobile-quiz-ui .btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .btnMobileNavToggle{width:auto;margin:0;padding:6px 8px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--btn2-bg);color:var(--btn2-color);cursor:pointer;text-align:center;flex:0 1 auto!important;max-width:42%}.vipSolBtnsTop{display:none;gap:6px;align-items:center}.vipSolBtnsTop:not(.hide){display:inline-flex!important}.btnMobileSolToggle{padding:5px 10px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;cursor:pointer;line-height:1.2;white-space:nowrap}.btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .fsNavPanel{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;min-height:0!important}body.mobile-quiz-ui .mobileNavBody{display:none!important;flex:1;min-height:0;overflow:auto;padding:6px 8px;flex-direction:column!important}body.mobile-quiz-ui.mobile-nav-open .mobileNavBody{display:flex!important}body.mobile-quiz-ui.mobile-nav-open .fsNavPanel{max-height:min(42vh,320px)!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz>.panel.row .quizTimer{display:none!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz .quizLayout>div:last-child{flex-shrink:0!important}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:last-child{max-height:52px!important;min-height:0!important}body.mobile-quiz-ui #fsQuizTimer,body.mobile-quiz-ui #btnFsNav{display:none!important}body.fullde-mode.mobile-quiz-ui.mobile-nav-open #quiz .quizLayout>div:last-child{max-height:min(40vh,300px)!important}}body.mobile-quiz-ui.fullde-mode #quiz .quizLayout>div:first-child>.panel{overscroll-behavior:contain!important}body.mobile-quiz-ui .opt>span:not(.dsCircle),body.mobile-quiz-ui .tfStmt{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block}body.mobile-quiz-ui .opt .dsCircle,body.mobile-quiz-ui .tfrow .dsCircle{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;padding:0!important;line-height:1!important;text-align:center!important}.qid{font-size:19px;font-weight:800}.qidIdBadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:inherit;font-weight:800;font-family:ui-monospace,Consolas,monospace;cursor:pointer;line-height:1.3;vertical-align:middle}.qidIdBadge:hover{filter:brightness(1.03);box-shadow:0 1px 4px #1d4ed833}.qidIdBadge.qidIdEmpty{cursor:default;opacity:.7;background:var(--surface);border-color:var(--border);color:var(--muted)}html[data-theme="dark"] .qidIdBadge{background:#1e3a5f;border-color:#3b82f6;color:#bfdbfe}.quizIdJumpWrap{display:inline-flex;gap:4px;align-items:center;flex-shrink:0}.quizIdJumpInp{width:148px;font-size:12px;padding:5px 8px;font-family:ui-monospace,Consolas,monospace}.quizIdJumpBtn{padding:5px 8px!important;font-size:12px!important;min-width:0!important}.idLookupCard{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--surface)}.idLookupCard h4{margin:0 0 6px;font-size:15px;color:var(--heading)}.idLookupMeta{font-size:13px;line-height:1.45;margin:4px 0}.idLookupPreview{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:clamp(10px,2vw,14px);min-height:0;line-height:1.5;font-size:clamp(15px,2.2vw,18px);color:var(--text)}.qimgWrap{display:block;width:100%;margin:8px 0 10px;clear:both}.qimg{max-width:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:var(--surface);max-height:min(42vh,340px)}@media(max-width:768px) and (orientation:portrait){.qimg{max-height:min(50vh,400px)}}.mcqSplitWrap{margin-top:8px}.mcqSplit{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,3fr);gap:12px;align-items:stretch}.mcqSplitDs{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplitTln{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplit .mcqSplitOptsCol1{justify-content:space-evenly;gap:8px;align-self:stretch;min-height:100%}.mcqSplit .mcqSplitOptsCol1 .opt{margin:0!important;min-height:42px;align-items:center}.mcqSplitTln .mcqSplitImg .qimg{max-height:min(55vh,420px)}.mcqSplitImg .qimgWrap{margin:0}.mcqSplitImg .qimg{width:100%;max-height:min(48vh,360px)}.mcqSplitDs .mcqSplitImg .qimg{max-height:min(52vh,400px)}.mcqSplitOpts{min-width:0;min-height:0;display:flex;flex-direction:column;gap:4px}.mcqSplitOpts .opt{margin:4px 0;padding:8px 10px}.mcqSplitOpts .tfrow{margin:4px 0;padding:6px 8px;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px}.mcqSplitOpts .tfStmt{font-size:14px;line-height:1.4}.mcqSplitOpts .tfOptsHead{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px;margin:0 0 4px;font-size:11px;font-weight:800;color:var(--muted)}.mcqSplitOpts .tfOpt{min-width:42px;padding:4px 7px;font-size:11px}@media(max-width:768px) and (orientation:portrait){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:1fr;gap:10px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(52vh,420px);width:100%}}@media(orientation:landscape) and (max-height:520px){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:minmax(0,40%) minmax(0,60%);gap:8px;align-items:start}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(calc(100dvh - 130px),260px);width:100%}.mcqSplitOpts{overflow:visible;max-height:none;-webkit-overflow-scrolling:touch}.shortAnsCompact .shortAnsQtext{max-height:none;overflow:visible;font-size:14px;margin-bottom:6px}.shortAnsFieldRow{position:sticky;bottom:0;background:var(--surface);padding:6px 0 2px;z-index:3;border-top:1px solid var(--border);margin-top:4px;box-shadow:0 -4px 12px #0001}.shortAnsNote{display:none}.mcqSplitOpts .opt{padding:5px 7px;margin:2px 0;font-size:13px}}@media(max-width:480px) and (orientation:portrait){.qbox{font-size:15px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(50vh,400px)}}.shortAnsBox{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:12px;margin-top:10px}.shortAnsCompact{margin:0;padding:10px 12px}.shortAnsQtext{margin:0 0 10px;padding:0;border:none;background:transparent;line-height:1.5;font-size:clamp(15px,2vw,18px);min-height:0;color:var(--text)}.shortAnsFieldRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.shortAnsLbl{font-weight:800;font-size:14px;white-space:nowrap}.shortAnsInput{width:5.5em;max-width:120px;min-width:4.5em;font-size:20px;font-weight:800;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);letter-spacing:.04em}.shortAnsInputWide{width:100%;max-width:none;font-size:18px;font-weight:600;text-align:left}.shortAnsBtn{width:auto;margin:0;padding:6px 12px;min-width:0}.shortAnsHint{font-size:12px}.shortAnsNote{margin-top:8px;font-size:12px}.qimgErr{margin:10px 0;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412;font-size:13px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text);position:relative;z-index:1}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.mcqOptsGrid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch;width:100%}.mcqOptsGrid2>.opt,.mcqOptsGrid2>label.opt{margin:0!important}.editQuestionPreview .mcqOptsGrid2>.opt{margin:0!important}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:10px 12px;margin-top:10px;color:var(--text);font-size:clamp(13px,1.8vw,15px);line-height:1.45}.latex-list{margin:8px 0 8px 22px;padding:0}.latex-list li{margin:6px 0;line-height:1.55}.latex-tabular-wrap{overflow-x:auto;margin:12px 0;width:100%}.latex-tabular{border-collapse:collapse;width:100%;max-width:100%;font-size:15px}.latex-tabular td,.latex-tabular th{border:1px solid var(--border);padding:6px 10px;vertical-align:middle;line-height:1.45}.latex-tabular tr.hline-top td{border-top:2px solid var(--border)}.hintAdminBody{width:100%;min-height:160px;max-height:520px;overflow:auto;font-size:15px;line-height:1.55;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text}.btnHintLoading{opacity:.82;cursor:wait!important;pointer-events:none}.hintSpin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:hintSpin .75s linear infinite;vertical-align:-2px;margin-right:6px}.hintBoxLoading{border-color:#93c5fd!important;background:linear-gradient(180deg,var(--shuffle-bg),var(--surface))!important;animation:hintPulse 1.6s ease-in-out infinite}.hintLoadingPanel{display:flex;gap:12px;align-items:flex-start;padding:10px 4px 6px}.hintSpinBig{width:30px;height:30px;border:3px solid #93c5fd;border-top-color:var(--blue);border-radius:50%;animation:hintSpin .8s linear infinite;flex-shrink:0}@keyframes hintSpin{to{transform:rotate(360deg)}}@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 #3b82f633}50%{box-shadow:0 0 0 6px #3b82f611}}.hintAdminActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAdminActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.infographicPromptBox{width:100%;min-height:300px;max-height:55vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;padding:12px;border:1px solid var(--border);border-radius:10px;resize:vertical;background:var(--surface);color:var(--text);box-sizing:border-box}.hintAnswerCard{background:var(--green);border:2px solid #86efac;border-radius:10px;padding:12px 14px;margin:10px 0 8px}.hintAnswerCard.hintAnswerPending{background:var(--load-warn-bg);border-color:var(--load-warn-border)}.hintAnswerCard.hintAnswerPending .hintAnswerTitle{color:var(--load-warn-text)}.hintAnswerCard .hintAnswerTitle{font-size:16px;font-weight:800;color:#166534;margin:0 0 8px}html[data-theme="dark"] .hintAnswerCard .hintAnswerTitle{color:#86efac}.hintAnswerRow{margin:6px 0;line-height:1.55;font-size:15px}.hintAnswerRow b{color:#14532d}html[data-theme="dark"] .hintAnswerRow b{color:#bbf7d0}.hintSimilarBox{margin-top:10px;padding:10px 12px;border:1px dashed var(--shuffle-border);border-radius:10px;background:var(--shuffle-bg)}.hintSimilarBox .hintSimilarTitle{font-weight:800;margin-bottom:6px;color:var(--shuffle-text)}.hintSimilarBody{font-size:15px;line-height:1.55}.hintAiActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAiActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.q-reviewed{box-shadow:inset 0 0 0 2px #22c55e}.num.q-unreviewed{box-shadow:inset 0 0 0 2px #f97316;opacity:.92}.qReviewBadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:6px}.qReviewBadge.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}.qReviewBadge.pending{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}#btnQuestionReview.btnReviewOn{background:#dcfce7;border-color:#22c55e;color:#166534}#btnQuestionReview.btnReviewOff{background:#ffedd5;border-color:#fdba74;color:#9a3412}#quizReviewStat{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.navNums{align-items:start}.navNums .num{position:relative!important;min-height:38px!important;padding:4px 2px!important;border-width:2px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;overflow:visible!important;box-shadow:0 1px 4px #00000012!important}.navNums .num .navNumText{font-size:17px!important;line-height:1.05!important;font-weight:900!important;position:relative;z-index:1}.navNums .num .navLvBadge{position:absolute!important;top:0!important;right:0!important;transform:translate(18%,-22%)!important;font-size:8px!important;padding:1px 4px!important;border-radius:5px!important;font-weight:900!important;z-index:3!important;pointer-events:none!important;box-shadow:0 1px 2px #00000022!important}.navNums .num.ok .navLvBadge,.navNums .num.bad .navLvBadge{display:none!important}.navNums .num.nav-mucdo-nb{background:#bbf7d0!important;color:#14532d!important;border-color:#22c55e!important}.navNums .num.nav-mucdo-th{background:#bfdbfe!important;color:#1e3a8a!important;border-color:#3b82f6!important}.navNums .num.nav-mucdo-vd{background:#fed7aa!important;color:#9a3412!important;border-color:#f97316!important}.navNums .num.nav-mucdo-vdc{background:#fecaca!important;color:#7f1d1d!important;border-color:#ef4444!important}.navNums .num.nav-mucdo-empty{background:var(--surface)!important;color:var(--muted)!important;border-color:var(--border)!important}.navSectionLbl{grid-column:1/-1!important;margin:8px 0 2px!important;padding:7px 9px!important;border-radius:10px!important;font-size:13px!important;font-weight:900!important;border:1px solid var(--border)!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}.fsNavTitle{display:block;width:100%;text-align:center;font-weight:800;font-size:13px;color:var(--muted);margin:0 0 6px;line-height:1.25}.navMucDoLegend{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin:4px 0 6px!important;align-items:center!important;justify-content:center!important}.navMucDoLegend .navLvBadge{position:static!important;transform:none!important;font-size:9px!important;padding:2px 5px!important;box-shadow:none!important}html[data-theme='dark'] .navNums .num.nav-mucdo-nb{background:#14532d!important;color:#bbf7d0!important;border-color:#22c55e!important}html[data-theme='dark'] .navNums .num.nav-mucdo-th{background:#1e3a5f!important;color:#bfdbfe!important;border-color:#3b82f6!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vd{background:#7c2d12!important;color:#fed7aa!important;border-color:#f97316!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vdc{background:#450a0a!important;color:#fecaca!important;border-color:#ef4444!important}.tfrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:6px 8px;align-items:start;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:7px 0}.tfrow>b{padding-top:2px}.tfrow .dsCircle{margin-top:1px}.dsCircle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:14px;line-height:1;padding:0;box-sizing:border-box;flex-shrink:0;box-shadow:0 1px 3px #0002;text-align:center}.tfrow .dsCircle{width:26px;height:26px;min-width:26px;min-height:26px;font-size:13px}html[data-theme="dark"] .dsCircle{background:#2563eb;color:#eff6ff}.dsAnswerRow{display:flex;flex-wrap:wrap;gap:8px 12px;margin:4px 0}.dsAnswerItem{display:inline-flex;align-items:center;gap:6px}.dsVerdictDung{color:#166534;font-weight:800}html[data-theme="dark"] .dsVerdictDung{color:#86efac}.dsVerdictSai{color:#991b1b;font-weight:800}html[data-theme="dark"] .dsVerdictSai{color:#fecaca}.dsSolutionList{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn{grid-template-columns:1fr}@media(min-width:560px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1100px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(4,minmax(0,1fr))}}.dsSolutionDs{grid-template-columns:1fr}@media(min-width:640px){.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}.dsSolutionItem{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface)}.dsSolutionCompact .dsSolutionItem{padding:6px 9px}.dsSolutionHead{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;margin-bottom:0}.dsSolutionHead+.dsSolutionBody,.dsSolutionHead+.dsStmtBlock{margin-top:6px}.dsSolutionBody{font-size:13px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch}.dsStmtInline{font-size:14px;line-height:1.4;flex:1 1 auto;min-width:0;word-break:break-word}.dsStmtBlock{width:100%;font-size:14px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch;word-break:break-word}.mcqSplitOpts .opt>span:not(.dsCircle){display:block;flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.opt .dsCircle{flex:0 0 auto;flex-shrink:0;margin-top:1px;align-self:flex-start;padding:0;min-width:28px;text-align:center}.opt input[type=radio]{position:absolute;opacity:0;width:0;height:0;margin:0}.opt:has(input:checked) .dsCircle{background:#166534;box-shadow:0 0 0 2px #86efac}.opt.correct{background:#dcfce7!important;border-color:#86efac!important;box-shadow:inset 0 0 0 1px #bbf7d0}.opt.wrong{background:#fee2e2!important;border-color:#fecaca!important;box-shadow:inset 0 0 0 1px #fecaca}.tfrow.correct{background:#dcfce7!important;border-color:#86efac!important}.tfrow.wrong{background:#fee2e2!important;border-color:#fecaca!important}.tfRowFb{grid-column:1/-1;font-size:12px;font-weight:700;margin-top:2px;padding:2px 0 6px 28px;line-height:1.35}.tfRowFb.ok{color:#166534}.tfRowFb.bad{color:#991b1b}#resultBox.dsResultRich{font-size:13px;line-height:1.25;text-align:right}.dsCheckBox{display:flex;flex-direction:column;align-items:flex-end;gap:3px}.dsCheckHead{font-weight:800;font-size:15px;white-space:nowrap}.dsCheckRow{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.dsCheckItem{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-weight:800;font-size:12px;border:1px solid var(--border)}.dsCheckOk{background:var(--green);color:#166534;border-color:#86efac}.dsCheckBad{background:var(--red);color:#991b1b;border-color:#fca5a5}html[data-theme="dark"] .opt.correct,html[data-theme="dark"] .tfrow.correct{background:#14532d!important;border-color:#166534!important}html[data-theme="dark"] .opt.wrong,html[data-theme="dark"] .tfrow.wrong{background:#450a0a!important;border-color:#991b1b!important}.opt.correct .dsCircle{background:#166534}.opt.wrong .dsCircle{background:#991b1b}.tfStmt{min-width:0;line-height:1.45;font-size:15px;word-break:break-word}.tfOpts{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-shrink:0}.tfOptsHead{display:none}.tfOpt{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:52px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;user-select:none;position:relative}.tfOpt:has(input:checked){border-color:#93c5fd;background:var(--btn2-bg);color:var(--btn2-color)}.tfOpt input{width:13px;height:13px;margin:0;flex-shrink:0}.tfLbl{line-height:1}.tfLblShort{display:none}.tfLblFull{display:inline}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}.editGrid>*{min-width:0;max-width:100%}.editGrid textarea{min-height:80px;width:100%;max-width:100%;box-sizing:border-box}.editGrid label{display:block;width:100%;min-width:0}.editGrid [style*="display:flex"]{flex-wrap:wrap;max-width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
+:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px;overflow-x:hidden;width:100%;max-width:100vw}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002;width:100%;max-width:100vw}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#dcfce7;border:1px solid #86efac;color:#166534;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.adminTopBtn2{background:#ffffff22;border:1px solid #ffffff55;color:#fff}.adminTopBtn:hover{filter:brightness(1.05)}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:100%;margin:0;padding:12px;width:100%;min-width:0}
+#home{max-width:none;margin:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.quizHeadRow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:nowrap}.btnQuizToolsToggle{display:none;width:auto;margin:0;padding:6px 10px;font-size:18px;line-height:1;border-radius:8px;background:var(--btn2-bg);color:var(--btn2-color);border:1px solid var(--border);flex-shrink:0;cursor:pointer;font-weight:800}.quizActionsPanel{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:0}.quizToolbarStrip{background:transparent;border:none;padding:0;margin:0 0 8px;box-shadow:none}.quizToolbarHead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;flex-wrap:wrap}.quizToolbarHead .qid{flex:1;min-width:0;margin:0}.quizAdminTools{display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap;justify-content:flex-end}.adminReviewModeWrap{display:inline-flex;align-items:center;gap:6px;font-size:12px;flex-shrink:0}.adminReviewModeWrap select{padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface);color:var(--text);max-width:176px}.quizAdminTools .btn2,.adminQuizAct,#btnQuizEdit.adminQuizAct{background:#1e40af!important;color:#fff!important;border-color:#1d4ed8!important;font-weight:700!important}
+#btnQuizEdit.adminQuizAct{flex-shrink:0}.editAdminSoatBar .btnGreen{font-size:12px!important;padding:6px 10px!important}.editHintResult{max-height:min(36vh,240px);overflow:auto;margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;line-height:1.45}.editAdminPreviewBar{margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.editAdminPreviewBar .row{gap:6px;align-items:center;margin-bottom:8px}.editAdminPasteBox{width:100%;min-height:64px;font-size:13px;line-height:1.45;margin:6px 0}.editQuestionPreview{margin:0 0 12px;padding:12px;border:2px solid #93c5fd;border-radius:10px;background:var(--surface);max-height:min(52vh,420px);overflow:auto}.editQuestionPreview .opt{margin:4px 0;padding:6px 8px}.adminImgField textarea{min-height:56px!important}.adminImgPreview{margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;background:var(--bg);min-height:48px}.adminImgPreview .qimg{max-height:min(36vh,280px)}.adminLgAiTools{margin:4px 0 5px 0}.adminLgAiTools .btnSmall{font-size:11px!important;padding:4px 8px!important}.latexNormWrap{position:relative;display:inline-flex;gap:2px;align-items:center;flex-shrink:0}.latexNormMore{min-width:28px!important;padding:4px 6px!important;font-weight:800}.latexNormMenu{position:absolute;top:100%;left:0;z-index:120;min-width:min(320px,92vw);max-width:min(380px,96vw);max-height:min(62vh,420px);overflow:auto;margin-top:4px;padding:6px 0;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 8px 28px #0000002a}.latexNormMenu.hide{display:none!important}.latexNormGroupTitle{font-size:10px;font-weight:800;color:var(--muted);padding:6px 12px 4px;text-transform:uppercase;letter-spacing:.04em}.latexNormItem{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:7px 12px;font-size:12px;line-height:1.35;cursor:pointer}.latexNormItem:hover{background:var(--btn2-bg)}body.user-is-admin #btnRetry{display:none!important}.quizAdminTools button{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap}.quizToolsRow{display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;padding-bottom:2px}.quizToolsRow .quizNavRow{display:flex;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;flex-shrink:0;justify-content:flex-start}.quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;justify-content:flex-start;width:auto;flex:1;min-width:0;border:none;background:transparent;padding:0}.quizToolsRow #quizActions button,.quizToolsRow .quizNavRow button,.quizToolsRow .quizNavRow .btnNavWide{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap;flex-shrink:0;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto}.quizToolbarStrip .btnGreen,.quizToolbarStrip .btnStartStrong,.quizToolbarStrip .btn{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important;box-shadow:none!important;transform:none!important;filter:none!important}.quizToolbarStrip .btnGreen:hover,.quizToolbarStrip .btnStartStrong:hover,.quizToolbarStrip .btn:hover{filter:brightness(0.98)!important;transform:none!important}.quizToolbarStrip .btnSolToggle.active,.quizToolbarStrip .btnMobileSolToggle.active,.btnSolToggle.active,.btnMobileSolToggle.active{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;font-weight:800}.btnMobileSolToggle.vipSolLocked,.btnSolToggle.vipSolLocked{opacity:.45;cursor:not-allowed}.quizQuestionPanel{margin-top:0;position:relative;overflow:hidden}.quizQuestionPanel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:#cbd5e1}.quizQuestionPanel:after{content:attr(data-level-label);position:absolute;right:8px;top:6px;font-size:10px;font-weight:900;letter-spacing:.2px;padding:2px 7px;border-radius:999px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;pointer-events:none;z-index:5;max-width:3.2em;text-align:center;line-height:1.2;white-space:nowrap}.quizDbtLabel{position:absolute;top:6px;right:8px;display:flex;align-items:center;gap:4px;pointer-events:none;z-index:4;max-width:calc(100% - 60px)}.quizDbtLabel .quizDbtText{background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;line-height:1.2}.quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:46px}.quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:46px!important}.quizQuestionPanel[data-dbt-label]:not([data-dbt-label=""]) #qtext{padding-right:46px!important}@media(max-width:768px){.quizDbtLabel .quizDbtText{max-width:140px;font-size:9px}.quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:42px}}.quizQuestionPanel.mucdoPanel-nb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-th{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-nb:before{background:#22c55e}.quizQuestionPanel.mucdoPanel-th:before{background:#3b82f6}.quizQuestionPanel.mucdoPanel-vd:before{background:#f97316}.quizQuestionPanel.mucdoPanel-vdc:before{background:#ef4444}.quizQuestionPanel.mucdoPanel-nb:after{content:attr(data-level-label);background:#dcfce7;color:#166534;border-color:#86efac}.quizQuestionPanel.mucdoPanel-th:after{content:attr(data-level-label);background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.quizQuestionPanel.mucdoPanel-vd:after{content:attr(data-level-label);background:#ffedd5;color:#c2410c;border-color:#fdba74}.quizQuestionPanel.mucdoPanel-vdc:after{content:attr(data-level-label);background:#fee2e2;color:#991b1b;border-color:#fca5a5}.quizQuestionPanel.mucdoPanel-empty:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:after{display:none!important}body.mobile-quiz-ui .quizDbtLabel{top:4px;right:6px}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:6px}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:clamp(10px,2.5vw,14px)!important}body.mobile-quiz-ui #qid .mucdoFull,body.mobile-quiz-ui #qid .mucdoIcon{display:none!important}body.mobile-quiz-ui #qid .mucdoBadge{font-size:10px!important;padding:1px 6px!important;line-height:1.25!important;border-width:1px!important}#qid .mucdoFull{display:none!important}#qid .mucdoIcon{display:none!important}#qid .mucdoBadge{font-size:11px!important;padding:2px 7px!important}.quizQuestionPanel.mucdoPanel-nb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-th{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-nb:before{background:#22c55e}.quizQuestionPanel.mucdoPanel-th:before{background:#3b82f6}.quizQuestionPanel.mucdoPanel-vd:before{background:#f97316}.quizQuestionPanel.mucdoPanel-vdc:before{background:#ef4444}.quizQuestionPanel.mucdoPanel-nb:after{content:attr(data-level-label);background:#dcfce7;color:#166534;border-color:#86efac}.quizQuestionPanel.mucdoPanel-th:after{content:attr(data-level-label);background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.quizQuestionPanel.mucdoPanel-vd:after{content:attr(data-level-label);background:#ffedd5;color:#c2410c;border-color:#fdba74}.quizQuestionPanel.mucdoPanel-vdc:after{content:attr(data-level-label);background:#fee2e2;color:#991b1b;border-color:#fca5a5}.quizQuestionPanel.mucdoPanel-empty:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:clamp(10px,2.5vw,14px)!important}body.mobile-quiz-ui #qid .mucdoFull,body.mobile-quiz-ui #qid .mucdoIcon{display:none!important}body.mobile-quiz-ui #qid .mucdoBadge{font-size:10px!important;padding:1px 6px!important;line-height:1.25!important;border-width:1px!important}#qid .mucdoFull{display:none!important}#qid .mucdoIcon{display:none!important}#qid .mucdoBadge{font-size:11px!important;padding:2px 7px!important}.quizToolsRow .btnNavPrimary{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important}.quizNavRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}.btnNavMini{display:none;width:auto;margin:0;padding:8px 14px;font-size:18px;font-weight:800;border-radius:8px;min-width:44px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}.btnNavMini.btnNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}.btnNavWide{width:auto;margin:0}@media(max-width:768px),(orientation:landscape) and (max-height:520px){.btnQuizToolsToggle{display:inline-flex!important;align-items:center;justify-content:center}.quizHeadRow{flex-wrap:wrap;align-items:center}.qid{font-size:13px;line-height:1.3;flex:1;min-width:0;width:100%}.quizToolbarStrip{margin-bottom:6px}body.mobile-quiz-ui .quizToolbarStrip{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important}body.mobile-quiz-ui .quizToolbarHead{flex:1 1 auto!important;min-width:0!important;margin-bottom:0!important;flex-wrap:nowrap!important;align-items:center!important;overflow:hidden!important}body.mobile-quiz-ui .quizToolbarHead .qid{width:auto!important;white-space:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;font-size:11px!important;line-height:1.2!important}body.mobile-quiz-ui:not(.fullde-mode) .quizToolsRow{flex-shrink:0!important;overflow:visible!important;padding-bottom:0!important}body.mobile-quiz-ui.fullde-mode .quizToolsRow{display:none!important}body.mobile-quiz-ui.mobile-quiz-tools-open .quizToolbarStrip{flex-wrap:wrap!important}body.mobile-quiz-ui.mobile-quiz-tools-open:not(.fullde-mode) .quizToolsRow{width:100%!important}.quizToolsRow .quizNavRow.hide-mobile{display:none!important}body.mobile-quiz-ui:not(.fullde-mode):not(.mobile-quiz-tools-open) .quizToolsRow .quizActionsPanel{display:none!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow{flex-wrap:wrap!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:wrap!important;width:100%;overflow:visible}.quizToolsRow .quizActionsPanel{flex-wrap:nowrap!important;overflow-x:auto;width:100%}.quizToolsRow #quizActions button{font-size:10px!important;padding:3px 6px!important}#quizActions button,.quizNavRow .btnNavWide,.shortAnsBtn{font-size:10px!important;padding:3px 6px!important;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto;margin:0}body.fullde-mode #fsOnlyTools{display:flex!important;flex-wrap:wrap;gap:3px!important;padding:4px 6px!important;margin:0 0 4px!important;border-bottom:1px solid var(--border);border-radius:0;background:var(--surface);width:100%}body.fullde-mode #fsOnlyTools button{font-size:10px!important;padding:3px 6px!important}body.mobile-quiz-ui.fullde-mode #fsOnlyTools{flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;flex-shrink:0!important;width:auto!important;margin:0!important;padding:0!important;border:none!important;background:transparent!important}body.mobile-quiz-ui.fullde-mode:not(.mobile-quiz-tools-open) #fsOnlyTools>:not(:nth-child(-n+2)){display:none!important}body.mobile-quiz-ui.fullde-mode.mobile-quiz-tools-open #fsOnlyTools{width:100%!important}body.mobile-quiz-ui.fullde-mode #fsQuizTimer,body.mobile-quiz-ui.fullde-mode #btnFsNav{display:none!important}.btnFsToolsToggle{font-weight:800!important;flex-shrink:0!important}.btnNavMini{display:inline-flex!important;align-items:center;justify-content:center}.btnNavWide.hide-mobile{display:none!important}#quiz>.panel.row{padding:8px 10px;font-size:13px}#quiz>.panel.row #resultBox{font-size:14px!important}#quiz>.panel.row .quizTimer{font-size:12px;padding:3px 8px}.panel{padding:10px;margin-bottom:8px}.quizLayout{grid-template-columns:1fr!important;gap:8px!important}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn:not(.dsSolutionRows),.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}}body.mobile-quiz-ui .dsSolutionTn:not(.dsSolutionRows),body.mobile-quiz-ui .dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionItem{padding:5px 7px}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionHead{gap:4px}body.mobile-quiz-ui .dsSolutionCompact .dsStmtInline{font-size:13px;line-height:1.35}body.mobile-quiz-ui .mcqSplitOpts,body.mobile-quiz-ui .mcqSplitWrap .mcqSplitOpts{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui .shortAnsCompact .shortAnsQtext{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui #qtext,body.mobile-quiz-ui #options,body.mobile-quiz-ui #solution,body.mobile-quiz-ui #hintBox{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;max-width:100%}body.mobile-quiz-ui .qbox,body.mobile-quiz-ui .solution,body.mobile-quiz-ui .hintAdminBody,body.mobile-quiz-ui .dsSolutionBody,body.mobile-quiz-ui .dsStmtBlock{overflow-x:auto;-webkit-overflow-scrolling:touch}html.mobile-quiz-ui,body.mobile-quiz-ui{overscroll-behavior-y:auto;touch-action:auto}html.mobile-quiz-ui:not(.quiz-session-active),body.mobile-quiz-ui:not(.quiz-session-active){height:auto!important;min-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:auto!important;touch-action:auto!important;-webkit-overflow-scrolling:touch!important}body.mobile-quiz-ui:not(.quiz-session-active){position:static!important}body.mobile-quiz-ui:not(.quiz-session-active) .wrap,body.mobile-quiz-ui:not(.quiz-session-active) #home{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;touch-action:auto!important}body.quiz-scroll-lock{overscroll-behavior-y:none}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 56px)!important;overflow:hidden!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz>.panel.row{flex-shrink:0!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child{flex:1 1 auto!important;min-height:0!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child>.panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;max-height:none!important}body.mobile-quiz-ui #quiz{overscroll-behavior:contain}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:first-child>.panel{overflow:hidden!important;display:flex!important;flex-direction:column!important;min-height:0!important;flex:1!important}body.fullde-mode.mobile-quiz-ui #qtext{flex:0 0 auto!important;max-height:min(42vh,320px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;position:sticky!important;top:0!important;z-index:4!important;background:var(--surface)!important;box-shadow:0 2px 10px #00000014}body.fullde-mode.mobile-quiz-ui #options{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding-bottom:16px!important}.mobileNavDock{display:none}.mobileNavBody{display:contents}@media(max-width:768px),(orientation:landscape) and (max-height:520px){body.mobile-quiz-ui .mobileNavDock{display:flex!important;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}body.mobile-quiz-ui .mobileDockTimer{margin:0!important;font-size:12px!important;white-space:nowrap;flex-shrink:0;padding:4px 6px!important}body.mobile-quiz-ui .mobileDockNavGroup{display:flex!important;align-items:center;gap:4px;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini{display:inline-flex!important;align-items:center;justify-content:center;width:34px;min-width:34px;height:34px;padding:0;font-size:20px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;line-height:1;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini.btnMobileNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}body.mobile-quiz-ui .btnMobileNavMini:disabled{opacity:.35;cursor:default}body.mobile-quiz-ui .mobileDockMid{display:flex!important;gap:4px;flex:1;justify-content:center;align-items:center;min-width:0}body.mobile-quiz-ui .btnMobileSolToggle{padding:5px 6px;font-size:10px;font-weight:800;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;flex:1;max-width:76px;cursor:pointer;line-height:1.2;white-space:nowrap}body.mobile-quiz-ui .btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .btnMobileNavToggle{width:auto;margin:0;padding:6px 8px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--btn2-bg);color:var(--btn2-color);cursor:pointer;text-align:center;flex:0 1 auto!important;max-width:42%}.vipSolBtnsTop{display:none;gap:6px;align-items:center}.vipSolBtnsTop:not(.hide){display:inline-flex!important}.btnMobileSolToggle{padding:5px 10px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;cursor:pointer;line-height:1.2;white-space:nowrap}.btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .fsNavPanel{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;min-height:0!important}body.mobile-quiz-ui .mobileNavBody{display:none!important;flex:1;min-height:0;overflow:auto;padding:6px 8px;flex-direction:column!important}body.mobile-quiz-ui.mobile-nav-open .mobileNavBody{display:flex!important}body.mobile-quiz-ui.mobile-nav-open .fsNavPanel{max-height:min(42vh,320px)!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz>.panel.row .quizTimer{display:none!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz .quizLayout>div:last-child{flex-shrink:0!important}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:last-child{max-height:52px!important;min-height:0!important}body.mobile-quiz-ui #fsQuizTimer,body.mobile-quiz-ui #btnFsNav{display:none!important}body.fullde-mode.mobile-quiz-ui.mobile-nav-open #quiz .quizLayout>div:last-child{max-height:min(40vh,300px)!important}}body.mobile-quiz-ui.fullde-mode #quiz .quizLayout>div:first-child>.panel{overscroll-behavior:contain!important}body.mobile-quiz-ui .opt>span:not(.dsCircle),body.mobile-quiz-ui .tfStmt{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block}body.mobile-quiz-ui .opt .dsCircle,body.mobile-quiz-ui .tfrow .dsCircle{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;padding:0!important;line-height:1!important;text-align:center!important}.qid{font-size:19px;font-weight:800}.qidIdBadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:inherit;font-weight:800;font-family:ui-monospace,Consolas,monospace;cursor:pointer;line-height:1.3;vertical-align:middle}.qidIdBadge:hover{filter:brightness(1.03);box-shadow:0 1px 4px #1d4ed833}.qidIdBadge.qidIdEmpty{cursor:default;opacity:.7;background:var(--surface);border-color:var(--border);color:var(--muted)}html[data-theme="dark"] .qidIdBadge{background:#1e3a5f;border-color:#3b82f6;color:#bfdbfe}.quizIdJumpWrap{display:inline-flex;gap:4px;align-items:center;flex-shrink:0}.quizIdJumpInp{width:148px;font-size:12px;padding:5px 8px;font-family:ui-monospace,Consolas,monospace}.quizIdJumpBtn{padding:5px 8px!important;font-size:12px!important;min-width:0!important}.idLookupCard{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--surface)}.idLookupCard h4{margin:0 0 6px;font-size:15px;color:var(--heading)}.idLookupMeta{font-size:13px;line-height:1.45;margin:4px 0}.idLookupPreview{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:clamp(10px,2vw,14px);min-height:0;line-height:1.5;font-size:clamp(15px,2.2vw,18px);color:var(--text)}.qimgWrap{display:block;width:100%;margin:8px 0 10px;clear:both}.qimg{max-width:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:var(--surface);max-height:min(42vh,340px)}@media(max-width:768px) and (orientation:portrait){.qimg{max-height:min(50vh,400px)}}.mcqSplitWrap{margin-top:8px}.mcqSplit{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,3fr);gap:12px;align-items:stretch}.mcqSplitDs{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplitTln{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplit .mcqSplitOptsCol1{justify-content:space-evenly;gap:8px;align-self:stretch;min-height:100%}.mcqSplit .mcqSplitOptsCol1 .opt{margin:0!important;min-height:42px;align-items:center}.mcqSplitTln .mcqSplitImg .qimg{max-height:min(55vh,420px)}.mcqSplitImg .qimgWrap{margin:0}.mcqSplitImg .qimg{width:100%;max-height:min(48vh,360px)}.mcqSplitDs .mcqSplitImg .qimg{max-height:min(52vh,400px)}.mcqSplitOpts{min-width:0;min-height:0;display:flex;flex-direction:column;gap:4px}.mcqSplitOpts .opt{margin:4px 0;padding:8px 10px}.mcqSplitOpts .tfrow{margin:4px 0;padding:6px 8px;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px}.mcqSplitOpts .tfStmt{font-size:14px;line-height:1.4}.mcqSplitOpts .tfOptsHead{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px;margin:0 0 4px;font-size:11px;font-weight:800;color:var(--muted)}.mcqSplitOpts .tfOpt{min-width:42px;padding:4px 7px;font-size:11px}@media(max-width:768px) and (orientation:portrait){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:1fr;gap:10px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(52vh,420px);width:100%}}@media(orientation:landscape) and (max-height:520px){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:minmax(0,40%) minmax(0,60%);gap:8px;align-items:start}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(calc(100dvh - 130px),260px);width:100%}.mcqSplitOpts{overflow:visible;max-height:none;-webkit-overflow-scrolling:touch}.shortAnsCompact .shortAnsQtext{max-height:none;overflow:visible;font-size:14px;margin-bottom:6px}.shortAnsFieldRow{position:sticky;bottom:0;background:var(--surface);padding:6px 0 2px;z-index:3;border-top:1px solid var(--border);margin-top:4px;box-shadow:0 -4px 12px #0001}.shortAnsNote{display:none}.mcqSplitOpts .opt{padding:5px 7px;margin:2px 0;font-size:13px}}@media(max-width:480px) and (orientation:portrait){.qbox{font-size:15px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(50vh,400px)}}.shortAnsBox{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:12px;margin-top:10px}.shortAnsCompact{margin:0;padding:10px 12px}.shortAnsQtext{margin:0 0 10px;padding:0;border:none;background:transparent;line-height:1.5;font-size:clamp(15px,2vw,18px);min-height:0;color:var(--text)}.shortAnsFieldRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.shortAnsLbl{font-weight:800;font-size:14px;white-space:nowrap}.shortAnsInput{width:5.5em;max-width:120px;min-width:4.5em;font-size:20px;font-weight:800;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);letter-spacing:.04em}.shortAnsInputWide{width:100%;max-width:none;font-size:18px;font-weight:600;text-align:left}.shortAnsBtn{width:auto;margin:0;padding:6px 12px;min-width:0}.shortAnsHint{font-size:12px}.shortAnsNote{margin-top:8px;font-size:12px}.qimgErr{margin:10px 0;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412;font-size:13px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text);position:relative;z-index:1}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.mcqOptsGrid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch;width:100%}.mcqOptsGrid2>.opt,.mcqOptsGrid2>label.opt{margin:0!important}.editQuestionPreview .mcqOptsGrid2>.opt{margin:0!important}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:10px 12px;margin-top:10px;color:var(--text);font-size:clamp(13px,1.8vw,15px);line-height:1.45}.latex-list{margin:8px 0 8px 22px;padding:0}.latex-list li{margin:6px 0;line-height:1.55}.latex-tabular-wrap{overflow-x:auto;margin:12px 0;width:100%}.latex-tabular{border-collapse:collapse;width:100%;max-width:100%;font-size:15px}.latex-tabular td,.latex-tabular th{border:1px solid var(--border);padding:6px 10px;vertical-align:middle;line-height:1.45}.latex-tabular tr.hline-top td{border-top:2px solid var(--border)}.hintAdminBody{width:100%;min-height:160px;max-height:520px;overflow:auto;font-size:15px;line-height:1.55;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text}.btnHintLoading{opacity:.82;cursor:wait!important;pointer-events:none}.hintSpin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:hintSpin .75s linear infinite;vertical-align:-2px;margin-right:6px}.hintBoxLoading{border-color:#93c5fd!important;background:linear-gradient(180deg,var(--shuffle-bg),var(--surface))!important;animation:hintPulse 1.6s ease-in-out infinite}.hintLoadingPanel{display:flex;gap:12px;align-items:flex-start;padding:10px 4px 6px}.hintSpinBig{width:30px;height:30px;border:3px solid #93c5fd;border-top-color:var(--blue);border-radius:50%;animation:hintSpin .8s linear infinite;flex-shrink:0}@keyframes hintSpin{to{transform:rotate(360deg)}}@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 #3b82f633}50%{box-shadow:0 0 0 6px #3b82f611}}.hintAdminActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAdminActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.infographicPromptBox{width:100%;min-height:300px;max-height:55vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;padding:12px;border:1px solid var(--border);border-radius:10px;resize:vertical;background:var(--surface);color:var(--text);box-sizing:border-box}.hintAnswerCard{background:var(--green);border:2px solid #86efac;border-radius:10px;padding:12px 14px;margin:10px 0 8px}.hintAnswerCard.hintAnswerPending{background:var(--load-warn-bg);border-color:var(--load-warn-border)}.hintAnswerCard.hintAnswerPending .hintAnswerTitle{color:var(--load-warn-text)}.hintAnswerCard .hintAnswerTitle{font-size:16px;font-weight:800;color:#166534;margin:0 0 8px}html[data-theme="dark"] .hintAnswerCard .hintAnswerTitle{color:#86efac}.hintAnswerRow{margin:6px 0;line-height:1.55;font-size:15px}.hintAnswerRow b{color:#14532d}html[data-theme="dark"] .hintAnswerRow b{color:#bbf7d0}.hintSimilarBox{margin-top:10px;padding:10px 12px;border:1px dashed var(--shuffle-border);border-radius:10px;background:var(--shuffle-bg)}.hintSimilarBox .hintSimilarTitle{font-weight:800;margin-bottom:6px;color:var(--shuffle-text)}.hintSimilarBody{font-size:15px;line-height:1.55}.hintAiActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAiActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.q-reviewed{box-shadow:inset 0 0 0 2px #22c55e}.num.q-unreviewed{box-shadow:inset 0 0 0 2px #f97316;opacity:.92}.qReviewBadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:6px}.qReviewBadge.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}.qReviewBadge.pending{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}#btnQuestionReview.btnReviewOn{background:#dcfce7;border-color:#22c55e;color:#166534}#btnQuestionReview.btnReviewOff{background:#ffedd5;border-color:#fdba74;color:#9a3412}#quizReviewStat{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.navNums{align-items:start}.navNums .num{position:relative!important;min-height:38px!important;padding:4px 2px!important;border-width:2px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;overflow:visible!important;box-shadow:0 1px 4px #00000012!important}.navNums .num .navNumText{font-size:17px!important;line-height:1.05!important;font-weight:900!important;position:relative;z-index:1}.navNums .num .navLvBadge{position:absolute!important;top:0!important;right:0!important;transform:translate(18%,-22%)!important;font-size:8px!important;padding:1px 4px!important;border-radius:5px!important;font-weight:900!important;z-index:3!important;pointer-events:none!important;box-shadow:0 1px 2px #00000022!important}.navNums .num.ok .navLvBadge,.navNums .num.bad .navLvBadge{display:none!important}.navNums .num.nav-mucdo-nb{background:#bbf7d0!important;color:#14532d!important;border-color:#22c55e!important}.navNums .num.nav-mucdo-th{background:#bfdbfe!important;color:#1e3a8a!important;border-color:#3b82f6!important}.navNums .num.nav-mucdo-vd{background:#fed7aa!important;color:#9a3412!important;border-color:#f97316!important}.navNums .num.nav-mucdo-vdc{background:#fecaca!important;color:#7f1d1d!important;border-color:#ef4444!important}.navNums .num.nav-mucdo-empty{background:var(--surface)!important;color:var(--muted)!important;border-color:var(--border)!important}.navSectionLbl{grid-column:1/-1!important;margin:8px 0 2px!important;padding:7px 9px!important;border-radius:10px!important;font-size:13px!important;font-weight:900!important;border:1px solid var(--border)!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}.fsNavTitle{display:block;width:100%;text-align:center;font-weight:800;font-size:13px;color:var(--muted);margin:0 0 6px;line-height:1.25}.navMucDoLegend{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin:4px 0 6px!important;align-items:center!important;justify-content:center!important}.navMucDoLegend .navLvBadge{position:static!important;transform:none!important;font-size:9px!important;padding:2px 5px!important;box-shadow:none!important}html[data-theme='dark'] .navNums .num.nav-mucdo-nb{background:#14532d!important;color:#bbf7d0!important;border-color:#22c55e!important}html[data-theme='dark'] .navNums .num.nav-mucdo-th{background:#1e3a5f!important;color:#bfdbfe!important;border-color:#3b82f6!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vd{background:#7c2d12!important;color:#fed7aa!important;border-color:#f97316!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vdc{background:#450a0a!important;color:#fecaca!important;border-color:#ef4444!important}.tfrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:6px 8px;align-items:start;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:7px 0}.tfrow>b{padding-top:2px}.tfrow .dsCircle{margin-top:1px}.dsCircle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:14px;line-height:1;padding:0;box-sizing:border-box;flex-shrink:0;box-shadow:0 1px 3px #0002;text-align:center}.tfrow .dsCircle{width:26px;height:26px;min-width:26px;min-height:26px;font-size:13px}html[data-theme="dark"] .dsCircle{background:#2563eb;color:#eff6ff}.dsAnswerRow{display:flex;flex-wrap:wrap;gap:8px 12px;margin:4px 0}.dsAnswerItem{display:inline-flex;align-items:center;gap:6px}.dsVerdictDung{color:#166534;font-weight:800}html[data-theme="dark"] .dsVerdictDung{color:#86efac}.dsVerdictSai{color:#991b1b;font-weight:800}html[data-theme="dark"] .dsVerdictSai{color:#fecaca}.dsSolutionList{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn{grid-template-columns:1fr}@media(min-width:560px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1100px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(4,minmax(0,1fr))}}.dsSolutionDs{grid-template-columns:1fr}@media(min-width:640px){.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}.dsSolutionItem{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface)}.dsSolutionCompact .dsSolutionItem{padding:6px 9px}.dsSolutionHead{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;margin-bottom:0}.dsSolutionHead+.dsSolutionBody,.dsSolutionHead+.dsStmtBlock{margin-top:6px}.dsSolutionBody{font-size:13px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch}.dsStmtInline{font-size:14px;line-height:1.4;flex:1 1 auto;min-width:0;word-break:break-word}.dsStmtBlock{width:100%;font-size:14px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch;word-break:break-word}.mcqSplitOpts .opt>span:not(.dsCircle){display:block;flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.opt .dsCircle{flex:0 0 auto;flex-shrink:0;margin-top:1px;align-self:flex-start;padding:0;min-width:28px;text-align:center}.opt input[type=radio]{position:absolute;opacity:0;width:0;height:0;margin:0}.opt:has(input:checked) .dsCircle{background:#166534;box-shadow:0 0 0 2px #86efac}.opt.correct{background:#dcfce7!important;border-color:#86efac!important;box-shadow:inset 0 0 0 1px #bbf7d0}.opt.wrong{background:#fee2e2!important;border-color:#fecaca!important;box-shadow:inset 0 0 0 1px #fecaca}.tfrow.correct{background:#dcfce7!important;border-color:#86efac!important}.tfrow.wrong{background:#fee2e2!important;border-color:#fecaca!important}.tfRowFb{grid-column:1/-1;font-size:12px;font-weight:700;margin-top:2px;padding:2px 0 6px 28px;line-height:1.35}.tfRowFb.ok{color:#166534}.tfRowFb.bad{color:#991b1b}#resultBox.dsResultRich{font-size:13px;line-height:1.25;text-align:right}.dsCheckBox{display:flex;flex-direction:column;align-items:flex-end;gap:3px}.dsCheckHead{font-weight:800;font-size:15px;white-space:nowrap}.dsCheckRow{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.dsCheckItem{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-weight:800;font-size:12px;border:1px solid var(--border)}.dsCheckOk{background:var(--green);color:#166534;border-color:#86efac}.dsCheckBad{background:var(--red);color:#991b1b;border-color:#fca5a5}html[data-theme="dark"] .opt.correct,html[data-theme="dark"] .tfrow.correct{background:#14532d!important;border-color:#166534!important}html[data-theme="dark"] .opt.wrong,html[data-theme="dark"] .tfrow.wrong{background:#450a0a!important;border-color:#991b1b!important}.opt.correct .dsCircle{background:#166534}.opt.wrong .dsCircle{background:#991b1b}.tfStmt{min-width:0;line-height:1.45;font-size:15px;word-break:break-word}.tfOpts{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-shrink:0}.tfOptsHead{display:none}.tfOpt{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:52px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;user-select:none;position:relative}.tfOpt:has(input:checked){border-color:#93c5fd;background:var(--btn2-bg);color:var(--btn2-color)}.tfOpt input{width:13px;height:13px;margin:0;flex-shrink:0}.tfLbl{line-height:1}.tfLblShort{display:none}.tfLblFull{display:inline}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}.editGrid>*{min-width:0;max-width:100%}.editGrid textarea{min-height:80px;width:100%;max-width:100%;box-sizing:border-box}.editGrid label{display:block;width:100%;min-width:0}.editGrid [style*="display:flex"]{flex-wrap:wrap;max-width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
 {display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;background:var(--bg);padding:0;margin:0;overflow:hidden;width:100vw!important;max-width:none!important}body.fullde-mode #quiz>.panel:first-child{display:none}body.fullde-mode #quiz .quizLayout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:0;width:100%;max-width:none;height:100%;min-height:0;margin:0}body.fullde-mode #quiz .quizLayout>div:first-child{min-width:0;height:100%;display:flex;flex-direction:column}body.fullde-mode #quiz .quizToolbarStrip{flex-shrink:0;padding:4px 8px 2px;margin:0;border:none;background:var(--bg)}body.fullde-mode #quiz .quizLayout>div:first-child>.quizQuestionPanel{flex:1;display:flex;flex-direction:column;margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;width:100%;max-width:none;min-height:0;overflow:auto}body.fullde-mode #quiz .quizLayout>div:last-child{display:flex!important;height:100%;min-height:0}body.fullde-mode #quiz .quizLayout>div:last-child>.panel{margin:0;border-radius:0;border-top:none;border-right:none;border-bottom:none;height:100%;padding:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}body.fullde-mode #quiz .quizLayout>div:last-child .line,body.fullde-mode #quiz .quizLayout>div:last-child .muted{display:none!important}body.fullde-mode #quiz .quizLayout>div:last-child .fsNavTitle{display:block!important;font-size:11px;text-align:center;margin:0 0 4px;font-weight:800;color:var(--muted);flex-shrink:0}body.fullde-mode #navNums{grid-template-columns:repeat(3,1fr);gap:3px;overflow-y:auto;flex:1;align-content:start}body.fullde-mode #navNums .num{padding:4px 0;font-size:11px;line-height:1.1}body.fullde-mode #fsOnlyTools{display:flex;position:sticky;top:0;z-index:5;justify-content:flex-end;gap:8px;flex-wrap:wrap;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0}body.fullde-mode #qid{font-size:15px;padding:0 8px;flex-shrink:0}body.fullde-mode #quiz .quizLayout>div:first-child .row:first-child{flex-shrink:0;padding:4px 8px 0}body.fullde-mode #qtext,body.fullde-mode #options,body.fullde-mode #solution,body.fullde-mode #hintBox{width:100%}body.fullde-mode #qtext{flex:0 0 auto;min-height:0;overflow:visible}body.fullde-mode #options{flex:0 0 auto;margin-top:8px;padding:0 8px 4px;position:relative;z-index:2;background:var(--bg)}body.fullde-mode #qtext .qimg{max-height:min(42vh,280px)}body.fullde-mode #hintBox{flex-shrink:0;max-height:38vh;overflow:auto;margin-top:8px}body.fullde-mode #fsOnlyTools button{font-size:12px;padding:5px 8px;white-space:nowrap}body.fullde-mode #fsOnlyTools .quizTimer{font-size:11px;padding:3px 8px}body.fullde-mode #hintBox .hintAdminBody{max-height:28vh;font-size:14px}body.fullde-mode #quizActions{display:none!important}body.fullde-mode #btnRetry,body.fullde-mode #btnEdit,body.fullde-mode #btnSubmit{display:none!important}@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:96px}body.fullde-mode #navNums{grid-template-columns:repeat(8,1fr);overflow-x:auto;overflow-y:hidden}body.fullde-mode #fsOnlyTools{gap:4px;padding:4px 6px;flex-wrap:wrap;justify-content:flex-start}body.fullde-mode #fsOnlyTools button{font-size:10px!important;padding:4px 6px!important}body.fullde-mode #fsOnlyTools .quizTimer{font-size:10px;padding:2px 6px}body.fullde-mode #qid{font-size:12px;line-height:1.3}body.fullde-mode #qtext{font-size:15px;padding:8px 10px!important}body.fullde-mode #qtext .qimg{max-height:min(36vh,220px);margin:8px auto 10px}body.fullde-mode #options{padding:0 6px 6px}body.fullde-mode .opt{padding:7px 8px;margin:4px 0;font-size:14px}body.fullde-mode #quiz .quizLayout>div:first-child>.panel{padding-bottom:6px}.wrap{padding:8px}.top{padding:8px 10px}.top h1{font-size:14px;min-width:0;flex:1 1 100%}.topRight{font-size:11px;gap:4px 8px}.adminTopBtn{font-size:10px;padding:4px 7px}.themeBtn{font-size:12px;padding:4px 8px}.examStrip{top:48px;padding:6px 8px;font-size:12px;flex-wrap:wrap}.panel{padding:10px;margin-bottom:10px;min-width:0}#quiz>.panel:first-child{flex-wrap:wrap;gap:8px}#quiz>.panel:first-child>div{width:100%}#resultBox{font-size:14px!important}.quizLayout>div{min-width:0}#quiz .panel>.row:first-child{flex-direction:column;align-items:stretch;gap:8px}#qid{font-size:13px;line-height:1.35;word-break:break-word}#quizActions{display:flex;flex-wrap:wrap;gap:4px;width:100%}#quizActions button{font-size:10px;padding:5px 7px;flex:0 1 auto}#quiz .panel>.row:last-child button{font-size:13px;padding:8px 12px;flex:1}.qbox{font-size:15px;padding:10px;min-height:0;overflow-wrap:anywhere}.opt{padding:8px;font-size:14px;margin:5px 0}.qimg{max-height:min(40vh,240px)}.tfrow{grid-template-columns:28px minmax(0,1fr) 34px;grid-template-areas:"lbl stmt opts";gap:4px 6px;padding:7px 8px;align-items:start}.tfrow>b,.tfrow .dsCircle{grid-area:lbl;justify-self:center}.tfStmt{grid-area:stmt;font-size:14px}.tfOpts{grid-area:opts;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:3px;padding:0;width:34px}.tfOptsHead{display:grid;grid-template-columns:28px minmax(0,1fr) 34px;gap:4px 6px;margin:0 0 4px;padding:0 8px;font-size:10px;font-weight:800;color:var(--muted);align-items:center}.tfColHead{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.15;text-align:center}.tfOptsHead .tfLblShort{display:flex;flex-direction:column;align-items:center}.tfOptsHead .tfLblFull{display:none}.tfLblFull{display:none}.tfLblShort{display:inline}.tfOpt{flex:0;width:100%;max-width:none;min-width:0;padding:5px 2px;font-size:12px;border-radius:6px;text-align:center}.tfOpt input{position:absolute;opacity:0;width:0;height:0;margin:0}}html:fullscreen,body:fullscreen{background:var(--bg)}@media(max-width:900px){.quizLayout{grid-template-columns:1fr}.editGrid{grid-template-columns:1fr}.qbox{font-size:16px}.top h1{font-size:16px}.examStrip{top:52px;font-size:13px}}
 
 /* ===== V232: Nút ADMIN nhỏ gọn trên điện thoại ===== */
@@ -15970,7 +16060,7 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
 }
 .homeSectionRow{
     display:grid;
-    grid-template-columns:1fr 340px;
+    grid-template-columns:1fr min(380px,30vw);
     gap:12px;
     align-items:start;
 }
@@ -16076,6 +16166,67 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
 }
 .btnClaudeFix:hover{filter:brightness(1.1)!important}
 .btnClaudeFix:disabled{opacity:.6!important;cursor:wait!important}
+
+/* ===== V322v: BulkDbt AI badge + progress ===== */
+.bulkDbtAiBadge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;
+  background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);
+}
+.bulkDbtAiBadge.claude{background:linear-gradient(135deg,#7c3aed88,#4f46e588);border-color:#a78bfa66}
+.bulkDbtAiBadge.gemini{background:linear-gradient(135deg,#059669aa,#0891b2aa);border-color:#34d39966}
+.bulkDbtAiBadge.openai{background:linear-gradient(135deg,#16a34aaa,#15803daa);border-color:#4ade8066}
+
+/* ===== V322x: ChapterDbt redesign game-style + drag-drop ===== */
+.cdbtSuggestBox{padding:8px 12px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.6;margin-bottom:6px}
+.cdbtScopeTag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.15);color:#fff;font-size:12px;font-weight:800;margin-right:4px;border:1px solid rgba(255,255,255,0.2)}
+.cdbtScopeTag.muted{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.65)}
+.cdbtSugTag{display:inline-flex;padding:3px 8px;border-radius:7px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:11px;font-weight:800;margin:2px 3px;cursor:pointer}
+.cdbtLesson{border:1px solid #e2e8f0;border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:0 1px 4px #0f172a08;transition:box-shadow .2s}
+.cdbtLesson:hover{box-shadow:0 3px 12px #0f172a14}
+.cdbtLessonHead{padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #bfdbfe}
+html[data-theme="dark"] .cdbtLessonHead{background:linear-gradient(135deg,#1e3a5f,#172554)}
+.cdbtLessonInfo{display:flex;align-items:center;gap:10px;min-width:0}
+.cdbtLessonNum{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-weight:900;font-size:14px;flex-shrink:0}
+.cdbtLessonName{font-weight:900;color:#1e3a8a;font-size:14px;line-height:1.3}
+html[data-theme="dark"] .cdbtLessonName{color:#bfdbfe}
+.cdbtLessonMeta{font-size:11px;color:var(--muted);margin-top:1px}
+.cdbtUnclsBadge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:900;margin-left:4px}
+.cdbtLessonTools{display:flex;flex-wrap:wrap;gap:5px}
+.cdbtToolBtn{font-size:11px!important;padding:5px 9px!important;border-radius:8px!important;font-weight:800!important;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--text)!important;cursor:pointer;white-space:nowrap}
+.cdbtToolBtn:hover{filter:brightness(0.96)!important}
+.cdbtToolBtnGpt{background:#fef9c3!important;border-color:#fde047!important;color:#713f12!important}
+.cdbtToolBtnOpen{background:#eff6ff!important;border-color:#93c5fd!important;color:#1d4ed8!important}
+.cdbtToolBtnSave{background:linear-gradient(135deg,#1d4ed8,#4f46e5)!important;color:#fff!important;border:none!important}
+.cdbtRows{padding:6px 10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+@media(max-width:700px){.cdbtRows{grid-template-columns:1fr}}
+.chapterDbtBody{max-height:min(78vh,740px);overflow:auto;display:flex;flex-direction:column;gap:8px;margin-top:8px;padding-right:2px}
+.cdbtDangRow{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);transition:background .15s,box-shadow .15s;cursor:grab}
+.cdbtDangRow:hover{background:var(--surface);box-shadow:0 2px 8px #0f172a10}
+.cdbtDangRow.cdbtDragging{opacity:.5;box-shadow:0 6px 20px #0f172a20;cursor:grabbing}
+.cdbtDangRow.cdbtDragOver{border-color:#6366f1;background:#eef2ff;box-shadow:0 0 0 2px #6366f144}
+.cdbtDragHandle{color:#94a3b8;font-size:14px;cursor:grab;flex-shrink:0;user-select:none;letter-spacing:-1px}
+.cdbtDangNum{color:#94a3b8;font-weight:900;font-size:12px;min-width:1.4em;flex-shrink:0;text-align:center}
+.cdbtDangLabel{display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer}
+.cdbtDangName{font-weight:800;font-size:13px;line-height:1.35;flex:1;min-width:0}
+.cdbtDangCount{display:inline-flex;padding:1px 6px;border-radius:999px;background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:900;flex-shrink:0}
+.cdbtAltNote{font-size:10px;color:var(--muted);flex-shrink:0;border:1px dashed var(--border);border-radius:5px;padding:1px 5px}
+.cdbtDangTools{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.cdbtMoveBtn{font-size:12px!important;padding:3px 7px!important;border-radius:6px!important;font-weight:900!important;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--text)!important;cursor:pointer;min-width:28px}
+.cdbtMoveBtn:disabled{opacity:.35;cursor:default}
+.cdbtMoveBtn:not(:disabled):hover{background:var(--btn2-bg)!important}
+.cdbtUnclsRow{border-color:#fde68a!important;background:#fffbeb!important;cursor:default!important}
+.cdbtMergeBar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-top:1px dashed #e2e8f0;background:var(--bg);transition:background .2s}
+.cdbtMergeBar.cdbtMergeActive{background:#eff6ff;border-top-color:#bfdbfe}
+.cdbtMergeLabel{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
+.cdbtMergeInput{flex:1;min-width:180px;padding:6px 9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)}
+.cdbtMergeActive .cdbtMergeInput{border-color:#93c5fd;background:#fff}
+.cdbtEmpty{padding:10px 12px;color:var(--muted);font-size:13px;font-style:italic}
+
+/* Override cũ để không conflict */
+.chapterDbtModalBox{max-width:min(1200px,96vw)!important;width:96vw!important}
+.chapterDbtBody{max-height:min(75vh,700px);overflow:auto;display:flex;flex-direction:column;gap:8px;margin-top:8px;padding-right:2px}
+.chapterDbtScope{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px}
 
 /* ===== V322: bulkDbt Modal — Dạng BT hàng loạt redesign ===== */
 .bulkDbtModalBox{
@@ -17742,10 +17893,10 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
 
 <!-- SECTION 1: Lọc & tìm đề -->
 <div class="homeSection">
-  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
+  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:10px"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
 </div>
 
-<!-- SECTION 2: Tự luyện ngẫu nhiên + Tìm ID (cạnh nhau) -->
+<!-- SECTION 2: Tự luyện ngẫu nhiên + Tìm ID + Key AI -->
 <div class="homeSection homeSectionRow">
 
   <!-- Tự luyện -->
@@ -17906,23 +18057,26 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
 
 </div></div><div id="modal" class="modal hide"><div class="modalBox"><h3 id="editModalTitle">ADMIN: Sửa câu hỏi</h3><div id="editAdminSoatBar" class="editAdminSoatBar row hide" style="gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)"><span style="font-weight:800">🔍 Soát đề AI</span><label class="adminReviewModeWrap" id="adminReviewModeEditWrap">Chế độ <select id="adminReviewModeEdit" onchange="onAdminReviewModeChange(this.value)"><option value="fast">⚡ Nhanh</option><option value="full">🔍 Kỹ</option></select></label><button type="button" id="btnEditHint" class="btnGreen" onclick="requestHintFromEditModal()">🔍 Soát đề</button><button type="button" class="btn2" onclick="applyEditHintAll()">📋 Điền P/R</button><button type="button" class="btn2" onclick="applyEditHintField('DapAn')">→ P</button><button type="button" class="btn2" onclick="applyEditHintField('LoiGiai')">→ R</button></div><div id="editHintResult" class="editHintResult hide"></div><div id="editAiRepairBar" class="row" style="margin:6px 0 10px;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btnGreen" onclick="aiRepairCurrentQuestion()">🧩 Khôi phục câu</button><button type="button" class="btn2" id="btnAiDetectDangBaiTap" onclick="aiDetectCurrentQuestionDangBaiTap()">🏷️ Gợi ý Dạng BT</button><button type="button" class="btn2" id="btnAiDetectSaveDangBaiTap" onclick="aiDetectAndSaveCurrentQuestionDangBaiTap()">💾 Lưu Dạng BT</button><button type="button" class="btn2" id="btnAiDetectLevel" onclick="aiDetectCurrentQuestionLevel()">🎯 Gợi ý mức độ</button><button type="button" class="btn2" id="btnAiDetectSaveLevel" onclick="aiDetectAndSaveCurrentQuestionLevel()">💾 Lưu mức độ</button><span class="muted" style="font-size:12px">Mức độ (I) · Năng lực (V): chip bên dưới hoặc AI ở đây. Hàng loạt: 🎯 Mức độ · 🏷️ Dạng BT trên thanh ADMIN.</span></div><div id="editForm" class="editGrid"></div><div id="editLearningBox" class="editLearningBox"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button id="btnDeleteQuestion" class="btnRed" onclick="deleteQuestion()">Xóa câu này khỏi Google Sheet</button><div><button onclick="closeEdit()">Hủy</button><button id="btnSaveQuestion" class="btn" onclick="saveQuestionModal()">Lưu vào Google Sheet</button></div></div><div class="muted" style="margin-top:8px" id="editModalNote">Xóa liên tiếp được — app tự cập nhật số dòng Sheet, không cần đồng bộ lại sau mỗi lần xóa. Chỉ bấm Đồng bộ khi sửa trực tiếp trên Google Sheet.</div></div></div><div id="bulkDbtModal" class="modal hide"><div class="modalBox bulkDbtModalBox" style="max-width:960px">
 
-<!-- HEADER -->
+<!-- HEADER game-style -->
 <div class="bulkDbtHeader">
   <div class="bulkDbtHeaderLeft">
     <span class="bulkDbtHeaderIcon">🏷️</span>
     <div>
-      <h3 style="margin:0;font-size:17px;font-weight:900">ADMIN · Gợi ý Dạng bài tập hàng loạt</h3>
-      <p class="muted" style="margin:2px 0 0;font-size:12px;line-height:1.4">GPT đọc câu → gợi ý cột H. Tick chọn rồi mới ghi Sheet. Ưu tiên khớp tên dạng đã có cùng Môn/Chương/Bài.</p>
+      <h3 style="margin:0;font-size:17px;font-weight:900;color:#fff">ADMIN · Phân loại Dạng bài tập</h3>
+      <p style="margin:2px 0 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.75)">AI đọc câu → gợi ý cột H. Tick chọn rồi mới ghi Sheet.</p>
     </div>
   </div>
-  <button type="button" class="bulkDbtCloseBtn" onclick="closeBulkDbtReview()">✕</button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="bulkDbtAiBadge" class="bulkDbtAiBadge hide"></span>
+    <button type="button" class="bulkDbtCloseBtn" onclick="closeBulkDbtReview()">✕</button>
+  </div>
 </div>
 
 <!-- GUIDE BOX thu gọn -->
 <details class="bulkDbtGuideDetails" id="bulkDbtGuideBox">
-  <summary class="bulkDbtGuideSummary">📝 Tóm tắt dạng bài tập <span class="muted" style="font-size:11px;font-weight:500">(mở để chỉnh — GPT đọc để ép phân bổ, tối đa 6 dạng/bài)</span></summary>
+  <summary class="bulkDbtGuideSummary">📝 Tóm tắt dạng bài tập <span class="muted" style="font-size:11px;font-weight:500">(mở để chỉnh — AI đọc để ép phân bổ, tối đa 6 dạng/bài)</span></summary>
   <div style="padding:10px 0 4px">
-    <p class="muted" style="font-size:12px;margin:0 0 6px;line-height:1.4">Mỗi dòng một dạng, hoặc «<b>Tên dạng</b>: mô tả ngắn». GPT dùng để <b>ép phân bổ</b> đúng dạng.</p>
+    <p class="muted" style="font-size:12px;margin:0 0 6px;line-height:1.4">Mỗi dòng một dạng, hoặc «<b>Tên dạng</b>: mô tả ngắn». AI dùng để <b>ép phân bổ</b> đúng dạng.</p>
     <textarea id="bulkDbtAdminGuide" rows="4" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:inherit;font-size:13px;line-height:1.5;resize:vertical" placeholder="VD:
 Tìm giá trị lớn nhất biểu thức lượng giác
 Xác định tập xác định của hàm số
@@ -17935,17 +18089,26 @@ Chứng minh mệnh đề phủ định"></textarea>
   </div>
 </details>
 
-<!-- TOOLBAR CHÍNH — 2 nhóm -->
+<!-- TOOLBAR CHÍNH game-style -->
 <div class="bulkDbtToolbar">
   <div class="bulkDbtToolbarGroup">
-    <button type="button" class="btn bulkDbtRunBtn" id="bulkDbtRerunBtn" onclick="bulkDbtDetectCurrent()">🤖 Chạy GPT gợi ý</button>
+    <button type="button" class="btn bulkDbtRunBtn" id="bulkDbtRerunBtn" onclick="bulkDbtDetectCurrent()">🤖 Chạy AI gợi ý</button>
     <button type="button" class="btn2" style="font-size:12px;padding:5px 10px" onclick="openDbtMergeModal(CURRENT_MADE||'')">🔀 Gộp dạng BT</button>
   </div>
   <div class="bulkDbtToolbarGroup">
     <button type="button" class="btnGreen" style="font-size:12px;padding:5px 10px" id="bulkDbtSelectAllBtn" onclick="bulkDbtSelectAllAi()">✅ Tick tất cả</button>
     <button type="button" class="btn2" style="font-size:12px;padding:5px 10px" onclick="bulkDbtSelectNone()">☐ Bỏ tick</button>
+    <button type="button" class="btn2" style="font-size:12px;padding:5px 10px" id="bulkDbtHideSavedBtn" onclick="bulkDbtToggleHideSaved()" title="Ẩn/hiện các câu đã lưu Sheet để chỉ thấy câu chưa cập nhật">🙈 Ẩn đã lưu</button>
     <button type="button" class="btn" style="font-size:12px;padding:5px 12px;background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none;box-shadow:0 2px 8px #1d4ed833" id="bulkDbtApplyBtnTop" onclick="bulkDbtApplySelected()">💾 Lưu đã tick</button>
   </div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div id="bulkDbtProgressWrap" class="hide" style="margin:6px 0;padding:0 2px">
+  <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+    <div id="bulkDbtProgressBar" style="height:100%;background:linear-gradient(90deg,#4f46e5,#06b6d4);border-radius:3px;width:0%;transition:width .4s"></div>
+  </div>
+  <div id="bulkDbtProgressText" style="font-size:11px;color:var(--muted);margin-top:3px;text-align:right"></div>
 </div>
 
 <!-- STATUS -->
@@ -17960,7 +18123,26 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" id="bulkDbtApplyBtnBot" onclick="bulkDbtApplySelected()">💾 Lưu câu đã tick</button>
 </div>
 
-</div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> mức độ NB/TH/VD/VDC (cột I) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. Tối đa 80 câu/lần gọi API — app tự chạy từng lô nhỏ.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkLevelRerunBtn" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" id="bulkLevelSelectAllBtn" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkLevelApplyBtnTop" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" id="bulkLevelApplyBtnBot" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="dbtOrderModal" class="modal hide"><div class="modalBox" style="max-width:560px"><h3>↕ ADMIN: Thứ tự Dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Sắp xếp thứ tự hiển thị các dạng BT trên <b>mục lục</b> và <b>modal làm bài</b>. Dùng ↑↓ rồi bấm Lưu — học sinh thấy đúng thứ tự bạn chọn.</p><div id="dbtOrderScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtOrderList" class="dbtOrderList"></div><div id="dbtOrderStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeDbtOrderModal()">Đóng</button><button type="button" class="btn" onclick="saveDbtOrder()">💾 Lưu thứ tự</button></div></div></div><div id="dbtMergeModal" class="modal hide"><div class="modalBox" style="max-width:720px"><h3>🔀 ADMIN: Gộp &amp; đổi tên dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Tick <b>≥2 tên giống nhau</b> để gộp, hoặc <b>1 tên</b> + tên mới để đổi tên → lưu cột H Google Sheet. App gợi ý nhóm tên gần giống — bấm nhóm để tick nhanh.</p><div id="dbtMergeScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtMergeSuggest" class="dbtMergeSuggestRow"></div><div id="dbtMergeList" class="dbtMergeList"></div><div style="margin-top:10px"><label style="font-weight:800;display:block;margin-bottom:4px">Tên mới sau khi gộp (cột H)</label><input type="text" id="dbtMergeNewName" class="adminDbtInput" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border)" placeholder="VD: Chu kỳ, tần số, tần số góc dao động" oninput="dbtMergePreview()" /></div><div id="dbtMergeStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeDbtMergeModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="dbtMergePickLongestName()">📏 Dùng tên dài nhất</button><button type="button" class="btn" onclick="applyDbtMerge()">💾 Gộp &amp; lưu Sheet</button></div></div></div></div><div id="chapterDbtModal" class="modal hide"><div class="modalBox chapterDbtModalBox"><h3>🏷️ ADMIN: Quản lý Dạng BT theo Chương</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Xem <b>tất cả bài</b> trong chương: gộp/đổi tên dạng (cột H), sắp thứ tự <b>↑↓ trong cùng bài</b>, mở đề để GPT gợi ý. <b>Chưa chuyển dạng sang bài khác</b> — muốn đổi bài học của câu: mở đề → Sửa câu.</p><div id="chapterDbtScope" class="muted" style="margin-bottom:8px;font-size:13px;font-weight:800"></div><div id="chapterDbtSuggest" class="chapterDbtSuggest hide"></div><div id="chapterDbtBody" class="chapterDbtBody"></div><div id="chapterDbtStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeChapterDbtBoard()">Đóng</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button></div></div></div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="bulkLevelModal" class="modal hide"><div class="modalBox" style="max-width:980px"><h3>🎯 ADMIN: GPT gợi ý mức độ hàng loạt</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">GPT ADMIN <b>gợi ý</b> mức độ NB/TH/VD/VDC (cột I) cho các câu đang mở. ADMIN xem nhanh, tick chọn rồi mới ghi Google Sheet. Tối đa 80 câu/lần gọi API — app tự chạy từng lô nhỏ.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:space-between"><div><button type="button" class="btn2" id="bulkLevelRerunBtn" onclick="bulkLevelDetectCurrent()">🤖 Chạy GPT gợi ý lại</button><button type="button" class="btnGreen" id="bulkLevelSelectAllBtn" onclick="bulkLevelSelectAllAi()">✅ Tick tất cả gợi ý</button><button type="button" class="btn2" onclick="bulkLevelSelectNone()">Bỏ tick</button></div><div><button type="button" class="btn" id="bulkLevelApplyBtnTop" onclick="bulkLevelApplySelected()">💾 Chấp nhận các câu đã tick</button></div></div><div id="bulkLevelStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="bulkLevelList" style="margin-top:10px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeBulkLevelReview()">Đóng</button><button type="button" class="btn" id="bulkLevelApplyBtnBot" onclick="bulkLevelApplySelected()">💾 Chấp nhận đã tick</button></div></div></div><div id="dbtOrderModal" class="modal hide"><div class="modalBox" style="max-width:560px"><h3>↕ ADMIN: Thứ tự Dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Sắp xếp thứ tự hiển thị các dạng BT trên <b>mục lục</b> và <b>modal làm bài</b>. Dùng ↑↓ rồi bấm Lưu — học sinh thấy đúng thứ tự bạn chọn.</p><div id="dbtOrderScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtOrderList" class="dbtOrderList"></div><div id="dbtOrderStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" onclick="closeDbtOrderModal()">Đóng</button><button type="button" class="btn" onclick="saveDbtOrder()">💾 Lưu thứ tự</button></div></div></div><div id="dbtMergeModal" class="modal hide"><div class="modalBox" style="max-width:720px"><h3>🔀 ADMIN: Gộp &amp; đổi tên dạng bài tập</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Tick <b>≥2 tên giống nhau</b> để gộp, hoặc <b>1 tên</b> + tên mới để đổi tên → lưu cột H Google Sheet. App gợi ý nhóm tên gần giống — bấm nhóm để tick nhanh.</p><div id="dbtMergeScope" class="muted" style="margin-bottom:8px;font-size:13px"></div><div id="dbtMergeSuggest" class="dbtMergeSuggestRow"></div><div id="dbtMergeList" class="dbtMergeList"></div><div style="margin-top:10px"><label style="font-weight:800;display:block;margin-bottom:4px">Tên mới sau khi gộp (cột H)</label><input type="text" id="dbtMergeNewName" class="adminDbtInput" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border)" placeholder="VD: Chu kỳ, tần số, tần số góc dao động" oninput="dbtMergePreview()" /></div><div id="dbtMergeStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><button type="button" onclick="closeDbtMergeModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="dbtMergePickLongestName()">📏 Dùng tên dài nhất</button><button type="button" class="btn" onclick="applyDbtMerge()">💾 Gộp &amp; lưu Sheet</button></div></div></div></div><div id="chapterDbtModal" class="modal hide"><div class="modalBox chapterDbtModalBox">
+<div class="bulkDbtHeader">
+  <div class="bulkDbtHeaderLeft">
+    <span class="bulkDbtHeaderIcon">🗂️</span>
+    <div>
+      <h3 style="margin:0;font-size:17px;font-weight:900;color:#fff">ADMIN · Quản lý Dạng BT theo Chương</h3>
+      <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,0.75)">Kéo thả · ↑↓ sắp xếp · Tick gộp tên · AI gợi ý từng bài</p>
+    </div>
+  </div>
+  <button type="button" class="bulkDbtCloseBtn" onclick="closeChapterDbtBoard()">✕</button>
+</div>
+<div id="chapterDbtScope" class="chapterDbtScope"></div>
+<div id="chapterDbtSuggest" class="cdbtSuggestBox hide"></div>
+<div id="chapterDbtBody" class="chapterDbtBody"></div>
+<div id="chapterDbtStatus" style="margin-top:6px"></div>
+<div class="bulkDbtFooter">
+  <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
+  <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
+</div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -18284,7 +18466,8 @@ function navMucDoClass(mucdo){let n=mucdoPrimary(mucdo);return n?'nav-'+mucdoBad
 function navLvBadgeHtml(mucdo){let n=mucdoPrimary(mucdo);if(!n)return'';return`<span class="navLvBadge ${mucdoBadgeClass(n)}" title="${escAttr(mucdoLabel(n))}">${esc(n)}</span>`}
 function navSectionClass(sec){let t=String(sec||'').toUpperCase();let n='';if(/\bVDC\b|MỨC\s*VDC|MUC\s*VDC/.test(t))n='VDC';else if(/\bVD\b|MỨC\s*VD|MUC\s*VD/.test(t))n='VD';else if(/\bTH\b|MỨC\s*TH|MUC\s*TH/.test(t))n='TH';else if(/\bNB\b|MỨC\s*NB|MUC\s*NB/.test(t))n='NB';return n?('navSection-'+mucdoBadgeClass(n).replace('mucdo-','')):''}
 function navSectionIcon(sec){let t=String(sec||'').toUpperCase();if(/\bVDC\b|MỨC\s*VDC|MUC\s*VDC/.test(t))return mucdoIcon('VDC');if(/\bVD\b|MỨC\s*VD|MUC\s*VD/.test(t))return mucdoIcon('VD');if(/\bTH\b|MỨC\s*TH|MUC\s*TH/.test(t))return mucdoIcon('TH');if(/\bNB\b|MỨC\s*NB|MUC\s*NB/.test(t))return mucdoIcon('NB');return '📂'}
-function syncQuestionMucDoChrome(q){let panel=document.querySelector('.quizQuestionPanel');if(!panel)return;panel.classList.remove('mucdoPanel-nb','mucdoPanel-th','mucdoPanel-vd','mucdoPanel-vdc','mucdoPanel-empty');let n=mucdoPrimary(q&&q.MucDo);let cls=n?('mucdoPanel-'+mucdoBadgeClass(n).replace('mucdo-','')):'mucdoPanel-empty';panel.classList.add(cls);panel.setAttribute('data-level-label',n||'');panel.setAttribute('title',n?('Mức độ '+n+' — '+mucdoLabel(n)):'');panel.removeAttribute('data-level-full')}
+function syncQuestionMucDoChrome(q){let panel=document.querySelector('.quizQuestionPanel');if(!panel)return;panel.classList.remove('mucdoPanel-nb','mucdoPanel-th','mucdoPanel-vd','mucdoPanel-vdc','mucdoPanel-empty');let n=mucdoPrimary(q&&q.MucDo);let cls=n?('mucdoPanel-'+mucdoBadgeClass(n).replace('mucdo-','')):'mucdoPanel-empty';panel.classList.add(cls);panel.setAttribute('data-level-label',n||'');panel.setAttribute('title',n?('Mức độ '+n+' — '+mucdoLabel(n)):'');panel.removeAttribute('data-level-full');let dbt=String((q&&q.DangBaiTap)||'').trim();panel.setAttribute('data-dbt-label',dbt);// Render DangBaiTap label element next to NB badge
+let existing=panel.querySelector('.quizDbtLabel');if(existing)existing.remove();if(dbt){let lbl=document.createElement('div');lbl.className='quizDbtLabel';lbl.innerHTML=`<span class="quizDbtText" title="${dbt.replace(/"/g,'&quot;')}">🏷️ ${dbt.replace(/</g,'&lt;')}</span>`;panel.appendChild(lbl)}}
 function formatMucDoBadges(mucdo){let raw=String(mucdo||'').trim();if(!raw)return'';let parts=raw.split(/[,;/|]+/).map(x=>x.trim()).filter(Boolean);if(!parts.length)parts=[raw];return parts.map(p=>{let n=mucdoNorm(p)||p;return `<span class="mucdoBadge ${mucdoBadgeClass(p)}" title="Mức độ (cột I): ${escAttr(p)} · ${escAttr(mucdoLabel(p))}"><span class="mucdoIcon">${mucdoIcon(p)}</span><span class="mucdoShort">${esc(n)}</span><span class="mucdoFull">${esc(mucdoLabel(p))}</span></span>`}).join(' ')}
 function filterQuestionsByDang(qs,dang){dang=String(dang||'').trim();if(!dang)return qs||[];let want=normDangClient(dang);return (qs||[]).filter(q=>normDangClient(applyResolvedDang(q).Dang)===want)}
 function filterQuestionsByLevel(qs,lv){lv=(lv||'').trim().toUpperCase();if(!lv)return qs||[];return (qs||[]).filter(q=>questionLevelMatch(q,lv))}
@@ -18661,9 +18844,20 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta');if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
 let INIT_POLL_COUNT=0;
-const INIT_POLL_MAX=45;
+const INIT_POLL_MAX=60;
+let INIT_CONNECT_FAILS=0;
+const INIT_CONNECT_MAX=15;
+function resetHomeFilterPlaceholders(loading){
+  try{
+    let mon=document.getElementById('fMon');
+    if(mon){
+      if(loading)mon.innerHTML='<option value="">⏳ Đang nạp Sheet…</option>';
+      else mon.innerHTML='<option value="">Tất cả</option>';
+    }
+  }catch(e){}
+}
 async function init(){
   ensureChapterDbtClickBindings();
   INIT_POLL_COUNT++;
@@ -18673,13 +18867,25 @@ async function init(){
   let cnt=document.getElementById('countCat');
   if(info)info.textContent='Đang tải dữ liệu Sheet...';
   if(cat&&!cat.innerHTML.trim())cat.innerHTML='<div class="muted">Đang tải mục lục đề...</div>';
+  resetHomeFilterPlaceholders(true);
   try{
-    // V265: /api/meta là dữ liệu chính. Không chờ API phụ như /api/ai-config,
-    // tránh đứng ở màn hình “Đang nạp...” khi mạng yếu hoặc Render phản hồi chậm.
-    META=await api('/api/meta',{timeoutMs:30000},1);
+    // V265: /api/meta là dữ liệu chính. Render Free vừa thức dậy có thể >30s — tăng timeout + retry.
+    META=await api('/api/meta',{timeoutMs:60000},4);
+    INIT_CONNECT_FAILS=0;
   }catch(e){
+    INIT_CONNECT_FAILS++;
+    let retryable=/AbortError|phản hồi quá lâu|Failed to fetch|NetworkError|timeout|502|503|504/i.test(String(e&&e.message||e));
+    if(retryable&&INIT_CONNECT_FAILS<INIT_CONNECT_MAX){
+      let waitSec=Math.min(4+INIT_CONNECT_FAILS,12);
+      if(info)info.textContent='Đang kết nối server… thử lại sau '+waitSec+'s ('+INIT_CONNECT_FAILS+'/'+INIT_CONNECT_MAX+')';
+      if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Đang kết nối máy chủ</h3><p><b>Render Free vừa «thức dậy» có thể chờ 30–90 giây.</b></p><p class="muted">${esc(e.message||e)}</p><p class="muted">Tự thử lại sau ${waitSec}s — không cần bấm liên tục.</p></div>`;
+      resetHomeFilterPlaceholders(true);
+      setTimeout(init,waitSec*1000);
+      return;
+    }
     if(info)info.textContent='Chưa nạp được dữ liệu';
-    if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(e.message||e)+'</p><p class="muted">Bấm nút bên dưới để thử lại. Nếu Render mới thức dậy, đợi 10 giây rồi thử lại.</p><button class="btn" onclick="init()">Tải lại dữ liệu</button></div>';
+    resetHomeFilterPlaceholders(false);
+    if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(e.message||e)+'</p><p class="muted">Bấm nút bên dưới để thử lại. Nếu Render mới thức dậy, đợi 10–60 giây rồi thử lại.</p><button class="btn" onclick="INIT_POLL_COUNT=0;INIT_CONNECT_FAILS=0;init()">Tải lại dữ liệu</button></div>';
     if(cnt)cnt.textContent='';
     return;
   }
@@ -18691,17 +18897,20 @@ async function init(){
     let waited=INIT_POLL_COUNT*3;
     let errHint=META.load_error?(' · '+META.load_error):'';
     if(info)info.textContent='Đang nạp Sheet… '+waited+'s'+errHint;
-    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–40 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
+    resetHomeFilterPlaceholders(true);
+    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–90 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
     if(cnt)cnt.textContent='';
     if(INIT_POLL_COUNT>=INIT_POLL_MAX){
       if(info)info.textContent='Không nạp được Sheet sau '+waited+'s';
-      if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(META.load_error||'Server không phản hồi kịp hoặc thiếu cấu hình Google trên Render.')+'</p><p class="muted">Kiểm tra Environment: <b>GOOGLE_SHEET_ID</b>, <b>GOOGLE_CREDENTIALS_JSON</b>. Render Free vừa ngủ có thể cần chờ 1–2 phút.</p><button class="btn" onclick="INIT_POLL_COUNT=0;init()">Thử lại</button></div>';
+      if(cat)cat.innerHTML='<div class="card loadWarn"><h3>Không nạp được Google Sheet</h3><p>'+esc(META.load_error||'Server không phản hồi kịp hoặc thiếu cấu hình Google trên Render.')+'</p><p class="muted">Kiểm tra Environment: <b>GOOGLE_SHEET_ID</b>, <b>GOOGLE_CREDENTIALS_JSON</b>. Render Free vừa ngủ có thể cần chờ 1–2 phút.</p><button class="btn" onclick="INIT_POLL_COUNT=0;INIT_CONNECT_FAILS=0;init()">Thử lại</button></div>';
+      resetHomeFilterPlaceholders(false);
       return;
     }
     setTimeout(init,3000);
     return;
   }
   INIT_POLL_COUNT=0;
+  INIT_CONNECT_FAILS=0;
   CATALOG=META.catalog||[];
   if(info)info.textContent=`${META.count_questions} câu hỏi | ${META.count_catalog} đề/thẻ đề | Nạp: ${META.loaded_at}`;
   try{refreshFilterOptions();renderCatalog();}catch(e){console.error('renderCatalog',e);if(cat)cat.innerHTML='<div class="card loadErr"><b>Lỗi hiển thị mục lục:</b> '+esc(e.message||e)+'</div>'}
@@ -19121,8 +19330,32 @@ function editQuestionAiInternetLatex(){let q=(typeof readQuestionFormData==='fun
 function buildAdminAiInternetPrompt(kind,body,url){body=body||{};let q=(typeof readQuestionFormData==='function')?readQuestionFormData():(currentQuestion?currentQuestion():{});let field=body.field||kind||'LoiGiai';let text=body.text||q[field]||q.LoiGiai||q.CauHoi||'';let mode=body.format_mode||'';return 'Bạn là trợ lý sửa LaTeX đề Toán/Vật lí. Hãy sửa nội dung sau cho MathJax hiển thị đúng, trình bày gọn, mỗi bước xuống dòng riêng. Không dùng dấu * markdown. Chỉ trả về NỘI DUNG ĐÃ SỬA để tôi dán lại vào ô '+field+'.\n\nDạng sửa: '+(mode||field)+'\nAPI app vừa hết quota nên tôi dùng AI Internet thủ công.\n\nNGỮ CẢNH CÂU HỎI:\n'+editQuestionAiInternetLatex()+'\n\nNỘI DUNG CẦN SỬA:\n'+text}
 function openAdminAiInternetFallback(body,url){openGoogleAiModeCustom(buildAdminAiInternetPrompt('quota',body,url),editQuestionAiInternetLatex())}
 function showAdminGeminiQuotaDialog(openaiAvailable){return new Promise(resolve=>{let m=ensureAdminQuotaModal();let box=m.querySelector('.modalBox');let gptBtn=document.getElementById('adminQuotaUseGpt');if(box&&!document.getElementById('adminQuotaUseInternet')){let b=document.createElement('button');b.type='button';b.id='adminQuotaUseInternet';b.className='btnGreen';b.textContent='🌐 AI Internet';let wrap=gptBtn&&gptBtn.parentElement;if(wrap)wrap.insertBefore(b,gptBtn);else box.appendChild(b)}let msg=document.getElementById('adminQuotaMsg');if(msg)msg.textContent=openaiAvailable?'Hết quota Gemini. Chọn AI Internet để không tốn quota app, hoặc chạy GPT nếu muốn tự điền ngay.':'Hết quota Gemini. Chọn AI Internet để sửa thủ công ngoài app, hoặc đợi quota hồi rồi thử lại.';if(gptBtn)gptBtn.classList.toggle('hide',!openaiAvailable);let done=choice=>{m.classList.add('hide');resolve(choice)};m.classList.remove('hide');let internetBtn=document.getElementById('adminQuotaUseInternet');if(internetBtn)internetBtn.onclick=()=>done('internet');if(gptBtn)gptBtn.onclick=()=>done('gpt');let waitBtn=document.getElementById('adminQuotaWait');if(waitBtn)waitBtn.onclick=()=>done('wait');m.onclick=e=>{if(e.target===m)done('wait')}})}
-async function adminAiFetch(url,body,opts){opts=opts||{};let payload=Object.assign({},body||{});if(opts.admin_ai_provider)payload.admin_ai_provider=opts.admin_ai_provider;if(opts.admin_ai_allow_gpt_fallback)payload.admin_ai_allow_gpt_fallback=true;let method=opts.method||'POST';let headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});let r=await fetch(url,{method,headers,body:JSON.stringify(payload),signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}if(j.gemini_quota_exhausted){let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);if(choice==='internet'){openAdminAiInternetFallback(body,url);throw new Error('Đã mở AI Internet. Chép kết quả rồi dán lại vào ô, không tốn quota app.')}if(choice==='gpt'&&j.openai_available){return adminAiFetch(url,body,{...opts,admin_ai_provider:'OPENAI',admin_ai_allow_gpt_fallback:true})}throw new Error(choice==='wait'?'Đã hủy — đợi quota Gemini hồi rồi thử lại.':'Hết quota GEMINI.')};if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
-async function adminAiFetchForm(url,buildFd,opts){opts=opts||{};async function run(useGpt){let fd=buildFd(!!useGpt);if(useGpt){fd.set('admin_ai_provider','OPENAI');fd.set('admin_ai_allow_gpt_fallback','true')}let r=await fetch(url,{method:'POST',body:fd,signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}if(j.gemini_quota_exhausted){let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);if(choice==='internet'){openAdminAiInternetFallback({},url);throw new Error('Đã mở AI Internet. Chép kết quả rồi dán lại vào ô, không tốn quota app.')}if(choice==='gpt'&&j.openai_available)return run(true);throw new Error(choice==='wait'?'Đã hủy — đợi quota Gemini hồi rồi thử lại.':'Hết quota GEMINI.')}if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}return run(false)}
+async function adminAiFetch(url,body,opts){opts=opts||{};let payload=Object.assign({},body||{});if(opts.admin_ai_provider)payload.admin_ai_provider=opts.admin_ai_provider;if(opts.admin_ai_allow_gpt_fallback)payload.admin_ai_allow_gpt_fallback=true;
+// Luôn đính kèm Anthropic key từ localStorage nếu có (server cần để dùng Claude)
+let _antKey=_loadAnthropicKey();if(_antKey)payload.anthropic_key=_antKey;
+let method=opts.method||'POST';let headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});let r=await fetch(url,{method,headers,body:JSON.stringify(payload),signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}
+// Bắt lỗi billing/account inactive — tự chuyển Claude nếu có key
+let errLow=String(j.error||'').toLowerCase();let isBillingErr=errLow.includes('billing')||errLow.includes('not active')||errLow.includes('payment')||errLow.includes('402')||errLow.includes('account has been');
+if(isBillingErr&&!opts.admin_ai_provider){let antKey=_loadAnthropicKey();if(antKey){let st=document.getElementById('bulkDbtStatus')||document.getElementById('bulkLevelStatus');if(st)st.textContent='⚠ Lỗi billing AI → tự chuyển Claude...';return adminAiFetch(url,body,{...opts,admin_ai_provider:'ANTHROPIC',admin_ai_allow_gpt_fallback:true})}}
+if(j.gemini_quota_exhausted){
+  let antKey=_loadAnthropicKey();
+  if(antKey){
+    try{
+      let st=document.getElementById('bulkDbtStatus')||document.getElementById('bulkLevelStatus');
+      if(st)st.textContent='⚡ Gemini hết quota → tự chuyển Claude...';
+      return adminAiFetch(url,body,{...opts,admin_ai_provider:'ANTHROPIC',admin_ai_allow_gpt_fallback:true});
+    }catch(e2){}
+  }
+  if(j.openai_available){
+    try{return adminAiFetch(url,body,{...opts,admin_ai_provider:'OPENAI',admin_ai_allow_gpt_fallback:true})}catch(e2){}
+  }
+  let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);
+  if(choice==='internet'){openAdminAiInternetFallback(body,url);throw new Error('Đã mở AI Internet.')}
+  if(choice==='gpt'&&j.openai_available)return adminAiFetch(url,body,{...opts,admin_ai_provider:'OPENAI',admin_ai_allow_gpt_fallback:true});
+  throw new Error('Hết quota GEMINI — chưa có key dự phòng.');
+}
+if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
+async function adminAiFetchForm(url,buildFd,opts){opts=opts||{};async function run(useGpt){let fd=buildFd(!!useGpt);if(useGpt){fd.set('admin_ai_provider','OPENAI');fd.set('admin_ai_allow_gpt_fallback','true')}let r=await fetch(url,{method:'POST',body:fd,signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}if(j.gemini_quota_exhausted){let antKey=_loadAnthropicKey();if(antKey){try{return run('claude')}catch(e2){}}if(j.openai_available)return run(true);let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);if(choice==='internet'){openAdminAiInternetFallback({},url);throw new Error('Đã mở AI Internet.')}if(choice==='gpt'&&j.openai_available)return run(true);throw new Error('Hết quota GEMINI.')}if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}return run(false)}
 function adminUsesGpt(){return isAdminViewer()&&adminAiProvider()==='OPENAI'}
 function adminAiModelLabel(){let m=String(USER.openai_admin_model||'gpt-4o').trim();return m||'gpt-4o'}
 function isSvipViewer(){return !!(USER.is_svip||String(USER.role||'').toUpperCase()==='S.VIP')}
@@ -19611,7 +19844,7 @@ function collectDangSimDeleteRows(){let rows=[];document.querySelectorAll('#dang
 function purgeLocalQuestionsAfterDeletes(rows){let dels=new Set(rows.map(r=>parseInt(r,10)).filter(r=>r>1));if(!dels.size)return;let removedIdx=[];for(let i=QUESTIONS.length-1;i>=0;i--){if(dels.has(parseInt(QUESTIONS[i]._row,10)||0))removedIdx.push(i)}removedIdx.sort((a,b)=>b-a);for(let i of removedIdx){QUESTIONS.splice(i,1);reindexQuizMaps(i)}for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;let shift=[...dels].filter(d=>d<r).length;if(shift)qq._row=r-shift}if(CUR>=QUESTIONS.length)CUR=Math.max(0,QUESTIONS.length-1)}
 async function executeDangSimilarityDelete(){if(!USER.is_admin)return;let rows=collectDangSimDeleteRows();if(!rows.length){alert('Chưa tick câu nào để xóa.');return}if(!confirm('Xóa '+rows.length+' câu khỏi Google Sheet?\n\nDòng: '+rows.sort((a,b)=>a-b).join(', ')+'\n\nHành động không hoàn tác.'))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;let btn=document.getElementById('dangSimDeleteBtn');let st=document.getElementById('dangSimStatus');if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}if(st)st.textContent='⏳ Đang xóa '+rows.length+' dòng trên Google Sheet…';try{let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});purgeLocalQuestionsAfterDeletes(j.rows||rows);DANG_SIMILARITY_CACHE={};if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||0)+' câu.'));renderNav();renderQuestion();refreshCatalogFromMeta();let q=QUESTIONS[CUR]||{};if(String(q.DangBaiTap||'').trim()){let rep=await loadDangSimilarityReport(q,true,false);if(rep&&rep.pair_count)renderDangSimilarityModal(rep);else closeDangSimilarityModal()}else closeDangSimilarityModal();alert(j.message||('Đã xóa '+(j.deleted||0)+' câu.'))}catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa các câu đã chọn'}}}
 async function adminAnalyzeDangSimilarity(withAi){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!String(q.DangBaiTap||'').trim()){alert('Câu chưa có Dạng bài tập (cột H).');return}let rep=await loadDangSimilarityReport(q,true,!!withAi);if(!rep){alert('Không phân tích được.');return}if(LEARNING_OPEN_KIND==='method'){let hb=document.getElementById('hintBox');if(hb&&hb.classList.contains('learningOpen')){let items=(LEARNING_CACHE[learningCacheKey('method',q)]||{}).items||[];renderLearningPanel('method',items,(LEARNING_CACHE[learningCacheKey('method',q)]||{}).meta||{})}}renderDangSimilarityModal(rep)}
-function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let parts=[q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].filter(x=>String(x||'').trim());scope.textContent=parts.length?parts.join(' · '):'Chưa có metadata bài/chương.'}}
+function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let dbt=String(q.DangBaiTap||'').trim();let meta=[q.Mon,q.Lop?'Lớp '+q.Lop:'',q.Chuong,q.BaiHoc].filter(x=>String(x||'').trim()).join(' · ');let trangThai=String(q.TrangThai||'').trim();let isDuyet=(()=>{let kn=trangThai.toLowerCase().replace(/\s/g,'');return kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||trangThai==='ĐÃ DUYỆT'})();let reviewBadge=trangThai?`<span style="display:inline-block;margin-top:4px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;${isDuyet?'background:#dcfce7;color:#166534;border:1px solid #86efac':'background:#ffedd5;color:#9a3412;border:1px solid #fdba74'}">` +(isDuyet?'✅ Đã duyệt':'⏳ Chưa duyệt')+'</span>':'';scope.innerHTML=(dbt?`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:12px;font-weight:900;max-width:100%;word-break:break-word">🏷️ ${esc(dbt)}</span></div>`:`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:11px;font-weight:800">⚠ Chưa có Dạng BT</span></div>`)+(meta?`<div style="font-size:11px;color:var(--muted);line-height:1.4">${esc(meta)}</div>`:'') +reviewBadge}}
 async function adminDetectDangBaiTapAndSave(autoOnly){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!q._row&&!autoOnly){alert('Câu chưa có dòng Sheet — không lưu được Dạng bài tập.');return}if(!confirm('GPT gán Dạng bài tập cho câu này và lưu Sheet?'))return;try{let j=await adminApiPost('/api/ai/detect-dangbaitap-update',{row:q._row,id:q.ID||'',question:q,dangbaitap_suggestions:adminDangBaiTapSuggestionsForQuestion(q)});if(j.DangBaiTap){q.DangBaiTap=j.DangBaiTap;LEARNING_CACHE={};renderQuestion();let sync=j.matched_existing?' (đồng bộ dạng có sẵn)':'';alert('Đã gán Dạng bài tập: '+j.DangBaiTap+sync+(j.reason?'\n'+j.reason:''))}}catch(e){alert('Không gán được: '+(e.message||e))}}
 async function adminGenerateAndSyncLearning(kind){if(!USER.is_admin)return;kind=(kind==='method')?'method':'theory';if(kind==='theory'){alert('Lý thuyết SGK phải do ADMIN nhập tay vào sheet Ly_Thuyet; GPT chỉ tạo Phương pháp giải.');return}let q=QUESTIONS[CUR]||{};if(!confirm('GPT tạo Phương pháp giải và lưu Google Sheet?'))return;try{let j=await adminApiPost('/api/learning/generate-save',{kind:'method',question:q});LEARNING_CACHE={};if(j.DangBaiTap&&q){q.DangBaiTap=j.DangBaiTap;renderQuestion()}let extra=j.question_dangbaitap_updated?('\nĐã gán Dạng bài tập cột H: '+j.DangBaiTap):'';alert('Đã lưu học liệu'+(j.row?(' dòng '+j.row):'')+'.'+extra);if(LEARNING_OPEN_KIND==='method')loadLearningPanelContent('method',true)}catch(e){alert('Không tạo/lưu được: '+(e.message||e))}}
 function translateEnStore(qIdx){qIdx=qIdx==null?CUR:qIdx;if(!TRANSLATE_BY_Q[qIdx])TRANSLATE_BY_Q[qIdx]={};return TRANSLATE_BY_Q[qIdx]}
@@ -19694,6 +19927,7 @@ let BULK_DBT_BUSY=false;
 let ADMIN_LEVEL_REVIEW_ITEMS=[];
 let BULK_LEVEL_BUSY=false;
 let BULK_DBT_DUP_FILTER='all';
+let BULK_DBT_HIDE_SAVED=false;
 let BULK_DBT_DUP_READY=false;
 const DBT_MAX_PER_LESSON=6;
 function bulkDbtApplyDupMarks(marks){
@@ -19769,6 +20003,574 @@ async function bulkDbtTickDupCopies(){
   let f=document.getElementById('bulkDbtDupFilterBtn');if(f)f.style.fontWeight='800';
   renderBulkDbtList();
 }
+let DBT_LESSON_CANONICAL={};
+function bulkDbtListEntries(){return ADMIN_DBT_REVIEW_ITEMS.map((it,pos)=>({it,pos})).filter(({it})=>(BULK_DBT_DUP_FILTER!=='dup'||!!it.dup_type)&&(!BULK_DBT_HIDE_SAVED||(!it.saved&&!it.locked)))}
+function bulkDbtGuideStorageKey(){
+  let scopes={};
+  for(let q of (QUESTIONS||[]))scopes[bulkDbtScopeKey(q||{})]=1;
+  let top=Object.keys(scopes).sort();
+  return 'bulkDbtAdminGuide_v1|'+(top[0]||'all');
+}
+function bulkDbtParseAdminTypes(text){
+  text=String(text||'').trim();
+  if(!text)return [];
+  let out=[],seen={};
+  for(let chunk of text.replace(/;/g,'\n').replace(/\|/g,'\n').split('\n')){
+    let line=String(chunk||'').trim();
+    if(!line)continue;
+    line=line.replace(/^[\-\*•\d]+[\.\)\:]\s*/,'').trim();
+    if(!line)continue;
+    if(line.indexOf(':')>=0){
+      let head=line.split(':')[0].trim();
+      if(head&&head.length>=3&&head.length<80)line=head;
+    }
+    if(adminDbtIsBadValue(line))continue;
+    let k=normText(line);
+    if(!k||seen[k])continue;
+    seen[k]=1;
+    out.push(line);
+    if(out.length>=DBT_MAX_PER_LESSON)break;
+  }
+  return out;
+}
+function bulkDbtAdminTypesByScope(){
+  let guideEl=document.getElementById('bulkDbtAdminGuide');
+  let text=guideEl?String(guideEl.value||''):'';
+  let types=bulkDbtParseAdminTypes(text);
+  let scopes={};
+  for(let q of (QUESTIONS||[]))scopes[bulkDbtScopeKey(q)]=1;
+  let byScope={};
+  if(types.length){
+    for(let sk of Object.keys(scopes))byScope[sk]=types.slice();
+    if(!Object.keys(scopes).length)byScope._all_=types.slice();
+  }
+  return {guide:text,byScope};
+}
+function bulkDbtAdminTypesForItem(it){
+  let pack=bulkDbtAdminTypesByScope();
+  let sk=bulkDbtScopeKey(it||{});
+  return (pack.byScope[sk]||pack.byScope._all_||[]).slice(0,DBT_MAX_PER_LESSON);
+}
+function bulkDbtLoadAdminGuide(){
+  let el=document.getElementById('bulkDbtAdminGuide');
+  let hint=document.getElementById('bulkDbtGuideHint');
+  if(!el)return;
+  try{
+    let saved=localStorage.getItem(bulkDbtGuideStorageKey())||'';
+    if(saved&&!String(el.value||'').trim())el.value=saved;
+    if(hint&&saved)hint.textContent='Đã lưu ('+bulkDbtParseAdminTypes(el.value).length+' dạng). Bấm «Chạy AI gợi ý» để AI phân bổ theo tóm tắt.';
+  }catch(e){}
+}
+function bulkDbtSaveAdminGuide(){
+  let el=document.getElementById('bulkDbtAdminGuide');
+  let hint=document.getElementById('bulkDbtGuideHint');
+  if(!el)return;
+  try{
+    localStorage.setItem(bulkDbtGuideStorageKey(),String(el.value||''));
+    let n=bulkDbtParseAdminTypes(el.value).length;
+    if(hint)hint.textContent='✅ Đã lưu ('+n+' dạng). Bấm «Chạy AI gợi ý» để AI phân bổ theo tóm tắt.';
+  }catch(e){if(hint)hint.textContent='Không lưu được tóm tắt.'}
+}
+function bulkDbtLoadCatalogGuide(){
+  let el=document.getElementById('bulkDbtAdminGuide');
+  let hint=document.getElementById('bulkDbtGuideHint');
+  if(!el)return;
+  let scopes={};
+  for(let q of (QUESTIONS||[]))scopes[bulkDbtScopeKey(q)]=(scopes[bulkDbtScopeKey(q)]||0)+1;
+  let top=Object.entries(scopes).sort((a,b)=>b[1]-a[1])[0];
+  let lines=[],seen={};
+  function add(v){v=String(v||'').trim();if(!v||adminDbtIsBadValue(v))return;let k=normText(v);if(seen[k])return;seen[k]=1;lines.push(v)}
+  if(top){
+    for(let q of (QUESTIONS||[])){
+      if(bulkDbtScopeKey(q)!==top[0])continue;
+      for(let s of adminDangBaiTapSuggestionsForQuestion(q))add(s);
+    }
+    for(let c of (CATALOG||[])){
+      let fc=((c.FilterCounts||{}).dangbaitap)||{};
+      if(typeof fc==='object')for(let k of Object.keys(fc))add(k);
+    }
+  }
+  el.value=lines.slice(0,DBT_MAX_PER_LESSON).join('\n');
+  if(hint)hint.textContent='📋 Đã lấy '+lines.length+' dạng — bấm Lưu hoặc Chạy AI gợi ý.';
+}
+function bulkDbtScopeKey(it){return [normText(it.Mon||''),normText(it.Chuong||''),normText(it.BaiHoc||'')].join('|')}
+function bulkDbtSimilarity(a,b){
+  a=normText(a);b=normText(b);
+  if(!a||!b)return 0;
+  if(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0)return 0.9;
+  let ta=a.split(/\s+/),tb=b.split(/\s+/),ov=0;
+  for(let w of ta)if(tb.includes(w))ov++;
+  return ov/Math.min(ta.length,tb.length)||0;
+}
+function bulkDbtNearestCanonical(name,canonicals){
+  canonicals=(canonicals||[]).filter(Boolean);
+  if(!canonicals.length)return String(name||'').trim();
+  let best=canonicals[0],bestSc=-1;
+  for(let c of canonicals){
+    let sc=bulkDbtSimilarity(name,c);
+    if(sc>bestSc){bestSc=sc;best=c}
+  }
+  return bestSc>=0.35?best:canonicals[0];
+}
+function bulkDbtConsolidateItems(items){
+  items=(items||[]).slice();
+  let merged=0;
+  let byLesson={};
+  items.forEach(it=>{(byLesson[bulkDbtScopeKey(it)]=byLesson[bulkDbtScopeKey(it)]||[]).push(it)});
+  for(let sk of Object.keys(byLesson)){
+    let group=byLesson[sk];
+    let buckets={};
+    group.forEach(it=>{
+      let v=String(it.ai_dbt||'').trim();
+      if(!v||adminDbtIsBadValue(v))return;
+      let k=normText(v);
+      if(!buckets[k])buckets[k]={display:v,count:0};
+      buckets[k].count++;
+    });
+    let keys=Object.keys(buckets);
+    if(keys.length<=DBT_MAX_PER_LESSON)continue;
+    let remap={};
+    keys.forEach(k=>{remap[k]=buckets[k].display});
+    function distNames(){
+      let seen={},out=[];
+      for(let k of Object.keys(remap)){
+        let dn=normText(remap[k]);
+        if(!seen[dn]){seen[dn]=1;out.push(remap[k])}
+      }
+      return out;
+    }
+    while(distNames().length>DBT_MAX_PER_LESSON){
+      let agg={};
+      for(let k of Object.keys(remap))agg[normText(remap[k])]=(agg[normText(remap[k])]||0)+1;
+      let ranked=Object.entries(agg).sort((a,b)=>(a[1]-b[1])||(a[0].length-b[0].length));
+      let victimN=ranked[0][0];
+      let victimDisplay=remap[Object.keys(remap).find(k=>normText(remap[k])===victimN)];
+      let others=[];
+      let seenO={};
+      for(let k of Object.keys(remap)){
+        if(normText(remap[k])===victimN)continue;
+        let ko=normText(remap[k]);
+        if(!seenO[ko]){seenO[ko]=1;others.push(remap[k])}
+      }
+      let target=bulkDbtNearestCanonical(victimDisplay,others);
+      for(let k of Object.keys(remap)){
+        if(normText(remap[k])===victimN)remap[k]=target;
+      }
+    }
+    group.forEach(it=>{
+      let v=String(it.ai_dbt||'').trim();
+      let kn=normText(v);
+      if(!kn||!remap[kn])return;
+      let nv=remap[kn];
+      if(normText(nv)!==kn){
+        it.ai_dbt=nv;
+        it.reason=String(it.reason||'')+(' (gộp về «'+nv+'» — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài)').trim().slice(0,180);
+        it.matched_existing=true;
+        merged++;
+      }
+    });
+  }
+  return {items,merged};
+}
+function bulkDbtRebuildLessonCanonical(items){
+  DBT_LESSON_CANONICAL={};
+  (items||[]).forEach(it=>{
+    let sk=bulkDbtScopeKey(it);
+    let v=String(it.ai_dbt||it.current_dbt||'').trim();
+    if(!v||adminDbtIsBadValue(v))return;
+    let bucket=DBT_LESSON_CANONICAL[sk]||{};
+    let k=normText(v);
+    if(!bucket[k])bucket[k]={display:v,count:0};
+    bucket[k].count++;
+    DBT_LESSON_CANONICAL[sk]=bucket;
+  });
+  let out={};
+  for(let sk of Object.keys(DBT_LESSON_CANONICAL)){
+    let ordered=Object.keys(DBT_LESSON_CANONICAL[sk]).sort((a,b)=>DBT_LESSON_CANONICAL[sk][b].count-DBT_LESSON_CANONICAL[sk][a].count||(DBT_LESSON_CANONICAL[sk][a].display.localeCompare(DBT_LESSON_CANONICAL[sk][b].display)));
+    out[sk]=ordered.slice(0,DBT_MAX_PER_LESSON).map(k=>DBT_LESSON_CANONICAL[sk][k].display);
+  }
+  DBT_LESSON_CANONICAL=out;
+}
+function bulkDbtLessonCanonicalForItem(it){
+  let sk=bulkDbtScopeKey(it);
+  return (DBT_LESSON_CANONICAL[sk]||[]).slice();
+}
+function bulkDbtMergeLessonContext(ctx,items){
+  ctx=Object.assign({},ctx||{});
+  (items||[]).forEach(it=>{
+    let sk=bulkDbtScopeKey(it);
+    let v=String(it.ai_dbt||'').trim();
+    if(!v)return;
+    let lst=ctx[sk]||[];
+    if(!lst.some(x=>normText(x)===normText(v)))lst.push(v);
+    ctx[sk]=lst.slice(0,DBT_MAX_PER_LESSON);
+  });
+  return ctx;
+}
+function bulkDbtChosen(it){return String((it&&it.ai_dbt)||'').trim()}
+function bulkDbtHasChange(it){
+  let cur=String((it&&it.current_dbt)||'').trim();
+  let ai=bulkDbtChosen(it);
+  if(!ai)return false;
+  if(!cur)return true;
+  return normText(cur)!==normText(ai);
+}
+function bulkDbtAcceptLabel(it){return (bulkDbtHasChange(it)||String(it.prev_ai_dbt||'').trim())?'Chấp nhận đổi':'Chấp nhận'}
+function bulkDbtSyncRowFromDom(pos){
+  let it=ADMIN_DBT_REVIEW_ITEMS[pos];if(!it)return;
+  let sel=document.querySelector('[data-bulk-dbt="'+pos+'"]');
+  if(sel){
+    let v=String(sel.value||'').trim();
+    if(v&&v!=='__custom__'){it.ai_dbt=v;it.selected=!!it.selected}
+  }
+  let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');
+  if(cb)it.selected=!!cb.checked;
+}
+function bulkDbtSyncAllFromDom(){for(let i=0;i<ADMIN_DBT_REVIEW_ITEMS.length;i++)bulkDbtSyncRowFromDom(i)}
+function bulkDbtSetBusy(on){
+  BULK_DBT_BUSY=!!on;
+  ['bulkDbtRerunBtn','bulkDbtSelectAllBtn','bulkDbtApplyBtnTop','bulkDbtApplyBtnBot','bulkDbtDupScanBtn','bulkDbtDupFilterBtn','bulkDbtDupAllBtn','bulkDbtDupTickBtn','bulkDbtDupDelBtn'].forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!!on});
+}
+function bulkDbtOptSelected(ai,cur,v){let pick=String(ai||cur||'').trim();if(!pick||!v)return false;return pick===v||normText(pick)===normText(v)}
+function closeBulkDbtReview(){let m=document.getElementById('bulkDbtModal');if(m)m.classList.add('hide')}
+function openBulkDbtReview(){
+  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
+  if(!Array.isArray(QUESTIONS)||!QUESTIONS.length){alert('Hãy mở một đề/chuyên đề trước. Nút này gợi ý Dạng bài tập cho các câu đang xem.');return}
+  let m=document.getElementById('bulkDbtModal');if(m)m.classList.remove('hide');
+  BULK_DBT_DUP_FILTER='all';
+  BULK_DBT_DUP_READY=false;
+  BULK_DBT_HIDE_SAVED=false;
+  let hideSavedBtn=document.getElementById('bulkDbtHideSavedBtn');
+  if(hideSavedBtn){hideSavedBtn.textContent='🙈 Ẩn đã lưu';hideSavedBtn.style.fontWeight='';hideSavedBtn.style.background='';hideSavedBtn.style.borderColor='';hideSavedBtn.style.color=''}
+  ensureBulkDbtDupBar();
+  bulkDbtLoadAdminGuide();
+  ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),prev_ai_dbt:'',ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false,saved:false,dup_delete:false}));
+  renderBulkDbtList();
+  let st=document.getElementById('bulkDbtStatus');
+  if(st)st.innerHTML='<span class="muted">Bấm <b>🤖 Chạy AI gợi ý</b> để bắt đầu phân loại '+QUESTIONS.length+' câu.</span>';
+}
+function bulkDbtOptsHtml(it,pos){
+  let ai=String(it.ai_dbt||'').trim();
+  let cur=String(it.current_dbt||'').trim();
+  let prevAi=String(it.prev_ai_dbt||'').trim();
+  let seen={},opts=[];
+  function add(v){v=String(v||'').trim();if(!v)return;let k=normText(v);if(seen[k])return;seen[k]=1;opts.push(v)}
+  for(let s of bulkDbtAdminTypesForItem(it))add(s);
+  add(ai);add(prevAi);add(cur);
+  for(let s of bulkDbtLessonCanonicalForItem(it))add(s);
+  for(let s of (it.suggestions||[]))add(s);
+  if(opts.length>DBT_MAX_PER_LESSON+2)opts=opts.slice(0,DBT_MAX_PER_LESSON+2);
+  if(!opts.length)return `<input type="text" data-bulk-dbt="${pos}" value="${escAttr(ai||cur)}" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)" oninput="bulkDbtInput(${pos},this.value)" />`;
+  let selPick=ai||cur;
+  let optHtml=opts.map(v=>`<option value="${escAttr(v)}"${bulkDbtOptSelected(ai,cur,v)?' selected':''}>${esc(v)}</option>`).join('');
+  if(selPick&&!opts.some(v=>bulkDbtOptSelected(selPick,'',v)))optHtml=`<option value="${escAttr(selPick)}" selected>${esc(selPick)}</option>`+optHtml;
+  return `<select data-bulk-dbt="${pos}" onchange="bulkDbtSet(${pos},this.value)" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)">${optHtml}<option value="__custom__">✏️ Nhập khác…</option></select>`;
+}
+function renderBulkDbtList(){
+  let box=document.getElementById('bulkDbtList');if(!box)return;
+  if(BULK_DBT_BUSY&&!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted" style="padding:20px;text-align:center">⏳ Đang chờ AI...</div>';return}
+  if(!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dữ liệu.</div>';return}
+  let entries=bulkDbtListEntries();
+  if(BULK_DBT_DUP_FILTER==='dup'&&!entries.length){
+    box.innerHTML='<div class="muted" style="padding:16px;line-height:1.5">'+(BULK_DBT_DUP_READY?'Không có câu trùng trong đề này.':'Chưa quét trùng — bấm «🔍 Quét trùng» trước.<br>Hoặc bấm «📋 Tất cả» để xem lại toàn bộ.')+'</div>';
+    return;
+  }
+  box.innerHTML=entries.map(({it,pos})=>{
+    let ai=String(it.ai_dbt||'').trim();
+    let cur=String(it.current_dbt||'').trim();
+    let prevAi=String(it.prev_ai_dbt||'').trim();
+    let changed=bulkDbtHasChange(it);
+    let isLocked=!!it.locked;
+    let checked=(!isLocked&&it.selected)?'checked':'';
+    let ok='';
+    if(isLocked){
+      ok=`<span class="tag" style="background:#e0e7ef;color:#64748b">🔒 Đã duyệt — khoá</span>`;
+    }else if(ai){
+      if(prevAi&&normText(prevAi)!==normText(ai)){
+        ok=`<span class="muted">Gợi ý cũ:</span> <span class="tag" style="background:#fef3c7;color:#92400e">${esc(prevAi)}</span> <span style="font-weight:800">→</span> <span class="tag" style="background:#dbeafe;color:#1e40af">Mới: ${esc(ai)}</span>`;
+      }else if(changed){
+        ok=`<span class="muted">Sheet:</span> <b style="color:#166534">${esc(cur)}</b> <span style="font-weight:800">→</span> <span class="tag" style="background:#dbeafe;color:#1e40af">AI: ${esc(ai)}</span>`;
+      }else{
+        ok=`<span class="tag" style="background:#dcfce7;color:#166534">AI: ${esc(ai)}</span>${it.matched_existing?' <span class="muted">(dạng có sẵn)</span>':''}`;
+      }
+    }else{
+      ok='<span class="muted">AI chưa gợi ý</span>';
+    }
+    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ Đã lưu Sheet</span>`:'';
+    let dupBox='';
+    if(BULK_DBT_DUP_READY&&it.dup_type){
+      dupBox=it.dup_keep?` <span class="tag" style="background:#fef3c7;color:#92400e">⚠️ Trùng (giữ · dòng ${esc(it.row||'?')})</span>`:` <span class="tag" style="background:#fee2e2;color:#991b1b">🔁 Trùng câu ${it.dup_mates.join(', ')}</span>`;
+      if(!it.dup_keep&&!isLocked)dupBox+=` <label style="display:inline-flex;gap:4px;align-items:center;font-weight:800;cursor:pointer;color:#991b1b"><input type="checkbox" data-bulk-dbt-dupdel="${pos}" ${it.dup_delete?'checked':''} ${BULK_DBT_BUSY?'disabled':''} onchange="bulkDbtToggleDupDelete(${pos},this.checked)"> Xóa trùng</label>`;
+    }
+    // Border: locked = xám, còn lại như cũ
+    let border=isLocked?'border:1px solid #cbd5e1;background:#f8fafc;opacity:.7':
+      (it.saved?'border:2px solid #86efac;background:#f0fdf4':
+      (BULK_DBT_DUP_READY&&it.dup_type&&!it.dup_keep?'border:2px solid #fca5a5;background:#fff7f7':
+      ((changed||prevAi)?'border:2px solid #fbbf24;background:#fffbeb':
+      (it.selected?'border:2px solid #93c5fd;background:#eff6ff':'border:1px solid var(--border);background:var(--bg)'))));
+    let acceptLbl=isLocked?'🔒 Đã duyệt':bulkDbtAcceptLabel(it);
+    let chkDisabled=(BULK_DBT_BUSY||isLocked)?'disabled':'';
+    // Ẩn ô Chốt dạng và nút Chấp nhận nếu đã khoá
+    let actionRow=isLocked
+      ?`<div style="margin-top:6px;font-size:12px;color:#94a3b8">Câu đã duyệt — không thể thay đổi Dạng BT. Bỏ duyệt trước nếu muốn chỉnh.</div>`
+      :`<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Chốt dạng:</span>${bulkDbtOptsHtml(it,pos)}<button type="button" class="btnSmall" onclick="bulkDbtAcceptOne(${pos})" ${BULK_DBT_BUSY?'disabled':''}>💾 Chấp nhận câu này</button></div>`;
+    return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;${border};border-radius:10px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại Sheet: ${cur?`<b style="color:#166534">${esc(cur)}</b>`:'<span class="muted">—</span>'} · ${ok}${saved}${dupBox}</div>
+        <label style="display:flex;gap:6px;align-items:center;font-weight:800;${isLocked?'opacity:.4;cursor:not-allowed':'cursor:pointer'}"><input type="checkbox" data-bulk-dbt-check="${pos}" ${checked} ${chkDisabled} onchange="bulkDbtToggle(${pos},this.checked)"> ${esc(acceptLbl)}</label>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:4px">ID: ${esc(it.ID||'—')} · dòng Sheet: ${esc(it.row||'—')}${it.Mon?' · '+esc(it.Mon):''}${it.BaiHoc?' · '+esc(it.BaiHoc):''}</div>
+      <div style="margin-top:6px;line-height:1.45">${esc(it.preview||'')}</div>
+      <div class="muted" style="margin-top:6px">${it.reason?'Lý do: '+esc(it.reason):'AI sẽ ghi lý do ngắn tại đây.'}</div>
+      ${actionRow}
+    </div>`;
+  }).join('');
+}
+function bulkDbtEnsureValue(it){
+  if(bulkDbtChosen(it))return bulkDbtChosen(it);
+  let sug=(it.suggestions||[]).find(x=>String(x||'').trim());
+  if(sug){it.ai_dbt=String(sug).trim();return it.ai_dbt}
+  return '';
+}
+function bulkDbtToggle(pos,on){
+  if(BULK_DBT_BUSY)return;
+  if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
+  if(ADMIN_DBT_REVIEW_ITEMS[pos].locked){
+    let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');
+    if(cb)cb.checked=false;
+    return;
+  }
+  bulkDbtSyncRowFromDom(pos);
+  let it=ADMIN_DBT_REVIEW_ITEMS[pos];
+  if(on){
+    let v=bulkDbtEnsureValue(it);
+    if(!v){
+      alert('Câu '+(it.index+1)+': chưa có Dạng BT.\n\n• Đợi dòng ⏳ AI xong\n• Hoặc chọn/gõ ở ô «Chốt dạng» rồi tick lại');
+      let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');
+      if(cb)cb.checked=false;
+      it.selected=false;
+      return;
+    }
+    let cur=String(it.current_dbt||'').trim();
+    if(cur&&normText(cur)!==normText(v)){
+      if(!confirm('Câu '+(it.index+1)+': đổi dạng Sheet «'+cur+'» → «'+v+'»?')){let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');if(cb)cb.checked=false;it.selected=false;return}
+    }
+  }
+  it.selected=!!on;
+}
+function bulkDbtSet(pos,v){
+  if(BULK_DBT_BUSY)return;
+  if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
+  if(v==='__custom__'){let nv=prompt('Nhập Dạng bài tập:',ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt||ADMIN_DBT_REVIEW_ITEMS[pos].current_dbt||'');if(nv===null)return;v=String(nv).trim()}
+  ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
+  ADMIN_DBT_REVIEW_ITEMS[pos].selected=false;
+  ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
+  renderBulkDbtList();
+}
+function bulkDbtInput(pos,v){
+  if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
+  ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
+  ADMIN_DBT_REVIEW_ITEMS[pos].selected=false;
+  ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
+}
+function bulkDbtSelectAllAi(){
+  if(BULK_DBT_BUSY){alert('Đang chờ AI gợi ý — đợi dòng trạng thái ⏳ xong rồi bấm lại.');return}
+  bulkDbtSyncAllFromDom();
+  let n=0;
+  for(let it of ADMIN_DBT_REVIEW_ITEMS){
+    bulkDbtEnsureValue(it);
+    it.selected=!!bulkDbtChosen(it);
+    if(it.selected)n++;
+  }
+  renderBulkDbtList();
+  if(!n)alert('Chưa có gợi ý nào để tick.\n\n• Đợi AI chạy xong\n• Hoặc bấm «🤖 Chạy AI gợi ý»\n• Hoặc chọn Dạng BT ở ô «Chốt dạng» từng câu');
+}
+function bulkDbtSelectNone(){for(let it of ADMIN_DBT_REVIEW_ITEMS)it.selected=false;renderBulkDbtList()}
+function bulkDbtToggleHideSaved(){
+  BULK_DBT_HIDE_SAVED=!BULK_DBT_HIDE_SAVED;
+  let btn=document.getElementById('bulkDbtHideSavedBtn');
+  if(btn){
+    btn.textContent=BULK_DBT_HIDE_SAVED?'👁 Hiện tất cả':'🙈 Ẩn đã xong';
+    btn.style.fontWeight=BULK_DBT_HIDE_SAVED?'800':'';
+    btn.style.background=BULK_DBT_HIDE_SAVED?'#dbeafe':'';
+    btn.style.borderColor=BULK_DBT_HIDE_SAVED?'#3b82f6':'';
+    btn.style.color=BULK_DBT_HIDE_SAVED?'#1e40af':'';
+  }
+  let savedCount=ADMIN_DBT_REVIEW_ITEMS.filter(it=>it.saved||it.locked).length;
+  let st=document.getElementById('bulkDbtStatus');
+  if(st&&savedCount>0)st.textContent=(BULK_DBT_HIDE_SAVED?`Đang ẩn ${savedCount} câu đã xong/duyệt.`:`Hiện tất cả (${savedCount} câu đã xong).`);
+  renderBulkDbtList();
+}
+function bulkDbtQuestionPayload(q,i){
+  return {index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||''};
+}
+async function bulkDbtDetectCurrent(){
+  if(!USER.is_admin)return;
+  if(!QUESTIONS.length){alert('Chưa mở đề.');return}
+
+  // ── Lọc câu cần AI phân loại: bỏ qua câu đã duyệt (khoá) thôi ──
+  let needAI=QUESTIONS.filter(q=>{
+    let approved=String(q.TrangThai||'').trim();
+    let kn=approved.toLowerCase().replace(/\s/g,'');
+    let isApproved=(kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||approved==='ĐÃ DUYỆT');
+    return !isApproved;
+  });
+  let skipApproved=QUESTIONS.filter(q=>{
+    let kn=String(q.TrangThai||'').trim().toLowerCase().replace(/\s/g,'');
+    return kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||String(q.TrangThai||'').trim()==='ĐÃ DUYỆT';
+  });
+
+  let hasExisting=ADMIN_DBT_REVIEW_ITEMS&&ADMIN_DBT_REVIEW_ITEMS.some(it=>String(it.ai_dbt||'').trim());
+  let prevSnap={};
+  (ADMIN_DBT_REVIEW_ITEMS||[]).forEach(it=>{prevSnap[parseInt(it.index,10)]=Object.assign({},it)});
+  let total=needAI.length;
+  let antKey=_loadAnthropicKey();
+  let aiInfo=antKey?'Gemini → tự chuyển Claude nếu hết quota':'Gemini';
+
+  let skipMsg='';
+  if(skipApproved.length)skipMsg+=`\n• Bỏ qua ${skipApproved.length} câu đã duyệt (khoá, không đổi được)`;
+  if(!total){alert('Không có câu nào cần phân loại.\n'+skipMsg.trim());return}
+
+  let msg=hasExisting
+    ?`Chạy lại AI gợi ý cho ${total} câu chưa phân loại?\n\nAI: ${aiInfo}${skipMsg}\n\n• Dạng trên Sheet vẫn giữ\n• Không tự ghi Sheet — tick «Chấp nhận đổi» từng câu muốn lưu\n\nBấm OK để tiếp tục.`
+    :`Chạy AI gợi ý Dạng BT cho ${total} câu?\n\nAI: ${aiInfo}${skipMsg}\nApp chạy từng lô 12 câu, nghỉ 2s giữa lô.\nSau khi xong, tick «Chấp nhận» rồi «Lưu đã tick».\n\nBấm OK để bắt đầu.`;
+  if(!confirm(msg))return;
+  let st=document.getElementById('bulkDbtStatus');
+  let btn=document.getElementById('bulkDbtBtn');let old=btn?btn.textContent:'';
+  let badge=document.getElementById('bulkDbtAiBadge');
+  let progWrap=document.getElementById('bulkDbtProgressWrap');
+  let progBar=document.getElementById('bulkDbtProgressBar');
+  let progText=document.getElementById('bulkDbtProgressText');
+  if(progWrap)progWrap.classList.remove('hide');
+  if(progBar)progBar.style.width='0%';
+  if(badge){
+    badge.classList.remove('hide','claude','gemini','openai');
+    badge.classList.add('gemini');
+    badge.textContent='⚡ Gemini';
+    if(antKey)badge.title='Sẽ tự chuyển Claude nếu hết quota Gemini';
+  }
+  bulkDbtSetBusy(true);
+  renderBulkDbtList();
+  const BATCH=12;
+  const BATCH_PAUSE_MS=2000;
+  try{
+    if(btn){btn.disabled=true;btn.textContent='⏳ AI Dạng BT...'}
+    let allItems=[],detected=0,warnings=[],mergedTotal=0,lessonCtx={},batchFails=[];
+    let aiCounts={Gemini:0,Claude:0,GPT:0,loi:0};
+    function _providerLabel(p){
+      p=String(p||'').toUpperCase();
+      if(p.includes('ANTHROPIC')||p.includes('CLAUDE'))return 'Claude';
+      if(p.includes('OPENAI')||p.includes('GPT'))return 'GPT';
+      if(p.includes('GEMINI'))return 'Gemini';
+      return 'Gemini';
+    }
+    // Chỉ gửi needAI lên server — tiết kiệm quota tối đa
+    for(let s=0;s<needAI.length;s+=BATCH){
+      let end=Math.min(s+BATCH,needAI.length);
+      let batchIdx=Math.floor(s/BATCH)+1;
+      let pct=Math.round(s/needAI.length*100);
+      if(progBar)progBar.style.width=pct+'%';
+      if(progText)progText.textContent='Lô '+batchIdx+'/'+Math.ceil(needAI.length/BATCH)+' · câu '+(s+1)+'–'+end+' / '+needAI.length;
+      let aiSummary=Object.entries(aiCounts).filter(([k,v])=>k!=='loi'&&v>0).map(([k,v])=>k+' '+v).join(' · ');
+      if(st)st.textContent='⏳ Lô '+batchIdx+'/'+Math.ceil(needAI.length/BATCH)+' · câu '+(s+1)+'–'+end+' / '+needAI.length+(aiSummary?' | '+aiSummary:'')+(aiCounts.loi?' | ❌ lỗi '+aiCounts.loi:'');
+      let adminGuidePack=bulkDbtAdminTypesByScope();
+      let payload={questions:needAI.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j)),lesson_dbt_context:lessonCtx,admin_dbt_guide:adminGuidePack.guide||'',admin_dbt_types_by_scope:adminGuidePack.byScope||{}};
+      try{
+        let j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true});
+        let prov=_providerLabel(j.provider_used);
+        aiCounts[prov]=(aiCounts[prov]||0)+parseInt(j.detected||0,10)||0;
+        if(j.provider_used&&badge){
+          badge.classList.remove('claude','gemini','openai');
+          if(prov==='Claude'){badge.classList.add('claude');badge.textContent='✨ Claude'}
+          else if(prov==='GPT'){badge.classList.add('openai');badge.textContent='✅ GPT'}
+          else{badge.classList.add('gemini');badge.textContent='⚡ Gemini'}
+        }
+        (j.items||[]).forEach(it=>allItems.push(it));
+        detected+=parseInt(j.detected||0,10)||0;
+        mergedTotal+=parseInt(j.dbt_merged||0,10)||0;
+        lessonCtx=bulkDbtMergeLessonContext(lessonCtx,j.items||[]);
+        if(j.warning)warnings.push(String(j.warning));
+      }catch(e){
+        batchFails.push((s+1)+'–'+end);
+        aiCounts.loi+=(end-s);
+        warnings.push('Lô '+(s+1)+'–'+end+': '+(e.message||e));
+        if(st)st.textContent='⚠ Lô '+batchIdx+' lỗi — thử lô tiếp sau '+Math.round(BATCH_PAUSE_MS/1000)+'s…';
+      }
+      if(s+BATCH<needAI.length)await sleepMs(BATCH_PAUSE_MS);
+    }
+    if(progBar)progBar.style.width='100%';
+    if(progText)progText.textContent='✅ Hoàn thành';
+    let cons=bulkDbtConsolidateItems(allItems);
+    allItems=cons.items||allItems;
+    mergedTotal+=parseInt(cons.merged||0,10)||0;
+    bulkDbtRebuildLessonCanonical(allItems);
+    // Map kết quả AI theo ID câu (needAI có thể không liên tục index)
+    let byId={};allItems.forEach(it=>{byId[String(it.ID||'').trim()]=it});
+    let needAiIdSet=new Set(needAI.map(q=>String(q.ID||'').trim()));
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{
+      let qId=String(q.ID||'').trim();
+      let it=byId[qId]||{};
+      let old=prevSnap[i]||{};
+      let oldAi=String(old.ai_dbt||'').trim();
+      let newAi=String(it.ai_dbt||'').trim();
+      let ai=newAi||oldAi;
+      let prevAi='';
+      if(hasExisting&&oldAi&&newAi&&normText(oldAi)!==normText(newAi))prevAi=oldAi;
+      let canon=bulkDbtLessonCanonicalForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});
+      let adminSug=bulkDbtAdminTypesForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});
+      let baseSug=(canon&&canon.length)?canon:((it.suggestions&&it.suggestions.length)?it.suggestions.slice(0,DBT_MAX_PER_LESSON):adminDangBaiTapSuggestionsForQuestion(q));
+      let sug=adminSug.slice();
+      for(let v of baseSug){if(!sug.some(x=>normText(x)===normText(v)))sug.push(v)}
+      if(prevAi&&!sug.some(x=>normText(x)===normText(prevAi)))sug.unshift(prevAi);
+      sug=sug.slice(0,DBT_MAX_PER_LESSON+1);
+      let curDbt=String(q.DangBaiTap||old.current_dbt||'').trim();
+
+      // Câu đã duyệt: khoá hoàn toàn
+      let kn=String(q.TrangThai||'').trim().toLowerCase().replace(/\s/g,'');
+      let isApproved=(kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||String(q.TrangThai||'').trim()==='ĐÃ DUYỆT');
+
+      let autoTick=!isApproved&&!!ai&&!hasExisting&&(!curDbt||normText(curDbt)===normText(ai));
+      return {
+        index:i,row:q._row||it.row||old.row||'',
+        ID:qId,Dang:q.Dang||it.Dang||old.Dang||resolveDang(q),
+        Mon:q.Mon||it.Mon||old.Mon||'',Chuong:q.Chuong||it.Chuong||old.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||old.BaiHoc||'',
+        current_dbt:curDbt,prev_ai_dbt:prevAi,ai_dbt:ai,
+        matched_existing:!!it.matched_existing,suggestions:sug,
+        reason:String(it.reason||old.reason||''),
+        preview:it.preview||old.preview||questionPreviewShort(q),
+        selected:autoTick,
+        saved:!!old.saved&&normText(old.current_dbt||'')===normText(curDbt)&&!newAi,
+        locked:isApproved,   // khoá — không tick, không đổi
+        dup_type:old.dup_type||'',dup_keep:old.dup_keep!==false,dup_mates:old.dup_mates||[],dup_delete:!!old.dup_delete
+      };
+    });
+    let tick=ADMIN_DBT_REVIEW_ITEMS.filter(x=>x.selected).length;
+    let changedN=ADMIN_DBT_REVIEW_ITEMS.filter(x=>!x.locked&&(bulkDbtHasChange(x)||String(x.prev_ai_dbt||'').trim())).length;
+    let aiDetail=Object.entries(aiCounts).filter(([k,v])=>k!=='loi'&&v>0).map(([k,v])=>{
+      let icon=k==='Claude'?'✨':k==='GPT'?'✅':'⚡';
+      return icon+' '+k+': '+v+' câu';
+    }).join(' · ');
+    let failDetail=aiCounts.loi?(' · ❌ lỗi '+aiCounts.loi+' câu'):'';
+    let warnTxt=warnings.filter(Boolean).join(' · ');
+    let skipInfo=skipApproved.length?
+      '<br><span style="font-size:11px;color:var(--muted)">🔒 '+skipApproved.length+' câu đã duyệt (khoá, không đổi được)</span>':'';
+    if(st)st.innerHTML=(batchFails.length?'<b>⚠ Một phần lỗi — lô: '+batchFails.join(', ')+'</b><br>':'')
+      +'✅ <b>Xong '+detected+'/'+total+' câu</b>'
+      +(hasExisting&&changedN?' · <b style="color:#b45309">'+changedN+' câu có gợi ý đổi — tick «Chấp nhận đổi» rồi Lưu</b>':' · tick sẵn '+tick+' câu')
+      +(mergedTotal?' · gộp '+mergedTotal:'')
+      +'<br><span style="font-size:11px;color:var(--muted)">'+(aiDetail||'(chưa rõ AI)')
+      +failDetail+'</span>'
+      +skipInfo
+      +(warnTxt?'<br><span style="color:#b45309;font-size:11px">⚠ '+warnTxt+'</span>':'');
+    renderBulkDbtList();
+  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Lỗi: '+(e.message||e))}
+  finally{
+    bulkDbtSetBusy(false);
+    if(btn){btn.disabled=false;btn.textContent=old||'🤖 Chạy AI gợi ý'}
+    renderBulkDbtList();
+    setTimeout(()=>{if(progWrap)progWrap.classList.add('hide')},3000);
+  }
+}
 async function bulkDbtDeleteDupTicked(){
   if(!USER.is_admin)return;
   if(BULK_DBT_BUSY){alert('Đợi GPT xong rồi mới xóa.');return}
@@ -19786,384 +20588,27 @@ async function bulkDbtDeleteDupTicked(){
     let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
     purgeLocalQuestionsAfterDeletes(j.rows||rows);
     BULK_DBT_DUP_FILTER='all';BULK_DBT_DUP_READY=false;
-    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let old=oldById[String(q.ID||'').trim()||('_i'+i)]||{};return {index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:String(old.ai_dbt||q.DangBaiTap||'').trim(),matched_existing:!!old.matched_existing,suggestions:old.suggestions||adminDangBaiTapSuggestionsForQuestion(q),reason:String(old.reason||''),preview:questionPreviewShort(q),selected:!!old.selected&&!!String(old.ai_dbt||q.DangBaiTap||'').trim(),saved:!!old.saved,dup_delete:false}});
+    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let old=oldById[String(q.ID||'').trim()||('_i'+i)]||{};return {index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),prev_ai_dbt:String(old.prev_ai_dbt||'').trim(),ai_dbt:String(old.ai_dbt||q.DangBaiTap||'').trim(),matched_existing:!!old.matched_existing,suggestions:old.suggestions||adminDangBaiTapSuggestionsForQuestion(q),reason:String(old.reason||''),preview:questionPreviewShort(q),selected:!!old.selected&&!!String(old.ai_dbt||q.DangBaiTap||'').trim(),saved:!!old.saved,dup_delete:false}});
     renderNav();renderQuestion();refreshCatalogFromMeta();
     if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||rows.length)+' bản trùng.'));
     let el=document.getElementById('bulkDbtDupStatus');if(el){el.textContent='Đã xóa trùng — bấm «🔍 Quét trùng» lại nếu cần.';el.classList.remove('hide')}
     renderBulkDbtList();
-  }catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}
+  }catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Xóa trùng lỗi: '+(e.message||e))}
   finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa trùng đã tick'}}
 }
-function bulkDbtListEntries(){return ADMIN_DBT_REVIEW_ITEMS.map((it,pos)=>({it,pos})).filter(({it})=>BULK_DBT_DUP_FILTER!=='dup'||!!it.dup_type)}
-function bulkDbtGuideStorageKey(){
-  let scopes={};
-  for(let q of (QUESTIONS||[])){
-    let sk=bulkDbtScopeKey(q||{});
-    if(sk)scopes[sk]=(scopes[sk]||0)+1;
-  }
-  let top=Object.entries(scopes).sort((a,b)=>b[1]-a[1])[0];
-  return 'bulkDbtAdminGuide_v1|'+(top?top[0]:'all');
-}
-function bulkDbtParseAdminTypes(text){
-  let out=[],seen={};
-  String(text||'').split(/\r?\n/).forEach(line=>{
-    line=String(line||'').trim();
-    if(!line)return;
-    line=line.replace(/^[\-\*•\d]+[\.\)\:]\s*/,'').trim();
-    if(!line)return;
-    let colon=line.indexOf(':');
-    if(colon>2&&colon<80){
-      let head=line.slice(0,colon).trim();
-      if(head.length>=3)line=head;
-    }
-    if(adminDbtIsBadValue(line))return;
-    let k=normText(line);
-    if(seen[k])return;
-    seen[k]=1;
-    out.push(line);
-  });
-  return out.slice(0,DBT_MAX_PER_LESSON);
-}
-function bulkDbtAdminTypesByScope(){
-  let guideEl=document.getElementById('bulkDbtAdminGuide');
-  let text=guideEl?String(guideEl.value||'').trim():'';
-  let types=bulkDbtParseAdminTypes(text);
-  let by={};
-  if(!types.length)return {guide:text,byScope:{}};
-  let scopes={};
-  for(let q of (QUESTIONS||[]))scopes[bulkDbtScopeKey(q)]=1;
-  for(let sk of Object.keys(scopes))by[sk]=types.slice(0,DBT_MAX_PER_LESSON);
-  return {guide:text,byScope:by};
-}
-function bulkDbtAdminTypesForItem(it){
-  let pack=bulkDbtAdminTypesByScope();
-  let sk=bulkDbtScopeKey(it||{});
-  return ((pack.byScope||{})[sk]||[]).slice(0,DBT_MAX_PER_LESSON);
-}
-function bulkDbtLoadAdminGuide(){
-  let el=document.getElementById('bulkDbtAdminGuide');
-  let hint=document.getElementById('bulkDbtGuideHint');
-  if(!el)return;
-  try{
-    let saved=localStorage.getItem(bulkDbtGuideStorageKey())||'';
-    if(saved)el.value=saved;
-    else el.value='';
-    if(hint)hint.textContent=saved?'Đã nạp tóm tắt đã lưu.':'Chưa có tóm tắt — nhập dạng rồi bấm Lưu hoặc Lấy từ danh mục.';
-  }catch(e){
-    if(hint)hint.textContent='';
-  }
-}
-function bulkDbtSaveAdminGuide(){
-  let el=document.getElementById('bulkDbtAdminGuide');
-  let hint=document.getElementById('bulkDbtGuideHint');
-  if(!el)return;
-  try{
-    localStorage.setItem(bulkDbtGuideStorageKey(),String(el.value||''));
-    let n=bulkDbtParseAdminTypes(el.value).length;
-    if(hint)hint.textContent='✅ Đã lưu ('+n+' dạng). Bấm «Chạy GPT gợi ý lại» để AI phân bổ theo tóm tắt.';
-  }catch(e){
-    if(hint)hint.textContent='Không lưu được trên trình duyệt này.';
-  }
-}
-function bulkDbtLoadCatalogGuide(){
-  let el=document.getElementById('bulkDbtAdminGuide');
-  let hint=document.getElementById('bulkDbtGuideHint');
-  if(!el)return;
-  let scopes={};
-  for(let q of (QUESTIONS||[]))scopes[bulkDbtScopeKey(q)]=(scopes[bulkDbtScopeKey(q)]||0)+1;
-  let top=Object.entries(scopes).sort((a,b)=>b[1]-a[1])[0];
-  if(!top){if(hint)hint.textContent='Chưa có câu hỏi.';return}
-  let parts=top[0].split('|');
-  let want={Mon:parts[0]||'',Chuong:parts[1]||'',BaiHoc:parts[2]||''};
-  let rows=(META&&META.lesson_catalog)||[];
-  let lines=[],seen={};
-  for(let r of rows){
-    if(normText(r.Mon||'')!==normText(want.Mon))continue;
-    if(normText(r.Chuong||'')!==normText(want.Chuong))continue;
-    if(normText(r.BaiHoc||'')!==normText(want.BaiHoc))continue;
-    let raw=String(r.DangBaiTap||'').trim();
-    if(!raw)continue;
-    for(let part of raw.split(/[,;|]+/)){
-      part=String(part||'').trim();
-      if(!part||adminDbtIsBadValue(part))continue;
-      let k=normText(part);
-      if(seen[k])continue;
-      seen[k]=1;
-      lines.push(part);
-    }
-  }
-  if(!lines.length){
-    let sug=[];
-    for(let q of (QUESTIONS||[])){
-      if(bulkDbtScopeKey(q)!==top[0])continue;
-      for(let v of adminDangBaiTapSuggestionsForQuestion(q))if(v&&!seen[normText(v)]){seen[normText(v)]=1;sug.push(v)}
-    }
-    lines=sug.slice(0,DBT_MAX_PER_LESSON);
-  }
-  if(!lines.length){if(hint)hint.textContent='Danh mục/Dạng có sẵn chưa có dạng cho bài này.';return}
-  el.value=lines.slice(0,DBT_MAX_PER_LESSON).join('\n');
-  if(hint)hint.textContent='📋 Đã lấy '+lines.length+' dạng — bấm Lưu hoặc Chạy GPT gợi ý lại.';
-}
-function bulkDbtScopeKey(it){return [normText(it.Mon||''),normText(it.Chuong||''),normText(it.BaiHoc||'')].join('|')}
-function bulkDbtNearestCanonical(name,canonicals){
-  if(!canonicals||!canonicals.length)return name;
-  let best=canonicals[0],bestSc=-1;
-  for(let c of canonicals){let sc=dbtSimilarity(name,c);if(sc>bestSc){bestSc=sc;best=c}}
-  return bestSc>=0.35?best:canonicals[0];
-}
-function bulkDbtConsolidateItems(items){
-  if(!items||!items.length)return {merged:0,items,canonical:{}};
-  let byLesson={};
-  items.forEach(it=>{(byLesson[bulkDbtScopeKey(it)]=byLesson[bulkDbtScopeKey(it)]||[]).push(it)});
-  let merged=0,canonical={};
-  for(let [sk,group] of Object.entries(byLesson)){
-    let buckets={};
-    group.forEach(it=>{
-      let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
-      if(!v||adminDbtIsBadValue(v))return;
-      let k=normText(v);
-      if(!buckets[k])buckets[k]={name:v,count:0};
-      buckets[k].count++;
-    });
-    let remap={};
-    for(let k in buckets)remap[k]=buckets[k].name;
-    function distNames(){let seen={},out=[];for(let k in remap){let dn=normText(remap[k]);if(!seen[dn]){seen[dn]=1;out.push(remap[k])}}return out}
-    while(distNames().length>DBT_MAX_PER_LESSON){
-      let agg={};
-      for(let k in remap){let dn=normText(remap[k]);agg[dn]=(agg[dn]||0)+1}
-      let ranked=Object.entries(agg).sort((a,b)=>a[1]-b[1]||(a[0].length-b[0].length));
-      let victimN=ranked[0][0];
-      let victimDisplay=Object.values(remap).find(v=>normText(v)===victimN)||ranked[0][0];
-      let others=[];let seenO={};
-      for(let k in remap){if(normText(remap[k])===victimN)continue;let ko=normText(remap[k]);if(!seenO[ko]){seenO[ko]=1;others.push(remap[k])}}
-      let target=bulkDbtNearestCanonical(victimDisplay,others);
-      for(let k in remap){if(normText(remap[k])===victimN)remap[k]=target}
-    }
-    canonical[sk]=distNames().slice(0,DBT_MAX_PER_LESSON);
-    group.forEach(it=>{
-      let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
-      let k=normText(v);
-      if(!k||!remap[k])return;
-      let nv=remap[k];
-      if(normText(nv)!==k){
-        it.ai_dbt=nv;it.DangBaiTap=nv;it.matched_existing=true;
-        it.reason=String(it.reason||'').trim();
-        if(it.reason.indexOf('gộp về')<0)it.reason=(it.reason?it.reason+' ':'')+'(gộp về «'+nv+'» — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài)';
-        merged++;
-      }
-    });
-  }
-  return {merged,items,canonical};
-}
-function bulkDbtRebuildLessonCanonical(items){
-  let byLesson={};
-  (items||[]).forEach(it=>{
-    let sk=bulkDbtScopeKey(it);
-    let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
-    if(!v||adminDbtIsBadValue(v))return;
-    (byLesson[sk]=byLesson[sk]||[]).push(v);
-  });
-  let c={};
-  for(let [sk,vals] of Object.entries(byLesson)){
-    let counts={},seen={};
-    vals.forEach(v=>{let k=normText(v);counts[k]=(counts[k]||0)+1;if(!seen[k])seen[k]=v});
-    c[sk]=Object.values(seen).sort((a,b)=>(counts[normText(b)]||0)-(counts[normText(a)]||0)).slice(0,DBT_MAX_PER_LESSON);
-  }
-  window.__BULK_DBT_LESSON_CANON=c;
-  return c;
-}
-function bulkDbtLessonCanonicalForItem(it){
-  let sk=bulkDbtScopeKey(it);
-  return ((window.__BULK_DBT_LESSON_CANON||{})[sk]||[]).slice(0,DBT_MAX_PER_LESSON);
-}
-function bulkDbtMergeLessonContext(ctx,items){
-  ctx=ctx||{};
-  (items||[]).forEach(it=>{
-    let sk=bulkDbtScopeKey(it);
-    let v=String(it.ai_dbt||it.DangBaiTap||'').trim();
-    if(!v||adminDbtIsBadValue(v))return;
-    let lst=ctx[sk]=ctx[sk]||[];
-    if(!lst.some(x=>normText(x)===normText(v)))lst.push(v);
-    if(lst.length>DBT_MAX_PER_LESSON)ctx[sk]=lst.slice(0,DBT_MAX_PER_LESSON);
-  });
-  return ctx;
-}
-function bulkDbtChosen(it){return String((it&&it.ai_dbt)||'').trim()}
-function bulkDbtSyncRowFromDom(pos){
-  let it=ADMIN_DBT_REVIEW_ITEMS[pos];if(!it)return;
-  let el=document.querySelector('[data-bulk-dbt="'+pos+'"]');
-  if(!el)return;
-  let v=String(el.value||'').trim();
-  if(el.tagName==='SELECT'&&v==='__custom__')return;
-  if(v)it.ai_dbt=v;
-}
-function bulkDbtSyncAllFromDom(){for(let i=0;i<ADMIN_DBT_REVIEW_ITEMS.length;i++)bulkDbtSyncRowFromDom(i)}
-function bulkDbtSetBusy(on){
-  BULK_DBT_BUSY=!!on;
-  ['bulkDbtRerunBtn','bulkDbtSelectAllBtn','bulkDbtApplyBtnTop','bulkDbtApplyBtnBot','bulkDbtDupScanBtn','bulkDbtDupFilterBtn','bulkDbtDupAllBtn','bulkDbtDupTickBtn','bulkDbtDupDelBtn'].forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!!on});
-}
-function bulkDbtOptSelected(ai,cur,v){let pick=String(ai||cur||'').trim();if(!pick||!v)return false;return pick===v||normText(pick)===normText(v)}
-function closeBulkDbtReview(){let m=document.getElementById('bulkDbtModal');if(m)m.classList.add('hide')}
-function openBulkDbtReview(){
-  if(!USER.is_admin){alert('Chỉ ADMIN.');return}
-  if(!Array.isArray(QUESTIONS)||!QUESTIONS.length){alert('Hãy mở một đề/chuyên đề trước. Nút này gợi ý Dạng bài tập cho các câu đang xem.');return}
-  let m=document.getElementById('bulkDbtModal');if(m)m.classList.remove('hide');
-  BULK_DBT_DUP_FILTER='all';
-  BULK_DBT_DUP_READY=false;
-  ensureBulkDbtDupBar();
-  bulkDbtLoadAdminGuide();
-  ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false,saved:false,dup_delete:false}));
-  renderBulkDbtList();
-  bulkDbtDetectCurrent();
-}
-function bulkDbtOptsHtml(it,pos){
-  let ai=String(it.ai_dbt||'').trim();
-  let cur=String(it.current_dbt||'').trim();
-  let seen={},opts=[];
-  function add(v){v=String(v||'').trim();if(!v)return;let k=normText(v);if(seen[k])return;seen[k]=1;opts.push(v)}
-  for(let s of bulkDbtAdminTypesForItem(it))add(s);
-  add(ai);add(cur);
-  for(let s of bulkDbtLessonCanonicalForItem(it))add(s);
-  for(let s of (it.suggestions||[]))add(s);
-  if(opts.length>DBT_MAX_PER_LESSON+2)opts=opts.slice(0,DBT_MAX_PER_LESSON+2);
-  if(!opts.length)return `<input type="text" data-bulk-dbt="${pos}" value="${escAttr(ai||cur)}" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)" oninput="bulkDbtInput(${pos},this.value)" />`;
-  let selPick=ai||cur;
-  let optHtml=opts.map(v=>`<option value="${escAttr(v)}"${bulkDbtOptSelected(ai,cur,v)?' selected':''}>${esc(v)}</option>`).join('');
-  if(selPick&&!opts.some(v=>bulkDbtOptSelected(selPick,'',v)))optHtml=`<option value="${escAttr(selPick)}" selected>${esc(selPick)}</option>`+optHtml;
-  return `<select data-bulk-dbt="${pos}" onchange="bulkDbtSet(${pos},this.value)" style="flex:1;min-width:180px;padding:6px 8px;border-radius:8px;border:1px solid var(--border)">${optHtml}<option value="__custom__">✏️ Nhập khác…</option></select>`;
-}
-function renderBulkDbtList(){
-  let box=document.getElementById('bulkDbtList');if(!box)return;
-  if(BULK_DBT_BUSY&&!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted" style="padding:20px;text-align:center">⏳ Đang chờ GPT...</div>';return}
-  if(!ADMIN_DBT_REVIEW_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dữ liệu.</div>';return}
-  let entries=bulkDbtListEntries();
-  if(BULK_DBT_DUP_FILTER==='dup'&&!entries.length){
-    box.innerHTML='<div class="muted" style="padding:16px;line-height:1.5">'+(BULK_DBT_DUP_READY?'Không có câu trùng trong đề này.':'Chưa quét trùng — bấm «🔍 Quét trùng» trước.<br>Hoặc bấm «📋 Tất cả» để xem lại toàn bộ.')+'</div>';
-    return;
-  }
-  box.innerHTML=entries.map(({it,pos})=>{
-    let ai=String(it.ai_dbt||'').trim();
-    let cur=String(it.current_dbt||'').trim();
-    let checked=it.selected?'checked':'';
-    let ok=ai?`<span class="tag" style="background:#dcfce7;color:#166534">AI: ${esc(ai)}</span>${it.matched_existing?' <span class="muted">(dạng có sẵn)</span>':''}`:'<span class="muted">AI chưa gợi ý</span>';
-    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ Đã lưu Sheet</span>`:'';
-    let dupBox='';
-    if(BULK_DBT_DUP_READY&&it.dup_type){
-      dupBox=it.dup_keep?` <span class="tag" style="background:#fef3c7;color:#92400e">⚠️ Trùng (giữ · dòng ${esc(it.row||'?')})</span>`:` <span class="tag" style="background:#fee2e2;color:#991b1b">🔁 Trùng câu ${it.dup_mates.join(', ')}</span>`;
-      if(!it.dup_keep)dupBox+=` <label style="display:inline-flex;gap:4px;align-items:center;font-weight:800;cursor:pointer;color:#991b1b"><input type="checkbox" data-bulk-dbt-dupdel="${pos}" ${it.dup_delete?'checked':''} ${BULK_DBT_BUSY?'disabled':''} onchange="bulkDbtToggleDupDelete(${pos},this.checked)"> Xóa trùng</label>`;
-    }
-    let border=it.saved?'border:2px solid #86efac;background:#f0fdf4':(BULK_DBT_DUP_READY&&it.dup_type&&!it.dup_keep?'border:2px solid #fca5a5;background:#fff7f7':(it.selected?'border:2px solid #93c5fd;background:#eff6ff':'border:1px solid var(--border);background:var(--bg)'));
-    return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;${border};border-radius:10px">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
-        <div><b>Câu ${it.index+1}</b> · ${esc(it.Dang||'')} · hiện tại: ${cur?`<b style="color:#166534">${esc(cur)}</b>`:'<span class="muted">—</span>'} · ${ok}${saved}${dupBox}</div>
-        <label style="display:flex;gap:6px;align-items:center;font-weight:800;cursor:pointer"><input type="checkbox" data-bulk-dbt-check="${pos}" ${checked} ${BULK_DBT_BUSY?'disabled':''} onchange="bulkDbtToggle(${pos},this.checked)"> Chấp nhận</label>
-      </div>
-      <div class="muted" style="font-size:12px;margin-top:4px">ID: ${esc(it.ID||'—')} · dòng Sheet: ${esc(it.row||'—')}${it.Mon?' · '+esc(it.Mon):''}${it.BaiHoc?' · '+esc(it.BaiHoc):''}</div>
-      <div style="margin-top:6px;line-height:1.45">${esc(it.preview||'')}</div>
-      <div class="muted" style="margin-top:6px">${it.reason?'Lý do: '+esc(it.reason):'GPT sẽ ghi lý do ngắn tại đây.'}</div>
-      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Chốt dạng:</span>${bulkDbtOptsHtml(it,pos)}<button type="button" class="btnSmall" onclick="bulkDbtAcceptOne(${pos})" ${BULK_DBT_BUSY?'disabled':''}>💾 Chấp nhận câu này</button></div>
-    </div>`;
-  }).join('');
-}
-function bulkDbtEnsureValue(it){
-  if(bulkDbtChosen(it))return bulkDbtChosen(it);
-  let sug=(it.suggestions||[]).find(x=>String(x||'').trim());
-  if(sug){it.ai_dbt=String(sug).trim();return it.ai_dbt}
-  return '';
-}
-function bulkDbtToggle(pos,on){
-  if(BULK_DBT_BUSY)return;
+function bulkDbtAcceptOne(pos){
   if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
-  bulkDbtSyncRowFromDom(pos);
   let it=ADMIN_DBT_REVIEW_ITEMS[pos];
-  if(on){
-    let v=bulkDbtEnsureValue(it);
-    if(!v){
-      alert('Câu '+(it.index+1)+': chưa có Dạng BT.\n\n• Đợi dòng ⏳ GPT xong\n• Hoặc chọn/gõ ở ô «Chốt dạng» rồi tick lại');
-      let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');
-      if(cb)cb.checked=false;
-      it.selected=false;
-      return;
-    }
+  bulkDbtSyncRowFromDom(pos);
+  let v=bulkDbtChosen(it);
+  if(!v){alert('Chưa có dạng để chấp nhận.');return}
+  let cur=String(it.current_dbt||'').trim();
+  if(cur&&normText(cur)!==normText(v)){
+    if(!confirm('Câu '+(it.index+1)+': ghi Sheet «'+cur+'» → «'+v+'»?'))return;
   }
-  it.selected=!!on;
+  ADMIN_DBT_REVIEW_ITEMS.forEach((x,i)=>x.selected=i===pos);
+  bulkDbtApplySelected();
 }
-function bulkDbtSet(pos,v){
-  if(BULK_DBT_BUSY)return;
-  if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
-  if(v==='__custom__'){let nv=prompt('Nhập Dạng bài tập:',ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt||ADMIN_DBT_REVIEW_ITEMS[pos].current_dbt||'');if(nv===null)return;v=String(nv).trim()}
-  ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
-  ADMIN_DBT_REVIEW_ITEMS[pos].selected=!!ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt;
-  ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
-  renderBulkDbtList();
-}
-function bulkDbtInput(pos,v){
-  if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
-  ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
-  ADMIN_DBT_REVIEW_ITEMS[pos].selected=!!ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt;
-  ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
-}
-function bulkDbtSelectAllAi(){
-  if(BULK_DBT_BUSY){alert('Đang chờ GPT gợi ý — đợi dòng trạng thái ⏳ xong rồi bấm lại.');return}
-  bulkDbtSyncAllFromDom();
-  let n=0;
-  for(let it of ADMIN_DBT_REVIEW_ITEMS){
-    bulkDbtEnsureValue(it);
-    it.selected=!!bulkDbtChosen(it);
-    if(it.selected)n++;
-  }
-  renderBulkDbtList();
-  if(!n)alert('Chưa có gợi ý nào để tick.\n\n• Đợi GPT chạy xong\n• Hoặc bấm «🤖 Chạy GPT gợi ý lại»\n• Hoặc chọn Dạng BT ở ô «Chốt dạng» từng câu');
-}
-function bulkDbtSelectNone(){for(let it of ADMIN_DBT_REVIEW_ITEMS)it.selected=false;renderBulkDbtList()}
-function bulkDbtQuestionPayload(q,i){
-  return {index:i,row:q._row||'',ID:q.ID||'',MaDe:q.MaDe||'',Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',Dang:q.Dang||resolveDang(q),MucDo:q.MucDo||'',CauHoi:q.CauHoi||'',A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||''};
-}
-async function bulkDbtDetectCurrent(){
-  if(!USER.is_admin)return;
-  if(!QUESTIONS.length){alert('Chưa mở đề.');return}
-  let st=document.getElementById('bulkDbtStatus');
-  let btn=document.getElementById('bulkDbtBtn');let old=btn?btn.textContent:'';
-  bulkDbtSetBusy(true);
-  renderBulkDbtList();
-  const BATCH=12;
-  const BATCH_PAUSE_MS=2000;
-  try{
-    if(btn){btn.disabled=true;btn.textContent='⏳ GPT Dạng BT...'}
-    let allItems=[],detected=0,warnings=[],mergedTotal=0,lessonCtx={},batchFails=[];
-    for(let s=0;s<QUESTIONS.length;s+=BATCH){
-      let end=Math.min(s+BATCH,QUESTIONS.length);
-      if(st)st.textContent='⏳ GPT gợi ý Dạng BT: câu '+(s+1)+'–'+end+' / '+QUESTIONS.length+' (lô '+(Math.floor(s/BATCH)+1)+'/'+Math.ceil(QUESTIONS.length/BATCH)+') — nghỉ '+Math.round(BATCH_PAUSE_MS/1000)+'s giữa lô';
-      let adminGuidePack=bulkDbtAdminTypesByScope();
-      let payload={questions:QUESTIONS.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j)),lesson_dbt_context:lessonCtx,admin_dbt_guide:adminGuidePack.guide||'',admin_dbt_types_by_scope:adminGuidePack.byScope||{}};
-      try{
-        let j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true});
-        (j.items||[]).forEach(it=>allItems.push(it));
-        detected+=parseInt(j.detected||0,10)||0;
-        mergedTotal+=parseInt(j.dbt_merged||0,10)||0;
-        lessonCtx=bulkDbtMergeLessonContext(lessonCtx,j.items||[]);
-        if(j.warning)warnings.push(String(j.warning));
-      }catch(e){
-        batchFails.push((s+1)+'–'+end);
-        warnings.push('Lô câu '+(s+1)+'–'+end+': '+(e.message||e));
-        if(st)st.textContent='⚠ Lô '+(s+1)+'–'+end+' lỗi (429/quota?) — đang thử lô tiếp sau '+Math.round(BATCH_PAUSE_MS/1000)+'s…';
-      }
-      if(s+BATCH<QUESTIONS.length)await sleepMs(BATCH_PAUSE_MS);
-    }
-    let cons=bulkDbtConsolidateItems(allItems);
-    allItems=cons.items||allItems;
-    mergedTotal+=parseInt(cons.merged||0,10)||0;
-    bulkDbtRebuildLessonCanonical(allItems);
-    let byIndex={};allItems.forEach(it=>{byIndex[parseInt(it.index,10)]=it});
-    ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let it=byIndex[i]||{};let ai=String(it.ai_dbt||it.DangBaiTap||'').trim();let canon=bulkDbtLessonCanonicalForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});let adminSug=bulkDbtAdminTypesForItem({Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||''});let baseSug=(canon&&canon.length)?canon:((it.suggestions&&it.suggestions.length)?it.suggestions.slice(0,DBT_MAX_PER_LESSON):adminDangBaiTapSuggestionsForQuestion(q));let sug=adminSug.slice();for(let v of baseSug){if(!sug.some(x=>normText(x)===normText(v)))sug.push(v)}sug=sug.slice(0,DBT_MAX_PER_LESSON);return {index:i,row:q._row||it.row||'',ID:q.ID||it.ID||'',Dang:q.Dang||it.Dang||resolveDang(q),Mon:q.Mon||it.Mon||'',Chuong:q.Chuong||it.Chuong||'',BaiHoc:q.BaiHoc||it.BaiHoc||'',current_dbt:String(q.DangBaiTap||it.current_dbt||'').trim(),ai_dbt:ai,matched_existing:!!it.matched_existing,suggestions:sug,reason:String(it.reason||''),preview:it.preview||questionPreviewShort(q),selected:!!ai,saved:false,dup_delete:false};});
-    let tick=ADMIN_DBT_REVIEW_ITEMS.filter(x=>x.selected).length;
-    let warn=warnings.filter(Boolean).join(' · ');
-    if(st)st.textContent=(batchFails.length?'⚠ Hoàn thành một phần — lô lỗi: '+batchFails.join(', ')+'\n':'')+'✅ GPT gợi ý xong '+detected+'/'+QUESTIONS.length+' câu · tối đa '+DBT_MAX_PER_LESSON+' dạng/bài · đã tick '+tick+' câu.'+(mergedTotal?' · gộp '+mergedTotal+' câu loãng.':'')+(warn?'\n⚠ '+warn:'')+(batchFails.length?'\n\nBấm «🤖 Chạy GPT gợi ý lại» cho các câu còn thiếu, hoặc chọn «Chạy GPT» khi hết quota Gemini.':'');
-    renderBulkDbtList();
-  }catch(e){if(st)st.textContent='❌ Không gợi ý được: '+(e.message||e);alert('Không gợi ý Dạng bài tập hàng loạt được: '+(e.message||e)+'\n\nNếu lỗi 429/quota: đợi ~1 phút rồi bấm «Chạy GPT gợi ý lại» — app tự retry và nghỉ giữa các lô.')}
-  finally{bulkDbtSetBusy(false);if(btn){btn.disabled=false;btn.textContent=old||'🏷️ Gợi ý Dạng BT'};renderBulkDbtList()}
-}
-function bulkDbtAcceptOne(pos){if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;ADMIN_DBT_REVIEW_ITEMS.forEach((it,i)=>it.selected=i===pos);bulkDbtApplySelected()}
 async function bulkDbtApplySelected(){
   if(BULK_DBT_BUSY){alert('Đang chờ GPT gợi ý — đợi xong rồi mới lưu.');return}
   bulkDbtSyncAllFromDom();
@@ -20181,7 +20626,7 @@ async function bulkDbtApplySelected(){
       let q=QUESTIONS[up.index];
       if(q)q.DangBaiTap=up.DangBaiTap;
       let it=ADMIN_DBT_REVIEW_ITEMS.find(x=>x.index===up.index);
-      if(it){it.current_dbt=up.DangBaiTap;it.ai_dbt=up.DangBaiTap;it.saved=true;it.selected=false;it.matched_existing=false}
+      if(it){it.current_dbt=up.DangBaiTap;it.ai_dbt=up.DangBaiTap;it.prev_ai_dbt='';it.saved=true;it.selected=false;it.matched_existing=false}
     }
     LEARNING_CACHE={};
     renderBulkDbtList();renderNav();renderQuestion();
@@ -20698,35 +21143,117 @@ function openChapterDbtBoard(mon,khoi,chuong){
 }
 function renderChapterDbtBoard(){
   let scope=document.getElementById('chapterDbtScope');
-  if(scope)scope.innerHTML='Phạm vi: <b>'+esc([CHAPTER_DBT_BOARD.mon,'Khối '+CHAPTER_DBT_BOARD.khoi,CHAPTER_DBT_BOARD.chuong].filter(Boolean).join(' · '))+'</b> · '+CHAPTER_DBT_BOARD.lessons.length+' bài';
+  if(scope)scope.innerHTML='<span class="cdbtScopeTag">'+esc(CHAPTER_DBT_BOARD.mon)+'</span><span class="cdbtScopeTag">Khối '+esc(CHAPTER_DBT_BOARD.khoi)+'</span><span class="cdbtScopeTag">'+esc(CHAPTER_DBT_BOARD.chuong)+'</span><span class="cdbtScopeTag muted">'+CHAPTER_DBT_BOARD.lessons.length+' bài</span>';
   let sug=document.getElementById('chapterDbtSuggest');
   if(sug){
     let groups=dbtSuggestMergeGroups(chapterDbtAllNames(CHAPTER_DBT_BOARD.lessons));
     if(!groups.length){sug.classList.add('hide');sug.innerHTML=''}
-    else{sug.classList.remove('hide');sug.innerHTML='<b>Gợi ý tên gần giống trong chương:</b> '+groups.slice(0,6).map(g=>`<span class="tag">${esc(g.slice(0,3).join(' · '))}${g.length>3?'…':''}</span>`).join(' ')+' <span class="muted">— tick & gộp trong từng bài bên dưới.</span>'}
+    else{sug.classList.remove('hide');sug.innerHTML='<b>💡 Tên gần giống trong chương:</b> '+groups.slice(0,6).map(g=>`<span class="cdbtSugTag">${esc(g.slice(0,3).join(' · '))}${g.length>3?'…':''}</span>`).join('')+'<span class="muted" style="font-size:11px"> — tick & gộp trong từng bài bên dưới.</span>'}
   }
   let body=document.getElementById('chapterDbtBody');
   if(!body)return;
-  if(!CHAPTER_DBT_BOARD.lessons.length){body.innerHTML='<div class="muted">Không có bài nào trong chương này.</div>';return}
+  if(!CHAPTER_DBT_BOARD.lessons.length){body.innerHTML='<div class="muted cdbtEmpty">Không có bài nào trong chương này.</div>';return}
   body.innerHTML=CHAPTER_DBT_BOARD.lessons.map((L,li)=>{
     let rows=(L.names||[]).map((name,ni)=>{
       let nk=normText(name);
       let cnt=L.counts[normText(name)]||0;
       let alts=(L.variants&&L.variants[nk]||[]).filter(v=>normText(v)!==nk);
-      let altNote=alts.length>1?` <span class="muted" style="font-size:11px">(${alts.length} tên gần giống trên Sheet)</span>`:'';
+      let altNote=alts.length>1?`<span class="cdbtAltNote">${alts.length} tên biến thể</span>`:'';
       let picked=!!(L.picks&&L.picks[nk]);
       let rowMove=chapterDbtMoveSelectHtml(li,'name',ni);
-      return `<div class="chapterDbtRow"><span class="chapterDbtRowNum">${ni+1}</span><label style="display:flex;gap:6px;align-items:flex-start;flex:1;cursor:pointer"><input type="checkbox" ${picked?'checked':''} onchange="chapterDbtTogglePick(${li},${ni},this.checked)"> <span class="chapterDbtRowName"><b>${esc(name)}</b>${cnt?(' · '+cnt+' câu'):''}${altNote}</span></label><span class="chapterDbtRowTools">${rowMove}<button type="button" class="btnSmall" onclick="chapterDbtMove(${li},${ni},-1)" ${ni===0?'disabled':''} title="Lên trong bài">↑</button><button type="button" class="btnSmall" onclick="chapterDbtMove(${li},${ni},1)" ${ni===L.names.length-1?'disabled':''} title="Xuống trong bài">↓</button></span></div>`;
+      return `<div class="cdbtDangRow" draggable="true"
+        data-li="${li}" data-ni="${ni}"
+        ondragstart="cdbtDragStart(event,${li},${ni})"
+        ondragover="cdbtDragOver(event)"
+        ondrop="cdbtDrop(event,${li},${ni})"
+        ondragend="cdbtDragEnd(event)">
+        <span class="cdbtDragHandle" title="Kéo để sắp xếp">⠿</span>
+        <span class="cdbtDangNum">${ni+1}</span>
+        <label class="cdbtDangLabel">
+          <input type="checkbox" ${picked?'checked':''} onchange="chapterDbtTogglePick(${li},${ni},this.checked)">
+          <span class="cdbtDangName">${esc(name)}</span>
+          ${cnt?`<span class="cdbtDangCount">${cnt} câu</span>`:''}
+          ${altNote}
+        </label>
+        <span class="cdbtDangTools">
+          ${rowMove}
+          <button type="button" class="cdbtMoveBtn" onclick="chapterDbtMove(${li},${ni},-1)" ${ni===0?'disabled':''} title="Lên">↑</button>
+          <button type="button" class="cdbtMoveBtn" onclick="chapterDbtMove(${li},${ni},1)" ${ni===L.names.length-1?'disabled':''} title="Xuống">↓</button>
+        </span>
+      </div>`;
     }).join('');
     let unclsRow='';
     if(L.unclassified>0){
       let unMove=chapterDbtMoveSelectHtml(li,'uncls',0);
-      unclsRow=`<div class="chapterDbtRow" style="border-color:#fde68a;background:#fffbeb"><span class="chapterDbtRowNum">?</span><span class="chapterDbtRowName"><b>❓ Chưa phân loại</b> · ${L.unclassified} câu <span class="muted" style="font-size:11px">— bấm 🏷️ GPT gợi ý</span></span><span class="chapterDbtRowTools">${unMove}</span></div>`;
+      unclsRow=`<div class="cdbtDangRow cdbtUnclsRow"><span class="cdbtDragHandle" style="opacity:.3">⠿</span><span class="cdbtDangNum">?</span><span class="cdbtDangLabel"><span class="cdbtDangName">❓ Chưa phân loại</span><span class="cdbtDangCount" style="background:#fde68a;color:#92400e">${L.unclassified} câu</span></span><span class="cdbtDangTools">${unMove}</span></div>`;
     }
-    let uncls=L.unclassified?(` · <span style="color:#b45309">${L.unclassified} chưa PL</span>`):'';
-    return `<div class="chapterDbtLesson"><div class="chapterDbtLessonHead"><div><span>${esc(L.baiHoc)}</span> <small>${L.soCau||0} câu · ${(L.names||[]).length} dạng${uncls}</small></div><div class="chapterDbtLessonTools"><button type="button" class="btnSmall" onclick="chapterDbtSaveLessonOrder(${li})">💾 Lưu thứ tự</button><button type="button" class="btnSmall chapterDbtGptBtn" data-made="${escAttr(L.made)}">🏷️ GPT gợi ý</button><button type="button" class="btnSmall" onclick="openStartModal('${String(L.made||'').replace(/'/g,"\\'")}','')">📂 Mở đề</button></div></div><div class="chapterDbtRows">${rows}${unclsRow||''}${!rows&&!unclsRow?'<div class="muted" style="padding:8px">Chưa có dạng BT — bấm GPT gợi ý.</div>':''}</div><div class="chapterDbtMergeBar"><span style="font-weight:800">Gộp/đổi tên tick:</span><input type="text" id="chapterDbtMergeName_${li}" placeholder="Tên mới thống nhất (cột H)" oninput="chapterDbtMergePreview(${li})" /><button type="button" class="btnSmall" onclick="chapterDbtPickLongest(${li})">📏 Tên dài nhất</button><button type="button" class="btn" onclick="chapterDbtApplyMerge(${li})">💾 Gộp &amp; lưu</button><span class="muted" id="chapterDbtMergeHint_${li}" style="font-size:11px"></span></div></div>`;
+    let hasPicks=L.picks&&Object.keys(L.picks).length>0;
+    let uncls=L.unclassified?`<span class="cdbtUnclsBadge">❗${L.unclassified} chưa PL</span>`:'';
+    return `<div class="cdbtLesson" id="cdbtLesson_${li}">
+      <div class="cdbtLessonHead">
+        <div class="cdbtLessonInfo">
+          <span class="cdbtLessonNum">${li+1}</span>
+          <div>
+            <div class="cdbtLessonName">${esc(L.baiHoc)}</div>
+            <div class="cdbtLessonMeta">${L.soCau||0} câu · ${(L.names||[]).length} dạng ${uncls}</div>
+          </div>
+        </div>
+        <div class="cdbtLessonTools">
+          <button type="button" class="cdbtToolBtn cdbtToolBtnGpt chapterDbtGptBtn" data-made="${escAttr(L.made)}" title="AI gợi ý dạng BT cho bài này">🤖 AI gợi ý</button>
+          <button type="button" class="cdbtToolBtn" onclick="chapterDbtSaveLessonOrder(${li})" title="Lưu thứ tự dạng BT">💾 Lưu thứ tự</button>
+          <button type="button" class="cdbtToolBtn cdbtToolBtnOpen" onclick="openStartModal('${String(L.made||'').replace(/'/g,"\\'")}','')" title="Mở đề làm bài">📂 Mở đề</button>
+        </div>
+      </div>
+      <div class="cdbtRows" id="cdbtRows_${li}">${rows}${unclsRow||''}${!rows&&!unclsRow?'<div class="cdbtEmpty">Chưa có dạng BT — bấm 🤖 AI gợi ý</div>':''}</div>
+      <div class="cdbtMergeBar ${hasPicks?'cdbtMergeActive':''}">
+        <span class="cdbtMergeLabel">✂️ Gộp/đổi tên tick:</span>
+        <input type="text" class="cdbtMergeInput" id="chapterDbtMergeName_${li}" placeholder="Tên mới sau khi gộp..." oninput="chapterDbtMergePreview(${li})">
+        <button type="button" class="cdbtToolBtn" onclick="chapterDbtPickLongest(${li})" title="Dùng tên dài nhất">📏 Tên dài nhất</button>
+        <button type="button" class="cdbtToolBtn cdbtToolBtnSave" onclick="chapterDbtApplyMerge(${li})">💾 Gộp & lưu</button>
+        <span class="muted" id="chapterDbtMergeHint_${li}" style="font-size:11px"></span>
+      </div>
+    </div>`;
   }).join('');
-  let st=document.getElementById('chapterDbtStatus');if(st)st.textContent='↑↓ = thứ tự trong cùng bài · «→ Bài» = chuyển cả dạng sang bài khác (cột Bài học) · tick ≥2 tên để gộp.';
+  let st=document.getElementById('chapterDbtStatus');if(st)st.innerHTML='<span class="muted" style="font-size:12px">⠿ Kéo thả để sắp xếp dạng BT · ↑↓ di chuyển · «→ Bài» chuyển sang bài khác · tick ≥2 để gộp</span>';
+  // Khởi tạo drag-drop
+  cdbtInitDragDrop();
+}
+
+// ── Drag & Drop cho chapterDbt ────────────────────────────────────────────
+let _cdbtDrag={li:-1,ni:-1,el:null};
+function cdbtDragStart(e,li,ni){
+  _cdbtDrag={li,ni,el:e.currentTarget};
+  e.currentTarget.classList.add('cdbtDragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',li+','+ni);
+}
+function cdbtDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  let row=e.currentTarget;
+  if(row===_cdbtDrag.el)return;
+  row.classList.add('cdbtDragOver');
+}
+function cdbtDrop(e,li,ni){
+  e.preventDefault();
+  document.querySelectorAll('.cdbtDragOver').forEach(x=>x.classList.remove('cdbtDragOver'));
+  if(_cdbtDrag.li<0||_cdbtDrag.li!==li)return; // chỉ kéo trong cùng bài
+  let from=_cdbtDrag.ni,to=ni;
+  if(from===to)return;
+  let L=CHAPTER_DBT_BOARD.lessons[li];if(!L||!L.names)return;
+  let item=L.names.splice(from,1)[0];
+  L.names.splice(to,0,item);
+  renderChapterDbtBoard();
+}
+function cdbtDragEnd(e){
+  document.querySelectorAll('.cdbtDragging,.cdbtDragOver').forEach(x=>{x.classList.remove('cdbtDragging');x.classList.remove('cdbtDragOver')});
+  _cdbtDrag={li:-1,ni:-1,el:null};
+}
+function cdbtInitDragDrop(){
+  document.querySelectorAll('.cdbtDangRow[draggable]').forEach(row=>{
+    row.addEventListener('dragenter',e=>{e.preventDefault();row.classList.add('cdbtDragOver')});
+    row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('cdbtDragOver')});
+  });
 }
 function chapterDbtTogglePick(li,ni,on){
   let L=CHAPTER_DBT_BOARD.lessons[li];if(!L||!L.names[ni])return;
@@ -23712,6 +24239,7 @@ def admin_gpt_classify_dangbaitap_bulk(
     *,
     force_provider: str = "",
     allow_gpt_fallback: bool = False,
+    extra_anthropic_key: str = "",
 ) -> Dict[str, Any]:
     """ADMIN: gợi ý DangBaiTap (cột H) — Gemini trước."""
     meta: Dict[str, Any] = {
@@ -23728,6 +24256,7 @@ def admin_gpt_classify_dangbaitap_bulk(
     cfg = ai_runtime_config()
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
+    anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
     model = clean(cfg.get("openai_admin_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
     meta_sug: List[str] = []
     try:
@@ -23735,8 +24264,8 @@ def admin_gpt_classify_dangbaitap_bulk(
     except Exception:
         meta_sug = []
 
-    if not openai_keys and not gemini_keys:
-        meta["ai_dbt_error"] = "Chưa có key AI (Gemini/GPT) cho ADMIN."
+    if not openai_keys and not gemini_keys and not anthropic_keys:
+        meta["ai_dbt_error"] = "Chưa có key AI (Gemini/GPT/Claude) cho ADMIN."
         for q in questions:
             q["_AiDangBaiTap"] = ""
             q["_AiReason"] = meta["ai_dbt_error"]
@@ -23835,6 +24364,7 @@ reason tối đa 20 từ.
                 timeout=45,
                 force_provider=force_provider,
                 allow_gpt_fallback=allow_gpt_fallback,
+                extra_anthropic_key=extra_anthropic_key,
             )
             meta["ai_provider"] = prov
             meta["ai_model"] = model_used
@@ -25189,6 +25719,56 @@ def api_learning_method():
         payload["similarity_report"] = sim
     return jsonify(payload)
 
+def _dang_stats_report(questions: Any) -> Dict[str, Any]:
+    """Thống kê cột Dang sau khi load từ Sheet — dùng trong api_sync().
+
+    Trả về:
+        counts         — {"Trắc nghiệm": 120, "Đúng sai": 30, ...}
+        warnings       — danh sách câu có Dang không rõ, gồm cả _DangWarn
+                         do effective_dang() gắn (tối đa 50)
+        unknown_count  — tổng số câu có cảnh báo dạng
+        total          — tổng câu
+    """
+    VALID = {"Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận"}
+    counts: Dict[str, int] = {}
+    warnings: List[Dict[str, Any]] = []
+
+    qs_list: List[Any] = []
+    if isinstance(questions, dict):
+        qs_list = list(questions.values())
+    elif isinstance(questions, list):
+        qs_list = questions
+
+    for i, q in enumerate(qs_list):
+        raw_dang = str(q.get("Dang") or "").strip()
+        dang_warn = str(q.get("_DangWarn") or "").strip()
+
+        if not raw_dang:
+            normalized, reason = "Trắc nghiệm", "trống → mặc định Trắc nghiệm"
+        else:
+            normalized, reason = norm_dang_explain(raw_dang)
+
+        counts[normalized] = counts.get(normalized, 0) + 1
+
+        # Cảnh báo: (1) Dang lạ chưa được nhận ra, hoặc (2) effective_dang đã đổi
+        has_warn = (raw_dang and raw_dang not in VALID and "⚠" in reason) or bool(dang_warn)
+        if has_warn:
+            warnings.append({
+                "row":    i + 2,
+                "id":     str(q.get("ID") or ""),
+                "raw":    raw_dang,
+                "chuan":  normalized,
+                "ly_do":  dang_warn or reason,
+            })
+
+    return {
+        "counts":        counts,
+        "warnings":      warnings[:50],
+        "unknown_count": len(warnings),
+        "total":         len(qs_list),
+    }
+
+
 @app.route("/api/sync", methods=["POST"])
 def api_sync():
     bad = require_login_json()
@@ -25197,11 +25777,35 @@ def api_sync():
     if not is_admin():
         return jsonify({"error": "Chỉ ADMIN được đồng bộ dữ liệu"}), 403
     st = get_store()
+
+    # Thống kê dạng bài từ cache hiện tại trước khi xoá (để hiển thị ngay)
+    try:
+        qs_cache = st.questions if hasattr(st, "questions") and st.questions else {}
+        dang_report = _dang_stats_report(qs_cache)
+    except Exception:
+        dang_report = {"counts": {}, "warnings": [], "unknown_count": 0, "total": 0}
+
     st.questions_loaded = False
     st.learning_loaded = False
     st.lesson_catalog_loaded = False
     st.start_questions_background(force=True)
-    return jsonify({"ok": True, "loading": True, "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây."})
+
+    unknown = dang_report.get("unknown_count", 0)
+    dang_hint = (
+        f"⚠ Có {unknown} câu cột Dang không rõ — vào ADMIN → Sửa câu → chọn lại Dạng câu."
+    ) if unknown else ""
+
+    return jsonify({
+        "ok":      True,
+        "loading": True,
+        "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây.",
+        # ── Thống kê dạng bài (từ cache trước sync) ──────────────────────────
+        "dang_counts":        dang_report.get("counts", {}),
+        "dang_unknown_count": unknown,
+        "dang_warnings":      dang_report.get("warnings", [])[:20],
+        "dang_total":         dang_report.get("total", 0),
+        "dang_hint":          dang_hint,
+    })
 
 @app.route("/api/admin/sync-lesson-catalog", methods=["POST"])
 def api_admin_sync_lesson_catalog():
@@ -27260,11 +27864,13 @@ def api_ai_detect_dangbaitap_bulk():
         st = get_store()
         st.ensure_questions_loaded()
         force, allow = admin_ai_body_params(body)
+        extra_ant_key = clean(body.get("anthropic_key", ""))
         meta = admin_gpt_classify_dangbaitap_bulk(
             qs, st, lesson_dbt_context=lesson_dbt_context,
             admin_dbt_guide=admin_dbt_guide,
             admin_dbt_types_by_scope=admin_dbt_types_by_scope,
             force_provider=force, allow_gpt_fallback=allow,
+            extra_anthropic_key=extra_ant_key,
         )
         lesson_canonical = _lesson_dbt_canonical_from_questions(qs, DBT_MAX_TYPES_PER_LESSON)
         items: List[Dict[str, Any]] = []
