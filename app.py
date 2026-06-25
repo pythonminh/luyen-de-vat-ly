@@ -13595,6 +13595,8 @@ def ai_rewrite_latex_text(
 
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
+    model_anthropic = clean(os.environ.get("ANTHROPIC_ADMIN_MODEL", DEFAULT_ANTHROPIC_ADMIN_MODEL)) or DEFAULT_ANTHROPIC_ADMIN_MODEL
+    anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
 
     last_error = ""
 
@@ -13604,17 +13606,22 @@ def ai_rewrite_latex_text(
         s = re.sub(r"```$", "", s).strip()
         return normalize_latex_light(s)
 
+    def try_anthropic() -> Tuple[str, str]:
+        nonlocal last_error
+        for api_key in anthropic_keys:
+            txt, finish, err = _anthropic_chat_call(
+                api_key, model_anthropic, sys_prompt, user_prompt, 900, 0.05, timeout=35,
+            )
+            if txt:
+                return postprocess(txt), "ANTHROPIC"
+            last_error = err or finish or last_error
+        return "", "ANTHROPIC"
+
     def try_openai() -> Tuple[str, str]:
         nonlocal last_error
         for api_key in openai_keys:
             txt, finish, err = _openai_chat_call(
-                api_key,
-                model_openai,
-                sys_prompt,
-                user_prompt,
-                900,
-                0.05,
-                timeout=35,
+                api_key, model_openai, sys_prompt, user_prompt, 900, 0.05, timeout=35,
             )
             if txt:
                 return postprocess(txt), "OPENAI"
@@ -13627,13 +13634,7 @@ def ai_rewrite_latex_text(
         for api_key in gemini_keys:
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key,
-                    gmodel,
-                    sys_prompt,
-                    user_prompt,
-                    900,
-                    0.05,
-                    timeout=35,
+                    api_key, gmodel, sys_prompt, user_prompt, 900, 0.05, timeout=35,
                 )
                 if txt:
                     return postprocess(txt), "GEMINI"
@@ -13643,15 +13644,25 @@ def ai_rewrite_latex_text(
         return "", "GEMINI"
 
     fp = admin_ai_resolve_force(force_provider)
-    if fp == "OPENAI":
+    if fp == "ANTHROPIC":
+        out, used = try_anthropic()
+    elif fp == "OPENAI":
         out, used = try_openai()
     else:
+        # Mặc định: Anthropic → Gemini → GPT
+        if anthropic_keys:
+            out, used = try_anthropic()
+            if out:
+                return out, used
         out, used = try_gemini()
         if not out:
-            if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
-                raise AdminGeminiQuotaError(last_error, openai_available=True)
-            if allow_gpt_fallback and openai_keys:
-                out, used = try_openai()
+            if gemini_saw_quota and anthropic_keys:
+                out, used = try_anthropic()
+            if not out:
+                if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+                    raise AdminGeminiQuotaError(last_error, openai_available=True)
+                if allow_gpt_fallback and openai_keys:
+                    out, used = try_openai()
 
     if not out:
         raise RuntimeError("AI chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
@@ -13760,6 +13771,8 @@ def ai_admin_fix_loigiai(
 
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
+    model_anthropic = clean(os.environ.get("ANTHROPIC_ADMIN_MODEL", DEFAULT_ANTHROPIC_ADMIN_MODEL)) or DEFAULT_ANTHROPIC_ADMIN_MODEL
+    anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
     last_error = ""
 
     def postprocess(s: str) -> str:
@@ -13778,17 +13791,22 @@ def ai_admin_fix_loigiai(
                 pass
         return s
 
+    def try_anthropic() -> Tuple[str, str]:
+        nonlocal last_error
+        for api_key in anthropic_keys:
+            txt, finish, err = _anthropic_chat_call(
+                api_key, model_anthropic, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
+            )
+            if txt:
+                return postprocess(txt), "ANTHROPIC"
+            last_error = err or finish or last_error
+        return "", "ANTHROPIC"
+
     def try_openai() -> Tuple[str, str]:
         nonlocal last_error
         for api_key in openai_keys:
             txt, finish, err = _openai_chat_call(
-                api_key,
-                model_openai,
-                sys_prompt,
-                user_prompt,
-                1200,
-                0.08,
-                timeout=45,
+                api_key, model_openai, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
             )
             if txt:
                 return postprocess(txt), "OPENAI"
@@ -13801,13 +13819,7 @@ def ai_admin_fix_loigiai(
         for api_key in gemini_keys:
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key,
-                    gmodel,
-                    sys_prompt,
-                    user_prompt,
-                    1200,
-                    0.08,
-                    timeout=45,
+                    api_key, gmodel, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
                 )
                 if txt:
                     return postprocess(txt), "GEMINI"
@@ -13817,15 +13829,25 @@ def ai_admin_fix_loigiai(
         return "", "GEMINI"
 
     fp = admin_ai_resolve_force(force_provider)
-    if fp == "OPENAI":
+    if fp == "ANTHROPIC":
+        out, used = try_anthropic()
+    elif fp == "OPENAI":
         out, used = try_openai()
     else:
+        # Mặc định: Anthropic → Gemini → GPT
+        if anthropic_keys:
+            out, used = try_anthropic()
+            if out:
+                return out, used
         out, used = try_gemini()
         if not out:
-            if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
-                raise AdminGeminiQuotaError(last_error, openai_available=True)
-            if allow_gpt_fallback and openai_keys:
-                out, used = try_openai()
+            if gemini_saw_quota and anthropic_keys:
+                out, used = try_anthropic()
+            if not out:
+                if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+                    raise AdminGeminiQuotaError(last_error, openai_available=True)
+                if allow_gpt_fallback and openai_keys:
+                    out, used = try_openai()
 
     if not out:
         raise RuntimeError("AI chưa chỉnh được lời giải: " + (last_error or "không có phản hồi."))
