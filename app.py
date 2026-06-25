@@ -8269,7 +8269,10 @@ class SheetStore:
         return r
 
     def _append_question_rows_at_col_a(self, rows: List[List[str]]) -> int:
-        """Ghi dòng mới bắt đầu từ cột A — tránh lệch cột."""
+        """Ghi dòng mới bắt đầu từ cột A — tránh lệch cột.
+        Tự thêm dòng/cột trước khi update để tránh lỗi:
+        Range (...A2616:AH2625) exceeds grid limits.
+        """
         if not rows:
             return 0
         padded = [self._pad_question_sheet_row(r) for r in rows]
@@ -8277,6 +8280,50 @@ class SheetStore:
         padded = [r + [""] * (width - len(r)) if len(r) < width else r[:width] for r in padded]
         start_row = self._next_question_sheet_row()
         end_row = start_row + len(padded) - 1
+
+        # Google Sheets không tự mở rộng khi dùng update(A1:AH...).
+        # Vì vậy phải đảm bảo sheet đủ dòng/cột trước khi ghi.
+        try:
+            cur_rows = int(getattr(self.ws_questions, "row_count", 0) or 0)
+        except Exception:
+            cur_rows = 0
+        try:
+            cur_cols = int(getattr(self.ws_questions, "col_count", 0) or 0)
+        except Exception:
+            cur_cols = 0
+
+        if end_row > cur_rows:
+            need_rows = end_row - cur_rows
+            try:
+                gsheet_call_retry(
+                    f"add_rows Cau_Hoi +{need_rows}",
+                    self.ws_questions.add_rows,
+                    need_rows,
+                )
+            except Exception:
+                gsheet_call_retry(
+                    f"resize Cau_Hoi rows {end_row}",
+                    self.ws_questions.resize,
+                    rows=end_row,
+                    cols=max(cur_cols, width),
+                )
+
+        if width > cur_cols and cur_cols > 0:
+            need_cols = width - cur_cols
+            try:
+                gsheet_call_retry(
+                    f"add_cols Cau_Hoi +{need_cols}",
+                    self.ws_questions.add_cols,
+                    need_cols,
+                )
+            except Exception:
+                gsheet_call_retry(
+                    f"resize Cau_Hoi cols {width}",
+                    self.ws_questions.resize,
+                    rows=max(cur_rows, end_row),
+                    cols=width,
+                )
+
         a1 = gspread.utils.rowcol_to_a1(start_row, 1)
         b1 = gspread.utils.rowcol_to_a1(end_row, width)
         gsheet_call_retry(
@@ -18746,6 +18793,10 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
             <div class="ldvlSyncColHead" id="ldvlSyncBaiHead">④ Bài học</div>
             <div id="ldvlSyncBaiCol" class="ldvlSyncCol">—</div>
           </div>
+          <div class="ldvlSyncColBox ldvlSyncColDbt" id="ldvlSyncDbtBox" style="display:none">
+            <div class="ldvlSyncColHead" id="ldvlSyncDbtHead" style="color:#d97706">⑤ Dạng BT</div>
+            <div id="ldvlSyncDbtCol" class="ldvlSyncCol">—</div>
+          </div>
         </div>
         <div class="ldvlSyncFoot">
         <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Bấm Toán hoặc Vật lý</b> → chọn Lớp · Chương · Bài (cuộn trong cột, có số thứ tự) → <b>Mở mục lục</b></div>
@@ -24458,6 +24509,7 @@ function ldvlDashOpenCatalog(){
       if(st.lop){setSel('fLop',st.lop);onFilterChange('lop');}
       if(st.chuong){setSel('fChuong',st.chuong);onFilterChange('chuong');}
       if(st.bai){setSel('fBaiHoc',st.bai);onFilterChange('baihoc');}
+      if(st.dbt){setSel('fDangBaiTap',st.dbt||'');onFilterChange('extra');}
       renderCatalog();
     }catch(e){console.warn(e);}
   },350);
@@ -24533,15 +24585,67 @@ function ldvlRenderDashSyncPanel(){
       return ldvlDashPickBtn('Bai',b,st.bai===b,'onclick="ldvlDashPickBai(\''+escAttr(b)+'\')"',i+1);
     }).join('');
   }
+  // V326: Cột Dạng bài tập — chỉ hiện khi đã chọn Bài học
+  (function(){
+    let dbtBox=document.getElementById('ldvlSyncDbtBox');
+    let dbtCol=document.getElementById('ldvlSyncDbtCol');
+    if(!dbtBox||!dbtCol)return;
+    if(!st.bai){dbtBox.style.display='none';st.dbt='';window.LDVL_DASH_SYNC=st;return;}
+    // Lấy danh sách DangBaiTap theo bài đang chọn
+    let dbtSet={};
+    ldvlDashScopeSources().forEach(function(c){
+      if(String(c.Mon||'')===st.mon&&String(c.Lop||'')===st.lop&&
+         String(c.Chuong||'')===st.chuong&&String(c.BaiHoc||c.De||'')===st.bai){
+        let d=String(c.DangBaiTap||'').trim();
+        if(d)d.split(/[,;|]+/).forEach(function(p){p=p.trim();if(p)dbtSet[p]=1;});
+      }
+    });
+    // Cũng lấy từ QUESTIONS nếu có
+    try{(QUESTIONS||[]).forEach(function(q){
+      if(String(q.Mon||'')===st.mon&&String(q.Lop||'')===st.lop&&
+         String(q.Chuong||'')===st.chuong&&String(q.BaiHoc||'')===st.bai){
+        let d=String(q.DangBaiTap||'').trim();
+        if(d)dbtSet[d]=1;
+      }
+    });}catch(e){}
+    let dbts=Object.keys(dbtSet).sort(function(a,b){return a.localeCompare(b,'vi');});
+    if(!dbts.length){dbtBox.style.display='none';return;}
+    dbtBox.style.display='';
+    ldvlDashSetColHead('ldvlSyncDbtHead','⑤ Dạng BT ('+dbts.length+')',dbts.length);
+    if(!st.dbt)st.dbt='';
+    dbtCol.innerHTML=dbts.map(function(d,i){
+      return ldvlDashPickBtn('Dbt',d,st.dbt===d,'onclick="ldvlDashPickDbt(\''+escAttr(d)+'\')"',i+1);
+    }).join('');
+    window.LDVL_DASH_SYNC=st;
+  })();
   let hint=document.getElementById('ldvlDashSyncHint');
   if(hint){
-    let parts=[st.mon,st.lop?('Lớp '+st.lop):'',st.chuong,st.bai].filter(Boolean);
+    let parts=[st.mon,st.lop?('Lớp '+st.lop):'',st.chuong,st.bai,st.dbt?('Dạng: '+st.dbt):''].filter(Boolean);
     hint.textContent=parts.length?('Đang lọc: '+parts.join(' · ')):'Chọn môn Toán hoặc Vật lý';
   }
 }
 window.ldvlDashPickMon=ldvlDashPickMon;
 window.ldvlDashOpenCatalog=ldvlDashOpenCatalog;
 window.ldvlRenderDashSyncPanel=ldvlRenderDashSyncPanel;
+// V326: Pick Dạng BT
+window.ldvlDashPickDbt=function(dbt){
+  let st=window.LDVL_DASH_SYNC||{};
+  st.dbt=(st.dbt===dbt)?'':dbt; // toggle
+  window.LDVL_DASH_SYNC=st;
+  ldvlRenderDashSyncPanel();
+  // Đồng bộ sang fDangBaiTap nếu đang ở trang mục lục
+  try{if(typeof setSel==='function')setSel('fDangBaiTap',st.dbt||'');}catch(e){}
+};
+// V326: Override ldvlDashPickBai để reset dbt khi đổi bài
+(function(){
+  let _orig=window.ldvlDashPickBai;
+  window.ldvlDashPickBai=function(bai){
+    let st=window.LDVL_DASH_SYNC||{};
+    st.dbt='';
+    window.LDVL_DASH_SYNC=st;
+    if(_orig)_orig(bai); else {st.bai=bai;ldvlRenderDashSyncPanel();}
+  };
+})();
 function ldvlAdminFilterMon(mon){
   try{refreshFilterOptions();setSel('fMon',mon);onFilterChange('mon');renderCatalog();}catch(e){console.warn('ldvlAdminFilterMon',e);}
 }
