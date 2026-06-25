@@ -13595,8 +13595,6 @@ def ai_rewrite_latex_text(
 
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
-    model_anthropic = clean(os.environ.get("ANTHROPIC_ADMIN_MODEL", DEFAULT_ANTHROPIC_ADMIN_MODEL)) or DEFAULT_ANTHROPIC_ADMIN_MODEL
-    anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
 
     last_error = ""
 
@@ -13606,22 +13604,17 @@ def ai_rewrite_latex_text(
         s = re.sub(r"```$", "", s).strip()
         return normalize_latex_light(s)
 
-    def try_anthropic() -> Tuple[str, str]:
-        nonlocal last_error
-        for api_key in anthropic_keys:
-            txt, finish, err = _anthropic_chat_call(
-                api_key, model_anthropic, sys_prompt, user_prompt, 900, 0.05, timeout=35,
-            )
-            if txt:
-                return postprocess(txt), "ANTHROPIC"
-            last_error = err or finish or last_error
-        return "", "ANTHROPIC"
-
     def try_openai() -> Tuple[str, str]:
         nonlocal last_error
         for api_key in openai_keys:
             txt, finish, err = _openai_chat_call(
-                api_key, model_openai, sys_prompt, user_prompt, 900, 0.05, timeout=35,
+                api_key,
+                model_openai,
+                sys_prompt,
+                user_prompt,
+                900,
+                0.05,
+                timeout=35,
             )
             if txt:
                 return postprocess(txt), "OPENAI"
@@ -13634,7 +13627,13 @@ def ai_rewrite_latex_text(
         for api_key in gemini_keys:
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key, gmodel, sys_prompt, user_prompt, 900, 0.05, timeout=35,
+                    api_key,
+                    gmodel,
+                    sys_prompt,
+                    user_prompt,
+                    900,
+                    0.05,
+                    timeout=35,
                 )
                 if txt:
                     return postprocess(txt), "GEMINI"
@@ -13644,25 +13643,15 @@ def ai_rewrite_latex_text(
         return "", "GEMINI"
 
     fp = admin_ai_resolve_force(force_provider)
-    if fp == "ANTHROPIC":
-        out, used = try_anthropic()
-    elif fp == "OPENAI":
+    if fp == "OPENAI":
         out, used = try_openai()
     else:
-        # Mặc định: Anthropic → Gemini → GPT
-        if anthropic_keys:
-            out, used = try_anthropic()
-            if out:
-                return out, used
         out, used = try_gemini()
         if not out:
-            if gemini_saw_quota and anthropic_keys:
-                out, used = try_anthropic()
-            if not out:
-                if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
-                    raise AdminGeminiQuotaError(last_error, openai_available=True)
-                if allow_gpt_fallback and openai_keys:
-                    out, used = try_openai()
+            if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+                raise AdminGeminiQuotaError(last_error, openai_available=True)
+            if allow_gpt_fallback and openai_keys:
+                out, used = try_openai()
 
     if not out:
         raise RuntimeError("AI chưa sửa được nội dung: " + (last_error or "không có phản hồi."))
@@ -13771,8 +13760,6 @@ def ai_admin_fix_loigiai(
 
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL)
     model_gemini = clean(cfg.get("gemini_model") or os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)) or DEFAULT_GEMINI_HINT_MODEL
-    model_anthropic = clean(os.environ.get("ANTHROPIC_ADMIN_MODEL", DEFAULT_ANTHROPIC_ADMIN_MODEL)) or DEFAULT_ANTHROPIC_ADMIN_MODEL
-    anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
     last_error = ""
 
     def postprocess(s: str) -> str:
@@ -13791,22 +13778,17 @@ def ai_admin_fix_loigiai(
                 pass
         return s
 
-    def try_anthropic() -> Tuple[str, str]:
-        nonlocal last_error
-        for api_key in anthropic_keys:
-            txt, finish, err = _anthropic_chat_call(
-                api_key, model_anthropic, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
-            )
-            if txt:
-                return postprocess(txt), "ANTHROPIC"
-            last_error = err or finish or last_error
-        return "", "ANTHROPIC"
-
     def try_openai() -> Tuple[str, str]:
         nonlocal last_error
         for api_key in openai_keys:
             txt, finish, err = _openai_chat_call(
-                api_key, model_openai, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
+                api_key,
+                model_openai,
+                sys_prompt,
+                user_prompt,
+                1200,
+                0.08,
+                timeout=45,
             )
             if txt:
                 return postprocess(txt), "OPENAI"
@@ -13819,7 +13801,13 @@ def ai_admin_fix_loigiai(
         for api_key in gemini_keys:
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key, gmodel, sys_prompt, user_prompt, 1200, 0.08, timeout=45,
+                    api_key,
+                    gmodel,
+                    sys_prompt,
+                    user_prompt,
+                    1200,
+                    0.08,
+                    timeout=45,
                 )
                 if txt:
                     return postprocess(txt), "GEMINI"
@@ -13829,25 +13817,15 @@ def ai_admin_fix_loigiai(
         return "", "GEMINI"
 
     fp = admin_ai_resolve_force(force_provider)
-    if fp == "ANTHROPIC":
-        out, used = try_anthropic()
-    elif fp == "OPENAI":
+    if fp == "OPENAI":
         out, used = try_openai()
     else:
-        # Mặc định: Anthropic → Gemini → GPT
-        if anthropic_keys:
-            out, used = try_anthropic()
-            if out:
-                return out, used
         out, used = try_gemini()
         if not out:
-            if gemini_saw_quota and anthropic_keys:
-                out, used = try_anthropic()
-            if not out:
-                if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
-                    raise AdminGeminiQuotaError(last_error, openai_available=True)
-                if allow_gpt_fallback and openai_keys:
-                    out, used = try_openai()
+            if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+                raise AdminGeminiQuotaError(last_error, openai_available=True)
+            if allow_gpt_fallback and openai_keys:
+                out, used = try_openai()
 
     if not out:
         raise RuntimeError("AI chưa chỉnh được lời giải: " + (last_error or "không có phản hồi."))
@@ -22669,13 +22647,16 @@ async function claudeFixLatexField(field){
     }
   }catch(e){/* nếu Python lỗi, vẫn tiếp tục gọi Claude */}
 
-  // ── Bước 2: Kiểm tra còn lỗi không — nếu không thì dừng ─────────────────
+  // ── Bước 2: Kiểm tra còn lỗi không — nếu không thì hỏi người dùng ────────
   let textAfterNorm=String(el.value||'').trim();
   let stillBroken=_clientLatexStillBroken(textAfterNorm);
   if(!stillBroken){
-    if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
-    alert('✅ Chuẩn hóa tự động xong — LaTeX đã đúng, không cần gọi Claude.');
-    return;
+    // V326: không tự dừng — cho người dùng chọn có gọi Claude không
+    let goOn=confirm('✅ Chuẩn hóa tự động xong — LaTeX có vẻ đúng.\n\nVẫn muốn gọi Claude kiểm tra thêm không?');
+    if(!goOn){
+      if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
+      return;
+    }
   }
 
   // ── Bước 3: Gọi Claude chỉ khi vẫn còn lỗi ──────────────────────────────
@@ -22732,6 +22713,15 @@ function _clientLatexStillBroken(t){
   // Cho phép: \Delta \Sigma \Omega \Gamma \Lambda \Theta \Phi \Psi v.v.
   let greekUpper=/\\(?:Delta|Sigma|Omega|Gamma|Lambda|Theta|Pi|Phi|Psi|Xi|Upsilon|Rightarrow|Leftrightarrow)/;
   if(!greekUpper.test(t)&&/\$[^$]*\\[A-Z][a-z]{0,2}\b[^{][^$]*\$/.test(t))return true;
+  // V326: thêm các lỗi phổ biến mà chuẩn hóa Python bỏ sót
+  if(/\\ddfrac/.test(t))return true;           // \ddfrac không hợp lệ
+  if(/\\dfac\b/.test(t))return true;           // typo \dfac
+  if(/_[A-Z]_[0-9]/.test(t))return true;         // _H_0 kiểu Word
+  if(/\$\{[^}]+\}\$/.test(t))return true;     // ${...}$ từ Word
+  if(/\\left\./.test(t)&&!/\\right/.test(t))return true; // \left. không có \right
+  if(/\\right\./.test(t)&&!/\\left/.test(t))return true; // \right. không có \left
+  if(/[A-Za-z]_\{[A-Za-z]+_[A-Za-z0-9]\}/.test(t))return true; // x_{L_H} kiểu lồng nhau
+  if(/\$[^$\n]{0,3}\\[a-z]{2,}[^{][^$]*\$/.test(t)&&/\\[a-z]{2,}[^{\s\\$]/.test(t))return true;
   return false;
 }
 function toggleLatexNormMenu(field){let m=document.getElementById('latexNormMenu_'+field);if(!m)return;document.querySelectorAll('.latexNormMenu').forEach(x=>{if(x!==m)x.classList.add('hide')});m.classList.toggle('hide')}
