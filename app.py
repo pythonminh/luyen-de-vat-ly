@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V323c_NO_AUTORUN_BULKDBT_2026_06_24"
+APP_VERSION = "V325r_PDF_SYNC_FIX_2026_06_25"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -165,6 +165,7 @@ AI_IMAGE_MAX_BYTES = max(500_000, min(int(os.environ.get("AI_IMAGE_MAX_BYTES", "
 INFOGRAPHIC_HTTP_MAX_SEC = max(35, min(int(os.environ.get("INFOGRAPHIC_HTTP_MAX_SEC", "58") or 58), 120))
 DEFAULT_AI_PROVIDER = "GEMINI"
 DEFAULT_SVIP_AI_PROVIDER = "GEMINI"
+DEFAULT_GEMINI_SVIP_MODEL = "gemini-2.5-flash"  # SVIP dùng model mạnh hơn VIP (lite)
 AI_HINT_MAX_OUTPUT_TOKENS = max(120, min(int(os.environ.get("AI_HINT_MAX_TOKENS", "280") or 280), 800))
 AI_HINT_MAX_CHARS = max(200, min(int(os.environ.get("AI_HINT_MAX_CHARS", "480") or 480), 1200))
 AI_HINT_VIP_MAX_OUTPUT_TOKENS = max(180, min(int(os.environ.get("AI_HINT_VIP_MAX_TOKENS", "420") or 420), 800))
@@ -339,8 +340,37 @@ def assistant_sys_prompt_for_question(q: Dict[str, Any], *, chat: bool = False) 
     kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
     dang = effective_dang(q)
     dcode = assistant_dang_code(dang)
+
+    # [ADMIN-SYS-PROMPT] ADMIN dùng prompt soát đề chuyên sâu, khác hoàn toàn với USER
+    if is_admin():
+        subject_note = (
+            "Môn: Toán THPT — kiểm tra đại số, lượng giác, hình học, xác suất."
+            if kind == "math"
+            else (
+                "Môn: Vật lí THPT — kiểm tra công thức, đơn vị SI, lực, điện, sóng, quang."
+                if kind == "physics"
+                else "Môn: THPT — nhận dạng môn từ nội dung đề."
+            )
+        )
+        chat_role = "trả lời câu hỏi ADMIN về câu này" if chat else "soát đề toàn diện"
+        return (
+            f"Bạn là chuyên gia soát đề THPT. Nhiệm vụ: {chat_role}. {subject_note} "
+            f"Dạng câu: {dcode}. "
+            "Kiểm tra theo thứ tự: "
+            "(1) Đáp án Sheet (cột P) có đúng không — giải lại từ đầu để xác nhận; "
+            "(2) Lời giải (cột R) có đủ bước, đúng công thức, không nhảy bước không; "
+            "(3) Đề bài (CauHoi, A/B/C/D) có lỗi LaTeX, lỗi đánh máy, câu hỏi mơ hồ không; "
+            "(4) Phân loại dạng bài có khớp DangBaiTap không. "
+            "Kết luận rõ: ĐẠT / CẦN SỬA / LỖI NGHIÊM TRỌNG — kèm hướng sửa cụ thể nếu cần. "
+            "Tiếng Việt. Công thức trong $...$. Không dùng markdown *, **."
+        )
+
+    # [USER-SYS-PROMPT] VIP/SVIP: hướng dẫn giải bài theo phương pháp môn học
     role = "trả lời hỏi đáp" if chat else "hướng dẫn"
-    dang_note = f"Dạng câu {dcode}: đọc lại đề, gợi ý các bước làm, kết thúc bằng đáp án đúng theo quy ước {dcode}. Không dùng markdown *, ** hoặc bullet dấu sao; mỗi Bước 1, Bước 2... phải ở đoạn riêng."
+    dang_note = (
+        f"Dạng câu {dcode}: đọc lại đề, gợi ý các bước làm, kết thúc bằng đáp án đúng theo quy ước {dcode}. "
+        "Không dùng markdown *, ** hoặc bullet dấu sao; mỗi Bước 1, Bước 2... phải ở đoạn riêng."
+    )
     if kind == "math":
         return (
             "Bạn là Trợ lý AI thầy Minh — giáo viên Toán THPT. "
@@ -455,7 +485,7 @@ def assistant_sheet_fallback_note(q: Dict[str, Any]) -> str:
     code = assistant_dang_code(dang)
     ans = assistant_format_final_answer(q)
     cau = clean(q.get("CauHoi", ""))
-    if not is_admin():
+    if not is_admin() and not is_svip():
         kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
         cond = "kiểm tra điều kiện và biến đổi tương đương" if kind == "math" else "đổi đơn vị SI và kiểm tra điều kiện áp dụng"
         return "\n".join([
@@ -463,6 +493,20 @@ def assistant_sheet_fallback_note(q: Dict[str, Any]) -> str:
             f"2. Dạng bài: {clean(q.get('DangBaiTap', '')) or 'nhận dạng theo chương bài'}",
             "3. Hướng làm: gạch dữ kiện, chọn công thức phù hợp, thay số từng bước.",
             f"4. Tự kiểm tra: {cond}; so lại loại câu TN/Đ/S/TLN trước khi chọn.",
+        ])
+    # SVIP: thấy đáp án nhưng lời giải chỉ hiện tóm tắt (không đầy đủ như ADMIN)
+    if is_svip() and not is_admin():
+        kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
+        steps = (
+            "Xác định điều kiện → biến đổi → suy luận → kiểm tra"
+            if kind == "math"
+            else "Gạch dữ kiện → đổi đơn vị nếu cần → áp dụng công thức → kiểm tra"
+        )
+        return "\n".join([
+            f"1. Đọc lại đề ({code}): {cau[:200] or '(xem đề trên)'}{'…' if len(cau) > 200 else ''}",
+            f"2. Dạng bài: {clean(q.get('DangBaiTap', '')) or 'nhận dạng theo chương bài'}",
+            f"3. Các bước làm: {steps}.",
+            f"4. Đáp án cuối cùng: {ans}",
         ])
     if lg:
         lg_show = lg[:2200] + ("…" if len(lg) > 2200 else "")
@@ -632,6 +676,14 @@ def assistant_compact_sys_prompt(q: Dict[str, Any], *, chat: bool = False) -> st
     kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
     dcode = assistant_dang_code(effective_dang(q))
     subject = "Toán" if kind == "math" else ("Vật lí" if kind == "physics" else "THPT")
+    # [ADMIN-COMPACT] Prompt compact riêng cho ADMIN — soát nhanh, kết luận rõ
+    if is_admin():
+        chat_role = "trả lời câu hỏi" if chat else "soát nhanh"
+        return (
+            f"Chuyên gia {subject}. {chat_role.capitalize()} câu {dcode}: "
+            "xác nhận đáp án đúng/sai, chỉ ra lỗi nếu có, kết luận ĐẠT hoặc CẦN SỬA. "
+            "Tiếng Việt. Công thức trong $...$. Không dùng markdown *, **."
+        )
     role = "trả lời hỏi thêm" if chat else "giải bài"
     return (
         f"Bạn là thầy Minh dạy {subject}. {role.capitalize()} câu {dcode}: "
@@ -765,10 +817,11 @@ def assistant_invoke_ai(
         )
         last_error = err or last_error
         txt = sanitize(txt)
-        if txt and not is_admin():
+        # SVIP và ADMIN được xem đáp án cuối đầy đủ; VIP/FREE bị ẩn dòng đáp án.
+        if txt and not is_admin() and not is_svip():
             txt = _strip_student_final_answer_text(txt)
         if txt:
-            if is_admin():
+            if is_admin() or is_svip():
                 txt = assistant_ensure_final_answer_line(txt, q)
             return txt, idx, used, model, ""
     return "", 0, "", "", last_error
@@ -777,17 +830,26 @@ def assistant_invoke_ai(
 def assistant_fallback_chat(q: Dict[str, Any]) -> str:
     dang = effective_dang(q)
     code = assistant_dang_code(dang)
-    if not is_admin():
+    ans = assistant_format_final_answer(q)
+    if is_admin():
+        return "\n".join([
+            f"Em đọc lại đề ({code}) và gạch dữ kiện trước.",
+            "Làm lần lượt từng bước; hỏi thầy cụ thể bước nào em kẹt.",
+            f"Đáp án cuối cùng (tham chiếu Sheet): {ans}",
+        ])
+    if is_svip():
+        # SVIP: thấy đáp án nhưng không có lời giải đầy đủ như ADMIN
         return "\n".join([
             f"Em đọc lại đề ({code}) và gạch dữ kiện trước.",
             "Viết công thức chính, thay số theo từng bước rồi tự so với phương án/kết quả.",
+            f"Đáp án cuối cùng (tham chiếu Sheet): {ans}",
             "Nếu còn kẹt, hãy hỏi cụ thể bước nào em chưa hiểu.",
         ])
-    ans = assistant_format_final_answer(q)
+    # VIP/FREE: không thấy đáp án, chỉ được gợi ý hướng làm
     return "\n".join([
         f"Em đọc lại đề ({code}) và gạch dữ kiện trước.",
-        "Làm lần lượt từng bước; hỏi thầy cụ thể bước nào em kẹt.",
-        f"Đáp án cuối cùng (tham chiếu Sheet): {ans}",
+        "Viết công thức chính, thay số theo từng bước rồi tự so với phương án/kết quả.",
+        "Nếu còn kẹt, hãy hỏi cụ thể bước nào em chưa hiểu.",
     ])
 
 
@@ -852,6 +914,17 @@ def clean(v: Any) -> str:
     if re.fullmatch(r"\d+\.0", s):
         s = s[:-2]
     return s
+
+
+def _password_match(stored: str, entered: str) -> bool:
+    """So sánh mật khẩu: khớp chính xác hoặc không phân biệt hoa/thường.
+    clean() đã tự động chuyển float '123456.0' -> '123456'."""
+    if stored == entered:
+        return True
+    # Không phân biệt hoa/thường cho mật khẩu chữ
+    if stored.lower() == entered.lower():
+        return True
+    return False
 
 
 def safe_next_url(raw: Any) -> str:
@@ -3476,6 +3549,7 @@ SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
 DBT_FILTER_UNCLASSIFIED = "__CHUA_PHAN_LOAI__"
 DBT_MAX_TYPES_PER_LESSON = 6
 DBT_ORDER_FILE = os.path.join(APP_DIR, "data", "dbt_order.json")
+PDF_LINKS_FILE = os.path.join(APP_DIR, "data", "pdf_links.json")
 
 
 def header_map(headers: List[str]) -> Dict[str, int]:
@@ -6197,6 +6271,7 @@ class SheetStore:
             "lesson_catalog_error": self.lesson_catalog_error if is_admin() else "",
             "dangbaitap_suggestions": dbt_options,
             "dbt_orders": dbt_orders,
+            "pdf_links": pdf_links_public(),
             "catalog": self.catalog,
             "duplicate_report": self.duplicate_report if is_admin() else {},
             "learning": {
@@ -9528,6 +9603,12 @@ def ai_runtime_config() -> Dict[str, Any]:
         or clean(os.environ.get("GEMINI_HINT_MODEL", DEFAULT_GEMINI_HINT_MODEL)).strip()
         or DEFAULT_GEMINI_HINT_MODEL
     )
+    # [SVIP-MODEL] SVIP dùng model Gemini mạnh hơn VIP (flash thay vì flash-lite)
+    if is_svip() and not clean(ov.get("gemini_model")):
+        gemini_model = (
+            clean(os.environ.get("GEMINI_SVIP_MODEL", DEFAULT_GEMINI_SVIP_MODEL)).strip()
+            or DEFAULT_GEMINI_SVIP_MODEL
+        )
     openai_model = (
         clean(ov.get("openai_model"))
         or clean(os.environ.get("OPENAI_HINT_MODEL", DEFAULT_OPENAI_HINT_MODEL)).strip()
@@ -9567,6 +9648,7 @@ def ai_runtime_config() -> Dict[str, Any]:
         "openai_keys_masked": _mask_list(openai_keys),
         "gemini_keys_masked": _mask_list(gemini_keys),
         "gemini_model": gemini_model,
+        "gemini_svip_model": DEFAULT_GEMINI_SVIP_MODEL,
         "openai_model": openai_model,
         "openai_admin_model": openai_admin_model,
         "using_user_keys": bool(user_g or user_o),
@@ -14391,6 +14473,8 @@ SHARE_HTML = r"""
 .learningQuickBar button{font-size:12px!important;padding:6px 10px!important;border-radius:999px!important;font-weight:900!important}
 .learningQuickBar .learnTheoryBtn{background:#ecfeff!important;color:#0e7490!important;border:1px solid #67e8f9!important}
 .learningQuickBar .learnMethodBtn{background:#fef3c7!important;color:#92400e!important;border:1px solid #fbbf24!important}
+.learningQuickBar .learnPdfBtn,.qidLearnBtns .learnPdfBtn{background:#fff1f2!important;color:#e11d48!important;border:1px solid #fecdd3!important}
+.adminLearningBoard .adminPdfBtn{background:#fff1f2!important;color:#e11d48!important;border:1px solid #fecaca!important}
 .adminLearningBoard{margin-top:12px;padding:10px;border:1px solid #93c5fd;border-radius:12px;background:#eff6ff;color:#1e3a8a}
 .adminLearningBoard h4{margin:0 0 6px;font-size:14px;color:#1e40af}
 .adminLearningBoard .adminLearnScope{font-size:12px;color:#475569;line-height:1.35;margin-bottom:8px}
@@ -14519,59 +14603,95 @@ LOGIN_HTML = r"""
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--blue:#1d4ed8;--blue2:#2563eb;--surface:#fff;--bg:#f0f4ff;--text:#0f172a;--muted:#64748b;--border:#dde3f0;--input-bg:#f8fafc;--err-bg:#fef2f2;--err:#991b1b;--ok-bg:#f0fdf4;--ok:#166534}
-html[data-theme="dark"]{--surface:#1e293b;--bg:#0f172a;--text:#e2e8f0;--muted:#94a3b8;--border:#334155;--input-bg:#0f172a}
-body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column}
+:root{
+  --blue:#1a73e8;--blue-dark:#1557b0;--blue-light:#e8f0fe;
+  --surface:#fff;--bg:#f8f9fa;--text:#202124;--text2:#5f6368;
+  --border:#dadce0;--inp:#fff;
+  --err-bg:#fce8e6;--err:#c5221f;
+  --ok-bg:#e6f4ea;--ok:#137333;
+  --radius:8px;--radius-lg:16px;
+}
+html[data-theme="dark"]{
+  --surface:#2d2d2d;--bg:#1a1a1a;--text:#e8eaed;--text2:#9aa0a6;
+  --border:#3c4043;--inp:#3c4043;
+  --blue-light:#1a3a6b;
+}
+body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Google Sans','Segoe UI',Roboto,Arial,sans-serif;display:flex;flex-direction:column;font-size:14px}
 
-/* ── HEADER ── */
-.ln-header{background:var(--blue);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px #0003;position:sticky;top:0;z-index:10}
-.ln-logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:15px;letter-spacing:.3px}
-.ln-logo-icon{width:34px;height:34px;border-radius:10px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+/* HEADER — Google bar style */
+.ln-header{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:10}
+.ln-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.ln-logo-icon{width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0}
+.ln-logo-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.ln-logo-text{font-size:18px;font-weight:500;color:var(--text);letter-spacing:-.2px}
+.ln-logo-text span{color:var(--blue)}
+.ln-spacer{flex:1}
 .ln-header-actions{display:flex;gap:8px;align-items:center}
-.ln-theme-btn{background:#ffffff22;border:1px solid #ffffff44;color:#fff;padding:6px 11px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:800;line-height:1}
-.ln-register-link{background:#fff;color:var(--blue);padding:6px 13px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;border:1px solid #ffffff44}
+.ln-theme-btn{background:none;border:1px solid var(--border);color:var(--text2);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.ln-theme-btn:hover{background:var(--bg)}
+.ln-register-link{background:var(--blue);color:#fff;padding:8px 20px;border-radius:4px;font-size:14px;font-weight:500;text-decoration:none;letter-spacing:.25px;transition:background .15s;border:none}
+.ln-register-link:hover{background:var(--blue-dark)}
 
-/* ── MAIN LAYOUT ── */
-.ln-main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px}
-.ln-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 12px 40px #1d4ed81a;overflow:hidden}
+/* MAIN */
+.ln-main{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 16px}
+.ln-card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:40px 40px 32px}
 
-/* ── CARD HEADER ── */
-.ln-card-head{background:linear-gradient(135deg,#1d4ed8,#4f46e5);padding:28px 28px 24px;text-align:center;position:relative}
-.ln-card-head-icon{width:58px;height:58px;border-radius:16px;background:#ffffff22;display:inline-flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:12px;border:2px solid #ffffff33}
-.ln-card-head h1{font-size:20px;font-weight:900;color:#fff;margin-bottom:5px;letter-spacing:.2px}
-.ln-card-head p{font-size:13px;color:#c7d7ff;font-weight:500}
+/* CARD HEADER */
+.ln-card-head{text-align:center;margin-bottom:28px}
+.ln-card-head-icon{width:56px;height:56px;border-radius:12px;overflow:hidden;margin:0 auto 16px;border:1px solid var(--border)}
+.ln-card-head-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.ln-card-head h1{font-size:22px;font-weight:400;color:var(--text);margin-bottom:6px;letter-spacing:-.5px}
+.ln-card-head p{font-size:14px;color:var(--text2);font-weight:400}
 
-/* ── CARD BODY ── */
-.ln-card-body{padding:26px 28px 22px}
-.ln-field{margin-bottom:16px}
-.ln-field label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-.ln-field input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;font-family:inherit;transition:border-color .15s,box-shadow .15s;outline:none}
-.ln-field input:focus{border-color:var(--blue2);box-shadow:0 0 0 3px #2563eb22}
-.ln-btn{width:100%;padding:13px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#4f46e5);color:#fff;font-size:16px;font-weight:900;border:none;cursor:pointer;margin-top:6px;letter-spacing:.2px;box-shadow:0 4px 14px #1d4ed844;transition:filter .15s,transform .1s}
-.ln-btn:hover{filter:brightness(1.07);transform:translateY(-1px)}
-.ln-btn:active{transform:translateY(0);filter:brightness(.97)}
-.ln-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:var(--muted);font-size:12px}
+/* FIELDS */
+.ln-field{margin-bottom:20px;position:relative}
+.ln-field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+.ln-field input{
+  width:100%;padding:13px 14px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--inp);
+  color:var(--text);font-size:15px;font-family:inherit;
+  transition:border-color .15s,box-shadow .15s;outline:none;
+  -webkit-appearance:none;
+}
+.ln-field input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,115,232,.2)}
+.ln-field input::placeholder{color:var(--text2);opacity:.7}
+
+/* BUTTONS */
+.ln-btn-row{display:flex;justify-content:space-between;align-items:center;margin-top:32px;gap:12px}
+.ln-register-btn-sm{color:var(--blue);font-size:14px;font-weight:500;text-decoration:none;padding:8px 4px;border-radius:4px;transition:background .15s;background:none;border:none;cursor:pointer}
+.ln-register-btn-sm:hover{background:var(--blue-light);padding:8px 10px}
+.ln-btn{background:var(--blue);color:#fff;font-size:14px;font-weight:500;border:none;cursor:pointer;padding:10px 24px;border-radius:4px;letter-spacing:.25px;transition:background .15s;white-space:nowrap}
+.ln-btn:hover{background:var(--blue-dark)}
+.ln-btn:active{background:var(--blue-dark);transform:scale(.99)}
+
+/* MESSAGES */
+.ln-msg-err{background:var(--err-bg);color:var(--err);padding:10px 14px;border-radius:var(--radius);margin-bottom:18px;font-size:13px;border:1px solid #f5c6c5;display:flex;align-items:flex-start;gap:8px}
+.ln-msg-ok{background:var(--ok-bg);color:var(--ok);padding:10px 14px;border-radius:var(--radius);margin-bottom:18px;font-size:13px;border:1px solid #a8d5b1}
+.ln-divider{display:flex;align-items:center;gap:10px;margin:20px 0 16px;color:var(--text2);font-size:12px}
 .ln-divider::before,.ln-divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.ln-register-btn{display:block;text-align:center;padding:12px;border-radius:12px;border:1.5px solid var(--border);color:var(--blue);font-weight:800;font-size:14px;text-decoration:none;background:var(--input-bg);transition:border-color .15s,background .15s}
-.ln-register-btn:hover{border-color:var(--blue2);background:#eff6ff}
-html[data-theme="dark"] .ln-register-btn:hover{background:#1e3a5f}
-.ln-msg-err{background:var(--err-bg);color:var(--err);padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;border:1px solid #fecaca}
-.ln-msg-ok{background:var(--ok-bg);color:var(--ok);padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;border:1px solid #bbf7d0}
-.ln-hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.ln-register-card{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);text-decoration:none;color:var(--text);transition:border-color .15s,box-shadow .15s;background:var(--surface)}
+.ln-register-card:hover{border-color:var(--blue);box-shadow:0 1px 6px rgba(26,115,232,.15)}
+.ln-register-card-icon{font-size:22px;flex-shrink:0}
+.ln-register-card-text strong{display:block;font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px}
+.ln-register-card-text span{font-size:12px;color:var(--text2)}
+.ln-register-card-arrow{margin-left:auto;color:var(--text2);font-size:16px}
+.ln-hint{font-size:12px;color:var(--text2);line-height:1.6;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
 
-/* ── FOOTER ── */
-.ln-footer{padding:16px;text-align:center;font-size:12px;color:var(--muted)}
-.ln-footer a{color:var(--blue);text-decoration:none;font-weight:700}
+/* FOOTER */
+.ln-footer{padding:20px;text-align:center;font-size:12px;color:var(--text2)}
+.ln-footer a{color:var(--blue);text-decoration:none;font-weight:500}
+.ln-footer a:hover{text-decoration:underline}
 </style></head>
 <body>
 
 <header class="ln-header">
-  <div class="ln-logo">
-    <div class="ln-logo-icon" style="background:none;border:none;padding:0;overflow:hidden"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="" style="width:34px;height:34px;border-radius:9px;object-fit:cover;display:block"></div>
-    <span>Luyện đề AI · Thầy Minh</span>
-  </div>
+  <a class="ln-logo" href="/">
+    <div class="ln-logo-icon"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt=""></div>
+    <span class="ln-logo-text">Luyện đề <span>AI</span></span>
+  </a>
+  <div class="ln-spacer"></div>
   <div class="ln-header-actions">
-    <button type="button" class="ln-theme-btn" id="lnThemeBtn" onclick="lnToggleTheme()">🌙</button>
+    <button type="button" class="ln-theme-btn" id="lnThemeBtn" onclick="lnToggleTheme()" title="Đổi giao diện">🌙</button>
     <a class="ln-register-link" href="/register">Đăng ký</a>
   </div>
 </header>
@@ -14579,31 +14699,39 @@ html[data-theme="dark"] .ln-register-btn:hover{background:#1e3a5f}
 <main class="ln-main">
   <div class="ln-card">
     <div class="ln-card-head">
-      <div class="ln-card-head-icon" style="background:none;border:none;padding:0;width:72px;height:72px"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" style="width:72px;height:72px;border-radius:18px;object-fit:cover;border:3px solid #ffffff55;box-shadow:0 4px 16px #0003"></div>
-      <h1>Đăng nhập học viên</h1>
+      <div class="ln-card-head-icon"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh"></div>
+      <h1>Đăng nhập</h1>
       <p>Vật lý · Toán học · THPT</p>
     </div>
-    <div class="ln-card-body">
-      {% if local_demo %}<div class="ln-msg-ok">Chế độ test local: đăng nhập <b>DEMO</b> / <b>123456</b> để kiểm tra.</div>{% endif %}
-      {% if error %}<div class="ln-msg-err">{{error}}</div>{% endif %}
-      {% if msg %}<div class="ln-msg-ok">{{msg}}</div>{% endif %}
-      <form method="post">
-        <input type="hidden" name="device_id" id="device_id">
-        <input type="hidden" name="next" value="{{ next or '' }}">
-        <div class="ln-field">
-          <label>Mã học sinh / tài khoản</label>
-          <input name="mahs" autofocus required placeholder="VD: HS001 hoặc TRIAL_xxxx">
-        </div>
-        <div class="ln-field">
-          <label>Mật khẩu</label>
-          <input name="password" type="password" required placeholder="Nhập mật khẩu">
-        </div>
-        <button class="ln-btn" type="submit">Đăng nhập →</button>
-      </form>
-      <div class="ln-divider">hoặc</div>
-      <a class="ln-register-btn" href="/register">✨ Đăng ký dùng thử miễn phí 3 ngày</a>
-      <div class="ln-hint">Tài khoản lấy từ sheet <b>HOC_VIEN</b>. ADMIN được xem đáp án và sửa câu hỏi trực tiếp. Tài khoản dùng thử chỉ đăng ký 1 lần theo số điện thoại và thiết bị.</div>
-    </div>
+    {% if local_demo %}<div class="ln-msg-ok">Chế độ test local: đăng nhập <b>DEMO</b> / <b>123456</b> để kiểm tra.</div>{% endif %}
+    {% if error %}<div class="ln-msg-err">⚠ {{error}}{% if "HOC_VIEN" in error or "Google Sheet" in error %}<br><small>💡 Nếu chạy local không có Sheet, thêm <code>LOCAL_DEMO=1</code> vào file <code>.env</code>.</small>{% endif %}</div>{% endif %}
+    {% if msg %}<div class="ln-msg-ok">{{msg}}</div>{% endif %}
+    <form method="post">
+      <input type="hidden" name="device_id" id="device_id">
+      <input type="hidden" name="next" value="{{ next or '' }}">
+      <div class="ln-field">
+        <label>Mã học sinh / tài khoản</label>
+        <input name="mahs" autofocus required placeholder="VD: HS001 hoặc TRIAL_xxxx">
+      </div>
+      <div class="ln-field">
+        <label>Mật khẩu</label>
+        <input name="password" type="password" required placeholder="Nhập mật khẩu">
+      </div>
+      <div class="ln-btn-row">
+        <a class="ln-register-btn-sm" href="/register">Đăng ký tài khoản</a>
+        <button class="ln-btn" type="submit">Đăng nhập</button>
+      </div>
+    </form>
+    <div class="ln-divider">hoặc</div>
+    <a class="ln-register-card" href="/register">
+      <span class="ln-register-card-icon">✨</span>
+      <div class="ln-register-card-text">
+        <strong>Dùng thử miễn phí 3 ngày</strong>
+        <span>Không cần thông tin thẻ thanh toán</span>
+      </div>
+      <span class="ln-register-card-arrow">›</span>
+    </a>
+    <div class="ln-hint">Tài khoản được quản lý qua Google Sheet <b>HOC_VIEN</b>. ADMIN có thêm quyền xem đáp án và sửa câu hỏi trực tiếp.</div>
   </div>
 </main>
 
@@ -14695,27 +14823,28 @@ APP_HTML = r"""
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Luyện đề</title><script>window.LDVL_OFFLINE=false;</script><script src="/offline-shim.js"></script><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
 <script>window.MathJax={loader:{load:['[tex]/ams']},tex:{packages:{'[+]':['ams']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},svg:{fontCache:"global"},options:{renderActions:{addMenu:[0,0,'']}}};</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
 
-/* ===== SETUP PANEL V322: Filter Môn/Lớp/Chương tách rõ, đẹp chuyên nghiệp ===== */
+/* ===== SETUP PANEL V325: Filter Môn/Lớp/Chương — Google Classroom style ===== */
 
-/* Panel thiết lập luyện tập — viền gradient nổi bật */
+/* Panel thiết lập luyện tập */
 .homePracticeSetupPanel{
-  border:none!important;
+  border:1px solid var(--border)!important;
   background:var(--surface)!important;
-  border-radius:16px!important;
+  border-radius:var(--rl)!important;
   padding:0!important;
   overflow:hidden!important;
-  box-shadow:0 4px 18px #1d4ed81a!important;
+  box-shadow:var(--shadow-sm)!important;
 }
 
 /* Header panel */
 .homePracticeSetupPanel>b{
   display:block;
-  background:linear-gradient(135deg,#1d4ed8,#4f46e5);
+  background:#1a73e8;
   color:#fff!important;
-  padding:12px 16px!important;
+  padding:13px 18px!important;
   font-size:13px!important;
   font-weight:900!important;
   letter-spacing:.3px!important;
@@ -14842,9 +14971,9 @@ html[data-theme="dark"] #fDangBaiTap{border-left-color:#fbbf24!important}
   .topBrandText{font-size:13px!important}
 }
 
-/* ===== V226: Lý thuyết/PP bật-tắt + mobile dễ đọc ===== */
-.learningToggleBtn.learningActive,.qidLearnBtns button.learningActive,.learningQuickBar button.learningActive,#quizActions button.learningActive,#fsOnlyTools button.learningActive,.adminLearningBoard button.learningActive{outline:2px solid #1d4ed8!important;box-shadow:0 0 0 3px #bfdbfe!important;filter:brightness(1.03)!important}
-.learningCloseBtn{margin-left:8px;padding:4px 8px!important;border-radius:999px!important;font-size:12px!important;background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important;font-weight:900!important;width:auto!important;white-space:nowrap!important}
+/* ===== V325: Lý thuyết/PP bật-tắt + mobile dễ đọc — Classroom style ===== */
+.learningToggleBtn.learningActive,.qidLearnBtns button.learningActive,.learningQuickBar button.learningActive,#quizActions button.learningActive,#fsOnlyTools button.learningActive,.adminLearningBoard button.learningActive{outline:2px solid #1a73e8!important;box-shadow:0 0 0 3px #aecbfa!important;background:var(--blue-light,#e8f0fe)!important;color:#1a73e8!important}
+.learningCloseBtn{margin-left:8px;padding:5px 10px!important;border-radius:20px!important;font-size:12px!important;background:#fce8e6!important;color:#c5221f!important;border:1px solid #f5c6c5!important;font-weight:500!important;width:auto!important;white-space:nowrap!important}
 .learningTitleRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
 #hintBox.learningOpen{font-size:15.5px;line-height:1.62}
 #hintBox.learningOpen .learningItem{font-size:15px;line-height:1.62}
@@ -14861,7 +14990,16 @@ html[data-theme="dark"] #fDangBaiTap{border-left-color:#fbbf24!important}
   .learningCloseBtn{padding:7px 10px!important;font-size:13px!important;min-width:72px!important}
 }
 
-:root{--blue:#1d4ed8;--border:#d7e0ed;--bg:#f5f7fb;--surface:#fff;--text:#0f172a;--heading:#1e3a8a;--muted:#64748b;--green:#dcfce7;--red:#fee2e2;--yellow:#fff7ed;--exam-bg:#fff7ed;--exam-border:#fed7aa;--exam-text:#9a3412;--exam-timer-bg:#fff;--exam-timer-border:#fdba74;--btn2-bg:#eef2ff;--btn2-color:#1d4ed8;--quiz-timer-bg:#eef2ff;--quiz-timer-color:#1e40af;--quiz-timer-border:#bfdbfe;--shuffle-bg:#eff6ff;--shuffle-border:#93c5fd;--shuffle-text:#1e3a8a;--solution-bg:#fff7ed;--solution-border:#fed7aa;--opt-hover:#f8fafc;--num-answered:#fef3c7;--modal-overlay:#0008;--load-card-bg:#eff6ff;--load-card-border:#93c5fd;--load-warn-bg:#fff7ed;--load-warn-border:#fed7aa;--load-warn-text:#9a3412}html[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--heading:#93c5fd;--muted:#94a3b8;--border:#334155;--green:#14532d;--red:#450a0a;--yellow:#422006;--exam-bg:#422006;--exam-border:#9a3412;--exam-text:#fed7aa;--exam-timer-bg:#1e293b;--exam-timer-border:#c2410c;--btn2-bg:#1e3a5f;--btn2-color:#bfdbfe;--quiz-timer-bg:#1e3a5f;--quiz-timer-color:#bfdbfe;--quiz-timer-border:#475569;--shuffle-bg:#1e3a5f;--shuffle-border:#3b82f6;--shuffle-text:#bfdbfe;--solution-bg:#422006;--solution-border:#9a3412;--opt-hover:#334155;--num-answered:#422006;--modal-overlay:#000c;--load-card-bg:#1e3a5f;--load-card-border:#3b82f6;--load-warn-bg:#422006;--load-warn-border:#9a3412;--load-warn-text:#fed7aa;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#166534;color:#dcfce7}html[data-theme="dark"] .btnRed{background:#991b1b;color:#fee2e2}html[data-theme="dark"] .correct{color:#86efac!important}html[data-theme="dark"] .wrong{color:#fecaca!important}html[data-theme="dark"] .num.ok{color:#86efac}html[data-theme="dark"] .num.bad{color:#fecaca}*{box-sizing:border-box}html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:15px;overflow-x:hidden;width:100%;max-width:100vw}.themeBtn{background:#ffffff22;border:1px solid #ffffff55;color:#fff;padding:5px 10px;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:var(--blue);color:#fff;padding:10px 14px;box-shadow:0 2px 8px #0002;width:100%;max-width:100vw}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#dcfce7;border:1px solid #86efac;color:#166534;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.adminTopBtn2{background:#ffffff22;border:1px solid #ffffff55;color:#fff}.adminTopBtn:hover{filter:brightness(1.05)}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 10px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:800}.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:999px;padding:2px 10px}.wrap{max-width:100%;margin:0;padding:12px;width:100%;min-width:0}
+:root{--blue:#1a73e8;--border:#dadce0;--bg:#f8f9fa;--surface:#fff;--text:#202124;--heading:#1a73e8;--muted:#5f6368;--green:#e6f4ea;--red:#fce8e6;--yellow:#fef9e7;--exam-bg:#fef9e7;--exam-border:#f9ab00;--exam-text:#b06000;--exam-timer-bg:#fff;--exam-timer-border:#f9ab00;--btn2-bg:#e8f0fe;--btn2-color:#1a73e8;--quiz-timer-bg:#e8f0fe;--quiz-timer-color:#1557b0;--quiz-timer-border:#aecbfa;--shuffle-bg:#e8f0fe;--shuffle-border:#aecbfa;--shuffle-text:#1557b0;--solution-bg:#fef9e7;--solution-border:#f9ab00;--opt-hover:#f8f9fa;--num-answered:#fef9e7;--modal-overlay:#0006;--load-card-bg:#e8f0fe;--load-card-border:#aecbfa;--load-warn-bg:#fef9e7;--load-warn-border:#f9ab00;--load-warn-text:#b06000}html[data-theme="dark"]{--bg:#1a1a1a;--surface:#2d2d2d;--text:#e8eaed;--heading:#8ab4f8;--muted:#9aa0a6;--border:#3c4043;--green:#0d3321;--red:#350000;--yellow:#2d1f00;--exam-bg:#2d1f00;--exam-border:#b06000;--exam-text:#f9ab00;--exam-timer-bg:#2d2d2d;--exam-timer-border:#b06000;--btn2-bg:#1a3a6b;--btn2-color:#8ab4f8;--quiz-timer-bg:#1a3a6b;--quiz-timer-color:#8ab4f8;--quiz-timer-border:#3c4043;--shuffle-bg:#1a3a6b;--shuffle-border:#4285f4;--shuffle-text:#8ab4f8;--solution-bg:#2d1f00;--solution-border:#b06000;--opt-hover:#3c4043;--num-answered:#2d1f00;--modal-overlay:#000b;--load-card-bg:#1a3a6b;--load-card-border:#4285f4;--load-warn-bg:#2d1f00;--load-warn-border:#b06000;--load-warn-text:#f9ab00;color:var(--text)}html[data-theme="dark"] .btnGreen{background:#0f9d58;color:#e6f4ea}html[data-theme="dark"] .btnRed{background:#c5221f;color:#fce8e6}html[data-theme="dark"] .correct{color:#81c995!important}html[data-theme="dark"] .wrong{color:#f28b82!important}html[data-theme="dark"] .num.ok{color:#81c995}html[data-theme="dark"] .num.bad{color:#f28b82}*{box-sizing:border-box}html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:'Google Sans','Segoe UI',Roboto,Arial,sans-serif;font-size:15px;overflow-x:hidden;width:100%;max-width:100vw}.themeBtn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:#fff;padding:5px 10px;border-radius:var(--r,8px);font-size:15px;font-weight:500;cursor:pointer;margin-right:6px}.top{position:sticky;top:0;z-index:9;background:#1a73e8;color:#fff;padding:10px 16px;box-shadow:0 2px 4px #0001;width:100%;max-width:100vw}.topRow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}.top h1{font-size:18px;margin:0;flex:1;min-width:200px;font-weight:500;letter-spacing:-.2px}.topRight{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}.top a{color:#fff}.adminBar{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-right:4px}.adminTopBtn{background:#e6f4ea;border:1px solid #a8d5b1;color:#137333;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;letter-spacing:.1px}.adminTopBtn2{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:#fff}.adminTopBtn:hover{background:#ceead6;border-color:#81c995}.adminTopBtn:disabled{opacity:.55;cursor:not-allowed}.examStrip{position:sticky;top:56px;z-index:8;display:flex;gap:8px;align-items:center;justify-content:center;padding:6px 12px;background:var(--exam-bg);border-top:1px solid var(--exam-border);border-bottom:1px solid var(--exam-border);color:var(--exam-text);font-weight:500;font-size:13px;
+/* không wrap, ẩn text tràn */
+white-space:nowrap;overflow:hidden;min-height:0}
+#examMsg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:center;min-width:0}
+.examStrip .timer{background:var(--exam-timer-bg);border:1px solid var(--exam-timer-border);border-radius:20px;padding:2px 12px;flex-shrink:0;white-space:nowrap}
+/* Ẩn examStrip chào mừng trên mobile — chỉ hiện khi đang thi (có timer) */
+@media(max-width:600px){
+  .examStrip:not(.exam-active){display:none!important}
+  body.quiz-session-active .examStrip{display:flex!important}
+}.wrap{max-width:100%;margin:0;padding:12px;width:100%;min-width:0}
 #home{max-width:none;margin:0}.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:4px;min-width:160px;flex:1}.field label{font-weight:700;font-size:12px}select,input,textarea,button{font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:var(--surface);color:var(--text)}button{cursor:pointer;font-weight:800}.btn{background:var(--blue);border-color:var(--blue);color:#fff}.btn2{background:var(--btn2-bg);color:var(--btn2-color)}.btnGreen{background:#dcfce7;color:#166534}.btnRed{background:#fee2e2;color:#991b1b}.btnStartStrong{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#1e40af;color:#fff;box-shadow:0 6px 16px #1e40af44}.btnStartStrong:hover{filter:brightness(1.03)}.quizTimer{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--quiz-timer-bg);color:var(--quiz-timer-color);font-weight:800;border:1px solid var(--quiz-timer-border)}.shuffleHint{margin-top:8px;background:var(--shuffle-bg);border:1px dashed var(--shuffle-border);color:var(--shuffle-text);padding:7px 9px;border-radius:8px;font-size:12px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}.card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:12px}.card h3{margin:0 0 8px;color:var(--heading)}.tag{display:inline-block;background:var(--btn2-bg);color:var(--btn2-color);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}.line{height:1px;background:var(--border);margin:10px 0}.muted{color:var(--muted)}.hide{display:none!important}.quizLayout{display:grid;grid-template-columns:1fr 270px;gap:12px}.quizHeadRow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:nowrap}.btnQuizToolsToggle{display:none;width:auto;margin:0;padding:6px 10px;font-size:18px;line-height:1;border-radius:8px;background:var(--btn2-bg);color:var(--btn2-color);border:1px solid var(--border);flex-shrink:0;cursor:pointer;font-weight:800}.quizActionsPanel{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:0}.quizToolbarStrip{background:transparent;border:none;padding:0;margin:0 0 8px;box-shadow:none}.quizToolbarHead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;flex-wrap:wrap}.quizToolbarHead .qid{flex:1;min-width:0;margin:0}.quizAdminTools{display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap;justify-content:flex-end}.adminReviewModeWrap{display:inline-flex;align-items:center;gap:6px;font-size:12px;flex-shrink:0}.adminReviewModeWrap select{padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface);color:var(--text);max-width:176px}.quizAdminTools .btn2,.adminQuizAct,#btnQuizEdit.adminQuizAct{background:#1e40af!important;color:#fff!important;border-color:#1d4ed8!important;font-weight:700!important}
 #btnQuizEdit.adminQuizAct{flex-shrink:0}.editAdminSoatBar .btnGreen{font-size:12px!important;padding:6px 10px!important}.editHintResult{max-height:min(36vh,240px);overflow:auto;margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;line-height:1.45}.editAdminPreviewBar{margin:0 0 10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.editAdminPreviewBar .row{gap:6px;align-items:center;margin-bottom:8px}.editAdminPasteBox{width:100%;min-height:64px;font-size:13px;line-height:1.45;margin:6px 0}.editQuestionPreview{margin:0 0 12px;padding:12px;border:2px solid #93c5fd;border-radius:10px;background:var(--surface);max-height:min(52vh,420px);overflow:auto}.editQuestionPreview .opt{margin:4px 0;padding:6px 8px}.adminImgField textarea{min-height:56px!important}.adminImgPreview{margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;background:var(--bg);min-height:48px}.adminImgPreview .qimg{max-height:min(36vh,280px)}.adminLgAiTools{margin:4px 0 5px 0}.adminLgAiTools .btnSmall{font-size:11px!important;padding:4px 8px!important}.latexNormWrap{position:relative;display:inline-flex;gap:2px;align-items:center;flex-shrink:0}.latexNormMore{min-width:28px!important;padding:4px 6px!important;font-weight:800}.latexNormMenu{position:absolute;top:100%;left:0;z-index:120;min-width:min(320px,92vw);max-width:min(380px,96vw);max-height:min(62vh,420px);overflow:auto;margin-top:4px;padding:6px 0;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 8px 28px #0000002a}.latexNormMenu.hide{display:none!important}.latexNormGroupTitle{font-size:10px;font-weight:800;color:var(--muted);padding:6px 12px 4px;text-transform:uppercase;letter-spacing:.04em}.latexNormItem{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:7px 12px;font-size:12px;line-height:1.35;cursor:pointer}.latexNormItem:hover{background:var(--btn2-bg)}body.user-is-admin #btnRetry{display:none!important}.quizAdminTools button{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap}.quizToolsRow{display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;padding-bottom:2px}.quizToolsRow .quizNavRow{display:flex;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;flex-shrink:0;justify-content:flex-start}.quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:nowrap;gap:4px;margin:0;align-items:center;justify-content:flex-start;width:auto;flex:1;min-width:0;border:none;background:transparent;padding:0}.quizToolsRow #quizActions button,.quizToolsRow .quizNavRow button,.quizToolsRow .quizNavRow .btnNavWide{font-size:11px!important;padding:4px 8px!important;margin:0!important;white-space:nowrap;flex-shrink:0;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto}.quizToolbarStrip .btnGreen,.quizToolbarStrip .btnStartStrong,.quizToolbarStrip .btn{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important;box-shadow:none!important;transform:none!important;filter:none!important}.quizToolbarStrip .btnGreen:hover,.quizToolbarStrip .btnStartStrong:hover,.quizToolbarStrip .btn:hover{filter:brightness(0.98)!important;transform:none!important}.quizToolbarStrip .btnSolToggle.active,.quizToolbarStrip .btnMobileSolToggle.active,.btnSolToggle.active,.btnMobileSolToggle.active{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;font-weight:800}.btnMobileSolToggle.vipSolLocked,.btnSolToggle.vipSolLocked{opacity:.45;cursor:not-allowed}.quizQuestionPanel{margin-top:0;position:relative;overflow:hidden}.quizQuestionPanel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:#cbd5e1}.quizQuestionPanel:after{content:attr(data-level-label);position:absolute;right:8px;top:6px;font-size:10px;font-weight:900;letter-spacing:.2px;padding:2px 7px;border-radius:999px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;pointer-events:none;z-index:5;max-width:3.2em;text-align:center;line-height:1.2;white-space:nowrap}.quizDbtLabel{position:absolute;top:6px;right:8px;display:flex;align-items:center;gap:4px;pointer-events:none;z-index:4;max-width:calc(100% - 60px)}.quizDbtLabel .quizDbtText{background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;line-height:1.2}.quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:46px}.quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:46px!important}.quizQuestionPanel[data-dbt-label]:not([data-dbt-label=""]) #qtext{padding-right:46px!important}@media(max-width:768px){.quizDbtLabel .quizDbtText{max-width:140px;font-size:9px}.quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:42px}}.quizQuestionPanel.mucdoPanel-nb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-th{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-nb:before{background:#22c55e}.quizQuestionPanel.mucdoPanel-th:before{background:#3b82f6}.quizQuestionPanel.mucdoPanel-vd:before{background:#f97316}.quizQuestionPanel.mucdoPanel-vdc:before{background:#ef4444}.quizQuestionPanel.mucdoPanel-nb:after{content:attr(data-level-label);background:#dcfce7;color:#166534;border-color:#86efac}.quizQuestionPanel.mucdoPanel-th:after{content:attr(data-level-label);background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.quizQuestionPanel.mucdoPanel-vd:after{content:attr(data-level-label);background:#ffedd5;color:#c2410c;border-color:#fdba74}.quizQuestionPanel.mucdoPanel-vdc:after{content:attr(data-level-label);background:#fee2e2;color:#991b1b;border-color:#fca5a5}.quizQuestionPanel.mucdoPanel-empty:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:after{display:none!important}body.mobile-quiz-ui .quizDbtLabel{top:4px;right:6px}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) .quizDbtLabel{right:6px}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:clamp(10px,2.5vw,14px)!important}body.mobile-quiz-ui #qid .mucdoFull,body.mobile-quiz-ui #qid .mucdoIcon{display:none!important}body.mobile-quiz-ui #qid .mucdoBadge{font-size:10px!important;padding:1px 6px!important;line-height:1.25!important;border-width:1px!important}#qid .mucdoFull{display:none!important}#qid .mucdoIcon{display:none!important}#qid .mucdoBadge{font-size:11px!important;padding:2px 7px!important}.quizQuestionPanel.mucdoPanel-nb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-th{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-vdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2,0 1px 4px #0001}.quizQuestionPanel.mucdoPanel-nb:before{background:#22c55e}.quizQuestionPanel.mucdoPanel-th:before{background:#3b82f6}.quizQuestionPanel.mucdoPanel-vd:before{background:#f97316}.quizQuestionPanel.mucdoPanel-vdc:before{background:#ef4444}.quizQuestionPanel.mucdoPanel-nb:after{content:attr(data-level-label);background:#dcfce7;color:#166534;border-color:#86efac}.quizQuestionPanel.mucdoPanel-th:after{content:attr(data-level-label);background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.quizQuestionPanel.mucdoPanel-vd:after{content:attr(data-level-label);background:#ffedd5;color:#c2410c;border-color:#fdba74}.quizQuestionPanel.mucdoPanel-vdc:after{content:attr(data-level-label);background:#fee2e2;color:#991b1b;border-color:#fca5a5}.quizQuestionPanel.mucdoPanel-empty:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:after{display:none!important}body.mobile-quiz-ui .quizQuestionPanel:not(.mucdoPanel-empty) #qtext{padding-right:clamp(10px,2.5vw,14px)!important}body.mobile-quiz-ui #qid .mucdoFull,body.mobile-quiz-ui #qid .mucdoIcon{display:none!important}body.mobile-quiz-ui #qid .mucdoBadge{font-size:10px!important;padding:1px 6px!important;line-height:1.25!important;border-width:1px!important}#qid .mucdoFull{display:none!important}#qid .mucdoIcon{display:none!important}#qid .mucdoBadge{font-size:11px!important;padding:2px 7px!important}.quizToolsRow .btnNavPrimary{background:var(--btn2-bg)!important;color:var(--btn2-color)!important;border:1px solid var(--border)!important}.quizNavRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}.btnNavMini{display:none;width:auto;margin:0;padding:8px 14px;font-size:18px;font-weight:800;border-radius:8px;min-width:44px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}.btnNavMini.btnNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}.btnNavWide{width:auto;margin:0}@media(max-width:768px),(orientation:landscape) and (max-height:520px){.btnQuizToolsToggle{display:inline-flex!important;align-items:center;justify-content:center}.quizHeadRow{flex-wrap:wrap;align-items:center}.qid{font-size:13px;line-height:1.3;flex:1;min-width:0;width:100%}.quizToolbarStrip{margin-bottom:6px}body.mobile-quiz-ui .quizToolbarStrip{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important}body.mobile-quiz-ui .quizToolbarHead{flex:1 1 auto!important;min-width:0!important;margin-bottom:0!important;flex-wrap:nowrap!important;align-items:center!important;overflow:hidden!important}body.mobile-quiz-ui .quizToolbarHead .qid{width:auto!important;white-space:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;font-size:11px!important;line-height:1.2!important}body.mobile-quiz-ui:not(.fullde-mode) .quizToolsRow{flex-shrink:0!important;overflow:visible!important;padding-bottom:0!important}body.mobile-quiz-ui.fullde-mode .quizToolsRow{display:none!important}body.mobile-quiz-ui.mobile-quiz-tools-open .quizToolbarStrip{flex-wrap:wrap!important}body.mobile-quiz-ui.mobile-quiz-tools-open:not(.fullde-mode) .quizToolsRow{width:100%!important}.quizToolsRow .quizNavRow.hide-mobile{display:none!important}body.mobile-quiz-ui:not(.fullde-mode):not(.mobile-quiz-tools-open) .quizToolsRow .quizActionsPanel{display:none!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow{flex-wrap:wrap!important}body.mobile-quiz-ui:not(.fullde-mode).mobile-quiz-tools-open .quizToolsRow .quizActionsPanel{display:flex!important;flex-wrap:wrap!important;width:100%;overflow:visible}.quizToolsRow .quizActionsPanel{flex-wrap:nowrap!important;overflow-x:auto;width:100%}.quizToolsRow #quizActions button{font-size:10px!important;padding:3px 6px!important}#quizActions button,.quizNavRow .btnNavWide,.shortAnsBtn{font-size:10px!important;padding:3px 6px!important;border-radius:6px!important;min-height:0!important;line-height:1.2!important;width:auto;margin:0}body.fullde-mode #fsOnlyTools{display:flex!important;flex-wrap:wrap;gap:3px!important;padding:4px 6px!important;margin:0 0 4px!important;border-bottom:1px solid var(--border);border-radius:0;background:var(--surface);width:100%}body.fullde-mode #fsOnlyTools button{font-size:10px!important;padding:3px 6px!important}body.mobile-quiz-ui.fullde-mode #fsOnlyTools{flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;flex-shrink:0!important;width:auto!important;margin:0!important;padding:0!important;border:none!important;background:transparent!important}body.mobile-quiz-ui.fullde-mode:not(.mobile-quiz-tools-open) #fsOnlyTools>:not(:nth-child(-n+2)){display:none!important}body.mobile-quiz-ui.fullde-mode.mobile-quiz-tools-open #fsOnlyTools{width:100%!important}body.mobile-quiz-ui.fullde-mode #fsQuizTimer,body.mobile-quiz-ui.fullde-mode #btnFsNav{display:none!important}.btnFsToolsToggle{font-weight:800!important;flex-shrink:0!important}.btnNavMini{display:inline-flex!important;align-items:center;justify-content:center}.btnNavWide.hide-mobile{display:none!important}#quiz>.panel.row{padding:8px 10px;font-size:13px}#quiz>.panel.row #resultBox{font-size:14px!important}#quiz>.panel.row .quizTimer{font-size:12px;padding:3px 8px}.panel{padding:10px;margin-bottom:8px}.quizLayout{grid-template-columns:1fr!important;gap:8px!important}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn:not(.dsSolutionRows),.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}}body.mobile-quiz-ui .dsSolutionTn:not(.dsSolutionRows),body.mobile-quiz-ui .dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))!important}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionItem{padding:5px 7px}body.mobile-quiz-ui .dsSolutionCompact .dsSolutionHead{gap:4px}body.mobile-quiz-ui .dsSolutionCompact .dsStmtInline{font-size:13px;line-height:1.35}body.mobile-quiz-ui .mcqSplitOpts,body.mobile-quiz-ui .mcqSplitWrap .mcqSplitOpts{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui .shortAnsCompact .shortAnsQtext{max-height:none!important;overflow:visible!important}body.mobile-quiz-ui #qtext,body.mobile-quiz-ui #options,body.mobile-quiz-ui #solution,body.mobile-quiz-ui #hintBox{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;max-width:100%}body.mobile-quiz-ui .qbox,body.mobile-quiz-ui .solution,body.mobile-quiz-ui .hintAdminBody,body.mobile-quiz-ui .dsSolutionBody,body.mobile-quiz-ui .dsStmtBlock{overflow-x:auto;-webkit-overflow-scrolling:touch}html.mobile-quiz-ui,body.mobile-quiz-ui{overscroll-behavior-y:auto;touch-action:auto}html.mobile-quiz-ui:not(.quiz-session-active),body.mobile-quiz-ui:not(.quiz-session-active){height:auto!important;min-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:auto!important;touch-action:auto!important;-webkit-overflow-scrolling:touch!important}body.mobile-quiz-ui:not(.quiz-session-active){position:static!important}body.mobile-quiz-ui:not(.quiz-session-active) .wrap,body.mobile-quiz-ui:not(.quiz-session-active) #home{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;touch-action:auto!important}body.quiz-scroll-lock{overscroll-behavior-y:none}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 56px)!important;overflow:hidden!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz>.panel.row{flex-shrink:0!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child{flex:1 1 auto!important;min-height:0!important;display:flex!important;flex-direction:column!important}body.mobile-quiz-ui.quiz-scroll-lock:not(.fullde-mode) #quiz .quizLayout>div:first-child>.panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;max-height:none!important}body.mobile-quiz-ui #quiz{overscroll-behavior:contain}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:first-child>.panel{overflow:hidden!important;display:flex!important;flex-direction:column!important;min-height:0!important;flex:1!important}body.fullde-mode.mobile-quiz-ui #qtext{flex:0 0 auto!important;max-height:min(42vh,320px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;position:sticky!important;top:0!important;z-index:4!important;background:var(--surface)!important;box-shadow:0 2px 10px #00000014}body.fullde-mode.mobile-quiz-ui #options{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding-bottom:16px!important}.mobileNavDock{display:none}.mobileNavBody{display:contents}@media(max-width:768px),(orientation:landscape) and (max-height:520px){body.mobile-quiz-ui .mobileNavDock{display:flex!important;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}body.mobile-quiz-ui .mobileDockTimer{margin:0!important;font-size:12px!important;white-space:nowrap;flex-shrink:0;padding:4px 6px!important}body.mobile-quiz-ui .mobileDockNavGroup{display:flex!important;align-items:center;gap:4px;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini{display:inline-flex!important;align-items:center;justify-content:center;width:34px;min-width:34px;height:34px;padding:0;font-size:20px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;line-height:1;flex-shrink:0}body.mobile-quiz-ui .btnMobileNavMini.btnMobileNavPrimary{background:var(--blue);color:#fff;border-color:var(--blue)}body.mobile-quiz-ui .btnMobileNavMini:disabled{opacity:.35;cursor:default}body.mobile-quiz-ui .mobileDockMid{display:flex!important;gap:4px;flex:1;justify-content:center;align-items:center;min-width:0}body.mobile-quiz-ui .btnMobileSolToggle{padding:5px 6px;font-size:10px;font-weight:800;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;flex:1;max-width:76px;cursor:pointer;line-height:1.2;white-space:nowrap}body.mobile-quiz-ui .btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .btnMobileNavToggle{width:auto;margin:0;padding:6px 8px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--btn2-bg);color:var(--btn2-color);cursor:pointer;text-align:center;flex:0 1 auto!important;max-width:42%}.vipSolBtnsTop{display:none;gap:6px;align-items:center}.vipSolBtnsTop:not(.hide){display:inline-flex!important}.btnMobileSolToggle{padding:5px 10px;font-size:11px;font-weight:800;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);margin:0;width:auto;cursor:pointer;line-height:1.2;white-space:nowrap}.btnMobileSolToggle.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}body.mobile-quiz-ui .fsNavPanel{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;min-height:0!important}body.mobile-quiz-ui .mobileNavBody{display:none!important;flex:1;min-height:0;overflow:auto;padding:6px 8px;flex-direction:column!important}body.mobile-quiz-ui.mobile-nav-open .mobileNavBody{display:flex!important}body.mobile-quiz-ui.mobile-nav-open .fsNavPanel{max-height:min(42vh,320px)!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz>.panel.row .quizTimer{display:none!important}body.mobile-quiz-ui:not(.fullde-mode) #quiz .quizLayout>div:last-child{flex-shrink:0!important}body.fullde-mode.mobile-quiz-ui #quiz .quizLayout>div:last-child{max-height:52px!important;min-height:0!important}body.mobile-quiz-ui #fsQuizTimer,body.mobile-quiz-ui #btnFsNav{display:none!important}body.fullde-mode.mobile-quiz-ui.mobile-nav-open #quiz .quizLayout>div:last-child{max-height:min(40vh,300px)!important}}body.mobile-quiz-ui.fullde-mode #quiz .quizLayout>div:first-child>.panel{overscroll-behavior:contain!important}body.mobile-quiz-ui .opt>span:not(.dsCircle),body.mobile-quiz-ui .tfStmt{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block}body.mobile-quiz-ui .opt .dsCircle,body.mobile-quiz-ui .tfrow .dsCircle{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;padding:0!important;line-height:1!important;text-align:center!important}.qid{font-size:19px;font-weight:800}.qidIdBadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:inherit;font-weight:800;font-family:ui-monospace,Consolas,monospace;cursor:pointer;line-height:1.3;vertical-align:middle}.qidIdBadge:hover{filter:brightness(1.03);box-shadow:0 1px 4px #1d4ed833}.qidIdBadge.qidIdEmpty{cursor:default;opacity:.7;background:var(--surface);border-color:var(--border);color:var(--muted)}html[data-theme="dark"] .qidIdBadge{background:#1e3a5f;border-color:#3b82f6;color:#bfdbfe}.quizIdJumpWrap{display:inline-flex;gap:4px;align-items:center;flex-shrink:0}.quizIdJumpInp{width:148px;font-size:12px;padding:5px 8px;font-family:ui-monospace,Consolas,monospace}.quizIdJumpBtn{padding:5px 8px!important;font-size:12px!important;min-width:0!important}.idLookupCard{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--surface)}.idLookupCard h4{margin:0 0 6px;font-size:15px;color:var(--heading)}.idLookupMeta{font-size:13px;line-height:1.45;margin:4px 0}.idLookupPreview{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}.qbox{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:clamp(10px,2vw,14px);min-height:0;line-height:1.5;font-size:clamp(15px,2.2vw,18px);color:var(--text)}.qimgWrap{display:block;width:100%;margin:8px 0 10px;clear:both}.qimg{max-width:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:var(--surface);max-height:min(42vh,340px)}@media(max-width:768px) and (orientation:portrait){.qimg{max-height:min(50vh,400px)}}.mcqSplitWrap{margin-top:8px}.mcqSplit{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,3fr);gap:12px;align-items:stretch}.mcqSplitDs{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplitTln{grid-template-columns:minmax(0,2fr) minmax(200px,3fr)}.mcqSplit .mcqSplitOptsCol1{justify-content:space-evenly;gap:8px;align-self:stretch;min-height:100%}.mcqSplit .mcqSplitOptsCol1 .opt{margin:0!important;min-height:42px;align-items:center}.mcqSplitTln .mcqSplitImg .qimg{max-height:min(55vh,420px)}.mcqSplitImg .qimgWrap{margin:0}.mcqSplitImg .qimg{width:100%;max-height:min(48vh,360px)}.mcqSplitDs .mcqSplitImg .qimg{max-height:min(52vh,400px)}.mcqSplitOpts{min-width:0;min-height:0;display:flex;flex-direction:column;gap:4px}.mcqSplitOpts .opt{margin:4px 0;padding:8px 10px}.mcqSplitOpts .tfrow{margin:4px 0;padding:6px 8px;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px}.mcqSplitOpts .tfStmt{font-size:14px;line-height:1.4}.mcqSplitOpts .tfOptsHead{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:5px 6px;margin:0 0 4px;font-size:11px;font-weight:800;color:var(--muted)}.mcqSplitOpts .tfOpt{min-width:42px;padding:4px 7px;font-size:11px}@media(max-width:768px) and (orientation:portrait){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:1fr;gap:10px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(52vh,420px);width:100%}}@media(orientation:landscape) and (max-height:520px){.mcqSplit,.mcqSplitDs,.mcqSplitTln{grid-template-columns:minmax(0,40%) minmax(0,60%);gap:8px;align-items:start}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(calc(100dvh - 130px),260px);width:100%}.mcqSplitOpts{overflow:visible;max-height:none;-webkit-overflow-scrolling:touch}.shortAnsCompact .shortAnsQtext{max-height:none;overflow:visible;font-size:14px;margin-bottom:6px}.shortAnsFieldRow{position:sticky;bottom:0;background:var(--surface);padding:6px 0 2px;z-index:3;border-top:1px solid var(--border);margin-top:4px;box-shadow:0 -4px 12px #0001}.shortAnsNote{display:none}.mcqSplitOpts .opt{padding:5px 7px;margin:2px 0;font-size:13px}}@media(max-width:480px) and (orientation:portrait){.qbox{font-size:15px}.mcqSplitImg .qimg,.mcqSplitDs .mcqSplitImg .qimg,.mcqSplitTln .mcqSplitImg .qimg{max-height:min(50vh,400px)}}.shortAnsBox{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:12px;margin-top:10px}.shortAnsCompact{margin:0;padding:10px 12px}.shortAnsQtext{margin:0 0 10px;padding:0;border:none;background:transparent;line-height:1.5;font-size:clamp(15px,2vw,18px);min-height:0;color:var(--text)}.shortAnsFieldRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.shortAnsLbl{font-weight:800;font-size:14px;white-space:nowrap}.shortAnsInput{width:5.5em;max-width:120px;min-width:4.5em;font-size:20px;font-weight:800;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);letter-spacing:.04em}.shortAnsInputWide{width:100%;max-width:none;font-size:18px;font-weight:600;text-align:left}.shortAnsBtn{width:auto;margin:0;padding:6px 12px;min-width:0}.shortAnsHint{font-size:12px}.shortAnsNote{margin-top:8px;font-size:12px}.qimgErr{margin:10px 0;padding:10px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412;font-size:13px}.opt{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid transparent;margin:7px 0;background:var(--surface);color:var(--text);position:relative;z-index:1}.opt:hover{background:var(--opt-hover)}.correct{background:var(--green)!important;border-color:#86efac!important}.wrong{background:var(--red)!important;border-color:#fecaca!important}.hidden5050{opacity:.25;pointer-events:none;text-decoration:line-through}.mcqOptsGrid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch;width:100%}.mcqOptsGrid2>.opt,.mcqOptsGrid2>label.opt{margin:0!important}.editQuestionPreview .mcqOptsGrid2>.opt{margin:0!important}.solution{background:var(--solution-bg);border:1px solid var(--solution-border);border-radius:10px;padding:10px 12px;margin-top:10px;color:var(--text);font-size:clamp(13px,1.8vw,15px);line-height:1.45}.latex-list{margin:8px 0 8px 22px;padding:0}.latex-list li{margin:6px 0;line-height:1.55}.latex-tabular-wrap{overflow-x:auto;margin:12px 0;width:100%}.latex-tabular{border-collapse:collapse;width:100%;max-width:100%;font-size:15px}.latex-tabular td,.latex-tabular th{border:1px solid var(--border);padding:6px 10px;vertical-align:middle;line-height:1.45}.latex-tabular tr.hline-top td{border-top:2px solid var(--border)}.hintAdminBody{width:100%;min-height:160px;max-height:520px;overflow:auto;font-size:15px;line-height:1.55;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text}.btnHintLoading{opacity:.82;cursor:wait!important;pointer-events:none}.hintSpin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:hintSpin .75s linear infinite;vertical-align:-2px;margin-right:6px}.hintBoxLoading{border-color:#93c5fd!important;background:linear-gradient(180deg,var(--shuffle-bg),var(--surface))!important;animation:hintPulse 1.6s ease-in-out infinite}.hintLoadingPanel{display:flex;gap:12px;align-items:flex-start;padding:10px 4px 6px}.hintSpinBig{width:30px;height:30px;border:3px solid #93c5fd;border-top-color:var(--blue);border-radius:50%;animation:hintSpin .8s linear infinite;flex-shrink:0}@keyframes hintSpin{to{transform:rotate(360deg)}}@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 #3b82f633}50%{box-shadow:0 0 0 6px #3b82f611}}.hintAdminActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAdminActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.infographicPromptBox{width:100%;min-height:300px;max-height:55vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;padding:12px;border:1px solid var(--border);border-radius:10px;resize:vertical;background:var(--surface);color:var(--text);box-sizing:border-box}.hintAnswerCard{background:var(--green);border:2px solid #86efac;border-radius:10px;padding:12px 14px;margin:10px 0 8px}.hintAnswerCard.hintAnswerPending{background:var(--load-warn-bg);border-color:var(--load-warn-border)}.hintAnswerCard.hintAnswerPending .hintAnswerTitle{color:var(--load-warn-text)}.hintAnswerCard .hintAnswerTitle{font-size:16px;font-weight:800;color:#166534;margin:0 0 8px}html[data-theme="dark"] .hintAnswerCard .hintAnswerTitle{color:#86efac}.hintAnswerRow{margin:6px 0;line-height:1.55;font-size:15px}.hintAnswerRow b{color:#14532d}html[data-theme="dark"] .hintAnswerRow b{color:#bbf7d0}.hintSimilarBox{margin-top:10px;padding:10px 12px;border:1px dashed var(--shuffle-border);border-radius:10px;background:var(--shuffle-bg)}.hintSimilarBox .hintSimilarTitle{font-weight:800;margin-bottom:6px;color:var(--shuffle-text)}.hintSimilarBody{font-size:15px;line-height:1.55}.hintAiActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.hintAiActions button{font-size:12px;padding:6px 10px;width:auto;margin:0}.navNums{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.num{padding:8px 0;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}.num.active{outline:3px solid #93c5fd}.num.q-reviewed{box-shadow:inset 0 0 0 2px #22c55e}.num.q-unreviewed{box-shadow:inset 0 0 0 2px #f97316;opacity:.92}.qReviewBadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:6px}.qReviewBadge.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}.qReviewBadge.pending{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}#btnQuestionReview.btnReviewOn{background:#dcfce7;border-color:#22c55e;color:#166534}#btnQuestionReview.btnReviewOff{background:#ffedd5;border-color:#fdba74;color:#9a3412}#quizReviewStat{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}.num.ok{background:var(--green);color:#166534}.num.bad{background:var(--red);color:#991b1b}.navNums{align-items:start}.navNums .num{position:relative!important;min-height:38px!important;padding:4px 2px!important;border-width:2px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;overflow:visible!important;box-shadow:0 1px 4px #00000012!important}.navNums .num .navNumText{font-size:17px!important;line-height:1.05!important;font-weight:900!important;position:relative;z-index:1}.navNums .num .navLvBadge{position:absolute!important;top:0!important;right:0!important;transform:translate(18%,-22%)!important;font-size:8px!important;padding:1px 4px!important;border-radius:5px!important;font-weight:900!important;z-index:3!important;pointer-events:none!important;box-shadow:0 1px 2px #00000022!important}.navNums .num.ok .navLvBadge,.navNums .num.bad .navLvBadge{display:none!important}.navNums .num.nav-mucdo-nb{background:#bbf7d0!important;color:#14532d!important;border-color:#22c55e!important}.navNums .num.nav-mucdo-th{background:#bfdbfe!important;color:#1e3a8a!important;border-color:#3b82f6!important}.navNums .num.nav-mucdo-vd{background:#fed7aa!important;color:#9a3412!important;border-color:#f97316!important}.navNums .num.nav-mucdo-vdc{background:#fecaca!important;color:#7f1d1d!important;border-color:#ef4444!important}.navNums .num.nav-mucdo-empty{background:var(--surface)!important;color:var(--muted)!important;border-color:var(--border)!important}.navSectionLbl{grid-column:1/-1!important;margin:8px 0 2px!important;padding:7px 9px!important;border-radius:10px!important;font-size:13px!important;font-weight:900!important;border:1px solid var(--border)!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}.fsNavTitle{display:block;width:100%;text-align:center;font-weight:800;font-size:13px;color:var(--muted);margin:0 0 6px;line-height:1.25}.navMucDoLegend{display:flex!important;flex-wrap:wrap!important;gap:4px!important;margin:4px 0 6px!important;align-items:center!important;justify-content:center!important}.navMucDoLegend .navLvBadge{position:static!important;transform:none!important;font-size:9px!important;padding:2px 5px!important;box-shadow:none!important}html[data-theme='dark'] .navNums .num.nav-mucdo-nb{background:#14532d!important;color:#bbf7d0!important;border-color:#22c55e!important}html[data-theme='dark'] .navNums .num.nav-mucdo-th{background:#1e3a5f!important;color:#bfdbfe!important;border-color:#3b82f6!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vd{background:#7c2d12!important;color:#fed7aa!important;border-color:#f97316!important}html[data-theme='dark'] .navNums .num.nav-mucdo-vdc{background:#450a0a!important;color:#fecaca!important;border-color:#ef4444!important}.tfrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:6px 8px;align-items:start;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:7px 0}.tfrow>b{padding-top:2px}.tfrow .dsCircle{margin-top:1px}.dsCircle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:14px;line-height:1;padding:0;box-sizing:border-box;flex-shrink:0;box-shadow:0 1px 3px #0002;text-align:center}.tfrow .dsCircle{width:26px;height:26px;min-width:26px;min-height:26px;font-size:13px}html[data-theme="dark"] .dsCircle{background:#2563eb;color:#eff6ff}.dsAnswerRow{display:flex;flex-wrap:wrap;gap:8px 12px;margin:4px 0}.dsAnswerItem{display:inline-flex;align-items:center;gap:6px}.dsVerdictDung{color:#166534;font-weight:800}html[data-theme="dark"] .dsVerdictDung{color:#86efac}.dsVerdictSai{color:#991b1b;font-weight:800}html[data-theme="dark"] .dsVerdictSai{color:#fecaca}.dsSolutionList{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}.dsSolutionRows{grid-template-columns:1fr!important}.dsSolutionTn{grid-template-columns:1fr}@media(min-width:560px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1100px){.dsSolutionTn:not(.dsSolutionRows){grid-template-columns:repeat(4,minmax(0,1fr))}}.dsSolutionDs{grid-template-columns:1fr}@media(min-width:640px){.dsSolutionDs:not(.dsSolutionRows){grid-template-columns:repeat(2,minmax(0,1fr))}}.dsSolutionItem{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface)}.dsSolutionCompact .dsSolutionItem{padding:6px 9px}.dsSolutionHead{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;margin-bottom:0}.dsSolutionHead+.dsSolutionBody,.dsSolutionHead+.dsStmtBlock{margin-top:6px}.dsSolutionBody{font-size:13px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch}.dsStmtInline{font-size:14px;line-height:1.4;flex:1 1 auto;min-width:0;word-break:break-word}.dsStmtBlock{width:100%;font-size:14px;line-height:1.45;overflow-x:auto;-webkit-overflow-scrolling:touch;word-break:break-word}.mcqSplitOpts .opt>span:not(.dsCircle){display:block;flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.opt .dsCircle{flex:0 0 auto;flex-shrink:0;margin-top:1px;align-self:flex-start;padding:0;min-width:28px;text-align:center}.opt input[type=radio]{position:absolute;opacity:0;width:0;height:0;margin:0}.opt:has(input:checked) .dsCircle{background:#166534;box-shadow:0 0 0 2px #86efac}.opt.correct{background:#dcfce7!important;border-color:#86efac!important;box-shadow:inset 0 0 0 1px #bbf7d0}.opt.wrong{background:#fee2e2!important;border-color:#fecaca!important;box-shadow:inset 0 0 0 1px #fecaca}.tfrow.correct{background:#dcfce7!important;border-color:#86efac!important}.tfrow.wrong{background:#fee2e2!important;border-color:#fecaca!important}.tfRowFb{grid-column:1/-1;font-size:12px;font-weight:700;margin-top:2px;padding:2px 0 6px 28px;line-height:1.35}.tfRowFb.ok{color:#166534}.tfRowFb.bad{color:#991b1b}#resultBox.dsResultRich{font-size:13px;line-height:1.25;text-align:right}.dsCheckBox{display:flex;flex-direction:column;align-items:flex-end;gap:3px}.dsCheckHead{font-weight:800;font-size:15px;white-space:nowrap}.dsCheckRow{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.dsCheckItem{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-weight:800;font-size:12px;border:1px solid var(--border)}.dsCheckOk{background:var(--green);color:#166534;border-color:#86efac}.dsCheckBad{background:var(--red);color:#991b1b;border-color:#fca5a5}html[data-theme="dark"] .opt.correct,html[data-theme="dark"] .tfrow.correct{background:#14532d!important;border-color:#166534!important}html[data-theme="dark"] .opt.wrong,html[data-theme="dark"] .tfrow.wrong{background:#450a0a!important;border-color:#991b1b!important}.opt.correct .dsCircle{background:#166534}.opt.wrong .dsCircle{background:#991b1b}.tfStmt{min-width:0;line-height:1.45;font-size:15px;word-break:break-word}.tfOpts{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-shrink:0}.tfOptsHead{display:none}.tfOpt{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:52px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;user-select:none;position:relative}.tfOpt:has(input:checked){border-color:#93c5fd;background:var(--btn2-bg);color:var(--btn2-color)}.tfOpt input{width:13px;height:13px;margin:0;flex-shrink:0}.tfLbl{line-height:1}.tfLblShort{display:none}.tfLblFull{display:inline}.modal{position:fixed;inset:0;background:var(--modal-overlay);z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}.modalBox{background:var(--surface);color:var(--text);border-radius:14px;padding:16px;max-width:900px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--border)}.editGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}.editGrid>*{min-width:0;max-width:100%}.editGrid textarea{min-height:80px;width:100%;max-width:100%;box-sizing:border-box}.editGrid label{display:block;width:100%;min-width:0}.editGrid [style*="display:flex"]{flex-wrap:wrap;max-width:100%}.loadCard{border-color:var(--load-card-border)!important;background:var(--load-card-bg)!important}.loadWarn{background:var(--load-warn-bg);border:1px solid var(--load-warn-border);border-radius:10px;padding:10px;margin:10px 0;color:var(--load-warn-text)}.loadErr{color:#ef4444}#fsOnlyTools{display:none}body.fullde-mode{overflow:hidden}body.fullde-mode .top,body.fullde-mode #examStrip,body.fullde-mode #home{display:none!important}body.fullde-mode .wrap{max-width:none!important;margin:0!important;padding:0!important;width:100%!important}body.fullde-mode #quiz
 {display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:9999;background:var(--bg);padding:0;margin:0;overflow:hidden;width:100vw!important;max-width:none!important}body.fullde-mode #quiz>.panel:first-child{display:none}body.fullde-mode #quiz .quizLayout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:0;width:100%;max-width:none;height:100%;min-height:0;margin:0}body.fullde-mode #quiz .quizLayout>div:first-child{min-width:0;height:100%;display:flex;flex-direction:column}body.fullde-mode #quiz .quizToolbarStrip{flex-shrink:0;padding:4px 8px 2px;margin:0;border:none;background:var(--bg)}body.fullde-mode #quiz .quizLayout>div:first-child>.quizQuestionPanel{flex:1;display:flex;flex-direction:column;margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;width:100%;max-width:none;min-height:0;overflow:auto}body.fullde-mode #quiz .quizLayout>div:last-child{display:flex!important;height:100%;min-height:0}body.fullde-mode #quiz .quizLayout>div:last-child>.panel{margin:0;border-radius:0;border-top:none;border-right:none;border-bottom:none;height:100%;padding:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}body.fullde-mode #quiz .quizLayout>div:last-child .line,body.fullde-mode #quiz .quizLayout>div:last-child .muted{display:none!important}body.fullde-mode #quiz .quizLayout>div:last-child .fsNavTitle{display:block!important;font-size:11px;text-align:center;margin:0 0 4px;font-weight:800;color:var(--muted);flex-shrink:0}body.fullde-mode #navNums{grid-template-columns:repeat(3,1fr);gap:3px;overflow-y:auto;flex:1;align-content:start}body.fullde-mode #navNums .num{padding:4px 0;font-size:11px;line-height:1.1}body.fullde-mode #fsOnlyTools{display:flex;position:sticky;top:0;z-index:5;justify-content:flex-end;gap:8px;flex-wrap:wrap;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0}body.fullde-mode #qid{font-size:15px;padding:0 8px;flex-shrink:0}body.fullde-mode #quiz .quizLayout>div:first-child .row:first-child{flex-shrink:0;padding:4px 8px 0}body.fullde-mode #qtext,body.fullde-mode #options,body.fullde-mode #solution,body.fullde-mode #hintBox{width:100%}body.fullde-mode #qtext{flex:0 0 auto;min-height:0;overflow:visible}body.fullde-mode #options{flex:0 0 auto;margin-top:8px;padding:0 8px 4px;position:relative;z-index:2;background:var(--bg)}body.fullde-mode #qtext .qimg{max-height:min(42vh,280px)}body.fullde-mode #hintBox{flex-shrink:0;max-height:38vh;overflow:auto;margin-top:8px}body.fullde-mode #fsOnlyTools button{font-size:12px;padding:5px 8px;white-space:nowrap}body.fullde-mode #fsOnlyTools .quizTimer{font-size:11px;padding:3px 8px}body.fullde-mode #hintBox .hintAdminBody{max-height:28vh;font-size:14px}body.fullde-mode #quizActions{display:none!important}body.fullde-mode #btnRetry,body.fullde-mode #btnEdit,body.fullde-mode #btnSubmit{display:none!important}@media(max-width:760px){body.fullde-mode #quiz .quizLayout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}body.fullde-mode #quiz .quizLayout>div:last-child{max-height:96px}body.fullde-mode #navNums{grid-template-columns:repeat(8,1fr);overflow-x:auto;overflow-y:hidden}body.fullde-mode #fsOnlyTools{gap:4px;padding:4px 6px;flex-wrap:wrap;justify-content:flex-start}body.fullde-mode #fsOnlyTools button{font-size:10px!important;padding:4px 6px!important}body.fullde-mode #fsOnlyTools .quizTimer{font-size:10px;padding:2px 6px}body.fullde-mode #qid{font-size:12px;line-height:1.3}body.fullde-mode #qtext{font-size:15px;padding:8px 10px!important}body.fullde-mode #qtext .qimg{max-height:min(36vh,220px);margin:8px auto 10px}body.fullde-mode #options{padding:0 6px 6px}body.fullde-mode .opt{padding:7px 8px;margin:4px 0;font-size:14px}body.fullde-mode #quiz .quizLayout>div:first-child>.panel{padding-bottom:6px}.wrap{padding:8px}.top{padding:8px 10px}.top h1{font-size:14px;min-width:0;flex:1 1 100%}.topRight{font-size:11px;gap:4px 8px}.adminTopBtn{font-size:10px;padding:4px 7px}.themeBtn{font-size:12px;padding:4px 8px}.examStrip{position:relative!important;top:auto!important;padding:6px 8px;font-size:12px;flex-wrap:wrap}
@@ -14896,18 +15034,21 @@ body.quiz-session-active .examStrip{position:sticky!important;top:96px!important
 .quizNavRowBelowPanel .btnNavMini{display:none!important}
 body.user-is-admin .quizToolbarHead{
   display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;
-  align-items:stretch!important;gap:4px!important;width:100%!important;
-  margin-bottom:4px!important;overflow:visible!important;
+  align-items:stretch!important;gap:5px!important;width:100%!important;
+  margin-bottom:6px!important;overflow:visible!important;
 }
 body.user-is-admin .quizToolbarRowMeta{
   display:flex!important;align-items:center!important;gap:6px!important;
   min-width:0!important;width:100%!important;flex-wrap:nowrap!important;
 }
 body.user-is-admin .quizToolbarRowAdmin{
-  display:flex!important;align-items:center!important;gap:0!important;
+  display:flex!important;align-items:center!important;gap:4px!important;
   width:100%!important;flex-wrap:nowrap!important;overflow-x:auto!important;
-  -webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:1px!important;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:2px!important;
+  /* [CSS-ADMIN-QUIZ V325] thanh ADMIN nổi bật hơn — Google Classroom green strip */
+  background:#e6f4ea;border:1px solid #a8d5b1;border-radius:8px;padding:5px 8px!important;
 }
+html[data-theme="dark"] body.user-is-admin .quizToolbarRowAdmin{background:#0d3321;border-color:#0f7a3c}
 body.user-is-admin .quizToolbarRowAdmin.hide{display:none!important}
 body.user-is-admin .quizToolbarRowMeta #qid{
   flex:1 1 auto!important;min-width:0!important;white-space:nowrap!important;
@@ -14922,9 +15063,19 @@ body.user-is-admin #quizAdminTools:not(.hide){
   flex:0 0 auto!important;min-width:0!important;max-width:none!important;
   margin-top:0!important;width:max-content!important;
 }
+/* [CSS-ADMIN-QUIZ V325] Nút ADMIN — Classroom chip style */
+body.user-is-admin .quizAdminTools button,
+body.user-is-admin .adminQuizAct,
+body.user-is-admin #btnQuizEdit.adminQuizAct{
+  background:#0f9d58!important;color:#fff!important;border-color:#0f9d58!important;
+  border-radius:20px!important;font-size:11px!important;font-weight:500!important;
+  padding:4px 12px!important;min-height:26px!important;letter-spacing:.1px!important;
+}
+body.user-is-admin .quizAdminTools button:hover,
+body.user-is-admin .adminQuizAct:hover,
+body.user-is-admin #btnQuizEdit.adminQuizAct:hover{background:#0b7a44!important;border-color:#0b7a44!important}
 body.user-is-admin #btnQuizEdit.adminQuizAct{
   flex:0 0 auto!important;margin-left:0!important;
-  font-size:10px!important;padding:3px 6px!important;min-height:24px!important;
 }
 body.user-is-admin .quizToolbarStrip{
   flex-direction:column!important;align-items:stretch!important;flex-wrap:nowrap!important;
@@ -15257,7 +15408,20 @@ html[data-theme='dark'] .aiGenStatus{background:#0f172acc}.aiGenRemove{padding:4
 
 
 /* ===== V253: Tab Toán / Vật lí đưa lên thanh trên, phù hợp điện thoại ===== */
-.topRowV253{gap:6px 10px}.topSubjectTabsV253{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.topSubjectBtnV253{border:1px solid #ffffff66!important;background:#ffffff1f!important;color:#fff!important;border-radius:999px!important;padding:7px 14px!important;font-size:13px!important;font-weight:950!important;line-height:1!important;white-space:nowrap;min-height:32px;box-shadow:none!important}.topSubjectBtnV253.active{background:#fff!important;color:#1d4ed8!important;border-color:#fff!important}.topSubjectBtnV253.math.active{color:#6d28d9!important}.topSubjectBtnV253.physics.active{color:#0f766e!important}.topSubjectToggleV253{border:1px solid #ffffff55!important;background:#ffffff22!important;color:#fff!important;border-radius:999px!important;padding:6px 10px!important;font-size:12px!important;font-weight:900!important;line-height:1!important;white-space:nowrap;width:auto!important;min-height:30px}.topSubjectTabsV253.subjectTabsHiddenV253{display:inline-flex!important}.catalogScopeBox.subjectV248{display:none!important}@media(max-width:760px){.top{padding:7px 8px!important}.topRowV253{display:grid!important;grid-template-columns:1fr auto;gap:6px!important;align-items:center}.topRowV253 h1{font-size:13px!important;min-width:0!important;line-height:1.25!important}.topSubjectTabsV253{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr;gap:6px;width:100%;order:2}.topSubjectTabsV253.subjectTabsHiddenV253{display:inline-flex!important}.topSubjectBtnV253{width:100%!important;min-height:34px!important;font-size:13px!important;padding:8px 8px!important}.topSubjectToggleV253{display:none!important}.topRight{grid-column:1/-1;order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:2px}.topRight>*{flex-shrink:0}.adminBar{flex-wrap:nowrap!important;overflow-x:visible!important}.examStrip{top:96px!important;font-size:12px!important;padding:6px 8px!important}.wrap{padding-top:8px!important}}@media(min-width:761px){.topRight{margin-left:auto}}html[data-theme="dark"] .topSubjectBtnV253.active{background:#dbeafe!important;color:#1e3a8a!important}
+.topRowV253{gap:6px 10px}
+/* Subject tabs CSS đã chuyển lên CSS header responsive phía trên */
+.topSubjectToggleV253{display:none!important}
+.catalogScopeBox.subjectV248{display:none!important}
+@media(max-width:760px){
+.top{padding:7px 8px!important}
+.topRowV253{display:grid!important;grid-template-columns:1fr auto;gap:6px!important;align-items:center}
+.topRowV253 h1{font-size:13px!important;min-width:0!important;line-height:1.25!important}
+.topRight{grid-column:1/-1;order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.topRight>*{flex-shrink:0}
+.examStrip{top:96px!important;font-size:12px!important;padding:6px 8px!important}
+.wrap{padding-top:8px!important}
+}
+@media(min-width:761px){.topRight{margin-left:auto}}
 
 
 /* ===== V303: Khung lý thuyết theo Dạng bài tập + trình soạn mobile toàn màn hình ===== */
@@ -15313,9 +15477,10 @@ html[data-theme="dark"] .theoryEnv-vidu{background:#052e16;color:#dcfce7}
 #hintBox.learningOpen .dangTheoryActions{margin:0 0 6px!important}
 #hintBox.learningOpen .dangTheoryActions button{font-size:11px!important;padding:4px 8px!important}
 .learningTitleBtns{display:flex;gap:5px;align-items:center;flex-shrink:0}
-.learningCollapseBtn{padding:4px 8px!important;font-size:11px!important;background:#eef2ff!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important;border-radius:999px!important;font-weight:900!important;width:auto!important;white-space:nowrap!important;cursor:pointer}
-.learningQuickBar{margin:5px 0 7px!important;padding:5px 7px!important;gap:5px!important}
-.learningQuickBar button{font-size:11.5px!important;padding:5px 8px!important;min-height:28px!important;border-radius:8px!important}
+.learningCollapseBtn{padding:4px 10px!important;font-size:11px!important;background:var(--blue-light,#e8f0fe)!important;color:#1a73e8!important;border:1px solid #aecbfa!important;border-radius:20px!important;font-weight:500!important;width:auto!important;white-space:nowrap!important;cursor:pointer;letter-spacing:.1px}
+.learningQuickBar{margin:6px 0 8px!important;padding:6px 8px!important;gap:6px!important;display:flex;flex-wrap:wrap}
+.learningQuickBar button{font-size:12px!important;padding:6px 12px!important;min-height:30px!important;border-radius:20px!important;border:1px solid var(--border,#dadce0)!important;background:var(--surface,#fff)!important;color:var(--text,#202124)!important;font-weight:500!important;cursor:pointer;transition:background .12s,border-color .12s;letter-spacing:.1px}
+.learningQuickBar button:hover{background:var(--blue-light,#e8f0fe)!important;border-color:#aecbfa!important;color:#1a73e8!important}
 @media(max-width:760px){
 #hintBox.learningOpen{padding:5px 7px!important;font-size:13.5px!important}
 #hintBox.learningOpen .learningPanelBody{max-height:min(34vh,280px)}
@@ -16182,7 +16347,7 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
         grid-column:1/-1!important;
         margin-bottom:0!important;
     }
-    /* trên mobile nhỏ thì stack lại -->  */
+    /* trên mobile nhỏ thì stack lại */
 }
 @media(max-width:560px){
     .homeSectionCol.homeSectionColSide{
@@ -17917,18 +18082,746 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
     }
 }
 
+/* ===== DASHBOARD V325 UI — Google Classroom style ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Google Classroom palette */
+  --blue:#1a73e8;--blue-dark:#1557b0;--blue-light:#e8f0fe;--blue-mid:#4285f4;
+  --teal:#0f9d58;--teal-light:#e6f4ea;
+  --purple:#673ab7;--purple-light:#f3e5f5;
+  --surface:#fff;--bg:#f8f9fa;--text:#202124;--text2:#5f6368;--text3:#80868b;
+  --border:#dadce0;--border2:#e8eaed;--inp:#fff;
+  --mh:#1a73e8;--ml:#e8f0fe;--mb:#aecbfa;
+  --ph:#0f9d58;--pl:#e6f4ea;--pb:#a8d5b1;
+  --ah:#673ab7;--al:#f3e5f5;--ab:#ce93d8;
+  --pdf:#e53935;
+  --r:8px;--rl:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
+  --shadow:0 2px 6px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.08);
+}
+html[data-theme=dark]{
+  --surface:#2d2d2d;--bg:#1a1a1a;--text:#e8eaed;--text2:#9aa0a6;--text3:#5f6368;
+  --border:#3c4043;--border2:#2d2d2d;--inp:#3c4043;
+  --blue-light:#1a3a6b;--ml:#1a3a6b;--mb:#1d4ed8;
+  --pl:#0d3321;--pb:#0f7a3c;
+  --al:#2a1b45;--ab:#6b3fa0;
+}
+body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Google Sans','Segoe UI',Roboto,Arial,sans-serif;font-size:14px;display:flex;flex-direction:column}
+
+/* screens */
+/* screens */
+.scr{display:none}.scr.on{display:flex;flex-direction:column;min-height:100dvh}
+
+/* HEADER — responsive priority system
+   >=780px : logo + tabs + info + chips + adminBar + buttons
+   640-779 : logo + tabs + chips + adminBar(icon) + buttons  [an info]
+   480-639 : logo + tabs + adminBar(icon) + buttons          [an chips]
+   380-479 : logo + adminBar(icon) + buttons                 [an tabs]
+   <=380px : logo + icon buttons only                        [toi gian] */
+.hdr{height:52px;display:flex;align-items:center;padding:0 8px 0 12px;gap:6px;
+  background:var(--surface);flex-shrink:0;position:sticky;top:0;z-index:200;
+  box-shadow:0 1px 4px rgba(0,0,0,.2);overflow:hidden}
+.hdr.hm{background:#1a73e8}
+.hdr.hp{background:#0f9d58}
+.hdr.ha{background:#673ab7}
+
+/* Logo — P1: luôn hiện */
+.logo{display:flex;align-items:center;gap:7px;text-decoration:none;flex-shrink:0}
+.logo img{width:28px;height:28px;border-radius:6px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0}
+.logo-fb{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;border:1.5px solid rgba(255,255,255,.3);flex-shrink:0}
+.logo-txt{font-size:13px;font-weight:600;color:#fff;line-height:1.2;white-space:nowrap}
+.logo-txt small{display:block;font-size:10px;font-weight:400;opacity:.7}
+/* Ẩn logo text dưới 360px — chỉ giữ icon */
+@media(max-width:360px){.logo-txt{display:none}}
+
+/* Spacer */
+.hsp{flex:1;min-width:4px}
+
+/* Subject tabs — P2: ẩn dưới 380px */
+.topSubjectTabsV253{display:inline-flex;align-items:center;gap:4px;flex-shrink:1;overflow:hidden}
+.topSubjectTabsV253.hsp{flex:1;min-width:0;justify-content:center}
+@media(max-width:380px){.topSubjectTabsV253:not(.subjectTabsHiddenV253){display:none!important}}
+.topSubjectBtnV253{border:1px solid rgba(255,255,255,.4)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;border-radius:20px!important;padding:4px 10px!important;font-size:11px!important;font-weight:500!important;line-height:1!important;white-space:nowrap;height:26px;cursor:pointer;transition:background .15s!important;flex-shrink:0}
+.topSubjectBtnV253:hover{background:rgba(255,255,255,.22)!important}
+.topSubjectBtnV253.active,.topSubjectBtnV253[data-active="1"]{background:#fff!important;color:#1a73e8!important;border-color:#fff!important;font-weight:600!important}
+.topSubjectBtnV253.math.active,.topSubjectBtnV253.math[data-active="1"]{color:#7b1fa2!important}
+.topSubjectBtnV253.physics.active,.topSubjectBtnV253.physics[data-active="1"]{color:#00695c!important}
+.topSubjectTabsV253.subjectTabsHiddenV253{display:inline-flex!important}
+.topSubjectToggleV253{display:none!important}
+.catalogScopeBox.subjectV248{display:none!important}
+html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSubjectBtnV253[data-active="1"]{background:#e8f0fe!important;color:#1557b0!important}
+
+/* Info span (câu hỏi / đề...) — P3: ẩn dưới 640px */
+#info{font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;flex-shrink:1;min-width:0;max-width:min(220px,22vw)}
+{%- raw -%}@media(max-width:640px){#info{display:none!important}}{%- endraw -%}
+
+/* topUserChip — P3: ẩn dưới 580px */
+.topUserChip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;
+  border-radius:20px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:min(160px,28vw);flex-shrink:1}
+.topUserChip.hide{display:none!important}
+@media(max-width:580px){.topUserChip:not(.hide){display:none!important}}
+
+/* aiProfileBadge — P3: ẩn dưới 500px */
+.aiProfileBadge{display:inline-flex;align-items:center;padding:3px 9px;
+  border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.aiProfileBadge.hide{display:none!important}
+@media(max-width:500px){.aiProfileBadge:not(.hide){display:none!important}}
+
+/* hchip (ldvlUserChip) — P3: ẩn dưới 560px */
+.hchip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 10px;
+  color:#fff;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.hchip.hide{display:none!important}
+@media(max-width:560px){.hchip:not(.hide){display:none!important}}
+.hav{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff}
+.rpill{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;
+  border:1px solid rgba(255,255,255,.28);color:#fff;background:rgba(0,0,0,.18)}
+
+/* Nút header — P1: luôn hiện */
+.hbtn{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+  color:#fff;padding:4px 9px;border-radius:8px;font-size:12px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;gap:4px;transition:background .15s;
+  white-space:nowrap;flex-shrink:0;height:28px}
+.hbtn:hover{background:rgba(255,255,255,.26)}
+.thbtn{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:8px;cursor:pointer;font-size:14px;
+  transition:background .15s;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;width:28px;height:28px;padding:0}
+.thbtn:hover{background:rgba(255,255,255,.26)}
+
+/* adminBar — P4: thu nhỏ + scroll; dưới 600px chỉ giữ icon */
+.adminBar{display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap;
+  flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;max-width:min(380px,55vw)}
+.adminBar::-webkit-scrollbar{display:none}
+/* Dưới 600px: ẩn text trong nút, chỉ giữ icon */
+@media(max-width:600px){
+  .adminBar .hbtn{padding:4px 6px;min-width:28px;justify-content:center}
+  .adminBar .hbtn i+*{display:none!important}
+  .adminBar{max-width:min(160px,38vw)}
+}
+/* PWA install — ẩn dưới 480px */
+{%- raw -%}@media(max-width:480px){#pwaInstallBtn{display:none!important}}{%- endraw -%}
+/* Logout text — ẩn dưới 440px */
+@media(max-width:440px){a.hbtn[href="/logout"] i+*{display:none!important}}
+
+/* login screen */
+#sl{background:var(--bg);align-items:center;justify-content:center;padding:32px 16px;flex-direction:column}
+.lw{width:100%;max-width:400px}
+.ltop{text-align:center;margin-bottom:24px}
+.ltop img{width:72px;height:72px;border-radius:16px;object-fit:cover;border:1px solid var(--border);margin-bottom:12px}
+.ltop h1{font-size:22px;font-weight:400;color:var(--text);letter-spacing:-.5px}
+.ltop p{font-size:14px;color:var(--text2);margin-top:4px}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:28px 28px 24px;box-shadow:var(--shadow-sm)}
+.fld{margin-bottom:16px}
+.fld label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.fld input,.fld select{width:100%;padding:10px 13px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+.fld input:focus,.fld select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,115,232,.18)}
+.btnl{width:100%;padding:11px;border-radius:var(--r);background:var(--blue);color:#fff;font-size:14px;font-weight:500;border:none;cursor:pointer;margin-top:8px;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:.25px}
+.btnl:hover{background:var(--blue-dark)}
+.errmsg{background:#fce8e6;color:#c5221f;padding:10px 13px;border-radius:var(--r);margin-bottom:14px;font-size:13px;border:1px solid #f5c6c5;display:none}
+.dtags{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;padding-top:13px;border-top:1px solid var(--border)}
+.dtag{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);cursor:pointer;background:var(--inp);color:var(--text);transition:border-color .15s,background .15s}
+.dtag:hover{border-color:var(--blue);background:var(--blue-light)}
+
+/* layout */
+.dash{flex:1;display:flex;overflow:hidden}
+
+/* SIDEBAR — Google Classroom nav style */
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sbu{padding:16px 16px 12px;border-bottom:1px solid var(--border2)}
+.sbu-row{display:flex;align-items:center;gap:10px}
+.sav{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+.sbn{font-size:14px;font-weight:500;color:var(--text)}
+.sbr{font-size:12px;color:var(--text2);margin-top:1px}
+.sbs{padding:12px 16px 4px;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+.sbs.sm{color:var(--mh)}
+.sbs.sp{color:var(--ph)}
+.sbs.sa{color:var(--ah)}
+.nb{display:flex;align-items:center;gap:10px;padding:8px 16px;margin:1px 0;border-radius:0 24px 24px 0;cursor:pointer;font-size:14px;font-weight:400;color:var(--text);border:none;background:transparent;width:calc(100% - 8px);text-align:left;transition:background .12s}
+.nb:hover{background:var(--bg)}
+.nb.am{background:var(--ml);color:var(--mh);font-weight:500}
+.nb.ap{background:var(--pl);color:var(--ph);font-weight:500}
+.nb.aa{background:var(--al);color:var(--ah);font-weight:500}
+.nic{width:20px;text-align:center;flex-shrink:0;font-size:16px}
+.nbadge{margin-left:auto;background:#d93025;color:#fff;border-radius:20px;font-size:10px;font-weight:600;padding:2px 7px;min-width:18px;text-align:center}
+.sbfoot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34a853;margin-right:5px;vertical-align:middle}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* PANELS — Material card style */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow-sm)}
+.ph{padding:14px 18px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ph h3{font-size:14px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:7px;letter-spacing:-.1px}
+.pa{font-size:13px;color:var(--blue);font-weight:500;cursor:pointer;background:none;border:none;padding:4px 10px;border-radius:20px;transition:background .12s;letter-spacing:.1px}
+.pa:hover{background:var(--blue-light)}
+.pb{padding:16px 18px}
+.pb.np{padding:0}
+
+/* BANNERS — Classroom header card style */
+.ban{border-radius:var(--rl);padding:18px 20px;display:flex;align-items:center;gap:16px;border:1px solid;box-shadow:var(--shadow-sm)}
+.ban.bm{background:var(--ml);border-color:var(--mb)}
+.ban.bp{background:var(--pl);border-color:var(--pb)}
+.ban.ba{background:var(--al);border-color:var(--ab)}
+.bico{font-size:28px;flex-shrink:0}
+.btit{font-size:16px;font-weight:500;color:var(--text);letter-spacing:-.2px}
+.bsub{font-size:13px;color:var(--text2);margin-top:3px}
+.brt{margin-left:auto;flex-shrink:0}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;transition:box-shadow .15s}
+.sc:hover{box-shadow:var(--shadow)}
+.sic{font-size:20px;margin-bottom:8px}
+.sv{font-size:22px;font-weight:400;color:var(--text);line-height:1}
+.sl{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600}
+.ss{font-size:11px;color:#16a34a;margin-top:2px}
+
+/* tags */
+.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.ta{background:var(--al);color:var(--ah)}
+.ts{background:#ecfdf5;color:#065f46}
+.tv{background:#eff6ff;color:#1e40af}
+.tt{background:#fefce8;color:#713f12}
+.tf{background:var(--bg);color:var(--muted)}
+.tm{background:var(--ml);color:var(--mh)}
+.tp{background:var(--pl);color:var(--ph)}
+.tok{background:#f0fdf4;color:#15803d}
+.twn{background:#fefce8;color:#92400e}
+
+/* table */
+.dt{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.dt th{text-align:left;padding:7px 11px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.dt td{padding:8px 11px;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--bg)}
+
+/* action grid */
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px}
+.ac{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 11px;cursor:pointer;display:flex;flex-direction:column;gap:5px;text-align:left;transition:border-color .15s}
+.ac:hover{border-color:var(--ah)}
+.aic{font-size:20px}
+.al2{font-size:12px;font-weight:700;color:var(--text)}
+.ad{font-size:11px;color:var(--muted)}
+
+/* exam card */
+.ec{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:11px}
+.ec:hover{border-color:var(--mh)}
+.ec.ep:hover{border-color:var(--ph)}
+.eico{font-size:24px;flex-shrink:0}
+.ebody{flex:1;min-width:0}
+.etit{font-size:13px;font-weight:700;color:var(--text)}
+.emeta{font-size:11px;color:var(--muted);margin-top:2px}
+.pw{background:var(--border);border-radius:20px;height:5px;overflow:hidden;margin-top:6px}
+.pb2{height:100%;border-radius:20px}
+.pb2.pm{background:var(--mh)}
+.pb2.pp{background:var(--ph)}
+
+/* alert */
+.alert{padding:9px 13px;border-radius:var(--r);font-size:13px;display:flex;align-items:flex-start;gap:7px;border:1px solid}
+.aw{background:#fffbeb;color:#92400e;border-color:#fcd34d}
+.ai{background:#eff6ff;color:#1e40af;border-color:#bfdbfe}
+.aok{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+
+/* hint */
+.hbox{border-radius:var(--r);padding:13px 15px;border:1px solid}
+.hbox.hm{background:var(--ml);border-color:var(--mb)}
+.hbox.hp{background:var(--pl);border-color:var(--pb)}
+.htit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.hbox.hm .htit{color:var(--mh)}
+.hbox.hp .htit{color:var(--ph)}
+
+/* section title */
+.stit{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+
+/* benefits */
+.beni{display:flex;align-items:flex-start;gap:7px;font-size:13px;color:var(--text);padding:3px 0}
+.benic{color:#16a34a;flex-shrink:0;margin-top:1px}
+
+/* score */
+.score{font-size:15px;font-weight:700}
+.sh{color:#16a34a}.sm2{color:#b45309}.slo{color:#dc2626}
+
+/* ── PDF VIEWER ── */
+.pdf-drop{border:2px dashed var(--border);border-radius:var(--rl);padding:30px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;background:var(--bg)}
+.pdf-drop:hover,.pdf-drop.over{border-color:var(--pdf);background:#fff1f2}
+.pdf-icon-big{font-size:40px;color:var(--pdf);margin-bottom:8px}
+.pdf-bar{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;flex-wrap:wrap}
+.pdf-frame-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.pdf-frame-wrap iframe{width:100%;height:580px;border:none;display:block}
+
+/* link input */
+.link-row{display:flex;gap:8px}
+.link-row input{flex:1;padding:9px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:14px;font-family:inherit;outline:none}
+.link-row input:focus{border-color:var(--pdf);box-shadow:0 0 0 3px rgba(225,29,72,.1)}
+.link-row button{padding:9px 16px;border-radius:var(--r);background:var(--pdf);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0}
+.pdf-list-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.pdf-list-row:last-child{border-bottom:none}
+.pdf-list-row:hover{background:var(--bg)}
+.pdf-list-ico{width:36px;height:36px;border-radius:8px;background:#fff1f2;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--pdf);flex-shrink:0}
+.pdf-list-body{flex:1;min-width:0}
+.pdf-list-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-list-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.pdf-list-act{flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:min(100%,280px)}
+.pdf-list-act button{padding:5px 9px;border-radius:7px;border:1px solid var(--border);background:var(--surface);font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pdf-list-act .pdfBtnEdit{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.pdf-list-act .pdfBtnMove{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}
+.pdf-list-act .pdfBtnDel{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.pdf-list-empty{padding:14px 14px 12px;font-size:13px;line-height:1.55;color:var(--muted)}
+.pdf-list-empty b{color:var(--text)}
+.pdf-list-head{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.pdf-list-head span{flex:1}
+.pdf-list-head .pdf-list-act-h{flex-shrink:0;text-align:right;min-width:140px}
+
+/* phương pháp form */
+.pm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.pm-card-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .12s}
+.pm-card-head:hover{background:var(--bg)}
+.pm-card-body{padding:13px 14px;display:flex;flex-direction:column;gap:10px}
+.pm-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.pm-input{width:100%;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:vertical}
+.pm-input:focus{border-color:var(--mh);box-shadow:0 0 0 2px rgba(37,99,235,.1)}
+.pm-input.ph-focus:focus{border-color:var(--ph);box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+.pm-row{display:flex;gap:8px;align-items:flex-end}
+.pm-select{flex:1;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.btn-save{padding:8px 16px;border-radius:var(--r);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.btn-save.bm{background:var(--mh)}.btn-save.bp{background:var(--ph)}
+.btn-del{padding:7px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:12px}
+.btn-del:hover{border-color:#ef4444;color:#ef4444}
+.step-wrap{display:flex;flex-direction:column;gap:6px}
+.step-row{display:flex;gap:6px;align-items:flex-start}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:6px}
+.step-num.sm{background:var(--mh)}.step-num.sp{background:var(--ph)}
+.badge-new{background:#dcfce7;color:#15803d;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-edit{background:#fef9c3;color:#854d0e;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+
+@media(max-width:640px){.sb{display:none}.sg{grid-template-columns:1fr 1fr}.ag{grid-template-columns:1fr 1fr}}
+
+/* Modal */
+#user-modal-bg{display:none}
+/* AI tabs */
+.ai-tab{transition:background .15s,color .15s}
+/* Spin */
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ═══════════════════════════════════
+   QUIZ FULLSCREEN
+═══════════════════════════════════ */
+#quiz-scr{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;overflow:hidden}
+#quiz-scr.on{display:flex}
+/* Quiz header bar */
+.qhdr{height:50px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
+.qhdr-title{font-size:13px;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qtimer{font-size:13px;font-weight:700;color:var(--mh);font-family:monospace;background:var(--ml);padding:4px 10px;border-radius:20px}
+.qhdr-btn{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.qhdr-btn:hover{background:var(--border)}
+.qhdr-btn.primary{background:var(--mh);color:#fff;border-color:var(--mh)}
+.qhdr-btn.primary:hover{filter:brightness(1.1)}
+.qhdr-btn.danger{background:#dc2626;color:#fff;border-color:#dc2626}
+/* Quiz body: question + nav panel */
+.qbody{flex:1;display:grid;grid-template-columns:1fr 220px;overflow:hidden;gap:0}
+@media(max-width:700px){.qbody{grid-template-columns:1fr}.qnav-panel{display:none}}
+/* Question area */
+.qarea{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+/* Question card */
+.qcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px}
+.qcard-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.qnum{font-size:12px;font-weight:700;color:var(--muted)}
+.qtype-pill{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.qtype-tn{background:var(--ml);color:var(--mh)}
+.qtype-ds{background:var(--al);color:var(--ah)}
+.qtype-tln{background:var(--pl);color:var(--ph)}
+.qtext{font-size:15px;line-height:1.7;color:var(--text);word-break:break-word}
+.qtext img{max-width:100%;border-radius:8px;margin:6px 0}
+/* Options */
+.opts-wrap{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.opt-btn{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--inp);cursor:pointer;text-align:left;font-size:14px;color:var(--text);transition:border-color .12s,background .12s;width:100%;line-height:1.5}
+.opt-btn:hover{border-color:var(--mh);background:var(--ml)}
+.opt-btn.selected{border-color:var(--mh);background:var(--ml);font-weight:700}
+.opt-btn.correct{border-color:#16a34a;background:#f0fdf4}
+.opt-btn.wrong{border-color:#dc2626;background:#fef2f2;opacity:.7}
+.opt-key{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-top:1px}
+.opt-btn.selected .opt-key,.opt-btn.correct .opt-key{background:var(--mh);color:#fff}
+.opt-btn.wrong .opt-key{background:#dc2626;color:#fff}
+/* Đúng/Sai rows */
+.ds-wrap{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:12px}
+.ds-hdr{display:grid;grid-template-columns:28px 1fr 52px 52px;padding:6px 10px;background:var(--bg);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.ds-row{display:grid;grid-template-columns:28px 1fr 52px 52px;align-items:center;padding:10px;border-bottom:1px solid var(--border);gap:6px;cursor:pointer;transition:background .1s}
+.ds-row:last-child{border-bottom:none}
+.ds-row:hover{background:var(--bg)}
+.ds-row.answered{background:var(--ml)}
+.ds-lbl{font-size:13px;font-weight:700;color:var(--muted)}
+.ds-stmt{font-size:13px;line-height:1.5;color:var(--text)}
+.ds-opt{display:flex;align-items:center;justify-content:center}
+.ds-radio{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;background:var(--inp)}
+.ds-radio:hover{border-color:var(--mh)}
+.ds-radio.sel-d{border-color:#16a34a;background:#f0fdf4;color:#16a34a}
+.ds-radio.sel-s{border-color:#dc2626;background:#fef2f2;color:#dc2626}
+/* TLN input */
+.tln-wrap{margin-top:12px}
+.tln-input{width:100%;padding:11px 13px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--inp);color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border-color .15s}
+.tln-input:focus{border-color:var(--mh);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+/* Solution / Hint box */
+.sol-box{border-radius:var(--r);padding:13px 15px;border:1px solid;display:none}
+.sol-box.show{display:block}
+.sol-box.answer{background:#f0fdf4;border-color:#bbf7d0}
+.sol-box.hint{background:var(--ml);border-color:var(--mb)}
+.sol-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.sol-box.answer .sol-title{color:#15803d}
+.sol-box.hint .sol-title{color:var(--mh)}
+/* Bottom action row */
+.qactions{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* Nav panel */
+.qnav-panel{background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.qnav-head{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text)}
+.qnav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:10px}
+.qnav-btn{aspect-ratio:1;border-radius:7px;border:1.5px solid var(--border);background:var(--bg);font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .12s;display:flex;align-items:center;justify-content:center}
+.qnav-btn:hover{border-color:var(--mh);color:var(--mh)}
+.qnav-btn.current{border-color:var(--mh);background:var(--mh);color:#fff}
+.qnav-btn.answered{border-color:#16a34a;background:#f0fdf4;color:#15803d}
+.qnav-btn.answered.current{background:var(--mh);color:#fff;border-color:var(--mh)}
+.qnav-legend{padding:8px 12px;display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
+.qnav-legend div{display:flex;align-items:center;gap:6px}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+/* Score modal */
+.score-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center}
+.score-modal-bg.on{display:flex}
+.score-modal{background:var(--surface);border-radius:var(--rl);padding:28px;width:100%;max-width:440px;margin:16px;text-align:center}
+.score-circle{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;margin:0 auto 16px;border:5px solid}
+.score-circle.great{border-color:#16a34a;background:#f0fdf4;color:#15803d}
+.score-circle.ok{border-color:#d97706;background:#fffbeb;color:#92400e}
+.score-circle.low{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+/* PDF fullscreen */
+#pdf-fs-scr{display:none;position:fixed;inset:0;z-index:500;background:#1a1a1a;flex-direction:column}
+#pdf-fs-scr.on{display:flex}
+.pdf-fs-bar{height:48px;background:#2d2d2d;display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;border-bottom:1px solid #444}
+.pdf-fs-bar span{color:#fff;font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-fs-counter{color:#cbd5e1;font-size:12px;font-weight:700;flex-shrink:0;min-width:52px;text-align:center}
+.pdf-fs-btn:disabled{opacity:.35;cursor:not-allowed}
+.pdf-fs-btn.pdf-fs-nav{background:#ffffff18}
+.ldvlPdfStudentTabs .ldvlPdfStab.on{box-shadow:0 0 0 2px rgba(37,99,235,.25)}
+.pdf-fs-btn{background:#ffffff22;border:1px solid #ffffff33;color:#fff;padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
+.pdf-fs-btn:hover{background:#ffffff33}
+#pdf-fs-frame{flex:1;border:none;width:100%;display:block}
+
+
+/* ── MỨC ĐỘ BADGES ── */
+.mucdoBadge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.3px;border:2px solid transparent;line-height:1.35;white-space:nowrap}
+.mucdo-nb{background:#dcfce7;color:#166534;border-color:#86efac}
+.mucdo-th{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.mucdo-vd{background:#ffedd5;color:#c2410c;border-color:#fdba74}
+.mucdo-vdc{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+html[data-theme=dark] .mucdo-nb{background:#14532d;color:#bbf7d0;border-color:#22c55e}
+html[data-theme=dark] .mucdo-th{background:#1e3a5f;color:#bfdbfe;border-color:#3b82f6}
+html[data-theme=dark] .mucdo-vd{background:#7c2d12;color:#fed7aa;border-color:#f97316}
+html[data-theme=dark] .mucdo-vdc{background:#450a0a;color:#fecaca;border-color:#ef4444}
+
+/* ── CARD viền trái theo mức độ ── */
+.qcard{position:relative;transition:border-color .15s,box-shadow .15s}
+.qcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:var(--rl) 0 0 var(--rl);background:var(--border)}
+.qcard.lvnb::before{background:#22c55e}
+.qcard.lvth::before{background:#3b82f6}
+.qcard.lvvd::before{background:#f97316}
+.qcard.lvvdc::before{background:#ef4444}
+.qcard.lvnb{border-color:#86efac;box-shadow:0 0 0 2px #dcfce7}
+.qcard.lvth{border-color:#93c5fd;box-shadow:0 0 0 2px #dbeafe}
+.qcard.lvvd{border-color:#fdba74;box-shadow:0 0 0 2px #ffedd5}
+.qcard.lvvdc{border-color:#fca5a5;box-shadow:0 0 0 2px #fee2e2}
+
+/* ── NAV GRID theo mức độ ── */
+.qnav-btn.nav-nb{background:#bbf7d0;color:#14532d;border-color:#22c55e}
+.qnav-btn.nav-th{background:#bfdbfe;color:#1e3a8a;border-color:#3b82f6}
+.qnav-btn.nav-vd{background:#fed7aa;color:#9a3412;border-color:#f97316}
+.qnav-btn.nav-vdc{background:#fecaca;color:#7f1d1d;border-color:#ef4444}
+.qnav-btn.answered.nav-nb,.qnav-btn.answered.nav-th,.qnav-btn.answered.nav-vd,.qnav-btn.answered.nav-vdc{opacity:.7}
+.qnav-btn.current.nav-nb,.qnav-btn.current.nav-th,.qnav-btn.current.nav-vd,.qnav-btn.current.nav-vdc{background:var(--mh)!important;color:#fff!important;border-color:var(--mh)!important}
+
+/* ── LEGEND ── */
+.qnav-legend-mucdo{display:flex;flex-wrap:wrap;gap:4px;padding:6px 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+
+/* ── TOOLBAR QUIZ header cải thiện ── */
+.qhdr{flex-wrap:wrap;gap:6px;height:auto;min-height:50px;padding:8px 12px}
+.qhdr-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:10px}
+.qtimer{font-size:14px;font-weight:800;color:var(--mh);font-family:monospace;background:var(--ml);padding:5px 13px;border-radius:20px;border:1px solid var(--mb);min-width:75px;text-align:center}
+.qprog-wrap{flex:1;max-width:180px;background:var(--border);border-radius:20px;height:6px;overflow:hidden}
+.qprog-bar{height:100%;border-radius:20px;background:var(--mh);transition:width .3s}
+
+/* ── LDVL bridge: app.py → dashboard shell ── */
+body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;background:var(--bg)}
+.ldvlDashV324 .top{display:none!important}
+.ldvlDashV324 #examStrip{border-radius:0;margin:0;border-left:none;border-right:none}
+.ldvlDashV324 .ldvlDashWrap{flex:1;display:flex;overflow:hidden;min-height:0}
+.ldvlDashV324 .ldvlMain{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.ldvlDashV324 .wrap{max-width:none!important;width:100%!important;margin:0!important;padding:0!important;background:transparent!important}
+.ldvlDashV324 #home{display:flex;flex-direction:column;gap:14px}
+.ldvlDashV324 .homeSection{margin:0}
+.ldvlDashV324 .panel{border-radius:var(--rl)!important;overflow:hidden}
+.ldvlDashV324 .homePracticeSetupPanel>b{
+  display:block;background:linear-gradient(135deg,#1d4ed8,#4f46e5);color:#fff!important;
+  padding:11px 15px!important;font-size:13px!important;font-weight:700!important;margin:0!important;
+}
+.ldvlDashV324 #catalog.grid{display:flex;flex-direction:column;gap:9px}
+.ldvlDashV324 #catalog .card,.ldvlDashV324 #catalog .examCard{
+  border-radius:var(--r)!important;padding:13px 15px!important;
+  display:flex;align-items:center;gap:11px;cursor:pointer;transition:border-color .15s;
+}
+.ldvlDashV324 #catalog .card:hover,.ldvlDashV324 #catalog .examCard:hover{border-color:var(--mh)!important}
+.ldvlDashV324 .ldvlSyncRow{display:flex;gap:0;border:2px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 6px 28px rgba(15,23,42,.09);background:linear-gradient(135deg,#f0f9ff 0%,#faf5ff 50%,#fff7ed 100%)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncMath{border-color:#93c5fd;box-shadow:0 6px 28px rgba(37,99,235,.14)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys{border-color:#c4b5fd;box-shadow:0 6px 28px rgba(124,58,237,.14)}
+.ldvlDashV324 .ldvlSyncColBox{padding:8px 8px;min-width:0;border-right:1px solid rgba(15,23,42,.07)}
+.ldvlDashV324 .ldvlSyncColMon{flex:0 0 clamp(74px,10%,92px);max-width:92px;padding:8px 5px}
+.ldvlDashV324 .ldvlSyncColLop{flex:0 0 clamp(86px,12%,112px);max-width:112px;padding:8px 5px}
+.ldvlDashV324 .ldvlSyncColChuong{flex:1.2 1 0;min-width:0}
+.ldvlDashV324 .ldvlSyncColBai{flex:1.2 1 0;min-width:0;border-right:none!important}
+.ldvlDashV324 .ldvlSyncColMon{background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%)}
+.ldvlDashV324 .ldvlSyncColLop{background:linear-gradient(180deg,#ecfdf5 0%,#d1fae5 100%)}
+.ldvlDashV324 .ldvlSyncColChuong{background:linear-gradient(180deg,#fffbeb 0%,#fde68a55 100%)}
+.ldvlDashV324 .ldvlSyncColBai{background:linear-gradient(180deg,#fdf4ff 0%,#f3e8ff 100%)}
+.ldvlDashV324 .ldvlSyncColMon .ldvlSyncColHead,.ldvlDashV324 .ldvlSyncColLop .ldvlSyncColHead{font-size:9px;letter-spacing:.3px;margin-bottom:5px;text-align:center}
+.ldvlDashV324 .ldvlSyncColMon .ldvlSyncColHead b,.ldvlDashV324 .ldvlSyncColLop .ldvlSyncColHead b{font-size:9px}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColMon{background:linear-gradient(180deg,#f5f3ff 0%,#ede9fe 100%)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColLop{background:linear-gradient(180deg,#eef2ff 0%,#e0e7ff 100%)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColChuong{background:linear-gradient(180deg,#faf5ff 0%,#e9d5ff55 100%)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColBai{background:linear-gradient(180deg,#fdf2f8 0%,#fce7f3 100%)}
+.ldvlDashV324 .ldvlSyncHeadMon{color:#1d4ed8!important}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncHeadMon{color:#6d28d9!important}
+.ldvlDashV324 .ldvlSyncCol{max-height:min(58vh,480px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;padding-right:2px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text)}
+.ldvlDashV324 .ldvlSyncColHead{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.ldvlDashV324 .ldvlSyncColHead b{color:#0f172a;font-weight:900}
+@media (max-width:900px){.ldvlDashV324 .ldvlSyncRow{overflow-x:auto;-webkit-overflow-scrolling:touch}.ldvlDashV324 .ldvlSyncColMon{flex:0 0 72px;max-width:72px}.ldvlDashV324 .ldvlSyncColLop{flex:0 0 88px;max-width:88px}.ldvlDashV324 .ldvlSyncColChuong{flex:0 0 min(58vw,280px);min-width:150px}.ldvlDashV324 .ldvlSyncColBai{flex:0 0 min(58vw,280px);min-width:150px}}
+.ldvlDashV324 .ldvlSyncColLop .ldvlSyncPick{padding:5px 4px;font-size:11px;gap:4px}
+.ldvlDashV324 .ldvlSyncColLop .ldvlSyncIdx{min-width:17px;height:17px;font-size:9px;border-radius:5px}
+.ldvlDashV324 .ldvlSyncColLop .ldvlSyncTxt{font-weight:700;text-align:center;line-height:1.25}
+.ldvlDashV324 .ldvlSyncMonBtn{padding:6px 3px;font-size:10.5px;margin-bottom:4px;border-radius:8px;line-height:1.2;text-align:center}
+.ldvlDashV324 .ldvlSyncColMon .ldvlSyncMonBtn .ldvlMonIco{display:block;font-size:14px;margin-bottom:1px}
+.ldvlDashV324 .ldvlSyncPick{cursor:pointer;padding:6px 8px;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.72);text-align:left;font-size:12px;width:100%;color:var(--text);line-height:1.35;display:flex;align-items:flex-start;gap:7px;transition:transform .12s,box-shadow .12s,border-color .12s}
+.ldvlDashV324 .ldvlSyncPick:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+.ldvlDashV324 .ldvlSyncIdx{flex-shrink:0;min-width:22px;height:22px;border-radius:7px;font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.ldvlDashV324 .ldvlSyncColLop .ldvlSyncIdx{background:#86efac;color:#14532d}
+.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncIdx{background:#fcd34d;color:#78350f}
+.ldvlDashV324 .ldvlSyncColBai .ldvlSyncIdx{background:#d8b4fe;color:#581c87}
+.ldvlDashV324 .ldvlSyncTxt{flex:1;min-width:0}
+.ldvlDashV324 .ldvlSyncPickLop.on{background:linear-gradient(90deg,#dcfce7,#bbf7d0)!important;border-color:#22c55e;font-weight:800;color:#14532d;box-shadow:0 0 0 2px rgba(34,197,94,.25)}
+.ldvlDashV324 .ldvlSyncPickChuong.on{background:linear-gradient(90deg,#fef3c7,#fde68a)!important;border-color:#f59e0b;font-weight:800;color:#92400e;box-shadow:0 0 0 2px rgba(245,158,11,.25)}
+.ldvlDashV324 .ldvlSyncPickBai.on{background:linear-gradient(90deg,#f3e8ff,#e9d5ff)!important;border-color:#a855f7;font-weight:800;color:#6b21a8;box-shadow:0 0 0 2px rgba(168,85,247,.25)}
+.ldvlDashV324 .ldvlSyncMonBtn{cursor:pointer;width:100%;margin-bottom:4px;border:2px solid transparent;font:inherit;border-radius:8px;padding:6px 3px;font-size:10.5px;font-weight:700;transition:transform .12s,box-shadow .12s;line-height:1.2;text-align:center}
+.ldvlDashV324 .ldvlSyncMonBtn.tm{background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1e40af;border-color:#93c5fd}
+.ldvlDashV324 .ldvlSyncMonBtn.tp{background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;border-color:#c4b5fd}
+.ldvlDashV324 .ldvlSyncMonBtn.on{transform:scale(1.02);font-weight:900;box-shadow:0 4px 16px rgba(37,99,235,.22)}
+.ldvlDashV324 .ldvlSyncMonBtn.tp.on{box-shadow:0 4px 16px rgba(124,58,237,.22)}
+.ldvlDashV324 .ldvlSyncFoot{margin-top:10px;padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0}
+.ldvlDashV324 #ldvlDashOpenCatalogBtn{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;box-shadow:0 4px 16px rgba(37,99,235,.35);font-weight:800;padding:9px 16px;border-radius:10px}
+.ldvlDashV324 #ldvlDashOpenCatalogBtn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.ldvlDashV324 #ldvlDashSyncHint{background:#fff;padding:5px 12px;border-radius:999px;border:1px solid #e2e8f0;font-size:11px;color:#475569}
+.ldvlDashV324 #ldvlAdminArea.hide,.ldvlDashV324 #ldvlStudentHome.hide{display:none!important}
+.ldvlDashV324 #ldvlAdminViewBar.hide{display:none!important}
+.ldvlDashV324 .ldvlAdminSubNav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #bfdbfe;border-radius:12px;position:sticky;top:0;z-index:30;box-shadow:0 4px 16px rgba(37,99,235,.08)}
+.ldvlDashV324 .ldvlAdminSubNav.hide{display:none!important}
+.ldvlDashV324 .ldvlAdminSubNavTitle{font-weight:800;font-size:14px;color:#1e3a8a;flex:1;min-width:120px}
+.ldvlDashV324 .ldvlAdminSubNavActs{display:flex;gap:8px;flex-wrap:wrap}
+.ldvlDashV324 .ldvlHdrNavLbl{display:inline}
+@media(max-width:900px){
+  .ldvlDashV324 #ldvlSidebar{display:none!important}
+  .ldvlDashV324 #ldvlSidebar.ldvlSbOpen{display:flex!important;position:fixed;top:0;left:0;bottom:0;width:min(280px,86vw);z-index:450;box-shadow:8px 0 32px rgba(15,23,42,.25)}
+  .ldvlDashV324 .ldvlSbBackdrop{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:440}
+  .ldvlDashV324 .ldvlSbBackdrop.on{display:block}
+  .ldvlDashV324 .ldvlHdrNavLbl{display:none}
+  .ldvlDashV324 .ldvlMain{padding:12px}
+}
+
 </style></head>
-<body><div class="top"><div class="topRow topRowV253"><h1 class="topTitleBrand"><span class="topBrandAvatar"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt=""></span><span class="topBrandText">ỨNG DỤNG LUYỆN ĐỀ VẬT LÝ - TOÁN HỌC</span></h1><div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn nhanh"><button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">Toán</button><button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">Vật lí</button></div><div class="topRight"><span id="quizTopBar" class="adminBar hide"><button type="button" class="adminTopBtn adminTopBtn2" onclick="backHome()">← Về mục lục</button></span><span id="adminBar" class="adminBar hide"><button type="button" id="syncBtn" class="adminTopBtn" onclick="syncData()">🔄 Đồng bộ</button><button type="button" id="topLatexImportBtn" class="adminTopBtn adminTopBtn2" onclick="openLatexImportModal()" title="Nhập file .tex vào Google Sheet">📥 LaTeX</button><button type="button" id="bulkDbtBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkDbtReview()" title="GPT gợi ý Dạng bài tập hàng loạt">🏷️ Dạng BT</button><button type="button" id="bulkLevelBtn" class="adminTopBtn adminTopBtn2" onclick="openBulkLevelReview()" title="GPT gợi ý mức độ NB/TH/VD/VDC hàng loạt">🎯 Mức độ</button><span class="adminMoreWrap"><button type="button" id="adminMoreBtn" class="adminTopBtn adminTopBtn2" onclick="toggleAdminMoreMenu(event)" title="Công cụ ADMIN thêm">⋯</button><div id="adminMoreMenu" class="adminMoreMenu hide"><button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button><button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button><button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button><button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button></div></span></span><span id="info">Đang nạp...</span> <span id="topUserChip" class="topUserChip hide"></span> <span id="aiProfileBadge" class="aiProfileBadge hide"></span> <button type="button" id="pwaInstallBtn" onclick="installPwaApp()" title="Cài app lên màn hình chính">📲 Cài app</button> <button type="button" id="btnTheme" class="themeBtn" onclick="toggleTheme()" title="Chuyển giao diện tối">🌙</button> <a href="/logout">Thoát</a></div></div></div>
-<div id="examStrip" class="examStrip"><span id="examMsg">🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh</span><span id="examTimer" class="timer hide"></span></div>
+<body class="ldvlDashV324">
+<header class="hdr hm" id="ldvlDashHdr">
+  <div class="logo">
+    <img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" width="30" height="30" style="border-radius:7px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="logo-fb" style="display:none"><i class="ti ti-school"></i></div>
+    <div class="logo-txt">Luyện đề AI · Thầy Minh <small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
+  </div>
+  <div id="topSubjectTabsV253" class="topSubjectTabsV253 hsp" aria-label="Chọn môn nhanh" style="justify-content:center">
+    <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
+    <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
+  </div>
+  <span id="quizTopBar" class="adminBar hide"><button type="button" class="hbtn" onclick="backHome()"><i class="ti ti-arrow-left"></i> Mục lục</button></span>
+  <span id="adminBar" class="adminBar hide">
+    <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrDashBtn" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')" title="Về Dashboard"><i class="ti ti-layout-dashboard"></i><span class="ldvlHdrNavLbl"> Dash</span></button>
+    <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrMenuBtn" onclick="ldvlToggleAdminSidebar()" title="Menu ADMIN"><i class="ti ti-menu-2"></i></button>
+    <button type="button" id="syncBtn" class="hbtn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ</button>
+    <button type="button" id="topLatexImportBtn" class="hbtn" onclick="openLatexImportModal()"><i class="ti ti-file-import"></i> LaTeX</button>
+    <button type="button" id="bulkDbtBtn" class="hbtn" onclick="openBulkDbtReview()"><i class="ti ti-tags"></i> Dạng BT</button>
+    <button type="button" id="bulkLevelBtn" class="hbtn" onclick="openBulkLevelReview()"><i class="ti ti-target"></i> Mức độ</button>
+    <span class="adminMoreWrap">
+      <button type="button" id="adminMoreBtn" class="hbtn" onclick="toggleAdminMoreMenu(event)"><i class="ti ti-dots"></i></button>
+      <div id="adminMoreMenu" class="adminMoreMenu hide">
+        <button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button>
+        <button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button>
+        <button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button>
+        <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
+      </div>
+    </span>
+  </span>
+  <div class="hchip hide" id="ldvlUserChip"><div class="hav" id="ldvlUserIni">?</div><span id="ldvlUserName">...</span><span class="rpill" id="ldvlUserRole">VIP</span></div>
+  <span id="info" style="font-size:11px;color:rgba(255,255,255,.85);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <span id="topUserChip" class="topUserChip hide"></span>
+  <span id="aiProfileBadge" class="aiProfileBadge hide"></span>
+  <button type="button" id="pwaInstallBtn" class="hbtn hide" onclick="installPwaApp()" title="Cài app"><i class="ti ti-download"></i></button>
+  <button type="button" id="btnTheme" class="thbtn" onclick="toggleTheme()" title="Giao diện tối"><i class="ti ti-moon"></i></button>
+  <a href="/logout" class="hbtn" style="text-decoration:none"><i class="ti ti-logout"></i> Ra</a>
+</header>
+<div class="ldvlDashWrap">
+<div id="ldvlSbBackdrop" class="ldvlSbBackdrop" onclick="ldvlCloseAdminSidebar()"></div>
+<nav class="sb hide" id="ldvlSidebar" aria-label="Menu ADMIN">
+  <div class="sbu">
+    <div class="sbu-row">
+      <div class="sav" id="ldvlSbAv" style="background:linear-gradient(135deg,#5b21b6,#7c3aed)">A</div>
+      <div><div class="sbn" id="ldvlSbName">ADMIN</div><div class="sbr" id="ldvlSbRole">Quản trị viên</div></div>
+    </div>
+  </div>
+  <div class="sbs sa">Tổng quan</div>
+  <button type="button" class="nb aa" id="ldvlNavDash" onclick="ldvlAdminNav(this,'ap-dash')"><i class="ti ti-layout-dashboard nic"></i> Dashboard</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-users')"><i class="ti ti-users nic"></i> Học viên</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-stats')"><i class="ti ti-chart-bar nic"></i> Thống kê điểm</button>
+  <div class="sbs">Luyện tập</div>
+  <button type="button" class="nb" id="ldvlNavPractice" onclick="ldvlAdminNav(this,'ap-practice')"><i class="ti ti-list nic"></i> Mục lục đề · Làm bài</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-random')"><i class="ti ti-dice-5 nic"></i> Tự luyện ngẫu nhiên</button>
+  <div class="sbs sm">Toán học</div>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-q-math')"><i class="ti ti-file-text nic"></i> Câu hỏi Toán <span class="nbadge" id="ldvlNbMath">—</span></button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-pdf-math')"><i class="ti ti-file-type-pdf nic" style="color:var(--pdf)"></i> PDF · Toán</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-ai-math')"><i class="ti ti-robot nic"></i> AI tạo câu Toán</button>
+  <div class="sbs sp">Vật lý</div>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-q-phys')"><i class="ti ti-file-text nic"></i> Câu hỏi Vật lý <span class="nbadge" id="ldvlNbPhys">—</span></button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-pdf-phys')"><i class="ti ti-file-type-pdf nic" style="color:var(--pdf)"></i> PDF · Vật lý</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-ai-phys')"><i class="ti ti-robot nic"></i> AI tạo câu Vật lý</button>
+  <div class="sbs">Hệ thống</div>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-sync')"><i class="ti ti-refresh nic"></i> Đồng bộ Sheet</button>
+  <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-tools')"><i class="ti ti-tool nic"></i> Công cụ &amp; AI Keys</button>
+  <div class="sbfoot"><span class="dot"></span> Giao diện <b style="color:var(--text)">V325r</b> · Sheet live</div>
+</nav>
+<main class="main ldvlMain">
 <div class="wrap">
+
 <div id="home">
 
-<!-- Thông tin tài khoản (compact 1 dòng) -->
+<div id="ldvlAdminArea" class="hide">
+<div id="am">
+  <div id="ldvlAdminSubNav" class="ldvlAdminSubNav hide">
+    <button type="button" class="btn2" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <span id="ldvlAdminSubNavTitle" class="ldvlAdminSubNavTitle">—</span>
+    <div class="ldvlAdminSubNavActs">
+      <button type="button" class="btn2" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')"><i class="ti ti-list"></i> Mục lục đề</button>
+      <button type="button" class="btn" id="ldvlAdminSubNavStudentBtn" onclick="ldvlAdminPreviewStudent()"><i class="ti ti-eye"></i> Xem học sinh</button>
+    </div>
+  </div>
+  <div id="ap-dash">
+    <div class="alert aw hide" id="ldvlDashAlert"><i class="ti ti-alert-triangle"></i> <span id="ldvlDashAlertTxt"></span></div>
+    <div class="sg">
+      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-math]'),'ap-q-math')" title="Mở mục lục đề Toán"><div class="sic"><i class="ti ti-file-text" style="color:var(--mh)"></i></div><div class="sv" id="ldvlStatMath">—</div><div class="sl">Câu hỏi Toán</div><div class="ss" id="ldvlStatMathSub">bấm → mục lục</div></div>
+      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')" title="Mở mục lục đề Vật lý"><div class="sic"><i class="ti ti-atom-2" style="color:var(--ph)"></i></div><div class="sv" id="ldvlStatPhys">—</div><div class="sl">Câu hỏi Vật lý</div><div class="ss" id="ldvlStatPhysSub">bấm → mục lục</div></div>
+      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở tất cả đề"><div class="sic"><i class="ti ti-books" style="color:var(--ah)"></i></div><div class="sv" id="ldvlStatCatalog">—</div><div class="sl">Đề / thẻ đề</div><div class="ss" id="ldvlStatTotal">bấm → luyện đề</div></div>
+      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở mục lục"><div class="sic"><i class="ti ti-database" style="color:var(--blue)"></i></div><div class="sv" id="ldvlStatAll">—</div><div class="sl">Tổng câu hỏi</div><div class="ss" id="ldvlStatLoaded">—</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Thứ tự đồng bộ Sheet</h3></div>
+      <div class="pb">
+        <div class="ldvlSyncRow" id="ldvlSyncRow">
+          <div class="ldvlSyncColBox ldvlSyncColMon">
+            <div class="ldvlSyncColHead ldvlSyncHeadMon">① Môn</div>
+            <div id="ldvlSyncMonCol"></div>
+          </div>
+          <div class="ldvlSyncColBox ldvlSyncColLop">
+            <div class="ldvlSyncColHead" id="ldvlSyncLopHead">② Lớp</div>
+            <div id="ldvlSyncLopCol" class="ldvlSyncCol">—</div>
+          </div>
+          <div class="ldvlSyncColBox ldvlSyncColChuong">
+            <div class="ldvlSyncColHead" id="ldvlSyncChuongHead">③ Chương</div>
+            <div id="ldvlSyncChuongCol" class="ldvlSyncCol">—</div>
+          </div>
+          <div class="ldvlSyncColBox ldvlSyncColBai">
+            <div class="ldvlSyncColHead" id="ldvlSyncBaiHead">④ Bài học</div>
+            <div id="ldvlSyncBaiCol" class="ldvlSyncCol">—</div>
+          </div>
+        </div>
+        <div class="ldvlSyncFoot">
+        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Bấm Toán hoặc Vật lý</b> → chọn Lớp · Chương · Bài (cuộn trong cột, có số thứ tự) → <b>Mở mục lục</b></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn" id="ldvlDashOpenCatalogBtn" onclick="ldvlDashOpenCatalog()">→ Mở mục lục đề</button>
+          <span id="ldvlDashSyncHint" class="muted" style="font-size:12px">Chưa chọn môn</span>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="stit">Thao tác nhanh</div>
+    <div class="ag">
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" style="border-color:var(--mh);background:var(--ml)"><div class="aic">📋</div><div class="al2">Luyện đề · Mục lục</div><div class="ad">Chọn đề → Làm bài</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(null,'ap-random')"><div class="aic">🎲</div><div class="al2">Tự luyện ngẫu nhiên</div><div class="ad">Ghép đề 28 câu</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-math]'),'ap-q-math')"><div class="aic">📐</div><div class="al2">Đề Toán</div><div class="ad">Lọc môn Toán</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')"><div class="aic">🔭</div><div class="al2">Đề Vật lý</div><div class="ad">Lọc môn Lý</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-pdf-math]'),'ap-pdf-math')"><div class="aic"><i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--pdf)"></i></div><div class="al2">PDF Toán</div><div class="ad">PP · lý thuyết · sách</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-pdf-phys]'),'ap-pdf-phys')"><div class="aic"><i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--pdf)"></i></div><div class="al2">PDF Vật lý</div><div class="ad">PP · lý thuyết · sách</div></button>
+    </div>
+  </div>
+  <div id="ap-users" style="display:none" class="panel"><b>👥 Học viên</b><p class="muted" style="margin:8px 0;line-height:1.5">Quản lý tài khoản qua sheet đăng ký / đăng nhập app. Mục này sẽ mở rộng thống kê học viên trong bản sau.</p></div>
+  <div id="ap-stats" style="display:none" class="panel"><b>📊 Thống kê điểm</b><p class="muted" style="margin:8px 0;line-height:1.5">Xem kết quả làm bài trong phiên luyện đề và sheet lịch sử (nếu có). Dùng mục lục đề để mở đề và xem báo cáo sau nộp bài.</p></div>
+  <div id="ap-sync" style="display:none" class="panel"><b>🔄 Đồng bộ Sheet</b><p class="muted" style="margin:8px 0 10px">Nạp lại dữ liệu từ Google Sheet (Cau_Hoi, mục lục đề…). PDF xem qua menu <b>📄 PDF</b>.</p><button type="button" class="btn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ ngay</button><div id="ldvlSyncStatus" class="muted" style="margin-top:10px;font-size:12px"></div></div>
+  <div id="ap-tools" style="display:none" class="panel"><b>🛠 Công cụ &amp; AI Keys</b><p class="muted" style="margin:8px 0 10px">LaTeX, Dạng BT, xóa trùng, test key AI.</p><div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" class="btn2" onclick="openBulkDbtReview()">🏷️ Dạng BT</button><button type="button" class="btn2" onclick="openBulkLevelReview()">🎯 Mức độ</button><button type="button" class="btn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng</button><button type="button" class="btn2" onclick="testServerAiKey()">🧪 Test AI</button></div></div>
+  <div id="ap-pdf-math" style="display:none" class="panel">
+    <b style="color:var(--pdf)"><i class="ti ti-file-type-pdf"></i> PDF Toán · Google Drive</b>
+    <p class="muted" style="margin:6px 0 10px;line-height:1.45">Chèn <b>phương pháp, lý thuyết, sách, đề mẫu</b> bằng link PDF Drive (quyền <b>Bất kỳ ai có link · Viewer</b>). Học sinh xem trong <b>Công cụ AI → 📄 PDF</b>.</p>
+    <div class="link-row" style="margin-bottom:8px"><input id="pdf-m-name" placeholder="Tên đề PDF" style="flex:1"><input id="pdf-m-url" placeholder="https://drive.google.com/file/d/..." style="flex:2"><button type="button" onclick="previewDrivePdf('pdf-m-url','pdf-m-frame','pdf-m-prev')">Xem trước</button></div>
+    <div id="pdf-m-prev" class="hide" style="margin-bottom:10px"><div class="pdf-frame-wrap"><iframe id="pdf-m-frame" src="about:blank" allowfullscreen></iframe></div></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><select id="pdf-m-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="pdf-m-add-btn" onclick="ldvlPdfAdd('math')">➕ Thêm đề</button><button type="button" class="btn2 hide" id="pdf-m-cancel-btn" onclick="ldvlPdfCancelEdit('math')">Hủy sửa</button></div>
+    <div id="pdf-m-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
+    <div id="pdf-m-list" class="panel" style="padding:0;margin:0"></div>
+  </div>
+  <div id="ap-pdf-phys" style="display:none" class="panel">
+    <b style="color:var(--pdf)"><i class="ti ti-file-type-pdf"></i> PDF Vật lý · Google Drive</b>
+    <p class="muted" style="margin:6px 0 10px;line-height:1.45">Chèn <b>phương pháp, lý thuyết, sách, đề mẫu</b> bằng link PDF Drive. Học sinh xem trong <b>Công cụ AI → 📄 PDF</b>.</p>
+    <div class="link-row" style="margin-bottom:8px"><input id="pdf-p-name" placeholder="Tên đề PDF" style="flex:1"><input id="pdf-p-url" placeholder="https://drive.google.com/file/d/..." style="flex:2"><button type="button" onclick="previewDrivePdf('pdf-p-url','pdf-p-frame','pdf-p-prev')">Xem trước</button></div>
+    <div id="pdf-p-prev" class="hide" style="margin-bottom:10px"><div class="pdf-frame-wrap"><iframe id="pdf-p-frame" src="about:blank" allowfullscreen></iframe></div></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><select id="pdf-p-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="pdf-p-add-btn" onclick="ldvlPdfAdd('phys')">➕ Thêm đề</button><button type="button" class="btn2 hide" id="pdf-p-cancel-btn" onclick="ldvlPdfCancelEdit('phys')">Hủy sửa</button></div>
+    <div id="pdf-p-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
+    <div id="pdf-p-list" class="panel" style="padding:0;margin:0"></div>
+  </div>
+</div>
+</div>
+
+<div id="ldvlStudentHome" class="hide">
+<div id="ldvlAdminViewBar" class="hide panel" style="margin:0 0 12px;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #bfdbfe">
+  <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0">
+    <div><b>📋 Luyện đề</b> <span class="muted" style="font-size:12px">— Lọc đề → chọn thẻ → bấm <b>Làm bài</b></span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn2" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')">← Dashboard</button>
+      <button type="button" class="btn2" onclick="document.getElementById('ldvlStudentPdfSection')&&document.getElementById('ldvlStudentPdfSection').scrollIntoView({behavior:'smooth',block:'start'})">↓ Đề PDF</button>
+      <button type="button" class="btn" onclick="document.getElementById('catalog')&&document.getElementById('catalog').scrollIntoView({behavior:'smooth',block:'start'})">↓ Mục lục đề</button>
+    </div>
+  </div>
+</div>
 <div id="userAccountCard" class="userAccountCard hide"></div>
 <div id="aiProfileBanner" class="aiProfileBanner hide"></div>
 
 <!-- catalogScopeBox: JS (v245/v250) tự render tabs Toán/Lý vào đây -->
 <div id="catalogScopeBox" class="catalogScopeBox"></div>
+
+<div class="homeSection" id="ldvlStudentPdfSection">
+  <div class="homeSectionHead">
+    <span class="homeSectionIcon">📄</span>
+    <span class="homeSectionTitle">PDF · Phương pháp / Lý thuyết / Sách</span>
+  </div>
+  <div class="panel" style="margin:0">
+    <p class="muted" style="margin:0 0 10px;font-size:13px;line-height:1.45">Bấm tên đề để xem toàn màn hình · dùng nút <b>← Trước</b> / <b>Sau →</b> để chuyển đề.</p>
+    <div class="ldvlPdfStudentTabs" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button type="button" class="btn ldvlPdfStab on" id="ldvlPdfTabMath" onclick="ldvlStudentPdfTab('math')">📐 Toán</button>
+      <button type="button" class="btn2 ldvlPdfStab" id="ldvlPdfTabPhys" onclick="ldvlStudentPdfTab('phys')">🔭 Vật lý</button>
+    </div>
+    <div id="ldvlStudentPdfList" class="panel" style="padding:0;margin:0"></div>
+  </div>
+</div>
 
 <!-- SECTION 1: Lọc & tìm đề -->
 <div class="homeSection">
@@ -18040,9 +18933,25 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
   <div id="agPreview" class="aiGenPreview"></div>
   <details id="agJsonDetails" style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">JSON xem trước — có thể sửa trước khi lưu</summary><textarea id="agJson" class="aiGenJsonBox" spellcheck="false" placeholder='{"questions":[]}'></textarea></details>
 </div>
-<div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
-</div><div id="startModal" class="modal hide"><div class="modalBox startModalBox">
+
+<div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
+</div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
+
+</div></main></div><!-- /ldvlDashWrap -->
+<div id="pdf-fs-scr">
+  <div class="pdf-fs-bar">
+    <button type="button" class="pdf-fs-btn pdf-fs-nav" id="pdf-fs-prev" onclick="ldvlPdfFsNav(-1)"><i class="ti ti-chevron-left"></i> Trước</button>
+    <button type="button" class="pdf-fs-btn" onclick="closePdfFs()"><i class="ti ti-arrow-left"></i> Đóng</button>
+    <span id="pdf-fs-title">Đề PDF</span>
+    <span id="pdf-fs-counter" class="pdf-fs-counter"></span>
+    <button type="button" class="pdf-fs-btn pdf-fs-nav" id="pdf-fs-next" onclick="ldvlPdfFsNav(1)">Sau <i class="ti ti-chevron-right"></i></button>
+    <button type="button" class="pdf-fs-btn" id="pdf-fs-newt"><i class="ti ti-external-link"></i> Tab mới</button>
+    <button type="button" class="pdf-fs-btn" onclick="closePdfFs()"><i class="ti ti-x"></i></button>
+  </div>
+  <iframe id="pdf-fs-frame" src="about:blank" allowfullscreen></iframe>
+</div>
+<div id="startModal" class="modal hide"><div class="modalBox startModalBox">
 
 <div class="startModalHead">
   <span id="startModalTitle" class="startModalTitle">⚡ Thiết lập làm bài</span>
@@ -18229,7 +19138,11 @@ Chứng minh mệnh đề phủ định"></textarea>
 <script id="ldvlEarlyBoot">
 (function(){
   try{
-    window.__LDVL_V='V307bx-mathjax';
+    window.__LDVL_V='V325r_PDF_SYNC_FIX_2026_06_25';
+    window.ldvlAdminNav=window.ldvlAdminNav||function(btn,pid){
+      window.__LDVL_NAV_PENDING=[btn,pid];
+      alert('App đang tải… bấm lại sau 2 giây hoặc Ctrl+F5');
+    };
     var el=document.getElementById('info');
     if(el)el.textContent='Đang kết nối server…';
     window.addEventListener('error',function(ev){
@@ -18266,7 +19179,7 @@ let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=
 let ADMIN_REVIEW_MODE='fast';
 function initAdminReviewMode(){try{ADMIN_REVIEW_MODE=localStorage.getItem('adminReviewMode')||'fast'}catch(e){ADMIN_REVIEW_MODE='fast'}if(ADMIN_REVIEW_MODE!=='full')ADMIN_REVIEW_MODE='fast';if(typeof onAdminReviewModeChange==='function')onAdminReviewModeChange(ADMIN_REVIEW_MODE);else try{localStorage.setItem('adminReviewMode',ADMIN_REVIEW_MODE);['adminReviewMode','adminReviewModeFs'].forEach(function(id){let el=document.getElementById(id);if(el)el.value=ADMIN_REVIEW_MODE})}catch(e2){}}
 const THEME_KEY='LDVL_THEME';
-function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAttribute('data-theme',dark?'dark':'light');try{localStorage.setItem(THEME_KEY,dark?'dark':'light')}catch(e){}let b=document.getElementById('btnTheme');if(b){b.textContent=dark?'☀️':'🌙';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}let bf=document.getElementById('btnFsTheme');if(bf)bf.textContent=dark?'☀️ Sáng':'🌙 Tối';if(window.MathJax&&MathJax.config&&MathJax.config.svg){MathJax.config.svg.color=dark?'#e2e8f0':'#0f172a';if(MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}}
+function applyTheme(mode){let dark=mode==='dark';document.documentElement.setAttribute('data-theme',dark?'dark':'light');try{localStorage.setItem(THEME_KEY,dark?'dark':'light')}catch(e){}let b=document.getElementById('btnTheme');if(b){if(b.classList.contains('thbtn')){b.innerHTML=dark?'<i class="ti ti-sun"></i>':'<i class="ti ti-moon"></i>';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}else{b.textContent=dark?'☀️':'🌙';b.title=dark?'Chuyển giao diện sáng':'Chuyển giao diện tối'}}let bf=document.getElementById('btnFsTheme');if(bf)bf.textContent=dark?'☀️ Sáng':'🌙 Tối';if(window.MathJax&&MathJax.config&&MathJax.config.svg){MathJax.config.svg.color=dark?'#e2e8f0':'#0f172a';if(MathJax.typesetPromise)MathJax.typesetPromise().catch(()=>{})}}
 function toggleTheme(){let cur=document.documentElement.getAttribute('data-theme')||'light';applyTheme(cur==='dark'?'light':'dark')}
 function initTheme(){let t='light';try{t=localStorage.getItem(THEME_KEY)||'light'}catch(e){}applyTheme(t==='dark'?'dark':'light')}
 function enhanceHomeColors(){
@@ -18706,14 +19619,14 @@ async function api(url,opts={},tries=2){
 }
 function setOptions(id,arr){document.getElementById(id).innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option>${esc(x)}</option>`).join('')}
 function lessonNum(s){s=normText(s||'');let m=s.match(/\bbai\s*(\d+)/);if(m)return parseInt(m[1],10);m=s.match(/^(\d+)/);return m?parseInt(m[1],10):9999}
-function chapterNum(s){s=normText(s||'');let m=s.match(/\bchuong\s*(viii|vii|vi|iv|iii|ii|ix|x|i|\d+)\b/);if(m){let t=m[1];if(/^\d+$/.test(t))return parseInt(t,10);let rom={i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7,viii:8,ix:9,x:10};return rom[t]||9999}return 9999}
+function chapterNum(s){s=normText(s||'');let m=s.match(/\bchuong\s*(viii|vii|vi|iv|iii|ii|v|ix|x|i|\d+)\b/);if(m){let t=m[1];if(/^\d+$/.test(t))return parseInt(t,10);let rom={i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7,viii:8,ix:9,x:10};return rom[t]||9999}m=s.match(/^(\d+)[\.\)]/);if(m)return parseInt(m[1],10);return 9999}
 function catalogSortKey(x){return [normText(x.Mon||''),normText(x.Lop||''),chapterNum(x.Chuong||''),normText(x.Chuong||''),lessonNum(x.BaiHoc||x.De||''),normText(x.BaiHoc||x.De||''),normText(x.BoDe||'')]}
 function compareCatalog(a,b){let ka=catalogSortKey(a),kb=catalogSortKey(b);for(let i=0;i<ka.length;i++){if(ka[i]<kb[i])return -1;if(ka[i]>kb[i])return 1}return 0}
 function uniqField(list,field){let seen=new Set(),out=[];for(let x of list||[]){let v=String((x||{})[field]||'').trim();if(!v||seen.has(v))continue;seen.add(v);out.push(v)}if(field==='BaiHoc')return out.sort((a,b)=>lessonNum(a)-lessonNum(b)||normText(a).localeCompare(normText(b),'vi'));if(field==='Chuong')return out.sort((a,b)=>chapterNum(a)-chapterNum(b)||normText(a).localeCompare(normText(b),'vi'));return out.sort((a,b)=>normText(a).localeCompare(normText(b),'vi'))}
 function filterBaseCatalog(){let mon=val('fMon')||'';if(!mon)return CATALOG.slice();return CATALOG.filter(x=>x.Mon==mon)}
 function filterCatalogUpTo(stopBefore){let list=filterBaseCatalog();let lop=val('fLop');if(lop)list=list.filter(x=>x.Lop==lop);if(stopBefore==='lop')return list;let chuong=val('fChuong');if(chuong)list=list.filter(x=>x.Chuong==chuong);if(stopBefore==='chuong')return list;let bai=val('fBaiHoc');if(bai)list=list.filter(x=>x.BaiHoc==bai);if(stopBefore==='baihoc')return list;let bode=val('fBoDe');if(bode)list=list.filter(x=>x.BoDe==bode);return list}
 function setOptionsKeep(id,arr,keep){let el=document.getElementById(id);if(!el)return;keep=String(keep||'');if(keep&&!arr.includes(keep))keep='';el.innerHTML='<option value="">Tất cả</option>'+arr.map(x=>`<option${x===keep?' selected':''}>${esc(x)}</option>`).join('');el.value=keep}
-function updateExamStrip(){const el=document.getElementById('examStrip');const msg=document.getElementById('examMsg');const tm=document.getElementById('examTimer');if(!el||!msg)return;msg.textContent='🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh';if(tm){tm.textContent='';tm.classList.add('hide')}el.classList.remove('hide')}
+function updateExamStrip(){const el=document.getElementById('examStrip');const msg=document.getElementById('examMsg');const tm=document.getElementById('examTimer');if(!el||!msg)return;msg.textContent='🎉 Chào mừng bạn đến ứng dụng luyện đề của Thầy Minh';if(tm){tm.textContent='';tm.classList.add('hide')}el.classList.remove('hide');el.classList.remove('exam-active')}
 function mergeUserAiProfile(src){src=src||{};if(src.ai_profile!==undefined)USER.ai_profile=src.ai_profile;if(src.ai_profile_label!==undefined)USER.ai_profile_label=src.ai_profile_label;if(src.ai_profile_hint!==undefined)USER.ai_profile_hint=src.ai_profile_hint;if(src.ai_profile_action!==undefined)USER.ai_profile_action=src.ai_profile_action;if(src.ai_key_source!==undefined)USER.ai_key_source=src.ai_key_source;if(src.ai_show_key_panel!==undefined)USER.ai_show_key_panel=src.ai_show_key_panel;if(src.ai_nudge_key!==undefined)USER.ai_nudge_key=src.ai_nudge_key;if(src.ai_server_key_count!==undefined)USER.ai_server_key_count=src.ai_server_key_count;if(src.using_user_keys!==undefined)USER.ai_using_user_keys=!!src.using_user_keys;if(src.user_gemini_keys!==undefined)USER.ai_user_gemini_keys=src.user_gemini_keys;if(src.has_keys!==undefined)USER.ai_has_keys=!!src.has_keys}
 function aiProfileBadgeClass(code){if(!code)return'hide';if(String(code).endsWith('_OWN'))return'aiProfileOwn';if(String(code).endsWith('_POOL'))return'aiProfilePool';if(String(code)==='FREE')return'aiProfileFree';return'aiProfileWarn'}
 function userRoleCssClass(u){u=u||USER||{};if(u.is_admin||String(u.role||'').toUpperCase()==='ADMIN')return'roleADMIN';if(u.is_svip||String(u.role||'').toUpperCase()==='S.VIP')return'roleSVIP';if(u.is_vip||String(u.role||'').toUpperCase()==='VIP')return'roleVIP';if(u.is_trial||String(u.role||'').toUpperCase()==='TRIAL')return'roleTRIAL';return'roleFREE'}
@@ -18875,6 +19788,7 @@ function updateAdminChrome(){
   syncAdminLearningBoard();
   syncUserQuizChrome();
   if(adm){ensureQuizAdminAiInternetButton();syncAdminComposeChrome();bindAdminNavContextMenu();try{initAdminAiGenerator()}catch(e){}}
+  if(typeof ldvlApplyAdminHomeLayout==='function')ldvlApplyAdminHomeLayout();
 }
 function closeAdminMoreMenu(){let m=document.getElementById('adminMoreMenu');if(m)m.classList.add('hide')}
 function toggleAdminMoreMenu(ev){if(ev)ev.stopPropagation();let m=document.getElementById('adminMoreMenu');if(!m)return;let willOpen=m.classList.contains('hide');closeAdminMoreMenu();if(willOpen)m.classList.remove('hide')}
@@ -18883,7 +19797,7 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;if(!document.getElementById('home').classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];ldvlPdfSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
 let INIT_CONNECT_FAILS=0;
@@ -18956,6 +19870,7 @@ async function init(){
   try{initRpPracticePanel()}catch(e){console.error('initRpPracticePanel',e)}
   try{initAdminComposePanel();initAdminAiGenerator()}catch(e){console.error('initAdminComposePanel',e)}
   showAdminDuplicateSheetNotice();
+  if(USER&&USER.is_admin&&typeof ldvlAdminNav==='function'){LDVL_ADMIN_STUDENT_MODE=false;ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}
   handleShareDeepLink();
   handleQidDeepLink();
   // API cấu hình AI chạy nền, không được chặn giao diện chính.
@@ -19119,9 +20034,9 @@ function renderStartDangBaiTapPicker(made,preselect){
   let mbar=document.getElementById('startDbtMergeBar');
   if(mbar)mbar.classList.toggle('hide',!(USER.is_admin&&dbts.length>=1));
 }
-function closeStartModal(){document.getElementById('startModal').classList.add('hide')}
-function openStartModal(made,dbtPref){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();CURRENT_DANGBAITAP=String(dbtPref!=null?dbtPref:(val('fDangBaiTap')||'')).trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let gd=document.getElementById('chkGroupDang');if(gd)gd.checked=true;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(made,CURRENT_DANGBAITAP);document.getElementById('startModal').classList.remove('hide')}
-function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(CURRENT_MADE,CURRENT_DANGBAITAP);document.getElementById('startModal').classList.remove('hide')}
+function closeStartModal(){let m=document.getElementById('startModal');if(m)m.classList.add('hide')}
+function openStartModal(made,dbtPref){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();CURRENT_DANGBAITAP=String(dbtPref!=null?dbtPref:(val('fDangBaiTap')||'')).trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let gd=document.getElementById('chkGroupDang');if(gd)gd.checked=true;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(made,CURRENT_DANGBAITAP);let sm=document.getElementById('startModal');if(sm)sm.classList.remove('hide')}
+function openRetryModal(){if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(CURRENT_MADE,CURRENT_DANGBAITAP);let sm2=document.getElementById('startModal');if(sm2)sm2.classList.remove('hide')}
 async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let gd=document.getElementById('chkGroupDang');let groupBy=gd?gd.checked:true;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;CURRENT_DANGBAITAP=getStartModalDangBaiTap();closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg,groupBy,CURRENT_DANGBAITAP)}
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');if(!el)return;let parts=[];if(j&&j.shuffle_questions)parts.push('Xáo câu');if(j&&j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
@@ -19182,7 +20097,7 @@ function quizSectionTitle(q){q=applyResolvedDang(q||{});return String(q.Dang||''
 function quizSectionLabel(i){if(!GROUP_BY_DANG||!QUESTIONS.length)return null;let q=applyResolvedDang(QUESTIONS[i]);if(i===0)return quizSectionTitle(q);let prev=applyResolvedDang(QUESTIONS[i-1]);return quizSectionKey(q)!==quizSectionKey(prev)?quizSectionTitle(q):null}
 function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;ASSISTANT_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
 async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap=''){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0})});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
-function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};OPENCLAW_BY_Q={};LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;ASSISTANT_LOADING=false;OPENCLAW_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
+function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};OPENCLAW_BY_Q={};LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;ASSISTANT_LOADING=false;OPENCLAW_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
 function ensureFullModeOverrides(){
     if(document.getElementById('LDVL_FS_OVR')) return;
     let st=document.createElement('style');
@@ -19333,7 +20248,7 @@ function adminNavCtxEdit(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(id
 async function adminNavCtxReview(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await toggleQuestionReviewAtIndex(idx)}
 async function adminNavCtxDelete(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await deleteQuestionAtIndex(idx)}function goQ(i){if(i!==CUR&&LEARNING_OPEN_KIND==='translate'){stopTranslateEnSpeech();TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_CHUNKS=[];LEARNING_OPEN_KIND=''}saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin){rb.textContent=isMobileQuizUI()?'ADMIN':'ADMIN: đang xem đáp án/lời giải';syncAdminResultBox()}else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]);if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=USER.can_ai_hint!==false;ensureLearningQuickBar();syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(LEARNING_OPEN_KIND==='openclaw'){renderOpenClawPanel()}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER.hoten||USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}else{qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+(splitImg?'':qImgHtml)};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!USER.can_5050||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER.is_admin||USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${html}</div></div>`:html;if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar()}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTIONS.length){return}if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=(USER&&USER.can_ai_hint)!==false;try{ensureLearningQuickBar()}catch(e){console.warn('ensureLearningQuickBar',e)}syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='pdf'){try{renderLearningPdfPanel()}catch(e){console.warn('renderLearningPdfPanel',e)}}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(LEARNING_OPEN_KIND==='openclaw'){renderOpenClawPanel()}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER&&USER.hoten||USER&&USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){if(qtextEl){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}}else{if(qtextEl){qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+(splitImg?'':qImgHtml)}};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER&&USER.is_admin||USER&&USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');if(optEl){optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${html}</div></div>`:html}if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER&&USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar()}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProvider(){let p=String(USER.admin_ai_provider||'GEMINI').toUpperCase();return p||'GEMINI'}
 function ensureAdminQuotaModal(){let m=document.getElementById('adminQuotaModal');if(m)return m;m=document.createElement('div');m.id='adminQuotaModal';m.className='modal hide';m.innerHTML='<div class="modalBox" style="max-width:480px"><h3>⚠️ Hết quota GEMINI</h3><p id="adminQuotaMsg" class="muted" style="margin:10px 0;line-height:1.5">Đã hết quota Gemini. Bạn muốn chạy GPT để tiếp tục không?</p><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><button type="button" id="adminQuotaUseGpt" class="btn">✅ Chạy GPT</button><button type="button" id="adminQuotaWait" class="btn2">⏳ Đợi quota hồi</button></div></div>';document.body.appendChild(m);return m}
@@ -19712,6 +20627,7 @@ function ensureLearningQuickBar(){
     +'</div><div id="learningPlusMenu" class="learningPlusMenu hide">'
     +'<button type="button" class="btn2 miniCalcBtn toolCalcBtn" onclick="learnMenuAction(toggleMiniCalc)" title="Mở máy tính khoa học">'+lblCalc+'</button>';
   if(canAi)html+='<button type="button" class="btn2 openclawBtn" data-learning-toggle="openclaw" onclick="learnMenuAction(toggleOpenClawPanel)" title="Gemini — dùng key AI của người dùng để hỏi nhanh và chat hỗ trợ">◇ '+lblOc+'</button>';
+  html+='<button type="button" class="btn2 learnPdfBtn" data-learning-toggle="pdf" onclick="learnMenuAction(function(){openLearningPdfPanel()})" title="Xem PDF phương pháp, lý thuyết, sách (Google Drive)">📄 PDF</button>';
   html+='<button type="button" class="btn2 translateEnBtn" onclick="learnMenuAction(function(){openTranslateAiMode(\'CauHoi\')})" title="Dịch EN qua AI Internet (Google) — không tốn key GPT/Gemini của app">'+lblTranslate+'</button>';
   html+='<button type="button" class="btn2 googleAiModeBtn" onclick="openGoogleAiMode()" title="AI Internet — giải bài, không tốn quota Gemini/GPT app">'+lblInternet+'</button>';
   html+='</div>';
@@ -19814,8 +20730,13 @@ function toggleOpenClawPanel(){if(LEARNING_OPEN_KIND==='openclaw'){closeLearning
 function syncOpenClawChatUi(st){st=st||OPENCLAW_BY_Q[CUR]||{messages:[]};let inp=document.getElementById('openclawChatInput'),btn=document.getElementById('openclawChatSend'),msgs=document.getElementById('openclawChatMsgs'),body=document.querySelector('#hintBox.learningOpen.openclawOpen .learningPanelBody');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;inp.disabled=!!OPENCLAW_LOADING}if(btn)btn.disabled=!!OPENCLAW_LOADING;requestAnimationFrame(()=>{if(msgs&&msgs.scrollHeight>msgs.clientHeight+4)msgs.scrollTop=msgs.scrollHeight;if(body)body.scrollTop=body.scrollHeight;let last=msgs&&msgs.querySelector('.aiMsg:last-child');if(last&&last.scrollIntoView)last.scrollIntoView({block:'nearest',behavior:'smooth'})})}
 function renderOpenClawPanel(){let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!=='openclaw')return;let st=OPENCLAW_BY_Q[CUR]||{messages:[]};OPENCLAW_BY_Q[CUR]=st;let oldInp=document.getElementById('openclawChatInput');if(oldInp)st.chatDraft=oldInp.value;let intro='<div class="openclawIntro muted">'+(isAdminViewer()?'Gemini dùng key AI của tài khoản trước, chỉ gửi khi bấm hỏi nhanh hoặc Gửi. Bấm <b>Giải từng ý</b> để mỗi lần 1 ý/bước (tiết kiệm quota).':'Gemini dùng key AI của bạn. Bấm <b>Giải từng ý</b> — xem xong bấm <b>Giải tiếp theo</b>, mỗi lần 1 ý để không hết quota.')+'</div>';let msgs=(st.messages||[]).map((m,i)=>{let acts='';if(isAdminViewer()&&m.role==='assistant')acts='<div class="openclawMsgActs"><button type="button" class="btn2 openclawLatexBtn" style="font-size:10px!important;padding:3px 8px!important;margin-top:5px" onclick="openEditWithHint(\'\',openclawCleanReply((OPENCLAW_BY_Q[CUR].messages['+i+']||{}).text||\''+''+'\'),{keepFullLoigiai:true})">💾 → Lời giải (R)</button></div>';return '<div class="aiMsg '+(m.role==='user'?'aiMsg-user':'aiMsg-bot')+'"><div class="hintMath openclawMsgBody">'+formatHintDisplay(openclawCleanReply(m.text||''))+'</div>'+acts+'</div>'}).join('');if(OPENCLAW_LOADING)msgs+='<div class="aiMsg aiMsg-bot"><span class="hintSpin"></span> Đang hỏi Gemini…</div>';let stepBar=openclawStepBarHtml(st);let chatBox='<div class="aiChatBox openclawChatBox"><div class="aiChatMsgs" id="openclawChatMsgs">'+(msgs||'<div class="muted">Bấm <b>Giải từng ý</b> hoặc nút hỏi nhanh khác.</div>')+'</div>'+stepBar+'<div class="aiChatForm"><textarea id="openclawChatInput" class="aiChatInput" rows="2" placeholder="Hỏi Gemini…" '+(OPENCLAW_LOADING?'disabled':'')+' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!this.disabled){event.preventDefault();sendOpenClawChat()}"></textarea><button type="button" id="openclawChatSend" class="aiChatSend openclawChatSend" onclick="sendOpenClawChat()" '+(OPENCLAW_LOADING?'disabled':'')+'>Gửi</button></div></div>';hb.classList.remove('hide');hb.classList.add('learningOpen','openclawOpen');hb.classList.remove('learningCollapsed','aiAssistOpen');hb.setAttribute('data-openclaw-q',String(CUR));hb.innerHTML='<div class="learningPanelShell">'+openclawTitleHtml()+'<div class="learningPanelBody openclawBody">'+intro+openclawQuickRowHtml(true)+chatBox+'</div></div>';syncLearningToggleUI();typesetQuizMath().then(()=>syncOpenClawChatUi(st));syncOpenClawChatUi(st)}
 async function sendOpenClawChat(directMsg,stepMode){if(OPENCLAW_LOADING)return;if(!USER.can_ai_hint)return;if(LEARNING_OPEN_KIND!=='openclaw'){LEARNING_PANEL_COLLAPSED=false;LEARNING_OPEN_KIND='openclaw'}let inp=document.getElementById('openclawChatInput');let msg=String(directMsg!=null&&directMsg!==''?directMsg:(inp&&inp.value||'')).trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=OPENCLAW_BY_Q[qIdx]||{messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';OPENCLAW_BY_Q[qIdx]=st;OPENCLAW_LOADING=true;renderOpenClawPanel();try{let stepIdx=stepMode&&st.stepSolve?((st.stepSolve.done|0)+1):0;let chatBody={message:msg,sid:SID,index:qIdx,answer:ANSWERS[qIdx],messages:st.messages.slice(0,-1),step_mode:!!stepMode,step_index:stepIdx,...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/openclaw-chat',chatBody):await api('/api/openclaw-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});st.messages.push({role:'assistant',text:openclawCleanReply(j.reply||'')});if(stepMode&&st.stepSolve)st.stepSolve.done=Math.min((st.stepSolve.done|0)+1,st.stepSolve.max|0);OPENCLAW_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'⚠️ '+(e.message||e)});OPENCLAW_BY_Q[qIdx]=st}OPENCLAW_LOADING=false;if(CUR===qIdx)renderOpenClawPanel()}
-/** Lý thuyết và Phương pháp giải đã được gỡ khỏi giao diện app. */
-function openLearningPanel(kind){return}
+function openLearningPanel(kind){
+  kind=(kind==='theory')?'theory':'method';
+  if(LEARNING_OPEN_KIND===kind){closeLearningPanel();return;}
+  LEARNING_PANEL_COLLAPSED=false;
+  LEARNING_OPEN_KIND=kind;
+  loadLearningPanelContent(kind);
+}
 function toggleAiAssistPanel(){toggleOpenClawPanel()}
 function aiAssistTitleHtml(){return '<div class="learningTitleRow aiAssistTitleRow"><b>🤖 Trợ lý AI thầy Minh</b><div class="learningTitleBtns"><button type="button" class="learningCloseBtn" onclick="closeLearningPanel(event)">✕</button></div></div>'}
 function syncAiAssistChatUi(st){st=st||ASSISTANT_BY_Q[CUR]||{note:'',messages:[]};let inp=document.getElementById('aiChatInput'),btn=document.getElementById('aiChatSend'),msgs=document.getElementById('aiChatMsgs');if(inp){if(st.chatDraft!=null&&inp.value!==st.chatDraft)inp.value=st.chatDraft;let lock=ASSISTANT_LOADING&&!st.note;inp.disabled=!!lock;inp.placeholder=lock?'Đang tải hướng dẫn…':'Hỏi thêm bước làm hoặc đáp án…'}if(btn)btn.disabled=!!ASSISTANT_LOADING;if(msgs)msgs.scrollTop=msgs.scrollHeight}
@@ -22745,7 +23666,7 @@ async function syncDangTheoryCard(force){
     if(dangTheoryKey(QUESTIONS[CUR]||{})===key)afterDangTheoryPrefetch(QUESTIONS[CUR]||{},entry,j);
   }catch(e){hideDangTheoryHost()}finally{delete DANG_THEORY_LOADING[key]}
 }
-async function syncLessonTheoryCards(force){await syncBaiTheoryCard(!!force);await syncDangTheoryCard(!!force)}
+async function syncLessonTheoryCards(force){hideDangTheoryHost();let b=document.getElementById('baiTheoryHost');if(b){b.classList.add('hide');b.innerHTML=''}}
 let THEORY_EDITOR_ITEM=null;
 let THEORY_EDITOR_Q=null;
 let THEORY_EDITOR_KIND='method';
@@ -22977,10 +23898,815 @@ async function saveDangTheoryToSheet(){
   let sheetName=kind==='theory'?'Ly_Thuyet':'Phuong_Phap';
   try{btn.disabled=true;btn.textContent='⏳ Đang lưu…';setTheoryEditorStatus('Đang ghi vào sheet '+sheetName+'…',false);let j=await api('/api/learning/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,item:it})});THEORY_EDITOR_ITEM=Object.assign({},it,j.item||{});THEORY_EDITOR_DIRTY=false;try{localStorage.removeItem(learningLatexDraftKey(q))}catch(e){}if(kind==='method'){DANG_THEORY_CACHE={}}if(typeof LEARNING_CACHE!=='undefined')LEARNING_CACHE={};setTheoryEditorStatus('✅ Đã '+(j.action==='updated'?'cập nhật':'tạo')+' khung tại dòng '+(j.row||'')+' của sheet '+sheetName+'.',false);if(kind==='method')await syncDangTheoryCard(true);else await syncBaiTheoryCard(true);if(LEARNING_OPEN_KIND===kind)loadLearningPanelContent(kind,true);previewDangTheoryEditor()}catch(e){setTheoryEditorStatus('Không lưu được: '+(e.message||e),true);alert('Không lưu được khung: '+(e.message||e))}finally{btn.disabled=false;btn.textContent='✅ Lưu Google Sheet'}
 }
-document.addEventListener('keydown',function(e){let ov=document.getElementById('dangTheoryEditor');if(e.key==='Escape'&&ov&&!ov.classList.contains('hide'))closeDangTheoryEditor()});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    let pdf=document.getElementById('pdf-fs-scr');
+    if(pdf&&pdf.classList.contains('on')){closePdfFs();return;}
+    let ov=document.getElementById('dangTheoryEditor');
+    if(ov&&!ov.classList.contains('hide'))closeDangTheoryEditor();
+    return;
+  }
+  let pdf=document.getElementById('pdf-fs-scr');
+  if(!pdf||!pdf.classList.contains('on'))return;
+  if(e.key==='ArrowLeft'){e.preventDefault();ldvlPdfFsNav(-1);}
+  else if(e.key==='ArrowRight'){e.preventDefault();ldvlPdfFsNav(1);}
+});
+function drivePdfPreviewUrl(url){
+  url=String(url||'').trim();
+  let m=url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m?('https://drive.google.com/file/d/'+m[1]+'/preview'):url.replace('/view','/preview');
+}
+function openPdfFs(url,title,ctx){
+  ctx=ctx||{};
+  if(ctx.items&&ctx.items.length){
+    window.LDVL_PDF_FS_CTX={sub:ctx.sub||'',idx:ctx.idx|0,items:ctx.items};
+  }
+  let scr=document.getElementById('pdf-fs-scr');
+  if(!scr)return;
+  let frame=document.getElementById('pdf-fs-frame');
+  let previewUrl=drivePdfPreviewUrl(url);
+  let m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]+)/);
+  let viewUrl=m?('https://drive.google.com/file/d/'+m[1]+'/view'):url;
+  if(frame)frame.src=previewUrl;
+  let t=document.getElementById('pdf-fs-title');
+  if(t)t.textContent=title||'Đề PDF';
+  let nt=document.getElementById('pdf-fs-newt');
+  if(nt)nt.onclick=function(){window.open(viewUrl,'_blank');};
+  ldvlPdfFsUpdateNav();
+  scr.classList.add('on');
+  try{document.documentElement.requestFullscreen?.();}catch(err){}
+}
+function closePdfFs(){
+  let scr=document.getElementById('pdf-fs-scr');
+  if(scr)scr.classList.remove('on');
+  let frame=document.getElementById('pdf-fs-frame');
+  if(frame)frame.src='about:blank';
+  window.LDVL_PDF_FS_CTX={sub:'',idx:0,items:[]};
+  try{document.exitFullscreen?.();}catch(err){}
+}
+function ldvlPdfFsUpdateNav(){
+  let c=window.LDVL_PDF_FS_CTX||{items:[],idx:0};
+  let items=c.items||[];
+  let idx=c.idx|0;
+  let counter=document.getElementById('pdf-fs-counter');
+  if(counter)counter.textContent=items.length?(idx+1)+' / '+items.length:'';
+  let prev=document.getElementById('pdf-fs-prev');
+  let next=document.getElementById('pdf-fs-next');
+  if(prev)prev.disabled=!items.length||idx<=0;
+  if(next)next.disabled=!items.length||idx>=items.length-1;
+}
+function ldvlPdfFsNav(delta){
+  let c=window.LDVL_PDF_FS_CTX||{};
+  let items=c.items||[];
+  if(!items.length)return;
+  let ni=(c.idx|0)+(delta|0);
+  if(ni<0||ni>=items.length)return;
+  let it=items[ni];
+  if(!it)return;
+  openPdfFs(it.url,it.name||'Đề PDF',{sub:c.sub,idx:ni,items:items});
+}
+function ldvlPdfCanOpen(it){
+  it=it||{};
+  let q=String(it.quyen||'FREE').trim().toUpperCase();
+  if(!USER||!USER.mahs)return q==='FREE';
+  if(USER.is_admin||USER.is_svip)return true;
+  if(USER.is_vip)return q!=='SVIP';
+  if(USER.is_trial)return q==='FREE';
+  return q==='FREE';
+}
+function ldvlPdfAllItems(sub){
+  let srv=(META&&META.pdf_links&&META.pdf_links[sub])||[];
+  let serverArr=Array.isArray(srv)?srv.slice():[];
+  let local=[];
+  try{local=JSON.parse(localStorage.getItem(ldvlPdfStorageKey(sub))||'[]')}catch(e){}
+  if(!Array.isArray(local))local=[];
+  if(USER&&USER.is_admin){
+    if(local.length)return local;
+    return serverArr;
+  }
+  if(serverArr.length)return serverArr;
+  return local;
+}
+function ldvlPdfSubFromMon(mon){
+  let k=String(mon||'').toLowerCase().replace(/\s/g,'');
+  if((/vat|phys|ly|lí|lý/.test(k)||k==='l')&&!/(toan|math|tin)/.test(k))return 'phys';
+  return 'math';
+}
+function openLearningPdfPanel(){
+  try{
+    if(LEARNING_OPEN_KIND==='pdf'){closeLearningPanel();return;}
+    LEARNING_PANEL_COLLAPSED=false;
+    LEARNING_OPEN_KIND='pdf';
+    renderLearningPdfPanel();
+  }catch(e){console.warn('openLearningPdfPanel',e);alert('Không mở được PDF: '+(e.message||e));}
+}
+function renderLearningPdfPanel(){
+  let hb=document.getElementById('hintBox');
+  if(!hb||LEARNING_OPEN_KIND!=='pdf')return;
+  let q=QUESTIONS[CUR]||{};
+  let sub=ldvlPdfSubFromMon(q.Mon);
+  let monLabel=sub==='phys'?'Vật lý':'Toán';
+  let all=[];
+  try{all=ldvlPdfAllItems(sub)}catch(e){all=[];}
+  let items=all.filter(function(it){try{return ldvlPdfCanOpen(it)}catch(e2){return false}});
+  let body='';
+  if(!items.length){
+    body='<div class="muted" style="margin-top:8px;line-height:1.5">'+(all.length?('Có '+all.length+' PDF nhưng tài khoản chưa đủ quyền (VIP/SVIP).'):('Chưa có PDF môn '+monLabel+' — ADMIN thêm ở Dashboard → PDF '+monLabel+'.'))+'</div>';
+  }else{
+    body='<p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">Bấm tên file để xem toàn màn hình · <b>← Trước</b> / <b>Sau →</b> chuyển PDF.</p>';
+    body+=items.map(function(it,i){
+      let nm=esc(it.name||'PDF');
+      let qtag=esc(it.quyen||'FREE');
+      return '<div class="pdf-list-row" onclick="ldvlPdfOpen(\''+sub+'\','+i+')"><div class="pdf-list-ico"><i class="ti ti-file-type-pdf"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+nm+'</div><div class="pdf-list-meta"><span class="tag">'+qtag+'</span></div></div><div class="pdf-list-act"><span class="muted" style="font-size:11px">'+(i+1)+'/'+items.length+'</span></div></div>';
+    }).join('');
+  }
+  if(USER&&USER.is_admin){
+    body+='<div style="margin-top:10px"><button type="button" class="btn2" onclick="ldvlAdminOpenPdfPanel(\''+sub+'\')">⚙ Quản lý PDF '+monLabel+'</button></div>';
+  }
+  hb.classList.remove('hide');
+  hb.classList.add('learningOpen');
+  hb.classList.toggle('learningCollapsed',!!LEARNING_PANEL_COLLAPSED);
+  hb.innerHTML='<div class="learningPanelShell">'+learningPanelTitleHtml('📄 PDF · '+monLabel)+'<div class="learningPanelBody">'+body+'</div></div>';
+  syncLearningToggleUI();
+}
+function ldvlAdminOpenPdfPanel(sub){
+  sub=(sub==='phys')?'phys':'math';
+  let btn=document.querySelector('#ldvlSidebar [onclick*=\'ap-pdf-'+sub+'\']');
+  if(typeof ldvlAdminNav==='function')ldvlAdminNav(btn,'ap-pdf-'+sub);
+}
+window.openLearningPdfPanel=openLearningPdfPanel;
+function ldvlPdfSyncFromMeta(force){
+  if(!META||!META.pdf_links)return;
+  try{
+    ['math','phys'].forEach(function(sub){
+      let rows=META.pdf_links[sub];
+      if(!Array.isArray(rows)||!rows.length)return;
+      if(force){
+        localStorage.setItem(ldvlPdfStorageKey(sub),JSON.stringify(rows));
+        return;
+      }
+      if(USER&&USER.is_admin){
+        if(window.LDVL_PDF_EDIT_ID&&window.LDVL_PDF_EDIT_SUB===sub)return;
+        let local=ldvlPdfLoad(sub);
+        if(Array.isArray(local)&&local.length)return;
+      }
+      localStorage.setItem(ldvlPdfStorageKey(sub),JSON.stringify(rows));
+    });
+  }catch(e){}
+}
+async function ldvlPdfSaveServer(){
+  if(!USER||!USER.is_admin)return true;
+  let info=document.getElementById('info');
+  let oldInfo=info?info.textContent:'';
+  if(info)info.textContent='💾 Đang lưu PDF…';
+  try{
+    let payload={math:ldvlPdfAllItems('math'),phys:ldvlPdfAllItems('phys')};
+    let j=await api('/api/admin/pdf-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:12000});
+    if(j&&j.pdf_links){
+      META=META||{};
+      META.pdf_links=j.pdf_links;
+      ldvlPdfSyncFromMeta(true);
+      if(typeof ldvlPdfRenderList==='function'){ldvlPdfRenderList('math');ldvlPdfRenderList('phys');}
+    }
+    if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();
+    if(info)info.textContent=oldInfo||('Đã lưu PDF · '+new Date().toLocaleTimeString('vi-VN'));
+    return true;
+  }catch(e){
+    console.warn('ldvlPdfSaveServer',e);
+    if(info)info.textContent=oldInfo;
+    alert('Lưu server thất bại: '+(e.message||e));
+    return false;
+  }
+}
+async function ldvlPdfMaybeMigrateLocal(){
+  if(!USER||!USER.is_admin)return;
+  try{if(sessionStorage.getItem('LDVL_PDF_MIGRATED_V1')==='1')return}catch(e){}
+  let sm=(META&&META.pdf_links&&META.pdf_links.math)||[];
+  let sp=(META&&META.pdf_links&&META.pdf_links.phys)||[];
+  if(sm.length||sp.length){try{sessionStorage.setItem('LDVL_PDF_MIGRATED_V1','1')}catch(e){}return;}
+  if(!ldvlPdfLoad('math').length&&!ldvlPdfLoad('phys').length)return;
+  let ok=await ldvlPdfSaveServer();
+  if(ok){try{sessionStorage.setItem('LDVL_PDF_MIGRATED_V1','1')}catch(e){}}
+}
+window.LDVL_STUDENT_PDF_SUB='math';
+function ldvlStudentPdfTab(sub){
+  window.LDVL_STUDENT_PDF_SUB=sub||'math';
+  let tm=document.getElementById('ldvlPdfTabMath');
+  let tp=document.getElementById('ldvlPdfTabPhys');
+  if(tm)tm.className=(sub==='math'?'btn':'btn2')+' ldvlPdfStab'+(sub==='math'?' on':'');
+  if(tp)tp.className=(sub==='phys'?'btn':'btn2')+' ldvlPdfStab'+(sub==='phys'?' on':'');
+  ldvlStudentPdfRender();
+}
+function ldvlStudentPdfRender(){
+  let box=document.getElementById('ldvlStudentPdfList');
+  if(!box)return;
+  let sub=window.LDVL_STUDENT_PDF_SUB||'math';
+  let all=ldvlPdfAllItems(sub);
+  let items=all.filter(ldvlPdfCanOpen);
+  if(!items.length){
+    box.innerHTML='<div class="muted" style="padding:12px">'+(all.length?('Có '+all.length+' đề nhưng tài khoản chưa đủ quyền (VIP/SVIP).'):('Chưa có đề PDF môn '+(sub==='phys'?'Vật lý':'Toán')+' — ADMIN thêm ở Dashboard → Đề PDF.'))+'</div>';
+    return;
+  }
+  box.innerHTML=items.map(function(it,i){
+    let nm=esc(it.name||'Đề PDF');
+    let q=esc(it.quyen||'FREE');
+    return '<div class="pdf-list-row" onclick="ldvlPdfOpen(\''+sub+'\','+i+')"><div class="pdf-list-ico"><i class="ti ti-file-type-pdf"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+nm+'</div><div class="pdf-list-meta"><span class="tag">'+q+'</span></div></div><div class="pdf-list-act"><span class="muted" style="font-size:11px">'+(i+1)+'/'+items.length+'</span></div></div>';
+  }).join('');
+}
+window.ldvlStudentPdfTab=ldvlStudentPdfTab;
+window.ldvlPdfFsNav=ldvlPdfFsNav;
+function previewDrivePdf(urlId,frameId,prevId){
+  let url=(document.getElementById(urlId)||{}).value||'';
+  if(!String(url).trim()){alert('Dán link Google Drive trước.');return;}
+  let frame=document.getElementById(frameId);
+  let prev=document.getElementById(prevId);
+  if(frame)frame.src=drivePdfPreviewUrl(url);
+  if(prev)prev.classList.remove('hide');
+}
+function ldvlPdfStorageKey(sub){return 'ldvl_pdf_links_'+sub;}
+function ldvlPdfLoad(sub){try{return JSON.parse(localStorage.getItem(ldvlPdfStorageKey(sub))||'[]')}catch(e){return[]}}
+function ldvlPdfPersist(sub,items){try{localStorage.setItem(ldvlPdfStorageKey(sub),JSON.stringify(items||[]))}catch(e){}}
+function ldvlPdfSyncEditUi(sub){
+  let pfx=sub==='phys'?'pdf-p':'pdf-m';
+  let editing=!!(window.LDVL_PDF_EDIT_ID&&window.LDVL_PDF_EDIT_SUB===sub);
+  let btn=document.getElementById(pfx+'-add-btn');
+  let cancel=document.getElementById(pfx+'-cancel-btn');
+  let hint=document.getElementById(pfx+'-edit-hint');
+  if(btn)btn.textContent=editing?'💾 Cập nhật & lưu server':'➕ Thêm đề';
+  if(cancel)cancel.classList.toggle('hide',!editing);
+  if(hint){
+    if(editing){
+      hint.classList.remove('hide');
+      hint.innerHTML='✏️ Đang sửa: <b>'+esc(String(window.LDVL_PDF_EDIT_NAME||''))+'</b> — sửa ô trên rồi bấm <b>Cập nhật</b>, hoặc <b>Hủy sửa</b>.';
+    }else hint.classList.add('hide');
+  }
+}
+function ldvlPdfSameId(a,b){return Number(a)===Number(b);}
+function ldvlPdfEdit(sub,id){
+  if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return;}
+  let items=ldvlPdfAllItems(sub);
+  let it=items.find(function(x){return ldvlPdfSameId(x.id,id);});
+  if(!it){alert('Không tìm thấy đề.');return;}
+  let pfx=sub==='phys'?'pdf-p':'pdf-m';
+  window.LDVL_PDF_EDIT_SUB=sub;
+  window.LDVL_PDF_EDIT_ID=id;
+  window.LDVL_PDF_EDIT_NAME=it.name||'';
+  let ni=document.getElementById(pfx+'-name');
+  let ui=document.getElementById(pfx+'-url');
+  let qi=document.getElementById(pfx+'-quyen');
+  if(ni)ni.value=it.name||'';
+  if(ui)ui.value=it.url||'';
+  if(qi)qi.value=it.quyen||'FREE';
+  ldvlPdfSyncEditUi(sub);
+  if(ni)ni.focus();
+  let panel=document.getElementById('ap-pdf-'+(sub==='phys'?'phys':'math'));
+  if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function ldvlPdfCancelEdit(sub){
+  let pfx=sub==='phys'?'pdf-p':'pdf-m';
+  window.LDVL_PDF_EDIT_ID=0;
+  window.LDVL_PDF_EDIT_SUB='';
+  window.LDVL_PDF_EDIT_NAME='';
+  ['name','url'].forEach(function(k){let el=document.getElementById(pfx+'-'+k);if(el)el.value='';});
+  ldvlPdfSyncEditUi(sub);
+}
+function ldvlPdfMove(sub,id){
+  if(!USER||!USER.is_admin)return;
+  let toSub=sub==='phys'?'math':'phys';
+  let label=toSub==='phys'?'Vật lý':'Toán';
+  if(!confirm('Chuyển đề này sang môn '+label+'?'))return;
+  let items=ldvlPdfAllItems(sub).slice();
+  let i=items.findIndex(function(x){return ldvlPdfSameId(x.id,id);});
+  if(i<0){alert('Không tìm thấy đề.');return;}
+  let it=items.splice(i,1)[0];
+  let other=ldvlPdfAllItems(toSub).slice();
+  other.unshift(it);
+  ldvlPdfPersist(sub,items);
+  ldvlPdfPersist(toSub,other);
+  ldvlPdfRenderList(sub);
+  ldvlPdfRenderList(toSub);
+  ldvlPdfSaveServer();
+  ldvlStudentPdfRender();
+  alert('Đã chuyển sang môn '+label+'.');
+}
+function ldvlPdfAdd(sub){
+  if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return;}
+  let pfx=sub==='phys'?'pdf-p':'pdf-m';
+  let name=String((document.getElementById(pfx+'-name')||{}).value||'').trim();
+  let url=String((document.getElementById(pfx+'-url')||{}).value||'').trim();
+  let quyen=String((document.getElementById(pfx+'-quyen')||{}).value||'FREE').trim();
+  if(!name||!url){alert('Nhập tên đề và link Drive.');return;}
+  let items=ldvlPdfAllItems(sub).slice();
+  let editId=window.LDVL_PDF_EDIT_ID|0;
+  if(editId&&window.LDVL_PDF_EDIT_SUB===sub){
+    let i=items.findIndex(function(x){return ldvlPdfSameId(x.id,editId);});
+    let row={id:editId,name,url,quyen,at:new Date().toISOString()};
+    if(i>=0)items[i]=Object.assign({},items[i],row);
+    else items.unshift(row);
+    ldvlPdfCancelEdit(sub);
+  }else{
+    items.unshift({id:Date.now(),name,url,quyen,at:new Date().toISOString()});
+    let ni=document.getElementById(pfx+'-name'),ui=document.getElementById(pfx+'-url');
+    if(ni)ni.value='';if(ui)ui.value='';
+  }
+  ldvlPdfPersist(sub,items);
+  ldvlPdfRenderList(sub);
+  let btn=document.getElementById(pfx+'-add-btn');
+  if(btn){btn.disabled=true;btn.textContent='💾 Đang lưu…';}
+  ldvlPdfSaveServer().then(function(ok){
+    if(btn){btn.disabled=false;ldvlPdfSyncEditUi(sub);}
+    if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();
+    if(editId){
+      if(ok)alert('✅ Đã cập nhật tên/link và lưu server.');
+      else alert('⚠ Đã sửa trên máy nhưng lưu server thất bại — bấm Cập nhật lại hoặc kiểm tra kết nối.');
+    }else{
+      alert(ok?'✅ Đã thêm đề PDF.':'⚠ Đã thêm trên máy nhưng lưu server thất bại — thử lại.');
+    }
+  });
+}
+function ldvlPdfDelete(sub,id){
+  if(!confirm('Xóa đề PDF này khỏi danh sách?'))return;
+  let items=ldvlPdfAllItems(sub).filter(function(x){return !ldvlPdfSameId(x.id,id);});
+  ldvlPdfPersist(sub,items);
+  ldvlPdfRenderList(sub);
+  ldvlPdfSaveServer();
+  if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();
+}
+function ldvlPdfEnsureSynced(sub){
+  let local=ldvlPdfLoad(sub);
+  if(Array.isArray(local)&&local.length)return;
+  let fromMeta=(META&&META.pdf_links&&META.pdf_links[sub])||[];
+  if(fromMeta&&fromMeta.length)ldvlPdfPersist(sub,fromMeta);
+}
+function ldvlPdfRenderList(sub){
+  ldvlPdfEnsureSynced(sub);
+  let listId=sub==='phys'?'pdf-p-list':'pdf-m-list';
+  let box=document.getElementById(listId);
+  if(!box)return;
+  let items=ldvlPdfAllItems(sub);
+  if(!items.length){
+    box.innerHTML='<div class="pdf-list-empty"><b>Chưa có đề trong danh sách.</b><br><span style="font-size:12px">① Điền <b>Tên</b> + <b>link Drive</b> → <b>Xem trước</b><br>② Bấm <b>➕ Thêm đề</b> (xem trước ≠ đã lưu)<br>③ Mỗi dòng sẽ có nút <b style="color:#1d4ed8">Sửa</b> · <b style="color:#991b1b">Xóa</b> bên phải</span></div>';
+    return;
+  }
+  let moveLbl=sub==='phys'?'→ Toán':'→ Lý';
+  box.innerHTML='<div class="pdf-list-head"><span>Đề PDF ('+items.length+')</span><span class="pdf-list-act-h">Sửa · Chuyển · Xóa</span></div>'+items.map(function(it,i){
+    let nm=esc(it.name||'Đề PDF');
+    let q=esc(it.quyen||'FREE');
+    return '<div class="pdf-list-row" onclick="ldvlPdfOpen(\''+sub+'\','+i+')"><div class="pdf-list-ico"><i class="ti ti-file-type-pdf"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+nm+'</div><div class="pdf-list-meta"><span class="tag">'+q+'</span> · bấm tên để xem</div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" onclick="event.stopPropagation();ldvlPdfEdit(\''+sub+'\','+it.id+')">Sửa</button><button type="button" class="pdfBtnMove" onclick="event.stopPropagation();ldvlPdfMove(\''+sub+'\','+it.id+')">'+moveLbl+'</button><button type="button" class="pdfBtnDel" onclick="event.stopPropagation();ldvlPdfDelete(\''+sub+'\','+it.id+')">Xóa</button></div></div>';
+  }).join('');
+}
+function ldvlPdfOpen(sub,idx){
+  let items=ldvlPdfAllItems(sub).filter(ldvlPdfCanOpen);
+  let it=items[idx|0];
+  if(!it){alert('Không mở được đề này (quyền hoặc danh sách trống).');return;}
+  openPdfFs(it.url,it.name||'Đề PDF',{sub:sub,idx:idx|0,items:items});
+}
+async function ldvlPdfCopy(sub,idx){
+  let it=(ldvlPdfAllItems(sub)||[])[idx|0];
+  if(!it)return;
+  let ok=await copyTextToClipboard(it.url||'');
+  alert(ok?'Đã chép link':'Không chép được');
+}
+function ldvlShowAdminPanel(id){ldvlAdminNav(null,'ap-'+(String(id||'').replace(/^/,'')||'dash'));}
+window.LDVL_ADMIN_STUDENT_MODE=false;
+function ldvlApplyAdminHomeLayout(){
+  let adm=USER&&USER.is_admin;
+  let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));
+  let adminArea=document.getElementById('ldvlAdminArea');
+  let studentHome=document.getElementById('ldvlStudentHome');
+  let viewBar=document.getElementById('ldvlAdminViewBar');
+  let hdrSub=document.getElementById('ldvlHdrSub');
+  if(hdrSub)hdrSub.textContent=adm?'Quản trị · ADMIN':'Toán & Vật lý';
+  if(!adm||inQuiz){
+    if(adminArea){adminArea.classList.add('hide');adminArea.style.display='none';}
+    if(studentHome){studentHome.classList.remove('hide');studentHome.style.display='';}
+    if(viewBar)viewBar.classList.add('hide');
+    return;
+  }
+  if(LDVL_ADMIN_STUDENT_MODE){
+    if(adminArea){adminArea.classList.add('hide');adminArea.style.display='none';}
+    if(studentHome){studentHome.classList.remove('hide');studentHome.style.display='';}
+    if(viewBar)viewBar.classList.remove('hide');
+  }else{
+    if(adminArea){adminArea.classList.remove('hide');adminArea.style.display='';}
+    if(studentHome){studentHome.classList.add('hide');studentHome.style.display='none';}
+    if(viewBar)viewBar.classList.add('hide');
+  }
+  if(typeof ldvlAdminSubNavUpdate==='function')ldvlAdminSubNavUpdate(window.LDVL_ADMIN_PID||'ap-dash');
+}
+function ldvlOpenPracticeView(scrollId,monFilter){
+  LDVL_ADMIN_STUDENT_MODE=true;
+  ldvlApplyAdminHomeLayout();
+  try{
+    if(monFilter)ldvlAdminFilterMon(monFilter);
+    else{refreshFilterOptions();renderCatalog();}
+  }catch(e){console.warn('ldvlOpenPracticeView',e);}
+  window.scrollTo({top:0,behavior:'smooth'});
+  let main=document.querySelector('.ldvlMain');
+  if(main)main.scrollTop=0;
+  setTimeout(function(){
+    let tgt=null;
+    if(scrollId==='random')tgt=document.querySelector('.practiceRandomPanel');
+    else if(scrollId)tgt=document.getElementById(scrollId);
+    if(!tgt)tgt=document.getElementById('catalog');
+    if(tgt)tgt.scrollIntoView({behavior:'smooth',block:'start'});
+  },280);
+}
+function ldvlRefreshAdminDashboard(){
+  if(!USER||!USER.is_admin)return;
+  let math=0,phys=0;
+  (CATALOG||[]).forEach(function(c){
+    let n=parseInt(c.SoCau,10)||0;
+    let m=String(c.Mon||'');
+    if(/to[aá]n/i.test(m))math+=n;
+    else if(/v[aậ]t|l[ií]/i.test(m))phys+=n;
+  });
+  let set=function(id,t){let el=document.getElementById(id);if(el)el.textContent=t;};
+  let total=(META&&META.count_questions)||(math+phys);
+  set('ldvlStatMath',math||'0');
+  set('ldvlStatPhys',phys||'0');
+  set('ldvlStatCatalog',(META&&META.count_catalog)||(CATALOG||[]).length||'0');
+  set('ldvlStatAll',total||'0');
+  set('ldvlStatTotal','tổng '+total);
+  set('ldvlStatLoaded',META&&META.loaded_at?('Nạp: '+META.loaded_at):'');
+  set('ldvlNbMath',String(math||0));
+  set('ldvlNbPhys',String(phys||0));
+  ldvlRenderDashSyncPanel();
+}
+window.LDVL_DASH_SYNC={mon:'',lop:'',chuong:'',bai:''};
+function ldvlMonKind(mon){
+  mon=String(mon||'').toLowerCase();
+  if(/to[aá]n/.test(mon))return 'math';
+  if(/v[aậ]t|l[ií]|physics/.test(mon))return 'phys';
+  return '';
+}
+function ldvlDashScopeSources(){
+  let rows=(CATALOG||[]).slice();
+  try{
+    if(typeof v246LessonCatalogAsCatalog==='function')rows=rows.concat(v246LessonCatalogAsCatalog());
+    else if(META&&META.lesson_catalog&&META.lesson_catalog.length){
+      rows=rows.concat((META.lesson_catalog||[]).map(function(x){
+        return {Mon:x.Mon||'',Lop:x.Lop||'',Chuong:x.Chuong||'',BaiHoc:x.BaiHoc||''};
+      }));
+    }
+  }catch(e){}
+  return rows;
+}
+function ldvlBuildDashScopeTree(){
+  let tree={};
+  ldvlDashScopeSources().forEach(function(c){
+    let mon=String(c.Mon||'').trim();
+    let lop=String(c.Lop||'').trim();
+    let chuong=String(c.Chuong||'').trim();
+    let bai=String(c.BaiHoc||c.De||'').trim();
+    if(!mon)return;
+    if(!tree[mon])tree[mon]={};
+    if(!lop)return;
+    if(!tree[mon][lop])tree[mon][lop]={};
+    if(!chuong)return;
+    if(!tree[mon][lop][chuong])tree[mon][lop][chuong]={};
+    if(bai&&!tree[mon][lop][chuong][bai])tree[mon][lop][chuong][bai]=1;
+  });
+  return tree;
+}
+function ldvlDashCmpKey(ka,kb){
+  for(let i=0;i<Math.max(ka.length,kb.length);i++){
+    let a=ka[i]!==undefined?ka[i]:'';
+    let b=kb[i]!==undefined?kb[i]:'';
+    if(a<b)return -1;if(a>b)return 1;
+  }
+  return 0;
+}
+function ldvlLopSortKey(lop){
+  let s=normText(lop||'');
+  let g=s.match(/\blop\s*(9|10|11|12)\b/)||s.match(/\b(9|10|11|12)\b/);
+  if(g)return [0,parseInt(g[1],10),s];
+  if(/thptqg|thpt/.test(s))return [1,0,s];
+  if(/bo de|bode|de 20/.test(s)){let y=s.match(/(20\d{2})/);return [2,y?parseInt(y[1],10):0,s];}
+  let lead=s.match(/^(\d{1,2})/);
+  if(lead)return [0,parseInt(lead[1],10),s];
+  return [3,0,s];
+}
+function ldvlChapterSortKey(label){
+  let t=normText(label||'');
+  let n=chapterNum(label);
+  if(n<9999)return [0,n,t];
+  if(/\bchuyen\s*de\b/.test(t))return [1,0,t];
+  if(/\bung\s*dung\b/.test(t))return [2,0,t];
+  return [3,0,t];
+}
+function ldvlLessonSortKey(label){
+  let t=normText(label||'');
+  let n=lessonNum(label);
+  if(n<9999)return [0,n,t];
+  return [1,0,t];
+}
+function ldvlDashSortChuong(a,b){return ldvlDashCmpKey(ldvlChapterSortKey(a),ldvlChapterSortKey(b));}
+function ldvlDashSortBai(a,b){return ldvlDashCmpKey(ldvlLessonSortKey(a),ldvlLessonSortKey(b));}
+function ldvlDashSetColHead(id,label,n){
+  let el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=label+(n>0?' <b>('+n+')</b>':'');
+}
+function ldvlDashSortLop(a,b){return ldvlDashCmpKey(ldvlLopSortKey(a),ldvlLopSortKey(b));}
+function ldvlDashLopLabel(l){
+  l=String(l||'').trim();
+  let m=l.match(/l[oớ]p\s*(.+)/i);
+  if(m)return m[1].trim();
+  return l;
+}
+function ldvlDashPickBtn(level,label,selected,onclickAttr,idx){
+  let cls='ldvlSyncPick ldvlSyncPick'+level+(selected?' on':'');
+  let num=(idx>0)?('<span class="ldvlSyncIdx">'+idx+'</span>'):'';
+  return '<button type="button" class="'+cls+'" '+onclickAttr+'>'+num+'<span class="ldvlSyncTxt">'+esc(label)+'</span></button>';
+}
+function ldvlDashPickMon(mon,openCatalog){
+  window.LDVL_DASH_SYNC={mon:mon||'',lop:'',chuong:'',bai:''};
+  ldvlRenderDashSyncPanel();
+  if(openCatalog)ldvlDashOpenCatalog();
+}
+function ldvlDashPickLop(lop,openCatalog){
+  let st=window.LDVL_DASH_SYNC||{};
+  st.lop=String(lop||'');
+  st.chuong='';
+  st.bai='';
+  window.LDVL_DASH_SYNC=st;
+  ldvlRenderDashSyncPanel();
+  if(openCatalog)ldvlDashOpenCatalog();
+}
+function ldvlDashPickChuong(chuong,openCatalog){
+  let st=window.LDVL_DASH_SYNC||{};
+  st.chuong=String(chuong||'');
+  st.bai='';
+  window.LDVL_DASH_SYNC=st;
+  ldvlRenderDashSyncPanel();
+  if(openCatalog)ldvlDashOpenCatalog();
+}
+function ldvlDashPickBai(bai){
+  let st=window.LDVL_DASH_SYNC||{};
+  st.bai=String(bai||'');
+  window.LDVL_DASH_SYNC=st;
+  ldvlRenderDashSyncPanel();
+  ldvlDashOpenCatalog();
+}
+function ldvlDashOpenCatalog(){
+  let st=window.LDVL_DASH_SYNC||{};
+  if(!st.mon){alert('Chọn môn Toán hoặc Vật lý trước.');return;}
+  ldvlOpenPracticeView('catalog',st.mon);
+  setTimeout(function(){
+    try{
+      if(st.lop){setSel('fLop',st.lop);onFilterChange('lop');}
+      if(st.chuong){setSel('fChuong',st.chuong);onFilterChange('chuong');}
+      if(st.bai){setSel('fBaiHoc',st.bai);onFilterChange('baihoc');}
+      renderCatalog();
+    }catch(e){console.warn(e);}
+  },350);
+}
+function ldvlRenderDashSyncPanel(){
+  let tree=ldvlBuildDashScopeTree();
+  let mons=Object.keys(tree);
+  try{
+    let extra=((META&&META.filters&&META.filters.Mon)||[]).filter(Boolean);
+    extra.forEach(function(m){
+      m=String(m||'').trim();
+      if(m&&!tree[m])tree[m]={};
+    });
+    mons=Object.keys(tree);
+  }catch(e){}
+  mons.sort(function(a,b){
+    let ka=ldvlMonKind(a),kb=ldvlMonKind(b);
+    if(ka==='math'&&kb!=='math')return -1;
+    if(ka==='phys'&&kb!=='phys'&&kb!=='math')return -1;
+    if(ka==='phys'&&kb==='math')return 1;
+    return String(a).localeCompare(String(b),'vi');
+  });
+  let st=window.LDVL_DASH_SYNC||{mon:'',lop:'',chuong:'',bai:''};
+  if(!st.mon||!tree[st.mon]){
+    st.mon=mons.find(function(m){return ldvlMonKind(m)==='math';})||mons.find(function(m){return ldvlMonKind(m)==='phys';})||mons[0]||'';
+    st.lop='';st.chuong='';st.bai='';
+    window.LDVL_DASH_SYNC=st;
+  }
+  let syncRow=document.getElementById('ldvlSyncRow');
+  if(syncRow){
+    syncRow.classList.remove('ldvlSyncMath','ldvlSyncPhys');
+    let mk=ldvlMonKind(st.mon);
+    if(mk==='math')syncRow.classList.add('ldvlSyncMath');
+    else if(mk==='phys')syncRow.classList.add('ldvlSyncPhys');
+  }
+  let monCol=document.getElementById('ldvlSyncMonCol');
+  if(monCol){
+    if(!mons.length)monCol.innerHTML='<div class="muted" style="font-size:12px">Chưa có dữ liệu Sheet</div>';
+    else monCol.innerHTML=mons.map(function(m){
+      let k=ldvlMonKind(m);
+      let cls='ldvlSyncMonBtn tag '+(k==='phys'?'tp':'tm')+(st.mon===m?' on':'');
+      return '<button type="button" class="'+cls+'" onclick="ldvlDashPickMon(\''+escAttr(m)+'\',false)"><span class="ldvlMonIco">'+(k==='phys'?'🔭':'📐')+'</span>'+esc(m)+'</button>';
+    }).join('');
+  }
+  let lops=st.mon&&tree[st.mon]?Object.keys(tree[st.mon]).sort(ldvlDashSortLop):[];
+  if(st.lop&&!lops.includes(st.lop)){st.lop='';st.chuong='';st.bai='';}
+  ldvlDashSetColHead('ldvlSyncLopHead','② Lớp',lops.length);
+  let lopCol=document.getElementById('ldvlSyncLopCol');
+  if(lopCol){
+    if(!lops.length)lopCol.innerHTML='<div class="muted">—</div>';
+    else lopCol.innerHTML=lops.map(function(l,i){
+      return ldvlDashPickBtn('Lop',ldvlDashLopLabel(l),st.lop===l,'onclick="ldvlDashPickLop(\''+escAttr(l)+'\',false)"',i+1);
+    }).join('');
+  }
+  let chuongs=(st.mon&&st.lop&&tree[st.mon]&&tree[st.mon][st.lop])?Object.keys(tree[st.mon][st.lop]).sort(ldvlDashSortChuong):[];
+  if(st.chuong&&!chuongs.includes(st.chuong)){st.chuong='';st.bai='';}
+  ldvlDashSetColHead('ldvlSyncChuongHead','③ Chương',chuongs.length);
+  let chCol=document.getElementById('ldvlSyncChuongCol');
+  if(chCol){
+    if(!chuongs.length)chCol.innerHTML='<div class="muted">'+(st.lop?'Không có chương':'Chọn lớp')+'</div>';
+    else chCol.innerHTML=chuongs.map(function(ch,i){
+      return ldvlDashPickBtn('Chuong',ch,st.chuong===ch,'onclick="ldvlDashPickChuong(\''+escAttr(ch)+'\',false)"',i+1);
+    }).join('');
+  }
+  let bais=(st.mon&&st.lop&&st.chuong&&tree[st.mon]&&tree[st.mon][st.lop]&&tree[st.mon][st.lop][st.chuong])?Object.keys(tree[st.mon][st.lop][st.chuong]).sort(ldvlDashSortBai):[];
+  if(st.bai&&!bais.includes(st.bai))st.bai='';
+  window.LDVL_DASH_SYNC=st;
+  ldvlDashSetColHead('ldvlSyncBaiHead','④ Bài học',bais.length);
+  let baiCol=document.getElementById('ldvlSyncBaiCol');
+  if(baiCol){
+    if(!bais.length)baiCol.innerHTML='<div class="muted">'+(st.chuong?'Không có bài':'Chọn chương')+'</div>';
+    else baiCol.innerHTML=bais.map(function(b,i){
+      return ldvlDashPickBtn('Bai',b,st.bai===b,'onclick="ldvlDashPickBai(\''+escAttr(b)+'\')"',i+1);
+    }).join('');
+  }
+  let hint=document.getElementById('ldvlDashSyncHint');
+  if(hint){
+    let parts=[st.mon,st.lop?('Lớp '+st.lop):'',st.chuong,st.bai].filter(Boolean);
+    hint.textContent=parts.length?('Đang lọc: '+parts.join(' · ')):'Chọn môn Toán hoặc Vật lý';
+  }
+}
+window.ldvlDashPickMon=ldvlDashPickMon;
+window.ldvlDashOpenCatalog=ldvlDashOpenCatalog;
+window.ldvlRenderDashSyncPanel=ldvlRenderDashSyncPanel;
+function ldvlAdminFilterMon(mon){
+  try{refreshFilterOptions();setSel('fMon',mon);onFilterChange('mon');renderCatalog();}catch(e){console.warn('ldvlAdminFilterMon',e);}
+}
+var LDVL_ADMIN_PANEL_TITLES={'ap-pdf-math':'PDF · Toán','ap-pdf-phys':'PDF · Vật lý','ap-users':'Học viên','ap-stats':'Thống kê điểm','ap-sync':'Đồng bộ Sheet','ap-tools':'Công cụ & AI Keys'};
+function ldvlAdminSubNavUpdate(pid){
+  window.LDVL_ADMIN_PID=pid||'';
+  let bar=document.getElementById('ldvlAdminSubNav');
+  if(!bar)return;
+  let show=!LDVL_ADMIN_STUDENT_MODE&&pid&&pid!=='ap-dash';
+  bar.classList.toggle('hide',!show);
+  let t=document.getElementById('ldvlAdminSubNavTitle');
+  if(t)t.textContent=LDVL_ADMIN_PANEL_TITLES[pid]||'';
+  let stuBtn=document.getElementById('ldvlAdminSubNavStudentBtn');
+  if(stuBtn){
+    if(/^ap-pdf/.test(pid))stuBtn.innerHTML='<i class="ti ti-eye"></i> Xem PDF học sinh';
+    else stuBtn.innerHTML='<i class="ti ti-eye"></i> Xem học sinh';
+  }
+}
+function ldvlToggleAdminSidebar(){
+  let sb=document.getElementById('ldvlSidebar');
+  let bd=document.getElementById('ldvlSbBackdrop');
+  if(!sb)return;
+  let open=!sb.classList.contains('ldvlSbOpen');
+  sb.classList.toggle('ldvlSbOpen',open);
+  if(bd)bd.classList.toggle('on',open);
+}
+function ldvlCloseAdminSidebar(){
+  let sb=document.getElementById('ldvlSidebar');
+  let bd=document.getElementById('ldvlSbBackdrop');
+  if(sb)sb.classList.remove('ldvlSbOpen');
+  if(bd)bd.classList.remove('on');
+}
+function ldvlAdminPreviewStudent(){
+  let pid=window.LDVL_ADMIN_PID||'';
+  if(/^ap-pdf/.test(pid)){
+    ldvlOpenPracticeView('ldvlStudentPdfSection','');
+    setTimeout(function(){
+      if(pid==='ap-pdf-phys')ldvlStudentPdfTab('phys');
+      else ldvlStudentPdfTab('math');
+      let el=document.getElementById('ldvlStudentPdfSection');
+      if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+    },320);
+    return;
+  }
+  ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice');
+}
+window.ldvlToggleAdminSidebar=ldvlToggleAdminSidebar;
+window.ldvlCloseAdminSidebar=ldvlCloseAdminSidebar;
+window.ldvlAdminPreviewStudent=ldvlAdminPreviewStudent;
+function ldvlAdminNav(btn,pid){
+  if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return;}
+  let home=document.getElementById('home');
+  let quiz=document.getElementById('quiz');
+  if(home)home.classList.remove('hide');
+  if(quiz)quiz.classList.add('hide');
+  if(btn){
+    document.querySelectorAll('#ldvlSidebar .nb').forEach(function(b){b.classList.remove('aa');});
+    btn.classList.add('aa');
+  }
+  pid=String(pid||'ap-dash');
+  if(pid==='ap-practice'){
+    window.LDVL_ADMIN_PID='ap-practice';
+    ldvlOpenPracticeView('catalog','');
+    return;
+  }
+  if(pid==='ap-random'){
+    window.LDVL_ADMIN_PID='ap-random';
+    ldvlOpenPracticeView('random','');
+    return;
+  }
+  if(pid==='ap-q-math'||pid==='ap-ai-math'){
+    ldvlOpenPracticeView(pid==='ap-ai-math'?'adminAiGeneratePanel':'catalog','Toán');
+    if(pid==='ap-ai-math'){let p=document.getElementById('adminAiGeneratePanel');if(p)p.classList.remove('hide');try{initAdminAiGenerator();}catch(e){}}
+    return;
+  }
+  if(pid==='ap-q-phys'||pid==='ap-ai-phys'){
+    ldvlOpenPracticeView(pid==='ap-ai-phys'?'adminAiGeneratePanel':'catalog','Vật lí');
+    if(pid==='ap-ai-phys'){let p=document.getElementById('adminAiGeneratePanel');if(p)p.classList.remove('hide');try{initAdminAiGenerator();}catch(e){}}
+    return;
+  }
+  if(pid==='ap-tools'){
+    LDVL_ADMIN_STUDENT_MODE=true;
+    ldvlApplyAdminHomeLayout();
+    let kp=document.getElementById('aiKeyPanel');
+    if(kp)kp.classList.remove('hide');
+    window.scrollTo({top:0,behavior:'smooth'});
+    setTimeout(function(){document.getElementById('idLookupPanel')&&document.getElementById('idLookupPanel').scrollIntoView({behavior:'smooth'})},200);
+    return;
+  }
+  LDVL_ADMIN_STUDENT_MODE=false;
+  ldvlApplyAdminHomeLayout();
+  window.scrollTo({top:0,behavior:'smooth'});
+  document.querySelectorAll('#am>div').forEach(function(d){
+    if(!d.id)return;
+    d.style.display=(d.id===pid)?'':'none';
+  });
+  if(pid==='ap-dash')ldvlRefreshAdminDashboard();
+  if(pid==='ap-pdf-math')ldvlPdfRenderList('math');
+  if(pid==='ap-pdf-phys')ldvlPdfRenderList('phys');
+  if(pid==='ap-sync'){let st=document.getElementById('ldvlSyncStatus');if(st)st.textContent=META&&META.loaded_at?('Lần nạp gần nhất: '+META.loaded_at):'';}
+  ldvlAdminSubNavUpdate(pid);
+  ldvlCloseAdminSidebar();
+  setTimeout(function(){let el=document.getElementById(pid);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},80);
+}
+window.ldvlAdminNav=ldvlAdminNav;
+window.ldvlOpenPracticeView=ldvlOpenPracticeView;
+if(window.__LDVL_NAV_PENDING){var _p=window.__LDVL_NAV_PENDING;window.__LDVL_NAV_PENDING=null;ldvlAdminNav(_p[0],_p[1]);}
+window.ldvlRefreshAdminDashboard=ldvlRefreshAdminDashboard;
 
 (function wrapRenderQuestionForDangTheory(){
   try{let old=window.renderQuestion;if(typeof old==='function'&&!old.__v303TheoryWrapped){let wrap=function(){let r=old.apply(this,arguments);setTimeout(()=>syncLessonTheoryCards(false),0);return r};wrap.__v303TheoryWrapped=true;window.renderQuestion=wrap}}catch(e){}
+})();
+
+
+(function ldvlDashboardUiBridge(){
+  function userInitial(name){return String(name||'?').trim().charAt(0).toUpperCase()||'?';}
+  function roleLabel(u){
+    if(!u)return 'Học viên';
+    if(u.is_admin)return 'ADMIN';
+    if(u.is_svip)return 'S.VIP';
+    if(u.is_vip)return 'VIP';
+    if(u.is_trial)return 'Dùng thử';
+    return 'FREE';
+  }
+  function syncDashUser(){
+    try{
+      let u=window.USER||{};
+      let nm=String(u.hoten||u.ten||u.mahs||'').trim()||'Học viên';
+      let chip=document.getElementById('ldvlUserChip');
+      let iniEl=document.getElementById('ldvlUserIni');
+      let nmEl=document.getElementById('ldvlUserName');
+      let roleEl=document.getElementById('ldvlUserRole');
+      let sb=document.getElementById('ldvlSidebar');
+      if(chip)chip.classList.toggle('hide',!String(u.mahs||u.hoten||'').trim());
+      if(iniEl)iniEl.textContent=userInitial(nm);
+      if(nmEl)nmEl.textContent=nm;
+      if(roleEl)roleEl.textContent=roleLabel(u);
+      let sav=document.getElementById('ldvlSbAv');
+      let sbn=document.getElementById('ldvlSbName');
+      let sbr=document.getElementById('ldvlSbRole');
+      if(sav)sav.textContent=userInitial(nm);
+      if(sbn)sbn.textContent=nm;
+      if(sbr)sbr.textContent=roleLabel(u);
+      if(sb)sb.classList.toggle('hide',!u.is_admin);
+      if(typeof ldvlApplyAdminHomeLayout==='function')ldvlApplyAdminHomeLayout();
+      if(u.is_admin&&typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();
+      let themeBtn=document.getElementById('btnTheme');
+      if(themeBtn){
+        let dark=(document.documentElement.getAttribute('data-theme')||'')==='dark';
+        themeBtn.innerHTML=dark?'<i class="ti ti-sun"></i>':'<i class="ti ti-moon"></i>';
+      }
+    }catch(e){console.warn('ldvlDashboardUiBridge',e);}
+  }
+  window.ldvlSyncDashboardUser=syncDashUser;
+  let oldUpd=window.updateAdminChrome;
+  window.updateAdminChrome=function(){
+    if(typeof oldUpd==='function')try{oldUpd.apply(this,arguments);}catch(e){}
+    syncDashUser();
+  };
+  let oldProf=window.renderUserAiProfile;
+  window.renderUserAiProfile=function(){
+    if(typeof oldProf==='function')try{oldProf.apply(this,arguments);}catch(e){}
+    syncDashUser();
+  };
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(syncDashUser,100);setTimeout(syncDashUser,1200);});
 })();
 
 (function bootApp(){
@@ -24785,7 +26511,7 @@ def login():
                 error = "Tài khoản đang bị khóa hoặc chưa kích hoạt."
             elif store.is_user_expired(user)[0]:
                 error = store.is_user_expired(user)[1]
-            elif clean(user.get("password")) != password:
+            elif not _password_match(clean(user.get("password", "")), password):
                 error = "Sai mật khẩu."
             else:
                 token = stable_hash(f"{mahs}|{time.time()}|{random.random()}", 24)
@@ -24799,7 +26525,15 @@ def login():
                 nxt = safe_next_url(request.form.get("next"))
                 return redirect(nxt or url_for("home"))
         except Exception as e:
-            error = str(e)
+            err_str = str(e)
+            if "GOOGLE_CREDENTIALS" in err_str or "credentials" in err_str.lower() or "gspread" in err_str.lower():
+                error = "Không kết nối được Google Sheet. Kiểm tra lại GOOGLE_CREDENTIALS_JSON và GOOGLE_SHEET_ID."
+            elif "Worksheet" in err_str and "not found" in err_str:
+                error = "Không tìm thấy sheet HOC_VIEN. Vui lòng tạo sheet này hoặc liên hệ admin."
+            elif "timed out" in err_str.lower() or "timeout" in err_str.lower():
+                error = "Kết nối Google Sheet quá chậm, vui lòng thử lại sau vài giây."
+            else:
+                error = err_str
     next_url = safe_next_url(request.args.get("next", ""))
     og_title = og_desc = og_url = ""
     if next_url:
@@ -25141,6 +26875,82 @@ def save_dbt_orders(orders: Dict[str, List[str]]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DBT_ORDER_FILE)
+
+
+def _normalize_pdf_link_item(raw: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return None
+    name = clean(raw.get("name", ""))
+    url = clean(raw.get("url", ""))
+    if not name or not url:
+        return None
+    try:
+        pid = int(raw.get("id") or 0)
+    except Exception:
+        pid = 0
+    if not pid:
+        pid = int(time.time() * 1000)
+    quyen = clean(raw.get("quyen", "FREE")) or "FREE"
+    return {
+        "id": pid,
+        "name": name,
+        "url": url,
+        "quyen": quyen,
+        "at": clean(raw.get("at", "")),
+    }
+
+
+def load_pdf_links() -> Dict[str, Any]:
+    default: Dict[str, Any] = {"math": [], "phys": [], "updated_at": ""}
+    try:
+        if os.path.isfile(PDF_LINKS_FILE):
+            with open(PDF_LINKS_FILE, encoding="utf-8") as f:
+                obj = json.load(f)
+            if isinstance(obj, dict):
+                out = dict(default)
+                for sub in ("math", "phys"):
+                    raw = obj.get(sub) or []
+                    if isinstance(raw, list):
+                        items = []
+                        for row in raw:
+                            norm = _normalize_pdf_link_item(row)
+                            if norm:
+                                items.append(norm)
+                        out[sub] = items
+                out["updated_at"] = clean(obj.get("updated_at", ""))
+                return out
+    except Exception:
+        pass
+    return default
+
+
+def save_pdf_links(links: Dict[str, Any]) -> None:
+    payload = {
+        "math": [],
+        "phys": [],
+        "updated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
+    }
+    for sub in ("math", "phys"):
+        raw = (links or {}).get(sub) or []
+        if isinstance(raw, list):
+            for row in raw:
+                norm = _normalize_pdf_link_item(row)
+                if norm:
+                    payload[sub].append(norm)
+    os.makedirs(os.path.dirname(PDF_LINKS_FILE), exist_ok=True)
+    tmp = PDF_LINKS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, PDF_LINKS_FILE)
+
+
+def pdf_links_public() -> Dict[str, Any]:
+    data = load_pdf_links()
+    return {
+        "math": list(data.get("math") or []),
+        "phys": list(data.get("phys") or []),
+        "updated_at": clean(data.get("updated_at", "")),
+    }
 
 
 def save_dbt_order_one(made: str, names: List[str], orders: Optional[Dict[str, List[str]]] = None) -> Dict[str, List[str]]:
@@ -28027,6 +29837,20 @@ def api_admin_dbt_order():
     return jsonify({"ok": True, "made": made, "order": names, "message": "Đã lưu thứ tự Dạng bài tập (Google Sheet DBT_ThuTu)."})
 
 
+@app.route("/api/admin/pdf-links", methods=["GET", "POST"])
+def api_admin_pdf_links():
+    """ADMIN: lưu danh sách đề PDF (Toán/Lý) để học sinh xem trên mọi thiết bị."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được quản lý đề PDF."}), 403
+    if request.method == "GET":
+        return jsonify({"ok": True, "pdf_links": pdf_links_public()})
+    body = request.get_json(silent=True) or {}
+    save_pdf_links(body if isinstance(body, dict) else {})
+    return jsonify({"ok": True, "pdf_links": pdf_links_public(), "message": "Đã lưu danh sách đề PDF lên server."})
+
 
 
 @app.route("/api/admin/dang-similarity", methods=["POST"])
@@ -29209,7 +31033,7 @@ def pwa_offline():
 @app.route("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'luyen-de-ai-v321-cartoon-teacher-icon';
+const CACHE_NAME = 'luyen-de-ai-v324-dashboard-ui';
 const CORE_ASSETS = ['/manifest.json','/pwa-icon-192.png','/pwa-icon-512.png','/offline'];
 self.addEventListener('install', event => {
   event.waitUntil(
