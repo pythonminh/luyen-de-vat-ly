@@ -22647,37 +22647,23 @@ async function claudeFixLatexField(field){
     }
   }catch(e){/* nếu Python lỗi, vẫn tiếp tục gọi Claude */}
 
-  // ── Bước 2: Kiểm tra còn lỗi không — nếu không thì hỏi người dùng ────────
+  // ── Bước 2: Kiểm tra còn lỗi không — nếu không thì dừng ─────────────────
   let textAfterNorm=String(el.value||'').trim();
   let stillBroken=_clientLatexStillBroken(textAfterNorm);
   if(!stillBroken){
-    // V326: không tự dừng — cho người dùng chọn có gọi Claude không
-    let goOn=confirm('✅ Chuẩn hóa tự động xong — LaTeX có vẻ đúng.\n\nVẫn muốn gọi Claude kiểm tra thêm không?');
-    if(!goOn){
-      if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
-      return;
-    }
+    if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
+    alert('✅ Chuẩn hóa tự động xong — LaTeX đã đúng, không cần gọi Claude.');
+    return;
   }
 
-  // ── Bước 3: Gọi Claude chỉ khi vẫn còn lỗi ──────────────────────────────
-  let antKey=_loadAnthropicKey();
-  if(!antKey){
-    if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
-    alert('⚠️ Chưa có Anthropic key.\n\nVào trang chủ → 🔑 Key AI → nhập sk-ant-... → Lưu.\nLấy key tại: https://console.anthropic.com/settings/keys');
-    return;
-  }
-  // Kiểm tra key format
-  if(!antKey.startsWith('sk-ant-')){
-    if(btn){btn.disabled=false;btn.innerHTML=oldBtnHtml}
-    alert('⚠️ Anthropic key không đúng định dạng (phải bắt đầu sk-ant-).\nVào 🔑 Key AI để cập nhật lại.');
-    return;
-  }
+  // ── Bước 3: Gọi Claude — server tự dùng key môi trường nếu client chưa có ─
+  let antKey=_loadAnthropicKey()||'';
   try{
     if(btn){btn.innerHTML='✨ Claude đang sửa…'}
     let j=await api('/api/admin/claude-fix-latex',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:textAfterNorm,anthropic_key:_loadAnthropicKey()||''})
+      body:JSON.stringify({text:textAfterNorm,anthropic_key:antKey})
     });
     if(j&&j.error)throw new Error(j.error);
     let fixed=(j&&j.text)||'';
@@ -22713,15 +22699,6 @@ function _clientLatexStillBroken(t){
   // Cho phép: \Delta \Sigma \Omega \Gamma \Lambda \Theta \Phi \Psi v.v.
   let greekUpper=/\\(?:Delta|Sigma|Omega|Gamma|Lambda|Theta|Pi|Phi|Psi|Xi|Upsilon|Rightarrow|Leftrightarrow)/;
   if(!greekUpper.test(t)&&/\$[^$]*\\[A-Z][a-z]{0,2}\b[^{][^$]*\$/.test(t))return true;
-  // V326: thêm các lỗi phổ biến mà chuẩn hóa Python bỏ sót
-  if(/\\ddfrac/.test(t))return true;           // \ddfrac không hợp lệ
-  if(/\\dfac\b/.test(t))return true;           // typo \dfac
-  if(/_[A-Z]_[0-9]/.test(t))return true;         // _H_0 kiểu Word
-  if(/\$\{[^}]+\}\$/.test(t))return true;     // ${...}$ từ Word
-  if(/\\left\./.test(t)&&!/\\right/.test(t))return true; // \left. không có \right
-  if(/\\right\./.test(t)&&!/\\left/.test(t))return true; // \right. không có \left
-  if(/[A-Za-z]_\{[A-Za-z]+_[A-Za-z0-9]\}/.test(t))return true; // x_{L_H} kiểu lồng nhau
-  if(/\$[^$\n]{0,3}\\[a-z]{2,}[^{][^$]*\$/.test(t)&&/\\[a-z]{2,}[^{\s\\$]/.test(t))return true;
   return false;
 }
 function toggleLatexNormMenu(field){let m=document.getElementById('latexNormMenu_'+field);if(!m)return;document.querySelectorAll('.latexNormMenu').forEach(x=>{if(x!==m)x.classList.add('hide')});m.classList.toggle('hide')}
@@ -29438,12 +29415,19 @@ def api_admin_claude_fix_latex():
     text = clean(body.get("text", ""))
     if not text:
         return jsonify({"ok": True, "text": "", "changed": False})
-    # Lấy key: ưu tiên key trong request (từ localStorage client), fallback server key
+    # Lấy key: ưu tiên key client (localStorage), fallback tất cả server keys
     client_key = clean(body.get("anthropic_key", ""))
-    server_keys = load_ai_keys("ANTHROPIC") if not client_key else []
-    api_key = client_key or (server_keys[0] if server_keys else "")
+    server_keys = load_ai_keys("ANTHROPIC")
+    # Gom key: client trước, server sau (tránh trùng)
+    all_keys = []
+    if client_key and _is_anthropic_api_key(client_key):
+        all_keys.append(client_key)
+    for k in server_keys:
+        if k not in all_keys:
+            all_keys.append(k)
+    api_key = all_keys[0] if all_keys else ""
     if not api_key:
-        return jsonify({"error": "Chưa có Anthropic key. Nạp sk-ant-... tại 🔑 Key AI hoặc cấu hình ANTHROPIC_API_KEY trên Render."}), 400
+        return jsonify({"error": "Chưa có Anthropic key. Cấu hình ANTHROPIC_API_KEY trên Render hoặc nạp sk-ant-... tại 🔑 Key AI."}), 400
     system_prompt = (
         "Bạn là chuyên gia LaTeX cho sách giáo khoa Vật lý/Toán THPT Việt Nam.\n"
         "CHỈ trả về nội dung đã sửa, KHÔNG giải thích, KHÔNG thêm text thừa.\n\n"
