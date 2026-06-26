@@ -3297,10 +3297,28 @@ def question_is_student_visible(q: Dict[str, Any]) -> bool:
     return question_is_reviewed(q)
 
 
-def filter_questions_for_students(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    if is_admin():
+def catalog_item_for_student(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Mục lục học sinh: chỉ đếm câu đã duyệt."""
+    out = dict(item or {})
+    n_total = int(out.get("SoCau") or 0)
+    n_rev = int(out.get("SoCauDuyet") or 0)
+    out["SoCauTotal"] = n_total
+    out["SoCau"] = n_rev
+    fc = out.get("FilterCountsStudent")
+    if isinstance(fc, dict) and fc:
+        out["FilterCounts"] = fc
+    return out
+
+
+def filter_questions_for_students(
+    qs: List[Dict[str, Any]],
+    *,
+    force: bool = False,
+) -> List[Dict[str, Any]]:
+    """Học sinh (hoặc ADMIN xem như HS khi force=True) chỉ làm câu ĐÃ DUYỆT."""
+    if is_admin() and not force:
         return list(qs or [])
-    return [q for q in (qs or []) if question_is_student_visible(q)]
+    return [q for q in (qs or []) if question_is_reviewed(q)]
 
 
 def question_solution_status(q: Dict[str, Any]) -> str:
@@ -6380,18 +6398,27 @@ class SheetStore:
                     "Lop": q.get("Lop", ""), "Mon": q.get("Mon", ""), "Chuong": q.get("Chuong", ""),
                     "BaiHoc": q.get("BaiHoc", ""), "DangBaiTap": q.get("DangBaiTap", ""),
                     "BoDe": q.get("BoDe", ""), "De": q.get("De", ""),
-                    "SoCau": 0, "MucDoSet": set(), "DangSet": set(), "QuyenTruyCapSet": set(),
+                    "SoCau": 0, "SoCauDuyet": 0, "MucDoSet": set(), "DangSet": set(), "QuyenTruyCapSet": set(),
                     "BoDeSet": set(), "DeSet": set(),
                     "DangCounts": {}, "LevelCounts": {}, "ComboCounts": {}, "DangBaiTapCounts": {}, "DbtDangCounts": {},
+                    "DangCountsRev": {}, "LevelCountsRev": {}, "ComboCountsRev": {}, "DangBaiTapCountsRev": {}, "DbtDangCountsRev": {},
                     "SolFull": 0, "SolPartial": 0, "SolNone": 0,
                 }
             g = groups[gk]
             g["SoCau"] += 1
+            rev = question_is_reviewed(q)
+            if rev:
+                g["SoCauDuyet"] += 1
             ed = question_dang(q)
             bump_count(g["DangCounts"], ed)
+            if rev:
+                bump_count(g["DangCountsRev"], ed)
             for lv in question_mucdo_parts(q):
                 bump_count(g["LevelCounts"], lv)
                 bump_count(g["ComboCounts"], f"{lv}|{ed}")
+                if rev:
+                    bump_count(g["LevelCountsRev"], lv)
+                    bump_count(g["ComboCountsRev"], f"{lv}|{ed}")
             if q.get("MucDo"):
                 g["MucDoSet"].add(q["MucDo"])
             if q.get("Dang"):
@@ -6408,6 +6435,12 @@ class SheetStore:
                 bump_count(g["DangBaiTapCounts"], DBT_FILTER_UNCLASSIFIED)
                 dbt_key = DBT_FILTER_UNCLASSIFIED
             bump_count(g["DbtDangCounts"], f"{dbt_key}|{ed}")
+            if rev:
+                if dbt and not _is_bad_dangbaitap_value(dbt):
+                    bump_count(g["DangBaiTapCountsRev"], dbt)
+                else:
+                    bump_count(g["DangBaiTapCountsRev"], DBT_FILTER_UNCLASSIFIED)
+                bump_count(g["DbtDangCountsRev"], f"{dbt_key}|{ed}")
             access = access_level_from_text(q.get("QuyenTruyCap", ""))
             g["QuyenTruyCapSet"].add(access)
             sol = question_solution_status(q)
@@ -6435,12 +6468,20 @@ class SheetStore:
             item["QuyenTruyCap"] = "VIP" if "VIP" in access_values else "FREE"
             item["IsFree"] = item["QuyenTruyCap"] == "FREE"
             dbt_counts = dict(item.pop("DangBaiTapCounts", {}))
+            dbt_counts_rev = dict(item.pop("DangBaiTapCountsRev", {}))
             item["FilterCounts"] = {
                 "dang": dict(item.pop("DangCounts")),
                 "level": dict(item.pop("LevelCounts")),
                 "combo": dict(item.pop("ComboCounts")),
                 "dangbaitap": dbt_counts,
                 "dbt_dang": dict(item.pop("DbtDangCounts")),
+            }
+            item["FilterCountsStudent"] = {
+                "dang": dict(item.pop("DangCountsRev", {})),
+                "level": dict(item.pop("LevelCountsRev", {})),
+                "combo": dict(item.pop("ComboCountsRev", {})),
+                "dangbaitap": dbt_counts_rev,
+                "dbt_dang": dict(item.pop("DbtDangCountsRev", {})),
             }
             made_key = clean(item.get("MaDe", ""))
             if made_key and dbt_counts:
@@ -6590,7 +6631,11 @@ class SheetStore:
             "dangbaitap_suggestions": dbt_options,
             "dbt_orders": dbt_orders,
             "pdf_links": pdf_links_public(),
-            "catalog": self.catalog,
+            "catalog": (
+                self.catalog
+                if is_admin()
+                else [catalog_item_for_student(x) for x in self.catalog]
+            ),
             "duplicate_report": self.duplicate_report if is_admin() else {},
             "learning": {
                 "count_theory": len(self.theory_items),
@@ -6743,6 +6788,7 @@ class SheetStore:
         dang_filter: str = "",
         dangbaitap_filter: str = "",
         group_by_dang: bool = True,
+        student_view: bool = False,
     ) -> Dict[str, Any]:
         base_qs = self.resolve_quiz_base(made)
         if not base_qs:
@@ -6751,8 +6797,9 @@ class SheetStore:
         level_filter = clean(level_filter).upper()
         qs_source = base_qs
         review_skipped = 0
-        if not is_admin():
-            visible = filter_questions_for_students(qs_source)
+        only_reviewed = (not is_admin()) or bool(student_view)
+        if only_reviewed:
+            visible = filter_questions_for_students(qs_source, force=True)
             review_skipped = len(qs_source) - len(visible)
             qs_source = visible
             if not qs_source:
@@ -6761,12 +6808,20 @@ class SheetStore:
                     f"Không có câu đã duyệt trong đề này ({n_rev}/{total_in_de} câu đã duyệt). "
                     "ADMIN cần đánh dấu cột TrangThai = «ĐÃ DUYỆT» trước khi học sinh làm."
                 )
+        student_pool = qs_source
         if level_filter:
             def has_level(q: Dict[str, Any]) -> bool:
                 return level_filter in question_mucdo_parts(q) or level_filter in clean(q.get("MucDo", "")).upper()
-            qs_source = [q for q in base_qs if has_level(q)]
+            qs_source = [q for q in qs_source if has_level(q)]
             if not qs_source:
-                raise RuntimeError(f"Đề này không có câu mức độ {level_filter}. Thầy chọn mức khác hoặc để Tất cả.")
+                n_level_all = sum(1 for q in student_pool if has_level(q))
+                cat_n = self.catalog_filter_count(made, level_filter, "")
+                hint = f" Mục lục báo {cat_n} câu — bấm Đồng bộ Sheet, Ctrl+F5." if cat_n else ""
+                raise RuntimeError(
+                    f"Không có câu mức độ {level_filter} đã duyệt trong đề này "
+                    f"(có {n_level_all} câu mức {level_filter} trong phạm vi đã duyệt). "
+                    f"Thầy chọn mức khác hoặc để Tất cả.{hint}"
+                )
         dang_filter = norm_dang(dang_filter) if clean(dang_filter) else ""
         if dang_filter:
             dang_norm = dang_filter
@@ -6844,7 +6899,7 @@ class SheetStore:
             "question_count": len(qs),
             "total_in_de": total_in_de,
             "review_strict": strict_question_review(),
-            "review_skipped": review_skipped if not is_admin() else 0,
+            "review_skipped": review_skipped if only_reviewed else 0,
             "review_approved_in_de": sum(1 for q in base_qs if question_is_reviewed(q)),
             "trial_message": "Tài khoản dùng thử: chỉ luyện đề FREE, không nộp/chấm điểm và không xem đáp án/lời giải." if is_trial() else "",
             "questions": [self.public_question(q, i, reveal=reveal) for i, q in enumerate(qs)]
@@ -10140,7 +10195,7 @@ def classify_user_ai_profile(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, 
         code = "ADMIN_OWN" if adm else "VIP_OWN"
         label = "ADMIN · Key cá nhân" if adm else "VIP · Key cá nhân"
         hint = (
-            f"Đã lưu {user_g or user_keys_n} key Gemini — ưu tiên khi Gợi ý AI, không tranh quota với lớp."
+            f"Đã có key Gemini — ưu tiên AI, không tranh quota lớp."
             if not adm
             else f"ADMIN: {user_g or user_keys_n} key riêng. Pool Render ({server_n} key) dự phòng cho học sinh chưa nạp key."
         )
@@ -10173,8 +10228,7 @@ def classify_user_ai_profile(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, 
             )
             if svip_u and not adm
             else (
-                f"Đang dùng {server_n} key chung trên server. "
-                "Nên tạo key tại Google AI Studio → 🔑 Key AI của tôi → Lưu để luyện ổn định, không tranh với lớp."
+                f"Key server ({server_n}) · Nên nạp key riêng tại 🔑 Key AI."
             )
             if not adm
             else (
@@ -10203,7 +10257,7 @@ def classify_user_ai_profile(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, 
     code = "ADMIN_NO_KEY" if adm else "VIP_NO_KEY"
     label = "ADMIN · Chưa có key" if adm else "VIP · Chưa có key"
     hint = (
-        "Chưa có key AI. Dán key AIza... tại 🔑 Key AI của tôi hoặc nhờ giáo viên cấu hình GEMINI_API_KEY trên Render."
+        "Chưa có key — dán AIza... tại 🔑 Key AI hoặc nhờ thầy cấu hình server."
         if not adm
         else "Chưa có key AI trên server và chưa nạp key riêng — cần cấu hình Render hoặc Lưu key ADMIN."
     )
@@ -15183,8 +15237,10 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 
 /* CARD HEADER */
 .ln-card-head{text-align:center;margin-bottom:28px}
-.ln-card-head-icon{width:56px;height:56px;border-radius:12px;overflow:hidden;margin:0 auto 16px;border:1px solid var(--border)}
+.ln-card-head-icon{width:88px;height:88px;border-radius:20px;overflow:hidden;margin:0 auto 14px;border:3px solid rgba(255,255,255,.45);box-shadow:0 6px 20px rgba(0,0,0,.15)}
 .ln-card-head-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.ln-card-head-zalo{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:13px;font-weight:800;text-decoration:none}
+.ln-card-head-zalo:hover{background:rgba(255,255,255,.28);color:#fff}
 .ln-card-head h1{font-size:22px;font-weight:400;color:var(--text);margin-bottom:6px;letter-spacing:-.5px}
 .ln-card-head p{font-size:14px;color:var(--text2);font-weight:400}
 
@@ -15247,6 +15303,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
       <div class="ln-card-head-icon"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh"></div>
       <h1>Đăng nhập</h1>
       <p>Vật lý · Toán học · THPT</p>
+      <a class="ln-card-head-zalo" href="https://zalo.me/0946111107" target="_blank" rel="noopener">💬 Zalo 0946 1111 07</a>
     </div>
     {% if local_demo %}<div class="ln-msg-ok">Chế độ test local: đăng nhập <b>DEMO</b> / <b>123456</b> để kiểm tra.</div>{% endif %}
     {% if error %}<div class="ln-msg-err">⚠ {{error}}{% if "HOC_VIEN" in error or "Google Sheet" in error %}<br><small>💡 Nếu chạy local không có Sheet, thêm <code>LOCAL_DEMO=1</code> vào file <code>.env</code>.</small>{% endif %}</div>{% endif %}
@@ -15307,7 +15364,10 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Segoe
 .ln-main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:28px 16px}
 .ln-card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 12px 40px #1d4ed81a;overflow:hidden}
 .ln-card-head{background:linear-gradient(135deg,#059669,#0891b2);padding:24px 28px 20px;text-align:center}
-.ln-card-head-icon{width:52px;height:52px;border-radius:14px;background:#ffffff22;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:10px;border:2px solid #ffffff33}
+.ln-card-head-icon{width:88px;height:88px;border-radius:20px;background:#ffffff22;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:10px;border:3px solid #ffffff44;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.ln-card-head-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.ln-card-head-zalo{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:13px;font-weight:800;text-decoration:none}
+.ln-card-head-zalo:hover{background:rgba(255,255,255,.28);color:#fff}
 .ln-card-head h1{font-size:19px;font-weight:900;color:#fff;margin-bottom:4px}
 .ln-card-head p{font-size:13px;color:#a7f3d0}
 .ln-card-body{padding:22px 26px 20px}
@@ -15333,9 +15393,10 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Segoe
 <main class="ln-main">
   <div class="ln-card">
     <div class="ln-card-head">
-      <div class="ln-card-head-icon" style="background:none;border:none;padding:0;width:60px;height:60px"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" style="width:60px;height:60px;border-radius:16px;object-fit:cover;border:2px solid #ffffff55"></div>
+      <div class="ln-card-head-icon" style="background:none;border:none;padding:0"><img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" style="width:100%;height:100%;object-fit:cover;display:block"></div>
       <h1>Đăng ký dùng thử</h1>
       <p>Miễn phí 3 ngày · Không cần thẻ tín dụng</p>
+      <a class="ln-card-head-zalo" href="https://zalo.me/0946111107" target="_blank" rel="noopener">💬 Zalo 0946 1111 07</a>
     </div>
     <div class="ln-card-body">
       {% if error %}<div class="ln-msg-err">{{error}}</div>{% endif %}
@@ -15442,8 +15503,9 @@ html[data-theme="dark"] .topSubjectBtnV253{
 }
 .topSubjectBtnV253.physics.active,.topSubjectBtnV253.physics[data-active="1"]{
   background:#fff!important;
-  color:#0891b2!important;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2)!important;
+  color:#6d28d9!important;
+  box-shadow:0 2px 8px rgba(109,40,217,.28)!important;
+  font-weight:900!important;
 }
 
 /* Nhãn select gọn, đẹp */
@@ -18671,13 +18733,33 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 .hdr.ha{background:#673ab7}
 
 /* Logo — P1: luôn hiện */
-.logo{display:flex;align-items:center;gap:7px;text-decoration:none;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0}
+.logo-avatar-link{display:flex;flex-shrink:0;line-height:0;text-decoration:none}
 .logo img{width:28px;height:28px;border-radius:6px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0}
 .logo-fb{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;border:1.5px solid rgba(255,255,255,.3);flex-shrink:0}
-.logo-txt{font-size:13px;font-weight:600;color:#fff;line-height:1.2;white-space:nowrap}
+.logo-txt{font-size:13px;font-weight:600;color:#fff;line-height:1.25;white-space:nowrap}
 .logo-txt small{display:block;font-size:10px;font-weight:400;opacity:.7}
-/* Ẩn logo text dưới 360px — chỉ giữ icon */
-@media(max-width:360px){.logo-txt{display:none}}
+.logo-zalo{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:#fff;text-decoration:none;margin-top:3px;opacity:1;letter-spacing:.15px;line-height:1.2}
+.logo-zalo:hover{text-decoration:underline;color:#e0f2fe}
+.ldvlDashV324 .hdr{height:auto!important;min-height:72px;padding:8px 10px 8px 12px;overflow:visible!important;align-items:center;flex-wrap:wrap;gap:6px 8px;row-gap:6px}
+.ldvlDashV324 .logo{align-items:center;gap:10px;flex:0 1 auto;min-width:0;flex-shrink:0}
+.ldvlDashV324 .logo img{width:64px!important;height:64px!important;border-radius:12px;border:2.5px solid rgba(255,255,255,.5)!important;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.ldvlDashV324 .logo-txt{white-space:nowrap;min-width:0;flex:1 1 auto;overflow:visible}
+.ldvlDashV324 .logo-txt .logo-title{display:block;font-size:15px;font-weight:700;line-height:1.25;white-space:nowrap}
+.ldvlDashV324 .logo-txt small{display:block;font-size:11px;margin-top:2px;white-space:nowrap;opacity:.85}
+.ldvlDashV324 .logo-zalo{display:inline-flex!important;font-size:12px;background:#0068ff;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.35);margin-top:4px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.ldvlDashV324 .logo-zalo:hover{background:#0058d6;color:#fff}
+.ldvlDashV324 .hdr .logo-zalo{display:none!important}
+.ldvlHdrHomeBtn{padding:5px 8px!important;min-width:34px!important;height:34px!important;border-radius:9px!important;flex-shrink:0;margin-left:2px}
+.ldvlHdrHomeBtn i{font-size:17px;line-height:1}
+@media(max-width:780px){
+  .ldvlDashV324 .hdr .logo{flex:1 1 100%;width:100%;max-width:100%;min-width:0}
+  .ldvlDashV324 .logo-txt{flex:1;min-width:0}
+  .ldvlDashV324 .hdr>.hbtn,.ldvlDashV324 .hdr>.adminBar,.ldvlDashV324 .hdr>#topSubjectTabsV253,.ldvlDashV324 .hdr>.hchip,.ldvlDashV324 .hdr>#info,.ldvlDashV324 .hdr>#topUserChip,.ldvlDashV324 .hdr>#aiProfileBadge,.ldvlDashV324 .hdr>#pwaInstallBtn,.ldvlDashV324 .hdr>.thbtn{flex-shrink:0}
+  .ldvlDashV324 #topSubjectTabsV253{margin-left:auto!important;margin-right:0!important}
+}
+@media(max-width:360px){.logo-txt:not(.ldvlLogoTxt){display:none}}
+@media(max-width:480px){.ldvlDashV324 .logo img{width:52px!important;height:52px!important}.ldvlDashV324 .logo-txt .logo-title{font-size:14px}.ldvlDashV324 .logo-zalo{font-size:11px;padding:2px 8px}}
 
 /* Spacer */
 .hsp{flex:1;min-width:4px}
@@ -18690,7 +18772,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 .topSubjectBtnV253:hover{background:rgba(255,255,255,.22)!important}
 .topSubjectBtnV253.active,.topSubjectBtnV253[data-active="1"]{background:#fff!important;color:#1a73e8!important;border-color:#fff!important;font-weight:600!important}
 .topSubjectBtnV253.math.active,.topSubjectBtnV253.math[data-active="1"]{color:#7b1fa2!important}
-.topSubjectBtnV253.physics.active,.topSubjectBtnV253.physics[data-active="1"]{color:#00695c!important}
+.topSubjectBtnV253.physics.active,.topSubjectBtnV253.physics[data-active="1"]{color:#6d28d9!important;font-weight:900!important;text-shadow:none!important}
 .topSubjectTabsV253.subjectTabsHiddenV253{display:inline-flex!important}
 .topSubjectToggleV253{display:none!important}
 .catalogScopeBox.subjectV248{display:none!important}
@@ -19108,7 +19190,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 .ldvlDashV324 .homeSection{margin:0}
 .ldvlDashV324 .panel{border-radius:var(--rl)!important;overflow:hidden}
 .ldvlDashV324 .homePracticeSetupPanel>b{
-  display:block;background:linear-gradient(135deg,#1d4ed8,#4f46e5);color:#fff!important;
+  display:block;background:linear-gradient(135deg,#00adef,#0083ca);color:#fff!important;
   padding:11px 15px!important;font-size:13px!important;font-weight:700!important;margin:0!important;
 }
 .ldvlDashV324 #catalog.grid{display:flex;flex-direction:column;gap:9px}
@@ -19117,74 +19199,124 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   display:flex;align-items:center;gap:11px;cursor:pointer;transition:border-color .15s;
 }
 .ldvlDashV324 #catalog .card:hover,.ldvlDashV324 #catalog .examCard:hover{border-color:var(--mh)!important}
-.ldvlDashV324 .ldvlSyncRow{display:flex;gap:0;align-items:stretch;width:100%;border:2px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 6px 28px rgba(15,23,42,.09);background:linear-gradient(135deg,#f0f9ff 0%,#faf5ff 50%,#fff7ed 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncMath{border-color:#93c5fd;box-shadow:0 6px 28px rgba(37,99,235,.14)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys{border-color:#c4b5fd;box-shadow:0 6px 28px rgba(124,58,237,.14)}
-.ldvlDashV324 .ldvlSyncColBox{padding:8px 6px;min-width:0;border-right:1px solid rgba(15,23,42,.07);flex:0 1 auto}
-.ldvlDashV324 .ldvlSyncColMon{flex:0 0 74px;max-width:74px;padding:8px 4px}
-.ldvlDashV324 .ldvlSyncColLop{flex:0 0 82px;max-width:82px;padding:8px 4px}
-.ldvlDashV324 .ldvlSyncColChuong{flex:0 0 auto;width:max-content;max-width:min(24vw,184px);min-width:0;align-self:flex-start}
-.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncPick{width:auto;max-width:100%;align-self:flex-start}
-.ldvlDashV324 .ldvlSyncColBai{flex:1 1 0;min-width:0;max-width:min(34vw,268px)}
-.ldvlDashV324 .ldvlSyncColDbt{flex:1 1 0;min-width:0;max-width:min(28vw,220px);background:linear-gradient(180deg,#fff7ed 0%,#ffedd588 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColDbt{background:linear-gradient(180deg,#fff1f2 0%,#ffe4e688 100%)}
-.ldvlDashV324 .ldvlSyncColDbt .ldvlSyncIdx{background:#fdba74;color:#9a3412}
-.ldvlDashV324 .ldvlSyncColDang{flex:0 0 auto;width:max-content;max-width:min(22vw,168px);min-width:108px;border-right:none!important;background:linear-gradient(180deg,#eff6ff 0%,#dbeafe88 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColDang{background:linear-gradient(180deg,#eef2ff 0%,#e0e7ff88 100%)}
-.ldvlDashV324 .ldvlSyncColDang .ldvlSyncIdx{background:#93c5fd;color:#1e3a8a}
-.ldvlDashV324 .ldvlSyncPickDang.on{background:linear-gradient(90deg,#dbeafe,#bfdbfe)!important;border-color:#3b82f6;font-weight:800;color:#1e40af;box-shadow:0 0 0 2px rgba(59,130,246,.22)}
-.ldvlDashV324 .ldvlSyncPickDbt.on{background:linear-gradient(90deg,#ffedd5,#fed7aa)!important;border-color:#f97316;font-weight:800;color:#9a3412;box-shadow:0 0 0 2px rgba(249,115,22,.25)}
+.ldvlDashV324 .ldvlSyncRow{--hm:#00adef;--hm-dark:#0083ca;--hm-light:#e8f7fd;--hm-mid:#b3e5fc;--hm-shadow:0 6px 24px rgba(0,173,239,.12);display:block;width:100%;border:1px solid #dce8f0;border-radius:10px;overflow:hidden;box-shadow:var(--hm-shadow);background:#fff;position:relative;z-index:20;transition:box-shadow .2s}
+.ldvlDashV324 .ldvlSyncRow:hover{box-shadow:0 8px 28px rgba(0,173,239,.16)}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncMath{--hm:#00adef;--hm-dark:#0083ca;--hm-light:#e8f7fd;--hm-mid:#b3e5fc;border-color:#b3e5fc}
+.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys{--hm:#7c3aed;--hm-dark:#6d28d9;--hm-light:#f3e8ff;--hm-mid:#ddd6fe;border-color:#c4b5fd;--hm-shadow:0 6px 24px rgba(124,58,237,.12)}
+.ldvlDashV324 .ldvlSyncMonBar{display:none}
+.ldvlDashV324 .adminEditMetaScope .ldvlSyncMonBar,.ldvlDashV324 #ldvlEditSyncRow .ldvlSyncMonBar{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid #e8f0f5;background:#fff}
+.adminEditMetaLocation{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:8px;margin-bottom:8px;padding:10px 12px;border:1px solid #93c5fd;border-radius:10px;background:linear-gradient(180deg,#f8fbff,#fff)}
+.adminEditMetaLocation .adminQuickField{margin-bottom:0}
+.adminEditMetaLocation .adminDbtSelect{margin-bottom:4px}
+.adminEditMetaLocation .adminMetaPickField .adminDbtSelect{max-width:100%}
+.ldvlDashV324 #topSubjectTabsV253.ldvlHdrMonHidden{display:none!important}
+.ldvlDashV324 #topSubjectTabsV253{margin-left:auto;margin-right:6px;flex:0 0 auto!important;justify-content:flex-end!important}
+.ldvlDashV324 .ldvlSyncMega{border-top:none;background:#fff;animation:ldvlMegaIn .18s ease-out;box-shadow:inset 0 1px 0 #e8f0f5}
+@keyframes ldvlMegaIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.ldvlDashV324 .ldvlSyncMega.hide,.ldvlDashV324 .ldvlSyncMegaSub.hide{display:none!important}
+.ldvlDashV324 .ldvlSyncMegaHead{display:none}
+.ldvlDashV324 .ldvlSyncMegaBody{display:flex;align-items:stretch;min-height:200px;max-height:min(56vh,460px)}
+.ldvlDashV324 .ldvlSyncMegaSide{flex:0 0 152px;max-width:168px;border-right:1px solid #e8f0f5;background:#fafcfd;display:flex;flex-direction:column;min-height:0}
+.ldvlDashV324 .ldvlSyncMegaSideTitle{padding:8px 10px;font-size:10px;font-weight:800;color:#fff;letter-spacing:.25px;border-bottom:none;background:#5c6b7a;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+.ldvlDashV324 .ldvlSyncMegaSideTitle::before{content:'☰';font-size:11px;opacity:.9;flex-shrink:0}
+.ldvlDashV324 .ldvlSyncMegaSideList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:3px 0}
+.ldvlDashV324 .ldvlMegaSideItem{display:flex;align-items:center;gap:7px;width:100%;padding:7px 10px;border:none;background:transparent;cursor:pointer;font:inherit;font-size:12px;font-weight:600;color:#475569;text-align:left;position:relative;transition:background .12s,color .12s;border-left:3px solid transparent}
+.ldvlDashV324 .ldvlMegaSideItem:hover,.ldvlDashV324 .ldvlMegaSideItem.pre{background:#e8f7fd;color:var(--hm-dark);border-left-color:var(--hm-mid)}
+.ldvlDashV324 .ldvlMegaSideItem.on{background:#e8f7fd;color:var(--hm);font-weight:800;border-left-color:var(--hm)}
+.ldvlDashV324 .ldvlMegaSideItem.on::after{content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);border:6px solid transparent;border-right-color:#fff;z-index:2}
+.ldvlDashV324 .ldvlMegaSideIco{width:16px;height:16px;background:transparent;color:#b0bec5;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.ldvlDashV324 .ldvlMegaSideItem:hover .ldvlMegaSideIco,.ldvlDashV324 .ldvlMegaSideItem.pre .ldvlMegaSideIco,.ldvlDashV324 .ldvlMegaSideItem.on .ldvlMegaSideIco{color:var(--hm)}
+.ldvlDashV324 .ldvlMegaSideNum{font-size:13px;font-weight:800;min-width:18px;text-align:left;color:inherit}
+.ldvlDashV324 .ldvlMegaSideTxt{font-size:11px;line-height:1.25;font-weight:700;color:inherit}
+.ldvlDashV324 .ldvlSyncMegaMain{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:#fff}
+.ldvlDashV324 .ldvlSyncMegaTopTabs{display:flex;align-items:stretch;border-bottom:1px solid #e8f0f5;background:#fff;flex-shrink:0}
+.ldvlDashV324 .ldvlMegaTopTab{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#64748b;background:#fff;border:none;cursor:default}
+.ldvlDashV324 .ldvlMegaTopTab.on{background:var(--hm);color:#fff}
+.ldvlDashV324 .ldvlMegaTopTabSub{font-size:10px;font-weight:600;opacity:.88;letter-spacing:0;text-transform:none}
+.ldvlDashV324 .ldvlSyncMegaScroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 8px;background:#fff}
+.ldvlDashV324 .ldvlMegaSec{margin:0;padding:0}
+.ldvlDashV324 .ldvlMegaSec+.ldvlMegaSec{border-top:1px solid #f1f5f9}
+.ldvlDashV324 .ldvlMegaSecOn .ldvlMegaSecHead{background:linear-gradient(90deg,var(--hm-light) 0%,#fff 100%)}
+.ldvlDashV324 .ldvlMegaSecHead{display:flex;align-items:center;gap:6px;padding:7px 12px 6px;margin:0;background:linear-gradient(90deg,#f7fbfd,#fff);border-bottom:1px solid #eef4f8;position:sticky;top:0;z-index:1}
+.ldvlDashV324 .ldvlMegaSecHeadNum{flex-shrink:0;font-size:10px;font-weight:900;color:var(--hm);letter-spacing:.2px;text-transform:uppercase;white-space:nowrap}
+.ldvlDashV324 .ldvlMegaSecHeadTit{flex:1;min-width:0;font-size:10px;font-weight:700;color:var(--hm-dark);letter-spacing:.15px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ldvlDashV324 .ldvlMegaSecHeadCnt{flex-shrink:0;font-size:9px;font-weight:700;color:#94a3b8;background:#f1f5f9;padding:2px 6px;border-radius:999px;white-space:nowrap}
+.ldvlDashV324 .ldvlMegaSecGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 4px;padding:4px 10px 8px}
+.ldvlDashV324 .ldvlMegaLinkItem{display:flex;align-items:center;gap:6px;padding:5px 6px;border:none;background:transparent;cursor:pointer;font:inherit;font-size:11.5px;font-weight:500;color:#334155;text-align:left;line-height:1.25;border-radius:4px;transition:color .12s,background .12s;min-width:0;max-width:100%}
+.ldvlDashV324 .ldvlMegaLinkItem i{font-size:14px;color:#b0bec5;flex-shrink:0}
+.ldvlDashV324 .ldvlMegaLinkItem span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ldvlDashV324 .ldvlBaiWord{color:#dc2626;font-weight:900}
+.ldvlDashV324 .ldvlBaiNum{color:#b91c1c;font-weight:800}
+.ldvlDashV324 .ldvlBaiTit{color:#1e3a5f;font-weight:600}
+.ldvlDashV324 .ldvlMegaLinkItem:hover .ldvlBaiTit{color:var(--hm-dark)}
+.ldvlDashV324 .ldvlMegaLinkItem.on .ldvlBaiWord{color:#b91c1c}
+.ldvlDashV324 .ldvlMegaLinkItem.on .ldvlBaiTit{color:var(--hm-dark);font-weight:700}
+.bookLessonTitle .ldvlBaiWord{color:#dc2626;font-weight:950}
+.bookLessonTitle .ldvlBaiNum{color:#b91c1c;font-weight:900}
+.bookLessonTitle .ldvlBaiTit{color:#1e40af;font-weight:800}
+html[data-theme="dark"] .ldvlDashV324 .ldvlBaiTit,html[data-theme="dark"] .bookLessonTitle .ldvlBaiTit{color:#93c5fd}
+html[data-theme="dark"] .ldvlDashV324 .ldvlBaiWord,html[data-theme="dark"] .bookLessonTitle .ldvlBaiWord{color:#f87171}
+.ldvlDashV324 .ldvlMegaLinkItem:hover{color:var(--hm);background:var(--hm-light)}
+.ldvlDashV324 .ldvlMegaLinkItem:hover i{color:var(--hm)}
+.ldvlDashV324 .ldvlMegaLinkItem.on{color:var(--hm-dark);font-weight:700;background:var(--hm-light);box-shadow:inset 0 0 0 1px var(--hm-mid)}
+.ldvlDashV324 .ldvlMegaLinkItem.on i{color:var(--hm)}
+.ldvlDashV324 .ldvlMegaLinkItem.ldvlMegaLinkReady i{color:#16a34a!important}
+.ldvlDashV324 .ldvlMegaLinkItem.ldvlMegaLinkPartial i{color:#d97706!important}
+.ldvlDashV324 .ldvlMegaLinkItem.ldvlMegaLinkPending{opacity:.58}
+.ldvlDashV324 .ldvlMegaLinkItem.ldvlMegaLinkPending i{color:#cbd5e1!important}
+.ldvlLessonReadyIco,.ldvlLessonPartialIco,.ldvlLessonPendingIco{display:inline-flex;align-items:center;justify-content:center;margin-right:5px;vertical-align:middle;font-size:13px;line-height:1;flex-shrink:0}
+.ldvlLessonReadyIco{color:#16a34a}
+.ldvlLessonPartialIco{color:#d97706;font-size:12px}
+.ldvlLessonPendingIco{color:#94a3b8;font-size:12px;opacity:.75}
+.bookLessonTitle{display:flex;align-items:center;gap:2px;min-width:0}
+.ldvlDashV324 .ldvlSyncMegaTabsBar{padding:8px 12px 0;border-bottom:1px solid #e8f0f5;background:#fff;flex-shrink:0}
+.ldvlDashV324 .ldvlSyncMegaTabsLabel{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#8aa4b5;margin-bottom:6px}
+.ldvlDashV324 .ldvlSyncMegaTabs{display:flex;flex-wrap:wrap;gap:4px;padding-bottom:8px}
+.ldvlDashV324 .ldvlMegaTab{flex:0 0 auto;border:1px solid #d9e8f2;background:#fff;cursor:pointer;font:inherit;font-size:11px;font-weight:700;color:#5b6b7a;padding:5px 12px;border-radius:999px;white-space:nowrap;transition:all .12s}
+.ldvlDashV324 .ldvlMegaTab:hover,.ldvlDashV324 .ldvlMegaTab.pre{color:var(--hm);border-color:var(--hm-mid);background:var(--hm-light)}
+.ldvlDashV324 .ldvlMegaTab.on{color:#fff;background:var(--hm);border-color:var(--hm);font-weight:800}
+.ldvlDashV324 .ldvlMegaTab.on::after{display:none}
+.ldvlDashV324 .ldvlSyncMegaGrid{display:none}
+.ldvlDashV324 .ldvlMegaGridItem{display:none}
+.ldvlDashV324 .ldvlSyncMegaSub{border-top:1px solid #e8f0f5;background:#f7fbfd;padding:0;animation:ldvlMegaIn .15s ease-out}
+.ldvlDashV324 .ldvlMegaPractice{padding:10px 12px 12px}
+.ldvlDashV324 .ldvlMegaPracticeHead{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+.ldvlDashV324 .ldvlMegaPracticeHead b{display:block;font-size:12.5px;font-weight:800;color:#1e293b;line-height:1.35}
+.ldvlDashV324 .ldvlMegaPracticeSub{font-size:11px;color:#64748b;margin-top:2px;display:block}
+.ldvlDashV324 .ldvlMegaPracticeLabel{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.35px;color:var(--hm);margin:0 0 6px}
+.ldvlDashV324 .ldvlMegaDbtList{display:flex;flex-direction:column;gap:4px;max-height:min(28vh,200px);overflow-y:auto;margin-bottom:10px}
+.ldvlDashV324 .ldvlMegaDbtOpt{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid #dce8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:11.5px;line-height:1.35;color:#334155;transition:border-color .12s,background .12s}
+.ldvlDashV324 .ldvlMegaDbtOpt:hover{border-color:var(--hm-mid);background:var(--hm-light)}
+.ldvlDashV324 .ldvlMegaDbtOpt:has(input:checked){border-color:var(--hm);background:var(--hm-light);box-shadow:inset 0 0 0 1px rgba(0,173,239,.15)}
+.ldvlDashV324 .ldvlMegaDbtOpt input{margin-top:2px;flex-shrink:0;accent-color:var(--hm)}
+.ldvlDashV324 .ldvlMegaPracticeOpts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.ldvlDashV324 .ldvlMegaOptChip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid #d9e8f2;border-radius:999px;background:#fff;font-size:11px;font-weight:600;color:#64748b;cursor:pointer}
+.ldvlDashV324 .ldvlMegaOptChip input{accent-color:var(--hm)}
+.ldvlDashV324 .ldvlMegaPracticeActs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ldvlDashV324 .ldvlMegaStartBtn{flex:1;min-width:160px;padding:9px 16px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--hm),var(--hm-dark));color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 3px 12px rgba(0,173,239,.25);transition:filter .12s,transform .12s}
+.ldvlDashV324 .ldvlMegaStartBtn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.ldvlDashV324 .ldvlMegaPracticeEmpty{padding:12px;font-size:12px;color:#94a3b8}
+.ldvlDashV324 .ldvlSyncMegaTabsDbt .ldvlMegaTab.on{background:#e85d04;border-color:#e85d04}
+.ldvlDashV324 .ldvlSyncMegaTabsDbt .ldvlMegaTab:hover,.ldvlDashV324 .ldvlSyncMegaTabsDbt .ldvlMegaTab.pre{color:#c2410c;border-color:#fdba74;background:#fff7ed}
+.ldvlDashV324 .ldvlSyncMegaTabsDang{background:#f7fbfd;padding-bottom:8px}
+.ldvlDashV324 .ldvlSyncMonBtn{padding:7px 16px;font-size:12px;margin:0;border-radius:6px;line-height:1.2;text-align:center;min-width:96px;cursor:pointer;border:1px solid #d9e8f2;font:inherit;font-weight:700;background:#fff;color:#64748b;transition:all .15s ease}
+.ldvlDashV324 .ldvlSyncMonBtn .ldvlMonIco{display:inline;margin-right:4px;font-size:14px}
+.ldvlDashV324 .ldvlSyncMonBtn.tm:hover,.ldvlDashV324 .ldvlSyncMonBtn.tp:hover{border-color:var(--hm);color:var(--hm);background:var(--hm-light)}
+.ldvlDashV324 .ldvlSyncMonBtn.tm.on{background:var(--hm);color:#fff!important;border-color:var(--hm);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.ldvlDashV324 .ldvlSyncMonBtn.tp{--hm:#7c3aed;--hm-dark:#6d28d9;--hm-light:#f3e8ff;--hm-mid:#ddd6fe}
+.ldvlDashV324 .ldvlSyncMonBtn.tp.on{background:linear-gradient(180deg,#8b5cf6,#6d28d9)!important;color:#fff!important;border-color:#6d28d9!important;font-weight:900!important;text-shadow:0 1px 2px rgba(0,0,0,.22);letter-spacing:.2px}
+.ldvlDashV324 .ldvlSyncMegaEmpty{padding:14px 16px;color:#94a3b8;font-size:12px;line-height:1.45}
+.ldvlDashV324 .ldvlMegaTabCount{font-size:10px;opacity:.85;margin-left:3px;font-weight:700}
 .ldvlDashV324 #ldvlStudentSyncSection~#catalogScopeBox{display:none!important}
+.ldvlDashV324 #ldvlStudentSyncSection~#ldvlCatalogPanel{display:none!important}
+.ldvlDashV324 #ldvlCatalogPanel.ldvlCatalogShow{display:block!important}
 .ldvlDashV324 .homeFilterAdvanced{margin:0 0 12px}
 .ldvlDashV324 .homeFilterAdvanced>summary{cursor:pointer;font-weight:800;font-size:13px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;list-style:none}
 .ldvlDashV324 .homeFilterAdvanced>summary::-webkit-details-marker{display:none}
 .ldvlDashV324 .homeFilterAdvanced[open]>summary{margin-bottom:10px;border-color:#bfdbfe;background:#eff6ff;color:#1e40af}
-.ldvlDashV324 .ldvlSyncColMon{background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%)}
-.ldvlDashV324 .ldvlSyncColLop{background:linear-gradient(180deg,#ecfdf5 0%,#d1fae5 100%)}
-.ldvlDashV324 .ldvlSyncColChuong{background:linear-gradient(180deg,#fffbeb 0%,#fde68a55 100%)}
-.ldvlDashV324 .ldvlSyncColBai{background:linear-gradient(180deg,#fdf4ff 0%,#f3e8ff 100%)}
-.ldvlDashV324 .ldvlSyncColMon .ldvlSyncColHead,.ldvlDashV324 .ldvlSyncColLop .ldvlSyncColHead{font-size:9px;letter-spacing:.3px;margin-bottom:5px;text-align:center}
-.ldvlDashV324 .ldvlSyncColMon .ldvlSyncColHead b,.ldvlDashV324 .ldvlSyncColLop .ldvlSyncColHead b{font-size:9px}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColMon{background:linear-gradient(180deg,#f5f3ff 0%,#ede9fe 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColLop{background:linear-gradient(180deg,#eef2ff 0%,#e0e7ff 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColChuong{background:linear-gradient(180deg,#faf5ff 0%,#e9d5ff55 100%)}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncColBai{background:linear-gradient(180deg,#fdf2f8 0%,#fce7f3 100%)}
-.ldvlDashV324 .ldvlSyncHeadMon{color:#1d4ed8!important}
-.ldvlDashV324 .ldvlSyncRow.ldvlSyncPhys .ldvlSyncHeadMon{color:#6d28d9!important}
-.ldvlDashV324 .ldvlSyncCol{max-height:min(58vh,480px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;padding-right:2px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text)}
-.ldvlDashV324 .ldvlSyncColHead{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
-.ldvlDashV324 .ldvlSyncColHead b{color:#0f172a;font-weight:900}
-.ldvlDashV324 .ldvlSyncFitWrap{width:100%;overflow:hidden;position:relative}
-.ldvlDashV324 .ldvlSyncFitWrap.ldvlSyncFitted .ldvlSyncRow{will-change:transform}
-@media (max-width:900px){.ldvlDashV324 .ldvlSyncFitWrap{width:100%;overflow:hidden}.ldvlDashV324 .ldvlSyncRow{overflow:visible;width:max-content;min-width:100%;max-width:none}.ldvlDashV324 .ldvlSyncColBox{flex:0 0 auto;min-width:0}.ldvlDashV324 .ldvlSyncColMon{flex:0 0 58px;max-width:58px;padding:5px 2px}.ldvlDashV324 .ldvlSyncColLop{flex:0 0 54px;max-width:54px;padding:5px 2px}.ldvlDashV324 .ldvlSyncColChuong{max-width:132px;width:auto}.ldvlDashV324 .ldvlSyncColBai{max-width:148px;width:auto}.ldvlDashV324 .ldvlSyncColDbt{max-width:142px;width:auto}.ldvlDashV324 .ldvlSyncColDang{max-width:68px;min-width:64px;width:auto;border-right:none!important}.ldvlDashV324 .ldvlSyncCol{max-height:min(40vh,300px)}.ldvlDashV324 .ldvlSyncColHead{font-size:8px;margin-bottom:4px;letter-spacing:.15px;line-height:1.2}.ldvlDashV324 .ldvlSyncColHead b{font-size:8px}.ldvlDashV324 .ldvlSyncColMon .ldvlSyncColHead,.ldvlDashV324 .ldvlSyncColLop .ldvlSyncColHead{font-size:7px}.ldvlDashV324 .ldvlSyncPick{padding:4px 4px;font-size:9px;gap:3px;border-radius:6px}.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColBai .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColDbt .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColDang .ldvlSyncPick{padding:4px 4px;font-size:9px;gap:3px}.ldvlDashV324 .ldvlSyncIdx{min-width:15px;height:15px;font-size:7px;border-radius:4px}.ldvlDashV324 .ldvlSyncMonBtn{font-size:8.5px;padding:4px 2px;margin-bottom:3px;border-radius:6px}.ldvlDashV324 .ldvlSyncColMon .ldvlSyncMonBtn .ldvlMonIco{font-size:11px;margin-bottom:0}.ldvlDashV324 .ldvlSyncPickDbt{grid-template-columns:14px minmax(0,1fr) auto}.ldvlDashV324 .ldvlSyncCount{font-size:7px;padding-left:2px}.ldvlDashV324 .ldvlSyncColDang .ldvlSyncPick{justify-content:center;text-align:center}.ldvlDashV324 .ldvlSyncColDang .ldvlSyncTxt{font-weight:800}.ldvlDashV324 .ldvlSyncFoot{padding:8px 10px}.ldvlDashV324 #ldvlDashSyncHint,#ldvlStuDashSyncHint,#ldvlEditDashSyncHint{white-space:normal;max-width:100%;line-height:1.35;word-break:break-word;border-radius:8px}.ldvlDashV324 .adminEditMeta5Col .ldvlSyncFitWrap{margin:0 -2px}}
-.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColBai .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColDbt .ldvlSyncPick,.ldvlDashV324 .ldvlSyncColDang .ldvlSyncPick{padding:5px 6px;font-size:11px;gap:5px}
-.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncTxt{line-height:1.28;word-break:break-word}
-.ldvlDashV324 .ldvlSyncPickDbt{display:grid!important;grid-template-columns:20px minmax(0,1fr) auto;align-items:center}
-.ldvlDashV324 .ldvlSyncPickDbt .ldvlSyncIdx{grid-column:1}
-.ldvlDashV324 .ldvlSyncPickDbt .ldvlSyncTxt{grid-column:2;min-width:0}
-.ldvlDashV324 .ldvlSyncCount{grid-column:3;font-size:10px;font-weight:900;color:#9a3412;white-space:nowrap;padding-left:4px}
-.ldvlDashV324 .ldvlSyncColLop .ldvlSyncPick{padding:5px 4px;font-size:11px;gap:4px}
-.ldvlDashV324 .ldvlSyncColLop .ldvlSyncIdx{min-width:17px;height:17px;font-size:9px;border-radius:5px}
-.ldvlDashV324 .ldvlSyncColLop .ldvlSyncTxt{font-weight:700;text-align:center;line-height:1.25}
-.ldvlDashV324 .ldvlSyncMonBtn{padding:6px 3px;font-size:10.5px;margin-bottom:4px;border-radius:8px;line-height:1.2;text-align:center}
-.ldvlDashV324 .ldvlSyncColMon .ldvlSyncMonBtn .ldvlMonIco{display:block;font-size:14px;margin-bottom:1px}
-.ldvlDashV324 .ldvlSyncPick{cursor:pointer;padding:6px 8px;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.72);text-align:left;font-size:12px;width:100%;color:var(--text);line-height:1.35;display:flex;align-items:flex-start;gap:7px;transition:transform .12s,box-shadow .12s,border-color .12s}
-.ldvlDashV324 .ldvlSyncPick:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(15,23,42,.08)}
-.ldvlDashV324 .ldvlSyncIdx{flex-shrink:0;min-width:22px;height:22px;border-radius:7px;font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;line-height:1}
-.ldvlDashV324 .ldvlSyncColLop .ldvlSyncIdx{background:#86efac;color:#14532d}
-.ldvlDashV324 .ldvlSyncColChuong .ldvlSyncIdx{background:#fcd34d;color:#78350f}
-.ldvlDashV324 .ldvlSyncColBai .ldvlSyncIdx{background:#d8b4fe;color:#581c87}
-.ldvlDashV324 .ldvlSyncTxt{flex:1;min-width:0}
-.ldvlDashV324 .ldvlSyncPickLop.on{background:linear-gradient(90deg,#dcfce7,#bbf7d0)!important;border-color:#22c55e;font-weight:800;color:#14532d;box-shadow:0 0 0 2px rgba(34,197,94,.25)}
-.ldvlDashV324 .ldvlSyncPickChuong.on{background:linear-gradient(90deg,#fef3c7,#fde68a)!important;border-color:#f59e0b;font-weight:800;color:#92400e;box-shadow:0 0 0 2px rgba(245,158,11,.25)}
-.ldvlDashV324 .ldvlSyncPickBai.on{background:linear-gradient(90deg,#f3e8ff,#e9d5ff)!important;border-color:#a855f7;font-weight:800;color:#6b21a8;box-shadow:0 0 0 2px rgba(168,85,247,.25)}
-.ldvlDashV324 .ldvlSyncMonBtn{cursor:pointer;width:100%;margin-bottom:4px;border:2px solid transparent;font:inherit;border-radius:8px;padding:6px 3px;font-size:10.5px;font-weight:700;transition:transform .12s,box-shadow .12s;line-height:1.2;text-align:center}
-.ldvlDashV324 .ldvlSyncMonBtn.tm{background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1e40af;border-color:#93c5fd}
-.ldvlDashV324 .ldvlSyncMonBtn.tp{background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;border-color:#c4b5fd}
-.ldvlDashV324 .ldvlSyncMonBtn.on{transform:scale(1.02);font-weight:900;box-shadow:0 4px 16px rgba(37,99,235,.22)}
-.ldvlDashV324 .ldvlSyncMonBtn.tp.on{box-shadow:0 4px 16px rgba(124,58,237,.22)}
+@media (max-width:900px){.ldvlDashV324 .ldvlSyncMegaBody{flex-direction:column;max-height:none}.ldvlDashV324 .ldvlSyncMegaSide{flex:0 0 auto;max-width:none;border-right:none;border-bottom:1px solid #e8f0f5}.ldvlDashV324 .ldvlSyncMegaSideList{max-height:120px}.ldvlDashV324 .ldvlMegaSecGrid{grid-template-columns:1fr 1fr}.ldvlDashV324 .ldvlSyncMonBtn{font-size:11px;padding:6px 10px}.ldvlDashV324 .ldvlSyncFoot{padding:8px 10px}.ldvlDashV324 #ldvlDashSyncHint,#ldvlStuDashSyncHint,#ldvlEditDashSyncHint{white-space:normal;max-width:100%;line-height:1.35;word-break:break-word;border-radius:8px}}
 .ldvlDashV324 .ldvlSyncFoot{margin-top:10px;padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0}
-.ldvlDashV324 #ldvlDashOpenCatalogBtn{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;box-shadow:0 4px 16px rgba(37,99,235,.35);font-weight:800;padding:9px 16px;border-radius:10px}
+.ldvlDashV324 #ldvlDashOpenCatalogBtn{background:linear-gradient(135deg,var(--hm,#00adef),#0083ca);color:#fff;border:none;box-shadow:0 3px 14px rgba(0,173,239,.28);font-weight:800;padding:8px 14px;border-radius:8px}
 .ldvlDashV324 #ldvlDashOpenCatalogBtn:hover{filter:brightness(1.06);transform:translateY(-1px)}
 .ldvlDashV324 #ldvlDashSyncHint{background:#fff;padding:5px 12px;border-radius:999px;border:1px solid #e2e8f0;font-size:11px;color:#475569}
 .ldvlDashV324 #ldvlAdminArea.hide,.ldvlDashV324 #ldvlStudentHome.hide{display:none!important}
@@ -19203,15 +19335,140 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   .ldvlDashV324 .ldvlMain{padding:12px}
 }
 
+/* Chat nổi Thầy Minh — học sinh hỏi AI linh hoạt */
+.ldvlTutorFab{position:fixed;right:10px;bottom:10px;z-index:480;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.ldvlTutorFab>*{pointer-events:auto}
+.ldvlTutorFabDock{display:inline-flex;align-items:center;gap:4px;max-width:calc(100vw - 20px)}
+.ldvlTutorFabZalo{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.55);background:linear-gradient(135deg,#0068ff,#0084ff);color:#fff!important;font-size:11px;font-weight:800;text-decoration:none!important;white-space:nowrap;line-height:1.2;box-shadow:0 3px 12px rgba(0,104,255,.32);transition:transform .12s,box-shadow .12s}
+.ldvlTutorFabZalo:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,104,255,.4);color:#fff!important}
+.ldvlTutorFabAiMini{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;min-width:32px;border-radius:999px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:900;cursor:pointer;line-height:1;box-shadow:0 2px 8px rgba(26,115,232,.18);transition:transform .12s}
+.ldvlTutorFabAiMini:hover{background:#dbeafe;transform:translateY(-1px)}
+.ldvlTutorFabBtn,.ldvlTutorFabLbl{display:none!important}
+.ldvlTutorFabMenu{display:flex;flex-direction:column;gap:4px;padding:8px;background:#fff;border:1px solid #dbeafe;border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.2);min-width:156px;max-width:210px;transform:translateY(6px) scale(.96);opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s}
+.ldvlTutorFabMenu.open{transform:none;opacity:1;visibility:visible}
+.ldvlTutorFabMenu button{font-size:11px;font-weight:700;padding:7px 10px;border-radius:8px;border:1px solid #bfdbfe;background:#f8fbff;color:#1d4ed8;cursor:pointer;text-align:left;width:100%;line-height:1.25}
+.ldvlTutorFabMenu button:hover{background:#eff6ff}
+.ldvlTutorFabMenuRow{display:flex;gap:4px}
+.ldvlTutorFabMenuRow button{flex:1;text-align:center;padding:6px 4px;font-size:10px}
+.ldvlTutorFabMenuSep{height:1px;background:#e2e8f0;margin:2px 0}
+.ldvlTutorFabMenuChat{background:#fff!important;border-color:#93c5fd!important}
+.ldvlTutorFabMenuZalo{display:flex!important;align-items:center;justify-content:center;gap:6px;padding:7px 10px!important;border-radius:8px!important;border:1px solid #93c5fd!important;background:linear-gradient(135deg,#0068ff,#0084ff)!important;color:#fff!important;text-decoration:none!important;font-size:11px!important;font-weight:800!important;text-align:center}
+.ldvlTutorFabMenuZalo:hover{background:linear-gradient(135deg,#0058d6,#0070e0)!important;color:#fff!important}
+.ldvlTutorFabMenu button:disabled{opacity:.55;cursor:not-allowed}
+.ldvlTutorBar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid #dbeafe;background:linear-gradient(90deg,#eff6ff,#f0f9ff);flex-shrink:0;flex-wrap:wrap}
+.ldvlTutorZaloLink{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:linear-gradient(135deg,#0068ff,#0084ff);color:#fff!important;text-decoration:none!important;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,104,255,.25)}
+.ldvlTutorZaloLink:hover{filter:brightness(1.06);color:#fff!important}
+.ldvlTutorInfoBtn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid #c4b5fd;background:#fff;color:#6d28d9;cursor:pointer;white-space:nowrap}
+.ldvlTutorInfoBtn:hover{background:#f5f3ff}
+.ldvlTutorInfoBtn:disabled{opacity:.5;cursor:not-allowed}
+.ldvlTutorInfoBtn.hide{display:none!important}
+.ldvlTutorKeyBtn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid #fcd34d;background:#fffbeb;color:#b45309;cursor:pointer;white-space:nowrap}
+.ldvlTutorKeyBtn:hover{background:#fef3c7}
+.ldvlTutorKeyBtn.ldvlTutorKeyWarn{border-color:#f87171;background:#fef2f2;color:#b91c1c;animation:ldvlKeyPulse 1.6s ease-in-out infinite}
+@keyframes ldvlKeyPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.35)}50%{box-shadow:0 0 0 4px rgba(248,113,113,0)}}
+.ldvlTutorKeyBox{border-bottom:1px solid #fde68a;background:linear-gradient(180deg,#fffbeb,#fff);flex-shrink:0}
+.ldvlTutorKeyBox.ldvlTutorKeyCollapsed .ldvlTutorKeyBody,.ldvlTutorKeyBox.ldvlTutorKeyCollapsed .ldvlTutorKeyActs,.ldvlTutorKeyBox.ldvlTutorKeyCollapsed #ldvlTutorKeyStatus{display:none}
+.ldvlTutorKeyHead{display:flex;align-items:center;justify-content:space-between;width:100%;padding:6px 10px;border:none;background:transparent;cursor:pointer;font:inherit;font-size:11px;font-weight:800;color:#92400e;text-align:left}
+.ldvlTutorKeyHead:hover{background:rgba(251,191,36,.12)}
+.ldvlTutorKeyBody{padding:0 10px 6px}
+.ldvlTutorKeyHint{margin:0 0 5px;font-size:10px;line-height:1.4;color:#78716c}
+.ldvlTutorKeyHint a{color:#1d4ed8}
+.ldvlTutorKeyBody textarea{width:100%;min-height:42px;max-height:72px;font-family:Consolas,monospace;font-size:11px;padding:6px 8px;border:1px solid #fcd34d;border-radius:8px;resize:vertical;line-height:1.35}
+.ldvlTutorKeyActs{display:flex;gap:5px;padding:0 10px 6px;flex-wrap:wrap}
+.ldvlTutorKeyActs button{font-size:10px;font-weight:700;padding:5px 9px;border-radius:8px;border:1px solid #fcd34d;background:#fff;color:#92400e;cursor:pointer}
+.ldvlTutorKeyActs button.ldvlTutorKeySave{background:#16a34a;border-color:#16a34a;color:#fff}
+.ldvlTutorKeyActs button:hover{filter:brightness(.97)}
+#ldvlTutorKeyStatus{padding:0 10px 7px;font-size:10px;line-height:1.35;color:#78716c}
+.ldvlTutorKeyBox.ldvlTutorKeyNeed{border-bottom-color:#fca5a5;background:linear-gradient(180deg,#fef2f2,#fff)}
+.ldvlTutorKeyBox.ldvlTutorKeyNeed .ldvlTutorKeyHead{color:#b91c1c}
+.ldvlTutorQuick button.ldvlTutorQuickZalo{background:linear-gradient(135deg,#0068ff,#0084ff);border-color:#0068ff;color:#fff}
+.ldvlTutorQuick button.ldvlTutorQuickInfo{border-color:#c4b5fd;color:#6d28d9}
+.ldvlTutorAbcd{display:flex;gap:5px;padding:7px 10px;border-bottom:1px solid #bfdbfe;background:linear-gradient(180deg,#f8fbff,#fff);flex-shrink:0}
+.ldvlTutorAbcd.hide{display:none!important}
+.ldvlTutorAbcd button{flex:1;min-width:0;font-size:11px;font-weight:800;padding:8px 5px;border-radius:8px;border:2px solid #60a5fa;background:#eff6ff;color:#1d4ed8;cursor:pointer;line-height:1.2}
+.ldvlTutorAbcd button:hover{background:#dbeafe;border-color:#3b82f6}
+.ldvlTutorAbcdNet{display:flex;gap:4px;padding:0 10px 7px;border-bottom:1px solid #bbf7d0;background:linear-gradient(180deg,#f0fdf4,#fff);flex-shrink:0}
+.ldvlTutorAbcdNet.hide{display:none!important}
+.ldvlTutorAbcdNet button{flex:1;min-width:0;font-size:10px;font-weight:800;padding:6px 3px;border-radius:7px;border:1px solid #86efac;background:#ecfdf5;color:#15803d;cursor:pointer;line-height:1.15}
+.ldvlTutorAbcdNet button:hover{background:#d1fae5;border-color:#22c55e}
+.ldvlTutorNetBtn{font-size:10px;font-weight:800;padding:5px 10px;border-radius:999px;border:1px solid #86efac;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#15803d;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.ldvlTutorNetBtn:hover{filter:brightness(.97);border-color:#22c55e}
+.ldvlTutorFabMenuAbcd .ldvlTutorFabMenuRow button,.ldvlTutorFabMenuRow.ldvlTutorFabMenuAbcd button{font-size:10px;font-weight:800}
+.ldvlTutorFabMenuRow.ldvlTutorFabMenuNet button{font-size:10px;font-weight:800;color:#15803d;border-color:#86efac;background:#ecfdf5}
+.ldvlTutorFabMenuRow.ldvlTutorFabMenuNet button:hover{background:#d1fae5}
+.ldvlTutorPanel{position:fixed;right:14px;bottom:78px;z-index:481;width:min(380px,calc(100vw - 28px));max-height:min(72vh,520px);background:#fff;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 12px 40px rgba(15,23,42,.22);display:flex;flex-direction:column;overflow:hidden;transform:translateY(12px) scale(.96);opacity:0;visibility:hidden;transition:opacity .2s,transform .2s,visibility .2s}
+.ldvlTutorPanel.open{transform:none;opacity:1;visibility:visible}
+.ldvlTutorHead{display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(135deg,#1a73e8,#2563eb);color:#fff;flex-shrink:0}
+.ldvlTutorHeadAv{width:40px;height:40px;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,.5);flex-shrink:0}
+.ldvlTutorHeadAv img{width:100%;height:100%;object-fit:cover}
+.ldvlTutorHeadTit{flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.2}
+.ldvlTutorHeadSub{font-size:11px;opacity:.88;font-weight:600}
+.ldvlTutorHeadClose{border:none;background:rgba(255,255,255,.2);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1}
+.ldvlTutorQuick{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;border-bottom:1px solid #e8f0f5;background:#f8fbff;flex-shrink:0}
+.ldvlTutorQuick button{font-size:10px;font-weight:700;padding:5px 8px;border-radius:999px;border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;cursor:pointer}
+.ldvlTutorQuick button:hover{background:#eff6ff}
+.ldvlTutorNotice{padding:5px 10px;font-size:11px;line-height:1.35;color:#92400e;background:#fffbeb;border-bottom:1px solid #fde68a;flex-shrink:0;text-align:center}
+.ldvlTutorNotice b{color:#b45309;font-weight:800}
+.ldvlTutorMsgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px;background:#fafcff;min-height:120px}
+.ldvlTutorMsg{margin-bottom:10px;display:flex;gap:8px;align-items:flex-start}
+.ldvlTutorMsg.user{flex-direction:row-reverse}
+.ldvlTutorMsgBubble{max-width:88%;padding:8px 11px;border-radius:12px;font-size:13px;line-height:1.45;word-break:break-word}
+.ldvlTutorMsg.user .ldvlTutorMsgBubble{background:#1a73e8;color:#fff;border-bottom-right-radius:4px}
+.ldvlTutorMsg.bot .ldvlTutorMsgBubble{background:#fff;border:1px solid #e2e8f0;color:#0f172a;border-bottom-left-radius:4px}
+.ldvlTutorMsgBubble .hintMath{font-size:13px;line-height:1.45}
+.ldvlTutorFoot{padding:8px 10px;border-top:1px solid #e2e8f0;background:#fff;display:flex;gap:6px;align-items:flex-end;flex-shrink:0}
+.ldvlTutorFoot textarea{flex:1;min-height:38px;max-height:100px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;font-size:13px;resize:none;line-height:1.35}
+.ldvlTutorFoot textarea:focus{outline:none;border-color:#60a5fa;box-shadow:0 0 0 2px #dbeafe}
+.ldvlTutorSend{flex-shrink:0;width:38px;height:38px;border:none;border-radius:10px;background:#1a73e8;color:#fff;cursor:pointer;font-size:16px}
+.ldvlTutorSend:disabled{opacity:.5;cursor:not-allowed}
+.ldvlTutorLoading{padding:8px 12px;font-size:12px;color:#64748b;display:flex;align-items:center;gap:8px}
+.ldvlTutorFab.hide,.ldvlTutorPanel.hide{display:none!important}
+body.mobile-quiz-ui.quiz-session-active .ldvlTutorFab{bottom:72px}
+html[data-theme="dark"] .ldvlTutorPanel{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .ldvlTutorMsgs{background:#0f172a}
+html[data-theme="dark"] .ldvlTutorMsg.bot .ldvlTutorMsgBubble{background:#1e293b;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .ldvlTutorQuick{background:#172033;border-color:#334155}
+html[data-theme="dark"] .ldvlTutorQuick button{background:#1e293b;border-color:#3b82f6;color:#bfdbfe}
+html[data-theme="dark"] .ldvlTutorNotice{background:#422006;border-color:#78350f;color:#fde68a}
+html[data-theme="dark"] .ldvlTutorNotice b{color:#fcd34d}
+html[data-theme="dark"] .ldvlTutorFabMenu{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .ldvlTutorFabMenu button{background:#172033;border-color:#3b82f6;color:#bfdbfe}
+html[data-theme="dark"] .ldvlTutorFabMenuSep{background:#334155}
+html[data-theme="dark"] .ldvlTutorBar{background:#172033;border-color:#334155}
+html[data-theme="dark"] .ldvlTutorInfoBtn{background:#1e293b;border-color:#7c3aed;color:#c4b5fd}
+html[data-theme="dark"] .ldvlTutorQuick button.ldvlTutorQuickInfo{background:#1e293b}
+html[data-theme="dark"] .ldvlTutorAbcd{background:#172033;border-color:#334155}
+html[data-theme="dark"] .ldvlTutorAbcd button{background:#1e293b;border-color:#3b82f6;color:#bfdbfe}
+html[data-theme="dark"] .ldvlTutorKeyBox{background:#2d1f00;border-color:#854d0e}
+html[data-theme="dark"] .ldvlTutorKeyHead{color:#fcd34d}
+html[data-theme="dark"] .ldvlTutorKeyBody textarea{background:#1e293b;border-color:#854d0e;color:#e2e8f0}
+html[data-theme="dark"] .ldvlTutorKeyActs button{background:#1e293b;border-color:#854d0e;color:#fcd34d}
+html[data-theme="dark"] .ldvlTutorKeyBtn{background:#422006;border-color:#854d0e;color:#fcd34d}
+@media(max-width:480px){.ldvlTutorPanel{right:8px;left:8px;width:auto;bottom:74px;max-height:min(68vh,480px)}.ldvlTutorFab{right:10px;bottom:10px}}
+.ldvlZaloFab{position:fixed;left:14px;bottom:14px;z-index:479;display:flex;align-items:center;gap:8px;padding:7px 14px 7px 10px;background:linear-gradient(135deg,#0068ff,#0084ff);color:#fff;text-decoration:none;border-radius:999px;box-shadow:0 6px 22px rgba(0,104,255,.42);border:2px solid rgba(255,255,255,.75);transition:transform .15s,box-shadow .15s}
+.ldvlZaloFab:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(0,104,255,.5);color:#fff}
+.ldvlZaloFabIco{font-size:20px;line-height:1;flex-shrink:0}
+.ldvlZaloFabTxt{display:flex;flex-direction:column;line-height:1.15}
+.ldvlZaloFabTit{font-size:12px;font-weight:900;letter-spacing:.2px}
+.ldvlZaloFabNum{font-size:11px;font-weight:700;letter-spacing:.35px;opacity:.95}
+.ldvlZaloFab.hide{display:none!important}
+/* Zalo đã gộp vào Hỏi AI — không hiện FAB riêng */
+#ldvlZaloFab{display:none!important}
+body.mobile-quiz-ui.quiz-session-active .ldvlZaloFab{bottom:72px}
+@media(max-width:480px){.ldvlZaloFab{left:10px;bottom:10px;padding:6px 12px 6px 9px}.ldvlZaloFabNum{font-size:10px}}
+
 </style></head>
 <body class="ldvlDashV324">
 <header class="hdr hm" id="ldvlDashHdr">
   <div class="logo">
-    <img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" width="30" height="30" style="border-radius:7px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <a href="https://zalo.me/0946111107" target="_blank" rel="noopener" class="logo-avatar-link" title="Nhắn Zalo Thầy Minh · 0946 1111 07">
+    <img src="/static/teacher-ai-icon-cartoon.png?v=322" alt="Thầy Minh" width="64" height="64" onerror="this.style.display='none';let f=this.closest('.logo')&&this.closest('.logo').querySelector('.logo-fb');if(f)f.style.display='flex'">
+    </a>
     <div class="logo-fb" style="display:none"><i class="ti ti-school"></i></div>
-    <div class="logo-txt">Luyện đề AI · Thầy Minh <small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
+    <div class="logo-txt ldvlLogoTxt"><span class="logo-title">Luyện đề AI · Thầy Minh</span><small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
   </div>
-  <div id="topSubjectTabsV253" class="topSubjectTabsV253 hsp" aria-label="Chọn môn nhanh" style="justify-content:center">
+  <button type="button" id="ldvlHdrHomeBtn" class="hbtn ldvlHdrHomeBtn" onclick="ldvlGoHome()" title="Về trang chủ" aria-label="Về trang chủ"><i class="ti ti-home"></i></button>
+  <div id="topSubjectTabsV253" class="topSubjectTabsV253" aria-label="Chọn môn Toán / Vật lý">
     <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
     <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
   </div>
@@ -19287,43 +19544,24 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   </div>
   <div id="ap-dash">
     <div class="alert aw hide" id="ldvlDashAlert"><i class="ti ti-alert-triangle"></i> <span id="ldvlDashAlertTxt"></span></div>
-    <div class="sg">
-      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-math]'),'ap-q-math')" title="Mở mục lục đề Toán"><div class="sic"><i class="ti ti-file-text" style="color:var(--mh)"></i></div><div class="sv" id="ldvlStatMath">—</div><div class="sl">Câu hỏi Toán</div><div class="ss" id="ldvlStatMathSub">bấm → mục lục</div></div>
-      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')" title="Mở mục lục đề Vật lý"><div class="sic"><i class="ti ti-atom-2" style="color:var(--ph)"></i></div><div class="sv" id="ldvlStatPhys">—</div><div class="sl">Câu hỏi Vật lý</div><div class="ss" id="ldvlStatPhysSub">bấm → mục lục</div></div>
-      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở tất cả đề"><div class="sic"><i class="ti ti-books" style="color:var(--ah)"></i></div><div class="sv" id="ldvlStatCatalog">—</div><div class="sl">Đề / thẻ đề</div><div class="ss" id="ldvlStatTotal">bấm → luyện đề</div></div>
-      <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở mục lục"><div class="sic"><i class="ti ti-database" style="color:var(--blue)"></i></div><div class="sv" id="ldvlStatAll">—</div><div class="sl">Tổng câu hỏi</div><div class="ss" id="ldvlStatLoaded">—</div></div>
-    </div>
     <div class="panel">
-      <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Thứ tự đồng bộ Sheet</h3></div>
       <div class="pb">
         <div class="ldvlSyncRow" id="ldvlSyncRow">
-          <div class="ldvlSyncColBox ldvlSyncColMon">
-            <div class="ldvlSyncColHead ldvlSyncHeadMon">① Môn</div>
-            <div id="ldvlSyncMonCol"></div>
+          <div class="ldvlSyncMega hide" id="ldvlSyncMegaPanel">
+            <div class="ldvlSyncMegaBody">
+              <aside class="ldvlSyncMegaSide"><div class="ldvlSyncMegaSideTitle">Chọn lớp</div><div class="ldvlSyncMegaSideList" id="ldvlSyncLopCol"></div></aside>
+              <div class="ldvlSyncMegaMain">
+                <div class="ldvlSyncMegaTopTabs"><span class="ldvlMegaTopTab on" id="ldvlSyncTopTabLbl">BÀI HỌC</span></div>
+                <div class="ldvlSyncMegaScroll" id="ldvlSyncBaiCol"></div>
+              </div>
+            </div>
           </div>
-          <div class="ldvlSyncColBox ldvlSyncColLop">
-            <div class="ldvlSyncColHead" id="ldvlSyncLopHead">② Lớp</div>
-            <div id="ldvlSyncLopCol" class="ldvlSyncCol">—</div>
-          </div>
-          <div class="ldvlSyncColBox ldvlSyncColChuong">
-            <div class="ldvlSyncColHead" id="ldvlSyncChuongHead">③ Chương</div>
-            <div id="ldvlSyncChuongCol" class="ldvlSyncCol">—</div>
-          </div>
-          <div class="ldvlSyncColBox ldvlSyncColBai">
-            <div class="ldvlSyncColHead" id="ldvlSyncBaiHead">④ Bài học</div>
-            <div id="ldvlSyncBaiCol" class="ldvlSyncCol">—</div>
-          </div>
-          <div class="ldvlSyncColBox ldvlSyncColDbt" id="ldvlSyncDbtBox" style="display:none">
-            <div class="ldvlSyncColHead" id="ldvlSyncDbtHead" style="color:#d97706">⑤ Dạng BT</div>
-            <div id="ldvlSyncDbtCol" class="ldvlSyncCol">—</div>
-          </div>
-          <div class="ldvlSyncColBox ldvlSyncColDang" id="ldvlSyncDangBox" style="display:none">
-            <div class="ldvlSyncColHead" id="ldvlSyncDangHead" style="color:#2563eb">⑥ Loại BT</div>
-            <div id="ldvlSyncDangCol" class="ldvlSyncCol">—</div>
+          <div class="ldvlSyncMegaSub hide" id="ldvlSyncMegaSubPanel">
+            <div class="ldvlMegaPractice" id="ldvlSyncPracticeBox"></div>
           </div>
         </div>
         <div class="ldvlSyncFoot">
-        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Bấm Toán hoặc Vật lý</b> → Lớp · Chương · Bài · <b>Dạng BT</b> → <b>Loại BT</b> (TN/ĐS/TLN/TL theo từng dạng) → <b>Mở mục lục đề</b></div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Click bài</b> → chọn dạng ngay bên dưới → <b>Bắt đầu làm bài</b> · hoặc <b>Mở mục lục đề</b> xem chi tiết</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button type="button" class="btn" id="ldvlDashOpenCatalogBtn" onclick="ldvlDashOpenCatalog()">→ Mở mục lục đề</button>
           <button type="button" class="btn2" id="ldvlDashExportLatexBtn" onclick="ldvlDashExportLatex()" title="Xuất .tex theo dạng BT đã chọn">📄 Xuất LaTeX</button>
@@ -19331,15 +19569,6 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
         </div>
         </div>
       </div>
-    </div>
-    <div class="stit">Thao tác nhanh</div>
-    <div class="ag">
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" style="border-color:var(--mh);background:var(--ml)"><div class="aic">📋</div><div class="al2">Luyện đề · Mục lục</div><div class="ad">Chọn đề → Làm bài</div></button>
-      <button type="button" class="ac" onclick="ldvlAdminNav(null,'ap-random')"><div class="aic">🎲</div><div class="al2">Tự luyện ngẫu nhiên</div><div class="ad">Ghép đề 28 câu</div></button>
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-math]'),'ap-q-math')"><div class="aic">📐</div><div class="al2">Đề Toán</div><div class="ad">Lọc môn Toán</div></button>
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')"><div class="aic">🔭</div><div class="al2">Đề Vật lý</div><div class="ad">Lọc môn Lý</div></button>
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-pdf-math]'),'ap-pdf-math')"><div class="aic"><i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--pdf)"></i></div><div class="al2">PDF Toán</div><div class="ad">PP · lý thuyết · sách</div></button>
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-pdf-phys]'),'ap-pdf-phys')"><div class="aic"><i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--pdf)"></i></div><div class="al2">PDF Vật lý</div><div class="ad">PP · lý thuyết · sách</div></button>
     </div>
   </div>
   <div id="ap-users" style="display:none" class="panel"><b>👥 Học viên</b><p class="muted" style="margin:8px 0;line-height:1.5">Quản lý tài khoản qua sheet đăng ký / đăng nhập app. Mục này sẽ mở rộng thống kê học viên trong bản sau.</p></div>
@@ -19383,36 +19612,23 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 
 <div id="ldvlStudentSyncSection" class="homeSection">
   <div class="panel" style="margin:0">
-    <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Chọn môn → lớp → chương → bài → dạng BT</h3></div>
     <div class="pb">
       <div class="ldvlSyncRow" id="ldvlStuSyncRow">
-        <div class="ldvlSyncColBox ldvlSyncColMon">
-          <div class="ldvlSyncColHead ldvlSyncHeadMon">① Môn</div>
-          <div id="ldvlStuSyncMonCol"></div>
+        <div class="ldvlSyncMega hide" id="ldvlStuSyncMegaPanel">
+          <div class="ldvlSyncMegaBody">
+            <aside class="ldvlSyncMegaSide"><div class="ldvlSyncMegaSideTitle">Chọn lớp</div><div class="ldvlSyncMegaSideList" id="ldvlStuSyncLopCol"></div></aside>
+            <div class="ldvlSyncMegaMain">
+              <div class="ldvlSyncMegaTopTabs"><span class="ldvlMegaTopTab on" id="ldvlStuSyncTopTabLbl">BÀI HỌC</span></div>
+              <div class="ldvlSyncMegaScroll" id="ldvlStuSyncBaiCol"></div>
+            </div>
+          </div>
         </div>
-        <div class="ldvlSyncColBox ldvlSyncColLop">
-          <div class="ldvlSyncColHead" id="ldvlStuSyncLopHead">② Lớp</div>
-          <div id="ldvlStuSyncLopCol" class="ldvlSyncCol">—</div>
-        </div>
-        <div class="ldvlSyncColBox ldvlSyncColChuong">
-          <div class="ldvlSyncColHead" id="ldvlStuSyncChuongHead">③ Chương</div>
-          <div id="ldvlStuSyncChuongCol" class="ldvlSyncCol">—</div>
-        </div>
-        <div class="ldvlSyncColBox ldvlSyncColBai">
-          <div class="ldvlSyncColHead" id="ldvlStuSyncBaiHead">④ Bài học</div>
-          <div id="ldvlStuSyncBaiCol" class="ldvlSyncCol">—</div>
-        </div>
-        <div class="ldvlSyncColBox ldvlSyncColDbt" id="ldvlStuSyncDbtBox" style="display:none">
-          <div class="ldvlSyncColHead" id="ldvlStuSyncDbtHead" style="color:#d97706">⑤ Dạng BT</div>
-          <div id="ldvlStuSyncDbtCol" class="ldvlSyncCol">—</div>
-        </div>
-        <div class="ldvlSyncColBox ldvlSyncColDang" id="ldvlStuSyncDangBox" style="display:none">
-          <div class="ldvlSyncColHead" id="ldvlStuSyncDangHead" style="color:#2563eb">⑥ Loại BT</div>
-          <div id="ldvlStuSyncDangCol" class="ldvlSyncCol">—</div>
+        <div class="ldvlSyncMegaSub hide" id="ldvlStuSyncMegaSubPanel">
+          <div class="ldvlMegaPractice" id="ldvlStuSyncPracticeBox"></div>
         </div>
       </div>
       <div class="ldvlSyncFoot">
-        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Bấm Toán hoặc Vật lý</b> → Lớp · Chương · Bài · <b>Dạng BT</b> → <b>Loại BT</b> (TN/ĐS/TLN/TL theo từng dạng) → <b>Mở mục lục đề</b></div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Click bài</b> → chọn dạng ngay bên dưới → <b>Bắt đầu làm bài</b> · hoặc <b>Mở mục lục đề</b> xem chi tiết</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button type="button" class="btn" id="ldvlStuDashOpenCatalogBtn" onclick="ldvlDashOpenCatalog()">→ Mở mục lục đề</button>
           <span id="ldvlStuDashSyncHint" class="muted" style="font-size:12px">Chưa chọn môn</span>
@@ -19554,9 +19770,9 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   <details id="agJsonDetails" style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">JSON xem trước — có thể sửa trước khi lưu</summary><textarea id="agJson" class="aiGenJsonBox" spellcheck="false" placeholder='{"questions":[]}'></textarea></details>
 </div>
 
-<div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
+<div id="ldvlCatalogPanel" class="panel"><span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
 </div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button type="button" id="btnHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Tạo câu tương tự</button><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsHint" class="btn2" onclick="requestHint()">💡 Gợi ý AI</button><button id="btnFsSimilar" class="btn2 hide" onclick="requestSimilarQuestion()">📝 Câu tương tự</button><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminQuizAiSuggestDbt()">🏷️ Gợi ý Dạng BT</button><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">💾 Lưu Dạng BT</button><button type="button" class="adminPPBtn" onclick="adminQuizAiSuggestLevel()">🎯 Gợi ý mức độ</button><button type="button" class="adminPPBtn" onclick="adminQuizAiSaveLevel()">💾 Lưu mức độ</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="adminIssueFilterBar" class="adminIssueFilterBar hide"><div class="adminIssueFilterLbl">🔎 Lọc soát nhanh</div><button type="button" class="adminIssueFilterBtn" id="adminFltNoLg" onclick="setAdminQuizIssueFilter('no_lg')">Thiếu LG</button><button type="button" class="adminIssueFilterBtn" id="adminFltNoDa" onclick="setAdminQuizIssueFilter('no_da')">Thiếu ĐA</button><button type="button" class="adminIssueFilterBtn" id="adminFltNoBoth" onclick="setAdminQuizIssueFilter('no_both')">Thiếu LG hoặc ĐA</button><span id="adminIssueFilterStat" class="adminIssueFilterStat"></span></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnRetry" class="btn2" onclick="openRetryModal()">🔁 Làm lại đề</button><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminQuizAiSuggestDbt()">🏷️ Gợi ý Dạng BT</button><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">💾 Lưu Dạng BT</button><button type="button" class="adminPPBtn" onclick="adminQuizAiSuggestLevel()">🎯 Gợi ý mức độ</button><button type="button" class="adminPPBtn" onclick="adminQuizAiSaveLevel()">💾 Lưu mức độ</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="adminIssueFilterBar" class="adminIssueFilterBar hide"><div class="adminIssueFilterLbl">🔎 Lọc soát nhanh</div><button type="button" class="adminIssueFilterBtn" id="adminFltNoLg" onclick="setAdminQuizIssueFilter('no_lg')">Thiếu LG</button><button type="button" class="adminIssueFilterBtn" id="adminFltNoDa" onclick="setAdminQuizIssueFilter('no_da')">Thiếu ĐA</button><button type="button" class="adminIssueFilterBtn" id="adminFltNoBoth" onclick="setAdminQuizIssueFilter('no_both')">Thiếu LG hoặc ĐA</button><span id="adminIssueFilterStat" class="adminIssueFilterStat"></span></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
 
 </div></main></div><!-- /ldvlDashWrap -->
 <div id="pdf-fs-scr">
@@ -19571,6 +19787,51 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   </div>
   <iframe id="pdf-fs-frame" src="about:blank" allowfullscreen></iframe>
 </div>
+<div id="ldvlTutorFab" class="ldvlTutorFab hide" aria-live="polite">
+  <div id="ldvlTutorPanel" class="ldvlTutorPanel hide" role="dialog" aria-label="Chat với Thầy Minh AI">
+    <div class="ldvlTutorHead">
+      <div class="ldvlTutorHeadAv"><img src="/static/teacher-ai-icon-cartoon.png?v=322" alt="Thầy Minh"></div>
+      <div class="ldvlTutorHeadTit">Thầy Minh AI<div class="ldvlTutorHeadSub">Hỏi định nghĩa · gợi ý giải · công thức</div></div>
+      <button type="button" class="ldvlTutorHeadClose" onclick="ldvlTutorChatToggle(false)" title="Đóng">✕</button>
+    </div>
+    <div class="ldvlTutorBar">
+      <a class="ldvlTutorZaloLink" href="https://zalo.me/0946111107" target="_blank" rel="noopener" title="Nhắn Zalo Thầy Minh">💬 Zalo · 0946 1111 07</a>
+      <button type="button" id="ldvlTutorKeyBtn" class="ldvlTutorKeyBtn" onclick="ldvlTutorToggleKeyBox()" title="Nhập key Gemini của bạn">🔑 Key</button>
+      <button type="button" id="ldvlTutorNetBtn" class="ldvlTutorNetBtn" onclick="ldvlTutorInternetGo('')" title="Chép prompt & mở Google AI — không tốn key API">🌐 Internet</button>
+      <button type="button" id="ldvlTutorInfoBtn" class="ldvlTutorInfoBtn hide" onclick="ldvlTutorOpenInfographic()" title="Vẽ poster infographic câu này">📊 Infographic</button>
+    </div>
+    <div id="ldvlTutorKeyBox" class="ldvlTutorKeyBox ldvlTutorKeyCollapsed hide" aria-label="Nhập key Gemini">
+      <button type="button" class="ldvlTutorKeyHead" onclick="ldvlTutorToggleKeyBox()"><span id="ldvlTutorKeyHeadLbl">🔑 Key Gemini (VIP tự nạp)</span><span id="ldvlTutorKeyChev">▼</span></button>
+      <div class="ldvlTutorKeyBody">
+        <p class="ldvlTutorKeyHint">Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> → dán <b>AIza...</b> → <b>Lưu</b> → <b>Test</b>.</p>
+        <textarea id="ldvlTutorGeminiKey" rows="2" placeholder="AIza... hoặc AQ... (key Gemini của em)" autocomplete="off" spellcheck="false"></textarea>
+      </div>
+      <div class="ldvlTutorKeyActs">
+        <button type="button" onclick="ldvlTutorTestKey()">🧪 Test</button>
+        <button type="button" class="ldvlTutorKeySave" onclick="ldvlTutorSaveKey()">💾 Lưu key</button>
+      </div>
+      <div id="ldvlTutorKeyStatus"></div>
+    </div>
+    <div id="ldvlTutorAbcd" class="ldvlTutorAbcd hide" aria-label="Chọn câu A B C D"></div>
+    <div id="ldvlTutorAbcdNet" class="ldvlTutorAbcdNet hide" aria-label="AI Internet từng câu"></div>
+    <div id="ldvlTutorQuick" class="ldvlTutorQuick"></div>
+    <div class="ldvlTutorNotice">Câu <b>NB</b> các em tự làm, <b>TH</b> ráng suy nghĩ nhé!</div>
+    <div id="ldvlTutorMsgs" class="ldvlTutorMsgs"></div>
+    <div class="ldvlTutorFoot">
+      <textarea id="ldvlTutorInput" rows="1" placeholder="Hỏi Thầy Minh… VD: Định nghĩa vectơ? Cách giải bài này?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ldvlTutorChatSend()}"></textarea>
+      <button type="button" id="ldvlTutorSendBtn" class="ldvlTutorSend" onclick="ldvlTutorChatSend()" title="Gửi">➤</button>
+    </div>
+  </div>
+  <div id="ldvlTutorFabMenu" class="ldvlTutorFabMenu" role="menu" aria-label="Gợi ý nhanh AI"></div>
+  <div class="ldvlTutorFabDock">
+    <a id="ldvlTutorFabZalo" class="ldvlTutorFabZalo" href="https://zalo.me/0946111107" target="_blank" rel="noopener" title="Nhắn Zalo Thầy Minh">💬 0946 1111 07</a>
+    <button type="button" id="ldvlTutorFabBtn" class="ldvlTutorFabAiMini hide" onclick="ldvlTutorFabToggle()" title="Hỏi AI Thầy Minh">AI</button>
+  </div>
+</div>
+<a id="ldvlZaloFab" class="ldvlZaloFab hide" href="https://zalo.me/0946111107" target="_blank" rel="noopener" title="Nhắn Zalo Thầy Minh">
+  <span class="ldvlZaloFabIco">💬</span>
+  <span class="ldvlZaloFabTxt"><span class="ldvlZaloFabTit">Zalo</span><span class="ldvlZaloFabNum">0946 1111 07</span></span>
+</a>
 <div id="startModal" class="modal hide"><div class="modalBox startModalBox">
 
 <div class="startModalHead">
@@ -19786,7 +20047,7 @@ Chứng minh mệnh đề phủ định"></textarea>
 </script><script>
 
 
-function v253SetSubjectTabsVisible(show){let box=document.getElementById('topSubjectTabsV253');if(box)box.classList.remove('subjectTabsHiddenV253')}
+function v253SetSubjectTabsVisible(show){let box=document.getElementById('topSubjectTabsV253');if(box)box.classList.toggle('ldvlHdrMonHidden',!show)}
 document.addEventListener('DOMContentLoaded',function(){v253SetSubjectTabsVisible(true);document.body.classList.remove('homeTopCompact')});
 
 /* ==========================================================================
@@ -19901,9 +20162,12 @@ function enhanceHomeColors(){
         ".userAccountExpiry{margin-top:10px;font-size:12px;font-weight:800;color:#9a3412}"+
         ".userAccountCard.compactHomeAccount{margin:0 0 8px!important;padding:8px 12px!important;border-width:1px!important;border-radius:12px!important;box-shadow:0 2px 8px #1d4ed812!important}"+
         ".compactHomeAccount .userAccountHead{gap:8px!important;flex-wrap:nowrap!important}.compactHomeAccount .userAccountAvatar{width:34px!important;height:34px!important;border-radius:10px!important;font-size:18px!important}.compactHomeAccount .userAccountName{font-size:17px!important;line-height:1.2!important}.compactHomeAccount .userAccountMeta{margin-top:1px!important;font-size:12px!important}.compactHomeAccount .userRoleBadge{padding:5px 10px!important;font-size:12px!important;box-shadow:none!important}.compactHomeAccount .userBenefitsTitle,.compactHomeAccount .userBenefits{display:none!important}.compactHomeAccount .userAccountExpiry{margin-top:4px!important;font-size:11px!important}"+
-        ".aiProfileBanner.aiProfileBannerCompact{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;margin:0 0 8px!important;padding:7px 10px!important;border-radius:10px!important;line-height:1.25!important;font-size:12px!important}.aiProfileBannerCompact .aiProfileBannerTxt{margin:0!important;font-size:12px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:min(720px,70vw)!important}.aiProfileBannerCompact .aiProfileBannerBtn{margin:0!important;padding:5px 8px!important;font-size:12px!important}"+
+        ".aiProfileBanner.aiProfileBannerCompact{display:flex!important;align-items:center!important;gap:6px 8px!important;flex-wrap:nowrap!important;margin:0 0 8px!important;padding:6px 10px!important;border-radius:10px!important;line-height:1.2!important;font-size:12px!important;overflow:hidden}"+
+        ".aiProfileBannerCompact .aiProfileBannerLbl,.aiProfileBannerCompact>b{flex:0 0 auto;white-space:nowrap;font-size:12px!important;margin:0!important}"+
+        ".aiProfileBannerCompact .aiProfileBannerTxt{flex:1 1 auto!important;min-width:0!important;margin:0!important;font-size:11.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:none!important;color:var(--muted)}"+
+        ".aiProfileBannerCompact .aiProfileBannerBtn{flex:0 0 auto!important;margin:0!important;padding:4px 9px!important;font-size:11px!important;white-space:nowrap!important}"+
         ".compactKeyCard.aiKeyCollapsed .aiProfileBanner,.compactKeyCard.aiKeyCollapsed p,.compactKeyCard.aiKeyCollapsed textarea,.compactKeyCard.aiKeyCollapsed .row,.compactKeyCard.aiKeyCollapsed #aiKeyStatus{display:none!important}.compactKeyCard.aiKeyCollapsed{min-height:0!important}.aiKeyMiniToggle{float:right;font-size:11px!important;padding:4px 8px!important;margin-left:8px!important;border-radius:999px!important}"+
-        "@media(max-width:760px){.compactHomeAccount .userAccountHead{flex-wrap:wrap!important}.compactHomeAccount .userRoleBadge{margin-left:auto}.aiProfileBannerCompact .aiProfileBannerTxt{max-width:100%!important;white-space:normal!important}.aiKeyMiniToggle{float:none;margin-top:4px!important}}"+
+        "@media(max-width:760px){.compactHomeAccount .userAccountHead{flex-wrap:wrap!important}.compactHomeAccount .userRoleBadge{margin-left:auto}.aiProfileBannerCompact .aiProfileBannerTxt{font-size:10.5px!important}.aiProfileBannerCompact .aiProfileBannerLbl,.aiProfileBannerCompact>b{font-size:11px!important}.aiProfileBannerCompact .aiProfileBannerBtn{padding:3px 7px!important;font-size:10px!important}.aiKeyMiniToggle{float:none;margin-top:4px!important}}"+
         "html[data-theme='dark'] .userAccountCard{background:linear-gradient(135deg,#1e293b,#172033);border-color:#334155}"+
         "html[data-theme='dark'] .userAccountCard.roleADMIN{background:linear-gradient(135deg,#2e1065,#1e1b4b);border-color:#7c3aed}"+
         "html[data-theme='dark'] .userAccountCard.roleSVIP{background:linear-gradient(135deg,#422006,#3b1f0a);border-color:#c2410c}"+
@@ -20344,8 +20608,9 @@ function isAiKeyPanelOpen(){try{return localStorage.getItem('LDVL_AI_KEY_PANEL_O
 function setAiKeyPanelOpen(open){try{localStorage.setItem('LDVL_AI_KEY_PANEL_OPEN_V257',open?'1':'0')}catch(e){}syncAiKeyCompactPanel()}
 function toggleAiKeyPanelCompact(){setAiKeyPanelOpen(!isAiKeyPanelOpen())}
 function syncAiKeyCompactPanel(){let panel=document.getElementById('aiKeyPanel');if(!panel)return;let open=isAiKeyPanelOpen();panel.classList.toggle('aiKeyCollapsed',!open);let title=panel.querySelector('b');if(title&&!document.getElementById('aiKeyMiniToggle'))title.insertAdjacentHTML('afterend',' <button type="button" id="aiKeyMiniToggle" class="btn2 aiKeyMiniToggle" onclick="toggleAiKeyPanelCompact()">Mở key</button>');let btn=document.getElementById('aiKeyMiniToggle');if(btn)btn.textContent=open?'Thu key':'Mở key'}
-function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=`<b>${esc(u.ai_profile_label||'AI')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`+(u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'')}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=`<b>${esc(u.ai_profile_label||'')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}}
-function scrollToAiKeyPanel(){let p=document.getElementById('aiKeyPanel');if(!p)return;p.classList.remove('hide');setAiKeyPanelOpen(true);p.scrollIntoView({behavior:'smooth',block:'start'})}
+function aiProfileBannerInnerHtml(u){u=u||{};let lbl=esc(u.ai_profile_label||'AI');let hint=esc(u.ai_profile_hint||'');let btn=u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'';return '<b class="aiProfileBannerLbl">'+lbl+'</b><span class="aiProfileBannerTxt">'+hint+'</span>'+btn}
+function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=aiProfileBannerInnerHtml(u)}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=aiProfileBannerInnerHtml(u)}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}if(typeof ldvlTutorChatSyncUi==='function')ldvlTutorChatSyncUi()}
+function scrollToAiKeyPanel(){let quiz=document.getElementById('quiz');let inQuiz=quiz&&!quiz.classList.contains('hide');if(inQuiz&&typeof ldvlTutorChatToggle==='function'){ldvlTutorChatToggle(true);if(typeof ldvlTutorOpenKeyBox==='function')ldvlTutorOpenKeyBox(true);return}let p=document.getElementById('aiKeyPanel');if(!p)return;p.classList.remove('hide');setAiKeyPanelOpen(true);p.scrollIntoView({behavior:'smooth',block:'start'})}
 async function loadAiKeyPanel(){
   let panel=document.getElementById('aiKeyPanel');
   let st=document.getElementById('aiKeyStatus');
@@ -20404,7 +20669,10 @@ async function testClaudeKey(){
 }
 async function saveMyAiKey(){
   if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}
-  let raw=(document.getElementById('myApiKeys').value||'').trim();
+  let tutorTa=document.getElementById('ldvlTutorGeminiKey');
+  let mainTa=document.getElementById('myApiKeys');
+  if(tutorTa&&String(tutorTa.value||'').trim()&&mainTa)mainTa.value=tutorTa.value.trim();
+  let raw=(mainTa?mainTa.value:'').trim();
   // Lưu Anthropic key nếu ADMIN đã nhập
   let antEl=document.getElementById('myAnthropicKey');
   let antKey=antEl?String(antEl.value||'').trim():'';
@@ -20424,6 +20692,7 @@ async function saveMyAiKey(){
     alert('✅ Anthropic Claude key đã lưu vào trình duyệt.\nDùng cho mọi chức năng AI ADMIN (Soát đề, LG, LaTeX, Dạng BT…).');
   }
   await loadAiKeyPanel();
+  if(typeof ldvlTutorSyncKeyPanel==='function')ldvlTutorSyncKeyPanel();
 }
 async function clearMyAiKey(){
   if(!confirm('Xóa key AI đã lưu?\n• Gemini key: xóa trên server\n• Anthropic key: xóa khỏi trình duyệt'))return;
@@ -20438,7 +20707,7 @@ async function clearMyAiKey(){
   }catch(e){alert(e.message)}
 }
 function formatAiKeyCheckAlert(j){j=j||{};let msg=(j.ok?'✅ ':'❌ ')+(j.message||'');if(j.details&&j.details.length){let extra=[];for(let d of j.details){let lab=d.label||(d.key_hint?('Key #'+d.index+' ('+d.key_hint+')'):('Key #'+d.index));if(d.source&&!String(lab).includes(d.source))lab+=' — '+d.source;extra.push((d.ok?'✅':'❌')+' '+lab+': '+(d.message||''))}if(extra.length&&!String(msg).includes('Key #'))msg+='\n\n'+extra.join('\n')}return msg}
-let TEST_KEY_BUSY=false;function apiNetworkErrorMsg(e){let m=String((e&&e.message)||e||'');if(/Failed to fetch|NetworkError|Load failed|ERR_CONNECTION/i.test(m))return 'Không kết nối được máy chủ. Kiểm tra app Python đang chạy (TRINH_CHAY_APP / port 8000) rồi Ctrl+F5.';return m||'Lỗi không xác định'}async function testMyAiKey(){if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}let raw=document.getElementById('myApiKeys').value.trim();let body={provider:'GEMINI'};if(raw)body.api_keys=raw;try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:90000,body:JSON.stringify(body)});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert(formatAiKeyCheckAlert(j)+ver)}catch(e){alert(apiNetworkErrorMsg(e))}}
+let TEST_KEY_BUSY=false;function apiNetworkErrorMsg(e){let m=String((e&&e.message)||e||'');if(/Failed to fetch|NetworkError|Load failed|ERR_CONNECTION/i.test(m))return 'Không kết nối được máy chủ. Kiểm tra app Python đang chạy (TRINH_CHAY_APP / port 8000) rồi Ctrl+F5.';return m||'Lỗi không xác định'}async function testMyAiKey(){if(!USER.can_ai_hint){alert('Key AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}let tutorTa=document.getElementById('ldvlTutorGeminiKey');let mainTa=document.getElementById('myApiKeys');if(tutorTa&&String(tutorTa.value||'').trim()&&mainTa)mainTa.value=tutorTa.value.trim();let raw=mainTa?mainTa.value.trim():'';let body={provider:'GEMINI'};if(raw)body.api_keys=raw;try{let j=await api('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:90000,body:JSON.stringify(body)});let ver=j.version?`\n\nPhiên bản server: ${j.version}`:'';alert(formatAiKeyCheckAlert(j)+ver);if(typeof ldvlTutorSyncKeyPanel==='function')ldvlTutorSyncKeyPanel()}catch(e){alert(apiNetworkErrorMsg(e))}}
 
 /* ==========================================================================
  * [JS-ADMIN-CHROME] Nút ADMIN khi đang làm bài (#quiz)
@@ -20903,8 +21172,8 @@ function quizLevelPrimary(q){let u=String((q&&q.MucDo)||'').toUpperCase();if(/\b
 function quizSectionKey(q){q=applyResolvedDang(q||{});return String(q.Dang||'').trim()||'Câu hỏi'}
 function quizSectionTitle(q){q=applyResolvedDang(q||{});return String(q.Dang||'').trim()||'Câu hỏi'}
 function quizSectionLabel(i){if(!GROUP_BY_DANG||!QUESTIONS.length)return null;let q=applyResolvedDang(QUESTIONS[i]);if(i===0)return quizSectionTitle(q);let prev=applyResolvedDang(QUESTIONS[i-1]);return quizSectionKey(q)!==quizSectionKey(prev)?quizSectionTitle(q):null}
-function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;ASSISTANT_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();try{initAdminQuizIssueFilter();ensureAdminQuizFontBar();syncAdminQuizIssueFilterUI()}catch(e){}renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap=''){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0})});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
+function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;ASSISTANT_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';let revSkip=parseInt(j.review_skipped,10)||0;let revTag=revSkip>0?` | ✓ ${n} câu đã duyệt`:'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}${revTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}${revTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();try{initAdminQuizIssueFilter();ensureAdminQuizFontBar();syncAdminQuizIssueFilterUI()}catch(e){}renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
+async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap=''){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let studentView=!!(USER&&USER.is_admin&&window.LDVL_ADMIN_STUDENT_MODE);let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0,student_view:studentView?1:0})});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
 function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';ASSISTANT_BY_Q={};OPENCLAW_BY_Q={};LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;ASSISTANT_LOADING=false;OPENCLAW_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
 function ensureFullModeOverrides(){
     if(document.getElementById('LDVL_FS_OVR')) return;
@@ -21067,7 +21336,7 @@ function adminNavCtxEdit(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(id
 async function adminNavCtxReview(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await toggleQuestionReviewAtIndex(idx)}
 async function adminNavCtxDelete(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await deleteQuestionAtIndex(idx)}function goQ(i){if(i!==CUR&&LEARNING_OPEN_KIND==='translate'){stopTranslateEnSpeech();TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_CHUNKS=[];LEARNING_OPEN_KIND=''}saveCurrent();CUR=i;renderQuestion()}function prevQ(){if(isAdminViewer()&&adminQuizIssueFilter()){adminNextIssueQ(-1);return}if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(isAdminViewer()&&adminQuizIssueFilter()){adminNextIssueQ(1);return}if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại rồi bấm Nộp bài.')}} 
 function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin){rb.textContent=isMobileQuizUI()?'ADMIN':'ADMIN: đang xem đáp án/lời giải';syncAdminResultBox()}else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTIONS.length){return}if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=(USER&&USER.can_ai_hint)!==false;try{ensureLearningQuickBar()}catch(e){console.warn('ensureLearningQuickBar',e)}syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='pdf'){try{renderLearningPdfPanel()}catch(e){console.warn('renderLearningPdfPanel',e)}}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(LEARNING_OPEN_KIND==='openclaw'){renderOpenClawPanel()}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER&&USER.hoten||USER&&USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitImg){if(qtextEl){qtextEl.classList.add('hide');qtextEl.innerHTML=''}}else if(splitTln){if(qtextEl){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}}else{if(qtextEl){qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+qImgHtml}};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER&&USER.is_admin||USER&&USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');if(optEl){optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');let splitQtext='';if(splitImg){if(splitTln){if(secHead)splitQtext=`<div class="mcqSplitQtext">${secHead}</div>`}else{splitQtext=`<div class="mcqSplitQtext">${secHead}${renderQuizFieldHtml(q.CauHoi||'')}</div>`}}optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${splitQtext}${html}</div></div>`:html}if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER&&USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar()}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTIONS.length){return}if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=(USER&&USER.can_ai_hint)!==false;try{ensureLearningQuickBar()}catch(e){console.warn('ensureLearningQuickBar',e)}syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='pdf'){try{renderLearningPdfPanel()}catch(e){console.warn('renderLearningPdfPanel',e)}}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(LEARNING_OPEN_KIND==='openclaw'){renderOpenClawPanel()}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER&&USER.hoten||USER&&USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitImg){if(qtextEl){qtextEl.classList.add('hide');qtextEl.innerHTML=''}}else if(splitTln){if(qtextEl){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}}else{if(qtextEl){qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+qImgHtml}};document.getElementById('btn5050').disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];document.getElementById('btnSubmit').style.display=(USER&&USER.is_admin||USER&&USER.is_trial)?'none':'';syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');if(optEl){optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');let splitQtext='';if(splitImg){if(splitTln){if(secHead)splitQtext=`<div class="mcqSplitQtext">${secHead}</div>`}else{splitQtext=`<div class="mcqSplitQtext">${secHead}${renderQuizFieldHtml(q.CauHoi||'')}</div>`}}optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${splitQtext}${html}</div></div>`:html}if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER&&USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMath();syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar();try{ldvlTutorRenderFabMenu();ldvlTutorRenderAbcdRow();ldvlTutorSyncInfoBtn()}catch(e){}}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProvider(){let p=String(USER.admin_ai_provider||'ANTHROPIC').toUpperCase();return p||'ANTHROPIC'}
 function bulkAdminAiProviderLabel(p){p=String(p||'').toUpperCase();if(p.includes('ANTHROPIC')||p==='CLAUDE')return 'Claude';if(p.includes('OPENAI')||p==='GPT')return 'GPT';if(p.includes('GEMINI'))return 'Gemini';return 'Tự động'}
@@ -21169,7 +21438,7 @@ function buildAdminAnalysisCard(j){if(!isAdminViewer()||!j||!j.admin_review)retu
 function applyAdminFixAll(){if(!USER.is_admin)return;let j=HINT_BY_Q[CUR]||{};let a=j.admin_analysis||{};openEditWithHint(String(a.fix_dapan||'').trim(),String(a.fix_loigiai||'').trim())}
 function buildHintAnswerCard(j){if(!j)return '';if(j.admin_review&&!isAdminViewer())return '';if(!j.show_answer&&!j.vip_detailed&&!j.exact&&!j.admin_review)return '';if((j.vip_detailed||j.show_answer)&&!j.admin_review&&!isAdminViewer()&&!canShowSolutionNow())return `<div class="hintAnswerCard hintAnswerPending"><div class="hintAnswerTitle">🔒 Chưa làm câu</div><div class="muted" style="font-size:13px;line-height:1.45;margin-top:6px">VIP/SVIP: chọn đáp án và <b>chấm câu này</b> (TN/ĐS tự chấm; TLN bấm ✓) trước khi xem <b>Đáp án</b> và <b>Lời giải</b> từ Sheet.</div></div>`;let q=currentQuestion();let aiDa=String(j.suggested_dapan||j.correct||'').trim();let sheetDa=String(j.sheet_dapan||'').trim();let aiLg=String(j.suggested_loigiai||'').trim();let sheetLg=String(j.sheet_loigiai||'').trim();if(j.admin_review&&isCurrentQuestionDs()){let daFromLg=dsDapAnFromSolutionText(aiLg||hintSection1Raw(),q);if(daFromLg)aiDa=daFromLg}if(!sheetDa&&q)sheetDa=String(q.DapAn||'').trim();if(!sheetLg&&q)sheetLg=String(q.LoiGiai||'').trim();if(j.admin_review&&ADMIN_HINT_SAVED[CUR]){sheetDa=String(q.DapAn||sheetDa||'').trim();sheetLg=String(q.LoiGiai||sheetLg||'').trim()}if(!aiDa&&sheetDa)aiDa=sheetDa;if(!aiLg&&sheetLg)aiLg=sheetLg;if(!aiDa&&!sheetDa&&!aiLg&&!sheetLg)return '';let isDs=isCurrentQuestionDs();let isTn=isCurrentQuestionTn();let vipShort=!!(j.vip_detailed&&!j.admin_review);function fmtAns(t){if(isDs)return formatDsHintText(t,false);if(isTn)return formatTnHintText(t,false);return formatHintDisplay(t)}function fmtSol(t,fromAi){if(vipShort)return formatHintDisplay(t);if(isDs)return formatDsHintText(t,true,fromAi);if(isTn)return formatTnHintText(t,true);return formatHintDisplay(t)}let rows='';if(sheetDa||aiDa){rows+=`<div class="hintAnswerRow"><b>📌 Đáp án:</b> <span class="hintMath hintAnswerMain">${fmtAns(sheetDa||aiDa)}</span></div>`;if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')!==aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (P):</b> <span class="hintMath">${fmtAns(sheetDa)}</span> · <b>AI đề xuất:</b> <span class="hintMath">${fmtAns(aiDa)}</span></div>`;else if(j.admin_review&&sheetDa&&aiDa&&sheetDa.replace(/\s/g,'')===aiDa.replace(/\s/g,''))rows+=`<div class="hintAnswerRow" style="font-size:13px;color:#166534"><b>✓ Đáp án Sheet khớp AI</b></div>`}let aiLgRaw=j.admin_review?hintAiLoigiaiRaw():'';let lgShow=j.admin_review?(adminHintNeedsSave()?aiLgRaw:(sheetLg||String(q.LoiGiai||''))):(sheetLg||aiLg);if(lgShow){let lgLabel=j.admin_review?(adminHintNeedsSave()?'📝 Lời giải AI (diễn giải + từng ý):':'📝 Lời giải (Sheet R):'):(vipShort?'📝 Phương hướng:':'📝 Lời giải:');rows+=`<div class="hintAnswerRow" style="margin-top:8px"><b>${lgLabel}</b> <span class="hintMath">${fmtSol(lgShow,j.admin_review&&adminHintNeedsSave())}</span></div>`;if(j.admin_review&&adminHintNeedsSave()&&sheetLg&&aiLgRaw&&sheetLg.trim()!==aiLgRaw.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>Sheet (R) hiện tại:</b> <span class="hintMath">${fmtSol(sheetLg,false)}</span></div>`;else if(j.admin_review&&!adminHintNeedsSave()&&aiLgRaw&&sheetLg&&sheetLg.trim()!==aiLgRaw.trim())rows+=`<div class="hintAnswerRow muted" style="font-size:13px"><b>AI đề xuất (mục 1):</b> <span class="hintMath">${fmtSol(aiLgRaw,true)}</span></div>`}if(!rows)return '';let cardTitle=j.admin_review?(adminHintNeedsSave()?'📋 Đáp án &amp; lời giải (ADMIN — đề xuất lưu Sheet)':'✅ Đã lưu Sheet — so khớp P/R với AI'):(vipShort?'✅ Kết quả &amp; phương hướng':'✅ Đáp án &amp; lời giải — so sánh ôn tập');let saveNote=(j.admin_review&&adminHintNeedsSave())?`<div class="muted" style="font-size:12px;margin-top:8px;line-height:1.45">So bảng phân tích phía trên → <b>✏️ Sửa Sheet</b> nếu lệch → <b>Lưu vào Google Sheet</b>.</div>`:'';return `<div class="hintAnswerCard"><div class="hintAnswerTitle">${cardTitle}</div>${rows}${saveNote}</div>`}
 function buildSheetPreviewCard(){if(!canViewSolutionLive()||USER.is_admin||!canShowSolutionNow())return '';let q=currentQuestion();if(!q)return '';return buildHintAnswerCard({show_answer:true,vip_detailed:true,sheet_dapan:q.DapAn||'',sheet_loigiai:q.LoiGiai||'',suggested_dapan:q.DapAn||'',suggested_loigiai:q.LoiGiai||''})}
-function buildHintSimilarSection(){if(!USER.can_ai_hint||isMobileQuizUI())return '';let sim=SIMILAR_BY_Q[CUR];let loading=SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR;let html=`<div class="hintAiActions"><button type="button" class="btn2" id="btnSimilarInline" onclick="requestSimilarQuestion()" ${loading?'disabled':''}>${loading?'⏳ Đang tạo câu tương tự…':'📝 Tạo câu tương tự'}</button></div>`;if(sim&&sim.similar){let warn='';if(sim.similar_warning&&sim.similar_warning.message)warn=`<div class="dangSimWarn" style="margin-top:8px"><b>⚠️ Quá giống</b><div>${esc(sim.similar_warning.message)}</div></div>`;html+=`<div class="hintSimilarBox" id="hintSimilarBox"><div class="hintSimilarTitle">📝 Câu tương tự (AI)</div>${warn}<div class="hintSimilarBody hintMath" id="hintSimilarBody">${formatHintDisplay(sim.similar)}</div></div>`}return html}
+function buildHintSimilarSection(){return ''}
 function hintClientTimeoutMs(){if(isAdminViewer())return adminReviewIsFast()?32000:35000;return 30000}
 function hintLoadingSeconds(){return HINT_LOADING_SINCE?Math.max(0,Math.floor((Date.now()-HINT_LOADING_SINCE)/1000)):0}
 function updateHintLoadingElapsed(){let s=hintLoadingSeconds();let el=document.getElementById('hintLoadingElapsed');if(el){el.textContent='Đã chờ '+s+' giây…';el.style.color=s>=28?'#9a3412':''}let rb=document.getElementById('resultBox');if(rb&&HINT_LOADING)rb.textContent='⏳ AI đang làm… ('+s+'s)'}
@@ -21614,6 +21883,42 @@ function renderLearningPanel(kind,items,meta){
 async function loadLearningPanelContent(kind,force){kind=(kind==='theory')?'theory':'method';let hb=document.getElementById('hintBox');if(!hb||LEARNING_OPEN_KIND!==kind)return;let q=applyResolvedDang(QUESTIONS[CUR]||{});let cacheKey=learningCacheKey(kind,q);let title=kind==='method'?'🧭 Phương pháp giải':'📚 Lý thuyết';if(!force&&LEARNING_CACHE[cacheKey]){let cached=LEARNING_CACHE[cacheKey];if(kind==='method'){let items=cached.items||[];if(!DANG_THEORY_CACHE[dangTheoryKey(q)])DANG_THEORY_CACHE[dangTheoryKey(q)]={item:exactDangTheoryItem(items,q),meta:cached.meta||{}};afterDangTheoryPrefetch(q,DANG_THEORY_CACHE[dangTheoryKey(q)],cached.meta||cached)}else afterBaiTheoryPrefetch(q,cached.meta||cached,cached.meta||cached);renderLearningPanel(kind,cached.items||[],cached.meta||{});return}if(LEARNING_LOADING)return;LEARNING_LOADING=kind;hb.classList.remove('hide');hb.classList.add('learningOpen');hb.classList.remove('hintBoxLoading');hb.classList.toggle('learningCollapsed',false);hb.innerHTML='<div class="learningPanelShell">'+learningPanelTitleHtml(title)+'<div class="learningPanelBody"><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang tải học liệu…</b></div></div></div></div>';try{let body={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||''};if(kind==='method')body.DangBaiTap=q.DangBaiTap||'';let url=kind==='method'?'/api/learning/method':'/api/learning/theory';let j=await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});LEARNING_CACHE[cacheKey]={items:j.items||[],meta:j};if(kind==='method'){let entry={item:exactDangTheoryItem(j.items||[],q),meta:j};DANG_THEORY_CACHE[dangTheoryKey(q)]=entry;if(j.similarity_report)DANG_SIMILARITY_CACHE[dangSimilarityCacheKey(q)]=j.similarity_report;afterDangTheoryPrefetch(q,entry,j)}else afterBaiTheoryPrefetch(q,j,j);if(LEARNING_OPEN_KIND===kind)renderLearningPanel(kind,j.items||[],j)}catch(e){if(LEARNING_OPEN_KIND===kind)hb.innerHTML='<div class="learningPanelShell">'+learningPanelTitleHtml(title)+'<div class="learningPanelBody"><div class="muted" style="margin-top:8px">Không tải được học liệu: '+esc(e.message||e)+'</div></div></div>'}finally{LEARNING_LOADING=false}}
 async function requestAssistantNote(){if(!USER.can_ai_hint){alert('Trợ lý AI chỉ dành VIP / SVIP / ADMIN.');return}if(ASSISTANT_LOADING)return;saveCurrent();let qIdx=CUR;ASSISTANT_LOADING=true;renderAiAssistPanel();try{let noteBody={sid:SID,index:qIdx,answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-note',noteBody):await api('/api/ai/assistant-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(noteBody)});let st=ASSISTANT_BY_Q[qIdx]||{messages:[]};st.note=j.note||'';st.provider_used=j.provider_used||'';st.ai_model=j.model||'';st.ai_error=j.ai_error||'';st.is_fallback=String(j.provider_used||'').toUpperCase()==='FALLBACK';ASSISTANT_BY_Q[qIdx]=st;if(CUR===qIdx)renderAiAssistPanel()}catch(e){alert('Không gọi được Trợ lý AI: '+(e.message||e))}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
 async function sendAssistantChat(){if(!USER.can_ai_hint)return;if(ASSISTANT_LOADING)return;let inp=document.getElementById('aiChatInput');let msg=String(inp&&inp.value||'').trim();if(!msg)return;saveCurrent();let qIdx=CUR;let st=ASSISTANT_BY_Q[qIdx]||{note:'',messages:[]};st.messages=st.messages||[];st.messages.push({role:'user',text:msg});st.chatDraft='';if(inp)inp.value='';ASSISTANT_BY_Q[qIdx]=st;ASSISTANT_LOADING=true;syncAiAssistChatUi(st);try{let chatBody={sid:SID,index:qIdx,message:msg,messages:st.messages.slice(0,-1),answer:ANSWERS[qIdx],...quizRestorePayload()};let j=isAdminViewer()?await adminAiFetch('/api/ai/assistant-chat',chatBody):await api('/api/ai/assistant-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chatBody)});st.messages.push({role:'assistant',text:j.reply||''});st.provider_used=j.provider_used||st.provider_used||'';st.ai_error=j.ai_error||'';st.is_fallback=String(j.provider_used||'').toUpperCase()==='FALLBACK';ASSISTANT_BY_Q[qIdx]=st}catch(e){st.messages.push({role:'assistant',text:'❌ '+(e.message||e)});ASSISTANT_BY_Q[qIdx]=st}finally{ASSISTANT_LOADING=false;if(CUR===qIdx)renderAiAssistPanel()}}
+let LDVL_TUTOR_STATE={messages:[],loading:false,open:false,menuOpen:false,keyOpen:false};
+function ldvlTutorNeedKey(){if(!(USER&&USER.can_ai_hint))return false;return !!(USER.ai_nudge_key||!USER.ai_has_keys||String(USER.ai_profile||'').endsWith('_NO_KEY'))}
+function ldvlTutorOpenKeyBox(open){LDVL_TUTOR_STATE.keyOpen=open!==false;let box=document.getElementById('ldvlTutorKeyBox');if(box){box.classList.toggle('ldvlTutorKeyCollapsed',!LDVL_TUTOR_STATE.keyOpen);box.classList.remove('hide')}let chev=document.getElementById('ldvlTutorKeyChev');if(chev)chev.textContent=LDVL_TUTOR_STATE.keyOpen?'▲':'▼'}
+function ldvlTutorToggleKeyBox(){ldvlTutorOpenKeyBox(!LDVL_TUTOR_STATE.keyOpen)}
+function ldvlTutorSyncKeyPanel(){let box=document.getElementById('ldvlTutorKeyBox');let st=document.getElementById('ldvlTutorKeyStatus');let btn=document.getElementById('ldvlTutorKeyBtn');if(!(USER&&USER.can_ai_hint)){if(box)box.classList.add('hide');if(btn)btn.classList.add('hide');return}if(box)box.classList.remove('hide');if(btn)btn.classList.remove('hide');let need=ldvlTutorNeedKey();if(box){box.classList.toggle('ldvlTutorKeyNeed',need);if(need&&!LDVL_TUTOR_STATE.keyOpen)ldvlTutorOpenKeyBox(true)}if(btn){btn.classList.toggle('ldvlTutorKeyWarn',need);btn.title=need?'Chưa có key — bấm để nhập Gemini':'Nhập / đổi key Gemini'}if(st){let parts=[];if(USER.ai_using_user_keys)parts.push('✅ Đã lưu '+(USER.ai_user_gemini_keys||1)+' key Gemini của em');else if(USER.ai_has_keys)parts.push('✅ Đang dùng key server');else parts.push('⚠️ Chưa có key — dán AIza... rồi Lưu');if(USER.ai_profile_hint)parts.push(USER.ai_profile_hint);st.textContent=parts.join(' · ')}}
+async function ldvlTutorSaveKey(){let ta=document.getElementById('ldvlTutorGeminiKey');let main=document.getElementById('myApiKeys');if(ta&&main)main.value=String(ta.value||'').trim();await saveMyAiKey();ldvlTutorSyncKeyPanel()}
+async function ldvlTutorTestKey(){let ta=document.getElementById('ldvlTutorGeminiKey');let main=document.getElementById('myApiKeys');if(ta&&main&&String(ta.value||'').trim())main.value=ta.value.trim();await testMyAiKey();await loadAiKeyPanel();ldvlTutorSyncKeyPanel()}
+function ldvlTutorInternetPrompt(mode){mode=String(mode||'').trim();let label=LDVL_TUTOR_MODE_LABELS[mode]||mode||'Hỏi Thầy Minh';let inQuiz=!!ldvlTutorQuizContext();let q=inQuiz?applyResolvedDang(QUESTIONS[CUR]||{}):{};let latex=inQuiz?currentQuestionLatexText():'';let lines=['Bạn là giáo viên Toán/Vật lí THPT. Học sinh luyện đề trên app Thầy Minh.','Yêu cầu: '+label+'.'];if(mode==='tom_tat')lines.push('Chỉ TÓM TẮT đề bài (3–5 dòng). Không giải chi tiết.');else if(mode==='cong_thuc')lines.push('Chỉ liệt kê CÔNG THỨC / định nghĩa cần dùng. Không giải hết bài.');else if(mode==='goi_y')lines.push('Gợi ý từng BƯỚC giải (Bước 1, Bước 2… mỗi bước một dòng).');else if(mode==='dinh_nghia')lines.push('Giải thích ĐỊNH NGHĨA / khái niệm liên quan, ngắn gọn.');else if(mode==='vi_du')lines.push('Cho VÍ DỤ minh họa ngắn.');else if(mode.startsWith('giai_')){let letter=mode.slice(-1).toUpperCase();lines.push('Trình bày 2 phần: (1) TÓM TẮT ĐỀ 2–3 dòng; (2) GIẢI/GỢI Ý CÂU '+letter+' từng bước có công thức $...$.');}else lines.push('Giải/gợi ý bài theo chương trình THPT, LaTeX trong $...$ nếu có công thức.');lines.push('Không dùng markdown ** hay bullet dấu *.');if(inQuiz&&String(q.CauHoi||'').trim()){lines.push('','--- ĐỀ BÀI ---','Môn: '+(q.Mon||''),'Lớp: '+(q.Lop||''),'Dạng: '+(q.Dang||''),'Câu hỏi: '+String(q.CauHoi||''));['A','B','C','D'].forEach(function(L){if(String(q[L]||'').trim())lines.push(L+'. '+q[L])});if(String(q.HinhAnh||'').trim())lines.push('Ảnh minh họa: '+q.HinhAnh)}else{lines.push('','Môn: '+ldvlTutorCurrentMon())}if(latex)lines.push('','LaTeX từ app:',latex);lines.push('','(Gửi từ app Luyện đề AI Thầy Minh — AI Internet, không tốn quota API app)');return lines.join('\n')}
+async function ldvlTutorInternetGo(mode,panelOnly){mode=String(mode||'').trim();ldvlTutorFabToggle(false);let prompt=ldvlTutorInternetPrompt(mode);let latex=ldvlTutorQuizContext()?currentQuestionLatexText():'';let title=mode?(LDVL_TUTOR_MODE_LABELS[mode]+' — Internet'):'🌐 AI Internet — Thầy Minh';if(panelOnly){openGoogleAiModeCustom(prompt,latex,title);return}let panel=document.getElementById('ldvlTutorPanel');if(panel){panel.classList.add('open');panel.classList.remove('hide');LDVL_TUTOR_STATE.open=true}let label=mode?(LDVL_TUTOR_MODE_LABELS[mode]||mode):'🌐 AI Internet';LDVL_TUTOR_STATE.messages.push({role:'user',text:label+' (Internet)'});let ok=await copyTextBestEffort(prompt);openGoogleAiModeTab(prompt);LDVL_TUTOR_STATE.messages.push({role:'assistant',text:(ok?'✅ Đã chép prompt & mở Google AI.':'⚠️ Mở Google AI — dán prompt (Ctrl+V) nếu chưa có.')+'\n\nTrên điện thoại: bấm Back để quay lại app.'});ldvlTutorRenderMsgs()}
+function ldvlTutorAbcdNetMenuRowHtml(){if(!ldvlTutorQuizContext()||!ldvlTutorHasAbcd())return '';let modes={A:'giai_a',B:'giai_b',C:'giai_c',D:'giai_d'};let btns=ldvlTutorQuestionLetters().map(function(L){return '<button type="button" onclick="ldvlTutorInternetGo(\''+modes[L]+'\')">🌐 '+L+'</button>'}).join('');return '<div class="ldvlTutorFabMenuRow ldvlTutorFabMenuNet">'+btns+'</div>'}
+function ldvlTutorRenderAbcdNetRow(){let box=document.getElementById('ldvlTutorAbcdNet');if(!box)return;if(!ldvlTutorQuizContext()||!ldvlTutorHasAbcd()){box.classList.add('hide');box.innerHTML='';return}let modes={A:'giai_a',B:'giai_b',C:'giai_c',D:'giai_d'};box.innerHTML=ldvlTutorQuestionLetters().map(function(L){return '<button type="button" onclick="ldvlTutorInternetGo(\''+modes[L]+'\')">🌐 '+L+'</button>'}).join('');box.classList.remove('hide')}
+const LDVL_TUTOR_MODE_LABELS={tom_tat:'📋 Tóm tắt đề',cong_thuc:'📐 Công thức cần dùng',goi_y:'📝 Gợi ý từng bước',giai_a:'Tóm tắt + Câu A',giai_b:'Tóm tắt + Câu B',giai_c:'Tóm tắt + Câu C',giai_d:'Tóm tắt + Câu D',dinh_nghia:'📖 Định nghĩa',vi_du:'💡 Ví dụ'};
+function ldvlTutorQuestionLetters(){let q=currentQuestion();if(!q)return[];return ['A','B','C','D'].filter(function(L){return !!String(q[L]||'').trim()})}
+function ldvlTutorHasAbcd(){return ldvlTutorQuestionLetters().length>0}
+function ldvlTutorAbcdMenuRowHtml(){if(!ldvlTutorQuizContext()||!ldvlTutorHasAbcd())return '';let modes={A:'giai_a',B:'giai_b',C:'giai_c',D:'giai_d'};let btns=ldvlTutorQuestionLetters().map(function(L){return '<button type="button" onclick="ldvlTutorPrompt(\''+modes[L]+'\')">Câu '+L+'</button>'}).join('');return '<div class="ldvlTutorFabMenuRow ldvlTutorFabMenuAbcd">'+btns+'</div>'}
+function ldvlTutorRenderAbcdRow(){let box=document.getElementById('ldvlTutorAbcd');if(!box)return;if(!ldvlTutorQuizContext()||!ldvlTutorHasAbcd()){box.classList.add('hide');box.innerHTML='';ldvlTutorRenderAbcdNetRow();return}let modes={A:'giai_a',B:'giai_b',C:'giai_c',D:'giai_d'};box.innerHTML=ldvlTutorQuestionLetters().map(function(L){return '<button type="button" onclick="ldvlTutorPrompt(\''+modes[L]+'\')">Câu '+L+'</button>'}).join('');box.classList.remove('hide');ldvlTutorRenderAbcdNetRow()}
+function ldvlTutorCanInfographic(){try{return !!(typeof canUseInfographicRole==='function'&&canUseInfographicRole()&&ldvlTutorQuizContext()&&typeof canUnlockInfographic==='function'&&canUnlockInfographic(CUR))}catch(e){return false}}
+function ldvlTutorShowInfographic(){try{return !!(typeof canUseInfographicRole==='function'&&canUseInfographicRole()&&ldvlTutorQuizContext())}catch(e){return false}}
+function ldvlTutorExtrasMenuTail(inQuiz){let h='<div class="ldvlTutorFabMenuSep"></div><button type="button" onclick="ldvlTutorInternetGo(\'\')">🌐 AI Internet (không cần key)</button><a href="https://zalo.me/0946111107" target="_blank" rel="noopener" class="ldvlTutorFabMenuZalo">💬 Zalo · 0946 1111 07</a>';if(inQuiz&&ldvlTutorShowInfographic()){if(ldvlTutorCanInfographic())h+='<button type="button" onclick="ldvlTutorOpenInfographic()">📊 Infographic</button>';else h+='<button type="button" disabled title="Trả lời đúng câu này trước">🔒 Infographic</button>'}h+='<div class="ldvlTutorFabMenuSep"></div><button type="button" class="ldvlTutorFabMenuChat" onclick="ldvlTutorFabOpenChat()">💬 Hỏi khác…</button>';return h}
+function ldvlTutorSyncInfoBtn(){let btn=document.getElementById('ldvlTutorInfoBtn');if(!btn)return;let show=ldvlTutorShowInfographic();btn.classList.toggle('hide',!show);if(show){let ok=ldvlTutorCanInfographic();btn.disabled=!ok;btn.title=ok?'Vẽ poster infographic (Gemini)':'Trả lời đúng câu này mới mở Infographic'}}
+async function ldvlTutorOpenInfographic(){ldvlTutorFabToggle(false);if(!ldvlTutorShowInfographic()){alert('Infographic chỉ dùng khi đang làm bài (VIP/SVIP/ADMIN).');return}if(!ldvlTutorCanInfographic()){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(typeof openInfographicPrompt==='function')await openInfographicPrompt();if(typeof generateInfographicImage==='function')generateInfographicImage()}
+function ldvlTutorPromptMenuHtml(inQuiz){let h='';if(inQuiz){h+='<button type="button" onclick="ldvlTutorPrompt(\'tom_tat\')">📋 Tóm tắt đề</button><button type="button" onclick="ldvlTutorPrompt(\'cong_thuc\')">📐 Công thức cần dùng</button>';h+=ldvlTutorAbcdMenuRowHtml();h+=ldvlTutorAbcdNetMenuRowHtml();if(!ldvlTutorHasAbcd())h+='<button type="button" onclick="ldvlTutorPrompt(\'goi_y\')">📝 Gợi ý từng bước</button>';h+='<button type="button" onclick="ldvlTutorPrompt(\'dinh_nghia\')">📖 Định nghĩa</button>'}else{h+='<button type="button" onclick="ldvlTutorPrompt(\'dinh_nghia\')">📖 Định nghĩa</button><button type="button" onclick="ldvlTutorPrompt(\'cong_thuc\')">📐 Công thức</button><button type="button" onclick="ldvlTutorPrompt(\'goi_y\')">📝 Gợi ý giải</button><button type="button" onclick="ldvlTutorPrompt(\'vi_du\')">💡 Ví dụ</button>'}h+=ldvlTutorExtrasMenuTail(inQuiz);return h}
+function ldvlTutorRenderFabMenu(){let menu=document.getElementById('ldvlTutorFabMenu');if(!menu)return;let inQuiz=!!ldvlTutorQuizContext();menu.innerHTML=ldvlTutorPromptMenuHtml(inQuiz);ldvlTutorSyncInfoBtn();ldvlTutorRenderAbcdRow()}
+function ldvlTutorRenderQuickBtns(){let box=document.getElementById('ldvlTutorQuick');if(!box)return;let inQuiz=!!ldvlTutorQuizContext();let h='';if(inQuiz){h+='<button type="button" onclick="ldvlTutorPrompt(\'tom_tat\')">📋 Tóm tắt</button><button type="button" onclick="ldvlTutorPrompt(\'cong_thuc\')">📐 Công thức</button>';if(!ldvlTutorHasAbcd())h+='<button type="button" onclick="ldvlTutorPrompt(\'goi_y\')">📝 Gợi ý</button>';h+='<button type="button" onclick="ldvlTutorPrompt(\'dinh_nghia\')">📖 Định nghĩa</button>';if(ldvlTutorShowInfographic()){if(ldvlTutorCanInfographic())h+='<button type="button" class="ldvlTutorQuickInfo" onclick="ldvlTutorOpenInfographic()">📊 Infographic</button>';else h+='<button type="button" class="ldvlTutorQuickInfo" disabled title="Trả lời đúng trước">🔒 Infographic</button>'}}else{h+='<button type="button" onclick="ldvlTutorPrompt(\'dinh_nghia\')">📖 Định nghĩa</button><button type="button" onclick="ldvlTutorPrompt(\'cong_thuc\')">📐 Công thức</button><button type="button" onclick="ldvlTutorPrompt(\'goi_y\')">📝 Gợi ý</button><button type="button" onclick="ldvlTutorPrompt(\'vi_du\')">💡 Ví dụ</button>'}box.innerHTML=h;ldvlTutorSyncInfoBtn();ldvlTutorRenderAbcdRow()}
+function ldvlTutorFabToggle(force){if(!(USER&&USER.mahs))return;let menu=document.getElementById('ldvlTutorFabMenu');if(!menu)return;let open=typeof force==='boolean'?force:!LDVL_TUTOR_STATE.menuOpen;LDVL_TUTOR_STATE.menuOpen=open;menu.classList.toggle('open',open);if(open){ldvlTutorRenderFabMenu();ldvlTutorChatToggle(false)}}
+function ldvlTutorFabOpenChat(){ldvlTutorFabToggle(false);ldvlTutorChatToggle(true)}
+function ldvlTutorChatSyncUi(){let fab=document.getElementById('ldvlTutorFab');let aiBtn=document.getElementById('ldvlTutorFabBtn');let logged=USER&&USER.mahs;if(fab)fab.classList.toggle('hide',!logged);if(aiBtn)aiBtn.classList.toggle('hide',!(logged&&USER.can_ai_hint));if(!logged){ldvlTutorFabToggle(false);ldvlTutorChatToggle(false)}else{ldvlTutorSyncInfoBtn();ldvlTutorSyncKeyPanel()}}
+function ldvlTutorChatToggle(force){let panel=document.getElementById('ldvlTutorPanel');if(!panel||!(USER&&USER.mahs))return;let open=typeof force==='boolean'?force:!LDVL_TUTOR_STATE.open;LDVL_TUTOR_STATE.open=open;if(open)ldvlTutorFabToggle(false);panel.classList.toggle('open',open);panel.classList.toggle('hide',!open);if(open){ldvlTutorSyncKeyPanel();ldvlTutorRenderQuickBtns();ldvlTutorRenderMsgs();let inp=document.getElementById('ldvlTutorInput');if(inp)setTimeout(function(){inp.focus()},80)}}
+function ldvlTutorRenderMsgs(){let box=document.getElementById('ldvlTutorMsgs');if(!box)return;let html='';if(!LDVL_TUTOR_STATE.messages.length)html='<div class="ldvlTutorMsg bot"><div class="ldvlTutorMsgBubble">Chào em! <b>Câu A–D</b> = AI trong app. Hàng <b>🌐 A–D</b> hoặc nút <b>Internet</b> = mở Google AI, <b>không cần key</b>, không tốn quota.</div></div>';else html=LDVL_TUTOR_STATE.messages.map(function(m){let cls=m.role==='user'?'user':'bot';let body=m.role==='user'?esc(m.text):formatHintDisplay(m.text);return '<div class="ldvlTutorMsg '+cls+'"><div class="ldvlTutorMsgBubble">'+body+'</div></div>'}).join('');if(LDVL_TUTOR_STATE.loading)html+='<div class="ldvlTutorLoading"><span class="hintSpin"></span> Thầy Minh đang suy nghĩ…</div>';box.innerHTML=html;if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([box]).catch(function(){});box.scrollTop=box.scrollHeight}
+function ldvlTutorCurrentMon(){try{let f=document.getElementById('fMon');if(f&&f.value)return f.value;let st=window.LDVL_DASH_SYNC||{};if(st.mon)return st.mon;return(localStorage.getItem('LDVL_TOP_SUBJECT_V255')||'')==='physics'?'Vật lí':'Toán'}catch(e){return 'Toán'}}
+function ldvlTutorQuizContext(){let quiz=document.getElementById('quiz');let inQuiz=quiz&&!quiz.classList.contains('hide');if(!inQuiz||!SID||!QUESTIONS.length)return null;return Object.assign({sid:SID,index:CUR,answer:ANSWERS[CUR]},quizRestorePayload())}
+async function ldvlTutorPrompt(mode){mode=String(mode||'').trim();if(!mode)return;ldvlTutorFabToggle(false);let label=LDVL_TUTOR_MODE_LABELS[mode]||mode;await ldvlTutorChatSend(label,mode)}
+async function ldvlTutorChatSend(directMsg,promptMode){if(!(USER&&USER.mahs))return;if(!USER.can_ai_hint){alert('Chat AI Thầy Minh dành VIP / SVIP / ADMIN.\n\nLiên hệ Zalo 0946 1111 07 để đăng ký.');return}if(LDVL_TUTOR_STATE.loading)return;let inp=document.getElementById('ldvlTutorInput');let display=String(directMsg!=null&&directMsg!==''?directMsg:(inp&&inp.value||'')).trim();if(!display)return;let mode=String(promptMode||'').trim();LDVL_TUTOR_STATE.open=true;let panel=document.getElementById('ldvlTutorPanel');if(panel){panel.classList.add('open');panel.classList.remove('hide')}LDVL_TUTOR_STATE.messages.push({role:'user',text:display});if(inp)inp.value='';LDVL_TUTOR_STATE.loading=true;ldvlTutorRenderMsgs();let btn=document.getElementById('ldvlTutorSendBtn');if(btn)btn.disabled=true;try{let hist=mode?[]:LDVL_TUTOR_STATE.messages.slice(0,-1);let body={message:display,messages:hist,mon:ldvlTutorCurrentMon(),prompt_mode:mode};let qctx=ldvlTutorQuizContext();if(qctx)Object.assign(body,qctx);let j=isAdminViewer()?await adminAiFetch('/api/ai/tutor-chat',body):await api('/api/ai/tutor-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let reply=String(j.reply||'').trim();if(!reply&&j.ai_error)reply='⚠️ '+j.ai_error;if(j.needs_key||String(j.provider_used||'').toUpperCase()==='NO_KEY'){ldvlTutorOpenKeyBox(true);if(reply&&!/Key Gemini|🔑/i.test(reply))reply+='\n\n🔑 Bấm Key phía trên → dán AIza... → Lưu → Test.';if(reply&&!/Internet|🌐/i.test(reply))reply+='\n\n🌐 Hoặc bấm <b>Internet</b> / 🌐A–D — mở Google AI, không cần key.'}if(mode.startsWith('giai_')&&reply.length<220&&!/\(2\)|PHƯƠNG ÁN|GỢI Ý/i.test(reply))reply+='\n\n⚠️ AI trả lời chưa đủ — bấm lại <b>Câu '+mode.slice(-1).toUpperCase()+'</b> hoặc <b>🌐 '+mode.slice(-1).toUpperCase()+'</b> (Internet).';LDVL_TUTOR_STATE.messages.push({role:'assistant',text:reply||'⚠️ AI chưa trả lời.'});mergeUserAiProfile(j);ldvlTutorSyncKeyPanel()}catch(e){let err=apiNetworkErrorMsg(e);if(ldvlTutorNeedKey()){err+='\n\n🔑 Nếu chưa nạp key: bấm Key → dán Gemini AIza... → Lưu.';ldvlTutorOpenKeyBox(true)}err+='\n\n🌐 Bấm <b>Internet</b> hoặc 🌐A–D để dùng Google AI (không cần key).';LDVL_TUTOR_STATE.messages.push({role:'assistant',text:'⚠️ '+err})}finally{LDVL_TUTOR_STATE.loading=false;if(btn)btn.disabled=false;ldvlTutorRenderMsgs();if(inp&&!LDVL_TUTOR_STATE.loading)inp.focus()}}
+function ldvlTutorQuickSend(mode){ldvlTutorPrompt(mode)}
+document.addEventListener('click',function(e){if(!LDVL_TUTOR_STATE.menuOpen)return;let fab=document.getElementById('ldvlTutorFab');if(fab&&fab.contains(e.target))return;ldvlTutorFabToggle(false)});
+window.ldvlTutorFabToggle=ldvlTutorFabToggle;window.ldvlTutorFabOpenChat=ldvlTutorFabOpenChat;window.ldvlTutorPrompt=ldvlTutorPrompt;window.ldvlTutorInternetGo=ldvlTutorInternetGo;window.ldvlTutorOpenInfographic=ldvlTutorOpenInfographic;window.ldvlTutorRenderFabMenu=ldvlTutorRenderFabMenu;window.ldvlTutorChatToggle=ldvlTutorChatToggle;window.ldvlTutorChatSend=ldvlTutorChatSend;window.ldvlTutorQuickSend=ldvlTutorQuickSend;window.ldvlTutorChatSyncUi=ldvlTutorChatSyncUi;window.ldvlTutorToggleKeyBox=ldvlTutorToggleKeyBox;window.ldvlTutorSaveKey=ldvlTutorSaveKey;window.ldvlTutorTestKey=ldvlTutorTestKey;
 function dangSimilarityCacheKey(q){q=q||{};return [q.Mon,q.Lop,q.Chuong,q.BaiHoc,q.DangBaiTap].map(x=>normText(String(x||''))).join('|')}
 async function loadDangSimilarityReport(q,force,withAi){if(!USER.is_admin||!q||!String(q.DangBaiTap||'').trim())return null;let key=dangSimilarityCacheKey(q);if(!force&&DANG_SIMILARITY_CACHE[key]&&!withAi)return DANG_SIMILARITY_CACHE[key];if(DANG_SIMILARITY_LOADING&&!force)return DANG_SIMILARITY_CACHE[key]||null;DANG_SIMILARITY_LOADING=true;try{let body={Mon:q.Mon||'',Lop:q.Lop||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',DangBaiTap:q.DangBaiTap||'',MaDe:q.MaDe||CURRENT_MADE||'',ID:q.ID||'',with_ai:!!withAi};let j=withAi?await adminApiPost('/api/admin/dang-similarity',body):await api('/api/admin/dang-similarity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});DANG_SIMILARITY_CACHE[key]=j;return j}catch(e){return {ok:false,error:e.message||String(e),summary:'Không phân tích được: '+(e.message||e)}}finally{DANG_SIMILARITY_LOADING=false}}
 function renderDangSimilarityWarnHtml(report,q){if(!report||!USER.is_admin)return '';let warns=(report.current_warnings&&report.current_warnings.length)?report.current_warnings:[];if(!warns.length&&report.pair_count>0){warns=(report.pairs||[]).slice(0,4).map(p=>p.suggestion||'')}if(!warns.length&&!report.pair_count)return '';let head=report.pair_count?('<b>⚠️ Trùng lặp trong dạng ≥70%</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>'):('<b>✅ Đa dạng trong dạng</b><div class="muted" style="font-size:12px;margin-top:4px">'+esc(report.summary||'')+'</div>');let list=warns.length?('<ul>'+warns.slice(0,5).map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'):'';let ai=report.ai_advice?('<div class="dangSimAi"><b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(report.ai_advice)+'</div>'):'';let btn=report.pair_count?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btnGreen" onclick="adminAnalyzeDangSimilarity(false)">🗑️ Xóa/gộp trùng</button><button type="button" class="btn2" onclick="adminAnalyzeDangSimilarity(true)">🤖 Gợi ý AI</button></div>':'';return '<div class="dangSimWarn">'+head+list+ai+btn+'</div>'}
@@ -21716,6 +22021,7 @@ async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử kh
 const QUESTION_FORM_FIELDS=['MaDe','ID','Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','QuyenTruyCap','TrangThai','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'];
 const ADMIN_EDIT_META_FIELDS=['MaDe','ID','Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','QuyenTruyCap','TrangThai','MucDo','Dang'];
 const ADMIN_EDIT_META_ESSENTIAL=['Dang','MucDo','TrangThai','QuyenTruyCap','NangLucVatLy'];
+const ADMIN_EDIT_META_LOCATION=['Mon','Lop','Chuong','BaiHoc','DangBaiTap'];
 const ADMIN_EDIT_META_MORE=['MaDe','ID'];
 const ADMIN_EDIT_OPT_FIELDS=['A','B','C','D'];
 const ADMIN_EDIT_PR_FIELDS=['DapAn','SaiSo','LoiGiai'];
@@ -21739,12 +22045,14 @@ function adminMetaFilteredRows(field,q){if(hasLessonCatalog())return adminMetaCa
 function adminMetaPickOptions(field,q){let opts=uniqField(adminMetaFilteredRows(field,q||{}),field);let cur=String((q&&q[field])||'').trim();if(cur&&!opts.some(x=>normText(x)===normText(cur)))opts.unshift(cur);if(field==='Mon'){if(!hasLessonCatalog()){for(let v of ((META&&META.filters&&META.filters.Mon)||[])){v=String(v||'').trim();if(v&&!opts.some(x=>normText(x)===normText(v)))opts.push(v)}}opts.sort((a,b)=>normText(a).localeCompare(normText(b),'vi'))}else{if(field==='BaiHoc')opts.sort((a,b)=>lessonNum(a)-lessonNum(b)||normText(a).localeCompare(normText(b),'vi'));else if(field==='Chuong')opts.sort((a,b)=>chapterNum(a)-chapterNum(b)||normText(a).localeCompare(normText(b),'vi'));else opts.sort((a,b)=>normText(a).localeCompare(normText(b),'vi'))}return opts}
 function adminMetaRebuildPick(raw,opts){let match=adminDbtFindMatch(raw,opts);let pickVal=match||(raw&&!hasLessonCatalog()?'__custom__':'');let optHtml='<option value="">— Chọn —</option>';for(let v of opts){optHtml+=`<option value="${escAttr(v)}"${pickVal===v?' selected':''}>${esc(v)}</option>`}if(!hasLessonCatalog())optHtml+=`<option value="__custom__"${pickVal==='__custom__'?' selected':''}>✏️ Nhập khác…</option>`;return{optHtml,match,pickVal}}
 function adminMetaRefreshCascade(changedField){let order=ADMIN_META_PICK_FIELDS;let idx=order.indexOf(changedField);if(idx<0)return;let form=readQuestionFormData();for(let i=idx+1;i<order.length;i++){let f=order[i];let sel=document.getElementById('edit_'+f+'_pick');let inp=document.getElementById('edit_'+f);if(!sel||!inp)continue;let cur=String(inp.value||'').trim();let opts=adminMetaPickOptions(f,form);let built=adminMetaRebuildPick(cur,opts);sel.innerHTML=built.optHtml;if(hasLessonCatalog()){sel.value=built.match||'';inp.value=built.match||''}else if(built.match){sel.value=built.match;inp.value=built.match;inp.classList.add('hide')}else if(cur){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}}adminDbtRefreshFromScope()}
-function adminMetaPickChange(field){let sel=document.getElementById('edit_'+field+'_pick');let inp=document.getElementById('edit_'+field);if(!sel||!inp)return;let v=String(sel.value||'');if(hasLessonCatalog()){inp.value=v;adminMetaRefreshCascade(field);return}if(v==='__custom__'){inp.classList.remove('hide');inp.focus()}else{inp.value=v;if(v)inp.classList.add('hide');else inp.classList.remove('hide')}adminMetaRefreshCascade(field)}
-function adminMetaInputChange(field){let inp=document.getElementById('edit_'+field);let sel=document.getElementById('edit_'+field+'_pick');if(!inp||!sel)return;let opts=[];for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(v&&v!=='__custom__')opts.push(v)}let m=adminDbtFindMatch(inp.value,opts);if(m&&normText(inp.value)===normText(m)){sel.value=m;inp.classList.add('hide')}else if(String(inp.value||'').trim()){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}adminMetaRefreshCascade(field)}
+function adminMetaPickChange(field){let sel=document.getElementById('edit_'+field+'_pick');let inp=document.getElementById('edit_'+field);if(!sel||!inp)return;let v=String(sel.value||'');if(hasLessonCatalog()){inp.value=v;adminMetaRefreshCascade(field);adminMetaSyncToEditScopeIfEdit();return}if(v==='__custom__'){inp.classList.remove('hide');inp.focus()}else{inp.value=v;if(v)inp.classList.add('hide');else inp.classList.remove('hide')}adminMetaRefreshCascade(field);adminMetaSyncToEditScopeIfEdit()}
+function adminMetaInputChange(field){let inp=document.getElementById('edit_'+field);let sel=document.getElementById('edit_'+field+'_pick');if(!inp||!sel)return;let opts=[];for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(v&&v!=='__custom__')opts.push(v)}let m=adminDbtFindMatch(inp.value,opts);if(m&&normText(inp.value)===normText(m)){sel.value=m;inp.classList.add('hide')}else if(String(inp.value||'').trim()){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}adminMetaRefreshCascade(field);adminMetaSyncToEditScopeIfEdit()}
+function adminMetaSyncPickUiFromForm(){let form={};for(let f of ADMIN_META_PICK_FIELDS){let el=document.getElementById('edit_'+f);form[f]=el?String(el.value||'').trim():''}for(let f of ADMIN_META_PICK_FIELDS){let sel=document.getElementById('edit_'+f+'_pick');let inp=document.getElementById('edit_'+f);if(!sel||!inp)continue;let opts=adminMetaPickOptions(f,form);let built=adminMetaRebuildPick(String(inp.value||'').trim(),opts);sel.innerHTML=built.optHtml;if(hasLessonCatalog()){sel.value=built.match||'';inp.value=built.match||''}else if(built.match){sel.value=built.match;inp.value=built.match;inp.classList.add('hide')}else if(String(inp.value||'').trim()){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}}try{adminDbtRefreshFromScope()}catch(e){}}
+function adminMetaSyncToEditScopeIfEdit(){if(!document.getElementById('ldvlEditSyncRow'))return;let form=readQuestionFormData();window.ADMIN_EDIT_META_SYNC={mon:String(form.Mon||'').trim(),lop:String(form.Lop||'').trim(),chuong:String(form.Chuong||'').trim(),bai:String(form.BaiHoc||'').trim(),dbt:String(form.DangBaiTap||'').trim(),dang:normDangFormVal(form.Dang||'')};adminEditRenderMeta5Col()}
 function adminMetaSyncAll(){adminMetaRefreshCascade('Mon')}
 function renderAdminMetaPickField(field,q){let raw=String((q&&q[field])||'').trim();let opts=adminMetaPickOptions(field,q);let built=adminMetaRebuildPick(raw,opts);let catalogOnly=hasLessonCatalog();let hideInp=catalogOnly||(built.pickVal&&built.pickVal!=='__custom__');let hideCls=hideInp?' hide':'';let inpHtml=catalogOnly?'':`<input type="text" id="edit_${field}" class="adminDbtInput${hideCls}" value="${escAttr(raw)}" placeholder="Hoặc gõ ${esc(QUESTION_FORM_LABELS[field]||field)} mới" oninput="adminMetaInputChange('${field}')" />`;if(catalogOnly)inpHtml+=`<input type="hidden" id="edit_${field}" value="${escAttr(built.match||raw||'')}" />`;return `<div class="adminQuickField adminMetaPickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b>${catalogOnly?` <span class="muted" style="font-size:11px">(danh mục)</span>`:''}</label><select id="edit_${field}_pick" class="adminDbtSelect" onchange="adminMetaPickChange('${field}')">${built.optHtml}</select>${inpHtml}</div>`}
 function adminEditMetaSyncFromQ(q){q=q||{};window.ADMIN_EDIT_META_SYNC={mon:String(q.Mon||'').trim(),lop:String(q.Lop||'').trim(),chuong:String(q.Chuong||'').trim(),bai:String(q.BaiHoc||'').trim(),dbt:String(q.DangBaiTap||'').trim(),dang:normDangFormVal(q.Dang||'')}}
-function adminEditMetaSyncToHidden(){let st=window.ADMIN_EDIT_META_SYNC||{};let map={Mon:'mon',Lop:'lop',Chuong:'chuong',BaiHoc:'bai',DangBaiTap:'dbt'};for(let [field,key] of Object.entries(map)){let el=document.getElementById('edit_'+field);if(el)el.value=st[key]||''}}
+function adminEditMetaSyncToHidden(){let st=window.ADMIN_EDIT_META_SYNC||{};let map={Mon:'mon',Lop:'lop',Chuong:'chuong',BaiHoc:'bai',DangBaiTap:'dbt'};for(let [field,key] of Object.entries(map)){let el=document.getElementById('edit_'+field);if(el)el.value=st[key]||''}if(document.getElementById('edit_Mon_pick'))adminMetaSyncPickUiFromForm()}
 function adminEditFuzzyTreeKey(keys,val,matcher){val=String(val||'').trim();if(!val||!keys||!keys.length)return val;if(keys.includes(val))return val;for(let k of keys){if(matcher&&matcher(k,val))return k;if(normText(k)===normText(val))return k}return val}
 function adminEditResolveSyncInTree(tree,st){st=st||{};if(st.mon){let mons=Object.keys(tree||{});if(!tree[st.mon]){let m=adminEditFuzzyTreeKey(mons,st.mon,null);if(tree[m])st.mon=m}}if(st.mon&&st.lop&&tree[st.mon]){let lops=Object.keys(tree[st.mon]);if(!lops.includes(st.lop)){let l=adminEditFuzzyTreeKey(lops,st.lop,ldvlDashNormLop);if(lops.includes(l))st.lop=l}}if(st.mon&&st.lop&&st.chuong&&tree[st.mon]&&tree[st.mon][st.lop]){let chs=Object.keys(tree[st.mon][st.lop]);if(!chs.includes(st.chuong)){let c=adminEditFuzzyTreeKey(chs,st.chuong,ldvlDashNormChuongMatch);if(chs.includes(c))st.chuong=c}}if(st.mon&&st.lop&&st.chuong&&st.bai&&tree[st.mon]&&tree[st.mon][st.lop]&&tree[st.mon][st.lop][st.chuong]){let bais=Object.keys(tree[st.mon][st.lop][st.chuong]);if(!bais.includes(st.bai)){let b=adminEditFuzzyTreeKey(bais,st.bai,ldvlDashNormBaiMatch);if(bais.includes(b))st.bai=b}}return st}
 function adminEditValidateMetaSyncInTree(tree,st){st=adminEditResolveSyncInTree(tree,st);if(st.lop&&st.mon&&tree[st.mon]&&!Object.keys(tree[st.mon]).includes(st.lop)){st.lop='';st.chuong='';st.bai='';st.dbt='';st.dang=''}if(st.chuong&&st.mon&&st.lop&&tree[st.mon]&&tree[st.mon][st.lop]&&!Object.keys(tree[st.mon][st.lop]).includes(st.chuong)){st.chuong='';st.bai='';st.dbt='';st.dang=''}if(st.bai&&st.mon&&st.lop&&st.chuong&&tree[st.mon]&&tree[st.mon][st.lop]&&tree[st.mon][st.lop][st.chuong]&&!Object.keys(tree[st.mon][st.lop][st.chuong]).includes(st.bai)){st.bai='';st.dbt='';st.dang=''}if(st.dbt&&st.bai){let dbts=ldvlDashCollectDbts(st);let dbtKeys=dbts.map(function(it){return it.key||it});if(dbts.length){let match=dbtKeys.find(function(k){return k===st.dbt||normText(k)===normText(st.dbt)});if(match)st.dbt=match}}if(st.dang&&!ADMIN_DANG_OPTS.includes(normDangFormVal(st.dang)))st.dang='';return st}
@@ -21752,8 +22060,8 @@ function adminEditSyncDbtCustomUi(st){st=st||window.ADMIN_EDIT_META_SYNC||{};let
 function adminEditFocusNewDbt(){let st=window.ADMIN_EDIT_META_SYNC||{};if(!st.bai){alert('Chọn đủ Môn → Lớp → Chương → Bài học trước.');return}st.dbt='';window.ADMIN_EDIT_META_SYNC=st;let hidden=document.getElementById('edit_DangBaiTap');if(hidden)hidden.value='';adminEditRenderMeta5Col();let custom=document.getElementById('edit_DangBaiTap_custom');if(custom){custom.value='';custom.focus()}}
 function adminEditDbtCustomInput(){let custom=document.getElementById('edit_DangBaiTap_custom');let hidden=document.getElementById('edit_DangBaiTap');if(!custom||!hidden)return;let v=String(custom.value||'').trim();hidden.value=v;let st=window.ADMIN_EDIT_META_SYNC||{};st.dbt=v;window.ADMIN_EDIT_META_SYNC=st;let dbts=st.bai?ldvlDashCollectDbts(st):[];let keys=dbts.map(function(it){return String(it.key||it.label||it).trim()});let match=adminDbtFindMatch(v,keys);if(match){st.dbt=match;window.ADMIN_EDIT_META_SYNC=st;hidden.value=match;adminEditRenderMeta5Col()}else{adminEditSyncDbtCustomUi(st)}renderEditQuestionPreview()}
 function adminEditRenderMeta5Col(){let tree=ldvlBuildDashScopeTree();let st=window.ADMIN_EDIT_META_SYNC||{mon:'',lop:'',chuong:'',bai:'',dbt:'',dang:''};st=adminEditValidateMetaSyncInTree(tree,st);window.ADMIN_EDIT_META_SYNC=st;adminEditMetaSyncToHidden();ldvlRenderDashSyncPanelOne('Edit',tree,st);adminEditSyncDbtCustomUi(st)}
-function adminEditPickMon(mon){window.ADMIN_EDIT_META_SYNC={mon:mon||'',lop:'',chuong:'',bai:'',dbt:'',dang:''};adminEditRenderMeta5Col();renderEditQuestionPreview()}
-function adminEditPickLop(lop){let st=window.ADMIN_EDIT_META_SYNC||{};st.lop=String(lop||'');st.chuong='';st.bai='';st.dbt='';st.dang='';window.ADMIN_EDIT_META_SYNC=st;adminEditRenderMeta5Col();renderEditQuestionPreview()}
+function adminEditPickMon(mon){ldvlDashMegaClearMonPre('Edit');ldvlDashMegaSetHover('Edit',null);window.ADMIN_EDIT_META_SYNC={mon:mon||'',lop:'',chuong:'',bai:'',dbt:'',dang:''};adminEditRenderMeta5Col();renderEditQuestionPreview()}
+function adminEditPickLop(lop){ldvlDashMegaClearHover('Edit');let st=window.ADMIN_EDIT_META_SYNC||{};st.lop=String(lop||'');st.chuong='';st.bai='';st.dbt='';st.dang='';window.ADMIN_EDIT_META_SYNC=st;adminEditRenderMeta5Col();renderEditQuestionPreview()}
 function adminEditPickChuong(chuong){let st=window.ADMIN_EDIT_META_SYNC||{};st.chuong=String(chuong||'');st.bai='';st.dbt='';st.dang='';window.ADMIN_EDIT_META_SYNC=st;adminEditRenderMeta5Col();renderEditQuestionPreview()}
 function adminEditPickBai(bai){let st=window.ADMIN_EDIT_META_SYNC||{};st.bai=String(bai||'');st.dbt='';st.dang='';window.ADMIN_EDIT_META_SYNC=st;adminEditRenderMeta5Col();renderEditQuestionPreview()}
 function ldvlDashOnPick(fnName,arg){
@@ -21804,7 +22112,328 @@ function adminEditPickDang(dang){
   adminEditRenderMeta5Col();
   requestAnimationFrame(function(){try{renderEditQuestionPreview()}catch(e){}});
 }
-function renderAdminEditMeta5ColPanel(q){adminEditMetaSyncFromQ(q);let dbtRaw=String((q&&q.DangBaiTap)||'').trim();return `<div class="adminEditMetaScope ldvlDashV324 adminEditMeta5Col"><input type="hidden" id="edit_Mon" value="${escAttr(String((q&&q.Mon)||''))}" /><input type="hidden" id="edit_Lop" value="${escAttr(String((q&&q.Lop)||''))}" /><input type="hidden" id="edit_Chuong" value="${escAttr(String((q&&q.Chuong)||''))}" /><input type="hidden" id="edit_BaiHoc" value="${escAttr(String((q&&q.BaiHoc)||''))}" /><input type="hidden" id="edit_DangBaiTap" value="${escAttr(dbtRaw)}" /><div class="ldvlSyncRow" id="ldvlEditSyncRow"><div class="ldvlSyncColBox ldvlSyncColMon"><div class="ldvlSyncColHead ldvlSyncHeadMon">① Môn</div><div id="ldvlEditSyncMonCol"></div></div><div class="ldvlSyncColBox ldvlSyncColLop"><div class="ldvlSyncColHead" id="ldvlEditSyncLopHead">② Lớp</div><div id="ldvlEditSyncLopCol" class="ldvlSyncCol">—</div></div><div class="ldvlSyncColBox ldvlSyncColChuong"><div class="ldvlSyncColHead" id="ldvlEditSyncChuongHead">③ Chương</div><div id="ldvlEditSyncChuongCol" class="ldvlSyncCol">—</div></div><div class="ldvlSyncColBox ldvlSyncColBai"><div class="ldvlSyncColHead" id="ldvlEditSyncBaiHead">④ Bài học</div><div id="ldvlEditSyncBaiCol" class="ldvlSyncCol">—</div></div><div class="ldvlSyncColBox ldvlSyncColDbt" id="ldvlEditSyncDbtBox" style="display:none"><div class="ldvlSyncColHead" id="ldvlEditSyncDbtHead" style="color:#d97706">⑤ Dạng BT</div><div id="ldvlEditSyncDbtCol" class="ldvlSyncCol">—</div></div><div class="ldvlSyncColBox ldvlSyncColDang" id="ldvlEditSyncDangBox" style="display:none"><div class="ldvlSyncColHead" id="ldvlEditSyncDangHead" style="color:#2563eb">⑥ Loại BT</div><div id="ldvlEditSyncDangCol" class="ldvlSyncCol">—</div></div></div><div class="ldvlSyncFoot" style="margin-top:8px;padding:0;border:none;background:transparent;box-shadow:none"><div style="font-size:11px;color:#64748b;margin-bottom:6px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Môn → Lớp → Chương → Bài học → Dạng BT (cột H) → Loại BT (cột J)</b> · dạng mới = gõ tên rồi <b>Lưu Sheet</b></div><span id="ldvlEditDashSyncHint" class="muted" style="font-size:12px;display:block;margin-bottom:6px">Chọn môn Toán hoặc Vật lý</span><div id="adminEditDbtCustomWrap" class="adminEditDbtCustom hide"><label style="font-size:11px;font-weight:800;display:block;margin-bottom:4px;color:#b45309">➕ Dạng mới phát sinh (cột H)</label><input type="text" id="edit_DangBaiTap_custom" class="adminDbtInput" placeholder="VD: Liên hệ li độ - gia tốc (3)" value="" oninput="adminEditDbtCustomInput()" /><div id="edit_DangBaiTap_hint" class="muted adminDbtHint" style="font-size:11px;margin-top:4px"></div></div></div></div>`}
+function ldvlDashSetColHead(id,label,n){
+  let el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=n>0?String(n):'';
+  el.style.display=n>0?'':'none';
+}
+function ldvlSyncNavCap(level){return level==='mon'?'Mon':level==='lop'?'Lop':level==='chuong'?'Chuong':level==='bai'?'Bai':level==='dbt'?'Dbt':'Dang';}
+function ldvlSyncMegaRowHtml(sfx){
+  sfx=sfx||'';
+  let p='ldvl'+(sfx||'')+'Sync';
+  let head=sfx==='Edit'?'Phạm vi Sheet':'';
+  return (sfx==='Edit'?('<div class="ldvlSyncMonBar" id="'+p+'MonCol"></div>'):'')+
+    '<div class="ldvlSyncMega hide" id="'+p+'MegaPanel">'+
+      '<div class="ldvlSyncMegaBody">'+
+        '<aside class="ldvlSyncMegaSide"><div class="ldvlSyncMegaSideTitle">Chọn lớp</div><div class="ldvlSyncMegaSideList" id="'+p+'LopCol"></div></aside>'+
+        '<div class="ldvlSyncMegaMain">'+
+          '<div class="ldvlSyncMegaTopTabs"><span class="ldvlMegaTopTab on" id="'+p+'TopTabLbl">BÀI HỌC</span></div>'+
+          '<div class="ldvlSyncMegaScroll" id="'+p+'BaiCol"></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ldvlSyncMegaSub hide" id="'+p+'MegaSubPanel">'+
+      (sfx==='Edit'?
+        '<div class="ldvlSyncMegaTabsBar"><div class="ldvlSyncMegaTabsLabel">Dạng bài tập</div><div class="ldvlSyncMegaTabs ldvlSyncMegaTabsDbt" id="'+p+'DbtCol"></div></div>'+
+        '<div class="ldvlSyncMegaTabsBar" id="'+p+'DangBox"><div class="ldvlSyncMegaTabsLabel">Loại BT (TN · Đ/S · TLN · TL)</div><div class="ldvlSyncMegaTabs ldvlSyncMegaTabsDang" id="'+p+'DangCol"></div></div>'
+        :'<div class="ldvlMegaPractice" id="'+p+'PracticeBox"></div>')+
+    '</div>';
+}
+function ldvlDashEnsureDefaultScope(st,tree){
+  st=Object.assign({},st||{});
+  if(!st.mon||!tree[st.mon])return st;
+  let lops=Object.keys(tree[st.mon]).sort(ldvlDashSortLop);
+  if(lops.length&&!st.lop)st.lop=lops[0];
+  if(st.lop&&tree[st.mon][st.lop]){
+    let chs=Object.keys(tree[st.mon][st.lop]).sort(ldvlDashSortChuong);
+    if(chs.length&&(!st.chuong||chs.indexOf(st.chuong)<0))st.chuong=chs[0];
+  }
+  return st;
+}
+function ldvlDashSplitChuong(ch){
+  ch=String(ch||'').trim();
+  let m=ch.match(/^(CHƯƠNG\s+[IVXLCDM\d]+(?:\s*[\.\:])?)\s*(.*)$/i);
+  if(m)return {num:m[1].trim(),tit:(m[2]||'').trim()};
+  m=ch.match(/^((?:Chương|CHƯƠNG)\s*\d+)\s*(.*)$/i);
+  if(m)return {num:m[1].trim(),tit:(m[2]||'').trim()};
+  return {num:'',tit:ch};
+}
+function ldvlMegaSideBtn(label,selected,preview,onAttr,hoverLop,sfx,isEdit){
+  let cls='ldvlMegaSideItem'+(selected?' on':'')+(preview&&!selected?' pre':'');
+  let sfxJs=String(sfx||'').replace(/'/g,"\\'");
+  let enter=hoverLop?(' onmouseenter="ldvlDashMegaHoverLop(\''+sfxJs+'\',\''+escAttr(hoverLop)+'\','+(isEdit?'true':'false')+')"'):'';
+  let isNum=/^\d+$/.test(String(label).trim());
+  let lbl=isNum?('<span class="ldvlMegaSideNum">'+esc(label)+'</span>'):('<span class="ldvlMegaSideTxt">'+esc(label)+'</span>');
+  return '<button type="button" class="'+cls+'" '+onAttr+enter+' title="'+escAttr('Lớp '+label)+'"><span class="ldvlMegaSideIco"><i class="ti ti-school"></i></span>'+lbl+'</button>';
+}
+function ldvlFormatBaiHocHtml(label){
+  label=String(label||'').trim();
+  if(!label)return '';
+  let m=label.match(/^(Bài|Bai)\s*(\d+)\s*([\.\:\-])?\s*(.*)$/i);
+  if(m){
+    let sep=(m[3]||'.')+' ';
+    let tit=String(m[4]||'').trim();
+    return '<span class="ldvlBaiWord">Bài</span><span class="ldvlBaiNum"> '+m[2]+sep+'</span>'+(tit?'<span class="ldvlBaiTit">'+esc(tit)+'</span>':'');
+  }
+  if(/^Bài\s/i.test(label))return '<span class="ldvlBaiWord">Bài</span><span class="ldvlBaiTit"> '+esc(label.replace(/^Bài\s*/i,''))+'</span>';
+  return '<span class="ldvlBaiTit">'+esc(label)+'</span>';
+}
+function ldvlShowLessonReviewIcons(){return !(USER&&USER.is_admin)||!!window.LDVL_ADMIN_STUDENT_MODE}
+function ldvlCatalogReviewCounts(entries){
+  entries=entries||[];let total=0,approved=0;
+  entries.forEach(function(e){
+    if(USER&&USER.is_admin&&!window.LDVL_ADMIN_STUDENT_MODE){
+      total+=parseInt(e.SoCau,10)||0;
+      approved+=parseInt(e.SoCauDuyet,10)||0;
+    }else{
+      total+=parseInt(e.SoCauTotal,10)||0;
+      approved+=parseInt(e.SoCau,10)||0;
+    }
+  });
+  return {total:total,approved:approved,canDo:approved>0,full:total>0&&approved>=total};
+}
+function ldvlCatalogBaiReviewInfo(mon,lop,chuong,bai){
+  let entries=(CATALOG||[]).filter(function(c){
+    if(String(c.Mon||'').trim()!==String(mon||'').trim())return false;
+    if(!ldvlDashNormLop(c.Lop,lop))return false;
+    if(String(c.Chuong||'').trim()!==String(chuong||'').trim())return false;
+    return ldvlDashNormBaiMatch(String(c.BaiHoc||c.De||''),bai);
+  });
+  return ldvlCatalogReviewCounts(entries);
+}
+function ldvlLessonReviewBadgeHtml(entries){
+  let rev=ldvlCatalogReviewCounts(entries);
+  if(!rev.canDo)return '<span class="ldvlLessonPendingIco" title="Chưa có câu đã duyệt — chờ thầy duyệt"><i class="ti ti-lock"></i></span>';
+  if(rev.full)return '<span class="ldvlLessonReadyIco" title="✓ '+rev.approved+' câu đã duyệt — làm được"><i class="ti ti-circle-check"></i></span>';
+  return '<span class="ldvlLessonPartialIco" title="'+rev.approved+'/'+rev.total+' câu đã duyệt — làm phần đã duyệt"><i class="ti ti-player-play"></i></span>';
+}
+function ldvlMegaLinkBtn(label,selected,onAttr,fullTitle,reviewInfo){
+  let tit=fullTitle||label;
+  let iconCls='ti ti-file-text';
+  let extraCls='';
+  if(reviewInfo&&ldvlShowLessonReviewIcons()){
+    if(reviewInfo.canDo){
+      iconCls=reviewInfo.full?'ti ti-circle-check':'ti ti-player-play';
+      extraCls=reviewInfo.full?' ldvlMegaLinkReady':' ldvlMegaLinkPartial';
+      tit+=(reviewInfo.full?(' · ✓ '+reviewInfo.approved+' câu làm được'):(' · '+reviewInfo.approved+'/'+reviewInfo.total+' câu đã duyệt'));
+    }else if(reviewInfo.total>0){
+      extraCls=' ldvlMegaLinkPending';
+      tit+=' · Chưa duyệt';
+    }
+  }
+  return '<button type="button" class="ldvlMegaLinkItem'+extraCls+(selected?' on':'')+'" '+onAttr+' title="'+escAttr(tit)+'"><i class="'+iconCls+'"></i><span>'+ldvlFormatBaiHocHtml(label)+'</span></button>';
+}
+function ldvlMegaGridBtn(label,selected,onAttr,fullTitle){
+  return ldvlMegaLinkBtn(label,selected,onAttr,fullTitle);
+}
+function ldvlMegaTabBtn(label,selected,preview,onAttr,count,hoverCh,sfx,isEdit){
+  let cnt=(count!=null&&count!=='')?('<span class="ldvlMegaTabCount">('+count+')</span>'):'';
+  let cls='ldvlMegaTab'+(selected?' on':'')+(preview&&!selected?' pre':'');
+  let sfxJs=String(sfx||'').replace(/'/g,"\\'");
+  let enter=hoverCh?(' onmouseenter="ldvlDashMegaHoverChuong(\''+sfxJs+'\',\''+escAttr(hoverCh)+'\','+(isEdit?'true':'false')+')"'):'';
+  return '<button type="button" class="'+cls+'" '+onAttr+enter+'>'+esc(label)+cnt+'</button>';
+}
+function ldvlMegaEmpty(msg){return '<div class="ldvlSyncMegaEmpty">'+msg+'</div>';}
+function ldvlDashMegaHoverKey(sfx){return sfx||'';}
+function ldvlDashMegaGetHover(sfx){return(window.LDVL_MEGA_HOVER||{})[ldvlDashMegaHoverKey(sfx)]||null;}
+function ldvlDashMegaSetHover(sfx,patch){
+  window.LDVL_MEGA_HOVER=window.LDVL_MEGA_HOVER||{};
+  let k=ldvlDashMegaHoverKey(sfx);
+  if(!patch){delete window.LDVL_MEGA_HOVER[k];return;}
+  window.LDVL_MEGA_HOVER[k]=Object.assign({},window.LDVL_MEGA_HOVER[k]||{},patch);
+}
+function ldvlDashMegaClearHover(sfx){ldvlDashMegaSetHover(sfx||'',null);}
+function ldvlDashMegaViewScope(st,sfx,tree){
+  let h=ldvlDashMegaGetHover(sfx);
+  let v=Object.assign({},st||{});
+  if(!h||!st.mon||!tree[st.mon])return v;
+  if(h.lop)v.lop=h.lop;
+  if(h.chuong!=null)v.chuong=h.chuong;
+  if(h.lop&&tree[st.mon][h.lop]){
+    let chs=Object.keys(tree[st.mon][h.lop]).sort(ldvlDashSortChuong);
+    if(chs.length&&(h.chuong==null||chs.indexOf(h.chuong)<0)&&!h.chuong)v.chuong=chs[0];
+    if(h.chuong!=null&&chs.indexOf(h.chuong)>=0)v.chuong=h.chuong;
+  }
+  return v;
+}
+function ldvlDashMegaRefreshMain(sfx,isEdit){
+  let tree=ldvlBuildDashScopeTree();
+  let st=isEdit?Object.assign({},window.ADMIN_EDIT_META_SYNC||{}):Object.assign({},window.LDVL_DASH_SYNC||{});
+  if(!st.mon)return;
+  if(isEdit)st=adminEditValidateMetaSyncInTree(tree,st);
+  ldvlDashRenderMegaMain(sfx,tree,st,isEdit);
+}
+function ldvlDashMegaHoverLop(sfx,lop,isEdit){
+  ldvlDashMegaSetHover(sfx,{lop:lop,chuong:null});
+  ldvlDashMegaRefreshMain(sfx,!!isEdit);
+}
+function ldvlDashMegaHoverChuong(sfx,chuong,isEdit){
+  let h=ldvlDashMegaGetHover(sfx)||{};
+  if(!h.lop)return;
+  ldvlDashMegaSetHover(sfx,{lop:h.lop,chuong:chuong});
+  ldvlDashMegaRefreshMain(sfx,!!isEdit);
+}
+function ldvlDashMegaHoverClear(sfx){
+  if(!ldvlDashMegaGetHover(sfx))return;
+  ldvlDashMegaSetHover(sfx,null);
+  ldvlDashMegaRefreshMain(sfx,sfx==='Edit');
+}
+function ldvlDashMegaPreviewMon(sfx,mon,isEdit){
+  if(!mon)return;
+  let tree=ldvlBuildDashScopeTree();
+  if(!tree[mon])return;
+  let fake={mon:mon,lop:'',chuong:'',bai:'',dbt:'',dang:''};
+  fake=ldvlDashEnsureDefaultScope(fake,tree);
+  window.LDVL_MEGA_MON_PRE=window.LDVL_MEGA_MON_PRE||{};
+  window.LDVL_MEGA_MON_PRE[ldvlDashMegaHoverKey(sfx)]=mon;
+  let ids=ldvlDashSyncIds(sfx);
+  let mega=document.getElementById(ids.megaPanel);
+  if(mega)mega.classList.remove('hide');
+  let syncRow=document.getElementById(ids.row);
+  if(syncRow){
+    syncRow.classList.remove('ldvlSyncMath','ldvlSyncPhys');
+    let mk=ldvlMonKind(mon);
+    if(mk==='math')syncRow.classList.add('ldvlSyncMath');
+    else if(mk==='phys')syncRow.classList.add('ldvlSyncPhys');
+  }
+  ldvlDashRenderMegaMain(sfx,tree,fake,!!isEdit,true);
+}
+function ldvlDashMegaClearMonPre(sfx){
+  window.LDVL_MEGA_MON_PRE=window.LDVL_MEGA_MON_PRE||{};
+  delete window.LDVL_MEGA_MON_PRE[ldvlDashMegaHoverKey(sfx)];
+}
+function ldvlDashMegaMonLeave(ev,sfx,mon,isEdit){
+  let rel=ev&&ev.relatedTarget;
+  let row=ev&&ev.currentTarget&&ev.currentTarget.closest?ev.currentTarget.closest('.ldvlSyncRow'):null;
+  if(rel&&row&&row.contains(rel))return;
+  let preKey=ldvlDashMegaHoverKey(sfx);
+  let preMon=(window.LDVL_MEGA_MON_PRE||{})[preKey];
+  if(!preMon||preMon!==mon)return;
+  let tree=ldvlBuildDashScopeTree();
+  let st=isEdit?Object.assign({},window.ADMIN_EDIT_META_SYNC||{}):Object.assign({},window.LDVL_DASH_SYNC||{});
+  if(st.mon===mon)return;
+  ldvlDashMegaClearMonPre(sfx);
+  ldvlDashMegaSetHover(sfx,null);
+  let ids=ldvlDashSyncIds(sfx);
+  let mega=document.getElementById(ids.megaPanel);
+  if(mega){
+    if(st.mon)mega.classList.remove('hide');
+    else mega.classList.add('hide');
+  }
+  if(st.mon){
+    if(isEdit)st=adminEditValidateMetaSyncInTree(tree,st);
+    let syncRow=document.getElementById(ids.row);
+    if(syncRow){
+      syncRow.classList.remove('ldvlSyncMath','ldvlSyncPhys');
+      let mk=ldvlMonKind(st.mon);
+      if(mk==='math')syncRow.classList.add('ldvlSyncMath');
+      else if(mk==='phys')syncRow.classList.add('ldvlSyncPhys');
+    }
+    ldvlDashRenderMegaMain(sfx,tree,st,!!isEdit);
+    ldvlDashShowMegaPanels(sfx,st);
+  }else{
+    let syncRow=document.getElementById(ids.row);
+    if(syncRow)syncRow.classList.remove('ldvlSyncMath','ldvlSyncPhys');
+  }
+}
+function ldvlDashRenderMegaSections(sfx,tree,st,view,isEdit){
+  if(!st.mon||!view.lop||!tree[st.mon]||!tree[st.mon][view.lop])return ldvlMegaEmpty(view.lop?'Không có chương':'Rê chuột hoặc chọn lớp');
+  let chuongs=Object.keys(tree[st.mon][view.lop]).sort(ldvlDashSortChuong);
+  if(!chuongs.length)return ldvlMegaEmpty('Không có chương');
+  return chuongs.map(function(ch,ci){
+    let bais=Object.keys(tree[st.mon][view.lop][ch]).sort(ldvlDashSortBai);
+    let parts=ldvlDashSplitChuong(ch);
+    let secOn=st.chuong===ch;
+    let head='<div class="ldvlMegaSecHead" title="'+escAttr(ch)+'">'+
+      (parts.num?'<span class="ldvlMegaSecHeadNum">'+esc(parts.num)+'</span>':'')+
+      '<span class="ldvlMegaSecHeadTit">'+esc(parts.tit||ch)+'</span>'+
+      (bais.length?'<span class="ldvlMegaSecHeadCnt">'+bais.length+' bài</span>':'')+
+      '</div>';
+    let grid=bais.length?('<div class="ldvlMegaSecGrid">'+bais.map(function(b){
+      let sel=st.chuong===ch&&st.bai===b;
+      let lopJs=escAttr(view.lop||'');
+      let onAttr=isEdit?('onclick="adminEditPickChuongBai(\''+escAttr(ch)+'\',\''+escAttr(b)+'\')"'):('onclick="ldvlDashPickChuongBai(\''+escAttr(ch)+'\',\''+escAttr(b)+'\',\''+lopJs+'\')"');
+      let rev=ldvlShowLessonReviewIcons()?ldvlCatalogBaiReviewInfo(st.mon,view.lop,ch,b):null;
+      return ldvlMegaLinkBtn(b,sel,onAttr,b,rev);
+    }).join('')+'</div>'):'';
+    return '<section class="ldvlMegaSec'+(secOn?' ldvlMegaSecOn':'')+'" id="ldvlMegaSec'+ci+'">'+head+grid+'</section>';
+  }).join('');
+}
+function ldvlDashRenderMegaMain(sfx,tree,st,isEdit,previewMon){
+  let ids=ldvlDashSyncIds(sfx);
+  let hover=ldvlDashMegaGetHover(sfx);
+  let view=ldvlDashMegaViewScope(st,sfx,tree);
+  let lops=st.mon&&tree[st.mon]?Object.keys(tree[st.mon]).sort(ldvlDashSortLop):[];
+  let lopCol=document.getElementById(ids.lopCol);
+  if(lopCol){
+    if(!lops.length)lopCol.innerHTML=ldvlMegaEmpty(st.mon?'Không có lớp':'Chọn môn ở trên');
+    else{
+      let activeLop=view.lop||st.lop||'';
+      let sfxJs=String(sfx||'').replace(/'/g,"\\'");
+      lopCol.innerHTML=lops.map(function(l){
+        let onAttr=isEdit?('onclick="ldvlDashMegaClearHover(\''+sfxJs+'\');ldvlDashMegaClearMonPre(\''+sfxJs+'\');adminEditPickLop(\''+escAttr(l)+'\')"'):('onclick="ldvlDashMegaClearHover(\''+sfxJs+'\');ldvlDashMegaClearMonPre(\''+sfxJs+'\');ldvlDashPickLop(\''+escAttr(l)+'\',false)"');
+        return ldvlMegaSideBtn(ldvlDashLopLabel(l),activeLop===l,false,onAttr,l,sfx,isEdit);
+      }).join('');
+    }
+  }
+  let topLbl=document.getElementById(ids.topTabLbl);
+  if(topLbl){
+    if(view.lop){
+      let chN=(tree[st.mon]&&tree[st.mon][view.lop])?Object.keys(tree[st.mon][view.lop]).length:0;
+      let baiN=0;
+      if(chN){Object.keys(tree[st.mon][view.lop]).forEach(function(ch){baiN+=Object.keys(tree[st.mon][view.lop][ch]||{}).length;});}
+      topLbl.innerHTML='LỚP '+esc(ldvlDashLopLabel(view.lop))+(chN?('<span class="ldvlMegaTopTabSub"> · '+chN+' chương · '+baiN+' bài</span>'):'');
+    }else topLbl.textContent='BÀI HỌC';
+  }
+  let baiCol=document.getElementById(ids.baiCol);
+  if(baiCol){
+    baiCol.innerHTML=ldvlDashRenderMegaSections(sfx,tree,st,view,isEdit);
+    if(st.chuong&&st.bai){
+      requestAnimationFrame(function(){
+        let onEl=baiCol.querySelector('.ldvlMegaLinkItem.on');
+        if(onEl&&typeof onEl.scrollIntoView==='function')onEl.scrollIntoView({block:'nearest',behavior:'smooth'});
+      });
+    }
+  }
+}
+function ldvlDashShowMegaPanels(sfx,st){
+  let ids=ldvlDashSyncIds(sfx);
+  let mega=document.getElementById(ids.megaPanel);
+  let sub=document.getElementById(ids.megaSubPanel);
+  let pre=(window.LDVL_MEGA_MON_PRE||{})[ldvlDashMegaHoverKey(sfx)];
+  if(mega)mega.classList.toggle('hide',!st.mon&&!pre);
+  if(sub)sub.classList.toggle('hide',!st.bai);
+}
+if(typeof window!=='undefined'&&!window.__LDVL_MEGA_HOVER_BOUND){
+  window.__LDVL_MEGA_HOVER_BOUND=1;
+  document.addEventListener('mouseleave',function(e){
+    let body=e.target.closest?e.target.closest('.ldvlSyncMegaBody'):null;
+    if(!body)return;
+    let rel=e.relatedTarget;
+    if(rel&&body.contains(rel))return;
+    let row=body.closest('.ldvlSyncRow');
+    if(!row)return;
+    let sfx=row.id==='ldvlStuSyncRow'?'Stu':(row.id==='ldvlEditSyncRow'?'Edit':'');
+    ldvlDashMegaSetHover(sfx,null);
+    ldvlDashMegaClearMonPre(sfx);
+    let isEdit=sfx==='Edit';
+    let tree=ldvlBuildDashScopeTree();
+    let st=isEdit?Object.assign({},window.ADMIN_EDIT_META_SYNC||{}):Object.assign({},window.LDVL_DASH_SYNC||{});
+    if(st.mon){
+      if(isEdit)st=adminEditValidateMetaSyncInTree(tree,st);
+      ldvlDashRenderMegaMain(sfx,tree,st,isEdit);
+      ldvlDashShowMegaPanels(sfx,st);
+    }
+  },true);
+}
+window.ldvlDashMegaClearHover=ldvlDashMegaClearHover;
+window.ldvlDashMegaHoverLop=ldvlDashMegaHoverLop;
+window.ldvlDashMegaHoverChuong=ldvlDashMegaHoverChuong;
+window.ldvlDashMegaPreviewMon=ldvlDashMegaPreviewMon;
+window.ldvlDashMegaMonLeave=ldvlDashMegaMonLeave;
+window.ldvlDashMegaClearMonPre=ldvlDashMegaClearMonPre;
+function renderAdminEditMeta5ColPanel(q){adminEditMetaSyncFromQ(q);return `<div class="adminEditMetaScope ldvlDashV324 adminEditMeta5Col"><div class="ldvlSyncRow" id="ldvlEditSyncRow">${ldvlSyncMegaRowHtml('Edit')}</div><div class="ldvlSyncFoot" style="margin-top:8px;padding:0;border:none;background:transparent;box-shadow:none"><div style="font-size:11px;color:#64748b;margin-bottom:6px;line-height:1.45"><i class="ti ti-info-circle"></i> <b>Chọn nhanh</b> Môn → Lớp → Chương → Bài → Dạng BT (đồng bộ với ô phía trên)</div><span id="ldvlEditDashSyncHint" class="muted" style="font-size:12px;display:block;margin-bottom:6px">Chọn môn Toán hoặc Vật lý</span><div id="adminEditDbtCustomWrap" class="adminEditDbtCustom hide"><label style="font-size:11px;font-weight:800;display:block;margin-bottom:4px;color:#b45309">➕ Dạng mới phát sinh (cột H)</label><input type="text" id="edit_DangBaiTap_custom" class="adminDbtInput" placeholder="VD: Liên hệ li độ - gia tốc (3)" value="" oninput="adminEditDbtCustomInput()" /><div id="edit_DangBaiTap_hint" class="muted adminDbtHint" style="font-size:11px;margin-top:4px"></div></div></div></div>`}
 window.adminEditPickMon=adminEditPickMon;window.adminEditPickLop=adminEditPickLop;window.adminEditPickChuong=adminEditPickChuong;window.adminEditPickBai=adminEditPickBai;window.adminEditPickDbt=adminEditPickDbt;window.adminEditPickDang=adminEditPickDang;window.adminEditRenderMeta5Col=adminEditRenderMeta5Col;window.adminEditDbtCustomInput=adminEditDbtCustomInput;window.adminEditFocusNewDbt=adminEditFocusNewDbt;
 
 function questionPreviewShort(q){let t=String((q&&q.CauHoi)||'').replace(/\s+/g,' ').trim();return t.length>150?t.slice(0,147)+'…':t}
@@ -23313,8 +23942,8 @@ function adminDangBaiTapSuggestionsForQuestion(q){try{let pack=adminDangBaiTapOp
 function adminDbtAiSyncNote(j){j=j||{};let dbt=String(j.DangBaiTap||'').trim();let raw=String(j.ai_raw||'').trim();if(j.matched_existing&&raw&&raw!==dbt)return '<br><span class="muted">🔗 Đồng bộ về dạng có sẵn: <b>'+esc(dbt)+'</b>'+(raw!==dbt?' (GPT gợi ý: '+esc(raw)+')':'')+'</span>';if(!j.matched_existing&&dbt)return '<br><span class="muted">🆕 Dạng mới — chưa có trong danh sách phạm vi này.</span>';return ''}
 function adminDbtFindMatch(val,opts){val=String(val||'').trim();if(!val)return null;for(let x of opts||[]){if(normText(x)===normText(val))return x}return null}
 function adminDbtCheckDuplicateHint(){let inp=document.getElementById('edit_DangBaiTap');let hint=document.getElementById('edit_DangBaiTap_dup');if(!inp||!hint)return;let raw=String(inp.value||'').trim();if(!raw){hint.textContent='';hint.classList.add('hide');return}let sel=document.getElementById('edit_DangBaiTap_pick');let near='';if(sel){for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(!v||v==='__custom__'||normText(v)===normText(raw))continue;if(normText(v).includes(normText(raw))||normText(raw).includes(normText(v))){near=v;break}}}if(near){hint.innerHTML='⚠ Có thể trùng với «'+esc(near)+'» — nên chọn dạng có sẵn.';hint.classList.remove('hide')}else{hint.textContent='';hint.classList.add('hide')}}
-function adminDbtPickChange(){let sel=document.getElementById('edit_DangBaiTap_pick');let inp=document.getElementById('edit_DangBaiTap');let note=document.getElementById('edit_DangBaiTap_hint');if(!sel||!inp)return;let v=String(sel.value||'');if(v==='__custom__'){inp.classList.remove('hide');inp.focus();if(note)note.textContent='Gõ tên dạng mới — tránh trùng hoặc gần giống tên đã có.';adminDbtCheckDuplicateHint();return}if(v){inp.value=v;inp.classList.add('hide');if(note)note.textContent='Đã chọn dạng có sẵn — tên thống nhất, không trùng.'}else{inp.value='';inp.classList.remove('hide');if(note)note.textContent='Chọn dạng có sẵn hoặc gõ mới bên dưới.'}adminDbtCheckDuplicateHint()}
-function adminDbtInputChange(){let inp=document.getElementById('edit_DangBaiTap');let sel=document.getElementById('edit_DangBaiTap_pick');if(!inp||!sel)return;let opts=[];for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(v&&v!=='__custom__')opts.push(v)}let m=adminDbtFindMatch(inp.value,opts);if(m&&normText(inp.value)===normText(m)){sel.value=m;inp.classList.add('hide')}else if(String(inp.value||'').trim()){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}adminDbtCheckDuplicateHint()}
+function adminDbtPickChange(){let sel=document.getElementById('edit_DangBaiTap_pick');let inp=document.getElementById('edit_DangBaiTap');let note=document.getElementById('edit_DangBaiTap_hint');if(!sel||!inp)return;let v=String(sel.value||'');if(v==='__custom__'){inp.classList.remove('hide');inp.focus();if(note)note.textContent='Gõ tên dạng mới — tránh trùng hoặc gần giống tên đã có.';adminDbtCheckDuplicateHint();adminMetaSyncToEditScopeIfEdit();return}if(v){inp.value=v;inp.classList.add('hide');if(note)note.textContent='Đã chọn dạng có sẵn — tên thống nhất, không trùng.'}else{inp.value='';inp.classList.remove('hide');if(note)note.textContent='Chọn dạng có sẵn hoặc gõ mới bên dưới.'}adminDbtCheckDuplicateHint();adminMetaSyncToEditScopeIfEdit()}
+function adminDbtInputChange(){let inp=document.getElementById('edit_DangBaiTap');let sel=document.getElementById('edit_DangBaiTap_pick');if(!inp||!sel)return;let opts=[];for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(v&&v!=='__custom__')opts.push(v)}let m=adminDbtFindMatch(inp.value,opts);if(m&&normText(inp.value)===normText(m)){sel.value=m;inp.classList.add('hide')}else if(String(inp.value||'').trim()){sel.value='__custom__';inp.classList.remove('hide')}else{sel.value='';inp.classList.remove('hide')}adminDbtCheckDuplicateHint();adminMetaSyncToEditScopeIfEdit()}
 function adminDbtSyncSelectFromInput(){adminDbtRefreshFromScope()}
 function adminDbtRebuildSelect(pack,cur){let opts=(pack&&pack.opts)||[];let match=adminDbtFindMatch(cur,opts);let pickVal=match||(cur?'__custom__':'');let optHtml='<option value="">— Chọn dạng có sẵn —</option>';for(let v of opts){let selOn=(pickVal===v)?' selected':'';optHtml+=`<option value="${escAttr(v)}"${selOn}>${esc(v)}</option>`}optHtml+=`<option value="__custom__"${pickVal==='__custom__'?' selected':''}>✏️ Nhập / sửa dạng khác…</option>`;return{optHtml,match,pickVal,opts}}
 function adminDbtRefreshFromScope(){let sel=document.getElementById('edit_DangBaiTap_pick');if(!sel)return;let inp=document.getElementById('edit_DangBaiTap');let cur=inp?String(inp.value||'').trim():'';let pack=adminDangBaiTapOptions(Object.assign({},readQuestionFormData(),{DangBaiTap:cur}));let built=adminDbtRebuildSelect(pack,cur);sel.innerHTML=built.optHtml;if(built.match){sel.value=built.match;if(inp){inp.value=built.match;inp.classList.add('hide')}}else if(cur){sel.value='__custom__';if(inp)inp.classList.remove('hide')}else{sel.value='';if(inp)inp.classList.remove('hide')}let scopeEl=document.getElementById('edit_DangBaiTap_scope');if(scopeEl)scopeEl.textContent=pack.scopeLabel||'';let hint=document.getElementById('edit_DangBaiTap_hint');if(hint){if(!pack.opts||!pack.opts.length)hint.textContent='Chưa có dạng trong phạm vi này — gõ tên mới hoặc điền đủ Chương/Bài.';else if(built.match)hint.textContent='Đã chọn dạng có sẵn — tên thống nhất.';else hint.textContent='Chọn trong danh sách hoặc gõ tên mới.'}adminDbtCheckDuplicateHint()}
@@ -23691,7 +24320,7 @@ if(['A','B','C','D'].includes(f)){
 }
 if(f==='CauHoi')return `<div class="adminFieldCard" data-admin-field="${f}"><label><b>${adminFieldShortLabel(f)}</b></label>${toolbar}<textarea style="min-height:150px" id="edit_${f}">${escFormVal(raw)}</textarea></div>`;
 return `<div class="adminFieldCard" data-admin-field="${f}"><label><b>${adminFieldShortLabel(f)}</b></label>${toolbar}<textarea style="min-height:${h}" id="edit_${f}">${escFormVal(raw)}</textarea></div>`}
-function renderQuestionForm(q){ensureEditAdminPreviewBar();if(shouldDsLoigiaiSplitUi(q))dsLoigiaiSplitPartsForForm(q);else{delete window._dsLoigiaiSplitParts;delete window._dsLoigiaiSplitKey}let metaEssential=ADMIN_EDIT_META_ESSENTIAL.map(f=>renderQuestionFormField(f,q)).join('');let metaMore=ADMIN_EDIT_META_MORE.map(f=>renderQuestionFormField(f,q)).join('');let meta5=renderAdminEditMeta5ColPanel(q);let meta=`<div class="adminEditMetaEssential">${metaEssential}</div>${meta5}<details class="adminMetaDetails"><summary>📁 Mã đề · ID</summary><div class="editGrid">${metaMore}</div></details>`;let main=`<div class="adminEditMainRow"><div class="adminEditMainQ">${renderQuestionFormField('CauHoi',q)}</div><div class="adminEditMainPR">${ADMIN_EDIT_PR_FIELDS.map(f=>renderQuestionFormField(f,q)).join('')}</div></div>`;let opts=`<div class="adminEditOpts">${ADMIN_EDIT_OPT_FIELDS.map(f=>renderQuestionFormField(f,q)).join('')}</div>`;let tail=`<div class="adminEditTail">${renderQuestionFormField('HinhAnh',q)}</div>`;document.getElementById('editForm').innerHTML=`${meta}${main}${opts}${tail}`;['QuyenTruyCap','TrangThai','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);adminExtractTikzFromFormFields();adminEditRenderMeta5Col();refreshEditHinhAnhPreview();bindEditFormLivePreview();syncDapAnFromResolvedVerdicts(q);applyDsLoigiaiSplitCardStyles(q);renderEditQuestionPreview();syncAdminSolutionFigHint()}
+function renderQuestionForm(q){ensureEditAdminPreviewBar();if(shouldDsLoigiaiSplitUi(q))dsLoigiaiSplitPartsForForm(q);else{delete window._dsLoigiaiSplitParts;delete window._dsLoigiaiSplitKey}let metaLoc=ADMIN_EDIT_META_LOCATION.map(f=>renderQuestionFormField(f,q)).join('');let metaEssential=ADMIN_EDIT_META_ESSENTIAL.map(f=>renderQuestionFormField(f,q)).join('');let metaMore=ADMIN_EDIT_META_MORE.map(f=>renderQuestionFormField(f,q)).join('');let meta5=renderAdminEditMeta5ColPanel(q);let meta=`<div class="adminEditMetaLocation">${metaLoc}</div><div class="adminEditMetaEssential">${metaEssential}</div>${meta5}<details class="adminMetaDetails"><summary>📁 Mã đề · ID</summary><div class="editGrid">${metaMore}</div></details>`;let main=`<div class="adminEditMainRow"><div class="adminEditMainQ">${renderQuestionFormField('CauHoi',q)}</div><div class="adminEditMainPR">${ADMIN_EDIT_PR_FIELDS.map(f=>renderQuestionFormField(f,q)).join('')}</div></div>`;let opts=`<div class="adminEditOpts">${ADMIN_EDIT_OPT_FIELDS.map(f=>renderQuestionFormField(f,q)).join('')}</div>`;let tail=`<div class="adminEditTail">${renderQuestionFormField('HinhAnh',q)}</div>`;document.getElementById('editForm').innerHTML=`${meta}${main}${opts}${tail}`;['QuyenTruyCap','TrangThai','MucDo','Dang','NangLucVatLy'].forEach(syncAdminChipGroup);syncDsEditFormFields(q);adminExtractTikzFromFormFields();adminEditRenderMeta5Col();refreshEditHinhAnhPreview();bindEditFormLivePreview();syncDapAnFromResolvedVerdicts(q);applyDsLoigiaiSplitCardStyles(q);renderEditQuestionPreview();syncAdminSolutionFigHint()}
 async function adminRerenderTikz(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}
 async function adminAiGenerateTikz(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
@@ -24468,7 +25097,8 @@ function v246LessonCard(mon,khoi,chuong,bai,entries){
   entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let dangs=v246UniqTextFromEntries(entries,'Dang',4);let primary=entries[0]||{};let made=String(primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let title=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);return `<button type="button" class="bookDbtBtn${cls}" onclick="openStartModal('${made}','${dd}')" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtText">${esc(shortText(it.label,44))}</span>${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}</button>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
   let orderBtn=(USER&&USER.is_admin&&made&&dbtPairs.length)?`<button type="button" class="bookExamBtn" onclick="openDbtOrderModal('${made}')" title="ADMIN: sắp xếp thứ tự dạng BT">↕ Thứ tự dạng</button>`:'';
   let madeRaw=String(primary.MaDe||'');let shareTools=madeRaw?v246ShareToolsHtml(primary,made):'';
-  return `<div class="bookLessonCard${selected}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${esc(bai||'Chưa rõ bài')}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangTags(dangs.slice(0,4))}</div>${dbtBtns?`<div class="bookDbtRow">${dbtBtns}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
+  let revIco=ldvlShowLessonReviewIcons()?ldvlLessonReviewBadgeHtml(entries):'';
+  return `<div class="bookLessonCard${selected}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${revIco}${ldvlFormatBaiHocHtml(bai||'Chưa rõ bài')}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangTags(dangs.slice(0,4))}</div>${dbtBtns?`<div class="bookDbtRow">${dbtBtns}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
 }
 function v246GroupBy(list,fn){let mp=new Map();for(let x of list){let k=fn(x)||'Chưa rõ';if(!mp.has(k))mp.set(k,[]);mp.get(k).push(x)}return mp}
 function catalogCollapseKey(kind,parts){return 'LDVL_CAT_COLLAPSE_V256|'+kind+'|'+(parts||[]).map(x=>normText(x||'')).join('|')}
@@ -24650,6 +25280,11 @@ function v255SelectTopSubject(kind){
     v255SetSelectByText('fMon',mon);
     try{ if(typeof v248SelectSubject==='function') v248SelectSubject(mon); else { if(typeof refreshFilterOptions==='function')refreshFilterOptions(); v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog(); } }catch(e){try{v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog();}catch(_){}}
     try{v255SetSelectByText('rpMon',mon); if(typeof onRpScopeChange==='function')onRpScopeChange('mon');}catch(e){}
+    try{
+      let cur=(window.LDVL_DASH_SYNC||{}).mon||'';
+      if(v255SubjectNorm(cur)!==v255SubjectNorm(mon)&&typeof ldvlDashPickMon==='function')ldvlDashPickMon(mon,false);
+      else if(typeof ldvlRenderDashSyncPanel==='function')ldvlRenderDashSyncPanel();
+    }catch(e){}
     v255SyncTopSubject();
   }
   let quiz=document.getElementById('quiz');
@@ -24663,6 +25298,7 @@ function v254ApplySubject(kind){return v255SelectTopSubject(kind)}
 function v255SyncTopSubject(){
   try{
     let cur=(document.getElementById('fMon')&&document.getElementById('fMon').value)||'';
+    if(!cur&&window.LDVL_DASH_SYNC&&window.LDVL_DASH_SYNC.mon)cur=window.LDVL_DASH_SYNC.mon;
     let kind=v255KindOfSubject(cur);
     if(!kind){try{kind=localStorage.getItem('LDVL_TOP_SUBJECT_V255')||localStorage.getItem('LDVL_TOP_SUBJECT_V254')||localStorage.getItem('LDVL_TOP_SUBJECT_V253')||''}catch(e){}}
     let bm=document.getElementById('topSubjectMathV253'),bp=document.getElementById('topSubjectPhysicsV253');
@@ -25478,6 +26114,28 @@ async function ldvlPdfCopy(sub,idx){
   alert(ok?'Đã chép link':'Không chép được');
 }
 function ldvlShowAdminPanel(id){ldvlAdminNav(null,'ap-'+(String(id||'').replace(/^/,'')||'dash'));}
+function ldvlGoHome(){
+  let quiz=document.getElementById('quiz');
+  let inQuiz=quiz&&!quiz.classList.contains('hide');
+  if(inQuiz){if(typeof backHome==='function')backHome();return;}
+  try{if(typeof closeStartModal==='function')closeStartModal();}catch(e){}
+  try{if(typeof closeEdit==='function')closeEdit();}catch(e){}
+  try{if(typeof ldvlCloseAdminSidebar==='function')ldvlCloseAdminSidebar();}catch(e){}
+  let cp=document.getElementById('ldvlCatalogPanel');
+  if(cp)cp.classList.remove('ldvlCatalogShow');
+  if(USER&&USER.is_admin&&typeof ldvlAdminNav==='function'){
+    LDVL_ADMIN_STUDENT_MODE=false;
+    ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');
+    return;
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+  let main=document.querySelector('.ldvlMain');
+  if(main)main.scrollTop=0;
+  let sec=document.getElementById('ldvlStudentSyncSection');
+  if(sec&&typeof sec.scrollIntoView==='function')sec.scrollIntoView({behavior:'smooth',block:'start'});
+  if(typeof forceMobileHomeScroll==='function')setTimeout(forceMobileHomeScroll,0);
+}
+window.ldvlGoHome=ldvlGoHome;
 window.LDVL_ADMIN_STUDENT_MODE=false;
 function ldvlApplyAdminHomeLayout(){
   let adm=USER&&USER.is_admin;
@@ -25504,6 +26162,7 @@ function ldvlApplyAdminHomeLayout(){
     if(viewBar)viewBar.classList.add('hide');
   }
   if(typeof ldvlAdminSubNavUpdate==='function')ldvlAdminSubNavUpdate(window.LDVL_ADMIN_PID||'ap-dash');
+  if(typeof v253SetSubjectTabsVisible==='function')v253SetSubjectTabsVisible(true);
 }
 function ldvlOpenPracticeView(scrollId,monFilter){
   LDVL_ADMIN_STUDENT_MODE=true;
@@ -25614,23 +26273,13 @@ function ldvlLessonSortKey(label){
 }
 function ldvlDashSortChuong(a,b){return ldvlDashCmpKey(ldvlChapterSortKey(a),ldvlChapterSortKey(b));}
 function ldvlDashSortBai(a,b){return ldvlDashCmpKey(ldvlLessonSortKey(a),ldvlLessonSortKey(b));}
-function ldvlDashSetColHead(id,label,n){
-  let el=document.getElementById(id);
-  if(!el)return;
-  el.innerHTML=label+(n>0?' <b>('+n+')</b>':'');
-}
 function ldvlDashSyncSuffixes(){
   return ['','Stu'].filter(function(s){return !!document.getElementById('ldvl'+(s||'')+'SyncRow');});
 }
 function ldvlSyncEnsureFitWraps(){
-  document.querySelectorAll('.ldvlDashV324 .ldvlSyncRow,.adminEditMeta5Col .ldvlSyncRow').forEach(function(row){
-    let p=row.parentElement;
-    if(p&&p.classList.contains('ldvlSyncFitWrap'))return;
-    if(!p)return;
-    let wrap=document.createElement('div');
-    wrap.className='ldvlSyncFitWrap';
-    p.insertBefore(wrap,row);
-    wrap.appendChild(row);
+  document.querySelectorAll('.ldvlSyncFitWrap').forEach(function(wrap){
+    let row=wrap.querySelector('.ldvlSyncRow');
+    if(row&&row.querySelector('.ldvlSyncNav')){wrap.replaceWith(row);return;}
   });
 }
 let _ldvlSyncFitT=null;
@@ -25639,29 +26288,7 @@ function ldvlSyncFitMobileDebounced(){
   _ldvlSyncFitT=requestAnimationFrame(function(){_ldvlSyncFitT=null;ldvlSyncFitMobile();});
 }
 function ldvlSyncFitMobile(){
-  try{
-    ldvlSyncEnsureFitWraps();
-    let mq=window.matchMedia('(max-width:900px)');
-    document.querySelectorAll('.ldvlSyncFitWrap').forEach(function(wrap){
-      let row=wrap.querySelector('.ldvlSyncRow');
-      if(!row)return;
-      row.style.transform='';
-      row.style.transformOrigin='';
-      wrap.style.height='';
-      wrap.classList.remove('ldvlSyncFitted');
-      if(!mq.matches)return;
-      let natural=row.scrollWidth;
-      let avail=wrap.clientWidth;
-      if(!natural||!avail)return;
-      let scale=Math.min(1,avail/natural);
-      if(scale<0.995){
-        row.style.transform='scale('+scale.toFixed(4)+')';
-        row.style.transformOrigin='top left';
-        wrap.style.height=Math.ceil(row.offsetHeight*scale)+'px';
-        wrap.classList.add('ldvlSyncFitted');
-      }
-    });
-  }catch(e){console.warn('ldvlSyncFitMobile',e);}
+  try{ldvlSyncEnsureFitWraps();}catch(e){console.warn('ldvlSyncFitMobile',e);}
 }
 window.ldvlSyncFitMobile=ldvlSyncFitMobile;
 window.ldvlSyncFitMobileDebounced=ldvlSyncFitMobileDebounced;
@@ -25675,17 +26302,14 @@ function ldvlDashSyncIds(sfx){
   return {
     row:'ldvl'+sfx+'SyncRow',
     monCol:'ldvl'+sfx+'SyncMonCol',
-    lopHead:'ldvl'+sfx+'SyncLopHead',
+    megaPanel:'ldvl'+sfx+'SyncMegaPanel',
     lopCol:'ldvl'+sfx+'SyncLopCol',
-    chuongHead:'ldvl'+sfx+'SyncChuongHead',
-    chuongCol:'ldvl'+sfx+'SyncChuongCol',
-    baiHead:'ldvl'+sfx+'SyncBaiHead',
+    topTabLbl:'ldvl'+sfx+'SyncTopTabLbl',
     baiCol:'ldvl'+sfx+'SyncBaiCol',
-    dbtBox:'ldvl'+sfx+'SyncDbtBox',
-    dbtHead:'ldvl'+sfx+'SyncDbtHead',
+    megaSubPanel:'ldvl'+sfx+'SyncMegaSubPanel',
+    practiceBox:'ldvl'+sfx+'SyncPracticeBox',
     dbtCol:'ldvl'+sfx+'SyncDbtCol',
     dangBox:'ldvl'+sfx+'SyncDangBox',
-    dangHead:'ldvl'+sfx+'SyncDangHead',
     dangCol:'ldvl'+sfx+'SyncDangCol',
     hint:'ldvl'+sfx+'DashSyncHint'
   };
@@ -25837,39 +26461,127 @@ function ldvlDashDbtScopeCount(st){
   let hit=dbts.find(function(it){let k=it.key||it.label||it;return k===st.dbt||(st.dbt&&k&&normText(k)===normText(st.dbt))});
   return hit?parseInt(hit.n,10)||0:0;
 }
-function ldvlDashOpenDbtPractice(dbt){
+function ldvlDashMegaDbtRadioName(sfx){return 'ldvlMegaDbt_'+(sfx||'');}
+function ldvlDashGetMegaDbtPick(sfx){
+  let el=document.querySelector('input[name="'+ldvlDashMegaDbtRadioName(sfx)+'"]:checked');
+  return el?String(el.value||''):'';
+}
+function ldvlDashRenderMegaPractice(sfx,st,isEdit){
+  let ids=ldvlDashSyncIds(sfx);
+  if(isEdit){
+    let dbtCol=document.getElementById(ids.dbtCol);
+    let dangCol=document.getElementById(ids.dangCol);
+    let dangBox=document.getElementById(ids.dangBox);
+    if(dbtCol){
+      if(!st.bai)dbtCol.innerHTML='';
+      else{
+        let dbts=ldvlDashCollectDbts(st);
+        if(!st.dbt)st.dbt='';
+        let html='';
+        if(dbts.length){
+          html=dbts.map(function(it){
+            let d=it.key||it.label||it;
+            let lbl=it.label||it.key||it;
+            let onAttr=ldvlDashOnPick('adminEditPickDbt',d);
+            let sel=st.dbt===d||(st.dbt&&d&&normText(st.dbt)===normText(d));
+            return ldvlMegaTabBtn(shortText(lbl,36),sel,false,onAttr,it.n,null,'',true);
+          }).join('');
+        }else html=ldvlMegaEmpty('Chưa có dạng trong bài này');
+        html+='<button type="button" class="ldvlMegaTab" onclick="adminEditFocusNewDbt()" title="Gõ tên dạng mới phát sinh" style="margin-left:6px">➕ Dạng mới</button>';
+        dbtCol.innerHTML=html||ldvlMegaEmpty('—');
+      }
+    }
+    if(dangCol&&dangBox){
+      if(!st.bai){dangCol.innerHTML='';dangBox.style.display='none';}
+      else if(!st.dbt){dangBox.style.display='';dangCol.innerHTML=ldvlMegaEmpty('Chọn Dạng BT ở trên để xem TN · Đ/S · TLN · TL');}
+      else{
+        dangBox.style.display='';
+        let dangs=ldvlDashCollectDangs(st);
+        if(!st.dang)st.dang='';
+        dangCol.innerHTML=dangs.length?dangs.map(function(it){
+          let d=it.key||it.full||it;
+          let lbl=it.label||ldvlDashDangShortLabel(d);
+          let onAttr=ldvlDashOnPick('adminEditPickDang',d);
+          let sel=st.dang===d||(st.dang&&d&&normDangFormVal(st.dang)===normDangFormVal(d));
+          return ldvlMegaTabBtn(lbl,sel,false,onAttr,it.n,null,'',true);
+        }).join(''):ldvlMegaEmpty('—');
+      }
+    }
+    return;
+  }
+  let box=document.getElementById(ids.practiceBox);
+  if(!box)return;
+  if(!st.bai){box.innerHTML='';return;}
+  let prim=ldvlDashPrimaryMade(st);
+  if(!prim.made){box.innerHTML='<div class="ldvlMegaPracticeEmpty">Chưa có đề cho bài này. Thử <b>Đồng bộ Sheet</b> hoặc chọn bài khác.</div>';return;}
+  let made=prim.made;
+  let item=CATALOG.find(function(x){return x.MaDe===made;})||{};
+  let dbts=catalogDbtCounts(item);
+  let uncls=catalogUnclassifiedCount(item);
+  let total=parseInt(item.SoCau,10)||dbts.reduce(function(a,x){return a+(x[1]||0);},0)+uncls;
+  let pre=ldvlDashNormDbtVal(st.dbt);
+  let rname=ldvlDashMegaDbtRadioName(sfx);
+  let sfxJs=String(sfx||'').replace(/'/g,"\\'");
+  let opts='';
+  opts+='<label class="ldvlMegaDbtOpt"><input type="radio" name="'+rname+'" value=""'+(!pre?' checked':'')+' onchange="ldvlDashMegaDbtPick(\''+sfxJs+'\',\'\')"> <span><b>Tất cả dạng</b> — '+total+' câu</span></label>';
+  if(uncls>0){
+    let on=pre===DBT_UNCLASSIFIED?' checked':'';
+    opts+='<label class="ldvlMegaDbtOpt"><input type="radio" name="'+rname+'" value="'+escAttr(DBT_UNCLASSIFIED)+'"'+on+' onchange="ldvlDashMegaDbtPick(\''+sfxJs+'\',\''+escAttr(DBT_UNCLASSIFIED)+'\')"> <span><b>'+esc(DBT_UNCLASSIFIED_LABEL)+'</b> — '+uncls+' câu</span></label>';
+  }
+  dbts.forEach(function(pair){
+    let d=pair[0],n=pair[1]||0;
+    let on=pre&&normText(pre)===normText(d)?' checked':'';
+    opts+='<label class="ldvlMegaDbtOpt"><input type="radio" name="'+rname+'" value="'+escAttr(d)+'"'+on+' onchange="ldvlDashMegaDbtPick(\''+sfxJs+'\','+JSON.stringify(d)+')"> <span><b>'+esc(d)+'</b>'+(n?(' · '+n+' câu'):'')+'</span></label>';
+  });
+  box.innerHTML=
+    '<div class="ldvlMegaPracticeHead"><b>'+esc(shortText(st.bai,88))+'</b><span class="ldvlMegaPracticeSub">'+esc(st.mon)+' · Lớp '+esc(ldvlDashLopLabel(st.lop))+' · '+esc(shortText(st.chuong,48))+'</span></div>'+
+    '<div class="ldvlMegaPracticeLabel">Chọn dạng bài tập</div>'+
+    '<div class="ldvlMegaDbtList">'+opts+'</div>'+
+    '<div class="ldvlMegaPracticeOpts">'+
+      '<label class="ldvlMegaOptChip"><input type="checkbox" id="ldvlMegaSq_'+sfxJs+'"> Xáo câu</label>'+
+      '<label class="ldvlMegaOptChip"><input type="checkbox" id="ldvlMegaGd_'+sfxJs+'" checked> Nhóm dạng</label>'+
+      '<label class="ldvlMegaOptChip"><input type="checkbox" id="ldvlMegaSa_'+sfxJs+'"> Xáo đáp án</label>'+
+    '</div>'+
+    '<div class="ldvlMegaPracticeActs">'+
+      '<button type="button" class="ldvlMegaStartBtn" onclick="ldvlDashStartFromMega(\''+sfxJs+'\')">▶ Bắt đầu làm bài</button>'+
+    '</div>';
+}
+function ldvlDashMegaDbtPick(sfx,dbt){
   let st=window.LDVL_DASH_SYNC||{};
-  if(!st.mon||!st.bai){alert('Chọn đủ Môn và Bài học trước.');return;}
-  let entries=ldvlDashFindLessonEntries(st);
-  if(!entries.length){alert('Không tìm thấy chuyên đề cho bài đã chọn. Thử Đồng bộ Sheet.');return;}
-  let primary=entries.slice().sort(function(a,b){return (parseInt(b.SoCau,10)||0)-(parseInt(a.SoCau,10)||0);})[0]||entries[0];
-  let made=String((primary&&primary.MaDe)||'').trim();
-  if(!made){alert('Thiếu mã đề (MaDe) cho bài này.');return;}
-  let dbtVal=String(dbt||'').trim();
-  if(isDbtUnclassifiedFilter(dbtVal)||normText(dbtVal)==='chua phan loai')dbtVal=DBT_UNCLASSIFIED;
-  try{
-    if(st.mon){setSel('fMon',st.mon);if(typeof refreshFilterOptions==='function')refreshFilterOptions();}
-    if(st.lop){setSel('fLop',st.lop);if(typeof onFilterChange==='function')onFilterChange('lop');}
-    if(st.chuong){setSel('fChuong',st.chuong);if(typeof onFilterChange==='function')onFilterChange('chuong');}
-    if(st.bai){setSel('fBaiHoc',st.bai);if(typeof onFilterChange==='function')onFilterChange('baihoc');}
-    setSel('fDangBaiTap',dbtVal);
-    if(st.dang)setSel('fDang',st.dang);
-    if(typeof onFilterChange==='function')onFilterChange('extra');
-  }catch(e){console.warn(e);}
-  openStartModal(made,dbtVal);
+  st.dbt=ldvlDashNormDbtVal(dbt);
+  st.dang='';
+  window.LDVL_DASH_SYNC=st;
+  let hint=document.getElementById(ldvlDashSyncIds(sfx).hint);
+  if(hint){
+    let parts=[st.mon,st.lop?('Lớp '+ldvlDashLopLabel(st.lop)):'',st.chuong,st.bai,st.dbt?('Dạng: '+st.dbt):''].filter(Boolean);
+    hint.textContent=parts.length?('Đang chọn: '+parts.join(' · ')):'Chọn môn Toán hoặc Vật lý';
+  }
+}
+async function ldvlDashStartFromMega(sfx){
+  sfx=sfx||'';
+  let st=window.LDVL_DASH_SYNC||{};
+  let prim=ldvlDashPrimaryMade(st);
+  if(!prim.made){alert('Chưa có đề cho bài này. Thử Đồng bộ Sheet.');return;}
+  CURRENT_MADE=prim.made;
+  CURRENT_DANGBAITAP=ldvlDashNormDbtVal(ldvlDashGetMegaDbtPick(sfx));
+  let sqEl=document.getElementById('ldvlMegaSq_'+sfx);
+  let saEl=document.getElementById('ldvlMegaSa_'+sfx);
+  let gdEl=document.getElementById('ldvlMegaGd_'+sfx);
+  let sq=!!(sqEl&&sqEl.checked);
+  let sa=!!(saEl&&saEl.checked);
+  let groupBy=gdEl?gdEl.checked:true;
+  let lv=(val('fMucDo')||'').trim().toUpperCase();
+  let dg=(val('fDang')||'').trim();
+  CURRENT_LEVEL=lv;
+  CURRENT_DANG=dg;
+  try{ldvlDashSyncLessonFilters(st);}catch(e){}
+  await startQuiz(prim.made,sq,sa,lv,dg,groupBy,CURRENT_DANGBAITAP);
 }
 function ldvlRenderDashSyncPanelOne(sfx,tree,st){
   let ids=ldvlDashSyncIds(sfx);
   let isEdit=sfx==='Edit';
   let syncRow=document.getElementById(ids.row);
   if(!syncRow)return;
-  let fitWrap=syncRow.parentElement;
-  if(fitWrap&&fitWrap.classList.contains('ldvlSyncFitWrap')){
-    syncRow.style.transform='';
-    syncRow.style.transformOrigin='';
-    fitWrap.style.height='';
-    fitWrap.classList.remove('ldvlSyncFitted');
-  }
   syncRow.classList.remove('ldvlSyncMath','ldvlSyncPhys');
   let mk=ldvlMonKind(st.mon);
   if(mk==='math')syncRow.classList.add('ldvlSyncMath');
@@ -25888,101 +26600,44 @@ function ldvlRenderDashSyncPanelOne(sfx,tree,st){
     return String(a).localeCompare(String(b),'vi');
   });
   let monCol=document.getElementById(ids.monCol);
-  if(monCol){
-    if(!mons.length)monCol.innerHTML='<div class="muted" style="font-size:12px">Chưa có dữ liệu Sheet</div>';
-    else monCol.innerHTML=mons.map(function(m){
-      let k=ldvlMonKind(m);
-      let cls='ldvlSyncMonBtn tag '+(k==='phys'?'tp':'tm')+(st.mon===m?' on':'');
-      let onClick=isEdit?('adminEditPickMon(\''+escAttr(m)+'\')'):('ldvlDashPickMon(\''+escAttr(m)+'\',false)');
-      return '<button type="button" class="'+cls+'" onclick="'+onClick+'"><span class="ldvlMonIco">'+(k==='phys'?'🔭':'📐')+'</span>'+esc(m)+'</button>';
-    }).join('');
-  }
-  let lops=st.mon&&tree[st.mon]?Object.keys(tree[st.mon]).sort(ldvlDashSortLop):[];
-  ldvlDashSetColHead(ids.lopHead,'② Lớp',lops.length);
-  let lopCol=document.getElementById(ids.lopCol);
-  if(lopCol){
-    if(!lops.length)lopCol.innerHTML='<div class="muted">—</div>';
-    else lopCol.innerHTML=lops.map(function(l,i){
-      let onAttr=isEdit?('onclick="adminEditPickLop(\''+escAttr(l)+'\')"'):('onclick="ldvlDashPickLop(\''+escAttr(l)+'\',false)"');
-      return ldvlDashPickBtn('Lop',ldvlDashLopLabel(l),st.lop===l,onAttr,i+1);
-    }).join('');
-  }
-  let chuongs=(st.mon&&st.lop&&tree[st.mon]&&tree[st.mon][st.lop])?Object.keys(tree[st.mon][st.lop]).sort(ldvlDashSortChuong):[];
-  ldvlDashSetColHead(ids.chuongHead,'③ Chương',chuongs.length);
-  let chCol=document.getElementById(ids.chuongCol);
-  if(chCol){
-    if(!chuongs.length)chCol.innerHTML='<div class="muted">'+(st.lop?'Không có chương':'Chọn lớp')+'</div>';
-    else chCol.innerHTML=chuongs.map(function(ch,i){
-      let onAttr=isEdit?('onclick="adminEditPickChuong(\''+escAttr(ch)+'\')"'):('onclick="ldvlDashPickChuong(\''+escAttr(ch)+'\',false)"');
-      return ldvlDashPickBtn('Chuong',ch,st.chuong===ch,onAttr,i+1);
-    }).join('');
-  }
-  let bais=(st.mon&&st.lop&&st.chuong&&tree[st.mon]&&tree[st.mon][st.lop]&&tree[st.mon][st.lop][st.chuong])?Object.keys(tree[st.mon][st.lop][st.chuong]).sort(ldvlDashSortBai):[];
-  ldvlDashSetColHead(ids.baiHead,'④ Bài học',bais.length);
-  let baiCol=document.getElementById(ids.baiCol);
-  if(baiCol){
-    if(!bais.length)baiCol.innerHTML='<div class="muted">'+(st.chuong?'Không có bài':'Chọn chương')+'</div>';
-    else baiCol.innerHTML=bais.map(function(b,i){
-      let onAttr=isEdit?('onclick="adminEditPickBai(\''+escAttr(b)+'\')"'):('onclick="ldvlDashPickBai(\''+escAttr(b)+'\')"');
-      return ldvlDashPickBtn('Bai',b,st.bai===b,onAttr,i+1);
-    }).join('');
-  }
-  let dbtBox=document.getElementById(ids.dbtBox);
-  let dbtCol=document.getElementById(ids.dbtCol);
-  if(dbtBox&&dbtCol){
-    if(!st.bai){dbtBox.style.display='none';dbtCol.innerHTML='—';}
+  if(monCol&&isEdit){
+    if(!mons.length)monCol.innerHTML=ldvlMegaEmpty('Chưa có dữ liệu Sheet');
     else{
-      let dbts=ldvlDashCollectDbts(st);
-      let tot=entriesTotalSoCau(st);
-      dbtBox.style.display='';
-      ldvlDashSetColHead(ids.dbtHead,'⑤ Dạng BT'+(tot?(' · '+tot+'c'):''),dbts.length);
-      if(!st.dbt)st.dbt='';
-      let html='';
-      if(dbts.length){
-        html=dbts.map(function(it,i){
-          let d=it.key||it.label||it;
-          let lbl=it.label||it.key||it;
-          let onAttr=isEdit?ldvlDashOnPick('adminEditPickDbt',d):ldvlDashOnPick('ldvlDashPickDbt',d);
-          return ldvlDashPickBtn('Dbt',lbl,st.dbt===d||(st.dbt&&d&&normText(st.dbt)===normText(d)),onAttr,i+1,it.n,it.total);
-        }).join('');
-      }else if(isEdit){
-        html='<div class="muted" style="font-size:11px;padding:6px 4px">Chưa có dạng trong bài này</div>';
-      }
-      if(isEdit){
-        html+='<button type="button" class="ldvlSyncPick ldvlSyncPickDbtNew" onclick="adminEditFocusNewDbt()" title="Gõ tên dạng mới phát sinh">➕ Dạng mới</button>';
-      }
-      dbtCol.innerHTML=html||'<div class="muted">—</div>';
-    }
-  }
-  let dangBox=document.getElementById(ids.dangBox);
-  let dangCol=document.getElementById(ids.dangCol);
-  if(dangBox&&dangCol){
-    if(!st.bai){dangBox.style.display='none';dangCol.innerHTML='—';}
-    else if(!st.dbt){dangBox.style.display='';ldvlDashSetColHead(ids.dangHead,'⑥ Loại BT',0);dangCol.innerHTML='<div class="muted" style="font-size:11px;padding:6px 4px;line-height:1.45">← Chọn <b>Dạng BT</b> (cột ⑤) để xem TN · Đ/S · TLN · TL</div>';}
-    else{
-      let dangs=ldvlDashCollectDangs(st);
-      let dbtTot=ldvlDashDbtScopeCount(st);
-      dangBox.style.display='';
-      ldvlDashSetColHead(ids.dangHead,'⑥ Loại BT'+(dbtTot?(' · '+dbtTot+'c'):''),dangs.length);
-      if(!st.dang)st.dang='';
-      let dangHtml=dangs.map(function(it,i){
-        let d=it.key||it.full||it;
-        let lbl=it.label||ldvlDashDangShortLabel(d);
-        let onAttr=isEdit?ldvlDashOnPick('adminEditPickDang',d):ldvlDashOnPick('ldvlDashPickDang',d);
-        let sel=st.dang===d||(st.dang&&d&&normDangFormVal(st.dang)===normDangFormVal(d));
-        return ldvlDashPickBtn('Dang',lbl,sel,onAttr,i+1,it.n,dbtTot);
+      let sfxJs=String(sfx||'').replace(/'/g,"\\'");
+      monCol.innerHTML=mons.map(function(m){
+        let k=ldvlMonKind(m);
+        let cls='ldvlSyncMonBtn tag '+(k==='phys'?'tp':'tm')+(st.mon===m?' on':'');
+        let onClick=isEdit?('adminEditPickMon(\''+escAttr(m)+'\')'):('ldvlDashPickMon(\''+escAttr(m)+'\',false)');
+        let onEnter='onmouseenter="ldvlDashMegaPreviewMon(\''+sfxJs+'\',\''+escAttr(m)+'\','+(isEdit?'true':'false')+')"';
+        let onLeave='onmouseleave="ldvlDashMegaMonLeave(event,\''+sfxJs+'\',\''+escAttr(m)+'\','+(isEdit?'true':'false')+')"';
+        return '<button type="button" class="'+cls+'" onclick="'+onClick+'" '+onEnter+' '+onLeave+'><span class="ldvlMonIco">'+(k==='phys'?'🔭':'📐')+'</span>'+esc(m)+'</button>';
       }).join('');
-      dangCol.innerHTML=dangHtml||'<div class="muted">—</div>';
     }
   }
+  if(st.mon&&!isEdit){
+    let ensured=ldvlDashEnsureDefaultScope(st,tree);
+    if(ensured.lop!==st.lop||ensured.chuong!==st.chuong){
+      st=ensured;
+      window.LDVL_DASH_SYNC=st;
+    }
+  }
+  if(st.mon&&isEdit){
+    let ensured=ldvlDashEnsureDefaultScope(st,tree);
+    if(ensured.lop!==st.lop||ensured.chuong!==st.chuong){
+      st=ensured;
+      window.ADMIN_EDIT_META_SYNC=st;
+      adminEditMetaSyncToHidden();
+    }
+  }
+  ldvlDashShowMegaPanels(sfx,st);
+  ldvlDashRenderMegaMain(sfx,tree,st,isEdit);
+  ldvlDashRenderMegaPractice(sfx,st,isEdit);
   let hint=document.getElementById(ids.hint);
   if(hint){
     let dangLbl=st.dang?('Loại: '+ldvlDashDangShortLabel(st.dang)):'';
     let parts=[st.mon,st.lop?('Lớp '+ldvlDashLopLabel(st.lop)):'',st.chuong,st.bai,st.dbt?('Dạng: '+st.dbt):'',dangLbl].filter(Boolean);
     hint.textContent=parts.length?(isEdit?('Đã chọn: '+parts.join(' · ')):'Đang lọc: '+parts.join(' · ')):(isEdit?'Chọn môn Toán hoặc Vật lý':'Chọn môn Toán hoặc Vật lý');
   }
-  ldvlSyncFitMobile();
-  ldvlSyncFitMobileDebounced();
 }
 function ldvlDashSortLop(a,b){return ldvlDashCmpKey(ldvlLopSortKey(a),ldvlLopSortKey(b));}
 function ldvlDashLopLabel(l){
@@ -26010,12 +26665,85 @@ function ldvlDashPickBtn(level,label,selected,onclickAttr,idx,count,total){
   let cnt=(count!=null&&count!==''&&Number(count)>=0)?('<b class="ldvlSyncCount" title="'+escAttr(cntTitle)+'">('+count+')</b>'):'';
   return '<button type="button" class="'+cls+'" '+onclickAttr+'>'+num+'<span class="ldvlSyncTxt">'+esc(label)+'</span>'+cnt+'</button>';
 }
+function ldvlDashNormDbtVal(dbt){
+  let dbtVal=String(dbt||'').trim();
+  if(typeof isDbtUnclassifiedFilter==='function'&&(isDbtUnclassifiedFilter(dbtVal)||normText(dbtVal)==='chua phan loai'))dbtVal=DBT_UNCLASSIFIED;
+  return dbtVal;
+}
+function ldvlDashPrimaryMade(st){
+  let entries=ldvlDashFindLessonEntries(st);
+  if(!entries.length)return {entries:[],made:''};
+  let primary=entries.slice().sort(function(a,b){return (parseInt(b.SoCau,10)||0)-(parseInt(a.SoCau,10)||0);})[0]||entries[0];
+  return {entries:entries,made:String((primary&&primary.MaDe)||'').trim()};
+}
+function ldvlDashSyncLessonFilters(st){
+  st=Object.assign({},st||{});
+  try{
+    if(st.mon){setSel('fMon',st.mon);if(typeof refreshFilterOptions==='function')refreshFilterOptions();setSel('fMon',st.mon);}
+    if(st.lop){setSel('fLop',st.lop);if(typeof onFilterChange==='function')onFilterChange('lop');}
+    if(st.chuong){setSel('fChuong',st.chuong);if(typeof onFilterChange==='function')onFilterChange('chuong');}
+    if(st.bai){setSel('fBaiHoc',st.bai);if(typeof onFilterChange==='function')onFilterChange('baihoc');}
+    if(st.dbt!==undefined){setSel('fDangBaiTap',st.dbt||'');if(typeof onFilterChange==='function')onFilterChange('extra');}
+    if(st.dang){setSel('fDang',st.dang);if(typeof onFilterChange==='function')onFilterChange('extra');}
+  }catch(e){console.warn('ldvlDashSyncLessonFilters',e);}
+}
+function ldvlDashGoToLesson(st,opts){
+  opts=opts||{};
+  st=Object.assign({},st||window.LDVL_DASH_SYNC||{});
+  if(!st.mon){alert('Chọn môn Toán hoặc Vật lý trước.');return;}
+  ldvlOpenPracticeView('catalog',st.mon);
+  let cp=document.getElementById('ldvlCatalogPanel');
+  if(cp)cp.classList.add('ldvlCatalogShow');
+  setTimeout(function(){
+    try{
+      ldvlDashSyncLessonFilters(st);
+      if(typeof renderCatalog==='function')renderCatalog();
+      if(st.bai&&typeof flashCatalogLesson==='function')flashCatalogLesson({Mon:st.mon,Lop:st.lop,Chuong:st.chuong,BaiHoc:st.bai,De:st.bai});
+      if(opts.openModal){
+        let prim=ldvlDashPrimaryMade(st);
+        if(prim.made&&typeof openStartModal==='function')openStartModal(prim.made,ldvlDashNormDbtVal(st.dbt));
+      }
+    }catch(e){console.warn('ldvlDashGoToLesson',e);}
+  },opts.delay||200);
+}
+function ldvlDashPickChuongBai(chuong,bai,lop){
+  let st=window.LDVL_DASH_SYNC||{};
+  if(lop!=null&&lop!=='')st.lop=String(lop);
+  st.chuong=String(chuong||'');
+  st.bai=String(bai||'');
+  st.dbt='';
+  st.dang='';
+  window.LDVL_DASH_SYNC=st;
+  ldvlRenderDashSyncPanel();
+  try{
+    let sub=document.getElementById('ldvlSyncMegaSubPanel')||document.getElementById('ldvlStuSyncMegaSubPanel');
+    if(sub&&typeof sub.scrollIntoView==='function')sub.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){}
+}
+function adminEditPickChuongBai(chuong,bai){
+  let st=window.ADMIN_EDIT_META_SYNC||{};
+  st.chuong=String(chuong||'');
+  st.bai=String(bai||'');
+  st.dbt='';
+  st.dang='';
+  window.ADMIN_EDIT_META_SYNC=st;
+  adminEditMetaSyncToHidden();
+  adminEditRenderMeta5Col();
+  renderEditQuestionPreview();
+}
+window.ldvlDashPickChuongBai=ldvlDashPickChuongBai;
+window.ldvlDashGoToLesson=ldvlDashGoToLesson;
+window.adminEditPickChuongBai=adminEditPickChuongBai;
 function ldvlDashPickMon(mon,openCatalog){
+  ldvlDashMegaClearMonPre('');
+  ldvlDashMegaSetHover('',null);
   window.LDVL_DASH_SYNC={mon:mon||'',lop:'',chuong:'',bai:'',dbt:'',dang:''};
   ldvlRenderDashSyncPanel();
   if(openCatalog)ldvlDashOpenCatalog();
 }
 function ldvlDashPickLop(lop,openCatalog){
+  ldvlDashMegaClearHover('');
+  ldvlDashMegaClearHover('Stu');
   let st=window.LDVL_DASH_SYNC||{};
   st.lop=String(lop||'');
   st.chuong='';
@@ -26058,17 +26786,7 @@ function ldvlDashPickDang(dang){
 function ldvlDashOpenCatalog(){
   let st=window.LDVL_DASH_SYNC||{};
   if(!st.mon){alert('Chọn môn Toán hoặc Vật lý trước.');return;}
-  ldvlOpenPracticeView('catalog',st.mon);
-  setTimeout(function(){
-    try{
-      if(st.lop){setSel('fLop',st.lop);onFilterChange('lop');}
-      if(st.chuong){setSel('fChuong',st.chuong);onFilterChange('chuong');}
-      if(st.bai){setSel('fBaiHoc',st.bai);onFilterChange('baihoc');}
-      if(st.dbt){setSel('fDangBaiTap',st.dbt||'');onFilterChange('extra');}
-      if(st.dang){setSel('fDang',st.dang);onFilterChange('extra');}
-      renderCatalog();
-    }catch(e){console.warn(e);}
-  },350);
+  ldvlDashGoToLesson(st,{openModal:false});
 }
 function ensureLatexExportModal(){
   let m=document.getElementById('latexExportModal');
@@ -26178,22 +26896,28 @@ function ldvlRenderDashSyncPanel(){
   if(st.dang&&!ADMIN_DANG_OPTS.includes(normDangFormVal(st.dang)))st.dang='';
   window.LDVL_DASH_SYNC=st;
   ldvlDashSyncSuffixes().forEach(function(sfx){ldvlRenderDashSyncPanelOne(sfx,tree,st);});
+  try{if(typeof v255SyncTopSubject==='function')v255SyncTopSubject();}catch(e){}
 }
 window.ldvlDashPickMon=ldvlDashPickMon;
 window.ldvlDashOpenCatalog=ldvlDashOpenCatalog;
 window.ldvlRenderDashSyncPanel=ldvlRenderDashSyncPanel;
-// V326: Pick Dạng BT
-window.ldvlDashPickDbt=function(dbt){
+// V326: Dạng BT trong menu — chọn inline, không popup
+window.ldvlDashPickDbtOpen=function(dbt){
   let st=window.LDVL_DASH_SYNC||{};
-  let newDbt=adminEditPickDbtNormToggle(st,dbt);
-  if(normText(newDbt||'')!==normText(st.dbt||''))st.dang='';
-  st.dbt=newDbt;
+  st.dbt=ldvlDashNormDbtVal(dbt);
+  st.dang='';
   window.LDVL_DASH_SYNC=st;
   ldvlRenderDashSyncPanel();
-  ldvlDashApplyScopeFilters(st);
+};
+window.ldvlDashPickDbt=function(dbt){
+  window.ldvlDashPickDbtOpen(dbt);
+};
+window.ldvlDashMegaDbtPick=ldvlDashMegaDbtPick;
+window.ldvlDashStartFromMega=ldvlDashStartFromMega;
+window.ldvlDashOpenDbtPractice=function(dbt){
+  window.ldvlDashPickDbtOpen(dbt);
 };
 window.ldvlDashPickDang=ldvlDashPickDang;
-window.ldvlDashOpenDbtPractice=ldvlDashOpenDbtPractice;
 function ldvlAdminFilterMon(mon){
   try{refreshFilterOptions();setSel('fMon',mon);onFilterChange('mon');renderCatalog();}catch(e){console.warn('ldvlAdminFilterMon',e);}
 }
@@ -26291,6 +27015,7 @@ function ldvlAdminNav(btn,pid){
     d.style.display=(d.id===pid)?'':'none';
   });
   if(pid==='ap-dash')ldvlRefreshAdminDashboard();
+  if(typeof v253SetSubjectTabsVisible==='function')v253SetSubjectTabsVisible(true);
   if(pid==='ap-pdf-math')ldvlPdfRenderList('math');
   if(pid==='ap-pdf-phys')ldvlPdfRenderList('phys');
   if(pid==='ap-sync'){let st=document.getElementById('ldvlSyncStatus');if(st)st.textContent=META&&META.loaded_at?('Lần nạp gần nhất: '+META.loaded_at):'';}
@@ -28342,7 +29067,7 @@ def version():
         "exam_countdown_removed_v261": True,
         "stable_rollback_no_freeze_v263": True,
         "mobile_ui_clean_removed_v263": True,
-        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/translate/en", "/api/admin/ai-generate-questions", "/api/admin/ai-generate-save", "/api/admin/ai-generate-tikz", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-physics-competency", "/api/ai/detect-physics-competency-update", "/api/ai/detect-physics-competency-bulk", "/api/ai/apply-physics-competencies", "/api/ai/detect-level-bulk", "/api/ai/apply-levels", "/api/ai/detect-dangbaitap-update", "/api/ai/detect-dangbaitap-bulk", "/api/ai/apply-dangbaitap", "/api/admin/merge-dangbaitap", "/api/admin/chapter-dbt-move-lesson", "/api/admin/dbt-order", "/api/admin/dang-similarity", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
+        "routes": ["/login", "/register", "/logout", "/share", "/d/<made>", "/api/meta", "/api/start", "/api/start-random", "/api/submit", "/api/learning/theory", "/api/learning/method", "/api/learning/generate-save", "/api/learning/save", "/api/ai/assistant-note", "/api/ai/assistant-chat", "/api/ai/tutor-chat", "/api/translate/en", "/api/admin/ai-generate-questions", "/api/admin/ai-generate-save", "/api/admin/ai-generate-tikz", "/api/question/create", "/api/question/update", "/api/question/delete", "/api/question/dedupe", "/api/question/lookup", "/api/infographic-prompt", "/api/infographic-generate", "/api/ai/detect-level", "/api/ai/detect-level-update", "/api/ai/detect-physics-competency", "/api/ai/detect-physics-competency-update", "/api/ai/detect-physics-competency-bulk", "/api/ai/apply-physics-competencies", "/api/ai/detect-level-bulk", "/api/ai/apply-levels", "/api/ai/detect-dangbaitap-update", "/api/ai/detect-dangbaitap-bulk", "/api/ai/apply-dangbaitap", "/api/admin/merge-dangbaitap", "/api/admin/chapter-dbt-move-lesson", "/api/admin/dbt-order", "/api/admin/dang-similarity", "/api/latex/import", "/manifest.json", "/service-worker.js", "/pwa-icon-192.png", "/pwa-icon-512.png", "/offline"]
     })
 
 @app.route("/login", methods=["GET", "POST"])
@@ -29557,6 +30282,7 @@ def api_start():
     if dang:
         dang = norm_dang(dang)
     dbt = _arg("dangbaitap") or _arg("dangbaitap_filter") or _arg("DangBaiTap")
+    student_view = str(_arg("student_view", "0")).lower() in ("1", "true", "yes")
     st = get_store()
     if not st.questions_loaded:
         st.start_questions_background(force=False)
@@ -29569,6 +30295,7 @@ def api_start():
         dang_filter=dang,
         dangbaitap_filter=dbt,
         group_by_dang=group_by_dang,
+        student_view=student_view,
     ))
 
 
@@ -29985,6 +30712,198 @@ def openclaw_chat_from_provider(
     return fb, 0, "FALLBACK", "", last_error
 
 
+TUTOR_PROMPT_MODE_HINTS: Dict[str, str] = {
+    "tom_tat": "Chỉ TÓM TẮT đề bài (3–5 dòng). Không giải, không đáp án.",
+    "cong_thuc": "Chỉ liệt kê CÔNG THỨC / ĐỊNH NGHĨA cần dùng (tối đa 6 dòng). Không giải chi tiết.",
+    "goi_y": "Chỉ gợi ý các BƯỚC LÀM (tối đa 6 bước ngắn). Không chốt đáp án.",
+    "giai_a": "Tóm tắt đề + gợi ý phương án/câu A (đủ 2 phần).",
+    "giai_b": "Tóm tắt đề + gợi ý phương án/câu B (đủ 2 phần).",
+    "giai_c": "Tóm tắt đề + gợi ý phương án/câu C (đủ 2 phần).",
+    "giai_d": "Tóm tắt đề + gợi ý phương án/câu D (đủ 2 phần).",
+    "dinh_nghia": "Chỉ GIẢI THÍCH định nghĩa / khái niệm liên quan (ngắn gọn).",
+    "vi_du": "Chỉ cho VÍ DỤ minh họa ngắn (1 ví dụ).",
+}
+
+
+def tutor_stub_question(mon: str = "") -> Dict[str, Any]:
+    m = clean(mon) or "Toán"
+    return {
+        "Mon": m,
+        "Lop": "",
+        "Chuong": "",
+        "BaiHoc": "",
+        "DangBaiTap": "",
+        "CauHoi": "",
+        "Dang": "Trắc nghiệm",
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": "",
+    }
+
+
+def build_tutor_chat_prompt(
+    message: str,
+    messages: Any = None,
+    *,
+    q: Optional[Dict[str, Any]] = None,
+    user_answer: Any = "",
+    mon: str = "",
+    in_quiz: bool = False,
+    prompt_mode: str = "",
+) -> Tuple[str, str]:
+    kind = subject_kind_from_mon(clean(mon)) if clean(mon) else ""
+    if not kind and q:
+        kind = subject_kind_from_mon(effective_question_mon(q)) or infer_subject_kind_from_question(q)
+    subject_line = (
+        "Ưu tiên môn Toán THPT (đại số, giải tích, hình học, xác suất)."
+        if kind == "math"
+        else (
+            "Ưu tiên môn Vật lí THPT (cơ, điện, quang, nhiệt, sóng…)."
+            if kind == "physics"
+            else "Hỗ trợ Toán và Vật lí THPT — tự nhận môn theo câu hỏi học sinh."
+        )
+    )
+    sys_prompt = (
+        "Bạn là Thầy Minh — giáo viên Toán & Vật lí, trợ giảng AI trong app Luyện đề THPT. "
+        + subject_line
+        + " Trả lời tiếng Việt, thân thiện, linh hoạt theo nhu cầu: giải thích định nghĩa; công thức và đơn vị SI; "
+        "gợi ý từng bước giải bài (không nhảy bước); ví dụ minh họa ngắn. "
+        "LaTeX trong $...$ một dòng. Không dùng markdown ** hay bullet dấu *."
+    )
+    if is_admin():
+        sys_prompt += " ADMIN: được giải đầy đủ, chốt đáp án, sửa lỗi đề nếu được hỏi."
+    elif is_svip():
+        sys_prompt += " SVIP: gợi ý học tập chi tiết; có thể kiểm tra từng bước với học sinh."
+    else:
+        sys_prompt += (
+            " VIP: gợi ý hướng làm và định nghĩa; KHÔNG chốt đáp án A/B/C/D, không nêu đáp số cuối."
+        )
+    mode = clean(prompt_mode).lower()
+    mode_hint = TUTOR_PROMPT_MODE_HINTS.get(mode, "")
+    if mode.startswith("giai_") and q and in_quiz:
+        letter = mode[-1:].upper()
+        if letter in "ABCD":
+            dang = effective_dang(q)
+            giai_word = "GIẢI chi tiết" if is_admin() else ("Gợi ý giải" if is_svip() else "Gợi ý cách làm")
+            if dang == "Đúng sai":
+                mode_hint = (
+                    f"Trả lời ĐỦ 2 phần (không chào hỏi dài — mở đầu ngay bằng «(1) TÓM TẮT ĐỀ»): "
+                    f"(1) TÓM TẮT ĐỀ — 2–3 dòng ngắn; "
+                    f"(2) {giai_word} CÂU {letter} — công thức, thay số, kết luận. "
+                    f"CHỈ câu {letter}, không giải câu khác."
+                )
+            elif dang == "Trắc nghiệm":
+                mode_hint = (
+                    f"Trả lời ĐỦ 2 phần (không chào hỏi dài — mở đầu ngay bằng «(1) TÓM TẮT ĐỀ»): "
+                    f"(1) TÓM TẮT ĐỀ — 2–3 dòng ngắn; "
+                    f"(2) {giai_word} PHƯƠNG ÁN {letter} — phân tích từng bước, so với đồ thị/đề. "
+                    f"CHỈ phương án {letter}, không giải phương án khác."
+                )
+            else:
+                mode_hint = (
+                    f"Trả lời ĐỦ 2 phần (không chào hỏi dài — mở đầu ngay bằng «(1) TÓM TẮT ĐỀ»): "
+                    f"(1) TÓM TẮT ĐỀ — 2–3 dòng; "
+                    f"(2) {giai_word} phần {letter} — từng bước. CHỈ phần {letter}."
+                )
+    if mode_hint:
+        cap = "14–18 dòng" if mode.startswith("giai_") else "6–8 dòng"
+        sys_prompt += f" CHẾ ĐỘ NGẮN: {mode_hint} Trả lời tối đa {cap}."
+    hist: List[str] = []
+    hist_limit = 2 if mode_hint else 10
+    if isinstance(messages, list):
+        for it in messages[-hist_limit:]:
+            if not isinstance(it, dict):
+                continue
+            role = clean(it.get("role", ""))
+            text = clean(it.get("text", it.get("content", "")))[:800]
+            if not text:
+                continue
+            hist.append(("Học sinh" if role == "user" else "Thầy Minh") + ": " + text)
+    parts: List[str] = []
+    if in_quiz and q:
+        block = build_ai_question_block(
+            q,
+            user_answer,
+            include_sheet_answer=is_admin(),
+            include_loigiai=is_admin(),
+        )
+        parts.extend(["", "CÂU ĐANG LÀM (nếu học sinh hỏi về bài này):", block])
+    parts.extend(
+        [
+            "",
+            "LỊCH SỬ:",
+            "\n".join(hist) if hist else "(mới bắt đầu)",
+            "",
+            "HỌC SINH:",
+            clean(message)[:900],
+        ]
+    )
+    return sys_prompt, "\n".join(parts)
+
+
+def tutor_chat_from_provider(
+    q: Dict[str, Any],
+    message: str,
+    messages: Any = None,
+    user_answer: Any = "",
+    prompt_mode: str = "",
+) -> Tuple[str, int, str, str, str]:
+    mode = clean(prompt_mode).lower()
+    sys_prompt, user_prompt = build_tutor_chat_prompt(
+        message,
+        messages,
+        q=q,
+        user_answer=user_answer,
+        mon=effective_question_mon(q),
+        in_quiz=bool(clean(q.get("CauHoi", ""))),
+        prompt_mode=mode,
+    )
+    max_tokens = 1500 if mode.startswith("giai_") else (640 if mode in TUTOR_PROMPT_MODE_HINTS else ASSISTANT_CHAT_MAX_TOKENS)
+    last_error = ""
+    txt, idx, used, model, err = assistant_run_vip_ai(
+        q,
+        sys_prompt,
+        user_prompt,
+        max_tokens=max_tokens,
+        temp=0.12 if mode else 0.14,
+    )
+    last_error = err or last_error
+    txt = _sanitize_assistant_chat_text(txt)
+    if mode.startswith("giai_") and len(clean(txt)) < 220:
+        retry_note = (
+            "\n\n[LƯU Ý] Lần trước trả lời quá ngắn hoặc dừng giữa chừng. "
+            "Viết ĐỦ cả (1) TÓM TẮT ĐỀ và (2) GỢI Ý PHƯƠNG ÁN — tối thiểu 10 dòng, không chào hỏi."
+        )
+        txt2, idx2, used2, model2, err2 = assistant_run_vip_ai(
+            q,
+            sys_prompt,
+            user_prompt + retry_note,
+            max_tokens=2200,
+            temp=0.1,
+        )
+        last_error = err2 or last_error
+        txt2 = _sanitize_assistant_chat_text(txt2)
+        if len(clean(txt2)) > len(clean(txt)):
+            txt, idx, used, model = txt2, idx2, used2, model2
+    if txt and not is_admin() and not is_svip():
+        txt = _strip_student_final_answer_text(txt)
+    if txt:
+        return txt, idx, used, model, ""
+    if not load_ai_keys("GEMINI"):
+        fb = (
+            "⚠️ Chưa có key Gemini để gọi AI.\n\n"
+            "Em bấm 🔑 Key ngay trong panel Hỏi AI → dán key AIza... từ Google AI Studio → Lưu → Test, rồi hỏi lại."
+        )
+        return fb, 0, "NO_KEY", "", "no_gemini_key"
+    fb = (
+        "Thầy Minh tạm chưa trả lời được. Em thử hỏi ngắn hơn hoặc nêu rõ môn (Toán/Vật lí) và dạng bài nhé."
+    )
+    if last_error:
+        fb = f"⚠️ AI tạm lỗi ({last_error[:120]}).\n\n" + fb
+    return fb, 0, "FALLBACK", "", last_error
+
+
 def openclaw_rewrite_latex_from_provider(field: str, text: str, context: Dict[str, Any]) -> Tuple[str, str, str]:
     """ADMIN: OpenClaw sửa LaTeX trong một ô, chưa lưu Sheet."""
     if not is_admin():
@@ -30149,6 +31068,86 @@ def api_ai_assistant_chat():
                 if is_admin()
                 else "Trợ lý AI VIP/SVIP: hướng dẫn bước làm, không chốt đáp án."
             )
+        })
+    except AdminGeminiQuotaError as e:
+        return admin_ai_quota_json(e)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/ai/tutor-chat", methods=["POST"])
+def api_ai_tutor_chat():
+    """Chat nổi Thầy Minh — hỏi tự do (định nghĩa, gợi ý giải); tùy chọn gắn câu đang làm."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    bad_ai = require_ai_hint_json()
+    if bad_ai:
+        return bad_ai
+    refresh_session_role_from_store()
+    data = request.get_json(silent=True) or {}
+    message = clean(data.get("message", ""))
+    if not message:
+        return jsonify({"error": "Chưa nhập câu hỏi."}), 400
+    if len(message) > 900:
+        return jsonify({"error": "Câu hỏi quá dài. Hãy hỏi ngắn gọn hơn."}), 400
+    messages = data.get("messages", [])
+    answer = data.get("answer", "")
+    mon = clean(data.get("mon", ""))
+    sid = clean(data.get("sid"))
+    try:
+        idx = int(data.get("index", 0))
+    except Exception:
+        idx = 0
+    q: Dict[str, Any] = tutor_stub_question(mon)
+    in_quiz = False
+    restore = quiz_restore_payload_from_body(data)
+    if sid:
+        try:
+            ses = get_store().check_quiz_session(sid, restore)
+            qs = ses["questions"]
+            if 0 <= idx < len(qs):
+                store = get_store()
+                q = assistant_question_from_session(store, ses, qs, idx)
+                in_quiz = True
+        except Exception:
+            pass
+    if not in_quiz and mon:
+        q = tutor_stub_question(mon)
+    prompt_mode = clean(data.get("prompt_mode", ""))
+
+    @copy_current_request_context
+    def _tutor_worker():
+        return tutor_chat_from_provider(q, message, messages, answer, prompt_mode)
+
+    try:
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(_tutor_worker)
+                reply, key_index, provider_used, model, ai_error = fut.result(
+                    timeout=ASSISTANT_HTTP_MAX_SEC
+                )
+        except FuturesTimeout:
+            reply = (
+                f"⚠️ Quá {ASSISTANT_HTTP_MAX_SEC}s — thử hỏi ngắn hơn.\n\n"
+                "Thầy Minh tạm chưa trả lời kịp. Em thử lại sau vài giây nhé."
+            )
+            key_index, provider_used, model, ai_error = 0, "FALLBACK", "", "timeout"
+        return jsonify({
+            "ok": True,
+            "reply": reply,
+            "in_quiz": in_quiz,
+            "key_index": key_index,
+            "provider_used": provider_used,
+            "model": model,
+            "ai_error": ai_error,
+            "needs_key": provider_used in ("NO_KEY",) or ai_error == "no_gemini_key",
+            **classify_user_ai_profile(ai_runtime_config()),
+            "message": (
+                "Chat Thầy Minh ADMIN: hỏi định nghĩa, gợi ý giải, soát đề."
+                if is_admin()
+                else "Chat Thầy Minh VIP/SVIP: hỏi định nghĩa và gợi ý giải linh hoạt."
+            ),
         })
     except AdminGeminiQuotaError as e:
         return admin_ai_quota_json(e)
