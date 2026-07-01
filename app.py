@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V325r_PDF_SYNC_FIX_2026_06_25"
+APP_VERSION = "V326_JSON_SOURCE_BUTTONS_2026_07_01"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -158,6 +158,10 @@ ASSISTANT_NOTE_MAX_TOKENS = max(
 )
 ASSISTANT_CHAT_MAX_TOKENS = max(
     500, min(int(os.environ.get("ASSISTANT_CHAT_MAX_TOKENS", "850") or 850), 1500)
+)
+# JSON Offline chat cần trả lời dài hơn chat thường, nếu để 850 token AI hay bị cụt giữa bước tính.
+JSON_LOCAL_CHAT_MAX_TOKENS = max(
+    1200, min(int(os.environ.get("JSON_LOCAL_CHAT_MAX_TOKENS", "2600") or 2600), 4200)
 )
 ASSISTANT_HTTP_MAX_SEC = max(22, min(int(os.environ.get("ASSISTANT_HTTP_MAX_SEC", "55") or 55), 90))
 AI_IMAGE_FETCH_TIMEOUT = max(6, min(int(os.environ.get("AI_IMAGE_FETCH_TIMEOUT", "12") or 12), 30))
@@ -14750,6 +14754,33 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 .ln-footer{padding:20px;text-align:center;font-size:12px;color:var(--text2)}
 .ln-footer a{color:var(--blue);text-decoration:none;font-weight:500}
 .ln-footer a:hover{text-decoration:underline}
+
+/* ── NGUỒN ĐỀ: Sheet / JSON / ADMIN JSON ── */
+.ldvlSourceTabs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;min-width:0;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+.ldvlSourceBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.52);color:#fff!important;text-decoration:none!important;font-size:11px;font-weight:900;line-height:1;white-space:nowrap;box-shadow:0 4px 14px rgba(15,23,42,.16);transition:transform .14s,filter .14s,box-shadow .14s}
+.ldvlSourceBtn:hover{transform:translateY(-1px);filter:brightness(1.07);box-shadow:0 7px 20px rgba(15,23,42,.20)}
+.ldvlSourceBtn.srcSheet{background:linear-gradient(135deg,#2563eb,#38bdf8)}
+.ldvlSourceBtn.srcJson{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.ldvlSourceBtn.srcAdmin{background:linear-gradient(135deg,#f97316,#f59e0b)}
+.ldvlSourcePanel{position:relative;overflow:hidden;border:1px solid rgba(37,99,235,.22);background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 46%,#fff7ed 100%);border-radius:20px;padding:14px;margin:0 0 14px;box-shadow:0 12px 32px rgba(15,23,42,.10)}
+.ldvlSourcePanel:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 10% 10%,rgba(59,130,246,.15),transparent 30%),radial-gradient(circle at 88% 20%,rgba(34,197,94,.12),transparent 28%),radial-gradient(circle at 48% 110%,rgba(249,115,22,.13),transparent 34%);pointer-events:none}
+.ldvlSourcePanel>*{position:relative;z-index:1}
+.ldvlSourcePanelTitle{font-weight:950;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:15px}
+.ldvlSourcePanelTitle .mini{font-size:11px;font-weight:800;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:3px 8px}
+.ldvlSourcePanelBtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.ldvlSourcePanelBtns a{position:relative;display:flex!important;align-items:center!important;gap:10px;min-height:74px;padding:13px 14px;border-radius:18px;text-decoration:none!important;font-weight:900;border:1px solid rgba(255,255,255,.78);box-shadow:0 10px 25px rgba(15,23,42,.12);transition:transform .14s,box-shadow .14s,filter .14s;overflow:hidden;color:#fff!important}
+.ldvlSourcePanelBtns a:after{content:"›";margin-left:auto;font-size:25px;font-weight:900;opacity:.92}
+.ldvlSourcePanelBtns a:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(15,23,42,.18);filter:brightness(1.05)}
+.ldvlSourcePanelBtns .ico{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.20);display:flex;align-items:center;justify-content:center;font-size:23px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);flex:0 0 42px}
+.ldvlSourcePanelBtns .txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ldvlSourcePanelBtns .ttl{font-size:14px;line-height:1.15;color:#fff}
+.ldvlSourcePanelBtns .desc{font-size:11px;line-height:1.25;font-weight:700;color:rgba(255,255,255,.86)}
+.ldvlSourcePanelBtns .sheet{background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%)}
+.ldvlSourcePanelBtns .json{background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%)}
+.ldvlSourcePanelBtns .adminjson{background:linear-gradient(135deg,#f97316 0%,#f59e0b 100%)}
+.ldvlSourceHint{margin-top:10px;font-size:12px;color:#475569;line-height:1.45;background:rgba(255,255,255,.70);border:1px dashed #cbd5e1;border-radius:12px;padding:8px 10px}
+@media(max-width:900px){.ldvlSourceTabs{order:10;width:100%;justify-content:flex-start;border-radius:14px}.ldvlSourcePanelBtns{grid-template-columns:1fr}.ldvlSourceBtn{font-size:10px;padding:7px 9px}.ldvlSourcePanel{border-radius:16px;padding:12px}.ldvlSourcePanelBtns a{min-height:64px;padding:11px 12px}.ldvlSourcePanelBtns .ico{width:36px;height:36px;font-size:20px;border-radius:12px}}
+
 </style></head>
 <body>
 
@@ -18717,6 +18748,11 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
     <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
     <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
   </div>
+  <div aria-label="Chọn nguồn đề" style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);">
+    <a href="/" title="Làm đề online từ Google Sheet" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(37,99,235,.28);white-space:nowrap;">🌐 Sheet Online</a>
+    <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(22,163,74,.28);white-space:nowrap;">📦 JSON Offline</a>
+    <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#f97316,#f59e0b);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(249,115,22,.28);white-space:nowrap;">🛠️ Tạo JSON</a>
+  </div>
   <span id="quizTopBar" class="adminBar hide"><button type="button" class="hbtn" onclick="backHome()"><i class="ti ti-arrow-left"></i> Mục lục</button></span>
   <span id="adminBar" class="adminBar hide">
     <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrDashBtn" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')" title="Về Dashboard"><i class="ti ti-layout-dashboard"></i><span class="ldvlHdrNavLbl"> Dash</span></button>
@@ -18759,6 +18795,8 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-stats')"><i class="ti ti-chart-bar nic"></i> Thống kê điểm</button>
   <div class="sbs">Luyện tập</div>
   <button type="button" class="nb" id="ldvlNavPractice" onclick="ldvlAdminNav(this,'ap-practice')"><i class="ti ti-list nic"></i> Mục lục đề · Làm bài</button>
+  <button type="button" class="nb" onclick="window.location.href='/json-local'"><i class="ti ti-package nic"></i> Đề JSON Offline</button>
+  <button type="button" class="nb" onclick="window.location.href='/admin/json'"><i class="ti ti-file-code nic"></i> ADMIN tạo JSON</button>
   <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-random')"><i class="ti ti-dice-5 nic"></i> Tự luyện ngẫu nhiên</button>
   <div class="sbs sm">Toán học</div>
   <button type="button" class="nb" onclick="ldvlAdminNav(this,'ap-q-math')"><i class="ti ti-file-text nic"></i> Câu hỏi Toán <span class="nbadge" id="ldvlNbMath">—</span></button>
@@ -18828,7 +18866,9 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
     </div>
     <div class="stit">Thao tác nhanh</div>
     <div class="ag">
-      <button type="button" class="ac" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" style="border-color:var(--mh);background:var(--ml)"><div class="aic">📋</div><div class="al2">Luyện đề · Mục lục</div><div class="ad">Chọn đề → Làm bài</div></button>
+      <button type="button" class="ac" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" style="border-color:var(--mh);background:var(--ml)"><div class="aic">📋</div><div class="al2">Google Sheet Online</div><div class="ad">Đọc sheet Cau_Hoi · lưu điểm</div></button>
+      <button type="button" class="ac" onclick="window.location.href='/json-local'"><div class="aic">📦</div><div class="al2">Đề JSON Offline</div><div class="ad">Học sinh nhập · lưu · mở đề</div></button>
+      <button type="button" class="ac" onclick="window.location.href='/admin/json'"><div class="aic">🛠️</div><div class="al2">ADMIN tạo JSON</div><div class="ad">Xuất từ Sheet · tải gửi HS</div></button>
       <button type="button" class="ac" onclick="ldvlAdminNav(null,'ap-random')"><div class="aic">🎲</div><div class="al2">Tự luyện ngẫu nhiên</div><div class="ad">Ghép đề 28 câu</div></button>
       <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-math]'),'ap-q-math')"><div class="aic">📐</div><div class="al2">Đề Toán</div><div class="ad">Lọc môn Toán</div></button>
       <button type="button" class="ac" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')"><div class="aic">🔭</div><div class="al2">Đề Vật lý</div><div class="ad">Lọc môn Lý</div></button>
@@ -18874,6 +18914,42 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 </div>
 <div id="userAccountCard" class="userAccountCard hide"></div>
 <div id="aiProfileBanner" class="aiProfileBanner hide"></div>
+
+<section id="ldvlNguonDePanel" style="margin:12px 0 16px;padding:16px;border-radius:22px;background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 50%,#fff7ed 100%);border:1px solid #bfdbfe;box-shadow:0 12px 34px rgba(15,23,42,.10);font-family:Inter,Segoe UI,Arial,sans-serif;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-weight:950;color:#0f172a;font-size:17px;letter-spacing:.1px;">🔀 Chọn nguồn đề</div>
+    <div style="font-size:11px;font-weight:900;color:#1e40af;background:#fff;border:1px solid #dbeafe;border-radius:999px;padding:5px 10px;box-shadow:0 3px 10px rgba(37,99,235,.08);">Sheet · JSON Offline · ADMIN</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;">
+    <a href="/" title="Làm đề online từ Google Sheet" style="display:flex;align-items:center;gap:13px;min-height:82px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);color:#fff;text-decoration:none;box-shadow:0 12px 28px rgba(37,99,235,.25);border:1px solid rgba(255,255,255,.72);">
+      <span style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);flex:0 0 46px;">🌐</span>
+      <span style="display:flex;flex-direction:column;gap:4px;line-height:1.2;min-width:0;">
+        <b style="font-size:15px;color:#fff;">Google Sheet Online</b>
+        <span style="font-size:12px;font-weight:750;color:rgba(255,255,255,.90);">Làm bài online · lưu điểm · xếp hạng</span>
+      </span>
+      <span style="margin-left:auto;font-size:28px;font-weight:900;opacity:.9;">›</span>
+    </a>
+    <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy" style="display:flex;align-items:center;gap:13px;min-height:82px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);color:#fff;text-decoration:none;box-shadow:0 12px 28px rgba(22,163,74,.25);border:1px solid rgba(255,255,255,.72);">
+      <span style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);flex:0 0 46px;">📦</span>
+      <span style="display:flex;flex-direction:column;gap:4px;line-height:1.2;min-width:0;">
+        <b style="font-size:15px;color:#fff;">Đề JSON Offline</b>
+        <span style="font-size:12px;font-weight:750;color:rgba(255,255,255,.90);">Nhập file · lưu đề · mở lại bài làm</span>
+      </span>
+      <span style="margin-left:auto;font-size:28px;font-weight:900;opacity:.9;">›</span>
+    </a>
+    <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON" style="display:flex;align-items:center;gap:13px;min-height:82px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,#f97316 0%,#f59e0b 100%);color:#fff;text-decoration:none;box-shadow:0 12px 28px rgba(249,115,22,.25);border:1px solid rgba(255,255,255,.72);">
+      <span style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);flex:0 0 46px;">🛠️</span>
+      <span style="display:flex;flex-direction:column;gap:4px;line-height:1.2;min-width:0;">
+        <b style="font-size:15px;color:#fff;">ADMIN tạo JSON</b>
+        <span style="font-size:12px;font-weight:750;color:rgba(255,255,255,.90);">Xuất từ Sheet · tải file gửi học sinh</span>
+      </span>
+      <span style="margin-left:auto;font-size:28px;font-weight:900;opacity:.9;">›</span>
+    </a>
+  </div>
+  <div style="margin-top:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.74);border:1px dashed #93c5fd;color:#334155;font-size:12px;line-height:1.45;font-weight:700;">
+    📌 JSON Offline: học sinh chọn file JSON trên máy, lưu đề và mở lại bài làm. Google Sheet Online: dùng app cũ, có tài khoản, lưu điểm và xếp hạng.
+  </div>
+</section>
 
 <!-- catalogScopeBox: JS (v245/v250) tự render tabs Toán/Lý vào đây -->
 <div id="catalogScopeBox" class="catalogScopeBox"></div>
@@ -24779,6 +24855,127 @@ window.ldvlRefreshAdminDashboard=ldvlRefreshAdminDashboard;
   document.addEventListener('DOMContentLoaded',function(){setTimeout(syncDashUser,100);setTimeout(syncDashUser,1200);});
 })();
 
+
+
+/* ===== V14: Bóng chat AI nổi + ẩn thanh Công cụ AI cũ dưới câu hỏi ===== */
+(function ldvlFloatingAiChatV14(){
+  function injectStyle(){
+    if(document.getElementById('ldvlFloatingAiChatStyleV14'))return;
+    var css=`
+      /* Ẩn thanh Công cụ AI cũ nằm dưới câu hỏi */
+      .quizQuestionPanel .learningQuickBar.learningQuickBarBelowOpts,
+      .quizQuestionPanel .learningQuickBar .learnCompactBar,
+      .quizQuestionPanel .learningQuickBarBelowOpts{display:none!important;}
+      .qidLearnBtns .aiAssistBtn{display:none!important;}
+
+      /* Bóng chat nổi */
+      #ldvlAiChatBubbleV14{
+        position:fixed;right:22px;bottom:22px;z-index:2147483000;
+        display:flex;align-items:center;gap:9px;height:54px;padding:0 18px 0 13px;
+        border:2px solid #0f172a;border-radius:999px;
+        background:linear-gradient(135deg,#2563eb 0%,#7c3aed 58%,#ec4899 100%);
+        color:#fff;font-weight:900;font-size:15px;letter-spacing:.1px;
+        box-shadow:0 14px 34px rgba(37,99,235,.35),0 4px 10px rgba(15,23,42,.18);
+        cursor:pointer;user-select:none;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;
+      }
+      #ldvlAiChatBubbleV14:hover{transform:translateY(-2px) scale(1.02);filter:brightness(1.05);}
+      #ldvlAiChatBubbleV14 .ldvlAiFace{
+        width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+        background:#fff;color:#2563eb;border:2px solid rgba(255,255,255,.85);
+        font-size:20px;box-shadow:inset 0 0 0 2px #dbeafe;
+      }
+      #ldvlAiChatBubbleV14 .ldvlAiBubbleText{display:flex;flex-direction:column;line-height:1.05;text-align:left;}
+      #ldvlAiChatBubbleV14 .ldvlAiBubbleText b{font-size:14px;color:#fff;}
+      #ldvlAiChatBubbleV14 .ldvlAiBubbleText small{font-size:10.5px;color:#e0e7ff;font-weight:800;margin-top:2px;}
+      #ldvlAiChatBubbleV14.ldvlAiOpen{
+        background:linear-gradient(135deg,#059669 0%,#2563eb 100%);
+        box-shadow:0 14px 34px rgba(5,150,105,.35),0 4px 10px rgba(15,23,42,.18);
+      }
+
+      /* Panel chat mở dạng cửa sổ nổi, không chiếm chỗ dưới câu hỏi */
+      #hintBox.learningOpen.openclawOpen,
+      #hintBox.learningOpen.aiAssistOpen{
+        position:fixed!important;right:22px!important;bottom:88px!important;left:auto!important;top:auto!important;
+        width:min(460px,calc(100vw - 28px))!important;
+        max-height:min(72vh,620px)!important;z-index:2147482999!important;
+        margin:0!important;padding:0!important;border:2px solid #2563eb!important;border-radius:18px!important;
+        overflow:hidden!important;background:#fff!important;box-shadow:0 22px 60px rgba(15,23,42,.28)!important;
+      }
+      #hintBox.learningOpen.openclawOpen .learningPanelShell,
+      #hintBox.learningOpen.aiAssistOpen .learningPanelShell{height:100%!important;display:flex!important;flex-direction:column!important;}
+      #hintBox.learningOpen.openclawOpen .learningTitleRow,
+      #hintBox.learningOpen.aiAssistOpen .learningTitleRow{
+        position:sticky!important;top:0!important;z-index:2!important;padding:12px 14px!important;
+        background:linear-gradient(135deg,#1d4ed8,#7c3aed)!important;color:#fff!important;border-bottom:0!important;
+      }
+      #hintBox.learningOpen.openclawOpen .learningTitleRow b,
+      #hintBox.learningOpen.aiAssistOpen .learningTitleRow b{color:#fff!important;font-size:15px!important;}
+      #hintBox.learningOpen.openclawOpen .learningCloseBtn,
+      #hintBox.learningOpen.aiAssistOpen .learningCloseBtn{
+        background:#fff!important;color:#1d4ed8!important;border:0!important;border-radius:999px!important;font-weight:900!important;
+        width:30px!important;height:30px!important;line-height:30px!important;padding:0!important;
+      }
+      #hintBox.learningOpen.openclawOpen .learningPanelBody,
+      #hintBox.learningOpen.aiAssistOpen .learningPanelBody{
+        max-height:calc(min(72vh,620px) - 54px)!important;overflow:auto!important;padding:12px!important;background:#f8fafc!important;
+      }
+      #hintBox.learningOpen.openclawOpen .aiChatMsgs,
+      #hintBox.learningOpen.aiAssistOpen .aiChatMsgs{max-height:min(38vh,330px)!important;}
+
+      @media(max-width:760px){
+        #ldvlAiChatBubbleV14{right:12px;bottom:14px;height:48px;padding:0 13px 0 9px;font-size:13px;}
+        #ldvlAiChatBubbleV14 .ldvlAiFace{width:32px;height:32px;font-size:18px;}
+        #ldvlAiChatBubbleV14 .ldvlAiBubbleText small{display:none;}
+        #hintBox.learningOpen.openclawOpen,#hintBox.learningOpen.aiAssistOpen{
+          right:8px!important;left:8px!important;bottom:70px!important;width:auto!important;max-height:70vh!important;border-radius:16px!important;
+        }
+      }
+    `;
+    var st=document.createElement('style');st.id='ldvlFloatingAiChatStyleV14';st.textContent=css;document.head.appendChild(st);
+  }
+  function syncBubble(){
+    var b=document.getElementById('ldvlAiChatBubbleV14');if(!b)return;
+    var open=(window.LEARNING_OPEN_KIND==='openclaw'||window.LEARNING_OPEN_KIND==='assistant');
+    b.classList.toggle('ldvlAiOpen',!!open);
+    var txt=b.querySelector('.ldvlAiBubbleText b');if(txt)txt.textContent=open?'Đang mở AI':'Chat AI';
+  }
+  function ensureBubble(){
+    injectStyle();
+    if(document.getElementById('ldvlAiChatBubbleV14')){syncBubble();return;}
+    var b=document.createElement('button');
+    b.type='button';b.id='ldvlAiChatBubbleV14';
+    b.title='Mở bóng chat AI Gemini';
+    b.innerHTML='<span class="ldvlAiFace">💬</span><span class="ldvlAiBubbleText"><b>Chat AI</b><small>Hỏi bài ngay</small></span>';
+    b.onclick=function(ev){
+      ev&&ev.preventDefault&&ev.preventDefault();
+      try{
+        if(window.USER&&USER.can_ai_hint===false){alert('Chat AI chỉ dành VIP / SVIP / ADMIN.');return;}
+        if(typeof toggleOpenClawPanel==='function')toggleOpenClawPanel();
+        else if(typeof requestHint==='function')requestHint();
+        setTimeout(syncBubble,80);
+      }catch(e){alert('Không mở được bóng chat AI: '+(e.message||e));}
+    };
+    document.body.appendChild(b);
+    syncBubble();
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBubble,250);setTimeout(ensureBubble,1800);});
+  var oldClose=window.closeLearningPanel;
+  window.closeLearningPanel=function(){
+    var r;
+    try{ if(typeof oldClose==='function') r=oldClose.apply(this,arguments); }
+    finally{ setTimeout(syncBubble,50); }
+    return r;
+  };
+  var oldOpenClaw=window.toggleOpenClawPanel;
+  window.toggleOpenClawPanel=function(){
+    var r;
+    try{ if(typeof oldOpenClaw==='function') r=oldOpenClaw.apply(this,arguments); }
+    finally{ setTimeout(function(){ensureBubble();syncBubble();},60); }
+    return r;
+  };
+  window.ldvlEnsureFloatingAiChat=ensureBubble;
+})();
+
 (function bootApp(){
   try{let i=document.getElementById('info');if(i)i.textContent='Đang kết nối server…'}catch(e){}
   try{enhanceHomeColors();initTheme();initMobileQuizToolbar();if(typeof warmTranslateEnSpeech==='function')warmTranslateEnSpeech()}catch(e){console.error(e)}
@@ -29029,6 +29226,7 @@ def _sanitize_assistant_chat_text(txt: Any) -> str:
 
 def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: Any = None, user_answer: Any = "") -> str:
     admin_mode = is_admin()
+    json_local_mode = clean(q.get("_JsonLocalChat", "")) == "1"
     block = build_ai_question_block(
         q, user_answer, include_sheet_answer=admin_mode, include_loigiai=False
     )
@@ -29061,7 +29259,11 @@ def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: An
         (
             "Nhiệm vụ ADMIN: trả lời câu hỏi thêm, giải đủ bước và có thể chốt đáp án cuối đúng TN/Đ/S/TLN."
             if admin_mode
-            else "Nhiệm vụ VIP/SVIP: trả lời câu hỏi thêm bằng gợi ý từng bước; KHÔNG chốt đáp án cuối."
+            else (
+                "Nhiệm vụ JSON Offline: trả lời ĐẦY ĐỦ từng bước theo câu đang mở; nếu tài khoản chưa được phép xem đáp án thì không chốt đáp án cuối."
+                if json_local_mode
+                else "Nhiệm vụ VIP/SVIP: trả lời câu hỏi thêm bằng gợi ý từng bước; KHÔNG chốt đáp án cuối."
+            )
         ),
         "",
         *assistant_subject_rules(q),
@@ -29081,13 +29283,13 @@ def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: An
         rules.extend([
             "- Nếu em hỏi «đáp án là gì»: trả lời ngắn các bước chính rồi «Đáp án cuối cùng: …».",
             f"- Đáp án tham chiếu Sheet (cột P): {ref_ans}",
-            "- Trả lời tối đa 12 dòng; kết thúc bằng đáp án nếu em hỏi về kết quả.",
+            ("- Với JSON Offline: trả lời đủ ý, đủ bước, không bỏ lửng; có thể dài 20–30 dòng nếu cần." if json_local_mode else "- Trả lời tối đa 12 dòng; kết thúc bằng đáp án nếu em hỏi về kết quả."),
         ])
     else:
         rules.extend([
             "- Nếu học sinh hỏi «đáp án là gì», chỉ nhắc cách kiểm tra/loại trừ, không nêu đáp án đúng.",
             "- Không ghi «Đáp án cuối cùng», không nói A/B/C/D nào đúng, không nêu đáp số cuối.",
-            "- Trả lời tối đa 10 dòng; kết thúc bằng câu hỏi gợi mở hoặc bước tự kiểm tra.",
+            ("- Với JSON Offline: trả lời đủ công thức, đủ bước thay số; không bỏ lửng giữa dòng. Có thể dài 18–25 dòng. Nếu chưa được phép xem đáp án, dừng ở bước tự kiểm tra gần cuối và không ghi đáp án cuối." if json_local_mode else "- Trả lời tối đa 10 dòng; kết thúc bằng câu hỏi gợi mở hoặc bước tự kiểm tra."),
         ])
     return "\n".join([
         *rules,
@@ -32191,6 +32393,71 @@ self.addEventListener('fetch', event => {
 
 
 # ============================================================
+# [JSON-LOCAL-AI] Bóng chat AI cho đề JSON offline
+# Client gửi câu hiện tại lên server khi có mạng; không lưu đề trên server.
+# ============================================================
+@app.route("/api/ai/json-local-chat", methods=["POST"])
+def api_ai_json_local_chat():
+    bad = require_login_json()
+    if bad:
+        return bad
+    bad_ai = require_ai_hint_json()
+    if bad_ai:
+        return bad_ai
+    refresh_session_role_from_store()
+    data = request.get_json(silent=True) or {}
+    q = data.get("q") or data.get("question") or {}
+    if not isinstance(q, dict):
+        return jsonify({"error": "Dữ liệu câu JSON không hợp lệ."}), 400
+    # Chuẩn hóa tên cột giống Cau_Hoi.
+    q = dict(q)
+    if "Môn" in q and "Mon" not in q:
+        q["Mon"] = q.get("Môn")
+    for k in [
+        "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "MucDo",
+        "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap",
+    ]:
+        q[k] = clean(q.get(k, ""))
+    if not q.get("CauHoi"):
+        return jsonify({"error": "Câu JSON chưa có nội dung CauHoi."}), 400
+    message = clean(data.get("message", ""))
+    if not message:
+        message = "Hãy gợi ý cách làm câu này."
+    if len(message) > 900:
+        return jsonify({"error": "Câu hỏi chat quá dài. Hãy hỏi ngắn gọn hơn."}), 400
+    answer = data.get("answer", "")
+    messages = data.get("messages", [])
+    try:
+        q = question_for_ai_prompt(q)
+        q["_JsonLocalChat"] = "1"
+        reply, key_index, provider_used, model, ai_error = assistant_invoke_ai(
+            q,
+            answer,
+            chat=True,
+            chat_message=message,
+            messages=messages,
+            max_tokens=JSON_LOCAL_CHAT_MAX_TOKENS,
+        )
+        if not clean(reply):
+            reply = assistant_fallback_chat(q)
+        return jsonify({
+            "ok": True,
+            "reply": reply,
+            "key_index": key_index,
+            "provider_used": provider_used or "FALLBACK",
+            "model": model,
+            "ai_error": ai_error,
+            "dang": effective_dang(q),
+            "show_answer": is_admin() or is_svip(),
+        })
+    except AdminGeminiQuotaError as e:
+        return admin_ai_quota_json(e)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+
+# ============================================================
 # [STUDENT-LOCAL-JSON] Học sinh tự nạp file JSON trên máy
 # Không upload lên Render, không lưu server, không dùng Google Sheet.
 # Vào: /json-local hoặc /de-json
@@ -32204,10 +32471,57 @@ def student_local_json_page():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Làm đề JSON trên máy học sinh</title>
+<title>Đề JSON Offline v21 · Học sinh tự nạp</title>
+<link rel="manifest" href="/json-local/manifest.webmanifest">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--line:#dbe5f2;--text:#102033;--muted:#667085;--blue:#2563eb;--green:#0f9f6e;--red:#dc2626;--amber:#b45309;--shadow:0 10px 30px rgba(16,32,51,.08)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Helvetica Neue",sans-serif;font-size:15px}.wrap{max-width:1180px;margin:0 auto;padding:12px}.top{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#eaf2ff,#fff);border-bottom:1px solid var(--line);box-shadow:0 2px 14px rgba(0,0,0,.04)}.topin{max-width:1180px;margin:0 auto;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:900;color:#0f3b8f}.pill{font-size:12px;color:#18512f;background:#dcfce7;border:1px solid #86efac;padding:5px 8px;border-radius:999px}.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px}.card h2,.card h3{margin:0 0 10px}.small{font-size:12px;color:var(--muted);line-height:1.45}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.btn{border:1px solid #b9c9df;background:#fff;border-radius:11px;padding:9px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.good{background:var(--green);border-color:var(--green);color:#fff}.btn.warn{background:#fff7ed;border-color:#fdba74;color:#9a3412}.btn.danger{background:#fff1f2;border-color:#fda4af;color:#be123c}.btn:disabled{opacity:.45;cursor:not-allowed}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:11px;padding:9px 10px;font:inherit;background:#fff}textarea{min-height:140px;resize:vertical}.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px;text-align:center}.stat b{display:block;font-size:20px}.qbox{font-size:17px;line-height:1.55}.latex{white-space:pre-wrap}.meta{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.tag{font-size:12px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:4px 7px;border-radius:999px}.opt{display:block;border:1px solid #d7e0ed;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;cursor:pointer;line-height:1.45}.opt:hover{border-color:#93c5fd;background:#eff6ff}.opt input{width:auto;margin-right:8px}.tfrow{display:grid;grid-template-columns:minmax(0,1fr) 88px 88px;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:12px;padding:8px;margin:8px 0;background:#fff}.tfrow label{display:flex;gap:5px;align-items:center;justify-content:center}.result{border-radius:13px;padding:10px;margin-top:10px;white-space:pre-wrap;line-height:1.45}.ok{background:#ecfdf5;border:1px solid #86efac;color:#065f46}.bad{background:#fff1f2;border:1px solid #fda4af;color:#9f1239}.note{background:#fffbeb;border:1px solid #fde68a;color:#7c2d12;border-radius:12px;padding:9px}.hidden{display:none!important}.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.bar{height:100%;background:var(--blue);width:0}.footerBtns{position:sticky;bottom:0;background:rgba(244,247,251,.94);backdrop-filter:blur(6px);padding:10px 0;display:flex;gap:8px;flex-wrap:wrap}.loigiai{border-left:4px solid #22c55e;background:#f0fdf4;padding:10px;border-radius:10px;margin-top:10px;white-space:pre-wrap}.list{max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px;background:#fff}.list button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #edf2f7;background:#fff;padding:9px;cursor:pointer}.list button:hover{background:#eff6ff}.list button.active{background:#dbeafe;font-weight:800}@media(max-width:820px){.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.stat{grid-template-columns:repeat(3,1fr)}.topin{align-items:flex-start}.tfrow{grid-template-columns:1fr 70px 70px}.qbox{font-size:16px}.wrap{padding:8px}.card{padding:10px}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Helvetica Neue",sans-serif;font-size:15px}.wrap{max-width:1180px;margin:0 auto;padding:12px}.top{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#eaf2ff,#fff);border-bottom:1px solid var(--line);box-shadow:0 2px 14px rgba(0,0,0,.04)}.topin{max-width:1180px;margin:0 auto;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:900;color:#0f3b8f}.pill{font-size:12px;color:#18512f;background:#dcfce7;border:1px solid #86efac;padding:5px 8px;border-radius:999px}.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px}.card h2,.card h3{margin:0 0 10px}.small{font-size:12px;color:var(--muted);line-height:1.45}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.btn{border:1px solid #b9c9df;background:#fff;border-radius:11px;padding:9px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.good{background:var(--green);border-color:var(--green);color:#fff}.btn.warn{background:#fff7ed;border-color:#fdba74;color:#9a3412}.btn.danger{background:#fff1f2;border-color:#fda4af;color:#be123c}.btn:disabled{opacity:.45;cursor:not-allowed}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:11px;padding:9px 10px;font:inherit;background:#fff}textarea{min-height:140px;resize:vertical}.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px}.filterField{display:flex;flex-direction:column;gap:4px}.filterField label{font-size:12px;font-weight:900;color:#0f172a}.filterField select{min-height:42px}.filterHelp{font-size:12px;color:#475467;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:8px;line-height:1.45;margin:6px 0 8px}.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px;text-align:center}.stat b{display:block;font-size:20px}.qbox{font-size:17px;line-height:1.55}.latex{white-space:pre-wrap}.meta{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.tag{font-size:12px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:4px 7px;border-radius:999px}.opt{display:block;border:1px solid #d7e0ed;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;cursor:pointer;line-height:1.45}.opt:hover{border-color:#93c5fd;background:#eff6ff}.opt input{width:auto;margin-right:8px}.tfrow{display:grid;grid-template-columns:minmax(0,1fr) 88px 88px;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:12px;padding:8px;margin:8px 0;background:#fff}.tfrow label{display:flex;gap:5px;align-items:center;justify-content:center}.result{border-radius:13px;padding:10px;margin-top:10px;white-space:pre-wrap;line-height:1.45}.ok{background:#ecfdf5;border:1px solid #86efac;color:#065f46}.bad{background:#fff1f2;border:1px solid #fda4af;color:#9f1239}.note{background:#fffbeb;border:1px solid #fde68a;color:#7c2d12;border-radius:12px;padding:9px}.hidden{display:none!important}.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.bar{height:100%;background:var(--blue);width:0}.footerBtns{position:sticky;bottom:0;background:rgba(244,247,251,.94);backdrop-filter:blur(6px);padding:10px 0;display:flex;gap:8px;flex-wrap:wrap}.loigiai{border-left:4px solid #22c55e;background:#f0fdf4;padding:10px;border-radius:10px;margin-top:10px;white-space:pre-wrap}.list{max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px;background:#fff}.list button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #edf2f7;background:#fff;padding:9px;cursor:pointer}.list button:hover{background:#eff6ff}.list button.active{background:#dbeafe;font-weight:800}@media(max-width:820px){.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.stat{grid-template-columns:repeat(3,1fr)}.topin{align-items:flex-start}.tfrow{grid-template-columns:1fr 70px 70px}.qbox{font-size:16px}.wrap{padding:8px}.card{padding:10px}}
+
+/* ===== V12: thiết kế lại khung đề JSON cho rõ, đậm, dễ đọc ===== */
+body{background:linear-gradient(180deg,#eef5ff 0%,#f8fafc 38%,#eef2f7 100%)!important;color:#0f172a!important}
+.grid{grid-template-columns:350px minmax(0,1fr)!important;align-items:start}.grid>.card:nth-child(2){padding:16px!important;border-radius:22px!important;border:1px solid #bfdbfe!important;box-shadow:0 18px 45px rgba(15,23,42,.12)!important;background:linear-gradient(180deg,#fff,#f8fbff)!important}.grid>.card:nth-child(1){border-radius:20px!important;box-shadow:0 14px 36px rgba(15,23,42,.10)!important}.card h2{font-size:20px!important;color:#0f172a!important}.meta{margin:10px 0 12px!important}.tag{font-size:12px!important;font-weight:900!important;background:#e0ecff!important;border-color:#93c5fd!important;color:#1d4ed8!important;padding:5px 9px!important}.progress{height:12px!important;background:#e2e8f0!important;border-radius:999px!important}.bar{background:linear-gradient(90deg,#2563eb,#22c55e)!important}.qbox,#questionArea,#questionArea.small{color:#0f172a!important;font-size:19px!important;line-height:1.75!important;font-weight:500!important}.questionPaper{position:relative;background:#ffffff;border:2px solid #dbeafe;border-left:8px solid #2563eb;border-radius:20px;padding:18px 20px;margin:14px 0 14px;box-shadow:0 10px 28px rgba(37,99,235,.10)}.questionPaper:before{content:"ĐỀ BÀI";position:absolute;top:-12px;left:18px;background:#2563eb;color:#fff;font-size:11px;font-weight:1000;letter-spacing:.08em;border-radius:999px;padding:5px 10px;box-shadow:0 6px 14px rgba(37,99,235,.25)}.qTextMain{color:#0b1220!important;font-size:19px!important;line-height:1.8!important;font-weight:600!important;white-space:pre-wrap}.qTextMain .MathJax,.questionPaper .MathJax{font-size:105%!important}.questionPaper img,.qbox img{display:block;max-width:min(100%,560px)!important;max-height:440px!important;object-fit:contain;margin:14px auto 4px;border-radius:14px;border:1px solid #dbeafe;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.10)}.answerCard{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:13px;margin-top:10px}.answerTitle{font-weight:1000;color:#0f172a;margin:0 0 10px;display:flex;align-items:center;gap:8px}.opt{position:relative;border:2px solid #dbe5f2!important;background:#fff!important;border-radius:16px!important;padding:13px 15px!important;margin:10px 0!important;cursor:pointer!important;line-height:1.65!important;color:#0f172a!important;font-size:16px!important;box-shadow:0 4px 14px rgba(15,23,42,.04);transition:.15s ease}.opt:hover{border-color:#60a5fa!important;background:#eff6ff!important;transform:translateY(-1px)}.opt:has(input:checked){border-color:#2563eb!important;background:#dbeafe!important;box-shadow:0 8px 24px rgba(37,99,235,.18)}.opt b{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;margin-right:8px;border-radius:10px;background:#2563eb;color:#fff;font-weight:1000}.opt input{transform:scale(1.15);accent-color:#2563eb}.manualChoiceWrap{display:grid;grid-template-columns:repeat(4,minmax(70px,1fr));gap:10px}.manualChoice{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;border:2px solid #dbe5f2;border-radius:15px;background:#fff;font-weight:1000;cursor:pointer}.manualChoice:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.shortBox{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:14px;margin-top:12px}.shortBox input{font-size:18px!important;font-weight:800!important;border:2px solid #bfdbfe!important;background:#fff!important}.tfrow{border:2px solid #dbe5f2!important;border-radius:16px!important;background:#fff!important;padding:12px!important;color:#0f172a!important;box-shadow:0 4px 14px rgba(15,23,42,.04)}.tfrow>div{font-size:16px;line-height:1.6;font-weight:600}.tfrow label{font-weight:900;border:1px solid #dbe5f2;border-radius:12px;padding:9px;background:#f8fafc;cursor:pointer}.tfrow label:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.result{font-size:16px!important;font-weight:800!important;line-height:1.65!important;border-radius:16px!important}.loigiai{border:2px solid #86efac!important;border-left:8px solid #22c55e!important;background:#ecfdf5!important;color:#064e3b!important;border-radius:18px!important;padding:15px 17px!important;font-size:16px!important;line-height:1.75!important;box-shadow:0 8px 22px rgba(34,197,94,.12)}.solTitle{font-weight:1000;color:#065f46;margin-bottom:8px;font-size:17px}.emptyWarn{background:#fff7ed;border:2px dashed #fdba74;color:#9a3412;border-radius:16px;padding:12px;line-height:1.55;font-weight:700}.footerBtns{border-top:1px solid #dbe5f2;margin-top:14px}.footerBtns .btn{min-height:42px;border-radius:13px}.list button{font-size:13px;line-height:1.4}.list button.active{background:#dbeafe!important;border-left:5px solid #2563eb!important;color:#0f172a!important}@media(max-width:820px){.grid{grid-template-columns:1fr!important}.qbox,#questionArea,#questionArea.small,.qTextMain{font-size:17px!important}.questionPaper{padding:16px 14px}.manualChoiceWrap{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== V13: tự chấm + ẩn/mở bộ lọc để mở rộng đề ===== */
+.jsonLocalGrid{transition:.2s ease}.sidePanel{transition:.2s ease}.quizPanel{min-height:calc(100vh - 125px)}
+body.sideHidden .jsonLocalGrid{grid-template-columns:minmax(0,1fr)!important;max-width:1180px;margin:0 auto}
+body.sideHidden .sidePanel{display:none!important}
+body.sideHidden .quizPanel{width:100%!important}
+.quizTopBar{position:sticky;top:58px;z-index:6;background:linear-gradient(180deg,#fff,#f8fbff);padding-bottom:10px;border-bottom:1px solid #e2e8f0}
+.autoCheckBox{display:inline-flex;align-items:center;gap:6px;border:1px solid #86efac;background:#ecfdf5;color:#065f46;border-radius:999px;padding:8px 10px;font-weight:1000;font-size:13px;cursor:pointer;white-space:nowrap}.autoCheckBox input{width:auto;accent-color:#16a34a}.autoCheckBox:has(input:not(:checked)){background:#f8fafc;color:#64748b;border-color:#cbd5e1}
+#answerArea{margin-top:8px}.questionPaper{min-height:86px}.qTextMain{font-size:20px!important;color:#07111f!important}.questionPaper:before{content:"ĐỀ BÀI - ĐỌC KĨ"!important}.answerCard{border-left:6px solid #2563eb!important}.result.ok{border:2px solid #22c55e!important;background:#dcfce7!important}.result.bad{border:2px solid #fb7185!important;background:#fff1f2!important}.footerBtns .btn.primary{box-shadow:0 8px 18px rgba(37,99,235,.22)}
+
+@media(max-width:820px){.quizTopBar{top:0;position:sticky}.autoCheckBox{width:auto;justify-content:center}body.sideHidden .sidePanel{display:none!important}body.sideHidden .jsonLocalGrid{grid-template-columns:1fr!important}}
+
+/* ===== V16: JSON offline đẹp hơn trên điện thoại + bóng chat AI ===== */
+.jsonAiBubble{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:0;border-radius:999px;background:linear-gradient(135deg,#2563eb,#7c3aed 55%,#ec4899);color:#fff;display:flex;align-items:center;gap:9px;padding:10px 15px 10px 10px;font-weight:1000;box-shadow:0 16px 38px rgba(37,99,235,.35),0 5px 14px rgba(15,23,42,.18);cursor:pointer}.jsonAiBubble .face{width:36px;height:36px;border-radius:50%;background:#fff;color:#2563eb;display:grid;place-items:center;font-size:20px}.jsonAiBubble span:last-child{display:flex;flex-direction:column;text-align:left;line-height:1.05}.jsonAiBubble small{font-size:10.5px;color:#e0e7ff;margin-top:2px}.jsonAiPanel{position:fixed;right:18px;bottom:84px;width:min(460px,calc(100vw - 24px));max-height:min(72vh,650px);z-index:2147482999;background:#fff;border:2px solid #2563eb;border-radius:20px;box-shadow:0 24px 70px rgba(15,23,42,.30);overflow:hidden;display:flex;flex-direction:column}.jsonAiHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;font-weight:1000}.jsonAiHead button{border:0;background:#fff;color:#1d4ed8;border-radius:999px;width:30px;height:30px;font-weight:1000;cursor:pointer}.jsonAiMsgs{padding:12px;background:#f8fafc;overflow:auto;min-height:180px;max-height:42vh}.jsonAiMsg{margin:8px 0;display:flex}.jsonAiMsg .bubble{max-width:88%;padding:9px 11px;border-radius:14px;line-height:1.45;white-space:pre-wrap;border:1px solid #e2e8f0}.jsonAiMsg.user{justify-content:flex-end}.jsonAiMsg.user .bubble{background:#2563eb;color:#fff;border-color:#2563eb}.jsonAiMsg.ai .bubble{background:#fff;color:#0f172a}.jsonAiQuick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#eff6ff;border-top:1px solid #dbeafe}.jsonAiQuick button{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;border-radius:999px;padding:7px 9px;font-weight:900;font-size:12px;cursor:pointer}.jsonAiInput{display:flex;gap:8px;padding:10px;background:#fff;border-top:1px solid #e2e8f0}.jsonAiInput textarea{min-height:48px;max-height:110px;resize:vertical;border:1px solid #cbd5e1;border-radius:12px;padding:10px;font-size:14px}.jsonAiInput button{width:86px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-weight:1000;cursor:pointer}.jsonLocalGrid{max-width:1220px}.quizPanel{overflow:hidden}.quizTopBar h2{line-height:1.2}.answerCard,.questionPaper,.tfrow,.shortBox{max-width:100%}.latex{overflow-wrap:anywhere;word-break:normal}.MathJax{max-width:100%;overflow-x:auto;overflow-y:hidden}.questionPaper mjx-container,.answerCard mjx-container,.loigiai mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}.mobileOnlyHint{display:none}
+@media(max-width:820px){body{font-size:14px!important}.top{position:relative!important}.topin{padding:8px 10px!important}.brand{font-size:14px!important}.top .small{font-size:11px!important}.wrap{padding:6px!important}.grid,.jsonLocalGrid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.grid>.card:nth-child(2),.quizPanel{border-radius:14px!important;padding:10px!important;min-height:70vh!important}.grid>.card:nth-child(1),.sidePanel{border-radius:14px!important;padding:10px!important}.quizTopBar{top:0!important;position:sticky!important;z-index:20!important;margin:-10px -10px 8px!important;padding:8px 10px!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(8px)!important}.quizTopBar h2{font-size:16px!important;margin:0!important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.quizTopBar>.row{width:100%;gap:6px!important}.quizTopBar .btn,.quizTopBar .autoCheckBox{min-height:36px!important;padding:7px 9px!important;font-size:12px!important;flex:1 1 auto}.meta{max-height:58px;overflow:auto;margin:6px 0!important}.tag{font-size:10.5px!important;padding:4px 7px!important}.progress{height:8px!important}.qbox,#questionArea,#questionArea.small,.qTextMain{font-size:16px!important;line-height:1.6!important}.questionPaper{border-left-width:5px!important;border-radius:14px!important;padding:15px 12px!important;margin:10px 0!important}.questionPaper:before{font-size:9.5px!important;top:-10px!important;left:12px!important}.questionPaper img,.qbox img{max-height:280px!important;border-radius:10px!important}.answerCard,.shortBox{border-radius:14px!important;padding:10px!important}.answerTitle{font-size:13px!important}.opt{font-size:15px!important;padding:11px 10px!important;margin:8px 0!important;border-radius:13px!important}.opt b{min-width:28px;height:28px}.tfrow{grid-template-columns:1fr!important;gap:8px!important;padding:10px!important}.tfrow>div{font-size:15px!important}.tfrow label{display:inline-flex!important;justify-content:center!important;min-height:40px!important}.tfrow{position:relative}.tfrow label:nth-of-type(1),.tfrow label:nth-of-type(2){width:calc(50% - 4px);float:left}.manualChoiceWrap{grid-template-columns:repeat(2,1fr)!important}.footerBtns{position:sticky!important;bottom:0!important;margin:8px -10px -10px!important;padding:8px 10px!important;background:rgba(248,250,252,.96)!important;z-index:15}.footerBtns .btn{flex:1 1 42%;font-size:12px!important;min-height:38px!important;padding:8px!important}.loigiai{font-size:15px!important;padding:12px!important;border-radius:14px!important}.filters{grid-template-columns:1fr 1fr!important;gap:8px!important}.filterField label{font-size:11px!important}.filterField select{min-height:38px!important;font-size:13px!important}.row .btn{font-size:12px;padding:8px 9px}.stat b{font-size:18px}.list{max-height:170px}.mobileOnlyHint{display:block;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:12px;padding:8px;margin:6px 0;font-size:12px;font-weight:800}.jsonAiBubble{right:12px;bottom:12px;padding:8px 11px 8px 8px}.jsonAiBubble .face{width:32px;height:32px}.jsonAiBubble small{display:none}.jsonAiPanel{left:8px;right:8px;bottom:62px;width:auto;max-height:76vh;border-radius:16px}.jsonAiMsgs{max-height:42vh;min-height:160px}.jsonAiInput{gap:6px;padding:8px}.jsonAiInput button{width:72px}.jsonAiInput textarea{font-size:13px}.sidePanel h2,.sidePanel h3{font-size:17px!important}body.sideHidden .sidePanel{display:none!important}body.sideHidden .quizPanel{min-height:calc(100vh - 16px)!important}}
+
+
+
+/* ===== V18: khung nhập Gemini key ngay trong bóng chat JSON ===== */
+.jsonAiKeyBox{background:#fff7ed;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.jsonAiKeyTop{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:1000;color:#7c2d12}.jsonAiKeyTop small{font-weight:800;color:#9a3412}
+.jsonAiKeyBox textarea{width:100%;min-height:52px;max-height:110px;border:1px solid #fdba74;border-radius:12px;padding:9px 10px;font-size:13px;background:#fff;color:#0f172a;resize:vertical}.jsonAiKeyBox textarea:focus{outline:2px solid rgba(249,115,22,.22);border-color:#f97316}
+.jsonAiKeyBtns{display:flex;gap:6px;flex-wrap:wrap}.jsonAiKeyBtns button{border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:999px;padding:7px 10px;font-weight:1000;font-size:12px;cursor:pointer}.jsonAiKeyBtns button.save{background:#16a34a;border-color:#16a34a;color:#fff}.jsonAiKeyBtns button.test{background:#2563eb;border-color:#2563eb;color:#fff}.jsonAiKeyBtns button.clear{background:#fff1f2;border-color:#fda4af;color:#be123c}
+#jsonAiKeyStatus{font-size:12px;line-height:1.4;color:#7c2d12;background:#fffbeb;border:1px dashed #fbbf24;border-radius:10px;padding:7px 8px}.jsonAiKeyHint{font-size:11.5px;line-height:1.35;color:#7c2d12}.jsonAiKeyHint a{color:#1d4ed8;font-weight:900;text-decoration:none}.jsonAiLoginWarn{background:#fff1f2!important;border-color:#fda4af!important;color:#be123c!important}
+@media(max-width:820px){.jsonAiKeyBox{padding:8px}.jsonAiKeyBox textarea{min-height:42px;font-size:12px}.jsonAiKeyBtns button{font-size:11px;padding:6px 8px}.jsonAiKeyHint{font-size:10.8px}.jsonAiMsgs{min-height:120px!important}}
+
+.jsonAiKeyToggle{border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:999px;padding:5px 9px;font-weight:1000;font-size:11px;cursor:pointer;white-space:nowrap}
+.jsonAiKeyBox.collapsed{background:#ecfdf5;border-top:1px solid #86efac;border-bottom:1px solid #86efac;padding:8px 12px;gap:4px}
+.jsonAiKeyBox.collapsed .jsonAiKeyTop{color:#065f46}.jsonAiKeyBox.collapsed .jsonAiKeyTop small{color:#15803d}.jsonAiKeyBox.collapsed .jsonAiKeyToggle{border-color:#86efac;color:#166534;background:#fff}
+.jsonAiKeyBox.collapsed textarea,.jsonAiKeyBox.collapsed .jsonAiKeyBtns,.jsonAiKeyBox.collapsed .jsonAiKeyHint{display:none!important}
+.jsonAiKeyBox.collapsed #jsonAiKeyStatus{background:transparent!important;border:0!important;padding:0!important;color:#166534!important;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+@media(max-width:820px){.jsonAiKeyBox.collapsed{padding:7px 9px}.jsonAiKeyBox.collapsed #jsonAiKeyStatus{font-size:11px}.jsonAiKeyToggle{font-size:10.5px;padding:5px 7px}}
+/* ===== V20: khi đã lưu key thì thu gọn thành 1 thanh rất mỏng ở trên ===== */
+.jsonAiKeyBox.collapsed{padding:4px 10px!important;min-height:30px!important;gap:0!important;background:#ecfdf5!important;border-top:1px solid #86efac!important;border-bottom:1px solid #86efac!important}
+.jsonAiKeyBox.collapsed .jsonAiKeyTop{width:100%;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:6px!important;min-height:26px!important;line-height:1!important;color:#065f46!important}
+.jsonAiKeyBox.collapsed #jsonAiKeyTitle{font-size:12px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:145px!important}
+.jsonAiKeyBox.collapsed #jsonAiKeyMini{font-size:11px!important;color:#15803d!important;max-width:170px!important;display:inline-block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.jsonAiKeyBox.collapsed #jsonAiKeyStatus{display:none!important}
+.jsonAiKeyBox.collapsed textarea,.jsonAiKeyBox.collapsed .jsonAiKeyBtns,.jsonAiKeyBox.collapsed .jsonAiKeyHint{display:none!important}
+.jsonAiKeyBox.collapsed .jsonAiKeyToggle{font-size:10.5px!important;padding:4px 7px!important;border-color:#86efac!important;color:#166534!important;background:#fff!important}
+@media(max-width:820px){.jsonAiKeyBox.collapsed{padding:3px 8px!important}.jsonAiKeyBox.collapsed #jsonAiKeyTitle{max-width:105px!important;font-size:11px!important}.jsonAiKeyBox.collapsed #jsonAiKeyMini{max-width:120px!important;font-size:10.5px!important}.jsonAiKeyBox.collapsed .jsonAiKeyToggle{font-size:10px!important;padding:4px 6px!important}.jsonAiPanel{max-height:82vh!important}.jsonAiMsgs{max-height:50vh!important}}
+
 </style>
 <script>
 window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},svg:{fontCache:'global'}};
@@ -32215,34 +32529,49 @@ window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body>
-<div class="top"><div class="topin"><div><div class="brand">📦 Làm đề JSON trên máy học sinh</div><div class="small">Học sinh tự chọn file JSON từ máy. File không gửi lên server, lưu tạm trong trình duyệt.</div></div><span class="pill">Local JSON · nhẹ · không Google Sheet</span></div></div>
+<div class="top"><div class="topin"><div><div class="brand">📦 Đề JSON Offline · Học sinh tự nạp</div><div class="small">Tự nhập / lưu / mở lại đề JSON trên máy. File không gửi lên server, không dùng Google Sheet.</div></div><div class="row" style="margin:0"><a class="btn" href="/chon-de">← Chọn nguồn đề</a><span id="userRoleBadge" class="pill">Local JSON · nhẹ · offline</span></div></div></div>
 <div class="wrap">
-  <div class="grid">
-    <div class="card">
+  <div id="localGrid" class="grid jsonLocalGrid">
+    <div id="sidePanel" class="card sidePanel">
       <h2>1. Nạp đề JSON</h2>
-      <div class="note">Dùng JSON dạng cột <b>Cau_Hoi</b>: <code>{headers:[...], rows:[...]}</code>. Đúng/Sai và Trả lời ngắn vẫn dùng cột <b>Dang</b>, <b>DapAn</b>, <b>SaiSo</b>.</div>
+      <div class="note">Dùng JSON dạng cột <b>Cau_Hoi</b>: <code>{headers:[...], rows:[...]}</code>. Quyền theo cột <b>QuyenTruyCap</b>: FREE / VIP / SVIP. Trang này tự lưu đề và bài làm vào trình duyệt để mở lại khi không có mạng.</div>
+      <div id="offlineMsg" class="small">Đang kiểm tra chế độ offline...</div>
       <div class="row"><input id="fileInput" type="file" accept=".json,application/json"></div>
-      <div class="row"><button class="btn primary" onclick="loadFile()">📂 Đọc file</button><button class="btn" onclick="pasteBox.classList.toggle('hidden')">Dán JSON</button><button class="btn danger" onclick="clearLocal()">Xóa đề đã nạp</button></div>
+      <div class="row">
+        <button class="btn primary" onclick="loadFile()">📥 Nhập file JSON</button>
+        <button class="btn good" onclick="saveCurrentToLocal()">💾 Lưu đề trên máy</button>
+        <button class="btn" onclick="openSavedLocal()">📂 Mở đề đã lưu</button>
+        <button class="btn" onclick="pasteBox.classList.toggle('hidden')">Dán JSON</button>
+        <button class="btn danger" onclick="clearLocal()">Xóa đề đã nạp</button>
+      </div>
       <div id="pasteBox" class="hidden"><textarea id="jsonText" placeholder="Dán JSON ở đây..."></textarea><div class="row"><button class="btn good" onclick="loadPasted()">✅ Đọc JSON dán</button></div></div>
       <div id="loadMsg" class="small"></div>
       <h3>2. Lọc đề</h3>
+      <div class="filterHelp">Chọn theo thứ tự dễ nhất: <b>Bộ đề</b> → <b>Lớp</b> → <b>Môn</b> → <b>Chương</b> → <b>Bài học</b>. Không cần lọc mục nào thì để <b>Tất cả</b>.</div>
       <div class="filters">
-        <select id="fBoDe" onchange="applyFilters()"></select>
-        <select id="fLop" onchange="applyFilters()"></select>
-        <select id="fMon" onchange="applyFilters()"></select>
-        <select id="fChuong" onchange="applyFilters()"></select>
-        <select id="fBai" onchange="applyFilters()"></select>
-        <select id="fDang" onchange="applyFilters()"></select>
-        <select id="fMucDo" onchange="applyFilters()"></select>
-        <select id="fDe" onchange="applyFilters()"></select>
+        <div class="filterField"><label for="fBoDe">📚 Bộ đề / Chuyên đề</label><select id="fBoDe" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fLop">🏫 Lớp</label><select id="fLop" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fMon">📘 Môn học</label><select id="fMon" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fChuong">🧩 Chương</label><select id="fChuong" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fBai">📖 Bài học</label><select id="fBai" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fDang">📝 Dạng câu</label><select id="fDang" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fMucDo">⭐ Mức độ</label><select id="fMucDo" onchange="applyFilters()"></select></div>
+        <div class="filterField"><label for="fDe">🗂️ Mã đề / Tên đề</label><select id="fDe" onchange="applyFilters()"></select></div>
       </div>
-      <div class="row"><button class="btn good" onclick="startQuiz(false)">▶️ Làm theo thứ tự</button><button class="btn warn" onclick="startQuiz(true)">🔀 Trộn câu</button><button class="btn" onclick="exportCurrentJson()">⬇️ Tải lại JSON</button></div>
+      <div class="row"><button class="btn" onclick="resetFiltersAndShowAll()">🔄 Xóa lọc / hiện tất cả</button><button class="btn good" onclick="startQuiz(false)">▶️ Làm theo thứ tự</button><button class="btn warn" onclick="startQuiz(true)">🔀 Trộn câu</button><button class="btn" onclick="exportCurrentJson()">⬇️ Tải đề JSON ra file</button><button class="btn" onclick="exportProgressJson()">📝 Tải bài làm</button><button class="btn" onclick="importProgressClick()">📑 Mở bài làm</button><input id="progressInput" type="file" accept=".json,application/json" style="display:none" onchange="importProgressFile(this.files[0])"></div>
       <div class="stat"><div><b id="totalN">0</b><span class="small">Tổng</span></div><div><b id="filterN">0</b><span class="small">Đang lọc</span></div><div><b id="scoreN">0</b><span class="small">Điểm đúng</span></div></div>
       <h3>Danh sách câu</h3>
       <div id="qList" class="list"></div>
     </div>
-    <div class="card">
-      <div class="row" style="justify-content:space-between"><h2 id="quizTitle">Chưa có đề</h2><button class="btn" onclick="renderMath()">∑ Render công thức</button></div>
+    <div id="quizPanel" class="card quizPanel">
+      <div class="row quizTopBar" style="justify-content:space-between">
+        <h2 id="quizTitle">Chưa có đề</h2>
+        <div class="row" style="margin:0">
+          <label class="autoCheckBox" title="Bật để chọn đáp án là app tự chấm ngay"><input id="autoCheckToggle" type="checkbox" checked onchange="AUTO_CHECK=this.checked"> Tự chấm</label>
+          <button class="btn" onclick="toggleSidePanel()" id="toggleSideBtn">⛶ Mở rộng đề</button>
+          <button class="btn" onclick="renderMath()">∑ Render công thức</button>
+        </div>
+      </div>
       <div class="progress"><div id="bar" class="bar"></div></div>
       <div class="meta" id="meta"></div>
       <div id="questionArea" class="qbox small">Hãy nạp file JSON để bắt đầu.</div>
@@ -32252,38 +32581,70 @@ window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$
       <div class="footerBtns"><button class="btn" onclick="prevQ()">← Câu trước</button><button class="btn primary" onclick="checkAnswer()">✅ Chấm câu này</button><button class="btn good" onclick="showSolution()">💡 Lời giải</button><button class="btn" onclick="nextQ()">Câu sau →</button><button class="btn warn" onclick="finishQuiz()">🏁 Tổng kết</button></div>
     </div>
   </div>
+
+</div>
+<button id="jsonAiBubble" class="jsonAiBubble" type="button" onclick="toggleJsonAiChat()"><span class="face">💬</span><span><b>Chat AI</b><small>Hỏi câu JSON</small></span></button>
+<div id="jsonAiPanel" class="jsonAiPanel hidden">
+  <div class="jsonAiHead"><span>💬 Bóng chat AI · đề JSON</span><button type="button" onclick="toggleJsonAiChat(false)">×</button></div>
+  <div class="jsonAiKeyBox" id="jsonAiKeyBox">
+    <div class="jsonAiKeyTop"><span id="jsonAiKeyTitle">🔑 Gemini key cho Chat AI</span><span style="display:flex;align-items:center;gap:6px"><small id="jsonAiKeyMini">đang kiểm tra...</small><button id="jsonAiKeyToggle" class="jsonAiKeyToggle" type="button" onclick="jsonAiToggleKeyBox()">Thu gọn</button></span></div>
+    <textarea id="jsonGeminiKeys" placeholder="Dán Gemini API key AIza... hoặc AQ... vào đây. Có thể dán nhiều key, mỗi dòng 1 key."></textarea>
+    <div class="jsonAiKeyBtns">
+      <button class="save" type="button" onclick="jsonAiSaveGeminiKey()">💾 Lưu key</button>
+      <button class="test" type="button" onclick="jsonAiTestGeminiKey()">🧪 Test key</button>
+      <button class="clear" type="button" onclick="jsonAiClearGeminiKey()">🗑 Xóa key</button>
+    </div>
+    <div id="jsonAiKeyStatus">VIP/SVIP/ADMIN dùng Gemini để hỏi AI. Key lưu theo tài khoản đang đăng nhập, không lưu vào file JSON.</div>
+    <div class="jsonAiKeyHint">Lấy key tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> → Create API key → copy key → quay lại app dán vào đây.</div>
+  </div>
+  <div id="jsonAiMsgs" class="jsonAiMsgs"><div class="jsonAiMsg ai"><div class="bubble">Chọn một câu rồi hỏi AI. Nếu chưa gọi được AI, hãy dán Gemini key ở khung 🔑 phía trên rồi bấm Lưu key / Test key.</div></div></div>
+  <div class="jsonAiQuick"><button type="button" onclick="jsonAiAskQuick('Gợi ý cách làm câu này, không chốt đáp án nếu em chưa được phép xem.')">Gợi ý</button><button type="button" onclick="jsonAiAskQuick('Giải thích dạng bài và công thức cần dùng.')">Dạng bài</button><button type="button" onclick="jsonAiAskQuick('Kiểm tra đáp án em đã chọn/nhập và chỉ ra lỗi sai nếu có.')">Kiểm tra bài làm</button></div>
+  <div class="jsonAiInput"><textarea id="jsonAiInput" placeholder="Hỏi AI về câu đang mở..."></textarea><button type="button" onclick="sendJsonAiChat()">Gửi</button></div>
 </div>
 <script>
-const LS_KEY='thayMinh.localCauHoiJson.v1';
-const LS_PROGRESS='thayMinh.localCauHoiProgress.v1';
+const LS_KEY='thayMinh.localCauHoiJson.v20';
+const LS_PROGRESS='thayMinh.localCauHoiProgress.v20';
+const CURRENT_USER={{ user|tojson }};
 let rawPack=null, allRows=[], filtered=[], quiz=[], idx=0, answers={}, checked={};
+let AUTO_CHECK=true;
+let AUTO_CHECK_TIMER=null;
 const $=id=>document.getElementById(id);
 const fields={fBoDe:'BoDe',fLop:'Lop',fMon:'Mon',fChuong:'Chuong',fBai:'BaiHoc',fDang:'Dang',fMucDo:'MucDo',fDe:'De'};
+function userRole(){let u=CURRENT_USER||{}; if(u.is_admin)return 'ADMIN'; if(u.is_svip)return 'SVIP'; if(u.is_vip)return 'VIP'; if(u.is_trial)return 'TRIAL'; return String(u.role||'FREE').toUpperCase()}
+function roleLabel(){let u=CURRENT_USER||{}; return u.role_label||userRole()||'FREE'}
+function accessNeed(r){let raw=clean(getVal(r,'QuyenTruyCap')||getVal(r,'Quyen')||getVal(r,'QuyenTruyCap')); let k=stripAccents(raw).toUpperCase().replace(/\s+/g,''); if(!k)return 'VIP'; if(k==='S.VIP'||k==='SVIP')return 'SVIP'; if(k==='ADMIN')return 'ADMIN'; if(k==='FREE'||k==='MIENPHI')return 'FREE'; return 'VIP'}
+function canAccessRow(r){let need=accessNeed(r), u=CURRENT_USER||{}; if(u.is_admin)return true; if(need==='ADMIN')return false; if(u.is_svip)return need!=='ADMIN'; if(u.is_vip)return need!=='SVIP'&&need!=='ADMIN'; if(u.is_trial)return need==='FREE'; return need==='FREE'}
+function canViewSolutionRow(r){let u=CURRENT_USER||{}; return !!(u.is_admin||u.is_svip||u.is_vip)}
+function updateUserBadge(){let el=document.getElementById('userRoleBadge'); if(el)el.textContent='Tài khoản: '+roleLabel()}
 function clean(v){return (v==null?'':String(v)).trim()}
 function stripAccents(s){return clean(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D')}
 function kn(s){return stripAccents(s).toLowerCase().replace(/\s+/g,' ').trim()}
 function getVal(r,k){if(!r)return''; if(k in r)return clean(r[k]); if(k==='Mon' && 'Môn' in r)return clean(r['Môn']); if(k==='CauHoi' && 'NoiDung' in r)return clean(r.NoiDung); return clean(r[k]||'')}
 function setVal(r,k,v){r[k]=v}
 function normDang(s){let k=kn(s); if(/dung.*sai|true.*false|^ds$|^tf$/.test(k))return 'Đúng sai'; if(/tra.*loi.*ngan|tln|short/.test(k))return 'Trả lời ngắn'; if(/tu.*luan|essay/.test(k))return 'Tự luận'; return 'Trắc nghiệm'}
-function normalizeRow(r,i){let o={}; Object.keys(r||{}).forEach(k=>{o[k==='Môn'?'Mon':k]=r[k]}); if(!o.ID)o.ID='J'+String(i+1).padStart(4,'0'); if(!o.Dang)o.Dang=(clean(o.A)||clean(o.B)||clean(o.C)||clean(o.D))?'Trắc nghiệm':'Tự luận'; o.Dang=normDang(o.Dang); if(!o.CauHoi && o.NoiDung)o.CauHoi=o.NoiDung; ['BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'].forEach(k=>{if(!(k in o))o[k]=''}); return o}
+function normalizeRow(r,i){let o={}; Object.keys(r||{}).forEach(k=>{o[k==='Môn'?'Mon':k]=r[k]}); if(!o.ID)o.ID='J'+String(i+1).padStart(4,'0'); if(!o.Dang)o.Dang=(clean(o.A)||clean(o.B)||clean(o.C)||clean(o.D))?'Trắc nghiệm':'Tự luận'; o.Dang=normDang(o.Dang); if(!o.CauHoi && o.NoiDung)o.CauHoi=o.NoiDung; ['BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh','QuyenTruyCap'].forEach(k=>{if(!(k in o))o[k]=''}); return o}
 function extractLoigiai(content){let s=clean(content); let m=s.match(/\\loigiai\s*\{([\s\S]*)\}\s*\\end\{(?:ex|bt)\}/i); return m?m[1].trim():''}
 function stripLatexEnv(content){let s=clean(content); s=s.replace(/^\\begin\{(?:ex|bt)\}\s*/i,'').replace(/\\end\{(?:ex|bt)\}\s*$/i,''); s=s.replace(/\\loigiai\s*\{[\s\S]*\}\s*$/i,'').trim(); return s}
-function convertOldPack(obj){let rows=[]; if(obj&&Array.isArray(obj.rows))return obj.rows; if(Array.isArray(obj))return obj; if(obj&&Array.isArray(obj.questions))return obj.questions; if(obj&&Array.isArray(obj.exams)){obj.exams.forEach(ex=>{(ex.questions||[]).forEach((q,j)=>{let content=clean(q.content||q.body||''); rows.push({ID:q.id||('Q'+String(j+1).padStart(3,'0')),BoDe:ex.name||'',De:ex.name||'',Lop:'',Mon:ex.spaceName||'',Chuong:ex.chapterNo||'',BaiHoc:ex.lessonNo||'',Dang:q.type==='bt'?'Tự luận':'Trắc nghiệm',CauHoi:stripLatexEnv(content),A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:extractLoigiai(content),HinhAnh:''})})}); return rows} return []}
-function parsePack(obj){let rows=convertOldPack(obj).map(normalizeRow); if(!rows.length)throw new Error('Không thấy rows/questions trong JSON. Cần dạng {headers, rows}.'); return {sheet:'Cau_Hoi',schema:'Cau_Hoi.columns.local.v1',headers:['ID','BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'],rows}}
-function loadPack(obj, save=true){rawPack=parsePack(obj); allRows=rawPack.rows; if(save)localStorage.setItem(LS_KEY,JSON.stringify(rawPack)); $('loadMsg').innerHTML='✅ Đã nạp <b>'+allRows.length+'</b> câu. Đề lưu trên máy này.'; buildFilters(); applyFilters(); startQuiz(false)}
+function convertOldPack(obj){let rows=[]; if(obj&&Array.isArray(obj.rows))return obj.rows; if(Array.isArray(obj))return obj; if(obj&&Array.isArray(obj.questions))return obj.questions; if(obj&&Array.isArray(obj.exams)){obj.exams.forEach(ex=>{(ex.questions||[]).forEach((q,j)=>{let content=clean(q.content||q.body||''); rows.push({ID:q.id||('Q'+String(j+1).padStart(3,'0')),BoDe:ex.name||'',De:ex.name||'',Lop:'',Mon:ex.spaceName||'',Chuong:ex.chapterNo||'',BaiHoc:ex.lessonNo||'',Dang:q.type==='bt'?'Tự luận':'Trắc nghiệm',CauHoi:stripLatexEnv(content),A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:extractLoigiai(content),HinhAnh:'',QuyenTruyCap:'VIP'})})}); return rows} return []}
+function parsePack(obj){let rows=convertOldPack(obj).map(normalizeRow); if(!rows.length)throw new Error('Không thấy rows/questions trong JSON. Cần dạng {headers, rows}.'); return {sheet:'Cau_Hoi',schema:'Cau_Hoi.columns.local.v1',headers:['ID','BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh','QuyenTruyCap'],rows}}
+function loadPack(obj, save=true){rawPack=parsePack(obj); let rows=rawPack.rows||[]; let total=rows.length; allRows=rows.filter(canAccessRow); let locked=total-allRows.length; if(save)localStorage.setItem(LS_KEY,JSON.stringify(rawPack)); $('loadMsg').innerHTML='✅ Đã nạp <b>'+allRows.length+'</b>/<b>'+total+'</b> câu cho quyền <b>'+roleLabel()+'</b>.'+(locked>0?' <span style="color:#b45309">Đã khóa '+locked+' câu vượt quyền.</span>':'')+' Đề lưu trên máy này.'; buildFilters(); applyFilters(); startQuiz(false)}
 function loadFile(){let f=$('fileInput').files[0]; if(!f){alert('Chọn file JSON trước.');return} let rd=new FileReader(); rd.onload=()=>{try{loadPack(JSON.parse(rd.result))}catch(e){alert('JSON lỗi: '+e.message)}}; rd.readAsText(f,'utf-8')}
 function loadPasted(){try{loadPack(JSON.parse($('jsonText').value))}catch(e){alert('JSON lỗi: '+e.message)}}
 function clearLocal(){if(confirm('Xóa đề JSON đã nạp trên máy này?')){localStorage.removeItem(LS_KEY);localStorage.removeItem(LS_PROGRESS);location.reload()}}
-function optionList(id, arr){let el=$(id); let old=el.value; el.innerHTML='<option value="">Tất cả</option>'+arr.map(v=>'<option>'+esc(v)+'</option>').join(''); if([...el.options].some(o=>o.value===old))el.value=old}
+function optionLabel(id){return ({fBoDe:'Tất cả bộ đề',fLop:'Tất cả lớp',fMon:'Tất cả môn',fChuong:'Tất cả chương',fBai:'Tất cả bài học',fDang:'Tất cả dạng câu',fMucDo:'Tất cả mức độ',fDe:'Tất cả mã đề'})[id]||'Tất cả'}
+function optionList(id, arr){let el=$(id); let old=el.value; el.innerHTML='<option value="">'+optionLabel(id)+'</option>'+arr.map(v=>'<option>'+esc(v)+'</option>').join(''); if([...el.options].some(o=>o.value===old))el.value=old}
 function unique(field){let a=[...new Set(allRows.map(r=>getVal(r,field)).filter(Boolean))]; return a.sort((x,y)=>kn(x).localeCompare(kn(y),'vi'))}
 function buildFilters(){Object.entries(fields).forEach(([id,field])=>optionList(id,unique(field)))}
-function applyFilters(){filtered=allRows.filter(r=>Object.entries(fields).every(([id,field])=>!$(id).value||getVal(r,field)===$(id).value)); $('totalN').textContent=allRows.length; $('filterN').textContent=filtered.length; renderList(); if(!quiz.length){quiz=filtered.slice();idx=0;renderQ()}}
-function renderList(){let box=$('qList'); if(!filtered.length){box.innerHTML='<div class="small" style="padding:10px">Không có câu phù hợp.</div>';return} box.innerHTML=filtered.slice(0,250).map((r,i)=>'<button onclick="jumpToFiltered('+i+')" class="'+(quiz[idx]&&quiz[idx].ID===r.ID?'active':'')+'"><b>'+esc(r.ID)+'</b> · '+esc(getVal(r,'Dang'))+' · '+esc(short(getVal(r,'CauHoi'),90))+'</button>').join('')}
+function selectedFilterText(){return Object.entries(fields).map(([id,field])=>{let v=$(id)&&$(id).value;return v?optionLabel(id).replace('Tất cả ','')+': '+v:''}).filter(Boolean).join(' · ')}
+function clearFilterValues(){Object.keys(fields).forEach(id=>{if($(id))$(id).value=''})}
+function resetFiltersAndShowAll(){if(!allRows.length){alert('Chưa có đề JSON. Hãy bấm Nhập file JSON trước.');return} clearFilterValues(); filtered=allRows.slice(); $('totalN').textContent=allRows.length; $('filterN').textContent=filtered.length; quiz=filtered.slice(); idx=0; answers={}; checked={}; updateScore(); renderList(); renderQ(); saveProgress(); $('loadMsg').innerHTML='✅ Đã xóa lọc. Đang hiện tất cả <b>'+allRows.length+'</b> câu có quyền truy cập.'}
+function applyFilters(forceQuiz){filtered=allRows.filter(r=>Object.entries(fields).every(([id,field])=>!$(id).value||getVal(r,field)===$(id).value)); $('totalN').textContent=allRows.length; $('filterN').textContent=filtered.length; renderList(); if(forceQuiz||!quiz.length){quiz=filtered.slice();idx=0;renderQ()}}
+function renderList(){let box=$('qList'); if(!filtered.length){let detail=selectedFilterText(); box.innerHTML='<div class="small" style="padding:10px;color:#9a3412"><b>Không có câu phù hợp.</b><br>'+(detail?'Đang lọc: '+esc(detail)+'<br>':'')+'Bấm <b>🔄 Xóa lọc / hiện tất cả</b> rồi chọn lại từ từ.</div>';return} box.innerHTML=filtered.slice(0,250).map((r,i)=>'<button onclick="jumpToFiltered('+i+')" class="'+(quiz[idx]&&quiz[idx].ID===r.ID?'active':'')+'"><b>'+esc(r.ID)+'</b> · '+esc(getVal(r,'Dang'))+' · '+esc(short(getVal(r,'CauHoi'),90))+'</button>').join('')}
 function jumpToFiltered(i){quiz=filtered.slice();idx=i;renderQ()}
-function startQuiz(shuffle){quiz=filtered.slice(); if(shuffle)quiz.sort(()=>Math.random()-.5); idx=0; answers={}; checked={}; saveProgress(); renderQ()}
+function startQuiz(shuffle){if(!allRows.length){alert('Chưa có đề JSON. Hãy bấm Nhập file JSON trước.');return} if(!filtered.length){let detail=selectedFilterText(); let ok=confirm('Bộ lọc hiện tại không có câu nào.'+(detail?'\n\nĐang lọc: '+detail:'')+'\n\nBấm OK để tự xóa lọc và hiện tất cả câu.'); if(!ok)return; clearFilterValues(); applyFilters(true)} quiz=filtered.slice(); if(shuffle)quiz.sort(()=>Math.random()-.5); idx=0; answers={}; checked={}; updateScore(); saveProgress(); renderQ()}
 function esc(s){return clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function short(s,n){s=clean(s).replace(/\s+/g,' ');return s.length>n?s.slice(0,n-1)+'…':s}
-function tags(r){let keys=['BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang'];return keys.map(k=>getVal(r,k)).filter(Boolean).slice(0,8).map(v=>'<span class="tag">'+esc(v)+'</span>').join('')}
+function tags(r){let keys=['QuyenTruyCap','BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang'];return keys.map(k=>getVal(r,k)).filter(Boolean).slice(0,8).map(v=>'<span class="tag">'+esc(v)+'</span>').join('')}
 function renderQ(){let r=quiz[idx]; $('result').classList.add('hidden'); $('solution').classList.add('hidden'); if(!r){$('quizTitle').textContent='Chưa có câu'; $('questionArea').textContent='Nạp hoặc lọc đề trước.'; $('answerArea').innerHTML=''; $('meta').innerHTML=''; $('bar').style.width='0'; return} $('quizTitle').textContent='Câu '+(idx+1)+' / '+quiz.length+' · '+getVal(r,'ID'); $('meta').innerHTML=tags(r); $('bar').style.width=(quiz.length?((idx+1)/quiz.length*100):0)+'%'; $('questionArea').innerHTML='<div class="latex">'+esc(getVal(r,'CauHoi'))+'</div>'+imgHtml(r); renderAnswer(r); renderList(); saveProgress(); renderMath()}
 function imgHtml(r){let u=getVal(r,'HinhAnh'); if(!u)return''; if(/^https?:\/\//i.test(u)||u.startsWith('/'))return '<div style="margin-top:8px"><img src="'+esc(u)+'" style="max-width:100%;border:1px solid #ddd;border-radius:12px"></div>'; return ''}
 function renderAnswer(r){let d=normDang(getVal(r,'Dang')); if(d==='Đúng sai')return renderTF(r); if(d==='Trả lời ngắn'||d==='Tự luận')return renderShort(r); return renderMCQ(r)}
@@ -32295,9 +32656,9 @@ function normLetter(s){s=clean(s).toUpperCase(); let m=s.match(/[ABCD]/); return
 function normTF(s){s=stripAccents(clean(s)).toUpperCase().replace(/TRUE/g,'D').replace(/FALSE/g,'S').replace(/DUNG/g,'D').replace(/SAI/g,'S').replace(/[^DS]/g,''); return s}
 function parseNum(s){s=clean(s).replace(/,/g,'.'); let m=s.match(/[-+]?\d+(?:\.\d+)?(?:e[-+]?\d+)?/i); return m?Number(m[0]):NaN}
 function normText(s){return kn(s).replace(/[,;，。\s]+/g,'')}
-function checkAnswer(){let r=quiz[idx]; if(!r)return; let id=getVal(r,'ID'), d=normDang(getVal(r,'Dang')), right=false, msg=''; let key=getVal(r,'DapAn'); if(d==='Đúng sai'){let need=normTF(key); let cur=answers[id]||{}; let got=['A','B','C','D'].filter(k=>getVal(r,k)).map(k=>cur[k]||'?').join(''); right=(got===need); msg='Em chọn: '+got+'\nĐáp án: '+need}else if(d==='Trả lời ngắn'){let got=clean(answers[id]||''); let tol=parseNum(getVal(r,'SaiSo')); let a=parseNum(got), b=parseNum(key); if(!Number.isNaN(a)&&!Number.isNaN(b)){right=Math.abs(a-b)<=(!Number.isNaN(tol)&&tol>0?tol:1e-9)}else{right=normText(got)===normText(key)} msg='Em nhập: '+got+'\nĐáp án: '+key+(getVal(r,'SaiSo')?'\nSai số: ±'+getVal(r,'SaiSo'):'')}else if(d==='Tự luận'){msg='Tự luận: app không tự chấm chắc chắn. Đáp án/tham khảo: '+(key||'(xem lời giải)'); right=false}else{let got=normLetter(answers[id]||''); let need=normLetter(key); right=got&&got===need; msg='Em chọn: '+(got||'(chưa chọn)')+'\nĐáp án: '+need} checked[id]=right; $('result').className='result '+(right?'ok':'bad'); $('result').textContent=(right?'✅ Đúng':'❌ Chưa đúng')+'\n'+msg; $('result').classList.remove('hidden'); updateScore(); saveProgress()}
+function checkAnswer(){let r=quiz[idx]; if(!r)return; let id=getVal(r,'ID'), d=normDang(getVal(r,'Dang')), right=false, msg='', canShow=canViewSolutionRow(r); let key=getVal(r,'DapAn'); if(d==='Đúng sai'){let need=normTF(key); let cur=answers[id]||{}; let got=['A','B','C','D'].filter(k=>getVal(r,k)).map(k=>cur[k]||'?').join(''); right=(got===need); msg='Em chọn: '+got+(canShow?'\nĐáp án: '+need:'')}else if(d==='Trả lời ngắn'){let got=clean(answers[id]||''); let tol=parseNum(getVal(r,'SaiSo')); let a=parseNum(got), b=parseNum(key); if(!Number.isNaN(a)&&!Number.isNaN(b)){right=Math.abs(a-b)<=(!Number.isNaN(tol)&&tol>0?tol:1e-9)}else{right=normText(got)===normText(key)} msg='Em nhập: '+got+(canShow?'\nĐáp án: '+key+(getVal(r,'SaiSo')?'\nSai số: ±'+getVal(r,'SaiSo'):''):'')}else if(d==='Tự luận'){msg=canShow?('Tự luận: app không tự chấm chắc chắn. Đáp án/tham khảo: '+(key||'(xem lời giải)')):'Tự luận: đã lưu câu trả lời trên máy. Tài khoản VIP/SVIP sẽ xem được lời giải.'; right=false}else{let got=normLetter(answers[id]||''); let need=normLetter(key); right=got&&got===need; msg='Em chọn: '+(got||'(chưa chọn)')+(canShow?'\nĐáp án: '+need:'')} checked[id]=right; $('result').className='result '+(right?'ok':'bad'); $('result').textContent=(right?'✅ Đúng':'❌ Chưa đúng')+'\n'+msg; $('result').classList.remove('hidden'); updateScore(); saveProgress()}
 function updateScore(){let n=Object.values(checked).filter(Boolean).length; $('scoreN').textContent=n}
-function showSolution(){let r=quiz[idx]; if(!r)return; $('solution').textContent=getVal(r,'LoiGiai')||'Chưa có lời giải trong JSON.'; $('solution').classList.remove('hidden'); renderMath()}
+function showSolution(){let r=quiz[idx]; if(!r)return; if(!canViewSolutionRow(r)){alert('Lời giải/đáp án chỉ mở cho VIP, SVIP hoặc ADMIN.');return} $('solution').textContent=getVal(r,'LoiGiai')||'Chưa có lời giải trong JSON.'; $('solution').classList.remove('hidden'); renderMath()}
 function prevQ(){if(idx>0){idx--;renderQ()}}
 function nextQ(){if(idx<quiz.length-1){idx++;renderQ()}}
 function finishQuiz(){let done=Object.keys(checked).length, ok=Object.values(checked).filter(Boolean).length; alert('Kết quả trên máy này:\nĐã chấm: '+done+'/'+quiz.length+' câu\nĐúng: '+ok+' câu')}
@@ -32305,11 +32666,606 @@ function renderMath(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetP
 function saveProgress(){try{localStorage.setItem(LS_PROGRESS,JSON.stringify({answers,checked,idx,filter:Object.fromEntries(Object.keys(fields).map(id=>[id,$(id)?.value||'']))}))}catch(e){}}
 function restoreProgress(){try{let p=JSON.parse(localStorage.getItem(LS_PROGRESS)||'{}'); answers=p.answers||{}; checked=p.checked||{}; idx=p.idx||0; if(p.filter)Object.entries(p.filter).forEach(([id,v])=>{if($(id))$(id).value=v}); updateScore()}catch(e){}}
 function exportCurrentJson(){let pack={sheet:'Cau_Hoi',schema:'Cau_Hoi.columns.local.v1',exportedAt:new Date().toISOString(),headers:rawPack?.headers||[],rows:allRows}; let blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json;charset=utf-8'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Cau_Hoi_local.json'; a.click(); URL.revokeObjectURL(a.href)}
-(function init(){let saved=localStorage.getItem(LS_KEY); if(saved){try{loadPack(JSON.parse(saved),false); restoreProgress(); applyFilters(); if(quiz.length)renderQ(); $('loadMsg').innerHTML='✅ Đã mở lại đề đã nạp trên máy này: <b>'+allRows.length+'</b> câu.'}catch(e){localStorage.removeItem(LS_KEY)}}})();
+function saveCurrentToLocal(){
+  if(!rawPack){alert('Chưa có đề để lưu. Hãy nhập file JSON trước.');return}
+  localStorage.setItem(LS_KEY,JSON.stringify(rawPack)); saveProgress();
+  $('loadMsg').innerHTML='💾 Đã lưu đề và bài làm trên máy này. Lần sau mở /json-local sẽ tự mở lại.';
+}
+function openSavedLocal(){
+  let saved=localStorage.getItem(LS_KEY);
+  if(!saved){alert('Máy này chưa có đề đã lưu. Hãy nhập file JSON trước.');return}
+  try{loadPack(JSON.parse(saved),false); restoreProgress(); applyFilters(); if(quiz.length)renderQ(); $('loadMsg').innerHTML='📂 Đã mở đề đã lưu trên máy này: <b>'+allRows.length+'</b> câu.'}
+  catch(e){alert('Không mở được đề đã lưu: '+e.message)}
+}
+function downloadBlob(name,obj){let blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function exportProgressJson(){
+  if(!rawPack){alert('Chưa có đề/bài làm để tải.');return}
+  downloadBlob('Bai_lam_JSON_local.json',{app:'LuyenDeJSONLocal',type:'student_progress',exportedAt:new Date().toISOString(),answers,checked,idx,score:Object.values(checked).filter(Boolean).length,total:quiz.length,questionIds:(quiz||[]).map(r=>getVal(r,'ID'))});
+}
+function importProgressClick(){ $('progressInput').click(); }
+function importProgressFile(f){
+  if(!f)return; let rd=new FileReader(); rd.onload=()=>{try{let p=JSON.parse(rd.result);answers=p.answers||{};checked=p.checked||{};idx=Number(p.idx||0);saveProgress();updateScore();renderQ();alert('Đã mở bài làm đã lưu.')}catch(e){alert('File bài làm lỗi: '+e.message)}}; rd.readAsText(f,'utf-8');
+}
+function updateOfflineStatus(){let el=$('offlineMsg'); if(!el)return; el.innerHTML=(navigator.onLine?'🟢 Đang có mạng. ':'🟡 Đang offline. ')+'Đề và bài làm được lưu trong trình duyệt bằng localStorage.'}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw-json-local.js').then(()=>{updateOfflineStatus()}).catch(()=>{updateOfflineStatus()})});}
+window.addEventListener('online',updateOfflineStatus); window.addEventListener('offline',updateOfflineStatus);
+
+
+/* ===== V12: render đề rõ màu, khung đẹp, không bị chữ xám ===== */
+function richText(v){
+  let t=esc(v||'');
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  return t;
+}
+function renderQ(){
+  let r=quiz[idx];
+  $('result').classList.add('hidden');
+  $('solution').classList.add('hidden');
+  if(!r){
+    $('quizTitle').textContent='Chưa có câu';
+    $('questionArea').className='qbox';
+    $('questionArea').innerHTML='<div class="emptyWarn">Chưa có câu phù hợp. Hãy bấm “Xóa lọc / hiện tất cả”, rồi bấm “Làm theo thứ tự”.</div>';
+    $('answerArea').innerHTML=''; $('meta').innerHTML=''; $('bar').style.width='0'; return;
+  }
+  $('quizTitle').textContent='Câu '+(idx+1)+' / '+quiz.length+' · '+getVal(r,'ID');
+  $('meta').innerHTML=tags(r);
+  $('bar').style.width=(quiz.length?((idx+1)/quiz.length*100):0)+'%';
+  $('questionArea').className='qbox';
+  $('questionArea').innerHTML='<div class="questionPaper"><div class="latex qTextMain">'+richText(getVal(r,'CauHoi'))+'</div>'+imgHtml(r)+'</div>';
+  renderAnswer(r); renderList(); saveProgress(); renderMath();
+}
+function renderMCQ(r){
+  let id=String(getVal(r,'ID')||'');
+  let ans=answers[id]||'';
+  let opts=['A','B','C','D'].filter(k=>getVal(r,k));
+  if(opts.length){
+    let html='<div class="answerCard"><div class="answerTitle">📝 Chọn một đáp án đúng</div>';
+    html+=opts.map(k=>'<label class="opt"><input type="radio" name="mcq" value="'+k+'" '+(ans===k?'checked':'')+' onchange="answers[\''+esc(id)+'\']=this.value;saveProgress()"> <b>'+k+'</b> <span class="latex">'+richText(getVal(r,k))+'</span></label>').join('');
+    html+='</div>'; $('answerArea').innerHTML=html; renderMath(); return;
+  }
+  $('answerArea').innerHTML='<div class="answerCard"><div class="answerTitle">📝 File JSON chưa tách cột A–D</div><div class="emptyWarn" style="margin-bottom:10px">Nếu phương án đang nằm trong đề/ảnh, em chọn A/B/C/D ở dưới.</div><div class="manualChoiceWrap">'+['A','B','C','D'].map(k=>'<label class="manualChoice"><input type="radio" name="mcq" value="'+k+'" '+(ans===k?'checked':'')+' onchange="answers[\''+esc(id)+'\']=this.value;saveProgress()"> '+k+'</label>').join('')+'</div></div>';
+}
+function renderShort(r){
+  let id=String(getVal(r,'ID')||''), ans=answers[id]||'';
+  let d=normDang(getVal(r,'Dang'));
+  let ph=d==='Tự luận'?'Nhập bài làm / kết luận của em...':'Nhập đáp án ngắn của em...';
+  $('answerArea').innerHTML='<div class="shortBox"><div class="answerTitle">✍️ '+(d==='Tự luận'?'Trả lời tự luận':'Trả lời ngắn')+'</div><input id="shortAns" placeholder="'+ph+'" value="'+esc(ans)+'" oninput="answers[\''+esc(id)+'\']=this.value;saveProgress()"></div>';
+}
+function renderTF(r){
+  let id=String(getVal(r,'ID')||''); let cur=answers[id]||{};
+  let rows=['A','B','C','D'].filter(k=>getVal(r,k));
+  let html='<div class="answerCard"><div class="answerTitle">✅ Chọn Đúng / Sai cho từng ý</div>';
+  html+=rows.map(k=>'<div class="tfrow"><div><b>'+k+'.</b> <span class="latex">'+richText(getVal(r,k))+'</span></div><label><input type="radio" name="tf'+k+'" value="D" '+(cur[k]==='D'?'checked':'')+' onchange="setTF(\''+esc(id)+'\',\''+k+'\',\'D\')"> Đúng</label><label><input type="radio" name="tf'+k+'" value="S" '+(cur[k]==='S'?'checked':'')+' onchange="setTF(\''+esc(id)+'\',\''+k+'\',\'S\')"> Sai</label></div>').join('');
+  html+=rows.length?'':'<div class="emptyWarn">Không có mệnh đề A–D trong JSON.</div>';
+  html+='</div>'; $('answerArea').innerHTML=html; renderMath();
+}
+function showSolution(){
+  let r=quiz[idx]; if(!r)return;
+  if(!canViewSolutionRow(r)){alert('Lời giải/đáp án chỉ mở cho VIP, SVIP hoặc ADMIN.');return}
+  let txt=getVal(r,'LoiGiai')||'Chưa có lời giải trong JSON.';
+  $('solution').innerHTML='<div class="solTitle">💡 Lời giải / đáp án tham khảo</div><div class="latex">'+richText(txt)+'</div>';
+  $('solution').classList.remove('hidden'); renderMath();
+}
+
+/* ===== V13: tự chấm khi chọn đáp án + ẩn/mở bộ lọc ===== */
+function toggleSidePanel(){
+  document.body.classList.toggle('sideHidden');
+  let hidden=document.body.classList.contains('sideHidden');
+  let b=$('toggleSideBtn');
+  if(b)b.textContent=hidden?'☰ Hiện bộ lọc':'⛶ Mở rộng đề';
+  setTimeout(renderMath,80);
+}
+function autoCheckSoon(force){
+  if(force===false)return;
+  let t=$('autoCheckToggle');
+  AUTO_CHECK=!(t&&t.checked===false);
+  if(!AUTO_CHECK)return;
+  clearTimeout(AUTO_CHECK_TIMER);
+  AUTO_CHECK_TIMER=setTimeout(()=>{
+    try{ if(isCurrentAnswered()) checkAnswer(true); }catch(e){}
+  },180);
+}
+function isCurrentAnswered(){
+  let r=quiz[idx]; if(!r)return false;
+  let id=getVal(r,'ID'), d=normDang(getVal(r,'Dang'));
+  if(d==='Đúng sai'){
+    let rows=['A','B','C','D'].filter(k=>getVal(r,k));
+    let cur=answers[id]||{};
+    return rows.length>0 && rows.every(k=>cur[k]==='D'||cur[k]==='S');
+  }
+  return clean(answers[id]||'')!=='';
+}
+function saveAnswerAndAuto(id,val){
+  answers[id]=val; saveProgress(); autoCheckSoon();
+}
+function renderMCQ(r){
+  let id=String(getVal(r,'ID')||'');
+  let ans=answers[id]||'';
+  let opts=['A','B','C','D'].filter(k=>getVal(r,k));
+  if(opts.length){
+    let html='<div class="answerCard"><div class="answerTitle">📝 Chọn đáp án - chọn xong app tự chấm</div>';
+    html+=opts.map(k=>'<label class="opt"><input type="radio" name="mcq" value="'+k+'" '+(ans===k?'checked':'')+' onchange="saveAnswerAndAuto(\''+esc(id)+'\',this.value)"> <b>'+k+'</b> <span class="latex">'+richText(getVal(r,k))+'</span></label>').join('');
+    html+='</div>'; $('answerArea').innerHTML=html; renderMath(); return;
+  }
+  $('answerArea').innerHTML='<div class="answerCard"><div class="answerTitle">📝 Chọn A/B/C/D - file JSON chưa tách cột phương án</div><div class="emptyWarn" style="margin-bottom:10px">Nếu phương án nằm trong ảnh hoặc trong nội dung đề, em chọn A/B/C/D ở dưới. Chọn xong app sẽ tự chấm.</div><div class="manualChoiceWrap">'+['A','B','C','D'].map(k=>'<label class="manualChoice"><input type="radio" name="mcq" value="'+k+'" '+(ans===k?'checked':'')+' onchange="saveAnswerAndAuto(\''+esc(id)+'\',this.value)"> '+k+'</label>').join('')+'</div></div>';
+}
+function renderShort(r){
+  let id=String(getVal(r,'ID')||''), ans=answers[id]||'';
+  let d=normDang(getVal(r,'Dang'));
+  let ph=d==='Tự luận'?'Nhập bài làm / kết luận của em...':'Nhập đáp án ngắn rồi bấm Enter hoặc rời ô để tự chấm...';
+  $('answerArea').innerHTML='<div class="shortBox"><div class="answerTitle">✍️ '+(d==='Tự luận'?'Trả lời tự luận':'Trả lời ngắn')+'</div><input id="shortAns" placeholder="'+ph+'" value="'+esc(ans)+'" oninput="answers[\''+esc(id)+'\']=this.value;saveProgress()" onkeydown="if(event.key===\'Enter\'){answers[\''+esc(id)+'\']=this.value;saveProgress();autoCheckSoon()}" onblur="answers[\''+esc(id)+'\']=this.value;saveProgress();autoCheckSoon()"><div class="small" style="margin-top:6px">Trả lời ngắn sẽ tự chấm khi em bấm Enter hoặc bấm ra ngoài ô.</div></div>';
+}
+function renderTF(r){
+  let id=String(getVal(r,'ID')||''); let cur=answers[id]||{};
+  let rows=['A','B','C','D'].filter(k=>getVal(r,k));
+  let html='<div class="answerCard"><div class="answerTitle">✅ Chọn Đúng / Sai cho từng ý - đủ các ý sẽ tự chấm</div>';
+  html+=rows.map(k=>'<div class="tfrow"><div><b>'+k+'.</b> <span class="latex">'+richText(getVal(r,k))+'</span></div><label><input type="radio" name="tf'+k+'" value="D" '+(cur[k]==='D'?'checked':'')+' onchange="setTF(\''+esc(id)+'\',\''+k+'\',\'D\')"> Đúng</label><label><input type="radio" name="tf'+k+'" value="S" '+(cur[k]==='S'?'checked':'')+' onchange="setTF(\''+esc(id)+'\',\''+k+'\',\'S\')"> Sai</label></div>').join('');
+  html+=rows.length?'':'<div class="emptyWarn">Không có mệnh đề A–D trong JSON.</div>';
+  html+='</div>'; $('answerArea').innerHTML=html; renderMath();
+}
+function setTF(id,k,v){answers[id]=answers[id]||{};answers[id][k]=v;saveProgress();autoCheckSoon()}
+function nextQ(){if(idx<quiz.length-1){idx++;renderQ()}else{finishQuiz()}}
+function checkAnswer(autoMode){
+  let r=quiz[idx]; if(!r)return; let id=getVal(r,'ID'), d=normDang(getVal(r,'Dang')), right=false, msg='', canShow=canViewSolutionRow(r); let key=getVal(r,'DapAn');
+  if(d==='Đúng sai'){let need=normTF(key); let cur=answers[id]||{}; let got=['A','B','C','D'].filter(k=>getVal(r,k)).map(k=>cur[k]||'?').join(''); right=(got===need); msg='Em chọn: '+got+(canShow?'\nĐáp án: '+need:'')}
+  else if(d==='Trả lời ngắn'){let got=clean(answers[id]||''); if(!got){if(!autoMode)alert('Em chưa nhập đáp án.'); return} let tol=parseNum(getVal(r,'SaiSo')); let a=parseNum(got), b=parseNum(key); if(!Number.isNaN(a)&&!Number.isNaN(b)){right=Math.abs(a-b)<=(!Number.isNaN(tol)&&tol>0?tol:1e-9)}else{right=normText(got)===normText(key)} msg='Em nhập: '+got+(canShow?'\nĐáp án: '+key+(getVal(r,'SaiSo')?'\nSai số: ±'+getVal(r,'SaiSo'):''):'')}
+  else if(d==='Tự luận'){msg=canShow?('Tự luận: app không tự chấm chắc chắn. Đáp án/tham khảo: '+(key||'(xem lời giải)')):'Tự luận: đã lưu câu trả lời trên máy. Tài khoản VIP/SVIP sẽ xem được lời giải.'; right=false}
+  else{let got=normLetter(answers[id]||''); let need=normLetter(key); if(!got){if(!autoMode)alert('Em chưa chọn đáp án.'); return} right=got&&got===need; msg='Em chọn: '+(got||'(chưa chọn)')+(canShow?'\nĐáp án: '+need:'')}
+  checked[id]=right; $('result').className='result '+(right?'ok':'bad'); $('result').textContent=(right?'✅ Đúng':'❌ Chưa đúng')+'\n'+msg; $('result').classList.remove('hidden'); updateScore(); saveProgress(); renderList();
+}
+
+
+/* ===== V15: đọc đúng theo SƠ ĐỒ JSON, không ép thủ công A/B/C/D =====
+   Hỗ trợ nhiều kiểu JSON:
+   1) Cau_Hoi columns: {headers, rows:[{CauHoi,A,B,C,D,DapAn,...}]}
+   2) Soạn đề/old app: {exams:[{questions:[{content/body/type/options/answers...}]}]}
+   3) Câu LaTeX: \choice, \choiceTF, \shortans, \loigiai, \True
+   4) Phương án nằm trong text: A. ... B. ... C. ... D. ...
+*/
+function pickFirst(){for(let i=0;i<arguments.length;i++){let v=arguments[i]; if(v!==undefined&&v!==null&&clean(v)!=='')return v} return ''}
+function deepPick(obj, keys){
+  if(!obj||typeof obj!=='object')return '';
+  for(let k of keys){if(Object.prototype.hasOwnProperty.call(obj,k)&&clean(obj[k])!=='')return obj[k]}
+  return '';
+}
+function arrToOptions(arr){
+  let out={}; if(!Array.isArray(arr))return out;
+  arr.slice(0,4).forEach((it,i)=>{
+    let L='ABCD'[i];
+    if(typeof it==='string'||typeof it==='number')out[L]=clean(it);
+    else if(it&&typeof it==='object'){
+      let lab=clean(it.label||it.key||it.option||it.id||L).toUpperCase();
+      lab=(lab.match(/[ABCD]/)||[L])[0];
+      out[lab]=clean(pickFirst(it.text,it.content,it.body,it.value,it.html,it.title,it.answer));
+      if(it.correct===true||it.isCorrect===true||it.True===true||it.true===true)out._answer=lab;
+    }
+  });
+  return out;
+}
+function objectToOptions(obj){
+  let out={}; if(!obj||typeof obj!=='object'||Array.isArray(obj))return out;
+  ['A','B','C','D'].forEach(k=>{if(clean(obj[k])||clean(obj[k.toLowerCase()]))out[k]=clean(obj[k]||obj[k.toLowerCase()])});
+  if(!Object.keys(out).some(k=>/[ABCD]/.test(k))){
+    let keys=Object.keys(obj).slice(0,4); keys.forEach((kk,i)=>{let L='ABCD'[i]; if(typeof obj[kk]==='string'||typeof obj[kk]==='number')out[L]=clean(obj[kk])});
+  }
+  return out;
+}
+function readLatexBlockAt(s, bracePos){
+  if(bracePos<0||s[bracePos]!=='{')return null;
+  let depth=0;
+  for(let i=bracePos;i<s.length;i++){
+    let ch=s[i], prev=i>0?s[i-1]:'';
+    if(ch==='{'&&prev!=='\\')depth++;
+    else if(ch==='}'&&prev!=='\\'){
+      depth--; if(depth===0)return {text:s.slice(bracePos+1,i), end:i+1};
+    }
+  }
+  return null;
+}
+function readLatexCommandArgs(s, cmd, maxArgs){
+  let re=new RegExp('\\\\'+cmd+'\\b','i'); let m=re.exec(s); if(!m)return null;
+  let pos=m.index+m[0].length, args=[];
+  while(args.length<maxArgs){
+    while(pos<s.length&&/\s/.test(s[pos]))pos++;
+    if(s[pos]!=='{')break;
+    let b=readLatexBlockAt(s,pos); if(!b)break;
+    args.push(b.text); pos=b.end;
+  }
+  return args.length?{args,end:pos,start:m.index}:null;
+}
+function removeLatexCmdWithArgs(s, cmd, maxArgs){
+  let got=readLatexCommandArgs(s,cmd,maxArgs); if(!got)return s;
+  return (s.slice(0,got.start)+' '+s.slice(got.end)).trim();
+}
+function stripTrueMarker(s){return clean(s).replace(/\\True\b/gi,'').replace(/^\s*\*\s*/,'').trim()}
+function extractSolutionAndRemove(s){
+  let sol=''; let got=readLatexCommandArgs(s,'loigiai',1);
+  if(got){sol=got.args[0]; s=(s.slice(0,got.start)+' '+s.slice(got.end)).trim()}
+  return {text:s, solution:sol};
+}
+function stripLatexWrappers(s){
+  s=clean(s);
+  s=s.replace(/^\\begin\{(?:ex|bt|vd|baitap|question)\}\s*/i,'');
+  s=s.replace(/\\end\{(?:ex|bt|vd|baitap|question)\}\s*$/i,'');
+  return s.trim();
+}
+function parseLatexChoice(s){
+  let out={opts:{}, answer:''};
+  let got=readLatexCommandArgs(s,'choice',4);
+  if(!got)return out;
+  got.args.slice(0,4).forEach((x,i)=>{let L='ABCD'[i]; if(/\\True\b/i.test(x))out.answer=L; out.opts[L]=stripTrueMarker(x)});
+  out.question=(s.slice(0,got.start)+' '+s.slice(got.end)).trim();
+  return out;
+}
+function parseLatexChoiceTF(s){
+  let out={opts:{}, answer:''};
+  let got=readLatexCommandArgs(s,'choiceTF',4);
+  if(!got)return out;
+  let ans='';
+  got.args.slice(0,4).forEach((x,i)=>{let L='ABCD'[i]; let isTrue=/\\True\b/i.test(x); ans += isTrue?'D':'S'; out.opts[L]=stripTrueMarker(x)});
+  out.answer=ans;
+  out.question=(s.slice(0,got.start)+' '+s.slice(got.end)).trim();
+  return out;
+}
+function parseShortAnsLatex(s){
+  let got=readLatexCommandArgs(s,'shortans',1)||readLatexCommandArgs(s,'shortansTF',1);
+  if(!got)return null;
+  return {answer:stripTrueMarker(got.args[0]), question:(s.slice(0,got.start)+' '+s.slice(got.end)).trim()};
+}
+function parseTextABCD(s){
+  let text=clean(s); let out={opts:{}, question:text};
+  // bắt các dạng: A. ... B. ... C. ... D. ... hoặc a) ... b) ...
+  // Không bắt chữ A/B/C/D nằm trong công thức vì cần có dấu . ) : và khoảng tách rõ.
+  let re=/(^|\n|\r|\s)([ABCDabcd])\s*[\.)、:]\s*/g;
+  let marks=[], m;
+  while((m=re.exec(text))){marks.push({label:String(m[2]||'').toUpperCase(), index:m.index + m[1].length, startAfter:re.lastIndex})}
+  if(marks.length<2)return out;
+  marks=marks.filter((x,i,a)=>i===0||x.label.charCodeAt(0)>a[i-1].label.charCodeAt(0));
+  if(marks.length<2)return out;
+  let first=marks[0]; out.question=text.slice(0, first.index).trim();
+  for(let i=0;i<marks.length;i++){
+    let cur=marks[i], nxt=marks[i+1]; let chunk=text.slice(cur.startAfter, nxt?nxt.index:text.length).trim();
+    if(/[ABCD]/.test(cur.label))out.opts[cur.label]=chunk;
+  }
+  return out;
+}
+function cleanQuestionBody(s){
+  s=stripLatexWrappers(s);
+  s=s.replace(/\\par\b/g,'\n').replace(/\\\\/g,'\n');
+  return s.trim();
+}
+function inferDangFromRaw(o, text){
+  let raw=pickFirst(o.Dang,o.dang,o.type,o.questionType,o.kind,o.format,o.Dạng,o['Dạng']);
+  let k=kn(raw), tx=String(text||'');
+  if(/choiceTF|choice\s*TF|\choiceTF/i.test(tx)||/dung.*sai|true.*false|choice.?tf|^ds$|tf/.test(k))return 'Đúng sai';
+  if(/shortans|short|tra.*loi.*ngan|tln/i.test(tx)||/short|tra.*loi.*ngan|tln/.test(k))return 'Trả lời ngắn';
+  if(/tu.*luan|essay|bt/.test(k))return 'Tự luận';
+  if(/choice|trac.*nghiem|mcq|tn/i.test(tx)||/trac.*nghiem|mcq|tn|ex/.test(k))return 'Trắc nghiệm';
+  return '';
+}
+function tfLettersFromAnswer(s){
+  let raw=stripAccents(clean(s)).toUpperCase();
+  raw=raw.replace(/Đ/g,'D').replace(/TRUE/g,'D').replace(/FALSE/g,'S').replace(/DUNG/g,'D').replace(/SAI/g,'S');
+  // Bắt các kiểu: Đ,S,Đ,S hoặc A=Đ;B=S;C=Đ;D=S hoặc DSSD.
+  let letters=raw.replace(/[^DS]/g,'');
+  return letters;
+}
+function looksLikeTFAnswer(s){let letters=tfLettersFromAnswer(s); return letters.length>=2 && letters.length<=4;}
+function looksLikeSingleMCQAnswer(s){return /^[ABCD]$/i.test(clean(s));}
+function looksLikeShortAnswer(s){
+  let a=clean(s); if(!a)return false;
+  if(looksLikeSingleMCQAnswer(a)||looksLikeTFAnswer(a))return false;
+  // số, biểu thức latex, căn, phân số, đơn vị, kết quả có dấu = đều xem là trả lời ngắn
+  return /[-+]?\d|\dfrac|\frac|\sqrt|\^|_|=|,|\.|kg|m\/s|J|N|Pa/i.test(a) || a.length<=80;
+}
+function looksLikeTFQuestionText(s){
+  let k=kn(s);
+  return /dung.*sai|sai.*dung|cac phat bieu|phat bieu nao|cac menh de|menh de nao|nhan dinh|khẳng định|khang dinh/.test(k);
+}
+function looksLikeShortQuestionText(s){
+  let k=kn(s);
+  return /tinh|tim|bao nhieu|gia tri|ket qua|lam tron|dap so|bang bao nhieu|xap xi/.test(k);
+}
+function decideDangBySchema(o, qText, inferred){
+  let declared=clean(o.Dang)?normDang(o.Dang):'';
+  let hasOpts=['A','B','C','D'].some(k=>clean(o[k]));
+  let optCount=['A','B','C','D'].filter(k=>clean(o[k])).length;
+  let ans=clean(o.DapAn);
+  let textBlob=[qText,o.CauHoi,o.A,o.B,o.C,o.D,o.LoiGiai].map(clean).join('\n');
+
+  // Ưu tiên cấu trúc thật của JSON hơn nhãn Dang bị xuất sai.
+  if(inferred==='Đúng sai' || looksLikeTFAnswer(ans) || (hasOpts && looksLikeTFQuestionText(textBlob) && optCount>=2 && !looksLikeSingleMCQAnswer(ans))) return 'Đúng sai';
+  if(inferred==='Trả lời ngắn') return 'Trả lời ngắn';
+  if(hasOpts) return declared || inferred || 'Trắc nghiệm';
+
+  // Không có A-D mà đáp án là số/biểu thức thì chắc chắn không phải Trắc nghiệm.
+  if(looksLikeShortAnswer(ans) || looksLikeShortQuestionText(textBlob)) return 'Trả lời ngắn';
+  if(declared==='Đúng sai' || declared==='Trả lời ngắn' || declared==='Tự luận') return declared;
+  // Nếu đáp án chỉ là A/B/C/D nhưng thiếu phương án, giữ Trắc nghiệm để học sinh chọn thủ công.
+  if(looksLikeSingleMCQAnswer(ans)) return 'Trắc nghiệm';
+  return inferred || declared || 'Tự luận';
+}
+function normalizeRow(r,i){
+  let src=r||{}, o={};
+  Object.keys(src).forEach(k=>{o[k==='Môn'?'Mon':k]=src[k]});
+  let rawText=clean(pickFirst(o.CauHoi,o.NoiDung,o.content,o.body,o.question,o.questionText,o.text,o.prompt,o.title,o['Câu hỏi'],o['Nội dung']));
+  let solPack=extractSolutionAndRemove(rawText); rawText=solPack.text;
+  let qText=cleanQuestionBody(rawText);
+
+  let optObj={};
+  Object.assign(optObj, objectToOptions(o.options||o.choices||o.answers||o.answerOptions||o.phuongAn||o.PhuongAn));
+  Object.assign(optObj, arrToOptions(o.options||o.choices||o.answers||o.answerOptions||o.phuongAn||o.PhuongAn));
+
+  let tf=parseLatexChoiceTF(qText);
+  let ch=parseLatexChoice(qText);
+  let sh=parseShortAnsLatex(qText);
+  if(tf.answer){Object.assign(optObj,tf.opts); qText=cleanQuestionBody(tf.question); if(!o.DapAn) o.DapAn=tf.answer; if(!o.Dang) o.Dang='Đúng sai'}
+  else if(ch.answer||Object.keys(ch.opts).length){Object.assign(optObj,ch.opts); qText=cleanQuestionBody(ch.question); if(!o.DapAn&&ch.answer)o.DapAn=ch.answer; if(!o.Dang) o.Dang='Trắc nghiệm'}
+  else if(sh){qText=cleanQuestionBody(sh.question); if(!o.DapAn)o.DapAn=sh.answer; if(!o.Dang)o.Dang='Trả lời ngắn'}
+
+  let abcd=parseTextABCD(qText);
+  if(Object.keys(optObj).filter(k=>/^[ABCD]$/.test(k)).length<2 && Object.keys(abcd.opts).length>=2){
+    Object.assign(optObj, abcd.opts); qText=cleanQuestionBody(abcd.question);
+  }
+
+  ['A','B','C','D'].forEach(k=>{o[k]=pickFirst(o[k],o[k.toLowerCase()],optObj[k])});
+  if(!o.DapAn)o.DapAn=pickFirst(o.answer,o.correctAnswer,o.answerKey,o.correct,o.key,o.dapAn,optObj._answer);
+  if(!o.LoiGiai)o.LoiGiai=pickFirst(o.LoiGiai,o.solution,o.explanation,o.loigiai,o.loiGiai,solPack.solution);
+  if(!o.CauHoi)o.CauHoi=qText;
+  else o.CauHoi=cleanQuestionBody(qText||o.CauHoi);
+  if(!o.ID)o.ID=pickFirst(o.id,o._id,o.maCau,o.MaCau,'AUTO_'+Math.random().toString(16).slice(2,10));
+  o.BoDe=pickFirst(o.BoDe,o.boDe,o.examName,o.topic,o.chapterName,o.spaceName);
+  o.De=pickFirst(o.De,o.de,o.name,o.examName,o.testName);
+  o.Lop=pickFirst(o.Lop,o.lop,o.grade,o.className);
+  o.Mon=pickFirst(o.Mon,o['Môn'],o.mon,o.subject,o.subjectName,o.spaceName);
+  o.Chuong=pickFirst(o.Chuong,o.chuong,o.chapter,o.chapterNo,o.chapterName);
+  o.BaiHoc=pickFirst(o.BaiHoc,o.baiHoc,o.lesson,o.lessonNo,o.lessonName);
+  o.DangBaiTap=pickFirst(o.DangBaiTap,o.dangBaiTap,o.category,o.skill,o.topicName);
+  o.MucDo=pickFirst(o.MucDo,o.mucDo,o.level,o.difficulty);
+  o.SaiSo=pickFirst(o.SaiSo,o.saiSo,o.tolerance);
+  o.HinhAnh=pickFirst(o.HinhAnh,o.hinhAnh,o.image,o.imageUrl,o.img,o.figure);
+  o.QuyenTruyCap=pickFirst(o.QuyenTruyCap,o.quyenTruyCap,o.Quyen,o.permission,o.access,o.role,'FREE');
+
+  let inferred=inferDangFromRaw(o, rawText+'\n'+qText);
+  if(o.Dang==='Đúng sai' && !clean(o.DapAn) && optObj._answer)o.DapAn=optObj._answer;
+  o.Dang=decideDangBySchema(o, qText, inferred);
+  if(o.Dang==='Đúng sai' && clean(o.DapAn)){
+    let tf=tfLettersFromAnswer(o.DapAn); if(tf)o.DapAn=tf;
+  }
+  ['BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh','QuyenTruyCap'].forEach(k=>{if(!(k in o)||o[k]==null)o[k]=''});
+  return o;
+}
+function convertOldPack(obj){
+  let rows=[];
+  if(obj&&Array.isArray(obj.rows))return obj.rows;
+  if(Array.isArray(obj))return obj;
+  if(obj&&Array.isArray(obj.questions))return obj.questions;
+  if(obj&&Array.isArray(obj.items))return obj.items;
+  if(obj&&Array.isArray(obj.data))return obj.data;
+  if(obj&&Array.isArray(obj.exams)){
+    obj.exams.forEach(ex=>{
+      (ex.questions||[]).forEach((q,j)=>{
+        let base={...q};
+        base.ID=q.id||q.ID||('Q'+String(j+1).padStart(3,'0'));
+        base.BoDe=pickFirst(q.BoDe,ex.name,ex.title);
+        base.De=pickFirst(q.De,ex.name,ex.title);
+        base.Mon=pickFirst(q.Mon,q['Môn'],ex.spaceName,ex.subject,ex.name);
+        base.Chuong=pickFirst(q.Chuong,ex.chapterNo,ex.chapterName,ex.chapter);
+        base.BaiHoc=pickFirst(q.BaiHoc,ex.lessonNo,ex.lessonName,ex.lesson);
+        base.QuyenTruyCap=pickFirst(q.QuyenTruyCap,ex.QuyenTruyCap,ex.access,'FREE');
+        rows.push(base);
+      })
+    });
+    return rows;
+  }
+  return [];
+}
+function parsePack(obj){
+  let rows=convertOldPack(obj).map((r,i)=>normalizeRow(r,i));
+  if(!rows.length)throw new Error('Không thấy rows/questions/exams trong JSON. Cần dạng {headers, rows:[...]} hoặc {exams:[{questions:[...]}]}.');
+  return {sheet:'Cau_Hoi',schema:'Cau_Hoi.columns.local.v17',headers:['ID','BoDe','De','Lop','Mon','Chuong','BaiHoc','DangBaiTap','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh','QuyenTruyCap'],rows};
+}
+function jsonSchemaReport(rows){
+  let total=rows.length;
+  let mcq=rows.filter(r=>normDang(getVal(r,'Dang'))==='Trắc nghiệm').length;
+  let mcqOpt=rows.filter(r=>normDang(getVal(r,'Dang'))==='Trắc nghiệm' && ['A','B','C','D'].filter(k=>getVal(r,k)).length>=2).length;
+  let tf=rows.filter(r=>normDang(getVal(r,'Dang'))==='Đúng sai').length;
+  let short=rows.filter(r=>normDang(getVal(r,'Dang'))==='Trả lời ngắn').length;
+  let missing=rows.filter(r=>normDang(getVal(r,'Dang'))==='Trắc nghiệm' && ['A','B','C','D'].filter(k=>getVal(r,k)).length<2).length;
+  return ' · Sơ đồ JSON v17: '+total+' câu; TN '+mcqOpt+'/'+mcq+' có A-D'+(missing?'; TN thiếu A-D '+missing:'')+'; Đ/S '+tf+'; TLN '+short+'.';
+}
+function loadPack(obj, save=true){
+  rawPack=parsePack(obj); let rows=rawPack.rows||[]; let total=rows.length;
+  allRows=rows.filter(canAccessRow); let locked=total-allRows.length;
+  if(save)localStorage.setItem(LS_KEY,JSON.stringify(rawPack));
+  $('loadMsg').innerHTML='✅ Đã nạp <b>'+allRows.length+'</b>/<b>'+total+'</b> câu cho quyền <b>'+roleLabel()+'</b>.'+(locked>0?' <span style="color:#b45309">Đã khóa '+locked+' câu vượt quyền.</span>':'')+jsonSchemaReport(allRows)+' Đề lưu trên máy này.';
+  buildFilters(); applyFilters(); startQuiz(false);
+}
+function renderMCQ(r){
+  let id=String(getVal(r,'ID')||'');
+  let ans=answers[id]||'';
+  let opts=['A','B','C','D'].filter(k=>getVal(r,k));
+  if(opts.length){
+    let html='<div class="answerCard"><div class="answerTitle">📝 Chọn đáp án theo sơ đồ JSON</div>';
+    html+=opts.map(k=>'<label class="opt"><input type="radio" name="mcq" value="'+k+'" '+(ans===k?'checked':'')+' onchange="saveAnswerAndAuto(\''+esc(id)+'\',this.value)"> <b>'+k+'</b> <span class="latex">'+richText(getVal(r,k))+'</span></label>').join('');
+    html+='</div>'; $('answerArea').innerHTML=html; renderMath(); return;
+  }
+  $('answerArea').innerHTML='<div class="answerCard"><div class="answerTitle">⚠️ JSON câu này chưa có phương án A-D</div><div class="emptyWarn">App đã đọc đúng sơ đồ JSON, nhưng riêng câu này không có trường A/B/C/D, không có options/choices và cũng không tách được A. B. C. D. trong nội dung. Hãy xuất lại JSON theo cột A, B, C, D hoặc kiểm tra câu trong file.</div></div>';
+}
+
+
+/* ===== V16: bóng chat AI cho JSON + tự ẩn bộ lọc trên điện thoại ===== */
+let jsonAiMessages=[];
+function currentJsonQuestion(){return quiz[idx]||null}
+function currentJsonAnswer(){let r=currentJsonQuestion(); if(!r)return ''; return answers[getVal(r,'ID')]||''}
+function jsonNl2br(s){return esc(s).replace(/\n/g,'<br>')}
+function addJsonAiMsg(role, text){let box=$('jsonAiMsgs'); if(!box)return; let div=document.createElement('div'); div.className='jsonAiMsg '+(role==='user'?'user':'ai'); div.innerHTML='<div class="bubble">'+jsonNl2br(text||'')+'</div>'; box.appendChild(div); box.scrollTop=box.scrollHeight; renderMath();}
+function toggleJsonAiChat(open){let p=$('jsonAiPanel'); if(!p)return; if(open===false)p.classList.add('hidden'); else if(open===true)p.classList.remove('hidden'); else p.classList.toggle('hidden'); if(!p.classList.contains('hidden')){setTimeout(()=>{let i=$('jsonAiInput'); if(i)i.focus()},60)}}
+function localAiFallback(msg){let r=currentJsonQuestion(); if(!r)return 'Chưa có câu đang mở. Hãy nạp JSON và bấm Làm theo thứ tự.'; let d=normDang(getVal(r,'Dang')); let s='Gợi ý nhanh cho câu hiện tại:\n'; s+='Dạng: '+d+'\n'; s+='Bước 1: Đọc kĩ dữ kiện và xác định yêu cầu của đề.\n'; if(d==='Trắc nghiệm')s+='Bước 2: Làm ra kết quả trước, sau đó so với A/B/C/D.\n'; else if(d==='Đúng sai')s+='Bước 2: Xét từng mệnh đề A, B, C, D độc lập; mệnh đề nào sai chỉ cần một phản ví dụ hoặc sai công thức.\n'; else if(d==='Trả lời ngắn')s+='Bước 2: Tính kết quả số/biểu thức, chú ý đơn vị và sai số.\n'; else s+='Bước 2: Trình bày theo công thức, thay số và kết luận.\n'; let da=getVal(r,'DapAn'), lg=getVal(r,'LoiGiai'); if(canViewSolutionRow(r)){ if(da)s+='\nĐáp án trong JSON: '+da; if(lg)s+='\n\nLời giải trong JSON:\n'+lg; } else { s+='\nTài khoản hiện tại chưa được mở đáp án/lời giải. Hãy tự làm rồi bấm chấm.'; } return s;}
+function jsonAiAskQuick(t){let i=$('jsonAiInput'); if(i){i.value=t; sendJsonAiChat();}}
+async function sendJsonAiChat(){let input=$('jsonAiInput'); let msg=clean(input&&input.value); if(!msg){alert('Nhập câu hỏi cho AI trước.');return} let r=currentJsonQuestion(); if(!r){alert('Chưa có câu đang mở.');return} addJsonAiMsg('user',msg); if(input)input.value=''; jsonAiMessages.push({role:'user',text:msg}); let loading='Đang hỏi AI...'; addJsonAiMsg('ai',loading); let box=$('jsonAiMsgs'); let last=box?box.lastElementChild:null; try{ if(!navigator.onLine)throw new Error('offline'); let res=await fetch('/api/ai/json-local-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:r,answer:currentJsonAnswer(),message:msg,messages:jsonAiMessages.slice(-8)})}); let data=await res.json().catch(()=>({})); if(!res.ok||data.error)throw new Error(data.error||('HTTP '+res.status)); let reply=data.reply||'AI chưa có phản hồi.'; if(last)last.querySelector('.bubble').innerHTML=jsonNl2br(reply); jsonAiMessages.push({role:'assistant',text:reply}); renderMath(); }catch(e){let reply='⚠️ Không gọi được AI online ('+(e.message||e)+').\n\n'+localAiFallback(msg); if(last)last.querySelector('.bubble').innerHTML=jsonNl2br(reply); jsonAiMessages.push({role:'assistant',text:reply}); renderMath(); }}
+
+
+/* ===== V19: lưu/test Gemini key + tự thu gọn ô key sau khi lưu ===== */
+function jsonAiMaskKey(k){k=clean(k); if(!k)return''; return k.length<=14?k.slice(0,6)+'…':k.slice(0,8)+'…'+k.slice(-4)}
+function jsonAiShortKeyStatus(msg){
+  msg=clean(msg||'');
+  if(!msg)return '';
+  if(msg.includes('Đã lưu')||msg.includes('OK')||msg.includes('đã lưu'))return '✅ Key OK';
+  if(msg.includes('Đang lưu'))return 'Đang lưu...';
+  if(msg.includes('Đang test'))return 'Đang test...';
+  if(msg.includes('Chưa có'))return 'Chưa có key';
+  if(msg.includes('lỗi')||msg.includes('Lỗi')||msg.includes('❌'))return '⚠️ Lỗi key';
+  return msg.split('\n')[0].slice(0,34);
+}
+function jsonAiSetKeyStatus(msg, cls){
+  let el=$('jsonAiKeyStatus');
+  if(el){el.textContent=msg||''; el.classList.toggle('jsonAiLoginWarn',cls==='warn')}
+  let mini=$('jsonAiKeyMini');
+  if(mini)mini.textContent=jsonAiShortKeyStatus(msg);
+}
+function jsonAiSetKeyCollapsed(on){
+  let box=$('jsonAiKeyBox'); if(!box)return;
+  box.classList.toggle('collapsed',!!on);
+  let btn=$('jsonAiKeyToggle'); if(btn)btn.textContent=on?'Sửa':'Thu gọn';
+  let title=$('jsonAiKeyTitle'); if(title)title.textContent=on?'🔑 Gemini':'🔑 Gemini key cho Chat AI';
+}
+function jsonAiToggleKeyBox(){let box=$('jsonAiKeyBox'); jsonAiSetKeyCollapsed(!(box&&box.classList.contains('collapsed')))}
+async function jsonAiLoadKeyStatus(){
+  let mini=$('jsonAiKeyMini'); if(mini)mini.textContent='đang kiểm tra...';
+  try{
+    let res=await fetch('/api/ai-config',{method:'GET',headers:{'Accept':'application/json'}});
+    let j=await res.json().catch(()=>({}));
+    if(!res.ok||j.error)throw new Error(j.error||('HTTP '+res.status));
+    let masked=(j.gemini_keys_masked||[]).join(', ');
+    let n=Number(j.user_gemini_keys||0), total=Number(j.gemini_keys_count||0), server=Number(j.ai_server_key_count||0);
+    if(j.can_save_own_key===false){jsonAiSetKeyCollapsed(false); jsonAiSetKeyStatus('Tài khoản này chưa có quyền dùng AI. Cần VIP/SVIP/ADMIN để lưu Gemini key.', 'warn');return;}
+    if(n>0){jsonAiSetKeyStatus('✅ Đã lưu '+n+' key Gemini cá nhân'+(masked?': '+masked:'')+' · Chat AI dùng key này.'); jsonAiSetKeyCollapsed(true);}
+    else if(total>0){jsonAiSetKeyCollapsed(false); jsonAiSetKeyStatus('Chưa có key cá nhân. Đang có '+server+' key server dự phòng, nhưng nên dán key riêng để ổn định.');}
+    else {jsonAiSetKeyCollapsed(false); jsonAiSetKeyStatus('Chưa có Gemini key. Dán key AIza... hoặc AQ... vào ô trên rồi bấm 💾 Lưu key.', 'warn');}
+  }catch(e){jsonAiSetKeyStatus('Chưa đăng nhập hoặc chưa đọc được trạng thái key. Hãy đăng nhập VIP/SVIP/ADMIN rồi mở lại Chat AI.', 'warn')}
+}
+async function jsonAiSaveGeminiKey(){
+  let raw=clean($('jsonGeminiKeys')&&$('jsonGeminiKeys').value); if(!raw){alert('Dán Gemini key AIza... hoặc AQ... trước.');return}
+  jsonAiSetKeyStatus('Đang lưu key Gemini...');
+  try{
+    let res=await fetch('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'GEMINI',api_keys:raw})});
+    let j=await res.json().catch(()=>({})); if(!res.ok||j.error)throw new Error(j.error||('HTTP '+res.status));
+    $('jsonGeminiKeys').value='';
+    jsonAiSetKeyStatus('✅ Đã lưu '+(j.user_gemini_keys||j.gemini_keys_count||1)+' key Gemini.');
+    jsonAiSetKeyCollapsed(true);
+    await jsonAiLoadKeyStatus();
+  }catch(e){jsonAiSetKeyStatus('❌ Lưu key lỗi: '+(e.message||e), 'warn'); alert('Lưu key lỗi: '+(e.message||e));}
+}
+async function jsonAiTestGeminiKey(){
+  let raw=clean($('jsonGeminiKeys')&&$('jsonGeminiKeys').value);
+  jsonAiSetKeyStatus('Đang test Gemini key...');
+  try{
+    let body={provider:'GEMINI'}; if(raw)body.api_keys=raw;
+    let res=await fetch('/api/ai-key-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    let j=await res.json().catch(()=>({})); if(!res.ok||j.error)throw new Error(j.error||('HTTP '+res.status));
+    let msg=(j.message||'Đã test key.')+(j.keys_ok!=null?' · OK '+j.keys_ok+'/'+j.keys_tested:'');
+    jsonAiSetKeyStatus((j.ok?'✅ ':'⚠️ ')+msg, j.ok?'':'warn');
+    alert(msg);
+  }catch(e){jsonAiSetKeyStatus('❌ Test key lỗi: '+(e.message||e), 'warn'); alert('Test key lỗi: '+(e.message||e));}
+}
+async function jsonAiClearGeminiKey(){
+  if(!confirm('Xóa Gemini key đã lưu cho tài khoản này?'))return;
+  jsonAiSetKeyStatus('Đang xóa key...');
+  try{
+    let res=await fetch('/api/ai-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear_keys:true,provider:'GEMINI'})});
+    let j=await res.json().catch(()=>({})); if(!res.ok||j.error)throw new Error(j.error||('HTTP '+res.status));
+    jsonAiSetKeyCollapsed(false); jsonAiSetKeyStatus('Đã xóa key cá nhân.'); await jsonAiLoadKeyStatus();
+  }catch(e){jsonAiSetKeyStatus('❌ Xóa key lỗi: '+(e.message||e), 'warn'); alert('Xóa key lỗi: '+(e.message||e));}
+}
+(function patchJsonAiToggleKeyV18(){
+  let oldToggle=toggleJsonAiChat;
+  toggleJsonAiChat=function(open){oldToggle(open); let p=$('jsonAiPanel'); if(p&&!p.classList.contains('hidden'))setTimeout(jsonAiLoadKeyStatus,80)};
+})();
+
+(function enhanceJsonMobileV16(){
+  let oldStart=startQuiz; startQuiz=function(shuffle){ oldStart(shuffle); if(window.innerWidth<=820 && quiz.length){document.body.classList.add('sideHidden'); let b=$('toggleSideBtn'); if(b)b.textContent='☰ Hiện bộ lọc'; setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),80);} };
+  let oldJump=jumpToFiltered; jumpToFiltered=function(i){oldJump(i); if(window.innerWidth<=820){document.body.classList.add('sideHidden'); let b=$('toggleSideBtn'); if(b)b.textContent='☰ Hiện bộ lọc';}};
+  let oldRender=renderQ; renderQ=function(){oldRender(); let qa=$('questionArea'); if(qa && !$('mobileHintInQuestion') && window.innerWidth<=820){let h=document.createElement('div');h.id='mobileHintInQuestion';h.className='mobileOnlyHint';h.textContent='Mẹo: bấm ☰ Hiện bộ lọc để chọn chương/bài, hoặc bấm 💬 Chat AI ở góc dưới để hỏi câu này.'; qa.parentNode.insertBefore(h,qa);}};
+})();
+
+(function init(){updateUserBadge(); setTimeout(jsonAiLoadKeyStatus,400); let saved=localStorage.getItem(LS_KEY); if(saved){try{loadPack(JSON.parse(saved),false); restoreProgress(); applyFilters(true); if(!filtered.length&&allRows.length){clearFilterValues(); applyFilters(true); $('loadMsg').innerHTML='✅ Đã mở lại đề đã nạp trên máy này: <b>'+allRows.length+'</b> câu. <span style="color:#b45309">Bộ lọc cũ không còn khớp nên app đã tự xóa lọc.</span>'}else{if(quiz.length)renderQ(); $('loadMsg').innerHTML='✅ Đã mở lại đề đã nạp trên máy này: <b>'+allRows.length+'</b> câu.'}}catch(e){localStorage.removeItem(LS_KEY)}}})();
 </script>
 </body>
 </html>
-    """)
+    """, user=current_user_public())
+
+# ============================================================
+# [DE-SOURCE-SELECTOR] Tách rõ 3 luồng: Sheet Online / JSON Offline / ADMIN tạo JSON
+# ============================================================
+@app.route("/chon-de")
+@app.route("/chon-nguon-de")
+@app.route("/nguon-de")
+def choose_question_source_page():
+    return render_template_string(r"""
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chọn nguồn đề</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:linear-gradient(135deg,#eff6ff,#f8fafc);color:#102033}.wrap{max-width:1050px;margin:0 auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}.brand{font-size:26px;font-weight:900;color:#0f3b8f}.sub{color:#667085;line-height:1.45}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:#fff;border:1px solid #dbe5f2;border-radius:20px;box-shadow:0 10px 30px rgba(16,32,51,.09);padding:18px;min-height:260px;display:flex;flex-direction:column}.icon{font-size:38px}.card h2{margin:10px 0 8px}.card p{color:#475467;line-height:1.5}.btn{display:inline-block;text-decoration:none;border-radius:13px;padding:12px 14px;font-weight:900;text-align:center;margin-top:auto;border:1px solid #b9c9df;background:#fff;color:#102033}.blue{background:#2563eb;border-color:#2563eb;color:#fff}.green{background:#0f9f6e;border-color:#0f9f6e;color:#fff}.orange{background:#f97316;border-color:#f97316;color:#fff}.note{margin-top:16px;background:#fffbeb;border:1px solid #fde68a;color:#7c2d12;border-radius:16px;padding:12px;line-height:1.5}.pill{font-size:12px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:6px 9px;border-radius:999px}@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.brand{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><div class="brand">📚 Chọn nguồn đề luyện tập</div><div class="sub">Tách rõ: Google Sheet online, đề JSON offline, và ADMIN tạo/xuất JSON.</div></div><span class="pill">{{ role }}</span></div>
+  <div class="grid">
+    <div class="card"><div class="icon">🌐</div><h2>Google Sheet Online</h2><p>Học sinh làm bài như app cũ: đọc dữ liệu từ sheet <b>Cau_Hoi</b>, có đăng nhập, VIP/SVIP, lưu điểm, lịch sử, xếp hạng.</p><a class="btn blue" href="/">Vào làm đề online</a></div>
+    <div class="card"><div class="icon">📦</div><h2>Đề JSON Offline</h2><p>Học sinh tự chọn file JSON trên máy, làm bài nhẹ, lưu đề và bài làm trong trình duyệt, mở lại được khi không có mạng sau lần mở đầu.</p><a class="btn green" href="/json-local">Nhập / mở JSON</a></div>
+    <div class="card"><div class="icon">🛠️</div><h2>ADMIN tạo JSON</h2><p>Giáo viên tạo JSON từ Google Sheet, đọc thử JSON, nhập JSON vào Sheet, lưu/tải file JSON để gửi học sinh.</p><a class="btn orange" href="/admin/json">Tạo / xuất JSON</a></div>
+  </div>
+  <div class="note"><b>Gợi ý dùng:</b> Thi thật hoặc cần lưu điểm → Google Sheet Online. Luyện tập nhẹ/offline → Đề JSON Offline. Soạn và phát đề → ADMIN tạo JSON.</div>
+</div>
+</body>
+</html>
+    """, role=(current_user_public().get("role_label") or "Chưa đăng nhập"))
+
+@app.route("/online")
+@app.route("/google-sheet-online")
+@app.route("/ggs")
+def google_sheet_online_alias():
+    return redirect("/")
+
+@app.route("/json-local/manifest.webmanifest")
+def json_local_manifest():
+    return jsonify({
+        "name":"Đề JSON Offline",
+        "short_name":"De JSON",
+        "start_url":"/json-local",
+        "scope":"/",
+        "display":"standalone",
+        "background_color":"#f4f7fb",
+        "theme_color":"#2563eb",
+        "icons":[]
+    })
+
+@app.route("/sw-json-local.js")
+def sw_json_local():
+    js = r"""
+const CACHE='json-local-cache-v20';
+const ASSETS=['/json-local','/json-local/manifest.webmanifest','/chon-de'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
+self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
+self.addEventListener('fetch',e=>{
+  const u=new URL(e.request.url);
+  if(u.origin!==location.origin)return;
+  if(u.pathname==='/json-local'||u.pathname==='/de-json'||u.pathname==='/chon-de'||u.pathname==='/json-local/manifest.webmanifest'){
+    e.respondWith(fetch(e.request).then(r=>{let copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('/json-local'))));
+  }
+});
+"""
+    resp = make_response(js)
+    resp.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
 @app.errorhandler(Exception)
 def handle_error(e):
     return jsonify({"error": str(e)}), 500
