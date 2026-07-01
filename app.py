@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V326_JSON_SOURCE_BUTTONS_2026_07_01"
+APP_VERSION = "V327_STUDIO_WEB_PAGES_2026_07_01"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -162,6 +162,10 @@ ASSISTANT_CHAT_MAX_TOKENS = max(
 # JSON Offline chat cần trả lời dài hơn chat thường, nếu để 850 token AI hay bị cụt giữa bước tính.
 JSON_LOCAL_CHAT_MAX_TOKENS = max(
     1200, min(int(os.environ.get("JSON_LOCAL_CHAT_MAX_TOKENS", "2600") or 2600), 4200)
+)
+# Câu Đúng/Sai phải phân tích từng ý A–D nên cần thêm token, nhưng vẫn giới hạn để không hao quota quá mức.
+JSON_LOCAL_TF_CHAT_MAX_TOKENS = max(
+    2200, min(int(os.environ.get("JSON_LOCAL_TF_CHAT_MAX_TOKENS", "3600") or 3600), 5000)
 )
 ASSISTANT_HTTP_MAX_SEC = max(22, min(int(os.environ.get("ASSISTANT_HTTP_MAX_SEC", "55") or 55), 90))
 AI_IMAGE_FETCH_TIMEOUT = max(6, min(int(os.environ.get("AI_IMAGE_FETCH_TIMEOUT", "12") or 12), 30))
@@ -18218,12 +18222,17 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
    480-639 : logo + tabs + adminBar(icon) + buttons          [an chips]
    380-479 : logo + adminBar(icon) + buttons                 [an tabs]
    <=380px : logo + icon buttons only                        [toi gian] */
-.hdr{height:52px;display:flex;align-items:center;padding:0 8px 0 12px;gap:6px;
-  background:var(--surface);flex-shrink:0;position:sticky;top:0;z-index:200;
-  box-shadow:0 1px 4px rgba(0,0,0,.2);overflow:hidden}
+.hdr{display:flex;flex-direction:column;background:var(--surface);flex-shrink:0;
+  position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .hdr.hm{background:#1a73e8}
 .hdr.hp{background:#0f9d58}
 .hdr.ha{background:#673ab7}
+.hdrTop{height:52px;display:flex;align-items:center;padding:0 8px 0 12px;gap:6px;overflow:hidden}
+.hdrToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+  padding:6px 12px;background:rgba(0,0,0,.09);border-top:1px solid rgba(255,255,255,.14)}
+.hdrToolbar:not(:has(> *:not(.hide))){display:none}
+.hdrToolbarDivider{width:1px;align-self:stretch;min-height:20px;background:rgba(255,255,255,.22);flex-shrink:0}
+@media(max-width:600px){.hdrToolbar{padding:5px 8px}}
 
 /* Logo — P1: luôn hiện */
 .logo{display:flex;align-items:center;gap:7px;text-decoration:none;flex-shrink:0}
@@ -18292,17 +18301,27 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
   transition:background .15s;flex-shrink:0;display:flex;align-items:center;
   justify-content:center;width:28px;height:28px;padding:0}
 .thbtn:hover{background:rgba(255,255,255,.26)}
+/* Dropdown "Nguồn đề" — details/summary gọn, thay cho 3 nút rời trước đây */
+.hdrSrcDrop{position:relative;flex-shrink:0}
+.hdrSrcDrop summary{list-style:none;user-select:none}
+.hdrSrcDrop summary::-webkit-details-marker{display:none}
+.hdrSrcDrop summary .hdrSrcCaret{font-size:10px;opacity:.75;transition:transform .15s}
+.hdrSrcDrop[open] summary .hdrSrcCaret{transform:rotate(180deg)}
+.hdrSrcMenu{position:absolute;top:calc(100% + 6px);left:0;z-index:1200;min-width:190px;
+  display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #00000026}
+.hdrSrcMenu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+  color:var(--text);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap}
+.hdrSrcMenu a:hover{background:var(--opt-hover,#f1f3f4)}
+@media(max-width:600px){.hdrSrcDrop summary span:not(.hdrSrcCaret){display:none}.hdrSrcDrop summary{padding:4px 6px;min-width:28px;justify-content:center}}
 
 /* adminBar — P4: thu nhỏ + scroll; dưới 600px chỉ giữ icon */
-.adminBar{display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap;
-  flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
-  scrollbar-width:none;max-width:min(380px,55vw)}
-.adminBar::-webkit-scrollbar{display:none}
+.adminBar{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
+.adminMoreSep{height:1px;background:var(--border);margin:4px 2px}
 /* Dưới 600px: ẩn text trong nút, chỉ giữ icon */
 @media(max-width:600px){
   .adminBar .hbtn{padding:4px 6px;min-width:28px;justify-content:center}
   .adminBar .hbtn i+*{display:none!important}
-  .adminBar{max-width:min(160px,38vw)}
 }
 /* PWA install — ẩn dưới 480px */
 {%- raw -%}@media(max-width:480px){#pwaInstallBtn{display:none!important}}{%- endraw -%}
@@ -18739,46 +18758,57 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 </style></head>
 <body class="ldvlDashV324">
 <header class="hdr hm" id="ldvlDashHdr">
-  <div class="logo">
-    <img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" width="30" height="30" style="border-radius:7px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-    <div class="logo-fb" style="display:none"><i class="ti ti-school"></i></div>
-    <div class="logo-txt">Luyện đề AI · Thầy Minh <small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
+  <div class="hdrTop">
+    <div class="logo">
+      <img src="/static/teacher-ai-icon-cartoon.png?v=321" alt="Thầy Minh" width="30" height="30" style="border-radius:7px;object-fit:cover;border:1.5px solid rgba(255,255,255,.35);flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="logo-fb" style="display:none"><i class="ti ti-school"></i></div>
+      <div class="logo-txt">Luyện đề AI · Thầy Minh <small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
+    </div>
+    <div id="topSubjectTabsV253" class="topSubjectTabsV253 hsp" aria-label="Chọn môn nhanh" style="justify-content:center">
+      <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
+      <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
+    </div>
+    <div class="hchip hide" id="ldvlUserChip"><div class="hav" id="ldvlUserIni">?</div><span id="ldvlUserName">...</span><span class="rpill" id="ldvlUserRole">VIP</span></div>
+    <span id="info" style="font-size:11px;color:rgba(255,255,255,.85);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <span id="topUserChip" class="topUserChip hide"></span>
+    <span id="aiProfileBadge" class="aiProfileBadge hide"></span>
+    <button type="button" id="pwaInstallBtn" class="hbtn hide" onclick="installPwaApp()" title="Cài app"><i class="ti ti-download"></i></button>
+    <button type="button" id="btnTheme" class="thbtn" onclick="toggleTheme()" title="Giao diện tối"><i class="ti ti-moon"></i></button>
+    <a href="/logout" class="hbtn" style="text-decoration:none"><i class="ti ti-logout"></i> Ra</a>
   </div>
-  <div id="topSubjectTabsV253" class="topSubjectTabsV253 hsp" aria-label="Chọn môn nhanh" style="justify-content:center">
-    <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
-    <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
-  </div>
-  <div aria-label="Chọn nguồn đề" style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);">
-    <a href="/" title="Làm đề online từ Google Sheet" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(37,99,235,.28);white-space:nowrap;">🌐 Sheet Online</a>
-    <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(22,163,74,.28);white-space:nowrap;">📦 JSON Offline</a>
-    <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON" style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(135deg,#f97316,#f59e0b);color:#fff;text-decoration:none;font-weight:900;font-size:12px;box-shadow:0 6px 16px rgba(249,115,22,.28);white-space:nowrap;">🛠️ Tạo JSON</a>
-  </div>
-  <span id="quizTopBar" class="adminBar hide"><button type="button" class="hbtn" onclick="backHome()"><i class="ti ti-arrow-left"></i> Mục lục</button></span>
-  <span id="adminBar" class="adminBar hide">
-    <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrDashBtn" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')" title="Về Dashboard"><i class="ti ti-layout-dashboard"></i><span class="ldvlHdrNavLbl"> Dash</span></button>
-    <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrMenuBtn" onclick="ldvlToggleAdminSidebar()" title="Menu ADMIN"><i class="ti ti-menu-2"></i></button>
-    <button type="button" id="syncBtn" class="hbtn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ</button>
-    <button type="button" id="topLatexImportBtn" class="hbtn" onclick="openLatexImportModal()"><i class="ti ti-file-import"></i> LaTeX</button>
-    <button type="button" id="bulkDbtBtn" class="hbtn" onclick="openBulkDbtReview()"><i class="ti ti-tags"></i> Dạng BT</button>
-    <button type="button" id="bulkLevelBtn" class="hbtn" onclick="openBulkLevelReview()"><i class="ti ti-target"></i> Mức độ</button>
-    <span class="adminMoreWrap">
-      <button type="button" id="adminMoreBtn" class="hbtn" onclick="toggleAdminMoreMenu(event)"><i class="ti ti-dots"></i></button>
-      <div id="adminMoreMenu" class="adminMoreMenu hide">
-        <button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button>
-        <button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button>
-        <button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button>
-        <button type="button" onclick="window.open('/admin/json','_blank');closeAdminMoreMenu()">📦 Đề JSON</button>
-        <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
+  <div class="hdrToolbar">
+    <details class="hdrSrcDrop" id="hdrSrcDrop">
+      <summary class="hbtn" title="Chọn nguồn đề"><i class="ti ti-database"></i><span>Nguồn đề</span><i class="ti ti-chevron-down hdrSrcCaret"></i></summary>
+      <div class="hdrSrcMenu" aria-label="Chọn nguồn đề">
+        <a href="/" title="Làm đề online từ Google Sheet"><i class="ti ti-cloud"></i> Sheet Online</a>
+        <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy"><i class="ti ti-package"></i> JSON Offline</a>
+        <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON"><i class="ti ti-code"></i> Tạo JSON</a>
       </div>
+    </details>
+    <span id="quizTopBar" class="adminBar hide"><button type="button" class="hbtn" onclick="backHome()"><i class="ti ti-arrow-left"></i> Mục lục</button></span>
+    <span id="adminBar" class="adminBar hide">
+      <span class="hdrToolbarDivider"></span>
+      <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrDashBtn" onclick="ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash')" title="Về Dashboard"><i class="ti ti-layout-dashboard"></i><span class="ldvlHdrNavLbl"> Dash</span></button>
+      <button type="button" class="hbtn ldvlHdrNavBtn" id="ldvlHdrMenuBtn" onclick="ldvlToggleAdminSidebar()" title="Menu ADMIN"><i class="ti ti-menu-2"></i></button>
+      <span class="hdrToolbarDivider"></span>
+      <button type="button" id="syncBtn" class="hbtn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ</button>
+      <span class="adminMoreWrap">
+        <button type="button" id="adminMoreBtn" class="hbtn" onclick="toggleAdminMoreMenu(event)" title="Công cụ khác"><i class="ti ti-tool"></i><span>Công cụ</span></button>
+        <div id="adminMoreMenu" class="adminMoreMenu hide">
+          <button type="button" id="topLatexImportBtn" onclick="openLatexImportModal();closeAdminMoreMenu()"><i class="ti ti-file-import"></i> Nhập LaTeX</button>
+          <button type="button" id="bulkDbtBtn" onclick="openBulkDbtReview();closeAdminMoreMenu()"><i class="ti ti-tags"></i> Gắn Dạng bài tập</button>
+          <button type="button" id="bulkLevelBtn" onclick="openBulkLevelReview();closeAdminMoreMenu()"><i class="ti ti-target"></i> Gắn Mức độ</button>
+          <div class="adminMoreSep"></div>
+          <button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button>
+          <button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button>
+          <button type="button" onclick="testServerAiKey();closeAdminMoreMenu()">🧪 Test GPT+Gemini</button>
+          <button type="button" onclick="window.open('/admin/json','_blank');closeAdminMoreMenu()">📦 Đề JSON</button>
+          <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
+        </div>
+      </span>
+
     </span>
-  </span>
-  <div class="hchip hide" id="ldvlUserChip"><div class="hav" id="ldvlUserIni">?</div><span id="ldvlUserName">...</span><span class="rpill" id="ldvlUserRole">VIP</span></div>
-  <span id="info" style="font-size:11px;color:rgba(255,255,255,.85);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-  <span id="topUserChip" class="topUserChip hide"></span>
-  <span id="aiProfileBadge" class="aiProfileBadge hide"></span>
-  <button type="button" id="pwaInstallBtn" class="hbtn hide" onclick="installPwaApp()" title="Cài app"><i class="ti ti-download"></i></button>
-  <button type="button" id="btnTheme" class="thbtn" onclick="toggleTheme()" title="Giao diện tối"><i class="ti ti-moon"></i></button>
-  <a href="/logout" class="hbtn" style="text-decoration:none"><i class="ti ti-logout"></i> Ra</a>
+  </div>
 </header>
 <div class="ldvlDashWrap">
 <div id="ldvlSbBackdrop" class="ldvlSbBackdrop" onclick="ldvlCloseAdminSidebar()"></div>
@@ -18915,7 +18945,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 <div id="userAccountCard" class="userAccountCard hide"></div>
 <div id="aiProfileBanner" class="aiProfileBanner hide"></div>
 
-<section id="ldvlNguonDePanel" style="margin:12px 0 16px;padding:16px;border-radius:22px;background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 50%,#fff7ed 100%);border:1px solid #bfdbfe;box-shadow:0 12px 34px rgba(15,23,42,.10);font-family:Inter,Segoe UI,Arial,sans-serif;">
+<section id="ldvlNguonDePanel" class="hide" style="margin:12px 0 16px;padding:16px;border-radius:22px;background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 50%,#fff7ed 100%);border:1px solid #bfdbfe;box-shadow:0 12px 34px rgba(15,23,42,.10);font-family:Inter,Segoe UI,Arial,sans-serif;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
     <div style="font-weight:950;color:#0f172a;font-size:17px;letter-spacing:.1px;">🔀 Chọn nguồn đề</div>
     <div style="font-size:11px;font-weight:900;color:#1e40af;background:#fff;border:1px solid #dbeafe;border-radius:999px;padding:5px 10px;box-shadow:0 3px 10px rgba(37,99,235,.08);">Sheet · JSON Offline · ADMIN</div>
@@ -24736,6 +24766,10 @@ function ldvlAdminPreviewStudent(){
 }
 window.ldvlToggleAdminSidebar=ldvlToggleAdminSidebar;
 window.ldvlCloseAdminSidebar=ldvlCloseAdminSidebar;
+document.addEventListener('click', function(e){
+  var d = document.getElementById('hdrSrcDrop');
+  if(d && d.hasAttribute('open') && !d.contains(e.target)) d.removeAttribute('open');
+});
 window.ldvlAdminPreviewStudent=ldvlAdminPreviewStudent;
 function ldvlAdminNav(btn,pid){
   if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return;}
@@ -29279,6 +29313,16 @@ def build_ai_assistant_chat_prompt(q: Dict[str, Any], message: Any, messages: An
         "- Được nêu công thức, thay số, lưu ý " + unit_note + ", bẫy dễ sai.",
         "- Công thức đặt trong $...$ nếu cần.",
     ]
+    if json_local_mode and dang == "Đúng sai":
+        rules.extend([
+            "",
+            "QUY TẮC RIÊNG CHO CÂU ĐÚNG/SAI JSON OFFLINE:",
+            "- BẮT BUỘC phân tích lần lượt từng ý A, B, C, D; không gộp chung một đoạn.",
+            "- Mỗi ý trình bày ngắn theo mẫu: Ý A → Công thức/lý do → Kết luận/khuyến nghị tự kiểm tra.",
+            "- Ưu tiên đủ 4 ý hơn văn phong dài. Mỗi ý 2–4 câu là đủ; không mở bài dài để tránh hao quota.",
+            "- Nếu tài khoản được phép xem đáp án: ghi rõ A=Đúng/Sai, B=Đúng/Sai... Nếu chưa được phép: không chốt nhãn Đúng/Sai cuối cùng, nhưng vẫn phân tích điều kiện để em tự đối chiếu.",
+            "- Không được dừng giữa ý C hoặc D; nếu cần rút gọn thì rút phần mở đầu, vẫn phải đủ A–D.",
+        ])
     if admin_mode:
         rules.extend([
             "- Nếu em hỏi «đáp án là gì»: trả lời ngắn các bước chính rồi «Đáp án cuối cùng: …».",
@@ -32430,13 +32474,14 @@ def api_ai_json_local_chat():
     try:
         q = question_for_ai_prompt(q)
         q["_JsonLocalChat"] = "1"
+        json_local_tokens = JSON_LOCAL_TF_CHAT_MAX_TOKENS if effective_dang(q) == "Đúng sai" else JSON_LOCAL_CHAT_MAX_TOKENS
         reply, key_index, provider_used, model, ai_error = assistant_invoke_ai(
             q,
             answer,
             chat=True,
             chat_message=message,
             messages=messages,
-            max_tokens=JSON_LOCAL_CHAT_MAX_TOKENS,
+            max_tokens=json_local_tokens,
         )
         if not clean(reply):
             reply = assistant_fallback_chat(q)
@@ -32598,7 +32643,7 @@ window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$
     <div class="jsonAiKeyHint">Lấy key tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> → Create API key → copy key → quay lại app dán vào đây.</div>
   </div>
   <div id="jsonAiMsgs" class="jsonAiMsgs"><div class="jsonAiMsg ai"><div class="bubble">Chọn một câu rồi hỏi AI. Nếu chưa gọi được AI, hãy dán Gemini key ở khung 🔑 phía trên rồi bấm Lưu key / Test key.</div></div></div>
-  <div class="jsonAiQuick"><button type="button" onclick="jsonAiAskQuick('Gợi ý cách làm câu này, không chốt đáp án nếu em chưa được phép xem.')">Gợi ý</button><button type="button" onclick="jsonAiAskQuick('Giải thích dạng bài và công thức cần dùng.')">Dạng bài</button><button type="button" onclick="jsonAiAskQuick('Kiểm tra đáp án em đã chọn/nhập và chỉ ra lỗi sai nếu có.')">Kiểm tra bài làm</button></div>
+  <div class="jsonAiQuick"><button type="button" onclick="jsonAiAskQuick('Gợi ý cách làm câu này, không chốt đáp án nếu em chưa được phép xem.')">Gợi ý</button><button type="button" onclick="jsonAiAskQuick('Giải thích dạng bài và công thức cần dùng.')">Dạng bài</button><button type="button" onclick="jsonAiAskQuick('Nếu đây là câu Đúng/Sai, hãy phân tích lần lượt từng ý A, B, C, D; mỗi ý nêu công thức/lý do và kết luận nếu em được phép xem đáp án. Không bỏ ý nào.')">Đ/S từng ý</button><button type="button" onclick="jsonAiAskQuick('Kiểm tra đáp án em đã chọn/nhập và chỉ ra lỗi sai nếu có.')">Kiểm tra bài làm</button></div>
   <div class="jsonAiInput"><textarea id="jsonAiInput" placeholder="Hỏi AI về câu đang mở..."></textarea><button type="button" onclick="sendJsonAiChat()">Gửi</button></div>
 </div>
 <script>
@@ -33101,7 +33146,7 @@ function currentJsonAnswer(){let r=currentJsonQuestion(); if(!r)return ''; retur
 function jsonNl2br(s){return esc(s).replace(/\n/g,'<br>')}
 function addJsonAiMsg(role, text){let box=$('jsonAiMsgs'); if(!box)return; let div=document.createElement('div'); div.className='jsonAiMsg '+(role==='user'?'user':'ai'); div.innerHTML='<div class="bubble">'+jsonNl2br(text||'')+'</div>'; box.appendChild(div); box.scrollTop=box.scrollHeight; renderMath();}
 function toggleJsonAiChat(open){let p=$('jsonAiPanel'); if(!p)return; if(open===false)p.classList.add('hidden'); else if(open===true)p.classList.remove('hidden'); else p.classList.toggle('hidden'); if(!p.classList.contains('hidden')){setTimeout(()=>{let i=$('jsonAiInput'); if(i)i.focus()},60)}}
-function localAiFallback(msg){let r=currentJsonQuestion(); if(!r)return 'Chưa có câu đang mở. Hãy nạp JSON và bấm Làm theo thứ tự.'; let d=normDang(getVal(r,'Dang')); let s='Gợi ý nhanh cho câu hiện tại:\n'; s+='Dạng: '+d+'\n'; s+='Bước 1: Đọc kĩ dữ kiện và xác định yêu cầu của đề.\n'; if(d==='Trắc nghiệm')s+='Bước 2: Làm ra kết quả trước, sau đó so với A/B/C/D.\n'; else if(d==='Đúng sai')s+='Bước 2: Xét từng mệnh đề A, B, C, D độc lập; mệnh đề nào sai chỉ cần một phản ví dụ hoặc sai công thức.\n'; else if(d==='Trả lời ngắn')s+='Bước 2: Tính kết quả số/biểu thức, chú ý đơn vị và sai số.\n'; else s+='Bước 2: Trình bày theo công thức, thay số và kết luận.\n'; let da=getVal(r,'DapAn'), lg=getVal(r,'LoiGiai'); if(canViewSolutionRow(r)){ if(da)s+='\nĐáp án trong JSON: '+da; if(lg)s+='\n\nLời giải trong JSON:\n'+lg; } else { s+='\nTài khoản hiện tại chưa được mở đáp án/lời giải. Hãy tự làm rồi bấm chấm.'; } return s;}
+function localAiFallback(msg){let r=currentJsonQuestion(); if(!r)return 'Chưa có câu đang mở. Hãy nạp JSON và bấm Làm theo thứ tự.'; let d=normDang(getVal(r,'Dang')); let s='Gợi ý nhanh cho câu hiện tại:\n'; s+='Dạng: '+d+'\n'; s+='Bước 1: Đọc kĩ dữ kiện và xác định yêu cầu của đề.\n'; if(d==='Trắc nghiệm')s+='Bước 2: Làm ra kết quả trước, sau đó so với A/B/C/D.\n'; else if(d==='Đúng sai'){s+='Bước 2: Xét từng mệnh đề A, B, C, D độc lập; mệnh đề nào sai chỉ cần một phản ví dụ hoặc sai công thức.\n'; ['A','B','C','D'].forEach(L=>{let v=getVal(r,L); if(v)s+='\nÝ '+L+': '+v+'\nCách xét: viết công thức/định nghĩa liên quan, kiểm tra điều kiện của ý '+L+', rồi đối chiếu với đề.';});} else if(d==='Trả lời ngắn')s+='Bước 2: Tính kết quả số/biểu thức, chú ý đơn vị và sai số.\n'; else s+='Bước 2: Trình bày theo công thức, thay số và kết luận.\n'; let da=getVal(r,'DapAn'), lg=getVal(r,'LoiGiai'); if(canViewSolutionRow(r)){ if(da)s+='\n\nĐáp án trong JSON: '+da; if(lg)s+='\n\nLời giải trong JSON:\n'+lg; } else { s+='\n\nTài khoản hiện tại chưa được mở đáp án/lời giải. Hãy tự làm rồi bấm chấm.'; } return s;}
 function jsonAiAskQuick(t){let i=$('jsonAiInput'); if(i){i.value=t; sendJsonAiChat();}}
 async function sendJsonAiChat(){let input=$('jsonAiInput'); let msg=clean(input&&input.value); if(!msg){alert('Nhập câu hỏi cho AI trước.');return} let r=currentJsonQuestion(); if(!r){alert('Chưa có câu đang mở.');return} addJsonAiMsg('user',msg); if(input)input.value=''; jsonAiMessages.push({role:'user',text:msg}); let loading='Đang hỏi AI...'; addJsonAiMsg('ai',loading); let box=$('jsonAiMsgs'); let last=box?box.lastElementChild:null; try{ if(!navigator.onLine)throw new Error('offline'); let res=await fetch('/api/ai/json-local-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:r,answer:currentJsonAnswer(),message:msg,messages:jsonAiMessages.slice(-8)})}); let data=await res.json().catch(()=>({})); if(!res.ok||data.error)throw new Error(data.error||('HTTP '+res.status)); let reply=data.reply||'AI chưa có phản hồi.'; if(last)last.querySelector('.bubble').innerHTML=jsonNl2br(reply); jsonAiMessages.push({role:'assistant',text:reply}); renderMath(); }catch(e){let reply='⚠️ Không gọi được AI online ('+(e.message||e)+').\n\n'+localAiFallback(msg); if(last)last.querySelector('.bubble').innerHTML=jsonNl2br(reply); jsonAiMessages.push({role:'assistant',text:reply}); renderMath(); }}
 
@@ -33249,7 +33294,7 @@ def json_local_manifest():
 @app.route("/sw-json-local.js")
 def sw_json_local():
     js = r"""
-const CACHE='json-local-cache-v20';
+const CACHE='json-local-cache-v22';
 const ASSETS=['/json-local','/json-local/manifest.webmanifest','/chon-de'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
@@ -33287,13 +33332,355 @@ def _schedule_store_warmup() -> None:
 
 _schedule_store_warmup()
 
+
+
+
+
+
+# =============================================================================
+# STUDIO_WEB_V1_ROUTES_2026_07_01
+# Trộn Studio tạo JSON/TikZ vào app.py thành nhiều trang riêng.
+# =============================================================================
+
+STUDIO_WEB_VERSION = "STUDIO_WEB_V1_2026_07_01"
+
+def _studio_page(title: str, body: str) -> str:
+    return f"""
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+:root {{
+  --bg:#f3f4f6; --card:#ffffff; --line:#d1d5db; --text:#111827;
+  --muted:#6b7280; --blue:#2563eb; --green:#059669; --red:#dc2626;
+  --yellow:#fef3c7; --pink:#fee2e2; --mint:#dcfce7; --sky:#e0f2fe;
+}}
+* {{ box-sizing:border-box; }}
+body {{ margin:0; font-family:Arial, sans-serif; background:var(--bg); color:var(--text); }}
+.top {{ position:sticky; top:0; z-index:50; background:#0f172a; color:#fff; padding:10px 14px; display:flex; align-items:center; gap:10px; }}
+.top a {{ color:#fff; text-decoration:none; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.1); }}
+.top a:hover {{ background:rgba(255,255,255,.22); }}
+.wrap {{ max-width:1500px; margin:0 auto; padding:14px; }}
+.card {{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,.04); margin-bottom:12px; }}
+.grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }}
+.btn {{ border:1px solid var(--line); background:#fff; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:600; }}
+.btn:hover {{ border-color:var(--blue); color:var(--blue); }}
+.btn.primary {{ background:var(--blue); color:#fff; border-color:var(--blue); }}
+.btn.green {{ background:var(--green); color:#fff; border-color:var(--green); }}
+.btn.red {{ background:var(--red); color:#fff; border-color:var(--red); }}
+.row {{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }}
+input, select, textarea {{ border:1px solid var(--line); border-radius:8px; padding:8px; font-family:inherit; }}
+textarea {{ width:100%; min-height:220px; font-family:Consolas, monospace; }}
+.small {{ color:var(--muted); font-size:13px; }}
+.split {{ display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,.7fr); gap:12px; }}
+@media(max-width:900px) {{ .split {{ grid-template-columns:1fr; }} }}
+table {{ width:100%; border-collapse:collapse; background:#fff; }}
+th,td {{ border:1px solid var(--line); padding:7px; vertical-align:top; }}
+th {{ background:#e5e7eb; position:sticky; top:48px; z-index:3; }}
+tr.tn {{ background:var(--yellow); }}
+tr.ds {{ background:var(--mint); }}
+tr.tln {{ background:var(--pink); }}
+tr.tl {{ background:var(--sky); }}
+tr.err {{ outline:2px solid #f87171; }}
+pre {{ white-space:pre-wrap; background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:10px; max-height:520px; overflow:auto; }}
+.badge {{ display:inline-block; padding:2px 8px; border-radius:999px; background:#e5e7eb; font-size:12px; }}
+.viewer img {{ max-width:100%; border:1px solid var(--line); border-radius:10px; background:#fff; }}
+.navcard {{ display:block; color:inherit; text-decoration:none; }}
+.navcard .card:hover {{ border-color:var(--blue); transform:translateY(-1px); }}
+.toolbar {{ overflow-x:auto; white-space:nowrap; padding-bottom:6px; }}
+.toolbar .btn {{ margin-right:6px; }}
+</style>
+</head>
+<body>
+<div class="top">
+  <b>JSON/TikZ Studio Web</b>
+  <a href="/studio">Studio</a>
+  <a href="/studio/latex-json">LaTeX → JSON</a>
+  <a href="/studio/json-editor">Sửa JSON</a>
+  <a href="/studio/tikz-bank">Ngân hàng TikZ</a>
+  <a href="/studio/image-tools">Ảnh/HinhAnh</a>
+  <a href="/">Về app</a>
+</div>
+<div class="wrap">
+{body}
+</div>
+</body>
+</html>
+"""
+
+@app.route("/studio")
+def studio_home():
+    body = """
+<div class="card">
+  <h2>Trung tâm tạo ngân hàng JSON/TikZ</h2>
+  <p>Đã tách chức năng thành từng trang riêng để gọn nút, dễ dùng trên màn hình nhỏ.</p>
+</div>
+<div class="grid">
+  <a class="navcard" href="/studio/latex-json"><div class="card">
+    <h3>1. LaTeX → JSON</h3>
+    <p>Paste LaTeX, tự tách câu, chuẩn hóa choice/choiceTF, xuất JSON Cau_Hoi.</p>
+  </div></a>
+  <a class="navcard" href="/studio/json-editor"><div class="card">
+    <h3>2. Sửa / lọc JSON</h3>
+    <p>Mở JSON, lọc dạng câu, sửa trường, lưu lại file JSON.</p>
+  </div></a>
+  <a class="navcard" href="/studio/tikz-bank"><div class="card">
+    <h3>3. Ngân hàng TikZ</h3>
+    <p>Quản lý mã TikZ, lưu JSON ngân hàng TikZ, gọi lại dùng.</p>
+  </div></a>
+  <a class="navcard" href="/studio/image-tools"><div class="card">
+    <h3>4. Ảnh / HinhAnh</h3>
+    <p>Đưa ảnh base64 vào cột HinhAnh, kiểm tra ảnh trong JSON.</p>
+  </div></a>
+</div>
+<div class="card">
+  <h3>Quy trình chuẩn</h3>
+  <pre>LaTeX gốc → LaTeX → JSON → Sửa/lọc JSON → TikZ/HinhAnh → Lưu JSON → Nạp vào app JSON Offline</pre>
+</div>
+"""
+    return render_template_string(_studio_page("Studio", body))
+
+
+@app.route("/studio/latex-json")
+def studio_latex_json():
+    body = r"""
+<div class="card">
+  <h2>LaTeX → JSON Cau_Hoi</h2>
+  <p class="small">Trang này chạy trên trình duyệt, không đẩy dữ liệu lên server. Dùng để tạo nhanh JSON cho app.</p>
+</div>
+<div class="split">
+  <div class="card">
+    <div class="row">
+      <label>Bộ đề <input id="mBoDe" value="Ngân hàng LaTeX"></label>
+      <label>Đề <input id="mDe" value="Đề 1"></label>
+      <label>Lớp <input id="mLop" value="12" style="width:70px"></label>
+      <label>Môn <input id="mMon" value="Vật lí" style="width:110px"></label>
+      <label>Prefix ID <input id="mPrefix" value="Q" style="width:70px"></label>
+    </div>
+    <p><b>Dán LaTeX:</b></p>
+    <textarea id="latexInput" placeholder="\begin{ex}...\choice...\loigiai{...}\end{ex}"></textarea>
+    <div class="toolbar">
+      <button class="btn primary" onclick="convertLatex()">Chuyển sang JSON</button>
+      <button class="btn" onclick="normalizeChoice()">Chuẩn choice[t]</button>
+      <button class="btn green" onclick="downloadJson()">Tải JSON</button>
+      <button class="btn" onclick="copyOut()">Copy JSON</button>
+      <button class="btn" onclick="saveLocal()">Lưu tạm trình duyệt</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Kết quả</h3>
+    <div id="stats" class="small"></div>
+    <pre id="jsonOut"></pre>
+  </div>
+</div>
+<script>
+const HEADERS=["ID","BoDe","De","Lop","Mon","Môn","Chuong","BaiHoc","DangBaiTap","MucDo","Dang","CauHoi","A","B","C","D","DapAn","SaiSo","LoiGiai","HinhAnh","QuyenTruyCap"];
+function clean(s){return (s||"").toString().replace(/\r\n/g,"\n").replace(/\r/g,"\n").trim();}
+function normalizeChoiceText(s){return clean(s).replace(/\\choiceTF\s*\[[^\]]*\]/g,"\\choiceTF").replace(/\\choice\s*\[[^\]]*\]/g,"\\choice");}
+function normalizeChoice(){ latexInput.value=normalizeChoiceText(latexInput.value); }
+function findMatchingBrace(s,pos){let d=0; for(let i=pos;i<s.length;i++){if(s[i]=="{"&&s[i-1]!="\\")d++; if(s[i]=="}"&&s[i-1]!="\\"){d--; if(d===0)return i;}} return -1;}
+function readArgs(s,cmd){
+  let st=s.indexOf("\\"+cmd); if(st<0)return null;
+  let i=st+cmd.length+1; while(/\s/.test(s[i]||""))i++;
+  if(s[i]=="["){let j=s.indexOf("]",i); if(j>=0)i=j+1;}
+  let args=[];
+  while(i<s.length){while(/\s/.test(s[i]||""))i++; if(s[i]!="{")break; let j=findMatchingBrace(s,i); if(j<0)break; args.push(s.slice(i+1,j).trim()); i=j+1;}
+  return {args,st,ed:i};
+}
+function removeCmd(s,cmd){let r=readArgs(s,cmd); if(r&&r.args.length)return {text:(s.slice(0,r.st)+s.slice(r.ed)).trim(), val:r.args[0]}; return {text:s,val:""};}
+function extractBlocks(tex){
+  tex=normalizeChoiceText(tex);
+  let arr=[], re=/\\begin\s*\{\s*(ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}/gi, m;
+  while((m=re.exec(tex))) arr.push(m[2].trim());
+  if(!arr.length) arr=[tex.trim()].filter(Boolean);
+  return arr;
+}
+function inferDang(r){
+  if((r.CauHoi||"").includes("\\choiceTF"))return "Đúng sai";
+  if((r.CauHoi||"").includes("\\shortans"))return "Trả lời ngắn";
+  if(/[ĐDđdSs](\s*,\s*[ĐDđdSs]){1,3}/.test(r.DapAn||""))return "Đúng sai";
+  if(r.A||r.B||r.C||r.D)return "Trắc nghiệm";
+  if(r.DapAn)return "Trả lời ngắn";
+  return "Tự luận";
+}
+function parseBlock(block,i){
+  let r={}; HEADERS.forEach(h=>r[h]="");
+  r.ID=(mPrefix.value||"Q")+"_"+String(i).padStart(4,"0");
+  r.BoDe=mBoDe.value; r.De=mDe.value; r.Lop=mLop.value; r.Mon=mMon.value; r["Môn"]=mMon.value; r.QuyenTruyCap="FREE";
+  let t=clean(block);
+  let lo=removeCmd(t,"loigiai"); t=lo.text; r.LoiGiai=lo.val;
+  let sh=readArgs(t,"shortans"); if(sh&&sh.args.length){r.DapAn=sh.args[0]; t=(t.slice(0,sh.st)+t.slice(sh.ed)).trim(); r.Dang="Trả lời ngắn";}
+  let ctf=readArgs(t,"choiceTF");
+  if(ctf&&ctf.args.length>=2){
+    let vals=[]; ["A","B","C","D"].forEach((ch,k)=>{let v=ctf.args[k]||""; vals.push(v.includes("\\True")?"Đ":"S"); r[ch]=v.replace(/\\True\b/g,"").trim();});
+    r.DapAn=vals.join(","); t=(t.slice(0,ctf.st)+t.slice(ctf.ed)).trim(); r.Dang="Đúng sai";
+  } else {
+    let ch=readArgs(t,"choice");
+    if(ch&&ch.args.length>=2){
+      ["A","B","C","D"].forEach((c,k)=>{let v=ch.args[k]||""; if(v.includes("\\True"))r.DapAn=c; r[c]=v.replace(/\\True\b/g,"").trim();});
+      t=(t.slice(0,ch.st)+t.slice(ch.ed)).trim(); r.Dang="Trắc nghiệm";
+    }
+  }
+  r.CauHoi=t.replace(/^\s*Câu\s*\d+\s*[\.:]/i,"").trim();
+  if(!r.Dang)r.Dang=inferDang(r);
+  return r;
+}
+let lastJson=null;
+function convertLatex(){
+  let rows=extractBlocks(latexInput.value).map(parseBlock);
+  lastJson={sheet:"Cau_Hoi",schema:"Cau_Hoi.studio_web.v1",headers:HEADERS,rows};
+  jsonOut.textContent=JSON.stringify(lastJson,null,2);
+  stats.textContent=`Đã tách ${rows.length} câu`;
+}
+function downloadJson(){
+  if(!lastJson)convertLatex();
+  let blob=new Blob([JSON.stringify(lastJson,null,2)],{type:"application/json;charset=utf-8"});
+  let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="Cau_Hoi_tu_LaTeX.json"; a.click();
+}
+function copyOut(){navigator.clipboard.writeText(jsonOut.textContent||"");}
+function saveLocal(){if(!lastJson)convertLatex(); localStorage.setItem("studio_last_json",JSON.stringify(lastJson)); alert("Đã lưu tạm trong trình duyệt");}
+</script>
+"""
+    return render_template_string(_studio_page("LaTeX sang JSON", body))
+
+
+@app.route("/studio/json-editor")
+def studio_json_editor():
+    body = r"""
+<div class="card">
+  <h2>Sửa / lọc JSON Cau_Hoi</h2>
+  <p class="small">Mở JSON, lọc câu, sửa từng trường và tải lại file JSON.</p>
+</div>
+<div class="card">
+  <div class="toolbar">
+    <input type="file" id="fileJson" accept=".json">
+    <button class="btn" onclick="loadSaved()">Mở JSON tạm</button>
+    <button class="btn green" onclick="downloadJson()">Tải JSON đã sửa</button>
+    <button class="btn" onclick="saveLocal()">Lưu tạm</button>
+    <button class="btn" onclick="renumber()">Đánh lại ID</button>
+    <button class="btn red" onclick="deleteSelected()">Xóa câu đang chọn</button>
+  </div>
+  <div class="row">
+    <label>Dạng <select id="fDang" onchange="renderTable()"><option>Tất cả</option><option>Trắc nghiệm</option><option>Đúng sai</option><option>Trả lời ngắn</option><option>Tự luận</option></select></label>
+    <label>Tìm <input id="fSearch" oninput="renderTable()"></label>
+  </div>
+</div>
+<div class="split">
+  <div class="card" style="overflow:auto;max-height:70vh">
+    <table><thead><tr><th>#</th><th>ID</th><th>Dạng</th><th>Lớp</th><th>Môn</th><th>Câu hỏi</th></tr></thead><tbody id="tbody"></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Sửa câu</h3>
+    <div id="editBox" class="small">Chưa chọn câu.</div>
+  </div>
+</div>
+<script>
+const HEADERS=["ID","BoDe","De","Lop","Mon","Môn","Chuong","BaiHoc","DangBaiTap","MucDo","Dang","CauHoi","A","B","C","D","DapAn","SaiSo","LoiGiai","HinhAnh","QuyenTruyCap"];
+let data={headers:HEADERS,rows:[]}, selected=-1;
+function clean(s){return (s||"").toString().trim();}
+function cls(d){return d=="Đúng sai"?"ds":d=="Trả lời ngắn"?"tln":d=="Tự luận"?"tl":"tn";}
+fileJson.onchange=e=>{let f=e.target.files[0]; if(!f)return; let r=new FileReader(); r.onload=()=>{data=JSON.parse(r.result); data.rows=data.rows||[]; renderTable();}; r.readAsText(f,"utf-8");};
+function loadSaved(){let s=localStorage.getItem("studio_last_json"); if(!s)return alert("Chưa có JSON tạm"); data=JSON.parse(s); renderTable();}
+function saveLocal(){localStorage.setItem("studio_last_json",JSON.stringify(data)); alert("Đã lưu tạm");}
+function filtered(){let q=clean(fSearch.value).toLowerCase(), d=fDang.value; return data.rows.map((r,i)=>({r,i})).filter(x=>(d=="Tất cả"||x.r.Dang==d)&&(!q||JSON.stringify(x.r).toLowerCase().includes(q)));}
+function renderTable(){tbody.innerHTML=""; filtered().forEach((x,n)=>{let tr=document.createElement("tr"); tr.className=cls(x.r.Dang); tr.onclick=()=>selectRow(x.i); tr.innerHTML=`<td>${n+1}</td><td>${x.r.ID||""}</td><td>${x.r.Dang||""}</td><td>${x.r.Lop||""}</td><td>${x.r.Mon||x.r["Môn"]||""}</td><td>${(x.r.CauHoi||"").slice(0,120)}</td>`; tbody.appendChild(tr);});}
+function selectRow(i){selected=i; let r=data.rows[i]; let html=HEADERS.map(h=>`<label><b>${h}</b><br>${["CauHoi","A","B","C","D","LoiGiai","HinhAnh"].includes(h)?`<textarea data-h="${h}" oninput="upd(this)">${r[h]||""}</textarea>`:`<input data-h="${h}" value="${String(r[h]||"").replaceAll('"','&quot;')}" oninput="upd(this)" style="width:100%">`}</label>`).join("<hr>"); editBox.innerHTML=html;}
+function upd(el){if(selected<0)return; data.rows[selected][el.dataset.h]=el.value; renderTable();}
+function renumber(){let p=prompt("Prefix ID","Q"); if(!p)return; data.rows.forEach((r,i)=>r.ID=p+"_"+String(i+1).padStart(4,"0")); renderTable(); if(selected>=0)selectRow(selected);}
+function deleteSelected(){if(selected<0)return; if(confirm("Xóa câu đang chọn?")){data.rows.splice(selected,1); selected=-1; renderTable(); editBox.textContent="Đã xóa.";}}
+function downloadJson(){let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="Cau_Hoi_da_sua.json"; a.click();}
+renderTable();
+</script>
+"""
+    return render_template_string(_studio_page("Sửa JSON", body))
+
+
+@app.route("/studio/tikz-bank")
+def studio_tikz_bank():
+    body = r"""
+<div class="card">
+  <h2>Ngân hàng TikZ</h2>
+  <p class="small">Lưu mã TikZ dùng lại. Trang web này quản lý JSON TikZ riêng, không cần cài thêm.</p>
+</div>
+<div class="split">
+  <div class="card">
+    <div class="toolbar">
+      <input type="file" id="fileBank" accept=".json">
+      <button class="btn" onclick="addItem()">Thêm mục</button>
+      <button class="btn green" onclick="downloadBank()">Tải JSON TikZ</button>
+      <button class="btn" onclick="saveBankLocal()">Lưu tạm</button>
+      <button class="btn" onclick="loadBankLocal()">Mở tạm</button>
+      <button class="btn red" onclick="deleteItem()">Xóa mục</button>
+    </div>
+    <table><thead><tr><th>#</th><th>Mã</th><th>Tên</th><th>Môn</th><th>Mô tả</th></tr></thead><tbody id="list"></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Sửa mục TikZ</h3>
+    <div class="row">
+      <input id="tid" placeholder="TikzID">
+      <input id="ten" placeholder="Tên">
+      <input id="mon" placeholder="Môn">
+    </div>
+    <textarea id="mota" placeholder="Mô tả" style="min-height:70px"></textarea>
+    <textarea id="code" placeholder="\begin{tikzpicture}...\end{tikzpicture}"></textarea>
+    <textarea id="img" placeholder="HinhAnh data:image/png;base64,... hoặc để trống" style="min-height:80px"></textarea>
+    <div class="toolbar">
+      <button class="btn primary" onclick="saveItem()">Lưu sửa mục</button>
+      <button class="btn" onclick="copyTikz()">Copy TikZ</button>
+      <button class="btn" onclick="copyImg()">Copy HinhAnh</button>
+    </div>
+  </div>
+</div>
+<script>
+let bank={schema:"tikz_bank_v1",items:[]}, sel=-1;
+fileBank.onchange=e=>{let f=e.target.files[0]; if(!f)return; let r=new FileReader(); r.onload=()=>{bank=JSON.parse(r.result); bank.items=bank.items||[]; render();}; r.readAsText(f,"utf-8");};
+function nextId(){return "TKZ_"+String(bank.items.length+1).padStart(4,"0");}
+function addItem(){bank.items.push({TikzID:nextId(),Ten:"Mục TikZ mới",Mon:"",MoTa:"",TikZCode:"\\\\begin{tikzpicture}\\n\\\\draw (0,0)--(2,0);\\n\\\\end{tikzpicture}",HinhAnh:""}); sel=bank.items.length-1; render(); load();}
+function render(){list.innerHTML=""; bank.items.forEach((it,i)=>{let tr=document.createElement("tr"); tr.onclick=()=>{sel=i;load();}; tr.innerHTML=`<td>${i+1}</td><td>${it.TikzID||""}</td><td>${it.Ten||""}</td><td>${it.Mon||""}</td><td>${(it.MoTa||"").slice(0,80)}</td>`; list.appendChild(tr);});}
+function load(){let it=bank.items[sel]; if(!it)return; tid.value=it.TikzID||""; ten.value=it.Ten||""; mon.value=it.Mon||""; mota.value=it.MoTa||""; code.value=it.TikZCode||""; img.value=it.HinhAnh||"";}
+function saveItem(){if(sel<0)return addItem(); let it=bank.items[sel]; it.TikzID=tid.value; it.Ten=ten.value; it.Mon=mon.value; it.MoTa=mota.value; it.TikZCode=code.value; it.HinhAnh=img.value; render();}
+function deleteItem(){if(sel<0)return; bank.items.splice(sel,1); sel=-1; render();}
+function downloadBank(){let blob=new Blob([JSON.stringify(bank,null,2)],{type:"application/json;charset=utf-8"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="ngan_hang_tikz.json"; a.click();}
+function saveBankLocal(){localStorage.setItem("tikz_bank",JSON.stringify(bank)); alert("Đã lưu tạm");}
+function loadBankLocal(){let s=localStorage.getItem("tikz_bank"); if(!s)return alert("Chưa có"); bank=JSON.parse(s); render();}
+function copyTikz(){navigator.clipboard.writeText(code.value);}
+function copyImg(){navigator.clipboard.writeText(img.value);}
+render();
+</script>
+"""
+    return render_template_string(_studio_page("Ngân hàng TikZ", body))
+
+
+@app.route("/studio/image-tools")
+def studio_image_tools():
+    body = r"""
+<div class="card">
+  <h2>Ảnh / HinhAnh</h2>
+  <p class="small">Chuyển ảnh PNG/JPG thành data:image để dán vào cột HinhAnh của JSON.</p>
+</div>
+<div class="split">
+  <div class="card">
+    <input type="file" id="fileImg" accept="image/*">
+    <p><button class="btn green" onclick="copyData()">Copy data:image</button></p>
+    <textarea id="out" placeholder="data:image/png;base64,..."></textarea>
+  </div>
+  <div class="card viewer">
+    <h3>Xem ảnh</h3>
+    <img id="preview" alt="">
+  </div>
+</div>
+<script>
+fileImg.onchange=e=>{let f=e.target.files[0]; if(!f)return; let r=new FileReader(); r.onload=()=>{out.value=r.result; preview.src=r.result;}; r.readAsDataURL(f);};
+function copyData(){navigator.clipboard.writeText(out.value||"");}
+</script>
+"""
+    return render_template_string(_studio_page("Ảnh HinhAnh", body))
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
-
-
-
-
 
