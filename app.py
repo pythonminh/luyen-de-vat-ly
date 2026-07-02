@@ -11909,8 +11909,11 @@ def admin_ai_resolve_force(force_provider: Any) -> str:
         return "OPENAI"
     if p in ("GEMINI", "GOOGLE"):
         return "GEMINI"
+    if p in ("ANTHROPIC", "CLAUDE"):
+        return "ANTHROPIC"
     if p in ("AUTO", ""):
-        return resolve_ai_provider(admin_review=True)
+        # Chuỗi fallback Anthropic → Gemini → GPT (không ép OPENAI khi billing lỗi)
+        return ""
     return "GEMINI"
 
 
@@ -12035,33 +12038,47 @@ def admin_ai_call_text(
                     gemini_saw_quota = True
         return "", "GEMINI", model_gemini, 0
 
+    def _chain(*names: str) -> Tuple[str, str, str, int]:
+        for name in names:
+            if name == "ANTHROPIC" and anthropic_keys:
+                txt, prov, model, ki = try_anthropic()
+                if txt:
+                    return txt, prov, model, ki
+            elif name == "GEMINI" and gemini_keys:
+                txt, prov, model, ki = try_gemini()
+                if txt:
+                    return txt, prov, model, ki
+            elif name == "OPENAI" and openai_keys:
+                txt, prov, model, ki = try_openai()
+                if txt:
+                    return txt, prov, model, ki
+        return "", "", "", 0
+
     fp = admin_ai_resolve_force(force_provider)
     if fp == "ANTHROPIC":
-        txt, prov, model, ki = try_anthropic()
+        txt, prov, model, ki = _chain("ANTHROPIC", "GEMINI", "OPENAI")
         if txt:
             return txt, prov, model, ki
         raise RuntimeError(last_error or "ANTHROPIC không phản hồi.")
     if fp == "OPENAI":
-        txt, prov, model, ki = try_openai()
+        txt, prov, model, ki = _chain("OPENAI", "GEMINI", "ANTHROPIC")
         if txt:
             return txt, prov, model, ki
         raise RuntimeError(last_error or "OPENAI không phản hồi.")
-    # Mặc định: Anthropic trước (nếu có key), rồi Gemini, rồi GPT dự phòng
-    if anthropic_keys:
-        txt, prov, model, ki = try_anthropic()
+    if fp == "GEMINI":
+        txt, prov, model, ki = _chain("GEMINI", "ANTHROPIC", "OPENAI")
         if txt:
             return txt, prov, model, ki
-    txt, prov, model, ki = try_gemini()
+        if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
+            raise AdminGeminiQuotaError(last_error, openai_available=True)
+        raise RuntimeError(last_error or "GEMINI không phản hồi.")
+    # Mặc định (AUTO): Anthropic → Gemini → GPT (nếu allow_gpt_fallback hoặc hết lựa chọn khác)
+    txt, prov, model, ki = _chain("ANTHROPIC", "GEMINI")
     if txt:
         return txt, prov, model, ki
-    # Nếu Gemini lỗi billing/quota → thử Claude nếu chưa thử (không có key trước đó)
-    if gemini_saw_quota and anthropic_keys and not anthropic_keys:
-        txt, prov, model, ki = try_anthropic()
-        if txt:
-            return txt, prov, model, ki
     if gemini_saw_quota and openai_keys and not allow_gpt_fallback:
         raise AdminGeminiQuotaError(last_error, openai_available=True)
-    if allow_gpt_fallback and openai_keys:
+    if openai_keys and (allow_gpt_fallback or (not anthropic_keys and not gemini_keys)):
         txt, prov, model, ki = try_openai()
         if txt:
             return txt, prov, model, ki
@@ -16484,6 +16501,12 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
 .bulkDbtAiBadge.claude{background:linear-gradient(135deg,#7c3aed88,#4f46e588);border-color:#a78bfa66}
 .bulkDbtAiBadge.gemini{background:linear-gradient(135deg,#059669aa,#0891b2aa);border-color:#34d39966}
 .bulkDbtAiBadge.openai{background:linear-gradient(135deg,#16a34aaa,#15803daa);border-color:#4ade8066}
+.bulkDbtAiSelect{
+  padding:4px 8px;border-radius:8px;font-size:11px;font-weight:800;
+  background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);
+  cursor:pointer;max-width:120px
+}
+.bulkDbtAiSelect option{color:#111;background:#fff}
 
 /* ===== V322x: ChapterDbt redesign game-style + drag-drop ===== */
 .cdbtSuggestBox{padding:8px 12px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.6;margin-bottom:6px}
@@ -19191,7 +19214,12 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <span id="bulkDbtAiBadge" class="bulkDbtAiBadge hide"></span>
+    <select id="bulkDbtAiSelect" class="bulkDbtAiSelect" onchange="bulkDbtSaveAiProvider(this.value);bulkDbtSyncAiBadge()" title="Chọn AI phân loại Dạng BT">
+      <option value="GEMINI">⚡ Gemini</option>
+      <option value="ANTHROPIC">✨ Claude</option>
+      <option value="OPENAI">✅ GPT</option>
+    </select>
+    <span id="bulkDbtAiBadge" class="bulkDbtAiBadge hide" onclick="bulkDbtCycleAiProvider()" title="Bấm để đổi AI: Gemini / Claude / GPT" style="cursor:pointer"></span>
     <button type="button" class="bulkDbtCloseBtn" onclick="closeBulkDbtReview()">✕</button>
   </div>
 </div>
@@ -20428,8 +20456,6 @@ function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTI
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}document.getElementById('btn5050').disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProvider(){let p=String(USER.admin_ai_provider||'GEMINI').toUpperCase();return p||'GEMINI'}
 function ensureAdminQuotaModal(){let m=document.getElementById('adminQuotaModal');if(m)return m;m=document.createElement('div');m.id='adminQuotaModal';m.className='modal hide';m.innerHTML='<div class="modalBox" style="max-width:480px"><h3>⚠️ Hết quota GEMINI</h3><p id="adminQuotaMsg" class="muted" style="margin:10px 0;line-height:1.5">Đã hết quota Gemini. Bạn muốn chạy GPT để tiếp tục không?</p><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><button type="button" id="adminQuotaUseGpt" class="btn">✅ Chạy GPT</button><button type="button" id="adminQuotaWait" class="btn2">⏳ Đợi quota hồi</button></div></div>';document.body.appendChild(m);return m}
-function showAdminGeminiQuotaDialog(openaiAvailable){return new Promise(resolve=>{let m=ensureAdminQuotaModal();let msg=document.getElementById('adminQuotaMsg');let gptBtn=document.getElementById('adminQuotaUseGpt');if(msg)msg.textContent=openaiAvailable?'Đã hết quota GEMINI. Bạn muốn chạy GPT để tiếp tục không?':'Đã hết quota GEMINI. Chưa có key GPT — vui lòng đợi quota hồi rồi thử lại.';if(gptBtn)gptBtn.classList.toggle('hide',!openaiAvailable);let done=choice=>{m.classList.add('hide');resolve(choice)};m.classList.remove('hide');if(gptBtn){gptBtn.onclick=()=>done('gpt')}let waitBtn=document.getElementById('adminQuotaWait');if(waitBtn){waitBtn.onclick=()=>done('wait')}m.onclick=e=>{if(e.target===m)done('wait')}})}
-async function adminAiFetch(url,body,opts){opts=opts||{};let payload=Object.assign({},body||{});if(opts.admin_ai_provider)payload.admin_ai_provider=opts.admin_ai_provider;if(opts.admin_ai_allow_gpt_fallback)payload.admin_ai_allow_gpt_fallback=true;let method=opts.method||'POST';let headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});let r=await fetch(url,{method,headers,body:JSON.stringify(payload),signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}if(j.gemini_quota_exhausted){let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);if(choice==='gpt'&&j.openai_available){return adminAiFetch(url,body,{...opts,admin_ai_provider:'OPENAI',admin_ai_allow_gpt_fallback:true})}throw new Error(choice==='wait'?'Đã hủy — đợi quota Gemini hồi rồi thử lại.':'Hết quota GEMINI.')};if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
 async function adminApiPost(url,body,opts){
   opts=opts||{};
   let bulk=!!opts.bulk;
@@ -20443,7 +20469,18 @@ async function adminApiPost(url,body,opts){
       }catch(e){
         lastErr=e;
         let msg=String(e&&e.message||e);
-        let retryable=/429|quota|rate|timeout|HTTP 5|temporarily|service unavailable|deadline/i.test(msg);
+        let billing=/billing|not active|payment|402|account has been/i.test(msg);
+        if(billing&&isAdminViewer()){
+          let cur=String(opts.admin_ai_provider||'').toUpperCase();
+          let alts=cur==='OPENAI'?['GEMINI','ANTHROPIC']:cur==='ANTHROPIC'?['GEMINI','OPENAI']:['ANTHROPIC','OPENAI'];
+          for(let alt of alts){
+            if(alt===cur)continue;
+            try{
+              return await adminAiFetch(url,body||{},{signal:opts.signal,admin_ai_provider:alt,admin_ai_allow_gpt_fallback:true});
+            }catch(e2){lastErr=e2}
+          }
+        }
+        let retryable=/429|quota|rate|timeout|HTTP 5|temporarily|service unavailable|deadline|billing|not active/i.test(msg);
         if(retryable&&attempt+1<maxTry){
           await sleepMs(1100*(attempt+1)+Math.floor(Math.random()*500));
           continue;
@@ -20455,7 +20492,6 @@ async function adminApiPost(url,body,opts){
   }
   return api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{}),signal:opts.signal,timeoutMs:opts.timeoutMs||0},bulk?3:2);
 }
-async function adminAiFetchForm(url,buildFd,opts){opts=opts||{};async function run(useGpt){let fd=buildFd(!!useGpt);if(useGpt){fd.set('admin_ai_provider','OPENAI');fd.set('admin_ai_allow_gpt_fallback','true')}let r=await fetch(url,{method:'POST',body:fd,signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}if(j.gemini_quota_exhausted){let choice=await showAdminGeminiQuotaDialog(!!j.openai_available);if(choice==='gpt'&&j.openai_available)return run(true);throw new Error(choice==='wait'?'Đã hủy — đợi quota Gemini hồi rồi thử lại.':'Hết quota GEMINI.')}if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}return run(false)}
 function editQuestionAiInternetLatex(){let q=(typeof readQuestionFormData==='function')?readQuestionFormData():(currentQuestion?currentQuestion():{});return ['CauHoi: '+(q.CauHoi||''),'A: '+(q.A||''),'B: '+(q.B||''),'C: '+(q.C||''),'D: '+(q.D||''),'DapAn: '+(q.DapAn||''),'LoiGiai: '+(q.LoiGiai||'')].join('\n')}
 function buildAdminAiInternetPrompt(kind,body,url){body=body||{};let q=(typeof readQuestionFormData==='function')?readQuestionFormData():(currentQuestion?currentQuestion():{});let field=body.field||kind||'LoiGiai';let text=body.text||q[field]||q.LoiGiai||q.CauHoi||'';let mode=body.format_mode||'';return 'Bạn là trợ lý sửa LaTeX đề Toán/Vật lí. Hãy sửa nội dung sau cho MathJax hiển thị đúng, trình bày gọn, mỗi bước xuống dòng riêng. Không dùng dấu * markdown. Chỉ trả về NỘI DUNG ĐÃ SỬA để tôi dán lại vào ô '+field+'.\n\nDạng sửa: '+(mode||field)+'\nAPI app vừa hết quota nên tôi dùng AI Internet thủ công.\n\nNGỮ CẢNH CÂU HỎI:\n'+editQuestionAiInternetLatex()+'\n\nNỘI DUNG CẦN SỬA:\n'+text}
 function openAdminAiInternetFallback(body,url){openGoogleAiModeCustom(buildAdminAiInternetPrompt('quota',body,url),editQuestionAiInternetLatex())}
@@ -20464,9 +20500,19 @@ async function adminAiFetch(url,body,opts){opts=opts||{};let payload=Object.assi
 // Luôn đính kèm Anthropic key từ localStorage nếu có (server cần để dùng Claude)
 let _antKey=_loadAnthropicKey();if(_antKey)payload.anthropic_key=_antKey;
 let method=opts.method||'POST';let headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});let r=await fetch(url,{method,headers,body:JSON.stringify(payload),signal:opts.signal});let txt=await r.text();let j={};try{j=txt?JSON.parse(txt):{}}catch(e){j={error:txt.slice(0,220)}}
-// Bắt lỗi billing/account inactive — tự chuyển Claude nếu có key
+// Bắt lỗi billing/account inactive — tự chuyển Gemini/Claude
 let errLow=String(j.error||'').toLowerCase();let isBillingErr=errLow.includes('billing')||errLow.includes('not active')||errLow.includes('payment')||errLow.includes('402')||errLow.includes('account has been');
-if(isBillingErr&&!opts.admin_ai_provider){let antKey=_loadAnthropicKey();if(antKey){let st=document.getElementById('bulkDbtStatus')||document.getElementById('bulkLevelStatus');if(st)st.textContent='⚠ Lỗi billing AI → tự chuyển Claude...';return adminAiFetch(url,body,{...opts,admin_ai_provider:'ANTHROPIC',admin_ai_allow_gpt_fallback:true})}}
+if(isBillingErr){
+  let cur=String(opts.admin_ai_provider||'').toUpperCase();
+  let alts=cur==='OPENAI'?['GEMINI','ANTHROPIC']:cur==='ANTHROPIC'?['GEMINI','OPENAI']:['_ANTHROPIC','OPENAI'];
+  for(let alt of alts){
+    if(alt.startsWith('_'))alt=_loadAnthropicKey()?'ANTHROPIC':'';
+    if(!alt||alt===cur)continue;
+    let st=document.getElementById('bulkDbtStatus')||document.getElementById('bulkLevelStatus');
+    if(st)st.textContent='⚠ Lỗi billing AI → thử '+alt+'…';
+    try{return adminAiFetch(url,body,{...opts,admin_ai_provider:alt,admin_ai_allow_gpt_fallback:true})}catch(e2){}
+  }
+}
 if(j.gemini_quota_exhausted){
   let antKey=_loadAnthropicKey();
   if(antKey){
@@ -21368,6 +21414,13 @@ function bulkDbtSetBusy(on){
   ['bulkDbtRerunBtn','bulkDbtSelectAllBtn','bulkDbtApplyBtnTop','bulkDbtApplyBtnBot','bulkDbtDupScanBtn','bulkDbtDupFilterBtn','bulkDbtDupAllBtn','bulkDbtDupTickBtn','bulkDbtDupDelBtn'].forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!!on});
 }
 function bulkDbtOptSelected(ai,cur,v){let pick=String(ai||cur||'').trim();if(!pick||!v)return false;return pick===v||normText(pick)===normText(v)}
+function bulkDbtLoadAiProvider(){try{let p=localStorage.getItem('LDVL_BULK_DBT_AI')||'GEMINI';return ['GEMINI','ANTHROPIC','OPENAI'].includes(p)?p:'GEMINI'}catch(e){return 'GEMINI'}}
+function bulkDbtSaveAiProvider(p){p=String(p||'GEMINI').toUpperCase();if(!['GEMINI','ANTHROPIC','OPENAI'].includes(p))p='GEMINI';try{localStorage.setItem('LDVL_BULK_DBT_AI',p)}catch(e){}let sel=document.getElementById('bulkDbtAiSelect');if(sel)sel.value=p;bulkDbtSyncAiBadge();return p}
+function bulkDbtAiProvider(){return bulkDbtLoadAiProvider()}
+function bulkDbtCycleAiProvider(){let order=['GEMINI','ANTHROPIC','OPENAI'];let cur=bulkDbtAiProvider();return bulkDbtSaveAiProvider(order[(order.indexOf(cur)+1)%order.length])}
+function bulkDbtSyncAiBadge(){let p=bulkDbtAiProvider();let sel=document.getElementById('bulkDbtAiSelect');if(sel)sel.value=p;let badge=document.getElementById('bulkDbtAiBadge');if(!badge)return;badge.classList.remove('hide','claude','gemini','openai');if(p==='ANTHROPIC'){badge.classList.add('claude');badge.textContent='✨ Claude'}else if(p==='OPENAI'){badge.classList.add('openai');badge.textContent='✅ GPT'}else{badge.classList.add('gemini');badge.textContent='⚡ Gemini'}}
+function bulkDbtAiProviderLabel(p){p=String(p||'').toUpperCase();if(p.includes('ANTHROPIC')||p.includes('CLAUDE'))return 'Claude';if(p.includes('OPENAI')||p.includes('GPT'))return 'GPT';return 'Gemini'}
+function bulkDbtBatchLooksBillingFail(j){if(!j||parseInt(j.detected||0,10)>0)return false;let txt=String(j.warning||'')+((j.items||[]).map(it=>it.reason||'').join(' '));return /billing|not active|payment|402|account has been/i.test(txt)}
 function closeBulkDbtReview(){let m=document.getElementById('bulkDbtModal');if(m)m.classList.add('hide')}
 function openBulkDbtReview(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
@@ -21380,10 +21433,12 @@ function openBulkDbtReview(){
   if(hideSavedBtn){hideSavedBtn.textContent='🙈 Ẩn đã lưu';hideSavedBtn.style.fontWeight='';hideSavedBtn.style.background='';hideSavedBtn.style.borderColor='';hideSavedBtn.style.color=''}
   ensureBulkDbtDupBar();
   bulkDbtLoadAdminGuide();
+  bulkDbtSyncAiBadge();
   ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>({index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),prev_ai_dbt:'',ai_dbt:'',matched_existing:false,suggestions:adminDangBaiTapSuggestionsForQuestion(q),reason:'',preview:questionPreviewShort(q),selected:false,saved:false,dup_delete:false}));
   renderBulkDbtList();
   let st=document.getElementById('bulkDbtStatus');
-  if(st)st.innerHTML='<span class="muted">Bấm <b>🤖 Chạy AI gợi ý</b> để bắt đầu phân loại '+QUESTIONS.length+' câu.</span>';
+  let aiLbl=bulkDbtAiProviderLabel(bulkDbtAiProvider());
+  if(st)st.innerHTML='<span class="muted">AI: <b>'+aiLbl+'</b> · Bấm <b>🤖 Chạy AI gợi ý</b> để phân loại '+QUESTIONS.length+' câu.</span>';
 }
 function bulkDbtOptsHtml(it,pos){
   let ai=String(it.ai_dbt||'').trim();
@@ -21560,8 +21615,9 @@ async function bulkDbtDetectCurrent(){
   let prevSnap={};
   (ADMIN_DBT_REVIEW_ITEMS||[]).forEach(it=>{prevSnap[parseInt(it.index,10)]=Object.assign({},it)});
   let total=needAI.length;
-  let antKey=_loadAnthropicKey();
-  let aiInfo=antKey?'Gemini → tự chuyển Claude nếu hết quota':'Gemini';
+  let chosenAi=bulkDbtAiProvider();
+  let aiInfo=bulkDbtAiProviderLabel(chosenAi);
+  if(chosenAi==='GEMINI'&&_loadAnthropicKey())aiInfo+=' (tự chuyển Claude nếu hết quota)';
 
   let skipMsg='';
   if(skipApproved.length)skipMsg+=`\n• Bỏ qua ${skipApproved.length} câu đã duyệt (khoá, không đổi được)`;
@@ -21579,12 +21635,7 @@ async function bulkDbtDetectCurrent(){
   let progText=document.getElementById('bulkDbtProgressText');
   if(progWrap)progWrap.classList.remove('hide');
   if(progBar)progBar.style.width='0%';
-  if(badge){
-    badge.classList.remove('hide','claude','gemini','openai');
-    badge.classList.add('gemini');
-    badge.textContent='⚡ Gemini';
-    if(antKey)badge.title='Sẽ tự chuyển Claude nếu hết quota Gemini';
-  }
+  bulkDbtSyncAiBadge();
   bulkDbtSetBusy(true);
   renderBulkDbtList();
   const BATCH=12;
@@ -21611,9 +21662,20 @@ async function bulkDbtDetectCurrent(){
       if(st)st.textContent='⏳ Lô '+batchIdx+'/'+Math.ceil(needAI.length/BATCH)+' · câu '+(s+1)+'–'+end+' / '+needAI.length+(aiSummary?' | '+aiSummary:'')+(aiCounts.loi?' | ❌ lỗi '+aiCounts.loi:'');
       let adminGuidePack=bulkDbtAdminTypesByScope();
       let payload={questions:needAI.slice(s,end).map((q,j)=>bulkDbtQuestionPayload(q,s+j)),lesson_dbt_context:lessonCtx,admin_dbt_guide:adminGuidePack.guide||'',admin_dbt_types_by_scope:adminGuidePack.byScope||{}};
+      let batchProv=chosenAi;
       try{
-        let j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true});
-        let prov=_providerLabel(j.provider_used);
+        let j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true,admin_ai_provider:batchProv,admin_ai_allow_gpt_fallback:true});
+        if(bulkDbtBatchLooksBillingFail(j)){
+          let fallbacks={GEMINI:['ANTHROPIC','OPENAI'],ANTHROPIC:['GEMINI','OPENAI'],OPENAI:['GEMINI','ANTHROPIC']};
+          for(let alt of (fallbacks[batchProv]||[])){
+            if(st)st.textContent='⚠ '+bulkDbtAiProviderLabel(batchProv)+' lỗi billing → thử '+bulkDbtAiProviderLabel(alt)+'…';
+            try{
+              j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true,admin_ai_provider:alt,admin_ai_allow_gpt_fallback:true});
+              if(!bulkDbtBatchLooksBillingFail(j)&&parseInt(j.detected||0,10)>0){batchProv=alt;break}
+            }catch(e2){}
+          }
+        }
+        let prov=_providerLabel(j.provider_used||j.ai_provider);
         aiCounts[prov]=(aiCounts[prov]||0)+parseInt(j.detected||0,10)||0;
         if(j.provider_used&&badge){
           badge.classList.remove('claude','gemini','openai');
@@ -31121,12 +31183,14 @@ def api_ai_detect_dangbaitap_bulk():
                 "suggestions": scoped[:DBT_MAX_TYPES_PER_LESSON],
             })
         cons = meta.get("dbt_lesson_consolidation") or {}
+        ai_prov = meta.get("ai_provider", "GEMINI")
         return jsonify({
             "ok": True,
             "items": items,
             "detected": detected,
             "total": len(items),
-            "ai_provider": meta.get("ai_provider", "OPENAI"),
+            "ai_provider": ai_prov,
+            "provider_used": ai_prov,
             "ai_model": meta.get("ai_model", ""),
             "warning": clean(meta.get("ai_dbt_error", "")),
             "dbt_merged": int(cons.get("merged") or 0),
