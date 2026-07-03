@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V350_RP_EXPORT_LATEX_2026_06_22"
+APP_VERSION = "V350_LATEX_EXPORT_SVIP_ADMIN_2026_06_22"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -3393,6 +3393,12 @@ def can_view_solution_live() -> bool:
     """VIP/SVIP/ADMIN có quyền xem đáp án/lời giải khi làm bài (client: sau khi làm + chấm từng câu)."""
     refresh_session_role_from_store()
     return norm_role(session.get("role", "")) in ["VIP", "S.VIP", "ADMIN"]
+
+
+def can_export_latex() -> bool:
+    """Chỉ SVIP và ADMIN được xuất LaTeX — tránh lộ tài liệu cho VIP/FREE."""
+    refresh_session_role_from_store()
+    return is_admin() or is_svip()
 
 
 def can_use_infographic() -> bool:
@@ -14429,6 +14435,7 @@ def current_user_public() -> Dict[str, Any]:
         "can_quiz_similar": can_use_quiz_similar(),
         "can_quiz_retry": can_use_quiz_retry(),
         "can_view_solution_live": can_view_solution_live(),
+        "can_export_latex": can_export_latex(),
         "can_save_own_ai_key": can_save_own_ai_key(),
         "ai_has_keys": bool(cfg.get("has_keys")),
         "ai_using_user_keys": bool(cfg.get("using_user_keys")),
@@ -15887,8 +15894,7 @@ body.homeTopCompact .homeSectionCol>.panel{flex:0 0 auto!important;height:auto!i
 body.homeTopCompact .practiceRandomPanel .rpScopeRow{gap:5px!important;margin-bottom:2px!important;flex-wrap:nowrap!important}
 body.homeTopCompact .practiceRandomPanel .rpScopeRow .field{flex:1 1 25%!important;min-width:0!important}
 body.homeTopCompact .practiceRandomPanel .rpScopeRow .field label{font-size:10px!important;white-space:nowrap!important}
-body.homeTopCompact .practiceRandomPanel .rpActionRow .btnStartStrong{width:auto!important;margin-top:0!important}
-body.homeTopCompact .practiceRandomPanel .rpActionRow .btnRpLatex{min-height:34px!important;height:auto!important}
+body.homeTopCompact .practiceRandomPanel .rpScopeRow select{height:30px!important;padding:4px 5px!important;font-size:11px!important}
 body.homeTopCompact .homeSectionColMain .practiceRandomPanel{height:auto!important;max-height:none!important}
 body.homeTopCompact .compactKeyCard.aiKeyCollapsed{display:none!important}
 body.homeTopCompact .compactKeyCard p.muted{margin:0 0 4px!important;font-size:11px!important;line-height:1.3!important}
@@ -16662,28 +16668,22 @@ body.homeTopCompact .homeSectionRow .practiceRandomPanel .rpScopeRow .field{
 }
 .practiceRandomPanel .rpActionRow{
     display:flex!important;
-    flex-direction:row!important;
     flex-wrap:nowrap!important;
     align-items:stretch!important;
     gap:6px!important;
     margin-top:4px!important;
 }
 .practiceRandomPanel .rpActionRow .btnStartStrong{
-    flex:1 1 auto!important;
-    min-width:0!important;
-    width:auto!important;
     margin-top:0!important;
+    width:auto!important;
 }
-.practiceRandomPanel .rpActionRow .btnRpLatex{
-    flex:0 0 auto!important;
-    white-space:nowrap!important;
-    margin:0!important;
-    font-size:11.5px!important;
-    padding:7px 10px!important;
+body.homeTopCompact .practiceRandomPanel .rpActionRow .btnStartStrong{
+    min-height:34px!important;
 }
-body.homeTopCompact .practiceRandomPanel .rpActionRow .btnRpLatex{
+body.homeTopCompact .practiceRandomPanel .rpActionRow #btnRpExportLatex{
+    min-height:34px!important;
+    padding:4px 8px!important;
     font-size:11px!important;
-    padding:6px 8px!important;
 }
 body.homeTopCompact .practiceRandomPanel #rpScopeNote{margin:3px 0!important;padding:4px 7px!important;font-size:10.5px!important}
 
@@ -19298,7 +19298,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 
 <!-- SECTION 1: Lọc & tìm đề -->
 <div class="homeSection">
-  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
+  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button><button type="button" class="btn2 hide" id="btnExportLatex" onclick="exportLatexFiltered()" title="SVIP/ADMIN: tải file .tex theo bộ lọc hiện tại">📄 Xuất LaTeX</button></div></div>
 </div>
 
 <!-- SECTION 2: Tự luyện ngẫu nhiên + Tìm ID + Key AI -->
@@ -19322,9 +19322,9 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
       <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi</button></div>
       <div id="rpScopeNote" class="hide" style="margin:4px 0;padding:5px 8px;border-radius:7px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
       <label style="display:flex;gap:5px;align-items:center;margin:2px 0;font-size:11px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ câu có <b>lời giải đầy đủ</b></label>
-      <div class="row rpActionRow" style="margin-top:4px">
-        <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
-        <button type="button" class="btn2 btnRpLatex" id="btnRpExportLatex" onclick="exportRpScopeLatex()" title="Tải file .tex theo phạm vi Môn · Lớp · Chương · Bài">📄 Xuất LaTeX</button>
+      <div class="row rpActionRow" style="margin:0;gap:6px;align-items:stretch">
+        <button type="button" class="btnStartStrong" style="flex:1;margin:0" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
+        <button type="button" class="btn2 hide" id="btnRpExportLatex" onclick="exportLatexFromRpScope()" title="SVIP/ADMIN: tải .tex theo Môn · Lớp · Chương · Bài" style="flex-shrink:0;white-space:nowrap;align-self:stretch">📄 LaTeX</button>
       </div>
     </div>
   </div>
@@ -19410,7 +19410,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 
 <div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
 </div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button type="button" class="btn2 hide" id="btnExportLatexQuiz" onclick="exportLatexCurrentQuiz()" title="SVIP/ADMIN: tải đề hiện tại ra .tex">📄 LaTeX</button><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
 
 </div></main></div><!-- /ldvlDashWrap -->
 <div id="pdf-fs-scr">
@@ -20124,7 +20124,13 @@ function isAiKeyPanelOpen(){try{return localStorage.getItem('LDVL_AI_KEY_PANEL_O
 function setAiKeyPanelOpen(open){try{localStorage.setItem('LDVL_AI_KEY_PANEL_OPEN_V257',open?'1':'0')}catch(e){}syncAiKeyCompactPanel()}
 function toggleAiKeyPanelCompact(){setAiKeyPanelOpen(!isAiKeyPanelOpen())}
 function syncAiKeyCompactPanel(){let panel=document.getElementById('aiKeyPanel');if(!panel)return;let open=isAiKeyPanelOpen();panel.classList.toggle('aiKeyCollapsed',!open);let btn=document.getElementById('aiKeyMiniToggle');if(btn)btn.textContent=open?'Thu key':'Mở key'}
-function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=`<b>${esc(u.ai_profile_label||'AI')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`+(u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'')}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=`<b>${esc(u.ai_profile_label||'')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}}
+function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=`<b>${esc(u.ai_profile_label||'AI')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`+(u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'')}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=`<b>${esc(u.ai_profile_label||'')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}syncLatexExportButtons()}
+function canExportLatex(){return !!(USER&&(USER.can_export_latex||USER.is_admin||USER.is_svip))}
+function latexExportFilter(){return{mon:val('fMon'),lop:val('fLop'),chuong:val('fChuong'),baihoc:val('fBaiHoc'),dangbaitap:val('fDangBaiTap'),bode:val('fBoDe'),dang:val('fDang'),level:(val('fMucDo')||'').trim().toUpperCase(),search:val('fSearch'),sol_full_only:!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0}}
+function syncLatexExportButtons(){let show=canExportLatex();['btnExportLatex','btnRpExportLatex','btnExportLatexQuiz'].forEach(function(id){let el=document.getElementById(id);if(el)el.classList.toggle('hide',!show)})}
+function exportLatexFiltered(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}let btn=window.event&&window.event.target;let old=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let p=new URLSearchParams(latexExportFilter());p.set('download','1');window.location='/api/latex/export?'+p.toString()}catch(e){alert('Không xuất được LaTeX: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
+function exportLatexFromRpScope(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop'),chuong=val('rpChuong'),bai=val('rpBaiHoc');if(!mon||!lop){alert('Chọn Môn và Lớp trước khi xuất LaTeX.');return}let p=new URLSearchParams({mon,lop,download:'1'});if(chuong)p.set('chuong',chuong);if(bai)p.set('baihoc',bai);if(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)p.set('sol_full_only','1');let lv=(val('fMucDo')||'').trim().toUpperCase();if(lv)p.set('level',lv);window.location='/api/latex/export?'+p.toString()}
+function exportLatexCurrentQuiz(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}if(!SID){alert('Chưa có phiên đề.');return}window.location='/api/latex/export?sid='+encodeURIComponent(SID)+'&download=1'}
 function scrollToAiKeyPanel(){let p=document.getElementById('aiKeyPanel');if(!p)return;p.classList.remove('hide');setAiKeyPanelOpen(true);p.scrollIntoView({behavior:'smooth',block:'start'})}
 async function loadAiKeyPanel(){
   let panel=document.getElementById('aiKeyPanel');
@@ -20273,6 +20279,7 @@ function updateAdminChrome(){
   syncInfographicButtons();
   syncAdminLearningBoard();
   syncUserQuizChrome();
+  syncLatexExportButtons();
   if(adm){ensureQuizAdminAiInternetButton();syncAdminComposeChrome();bindAdminNavContextMenu();try{initAdminAiGenerator()}catch(e){}}
   if(typeof ldvlApplyAdminHomeLayout==='function')ldvlApplyAdminHomeLayout();
 }
@@ -20540,8 +20547,6 @@ function unlockRpScope(){RP_SCOPE_LOCKED=false;let wrap=document.querySelector('
 function getRpSelectedChuongs(){let ch=val('rpChuong');return ch?[ch]:[]}
 function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop'),ch=val('fChuong'),bai=val('fBaiHoc');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l&&deriveKhoi(l)){setVal('rpKhoi',deriveKhoi(l));refreshRpScopeOptions();setVal('rpLop',l);refreshRpScopeOptions()}if(ch)setVal('rpChuong',ch);if(bai)setVal('rpBaiHoc',bai);refreshRpScopeOptions()}
 function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions()}
-function rpExportPayload(){syncRpKhoiFromLop();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();return{mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0}}
-async function exportRpScopeLatex(){let btn=document.getElementById('btnRpExportLatex'),old=btn?btn.textContent:'';try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(btn){btn.disabled=true;btn.textContent='⏳ Đang xuất…'}let body=rpExportPayload();let j=await api('/api/latex/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.ok){alert(j&&j.error?j.error:'Không xuất được LaTeX.');return}if(j.count<1){alert('Không có câu nào trong phạm vi đã chọn.');return}let blob=new Blob([String(j.tex||'')],{type:'text/plain;charset=utf-8'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=j.filename||'Cau_Hoi.tex';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}catch(e){alert('Không xuất được LaTeX: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent=old||'📄 Xuất LaTeX'}}}
 async function startRandomPractice(){try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
 const AC_MATRIX_DANGS=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
 const AC_MATRIX_LEVELS=['NB','TH','VD','VDC'];
@@ -27715,58 +27720,155 @@ def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
     return "bt", content, cau + (("\n\\loigiai{\n" + lg + "\n}") if lg else "")
 
 
-def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> str:
-    """Ghép danh sách câu hỏi thành nội dung file .tex (\\begin{ex}...)."""
-    blocks: List[str] = []
-    for i, q in enumerate(questions or [], start=1):
+def _latex_ex_mucdo_tag(q: Dict[str, Any]) -> str:
+    lv = _primary_mucdo(q)
+    ch = {"NB": "N", "TH": "H", "VD": "V", "VDC": "D"}.get(lv, "")
+    return f"%[0D1{ch}1-1]\n" if ch else ""
+
+
+def _latex_filter_store_questions(st: "SheetStore", body: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Lọc câu từ Sheet hoặc phiên quiz — dùng cho xuất LaTeX."""
+    sid = clean(body.get("sid") or request.args.get("sid", ""))
+    if sid:
+        restore = quiz_restore_payload_from_body(body if isinstance(body, dict) else {})
+        ses = st.check_quiz_session(sid, restore)
+        qs = [q for q in (ses.get("questions") or []) if isinstance(q, dict)]
+    else:
+        st.ensure_questions_loaded()
+        qs = list(st.questions or [])
+
+    made = clean(body.get("made") or body.get("MaDe") or request.args.get("made", ""))
+    de = clean(body.get("de") or body.get("De") or request.args.get("de", ""))
+    mon = clean(body.get("mon") or body.get("Mon") or request.args.get("mon", ""))
+    khoi = clean(body.get("khoi") or body.get("Khoi") or request.args.get("khoi", ""))
+    lop = clean(body.get("lop") or body.get("Lop") or request.args.get("lop", ""))
+    chuong = clean(body.get("chuong") or body.get("Chuong") or request.args.get("chuong", ""))
+    chuongs_raw = body.get("chuongs") or request.args.getlist("chuongs") or []
+    chuongs = [clean(c) for c in chuongs_raw if clean(c)]
+    bai = clean(body.get("baihoc") or body.get("BaiHoc") or request.args.get("baihoc", ""))
+    dangbt = clean(body.get("dangbaitap") or body.get("DangBaiTap") or request.args.get("dangbaitap", ""))
+    bode = clean(body.get("bode") or body.get("BoDe") or request.args.get("bode", ""))
+    dang = clean(body.get("dang") or body.get("Dang") or request.args.get("dang", ""))
+    level = clean(body.get("level") or body.get("mucdo") or body.get("MucDo") or request.args.get("level", ""))
+    search = clean(body.get("search") or body.get("q") or request.args.get("search", ""))
+    sol_full_only = str(body.get("sol_full_only") or request.args.get("sol_full_only", "")).lower() in ("1", "true", "yes", "on")
+    try:
+        limit = int(body.get("limit") or request.args.get("limit") or 0)
+    except Exception:
+        limit = 0
+
+    def ok(q: Dict[str, Any]) -> bool:
+        if made and key_norm(q.get("MaDe")) != key_norm(made):
+            return False
+        if de and key_norm(q.get("De")) != key_norm(de):
+            return False
+        if not question_matches_pool_filter(
+            q,
+            mon=mon,
+            khoi=khoi,
+            lop=lop,
+            chuong=chuong,
+            chuongs=chuongs or None,
+            baihoc=bai,
+            bode=bode,
+            level=level,
+            sol_full_only=sol_full_only,
+        ):
+            return False
+        if dangbt and key_norm(q.get("DangBaiTap")) != key_norm(dangbt):
+            return False
+        if dang and norm_dang(q.get("Dang")) != norm_dang(dang):
+            return False
+        if search:
+            blob = key_norm(
+                " ".join(
+                    clean(q.get(f, ""))
+                    for f in ("Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De", "MucDo", "Dang", "ID", "CauHoi")
+                )
+            )
+            if key_norm(search) not in blob:
+                return False
+        return True
+
+    out = [q for q in qs if ok(q)]
+    if limit > 0:
+        out = out[: min(limit, 2000)]
+    elif len(out) > 2000:
+        out = out[:2000]
+    return out
+
+
+def build_latex_document_from_questions(
+    questions: List[Dict[str, Any]],
+    title: str = "",
+    *,
+    include_solutions: bool = True,
+    exported_by: str = "",
+) -> str:
+    title = clean(title) or "De_LaTeX"
+    lines: List[str] = [
+        f"% Xuất từ ứng dụng luyện đề — {APP_VERSION}",
+        f"% Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+    ]
+    if exported_by:
+        lines.append(f"% Người xuất: {exported_by}")
+    lines.extend(
+        [
+            "",
+            r"\documentclass[12pt,a4paper]{article}",
+            r"\usepackage[utf8]{inputenc}",
+            r"\usepackage[T5]{fontenc}",
+            r"\usepackage[vietnamese]{babel}",
+            r"\usepackage{amsmath,amssymb}",
+            r"\usepackage{graphicx}",
+            r"\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}",
+            "",
+            rf"\title{{{_json_latex_escape_block(title)}}}",
+            r"\date{}",
+            r"\begin{document}",
+            r"\maketitle",
+            "",
+        ]
+    )
+    prev_ch = prev_bai = prev_dbt = ""
+    for q in questions:
         if not isinstance(q, dict):
             continue
-        _qtype, content, _body = _json_question_content_block(q)
-        meta: List[str] = []
-        qid = clean(q.get("ID", ""))
-        muc = clean(q.get("MucDo", ""))
-        dbt = clean(q.get("DangBaiTap", ""))
-        if qid:
-            meta.append(f"% ID: {qid}")
-        if muc:
-            meta.append(f"% Mức: {muc}")
-        if dbt:
-            meta.append(f"% Dạng BT: {dbt}")
-        header = f"% ===== Câu {i}" + (f" · {qid}" if qid else "") + " ====="
-        if meta:
-            header += "\n" + "\n".join(meta)
-        blocks.append(header + "\n" + content)
-    title_line = clean(title) or "Cau_Hoi"
-    head = (
-        f"% Xuất từ app Thầy Minh · {APP_VERSION}\n"
-        f"% {title_line}\n"
-        f"% {len(blocks)} câu\n"
+        ch = clean(q.get("Chuong"))
+        bai = clean(q.get("BaiHoc") or q.get("De"))
+        dbt = clean(q.get("DangBaiTap"))
+        if ch and ch != prev_ch:
+            lines.append(f"\\section*{{{_json_latex_escape_block(ch)}}}")
+            prev_ch, prev_bai, prev_dbt = ch, "", ""
+        if bai and bai != prev_bai:
+            lines.append(f"\\subsection*{{{_json_latex_escape_block(bai)}}}")
+            prev_bai, prev_dbt = bai, ""
+        if dbt and dbt != prev_dbt:
+            lines.append(f"\\dangbt{{{_json_latex_escape_block(dbt)}}}")
+            prev_dbt = dbt
+        q_work = dict(q)
+        if not include_solutions:
+            q_work["LoiGiai"] = ""
+        _, block, _ = _json_question_content_block(q_work)
+        tag = _latex_ex_mucdo_tag(q_work)
+        if tag:
+            block = block.replace("\\begin{ex}\n", "\\begin{ex}\n" + tag, 1).replace("\\begin{bt}\n", "\\begin{bt}\n" + tag, 1)
+        lines.append(block)
+        lines.append("")
+    lines.append(r"\end{document}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _latex_response_download(tex: str, filename: str):
+    bio = io.BytesIO(str(tex or "").encode("utf-8"))
+    bio.seek(0)
+    return send_file(
+        bio,
+        mimetype="application/x-tex; charset=utf-8",
+        as_attachment=True,
+        download_name=_safe_json_filename(filename, ".tex"),
     )
-    return head + "\n" + ("\n\n".join(blocks) + ("\n" if blocks else ""))
-
-
-def _latex_export_scope_title(mon: str, lop: str, chuong: str, baihoc: str) -> str:
-    parts = [p for p in [clean(mon), f"Lop_{clean(lop)}" if clean(lop) else "", clean(chuong), clean(baihoc)] if p]
-    return " · ".join(parts) if parts else "Cau_Hoi"
-
-
-def _parse_pool_scope_body(body: Dict[str, Any]) -> Dict[str, Any]:
-    chuongs_raw = body.get("chuongs") or body.get("chapters") or []
-    if isinstance(chuongs_raw, str):
-        chuongs_raw = [x.strip() for x in chuongs_raw.split(",") if x.strip()]
-    if not isinstance(chuongs_raw, list):
-        chuongs_raw = []
-    return {
-        "mon": clean(body.get("mon", "")),
-        "khoi": clean(body.get("khoi", "")),
-        "lop": clean(body.get("lop", "")),
-        "chuongs": [clean(x) for x in chuongs_raw if clean(x)],
-        "chuong": clean(body.get("chuong", "")),
-        "baihoc": clean(body.get("bai_hoc", body.get("baihoc", ""))),
-        "bode": clean(body.get("bode", "")),
-        "level_filter": clean(body.get("level", "")).upper(),
-        "sol_full_only": str(body.get("sol_full_only", "0")).lower() in ("1", "true", "yes"),
-    }
 
 
 def _json_default_spaces() -> List[Dict[str, Any]]:
@@ -32610,37 +32712,6 @@ def api_ai_apply_physics_competencies():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route("/api/latex/export", methods=["POST"])
-def api_latex_export():
-    bad = require_login_json()
-    if bad:
-        return bad
-    try:
-        body = request.get_json(silent=True) or {}
-        st = get_store()
-        if not st.questions_loaded:
-            st.start_questions_background(force=False)
-            return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
-        scope = _parse_pool_scope_body(body)
-        if not scope["mon"] or not scope["khoi"] or not scope["lop"]:
-            return jsonify({"error": "Phải chọn đủ Môn và Lớp trước khi xuất LaTeX."}), 400
-        pool = st.build_question_pool(**scope)
-        if not pool:
-            return jsonify({"error": "Không có câu nào trong phạm vi đã chọn."}), 404
-        title = _latex_export_scope_title(scope["mon"], scope["lop"], scope["chuong"], scope["baihoc"])
-        tex = questions_to_latex_tex(pool, title)
-        filename = _safe_json_filename(title + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"), suffix=".tex")
-        return jsonify({
-            "ok": True,
-            "count": len(pool),
-            "filename": filename,
-            "title": title,
-            "tex": tex,
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
 @app.route("/api/latex/import", methods=["POST"])
 def api_latex_import():
     bad = require_login_json()
@@ -32825,6 +32896,52 @@ def api_latex_import():
             "theory_lessons_errors": lesson_errors,
         })
         return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/latex/export", methods=["GET", "POST"])
+def api_latex_export():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not can_export_latex():
+        return jsonify({"error": "Chỉ SVIP và ADMIN được xuất LaTeX."}), 403
+    try:
+        body = request.get_json(silent=True) or {}
+        if not body and request.args:
+            body = {k: request.args.get(k, "") for k in request.args.keys()}
+        st = get_store()
+        qs = _latex_filter_store_questions(st, body)
+        if not qs:
+            return jsonify({"error": "Không tìm thấy câu nào theo bộ lọc đã chọn."}), 404
+        include_solutions = str(body.get("include_solutions", request.args.get("include_solutions", "1"))).lower() not in ("0", "false", "no", "off")
+        name_parts = [
+            clean(body.get("mon") or body.get("Mon") or request.args.get("mon", "")),
+            clean(body.get("lop") or body.get("Lop") or request.args.get("lop", "")),
+            clean(body.get("chuong") or body.get("Chuong") or request.args.get("chuong", "")),
+            clean(body.get("baihoc") or body.get("BaiHoc") or request.args.get("baihoc", "")),
+            clean(body.get("made") or body.get("MaDe") or request.args.get("made", "")),
+        ]
+        title = " · ".join(p for p in name_parts if p) or (clean(qs[0].get("De")) if qs else "De_LaTeX")
+        exported_by = clean(session.get("hoten") or session.get("mahs") or "")
+        tex = build_latex_document_from_questions(
+            qs,
+            title=title,
+            include_solutions=include_solutions,
+            exported_by=exported_by,
+        )
+        filename = _safe_json_filename(title + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"), ".tex")
+        if clean(request.args.get("download")) or str(body.get("download", "")).lower() in ("1", "true", "yes", "on"):
+            return _latex_response_download(tex, filename)
+        return jsonify({
+            "ok": True,
+            "filename": filename,
+            "count_questions": len(qs),
+            "title": title,
+            "preview": tex[:12000],
+            "truncated": len(tex) > 12000,
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
