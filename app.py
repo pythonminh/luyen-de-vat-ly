@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V351_RP_MON_LOP_CHUONG_ROW_2026_06_22"
+APP_VERSION = "V350_RP_EXPORT_LATEX_2026_06_22"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -15852,19 +15852,13 @@ body.homeTopCompact .homeCompactRow button{
 body.homeTopCompact #aiProfileDetail{display:none!important}
 body.homeTopCompact .homeSection{margin-bottom:6px!important}
 body.homeTopCompact .homeSectionRow{
-    gap:8px!important;
-    display:grid!important;
-    grid-template-columns:1fr 1fr!important;
-    align-items:stretch!important;
+    gap:6px!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:flex-start!important;
 }
-body.homeTopCompact .homeSectionColMain,
-body.homeTopCompact .homeSectionColSide{flex:none!important;min-width:0!important;max-width:none!important;width:auto!important}
-body.homeTopCompact .homeSectionCol{align-self:stretch!important;height:100%!important;min-height:0!important}
-body.homeTopCompact .homeSectionCol>.panel.practiceRandomPanel,
-body.homeTopCompact .homeSectionColSide #aiKeyPanel:not(.aiKeyCollapsed){flex:1 1 auto!important;display:flex!important;flex-direction:column!important;min-height:0!important;height:auto!important}
-body.homeTopCompact .practiceRandomPanel .rpPanelFoot{margin-top:auto!important;padding-top:4px!important;flex-shrink:0!important}
-body.homeTopCompact .homeSectionRow .btnStartStrong{margin-top:0!important}
-body.homeTopCompact .homeSectionColSide #aiKeyPanel:not(.aiKeyCollapsed) .row:last-of-type{margin-top:auto!important}
+body.homeTopCompact .homeSectionColMain{flex:1 1 520px!important;min-width:min(100%,300px)!important;max-width:none!important}
+body.homeTopCompact .homeSectionColSide{flex:0 1 min(260px,30vw)!important;min-width:220px!important}
 body.homeTopCompact .homeSectionHead{margin-bottom:2px!important;min-height:20px}
 body.homeTopCompact .homeSectionTitle{font-size:11px!important;letter-spacing:.4px!important}
 body.homeTopCompact .homeSectionIcon{font-size:13px!important}
@@ -15878,20 +15872,24 @@ body.homeTopCompact .homeSectionRow textarea#myApiKeys{min-height:36px!important
 body.homeTopCompact .homeSectionRow .btn,
 body.homeTopCompact .homeSectionRow .btn2,
 body.homeTopCompact .homeSectionRow .btnGreen{min-height:30px!important;height:30px!important;padding:4px 8px!important;font-size:11px!important}
-body.homeTopCompact .homeSectionRow .btnStartStrong{min-height:34px!important;height:auto!important;padding:7px 10px!important;font-size:12px!important;width:100%!important;margin-top:0!important;box-shadow:0 4px 12px #1e40af33!important}
-body.homeTopCompact .compactRandomCard>p.muted{display:none!important}
+body.homeTopCompact .homeSectionRow .btnStartStrong{min-height:34px!important;height:auto!important;padding:7px 10px!important;font-size:12px!important;width:100%!important;margin-top:4px!important;box-shadow:0 4px 12px #1e40af33!important}
+body.homeTopCompact .compactRandomCard>p.muted,
+body.homeTopCompact .compactRandomCard>p.rpScopeIntro{display:none!important}
 body.homeTopCompact .practiceRandomPanel #rpScopeNote{margin:4px 0!important;padding:4px 7px!important;font-size:11px!important}
-body.homeTopCompact .practiceRandomPanel .rpScopeRow select{height:30px!important;padding:4px 5px!important;font-size:11px!important}
-body.homeTopCompact .practiceRandomPanel #rpChuongWrap{display:none!important}
+body.homeTopCompact .practiceRandomPanel #rpChuongWrap{max-height:68px!important;margin-top:4px!important;padding:4px 6px!important}
+body.homeTopCompact .practiceRandomPanel .rpChuongList{max-height:40px!important}
 body.homeTopCompact .compactIdCard{padding:6px 8px!important;margin-bottom:4px!important}
 body.homeTopCompact .compactIdCard #idLookupResult{margin-top:4px!important;max-height:60px!important;overflow:auto}
 body.homeTopCompact .homeKeyHead{display:flex!important;align-items:center!important;gap:5px!important;margin-top:0!important}
 body.homeTopCompact .homeKeyHead .aiKeyMiniToggle{margin-left:auto!important;float:none!important;flex-shrink:0}
-body.homeTopCompact .practiceRandomPanel .rpScopeRow{gap:4px!important;margin-bottom:2px!important;flex-wrap:nowrap!important}
-body.homeTopCompact .practiceRandomPanel .rpScopeRow .field{flex:1 1 0!important;min-width:0!important;max-width:none!important;width:auto!important}
+body.homeTopCompact .homeSectionCol{align-self:flex-start!important;height:auto!important}
+body.homeTopCompact .homeSectionCol>.panel{flex:0 0 auto!important;height:auto!important;min-height:0!important}
+body.homeTopCompact .practiceRandomPanel .rpScopeRow{gap:5px!important;margin-bottom:2px!important;flex-wrap:nowrap!important}
+body.homeTopCompact .practiceRandomPanel .rpScopeRow .field{flex:1 1 25%!important;min-width:0!important}
 body.homeTopCompact .practiceRandomPanel .rpScopeRow .field label{font-size:10px!important;white-space:nowrap!important}
-body.homeTopCompact .practiceRandomPanel .rpScopeRow select{height:30px!important;padding:4px 5px!important;font-size:11px!important;width:100%!important}
-body.homeTopCompact .homeSectionColMain .practiceRandomPanel{display:flex!important;flex-direction:column!important}
+body.homeTopCompact .practiceRandomPanel .rpActionRow .btnStartStrong{width:auto!important;margin-top:0!important}
+body.homeTopCompact .practiceRandomPanel .rpActionRow .btnRpLatex{min-height:34px!important;height:auto!important}
+body.homeTopCompact .homeSectionColMain .practiceRandomPanel{height:auto!important;max-height:none!important}
 body.homeTopCompact .compactKeyCard.aiKeyCollapsed{display:none!important}
 body.homeTopCompact .compactKeyCard p.muted{margin:0 0 4px!important;font-size:11px!important;line-height:1.3!important}
 body.homeTopCompact #homePracticeSetupPanel .row{padding:6px 8px!important;gap:5px 6px!important}
@@ -16573,9 +16571,9 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     margin-bottom:8px;
 }
 .homeSectionRow{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    align-items:stretch;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
     gap:8px;
 }
 .homeSectionCol{
@@ -16583,12 +16581,17 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     flex-direction:column;
     gap:0;
     min-width:0;
-    align-self:stretch;
-    height:100%;
+    align-self:flex-start;
+    height:auto;
 }
-.homeSectionColMain,
+.homeSectionColMain{
+    flex:1 1 560px;
+    min-width:min(100%,320px);
+    max-width:none;
+}
 .homeSectionColSide{
-    min-width:0;
+    flex:0 1 min(300px,28vw);
+    min-width:220px;
 }
 .homeSectionHead{
     display:flex;
@@ -16609,63 +16612,80 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     color:var(--muted);
 }
 
-/* panel bên trong section — 2 cột bằng chiều cao */
+/* panel bên trong section — không kéo cao theo cột kế bên */
 .homeSectionCol .panel{
     margin-bottom:0!important;
+    flex:0 0 auto!important;
+    height:auto!important;
+    min-height:0!important;
     align-self:stretch;
 }
 .homeSectionColMain .practiceRandomPanel{
-    flex:1 1 auto;
-    display:flex;
-    flex-direction:column;
-    min-height:0;
-    height:auto;
-}
-.homeSectionColSide #aiKeyPanel:not(.aiKeyCollapsed){
-    flex:1 1 auto;
-    display:flex;
-    flex-direction:column;
-    min-height:0;
-}
-.practiceRandomPanel .rpPanelFoot{
-    margin-top:auto;
-    flex-shrink:0;
-    padding-top:4px;
-}
-.homeSectionColSide #aiKeyPanel:not(.aiKeyCollapsed) #aiKeyStatus{
-    margin-top:auto;
+    height:auto!important;
+    max-height:none!important;
 }
 .practiceRandomPanel .rpScopeRow{
     display:flex!important;
     flex-direction:row!important;
-    align-items:flex-end!important;
     flex-wrap:nowrap!important;
-    gap:5px!important;
+    align-items:flex-end!important;
+    gap:6px!important;
+    width:100%!important;
 }
 .practiceRandomPanel .rpScopeRow .field{
-    flex:1 1 0!important;
+    flex:1 1 25%!important;
     min-width:0!important;
     width:auto!important;
     max-width:none!important;
-    gap:2px!important;
+}
+body.homeTopCompact .homeSectionRow .practiceRandomPanel .rpScopeRow .field{
+    flex:1 1 25%!important;
+    min-width:0!important;
 }
 .practiceRandomPanel .rpScopeRow .field label{
     font-size:11px!important;
     white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
 }
 .practiceRandomPanel .rpScopeRow .field select{
     width:100%!important;
-    min-width:0!important;
     box-sizing:border-box!important;
     font-size:12px!important;
-    padding:5px 6px!important;
-    text-overflow:ellipsis;
 }
-.practiceRandomPanel .rpScopeRow .field select{font-size:11px!important}
-.practiceRandomPanel .rpChuongField select option{font-size:11px}
+@media(max-width:720px){
+    .practiceRandomPanel .rpScopeRow{flex-wrap:wrap!important}
+    .practiceRandomPanel .rpScopeRow .field{flex:1 1 calc(50% - 6px)!important;min-width:120px!important}
+}
 .practiceRandomPanel .rpScopeUnlockRow{
     margin:2px 0 0!important;
 }
+.practiceRandomPanel .rpActionRow{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch!important;
+    gap:6px!important;
+    margin-top:4px!important;
+}
+.practiceRandomPanel .rpActionRow .btnStartStrong{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    width:auto!important;
+    margin-top:0!important;
+}
+.practiceRandomPanel .rpActionRow .btnRpLatex{
+    flex:0 0 auto!important;
+    white-space:nowrap!important;
+    margin:0!important;
+    font-size:11.5px!important;
+    padding:7px 10px!important;
+}
+body.homeTopCompact .practiceRandomPanel .rpActionRow .btnRpLatex{
+    font-size:11px!important;
+    padding:6px 8px!important;
+}
+body.homeTopCompact .practiceRandomPanel #rpScopeNote{margin:3px 0!important;padding:4px 7px!important;font-size:10.5px!important}
 
 /* userAccountCard — compact 1 dòng */
 .userAccountCard.compactHomeAccount{
@@ -16704,8 +16724,14 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
 
 @media(max-width:820px){
     .homeSectionRow{
-        grid-template-columns:1fr!important;
+        flex-direction:column!important;
         gap:8px!important;
+    }
+    .homeSectionColMain,
+    .homeSectionColSide{
+        flex:1 1 100%!important;
+        min-width:0!important;
+        max-width:100%!important;
     }
     .homeSectionCol.homeSectionColSide{
         display:grid!important;
@@ -19285,22 +19311,20 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
       <span class="homeSectionTitle">Tự luyện ngẫu nhiên</span>
     </div>
     <div class="panel practiceRandomPanel compactCard compactRandomCard" style="margin:0">
-      <p class="muted" style="margin:0 0 4px;font-size:12px">Ghép đề <b>28 câu</b> — chọn <b>Môn · Lớp · Chương</b> rồi bấm tự luyện.</p>
+      <p class="muted rpScopeIntro" style="margin:0 0 4px;font-size:12px">Ghép đề <b>28 câu</b> — chọn <b>Môn · Lớp · Chương · Bài</b> trên một hàng.</p>
+      <select id="rpKhoi" class="hide" aria-hidden="true" tabindex="-1"><option value=""></option></select>
       <div class="row rpScopeRow" style="margin-top:0">
-        <div class="field rpMonField"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Chọn —</option></select></div>
-        <div class="field rpLopField"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Chọn —</option></select></div>
-        <div class="field rpChuongField"><label>Chương</label><select id="rpChuong" onchange="onRpScopeChange('chuong')" disabled title="Để trống = tất cả chương"><option value="">Tất cả chương</option></select></div>
+        <div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Môn —</option></select></div>
+        <div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Lớp —</option></select></div>
+        <div class="field" id="rpChuongField"><label>Chương</label><select id="rpChuong" onchange="onRpScopeChange('chuong')" disabled><option value="">Tất cả</option></select></div>
+        <div class="field" id="rpBaiField"><label>Bài</label><select id="rpBaiHoc" onchange="onRpScopeChange('bai')" disabled><option value="">Tất cả</option></select></div>
       </div>
-      <input type="hidden" id="rpKhoi" value="">
       <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi</button></div>
-      <div id="rpScopeNote" class="hide" style="margin:6px 0;padding:5px 8px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
-      <div id="rpChuongWrap" class="hide" aria-hidden="true">
-        <input type="checkbox" id="rpChuongAll" checked class="hide">
-        <div id="rpChuongList" class="rpChuongList"></div>
-      </div>
-      <div class="rpPanelFoot">
+      <div id="rpScopeNote" class="hide" style="margin:4px 0;padding:5px 8px;border-radius:7px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
       <label style="display:flex;gap:5px;align-items:center;margin:2px 0;font-size:11px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ câu có <b>lời giải đầy đủ</b></label>
-      <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
+      <div class="row rpActionRow" style="margin-top:4px">
+        <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
+        <button type="button" class="btn2 btnRpLatex" id="btnRpExportLatex" onclick="exportRpScopeLatex()" title="Tải file .tex theo phạm vi Môn · Lớp · Chương · Bài">📄 Xuất LaTeX</button>
       </div>
     </div>
   </div>
@@ -20503,34 +20527,36 @@ async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=d
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');if(!el)return;let parts=[];if(j&&j.shuffle_questions)parts.push('Xáo câu');if(j&&j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
 function deriveKhoi(lop){let s=String(lop||'').trim();if(!s)return '';let m=s.match(/^(\d{1,2})/);if(m)return m[1];let m2=s.match(/\b(10|11|12)\b/);return m2?m2[1]:''}
-function syncRpKhoiHidden(){let lop=val('rpLop');let h=document.getElementById('rpKhoi');if(h)h.value=deriveKhoi(lop)||''}
-function rpScopeNoteHtml(mon,lop,chuong){let m=esc(mon||'');let parts=[`<b>${m}</b>`];if(lop)parts.push(`Lớp <b>${esc(lop)}</b>`);parts.push(chuong?`Chương <b>${esc(chuong)}</b>`:'<b>tất cả chương</b>');return `🔒 Phạm vi: ${parts.join(' · ')}`}
 function rpCatalogBase(){return(CATALOG||[]).filter(x=>x.Mon&&x.Lop)}
-function rpFilterCatalog(){let mon=val('rpMon'),lop=val('rpLop'),khoi=val('rpKhoi')||deriveKhoi(lop),ch=val('rpChuong');return rpCatalogBase().filter(x=>{if(mon&&x.Mon!==mon)return false;if(khoi&&deriveKhoi(x.Lop)!==khoi)return false;if(lop&&x.Lop!==lop)return false;if(ch&&x.Chuong!==ch)return false;return true})}
+function rpFilterCatalog(){let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');return rpCatalogBase().filter(x=>{if(mon&&x.Mon!==mon)return false;if(khoi&&deriveKhoi(x.Lop)!==khoi)return false;if(lop&&x.Lop!==lop)return false;return true})}
+function rpScopeSummary(){let mon=val('rpMon'),lop=val('rpLop'),ch=val('rpChuong'),bai=val('rpBaiHoc');let parts=[mon,lop?'Lớp '+lop:'',ch,bai].filter(Boolean);return parts.join(' · ')}
+function syncRpKhoiFromLop(){let lop=val('rpLop'),khoiEl=document.getElementById('rpKhoi');if(!khoiEl)return;let dk=lop?deriveKhoi(lop):'';if(dk)khoiEl.innerHTML=`<option value="${escAttr(dk)}" selected>${esc(dk)}</option>`;else khoiEl.innerHTML='<option value=""></option>'}
+function refreshRpChuongBaiOptions(){let lop=val('rpLop');let chEl=document.getElementById('rpChuong'),baiEl=document.getElementById('rpBaiHoc');if(chEl){chEl.disabled=!lop;if(!lop){chEl.innerHTML='<option value="">Tất cả</option>'}else{let chuongs=uniqField(rpFilterCatalog(),'Chuong');setRpSelectOptions('rpChuong',chuongs,val('rpChuong'),'<option value="">Tất cả</option>')}}if(baiEl){baiEl.disabled=!lop;if(!lop){baiEl.innerHTML='<option value="">Tất cả</option>'}else{let ch=val('rpChuong');let baiBase=ch?rpFilterCatalog().filter(x=>x.Chuong===ch):rpFilterCatalog();setRpSelectOptions('rpBaiHoc',uniqField(baiBase,'BaiHoc'),val('rpBaiHoc'),'<option value="">Tất cả</option>')}}}
 function setRpSelectOptions(selId,opts,cur,ph){let el=document.getElementById(selId);if(!el)return;let keep=cur||el.value;el.innerHTML=(ph||'<option value="">—</option>')+opts.map(v=>`<option value="${escAttr(v)}">${esc(v)}</option>`).join('');if(keep&&opts.includes(keep))el.value=keep}
-function refreshRpChuongSelect(){let mon=val('rpMon'),lop=val('rpLop');let base=rpCatalogBase();let k1=mon?base.filter(x=>x.Mon===mon):[];let k2=lop?k1.filter(x=>x.Lop===lop):[];let chuongs=uniqField(k2,'Chuong');let chEl=document.getElementById('rpChuong');if(!chEl)return;let cur=val('rpChuong');chEl.disabled=!lop;chEl.innerHTML='<option value="">Tất cả chương</option>'+chuongs.map(c=>`<option value="${escAttr(c)}">${esc(c)}</option>`).join('');if(cur&&chuongs.includes(cur))chEl.value=cur}
-function refreshRpScopeOptions(){if(RP_SCOPE_LOCKED)return;let mon=val('rpMon');let base=rpCatalogBase();setRpSelectOptions('rpMon',uniqField(base,'Mon'),mon,'<option value="">— Chọn —</option>');let k1=mon?base.filter(x=>x.Mon===mon):[];let lopEl=document.getElementById('rpLop');if(lopEl){lopEl.disabled=!mon;lopEl.classList.toggle('rpLockable',true);setRpSelectOptions('rpLop',uniqField(k1,'Lop'),val('rpLop'),'<option value="">— Chọn —</option>')}syncRpKhoiHidden();refreshRpChuongSelect()}
-function onRpScopeChange(level){if(RP_SCOPE_LOCKED)return;if(level==='mon'){setVal('rpLop','');setVal('rpChuong','')}else if(level==='lop')setVal('rpChuong','');refreshRpScopeOptions()}
-function maybeLockRpScope(){let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiHidden();let khoi=val('rpKhoi');if(!mon||!lop||!khoi)return;RP_SCOPE_LOCKED=true;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.add('rpLocked');['rpMon','rpLop','rpChuong'].forEach(id=>{let e=document.getElementById(id);if(e)e.disabled=true});let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML=rpScopeNoteHtml(mon,lop,val('rpChuong'));note.classList.remove('hide')}if(USER&&USER.is_admin)syncAdminComposeChrome()}
+function refreshRpScopeOptions(){if(RP_SCOPE_LOCKED){refreshRpChuongBaiOptions();return}let mon=val('rpMon');let base=rpCatalogBase();setRpSelectOptions('rpMon',uniqField(base,'Mon'),mon,'<option value="">— Môn —</option>');let k1=mon?base.filter(x=>x.Mon===mon):[];let lopEl=document.getElementById('rpLop');if(lopEl){lopEl.disabled=!mon;lopEl.classList.toggle('rpLockable',true);setRpSelectOptions('rpLop',uniqField(k1,'Lop'),val('rpLop'),'<option value="">— Lớp —</option>')}syncRpKhoiFromLop();refreshRpChuongBaiOptions()}
+function onRpScopeChange(level){if(RP_SCOPE_LOCKED)return;if(level==='mon'){setVal('rpKhoi','');setVal('rpLop','');setVal('rpChuong','');setVal('rpBaiHoc','')}else if(level==='lop'){syncRpKhoiFromLop();setVal('rpChuong','');setVal('rpBaiHoc','')}else if(level==='chuong')setVal('rpBaiHoc','');refreshRpScopeOptions();if(USER&&USER.is_admin)syncAdminComposeChrome()}
+function maybeLockRpScope(){let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi)return;RP_SCOPE_LOCKED=true;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.add('rpLocked');['rpMon','rpLop','rpChuong','rpBaiHoc'].forEach(id=>{let e=document.getElementById(id);if(e)e.disabled=true});let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML=`🔒 ${esc(rpScopeSummary())}`;note.classList.remove('hide')}if(USER&&USER.is_admin)syncAdminComposeChrome()}
 function unlockRpScope(){RP_SCOPE_LOCKED=false;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.remove('rpLocked');let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='none';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML='';note.classList.add('hide')}refreshRpScopeOptions();if(USER&&USER.is_admin)syncAdminComposeChrome()}
-function getRpSelectedChuongs(){let c=val('rpChuong');return c?[c]:[]}
-function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop'),ch=val('fChuong');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l){setVal('rpLop',l);refreshRpScopeOptions()}if(ch){setVal('rpChuong',ch);refreshRpChuongSelect()}}
+function getRpSelectedChuongs(){let ch=val('rpChuong');return ch?[ch]:[]}
+function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop'),ch=val('fChuong'),bai=val('fBaiHoc');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l&&deriveKhoi(l)){setVal('rpKhoi',deriveKhoi(l));refreshRpScopeOptions();setVal('rpLop',l);refreshRpScopeOptions()}if(ch)setVal('rpChuong',ch);if(bai)setVal('rpBaiHoc',bai);refreshRpScopeOptions()}
 function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions()}
-async function startRandomPractice(){try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiHidden();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
+function rpExportPayload(){syncRpKhoiFromLop();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();return{mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0}}
+async function exportRpScopeLatex(){let btn=document.getElementById('btnRpExportLatex'),old=btn?btn.textContent:'';try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(btn){btn.disabled=true;btn.textContent='⏳ Đang xuất…'}let body=rpExportPayload();let j=await api('/api/latex/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.ok){alert(j&&j.error?j.error:'Không xuất được LaTeX.');return}if(j.count<1){alert('Không có câu nào trong phạm vi đã chọn.');return}let blob=new Blob([String(j.tex||'')],{type:'text/plain;charset=utf-8'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=j.filename||'Cau_Hoi.tex';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}catch(e){alert('Không xuất được LaTeX: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent=old||'📄 Xuất LaTeX'}}}
+async function startRandomPractice(){try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
 const AC_MATRIX_DANGS=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
 const AC_MATRIX_LEVELS=['NB','TH','VD','VDC'];
 let AC_MATRIX_DATA=null;
-function acComposePayloadBase(){syncRpKhoiHidden();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');let chuongs=getRpSelectedChuongs();let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('acLevelFilter')||'').trim().toUpperCase();let bai=(val('acBaiHoc')||'').trim();return{mon,khoi,lop,chuongs,level:lv,bai_hoc:bai,sol_full_only:solOnly?1:0}}
+function acComposePayloadBase(){syncRpKhoiFromLop();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');let chuongs=getRpSelectedChuongs();let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('acLevelFilter')||'').trim().toUpperCase();let bai=(val('rpBaiHoc')||val('acBaiHoc')||'').trim();return{mon,khoi,lop,chuongs,chuong:val('rpChuong'),level:lv,bai_hoc:bai,sol_full_only:solOnly?1:0}}
 function isAdminComposeOpen(){try{return localStorage.getItem('LDVL_ADMIN_COMPOSE_OPEN_V257')==='1'}catch(e){return false}}
 function setAdminComposeOpen(open){try{localStorage.setItem('LDVL_ADMIN_COMPOSE_OPEN_V257',open?'1':'0')}catch(e){}syncAdminComposeChrome();if(open)refreshAdminComposeMatrix()}
 function toggleAdminComposeCompact(){setAdminComposeOpen(!isAdminComposeOpen())}
-function syncAdminComposeChrome(){if(!USER||!USER.is_admin)return;let panel=document.getElementById('adminComposePanel');let open=isAdminComposeOpen();if(panel){panel.classList.toggle('acCollapsed',!open);let title=panel.querySelector('b');if(title&&!document.getElementById('adminComposeToggle'))title.insertAdjacentHTML('afterend',' <button type="button" id="adminComposeToggle" class="btn2 adminComposeToggle" onclick="toggleAdminComposeCompact()">Mở ghép đề</button>');let btn=document.getElementById('adminComposeToggle');if(btn)btn.textContent=open?'Thu gọn':'Mở ghép đề'}let note=document.getElementById('acScopeNote');let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiHidden();let khoi=val('rpKhoi');if(note){if(mon&&lop&&khoi){let ch=val('rpChuong');let chTxt=ch?esc(ch):'tất cả chương';note.innerHTML=`📌 ${esc(mon)} · Lớp <b>${esc(lop)}</b> · ${chTxt}`;note.classList.remove('hide')}else{note.innerHTML='⚠️ Chọn Môn · Lớp ở «Tự luyện ngẫu nhiên».';note.classList.remove('hide')}}let bh=document.getElementById('acBaiHoc');if(bh&&mon&&lop&&khoi){let list=uniqField(rpFilterCatalog(),'BaiHoc');let cur=val('acBaiHoc');bh.innerHTML='<option value="">Tất cả bài</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}}
+function syncAdminComposeChrome(){if(!USER||!USER.is_admin)return;let panel=document.getElementById('adminComposePanel');let open=isAdminComposeOpen();if(panel){panel.classList.toggle('acCollapsed',!open);let title=panel.querySelector('b');if(title&&!document.getElementById('adminComposeToggle'))title.insertAdjacentHTML('afterend',' <button type="button" id="adminComposeToggle" class="btn2 adminComposeToggle" onclick="toggleAdminComposeCompact()">Mở ghép đề</button>');let btn=document.getElementById('adminComposeToggle');if(btn)btn.textContent=open?'Thu gọn':'Mở ghép đề'}let note=document.getElementById('acScopeNote');let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();if(note){if(mon&&lop){note.innerHTML=`📌 ${esc(rpScopeSummary())}`;note.classList.remove('hide')}else{note.innerHTML='⚠️ Chọn Môn · Lớp ở «Tự luyện ngẫu nhiên».';note.classList.remove('hide')}}let bh=document.getElementById('acBaiHoc');if(bh&&mon&&lop){let ch=val('rpChuong');let baiBase=ch?rpFilterCatalog().filter(x=>x.Chuong===ch):rpFilterCatalog();let list=uniqField(baiBase,'BaiHoc');let cur=val('acBaiHoc')||val('rpBaiHoc');bh.innerHTML='<option value="">Tất cả bài</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}}
 function renderAdminComposeMatrix(j){AC_MATRIX_DATA=j||null;let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!wrap)return;if(!j||!j.matrix){wrap.innerHTML='<div class="muted" style="padding:12px">Chưa có dữ liệu ma trận.</div>';return}let levels=j.levels||AC_MATRIX_LEVELS;let dangs=j.dangs||AC_MATRIX_DANGS;let hdr='<tr><th>Dạng \\ Mức</th>'+levels.map(lv=>'<th>'+esc(lv)+'</th>').join('')+'<th>Mọi mức</th></tr>';let body=dangs.map(d=>{let row=j.matrix[d]||{};let any=j.row_any&&j.row_any[d]!=null?j.row_any[d]:0;let cells=levels.map(lv=>{let av=row[lv]||0;let id='ac_'+d.replace(/\s+/g,'_')+'_'+lv;return '<td><span class="acAvail">'+av+'</span><input type="number" min="0" max="99" class="acNeed" id="'+id+'" data-dang="'+escAttr(d)+'" data-level="'+escAttr(lv)+'" placeholder="0"></td>'}).join('');let idAny='ac_'+d.replace(/\s+/g,'_')+'_ANY';return '<tr><td class="acDang">'+esc(d)+'</td>'+cells+'<td><span class="acAvail">'+any+'</span><input type="number" min="0" max="99" class="acNeed" id="'+idAny+'" data-dang="'+escAttr(d)+'" data-level="" placeholder="0"></td></tr>'}).join('');wrap.innerHTML='<table class="acMatrix"><thead>'+hdr+'</thead><tbody>'+body+'</tbody></table>';if(st)st.textContent='Có '+((j.pool_size!=null?j.pool_size:j.total)||0)+' câu trong phạm vi đã chọn.'}
-async function refreshAdminComposeMatrix(){if(!USER||!USER.is_admin)return;syncAdminComposeChrome();if(!isAdminComposeOpen())return;syncRpKhoiHidden();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!mon||!khoi||!lop){if(wrap)wrap.innerHTML='<div class="muted" style="padding:10px">Chọn phạm vi ở khối «Tự luyện ngẫu nhiên» rồi quay lại đây.</div>';if(st)st.textContent='';return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();if(st)st.textContent='Đang tải ma trận…';try{let body=acComposePayloadBase();let j=await api('/api/admin/pool-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});renderAdminComposeMatrix(j)}catch(e){if(wrap)wrap.innerHTML='<div class="muted" style="padding:12px;color:#991b1b">'+esc(e.message||e)+'</div>';if(st)st.textContent=''}}
+async function refreshAdminComposeMatrix(){if(!USER||!USER.is_admin)return;syncAdminComposeChrome();if(!isAdminComposeOpen())return;let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!mon||!lop||!khoi){if(wrap)wrap.innerHTML='<div class="muted" style="padding:10px">Chọn Môn · Lớp ở «Tự luyện ngẫu nhiên» rồi quay lại đây.</div>';if(st)st.textContent='';return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();if(st)st.textContent='Đang tải ma trận…';try{let body=acComposePayloadBase();let j=await api('/api/admin/pool-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});renderAdminComposeMatrix(j)}catch(e){if(wrap)wrap.innerHTML='<div class="muted" style="padding:12px;color:#991b1b">'+esc(e.message||e)+'</div>';if(st)st.textContent=''}}
 function acClearMatrixInputs(){document.querySelectorAll('.acNeed').forEach(inp=>{inp.value=''})}
 function acPresetStandard28(){acClearMatrixInputs();let set=(d,n)=>{let el=document.querySelector('.acNeed[data-dang="'+d+'"][data-level=""]');if(el)el.value=String(n)};set('Trắc nghiệm',18);set('Đúng sai',4);set('Trả lời ngắn',6);let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đã điền đề chuẩn 28 câu (cột «Mọi mức»). Bấm «Ghép đề ADMIN».'}
 function collectAdminComposeSpec(){let spec=[];document.querySelectorAll('.acNeed').forEach(inp=>{let n=parseInt(inp.value,10);if(!n||n<=0)return;let d=inp.getAttribute('data-dang')||'';let lv=(inp.getAttribute('data-level')||'').trim().toUpperCase();spec.push({dang:d,level:lv,count:n})});return spec}
-async function startAdminComposeExam(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}syncRpKhoiHidden();let mon=val('rpMon'),khoi=val('rpKhoi'),lop=val('rpLop');if(!mon||!lop||!khoi){alert('Chọn đủ Môn và Lớp ở khối «Tự luyện ngẫu nhiên».');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let spec=collectAdminComposeSpec();if(!spec.length){alert('Nhập số câu cần lấy trong ma trận (hoặc bấm «Đề chuẩn 28»).');return}let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đang ghép đề…';try{let body=Object.assign(acComposePayloadBase(),{spec,shuffle_a:1});let j=await api('/api/admin/start-compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không ghép được đề.');if(st)st.textContent='';return}let lv=(val('acLevelFilter')||'').trim().toUpperCase();if(st)st.textContent='Đã ghép '+j.questions.length+' câu.'+(j.random_shortages&&j.random_shortages.length?'\nThiếu: '+j.random_shortages.join('; '):'');enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){if(st)st.textContent='';alert('Không ghép được đề: '+(e.message||e))}}
+async function startAdminComposeExam(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Chọn đủ Môn và Lớp ở khối «Tự luyện ngẫu nhiên».');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let spec=collectAdminComposeSpec();if(!spec.length){alert('Nhập số câu cần lấy trong ma trận (hoặc bấm «Đề chuẩn 28»).');return}let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đang ghép đề…';try{let body=Object.assign(acComposePayloadBase(),{spec,shuffle_a:1});let j=await api('/api/admin/start-compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không ghép được đề.');if(st)st.textContent='';return}let lv=(val('acLevelFilter')||'').trim().toUpperCase();if(st)st.textContent='Đã ghép '+j.questions.length+' câu.'+(j.random_shortages&&j.random_shortages.length?'\nThiếu: '+j.random_shortages.join('; '):'');enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){if(st)st.textContent='';alert('Không ghép được đề: '+(e.message||e))}}
 function initAdminComposePanel(){syncAdminComposeChrome();if(USER&&USER.is_admin&&isAdminComposeOpen())refreshAdminComposeMatrix()}
 
 let AI_GEN_QUESTIONS=[],AI_GEN_BUSY=false,AI_GEN_SAVED=false,AI_GEN_REQUEST_ID='';
@@ -27689,6 +27715,60 @@ def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
     return "bt", content, cau + (("\n\\loigiai{\n" + lg + "\n}") if lg else "")
 
 
+def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> str:
+    """Ghép danh sách câu hỏi thành nội dung file .tex (\\begin{ex}...)."""
+    blocks: List[str] = []
+    for i, q in enumerate(questions or [], start=1):
+        if not isinstance(q, dict):
+            continue
+        _qtype, content, _body = _json_question_content_block(q)
+        meta: List[str] = []
+        qid = clean(q.get("ID", ""))
+        muc = clean(q.get("MucDo", ""))
+        dbt = clean(q.get("DangBaiTap", ""))
+        if qid:
+            meta.append(f"% ID: {qid}")
+        if muc:
+            meta.append(f"% Mức: {muc}")
+        if dbt:
+            meta.append(f"% Dạng BT: {dbt}")
+        header = f"% ===== Câu {i}" + (f" · {qid}" if qid else "") + " ====="
+        if meta:
+            header += "\n" + "\n".join(meta)
+        blocks.append(header + "\n" + content)
+    title_line = clean(title) or "Cau_Hoi"
+    head = (
+        f"% Xuất từ app Thầy Minh · {APP_VERSION}\n"
+        f"% {title_line}\n"
+        f"% {len(blocks)} câu\n"
+    )
+    return head + "\n" + ("\n\n".join(blocks) + ("\n" if blocks else ""))
+
+
+def _latex_export_scope_title(mon: str, lop: str, chuong: str, baihoc: str) -> str:
+    parts = [p for p in [clean(mon), f"Lop_{clean(lop)}" if clean(lop) else "", clean(chuong), clean(baihoc)] if p]
+    return " · ".join(parts) if parts else "Cau_Hoi"
+
+
+def _parse_pool_scope_body(body: Dict[str, Any]) -> Dict[str, Any]:
+    chuongs_raw = body.get("chuongs") or body.get("chapters") or []
+    if isinstance(chuongs_raw, str):
+        chuongs_raw = [x.strip() for x in chuongs_raw.split(",") if x.strip()]
+    if not isinstance(chuongs_raw, list):
+        chuongs_raw = []
+    return {
+        "mon": clean(body.get("mon", "")),
+        "khoi": clean(body.get("khoi", "")),
+        "lop": clean(body.get("lop", "")),
+        "chuongs": [clean(x) for x in chuongs_raw if clean(x)],
+        "chuong": clean(body.get("chuong", "")),
+        "baihoc": clean(body.get("bai_hoc", body.get("baihoc", ""))),
+        "bode": clean(body.get("bode", "")),
+        "level_filter": clean(body.get("level", "")).upper(),
+        "sol_full_only": str(body.get("sol_full_only", "0")).lower() in ("1", "true", "yes"),
+    }
+
+
 def _json_default_spaces() -> List[Dict[str, Any]]:
     spaces: List[Dict[str, Any]] = []
     t = 1700000000000
@@ -32529,6 +32609,37 @@ def api_ai_apply_physics_competencies():
         return jsonify(st.update_question_competency_bulk(updates))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+@app.route("/api/latex/export", methods=["POST"])
+def api_latex_export():
+    bad = require_login_json()
+    if bad:
+        return bad
+    try:
+        body = request.get_json(silent=True) or {}
+        st = get_store()
+        if not st.questions_loaded:
+            st.start_questions_background(force=False)
+            return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
+        scope = _parse_pool_scope_body(body)
+        if not scope["mon"] or not scope["khoi"] or not scope["lop"]:
+            return jsonify({"error": "Phải chọn đủ Môn và Lớp trước khi xuất LaTeX."}), 400
+        pool = st.build_question_pool(**scope)
+        if not pool:
+            return jsonify({"error": "Không có câu nào trong phạm vi đã chọn."}), 404
+        title = _latex_export_scope_title(scope["mon"], scope["lop"], scope["chuong"], scope["baihoc"])
+        tex = questions_to_latex_tex(pool, title)
+        filename = _safe_json_filename(title + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"), suffix=".tex")
+        return jsonify({
+            "ok": True,
+            "count": len(pool),
+            "filename": filename,
+            "title": title,
+            "tex": tex,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 
 @app.route("/api/latex/import", methods=["POST"])
 def api_latex_import():
