@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V350_LATEX_EXPORT_SVIP_ADMIN_2026_06_22"
+APP_VERSION = "V351_LOIGIAI_ABCD_LINES_2026_06_22"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -3393,12 +3393,6 @@ def can_view_solution_live() -> bool:
     """VIP/SVIP/ADMIN có quyền xem đáp án/lời giải khi làm bài (client: sau khi làm + chấm từng câu)."""
     refresh_session_role_from_store()
     return norm_role(session.get("role", "")) in ["VIP", "S.VIP", "ADMIN"]
-
-
-def can_export_latex() -> bool:
-    """Chỉ SVIP và ADMIN được xuất LaTeX — tránh lộ tài liệu cho VIP/FREE."""
-    refresh_session_role_from_store()
-    return is_admin() or is_svip()
 
 
 def can_use_infographic() -> bool:
@@ -8908,6 +8902,17 @@ def _strip_ds_body_leading_verdict(body: str, verdict_label: str = "") -> str:
     if not body:
         return ""
     m = re.match(
+        r"^(?:Phát biểu này|Mệnh đề này|Menh de nay)\s+(đúng|sai)\s*[\.\-—:–]?\s*",
+        body,
+        flags=re.I,
+    )
+    if m:
+        if verdict_label:
+            got = _ds_verdict_label(_ds_verdict_token(m.group(1)))
+            if got and got != verdict_label:
+                return body
+        body = clean(body[m.end():]) or body
+    m = re.match(
         r"^(?:\*\*)?(?:\\textbf\s*\{\s*)?(Đúng|Sai|Đ|D|S|True|False)(?:\s*\})?\s*[\-—:–\.\)]*\s*",
         body,
         flags=re.I,
@@ -8987,6 +8992,11 @@ _DS_BULLET_VERDICT_HEAD_RE = re.compile(
     re.I,
 )
 
+_DS_PHAT_BIEU_VERDICT_RE = re.compile(
+    r"^(?:Phát biểu này|Mệnh đề này|Menh de nay)\s+(đúng|sai)\b",
+    re.I,
+)
+
 
 _DS_LEGACY_VERDICT_BLOCK_RE = re.compile(
     r"(?:^|\n|[•●▪▫◦]\s*)(?:ch\s+)?(?:\\textbf\s*\{\s*)?(?:Đúng|Sai)\s*[\.\-—:–]\s*",
@@ -9055,6 +9065,10 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
                 if mm:
                     verdict = _ds_verdict_token(mm.group(1))
                     body = clean(mm.group(2)) or body
+            if not verdict:
+                pm = _DS_PHAT_BIEU_VERDICT_RE.match(body)
+                if pm:
+                    verdict = _ds_verdict_token(pm.group(1))
             if verdict:
                 body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
             if body or verdict:
@@ -9085,6 +9099,11 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
             if vm:
                 verdict = _ds_verdict_token(vm.group(1))
                 body = clean(body[vm.end():]).strip(" ).\n")
+            if not verdict:
+                pm = _DS_PHAT_BIEU_VERDICT_RE.match(body)
+                if pm:
+                    verdict = _ds_verdict_token(pm.group(1))
+                    body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
             out[L] = {"verdict": verdict, "body": clean(body).strip(" ).\n")}
     return out
 
@@ -9123,8 +9142,17 @@ def _ds_loigiai_already_canonical(raw: str) -> bool:
     """True nếu đã là intro (tùy chọn) + A. Đúng/Sai — …, không còn khối legacy."""
     if not raw or not _DS_LG_TAG_RE.search(raw):
         return False
+    if re.search(r"[•●▪▫◦]\s+", raw):
+        return False
     tagged = list(_DS_LG_TAG_RE.finditer(raw))
     if len(tagged) < 2:
+        return False
+    # Chưa chuẩn nếu chỉ có A. nội dung… mà chưa có nhãn Đúng/Sai + dấu — sau chữ cái.
+    canonical_line = re.compile(
+        r"(?m)^\s*[ABCD]\s*[\.\):]\s*(?:Đúng|Sai|Đ|D|S)\s*[\-—:–]",
+        re.I,
+    )
+    if len(canonical_line.findall(raw)) < 2:
         return False
     pre = raw[: tagged[0].start()]
     return len(list(_DS_LEGACY_VERDICT_BLOCK_RE.finditer(pre))) < 2
@@ -14435,7 +14463,6 @@ def current_user_public() -> Dict[str, Any]:
         "can_quiz_similar": can_use_quiz_similar(),
         "can_quiz_retry": can_use_quiz_retry(),
         "can_view_solution_live": can_view_solution_live(),
-        "can_export_latex": can_export_latex(),
         "can_save_own_ai_key": can_save_own_ai_key(),
         "ai_has_keys": bool(cfg.get("has_keys")),
         "ai_using_user_keys": bool(cfg.get("using_user_keys")),
@@ -16665,25 +16692,6 @@ body.homeTopCompact .homeSectionRow .practiceRandomPanel .rpScopeRow .field{
 }
 .practiceRandomPanel .rpScopeUnlockRow{
     margin:2px 0 0!important;
-}
-.practiceRandomPanel .rpActionRow{
-    display:flex!important;
-    flex-wrap:nowrap!important;
-    align-items:stretch!important;
-    gap:6px!important;
-    margin-top:4px!important;
-}
-.practiceRandomPanel .rpActionRow .btnStartStrong{
-    margin-top:0!important;
-    width:auto!important;
-}
-body.homeTopCompact .practiceRandomPanel .rpActionRow .btnStartStrong{
-    min-height:34px!important;
-}
-body.homeTopCompact .practiceRandomPanel .rpActionRow #btnRpExportLatex{
-    min-height:34px!important;
-    padding:4px 8px!important;
-    font-size:11px!important;
 }
 body.homeTopCompact .practiceRandomPanel #rpScopeNote{margin:3px 0!important;padding:4px 7px!important;font-size:10.5px!important}
 
@@ -19298,7 +19306,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 
 <!-- SECTION 1: Lọc & tìm đề -->
 <div class="homeSection">
-  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button><button type="button" class="btn2 hide" id="btnExportLatex" onclick="exportLatexFiltered()" title="SVIP/ADMIN: tải file .tex theo bộ lọc hiện tại">📄 Xuất LaTeX</button></div></div>
+  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
 </div>
 
 <!-- SECTION 2: Tự luyện ngẫu nhiên + Tìm ID + Key AI -->
@@ -19322,10 +19330,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
       <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi</button></div>
       <div id="rpScopeNote" class="hide" style="margin:4px 0;padding:5px 8px;border-radius:7px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
       <label style="display:flex;gap:5px;align-items:center;margin:2px 0;font-size:11px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ câu có <b>lời giải đầy đủ</b></label>
-      <div class="row rpActionRow" style="margin:0;gap:6px;align-items:stretch">
-        <button type="button" class="btnStartStrong" style="flex:1;margin:0" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
-        <button type="button" class="btn2 hide" id="btnRpExportLatex" onclick="exportLatexFromRpScope()" title="SVIP/ADMIN: tải .tex theo Môn · Lớp · Chương · Bài" style="flex-shrink:0;white-space:nowrap;align-self:stretch">📄 LaTeX</button>
-      </div>
+      <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
     </div>
   </div>
 
@@ -19410,7 +19415,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 
 <div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
 </div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button type="button" class="btn2 hide" id="btnExportLatexQuiz" onclick="exportLatexCurrentQuiz()" title="SVIP/ADMIN: tải đề hiện tại ra .tex">📄 LaTeX</button><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
 
 </div></main></div><!-- /ldvlDashWrap -->
 <div id="pdf-fs-scr">
@@ -20124,13 +20129,7 @@ function isAiKeyPanelOpen(){try{return localStorage.getItem('LDVL_AI_KEY_PANEL_O
 function setAiKeyPanelOpen(open){try{localStorage.setItem('LDVL_AI_KEY_PANEL_OPEN_V257',open?'1':'0')}catch(e){}syncAiKeyCompactPanel()}
 function toggleAiKeyPanelCompact(){setAiKeyPanelOpen(!isAiKeyPanelOpen())}
 function syncAiKeyCompactPanel(){let panel=document.getElementById('aiKeyPanel');if(!panel)return;let open=isAiKeyPanelOpen();panel.classList.toggle('aiKeyCollapsed',!open);let btn=document.getElementById('aiKeyMiniToggle');if(btn)btn.textContent=open?'Thu key':'Mở key'}
-function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=`<b>${esc(u.ai_profile_label||'AI')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`+(u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'')}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=`<b>${esc(u.ai_profile_label||'')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}syncLatexExportButtons()}
-function canExportLatex(){return !!(USER&&(USER.can_export_latex||USER.is_admin||USER.is_svip))}
-function latexExportFilter(){return{mon:val('fMon'),lop:val('fLop'),chuong:val('fChuong'),baihoc:val('fBaiHoc'),dangbaitap:val('fDangBaiTap'),bode:val('fBoDe'),dang:val('fDang'),level:(val('fMucDo')||'').trim().toUpperCase(),search:val('fSearch'),sol_full_only:!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0}}
-function syncLatexExportButtons(){let show=canExportLatex();['btnExportLatex','btnRpExportLatex','btnExportLatexQuiz'].forEach(function(id){let el=document.getElementById(id);if(el)el.classList.toggle('hide',!show)})}
-function exportLatexFiltered(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}let btn=window.event&&window.event.target;let old=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let p=new URLSearchParams(latexExportFilter());p.set('download','1');window.location='/api/latex/export?'+p.toString()}catch(e){alert('Không xuất được LaTeX: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
-function exportLatexFromRpScope(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop'),chuong=val('rpChuong'),bai=val('rpBaiHoc');if(!mon||!lop){alert('Chọn Môn và Lớp trước khi xuất LaTeX.');return}let p=new URLSearchParams({mon,lop,download:'1'});if(chuong)p.set('chuong',chuong);if(bai)p.set('baihoc',bai);if(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)p.set('sol_full_only','1');let lv=(val('fMucDo')||'').trim().toUpperCase();if(lv)p.set('level',lv);window.location='/api/latex/export?'+p.toString()}
-function exportLatexCurrentQuiz(){if(!canExportLatex()){alert('Chỉ SVIP và ADMIN được xuất LaTeX.');return}if(!SID){alert('Chưa có phiên đề.');return}window.location='/api/latex/export?sid='+encodeURIComponent(SID)+'&download=1'}
+function renderUserAiProfile(u){u=u||USER||{};renderUserAccountCard(u);let badge=document.getElementById('aiProfileBadge');if(badge){if(u.ai_profile&&u.ai_profile!=='FREE'&&u.can_ai_hint!==false){badge.textContent=u.ai_profile_label||'';badge.className='aiProfileBadge '+aiProfileBadgeClass(u.ai_profile)}else badge.className='aiProfileBadge hide'}let banner=document.getElementById('aiProfileBanner');if(banner){if(u.can_ai_hint&&u.ai_profile_hint){let cls='aiProfileBanner aiProfileBannerCompact ';if(u.ai_profile&&String(u.ai_profile).endsWith('_NO_KEY'))cls+='aiProfileBannerErr';else if(u.ai_nudge_key)cls+='aiProfileBannerNudge';else cls+='aiProfileBannerOk';banner.className=cls;banner.title=String(u.ai_profile_hint||'');banner.innerHTML=`<b>${esc(u.ai_profile_label||'AI')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`+(u.ai_nudge_key?'<button type="button" class="btn2 aiProfileBannerBtn" onclick="scrollToAiKeyPanel()">Nạp key</button>':'')}else banner.className='aiProfileBanner hide'}let detail=document.getElementById('aiProfileDetail');if(detail){if(u.can_ai_hint&&u.ai_profile_hint){let dcls='aiProfileBanner aiProfileBannerCompact ';dcls+=u.ai_profile&&String(u.ai_profile).endsWith('_OWN')?'aiProfileBannerOk':(u.ai_nudge_key?'aiProfileBannerNudge':'aiProfileBannerOk');detail.className=dcls;detail.style.margin='6px 0 8px';detail.title=String(u.ai_profile_hint||'');detail.innerHTML=`<b>${esc(u.ai_profile_label||'')}</b><div class="aiProfileBannerTxt">${esc(u.ai_profile_hint||'')}</div>`}else detail.className='aiProfileBanner aiProfileBannerOk hide'}let panel=document.getElementById('aiKeyPanel');if(panel){if(u.ai_show_key_panel===false||u.can_save_own_ai_key===false)panel.classList.add('hide');else if(u.can_ai_hint)panel.classList.remove('hide');syncAiKeyCompactPanel()}}
 function scrollToAiKeyPanel(){let p=document.getElementById('aiKeyPanel');if(!p)return;p.classList.remove('hide');setAiKeyPanelOpen(true);p.scrollIntoView({behavior:'smooth',block:'start'})}
 async function loadAiKeyPanel(){
   let panel=document.getElementById('aiKeyPanel');
@@ -20279,7 +20278,6 @@ function updateAdminChrome(){
   syncInfographicButtons();
   syncAdminLearningBoard();
   syncUserQuizChrome();
-  syncLatexExportButtons();
   if(adm){ensureQuizAdminAiInternetButton();syncAdminComposeChrome();bindAdminNavContextMenu();try{initAdminAiGenerator()}catch(e){}}
   if(typeof ldvlApplyAdminHomeLayout==='function')ldvlApplyAdminHomeLayout();
 }
@@ -23182,11 +23180,16 @@ function renderEditQuestionPreview(){let box=document.getElementById('editQuesti
 function toggleEditQuestionPreview(){let box=document.getElementById('editQuestionPreview');if(!box)return;box.classList.toggle('hide');let btn=document.getElementById('btnEditTogglePreview');if(btn)btn.textContent=box.classList.contains('hide')?'👁 Bật xem trước':'👁 Ẩn xem trước'}
 function setEditDangQuick(dang){setAdminChip('Dang',dang);renderEditQuestionPreview()}
 function bindEditFormLivePreview(){document.querySelectorAll('#editForm textarea, #editForm input').forEach(el=>{el.oninput=function(){refreshEditHinhAnhPreview();renderEditQuestionPreview()}})}
-function ensureEditAdminPreviewBar(){let form=document.getElementById('editForm');if(!form)return;if(!document.getElementById('editAdminPreviewBar')){let bar=document.createElement('div');bar.id='editAdminPreviewBar';bar.className='editAdminPreviewBar';bar.innerHTML='<div style="font-weight:800;margin-bottom:6px">📋 Dán câu & xem trước</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.45">Máy tính: <b>Ctrl+V</b> vào ô dưới hoặc bấm «Dán clipboard» — app tự tách Câu hỏi / A–D / P / R / link ảnh / <b>mã TikZ</b> (→ ô 📐 TikZ). Chọn <b>Dạng câu</b> rồi xem giống lúc làm bài.</p><textarea id="editPasteBuffer" class="editAdminPasteBox" placeholder="Dán cả câu từ Word, PDF, LaTeX, Messenger…&#10;VD:&#10;Một vật dao động...&#10;A. 2 Hz&#10;B. 4 Hz&#10;...&#10;Đáp án: B"></textarea><div class="row" style="margin-bottom:8px"><button type="button" class="btn2 btnSmall" onclick="adminApplyPasteBuffer()">↪ Tách vào form</button><button type="button" class="btn2 btnSmall" onclick="adminPasteFromClipboard()">📋 Dán clipboard</button><button type="button" class="btn2 btnSmall" id="btnEditTogglePreview" onclick="toggleEditQuestionPreview()">👁 Ẩn xem trước</button></div><div class="row"><span class="muted" style="font-size:12px;font-weight:800">Dạng nhanh:</span><button type="button" class="adminChip mucdo-th btnSmall" onclick="setEditDangQuick(\'Trắc nghiệm\')">TN</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Đúng sai\')">Đ/S</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Trả lời ngắn\')">TLN</button></div>';form.parentNode.insertBefore(bar,form)}if(!document.getElementById('editQuestionPreview')){let prev=document.createElement('div');prev.id='editQuestionPreview';prev.className='editQuestionPreview';form.parentNode.insertBefore(prev,form)}}
+function ensureEditAdminPreviewBar(){let form=document.getElementById('editForm');if(!form)return;if(!document.getElementById('editAdminPreviewBar')){let bar=document.createElement('div');bar.id='editAdminPreviewBar';bar.className='editAdminPreviewBar';bar.innerHTML='<div style="font-weight:800;margin-bottom:6px">📋 Dán câu & xem trước</div><p class="muted" style="font-size:12px;margin:0 0 8px;line-height:1.45">Máy tính: <b>Ctrl+V</b> vào ô dưới hoặc bấm «Dán clipboard». Hỗ trợ <b>Word</b> (A. B. C. D.) và <b>LaTeX</b> (<code>\\begin{ex}</code>, <code>\\choiceTF</code>, <code>\\loigiai</code>). App tự tách Câu hỏi / A–D / P / R.</p><textarea id="editPasteBuffer" class="editAdminPasteBox" placeholder="Dán cả câu từ Word hoặc LaTeX…&#10;LaTeX: \\begin{ex} … \\choiceTF {\\True …} … \\loigiai{…} \\end{ex}&#10;Word: Một vật dao động… / A. 2 Hz / Đáp án: B"></textarea><div class="row" style="margin-bottom:8px"><button type="button" class="btn2 btnSmall" onclick="adminApplyPasteBuffer()">↪ Tách vào form</button><button type="button" class="btn2 btnSmall" onclick="adminPasteFromClipboard()">📋 Dán clipboard</button><button type="button" class="btn2 btnSmall" id="btnEditTogglePreview" onclick="toggleEditQuestionPreview()">👁 Ẩn xem trước</button></div><div class="row"><span class="muted" style="font-size:12px;font-weight:800">Dạng nhanh:</span><button type="button" class="adminChip mucdo-th btnSmall" onclick="setEditDangQuick(\'Trắc nghiệm\')">TN</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Đúng sai\')">Đ/S</button><button type="button" class="adminChip btnSmall" onclick="setEditDangQuick(\'Trả lời ngắn\')">TLN</button></div>';form.parentNode.insertBefore(bar,form)}if(!document.getElementById('editQuestionPreview')){let prev=document.createElement('div');prev.id='editQuestionPreview';prev.className='editQuestionPreview';form.parentNode.insertBefore(prev,form)}}
 function adminFillQuestionForm(data){if(!data)return;for(let f of ['CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai']){if(data[f]==null)continue;let el=document.getElementById('edit_'+f);if(el)el.value=data[f]}if(data.Tikz){let tzEl=document.getElementById('edit_Tikz');adminMergeTikzIntoField(tzEl,data.Tikz)}if(data.HinhAnh!=null){let parsed=parseHinhanhCellClient(data.HinhAnh);let imgEl=document.getElementById('edit_HinhAnh');let tzEl=document.getElementById('edit_Tikz');if(imgEl)imgEl.value=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';if(tzEl&&parsed.tikz)adminMergeTikzIntoField(tzEl,parsed.tikz)}adminExtractTikzFromFormFields();if(data.Dang)setAdminChip('Dang',normDangFormVal(data.Dang))}
-function adminParsePastedQuestion(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw)return null;let work=raw,out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let loiM=work.match(/(?:^|\n)\s*(?:Lời giải|LoiGiai|LG|Giải|Hướng dẫn giải)\s*[:：]?\s*\n([\s\S]*)$/i);if(loiM){out.LoiGiai=loiM[1].trim();work=work.slice(0,loiM.index).trim()}let imgM=work.match(/(?:Hình(?: ảnh)?|HinhAnh|Image|Link\s*ảnh|Cột T)\s*[:：]?\s*(https?:\S+|drive[^\s]+)/i);if(imgM){out.HinhAnh=imgM[1].trim();work=work.replace(imgM[0],'').trim()}let ssM=work.match(/(?:Sai số|SaiSo|±)\s*[:：]?\s*([0-9.,]+)/i);if(ssM)out.SaiSo=ssM[1].trim();let daM=work.match(/(?:Đáp án|DapAn|ĐA|Answer|Chọn|Đ\/S|P\s*[:=])\s*[:：]?\s*([^\n]+)/i);if(daM){out.DapAn=daM[1].trim().replace(/^[.:]\s*/,'');work=work.replace(daM[0],'').trim()}let opts={};let optRe=/^[ \t]*([ABCD])[.)]\s*(.+)$/gim,m;while((m=optRe.exec(work))){let L=m[1].toUpperCase(),t=m[2].trim();opts[L]=opts[L]?(opts[L]+'\n'+t):t}work=work.replace(/^[ \t]*[ABCD][.)]\s*.+$/gim,'').trim();work=work.replace(/(?:Câu hỏi|CauHoi|Nội dung)\s*[:：]?\s*/i,'').trim();out.CauHoi=work;out.A=opts.A||'';out.B=opts.B||'';out.C=opts.C||'';out.D=opts.D||'';let tikzParts=[];function pullTikz(key,val){let ex=extractTikzBlocksClient(val);if(ex.tikz)tikzParts.push(ex.tikz);out[key]=ex.cleaned}pullTikz('LoiGiai',out.LoiGiai);pullTikz('CauHoi',out.CauHoi);for(let L of ['A','B','C','D'])pullTikz(L,out[L]);if(tikzParts.length)out.Tikz=tikzParts.join('\n\n');if(looksDsAnswer(out.DapAn))out.Dang='Đúng sai';else if(isMcqLetter(out.DapAn)&&hasOptsClient(out))out.Dang='Trắc nghiệm';else if(out.DapAn&&String(out.DapAn).trim()&&!hasOptsClient(out))out.Dang='Trả lời ngắn';else if(hasOptsClient(out))out.Dang='Trắc nghiệm';else out.Dang='Trắc nghiệm';if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D&&!out.Tikz)return null;return out}
-function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer');if(!ta||!String(ta.value||'').trim()){alert('Chưa có nội dung để tách — dán câu vào ô trên.');return}let parsed=adminParsePastedQuestion(ta.value);if(!parsed){alert('Không tách được — thử định dạng:\nCâu hỏi...\nA. ... B. ...\nĐáp án: B');return}adminFillQuestionForm(parsed);refreshEditHinhAnhPreview();renderEditQuestionPreview();let tzNote=parsed.Tikz?' (đã tách TikZ vào ô 📐)':'';alert('Đã tách vào form ('+(parsed.Dang||'TN')+')'+tzNote+'. Kiểm tra LaTeX và bấm Lưu.')}
-async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
+function adminLooksLikeLatexBlock(s){return /\\begin\s*\{\s*(?:ex|bt)\s*\}|\\choiceTF\b|\\choice\b|\\loigiai\b|\\shortans\b/i.test(String(s||''))}
+function adminReadLatexBraced(s,pos){if(pos<0||s[pos]!=='{')return null;let depth=0;for(let i=pos;i<s.length;i++){if(s[i]==='\\'&&i+1<s.length){i++;continue}if(s[i]==='{')depth++;else if(s[i]==='}'){depth--;if(depth===0)return{text:s.slice(pos+1,i),end:i+1}}}return null}
+function adminReadLatexCmdArgs(s,cmd,maxArgs){let re=new RegExp('\\\\'+cmd+'\\b','i'),m=re.exec(s);if(!m)return null;let pos=m.index+m[0].length,args=[];while(args.length<maxArgs){while(pos<s.length&&/\s/.test(s[pos]))pos++;if(s[pos]!=='{')break;let b=adminReadLatexBraced(s,pos);if(!b)break;args.push(b.text);pos=b.end}return args.length?{start:m.index,end:pos,args}:null}
+function adminLatexItemchoiceToAbcd(s){s=String(s||'');if(!/\\item\b/i.test(s))return s;s=s.replace(/\\begin\s*\{\s*itemchoice\s*\}/gi,'').replace(/\\end\s*\{\s*itemchoice\s*\}/gi,'');let parts=s.split(/\\item\s*/i),pre=clean(parts[0]||''),lines=pre?[pre]:[];for(let i=1;i<Math.min(parts.length,5);i++){let body=clean(parts[i]||'');if(body)lines.push('ABCD'[i-1]+'. '+body)}return lines.join('\n')}
+function adminParsePastedLatexBlock(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw||!adminLooksLikeLatexBlock(raw))return null;let tex=raw;if(!/\\begin\s*\{\s*(?:ex|bt)\s*\}/i.test(tex))tex='\\begin{ex}\n'+tex+'\n\\end{ex}';let bm=/\\begin\s*\{\s*(ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}/i.exec(tex);let t=(bm?bm[2]:tex).trim();let out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let lo=adminReadLatexCmdArgs(t,'loigiai',1);if(lo){let lgRaw=adminLatexItemchoiceToAbcd(lo.args[0].replace(/\\True\b/gi,'').trim());out.LoiGiai=/^[ABCD]\.\s/m.test(lgRaw)?lgRaw:stripLatexListMarkup(lgRaw);t=(t.slice(0,lo.start)+t.slice(lo.end)).trim()}let sh=adminReadLatexCmdArgs(t,'shortans',1);if(sh){out.DapAn=sh.args[0].replace(/\\True\b/gi,'').trim();t=(t.slice(0,sh.start)+t.slice(sh.end)).trim();out.Dang='Trả lời ngắn'}else{let tf=adminReadLatexCmdArgs(t,'choiceTF',4);if(tf&&tf.args.length>=2){let vals=[];['A','B','C','D'].forEach((L,k)=>{let v=tf.args[k]||'';vals.push(/\\True\b/i.test(v)?'Đ':'S');out[L]=v.replace(/\\True\b/gi,'').trim()});out.DapAn=vals.join(',');t=(t.slice(0,tf.start)+t.slice(tf.end)).trim();out.Dang='Đúng sai'}else{let ch=adminReadLatexCmdArgs(t,'choice',4);if(ch&&ch.args.length>=2){['A','B','C','D'].forEach((L,k)=>{let v=ch.args[k]||'';if(/\\True\b/i.test(v))out.DapAn=L;out[L]=v.replace(/\\True\b/gi,'').trim()});t=(t.slice(0,ch.start)+t.slice(ch.end)).trim();out.Dang='Trắc nghiệm'}}}out.CauHoi=t.replace(/^\s*\[(?:TTN|TDS|TLN|TL|TN|DS)\]\s*/gim,'').replace(/^\s*Câu\s*\d+\s*[.:]/i,'').trim();if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D)return null;return out}
+function adminParsePastedQuestion(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw)return null;let latex=adminParsePastedLatexBlock(raw);if(latex)return latex;let work=raw,out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let loiM=work.match(/(?:^|\n)\s*(?:Lời giải|LoiGiai|LG|Giải|Hướng dẫn giải)\s*[:：]?\s*\n([\s\S]*)$/i);if(loiM){out.LoiGiai=loiM[1].trim();work=work.slice(0,loiM.index).trim()}let imgM=work.match(/(?:Hình(?: ảnh)?|HinhAnh|Image|Link\s*ảnh|Cột T)\s*[:：]?\s*(https?:\S+|drive[^\s]+)/i);if(imgM){out.HinhAnh=imgM[1].trim();work=work.replace(imgM[0],'').trim()}let ssM=work.match(/(?:Sai số|SaiSo|±)\s*[:：]?\s*([0-9.,]+)/i);if(ssM)out.SaiSo=ssM[1].trim();let daM=work.match(/(?:Đáp án|DapAn|ĐA|Answer|Chọn|Đ\/S|P\s*[:=])\s*[:：]?\s*([^\n]+)/i);if(daM){out.DapAn=daM[1].trim().replace(/^[.:]\s*/,'');work=work.replace(daM[0],'').trim()}let opts={};let optRe=/^[ \t]*([ABCD])[.)]\s*(.+)$/gim,m;while((m=optRe.exec(work))){let L=m[1].toUpperCase(),t=m[2].trim();opts[L]=opts[L]?(opts[L]+'\n'+t):t}work=work.replace(/^[ \t]*[ABCD][.)]\s*.+$/gim,'').trim();work=work.replace(/(?:Câu hỏi|CauHoi|Nội dung)\s*[:：]?\s*/i,'').trim();out.CauHoi=work;out.A=opts.A||'';out.B=opts.B||'';out.C=opts.C||'';out.D=opts.D||'';let tikzParts=[];function pullTikz(key,val){let ex=extractTikzBlocksClient(val);if(ex.tikz)tikzParts.push(ex.tikz);out[key]=ex.cleaned}pullTikz('LoiGiai',out.LoiGiai);pullTikz('CauHoi',out.CauHoi);for(let L of ['A','B','C','D'])pullTikz(L,out[L]);if(tikzParts.length)out.Tikz=tikzParts.join('\n\n');if(looksDsAnswer(out.DapAn))out.Dang='Đúng sai';else if(isMcqLetter(out.DapAn)&&hasOptsClient(out))out.Dang='Trắc nghiệm';else if(out.DapAn&&String(out.DapAn).trim()&&!hasOptsClient(out))out.Dang='Trả lời ngắn';else if(hasOptsClient(out))out.Dang='Trắc nghiệm';else out.Dang='Trắc nghiệm';if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D&&!out.Tikz)return null;return out}
+async function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer');let raw=String(ta?.value||'').trim();if(!raw){alert('Chưa có nội dung để tách — dán câu vào ô trên.');return}let parsed=null;if(adminLooksLikeLatexBlock(raw)&&USER&&USER.is_admin){try{let tex=raw;if(!/\\begin\s*\{\s*(?:ex|bt)\s*\}/i.test(tex))tex='\\begin{ex}\n'+tex+'\n\\end{ex}';let j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex,commit:false})});let qs=j&&j.questions?j.questions:[];if(qs.length)parsed=qs[0]}catch(e){}}if(!parsed)parsed=adminParsePastedQuestion(raw);if(!parsed){alert('Không tách được — thử định dạng Word (A. B. C. D.) hoặc LaTeX:\n\\begin{ex}...\\choiceTF{...}\\loigiai{...}\\end{ex}');return}adminFillQuestionForm(parsed);refreshEditHinhAnhPreview();renderEditQuestionPreview();let tzNote=parsed.Tikz?' (đã tách TikZ vào ô 📐)':'';let srcNote=adminLooksLikeLatexBlock(raw)?' (LaTeX ex/choiceTF)':'';alert('Đã tách vào form ('+(parsed.Dang||'TN')+')'+srcNote+tzNote+'. Kiểm tra LaTeX và bấm Lưu.')}
+async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;await adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
 function syncAdminChipGroup(field){let el=document.getElementById('edit_'+field);let val=el?String(el.value||''):'';document.querySelectorAll('[data-chip-field="'+field+'"]').forEach(btn=>{btn.classList.toggle('adminChipOn',btn.getAttribute('data-chip-value')===val)})}
 function renderAdminChipGroup(field,options,current,normFn){let cur=normFn?normFn(current):String(current||'');let chips='';for(let opt of options){let v=typeof opt==='string'?opt:opt.v;let lab=typeof opt==='string'?opt:opt.l;let cls=typeof opt==='string'?(field==='MucDo'?mucdoBadgeClass(v):''):(opt.cls||'');let on=cur===v?' adminChipOn':'';chips+=`<button type="button" class="adminChip ${cls}${on}" data-chip-field="${field}" data-chip-value="${escAttr(v)}" onclick="setAdminChip('${field}','${escAttr(v)}')">${esc(lab)}</button>`}return `<div class="adminQuickField"><label><b>${QUESTION_FORM_LABELS[field]||field}</b></label><input type="hidden" id="edit_${field}" value="${escAttr(cur)}"><div class="adminChipRow">${chips}</div></div>`}
 const LATEX_NORM_ACTIONS=[{id:'full',label:'⚡ Tất cả (chuẩn hóa đầy đủ)',group:'Tổng hợp'},{id:'light',label:'Chuẩn hóa nhẹ (không gộp khối $)',group:'Tổng hợp'},{id:'wrap_long_lines',label:'↵ Cắt dòng câu / công thức dài',group:'Dòng & khoảng trắng'},{id:'strip_mathpix_space',label:'Xóa khoảng trắng Mathpix',group:'Dòng & khoảng trắng'},{id:'separate_dollar_text',label:'Tách $ dính văn bản',group:'Dòng & khoảng trắng'},{id:'fix_surplus_dollars',label:'Rút gọn dấu $ thừa',group:'Dấu $'},{id:'add_dollar_suitable',label:'Thêm $ phù hợp (LaTeX / điểm / đơn vị)',group:'Dấu $'},{id:'add_dollar_math',label:'Thêm $ vào \\frac, \\sqrt, (sin²)…',group:'Dấu $'},{id:'add_dollar_points',label:'Thêm $ vào tên điểm / số+đơn vị',group:'Dấu $'},{id:'close_formulas',label:'Đóng công thức ($ lệch)',group:'Dấu $'},{id:'display_dollar_to_bracket',label:'Chuyển $$...$$ → \\[...\\]',group:'Dấu $'},{id:'inline_dollar_to_paren',label:'Chuyển $...$ → \\(...\\)',group:'Dấu $'},{id:'display_bracket_to_dollar',label:'Chuyển \\[...\\] → $$...$$',group:'Dấu $'},{id:'merge_display_math',label:'Gộp nhiều \\[...\\] liền nhau',group:'Dấu $'},{id:'heva_to_tex',label:'Chuyển \\heva → aligned + {',group:'Hệ PT / macro'},{id:'strip_left_right',label:'Xóa \\left \\right dư',group:'Sửa cú pháp'},{id:'fix_degree_zero',label:'Sửa ^0 → ^\\circ',group:'Sửa cú pháp'},{id:'wrap_comma_braces',label:"Đưa dấu ',' vào '{}'",group:'Sửa cú pháp'},{id:'fix_redundant_rm',label:'Sửa lỗi dư \\rm',group:'Sửa cú pháp'},{id:'normalize_frac_vector',label:'Chuẩn hóa \\frac và vector',group:'Sửa cú pháp'},{id:'trim_brace_pairs',label:'Rút gọn cặp {}',group:'Sửa cú pháp'},{id:'dot_to_cdot',label:"Chuyển '.' thành \\cdot (trong số)",group:'Dấu câu'},{id:'cdot_to_dot',label:"Chuyển \\cdot thành '.'",group:'Dấu câu'},{id:'split_comma_points',label:"Tách dấu ',' trong tên điểm",group:'Dấu câu'},{id:'split_semicolon_formula',label:"Tách dấu ';' trong công thức",group:'Dấu câu'}];
@@ -26021,12 +26024,54 @@ def _latex_strip_comments_keep_meta(s: str) -> str:
     return "\n".join(lines)
 
 
+def _latex_itemchoice_to_abcd(raw: str) -> str:
+    """Trong \\loigiai + itemchoice: \\item → A. B. C. D. (mỗi ý một dòng, không dùng •)."""
+    s = str(raw or "")
+    if not re.search(r"\\item\b", s, flags=re.I):
+        return s
+    s = re.sub(r"\\begin\s*\{\s*itemchoice\s*\}", "", s, flags=re.I)
+    s = re.sub(r"\\end\s*\{\s*itemchoice\s*\}", "", s, flags=re.I)
+    parts = re.split(r"\\item\s*", s, flags=re.I)
+    preamble = clean(parts[0]) if parts else ""
+    lines: List[str] = []
+    if preamble:
+        lines.append(preamble)
+    for i, part in enumerate(parts[1:5]):
+        body = clean(part)
+        if not body:
+            continue
+        lines.append(f"{'ABCD'[i]}. {body}")
+    if len(parts) > 5:
+        tail = clean("".join(parts[5:]))
+        if tail:
+            lines.append(tail)
+    return "\n".join(lines)
+
+
+def _finalize_latex_parsed_question(q: Dict[str, Any]) -> None:
+    """Sau khi tách LaTeX: chuẩn hóa lời giải A–D từng dòng (không để bullet •)."""
+    dang = effective_dang(q)
+    lg = clean(q.get("LoiGiai", ""))
+    if not lg:
+        return
+    if dang == "Đúng sai":
+        fixed = normalize_ds_loigiai(lg, q, use_sheet_dapan=True)
+        if fixed:
+            q["LoiGiai"] = fixed
+    elif dang == "Trắc nghiệm" and _loigiai_has_splittable_chunks(lg):
+        fixed = normalize_tn_loigiai_abcd(lg, q)
+        if fixed:
+            q["LoiGiai"] = fixed
+
+
 def _latex_clean_body(s: Any) -> str:
     t = clean(s)
     if not t:
         return ""
     # Bỏ tag meta kiểu %[Xuất từ robot...] còn sót ngay đầu câu.
     t = re.sub(r"^\s*(?:%\[[^\]]*\]\s*)+", "", t)
+    # Tag robot Word: [TTN], [TDS], [TLN]… (đầu dòng, không nhầm [0D1N1-1]).
+    t = re.sub(r"(?m)^\s*\[(?:TTN|TDS|TLN|TL|TN|DS)\]\s*", "", t, flags=re.I)
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = re.sub(r"[ \t]{2,}", " ", t)
     t = _latex_convert_robot_text_cmds(t.strip())
@@ -26344,7 +26389,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             lg_cmd = _latex_find_command_with_brace(work, "loigiai")
             if lg_cmd:
                 work = work[: lg_cmd[0]] + "\n" + work[lg_cmd[1] :]
-                lg = _latex_clean_body(lg_cmd[2])
+                lg = _latex_clean_body(_latex_itemchoice_to_abcd(lg_cmd[2]))
 
             # Ưu tiên Trả lời ngắn, rồi Đúng/Sai, rồi Trắc nghiệm.
             short_cmd = _latex_find_command_with_brace(work, "shortans")
@@ -26420,6 +26465,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Trắc nghiệm chưa tìm thấy \\True."})
             if q["Dang"] == "Đúng sai" and not looks_like_dungsai_answer(q.get("DapAn")):
                 errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Đúng/Sai chưa đủ đáp án Đ/S."})
+            _finalize_latex_parsed_question(q)
 
             if clean(q.get("CauHoi")):
                 out.append(q)
@@ -27718,157 +27764,6 @@ def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
         content += "\n\\loigiai{\n" + lg + "\n}"
     content += "\n\\end{bt}"
     return "bt", content, cau + (("\n\\loigiai{\n" + lg + "\n}") if lg else "")
-
-
-def _latex_ex_mucdo_tag(q: Dict[str, Any]) -> str:
-    lv = _primary_mucdo(q)
-    ch = {"NB": "N", "TH": "H", "VD": "V", "VDC": "D"}.get(lv, "")
-    return f"%[0D1{ch}1-1]\n" if ch else ""
-
-
-def _latex_filter_store_questions(st: "SheetStore", body: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Lọc câu từ Sheet hoặc phiên quiz — dùng cho xuất LaTeX."""
-    sid = clean(body.get("sid") or request.args.get("sid", ""))
-    if sid:
-        restore = quiz_restore_payload_from_body(body if isinstance(body, dict) else {})
-        ses = st.check_quiz_session(sid, restore)
-        qs = [q for q in (ses.get("questions") or []) if isinstance(q, dict)]
-    else:
-        st.ensure_questions_loaded()
-        qs = list(st.questions or [])
-
-    made = clean(body.get("made") or body.get("MaDe") or request.args.get("made", ""))
-    de = clean(body.get("de") or body.get("De") or request.args.get("de", ""))
-    mon = clean(body.get("mon") or body.get("Mon") or request.args.get("mon", ""))
-    khoi = clean(body.get("khoi") or body.get("Khoi") or request.args.get("khoi", ""))
-    lop = clean(body.get("lop") or body.get("Lop") or request.args.get("lop", ""))
-    chuong = clean(body.get("chuong") or body.get("Chuong") or request.args.get("chuong", ""))
-    chuongs_raw = body.get("chuongs") or request.args.getlist("chuongs") or []
-    chuongs = [clean(c) for c in chuongs_raw if clean(c)]
-    bai = clean(body.get("baihoc") or body.get("BaiHoc") or request.args.get("baihoc", ""))
-    dangbt = clean(body.get("dangbaitap") or body.get("DangBaiTap") or request.args.get("dangbaitap", ""))
-    bode = clean(body.get("bode") or body.get("BoDe") or request.args.get("bode", ""))
-    dang = clean(body.get("dang") or body.get("Dang") or request.args.get("dang", ""))
-    level = clean(body.get("level") or body.get("mucdo") or body.get("MucDo") or request.args.get("level", ""))
-    search = clean(body.get("search") or body.get("q") or request.args.get("search", ""))
-    sol_full_only = str(body.get("sol_full_only") or request.args.get("sol_full_only", "")).lower() in ("1", "true", "yes", "on")
-    try:
-        limit = int(body.get("limit") or request.args.get("limit") or 0)
-    except Exception:
-        limit = 0
-
-    def ok(q: Dict[str, Any]) -> bool:
-        if made and key_norm(q.get("MaDe")) != key_norm(made):
-            return False
-        if de and key_norm(q.get("De")) != key_norm(de):
-            return False
-        if not question_matches_pool_filter(
-            q,
-            mon=mon,
-            khoi=khoi,
-            lop=lop,
-            chuong=chuong,
-            chuongs=chuongs or None,
-            baihoc=bai,
-            bode=bode,
-            level=level,
-            sol_full_only=sol_full_only,
-        ):
-            return False
-        if dangbt and key_norm(q.get("DangBaiTap")) != key_norm(dangbt):
-            return False
-        if dang and norm_dang(q.get("Dang")) != norm_dang(dang):
-            return False
-        if search:
-            blob = key_norm(
-                " ".join(
-                    clean(q.get(f, ""))
-                    for f in ("Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "BoDe", "De", "MucDo", "Dang", "ID", "CauHoi")
-                )
-            )
-            if key_norm(search) not in blob:
-                return False
-        return True
-
-    out = [q for q in qs if ok(q)]
-    if limit > 0:
-        out = out[: min(limit, 2000)]
-    elif len(out) > 2000:
-        out = out[:2000]
-    return out
-
-
-def build_latex_document_from_questions(
-    questions: List[Dict[str, Any]],
-    title: str = "",
-    *,
-    include_solutions: bool = True,
-    exported_by: str = "",
-) -> str:
-    title = clean(title) or "De_LaTeX"
-    lines: List[str] = [
-        f"% Xuất từ ứng dụng luyện đề — {APP_VERSION}",
-        f"% Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-    ]
-    if exported_by:
-        lines.append(f"% Người xuất: {exported_by}")
-    lines.extend(
-        [
-            "",
-            r"\documentclass[12pt,a4paper]{article}",
-            r"\usepackage[utf8]{inputenc}",
-            r"\usepackage[T5]{fontenc}",
-            r"\usepackage[vietnamese]{babel}",
-            r"\usepackage{amsmath,amssymb}",
-            r"\usepackage{graphicx}",
-            r"\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}",
-            "",
-            rf"\title{{{_json_latex_escape_block(title)}}}",
-            r"\date{}",
-            r"\begin{document}",
-            r"\maketitle",
-            "",
-        ]
-    )
-    prev_ch = prev_bai = prev_dbt = ""
-    for q in questions:
-        if not isinstance(q, dict):
-            continue
-        ch = clean(q.get("Chuong"))
-        bai = clean(q.get("BaiHoc") or q.get("De"))
-        dbt = clean(q.get("DangBaiTap"))
-        if ch and ch != prev_ch:
-            lines.append(f"\\section*{{{_json_latex_escape_block(ch)}}}")
-            prev_ch, prev_bai, prev_dbt = ch, "", ""
-        if bai and bai != prev_bai:
-            lines.append(f"\\subsection*{{{_json_latex_escape_block(bai)}}}")
-            prev_bai, prev_dbt = bai, ""
-        if dbt and dbt != prev_dbt:
-            lines.append(f"\\dangbt{{{_json_latex_escape_block(dbt)}}}")
-            prev_dbt = dbt
-        q_work = dict(q)
-        if not include_solutions:
-            q_work["LoiGiai"] = ""
-        _, block, _ = _json_question_content_block(q_work)
-        tag = _latex_ex_mucdo_tag(q_work)
-        if tag:
-            block = block.replace("\\begin{ex}\n", "\\begin{ex}\n" + tag, 1).replace("\\begin{bt}\n", "\\begin{bt}\n" + tag, 1)
-        lines.append(block)
-        lines.append("")
-    lines.append(r"\end{document}")
-    lines.append("")
-    return "\n".join(lines)
-
-
-def _latex_response_download(tex: str, filename: str):
-    bio = io.BytesIO(str(tex or "").encode("utf-8"))
-    bio.seek(0)
-    return send_file(
-        bio,
-        mimetype="application/x-tex; charset=utf-8",
-        as_attachment=True,
-        download_name=_safe_json_filename(filename, ".tex"),
-    )
 
 
 def _json_default_spaces() -> List[Dict[str, Any]]:
@@ -32896,52 +32791,6 @@ def api_latex_import():
             "theory_lessons_errors": lesson_errors,
         })
         return jsonify(res)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@app.route("/api/latex/export", methods=["GET", "POST"])
-def api_latex_export():
-    bad = require_login_json()
-    if bad:
-        return bad
-    if not can_export_latex():
-        return jsonify({"error": "Chỉ SVIP và ADMIN được xuất LaTeX."}), 403
-    try:
-        body = request.get_json(silent=True) or {}
-        if not body and request.args:
-            body = {k: request.args.get(k, "") for k in request.args.keys()}
-        st = get_store()
-        qs = _latex_filter_store_questions(st, body)
-        if not qs:
-            return jsonify({"error": "Không tìm thấy câu nào theo bộ lọc đã chọn."}), 404
-        include_solutions = str(body.get("include_solutions", request.args.get("include_solutions", "1"))).lower() not in ("0", "false", "no", "off")
-        name_parts = [
-            clean(body.get("mon") or body.get("Mon") or request.args.get("mon", "")),
-            clean(body.get("lop") or body.get("Lop") or request.args.get("lop", "")),
-            clean(body.get("chuong") or body.get("Chuong") or request.args.get("chuong", "")),
-            clean(body.get("baihoc") or body.get("BaiHoc") or request.args.get("baihoc", "")),
-            clean(body.get("made") or body.get("MaDe") or request.args.get("made", "")),
-        ]
-        title = " · ".join(p for p in name_parts if p) or (clean(qs[0].get("De")) if qs else "De_LaTeX")
-        exported_by = clean(session.get("hoten") or session.get("mahs") or "")
-        tex = build_latex_document_from_questions(
-            qs,
-            title=title,
-            include_solutions=include_solutions,
-            exported_by=exported_by,
-        )
-        filename = _safe_json_filename(title + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"), ".tex")
-        if clean(request.args.get("download")) or str(body.get("download", "")).lower() in ("1", "true", "yes", "on"):
-            return _latex_response_download(tex, filename)
-        return jsonify({
-            "ok": True,
-            "filename": filename,
-            "count_questions": len(qs),
-            "title": title,
-            "preview": tex[:12000],
-            "truncated": len(tex) > 12000,
-        })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
