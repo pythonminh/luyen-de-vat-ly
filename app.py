@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V351_LOIGIAI_ABCD_LINES_2026_06_22"
+APP_VERSION = "V353_LATEX_IMPORT_DBT_2026_06_22"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -8902,17 +8902,6 @@ def _strip_ds_body_leading_verdict(body: str, verdict_label: str = "") -> str:
     if not body:
         return ""
     m = re.match(
-        r"^(?:Phát biểu này|Mệnh đề này|Menh de nay)\s+(đúng|sai)\s*[\.\-—:–]?\s*",
-        body,
-        flags=re.I,
-    )
-    if m:
-        if verdict_label:
-            got = _ds_verdict_label(_ds_verdict_token(m.group(1)))
-            if got and got != verdict_label:
-                return body
-        body = clean(body[m.end():]) or body
-    m = re.match(
         r"^(?:\*\*)?(?:\\textbf\s*\{\s*)?(Đúng|Sai|Đ|D|S|True|False)(?:\s*\})?\s*[\-—:–\.\)]*\s*",
         body,
         flags=re.I,
@@ -8992,11 +8981,6 @@ _DS_BULLET_VERDICT_HEAD_RE = re.compile(
     re.I,
 )
 
-_DS_PHAT_BIEU_VERDICT_RE = re.compile(
-    r"^(?:Phát biểu này|Mệnh đề này|Menh de nay)\s+(đúng|sai)\b",
-    re.I,
-)
-
 
 _DS_LEGACY_VERDICT_BLOCK_RE = re.compile(
     r"(?:^|\n|[•●▪▫◦]\s*)(?:ch\s+)?(?:\\textbf\s*\{\s*)?(?:Đúng|Sai)\s*[\.\-—:–]\s*",
@@ -9065,10 +9049,6 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
                 if mm:
                     verdict = _ds_verdict_token(mm.group(1))
                     body = clean(mm.group(2)) or body
-            if not verdict:
-                pm = _DS_PHAT_BIEU_VERDICT_RE.match(body)
-                if pm:
-                    verdict = _ds_verdict_token(pm.group(1))
             if verdict:
                 body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
             if body or verdict:
@@ -9099,11 +9079,6 @@ def _parse_ds_loigiai_chunks(text: Any) -> Dict[str, Dict[str, str]]:
             if vm:
                 verdict = _ds_verdict_token(vm.group(1))
                 body = clean(body[vm.end():]).strip(" ).\n")
-            if not verdict:
-                pm = _DS_PHAT_BIEU_VERDICT_RE.match(body)
-                if pm:
-                    verdict = _ds_verdict_token(pm.group(1))
-                    body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict))
             out[L] = {"verdict": verdict, "body": clean(body).strip(" ).\n")}
     return out
 
@@ -9142,17 +9117,8 @@ def _ds_loigiai_already_canonical(raw: str) -> bool:
     """True nếu đã là intro (tùy chọn) + A. Đúng/Sai — …, không còn khối legacy."""
     if not raw or not _DS_LG_TAG_RE.search(raw):
         return False
-    if re.search(r"[•●▪▫◦]\s+", raw):
-        return False
     tagged = list(_DS_LG_TAG_RE.finditer(raw))
     if len(tagged) < 2:
-        return False
-    # Chưa chuẩn nếu chỉ có A. nội dung… mà chưa có nhãn Đúng/Sai + dấu — sau chữ cái.
-    canonical_line = re.compile(
-        r"(?m)^\s*[ABCD]\s*[\.\):]\s*(?:Đúng|Sai|Đ|D|S)\s*[\-—:–]",
-        re.I,
-    )
-    if len(canonical_line.findall(raw)) < 2:
         return False
     pre = raw[: tagged[0].start()]
     return len(list(_DS_LEGACY_VERDICT_BLOCK_RE.finditer(pre))) < 2
@@ -16693,6 +16659,26 @@ body.homeTopCompact .homeSectionRow .practiceRandomPanel .rpScopeRow .field{
 .practiceRandomPanel .rpScopeUnlockRow{
     margin:2px 0 0!important;
 }
+.practiceRandomPanel .rpActionRow{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch!important;
+    gap:6px!important;
+    margin-top:4px!important;
+}
+.practiceRandomPanel .rpActionRow .btnStartStrong{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    width:auto!important;
+    margin-top:0!important;
+}
+.practiceRandomPanel .rpActionRow .btnRpExportLatex{
+    flex:0 0 auto!important;
+    white-space:nowrap!important;
+    margin-top:0!important;
+    align-self:stretch!important;
+}
 body.homeTopCompact .practiceRandomPanel #rpScopeNote{margin:3px 0!important;padding:4px 7px!important;font-size:10.5px!important}
 
 /* userAccountCard — compact 1 dòng */
@@ -19330,7 +19316,10 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
       <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi</button></div>
       <div id="rpScopeNote" class="hide" style="margin:4px 0;padding:5px 8px;border-radius:7px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
       <label style="display:flex;gap:5px;align-items:center;margin:2px 0;font-size:11px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ câu có <b>lời giải đầy đủ</b></label>
-      <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
+      <div class="row rpActionRow" style="margin:4px 0 0">
+        <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
+        <button type="button" class="btn2 btnShare btnRpExportLatex hide" id="btnRpExportLatex" onclick="exportRpScopeLatex()" title="ADMIN: tải file .tex theo phạm vi Môn/Lớp/Chương/Bài">📄 LaTeX</button>
+      </div>
     </div>
   </div>
 
@@ -19574,7 +19563,7 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
 </div>
-</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><input id="latexDefDangBaiTap" placeholder="VD: Chu kỳ, tần số, pha dao động…"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -19821,7 +19810,11 @@ function offlineGradeOne(q,ans){let dang=typeof resolveDang==='function'?resolve
 function routeCachedApi(url,opts){if(window.LDVL_OFFLINE)return null;let method=String((opts&&opts.method)||'GET').toUpperCase();let path=String(url||'').split('?')[0];let body={};try{body=JSON.parse((opts&&opts.body)||'{}')}catch(e){}if(path==='/api/start'&&method==='POST'){let made=String(body.made||body.MaDe||'').trim();let hit=offlineCacheDeck(made);if(!hit||!hit.deck)return{error:'Đề «'+made+'» chưa lưu offline. Khi có mạng, bấm 📴 Lưu offline ở mục lục.'};let deck=Object.assign({},hit.deck);let sid=deck.sid||('off_'+made);LDVL_OFFLINE_SESSIONS[sid]=deck;return Object.assign({},deck,{sid})}if(path==='/api/check-one'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn — mở lại đề.'};let idx=parseInt(body.index,10)||0,qs=ses.questions||[],q=qs[idx];if(!q)return{error:'Câu không hợp lệ'};let g=offlineGradeOne(q,body.answer);return{index:idx,ID:q.ID,Dang:q.Dang,ok:g.ok,correct:g.correct,chosen:g.chosen,DapAn:g.DapAn,LoiGiai:g.LoiGiai}}if(path==='/api/submit'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn.'};let qs=ses.questions||[],answers=body.answers||{},results=[],correct=0,auto=0;for(let i=0;i<qs.length;i++){let q=qs[i],dang=typeof resolveDang==='function'?resolveDang(q):String(q.Dang||'');if(dang==='Tự luận')continue;auto++;let g=offlineGradeOne(q,answers[i]);if(g.ok)correct++;results.push({index:i,ok:g.ok,correct:g.correct,chosen:g.chosen})}return{score:auto?Math.round(correct/auto*100)/10:0,correct_count:correct,auto_count:auto,results}}return null}
 async function saveExamOffline(made){made=String(made||'').trim();if(!made)return;let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}if(!confirm('Lưu đề «'+examDisplayTitle(item)+'» vào máy để luyện khi mất mạng?\n\nCó thể lưu nhiều đề — app tự dùng bản đã lưu.'))return;let btn=window.event&&window.event.target;if(btn&&btn.tagName==='BUTTON'){btn.disabled=true;btn.textContent='⏳ Đang lưu...'}try{let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_questions:false,shuffle_options:false,group_by_dang:true})});let cache=readOfflineCache();cache.decks=cache.decks||{};cache.decks[made]={deck:j,item:item,saved_at:new Date().toISOString()};cache.saved_at=cache.saved_at||{};cache.saved_at[made]=cache.decks[made].saved_at;if(!writeOfflineCache(cache))throw new Error('Bộ nhớ máy đầy — hãy xóa bớt đề offline cũ.');alert('✅ Đã lưu offline:\n'+examDisplayTitle(item)+'\n\nKhi mất mạng, mở lại đề này — app dùng bản đã lưu.')}catch(e){alert('Lưu offline thất bại: '+(e.message||e))}finally{if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='📴 Lưu offline'}}}
 async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN được tải gói offline APK.');return}if(!confirm('Tải ZIP gói offline (toàn bộ đề)?\n\nCó thể chờ vài phút nếu nhiều đề.'))return;try{let r=await fetch('/api/admin/offline-pack',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='luyen-de-offline.zip';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải gói offline ZIP.\n\nGiải nén vào assets Android hoặc mở index.html trong gói.')}catch(e){alert('Tải gói offline thất bại: '+(e.message||e))}}
-function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button></span></div>`}
+function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));let latexBtn=(USER&&USER.is_admin)?`<button type="button" class="btnShare" onclick="downloadExamLatex('${madeEsc}')" title="Tải file .tex (\\begin{ex}...\\choiceTF...\\loigiai)">📄 Xuất LaTeX</button>`:'';return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button>${latexBtn}</span></div>`}
+function latexExportDownloadUrl(params){let p=new URLSearchParams();Object.keys(params||{}).forEach(function(k){let v=params[k];if(v!=null&&String(v).trim()!=='')p.set(k,String(v))});p.set('download','1');return '/api/latex/export?'+p.toString()}
+function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
+function exportRpScopeLatex(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop');if(!mon||!lop){alert('Chọn Môn và Lớp trước.');return}let chuongs=getRpSelectedChuongs();let params={mon:mon,lop:lop,chuong:val('rpChuong'),baihoc:val('rpBaiHoc'),level:(val('fMucDo')||'').trim().toUpperCase(),sol_full_only:(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0,name:[mon,'Lop'+lop,val('rpChuong'),val('rpBaiHoc')].filter(Boolean).join('_')};if(chuongs.length)params.chuongs=chuongs.join(',');window.location=latexExportDownloadUrl(params)}
+function syncRpExportLatexBtn(){let b=document.getElementById('btnRpExportLatex');if(b)b.classList.toggle('hide',!(USER&&USER.is_admin))}
 let ID_LOOKUP_MATCHES=[];
 function setVal(id,v){let el=document.getElementById(id);if(el)el.value=v==null?'':String(v)}
 function findQuestionIndexById(id){let u=String(id||'').trim().toUpperCase();if(!u)return -1;for(let i=0;i<QUESTIONS.length;i++){let qid=String(QUESTIONS[i].ID||'').trim().toUpperCase();if(qid===u)return i}return -1}
@@ -20544,7 +20537,7 @@ function maybeLockRpScope(){let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFrom
 function unlockRpScope(){RP_SCOPE_LOCKED=false;let wrap=document.querySelector('.practiceRandomPanel');if(wrap)wrap.classList.remove('rpLocked');let bu=document.getElementById('btnRpUnlock');if(bu)bu.style.display='none';let note=document.getElementById('rpScopeNote');if(note){note.innerHTML='';note.classList.add('hide')}refreshRpScopeOptions();if(USER&&USER.is_admin)syncAdminComposeChrome()}
 function getRpSelectedChuongs(){let ch=val('rpChuong');return ch?[ch]:[]}
 function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop'),ch=val('fChuong'),bai=val('fBaiHoc');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l&&deriveKhoi(l)){setVal('rpKhoi',deriveKhoi(l));refreshRpScopeOptions();setVal('rpLop',l);refreshRpScopeOptions()}if(ch)setVal('rpChuong',ch);if(bai)setVal('rpBaiHoc',bai);refreshRpScopeOptions()}
-function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions()}
+function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions();syncRpExportLatexBtn()}
 async function startRandomPractice(){try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
 const AC_MATRIX_DANGS=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
 const AC_MATRIX_LEVELS=['NB','TH','VD','VDC'];
@@ -23185,8 +23178,7 @@ function adminFillQuestionForm(data){if(!data)return;for(let f of ['CauHoi','A',
 function adminLooksLikeLatexBlock(s){return /\\begin\s*\{\s*(?:ex|bt)\s*\}|\\choiceTF\b|\\choice\b|\\loigiai\b|\\shortans\b/i.test(String(s||''))}
 function adminReadLatexBraced(s,pos){if(pos<0||s[pos]!=='{')return null;let depth=0;for(let i=pos;i<s.length;i++){if(s[i]==='\\'&&i+1<s.length){i++;continue}if(s[i]==='{')depth++;else if(s[i]==='}'){depth--;if(depth===0)return{text:s.slice(pos+1,i),end:i+1}}}return null}
 function adminReadLatexCmdArgs(s,cmd,maxArgs){let re=new RegExp('\\\\'+cmd+'\\b','i'),m=re.exec(s);if(!m)return null;let pos=m.index+m[0].length,args=[];while(args.length<maxArgs){while(pos<s.length&&/\s/.test(s[pos]))pos++;if(s[pos]!=='{')break;let b=adminReadLatexBraced(s,pos);if(!b)break;args.push(b.text);pos=b.end}return args.length?{start:m.index,end:pos,args}:null}
-function adminLatexItemchoiceToAbcd(s){s=String(s||'');if(!/\\item\b/i.test(s))return s;s=s.replace(/\\begin\s*\{\s*itemchoice\s*\}/gi,'').replace(/\\end\s*\{\s*itemchoice\s*\}/gi,'');let parts=s.split(/\\item\s*/i),pre=clean(parts[0]||''),lines=pre?[pre]:[];for(let i=1;i<Math.min(parts.length,5);i++){let body=clean(parts[i]||'');if(body)lines.push('ABCD'[i-1]+'. '+body)}return lines.join('\n')}
-function adminParsePastedLatexBlock(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw||!adminLooksLikeLatexBlock(raw))return null;let tex=raw;if(!/\\begin\s*\{\s*(?:ex|bt)\s*\}/i.test(tex))tex='\\begin{ex}\n'+tex+'\n\\end{ex}';let bm=/\\begin\s*\{\s*(ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}/i.exec(tex);let t=(bm?bm[2]:tex).trim();let out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let lo=adminReadLatexCmdArgs(t,'loigiai',1);if(lo){let lgRaw=adminLatexItemchoiceToAbcd(lo.args[0].replace(/\\True\b/gi,'').trim());out.LoiGiai=/^[ABCD]\.\s/m.test(lgRaw)?lgRaw:stripLatexListMarkup(lgRaw);t=(t.slice(0,lo.start)+t.slice(lo.end)).trim()}let sh=adminReadLatexCmdArgs(t,'shortans',1);if(sh){out.DapAn=sh.args[0].replace(/\\True\b/gi,'').trim();t=(t.slice(0,sh.start)+t.slice(sh.end)).trim();out.Dang='Trả lời ngắn'}else{let tf=adminReadLatexCmdArgs(t,'choiceTF',4);if(tf&&tf.args.length>=2){let vals=[];['A','B','C','D'].forEach((L,k)=>{let v=tf.args[k]||'';vals.push(/\\True\b/i.test(v)?'Đ':'S');out[L]=v.replace(/\\True\b/gi,'').trim()});out.DapAn=vals.join(',');t=(t.slice(0,tf.start)+t.slice(tf.end)).trim();out.Dang='Đúng sai'}else{let ch=adminReadLatexCmdArgs(t,'choice',4);if(ch&&ch.args.length>=2){['A','B','C','D'].forEach((L,k)=>{let v=ch.args[k]||'';if(/\\True\b/i.test(v))out.DapAn=L;out[L]=v.replace(/\\True\b/gi,'').trim()});t=(t.slice(0,ch.start)+t.slice(ch.end)).trim();out.Dang='Trắc nghiệm'}}}out.CauHoi=t.replace(/^\s*\[(?:TTN|TDS|TLN|TL|TN|DS)\]\s*/gim,'').replace(/^\s*Câu\s*\d+\s*[.:]/i,'').trim();if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D)return null;return out}
+function adminParsePastedLatexBlock(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw||!adminLooksLikeLatexBlock(raw))return null;let tex=raw;if(!/\\begin\s*\{\s*(?:ex|bt)\s*\}/i.test(tex))tex='\\begin{ex}\n'+tex+'\n\\end{ex}';let bm=/\\begin\s*\{\s*(ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}/i.exec(tex);let t=(bm?bm[2]:tex).trim();let out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let lo=adminReadLatexCmdArgs(t,'loigiai',1);if(lo){out.LoiGiai=stripLatexListMarkup(lo.args[0].replace(/\\True\b/gi,'').trim());t=(t.slice(0,lo.start)+t.slice(lo.end)).trim()}let sh=adminReadLatexCmdArgs(t,'shortans',1);if(sh){out.DapAn=sh.args[0].replace(/\\True\b/gi,'').trim();t=(t.slice(0,sh.start)+t.slice(sh.end)).trim();out.Dang='Trả lời ngắn'}else{let tf=adminReadLatexCmdArgs(t,'choiceTF',4);if(tf&&tf.args.length>=2){let vals=[];['A','B','C','D'].forEach((L,k)=>{let v=tf.args[k]||'';vals.push(/\\True\b/i.test(v)?'Đ':'S');out[L]=v.replace(/\\True\b/gi,'').trim()});out.DapAn=vals.join(',');t=(t.slice(0,tf.start)+t.slice(tf.end)).trim();out.Dang='Đúng sai'}else{let ch=adminReadLatexCmdArgs(t,'choice',4);if(ch&&ch.args.length>=2){['A','B','C','D'].forEach((L,k)=>{let v=ch.args[k]||'';if(/\\True\b/i.test(v))out.DapAn=L;out[L]=v.replace(/\\True\b/gi,'').trim()});t=(t.slice(0,ch.start)+t.slice(ch.end)).trim();out.Dang='Trắc nghiệm'}}}out.CauHoi=t.replace(/^\s*\[(?:TTN|TDS|TLN|TL|TN|DS)\]\s*/gim,'').replace(/^\s*Câu\s*\d+\s*[.:]/i,'').trim();if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D)return null;return out}
 function adminParsePastedQuestion(raw){raw=String(raw||'').replace(/\r/g,'').trim();if(!raw)return null;let latex=adminParsePastedLatexBlock(raw);if(latex)return latex;let work=raw,out={CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',Tikz:'',Dang:''};let loiM=work.match(/(?:^|\n)\s*(?:Lời giải|LoiGiai|LG|Giải|Hướng dẫn giải)\s*[:：]?\s*\n([\s\S]*)$/i);if(loiM){out.LoiGiai=loiM[1].trim();work=work.slice(0,loiM.index).trim()}let imgM=work.match(/(?:Hình(?: ảnh)?|HinhAnh|Image|Link\s*ảnh|Cột T)\s*[:：]?\s*(https?:\S+|drive[^\s]+)/i);if(imgM){out.HinhAnh=imgM[1].trim();work=work.replace(imgM[0],'').trim()}let ssM=work.match(/(?:Sai số|SaiSo|±)\s*[:：]?\s*([0-9.,]+)/i);if(ssM)out.SaiSo=ssM[1].trim();let daM=work.match(/(?:Đáp án|DapAn|ĐA|Answer|Chọn|Đ\/S|P\s*[:=])\s*[:：]?\s*([^\n]+)/i);if(daM){out.DapAn=daM[1].trim().replace(/^[.:]\s*/,'');work=work.replace(daM[0],'').trim()}let opts={};let optRe=/^[ \t]*([ABCD])[.)]\s*(.+)$/gim,m;while((m=optRe.exec(work))){let L=m[1].toUpperCase(),t=m[2].trim();opts[L]=opts[L]?(opts[L]+'\n'+t):t}work=work.replace(/^[ \t]*[ABCD][.)]\s*.+$/gim,'').trim();work=work.replace(/(?:Câu hỏi|CauHoi|Nội dung)\s*[:：]?\s*/i,'').trim();out.CauHoi=work;out.A=opts.A||'';out.B=opts.B||'';out.C=opts.C||'';out.D=opts.D||'';let tikzParts=[];function pullTikz(key,val){let ex=extractTikzBlocksClient(val);if(ex.tikz)tikzParts.push(ex.tikz);out[key]=ex.cleaned}pullTikz('LoiGiai',out.LoiGiai);pullTikz('CauHoi',out.CauHoi);for(let L of ['A','B','C','D'])pullTikz(L,out[L]);if(tikzParts.length)out.Tikz=tikzParts.join('\n\n');if(looksDsAnswer(out.DapAn))out.Dang='Đúng sai';else if(isMcqLetter(out.DapAn)&&hasOptsClient(out))out.Dang='Trắc nghiệm';else if(out.DapAn&&String(out.DapAn).trim()&&!hasOptsClient(out))out.Dang='Trả lời ngắn';else if(hasOptsClient(out))out.Dang='Trắc nghiệm';else out.Dang='Trắc nghiệm';if(!out.CauHoi&&!out.A&&!out.B&&!out.C&&!out.D&&!out.Tikz)return null;return out}
 async function adminApplyPasteBuffer(){let ta=document.getElementById('editPasteBuffer');let raw=String(ta?.value||'').trim();if(!raw){alert('Chưa có nội dung để tách — dán câu vào ô trên.');return}let parsed=null;if(adminLooksLikeLatexBlock(raw)&&USER&&USER.is_admin){try{let tex=raw;if(!/\\begin\s*\{\s*(?:ex|bt)\s*\}/i.test(tex))tex='\\begin{ex}\n'+tex+'\n\\end{ex}';let j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex,commit:false})});let qs=j&&j.questions?j.questions:[];if(qs.length)parsed=qs[0]}catch(e){}}if(!parsed)parsed=adminParsePastedQuestion(raw);if(!parsed){alert('Không tách được — thử định dạng Word (A. B. C. D.) hoặc LaTeX:\n\\begin{ex}...\\choiceTF{...}\\loigiai{...}\\end{ex}');return}adminFillQuestionForm(parsed);refreshEditHinhAnhPreview();renderEditQuestionPreview();let tzNote=parsed.Tikz?' (đã tách TikZ vào ô 📐)':'';let srcNote=adminLooksLikeLatexBlock(raw)?' (LaTeX ex/choiceTF)':'';alert('Đã tách vào form ('+(parsed.Dang||'TN')+')'+srcNote+tzNote+'. Kiểm tra LaTeX và bấm Lưu.')}
 async function adminPasteFromClipboard(){try{let txt=await navigator.clipboard.readText();if(!String(txt||'').trim()){alert('Clipboard trống.');return}let ta=document.getElementById('editPasteBuffer');if(ta)ta.value=txt;await adminApplyPasteBuffer()}catch(e){alert('Không đọc clipboard tự động — bấm vào ô «Dán cả câu» rồi Ctrl+V, sau đó «Tách vào form».')}}
@@ -23506,6 +23498,7 @@ function currentLatexDefaults(){
     BaiHoc:val('latexDefBaiHoc')||q.BaiHoc||q.De||'',
     BoDe:val('latexDefBoDe')||q.BoDe||'',
     De:val('latexDefDe')||q.De||'',
+    DangBaiTap:val('latexDefDangBaiTap')||q.DangBaiTap||'',
     MucDo:val('latexDefMucDo')||q.MucDo||'',
     QuyenTruyCap:val('latexDefQuyen')||q.QuyenTruyCap||'VIP',
     Diem:'1'
@@ -23519,7 +23512,7 @@ function openLatexImportModal(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
   let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));
   let q=(inQuiz&&QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
-  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe')};
+  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe'),DangBaiTap:q.DangBaiTap||val('fDangBaiTap')||val('latexDefDangBaiTap')};
   let m=document.getElementById('latexImportModal');
   if(!m){alert('Không tìm thấy modal nhập LaTeX.');return}
   let set=(id,v)=>{let e=document.getElementById(id);if(e&&!e.value)e.value=v||''};
@@ -23529,6 +23522,7 @@ function openLatexImportModal(){
   set('latexDefBaiHoc',scope.BaiHoc);
   set('latexDefBoDe',scope.BoDe);
   set('latexDefDe',scope.De);
+  set('latexDefDangBaiTap',scope.DangBaiTap);
   let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
   setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
@@ -23581,6 +23575,7 @@ function latexImportSummary(j){
   let lines=[];
   lines.push('Tìm thấy block ex: '+(j.total_blocks||0));
   lines.push('Đọc được: '+(j.parsed||0)+' câu');
+  if(j.skipped_count!=null&&j.skipped_count>0)lines.push('Bỏ qua (lỗi): '+j.skipped_count+' câu');
   lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0));
   if(j.ai_level)lines.push('GPT ADMIN mức độ: '+(j.ai_level_done?'đã nhận diện':'chưa nhận diện')+(j.ai_model?' · '+j.ai_model:''));
   if(j.ai_level_error)lines.push('Lỗi AI mức độ: '+j.ai_level_error);
@@ -23592,7 +23587,7 @@ function latexImportSummary(j){
   if(j.theory_lessons_saved&&j.theory_lessons_saved.length)lines.push('Đã lưu Ly_Thuyet: '+j.theory_lessons_saved.length+' bài');
   if(j.theory_errors&&j.theory_errors.length)lines.push('Lỗi khung PP: '+j.theory_errors.slice(0,5).join(' | '));
   if(j.theory_lessons_errors&&j.theory_lessons_errors.length)lines.push('Lỗi Ly_Thuyet: '+j.theory_lessons_errors.slice(0,5).join(' | '));
-  if(j.skipped&&j.skipped.length)lines.push('Bỏ qua: '+j.skipped.length+' câu ('+j.skipped.slice(0,5).map(x=>x.reason||x.id||x.index).join('; ')+')');
+  if(j.skipped&&j.skipped.length)lines.push('Chi tiết bỏ qua: '+j.skipped.slice(0,12).map(x=>'#'+(x.index||'?')+' '+(x.reason||x.warning||x.id||'')).join(' | '));
   if(j.media){lines.push('Media: includegraphics='+((j.media&&j.media.includegraphics)||0)+' · TikZ='+((j.media&&j.media.tikz)||0)+' · đã xử lý='+((j.media&&j.media.resolved)||0));}
   if(j.warnings&&j.warnings.length)lines.push('Cảnh báo: '+j.warnings.slice(0,8).map(w=>'#'+(w.index||'?')+' '+(w.warning||w.reason||'')).join(' | '));
   return lines.join('\n');
@@ -25762,11 +25757,12 @@ def _compile_tikz_pdf_via_cloud(tex_doc: str) -> Tuple[bytes, str]:
         return b"", f"Không gọi được dịch vụ biên dịch LaTeX: {str(e)[:200]}"
 
 
-def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> str:
+def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str, q_idx: Any = None) -> str:
     """Chuyển PDF → PNG (PyMuPDF hoặc pdftoppm)."""
     if not pdf_bytes or not ctx:
         return ""
     png_path = os.path.join(ctx["root"], name + ".png")
+    warn_ix = q_idx if q_idx is not None else name
     try:
         import fitz  # pymupdf
 
@@ -25781,12 +25777,12 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> 
         if drive_url:
             return drive_url
         if drive_err:
-            ctx.setdefault("warnings", []).append({"index": name, "warning": drive_err})
+            ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": drive_err})
         return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except ImportError:
         pass
     except Exception as e:
-        ctx.setdefault("warnings", []).append({"index": name, "warning": "PDF→PNG: " + str(e)[:160]})
+        ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": "PDF→PNG: " + str(e)[:160]})
         return ""
     pdftoppm = shutil.which("pdftoppm")
     if not pdftoppm:
@@ -25809,10 +25805,10 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str) -> 
             if drive_url:
                 return drive_url
             if drive_err:
-                ctx.setdefault("warnings", []).append({"index": name, "warning": drive_err})
+                ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": drive_err})
             return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except Exception as e:
-        ctx.setdefault("warnings", []).append({"index": name, "warning": "pdftoppm: " + str(e)[:160]})
+        ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": "pdftoppm: " + str(e)[:160]})
     return ""
 
 
@@ -25859,7 +25855,7 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
             pdf_path = os.path.join(workdir, name + ".pdf")
             if os.path.exists(pdf_path):
                 with open(pdf_path, "rb") as pf:
-                    url = _pdf_bytes_to_png_file(pf.read(), ctx, name)
+                    url = _pdf_bytes_to_png_file(pf.read(), ctx, name, q_idx=idx)
                 if url:
                     return _prefer_cache_url(url)
                 pdftoppm = shutil.which("pdftoppm")
@@ -25886,7 +25882,7 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
 
     pdf_bytes, cloud_err = _compile_tikz_pdf_via_cloud(tex_doc)
     if pdf_bytes:
-        url = _pdf_bytes_to_png_file(pdf_bytes, ctx, name)
+        url = _pdf_bytes_to_png_file(pdf_bytes, ctx, name, q_idx=idx)
         if url:
             return _prefer_cache_url(url)
     if cloud_err:
@@ -26022,46 +26018,6 @@ def _latex_strip_comments_keep_meta(s: str) -> str:
             continue
         lines.append(line)
     return "\n".join(lines)
-
-
-def _latex_itemchoice_to_abcd(raw: str) -> str:
-    """Trong \\loigiai + itemchoice: \\item → A. B. C. D. (mỗi ý một dòng, không dùng •)."""
-    s = str(raw or "")
-    if not re.search(r"\\item\b", s, flags=re.I):
-        return s
-    s = re.sub(r"\\begin\s*\{\s*itemchoice\s*\}", "", s, flags=re.I)
-    s = re.sub(r"\\end\s*\{\s*itemchoice\s*\}", "", s, flags=re.I)
-    parts = re.split(r"\\item\s*", s, flags=re.I)
-    preamble = clean(parts[0]) if parts else ""
-    lines: List[str] = []
-    if preamble:
-        lines.append(preamble)
-    for i, part in enumerate(parts[1:5]):
-        body = clean(part)
-        if not body:
-            continue
-        lines.append(f"{'ABCD'[i]}. {body}")
-    if len(parts) > 5:
-        tail = clean("".join(parts[5:]))
-        if tail:
-            lines.append(tail)
-    return "\n".join(lines)
-
-
-def _finalize_latex_parsed_question(q: Dict[str, Any]) -> None:
-    """Sau khi tách LaTeX: chuẩn hóa lời giải A–D từng dòng (không để bullet •)."""
-    dang = effective_dang(q)
-    lg = clean(q.get("LoiGiai", ""))
-    if not lg:
-        return
-    if dang == "Đúng sai":
-        fixed = normalize_ds_loigiai(lg, q, use_sheet_dapan=True)
-        if fixed:
-            q["LoiGiai"] = fixed
-    elif dang == "Trắc nghiệm" and _loigiai_has_splittable_chunks(lg):
-        fixed = normalize_tn_loigiai_abcd(lg, q)
-        if fixed:
-            q["LoiGiai"] = fixed
 
 
 def _latex_clean_body(s: Any) -> str:
@@ -26371,6 +26327,42 @@ def parse_latex_theory_groups_2026(tex: str, defaults: Optional[Dict[str, Any]] 
     return items
 
 
+def _latex_warn_index_key(raw: Any) -> str:
+    """Khóa cảnh báo — index câu (số) hoặc nhãn (ZIP, tikz_...)."""
+    if raw is None or raw == "":
+        return "0"
+    if isinstance(raw, int):
+        return str(raw)
+    s = clean(raw)
+    if s.isdigit():
+        return s
+    return s
+
+
+def _latex_warn_by_index(warnings: Any) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    for w in warnings or []:
+        if not isinstance(w, dict):
+            continue
+        k = _latex_warn_index_key(w.get("index"))
+        msg = clean(w.get("warning") or w.get("reason") or "")
+        if not msg:
+            continue
+        out[k] = (out.get(k, "") + (" · " if out.get(k) else "") + msg)
+    return out
+
+
+def _latex_safe_extract_media(text: str, ctx: Optional[Dict[str, Any]], idx: int) -> Tuple[str, str]:
+    try:
+        return _latex_extract_media(text, ctx, idx)
+    except Exception as e:
+        if ctx is not None:
+            ctx.setdefault("warnings", []).append(
+                {"index": idx, "warning": "Media/TikZ: " + str(e)[:220]}
+            )
+        return text or "", ""
+
+
 def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = None, asset_ctx: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Parse file .tex dạng \\begin{ex} ... \\choice/\\choiceTF/\\shortans/\\loigiai."""
     defaults = defaults or {}
@@ -26379,6 +26371,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
     dangbt_markers = _latex_dangbt_markers(tex)
     out: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, Any]] = []
 
     for idx, m in enumerate(blocks, start=1):
         raw_block = m.group(1)
@@ -26389,7 +26382,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             lg_cmd = _latex_find_command_with_brace(work, "loigiai")
             if lg_cmd:
                 work = work[: lg_cmd[0]] + "\n" + work[lg_cmd[1] :]
-                lg = _latex_clean_body(_latex_itemchoice_to_abcd(lg_cmd[2]))
+                lg = _latex_clean_body(lg_cmd[2])
 
             # Ưu tiên Trả lời ngắn, rồi Đúng/Sai, rồi Trắc nghiệm.
             short_cmd = _latex_find_command_with_brace(work, "shortans")
@@ -26412,7 +26405,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
 
             if short_cmd:
                 q_text = work[: short_cmd[0]]
-                q_text, imgs = _latex_extract_media(q_text, asset_ctx, idx)
+                q_text, imgs = _latex_safe_extract_media(q_text, asset_ctx, idx)
                 q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
                 q["Dang"] = "Trả lời ngắn"
                 q["DangBaiTap"] = q.get("DangBaiTap", "")
@@ -26423,7 +26416,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
 
             elif tf_cmd:
                 q_text = work[: tf_cmd[0]]
-                q_text, imgs = _latex_extract_media(q_text, asset_ctx, idx)
+                q_text, imgs = _latex_safe_extract_media(q_text, asset_ctx, idx)
                 q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
                 q["Dang"] = "Đúng sai"
                 vals = []
@@ -26439,7 +26432,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
 
             elif choice_cmd:
                 q_text = work[: choice_cmd[0]]
-                q_text, imgs = _latex_extract_media(q_text, asset_ctx, idx)
+                q_text, imgs = _latex_safe_extract_media(q_text, asset_ctx, idx)
                 q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
                 q["Dang"] = "Trắc nghiệm"
                 true_letter = ""
@@ -26454,7 +26447,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
 
             else:
                 # Không có lệnh đáp án: vẫn nhập như tự luận để ADMIN sửa tiếp.
-                q_text, imgs = _latex_extract_media(work, asset_ctx, idx)
+                q_text, imgs = _latex_safe_extract_media(work, asset_ctx, idx)
                 q["CauHoi"] = _latex_clean_body(_latex_strip_comments_keep_meta(q_text))
                 q["Dang"] = "Tự luận"
                 if imgs and not q.get("HinhAnh"):
@@ -26465,15 +26458,23 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Trắc nghiệm chưa tìm thấy \\True."})
             if q["Dang"] == "Đúng sai" and not looks_like_dungsai_answer(q.get("DapAn")):
                 errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Đúng/Sai chưa đủ đáp án Đ/S."})
-            _finalize_latex_parsed_question(q)
 
             if clean(q.get("CauHoi")):
                 out.append(q)
             else:
-                errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Không đọc được nội dung câu hỏi."})
+                reason = "Không đọc được nội dung câu hỏi."
+                skipped.append({"index": idx, "id": q.get("ID", ""), "reason": reason})
+                errors.append({"index": idx, "id": q.get("ID", ""), "warning": reason})
 
         except Exception as e:
-            errors.append({"index": idx, "warning": str(e)})
+            qid = ""
+            try:
+                qid = _latex_meta_id(raw_block, idx)
+            except Exception:
+                qid = ""
+            reason = str(e)
+            skipped.append({"index": idx, "id": qid, "reason": reason})
+            errors.append({"index": idx, "id": qid, "warning": reason})
 
     counts = {"Trắc nghiệm": 0, "Đúng sai": 0, "Trả lời ngắn": 0, "Tự luận": 0}
     for q in out:
@@ -26486,6 +26487,8 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
         "ok": True,
         "total_blocks": len(blocks),
         "parsed": len(out),
+        "skipped_count": len(skipped),
+        "skipped": skipped,
         "counts": counts,
         "questions": out,
         "warnings": errors,
@@ -27764,6 +27767,85 @@ def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
         content += "\n\\loigiai{\n" + lg + "\n}"
     content += "\n\\end{bt}"
     return "bt", content, cau + (("\n\\loigiai{\n" + lg + "\n}") if lg else "")
+
+
+def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> str:
+    """Ghép danh sách câu hỏi thành nội dung file .tex (\\begin{ex}...)."""
+    blocks: List[str] = []
+    for i, q in enumerate(questions or [], start=1):
+        if not isinstance(q, dict):
+            continue
+        _qtype, content, _body = _json_question_content_block(q)
+        meta: List[str] = []
+        qid = clean(q.get("ID", ""))
+        muc = clean(q.get("MucDo", ""))
+        dbt = clean(q.get("DangBaiTap", ""))
+        if qid:
+            meta.append(f"% ID: {qid}")
+        if muc:
+            meta.append(f"% Mức: {muc}")
+        if dbt:
+            meta.append(f"% Dạng BT: {dbt}")
+        header = f"% ===== Câu {i} ====="
+        blocks.append("\n".join([header] + meta + [content]) if meta else header + "\n" + content)
+    head = f"% {title}\n\n" if title else ""
+    return head + "\n\n".join(blocks) + ("\n" if blocks else "")
+
+
+def _latex_export_filter_questions(st: "SheetStore", body: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Lọc câu để xuất LaTeX — ADMIN, không áp trial/ẩn học sinh."""
+    made = clean(body.get("made") or body.get("MaDe") or "")
+    qs = list(st.questions or [])
+    if made:
+        qs = [q for q in qs if key_norm(q.get("MaDe")) == key_norm(made)]
+    else:
+        qs = _json_filter_store_questions(st, body)
+    mon = clean(body.get("mon") or body.get("Mon") or "")
+    khoi = clean(body.get("khoi") or body.get("Khoi") or "")
+    lop = clean(body.get("lop") or body.get("Lop") or "")
+    chuong = clean(body.get("chuong") or body.get("Chuong") or "")
+    baihoc = clean(body.get("baihoc") or body.get("BaiHoc") or "")
+    dangbt = clean(body.get("dangbaitap") or body.get("DangBaiTap") or "")
+    dang = clean(body.get("dang") or body.get("Dang") or "")
+    if dang:
+        dang = norm_dang(dang)
+    level = clean(body.get("level") or body.get("MucDo") or "").upper()
+    sol_full = str(body.get("sol_full_only", "0")).lower() in ("1", "true", "yes")
+    chuongs_raw = body.get("chuongs") or body.get("chapters") or []
+    if isinstance(chuongs_raw, str):
+        chuongs_raw = [x.strip() for x in chuongs_raw.split(",") if x.strip()]
+    chuongs = [clean(x) for x in chuongs_raw if clean(x)] if isinstance(chuongs_raw, list) else []
+    out: List[Dict[str, Any]] = []
+    for q in qs:
+        if mon and clean(q.get("Mon")) != mon:
+            continue
+        if khoi and derive_khoi(q.get("Lop", "")) != khoi:
+            continue
+        if lop and clean(q.get("Lop")) != lop:
+            continue
+        if chuongs:
+            if clean(q.get("Chuong")) not in chuongs:
+                continue
+        elif chuong and clean(q.get("Chuong")) != chuong:
+            continue
+        if baihoc and clean(q.get("BaiHoc")) != baihoc:
+            continue
+        if dangbt and key_norm(q.get("DangBaiTap")) != key_norm(dangbt):
+            continue
+        if dang and effective_dang(q) != dang:
+            continue
+        if level and level not in question_mucdo_parts(q) and level not in clean(q.get("MucDo", "")).upper():
+            continue
+        if sol_full and question_solution_status(q) != "full":
+            continue
+        out.append(q)
+    try:
+        limit = int(body.get("limit") or 0)
+    except Exception:
+        limit = 0
+    if limit > 0:
+        out = out[: min(limit, 5000)]
+    return out
 
 
 def _json_default_spaces() -> List[Dict[str, Any]]:
@@ -32607,6 +32689,55 @@ def api_ai_apply_physics_competencies():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route("/api/latex/export", methods=["GET", "POST"])
+def api_latex_export():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xuất LaTeX."}), 403
+    try:
+        body = dict(request.get_json(silent=True) or {})
+        for k in request.args:
+            if k not in body or body.get(k) in (None, ""):
+                body[k] = request.args.get(k)
+        st = get_store()
+        st.ensure_questions_loaded()
+        qs = _latex_export_filter_questions(st, body)
+        if not qs:
+            return jsonify({"error": "Không tìm thấy câu nào theo bộ lọc. Kiểm tra Mã đề / Môn / Lớp / Bài."}), 404
+        name = clean(
+            body.get("name")
+            or body.get("de")
+            or body.get("De")
+            or qs[0].get("De")
+            or qs[0].get("BaiHoc")
+            or qs[0].get("MaDe")
+            or "de-latex"
+        )
+        tex = questions_to_latex_tex(qs, title=name)
+        filename = _safe_json_filename(name, suffix=".tex")
+        do_dl = clean(request.args.get("download")) or str(body.get("download", "")).lower() in ("1", "true", "yes")
+        if do_dl:
+            bio = io.BytesIO(tex.encode("utf-8"))
+            bio.seek(0)
+            return send_file(
+                bio,
+                mimetype="text/plain; charset=utf-8",
+                as_attachment=True,
+                download_name=filename,
+            )
+        return jsonify({
+            "ok": True,
+            "filename": filename,
+            "count_questions": len(qs),
+            "tex": tex[:120000],
+            "truncated": len(tex) > 120000,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 @app.route("/api/latex/import", methods=["POST"])
 def api_latex_import():
     bad = require_login_json()
@@ -32682,7 +32813,7 @@ def api_latex_import():
             # Trả đầy đủ danh sách câu đã tách để ADMIN xem ngay trên modal,
             # không phải nhìn một chuỗi text dính nhau.
             preview_questions = []
-            warn_by_index = {int(w.get("index") or 0): clean(w.get("warning") or w.get("reason") or "") for w in (parsed.get("warnings", []) or []) if isinstance(w, dict)}
+            warn_by_index = _latex_warn_by_index(parsed.get("warnings", []))
             for idx, q in enumerate(parsed.get("questions", [])[:200], start=1):
                 preview_questions.append({
                     "index": idx,
@@ -32702,13 +32833,15 @@ def api_latex_import():
                     "SaiSo": q.get("SaiSo", ""),
                     "LoiGiai": q.get("LoiGiai", ""),
                     "HinhAnh": q.get("HinhAnh", ""),
-                    "warning": warn_by_index.get(idx, ""),
+                    "warning": warn_by_index.get(str(idx), ""),
                 })
             return jsonify({
                 "ok": True,
                 "dry_run": True,
                 "total_blocks": parsed.get("total_blocks", 0),
                 "parsed": parsed.get("parsed", 0),
+                "skipped_count": parsed.get("skipped_count", 0),
+                "skipped": (parsed.get("skipped", []) or [])[:50],
                 "counts": parsed.get("counts", {}),
                 "warnings": parsed.get("warnings", [])[:30],
                 "media": parsed.get("media", {}),
@@ -32744,7 +32877,17 @@ def api_latex_import():
 
         st = get_store()
         st.ensure_questions_loaded()
-        res = st.add_questions_bulk(parsed.get("questions", []))
+        qs_bulk = parsed.get("questions", []) or []
+        if not qs_bulk:
+            return jsonify({
+                "error": "Không đọc được câu nào từ LaTeX.",
+                "total_blocks": parsed.get("total_blocks", 0),
+                "parsed": 0,
+                "skipped_count": parsed.get("skipped_count", 0),
+                "skipped": (parsed.get("skipped", []) or [])[:50],
+                "warnings": parsed.get("warnings", [])[:30],
+            }), 400
+        res = st.add_questions_bulk(qs_bulk)
         theory_saved: List[Dict[str, Any]] = []
         theory_errors: List[str] = []
         lesson_saved: List[Dict[str, Any]] = []
@@ -32774,6 +32917,8 @@ def api_latex_import():
             "dry_run": False,
             "total_blocks": parsed.get("total_blocks", 0),
             "parsed": parsed.get("parsed", 0),
+            "skipped_count": parsed.get("skipped_count", 0),
+            "skipped": (parsed.get("skipped", []) or [])[:50],
             "counts": parsed.get("counts", {}),
             "warnings": parsed.get("warnings", [])[:30],
             "media": parsed.get("media", {}),
