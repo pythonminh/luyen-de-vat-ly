@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V353_LATEX_IMPORT_DBT_2026_06_22"
+APP_VERSION = "V355_NAV_CLICK_FIX_2026_07_04"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -18523,7 +18523,61 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
   padding:6px 12px;background:rgba(0,0,0,.09);border-top:1px solid rgba(255,255,255,.14)}
 .hdrToolbar:not(:has(> *:not(.hide))){display:none}
 .hdrToolbarDivider{width:1px;align-self:stretch;min-height:20px;background:rgba(255,255,255,.22);flex-shrink:0}
-@media(max-width:600px){.hdrToolbar{padding:5px 8px}}
+@media(max-width:600px){.hdrToolbar{padding:5px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}}
+/* V353: thanh điều hướng nhanh — Trang chủ · PDF · Lọc đề · Tự luyện · Mục lục */
+.ldvlQuickNav{
+  display:flex;align-items:stretch;gap:0;flex-shrink:0;
+  padding:0 6px;background:rgba(0,0,0,.16);
+  border-top:1px solid rgba(255,255,255,.12);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  position:relative;z-index:210;pointer-events:auto;
+}
+.ldvlQuickNav::-webkit-scrollbar{display:none}
+.ldvlQuickNav.hide{display:none!important}
+.ldvlQnavBtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border:none;background:transparent;
+  color:rgba(255,255,255,.86);font-size:12px;font-weight:600;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  border-bottom:3px solid transparent;
+  transition:background .15s,color .15s,border-color .15s;
+  position:relative;z-index:1;pointer-events:auto;
+  touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.25);
+}
+.ldvlQnavBtn i,.ldvlQnavBtn span{pointer-events:none}
+.ldvlQnavBtn:hover{background:rgba(255,255,255,.14);color:#fff}
+.ldvlQnavBtn.on{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.2);font-weight:700}
+.ldvlQnavBtn i{font-size:15px;line-height:1}
+@media(max-width:520px){.ldvlQnavBtn{padding:8px 11px;font-size:11px}.ldvlQnavBtn i{font-size:16px}}
+@media(max-width:400px){.ldvlQnavBtn span{display:none}.ldvlQnavBtn{padding:8px 10px}}
+body.hdr-in-quiz .ldvlQuickNav{display:none!important}
+.ldvlDashV324 #homePracticeSetupPanel{
+  position:sticky;top:var(--ldvl-sticky-top,96px);z-index:45;
+  box-shadow:0 6px 20px rgba(15,23,42,.1);
+}
+.ldvlDashV324 #homePracticeSetupPanel .homeScopeRow{
+  display:flex!important;flex-wrap:nowrap!important;gap:6px!important;
+  padding:8px 10px!important;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(239,246,255,.95),rgba(255,255,255,.98));
+}
+.ldvlDashV324 #homePracticeSetupPanel .homeScopeRow .field{
+  flex:1 1 25%!important;min-width:0!important;
+}
+.ldvlDashV324 #homePracticeSetupPanel .homeExtraFilterRow{padding-top:6px!important}
+@media(max-width:480px){
+  .ldvlDashV324 #homePracticeSetupPanel .homeScopeRow{flex-wrap:wrap!important}
+  .ldvlDashV324 #homePracticeSetupPanel .homeScopeRow .field{flex:1 1 calc(50% - 6px)!important}
+}
+/* V354: tinh giản trang chủ — 1 bộ lọc Môn/Lớp/Chương/Bài, bỏ trùng */
+#ldvlAdminViewBar,#ldvlNguonDePanel{display:none!important}
+.ldvlDashV324 .practiceRandomPanel.rpCompactPanel{padding:10px 12px!important;border:1px solid #93c5fd;background:linear-gradient(135deg,#eff6ff,#f0fdf4)!important}
+.ldvlDashV324 .practiceRandomPanel .rpScopeRow,
+.ldvlDashV324 .practiceRandomPanel .rpScopeIntro{display:none!important}
+body.homeTopCompact .homeSectionHead{display:none!important}
+body.homeTopCompact .bookIntroV246{padding:8px 10px!important;margin-bottom:6px!important}
+body.homeTopCompact .bookIntroV246 .muted{display:none!important}
+body.homeTopCompact .bookIntroTitle{font-size:13px!important;margin-bottom:4px!important}
+body.homeTopCompact .bookIntroStats .bookStat{font-size:10px!important;padding:2px 6px!important}
 
 /* Logo — P1: luôn hiện */
 .logo{display:flex;align-items:center;gap:7px;text-decoration:none;flex-shrink:0}
@@ -19067,6 +19121,13 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
     <button type="button" id="btnTheme" class="thbtn" onclick="toggleTheme()" title="Giao diện tối"><i class="ti ti-moon"></i></button>
     <a href="/logout" class="hbtn" style="text-decoration:none"><i class="ti ti-logout"></i> Ra</a>
   </div>
+  <nav class="ldvlQuickNav hide" id="ldvlQuickNav" aria-label="Điều hướng nhanh">
+    <button type="button" class="ldvlQnavBtn on" data-ldvl-nav="home" onclick="window.ldvlQnavClick&&window.ldvlQnavClick('home')"><i class="ti ti-home"></i><span>Trang chủ</span></button>
+    <button type="button" class="ldvlQnavBtn" data-ldvl-nav="pdf" onclick="window.ldvlQnavClick&&window.ldvlQnavClick('pdf')"><i class="ti ti-file-type-pdf"></i><span>PDF</span></button>
+    <button type="button" class="ldvlQnavBtn" data-ldvl-nav="filter" onclick="window.ldvlQnavClick&&window.ldvlQnavClick('filter')"><i class="ti ti-filter"></i><span>Lọc đề</span></button>
+    <button type="button" class="ldvlQnavBtn" data-ldvl-nav="random" onclick="window.ldvlQnavClick&&window.ldvlQnavClick('random')"><i class="ti ti-dice"></i><span>Tự luyện</span></button>
+    <button type="button" class="ldvlQnavBtn" data-ldvl-nav="catalog" onclick="window.ldvlQnavClick&&window.ldvlQnavClick('catalog')"><i class="ti ti-list"></i><span>Mục lục</span></button>
+  </nav>
   <div class="hdrToolbar">
     <details class="hdrSrcDrop" id="hdrSrcDrop">
       <summary class="hbtn" title="Chọn nguồn đề"><i class="ti ti-database"></i><span>Nguồn đề</span><i class="ti ti-chevron-down hdrSrcCaret"></i></summary>
@@ -19101,6 +19162,105 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
     </span>
   </div>
 </header>
+<script>
+(function ldvlQuickNavBootstrap(){
+  function stickyTop(){
+    var h=document.getElementById('ldvlDashHdr');
+    return h?h.offsetHeight:96;
+  }
+  function setActive(target){
+    document.querySelectorAll('.ldvlQnavBtn').forEach(function(b){
+      b.classList.toggle('on',b.getAttribute('data-ldvl-nav')===target);
+    });
+  }
+  function scrollToTarget(target){
+    setActive(target);
+    if(target==='home'){
+      var main=document.querySelector('.ldvlMain');
+      if(main)main.scrollTo({top:0,behavior:'smooth'});
+      window.scrollTo({top:0,behavior:'smooth'});
+      return;
+    }
+    var map={filter:'homeFilterSection',random:'homeRandomSection',catalog:'homeCatalogSection',pdf:'ldvlStudentPdfSection'};
+    var id=map[target];
+    if(!id)return;
+    var el=document.getElementById(id);
+    if(!el)return;
+    var main=document.querySelector('.ldvlMain');
+    var pad=stickyTop()+6;
+    if(main){
+      var top=el.getBoundingClientRect().top-main.getBoundingClientRect().top+main.scrollTop-pad;
+      main.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+    }else{
+      el.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  }
+  function ensureStudentView(target,cb){
+    var u=window.USER;
+    if(!u||!u.is_admin){cb();return;}
+    var sh=document.getElementById('ldvlStudentHome');
+    var ok=sh&&!sh.classList.contains('hide')&&sh.style.display!=='none';
+    if(ok){cb();return;}
+    if(typeof window.ldvlOpenPracticeView==='function'){
+      window.LDVL_ADMIN_STUDENT_MODE=true;
+      var sm={home:'catalog',pdf:'ldvlStudentPdfSection',filter:'homeFilterSection',random:'homeRandomSection',catalog:'homeCatalogSection'};
+      try{
+        window.ldvlOpenPracticeView(sm[target]||'catalog','');
+      }catch(e){
+        console.error('[ldvlQuickNav] ldvlOpenPracticeView lỗi, vẫn tiếp tục cuộn:',e);
+      }
+      setTimeout(cb,360);
+      return;
+    }
+    cb();
+  }
+  function go(target){
+    if(!target)return;
+    try{
+      ensureStudentView(target,function(){
+        try{scrollToTarget(target);}catch(e){console.error('[ldvlQuickNav] scrollToTarget lỗi:',e);}
+      });
+    }catch(e){
+      console.error('[ldvlQuickNav] go() lỗi, thử cuộn trực tiếp:',e);
+      try{scrollToTarget(target);}catch(e2){console.error('[ldvlQuickNav] scrollToTarget lỗi (fallback):',e2);}
+    }
+  }
+  function syncNav(){
+    var nav=document.getElementById('ldvlQuickNav');
+    if(!nav)return;
+    var quiz=document.getElementById('quiz');
+    if(quiz&&!quiz.classList.contains('hide')){nav.classList.add('hide');return;}
+    var sh=document.getElementById('ldvlStudentHome');
+    var u=window.USER;
+    var onStudent=!!(sh&&!sh.classList.contains('hide')&&sh.style.display!=='none');
+    var show=onStudent||!(u&&u.is_admin);
+    nav.classList.toggle('hide',!show);
+    if(show)document.documentElement.style.setProperty('--ldvl-sticky-top',stickyTop()+'px');
+  }
+  /* V356-FIX: hàm bấm nút DUY NHẤT, gắn thẳng vào onclick của từng nút (không qua
+     addEventListener/delegation nữa) và bọc try/catch ở MỌI bước — dù bất kỳ hàm
+     nào khác trong trang lỗi, nút vẫn phải cuộn/chuyển view được, không "đứng im". */
+  window.ldvlQnavClick=function(target){
+    try{ go(target); }
+    catch(e){
+      console.error('[ldvlQnavClick] lỗi ngoài dự kiến:',e);
+      try{ scrollToTarget(target); }catch(e2){}
+    }
+  };
+  window.ldvlStickyTopOffset=stickyTop;
+  window.ldvlQuickNavSetActive=setActive;
+  window.ldvlQuickNavGo=go;
+  window.ldvlQuickNavSyncVisibility=syncNav;
+  window.ldvlUpdateStickyTopVar=function(){
+    document.documentElement.style.setProperty('--ldvl-sticky-top',stickyTop()+'px');
+  };
+  try{ syncNav(); }catch(e){ console.error('[ldvlQuickNav] syncNav lỗi lúc khởi tạo:',e); }
+  document.addEventListener('DOMContentLoaded',function(){
+    try{ syncNav(); }catch(e){}
+    window.addEventListener('resize',function(){ try{window.ldvlUpdateStickyTopVar();}catch(e){} });
+  });
+})();
+</script>
 <div class="ldvlDashWrap">
 <div id="ldvlSbBackdrop" class="ldvlSbBackdrop" onclick="ldvlCloseAdminSidebar()"></div>
 <nav class="sb hide" id="ldvlSidebar" aria-label="Menu ADMIN">
@@ -19290,35 +19450,28 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   </div>
 </div>
 
-<!-- SECTION 1: Lọc & tìm đề -->
-<div class="homeSection">
-  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Thiết lập luyện tập</b><div class="row" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
+<!-- SECTION: Lọc đề (dùng chung cho mục lục + tự luyện) -->
+<div class="homeSection" id="homeFilterSection">
+  <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><b>Lọc đề</b><div class="row homeScopeRow" style="margin-top:0"><div class="field"><label>Môn</label><select id="fMon" onchange="onFilterChange('mon')"><option value="">⏳ Đang nạp…</option></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilterChange('lop')"><option value="">Tất cả</option></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilterChange('chuong')"><option value="">Tất cả</option></select></div><div class="field"><label>Bài học</label><select id="fBaiHoc" onchange="onFilterChange('baihoc')"><option value="">Tất cả</option></select></div></div><div class="row homeExtraFilterRow" style="margin-top:0"><div class="field"><label>Bộ đề</label><select id="fBoDe" onchange="onFilterChange('bode')"><option value="">Tất cả</option></select></div><div class="field"><label>Dạng câu</label><select id="fDang" onchange="onFilterChange('extra')"><option value="">Tất cả</option><option value="Trắc nghiệm">Trắc nghiệm</option><option value="Đúng sai">Đúng sai</option><option value="Trả lời ngắn">Trả lời ngắn</option><option value="Tự luận">Tự luận</option></select></div><div class="field"><label>Dạng bài tập</label><select id="fDangBaiTap" onchange="onFilterChange('extra')"><option value="">Tất cả</option></select></div><div class="field"><label>Tìm nhanh</label><input id="fSearch" placeholder="Nhập từ khóa..." oninput="onFilterChange('extra')"></div><label class="field homeSolOnlyField" style="flex-direction:row;align-items:center;gap:5px;min-width:0"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"><span style="font-size:11px;white-space:nowrap">Chỉ câu có lời giải đầy đủ</span></label><button class="btn" onclick="renderCatalog()">Lọc đề</button></div></div>
 </div>
 
-<!-- SECTION 2: Tự luyện ngẫu nhiên + Tìm ID + Key AI -->
-<div class="homeSection homeSectionRow">
+<!-- SECTION: Tự luyện + công cụ phụ -->
+<div class="homeSection homeSectionRow" id="homeRandomSection">
 
-  <!-- Tự luyện -->
   <div class="homeSectionCol homeSectionColMain">
-    <div class="homeSectionHead">
-      <span class="homeSectionIcon">🎲</span>
-      <span class="homeSectionTitle">Tự luyện ngẫu nhiên</span>
-    </div>
-    <div class="panel practiceRandomPanel compactCard compactRandomCard" style="margin:0">
-      <p class="muted rpScopeIntro" style="margin:0 0 4px;font-size:12px">Ghép đề <b>28 câu</b> — chọn <b>Môn · Lớp · Chương · Bài</b> trên một hàng.</p>
-      <select id="rpKhoi" class="hide" aria-hidden="true" tabindex="-1"><option value=""></option></select>
-      <div class="row rpScopeRow" style="margin-top:0">
-        <div class="field"><label>Môn <span class="muted">*</span></label><select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Môn —</option></select></div>
-        <div class="field"><label>Lớp <span class="muted">*</span></label><select id="rpLop" onchange="onRpScopeChange('lop')" disabled><option value="">— Lớp —</option></select></div>
-        <div class="field" id="rpChuongField"><label>Chương</label><select id="rpChuong" onchange="onRpScopeChange('chuong')" disabled><option value="">Tất cả</option></select></div>
-        <div class="field" id="rpBaiField"><label>Bài</label><select id="rpBaiHoc" onchange="onRpScopeChange('bai')" disabled><option value="">Tất cả</option></select></div>
+    <div class="panel practiceRandomPanel compactCard compactRandomCard rpCompactPanel" style="margin:0">
+      <div class="hide" aria-hidden="true">
+        <select id="rpKhoi" tabindex="-1"><option value=""></option></select>
+        <select id="rpMon" onchange="onRpScopeChange('mon')"><option value="">— Môn —</option></select>
+        <select id="rpLop" onchange="onRpScopeChange('lop')"><option value="">— Lớp —</option></select>
+        <select id="rpChuong" onchange="onRpScopeChange('chuong')"><option value="">Tất cả</option></select>
+        <select id="rpBaiHoc" onchange="onRpScopeChange('bai')"><option value="">Tất cả</option></select>
       </div>
-      <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi</button></div>
+      <div class="row rpScopeUnlockRow" style="margin:0"><button type="button" class="btn2" id="btnRpUnlock" onclick="unlockRpScope()" style="display:none">🔓 Đổi phạm vi</button></div>
       <div id="rpScopeNote" class="hide" style="margin:4px 0;padding:5px 8px;border-radius:7px;background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a;font-weight:800;font-size:11px"></div>
-      <label style="display:flex;gap:5px;align-items:center;margin:2px 0;font-size:11px"><input type="checkbox" id="fSolFullOnly" onchange="renderCatalog()"> Chỉ câu có <b>lời giải đầy đủ</b></label>
-      <div class="row rpActionRow" style="margin:4px 0 0">
+      <div class="row rpActionRow" style="margin:0">
         <button type="button" class="btnStartStrong" onclick="startRandomPractice()">🎲 Bắt đầu tự luyện</button>
-        <button type="button" class="btn2 btnShare btnRpExportLatex hide" id="btnRpExportLatex" onclick="exportRpScopeLatex()" title="ADMIN: tải file .tex theo phạm vi Môn/Lớp/Chương/Bài">📄 LaTeX</button>
+        <button type="button" class="btn2 btnShare btnRpExportLatex hide" id="btnRpExportLatex" onclick="exportRpScopeLatex()" title="ADMIN: tải file .tex theo phạm vi đã lọc">📄 LaTeX</button>
       </div>
     </div>
   </div>
@@ -19369,7 +19522,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
 </div>
 
 <!-- SECTION 3: ADMIN compose (ẩn mặc định) -->
-<div id="adminComposePanel" class="panel hide adminComposePanel"><b>🛠 ADMIN: Tạo đề theo chủ đề &amp; mức độ</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Chọn <b>Môn · Khối · Lớp · Chương</b> ở khối <b>Tự luyện ngẫu nhiên</b> bên trên, rồi nhập số câu cần lấy trong ma trận <b>Dạng × Mức độ</b>. Ô xám = số câu có sẵn trong Sheet.</p><div id="acScopeNote" class="acScopeNote hide"></div><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field"><label>Lọc mức (tuỳ chọn)</label><select id="acLevelFilter" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả mức</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Bài học (tuỳ chọn)</label><select id="acBaiHoc" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả bài</option></select></div><button type="button" class="btn2" onclick="refreshAdminComposeMatrix()">🔄 Cập nhật ma trận</button></div><div id="acMatrixWrap" class="acMatrixWrap"><div class="muted" style="padding:12px">Chọn đủ Môn/Khối/Lớp rồi bấm «Cập nhật ma trận».</div></div><div class="acToolbar"><button type="button" class="btn2" onclick="acPresetStandard28()">📋 Đề chuẩn 28</button><button type="button" class="btn2" onclick="acClearMatrixInputs()">🗑 Xóa nhập</button><button type="button" class="btnStartStrong" onclick="startAdminComposeExam()">🛠 Ghép đề ADMIN</button></div><div id="acComposeStatus" class="muted" style="margin-top:8px;font-size:12px"></div></div>
+<div id="adminComposePanel" class="panel hide adminComposePanel"><b>🛠 ADMIN: Tạo đề theo chủ đề &amp; mức độ</b><p class="muted" style="margin:6px 0 8px;line-height:1.45">Chọn <b>Môn · Khối · Lớp · Chương</b> ở khối <b>Lọc đề</b> bên trên, rồi nhập số câu cần lấy trong ma trận <b>Dạng × Mức độ</b>. Ô xám = số câu có sẵn trong Sheet.</p><div id="acScopeNote" class="acScopeNote hide"></div><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><div class="field"><label>Lọc mức (tuỳ chọn)</label><select id="acLevelFilter" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả mức</option><option value="NB">NB</option><option value="TH">TH</option><option value="VD">VD</option><option value="VDC">VDC</option></select></div><div class="field"><label>Bài học (tuỳ chọn)</label><select id="acBaiHoc" onchange="refreshAdminComposeMatrix()"><option value="">Tất cả bài</option></select></div><button type="button" class="btn2" onclick="refreshAdminComposeMatrix()">🔄 Cập nhật ma trận</button></div><div id="acMatrixWrap" class="acMatrixWrap"><div class="muted" style="padding:12px">Chọn đủ Môn/Khối/Lớp rồi bấm «Cập nhật ma trận».</div></div><div class="acToolbar"><button type="button" class="btn2" onclick="acPresetStandard28()">📋 Đề chuẩn 28</button><button type="button" class="btn2" onclick="acClearMatrixInputs()">🗑 Xóa nhập</button><button type="button" class="btnStartStrong" onclick="startAdminComposeExam()">🛠 Ghép đề ADMIN</button></div><div id="acComposeStatus" class="muted" style="margin-top:8px;font-size:12px"></div></div>
 
 <!-- SECTION 4: AI generate (ADMIN) -->
 <div id="adminAiGeneratePanel" class="panel hide aiGenPanel">
@@ -19402,7 +19555,7 @@ body.ldvlDashV324{display:flex;flex-direction:column;min-height:100dvh;backgroun
   <details id="agJsonDetails" style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">JSON xem trước — có thể sửa trước khi lưu</summary><textarea id="agJson" class="aiGenJsonBox" spellcheck="false" placeholder='{"questions":[]}'></textarea></details>
 </div>
 
-<div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div>
+<div class="homeSection" id="homeCatalogSection"><div class="panel"><b>Mục lục đề</b> <span id="countCat" class="muted"></span><div id="catalog" class="grid" style="margin-top:10px"></div></div></div>
 </div></div>
 <div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button id="btn5050" class="btn2" onclick="use5050()">Loại 2 câu sai</button><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span><button id="btnPresent" class="btn2" onclick="toggleQuizFullscreen()">📽 Full màn hình</button><button id="btnSubmit" class="btn2" onclick="submitQuiz()">Nộp bài</button></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
 
@@ -19563,7 +19716,7 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
 </div>
-</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><input id="latexDefDangBaiTap" placeholder="VD: Chu kỳ, tần số, pha dao động…"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -19638,7 +19791,13 @@ Chứng minh mệnh đề phủ định"></textarea>
 
 
 function v253SetSubjectTabsVisible(show){let box=document.getElementById('topSubjectTabsV253');if(box)box.classList.remove('subjectTabsHiddenV253')}
-document.addEventListener('DOMContentLoaded',function(){v253SetSubjectTabsVisible(true);document.body.classList.add('homeTopCompact')});
+document.addEventListener('DOMContentLoaded',function(){
+  v253SetSubjectTabsVisible(true);
+  document.body.classList.add('homeTopCompact');
+  if(typeof ldvlUpdateStickyTopVar==='function')ldvlUpdateStickyTopVar();
+  if(typeof ldvlQuickNavSyncVisibility==='function')ldvlQuickNavSyncVisibility();
+  window.addEventListener('resize',function(){if(typeof ldvlUpdateStickyTopVar==='function')ldvlUpdateStickyTopVar();});
+});
 
 /* ==========================================================================
  * [JS-VARS] Biến toàn cục — trạng thái làm bài & học liệu
@@ -19813,7 +19972,7 @@ async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMI
 function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));let latexBtn=(USER&&USER.is_admin)?`<button type="button" class="btnShare" onclick="downloadExamLatex('${madeEsc}')" title="Tải file .tex (\\begin{ex}...\\choiceTF...\\loigiai)">📄 Xuất LaTeX</button>`:'';return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button>${latexBtn}</span></div>`}
 function latexExportDownloadUrl(params){let p=new URLSearchParams();Object.keys(params||{}).forEach(function(k){let v=params[k];if(v!=null&&String(v).trim()!=='')p.set(k,String(v))});p.set('download','1');return '/api/latex/export?'+p.toString()}
 function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
-function exportRpScopeLatex(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop');if(!mon||!lop){alert('Chọn Môn và Lớp trước.');return}let chuongs=getRpSelectedChuongs();let params={mon:mon,lop:lop,chuong:val('rpChuong'),baihoc:val('rpBaiHoc'),level:(val('fMucDo')||'').trim().toUpperCase(),sol_full_only:(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0,name:[mon,'Lop'+lop,val('rpChuong'),val('rpBaiHoc')].filter(Boolean).join('_')};if(chuongs.length)params.chuongs=chuongs.join(',');window.location=latexExportDownloadUrl(params)}
+function exportRpScopeLatex(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop');if(!mon||!lop){alert('Chọn Môn và Lớp ở «Lọc đề» trước.');return}let chuongs=getRpSelectedChuongs();let params={mon:mon,lop:lop,chuong:val('rpChuong'),baihoc:val('rpBaiHoc'),level:(val('fMucDo')||'').trim().toUpperCase(),sol_full_only:(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0,name:[mon,'Lop'+lop,val('rpChuong'),val('rpBaiHoc')].filter(Boolean).join('_')};if(chuongs.length)params.chuongs=chuongs.join(',');window.location=latexExportDownloadUrl(params)}
 function syncRpExportLatexBtn(){let b=document.getElementById('btnRpExportLatex');if(b)b.classList.toggle('hide',!(USER&&USER.is_admin))}
 let ID_LOOKUP_MATCHES=[];
 function setVal(id,v){let el=document.getElementById(id);if(el)el.value=v==null?'':String(v)}
@@ -20359,6 +20518,7 @@ async function init(){
   handleQidDeepLink();
   // API cấu hình AI chạy nền, không được chặn giao diện chính.
   loadAiKeyPanel().catch(function(e){let st=document.getElementById('aiKeyStatus');if(st)st.textContent='Không tải trạng thái key: '+(e&&e.message?e.message:e)});
+  if(typeof ldvlQuickNavSyncVisibility==='function')ldvlQuickNavSyncVisibility();
 }
 function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClient(dang);if(fc.dang[nd]!=null)return fc.dang[nd];let n=0;for(let k in fc.dang)if(normDangClient(k)===nd)n+=fc.dang[k]||0;return n}
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
@@ -20538,7 +20698,7 @@ function unlockRpScope(){RP_SCOPE_LOCKED=false;let wrap=document.querySelector('
 function getRpSelectedChuongs(){let ch=val('rpChuong');return ch?[ch]:[]}
 function syncRpFromMainFilters(){if(RP_SCOPE_LOCKED)return;let m=val('fMon'),l=val('fLop'),ch=val('fChuong'),bai=val('fBaiHoc');if(m)setVal('rpMon',m);refreshRpScopeOptions();if(l&&deriveKhoi(l)){setVal('rpKhoi',deriveKhoi(l));refreshRpScopeOptions();setVal('rpLop',l);refreshRpScopeOptions()}if(ch)setVal('rpChuong',ch);if(bai)setVal('rpBaiHoc',bai);refreshRpScopeOptions()}
 function initRpPracticePanel(){syncRpFromMainFilters();if(!RP_SCOPE_LOCKED)refreshRpScopeOptions();syncRpExportLatexBtn()}
-async function startRandomPractice(){try{let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
+async function startRandomPractice(){try{if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Hãy chọn đủ Môn và Lớp ở «Lọc đề» trước.');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let chuongs=getRpSelectedChuongs();let bai=val('rpBaiHoc');let solOnly=!!(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked);let lv=(val('fMucDo')||'').trim().toUpperCase();let j=await api('/api/start-random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mon,khoi,lop,chuongs,chuong:val('rpChuong'),bai_hoc:bai,level:lv,sol_full_only:solOnly?1:0,shuffle_a:1})});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không đủ câu trong phạm vi đã chọn để ghép đề (cần 18 TN + 4 Đ/S + 6 TLN).');return}enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){alert('Không tạo được đề ngẫu nhiên: '+(e.message||e))}}
 const AC_MATRIX_DANGS=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];
 const AC_MATRIX_LEVELS=['NB','TH','VD','VDC'];
 let AC_MATRIX_DATA=null;
@@ -20546,13 +20706,13 @@ function acComposePayloadBase(){syncRpKhoiFromLop();let mon=val('rpMon'),khoi=va
 function isAdminComposeOpen(){try{return localStorage.getItem('LDVL_ADMIN_COMPOSE_OPEN_V257')==='1'}catch(e){return false}}
 function setAdminComposeOpen(open){try{localStorage.setItem('LDVL_ADMIN_COMPOSE_OPEN_V257',open?'1':'0')}catch(e){}syncAdminComposeChrome();if(open)refreshAdminComposeMatrix()}
 function toggleAdminComposeCompact(){setAdminComposeOpen(!isAdminComposeOpen())}
-function syncAdminComposeChrome(){if(!USER||!USER.is_admin)return;let panel=document.getElementById('adminComposePanel');let open=isAdminComposeOpen();if(panel){panel.classList.toggle('acCollapsed',!open);let title=panel.querySelector('b');if(title&&!document.getElementById('adminComposeToggle'))title.insertAdjacentHTML('afterend',' <button type="button" id="adminComposeToggle" class="btn2 adminComposeToggle" onclick="toggleAdminComposeCompact()">Mở ghép đề</button>');let btn=document.getElementById('adminComposeToggle');if(btn)btn.textContent=open?'Thu gọn':'Mở ghép đề'}let note=document.getElementById('acScopeNote');let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();if(note){if(mon&&lop){note.innerHTML=`📌 ${esc(rpScopeSummary())}`;note.classList.remove('hide')}else{note.innerHTML='⚠️ Chọn Môn · Lớp ở «Tự luyện ngẫu nhiên».';note.classList.remove('hide')}}let bh=document.getElementById('acBaiHoc');if(bh&&mon&&lop){let ch=val('rpChuong');let baiBase=ch?rpFilterCatalog().filter(x=>x.Chuong===ch):rpFilterCatalog();let list=uniqField(baiBase,'BaiHoc');let cur=val('acBaiHoc')||val('rpBaiHoc');bh.innerHTML='<option value="">Tất cả bài</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}}
+function syncAdminComposeChrome(){if(!USER||!USER.is_admin)return;let panel=document.getElementById('adminComposePanel');let open=isAdminComposeOpen();if(panel){panel.classList.toggle('acCollapsed',!open);let title=panel.querySelector('b');if(title&&!document.getElementById('adminComposeToggle'))title.insertAdjacentHTML('afterend',' <button type="button" id="adminComposeToggle" class="btn2 adminComposeToggle" onclick="toggleAdminComposeCompact()">Mở ghép đề</button>');let btn=document.getElementById('adminComposeToggle');if(btn)btn.textContent=open?'Thu gọn':'Mở ghép đề'}let note=document.getElementById('acScopeNote');let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();if(note){if(mon&&lop){note.innerHTML=`📌 ${esc(rpScopeSummary())}`;note.classList.remove('hide')}else{note.innerHTML='⚠️ Chọn Môn · Lớp ở «Lọc đề».';note.classList.remove('hide')}}let bh=document.getElementById('acBaiHoc');if(bh&&mon&&lop){let ch=val('rpChuong');let baiBase=ch?rpFilterCatalog().filter(x=>x.Chuong===ch):rpFilterCatalog();let list=uniqField(baiBase,'BaiHoc');let cur=val('acBaiHoc')||val('rpBaiHoc');bh.innerHTML='<option value="">Tất cả bài</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}}
 function renderAdminComposeMatrix(j){AC_MATRIX_DATA=j||null;let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!wrap)return;if(!j||!j.matrix){wrap.innerHTML='<div class="muted" style="padding:12px">Chưa có dữ liệu ma trận.</div>';return}let levels=j.levels||AC_MATRIX_LEVELS;let dangs=j.dangs||AC_MATRIX_DANGS;let hdr='<tr><th>Dạng \\ Mức</th>'+levels.map(lv=>'<th>'+esc(lv)+'</th>').join('')+'<th>Mọi mức</th></tr>';let body=dangs.map(d=>{let row=j.matrix[d]||{};let any=j.row_any&&j.row_any[d]!=null?j.row_any[d]:0;let cells=levels.map(lv=>{let av=row[lv]||0;let id='ac_'+d.replace(/\s+/g,'_')+'_'+lv;return '<td><span class="acAvail">'+av+'</span><input type="number" min="0" max="99" class="acNeed" id="'+id+'" data-dang="'+escAttr(d)+'" data-level="'+escAttr(lv)+'" placeholder="0"></td>'}).join('');let idAny='ac_'+d.replace(/\s+/g,'_')+'_ANY';return '<tr><td class="acDang">'+esc(d)+'</td>'+cells+'<td><span class="acAvail">'+any+'</span><input type="number" min="0" max="99" class="acNeed" id="'+idAny+'" data-dang="'+escAttr(d)+'" data-level="" placeholder="0"></td></tr>'}).join('');wrap.innerHTML='<table class="acMatrix"><thead>'+hdr+'</thead><tbody>'+body+'</tbody></table>';if(st)st.textContent='Có '+((j.pool_size!=null?j.pool_size:j.total)||0)+' câu trong phạm vi đã chọn.'}
-async function refreshAdminComposeMatrix(){if(!USER||!USER.is_admin)return;syncAdminComposeChrome();if(!isAdminComposeOpen())return;let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!mon||!lop||!khoi){if(wrap)wrap.innerHTML='<div class="muted" style="padding:10px">Chọn Môn · Lớp ở «Tự luyện ngẫu nhiên» rồi quay lại đây.</div>';if(st)st.textContent='';return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();if(st)st.textContent='Đang tải ma trận…';try{let body=acComposePayloadBase();let j=await api('/api/admin/pool-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});renderAdminComposeMatrix(j)}catch(e){if(wrap)wrap.innerHTML='<div class="muted" style="padding:12px;color:#991b1b">'+esc(e.message||e)+'</div>';if(st)st.textContent=''}}
+async function refreshAdminComposeMatrix(){if(!USER||!USER.is_admin)return;if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();syncAdminComposeChrome();if(!isAdminComposeOpen())return;let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');let wrap=document.getElementById('acMatrixWrap');let st=document.getElementById('acComposeStatus');if(!mon||!lop||!khoi){if(wrap)wrap.innerHTML='<div class="muted" style="padding:10px">Chọn Môn · Lớp ở «Lọc đề» rồi quay lại đây.</div>';if(st)st.textContent='';return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();if(st)st.textContent='Đang tải ma trận…';try{let body=acComposePayloadBase();let j=await api('/api/admin/pool-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});renderAdminComposeMatrix(j)}catch(e){if(wrap)wrap.innerHTML='<div class="muted" style="padding:12px;color:#991b1b">'+esc(e.message||e)+'</div>';if(st)st.textContent=''}}
 function acClearMatrixInputs(){document.querySelectorAll('.acNeed').forEach(inp=>{inp.value=''})}
 function acPresetStandard28(){acClearMatrixInputs();let set=(d,n)=>{let el=document.querySelector('.acNeed[data-dang="'+d+'"][data-level=""]');if(el)el.value=String(n)};set('Trắc nghiệm',18);set('Đúng sai',4);set('Trả lời ngắn',6);let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đã điền đề chuẩn 28 câu (cột «Mọi mức»). Bấm «Ghép đề ADMIN».'}
 function collectAdminComposeSpec(){let spec=[];document.querySelectorAll('.acNeed').forEach(inp=>{let n=parseInt(inp.value,10);if(!n||n<=0)return;let d=inp.getAttribute('data-dang')||'';let lv=(inp.getAttribute('data-level')||'').trim().toUpperCase();spec.push({dang:d,level:lv,count:n})});return spec}
-async function startAdminComposeExam(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Chọn đủ Môn và Lớp ở khối «Tự luyện ngẫu nhiên».');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let spec=collectAdminComposeSpec();if(!spec.length){alert('Nhập số câu cần lấy trong ma trận (hoặc bấm «Đề chuẩn 28»).');return}let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đang ghép đề…';try{let body=Object.assign(acComposePayloadBase(),{spec,shuffle_a:1});let j=await api('/api/admin/start-compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không ghép được đề.');if(st)st.textContent='';return}let lv=(val('acLevelFilter')||'').trim().toUpperCase();if(st)st.textContent='Đã ghép '+j.questions.length+' câu.'+(j.random_shortages&&j.random_shortages.length?'\nThiếu: '+j.random_shortages.join('; '):'');enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){if(st)st.textContent='';alert('Không ghép được đề: '+(e.message||e))}}
+async function startAdminComposeExam(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();let mon=val('rpMon'),lop=val('rpLop');syncRpKhoiFromLop();let khoi=val('rpKhoi');if(!mon||!lop||!khoi){alert('Chọn đủ Môn và Lớp ở khối «Lọc đề».');return}if(!RP_SCOPE_LOCKED)maybeLockRpScope();let spec=collectAdminComposeSpec();if(!spec.length){alert('Nhập số câu cần lấy trong ma trận (hoặc bấm «Đề chuẩn 28»).');return}let st=document.getElementById('acComposeStatus');if(st)st.textContent='Đang ghép đề…';try{let body=Object.assign(acComposePayloadBase(),{spec,shuffle_a:1});let j=await api('/api/admin/start-compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!j||!j.questions||!j.questions.length){alert(j&&j.error?j.error:'Không ghép được đề.');if(st)st.textContent='';return}let lv=(val('acLevelFilter')||'').trim().toUpperCase();if(st)st.textContent='Đã ghép '+j.questions.length+' câu.'+(j.random_shortages&&j.random_shortages.length?'\nThiếu: '+j.random_shortages.join('; '):'');enterQuizSession(j,j.made||'',lv,'','',false)}catch(e){if(st)st.textContent='';alert('Không ghép được đề: '+(e.message||e))}}
 function initAdminComposePanel(){syncAdminComposeChrome();if(USER&&USER.is_admin&&isAdminComposeOpen())refreshAdminComposeMatrix()}
 
 let AI_GEN_QUESTIONS=[],AI_GEN_BUSY=false,AI_GEN_SAVED=false,AI_GEN_REQUEST_ID='';
@@ -23498,7 +23658,6 @@ function currentLatexDefaults(){
     BaiHoc:val('latexDefBaiHoc')||q.BaiHoc||q.De||'',
     BoDe:val('latexDefBoDe')||q.BoDe||'',
     De:val('latexDefDe')||q.De||'',
-    DangBaiTap:val('latexDefDangBaiTap')||q.DangBaiTap||'',
     MucDo:val('latexDefMucDo')||q.MucDo||'',
     QuyenTruyCap:val('latexDefQuyen')||q.QuyenTruyCap||'VIP',
     Diem:'1'
@@ -23512,7 +23671,7 @@ function openLatexImportModal(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
   let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));
   let q=(inQuiz&&QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
-  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe'),DangBaiTap:q.DangBaiTap||val('fDangBaiTap')||val('latexDefDangBaiTap')};
+  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe')};
   let m=document.getElementById('latexImportModal');
   if(!m){alert('Không tìm thấy modal nhập LaTeX.');return}
   let set=(id,v)=>{let e=document.getElementById(id);if(e&&!e.value)e.value=v||''};
@@ -23522,7 +23681,6 @@ function openLatexImportModal(){
   set('latexDefBaiHoc',scope.BaiHoc);
   set('latexDefBoDe',scope.BoDe);
   set('latexDefDe',scope.De);
-  set('latexDefDangBaiTap',scope.DangBaiTap);
   let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
   setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
@@ -23873,6 +24031,7 @@ function onFilterChange(level){
   else if(level==='dangbaitap'){setVal('fBoDe','')}
   if(level!=='extra')refreshFilterOptions(); else {v245RenderCatalogScopeTabs();v246EnsureDangBaiTapFilter();}
   renderCatalog();
+  if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();
 }
 function v246ItemMatchesFilter(x){
   let s=normText(val('fSearch'));let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();let dbt=(val('fDangBaiTap')||'').trim();let mc=filterMatchCount(x,lv,dg);if(mc!==null&&mc===0)return false;let solOnly=document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked;if(solOnly&&(parseInt(x.SolFull,10)||0)<=0)return false;let blob=normText([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.DangBaiTap,x.BoDe,x.De,x.MucDo,x.Dang].join(' '));let levelOk=!lv||mc!==null||normText(x.MucDo||'').includes(normText(lv));let dangOk=!dg||mc!==null||normText(x.Dang||'').includes(normText(dg));let dbtOk=!dbt||normText(x.DangBaiTap||'').includes(normText(dbt));
@@ -24910,18 +25069,51 @@ function ldvlApplyAdminHomeLayout(){
     if(adminArea){adminArea.classList.add('hide');adminArea.style.display='none';}
     if(studentHome){studentHome.classList.remove('hide');studentHome.style.display='';}
     if(viewBar)viewBar.classList.add('hide');
+    if(typeof ldvlQuickNavSyncVisibility==='function')ldvlQuickNavSyncVisibility();
+    if(typeof ldvlUpdateStickyTopVar==='function')ldvlUpdateStickyTopVar();
     return;
   }
   if(LDVL_ADMIN_STUDENT_MODE){
     if(adminArea){adminArea.classList.add('hide');adminArea.style.display='none';}
     if(studentHome){studentHome.classList.remove('hide');studentHome.style.display='';}
-    if(viewBar)viewBar.classList.remove('hide');
   }else{
     if(adminArea){adminArea.classList.remove('hide');adminArea.style.display='';}
     if(studentHome){studentHome.classList.add('hide');studentHome.style.display='none';}
-    if(viewBar)viewBar.classList.add('hide');
   }
+  if(viewBar)viewBar.classList.add('hide');
   if(typeof ldvlAdminSubNavUpdate==='function')ldvlAdminSubNavUpdate(window.LDVL_ADMIN_PID||'ap-dash');
+  if(typeof ldvlQuickNavSyncVisibility==='function')ldvlQuickNavSyncVisibility();
+  if(typeof ldvlUpdateStickyTopVar==='function')ldvlUpdateStickyTopVar();
+}
+/* V355-FIX: KHÔNG khai báo lại các hàm ldvlStickyTopOffset / ldvlUpdateStickyTopVar /
+   ldvlQuickNavSetActive / ldvlQuickNavSyncVisibility / ldvlQuickNavGo bằng "function ..."
+   ở đây nữa — bản chạy thật đã được gán vào window ở IIFE phía header (ldvlQuickNavBootstrap).
+   Khai báo trùng tên trước đây khiến window.<ten_ham> bị ghi đè bằng chính nó,
+   dẫn tới gọi hàm là tự gọi lại chính nó vô hạn (Maximum call stack size exceeded)
+   và làm các nút Trang chủ/PDF/Lọc đề/Tự luyện/Mục lục ngừng phản hồi khi bấm. */
+if(typeof window.ldvlStickyTopOffset!=='function'){
+  window.ldvlStickyTopOffset=function(){
+    var hdr=document.getElementById('ldvlDashHdr');
+    return hdr?hdr.offsetHeight:96;
+  };
+}
+if(typeof window.ldvlUpdateStickyTopVar!=='function'){
+  window.ldvlUpdateStickyTopVar=function(){
+    document.documentElement.style.setProperty('--ldvl-sticky-top',window.ldvlStickyTopOffset()+'px');
+  };
+}
+if(typeof window.ldvlQuickNavSetActive!=='function'){
+  window.ldvlQuickNavSetActive=function(target){
+    document.querySelectorAll('.ldvlQnavBtn').forEach(function(b){
+      b.classList.toggle('on',b.getAttribute('data-ldvl-nav')===target);
+    });
+  };
+}
+if(typeof window.ldvlQuickNavSyncVisibility!=='function'){
+  window.ldvlQuickNavSyncVisibility=function(){};
+}
+if(typeof window.ldvlQuickNavGo!=='function'){
+  window.ldvlQuickNavGo=function(target){};
 }
 function ldvlOpenPracticeView(scrollId,monFilter){
   LDVL_ADMIN_STUDENT_MODE=true;
@@ -24935,7 +25127,7 @@ function ldvlOpenPracticeView(scrollId,monFilter){
   if(main)main.scrollTop=0;
   setTimeout(function(){
     let tgt=null;
-    if(scrollId==='random')tgt=document.querySelector('.practiceRandomPanel');
+    if(scrollId==='random')tgt=document.getElementById('homeRandomSection');
     else if(scrollId)tgt=document.getElementById(scrollId);
     if(!tgt)tgt=document.getElementById('catalog');
     if(tgt)tgt.scrollIntoView({behavior:'smooth',block:'start'});
