@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V363_PDF_ADMIN_IN_TAB_2026_07_05"
+APP_VERSION = "V364_LATEX_DBT_FIELD_2026_07_05"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -19727,7 +19727,7 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
 </div>
-</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..."></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí" oninput="latexImportRefreshDbtList()"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10" oninput="latexImportRefreshDbtList()"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể" oninput="latexImportRefreshDbtList()"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..." oninput="latexImportRefreshDbtList()"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><select id="latexDefDangBaiTap_pick" class="adminDbtSelect" style="width:100%;margin:0 0 4px" onchange="latexImportDbtPickChange()"><option value="">— Chọn hoặc gõ mới —</option></select><input id="latexDefDangBaiTap" placeholder="Dạng bài tập (cột H trên Sheet)" oninput="latexImportDbtInputChange()" /><span id="latexDefDangBaiTap_scope" class="muted" style="display:block;font-size:11px;margin-top:3px"></span></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -23672,6 +23672,7 @@ function currentLatexDefaults(){
     Lop:val('latexDefLop')||q.Lop||'',
     Chuong:val('latexDefChuong')||q.Chuong||'',
     BaiHoc:val('latexDefBaiHoc')||q.BaiHoc||q.De||'',
+    DangBaiTap:val('latexDefDangBaiTap')||q.DangBaiTap||'',
     BoDe:val('latexDefBoDe')||q.BoDe||'',
     De:val('latexDefDe')||q.De||'',
     MucDo:val('latexDefMucDo')||q.MucDo||'',
@@ -23683,11 +23684,56 @@ function setLatexImportStatus(msg,err=false){
   let el=document.getElementById('latexImportStatus');
   if(el){el.textContent=msg||'';el.style.color=err?'#991b1b':''}
 }
+function latexImportScopeData(){
+  return {
+    Mon:val('latexDefMon')||'',
+    Lop:val('latexDefLop')||'',
+    Chuong:val('latexDefChuong')||'',
+    BaiHoc:val('latexDefBaiHoc')||'',
+    BoDe:val('latexDefBoDe')||'',
+    De:val('latexDefDe')||'',
+    DangBaiTap:val('latexDefDangBaiTap')||''
+  };
+}
+function latexImportRefreshDbtList(){
+  let sel=document.getElementById('latexDefDangBaiTap_pick');
+  let inp=document.getElementById('latexDefDangBaiTap');
+  if(!sel||!inp||typeof adminDangBaiTapOptions!=='function'||typeof adminDbtRebuildSelect!=='function')return;
+  let cur=String(inp.value||'').trim();
+  let pack=adminDangBaiTapOptions(Object.assign({},latexImportScopeData(),{DangBaiTap:cur}));
+  let built=adminDbtRebuildSelect(pack,cur);
+  sel.innerHTML=built.optHtml;
+  if(built.match){sel.value=built.match;inp.value=built.match;}
+  else if(cur){sel.value='__custom__';}
+  else{sel.value='';}
+  let scopeEl=document.getElementById('latexDefDangBaiTap_scope');
+  if(scopeEl)scopeEl.textContent=pack.scopeLabel||'';
+}
+function latexImportDbtPickChange(){
+  let sel=document.getElementById('latexDefDangBaiTap_pick');
+  let inp=document.getElementById('latexDefDangBaiTap');
+  if(!sel||!inp)return;
+  let v=String(sel.value||'');
+  if(v==='__custom__'){inp.focus();return;}
+  if(v)inp.value=v;else inp.value='';
+}
+function latexImportDbtInputChange(){
+  let sel=document.getElementById('latexDefDangBaiTap_pick');
+  let inp=document.getElementById('latexDefDangBaiTap');
+  if(!sel||!inp)return;
+  let cur=String(inp.value||'').trim();
+  if(!cur){sel.value='';return;}
+  let opts=[];
+  for(let i=0;i<sel.options.length;i++){let v=sel.options[i].value;if(v&&v!=='__custom__')opts.push(v);}
+  let m=typeof adminDbtFindMatch==='function'?adminDbtFindMatch(cur,opts):'';
+  if(m&&normText(cur)===normText(m))sel.value=m;else sel.value='__custom__';
+}
+window.latexImportRefreshDbtList=latexImportRefreshDbtList;
 function openLatexImportModal(){
   if(!USER.is_admin){alert('Chỉ ADMIN.');return}
   let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));
   let q=(inQuiz&&QUESTIONS&&QUESTIONS.length)?(QUESTIONS[CUR]||{}):{};
-  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe')};
+  let scope={Mon:q.Mon||val('fMon')||val('latexDefMon'),Lop:q.Lop||val('fLop')||val('latexDefLop'),Chuong:q.Chuong||val('fChuong')||val('latexDefChuong'),BaiHoc:q.BaiHoc||q.De||val('fBaiHoc')||val('latexDefBaiHoc'),BoDe:q.BoDe||val('fBoDe')||val('latexDefBoDe'),De:q.De||val('latexDefDe'),DangBaiTap:q.DangBaiTap||val('fDangBaiTap')||val('latexDefDangBaiTap')};
   let m=document.getElementById('latexImportModal');
   if(!m){alert('Không tìm thấy modal nhập LaTeX.');return}
   let set=(id,v)=>{let e=document.getElementById(id);if(e&&!e.value)e.value=v||''};
@@ -23697,6 +23743,9 @@ function openLatexImportModal(){
   set('latexDefBaiHoc',scope.BaiHoc);
   set('latexDefBoDe',scope.BoDe);
   set('latexDefDe',scope.De);
+  let dbtInp=document.getElementById('latexDefDangBaiTap');
+  if(dbtInp&&scope.DangBaiTap&&!dbtInp.value)dbtInp.value=scope.DangBaiTap;
+  latexImportRefreshDbtList();
   let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
   setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
