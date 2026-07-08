@@ -24009,7 +24009,23 @@ function renderEditHintResult(j){
   let prov=j.provider_used||j.provider_mode||'';
   let head='<div style="font-weight:800;margin-bottom:6px">Kết quả soát đề'+(prov?(' · '+esc(prov)):'')+'</div>';
   let body=j.hint?('<div style="white-space:pre-wrap">'+esc(String(j.hint).split('📋 Tham chiếu Sheet')[0].trim().slice(0,4000))+'</div>'):'<div class="muted">Chưa có nội dung.</div>';
-  box.innerHTML=head+body;
+  box.innerHTML=head+body+renderEditHintDbtSuggest(j);
+}
+function renderEditHintDbtSuggest(j){
+  j=j||{};
+  if(j.dbt_suggest_loading)return '<div class="muted" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">🏷️ Đang lấy gợi ý Dạng bài tập…</div>';
+  let dj=j.dbt_suggest;
+  if(!dj)return '';
+  let dbt=String(dj.DangBaiTap||'').trim();
+  if(!dbt)return dj.error?('<div class="muted" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">🏷️ Gợi ý Dạng bài tập: chưa nhận được ('+esc(dj.error)+')</div>'):'';
+  let cur=String(dj.from||'').trim();
+  let reason=String(dj.reason||'').trim();
+  let conf=String(dj.confidence||'').trim();
+  let sameAsCur=cur&&normText(cur)===normText(dbt);
+  let fromToLine=sameAsCur
+    ?'✓ Dạng hiện tại «'+esc(dbt)+'» đã khớp AI — không cần đổi.'
+    :(cur?('Hiện tại: «'+esc(cur)+'»  →  AI gợi ý: «'+esc(dbt)+'»'):('AI gợi ý (câu chưa có Dạng): «'+esc(dbt)+'»'));
+  return '<div class="muted" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">🏷️ Gợi ý Dạng bài tập (AI)'+(conf?' · tin cậy '+esc(conf):'')+':<br><b>'+fromToLine+'</b>'+(reason?'<br>Lý do: '+esc(reason):'')+adminDbtAiSyncNote(dj)+'<br><span style="font-size:11px">Chỉ hiển thị — chưa ghi cột H. Xem ô «Dạng bài tập» ở form bên dưới rồi tự chọn/lưu như hiện tại.</span></div>';
 }
 function applyEditHintField(field){
   if(!USER.is_admin)return;
@@ -24056,11 +24072,32 @@ async function requestHintFromEditModal(){
     if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;
     renderEditHintResult(j);
     syncQuestionModalChrome();
+    if(j.admin_review)fetchDbtSuggestForEditHint(qIdx);
   }catch(e){
     if(box){box.innerHTML='<div class="muted">❌ '+esc(e.message||e)+'</div>'}
   }finally{
     setHintLoading(false,qIdx);
     syncEditHintButtonLabel();
+  }
+}
+async function fetchDbtSuggestForEditHint(qIdx){
+  let j=HINT_BY_Q[qIdx];
+  if(!j||!j.admin_review)return;
+  j.dbt_suggest_loading=true;
+  if(CUR===qIdx)renderEditHintResult(j);
+  try{
+    let q=readQuestionFormData();
+    q.Dang=normDangFormVal(q.Dang||'');
+    let curDbt=String(q.DangBaiTap||'').trim();
+    let dj=await adminApiPost('/api/ai/detect-dangbaitap-update',{question:q,dangbaitap_suggestions:adminDangBaiTapSuggestions(),save:false});
+    dj.from=curDbt;
+    j.dbt_suggest=dj;
+  }catch(e){
+    j.dbt_suggest={error:String((e&&e.message)||e)};
+  }finally{
+    j.dbt_suggest_loading=false;
+    HINT_BY_Q[qIdx]=j;
+    if(CUR===qIdx)renderEditHintResult(j);
   }
 }
 function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let soat=document.getElementById('editAdminSoatBar');if(soat)soat.classList.toggle('hide',isAdd||!isAdminViewer());syncAdminReviewModeUI();syncEditHintButtonLabel();if(!isAdd&&isAdminViewer())renderEditHintResult(HINT_BY_Q[CUR]);let note=document.getElementById('editModalNote');if(note){if(isAdd)note.textContent='Dán cả câu (Ctrl+V) ở khung trên → Tách vào form → chọn TN/Đ/S/TLN → xem trước + ảnh → Lưu Sheet.';else if(adminHintNeedsSave())note.textContent='Soát đề ở trên → kiểm tra P/R → bấm → P / → R hoặc 📋 Điền P/R → Lưu Sheet.';else note.textContent='Soát đề AI nằm ngay trên form. Xóa liên tiếp được — chỉ Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
