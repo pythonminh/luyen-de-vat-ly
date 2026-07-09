@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V377_EXTERNAL_MAIN_JS_2026_07_05"
+APP_VERSION = "V378_LATEX_EXPORT_GRP_2026_07_09"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -20306,7 +20306,7 @@ async function saveExamOffline(made){made=String(made||'').trim();if(!made)retur
 async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN được tải gói offline APK.');return}if(!confirm('Tải ZIP gói offline (toàn bộ đề)?\n\nCó thể chờ vài phút nếu nhiều đề.'))return;try{let r=await fetch('/api/admin/offline-pack',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='luyen-de-offline.zip';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải gói offline ZIP.\n\nGiải nén vào assets Android hoặc mở index.html trong gói.')}catch(e){alert('Tải gói offline thất bại: '+(e.message||e))}}
 function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));let latexBtn=(USER&&USER.is_admin)?`<button type="button" class="btnShare" onclick="downloadExamLatex('${madeEsc}')" title="Tải file .tex (\\begin{ex}...\\choiceTF...\\loigiai)">📄 Xuất LaTeX</button>`:'';return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button>${latexBtn}</span></div>`}
 function latexExportDownloadUrl(params){let p=new URLSearchParams();Object.keys(params||{}).forEach(function(k){let v=params[k];if(v!=null&&String(v).trim()!=='')p.set(k,String(v))});p.set('download','1');return '/api/latex/export?'+p.toString()}
-function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
+function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made||x.GroupKey===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
 function exportRpScopeLatex(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}if(typeof syncRpFromMainFilters==='function')syncRpFromMainFilters();syncRpKhoiFromLop();let mon=val('rpMon'),lop=val('rpLop');if(!mon||!lop){alert('Chọn Môn và Lớp ở «Lọc đề» trước.');return}let chuongs=getRpSelectedChuongs();let params={mon:mon,lop:lop,chuong:val('rpChuong'),baihoc:val('rpBaiHoc'),level:(val('fMucDo')||'').trim().toUpperCase(),sol_full_only:(document.getElementById('fSolFullOnly')&&document.getElementById('fSolFullOnly').checked)?1:0,name:[mon,'Lop'+lop,val('rpChuong'),val('rpBaiHoc')].filter(Boolean).join('_')};if(chuongs.length)params.chuongs=chuongs.join(',');window.location=latexExportDownloadUrl(params)}
 function syncRpExportLatexBtn(){let b=document.getElementById('btnRpExportLatex');if(b)b.classList.toggle('hide',!(USER&&USER.is_admin))}
 let ID_LOOKUP_MATCHES=[];
@@ -28539,9 +28539,10 @@ def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> 
 def _latex_export_filter_questions(st: "SheetStore", body: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Lọc câu để xuất LaTeX — ADMIN, không áp trial/ẩn học sinh."""
     made = clean(body.get("made") or body.get("MaDe") or "")
-    qs = list(st.questions or [])
     if made:
-        qs = [q for q in qs if key_norm(q.get("MaDe")) == key_norm(made)]
+        qs = list(st.resolve_quiz_base(made))
+        if not qs:
+            qs = [q for q in (st.questions or []) if key_norm(q.get("MaDe")) == key_norm(made)]
     else:
         qs = _json_filter_store_questions(st, body)
     mon = clean(body.get("mon") or body.get("Mon") or "")
