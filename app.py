@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V378_LATEX_EXPORT_GRP_2026_07_09"
+APP_VERSION = "V379_LATEX_DS_LOIGIAI_2026_07_09"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -28469,11 +28469,82 @@ def _json_latex_escape_block(s: Any) -> str:
     return clean(s)
 
 
+def _latex_loigiai_has_itemchoice(raw: str) -> bool:
+    return bool(re.search(r"\\begin\s*\{\s*itemchoice\s*\}", raw or "", re.I))
+
+
+def _latex_export_ds_loigiai_itemchoice(q: Dict[str, Any], raw: str) -> str:
+    """Xuất lời giải Đ/S dạng \\begin{itemchoice} \\item (Đúng|Sai) … (Vì): …"""
+    raw = clean(raw).replace("\r", "")
+    if not raw:
+        return ""
+    if _latex_loigiai_has_itemchoice(raw):
+        return raw.strip()
+
+    norm = normalize_ds_loigiai(raw, q, use_sheet_dapan=True)
+    chunks = _parse_ds_loigiai_chunks(norm) or _parse_ds_loigiai_chunks(raw)
+    letters = [L for L in "ABCD" if clean(q.get(L))]
+    if not letters:
+        return raw
+
+    items: List[str] = []
+    for L in letters:
+        c = chunks.get(L, {}) if isinstance(chunks.get(L), dict) else {}
+        verdict_code = clean(c.get("verdict", "")) or _ds_verdict_from_q_dapan(q, L)
+        verdict_label = _ds_verdict_label(verdict_code) or "Sai"
+
+        option_txt, _had = _split_option_label(q.get(L, ""))
+        option_txt = re.sub(r"\\True\s*", "", option_txt or "", flags=re.I).strip()
+        option_txt = re.sub(r"\*\*", "", option_txt).strip()
+
+        body = clean(c.get("body", ""))
+        body = re.sub(r"\*\*", "", body).strip()
+        if verdict_code:
+            body = _strip_ds_body_leading_verdict(body, _ds_verdict_label(verdict_code))
+        body = re.sub(r"^[ABCD]\s*[\.\):]\s*", "", body, flags=re.I).strip()
+
+        vi_parts = re.split(r"\(\s*Vì\s*\)\s*:?", body, maxsplit=1, flags=re.I)
+        if len(vi_parts) == 2:
+            reason = clean(vi_parts[1]).rstrip(".")
+            stmt = option_txt or clean(vi_parts[0]).rstrip(". ")
+        elif body:
+            stmt = option_txt or body.rstrip(". ")
+            reason = body if option_txt and body != option_txt else ""
+            if option_txt and body == option_txt:
+                reason = ""
+        else:
+            stmt = option_txt
+            reason = ""
+
+        stmt = stmt.rstrip(". ").strip()
+        if not stmt and not reason:
+            continue
+        if reason:
+            items.append(f"\\item ({verdict_label}) {stmt}. (Vì): {reason}")
+        else:
+            items.append(f"\\item ({verdict_label}) {stmt}.")
+
+    if not items:
+        return norm or raw
+
+    return "\\begin{itemchoice}\n" + "\n".join(items) + "\n\\end{itemchoice}"
+
+
+def _latex_export_loigiai(q: Dict[str, Any]) -> str:
+    """Chuẩn hóa cột R khi xuất file .tex."""
+    raw = clean(q.get("LoiGiai", ""))
+    if not raw:
+        return ""
+    if effective_dang(q) == "Đúng sai":
+        return _latex_export_ds_loigiai_itemchoice(q, raw)
+    return raw
+
+
 def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
     """Trả về (type, content, body) cho package JSON dễ đọc."""
     dang = effective_dang(q)
     cau = _json_latex_escape_block(q.get("CauHoi", ""))
-    lg = _json_latex_escape_block(q.get("LoiGiai", ""))
+    lg = _latex_export_loigiai(q)
     if dang == "Trắc nghiệm":
         ans = norm_letter(q.get("DapAn", ""))
         opts = []
