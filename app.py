@@ -111,7 +111,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V379_LATEX_DS_LOIGIAI_2026_07_09"
+APP_VERSION = "V380_LATEX_DANGBT_2026_07_09"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -28584,9 +28584,23 @@ def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
     return "bt", content, cau + (("\n\\loigiai{\n" + lg + "\n}") if lg else "")
 
 
+def _latex_export_dangbt_arg(s: Any) -> str:
+    """Escape nội dung trong \\dangbt{...}."""
+    t = clean(s)
+    return t.replace("\\", "\\textbackslash{}").replace("{", "\\{").replace("}", "\\}")
+
+
+def _latex_export_dangbt_line(dbt: str) -> str:
+    dbt = clean(dbt)
+    if not dbt:
+        return ""
+    return f"\\dangbt{{{_latex_export_dangbt_arg(dbt)}}}"
+
+
 def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> str:
     """Ghép danh sách câu hỏi thành nội dung file .tex (\\begin{ex}...)."""
     blocks: List[str] = []
+    prev_dbt = ""
     for i, q in enumerate(questions or [], start=1):
         if not isinstance(q, dict):
             continue
@@ -28599,10 +28613,13 @@ def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> 
             meta.append(f"% ID: {qid}")
         if muc:
             meta.append(f"% Mức: {muc}")
-        if dbt:
-            meta.append(f"% Dạng BT: {dbt}")
         header = f"% ===== Câu {i} ====="
-        blocks.append("\n".join([header] + meta + [content]) if meta else header + "\n" + content)
+        body_parts = [header] + meta
+        if dbt and dbt != prev_dbt:
+            body_parts.append(_latex_export_dangbt_line(dbt))
+            prev_dbt = dbt
+        body_parts.append(content)
+        blocks.append("\n".join(body_parts))
     head = f"% {title}\n\n" if title else ""
     return head + "\n\n".join(blocks) + ("\n" if blocks else "")
 
