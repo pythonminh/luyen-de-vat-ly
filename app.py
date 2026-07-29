@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V313_FIX_CATALOG_INSERTBEFORE_2026_07_29"
+APP_VERSION = "V314_FIX_MULTI_ALIGNED_FULL_2026_07_29"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -1236,6 +1236,11 @@ def _normalize_aligned_block(block: str) -> str:
     env_name = m.group(1)
     body = m.group(2).replace("\r\n", "\n").replace("\r", "\n")
 
+    # aligned đã là môi trường toán học nên không được chứa thêm $...$ bên trong.
+    # Dữ liệu cũ có thể đã bị chèn dấu $ giữa các dòng của khối aligned.
+    body = re.sub(r"(?<!\\)\${1,2}", "", body)
+    body = re.sub(r"\\[\[\]()]+", "", body)
+
     # Một dấu \ ở cuối dòng là lỗi rất thường gặp:  ,\ + xuống dòng.
     # Đổi thành đúng hai dấu \\ để tạo hàng mới trong aligned.
     body = re.sub(
@@ -1292,6 +1297,14 @@ def _protect_aligned_environments(text: str) -> Tuple[str, List[str]]:
     # Các khối aligned chưa được bọc dấu toán học.
     raw_pat = re.compile(f"({block_pat})", re.IGNORECASE)
     t = raw_pat.sub(lambda m: stash(m.group(1)), t)
+
+    # Dọn $/$$ rác còn bám quanh token. Token khi khôi phục đã có $$...$$.
+    for idx in range(len(blocks)):
+        token = f"@@ALIGNED_MATH_{idx}@@"
+        esc_token = re.escape(token)
+        t = re.sub(rf"\${{1,2}}[ \t\r\n]*{esc_token}[ \t\r\n]*\${{1,2}}", token, t)
+        t = re.sub(rf"\${{1,2}}[ \t\r\n]*{esc_token}", token, t)
+        t = re.sub(rf"{esc_token}[ \t\r\n]*\${{1,2}}", token, t)
     return t, blocks
 
 
@@ -13646,6 +13659,9 @@ function normalizeAlignedBlockClient(block){
   let m=block.match(/\\begin\s*\{\s*(aligned\*?)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}/i);
   if(!m)return block;
   let env=m[1],body=String(m[2]||'');
+  // aligned đã là môi trường toán học: xóa $/$$ hoặc delimiter lồng bên trong.
+  body=body.replace(/(^|[^\\])\${1,2}/g,function(_,pre){return pre});
+  body=body.replace(/\\[\[\]()]+/g,'');
   body=body.replace(/(^|[^\\])\\[ \t]*(?=\n)/g,function(_,pre){return pre+'\\\\'});
   let lines=body.split('\n'),non=[];
   for(let i=0;i<lines.length;i++)if(String(lines[i]||'').trim())non.push(i);
@@ -13672,6 +13688,14 @@ function protectAlignedBlocksClient(s){
   t=t.replace(pats[2],function(_,b){return stash(b)});
   t=t.replace(pats[3],function(_,pre,b){return pre+stash(b)});
   t=t.replace(new RegExp('('+bp+')','gi'),function(_,b){return stash(b)});
+  // Dọn $/$$ rác còn bám quanh token. Mỗi token đã tự có $$...$$.
+  for(let i=0;i<blocks.length;i++){
+    let token='@@MJALIGNED_'+i+'@@';
+    let q=token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    t=t.replace(new RegExp('\\${1,2}[ \t\r\n]*'+q+'[ \t\r\n]*\\${1,2}','g'),token);
+    t=t.replace(new RegExp('\\${1,2}[ \t\r\n]*'+q,'g'),token);
+    t=t.replace(new RegExp(q+'[ \t\r\n]*\\${1,2}','g'),token);
+  }
   return{text:t,blocks:blocks};
 }
 function restoreAlignedBlocksClient(s,blocks){
