@@ -81,7 +81,7 @@ try:
 except Exception:
     pass
 
-APP_VERSION = "V312_DOC_ALIGNED_LATEX_2026_07_29"
+APP_VERSION = "V313_FIX_CATALOG_INSERTBEFORE_2026_07_29"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -16316,14 +16316,33 @@ function v245EnsureCatalogScopeCss(){
 }
 function v245EnsureCatalogScopeBox(){
   v245EnsureCatalogScopeCss();
-  let home=document.getElementById('home'); if(!home)return null;
-  if(document.getElementById('catalogScopeBox'))return document.getElementById('catalogScopeBox');
-  let firstPanel=home.querySelector('.panel'); if(!firstPanel)return null;
-  let box=document.createElement('div');
-  box.id='catalogScopeBox'; box.className='catalogScopeBox';
+  const home=document.getElementById('home');
+  if(!home)return null;
+
+  const existed=document.getElementById('catalogScopeBox');
+  if(existed)return existed;
+
+  const firstPanel=home.querySelector('.panel');
+  if(!firstPanel)return null;
+
+  const box=document.createElement('div');
+  box.id='catalogScopeBox';
+  box.className='catalogScopeBox';
   box.innerHTML=`<div class="catalogScopeTitle">🧭 Lọc nhanh theo Môn → Khối → Chương → Bài</div><div id="catalogMonTabs" class="catalogScopeRow"></div><div id="catalogKhoiTabs" class="catalogScopeRow"></div><div id="catalogChuongTabs" class="catalogScopeRow"></div><div id="catalogBaiTabs" class="catalogScopeRow"></div><div class="catalogAdvancedHint">Bên dưới vẫn giữ bộ lọc chi tiết: Lớp, Bộ đề, Mức độ, Dạng câu, Tìm nhanh.</div>`;
-  let row=firstPanel.querySelector('.row');
-  if(row)firstPanel.insertBefore(box,row); else firstPanel.appendChild(box);
+
+  // V313: sau khi giao diện compact bọc panel bằng .uiSectionBody,
+  // các .row không còn là con trực tiếp của firstPanel. insertBefore chỉ
+  // nhận node mốc là con trực tiếp, nên phải chèn vào đúng host thực tế.
+  const body=Array.from(firstPanel.children).find(
+    el=>el.classList && el.classList.contains('uiSectionBody')
+  );
+  const host=body || firstPanel;
+  const row=Array.from(host.children).find(
+    el=>el.classList && el.classList.contains('row')
+  );
+
+  if(row && row.parentNode===host)host.insertBefore(box,row);
+  else host.prepend(box);
   return box;
 }
 /* ===== V246: Giao diện sách trong từng tab + bộ lọc Dạng bài tập ===== */
