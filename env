@@ -1,0 +1,10 @@
+# Đổi tên file này thành .env và đặt cùng thư mục với app.py
+# KHÔNG đưa .env hoặc service-account.json lên GitHub.
+
+GOOGLE_SHEET_ID=1i5qTVt7LwJhJ3EC1mLNLFpSN-4V5hS_GtgtYGWoo7sA
+GOOGLE_CREDENTIALS_FILE=service-account.json
+SECRET_KEY=luyen-de-thay-minh-2026
+# Các key AI nếu cần chạy local
+# GEMINI_API_KEY=
+# OPENAI_API_KEY=
+
