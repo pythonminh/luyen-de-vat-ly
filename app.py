@@ -1,8 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 app.py - Ứng dụng luyện đề Google Sheet + đăng nhập + ADMIN sửa câu
-Chạy Render:
-    gunicorn app:app --bind 0.0.0.0:$PORT
+Chạy Render (dùng file gunicorn.conf.py kèm theo — KHÓA 1 WORKER, xem [B1]):
+    gunicorn app:app -c gunicorn.conf.py
+
+BẢO MẬT — biến môi trường nên đặt:
+    SECRET_KEY=<chuỗi ngẫu nhiên 64 ký tự>   BẮT BUỘC. Thiếu thì app tự suy ra
+                            khóa từ GOOGLE_CREDENTIALS_JSON và ghi cảnh báo.
+    PASSWORD_HASHING=1      Băm mật khẩu trong sheet HOC_VIEN sau lần đăng nhập
+                            đúng đầu tiên. MẶC ĐỊNH 0 (tắt) vì bật lên thì thầy
+                            KHÔNG còn xem lại được mật khẩu học viên trên Sheet.
+                            Thầy vẫn gõ mật khẩu mới dạng thường như cũ, hệ thống
+                            tự băm ở lần đăng nhập kế tiếp.
+    PASSWORD_CASE_INSENSITIVE=0  Bắt đúng hoa/thường (mặc định 1 = như cũ).
+    SESSION_COOKIE_SECURE=1 Chỉ gửi cookie qua HTTPS (tự bật khi chạy trên Render).
+    SESSION_DAYS=14         Số ngày giữ đăng nhập.
+    LOG_LEVEL=DEBUG         Hiện đầy đủ lỗi đang bị bỏ qua (mặc định INFO).
+    TIKZ_RENDER_MAX_CHARS   Giới hạn độ dài mã TikZ gửi lên biên dịch.
+    WEB_CONCURRENCY         PHẢI để 1 — xem ghi chú [B1] trong mã.
+
 Yêu cầu Environment Variables trên Render:
     GOOGLE_SHEET_ID
     GOOGLE_CREDENTIALS_JSON
@@ -27,8 +43,10 @@ Yêu cầu Environment Variables trên Render:
 from __future__ import annotations
 
 import base64
+import hmac
 import io
 import json
+import logging
 import os
 import random
 import re
@@ -45,8 +63,9 @@ import shutil
 import subprocess
 import uuid
 from datetime import datetime, timedelta
-from collections import defaultdict
+from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+from functools import wraps
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from flask import (
@@ -61,6 +80,13 @@ from flask import (
     session,
     url_for,
 )
+
+# Werkzeug đi kèm Flask nên không cần thêm gói mới vào requirements.txt.
+try:
+    from werkzeug.security import check_password_hash, generate_password_hash
+except Exception:  # pragma: no cover
+    check_password_hash = None
+    generate_password_hash = None
 
 try:
     import gspread
@@ -253,6 +279,7 @@ ADMIN_SYS_PROMPT_COMPACT = (
     "Với Trả lời ngắn: không tạo A/B/C/D, chỉ giải ra kết quả số/biểu thức. "
     "LaTeX trong $...$ một dòng."
 )
+TIKZ_RENDER_MAX_CHARS = max(2000, min(int(os.environ.get("TIKZ_RENDER_MAX_CHARS", "20000") or 20000), 60000))
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -262,7 +289,100 @@ _DRIVE_UPLOAD_FOLDER_CACHE = ""
 DEFAULT_DRIVE_IMAGES_FOLDER_ID = "1QSVzBMuklr6JGqAvAJ9oa8jX2hxQLV3f"
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "luyen-de-vat-ly-secret-key-change-me")
+
+# ------------------------------------------------------------------
+# [B2] LOG — thay cho việc nuốt lỗi im lặng.
+# Đặt LOG_LEVEL=DEBUG trên Render khi cần soi chi tiết.
+# ------------------------------------------------------------------
+logging.basicConfig(
+    level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+log = logging.getLogger("luyende")
+
+
+def log_swallow(where: str) -> None:
+    """Ghi lại lỗi được cố ý bỏ qua. Mức DEBUG nên không làm ồn log chạy thật;
+    khi cần điều tra thì đặt LOG_LEVEL=DEBUG trên Render là thấy đầy đủ."""
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug("Bỏ qua lỗi tại %s", where, exc_info=True)
+
+
+def log_exc(where: str, exc: BaseException) -> None:
+    """Ghi log lỗi đã bị bắt mà vẫn cho luồng chạy tiếp (không đổi hành vi app)."""
+    log.warning("[%s] %s: %s", where, type(exc).__name__, exc, exc_info=log.isEnabledFor(logging.DEBUG))
+
+
+# ------------------------------------------------------------------
+# [A1] SECRET_KEY — không dùng chuỗi mặc định lộ trong mã nguồn.
+# Thứ tự ưu tiên:
+#   1. SECRET_KEY trên Render  (khuyến nghị: chuỗi ngẫu nhiên 64 ký tự)
+#   2. Suy ra ổn định từ GOOGLE_CREDENTIALS_JSON — không lộ trong mã,
+#      không đổi khi Render khởi động lại nên học viên không bị đăng xuất.
+#   3. Ngẫu nhiên theo tiến trình + cảnh báo (mọi người sẽ bị đăng xuất khi app ngủ dậy).
+# ------------------------------------------------------------------
+def _resolve_secret_key() -> str:
+    env_key = (os.environ.get("SECRET_KEY") or "").strip()
+    if env_key and env_key != "luyen-de-vat-ly-secret-key-change-me":
+        return env_key
+    seed = (os.environ.get("GOOGLE_CREDENTIALS_JSON") or "").strip()
+    if len(seed) > 100:
+        log.warning(
+            "Chưa đặt SECRET_KEY — đang dùng khóa suy ra từ GOOGLE_CREDENTIALS_JSON. "
+            "Nên đặt biến SECRET_KEY trên Render."
+        )
+        return hashlib.sha256(("ldvl-session|" + seed).encode("utf-8")).hexdigest()
+    log.error(
+        "THIẾU SECRET_KEY và GOOGLE_CREDENTIALS_JSON — sinh khóa ngẫu nhiên tạm thời. "
+        "Mọi phiên đăng nhập sẽ mất khi app khởi động lại."
+    )
+    return base64.b64encode(os.urandom(48)).decode("ascii")
+
+
+app.secret_key = _resolve_secret_key()
+
+# ------------------------------------------------------------------
+# [A5] Cookie phiên: chặn JS đọc cookie, chặn gửi cookie sang site khác,
+# chỉ gửi qua HTTPS khi chạy thật. Local (http://localhost) tự tắt Secure.
+# ------------------------------------------------------------------
+_IS_LOCAL_RUN = (os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID") or "") == ""
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=(os.environ.get("SESSION_COOKIE_SECURE", "0" if _IS_LOCAL_RUN else "1") == "1"),
+    PERMANENT_SESSION_LIFETIME=timedelta(
+        days=max(1, min(int(os.environ.get("SESSION_DAYS", "14") or 14), 90))
+    ),
+    MAX_CONTENT_LENGTH=max(4, min(int(os.environ.get("MAX_UPLOAD_MB", "24") or 24), 100)) * 1024 * 1024,
+)
+
+
+# ------------------------------------------------------------------
+# [B1] CẢNH BÁO NHIỀU WORKER
+# Toàn bộ ngân hàng câu hỏi (STORE.questions) và bảng chống đăng nhập 2 thiết bị
+# (STORE.active_tokens) nằm trong RAM của TỪNG tiến trình. Chạy gunicorn với
+# nhiều worker => mỗi worker giữ một bản sao riêng:
+#   - ADMIN sửa câu ở worker A, học viên rơi vào worker B vẫn thấy bản cũ;
+#   - Chống dùng chung tài khoản hoạt động chập chờn.
+# Muốn chạy nhiều worker thì phải đưa cache + token ra Redis trước.
+# Lệnh chạy đúng hiện nay:
+#   gunicorn app:app --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT
+# ------------------------------------------------------------------
+def _warn_if_multi_worker() -> None:
+    try:
+        n = int(os.environ.get("WEB_CONCURRENCY", "1") or 1)
+    except Exception:
+        n = 1
+    if n > 1:
+        log.error(
+            "WEB_CONCURRENCY=%s (>1). Dữ liệu câu hỏi và phiên đăng nhập nằm trong RAM "
+            "từng worker nên sẽ KHÔNG đồng bộ giữa các worker. Hãy đặt WEB_CONCURRENCY=1 "
+            "và tăng --threads, hoặc chuyển cache sang Redis trước khi tăng worker.",
+            n,
+        )
+
+
+_warn_if_multi_worker()
 
 # Key AI theo từng học viên (mahs) — mỗi người nhập key riêng
 AI_USER_OVERRIDES: Dict[str, Dict[str, Any]] = {}
@@ -426,14 +546,56 @@ def clean(v: Any) -> str:
     return s
 
 
+# ------------------------------------------------------------------
+# [A2] MẬT KHẨU
+# PASSWORD_HASHING=1  → sau khi học viên đăng nhập đúng, ô MatKhau trong sheet
+#                       HOC_VIEN được ghi đè bằng chuỗi băm (không đọc lại được).
+#                       Thầy vẫn gõ mật khẩu mới dạng thường vào sheet như cũ,
+#                       hệ thống tự băm ở lần đăng nhập kế tiếp.
+# PASSWORD_CASE_INSENSITIVE=0 → bắt buộc đúng hoa/thường (mặc định 1 = giữ
+#                       nguyên hành vi cũ để học viên đang dùng không bị khóa).
+# ------------------------------------------------------------------
+PASSWORD_HASH_PREFIXES = ("pbkdf2:", "scrypt:", "argon2")
+
+
+def password_hashing_enabled() -> bool:
+    return os.environ.get("PASSWORD_HASHING", "0") == "1" and generate_password_hash is not None
+
+
+def is_hashed_password(stored: Any) -> bool:
+    s = str(stored or "")
+    return s.startswith(PASSWORD_HASH_PREFIXES)
+
+
+def hash_password(raw: str) -> str:
+    if generate_password_hash is None:
+        return raw
+    return generate_password_hash(raw, method="pbkdf2:sha256:260000")
+
+
 def _password_match(stored: str, entered: str) -> bool:
-    """So sánh mật khẩu: khớp chính xác hoặc không phân biệt hoa/thường.
+    """So sánh mật khẩu.
+    - Nếu ô trong sheet đã là chuỗi băm  -> kiểm tra bằng check_password_hash.
+    - Nếu còn là chữ thường (chưa migrate) -> so sánh hằng thời gian
+      (hmac.compare_digest) để không lộ độ dài/tiền tố qua thời gian phản hồi.
     clean() đã tự động chuyển float '123456.0' -> '123456'."""
-    if stored == entered:
+    stored = str(stored or "")
+    entered = str(entered or "")
+    if not stored:
+        return False
+    if is_hashed_password(stored):
+        if check_password_hash is None:
+            return False
+        try:
+            return check_password_hash(stored, entered)
+        except Exception as e:
+            log_exc("check_password_hash", e)
+            return False
+    if hmac.compare_digest(stored, entered):
         return True
-    # Không phân biệt hoa/thường cho mật khẩu chữ
-    if stored.lower() == entered.lower():
-        return True
+    # Không phân biệt hoa/thường — giữ mặc định để không khóa tài khoản cũ.
+    if os.environ.get("PASSWORD_CASE_INSENSITIVE", "1") == "1":
+        return hmac.compare_digest(stored.lower(), entered.lower())
     return False
 
 
@@ -2012,6 +2174,7 @@ def parse_datetime_any(s: Any) -> Optional[datetime]:
             base = datetime(1899, 12, 30)
             return base + timedelta(days=float(s))
     except Exception:
+        log_swallow("parse_datetime_any:2160")
         pass
     fmts = [
         "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
@@ -2022,6 +2185,7 @@ def parse_datetime_any(s: Any) -> Optional[datetime]:
         try:
             return datetime.strptime(s, fmt)
         except Exception:
+            log_swallow("parse_datetime_any:2170")
             pass
     return None
 
@@ -2049,6 +2213,7 @@ def parse_float_vn(s: Any) -> Optional[float]:
     try:
         return float(m.group(0))
     except Exception:
+        log_swallow("parse_float_vn:2197")
         return None
 
 
@@ -2842,6 +3007,7 @@ def refresh_session_role_from_store() -> None:
         if user and user.get("role"):
             session["role"] = norm_role(user.get("role"))
     except Exception:
+        log_swallow("refresh_session_role_from_store:2990")
         pass
 
 
@@ -2963,6 +3129,46 @@ def quiz_access_level(qs: List[Dict[str, Any]]) -> str:
         if access_level_from_text(q.get("QuyenTruyCap", "")) == "VIP":
             return "VIP"
     return "FREE"
+
+
+def login_json(fn):
+    """[A3] Bọc route JSON: bắt buộc đã đăng nhập.
+    Dùng thay cho việc viết tay `bad = require_login_json()` ở đầu mỗi hàm."""
+    @wraps(fn)
+    def _wrap(*args, **kwargs):
+        bad = require_login_json()
+        if bad:
+            return bad
+        return fn(*args, **kwargs)
+    return _wrap
+
+
+def admin_json(fn):
+    """[A3] Bọc route JSON: bắt buộc đăng nhập VÀ là ADMIN."""
+    @wraps(fn)
+    def _wrap(*args, **kwargs):
+        bad = require_login_json()
+        if bad:
+            return bad
+        refresh_session_role_from_store()
+        if not is_admin():
+            return jsonify({"error": "Chỉ ADMIN được dùng chức năng này."}), 403
+        return fn(*args, **kwargs)
+    return _wrap
+
+
+def admin_page(fn):
+    """[A3] Bọc trang HTML của ADMIN: chưa đăng nhập thì đưa về /login,
+    đã đăng nhập mà không phải ADMIN thì trả 403."""
+    @wraps(fn)
+    def _wrap(*args, **kwargs):
+        if not session.get("mahs"):
+            return redirect(url_for("login", next=request.full_path.rstrip("?")))
+        refresh_session_role_from_store()
+        if not is_admin():
+            return make_response("<h3>403 — Trang này chỉ dành cho ADMIN.</h3>", 403)
+        return fn(*args, **kwargs)
+    return _wrap
 
 
 def require_login_json():
@@ -3245,6 +3451,7 @@ def client_question_to_internal(raw: Any) -> Dict[str, Any]:
         try:
             out["_row"] = int(raw.get("_row"))
         except Exception:
+            log_swallow("client_question_to_internal:3433")
             out["_row"] = raw.get("_row")
     return out
 
@@ -3690,6 +3897,7 @@ def ai_dang_similarity_advice(
     except AdminGeminiQuotaError:
         raise
     except Exception:
+        log_swallow("ai_dang_similarity_advice:3878")
         return ""
 
 
@@ -3833,6 +4041,7 @@ def extract_drive_file_id(value: Any) -> str:
         if qs.get('id') and qs['id'][0]:
             return qs['id'][0]
     except Exception:
+        log_swallow("extract_drive_file_id:4021")
         pass
     # Chuỗi file id thuần
     if re.fullmatch(r'[A-Za-z0-9_-]{20,}', s):
@@ -3963,6 +4172,7 @@ def _drive_api_error_detail(exc: Exception) -> str:
                 return msg
             return raw[:400]
         except Exception:
+            log_swallow("_drive_api_error_detail:4151")
             code = getattr(exc, "code", "")
             return f"HTTP {code}: {getattr(exc, 'reason', exc)}"
     return str(exc)[:400]
@@ -4075,6 +4285,7 @@ def _drive_find_folder_by_name(name: str) -> str:
                 return preferred
         return clean(files[0].get("id", "")) if files else ""
     except Exception:
+        log_swallow("_drive_find_folder_by_name:4263")
         return ""
 
 
@@ -4121,6 +4332,7 @@ def _drive_set_public(file_id: str, token: str) -> None:
     try:
         urllib.request.urlopen(req, timeout=30)
     except Exception:
+        log_swallow("_drive_set_public:4309")
         pass
 
 
@@ -4232,6 +4444,7 @@ def _google_service_account_email() -> str:
         info = _load_google_service_account_info()
         return clean(info.get("client_email", ""))
     except Exception:
+        log_swallow("_google_service_account_email:4420")
         return ""
 
 
@@ -4611,6 +4824,7 @@ def _parse_gsheet_updated_start_row(updated_range: Any) -> Optional[int]:
     try:
         return int(m.group(2))
     except Exception:
+        log_swallow("_parse_gsheet_updated_start_row:4799")
         return None
 
 
@@ -4630,6 +4844,7 @@ def _gsheet_append_response_start_row(resp: Any, fallback: int) -> int:
             if sr:
                 return sr
     except Exception:
+        log_swallow("_gsheet_append_response_start_row:4818")
         pass
     return max(2, int(fallback or 2))
 
@@ -4714,6 +4929,7 @@ class SheetStore:
         try:
             return self.sheet.worksheet(name)
         except Exception:
+            log_swallow("worksheet_or_none:4902")
             return None
 
     def ensure_users_loaded(self, force: bool = False):
@@ -4919,6 +5135,7 @@ class SheetStore:
             if getattr(self.ws_questions, "col_count", 0) < target_col:
                 gsheet_call_retry("resize Cau_Hoi columns", self.ws_questions.resize, cols=target_col)
         except Exception:
+            log_swallow("ensure_question_competency_header:5107")
             pass
         a1 = gspread.utils.rowcol_to_a1(1, target_col)
         current = clean(gsheet_call_retry("read NangLucVatLy header", self.ws_questions.acell, a1).value)
@@ -4928,6 +5145,7 @@ class SheetStore:
                 if getattr(self.ws_questions, "col_count", 0) < target_col:
                     gsheet_call_retry("resize Cau_Hoi extra column", self.ws_questions.resize, cols=target_col)
             except Exception:
+                log_swallow("ensure_question_competency_header:5116")
                 pass
             a1 = gspread.utils.rowcol_to_a1(1, target_col)
         gsheet_call_retry(
@@ -5005,9 +5223,39 @@ class SheetStore:
         self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_question_indexes()
 
+    def backfill_missing_mon(self) -> int:
+        """Điền cột Mon còn trống bằng Mon của các câu cùng Lop|Chuong|BaiHoc.
+
+        catalog_group_key() gom thẻ bài theo Mon|Lop|Chuong|BaiHoc, nên một ô Mon
+        bỏ trống trên Sheet sẽ tách bài đó thành một thẻ "Chưa rõ môn" riêng và
+        các dạng bài của nó biến mất khỏi thẻ chính. Chỉ sửa trong RAM.
+        """
+        votes: Dict[str, Counter] = {}
+        for q in self.questions:
+            mon = clean(q.get("Mon", ""))
+            if not mon:
+                continue
+            k = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Chuong", "BaiHoc"])
+            votes.setdefault(k, Counter())[mon] += 1
+
+        fixed = 0
+        for q in self.questions:
+            if clean(q.get("Mon", "")):
+                continue
+            k = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Chuong", "BaiHoc"])
+            c = votes.get(k)
+            if not c:
+                continue
+            q["Mon"] = c.most_common(1)[0][0]
+            fixed += 1
+        if fixed:
+            print(f"[CATALOG] Đã điền Môn cho {fixed} câu bị bỏ trống (gộp về đúng thẻ bài).")
+        return fixed
+
     def rebuild_question_indexes(self) -> None:
         for q in self.questions:
             q["Dang"] = effective_dang(q)
+        self.backfill_missing_mon()
         self.by_made = {}
         self.by_group = {}
         self.by_id = {}
@@ -5107,6 +5355,7 @@ class SheetStore:
             try:
                 q = canonical_question(q)
             except Exception:
+                log_swallow("load_questions_from_json_runtime:5325")
                 q = {f: clean(q.get(f, "")) for f in QUESTION_FIELDS}
                 q["Dang"] = effective_dang(q)
             if not clean(q.get("CauHoi")):
@@ -5436,6 +5685,7 @@ class SheetStore:
                     try:
                         return int(it.get("_row") or 0)
                     except Exception:
+                        log_swallow("_learning_upsert_match_row:5654")
                         return 0
         def kn(it: Dict[str, Any]) -> Tuple[str, ...]:
             return tuple(key_norm(it.get(k, "")) for k in key_fields)
@@ -5446,6 +5696,7 @@ class SheetStore:
                     try:
                         return int(it.get("_row") or 0)
                     except Exception:
+                        log_swallow("_learning_upsert_match_row:5664")
                         return 0
         return 0
 
@@ -5574,6 +5825,7 @@ class SheetStore:
                 try:
                     row_no = int(it.get("_row") or 0)
                 except Exception:
+                    log_swallow("save_translation_en_item:5792")
                     row_no = 0
                 break
         action = "updated" if row_no and row_no >= 2 else "created"
@@ -5623,6 +5875,58 @@ class SheetStore:
         # Tài khoản dự phòng nếu sheet chưa có ADMIN.
         if not any(u.get("role") == "ADMIN" for u in self.users.values()):
             self.users["admin"] = {"mahs": "admin", "hoten": "ADMIN", "lop": "", "role": "ADMIN", "password": "admin123", "status": "ON"}
+
+    def upgrade_password_hash(self, mahs: str, plain_password: str) -> bool:
+        """[A2] Ghi đè ô MatKhau bằng chuỗi băm sau khi học viên đăng nhập đúng.
+        Chỉ chạy khi PASSWORD_HASHING=1. Lỗi ghi sheet không được làm hỏng đăng nhập."""
+        if not password_hashing_enabled() or self.ws_users is None:
+            return False
+        mahs = clean(mahs)
+        plain_password = str(plain_password or "")
+        if not mahs or not plain_password:
+            return False
+        try:
+            values = gsheet_call_retry("get_all_values HOC_VIEN hash", self.ws_users.get_all_values) or []
+            if len(values) < 2:
+                return False
+            headers = values[0]
+            pw_col = -1
+            id_col = -1
+            for i, h in enumerate(headers):
+                hn = key_norm(h)
+                if pw_col < 0 and hn in {key_norm(x) for x in ALIASES["MatKhau"]}:
+                    pw_col = i
+                if id_col < 0 and hn in {key_norm(x) for x in ALIASES["MaHS"]}:
+                    id_col = i
+            if pw_col < 0 or id_col < 0:
+                return False
+            target_row = -1
+            for r, row_vals in enumerate(values[1:], start=2):
+                cur = row_vals[id_col] if id_col < len(row_vals) else ""
+                if key_norm(cur) == key_norm(mahs):
+                    target_row = r
+                    break
+            if target_row < 0:
+                return False
+            cur_pw = values[target_row - 1][pw_col] if pw_col < len(values[target_row - 1]) else ""
+            if is_hashed_password(cur_pw):
+                return False
+            a1 = gspread.utils.rowcol_to_a1(target_row, pw_col + 1)
+            gsheet_call_retry(
+                "update MatKhau hash",
+                self.ws_users.update,
+                a1,
+                [[hash_password(plain_password)]],
+                value_input_option="RAW",
+            )
+            u = self.users.get(mahs)
+            if isinstance(u, dict):
+                u["password"] = hash_password(plain_password)
+            log.info("Đã băm mật khẩu cho tài khoản %s", mahs)
+            return True
+        except Exception as e:
+            log_exc("upgrade_password_hash", e)
+            return False
 
     def is_user_expired(self, user: Dict[str, Any]) -> Tuple[bool, str]:
         if user.get("role") == "ADMIN":
@@ -5674,7 +5978,7 @@ class SheetStore:
             "NgayHetHanTrial": fmt_datetime(until),
             "DeviceId": device_id,
             "NgayHetHanTaiKhoan": "",
-            "MatKhau": clean(password),
+            "MatKhau": hash_password(clean(password)) if password_hashing_enabled() else clean(password),
         }
         headers = self.ws_users.get_all_values()[0]
         row = [self.user_header_value(h, record) for h in headers]
@@ -5807,6 +6111,7 @@ class SheetStore:
         try:
             rows = gsheet_call_retry("get_all_values DBT_ThuTu", ws.get_all_values) or []
         except Exception:
+            log_swallow("read_dbt_orders_from_sheet:6077")
             return {}
         if not rows:
             return {}
@@ -5825,6 +6130,7 @@ class SheetStore:
                     if isinstance(parsed, list):
                         names = [clean(x) for x in parsed if clean(x) and not _is_bad_dangbaitap_value(x)]
                 except Exception:
+                    log_swallow("read_dbt_orders_from_sheet:6095")
                     names = [
                         clean(x) for x in re.split(r"\|\|\||\n", raw)
                         if clean(x) and not _is_bad_dangbaitap_value(x)
@@ -5845,6 +6151,7 @@ class SheetStore:
         try:
             rows = gsheet_call_retry("get_all_values DBT_ThuTu upsert", ws.get_all_values) or []
         except Exception:
+            log_swallow("upsert_dbt_order_on_sheet:6115")
             rows = []
         target_row = 0
         for i, row in enumerate(rows[1:], start=2):
@@ -6761,6 +7068,7 @@ class SheetStore:
                     ff = self.fifty_fifty(sid, index, restore_payload)
                     hide_5050 = list(ff.get("hide") or [])
                 except Exception:
+                    log_swallow("hint_one:7031")
                     hide_5050 = []
             final_da, da_warn = reconcile_vip_suggested_dapan(
                 sug.get("suggested_dapan", ""),
@@ -7149,6 +7457,7 @@ class SheetStore:
                 json.dumps(detail, ensure_ascii=False)
             ], value_input_option="USER_ENTERED")
         except Exception:
+            log_swallow("save_result:7419")
             pass
 
     def _question_id_col_1(self) -> int:
@@ -7157,6 +7466,7 @@ class SheetStore:
             col0 = find_col(self.question_headers or [], "ID")
             return int(col0) + 1 if col0 is not None else 2
         except Exception:
+            log_swallow("_question_id_col_1:7427")
             return 2
 
     def _find_sheet_row_by_question_id(self, question_id: str) -> Optional[int]:
@@ -7171,6 +7481,7 @@ class SheetStore:
                 if i >= 2 and clean(v) == question_id:
                     return i
         except Exception:
+            log_swallow("_find_sheet_row_by_question_id:7441")
             return None
         return None
 
@@ -7198,6 +7509,7 @@ class SheetStore:
             try:
                 actual_id = clean(gsheet_call_retry("read Cau_Hoi ID", self.ws_questions.acell, a1_id).value)
             except Exception:
+                log_swallow("update_question:7468")
                 actual_id = ""
             if actual_id and actual_id != expected_id:
                 found_row = self._find_sheet_row_by_question_id(expected_id)
@@ -7222,6 +7534,7 @@ class SheetStore:
                 try:
                     same_row2 = int(qq.get("_row") or 0) == int(row_number)
                 except Exception:
+                    log_swallow("update_question:7492")
                     same_row2 = False
                 same_id2 = bool(expected_id and clean(qq.get("ID", "")) == expected_id)
                 if same_row2 or same_id2:
@@ -7244,6 +7557,7 @@ class SheetStore:
                     ):
                         updates[f] = patch.get(f, "")
         except Exception:
+            log_swallow("update_question:7514")
             pass
 
         hinhanh_warn = ""
@@ -7256,6 +7570,7 @@ class SheetStore:
                 try:
                     same_row2 = int(qq.get("_row") or 0) == int(row_number)
                 except Exception:
+                    log_swallow("update_question:7526")
                     same_row2 = False
                 same_id2 = bool(expected_id and clean(qq.get("ID", "")) == expected_id)
                 if same_row2 or same_id2:
@@ -7263,6 +7578,7 @@ class SheetStore:
                     break
             merged_for_norm.update({k: clean(v) for k, v in updates.items()})
         except Exception:
+            log_swallow("update_question:7533")
             merged_for_norm = dict(updates or {})
 
         updates = _normalize_question_latex_updates(updates, merged_for_norm)
@@ -7279,6 +7595,7 @@ class SheetStore:
                     if display_da:
                         updates["DapAn"] = display_da
         except Exception:
+            log_swallow("update_question:7549")
             pass
 
         batch = []
@@ -7312,6 +7629,7 @@ class SheetStore:
             try:
                 same_row = int(q.get("_row") or 0) == int(row_number)
             except Exception:
+                log_swallow("update_question:7582")
                 same_row = False
             same_id = bool(expected_id and clean(q.get("ID", "")) == expected_id)
             if same_row or same_id:
@@ -7356,6 +7674,7 @@ class SheetStore:
             try:
                 r = int(q.get("_row") or 0)
             except Exception:
+                log_swallow("update_question_review_bulk:7626")
                 continue
             if r >= 2:
                 by_row[r] = q
@@ -7367,6 +7686,7 @@ class SheetStore:
             try:
                 row_number = int(raw.get("row") or raw.get("_row") or 0)
             except Exception:
+                log_swallow("update_question_review_bulk:7637")
                 continue
             if row_number < 2:
                 continue
@@ -7402,6 +7722,7 @@ class SheetStore:
             try:
                 r = int(q.get("_row") or 0)
             except Exception:
+                log_swallow("update_question_levels_bulk:7672")
                 r = 0
             if r >= 2:
                 by_row[r] = q
@@ -7412,6 +7733,7 @@ class SheetStore:
             try:
                 row = int(up.get("row") or 0)
             except Exception:
+                log_swallow("update_question_levels_bulk:7682")
                 row = 0
             if row < 2 or row in seen:
                 continue
@@ -7450,6 +7772,7 @@ class SheetStore:
             try:
                 r = int(q.get("_row") or 0)
             except Exception:
+                log_swallow("update_question_dangbaitap_bulk:7720")
                 r = 0
             if r >= 2:
                 by_row[r] = q
@@ -7460,6 +7783,7 @@ class SheetStore:
             try:
                 row = int(up.get("row") or 0)
             except Exception:
+                log_swallow("update_question_dangbaitap_bulk:7730")
                 row = 0
             if row < 2 or row in seen:
                 continue
@@ -7505,6 +7829,7 @@ class SheetStore:
             try:
                 r = int(q.get("_row") or 0)
             except Exception:
+                log_swallow("update_question_competency_bulk:7775")
                 r = 0
             if r >= 2:
                 by_row[r] = q
@@ -7515,6 +7840,7 @@ class SheetStore:
             try:
                 row = int(up.get("row") or 0)
             except Exception:
+                log_swallow("update_question_competency_bulk:7785")
                 row = 0
             if row < 2 or row in seen:
                 continue
@@ -7969,10 +8295,12 @@ class SheetStore:
             col_a = gsheet_call_retry("col_values Cau_Hoi A", self.ws_questions.col_values, 1) or []
             return max(2, len(col_a) + 1)
         except Exception:
+            log_swallow("_next_question_sheet_row:8239")
             try:
                 vals = gsheet_call_retry("get_all_values Cau_Hoi tail", self.ws_questions.get_all_values) or []
                 return max(2, len(vals) + 1)
             except Exception:
+                log_swallow("_next_question_sheet_row:8243")
                 return 2
 
     def _pad_question_sheet_row(self, row: List[str]) -> List[str]:
@@ -8143,8 +8471,10 @@ class SheetStore:
                 try:
                     existing_fp.add(question_content_fingerprint(q))
                 except Exception:
+                    log_swallow("_extend_fingerprints_from_sheet_tail:8413")
                     pass
         except Exception:
+            log_swallow("_extend_fingerprints_from_sheet_tail:8415")
             pass
 
     def _read_appended_question_rows(self, start_row: int, count: int) -> List[Dict[str, Any]]:
@@ -8168,6 +8498,7 @@ class SheetStore:
                 if q:
                     out.append(q)
         except Exception:
+            log_swallow("_read_appended_question_rows:8438")
             pass
         return out
 
@@ -8205,6 +8536,7 @@ class SheetStore:
                 if question_content_fingerprint(q) == fp_new:
                     return row_num
         except Exception:
+            log_swallow("_find_recent_sheet_duplicate:8475")
             return None
         return None
 
@@ -8295,6 +8627,7 @@ class SheetStore:
                 try:
                     existing_fp.add(question_content_fingerprint(q))
                 except Exception:
+                    log_swallow("add_questions_bulk:8565")
                     pass
             self._extend_fingerprints_from_sheet_tail(existing_fp)
 
@@ -11785,9 +12118,11 @@ def _http_error_message(e: Exception) -> str:
                 if msg:
                     return msg[:220]
             except Exception:
+                log_swallow("_http_error_message:12055")
                 pass
             return clean(body)[:220]
     except Exception:
+        log_swallow("_http_error_message:12058")
         pass
     return clean(str(e))[:220]
 
@@ -12053,6 +12388,7 @@ def _json_loads_ai_lenient(raw: str) -> Any:
             try:
                 return json.loads(variant)
             except Exception:
+                log_swallow("_json_loads_ai_lenient:12323")
                 pass
     return None
 
@@ -12192,6 +12528,7 @@ def classify_physics_competency_with_admin_gpt(
     try:
         confidence = max(0.0, min(1.0, float(obj.get("do_tin_cay", 0))))
     except Exception:
+        log_swallow("classify_physics_competency_with_admin_gpt:12462")
         confidence = 0.0
     recheck_raw = obj.get("can_kiem_tra_lai", False)
     recheck = recheck_raw if isinstance(recheck_raw, bool) else key_norm(recheck_raw) in {"true", "1", "co", "yes"}
@@ -12267,6 +12604,7 @@ Không dùng Markdown. Không bỏ sót phần tử. Mỗi câu chỉ chọn m�
         try:
             index = int(raw.get("index"))
         except Exception:
+            log_swallow("classify_physics_competency_bulk_with_admin_gpt:12537")
             continue
         if index in seen:
             continue
@@ -12280,6 +12618,7 @@ Không dùng Markdown. Không bỏ sót phần tử. Mỗi câu chỉ chọn m�
         try:
             confidence = max(0.0, min(1.0, float(raw.get("do_tin_cay", 0))))
         except Exception:
+            log_swallow("classify_physics_competency_bulk_with_admin_gpt:12550")
             confidence = 0.0
         recheck_raw = raw.get("can_kiem_tra_lai", False)
         recheck = recheck_raw if isinstance(recheck_raw, bool) else key_norm(recheck_raw) in {"true", "1", "co", "yes"}
@@ -12306,11 +12645,13 @@ def normalize_ai_generation_spec(raw: Dict[str, Any]) -> Dict[str, Any]:
     try:
         count = int(raw.get("count") or raw.get("batch_count") or 1)
     except Exception:
+        log_swallow("normalize_ai_generation_spec:12576")
         count = 1
     count = max(1, min(count, AI_GENERATE_BATCH_MAX))
     try:
         offset = max(0, int(raw.get("offset") or 0))
     except Exception:
+        log_swallow("normalize_ai_generation_spec:12581")
         offset = 0
 
     dang = norm_dang(raw.get("Dang", raw.get("dang", "")))
@@ -12700,6 +13041,7 @@ def _salvage_ai_question_dicts(raw: str) -> List[Dict[str, Any]]:
                                 parsed_obj = obj
                                 break
                         except Exception:
+                            log_swallow("_salvage_ai_question_dicts:12970")
                             pass
                     if parsed_obj:
                         norm = _normalize_ai_gen_raw(parsed_obj)
@@ -13542,6 +13884,7 @@ def ai_admin_fix_loigiai(
                     s, context, use_sheet_dapan=looks_like_dungsai_answer(dapan)
                 )
             except Exception:
+                log_swallow("ai_admin_fix_loigiai:13812")
                 pass
         return s
 
@@ -14388,6 +14731,7 @@ def render_share_page(de: str, args: Any):
             og_title, og_desc = share_og_context(store, de)
             item = catalog_find_by_made(store, de)
         except Exception:
+            log_swallow("render_share_page:14658")
             pass
     target_url = build_exam_entry_url(de, args)
     return render_template_string(
@@ -26108,6 +26452,7 @@ def _build_latex_asset_context(commit: bool, assets_zip=None) -> Dict[str, Any]:
                 try:
                     os.unlink(zip_path)
                 except Exception:
+                    log_swallow("_build_latex_asset_context:26378")
                     pass
         except Exception as e:
             ctx["warnings"].append({"index": "ZIP", "warning": "Không giải nén được ZIP ảnh: " + str(e)})
@@ -26228,6 +26573,7 @@ def _tikz_cache_png_url(tikz_code: str) -> str:
             key = _tikz_cache_key(tikz_code)
             return "/static/latex_assets/" + TIKZ_CACHE_SUBDIR + "/" + key + ".png"
     except Exception:
+        log_swallow("_tikz_cache_png_url:26498")
         pass
     return ""
 
@@ -26242,6 +26588,7 @@ def _tikz_promote_to_cache(tikz_code: str, png_path: str) -> str:
         shutil.copy2(png_path, dest)
         return _tikz_cache_png_url(tikz_code)
     except Exception:
+        log_swallow("_tikz_promote_to_cache:26512")
         return ""
 
 
@@ -26255,6 +26602,7 @@ def _decode_tikzraw_src(src: str) -> str:
         try:
             return base64.urlsafe_b64decode(enc + pad).decode("utf-8", errors="replace")
         except Exception:
+            log_swallow("_decode_tikzraw_src:26525")
             return ""
     block = _extract_tikz_block(s)
     return block or s
@@ -26282,6 +26630,7 @@ def _compile_tikz_pdf_via_cloud(tex_doc: str) -> Tuple[bytes, str]:
             log = err.get("logs") or err.get("message") or str(err)
             return b"", str(log)[:320]
         except Exception:
+            log_swallow("_compile_tikz_pdf_via_cloud:26552")
             return b"", "Dịch vụ LaTeX trả lỗi không xác định."
     except Exception as e:
         return b"", f"Không gọi được dịch vụ biên dịch LaTeX: {str(e)[:200]}"
@@ -26375,7 +26724,9 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
             f.write(tex_doc)
         try:
             subprocess.run(
-                [pdflatex, "-interaction=nonstopmode", "-halt-on-error", tex_path],
+                # [A4] -no-shell-escape: chặn \write18 — mã TikZ dán vào không
+                # chạy được lệnh hệ thống của máy chủ.
+                [pdflatex, "-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", tex_path],
                 cwd=workdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -27001,6 +27352,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             try:
                 qid = _latex_meta_id(raw_block, idx)
             except Exception:
+                log_swallow("parse_latex_questions_2026:27273")
                 qid = ""
             reason = str(e)
             skipped.append({"index": idx, "id": qid, "reason": reason})
@@ -27061,6 +27413,7 @@ def _apply_latex_level_overrides(questions: List[Dict[str, Any]], overrides: Any
         try:
             overrides = json.loads(overrides or "[]")
         except Exception:
+            log_swallow("_apply_latex_level_overrides:27333")
             overrides = []
     if not isinstance(overrides, list):
         return 0
@@ -27071,6 +27424,7 @@ def _apply_latex_level_overrides(questions: List[Dict[str, Any]], overrides: Any
         try:
             idx = int(it.get("index") or it.get("idx") or 0)
         except Exception:
+            log_swallow("_apply_latex_level_overrides:27343")
             idx = 0
         lv = _norm_mucdo_4(it.get("MucDo") or it.get("mucdo") or it.get("level"))
         if idx > 0 and lv:
@@ -27203,6 +27557,7 @@ MucDo chỉ được là NB, TH, VD, VDC. reason tối đa 18 từ.
             try:
                 idx = int(it.get("index") or 0)
             except Exception:
+                log_swallow("admin_gpt_classify_latex_levels:27475")
                 idx = 0
             lv = _norm_mucdo_4(it.get("MucDo") or it.get("level"))
             if idx and lv:
@@ -27224,6 +27579,7 @@ MucDo chỉ được là NB, TH, VD, VDC. reason tối đa 18 từ.
             try:
                 conf = f"{float(conf):.2f}"
             except Exception:
+                log_swallow("admin_gpt_classify_latex_levels:27496")
                 conf = clean(conf)
             q["_AiConfidence"] = clean(conf)
             q["_AiReason"] = clean(it.get("reason") or it.get("ly_do") or "")[:180]
@@ -27388,6 +27744,7 @@ def admin_gpt_classify_dangbaitap_bulk(
     try:
         meta_sug = ((store.meta() or {}).get("filters") or {}).get("DangBaiTap") or []
     except Exception:
+        log_swallow("admin_gpt_classify_dangbaitap_bulk:27660")
         meta_sug = []
 
     if not openai_keys and not gemini_keys and not anthropic_keys:
@@ -27475,6 +27832,7 @@ reason tối đa 20 từ.
             try:
                 idx = int(it.get("index") or 0)
             except Exception:
+                log_swallow("admin_gpt_classify_dangbaitap_bulk:27747")
                 idx = 0
             if idx:
                 sug_by_idx[idx] = list(it.get("dbt_existing") or [])
@@ -27520,6 +27878,7 @@ reason tối đa 20 từ.
             try:
                 idx = int(it.get("index") or 0)
             except Exception:
+                log_swallow("admin_gpt_classify_dangbaitap_bulk:27792")
                 idx = 0
             ai_raw = clean(it.get("DangBaiTap") or it.get("dangbaitap") or "")
             if idx and ai_raw and not _is_bad_dangbaitap_value(ai_raw):
@@ -27693,6 +28052,7 @@ def _json_runtime_question_files() -> List[str]:
                 if name.lower().endswith(".json"):
                     files.append(os.path.join(d, name))
         except Exception:
+            log_swallow("_json_runtime_question_files:27965")
             continue
     return files
 
@@ -27766,6 +28126,7 @@ def _json_sheet_headers_from_store(st: Any = None) -> List[str]:
         if not raw_headers and getattr(st, "ws_questions", None):
             raw_headers = list(gsheet_call_retry("row_values Cau_Hoi header json", st.ws_questions.row_values, 1) or [])
     except Exception:
+        log_swallow("_json_sheet_headers_from_store:28038")
         raw_headers = []
     out: List[str] = []
     seen: set = set()
@@ -27839,6 +28200,7 @@ def _json_loads_lenient(raw: Any) -> Dict[str, Any]:
     try:
         candidates.append(_strip_ai_json_fence(txt))
     except Exception:
+        log_swallow("_json_loads_lenient:28111")
         pass
     # Nếu người dùng lỡ dán thêm chữ ngoài JSON, lấy khối {...} lớn nhất.
     a, b = txt.find("{"), txt.rfind("}")
@@ -27848,6 +28210,7 @@ def _json_loads_lenient(raw: Any) -> Dict[str, Any]:
     try:
         candidates.extend([_repair_latex_json_escapes(c) for c in list(candidates)])
     except Exception:
+        log_swallow("_json_loads_lenient:28120")
         pass
     last = None
     seen = set()
@@ -27875,6 +28238,7 @@ def _json_request_payload() -> Tuple[Dict[str, Any], Dict[str, Any]]:
         try:
             defaults = _json_loads_lenient(request.form.get("defaults", "{}") or "{}")
         except Exception:
+            log_swallow("_json_request_payload:28147")
             defaults = {}
         f = request.files.get("json_file") or request.files.get("file")
         raw_text = request.form.get("json_text", "") or request.form.get("raw", "")
@@ -27970,6 +28334,7 @@ def _json_parse_latex_question(src: Any, defaults: Dict[str, Any]) -> Dict[str, 
         if qs:
             return dict(qs[0])
     except Exception:
+        log_swallow("_json_parse_latex_question:28242")
         pass
     return {}
 
@@ -28026,6 +28391,7 @@ def _json_question_to_internal(raw: Any, exam_meta: Dict[str, str], defaults: Di
                 lg = _latex_clean_body(cmd[2])
                 plain = (plain[:cmd[0]] + "\n" + plain[cmd[1]:]).strip()
         except Exception:
+            log_swallow("_json_question_to_internal:28298")
             pass
         plain = re.sub(r"\\begin\s*\{\s*(ex|bt)\s*\}", "", plain, flags=re.I)
         plain = re.sub(r"\\end\s*\{\s*(ex|bt)\s*\}", "", plain, flags=re.I)
@@ -28060,6 +28426,7 @@ def _json_question_to_internal(raw: Any, exam_meta: Dict[str, str], defaults: Di
     try:
         data = canonical_question(data)
     except Exception:
+        log_swallow("_json_question_to_internal:28332")
         data = {f: clean(data.get(f, "")) for f in QUESTION_FIELDS}
         data["Dang"] = effective_dang(data)
     return data, warnings
@@ -28340,6 +28707,7 @@ def _latex_export_filter_questions(st: "SheetStore", body: Dict[str, Any]) -> Li
     try:
         limit = int(body.get("limit") or 0)
     except Exception:
+        log_swallow("_latex_export_filter_questions:28612")
         limit = 0
     if limit > 0:
         out = out[: min(limit, 5000)]
@@ -28423,6 +28791,7 @@ def _json_filter_store_questions(st: "SheetStore", body: Dict[str, Any]) -> List
     try:
         limit = int(body.get("limit") or request.args.get("limit") or 0)
     except Exception:
+        log_swallow("_json_filter_store_questions:28695")
         limit = 0
     qs = list(st.questions or [])
     def ok(q: Dict[str, Any]) -> bool:
@@ -28681,6 +29050,7 @@ def api_json_import():
             body0 = request.get_json(silent=True) or {}
             commit = str(body0.get("commit", "false")).lower() in ("1", "true", "yes", "on")
     except Exception:
+        log_swallow("api_json_import:28953")
         commit = False
     try:
         pkg, defaults = _json_request_payload()
@@ -28978,9 +29348,15 @@ def login():
             elif not _password_match(clean(user.get("password", "")), password):
                 error = "Sai mật khẩu."
             else:
+                # [A2] Nâng cấp mật khẩu thường -> băm (chỉ khi PASSWORD_HASHING=1).
+                try:
+                    store.upgrade_password_hash(mahs, password)
+                except Exception as e:
+                    log_exc("login upgrade_password_hash", e)
                 token = stable_hash(f"{mahs}|{time.time()}|{random.random()}", 24)
                 store.active_tokens[mahs] = token
                 session.clear()
+                session.permanent = True
                 session.update({
                     "mahs": user.get("mahs"), "hoten": user.get("hoten"), "lop": user.get("lop"),
                     "role": user.get("role"), "session_token": token,
@@ -29008,6 +29384,7 @@ def login():
                 og_title, og_desc = share_og_context(store, de)
                 og_url = request.url_root.rstrip("/") + next_url
             except Exception:
+                log_swallow("login:29286")
                 pass
     return render_template_string(
         LOGIN_HTML,
@@ -29169,6 +29546,7 @@ def _learning_question_from_body(body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         out["_row"] = int(q.get("_row") or (body.get("row") if isinstance(body, dict) else 0) or 0)
     except Exception:
+        log_swallow("_learning_question_from_body:29447")
         out["_row"] = 0
     out["Dang"] = effective_dang(out)
     return out
@@ -29368,6 +29746,7 @@ def load_dbt_orders() -> Dict[str, List[str]]:
                     if names:
                         merged[clean(k)] = names
     except Exception:
+        log_swallow("load_dbt_orders:29646")
         pass
     try:
         st = get_store()
@@ -29376,6 +29755,7 @@ def load_dbt_orders() -> Dict[str, List[str]]:
             if sheet_orders:
                 merged.update(sheet_orders)
     except Exception:
+        log_swallow("load_dbt_orders:29654")
         pass
     return merged
 
@@ -29399,6 +29779,7 @@ def _normalize_pdf_link_item(raw: Any) -> Optional[Dict[str, Any]]:
     try:
         pid = int(raw.get("id") or 0)
     except Exception:
+        log_swallow("_normalize_pdf_link_item:29677")
         pid = 0
     if not pid:
         pid = int(time.time() * 1000)
@@ -29432,6 +29813,7 @@ def load_pdf_links() -> Dict[str, Any]:
                 out["updated_at"] = clean(obj.get("updated_at", ""))
                 return out
     except Exception:
+        log_swallow("load_pdf_links:29710")
         pass
     return default
 
@@ -29482,6 +29864,7 @@ def save_dbt_order_one(made: str, names: List[str], orders: Optional[Dict[str, L
         if st.catalog:
             st.apply_dbt_orders_to_catalog(orders)
     except Exception:
+        log_swallow("save_dbt_order_one:29760")
         pass
     return orders
 
@@ -29886,6 +30269,7 @@ def api_ai_detect_dangbaitap_update():
     try:
         meta_sug = ((st.meta() or {}).get("filters") or {}).get("DangBaiTap") or []
     except Exception:
+        log_swallow("api_ai_detect_dangbaitap_update:30164")
         meta_sug = []
     suggestions = _merge_dangbaitap_suggestions(scoped_sug, client_sug, meta_sug, limit=50)
     save_sheet = body.get("save", True)
@@ -30144,6 +30528,7 @@ def api_sync():
         qs_cache = getattr(st, "questions", None) or []
         dang_report = _dang_stats_report(qs_cache)
     except Exception:
+        log_swallow("api_sync:30422")
         dang_report = {"counts": {}, "warnings": [], "unknown_count": 0, "total": 0}
 
     st.questions_loaded = False
@@ -30367,6 +30752,7 @@ def api_hint():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_hint:30645")
         idx = 0
     answer = data.get("answer", "")
     admin_review_mode = norm_admin_review_mode(data.get("admin_review_mode", "full"))
@@ -30409,6 +30795,7 @@ def api_hint_similar():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_hint_similar:30687")
         idx = 0
     st = get_store()
     restore = quiz_restore_payload_from_body(data)
@@ -30486,6 +30873,7 @@ def _ai_gemini_resolve_question(data: Dict[str, Any]) -> Tuple[Dict[str, Any], i
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("_ai_gemini_resolve_question:30764")
         idx = 0
     if sid:
         restore = quiz_restore_payload_from_body(data)
@@ -30610,6 +30998,7 @@ def _ai_gemini_similar_handler():
     try:
         n = int(data.get("n", data.get("count", 5)) or 5)
     except Exception:
+        log_swallow("_ai_gemini_similar_handler:30888")
         n = 5
     keys = load_ai_keys("GEMINI")
     if not keys:
@@ -31067,6 +31456,7 @@ def api_translate_en():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_translate_en:31345")
         idx = 0
     loai = clean(data.get("type") or data.get("loai") or "CauHoi") or "CauHoi"
     text = _strip_html_for_ai_text(data.get("text", ""))
@@ -31079,6 +31469,7 @@ def api_translate_en():
             if 0 <= idx < len(qs):
                 q = qs[idx]
     except Exception:
+        log_swallow("api_translate_en:31357")
         q = {}
     if loai in ("DapAn", "LoiGiai") and not _translate_sensitive_allowed(data.get("answer")):
         return jsonify({"error": "Hãy làm và chấm câu này trước khi dịch đáp án / lời giải."}), 403
@@ -31133,6 +31524,7 @@ def api_ai_repair_question():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_ai_repair_question:31411")
         idx = 0
     target_dang = clean(data.get("target_dang", ""))
     mode = clean(data.get("mode", "repair")) or "repair"
@@ -31175,6 +31567,7 @@ def api_infographic_prompt():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_infographic_prompt:31453")
         idx = 0
     answer = data.get("answer", "")
     st = get_store()
@@ -31197,6 +31590,7 @@ def api_infographic_generate():
     try:
         idx = int(data.get("index", 0))
     except Exception:
+        log_swallow("api_infographic_generate:31475")
         idx = 0
     answer = data.get("answer", "")
     st = get_store()
@@ -31805,6 +32199,7 @@ def api_admin_claude_fix_latex():
                 err_body = json.loads(e.read().decode("utf-8"))
                 err = err_body.get("error", {}).get("message", err)
         except Exception:
+            log_swallow("api_admin_claude_fix_latex:32083")
             pass
         return jsonify({"error": f"Claude API lỗi: {err}"}), 500
 
@@ -32128,6 +32523,7 @@ def api_ai_detect_level_bulk():
         try:
             idx = int(raw.get("index", i))
         except Exception:
+            log_swallow("api_ai_detect_level_bulk:32406")
             idx = i
         meta_rows.append({"index": idx, "row": clean(raw.get("row") or raw.get("_row") or ""), "ID": clean(raw.get("ID", ""))})
     if not qs:
@@ -32231,6 +32627,7 @@ def api_ai_detect_dangbaitap_bulk():
         try:
             idx = int(raw.get("index", i))
         except Exception:
+            log_swallow("api_ai_detect_dangbaitap_bulk:32509")
             idx = i
         meta_rows.append({"index": idx, "row": clean(raw.get("row") or raw.get("_row") or ""), "ID": clean(raw.get("ID", ""))})
     if not qs:
@@ -32263,6 +32660,7 @@ def api_ai_detect_dangbaitap_bulk():
                 try:
                     scoped, _ = _scoped_dangbaitap_suggestions(st, q, limit=DBT_MAX_TYPES_PER_LESSON)
                 except Exception:
+                    log_swallow("api_ai_detect_dangbaitap_bulk:32541")
                     scoped = []
             items.append({
                 "index": m.get("index"),
@@ -32344,6 +32742,7 @@ def api_admin_dbt_order():
                         if isinstance(fc, dict):
                             available = ordered_dbt_names(made, {k: int(v or 0) for k, v in fc.items()}, orders)
             except Exception:
+                log_swallow("api_admin_dbt_order:32622")
                 pass
         return jsonify({"ok": True, "made": made, "order": order, "available": available})
     body = request.get_json(silent=True) or {}
@@ -32396,6 +32795,7 @@ def api_admin_dang_similarity():
     try:
         threshold = float(body.get("threshold") or DANG_CONTENT_SIMILARITY_THRESHOLD)
     except Exception:
+        log_swallow("api_admin_dang_similarity:32674")
         threshold = DANG_CONTENT_SIMILARITY_THRESHOLD
     threshold = max(0.5, min(0.95, threshold))
     report = analyze_dang_content_similarity(
@@ -32625,6 +33025,7 @@ def api_ai_detect_level_update():
     try:
         row_number = int(body.get("row", 0) or 0)
     except Exception:
+        log_swallow("api_ai_detect_level_update:32903")
         row_number = 0
     if row_number < 2:
         return jsonify({"error": "Không xác định dòng Google Sheet của câu này."}), 400
@@ -32672,6 +33073,7 @@ def api_ai_detect_level_update():
                 saved_q = qq
                 break
         except Exception:
+            log_swallow("api_ai_detect_level_update:32950")
             pass
 
     return jsonify({
@@ -32729,6 +33131,7 @@ def api_ai_detect_physics_competency_update():
     try:
         row_number = int(body.get("row", 0) or 0)
     except Exception:
+        log_swallow("api_ai_detect_physics_competency_update:33007")
         row_number = 0
     if row_number < 2:
         return jsonify({"error": "Không xác định dòng Google Sheet của câu này."}), 400
@@ -32789,6 +33192,7 @@ def api_ai_detect_physics_competency_bulk():
         try:
             idx = int(raw.get("index", i))
         except Exception:
+            log_swallow("api_ai_detect_physics_competency_bulk:33067")
             idx = i
         q["_bulk_index"] = idx
         qs.append(q)
@@ -32810,6 +33214,7 @@ def api_ai_detect_physics_competency_bulk():
             try:
                 idx = int(item.get("index"))
             except Exception:
+                log_swallow("api_ai_detect_physics_competency_bulk:33088")
                 continue
             meta = meta_rows.get(idx, {})
             x = dict(item)
@@ -32920,12 +33325,14 @@ def api_latex_import():
         try:
             defaults = json.loads(request.form.get("defaults", "{}") or "{}")
         except Exception:
+            log_swallow("api_latex_import:33198")
             defaults = {}
         commit = str(request.form.get("commit", "false")).lower() in ("1", "true", "yes", "on")
         ai_level_explicit = request.form.get("ai_level", "")
         try:
             level_overrides = json.loads(request.form.get("level_overrides", "[]") or "[]")
         except Exception:
+            log_swallow("api_latex_import:33204")
             level_overrides = []
         asset_zip = request.files.get("assets_zip")
         ai_body = {
@@ -33127,6 +33534,7 @@ def api_drive_image(file_ref: str):
         out.headers["Cache-Control"] = "public, max-age=86400"
         return out
     except Exception:
+        log_swallow("api_drive_image:33405")
         return redirect(_drive_thumbnail_fallback_url(fid), code=302)
 
 
@@ -33179,13 +33587,18 @@ def api_admin_drive_images_setup():
 
 
 @app.route("/api/tikz/render", methods=["POST"])
+@login_json
 def api_tikz_render():
-    """Biên dịch TikZ (hoặc tikzraw:…) thành PNG để hiển thị đồ thị khi làm bài."""
+    """Biên dịch TikZ (hoặc tikzraw:…) thành PNG để hiển thị đồ thị khi làm bài.
+    [A3] Phải đăng nhập: mỗi lần gọi chạy pdflatex tới 45s, để mở tự do thì
+    người lạ có thể làm treo máy chủ chỉ bằng cách gửi liên tục."""
     body = request.get_json(silent=True) or {}
     src = clean(body.get("src", body.get("tikz", body.get("HinhAnh", ""))))
     tikz_code = _decode_tikzraw_src(src)
     if not tikz_code or "tikzpicture" not in tikz_code.lower():
         return jsonify({"ok": False, "error": "Không có mã TikZ hợp lệ."}), 400
+    if len(tikz_code) > TIKZ_RENDER_MAX_CHARS:
+        return jsonify({"ok": False, "error": "Mã TikZ quá dài."}), 413
     cached = _tikz_cache_png_url(tikz_code)
     if cached:
         return jsonify({"ok": True, "url": cached, "cached": True})
@@ -33278,6 +33691,7 @@ def api_question_dedupe():
     try:
         max_delete = int(body.get("max_delete") or 0)
     except Exception:
+        log_swallow("api_question_dedupe:33561")
         max_delete = 0
     try:
         st = get_store()
@@ -33300,6 +33714,7 @@ def api_admin_dedupe_hinhanh():
     try:
         max_sources = int(body.get("max_sources") or 400)
     except Exception:
+        log_swallow("api_admin_dedupe_hinhanh:33583")
         max_sources = 400
     try:
         st = get_store()
@@ -34366,6 +34781,7 @@ def _schedule_store_warmup() -> None:
         try:
             get_store().start_questions_background(force=False)
         except Exception:
+            log_swallow("_schedule_store_warmup:34649")
             pass
 
     threading.Thread(target=_run, daemon=True).start()
@@ -34453,6 +34869,7 @@ pre {{ white-space:pre-wrap; background:#f8fafc; border:1px solid var(--line); b
 """
 
 @app.route("/studio")
+@admin_page
 def studio_home():
     body = """
 <div class="card">
@@ -34486,6 +34903,7 @@ def studio_home():
 
 
 @app.route("/studio/latex-json")
+@admin_page
 def studio_latex_json():
     body = r"""
 <div class="card">
@@ -34589,6 +35007,7 @@ function saveLocal(){if(!lastJson)convertLatex(); localStorage.setItem("studio_l
 
 
 @app.route("/studio/json-editor")
+@admin_page
 def studio_json_editor():
     body = r"""
 <div class="card">
@@ -34640,6 +35059,7 @@ renderTable();
 
 
 @app.route("/studio/tikz-bank")
+@admin_page
 def studio_tikz_bank():
     body = r"""
 <div class="card">
@@ -34696,6 +35116,7 @@ render();
 
 
 @app.route("/studio/image-tools")
+@admin_page
 def studio_image_tools():
     body = r"""
 <div class="card">
