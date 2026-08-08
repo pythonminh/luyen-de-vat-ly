@@ -2163,6 +2163,20 @@ def now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+
+def format_duration_vn(sec: Any) -> str:
+    """Giây → mm:ss hoặc hh:mm:ss."""
+    try:
+        sec = max(0, int(float(sec or 0)))
+    except Exception:
+        sec = 0
+    h, rem = divmod(sec, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
 def parse_datetime_any(s: Any) -> Optional[datetime]:
     """Đọc ngày giờ từ Google Sheet: 30/05/2026 13:37, 2026-05-30, hoặc serial dạng text."""
     s = clean(s)
@@ -3324,6 +3338,179 @@ DBT_MAX_TYPES_PER_LESSON = 6
 DBT_ORDER_FILE = os.path.join(APP_DIR, "data", "dbt_order.json")
 PDF_LINKS_FILE = os.path.join(APP_DIR, "data", "pdf_links.json")
 
+DELETED_QIDS_FILE = os.path.join(APP_DIR, "data", "deleted_question_ids.json")
+_DELETED_QIDS_LOCK = threading.Lock()
+_DELETED_QIDS_CACHE: Optional[set] = None
+
+
+def _ensure_deleted_qids_dir() -> None:
+    try:
+        os.makedirs(os.path.dirname(DELETED_QIDS_FILE), exist_ok=True)
+    except Exception:
+        log_swallow("_ensure_deleted_qids_dir")
+
+
+def load_deleted_question_ids(force: bool = False) -> set:
+    """ID câu đã xóa — dùng chung giữa các worker để câu không 'hiện lại' từ RAM cũ."""
+    global _DELETED_QIDS_CACHE
+    with _DELETED_QIDS_LOCK:
+        if _DELETED_QIDS_CACHE is not None and not force:
+            return set(_DELETED_QIDS_CACHE)
+        ids: set = set()
+        try:
+            if os.path.isfile(DELETED_QIDS_FILE):
+                with open(DELETED_QIDS_FILE, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                if isinstance(raw, list):
+                    ids = {clean(x) for x in raw if clean(x)}
+                elif isinstance(raw, dict):
+                    ids = {clean(x) for x in (raw.get("ids") or []) if clean(x)}
+        except Exception:
+            log_swallow("load_deleted_question_ids")
+            ids = set()
+        _DELETED_QIDS_CACHE = set(ids)
+        return set(_DELETED_QIDS_CACHE)
+
+
+def save_deleted_question_ids(ids) -> None:
+    global _DELETED_QIDS_CACHE
+    cleaned = sorted({clean(x) for x in (ids or []) if clean(x)})
+    with _DELETED_QIDS_LOCK:
+        _ensure_deleted_qids_dir()
+        tmp = DELETED_QIDS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"ids": cleaned, "updated_at": now_str()}, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, DELETED_QIDS_FILE)
+        _DELETED_QIDS_CACHE = set(cleaned)
+
+
+def mark_question_ids_deleted(ids) -> None:
+    add = {clean(x) for x in (ids or []) if clean(x)}
+    if not add:
+        return
+    cur = load_deleted_question_ids(force=True)
+    cur |= add
+    # Giữ tối đa 5000 ID gần nhất.
+    if len(cur) > 5000:
+        cur = set(sorted(cur)[-5000:])
+    save_deleted_question_ids(cur)
+
+
+def reconcile_deleted_question_ids_with_loaded(loaded_ids) -> None:
+    """Sau khi nạp Sheet: bỏ tombstone của ID vẫn còn trên Sheet (xóa thất bại)."""
+    loaded = {clean(x) for x in (loaded_ids or []) if clean(x)}
+    cur = load_deleted_question_ids(force=True)
+    if not cur:
+        return
+    # Chỉ giữ ID không còn trên Sheet — các worker khác vẫn lọc được.
+    keep = {x for x in cur if x not in loaded}
+    if keep != cur:
+        save_deleted_question_ids(keep)
+
+
+EXAM_ASSIGN_FILE = os.path.join(APP_DIR, "data", "exam_assignments.json")
+_EXAM_ASSIGN_LOCK = threading.Lock()
+_EXAM_ASSIGN_CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def _ensure_exam_assign_dir() -> None:
+    try:
+        os.makedirs(os.path.dirname(EXAM_ASSIGN_FILE), exist_ok=True)
+    except Exception:
+        log_swallow("_ensure_exam_assign_dir")
+
+
+def load_exam_assignments(force: bool = False) -> Dict[str, Dict[str, Any]]:
+    global _EXAM_ASSIGN_CACHE
+    with _EXAM_ASSIGN_LOCK:
+        if _EXAM_ASSIGN_CACHE and not force:
+            return _EXAM_ASSIGN_CACHE
+        data: Dict[str, Dict[str, Any]] = {}
+        try:
+            if os.path.isfile(EXAM_ASSIGN_FILE):
+                with open(EXAM_ASSIGN_FILE, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                if isinstance(raw, dict):
+                    data = {clean(k).upper(): dict(v) for k, v in raw.items() if clean(k) and isinstance(v, dict)}
+        except Exception:
+            log_swallow("load_exam_assignments")
+            data = {}
+        _EXAM_ASSIGN_CACHE = data
+        return _EXAM_ASSIGN_CACHE
+
+
+def save_exam_assignments(data: Dict[str, Dict[str, Any]]) -> None:
+    global _EXAM_ASSIGN_CACHE
+    with _EXAM_ASSIGN_LOCK:
+        _ensure_exam_assign_dir()
+        tmp = EXAM_ASSIGN_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, EXAM_ASSIGN_FILE)
+        _EXAM_ASSIGN_CACHE = dict(data)
+
+
+def get_exam_assignment(code: str) -> Optional[Dict[str, Any]]:
+    c = clean(code).upper()
+    if not c:
+        return None
+    return load_exam_assignments().get(c)
+
+
+def create_exam_assignment(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """ADMIN tạo bài kiểm tra để gửi link cho học sinh."""
+    if not is_admin():
+        raise RuntimeError("Chỉ ADMIN tạo link bài kiểm tra.")
+    made = clean(payload.get("made", ""))
+    if not made:
+        raise RuntimeError("Thiếu mã đề.")
+    num_questions = 0
+    try:
+        num_questions = int(payload.get("num_questions") or 0)
+    except Exception:
+        num_questions = 0
+    exam_all = str(payload.get("exam_all", "0")).lower() in ("1", "true", "yes")
+    ids_raw = payload.get("question_ids") or []
+    if isinstance(ids_raw, str):
+        ids_raw = [x.strip() for x in re.split(r"[\n,;]+", ids_raw) if x.strip()]
+    if not isinstance(ids_raw, list):
+        ids_raw = []
+    question_ids = [clean(x) for x in ids_raw if clean(x)]
+    exam_spec = payload.get("exam_spec") if isinstance(payload.get("exam_spec"), dict) else {}
+    if not question_ids and not exam_spec and not exam_all and num_questions <= 0:
+        raise RuntimeError("Chưa chọn số câu / theo dạng / tick câu cho bài kiểm tra.")
+    # Mã ngắn dễ gửi Zalo.
+    for _ in range(12):
+        code = ("K" + stable_hash(f"{made}|{time.time()}|{random.random()}", 8)).upper()
+        if not get_exam_assignment(code):
+            break
+    else:
+        raise RuntimeError("Không tạo được mã bài kiểm tra — thử lại.")
+    item = {
+        "code": code,
+        "made": made,
+        "exam_mode": True,
+        "num_questions": num_questions,
+        "exam_all": bool(exam_all),
+        "question_ids": question_ids,
+        "exam_spec": exam_spec,
+        "level": clean(payload.get("level", "")).upper(),
+        "dang": clean(payload.get("dang", "")),
+        "dangbaitap": clean(payload.get("dangbaitap", "")),
+        "shuffle_a": str(payload.get("shuffle_a", "1")).lower() not in ("0", "false", "no"),
+        "title": clean(payload.get("title", "")),
+        "created_by": clean(session.get("mahs", "")),
+        "created_at": now_str(),
+    }
+    data = load_exam_assignments(force=True)
+    data[code] = item
+    # Giữ tối đa 200 bài gần nhất.
+    if len(data) > 200:
+        ordered = sorted(data.items(), key=lambda kv: clean(kv[1].get("created_at", "")), reverse=True)[:200]
+        data = {k: v for k, v in ordered}
+    save_exam_assignments(data)
+    return item
+
 
 def header_map(headers: List[str]) -> Dict[str, int]:
     return {key_norm(h): i for i, h in enumerate(headers)}
@@ -3510,20 +3697,52 @@ def sheet_a1_range(title: str, col_0: int, row_start: int, row_end: int) -> str:
     return f"'{safe}'!${letter}${row_start}:${letter}${row_end}"
 
 
+def question_dup_text(text: Any, n: int = 2500) -> str:
+    """Chuẩn hóa nội dung để bắt trùng (bỏ LaTeX/$ / khoảng trắng / dấu) — không phụ thuộc ID."""
+    try:
+        s = _similarity_normalize_blob(clean(text))
+    except Exception:
+        s = key_norm(clean(text))
+    return (s or "")[: max(0, int(n))]
+
+
 def question_content_fingerprint(q: Dict[str, Any]) -> str:
-    """Dấu vết nội dung để phát hiện câu trùng trên Sheet."""
-    parts = [
-        clean(q.get("MaDe", "")),
-        key_norm(clean(q.get("CauHoi", ""))[:2500]),
-        key_norm(clean(q.get("DapAn", ""))[:300]),
-        key_norm(clean(q.get("A", ""))[:400]),
-        key_norm(clean(q.get("B", ""))[:400]),
-    ]
+    """Dấu vết nội dung để xóa trùng Sheet — bỏ MaDe/ID (câu paste lại chỉ khác ID vẫn bắt được).
+
+    Gom theo bài học (Mon|Lop|Chuong|BaiHoc) + nội dung đã chuẩn hóa.
+    Trắc nghiệm: sắp xếp A–D theo chữ (không phụ thuộc thứ tự phương án / xáo đáp án).
+    """
+    lesson = "|".join(key_norm(clean(q.get(x, ""))) for x in ("Mon", "Lop", "Chuong", "BaiHoc"))
+    dang = key_norm(norm_dang(q.get("Dang", "")) or clean(q.get("Dang", "")) or effective_dang(q))
+    cau = question_dup_text(q.get("CauHoi", ""), 2500)
+    if "trac nghiem" in dang or dang in ("tn", "mcq"):
+        opts = []
+        opt_map = {}
+        for L in ("A", "B", "C", "D"):
+            t = question_dup_text(q.get(L, ""), 400)
+            if t:
+                opts.append(t)
+                opt_map[L] = t
+        opts_key = "|".join(sorted(opts))
+        ans_L = norm_letter(q.get("DapAn", ""))
+        ans_txt = opt_map.get(ans_L) or question_dup_text(q.get("DapAn", ""), 300)
+        parts = [lesson, "tn", cau, ans_txt, opts_key]
+    else:
+        parts = [
+            lesson,
+            dang,
+            cau,
+            question_dup_text(q.get("DapAn", ""), 300),
+            question_dup_text(q.get("A", ""), 400),
+            question_dup_text(q.get("B", ""), 400),
+            question_dup_text(q.get("C", ""), 400),
+            question_dup_text(q.get("D", ""), 400),
+        ]
     return stable_hash("|".join(parts), 16)
 
 
 def analyze_question_duplicates(questions: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Thống kê dòng trùng ID hoặc trùng nội dung (MaDe + câu hỏi + đáp án)."""
+    """Thống kê dòng trùng ID hoặc trùng nội dung (cùng bài + cùng đề/đáp án/A–D; bỏ qua ID/MaDe)."""
     by_id: Dict[str, List[int]] = {}
     by_fp: Dict[str, List[int]] = {}
     for q in questions:
@@ -3902,8 +4121,27 @@ def ai_dang_similarity_advice(
 
 
 
+def _duplicate_keep_rank(q: Dict[str, Any]) -> Tuple[int, int, str]:
+    """Ưu tiên giữ bản đã duyệt / có lời giải / ID không AUTO — rồi dòng nhỏ."""
+    score = 0
+    try:
+        if question_is_reviewed_sheet(q):
+            score += 100
+    except Exception:
+        log_swallow("_duplicate_keep_rank:reviewed")
+    if clean(q.get("LoiGiai", "")):
+        score += 20
+    if clean(q.get("HinhAnh", "")):
+        score += 5
+    qid = clean(q.get("ID", ""))
+    if qid and not qid.upper().startswith("AUTO_"):
+        score += 3
+    row = int(q.get("_row") or 0)
+    return (-score, row, qid)
+
+
 def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Gom dòng trùng (cùng ID hoặc cùng nội dung). Giữ dòng có số nhỏ nhất trong mỗi nhóm."""
+    """Gom dòng trùng (cùng ID hoặc cùng nội dung bài+đề/A–D, bỏ qua khác ID/MaDe). Giữ bản tốt nhất."""
     rows_data: Dict[int, Dict[str, Any]] = {}
     for q in questions:
         row = int(q.get("_row") or 0)
@@ -3943,6 +4181,9 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
                 union(row, prev_id)
             else:
                 by_id[qid] = row
+        # Bỏ qua nhóm nội dung rỗng (thiếu câu hỏi) để không gộp nhầm hàng lỗi.
+        if not question_dup_text(q.get("CauHoi", ""), 80):
+            continue
         prev_fp = by_fp.get(fp)
         if prev_fp is not None:
             union(row, prev_fp)
@@ -3961,7 +4202,7 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
         if len(members) < 2:
             continue
         group_count += 1
-        members = sorted(members)
+        members = sorted(members, key=lambda r: _duplicate_keep_rank(rows_data.get(r, {})))
         keep = members[0]
         rows_to_keep.append(keep)
         rows_to_delete.extend(members[1:])
@@ -3971,7 +4212,7 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
         samples.append(
             f"Giữ dòng {keep}"
             + (f" (ID {qid})" if qid else "")
-            + f", xóa {', '.join(map(str, members[1:]))}"
+            + f", xóa {', '.join(map(str, sorted(members[1:])))}"
             + (f" — {tip}…" if tip else "")
         )
 
@@ -3997,6 +4238,34 @@ def dedupe_questions_by_row(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             if row in seen:
                 continue
             seen.add(row)
+        out.append(q)
+    return out
+
+
+def lesson_content_fingerprint(q: Dict[str, Any]) -> str:
+    """Vân tay nội dung trong cùng bài — dùng chung chuẩn xóa trùng (không phụ thuộc MaDe/ID)."""
+    return question_content_fingerprint(q)
+
+
+def dedupe_questions_by_content(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Trong một thẻ bài: giữ 1 câu / ID và 1 câu / cùng nội dung (dòng nhỏ nhất)."""
+    ordered = sorted(
+        list(qs or []),
+        key=lambda x: (int(x.get("_row") or 10**9), clean(x.get("ID", ""))),
+    )
+    seen_id: set = set()
+    seen_fp: set = set()
+    out: List[Dict[str, Any]] = []
+    for q in ordered:
+        qid = clean(q.get("ID", ""))
+        if qid:
+            if qid in seen_id:
+                continue
+            seen_id.add(qid)
+        fp = lesson_content_fingerprint(q)
+        if fp in seen_fp:
+            continue
+        seen_fp.add(fp)
         out.append(q)
     return out
 
@@ -4944,9 +5213,11 @@ class SheetStore:
     def ensure_questions_loaded(self, force: bool = False):
         """Nạp Cau_Hoi + catalog khi thật sự cần. Lần đầu có thể chậm, các lần sau dùng RAM."""
         if self.questions_loaded and self.questions and not force:
+            self.apply_deleted_question_tombstones()
             return
         with self.load_lock:
             if self.questions_loaded and self.questions and not force:
+                self.apply_deleted_question_tombstones()
                 return
             self.questions_error = ""
             with ThreadPoolExecutor(max_workers=1) as pool:
@@ -5220,6 +5491,8 @@ class SheetStore:
                 continue
             q["_row"] = idx
             self.questions.append(q)
+        reconcile_deleted_question_ids_with_loaded([q.get("ID", "") for q in self.questions])
+        self.apply_deleted_question_tombstones()
         self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_question_indexes()
 
@@ -5274,6 +5547,23 @@ class SheetStore:
         """
         self.rebuild_question_indexes()
         self.loaded_at = now_str()
+
+
+    def apply_deleted_question_tombstones(self) -> int:
+        """Bỏ câu đã xóa khỏi RAM (kể cả worker khác chưa kịp Đồng bộ Sheet)."""
+        deleted = load_deleted_question_ids()
+        if not deleted or not self.questions:
+            return 0
+        kept = [q for q in self.questions if clean(q.get("ID", "")) not in deleted]
+        removed = len(self.questions) - len(kept)
+        if removed <= 0:
+            return 0
+        self.questions = kept
+        for ses in list(self.quiz_sessions.values()):
+            ses["questions"] = [q for q in ses.get("questions", []) if clean(q.get("ID", "")) not in deleted]
+        self.rebuild_question_indexes()
+        self.duplicate_report = analyze_question_duplicates(self.questions)
+        return removed
 
     def patch_quiz_sessions_after_row_delete(self, deleted_row: int) -> None:
         """Sau khi xóa dòng trên Sheet, cập nhật _row trong các phiên làm bài đang mở."""
@@ -6365,8 +6655,10 @@ class SheetStore:
             hits.append(self._lookup_match_item(q))
         return {"keyword": keyword, "count": len(hits), "matches": hits[: max(0, limit)]}
 
-    def resolve_quiz_base(self, made: str) -> List[Dict[str, Any]]:
+    def resolve_quiz_base_raw(self, made: str) -> List[Dict[str, Any]]:
+        """Pool thô theo đề/thẻ bài — KHÔNG gộp trùng nội dung (dùng để xóa trùng Sheet)."""
         made = clean(made)
+        self.apply_deleted_question_tombstones()
         if made.startswith("GRP_"):
             qs = list(self.by_group.get(made, []))
             if qs:
@@ -6380,6 +6672,24 @@ class SheetStore:
                 if gk.startswith("GRP_"):
                     return dedupe_questions_by_row(list(self.by_group.get(gk, [])))
                 return dedupe_questions_by_row(list(self.by_made.get(gk, [])))
+        return []
+
+    def resolve_quiz_base(self, made: str) -> List[Dict[str, Any]]:
+        made = clean(made)
+        self.apply_deleted_question_tombstones()
+        if made.startswith("GRP_"):
+            qs = list(self.by_group.get(made, []))
+            if qs:
+                return dedupe_questions_by_content(dedupe_questions_by_row(qs))
+        qs = list(self.by_made.get(made, []))
+        if qs:
+            return dedupe_questions_by_content(dedupe_questions_by_row(qs))
+        for item in self.catalog:
+            if item.get("MaDe") == made or item.get("GroupKey") == made:
+                gk = clean(item.get("GroupKey") or item.get("MaDe"))
+                if gk.startswith("GRP_"):
+                    return dedupe_questions_by_content(dedupe_questions_by_row(list(self.by_group.get(gk, []))))
+                return dedupe_questions_by_content(dedupe_questions_by_row(list(self.by_made.get(gk, []))))
         return []
 
     def catalog_filter_count(self, made: str, level_filter: str = "", dang_filter: str = "") -> Optional[int]:
@@ -6426,16 +6736,222 @@ class SheetStore:
         dang_filter: str = "",
         dangbaitap_filter: str = "",
         group_by_dang: bool = True,
+        exam_mode: bool = False,
+        num_questions: int = 0,
+        include_pending: bool = False,
+        question_ids: Optional[List[str]] = None,
+        exam_spec: Optional[Dict[str, Any]] = None,
+        exam_all: bool = False,
+        exam_code: str = "",
     ) -> Dict[str, Any]:
+        exam_code = clean(exam_code).upper()
+        if exam_code:
+            asg = get_exam_assignment(exam_code)
+            if not asg:
+                raise RuntimeError("Không tìm thấy bài kiểm tra (mã hết hạn hoặc sai). Hãy hỏi lại thầy link mới.")
+            made = clean(asg.get("made", "")) or made
+            exam_mode = True
+            num_questions = int(asg.get("num_questions") or 0)
+            exam_all = bool(asg.get("exam_all"))
+            question_ids = list(asg.get("question_ids") or [])
+            exam_spec = dict(asg.get("exam_spec") or {})
+            level_filter = clean(asg.get("level", "")) or level_filter
+            dang_filter = clean(asg.get("dang", "")) or dang_filter
+            dangbaitap_filter = clean(asg.get("dangbaitap", "")) or dangbaitap_filter
+            shuffle_options = bool(asg.get("shuffle_a", True))
+            include_pending = False
+        pool_info = self._build_quiz_pool(
+            made,
+            level_filter=level_filter,
+            dang_filter=dang_filter,
+            dangbaitap_filter=dangbaitap_filter,
+            include_pending=include_pending,
+            exam_mode=exam_mode,
+        )
+        base_qs = pool_info["base_qs"]
+        qs_source = list(pool_info["qs_source"])
+        total_in_de = pool_info["total_in_de"]
+        review_skipped = pool_info["review_skipped"]
+        show_pending = pool_info["show_pending"]
+        level_filter = pool_info["level_filter"]
+        dang_filter = pool_info["dang_filter"]
+        dbt_filter = pool_info["dangbaitap_filter"]
+        access_level = quiz_access_level(qs_source)
+        if is_trial() and access_level != "FREE":
+            raise RuntimeError("Tài khoản dùng thử chỉ mở được đề FREE, không mở được đề VIP.")
+        try:
+            num_questions = int(num_questions or 0)
+        except Exception:
+            num_questions = 0
+        pick_ids = [clean(x) for x in (question_ids or []) if clean(x)]
+        spec_map = self._normalize_exam_spec(exam_spec)
+        if exam_mode:
+            if pick_ids:
+                by_id = {clean(q.get("ID", "")): q for q in qs_source if clean(q.get("ID", ""))}
+                picked: List[Dict[str, Any]] = []
+                missing: List[str] = []
+                for qid in pick_ids:
+                    if qid in by_id:
+                        picked.append(by_id[qid])
+                    else:
+                        missing.append(qid)
+                if not picked:
+                    raise RuntimeError("Không tìm thấy câu đã tick trong phạm vi đề (chỉ câu đã duyệt).")
+                if missing:
+                    raise RuntimeError(
+                        f"Có {len(missing)} câu tick không còn trong phạm vi đã duyệt: {', '.join(missing[:5])}"
+                        + ("…" if len(missing) > 5 else "")
+                    )
+                qs_source = picked
+                num_questions = len(qs_source)
+                shuffle_questions = True
+            elif spec_map:
+                qs_source = self._sample_exam_by_spec(qs_source, spec_map)
+                num_questions = len(qs_source)
+                shuffle_questions = True
+            elif exam_all:
+                num_questions = len(qs_source)
+                shuffle_questions = True
+            elif num_questions > 0:
+                if num_questions > len(qs_source):
+                    raise RuntimeError(
+                        f"Chỉ còn {len(qs_source)} câu đã duyệt trong phạm vi — không đủ để giao {num_questions} câu."
+                    )
+                qs_source = random.sample(list(qs_source), num_questions)
+                shuffle_questions = True
+            else:
+                raise RuntimeError(
+                    "Chế độ kiểm tra cần chọn: nút sẵn (10/20/28/Tất cả), tick từng câu, hoặc số câu theo dạng TN/ĐS/TLN."
+                )
+        elif num_questions > 0:
+            if num_questions > len(qs_source):
+                raise RuntimeError(
+                    f"Chỉ còn {len(qs_source)} câu trong phạm vi — không đủ để lấy {num_questions} câu."
+                )
+            qs_source = random.sample(list(qs_source), num_questions)
+        qs = prepare_quiz_questions(
+            qs_source,
+            shuffle_questions=shuffle_questions,
+            shuffle_options=shuffle_options,
+            group_by_dang=False if exam_mode else group_by_dang,
+        )
+        sid = stable_hash(f"{session.get('mahs')}|{made}|{time.time()}|{random.random()}", 18)
+        self.quiz_sessions[sid] = {
+            "made": made,
+            "mahs": session.get("mahs"),
+            "created": time.time(),
+            "questions": qs,
+            "used_5050": set(),
+            "access_level": access_level,
+            "level_filter": level_filter,
+            "dang_filter": dang_filter,
+            "dangbaitap_filter": clean(dbt_filter),
+            "shuffle_questions": shuffle_questions,
+            "shuffle_options": shuffle_options,
+            "group_by_dang": False if exam_mode else group_by_dang,
+            "random_practice": made.startswith("__RANDOM__"),
+            "exam_mode": bool(exam_mode),
+            "num_questions": num_questions or len(qs),
+            "exam_spec": spec_map,
+            "exam_pick_ids": pick_ids,
+        }
+        # Kiểm tra: không gửi Đáp án/Lời giải xuống máy học sinh (kể cả VIP).
+        reveal = False if exam_mode else (is_admin() or can_view_solution_live())
+        can_view_sol = False if exam_mode else can_view_solution_live()
+        return {
+            "sid": sid,
+            "admin": is_admin(),
+            "is_trial": is_trial(),
+            "can_view_solution_live": can_view_sol,
+            "exam_mode": bool(exam_mode),
+            "exam_code": exam_code,
+            "num_questions": num_questions or len(qs),
+            "exam_spec": spec_map,
+            "access_level": access_level,
+            "can_5050": False if exam_mode else can_use_5050(),
+            "can_submit_score": not is_trial(),
+            "shuffle_questions": shuffle_questions,
+            "shuffle_options": shuffle_options,
+            "group_by_dang": False if exam_mode else group_by_dang,
+            "random_practice": made.startswith("__RANDOM__"),
+            "level_filter": level_filter,
+            "dang_filter": dang_filter,
+            "dangbaitap_filter": clean(dbt_filter),
+            "question_count": len(qs),
+            "total_in_de": total_in_de,
+            "review_strict": strict_question_review(),
+            "review_skipped": review_skipped,
+            "review_approved_in_de": sum(1 for q in base_qs if question_is_reviewed(q)),
+            "include_pending": bool(show_pending),
+            "trial_message": "Tài khoản dùng thử: chỉ luyện đề FREE, không nộp/chấm điểm và không xem đáp án/lời giải." if is_trial() else "",
+            "questions": [self.public_question(q, i, reveal=reveal) for i, q in enumerate(qs)]
+        }
+
+    def _normalize_exam_spec(self, exam_spec: Optional[Dict[str, Any]]) -> Dict[str, int]:
+        """Chuẩn hóa {tn/ds/tln hoặc tên dạng} → {Trắc nghiệm: n, ...}."""
+        if not isinstance(exam_spec, dict):
+            return {}
+        alias = {
+            "tn": "Trắc nghiệm", "trac nghiem": "Trắc nghiệm", "trắc nghiệm": "Trắc nghiệm",
+            "ds": "Đúng sai", "dung sai": "Đúng sai", "đúng sai": "Đúng sai",
+            "tln": "Trả lời ngắn", "tra loi ngan": "Trả lời ngắn", "trả lời ngắn": "Trả lời ngắn",
+            "tl": "Tự luận", "tu luan": "Tự luận", "tự luận": "Tự luận",
+        }
+        out: Dict[str, int] = {}
+        for k, v in exam_spec.items():
+            key = clean(k)
+            if not key:
+                continue
+            dang = alias.get(key_norm(key), norm_dang(key) if key else "")
+            if dang not in DANG_GROUP_ORDER:
+                continue
+            try:
+                n = int(v or 0)
+            except Exception:
+                n = 0
+            if n > 0:
+                out[dang] = out.get(dang, 0) + n
+        return out
+
+    def _sample_exam_by_spec(self, qs_source: List[Dict[str, Any]], spec_map: Dict[str, int]) -> List[Dict[str, Any]]:
+        by_dang: Dict[str, List[Dict[str, Any]]] = {}
+        for q in qs_source:
+            by_dang.setdefault(question_dang(q), []).append(q)
+        picked: List[Dict[str, Any]] = []
+        shortages: List[str] = []
+        for dang, need in spec_map.items():
+            avail = list(by_dang.get(dang, []))
+            if len(avail) < need:
+                shortages.append(f"{dang}: cần {need}, có {len(avail)}")
+            else:
+                picked.extend(random.sample(avail, need))
+        if shortages:
+            raise RuntimeError("Không đủ câu theo dạng đã chọn.\n" + "\n".join(shortages))
+        if not picked:
+            raise RuntimeError("Chưa nhập số câu theo dạng (TN / Đúng sai / TLN).")
+        random.shuffle(picked)
+        return picked
+
+    def _build_quiz_pool(
+        self,
+        made: str,
+        level_filter: str = "",
+        dang_filter: str = "",
+        dangbaitap_filter: str = "",
+        include_pending: bool = False,
+        exam_mode: bool = False,
+    ) -> Dict[str, Any]:
+        """Lọc pool câu theo đề + mức/dạng/duyệt — dùng chung start_quiz và exam-pool."""
         base_qs = self.resolve_quiz_base(made)
         if not base_qs:
             raise RuntimeError("Không có câu hỏi trong đề này. Có thể mã đề bị lệch, hãy bấm Đồng bộ dữ liệu.")
         total_in_de = len(base_qs)
         level_filter = clean(level_filter).upper()
-        qs_source = base_qs
+        qs_source = list(base_qs)
         review_skipped = 0
-        if not is_admin():
-            visible = filter_questions_for_students(qs_source)
+        show_pending = bool(is_admin() and include_pending and not exam_mode)
+        if not show_pending:
+            visible = [q for q in qs_source if question_is_reviewed(q)]
             review_skipped = len(qs_source) - len(visible)
             qs_source = visible
             if not qs_source:
@@ -6447,7 +6963,7 @@ class SheetStore:
         if level_filter:
             def has_level(q: Dict[str, Any]) -> bool:
                 return level_filter in question_mucdo_parts(q) or level_filter in clean(q.get("MucDo", "")).upper()
-            qs_source = [q for q in base_qs if has_level(q)]
+            qs_source = [q for q in qs_source if has_level(q)]
             if not qs_source:
                 raise RuntimeError(f"Đề này không có câu mức độ {level_filter}. Thầy chọn mức khác hoặc để Tất cả.")
         dang_filter = norm_dang(dang_filter) if clean(dang_filter) else ""
@@ -6472,7 +6988,6 @@ class SheetStore:
                 )
         dbt_filter = clean(dangbaitap_filter)
         if dbt_filter:
-            after_prev = qs_source
             qs_source = [q for q in qs_source if dangbaitap_matches(q, dbt_filter)]
             if not qs_source:
                 n_dbt_all = sum(1 for q in base_qs if dangbaitap_matches(q, dbt_filter))
@@ -6483,54 +6998,55 @@ class SheetStore:
                     f"Không có câu dạng bài tập {dbt_lbl} trong phạm vi đã chọn "
                     f"(chuyên đề có {n_dbt_all} câu dạng này).{hint}"
                 )
-        access_level = quiz_access_level(qs_source)
-        if is_trial() and access_level != "FREE":
-            raise RuntimeError("Tài khoản dùng thử chỉ mở được đề FREE, không mở được đề VIP.")
-        qs = prepare_quiz_questions(
-            qs_source,
-            shuffle_questions=shuffle_questions,
-            shuffle_options=shuffle_options,
-            group_by_dang=group_by_dang,
-        )
-        sid = stable_hash(f"{session.get('mahs')}|{made}|{time.time()}|{random.random()}", 18)
-        self.quiz_sessions[sid] = {
-            "made": made,
-            "mahs": session.get("mahs"),
-            "created": time.time(),
-            "questions": qs,
-            "used_5050": set(),
-            "access_level": access_level,
-            "level_filter": level_filter,
-            "dang_filter": dang_filter,
-            "dangbaitap_filter": clean(dbt_filter),
-            "shuffle_questions": shuffle_questions,
-            "shuffle_options": shuffle_options,
-            "group_by_dang": group_by_dang,
-            "random_practice": made.startswith("__RANDOM__"),
-        }
-        reveal = is_admin() or can_view_solution_live()
+        counts: Dict[str, int] = {d: 0 for d in DANG_GROUP_ORDER}
+        for q in qs_source:
+            d = question_dang(q)
+            if d in counts:
+                counts[d] += 1
         return {
-            "sid": sid,
-            "admin": is_admin(),
-            "is_trial": is_trial(),
-            "can_view_solution_live": can_view_solution_live(),
-            "access_level": access_level,
-            "can_5050": can_use_5050(),
-            "can_submit_score": not is_trial(),
-            "shuffle_questions": shuffle_questions,
-            "shuffle_options": shuffle_options,
-            "group_by_dang": group_by_dang,
-            "random_practice": made.startswith("__RANDOM__"),
+            "base_qs": base_qs,
+            "qs_source": qs_source,
+            "total_in_de": total_in_de,
+            "review_skipped": review_skipped,
+            "show_pending": show_pending,
             "level_filter": level_filter,
             "dang_filter": dang_filter,
-            "dangbaitap_filter": clean(dbt_filter),
-            "question_count": len(qs),
-            "total_in_de": total_in_de,
-            "review_strict": strict_question_review(),
-            "review_skipped": review_skipped if not is_admin() else 0,
-            "review_approved_in_de": sum(1 for q in base_qs if question_is_reviewed(q)),
-            "trial_message": "Tài khoản dùng thử: chỉ luyện đề FREE, không nộp/chấm điểm và không xem đáp án/lời giải." if is_trial() else "",
-            "questions": [self.public_question(q, i, reveal=reveal) for i, q in enumerate(qs)]
+            "dangbaitap_filter": dbt_filter,
+            "counts": counts,
+        }
+
+    def list_exam_pool(
+        self,
+        made: str,
+        level_filter: str = "",
+        dang_filter: str = "",
+        dangbaitap_filter: str = "",
+    ) -> Dict[str, Any]:
+        """Danh sách câu đã duyệt để ADMIN/VIP tick chọn khi giao bài kiểm tra."""
+        info = self._build_quiz_pool(
+            made,
+            level_filter=level_filter,
+            dang_filter=dang_filter,
+            dangbaitap_filter=dangbaitap_filter,
+            include_pending=False,
+            exam_mode=True,
+        )
+        items = []
+        for q in info["qs_source"]:
+            stem = short_plain_text(q.get("CauHoi", ""), 110)
+            items.append({
+                "ID": clean(q.get("ID", "")),
+                "Dang": question_dang(q),
+                "MucDo": clean(q.get("MucDo", "")),
+                "DangBaiTap": clean(q.get("DangBaiTap", "")),
+                "stem": stem,
+            })
+        return {
+            "ok": True,
+            "made": made,
+            "total": len(items),
+            "counts": info["counts"],
+            "items": items,
         }
 
     def start_random_practice(
@@ -6568,6 +7084,9 @@ class SheetStore:
                 sol_full_only=sol_full_only,
             )
         ]
+        # Học sinh/VIP chỉ lấy câu ĐÃ DUYỆT — trước đây start_random bỏ qua lọc duyệt.
+        if not is_admin():
+            pool = [q for q in pool if question_is_reviewed(q)]
         if not pool:
             ch_hint = f" ({len(ch_list)} chương đã chọn)" if ch_list else " (tất cả chương)"
             raise RuntimeError(
@@ -6909,20 +7428,24 @@ class SheetStore:
             raise RuntimeError("Số câu không hợp lệ")
         q = qs[index]
         ok, correct, chosen = check_answer(q, answer)
+        exam_mode = bool(ses.get("exam_mode"))
         out = {
             "index": index,
             "ID": q.get("ID"),
             "Dang": q.get("Dang"),
             "ok": ok,
-            "correct": correct,
             "chosen": chosen,
+            "exam_mode": exam_mode,
         }
-        if effective_dang(q) == "Đúng sai":
-            out["rows"] = dungsai_rows_detail(q, answer)
-            out["correct_display"] = format_tf_answer_display(q)
-        if can_view_solution_live():
-            out["LoiGiai"] = clean(q.get("LoiGiai", ""))
-            out["DapAn"] = clean(q.get("DapAn", ""))
+        # Kiểm tra: chỉ báo đúng/sai, không lộ chữ đáp án / từng ý Đ-S.
+        if not exam_mode:
+            out["correct"] = correct
+            if effective_dang(q) == "Đúng sai":
+                out["rows"] = dungsai_rows_detail(q, answer)
+                out["correct_display"] = format_tf_answer_display(q)
+            if can_view_solution_live():
+                out["LoiGiai"] = clean(q.get("LoiGiai", ""))
+                out["DapAn"] = clean(q.get("DapAn", ""))
         return out
 
     def hint_one(
@@ -7412,7 +7935,11 @@ class SheetStore:
         }
 
     def submit(
-        self, sid: str, answers: Dict[str, Any], restore_payload: Optional[Dict[str, Any]] = None
+        self,
+        sid: str,
+        answers: Dict[str, Any],
+        restore_payload: Optional[Dict[str, Any]] = None,
+        elapsed_sec: int = 0,
     ) -> Dict[str, Any]:
         if is_trial():
             raise RuntimeError("Tài khoản dùng thử không được nộp/chấm điểm. Thầy chỉ cho luyện thử các đề FREE trong 3 ngày.")
@@ -7421,7 +7948,9 @@ class SheetStore:
         results = []
         correct_count = 0
         auto_count = 0
-        reveal = can_view_solution_after_submit() or is_admin()
+        exam_mode = bool(ses.get("exam_mode"))
+        # Sau nộp bài kiểm tra: luôn trả ĐA/LG để xem lại (VIP/ADMIN vẫn xem như cũ).
+        reveal = exam_mode or can_view_solution_after_submit() or is_admin()
         for i, q in enumerate(qs):
             ans = answers.get(str(i), "")
             ok, correct, chosen = check_answer(q, ans)
@@ -7437,19 +7966,76 @@ class SheetStore:
                 r.update({"DapAn": q.get("DapAn", ""), "LoiGiai": q.get("LoiGiai", "")})
             results.append(r)
         score = round(10 * correct_count / auto_count, 2) if auto_count else 0
-        self.save_result(ses.get("made"), qs, score, correct_count, auto_count, results, ses.get("level_filter", ""))
-        return {"score": score, "correct_count": correct_count, "auto_count": auto_count, "total": len(qs), "show_solution": reveal, "results": results}
+        try:
+            elapsed_sec = max(0, min(int(elapsed_sec or 0), 24 * 3600))
+        except Exception:
+            elapsed_sec = 0
+        made = ses.get("made")
+        self.save_result(
+            made,
+            qs,
+            score,
+            correct_count,
+            auto_count,
+            results,
+            ses.get("level_filter", ""),
+            elapsed_sec=elapsed_sec,
+            exam_mode=exam_mode,
+        )
+        time_stats = {}
+        try:
+            time_stats = self.compute_result_time_stats(made=made, mahs=session.get("mahs", ""))
+        except Exception:
+            log_swallow("submit:time_stats")
+            time_stats = {}
+        avg_per_correct = int(round(elapsed_sec / correct_count)) if correct_count > 0 and elapsed_sec > 0 else 0
+        return {
+            "score": score,
+            "correct_count": correct_count,
+            "auto_count": auto_count,
+            "total": len(qs),
+            "show_solution": reveal,
+            "exam_mode": exam_mode,
+            "results": results,
+            "elapsed_sec": elapsed_sec,
+            "elapsed_text": format_duration_vn(elapsed_sec),
+            "avg_sec_per_correct": avg_per_correct,
+            "avg_per_correct_text": format_duration_vn(avg_per_correct),
+            "time_stats": time_stats,
+        }
 
-    def save_result(self, made: str, qs: List[Dict[str, Any]], score: float, so_dung: int, tong: int, results: List[Dict[str, Any]], level_filter: str = ""):
+    def save_result(
+        self,
+        made: str,
+        qs: List[Dict[str, Any]],
+        score: float,
+        so_dung: int,
+        tong: int,
+        results: List[Dict[str, Any]],
+        level_filter: str = "",
+        elapsed_sec: int = 0,
+        exam_mode: bool = False,
+    ):
         try:
             u = current_user_public()
             ten_de = qs[0].get("De") or qs[0].get("BaiHoc") or made if qs else made
             so_sai = max(0, int(tong or 0) - int(so_dung or 0))
+            try:
+                elapsed_sec = max(0, min(int(elapsed_sec or 0), 24 * 3600))
+            except Exception:
+                elapsed_sec = 0
+            so_dung_i = int(so_dung or 0)
+            avg_per_correct = int(round(elapsed_sec / so_dung_i)) if so_dung_i > 0 and elapsed_sec > 0 else 0
             detail = {
                 "level_filter": clean(level_filter).upper(),
-                "so_dung": int(so_dung or 0),
+                "so_dung": so_dung_i,
                 "so_sai": so_sai,
                 "tong_cau_cham_tu_dong": int(tong or 0),
+                "thoi_gian_lam_giay": elapsed_sec,
+                "thoi_gian_lam": format_duration_vn(elapsed_sec),
+                "avg_sec_per_correct": avg_per_correct,
+                "avg_per_correct": format_duration_vn(avg_per_correct),
+                "exam_mode": bool(exam_mode),
                 "results": results,
             }
             self.ws_results.append_row([
@@ -7459,6 +8045,140 @@ class SheetStore:
         except Exception:
             log_swallow("save_result:7419")
             pass
+
+    def compute_result_time_stats(self, made: str = "", mahs: str = "", limit_rows: int = 1200) -> Dict[str, Any]:
+        """Trung bình thời gian làm bài từ sheet Ket_Qua (ChiTiet.thoi_gian_lam_giay)."""
+        made = clean(made)
+        mahs = clean(mahs)
+        out: Dict[str, Any] = {
+            "count": 0,
+            "avg_sec": 0,
+            "avg_text": "—",
+            "min_sec": 0,
+            "max_sec": 0,
+            "min_text": "—",
+            "max_text": "—",
+            "avg_sec_per_correct": 0,
+            "avg_per_correct_text": "—",
+            "correct_sample_count": 0,
+            "made": made,
+            "mahs": mahs,
+            "by_made": {},
+            "samples": [],
+        }
+        try:
+            self.connect()
+            if not self.ws_results:
+                self.ws_results = self.ensure_ws("Ket_Qua", [
+                    "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
+                ])
+            values = self.ws_results.get_all_values()
+        except Exception:
+            log_swallow("compute_result_time_stats:read")
+            return out
+        if not values or len(values) < 2:
+            return out
+        headers = [clean(h) for h in values[0]]
+        def col(*names):
+            for n in names:
+                for i, h in enumerate(headers):
+                    if key_norm(h) == key_norm(n):
+                        return i
+            return -1
+        i_mahs = col("MaHS")
+        i_hoten = col("HoTen")
+        i_made = col("MaDe")
+        i_tende = col("TenDe")
+        i_chi = col("ChiTiet")
+        i_tg = col("ThoiGian")
+        secs: List[int] = []
+        per_correct_secs: List[int] = []
+        by_made: Dict[str, List[int]] = {}
+        by_made_correct: Dict[str, List[int]] = {}
+        samples: List[Dict[str, Any]] = []
+        rows = values[1:]
+        if limit_rows > 0 and len(rows) > limit_rows:
+            rows = rows[-limit_rows:]
+        for row in rows:
+            def cell(idx):
+                if idx < 0 or idx >= len(row):
+                    return ""
+                return row[idx]
+            row_mahs = clean(cell(i_mahs))
+            row_made = clean(cell(i_made))
+            if mahs and key_norm(row_mahs) != key_norm(mahs):
+                continue
+            if made and key_norm(row_made) != key_norm(made):
+                continue
+            sec = 0
+            so_dung_row = 0
+            avg_correct_row = 0
+            raw_chi = cell(i_chi)
+            if raw_chi:
+                try:
+                    detail = json.loads(raw_chi)
+                    if isinstance(detail, dict):
+                        sec = int(detail.get("thoi_gian_lam_giay") or 0)
+                        so_dung_row = int(detail.get("so_dung") or 0)
+                        avg_correct_row = int(detail.get("avg_sec_per_correct") or 0)
+                        if avg_correct_row <= 0 and so_dung_row > 0 and sec > 0:
+                            avg_correct_row = int(round(sec / so_dung_row))
+                except Exception:
+                    sec = 0
+            if sec <= 0:
+                continue
+            secs.append(sec)
+            if avg_correct_row > 0:
+                per_correct_secs.append(avg_correct_row)
+            if row_made:
+                by_made.setdefault(row_made, []).append(sec)
+                if avg_correct_row > 0:
+                    by_made_correct.setdefault(row_made, []).append(avg_correct_row)
+            if len(samples) < 12:
+                samples.append({
+                    "thoi_gian": clean(cell(i_tg)),
+                    "mahs": row_mahs,
+                    "hoten": clean(cell(i_hoten)),
+                    "made": row_made,
+                    "ten_de": clean(cell(i_tende)),
+                    "elapsed_sec": sec,
+                    "elapsed_text": format_duration_vn(sec),
+                    "avg_sec_per_correct": avg_correct_row,
+                    "avg_per_correct_text": format_duration_vn(avg_correct_row) if avg_correct_row else "—",
+                })
+        if not secs:
+            return out
+        avg = int(round(sum(secs) / len(secs)))
+        avg_correct = int(round(sum(per_correct_secs) / len(per_correct_secs))) if per_correct_secs else 0
+        out.update({
+            "count": len(secs),
+            "avg_sec": avg,
+            "avg_text": format_duration_vn(avg),
+            "min_sec": min(secs),
+            "max_sec": max(secs),
+            "min_text": format_duration_vn(min(secs)),
+            "max_text": format_duration_vn(max(secs)),
+            "avg_sec_per_correct": avg_correct,
+            "avg_per_correct_text": format_duration_vn(avg_correct) if avg_correct else "—",
+            "correct_sample_count": len(per_correct_secs),
+            "samples": samples,
+        })
+        made_avg = {}
+        for mk, lst in by_made.items():
+            if not lst:
+                continue
+            a = int(round(sum(lst) / len(lst)))
+            cl = by_made_correct.get(mk) or []
+            ac = int(round(sum(cl) / len(cl))) if cl else 0
+            made_avg[mk] = {
+                "count": len(lst),
+                "avg_sec": a,
+                "avg_text": format_duration_vn(a),
+                "avg_sec_per_correct": ac,
+                "avg_per_correct_text": format_duration_vn(ac) if ac else "—",
+            }
+        out["by_made"] = made_avg
+        return out
 
     def _question_id_col_1(self) -> int:
         """Cột ID trong sheet Cau_Hoi — mặc định B (cột 2)."""
@@ -8104,6 +8824,7 @@ class SheetStore:
 
         # Xóa nguyên dòng. Các dòng dưới sẽ tự dồn lên trong Google Sheet.
         self.ws_questions.delete_rows(row_number)
+        mark_question_ids_deleted([actual_id or question_id])
         self._purge_question_row_in_memory(row_number)
         self.rebuild_indexes_after_admin_change()
         return {"ok": True, "deleted": True, "row": row_number, "id": actual_id or question_id}
@@ -8118,6 +8839,10 @@ class SheetStore:
         if not to_del:
             return
         to_del_set = set(to_del)
+        mark_question_ids_deleted([
+            clean(q.get("ID", "")) for q in self.questions
+            if int(q.get("_row") or 0) in to_del_set
+        ])
         new_questions: List[Dict[str, Any]] = []
         for q in self.questions:
             r = int(q.get("_row") or 0)
@@ -8189,11 +8914,18 @@ class SheetStore:
             if off + chunk_size < len(rows):
                 time.sleep(1.2)
 
-    def remove_duplicate_questions(self, dry_run: bool = False, max_delete: int = 0) -> Dict[str, Any]:
-        """ADMIN xóa các dòng trùng trên Cau_Hoi — giữ bản đầu tiên (số dòng nhỏ nhất)."""
+    def remove_duplicate_questions(
+        self,
+        dry_run: bool = False,
+        max_delete: int = 0,
+        made: str = "",
+    ) -> Dict[str, Any]:
+        """ADMIN xóa các dòng trùng trên Cau_Hoi — giữ bản tốt nhất trong mỗi nhóm nội dung."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được xóa câu trùng")
-        plan = plan_sheet_duplicate_removals(self.questions)
+        made = clean(made)
+        pool = self.resolve_quiz_base_raw(made) if made else list(self.questions)
+        plan = plan_sheet_duplicate_removals(pool)
         all_to_delete: List[int] = list(plan["rows_to_delete"])
         to_delete: List[int] = all_to_delete
         if max_delete and max_delete > 0:
@@ -8203,7 +8935,7 @@ class SheetStore:
                 "ok": True,
                 "dry_run": dry_run,
                 "deleted": 0,
-                "message": "Không có dòng trùng cần xóa.",
+                "message": ("Không có dòng trùng trong đề này." if made else "Không có dòng trùng cần xóa."),
                 "plan": plan,
                 "duplicate_report": self.duplicate_report,
             }
@@ -15571,7 +16303,7 @@ body.user-is-admin .quizToolsRow{width:100%!important}
 @media(max-width:430px){
   .adminLearningBoard .adminLearnBtns button{font-size:10px!important;padding:4px 5px!important;min-height:26px!important}
   .quizAdminTools button,.quizToolsRow #quizActions button,#fsOnlyTools button{font-size:9.8px!important;padding:3px 5px!important;min-height:24px!important}
-  body:not(.user-is-admin) #quizAdminTools,body:not(.user-is-admin) #quizIdJumpWrap,body:not(.user-is-admin) #adminLearningBoard{display:none!important}
+  body:not(.user-is-admin) #quizAdminTools,body:not(.user-is-admin) #quizIdJumpWrap,body:not(.user-is-admin) #adminLearningBoard,body:not(.user-is-admin) #btnQuizDedupe,body:not(.user-is-admin) #dedupeBtn{display:none!important}
   #adminLearningBoard .adminLTBtn,
   #adminLearningBoard .adminPPBtn,
   #adminLearningBoard button[onclick*="adminGenerateAndSyncLearning"]{display:none!important}
@@ -18457,6 +19189,39 @@ html[data-theme="dark"] .tfOpt:has(input:checked){
     background:#1e3a5f!important;
     border-color:#60a5fa!important;
 }
+/* Đáp án sai/đúng phải thắng màu xanh khi đang chọn — trước đây .opt:has(input:checked) đè mất đỏ */
+.opt.wrong:has(input:checked),
+.opt.wrong{
+    background:var(--pedu-incorrect-bg,#fee2e2)!important;
+    border-color:var(--pedu-incorrect-border,#f87171)!important;
+    box-shadow:inset 0 0 0 1px var(--pedu-incorrect-border,#f87171)!important;
+}
+.opt.wrong:has(input:checked) .dsCircle,
+.opt.wrong .dsCircle{background:#dc2626!important;color:#fff!important}
+.opt.correct:has(input:checked),
+.opt.correct{
+    background:var(--pedu-correct-bg,#dcfce7)!important;
+    border-color:var(--pedu-correct-border,#4ade80)!important;
+    box-shadow:inset 0 0 0 1px var(--pedu-correct-border,#4ade80)!important;
+}
+.opt.correct:has(input:checked) .dsCircle,
+.opt.correct .dsCircle{background:#16a34a!important;color:#fff!important}
+.tfrow.wrong .tfOpt:has(input:checked){
+    background:#fee2e2!important;
+    border-color:#ef4444!important;
+}
+.tfrow.wrong .tfOpt:has(input:checked):before{
+    background:#ef4444!important;
+    border-color:#ef4444!important;
+}
+.tfrow.correct .tfOpt:has(input:checked){
+    background:#dcfce7!important;
+    border-color:#22c55e!important;
+}
+.tfrow.correct .tfOpt:has(input:checked):before{
+    background:#22c55e!important;
+    border-color:#22c55e!important;
+}
 @media(max-width:760px){
     .tfOptsHead{
         grid-template-columns:28px minmax(0,1fr) 72px!important;
@@ -18549,6 +19314,34 @@ html[data-theme=dark]{
   .pedFbActs{flex-direction:column}
   .pedFbActBtn{width:100%!important;min-height:44px!important;font-size:13px!important;box-sizing:border-box}
 }
+
+/* Banner đúng liên tiếp — đẹp hơn, khích lệ, hiện ~3 giây */
+.streakToastHost{position:fixed;left:0;right:0;bottom:20px;z-index:99990;display:flex;justify-content:center;pointer-events:none;padding:0 14px}
+.streakToast{pointer-events:none;position:relative;overflow:hidden;max-width:min(440px,94vw);width:100%;border-radius:20px;padding:16px 18px 14px;color:#fff;background:linear-gradient(145deg,#047857 0%,#159e4a 42%,#ca8a04 160%);border:1px solid rgba(255,255,255,.28);box-shadow:0 16px 40px rgba(4,120,87,.38),0 0 0 1px rgba(255,255,255,.08) inset;transform:translateY(120%) scale(.96);opacity:0;transition:transform .42s cubic-bezier(.2,.85,.2,1),opacity .32s ease}
+.streakToast::before{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 10% 0%,rgba(255,255,255,.22),transparent 55%),radial-gradient(90% 70% at 100% 100%,rgba(250,204,21,.18),transparent 50%);pointer-events:none}
+.streakToast.show{transform:translateY(0) scale(1);opacity:1}
+.streakToast.hideDown{transform:translateY(140%) scale(.96);opacity:0}
+.streakToastInner{position:relative;z-index:1}
+.streakToastCheer{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.18);font-size:12px;font-weight:800;letter-spacing:.02em;margin-bottom:8px}
+.streakToastHead{display:flex;align-items:center;gap:12px}
+.streakToastBadge{flex:0 0 auto;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;line-height:1;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 12px rgba(0,0,0,.12);animation:streakPulse 1.1s ease-in-out infinite}
+.streakToastTitle{font-weight:900;font-size:17px;line-height:1.25;text-shadow:0 1px 0 rgba(0,0,0,.12)}
+.streakToastSub{margin-top:2px;font-size:12.5px;opacity:.92;font-weight:650}
+.streakToastMeta{margin-top:10px;font-size:14px;line-height:1.35;font-weight:800}
+.streakToastMeta b{font-size:18px;color:#fef08a}
+.streakToastWork{margin-top:8px;padding:9px 11px;border-radius:12px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.14);font-size:12.5px;line-height:1.4}
+.streakToastWork b{color:#fef9c3}
+.streakToastTime{margin-top:6px;font-size:12px;font-weight:750;opacity:.95;letter-spacing:.01em}
+.streakToastAd{margin-top:9px;padding:9px 11px;border-radius:12px;background:linear-gradient(90deg,rgba(254,243,199,.95),rgba(255,255,255,.92));color:#854d0e;border:1px solid rgba(250,204,21,.75);font-size:12.5px;line-height:1.4;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.12);pointer-events:auto}
+.streakToastAd strong{display:block;font-size:13.5px;color:#a16207;margin-bottom:2px}
+.streakToastAd a{color:#0f766e;text-decoration:none;font-weight:900;letter-spacing:.02em}
+.streakToastAd a:hover{text-decoration:underline}
+.streakToastBar{margin-top:12px;height:3px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+.streakToastBar>i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#fef08a,#fff);transform-origin:left center;transform:scaleX(1)}
+.streakToast.show .streakToastBar>i{animation:streakBar 3s linear forwards}
+@keyframes streakPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes streakBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media(max-width:760px){.streakToastHost{bottom:max(14px,env(safe-area-inset-bottom))}.streakToast{padding:14px 14px 12px;border-radius:18px}.streakToastTitle{font-size:16px}.streakToastBadge{width:42px;height:42px;font-size:22px}}
 /* Mục lục câu — hệ màu trạng thái theo spec sư phạm */
 .navNums .num:not(.answered):not(.ok):not(.bad){background:#f1f5f9!important;color:#475569!important;border-color:#e2e8f0!important}
 .navNums .num.answered:not(.ok):not(.bad){background:var(--primary-bg)!important;color:var(--primary-dark)!important;border:1px solid var(--primary)!important;box-shadow:none!important}
@@ -19395,7 +20188,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <button type="button" id="bulkDbtBtn" onclick="openBulkDbtReview();closeAdminMoreMenu()"><i class="ti ti-tags"></i> Gắn Dạng bài tập</button>
           <button type="button" id="bulkLevelBtn" onclick="openBulkLevelReview();closeAdminMoreMenu()"><i class="ti ti-target"></i> Gắn Mức độ</button>
           <div class="adminMoreSep"></div>
-          <button type="button" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()">🧹 Xóa trùng Sheet</button>
+          <button type="button" id="dedupeBtn" onclick="dedupeSheetDuplicates();closeAdminMoreMenu()" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5;font-weight:900">🧹 Xóa trùng Sheet</button>
           <button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button>
           <button type="button" onclick="window.open('/admin/json','_blank');closeAdminMoreMenu()">📦 Đề JSON</button>
           <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
@@ -19561,6 +20354,16 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
       <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.querySelector('#ldvlSidebar [onclick*=ap-q-phys]'),'ap-q-phys')" title="Mở mục lục đề Vật lý"><div class="sic"><i class="ti ti-atom-2" style="color:var(--ph)"></i></div><div class="sv" id="ldvlStatPhys">—</div><div class="sl">Câu hỏi Vật lý</div><div class="ss" id="ldvlStatPhysSub">bấm → mục lục</div></div>
       <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở tất cả đề"><div class="sic"><i class="ti ti-books" style="color:var(--ah)"></i></div><div class="sv" id="ldvlStatCatalog">—</div><div class="sl">Đề / thẻ đề</div><div class="ss" id="ldvlStatTotal">bấm → luyện đề</div></div>
       <div class="sc ldvlStatClick" onclick="ldvlAdminNav(document.getElementById('ldvlNavPractice'),'ap-practice')" title="Mở mục lục"><div class="sic"><i class="ti ti-database" style="color:var(--blue)"></i></div><div class="sv" id="ldvlStatAll">—</div><div class="sl">Tổng câu hỏi</div><div class="ss" id="ldvlStatLoaded">—</div></div>
+      <div class="sc" title="Trung bình thời gian trên mỗi câu đúng (Ket_Qua)"><div class="sic"><i class="ti ti-clock" style="color:#0f766e"></i></div><div class="sv" id="ldvlStatAvgTime">—</div><div class="sl">TB / câu đúng</div><div class="ss" id="ldvlStatAvgTimeSub">đang tải…</div></div>
+    </div>
+    <div class="panel" id="ldvlAvgTimePanel" style="margin-top:10px">
+      <div class="ph" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <h3 style="margin:0"><i class="ti ti-clock-hour-4"></i> Thời gian làm bài (trung bình)</h3>
+        <button type="button" class="btn2" onclick="ldvlLoadAvgTimeStats(true)">↻ Làm mới</button>
+      </div>
+      <div class="pb">
+        <div id="ldvlAvgTimeBox" class="muted" style="font-size:13px;line-height:1.5">Bấm Làm mới để đọc Ket_Qua.</div>
+      </div>
     </div>
     <div class="panel">
       <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Thứ tự đồng bộ Sheet</h3></div>
@@ -19859,7 +20662,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   </div>
 </div>
 </div></div>
-<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button type="button" id="btnFsFlagReview" class="btn2 btnFlagReview" onclick="toggleFlagCurrent()" title="Đánh dấu câu này để xem lại sau" aria-label="Đánh dấu xem lại" aria-pressed="false">🚩 Đánh dấu</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
+<div id="streakToastHost" class="streakToastHost" aria-live="polite"><div id="streakToast" class="streakToast" role="status"></div></div>
+<div id="quiz" class="hide"><div class="panel row" style="justify-content:space-between"><div><span id="quizTitle" style="font-weight:800"></span> <span id="filterBadge" class="tag hide"></span> <span id="shuffleBadge" class="tag hide"></span></div><div style="display:flex;gap:10px;align-items:center"><div id="quizTimer" class="quizTimer">⏱ <span id="quizTimerText">00:00</span></div><span id="vipSolBtnsTop" class="vipSolBtnsTop hide"><button type="button" id="btnTopShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnTopShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></span><div id="resultBox" style="font-weight:800;font-size:18px"></div></div></div><div class="quizLayout"><div><div class="quizToolbarStrip"><div class="quizToolbarHead"><div class="quizToolbarRow quizToolbarRowMeta"><div class="qid" id="qid"></div><div id="quizIdJumpWrap" class="quizIdJumpWrap hide"><input id="quizIdJump" class="quizIdJumpInp" placeholder="Tìm ID trong đề…" title="ADMIN: nhập ID → Enter" onkeydown="if(event.key==='Enter')jumpToIdInQuiz()"><button type="button" class="btn2 quizIdJumpBtn" onclick="jumpToIdInQuiz()" title="Nhảy tới ID">→</button></div></div><div class="quizToolbarRow quizToolbarRowAdmin hide" id="quizToolbarRowAdmin"><div id="quizAdminTools" class="quizAdminTools hide"><button type="button" id="btnQuizEdit" class="btn2 adminQuizAct hide" onclick="openEdit()" title="ADMIN: Sửa câu hỏi">✏️ Sửa câu</button><button type="button" id="btnQuestionReview" class="btn2 btnReviewOff" onclick="toggleQuestionReview()" title="Bật/tắt duyệt câu hiện tại (cột TrangThai)">✅ Duyệt câu</button><button type="button" id="btnQuestionReviewAll" class="btn2" onclick="approveAllQuestionsInQuiz()" title="Duyệt tất cả câu trong phiên này">✅ Duyệt cả đề</button><button type="button" class="btn2 btnRed" id="btnQuizDedupe" onclick="dedupeCurrentQuizDuplicates()" title="Chỉ ADMIN — xóa câu trùng nội dung trong đề này (chỉ khác ID vẫn xóa)">🧹 Xóa trùng đề</button><button type="button" id="btnQuestionUnreviewAll" class="btn2" onclick="unapproveAllQuestionsInQuiz()" title="Bỏ duyệt tất cả câu trong phiên">↩ Bỏ cả đề</button><button type="button" id="btnAdd" class="btn2" onclick="openAddQuestion()" title="Thêm câu">➕</button><button type="button" id="btnLatexImport" class="btn2" onclick="openLatexImportModal()" title="Nhập LaTeX">📥</button><button type="button" id="btnInfographic" class="btn2" onclick="openInfographicPrompt()" title="Infographic">📊</button></div></div></div><div class="quizToolsRow"><button type="button" id="btnQuizToolsToggle" class="btnQuizToolsToggle" onclick="toggleQuizTools(event)" title="Công cụ làm bài" aria-expanded="false">☰</button><div id="quizActions" class="quizActionsPanel"><button type="button" id="btnQuizShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnQuizShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button type="button" id="btnExamSubmit" class="btn hide" onclick="submitQuiz()" title="Nộp bài kiểm tra">📝 Nộp bài</button><button id="adminReviewModeWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewMode" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewMode" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ + DIỄN GIẢI</option><option value="fast">⚡ Nhanh (2 mục · ~15s)</option></select></span></div></div><div id="fsOnlyTools"><button class="btn2" onclick="backHome()">← Mục lục</button><button type="button" id="btnFsToolsToggle" class="btn2 btnFsToolsToggle hide" onclick="toggleQuizTools(event)" title="Công cụ" aria-expanded="false">☰</button><div id="fsQuizTimer" class="quizTimer">⏱ <span id="fsQuizTimerText">00:00</span></div><button id="btnFsSync" class="btn2 hide" onclick="syncData()">🔄 Đồng bộ</button><button id="btnFsEdit" class="btn2 hide" onclick="openEdit()">✏️ Sửa câu</button><button id="btnFsAdd" class="btn2 hide" onclick="openAddQuestion()">➕ Thêm câu</button><button id="btnFsInfographic" class="btn2 hide" onclick="openInfographicPrompt()">📊 Infographic</button><button type="button" id="btnFsFlagReview" class="btn2 btnFlagReview" onclick="toggleFlagCurrent()" title="Đánh dấu câu này để xem lại sau" aria-label="Đánh dấu xem lại" aria-pressed="false">🚩 Đánh dấu</button><button id="btnFs5050" class="btn2" onclick="use5050()">50-50</button><button type="button" id="btnFsShowAns" class="btn2 btnSolToggle hide" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnFsShowExp" class="btn2 btnSolToggle hide" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button><button id="adminReviewModeFsWrap" class="adminReviewModeWrap hide" title="Chọn tốc độ soát đề ADMIN"><label for="adminReviewModeFs" class="muted" style="white-space:nowrap">Soát:</label><select id="adminReviewModeFs" onchange="onAdminReviewModeChange(this.value)"><option value="full">🔍 Kỹ (40–90s)</option><option value="fast">⚡ Nhanh (15–35s)</option></select></span><button type="button" id="btnFsTheme" class="btn2" onclick="toggleTheme()">🌙 Tối</button><button class="btn2" onclick="toggleQuizFullscreen()">⤢ Thoát full</button></div></div><div class="panel quizQuestionPanel"><div id="qtext" class="qbox"></div><div id="options"></div><div id="solution" class="solution hide"></div><div id="hintBox" class="solution hide"></div></div><div class="quizNavRowBelowPanel"><div class="quizNavRow quizNavRowBelow"><button type="button" class="btnNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><button type="button" class="btnNavWide" onclick="prevQ()">← Câu trước</button><button type="button" class="btnNavWide btnNavPrimary" onclick="nextQ()">Câu sau →</button><button type="button" class="btnNavMini btnNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div></div></div><div class="panel fsNavPanel"><div class="mobileNavDock"><div class="mobileDockNavGroup"><button type="button" id="btnMobilePrev" class="btnMobileNavMini" onclick="prevQ()" title="Câu trước" aria-label="Câu trước">‹</button><div id="mobileQuizTimer" class="quizTimer mobileDockTimer">⏱ <span id="mobileQuizTimerText">00:00</span></div><button type="button" id="btnMobileNext" class="btnMobileNavMini btnMobileNavPrimary" onclick="nextQ()" title="Câu sau" aria-label="Câu sau">›</button></div><div id="mobileDockVipBtns" class="mobileDockMid hide"><button type="button" id="btnMobileShowAns" class="btnMobileSolToggle" onclick="toggleQuestionAnswer(event)" title="Xem/ẩn đáp án">Đáp án</button><button type="button" id="btnMobileShowExp" class="btnMobileSolToggle" onclick="toggleQuestionExplain(event)" title="Xem/ẩn lời giải">Lời giải</button></div><button type="button" id="btnMobileNavToggle" class="btnMobileNavToggle" onclick="toggleMobileNavBoard(event)" aria-expanded="false" title="Mở/đóng bảng câu hỏi">▾ Bảng câu</button></div><div class="mobileNavBody"><b class="fsNavTitle">Bảng câu hỏi</b><div id="navNums" class="navNums" style="margin-top:10px"></div><div class="line"></div><div id="adminLearningBoard" class="adminLearningBoard hide"><h4>ADMIN</h4><div id="adminLearningScope" class="adminLearnScope">Chưa chọn câu.</div><div class="adminLearnBtns"><button type="button" class="adminGenBtn" onclick="adminDetectDangBaiTapAndSave(false)">🏷️ Dạng BT</button><button type="button" class="adminPdfBtn" onclick="openLearningPdfPanel()">📄 PDF môn</button><button type="button" class="adminSyncBtn" onclick="syncData()">🔄 Đồng bộ</button></div><div id="quizReviewStat" class="hide muted" style="margin-top:6px;font-size:12px"></div></div></div></div></div></div>
 
 </div></main></div><!-- /ldvlDashWrap -->
 <div id="pdf-fs-scr">
@@ -19918,6 +20722,61 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     </span>
   </label>
 </div>
+
+<!-- Chế độ kiểm tra: HS không xem ĐA/LG -->
+<div class="startSectionLabel" style="margin-top:12px">📝 Kiểm tra</div>
+<label class="startToggle" style="margin-bottom:8px">
+  <input type="checkbox" id="chkExamMode" onchange="syncStartExamUi()">
+  <span class="startToggleBody">
+    <span class="startToggleIcon">🧪</span>
+    <span class="startToggleText"><b>Làm bài kiểm tra</b><span class="startToggleSub">Ẩn đáp án · lời giải · giao số câu</span></span>
+  </span>
+</label>
+<div id="startExamPanel" class="hide" style="margin-top:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--bg)">
+  <div class="startToggleRow" style="margin-bottom:8px">
+    <button type="button" class="btn2 startExamTab" data-exam-tab="preset" onclick="setExamPickTab('preset')">Nút sẵn</button>
+    <button type="button" class="btn2 startExamTab" data-exam-tab="bytype" onclick="setExamPickTab('bytype')">Theo dạng</button>
+    <button type="button" class="btn2 startExamTab" data-exam-tab="pick" onclick="setExamPickTab('pick')">Tick chọn</button>
+  </div>
+  <div id="examTabPreset">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <button type="button" class="btn2" onclick="setExamPreset(10)">10 câu</button>
+      <button type="button" class="btn2" onclick="setExamPreset(20)">20 câu</button>
+      <button type="button" class="btn2" onclick="setExamPreset(28)">28 câu</button>
+      <button type="button" class="btn2" onclick="setExamPreset('all')">Tất cả</button>
+      <input type="number" id="startNumQuestions" min="1" max="200" step="1" placeholder="hoặc số khác" style="width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="EXAM_PICK_ALL=false;EXAM_PICK_IDS=[];updateExamPickSummary()">
+    </div>
+    <p class="muted" style="margin:6px 0 0;font-size:12px">Bốc ngẫu nhiên trong câu <b>đã duyệt</b> của đề/bộ lọc hiện tại.</p>
+  </div>
+  <div id="examTabByType" class="hide">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+      <label style="font-size:12px">TN<br><input type="number" id="examSpecTn" min="0" max="99" value="10" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
+      <label style="font-size:12px">Đ/S<br><input type="number" id="examSpecDs" min="0" max="99" value="4" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
+      <label style="font-size:12px">TLN<br><input type="number" id="examSpecTln" min="0" max="99" value="6" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
+      <button type="button" class="btn2" onclick="setExamSpecPreset(10,4,6)">10+4+6</button>
+      <button type="button" class="btn2" onclick="setExamSpecPreset(18,4,6)">18+4+6</button>
+    </div>
+    <p id="examByTypeCounts" class="muted" style="margin:6px 0 0;font-size:12px">Có trong đề: —</p>
+  </div>
+  <div id="examTabPick" class="hide">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button type="button" class="btn2" onclick="loadExamPoolList(true)">↻ Tải danh sách</button>
+      <button type="button" class="btn2" onclick="examPickSelectAll(true)">Chọn tất cả</button>
+      <button type="button" class="btn2" onclick="examPickSelectAll(false)">Bỏ chọn</button>
+    </div>
+    <div id="examPickList" style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:6px;background:var(--surface)"></div>
+  </div>
+  <p id="examPickSummary" style="margin:8px 0 0;font-size:13px;font-weight:700">Đã chọn: 0 câu</p>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+    <button type="button" class="btn" id="btnCreateExamLink" onclick="createAndCopyExamLink()">📋 Tạo &amp; chép link gửi học sinh</button>
+  </div>
+  <p class="muted" style="margin:6px 0 0;font-size:12px;line-height:1.4">ADMIN cấu hình xong → bấm nút này → gửi link Zalo/Messenger. Học sinh đăng nhập rồi mở link là vào đúng bài kiểm tra (không xem đáp án).</p>
+</div>
+<label id="startIncludePendingWrap" class="hide" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px">
+  <input type="checkbox" id="chkIncludePending">
+  <span>ADMIN: gồm cả câu <b>chưa duyệt</b> (soát đề) — tắt thì trùng VIP</span>
+</label>
+<p id="startExamHint" class="muted hide" style="margin:8px 0 0;font-size:12px;line-height:1.4">Học sinh không xem Đáp án/Lời giải cho đến khi nộp bài.</p>
 
 <!-- Footer nút -->
 <div class="startModalFooter">
@@ -20143,7 +21002,7 @@ document.addEventListener('DOMContentLoaded',function(){
  * LEARNING_CACHE       cache API /api/learning/method theo Mon|Lop|…|DangBaiTap
  * HINT_BY_Q[CUR]       kết quả Soát đề GPT / Gợi ý AI cho từng câu
  * ========================================================================== */
-let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',CURRENT_DANGBAITAP='',DBT_UNCLASSIFIED='__CHUA_PHAN_LOAI__',DBT_UNCLASSIFIED_LABEL='Chưa phân loại',START_IS_RETRY=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,MINI_CALC_OPEN=false,MINI_CALC_BY_Q={},QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={},LEARNING_OPEN_KIND='',LEARNING_CACHE={},LEARNING_LOADING=false,LEARNING_PANEL_COLLAPSED=false,TRANSLATE_BY_Q={},TRANSLATE_KIND='CauHoi',TRANSLATE_LOADING=false,TRANSLATE_SIDE_LOADING={},TRANSLATE_AUTO_QUEUE=[],TRANSLATE_SPEECH_CHUNKS=[],TRANSLATE_SPEECH_CHUNK_IDX=0,TRANSLATE_SPEECH_REPEAT=false,TRANSLATE_TTS_ACTIVE_BTN='',TRANSLATE_SPEECH_ACTIVE=false,TRANSLATE_SPEECH_AUTO_PLAY=false,TRANSLATE_SPEECH_RATE=0.92,FLAGGED={},FLAGGED_SID=null,PED_FORMULA_CACHE={},PED_FORMULA_LOADING={};
+let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',CURRENT_DANGBAITAP='',DBT_UNCLASSIFIED='__CHUA_PHAN_LOAI__',DBT_UNCLASSIFIED_LABEL='Chưa phân loại',START_IS_RETRY=false,EXAM_MODE=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,CORRECT_STREAK=0,STREAK_TOAST_TIMER=null,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,MINI_CALC_OPEN=false,MINI_CALC_BY_Q={},QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={},LEARNING_OPEN_KIND='',LEARNING_CACHE={},LEARNING_LOADING=false,LEARNING_PANEL_COLLAPSED=false,TRANSLATE_BY_Q={},TRANSLATE_KIND='CauHoi',TRANSLATE_LOADING=false,TRANSLATE_SIDE_LOADING={},TRANSLATE_AUTO_QUEUE=[],TRANSLATE_SPEECH_CHUNKS=[],TRANSLATE_SPEECH_CHUNK_IDX=0,TRANSLATE_SPEECH_REPEAT=false,TRANSLATE_TTS_ACTIVE_BTN='',TRANSLATE_SPEECH_ACTIVE=false,TRANSLATE_SPEECH_AUTO_PLAY=false,TRANSLATE_SPEECH_RATE=0.92,FLAGGED={},FLAGGED_SID=null,PED_FORMULA_CACHE={},PED_FORMULA_LOADING={};
 let ADMIN_REVIEW_MODE='fast';
 function initAdminReviewMode(){try{ADMIN_REVIEW_MODE=localStorage.getItem('adminReviewMode')||'fast'}catch(e){ADMIN_REVIEW_MODE='fast'}if(ADMIN_REVIEW_MODE!=='full')ADMIN_REVIEW_MODE='fast';if(typeof onAdminReviewModeChange==='function')onAdminReviewModeChange(ADMIN_REVIEW_MODE);else try{localStorage.setItem('adminReviewMode',ADMIN_REVIEW_MODE);['adminReviewMode','adminReviewModeFs'].forEach(function(id){let el=document.getElementById(id);if(el)el.value=ADMIN_REVIEW_MODE})}catch(e2){}}
 const THEME_KEY='LDVL_THEME';
@@ -20297,9 +21156,9 @@ function enhanceHomeColors(){
 }
 function shortAnswerFeedbackHtml(q){let r=RESULTS[CUR]||CHECKED[CUR];if(!r||!(r.ok===true||r.ok===false))return '';let chosen=esc(String(r.chosen||ANSWERS[CUR]||'').trim());if(r.ok===true)return `<div class="shortAnsFb ok">✅ <b>Đúng!</b>${chosen?` Bạn nhập: <b>${chosen}</b>`:''}</div>`;let extra='';if(canViewSolutionLive()||USER.is_admin){let cor=esc(String(r.correct||r.DapAn||q.DapAn||'').trim());if(cor)extra=`<div style="margin-top:4px;font-size:13px">Đáp án đúng: <b>${cor}</b></div>`}else extra='<div style="margin-top:4px;font-size:12px;font-weight:600">Nâng VIP để xem đáp án đúng ngay sau khi kiểm tra.</div>';return `<div class="shortAnsFb bad">❌ <b>Chưa đúng.</b> Bạn nhập: <b>${chosen||'—'}</b></div>${extra}`}
 function examDisplayTitle(item){item=item||{};let mon=String(item.Mon||'').trim();let lop=String(item.Lop||'').trim();let bai=String(item.BaiHoc||item.De||'Đề luyện tập').trim();if(mon){let head=lop?mon+' - Lớp '+lop:mon;return head+' | '+bai}if(lop)return'Lớp '+lop+' | '+bai;return bai}
-function getShareParams(){let p=new URLSearchParams(location.search);let de=(p.get('de')||p.get('made')||'').trim();if(!de){let m=location.pathname.match(/^\/d\/([^/]+)/i);if(m)de=decodeURIComponent(m[1])}let fromShort=/^\/d\//i.test(location.pathname);let open=p.get('open')==='1';return{de,level:(p.get('level')||'').trim().toUpperCase(),dang:(p.get('dang')||'').trim(),start:p.get('start')==='1'||(fromShort&&!open),open:!fromShort?p.get('start')!=='1'&&(p.get('open')||'1')!=='0':open,sq:p.get('sq')==='1',sa:p.get('sa')==='1'}}
-function buildExamShareUrl(item,extra){item=item||{};extra=extra||{};let de=extra.de||item.MaDe||'';if(!de)return location.origin+'/';let auto=extra.start!==0&&extra.start!=='0';let u=new URL(location.origin+'/d/'+de);if(!auto)u.searchParams.set('open','1');if(extra.sq)u.searchParams.set('sq','1');if(extra.sa)u.searchParams.set('sa','1');let lv=extra.level||val('fMucDo')||'';let dg=extra.dang||val('fDang')||'';if(lv)u.searchParams.set('level',lv);if(dg)u.searchParams.set('dang',dg);return u.toString()}
-function clearShareQuery(){let p=new URLSearchParams(location.search);if(!p.get('de')&&!p.get('made'))return;['de','made','mon','lop','chuong','baihoc','bode','level','dang','open','start','sq','sa'].forEach(k=>p.delete(k));let q=p.toString();history.replaceState(null,'',location.pathname+(q?'?'+q:''))}
+function getShareParams(){let p=new URLSearchParams(location.search);let de=(p.get('de')||p.get('made')||'').trim();if(!de){let m=location.pathname.match(/^\/d\/([^/]+)/i);if(m)de=decodeURIComponent(m[1])}let fromShort=/^\/d\//i.test(location.pathname);let open=p.get('open')==='1';let exam=(p.get('exam')||p.get('exam_code')||'').trim().toUpperCase();return{de,exam,level:(p.get('level')||'').trim().toUpperCase(),dang:(p.get('dang')||'').trim(),start:p.get('start')==='1'||(fromShort&&!open)||!!exam,open:!fromShort&&!exam?p.get('start')!=='1'&&(p.get('open')||'1')!=='0':open,sq:p.get('sq')==='1',sa:p.get('sa')==='1'}}
+function buildExamShareUrl(item,extra){item=item||{};extra=extra||{};if(extra.exam){let u=new URL(location.origin+'/');u.searchParams.set('exam',String(extra.exam).toUpperCase());u.searchParams.set('start','1');return u.toString()}let de=extra.de||item.MaDe||'';if(!de)return location.origin+'/';let auto=extra.start!==0&&extra.start!=='0';let u=new URL(location.origin+'/d/'+de);if(!auto)u.searchParams.set('open','1');if(extra.sq)u.searchParams.set('sq','1');if(extra.sa)u.searchParams.set('sa','1');let lv=extra.level||val('fMucDo')||'';let dg=extra.dang||val('fDang')||'';if(lv)u.searchParams.set('level',lv);if(dg)u.searchParams.set('dang',dg);return u.toString()}
+function clearShareQuery(){let p=new URLSearchParams(location.search);if(!p.get('de')&&!p.get('made')&&!p.get('exam')&&!p.get('exam_code'))return;['de','made','mon','lop','chuong','baihoc','bode','level','dang','open','start','sq','sa','exam','exam_code'].forEach(k=>p.delete(k));let q=p.toString();history.replaceState(null,'',location.pathname+(q?'?'+q:''))}
 function setSel(id,v){let el=document.getElementById(id);if(!el||!v)return;for(let o of el.options){if(o.value===v){el.value=v;return}}let opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v}
 async function copyTextToClipboard(text){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}let ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');document.body.removeChild(ta);return true}catch(e){document.body.removeChild(ta);return false}}
 async function copyExamShareLink(made,withModal){let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}let url=buildExamShareUrl(item,withModal?{start:0,open:1}:{start:1});let ok=await copyTextToClipboard(url);let ten=examDisplayTitle(item);let socau=item.SoCau?(item.SoCau+' câu'):'';let note=withModal?'Học viên mở link sẽ chọn xáo trộn trước khi làm.':'Học viên mở link sẽ vào làm bài luôn.';alert(ok?'✅ Đã chép link gửi Zalo/Messenger.\n\n'+ten+(socau?'\n'+socau:'')+'\n'+note:'Không chép được. Hãy bấm lại nút Chép link.')}
@@ -20310,6 +21169,8 @@ function writeOfflineCache(c){try{localStorage.setItem(LDVL_OFFLINE_CACHE_KEY,JS
 function offlineNormLetter(v){let s=String(v||'').trim().toUpperCase().replace(/\u0110/g,'D');return /^[ABCD]$/.test(s)?s:''}
 function offlineParseFloatVn(v){let s=String(v||'').trim().replace(/\s/g,'').replace(',','.');if(!s)return null;let n=parseFloat(s);return isNaN(n)?null:n}
 function offlineCacheDeck(made){made=String(made||'').trim();let c=readOfflineCache();return c.decks&&c.decks[made]?c.decks[made]:null}
+function clearOfflineDeckForMade(made){made=String(made||'').trim();if(!made)return;try{let c=readOfflineCache();if(c.decks&&c.decks[made]){delete c.decks[made]}if(c.saved_at&&c.saved_at[made])delete c.saved_at[made];writeOfflineCache(c)}catch(e){}}
+function clearOfflineDecksContainingIds(ids){let set=new Set((ids||[]).map(x=>String(x||'').trim()).filter(Boolean));if(!set.size)return;try{let c=readOfflineCache();let decks=c.decks||{};for(let made of Object.keys(decks)){let qs=(decks[made]&&decks[made].deck&&decks[made].deck.questions)||[];if(qs.some(q=>set.has(String(q.ID||'')))){delete decks[made];if(c.saved_at)delete c.saved_at[made]}}writeOfflineCache(c)}catch(e){}}
 function offlineGradeOne(q,ans){let dang=typeof resolveDang==='function'?resolveDang(q):String((q&&q.Dang)||'Trắc nghiệm');let cor=String((q&&q.DapAn)||'').trim(),chosen=String(ans==null?'':ans).trim();if(dang==='Trắc nghiệm'){let c=offlineNormLetter(cor),ch=offlineNormLetter(chosen);return{ok:!!(c&&ch&&c===ch),correct:c,chosen:ch,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}if(dang==='Đúng sai'){let corr=parseTfClient(cor),sel=parseTfClient(ans),bitsC=[],bitsS=[];for(let i=0;i<4;i++){let L='ABCD'[i];if(!String(q[L]||'').trim())continue;bitsC.push(corr[i]||'');bitsS.push(sel[i]||'')}let ok=bitsC.length>=2&&bitsC.every(Boolean)&&bitsS.every(Boolean)&&bitsC.join(',')===bitsS.join(',');return{ok,correct:cor,chosen:bitsS.join(','),DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}if(dang==='Trả lời ngắn'){let cn=offlineParseFloatVn(cor),un=offlineParseFloatVn(chosen),tol=offlineParseFloatVn(q.SaiSo);if(tol==null)tol=0;if(cn!=null&&un!=null)return{ok:Math.abs(cn-un)<=tol+1e-12,correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''};return{ok:normText(cor)===normText(chosen),correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}return{ok:false,correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}
 function routeCachedApi(url,opts){if(window.LDVL_OFFLINE)return null;let method=String((opts&&opts.method)||'GET').toUpperCase();let path=String(url||'').split('?')[0];let body={};try{body=JSON.parse((opts&&opts.body)||'{}')}catch(e){}if(path==='/api/start'&&method==='POST'){let made=String(body.made||body.MaDe||'').trim();let hit=offlineCacheDeck(made);if(!hit||!hit.deck)return{error:'Đề «'+made+'» chưa lưu offline. Khi có mạng, bấm 📴 Lưu offline ở mục lục.'};let deck=Object.assign({},hit.deck);let sid=deck.sid||('off_'+made);LDVL_OFFLINE_SESSIONS[sid]=deck;return Object.assign({},deck,{sid})}if(path==='/api/check-one'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn — mở lại đề.'};let idx=parseInt(body.index,10)||0,qs=ses.questions||[],q=qs[idx];if(!q)return{error:'Câu không hợp lệ'};let g=offlineGradeOne(q,body.answer);return{index:idx,ID:q.ID,Dang:q.Dang,ok:g.ok,correct:g.correct,chosen:g.chosen,DapAn:g.DapAn,LoiGiai:g.LoiGiai}}if(path==='/api/submit'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn.'};let qs=ses.questions||[],answers=body.answers||{},results=[],correct=0,auto=0;for(let i=0;i<qs.length;i++){let q=qs[i],dang=typeof resolveDang==='function'?resolveDang(q):String(q.Dang||'');if(dang==='Tự luận')continue;auto++;let g=offlineGradeOne(q,answers[i]);if(g.ok)correct++;results.push({index:i,ok:g.ok,correct:g.correct,chosen:g.chosen})}return{score:auto?Math.round(correct/auto*100)/10:0,correct_count:correct,auto_count:auto,results}}return null}
 async function saveExamOffline(made){made=String(made||'').trim();if(!made)return;let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}if(!confirm('Lưu đề «'+examDisplayTitle(item)+'» vào máy để luyện khi mất mạng?\n\nCó thể lưu nhiều đề — app tự dùng bản đã lưu.'))return;let btn=window.event&&window.event.target;if(btn&&btn.tagName==='BUTTON'){btn.disabled=true;btn.textContent='⏳ Đang lưu...'}try{let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_questions:false,shuffle_options:false,group_by_dang:true})});let cache=readOfflineCache();cache.decks=cache.decks||{};cache.decks[made]={deck:j,item:item,saved_at:new Date().toISOString()};cache.saved_at=cache.saved_at||{};cache.saved_at[made]=cache.decks[made].saved_at;if(!writeOfflineCache(cache))throw new Error('Bộ nhớ máy đầy — hãy xóa bớt đề offline cũ.');alert('✅ Đã lưu offline:\n'+examDisplayTitle(item)+'\n\nKhi mất mạng, mở lại đề này — app dùng bản đã lưu.')}catch(e){alert('Lưu offline thất bại: '+(e.message||e))}finally{if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='📴 Lưu offline'}}}
@@ -20516,7 +21377,18 @@ function clearKeywordSearch(){setVal('fKeywordSearch','');KEYWORD_SEARCH_MATCHES
 function handleQidDeepLink(){let p=new URLSearchParams(location.search);let qid=(p.get('qid')||p.get('question_id')||'').trim();if(!qid)return;setVal('fIdLookup',qid);setTimeout(()=>lookupQuestionById(),400);p.delete('qid');p.delete('question_id');let q=p.toString();history.replaceState(null,'',location.pathname+(q?'?'+q:''))}
 function clearShareTarget(){document.querySelectorAll('.card.shareTarget,.bookLessonCard.shareTarget').forEach(el=>el.classList.remove('shareTarget'))}
 function markShareTarget(made){clearShareTarget();let el=document.getElementById('shareCard_'+made);if(el){el.classList.add('shareTarget');setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),120)}}
-function handleShareDeepLink(){let sp=getShareParams();if(!sp.de)return;let item=CATALOG.find(x=>x.MaDe===sp.de);if(!item){alert('Không tìm thấy đề trong link. Có thể đề đã đổi hoặc cần Đồng bộ Sheet.');return}if(item.Mon)setSel('fMon',item.Mon);refreshFilterOptions();if(item.Lop)setSel('fLop',item.Lop);refreshFilterOptions();if(item.Chuong)setSel('fChuong',item.Chuong);refreshFilterOptions();if(item.BaiHoc)setSel('fBaiHoc',item.BaiHoc);refreshFilterOptions();if(item.BoDe)setSel('fBoDe',item.BoDe);if(sp.level)setSel('fMucDo',sp.level);if(sp.dang)setSel('fDang',sp.dang);renderCatalog();let lv=sp.level||val('fMucDo');let dg=sp.dang||val('fDang');if(sp.start){if(USER.is_trial&&(item.QuyenTruyCap||'FREE')!=='FREE'){markShareTarget(sp.de);alert('Tài khoản dùng thử chỉ mở đề FREE.');return}setTimeout(()=>startQuiz(sp.de,sp.sq,sp.sa,lv,dg),280)}else if(sp.open){markShareTarget(sp.de);setTimeout(()=>openStartModal(sp.de),280)}}
+function handleShareDeepLink(){let sp=getShareParams();if(sp.exam){setTimeout(()=>startExamByCode(sp.exam),280);return}if(!sp.de)return;let item=CATALOG.find(x=>x.MaDe===sp.de);if(!item){alert('Không tìm thấy đề trong link. Có thể đề đã đổi hoặc cần Đồng bộ Sheet.');return}if(item.Mon)setSel('fMon',item.Mon);refreshFilterOptions();if(item.Lop)setSel('fLop',item.Lop);refreshFilterOptions();if(item.Chuong)setSel('fChuong',item.Chuong);refreshFilterOptions();if(item.BaiHoc)setSel('fBaiHoc',item.BaiHoc);refreshFilterOptions();if(item.BoDe)setSel('fBoDe',item.BoDe);if(sp.level)setSel('fMucDo',sp.level);if(sp.dang)setSel('fDang',sp.dang);renderCatalog();let lv=sp.level||val('fMucDo');let dg=sp.dang||val('fDang');if(sp.start){if(USER.is_trial&&(item.QuyenTruyCap||'FREE')!=='FREE'){markShareTarget(sp.de);alert('Tài khoản dùng thử chỉ mở đề FREE.');return}setTimeout(()=>startQuiz(sp.de,sp.sq,sp.sa,lv,dg),280)}else if(sp.open){markShareTarget(sp.de);setTimeout(()=>openStartModal(sp.de),280)}}
+async function startExamByCode(code){
+  code=String(code||'').trim().toUpperCase();if(!code)return;
+  try{
+    let meta=await api('/api/exam-assign/'+encodeURIComponent(code));
+    let made=meta.made||'';
+    if(made){let item=CATALOG.find(x=>x.MaDe===made);if(item){if(item.Mon)setSel('fMon',item.Mon);refreshFilterOptions();if(item.Lop)setSel('fLop',item.Lop);refreshFilterOptions();if(item.Chuong)setSel('fChuong',item.Chuong);refreshFilterOptions();if(item.BaiHoc)setSel('fBaiHoc',item.BaiHoc);refreshFilterOptions()}}
+    let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({exam_code:code,exam_mode:1})});
+    enterQuizSession(j,j.made||made||'',meta.level||'','','',false,meta.dangbaitap||'');
+    alert('🧪 Đã vào bài kiểm tra'+(meta.title?(' «'+meta.title+'»'):'')+'.\nKhông xem đáp án/lời giải đến khi nộp bài.');
+  }catch(e){alert('Không mở được bài kiểm tra: '+(e.message||e))}
+}
 function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])).replace(/\n/g,'<br>')}
 function escapeHtmlInMathChunk(chunk){return String(chunk||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){if(i+1<n&&(s[i+1]==='{'||s[i+1]==='}')){i+=2;continue}i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
@@ -20898,7 +21770,7 @@ async function getFormulaForCurrentQuestion(qIdx){
 }
 function pedagogyFormulaEntryBlockHtml(entry,label){let g=function(k){return String(entry[k]||'').trim()};let parts=[];let formula=g('CongThucSuDung')||g('CongThuc');if(formula)parts.push('<div class="pedFbLine"><b>'+esc(label||'Công thức cần nhớ')+'</b><div class="pedFormulaBlock">'+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(formula):esc(formula))+'</div></div>');let dieukien=g('DieuKien')||g('DauHieuNhanBiet');if(dieukien)parts.push('<div class="pedFbLine pedFbSub">Điều kiện áp dụng: '+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(dieukien):esc(dieukien))+'</div>');if(Array.isArray(entry.KyHieu)&&entry.KyHieu.length)parts.push('<div class="pedFbLine pedFbSub">Ký hiệu:<br>'+entry.KyHieu.map(function(s){return esc(s)}).join('<br>')+'</div>');let dv=g('DonVi');if(dv)parts.push('<div class="pedFbLine pedFbSub">Đơn vị: '+esc(dv)+'</div>');let luuy=g('MeoNhanh')||g('LuuY')||g('SaiLamThuongGap');if(luuy)parts.push('<div class="pedFbLine pedFbSub">Lưu ý: '+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(luuy):esc(luuy))+'</div>');return parts.join('')}
 function pedagogyFormulaSectionHtml(entry,canAi,q){if(entry===undefined)return '<div class="muted">Đang tải công thức…</div>';if(!entry){let hasLoigiai=!!(q&&String(q.LoiGiai||'').trim());let canSol=typeof canViewSolutionLive==='function'&&canViewSolutionLive();if(hasLoigiai&&canSol)return '<div class="muted">Chưa trích được công thức tự động cho dạng bài này.</div><button type="button" class="btn2 pedFbActBtn" style="margin-top:6px" onclick="toggleQuestionExplain(event)">📄 Xem lời giải</button>';return '<div class="muted">Chưa có công thức cho dạng bài này.</div>'}if(Array.isArray(entry.Chain)&&entry.Chain.length){let blocks=entry.Chain.map(function(c,i){return pedagogyFormulaEntryBlockHtml(c,c.label||('Công thức '+(i+1)))});return blocks.join('<hr class="pedFormulaChainSep">')}let body=pedagogyFormulaEntryBlockHtml(entry,'Công thức cần nhớ');if(!body)return '<div class="muted">Chưa có công thức lưu sẵn cho dạng bài này.</div>';return body}
-function updateResultBox(qIdx){let rb=document.getElementById('resultBox');if(!rb)return;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return;let r=RESULTS[qIdx]||CHECKED[qIdx];let clear=function(){rb.textContent='';rb.removeAttribute('style');rb.classList.remove('dsResultRich');rb.classList.remove('pedResultRich')};if(!r||!(r.ok===true||r.ok===false)){clear();return}if(q.Dang==='Đúng sai'&&SUBMITTED){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.classList.remove('pedResultRich');rb.style.color=r.ok?'#166534':'#991b1b';return}clear()}
+function updateResultBox(qIdx){let rb=document.getElementById('resultBox');if(!rb)return;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return;let r=RESULTS[qIdx]||CHECKED[qIdx];let clear=function(){rb.textContent='';rb.removeAttribute('style');rb.classList.remove('dsResultRich');rb.classList.remove('pedResultRich')};if(!r||!(r.ok===true||r.ok===false)){clear();return}if(q.Dang==='Đúng sai'&&SUBMITTED){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.classList.remove('pedResultRich');rb.style.color=r.ok?'#166534':'#991b1b';return}if(q.Dang==='Đúng sai'&&EXAM_MODE&&!SUBMITTED){rb.classList.remove('dsResultRich');rb.classList.add('pedResultRich');rb.innerHTML=r.ok?'<span class="pedFeedback pedFeedback-ok"><span class="pedFbHead">✅ Đúng</span></span>':'<span class="pedFeedback pedFeedback-bad"><span class="pedFbHead">❌ Sai</span></span>';rb.style.color=r.ok?'#166534':'#991b1b';return}if(q.Dang==='Đúng sai'&&isQuestionChecked(qIdx)){rb.innerHTML=formatDsCheckResultBox(qIdx,r,q,ANSWERS[qIdx]);rb.classList.add('dsResultRich');rb.classList.remove('pedResultRich');rb.style.color=r.ok?'#166534':'#991b1b';return}rb.classList.remove('dsResultRich');rb.classList.add('pedResultRich');if(r.ok===true){rb.innerHTML='<span class="pedFeedback pedFeedback-ok"><span class="pedFbHead">✅ Đúng</span></span>';rb.style.color='#166534'}else{rb.innerHTML='<span class="pedFeedback pedFeedback-bad"><span class="pedFbHead">❌ Sai</span></span>';rb.style.color='#991b1b'}}
 function formatMcqAnswerBadge(text){let raw=String(text||'').trim();let m=raw.toUpperCase().match(/^([ABCD])$/);if(!m){let lm=raw.match(/(?:đáp án|chọn|kết luận|phương án)[^ABCD]*([ABCD])/i);if(lm)m=[null,lm[1].toUpperCase()]}if(m&&m[1])return `<div class="dsAnswerRow"><div class="dsAnswerItem">${dsCircleHtml(m[1])} <b class="dsVerdictDung">đáp án đúng</b></div></div>`;return formatHintDisplay(raw)}
 function loigiaiAbcdTagRx(){return /(?:^|\n|[•\-\*]\s*|\(\s*)(?:\*\*)?([ABCD])\s*[\.\):]\s*(?:(Đúng|Sai)\s*[\-—:–]\s*)?/gi}
 function dsLoigiaiLooksCanonical(t){t=String(t||'');let tagged=[...t.matchAll(loigiaiAbcdTagRx())];if(tagged.length<2)return false;let pre=t.slice(0,tagged[0].index);let leg=/(?:^|\n|[•●▪▫◦]\s*)(?:ch\s+)?(?:\\textbf\s*\{\s*)?(?:Đúng|Sai)\s*[\.\-—:–]\s*/gi;return [...pre.matchAll(leg)].length<2}
@@ -21308,32 +22180,35 @@ function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClien
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
 function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang)return comboCountLookup(fc,lv,dang);if(dang)return dangCountLookup(fc,dang);if(lv)return fc.level[lv]||0;return null}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?\n\n• Chuẩn hóa Lop/Môn/Chương/Bài học từ DANH_MUC_BAI_HOC → Cau_Hoi\n• Cài dropdown trên Cau_Hoi tham chiếu DANH_MUC_BAI_HOC'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');await init();if(USER.is_admin){try{let lj=await api('/api/admin/sync-lesson-catalog',{method:'POST',timeoutMs:120000});let msg=[];if(lj.message)msg.push(lj.message);if(lj.dropdowns&&lj.dropdowns.message)msg.push(lj.dropdowns.message);if(lj.dropdown_error)msg.push('⚠ Dropdown: '+lj.dropdown_error);if(msg.length)alert(msg.join('\n\n'));if((lj.updated||0)>0||(lj.cells||0)>0)await refreshCatalogFromMeta()}catch(e){console.warn('sync lesson catalog',e)}}if(USER.is_admin&&META&&META.duplicate_report)alertDuplicateSheetReport(META.duplicate_report)}
-async function dedupeSheetDuplicates(){
-  // V258: xóa trùng Sheet theo lô nhỏ để tránh timeout/quota; luôn báo rõ nếu không có trùng exact.
+async function dedupeSheetDuplicates(made){
+  // Chỉ ADMIN — server /api/question/dedupe cũng chặn 403 nếu không phải ADMIN.
+  if(!USER||!USER.is_admin){alert('Chức năng Xóa trùng chỉ dành cho ADMIN.');return}
+  // Xóa trùng Sheet theo lô nhỏ; made='' = cả Sheet, made=CURRENT_MADE = chỉ đề đang mở.
+  made=String(made||'').trim();
   try{
-    const btn=document.getElementById('dedupeBtn');
+    const btn=document.getElementById(made?'btnQuizDedupe':'dedupeBtn')||document.getElementById('dedupeBtn')||document.getElementById('btnQuizDedupe');
     if(btn){btn.disabled=true;btn.textContent='⏳ Đang kiểm tra trùng...'}
-    let preview=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+    let preview=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true,made:made})});
     let n=parseInt(preview.would_delete||((preview.plan||{}).delete_count),10)||0;
     if(n<=0){
-      alert((preview.message||'Không có dòng trùng exact trên Sheet.')+'\n\nLưu ý: nút này chỉ xóa dòng trùng ID hoặc trùng gần như y hệt nội dung. Các câu cùng chương/bài nhưng nội dung khác sẽ không bị xóa.');
+      alert((preview.message||'Không có dòng trùng trên Sheet.')+'\n\nĐã kiểm theo nội dung (bỏ qua khác ID/MaDe). Chỉ còn câu khác đề/đáp án/A–D hoặc khác bài học thì không xóa.');
       return;
     }
     let lines=((preview.plan||{}).samples||[]).slice(0,10);
-    let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: giữ dòng đầu, xóa bản sao phía sau.\nNút này KHÔNG dùng AI, chỉ xóa dòng trên Google Sheet.\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Tiếp tục xóa theo từng lô 40 dòng để tránh treo/quota?';
+    let msg='Phát hiện '+n+' dòng TRÙNG trên tab Cau_Hoi.\n\nQuy tắc: cùng nội dung (dù khác ID) → giữ bản đã duyệt/có lời giải, xóa bản sao.\nNút này KHÔNG dùng AI, chỉ xóa dòng trên Google Sheet.\n\n'+(lines.length?('Ví dụ:\n'+lines.join('\n')+'\n\n'):'')+'Tiếp tục xóa theo từng lô 40 dòng để tránh treo/quota?';
     if(!confirm(msg))return;
     let totalDeleted=0;
     let round=0;
     while(true){
       round++;
       if(btn){btn.disabled=true;btn.textContent='🧹 Xóa trùng '+totalDeleted+'/'+n}
-      let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false,max_delete:40})});
+      let j=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false,max_delete:40,made:made})});
       let del=parseInt(j.deleted||j.batch_deleted||0,10)||0;
       totalDeleted+=del;
       await refreshCatalogFromMeta();
       let remain=0;
       try{
-        let again=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true})});
+        let again=await api('/api/question/dedupe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true,made:made})});
         remain=parseInt(again.would_delete||((again.plan||{}).delete_count),10)||0;
       }catch(e){remain=parseInt(j.remaining_before_refresh||0,10)||0;}
       if(del<=0||remain<=0)break;
@@ -21352,7 +22227,21 @@ async function dedupeSheetDuplicates(){
   }finally{
     const btn=document.getElementById('dedupeBtn');
     if(btn){btn.disabled=false;btn.textContent='🧹 Xóa trùng Sheet'}
+    const qb=document.getElementById('btnQuizDedupe');
+    if(qb){qb.disabled=false;qb.textContent='🧹 Xóa trùng đề'}
   }
+}
+async function dedupeCurrentQuizDuplicates(){
+  if(!USER||!USER.is_admin){alert('Chức năng Xóa trùng đề chỉ dành cho ADMIN.');return}
+  if(!CURRENT_MADE){alert('Chưa mở đề — hãy vào một bài rồi bấm «Xóa trùng đề».');return}
+  await dedupeSheetDuplicates(CURRENT_MADE);
+  // Làm mới phiên đang mở
+  try{
+    if(SID&&CURRENT_MADE){
+      let lv=CURRENT_LEVEL||'',dg=CURRENT_DANG||'';
+      await startQuiz(CURRENT_MADE,false,false,lv,dg,GROUP_BY_DANG,CURRENT_DANGBAITAP||'');
+    }
+  }catch(e){console.warn('reload after dedupe',e)}
 }
 async function dedupeHinhAnhImages(){
   try{
@@ -21467,9 +22356,174 @@ function renderStartDangBaiTapPicker(made,preselect){
   if(mbar)mbar.classList.toggle('hide',!(USER.is_admin&&dbts.length>=1));
 }
 function closeStartModal(){let m=document.getElementById('startModal');if(m)m.classList.add('hide')}
-function openStartModal(made,dbtPref){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();CURRENT_DANGBAITAP=String(dbtPref!=null?dbtPref:(val('fDangBaiTap')||'')).trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let gd=document.getElementById('chkGroupDang');if(gd)gd.checked=true;let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);if(dg||lv){let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(made,CURRENT_DANGBAITAP);let sm=document.getElementById('startModal');if(sm)sm.classList.remove('hide')}
-function openRetryModal(){if(USER.can_quiz_retry===false)return;if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(CURRENT_MADE,CURRENT_DANGBAITAP);let sm2=document.getElementById('startModal');if(sm2)sm2.classList.remove('hide')}
-async function confirmStartQuiz(){let made=CURRENT_MADE;if(!made)return;let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;let gd=document.getElementById('chkGroupDang');let groupBy=gd?gd.checked:true;let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();CURRENT_LEVEL=lv;CURRENT_DANG=dg;CURRENT_DANGBAITAP=getStartModalDangBaiTap();closeStartModal();if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}await startQuiz(made,sq,sa,lv,dg,groupBy,CURRENT_DANGBAITAP)}
+let EXAM_PICK_TAB='preset',EXAM_PICK_ALL=false,EXAM_PICK_IDS=[],EXAM_POOL_CACHE=null;
+function setExamPickTab(tab){
+  EXAM_PICK_TAB=tab||'preset';
+  ['preset','bytype','pick'].forEach(t=>{
+    let box=document.getElementById(t==='preset'?'examTabPreset':(t==='bytype'?'examTabByType':'examTabPick'));
+    if(box)box.classList.toggle('hide',EXAM_PICK_TAB!==t);
+  });
+  document.querySelectorAll('.startExamTab').forEach(b=>{
+    let on=b.getAttribute('data-exam-tab')===EXAM_PICK_TAB;
+    b.style.fontWeight=on?'900':'600';
+    b.style.borderColor=on?'var(--primary)':'';
+    b.style.background=on?'var(--primary-bg)':'';
+  });
+  if(EXAM_PICK_TAB==='pick'||EXAM_PICK_TAB==='bytype')loadExamPoolList(false);
+  updateExamPickSummary();
+}
+function setExamPreset(n){
+  EXAM_PICK_TAB='preset';EXAM_PICK_IDS=[];
+  setExamPickTab('preset');
+  let nq=document.getElementById('startNumQuestions');
+  if(n==='all'){EXAM_PICK_ALL=true;if(nq)nq.value='';}
+  else{EXAM_PICK_ALL=false;if(nq)nq.value=String(n);}
+  updateExamPickSummary();
+}
+function setExamSpecPreset(tn,ds,tln){
+  EXAM_PICK_TAB='bytype';EXAM_PICK_ALL=false;EXAM_PICK_IDS=[];
+  setExamPickTab('bytype');
+  let a=document.getElementById('examSpecTn'),b=document.getElementById('examSpecDs'),c=document.getElementById('examSpecTln');
+  if(a)a.value=String(tn||0);if(b)b.value=String(ds||0);if(c)c.value=String(tln||0);
+  updateExamPickSummary();
+}
+function collectExamSpec(){
+  let tn=parseInt((document.getElementById('examSpecTn')||{}).value,10)||0;
+  let ds=parseInt((document.getElementById('examSpecDs')||{}).value,10)||0;
+  let tln=parseInt((document.getElementById('examSpecTln')||{}).value,10)||0;
+  let spec={};if(tn>0)spec.tn=tn;if(ds>0)spec.ds=ds;if(tln>0)spec.tln=tln;return spec;
+}
+function updateExamPickSummary(){
+  let el=document.getElementById('examPickSummary');if(!el)return;
+  let txt='';
+  if(EXAM_PICK_TAB==='pick'){
+    let n=EXAM_PICK_IDS.length;txt='Đã tick: <b>'+n+'</b> câu';
+  }else if(EXAM_PICK_TAB==='bytype'){
+    let s=collectExamSpec();let n=(s.tn||0)+(s.ds||0)+(s.tln||0);
+    txt='Theo dạng: <b>'+(s.tn||0)+'</b> TN + <b>'+(s.ds||0)+'</b> Đ/S + <b>'+(s.tln||0)+'</b> TLN = <b>'+n+'</b> câu';
+    let c=EXAM_POOL_CACHE&&EXAM_POOL_CACHE.counts||{};
+    let info=document.getElementById('examByTypeCounts');
+    if(info)info.textContent='Có trong đề (đã duyệt): TN '+(c['Trắc nghiệm']||0)+' · Đ/S '+(c['Đúng sai']||0)+' · TLN '+(c['Trả lời ngắn']||0)+(c['Tự luận']?(' · TL '+c['Tự luận']):'');
+  }else{
+    if(EXAM_PICK_ALL)txt='Nút sẵn: <b>Tất cả</b> câu đã duyệt';
+    else{let n=parseInt((document.getElementById('startNumQuestions')||{}).value,10)||0;txt=n?('Nút sẵn / số câu: <b>'+n+'</b> câu (bốc ngẫu nhiên)'):'Chưa chọn số câu';}
+  }
+  el.innerHTML=txt;
+}
+async function loadExamPoolList(force){
+  if(!CURRENT_MADE)return;
+  if(!force&&EXAM_POOL_CACHE&&EXAM_POOL_CACHE.made===CURRENT_MADE){renderExamPickList();updateExamPickSummary();return}
+  let box=document.getElementById('examPickList');if(box)box.innerHTML='<div class="muted" style="padding:8px">Đang tải danh sách câu đã duyệt…</div>';
+  try{
+    let lv=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();
+    let dg=(val('fDang')||CURRENT_DANG||'').trim();
+    let dbt=getStartModalDangBaiTap?getStartModalDangBaiTap():(CURRENT_DANGBAITAP||'');
+    let j=await api('/api/exam-pool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made:CURRENT_MADE,level:lv,dang:dg,dangbaitap:dbt})});
+    EXAM_POOL_CACHE=Object.assign({made:CURRENT_MADE},j||{});
+    renderExamPickList();updateExamPickSummary();
+  }catch(e){if(box)box.innerHTML='<div class="muted" style="padding:8px;color:#991b1b">'+esc(e.message||e)+'</div>';}
+}
+function renderExamPickList(){
+  let box=document.getElementById('examPickList');if(!box)return;
+  let items=(EXAM_POOL_CACHE&&EXAM_POOL_CACHE.items)||[];
+  if(!items.length){box.innerHTML='<div class="muted" style="padding:8px">Không có câu đã duyệt trong phạm vi.</div>';return}
+  let sel=new Set(EXAM_PICK_IDS);
+  box.innerHTML=items.map((it,i)=>{
+    let id=String(it.ID||'');let on=sel.has(id);
+    return `<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 4px;border-bottom:1px solid var(--border);font-size:12px;line-height:1.35;cursor:pointer"><input type="checkbox" data-exam-id="${escAttr(id)}" ${on?'checked':''} onchange="toggleExamPickId(this.getAttribute('data-exam-id'),this.checked)"><span><b>${i+1}.</b> <span class="tag">${esc(it.Dang||'')}</span> ${it.MucDo?('<span class="tag">'+esc(it.MucDo)+'</span> '):''}<span class="muted">${esc(id)}</span><br>${esc(it.stem||'')}</span></label>`;
+  }).join('');
+}
+function toggleExamPickId(id,on){
+  id=String(id||'');if(!id)return;
+  EXAM_PICK_ALL=false;EXAM_PICK_TAB='pick';
+  let set=new Set(EXAM_PICK_IDS);
+  if(on)set.add(id);else set.delete(id);
+  EXAM_PICK_IDS=[...set];
+  updateExamPickSummary();
+}
+function examPickSelectAll(on){
+  let items=(EXAM_POOL_CACHE&&EXAM_POOL_CACHE.items)||[];
+  EXAM_PICK_TAB='pick';EXAM_PICK_ALL=false;
+  EXAM_PICK_IDS=on?items.map(x=>String(x.ID||'')).filter(Boolean):[];
+  renderExamPickList();updateExamPickSummary();
+}
+function syncStartExamUi(){
+  let exam=!!(document.getElementById('chkExamMode')&&document.getElementById('chkExamMode').checked);
+  let panel=document.getElementById('startExamPanel');if(panel)panel.classList.toggle('hide',!exam);
+  let hint=document.getElementById('startExamHint');if(hint)hint.classList.toggle('hide',!exam);
+  let pend=document.getElementById('startIncludePendingWrap');
+  if(pend){pend.classList.toggle('hide',!(USER&&USER.is_admin&&!exam));pend.style.display=(USER&&USER.is_admin&&!exam)?'flex':'none'}
+  let linkBtn=document.getElementById('btnCreateExamLink');if(linkBtn)linkBtn.classList.toggle('hide',!(USER&&USER.is_admin&&exam));
+  let gd=document.getElementById('chkGroupDang');if(gd&&exam)gd.checked=false;
+  if(exam){
+    setExamPickTab(EXAM_PICK_TAB||'preset');
+    if(EXAM_PICK_TAB==='preset'&&!EXAM_PICK_ALL&&!(document.getElementById('startNumQuestions')||{}).value)setExamPreset(20);
+  }
+  updateExamPickSummary();
+}
+function collectExamAssignPayload(){
+  if(!CURRENT_MADE)throw new Error('Chưa chọn đề.');
+  if(!(document.getElementById('chkExamMode')&&document.getElementById('chkExamMode').checked))throw new Error('Hãy bật «Làm bài kiểm tra» trước.');
+  let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};
+  let payload={made:CURRENT_MADE,title:examDisplayTitle(item),level:(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase(),dang:(val('fDang')||CURRENT_DANG||'').trim(),dangbaitap:getStartModalDangBaiTap?getStartModalDangBaiTap():(CURRENT_DANGBAITAP||''),shuffle_a:document.getElementById('chkShuffleA')&&document.getElementById('chkShuffleA').checked?1:0};
+  if(EXAM_PICK_TAB==='pick'){
+    if(!EXAM_PICK_IDS.length)throw new Error('Tick chọn ít nhất 1 câu.');
+    payload.question_ids=EXAM_PICK_IDS.slice();
+  }else if(EXAM_PICK_TAB==='bytype'){
+    payload.exam_spec=collectExamSpec();
+    if(!((payload.exam_spec.tn||0)+(payload.exam_spec.ds||0)+(payload.exam_spec.tln||0)))throw new Error('Nhập số câu theo dạng TN/ĐS/TLN.');
+  }else{
+    payload.exam_all=EXAM_PICK_ALL?1:0;
+    payload.num_questions=parseInt((document.getElementById('startNumQuestions')||{}).value,10)||0;
+    if(!payload.exam_all&&payload.num_questions<=0)throw new Error('Chọn nút 10/20/28/Tất cả hoặc nhập số câu.');
+  }
+  return payload;
+}
+async function createAndCopyExamLink(){
+  if(!(USER&&USER.is_admin)){alert('Chỉ ADMIN tạo link gửi học sinh.');return}
+  try{
+    let payload=collectExamAssignPayload();
+    let j=await api('/api/exam-assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    let url=j.url||(location.origin+(j.path||('/?exam='+j.code+'&start=1')));
+    let ok=await copyTextToClipboard(url);
+    alert((ok?'✅ Đã chép link bài kiểm tra.\n\n':'⚠ Không chép được — hãy copy thủ công:\n\n')+url+'\n\nMã: '+(j.code||'')+'\nGửi Zalo/Messenger cho học sinh.\nCác em đăng nhập → mở link → làm bài (không xem đáp án đến khi nộp).');
+  }catch(e){alert('Không tạo được link: '+(e.message||e))}
+}
+function resetExamPickState(){
+  EXAM_PICK_TAB='preset';EXAM_PICK_ALL=false;EXAM_PICK_IDS=[];EXAM_POOL_CACHE=null;
+  let nq=document.getElementById('startNumQuestions');if(nq)nq.value='';
+  let a=document.getElementById('examSpecTn'),b=document.getElementById('examSpecDs'),c=document.getElementById('examSpecTln');
+  if(a)a.value='10';if(b)b.value='4';if(c)c.value='6';
+  let box=document.getElementById('examPickList');if(box)box.innerHTML='';
+}
+function openStartModal(made,dbtPref){CURRENT_MADE=made;CURRENT_LEVEL=(val('fMucDo')||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||'').trim();CURRENT_DANGBAITAP=String(dbtPref!=null?dbtPref:(val('fDangBaiTap')||'')).trim();START_IS_RETRY=false;document.getElementById('startModalTitle').textContent='Thiết lập làm bài';document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false;let gd=document.getElementById('chkGroupDang');if(gd)gd.checked=true;let ex=document.getElementById('chkExamMode');if(ex)ex.checked=false;resetExamPickState();let ip=document.getElementById('chkIncludePending');if(ip)ip.checked=false;syncStartExamUi();let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===made)||{};let lv=CURRENT_LEVEL;let dg=CURRENT_DANG;let mc=filterMatchCount(item,lv,dg);let parts=[];if(dg)parts.push('dạng <b>'+esc(dg)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(lv)parts.push('mức <b>'+esc(lv)+'</b>');let base=parts.length?'🎯 Chỉ làm câu '+parts.join(' · ')+'.':'';if(USER&&USER.is_admin)base+=(base?' ':'')+'✅ Mặc định chỉ câu <b>đã duyệt</b> (trùng VIP).';note.innerHTML=base;note.classList.toggle('hide',!base)}renderStartDangBaiTapPicker(made,CURRENT_DANGBAITAP);let sm=document.getElementById('startModal');if(sm)sm.classList.remove('hide')}
+function openRetryModal(){if(USER.can_quiz_retry===false)return;if(!CURRENT_MADE){alert('Chưa xác định được mã đề.');return}CURRENT_LEVEL=(val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();CURRENT_DANG=(val('fDang')||CURRENT_DANG||'').trim();START_IS_RETRY=true;document.getElementById('startModalTitle').textContent='Làm lại đề';let ex=document.getElementById('chkExamMode');if(ex)ex.checked=false;resetExamPickState();syncStartExamUi();let note=document.getElementById('startFilterNote');if(note){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};let mc=filterMatchCount(item,CURRENT_LEVEL,CURRENT_DANG);if(CURRENT_DANG||CURRENT_LEVEL){let parts=[];if(CURRENT_DANG)parts.push('dạng <b>'+esc(CURRENT_DANG)+'</b>'+(mc!=null?' — <b>'+mc+'</b> câu':''));if(CURRENT_LEVEL)parts.push('mức <b>'+esc(CURRENT_LEVEL)+'</b>');note.innerHTML='🎯 Chỉ làm câu '+parts.join(' · ')+'.';note.classList.remove('hide')}else{note.innerHTML='';note.classList.add('hide')}}renderStartDangBaiTapPicker(CURRENT_MADE,CURRENT_DANGBAITAP);let sm2=document.getElementById('startModal');if(sm2)sm2.classList.remove('hide')}
+async function confirmStartQuiz(){
+  let made=CURRENT_MADE;if(!made)return;
+  let sq=document.getElementById('chkShuffleQ').checked;let sa=document.getElementById('chkShuffleA').checked;
+  let gd=document.getElementById('chkGroupDang');let groupBy=gd?gd.checked:true;
+  let exam=!!(document.getElementById('chkExamMode')&&document.getElementById('chkExamMode').checked);
+  let includePending=!!(USER&&USER.is_admin&&document.getElementById('chkIncludePending')&&document.getElementById('chkIncludePending').checked&&!exam);
+  let numQ=0,examAll=false,ids=[],spec={};
+  if(exam){
+    if(EXAM_PICK_TAB==='pick'){
+      ids=EXAM_PICK_IDS.slice();
+      if(!ids.length){alert('Hãy tick chọn ít nhất 1 câu trong danh sách.');return}
+    }else if(EXAM_PICK_TAB==='bytype'){
+      spec=collectExamSpec();
+      if(!((spec.tn||0)+(spec.ds||0)+(spec.tln||0))){alert('Nhập số câu theo dạng (TN / Đ/S / TLN).');return}
+    }else{
+      examAll=!!EXAM_PICK_ALL;
+      numQ=parseInt((document.getElementById('startNumQuestions')||{}).value,10)||0;
+      if(!examAll&&numQ<=0){alert('Chọn nút 10/20/28/Tất cả hoặc nhập số câu.');return}
+    }
+  }
+  let lv=(val('fMucDo')||'').trim().toUpperCase();let dg=(val('fDang')||'').trim();
+  CURRENT_LEVEL=lv;CURRENT_DANG=dg;CURRENT_DANGBAITAP=getStartModalDangBaiTap();
+  closeStartModal();
+  if(START_IS_RETRY&&!SUBMITTED&&Object.keys(ANSWERS).length){if(!confirm('Làm lại sẽ xóa bài đang làm. Tiếp tục?'))return}
+  await startQuiz(made,sq,sa,lv,dg,groupBy,CURRENT_DANGBAITAP,exam,numQ,includePending,ids,spec,examAll);
+}
 function pickShufflePreset(kind){document.getElementById('chkShuffleQ').checked=kind==='q'||kind==='both';document.getElementById('chkShuffleA').checked=kind==='a'||kind==='both';if(kind==='none'){document.getElementById('chkShuffleQ').checked=false;document.getElementById('chkShuffleA').checked=false}confirmStartQuiz()}
 function updateShuffleBadge(j){let el=document.getElementById('shuffleBadge');if(!el)return;let parts=[];if(j&&j.shuffle_questions)parts.push('Xáo câu');if(j&&j.shuffle_options)parts.push('Xáo đáp án');if(parts.length){el.textContent=parts.join(' + ');el.classList.remove('hide')}else{el.textContent='';el.classList.add('hide')}}
 function deriveKhoi(lop){let s=String(lop||'').trim();if(!s)return '';let m=s.match(/^(\d{1,2})/);if(m)return m[1];let m2=s.match(/\b(10|11|12)\b/);return m2?m2[1]:''}
@@ -21527,9 +22581,9 @@ function quizLevelPrimary(q){let u=String((q&&q.MucDo)||'').toUpperCase();if(/\b
 function quizSectionKey(q){q=applyResolvedDang(q||{});return String(q.Dang||'').trim()||'Câu hỏi'}
 function quizSectionTitle(q){q=applyResolvedDang(q||{});return String(q.Dang||'').trim()||'Câu hỏi'}
 function quizSectionLabel(i){if(!GROUP_BY_DANG||!QUESTIONS.length)return null;let q=applyResolvedDang(QUESTIONS[i]);if(i===0)return quizSectionTitle(q);let prev=applyResolvedDang(QUESTIONS[i-1]);return quizSectionKey(q)!==quizSectionKey(prev)?quizSectionTitle(q):null}
-function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
-async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap=''){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0})});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
-function backHome(){stopQuizTimer();FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
+function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;EXAM_MODE=!!j.exam_mode;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(EXAM_MODE)USER.can_view_solution_live=false;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin&&!EXAM_MODE;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;CORRECT_STREAK=0;hideStreakToast(true);HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';let examTag=EXAM_MODE?' | 🧪 Kiểm tra':'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}${examTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}${examTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
+async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap='',examMode=false,numQuestions=0,includePending=false,questionIds=null,examSpec=null,examAll=false){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let body={made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0,exam_mode:examMode?1:0,num_questions:numQuestions||0,include_pending:includePending?1:0,exam_all:examAll?1:0,question_ids:questionIds||[],exam_spec:examSpec||{}};let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
+function backHome(){stopQuizTimer();EXAM_MODE=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
 function ensureFullModeOverrides(){
     let fsId='LDVL_FS_OVR_V334';
     let prev=document.getElementById(fsId);
@@ -21686,14 +22740,15 @@ function toggleFsNav(){
 }
 async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion();setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(3,120)},180);return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion()}
 function isAdminViewer(){return !!(USER.is_admin||String(USER.role||'').toUpperCase()==='ADMIN')} /* dùng cho nút Sửa câu, xem ĐA/LG ngay */
-function canViewSolutionLive(){return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
+function canViewSolutionLive(){if(EXAM_MODE&&!SUBMITTED)return false;return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
 function hasAttemptedQuestion(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return false;if(q.Dang==='Tự luận')return isQuestionDone(qIdx);return isQuestionChecked(qIdx)}
 function canShowSolutionNow(){if(!canViewSolutionLive())return false;if(isAdminViewer())return true;return hasAttemptedQuestion(CUR)}
 function canUseInfographicRole(){return !!(USER.is_admin||canViewSolutionLive())}
 function isQuestionCorrect(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;let r=SUBMITTED?RESULTS[qIdx]:(RESULTS[qIdx]||CHECKED[qIdx]);return !!(r&&r.ok===true)}
 function canUnlockInfographic(qIdx){if(!canUseInfographicRole())return false;if(USER.is_admin)return true;return isQuestionCorrect(qIdx)}
 function syncInfographicButtons(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let roleOk=canUseInfographicRole()&&inQuiz;let ready=canUnlockInfographic(CUR);let lockTip='Trả lời đúng câu này mới mở khóa infographic.';for(let spec of [['btnFsInfographic',false],['btnInfographic',true]]){let b=document.getElementById(spec[0]);if(!b)continue;if(spec[1]&&!USER.is_admin){b.classList.add('hide');continue}b.classList.toggle('hide',!roleOk);if(!USER.is_admin||!spec[1]){b.disabled=!ready;b.title=ready?'Tạo prompt infographic chính xác từ Sheet':lockTip;b.classList.toggle('vipSolLocked',!ready)}else{b.disabled=false;b.title='Tạo prompt infographic (ADMIN — không cần làm bài)'}}}
-function syncVipSolutionButtons(){let roleOk=canViewSolutionLive();let ready=canShowSolutionNow();let on=ready&&!!VIP_Q_SHOW_ANS[CUR],ex=ready&&!!VIP_Q_SHOW_EXP[CUR];let mobile=isMobileQuizUI();let lockTip='Làm và chấm câu này trước khi xem đáp án / lời giải.';let mv=document.getElementById('mobileDockVipBtns');if(mv)mv.classList.toggle('hide',!roleOk);let vt=document.getElementById('vipSolBtnsTop');if(vt)vt.classList.toggle('hide',!roleOk||mobile);for(let id of ['btnQuizShowAns','btnQuizShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let id of ['btnFsShowAns','btnFsShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let spec of [['btnMobileShowAns',on,'Ẩn ĐA','Đáp án'],['btnMobileShowExp',ex,'Ẩn LG','Lời giải'],['btnTopShowAns',on,'Ẩn ĐA','Đáp án'],['btnTopShowExp',ex,'Ẩn LG','Lời giải'],['btnQuizShowAns',on,'Ẩn ĐA','Đáp án'],['btnQuizShowExp',ex,'Ẩn LG','Lời giải'],['btnFsShowAns',on,'Ẩn ĐA','Đáp án'],['btnFsShowExp',ex,'Ẩn LG','Lời giải']]){let b=document.getElementById(spec[0]);if(!b)continue;b.classList.toggle('active',spec[1]);b.textContent=spec[1]?spec[2]:spec[3];if(!isAdminViewer()){b.disabled=!ready;b.title=ready?(spec[1]?'Ẩn':'Xem/ẩn')+(spec[0].includes('Exp')?' lời giải':' đáp án'):lockTip;b.classList.toggle('vipSolLocked',!ready)}}}
+function syncExamSubmitButton(){let b=document.getElementById('btnExamSubmit');if(!b)return;let show=!!EXAM_MODE&&!SUBMITTED&&!(USER&&USER.is_trial);b.classList.toggle('hide',!show);b.disabled=!show}
+function syncVipSolutionButtons(){syncExamSubmitButton();let roleOk=canViewSolutionLive()&&!(EXAM_MODE&&!SUBMITTED);let ready=canShowSolutionNow();let on=ready&&!!VIP_Q_SHOW_ANS[CUR],ex=ready&&!!VIP_Q_SHOW_EXP[CUR];let mobile=isMobileQuizUI();let lockTip='Làm và chấm câu này trước khi xem đáp án / lời giải.';let mv=document.getElementById('mobileDockVipBtns');if(mv)mv.classList.toggle('hide',!roleOk);let vt=document.getElementById('vipSolBtnsTop');if(vt)vt.classList.toggle('hide',!roleOk||mobile);for(let id of ['btnQuizShowAns','btnQuizShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let id of ['btnFsShowAns','btnFsShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let spec of [['btnMobileShowAns',on,'Ẩn ĐA','Đáp án'],['btnMobileShowExp',ex,'Ẩn LG','Lời giải'],['btnTopShowAns',on,'Ẩn ĐA','Đáp án'],['btnTopShowExp',ex,'Ẩn LG','Lời giải'],['btnQuizShowAns',on,'Ẩn ĐA','Đáp án'],['btnQuizShowExp',ex,'Ẩn LG','Lời giải'],['btnFsShowAns',on,'Ẩn ĐA','Đáp án'],['btnFsShowExp',ex,'Ẩn LG','Lời giải']]){let b=document.getElementById(spec[0]);if(!b)continue;b.classList.toggle('active',spec[1]);b.textContent=spec[1]?spec[2]:spec[3];if(!isAdminViewer()){b.disabled=!ready;b.title=ready?(spec[1]?'Ẩn':'Xem/ẩn')+(spec[0].includes('Exp')?' lời giải':' đáp án'):lockTip;b.classList.toggle('vipSolLocked',!ready)}}}
 function toggleQuestionAnswer(e){if(e&&e.stopPropagation)e.stopPropagation();if(!canViewSolutionLive()){alert('Chỉ VIP / SVIP / ADMIN được xem đáp án khi làm bài.');return}if(!canShowSolutionNow()){alert('Hãy làm và chấm câu này trước khi xem đáp án.');return}VIP_Q_SHOW_ANS[CUR]=!VIP_Q_SHOW_ANS[CUR];renderQuestion()}
 function toggleQuestionExplain(e){if(e&&e.stopPropagation)e.stopPropagation();if(!canViewSolutionLive()){alert('Chỉ VIP / SVIP / ADMIN được xem lời giải khi làm bài.');return}if(!canShowSolutionNow()){alert('Hãy làm và chấm câu này trước khi xem lời giải.');return}VIP_Q_SHOW_EXP[CUR]=!VIP_Q_SHOW_EXP[CUR];renderQuestion()}
 function toggleAnswerInFullscreen(){toggleQuestionAnswer()}
@@ -21702,7 +22757,47 @@ function formatDsAnswerLine(q,r){if(r&&r.correct_display)return formatDsAnswerBa
 function saveShortAnswer(){let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||USER.is_admin||q.Dang!='Trả lời ngắn')return;if(SUBMITTED)return;let el=document.getElementById('shortAnsInput');if(!el)return;ANSWERS[CUR]=el.value;renderNav();notifyDoneIfNeeded();if(MINI_CALC_OPEN)syncMiniCalcDisplay()}
 function saveCurrent(){let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||USER.is_admin)return;if(LOCKED_Q[CUR]&&q.Dang!='Trả lời ngắn')return;let ready=false;if(q.Dang=='Trắc nghiệm'){let r=document.querySelector(`input[name="ans_${CUR}"]:checked`);if(r){ANSWERS[CUR]=r.value;ready=true}}else if(q.Dang=='Đúng sai'){let arr=[];let req=0,got=0;for(let L of ['A','B','C','D']){if(q[L])req++;let r=document.querySelector(`input[name="tf_${CUR}_${L}"]:checked`);if(q[L]&&r)got++;arr.push(r?r.value:'')}ANSWERS[CUR]=arr;ready=(req>0&&got===req)}else if(q.Dang=='Trả lời ngắn'){saveShortAnswer()}else{let el=document.getElementById('essayAns');if(el)ANSWERS[CUR]=el.value}renderNav();notifyDoneIfNeeded();if(ready)autoCheckCurrentQuestion()}
 function commitShortAnswer(){saveShortAnswer();autoCheckCurrentQuestion()}
-async function autoCheckCurrentQuestion(){if(SUBMITTED||USER.is_admin||USER.is_trial)return;if(LOCKED_Q[CUR]||CHECKED[CUR]||RESULTS[CUR])return;let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||q.Dang=='Tự luận')return;let ans=ANSWERS[CUR];if(ans==null)return;if(Array.isArray(ans)?ans.every(v=>!v):String(ans).trim()==='')return;LOCKED_Q[CUR]=true;try{let j=await api('/api/check-one',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ans,...quizRestorePayload()})});CHECKED[CUR]=j;RESULTS[CUR]=j;updateResultBox(CUR);renderQuestion()}catch(e){LOCKED_Q[CUR]=false;renderQuestion();alert(e.message||'Không kiểm tra được câu này.')}}
+function currentQuizWorkTitle(){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};if(item&&(item.Mon||item.BaiHoc||item.De))return examDisplayTitle(item);let q=QUESTIONS[0]||{};let de=String((q.De||q.BaiHoc||CURRENT_MADE||'Bài luyện tập')).trim();return de||'Bài luyện tập'}
+function formatChosenAnswerBrief(q,ans){q=q||{};if(q.Dang==='Trắc nghiệm')return 'Chọn '+String(ans||'—');if(q.Dang==='Đúng sai'){let arr=Array.isArray(ans)?ans:[];let bits=[];for(let i=0;i<4;i++){if(!q[['A','B','C','D'][i]])continue;bits.push((['A','B','C','D'][i])+'='+(arr[i]||'?'))}return bits.join(' · ')||'Đã chọn Đúng/Sai'}if(q.Dang==='Trả lời ngắn')return 'TLN: '+String(ans||'').trim();return String(ans||'').trim()||'Đã trả lời'}
+function hideStreakToast(instant){let el=document.getElementById('streakToast');if(!el)return;if(STREAK_TOAST_TIMER){clearTimeout(STREAK_TOAST_TIMER);STREAK_TOAST_TIMER=null}if(instant){el.classList.remove('show','hideDown');el.innerHTML='';return}el.classList.add('hideDown');el.classList.remove('show');STREAK_TOAST_TIMER=setTimeout(function(){el.classList.remove('show','hideDown');el.innerHTML='';STREAK_TOAST_TIMER=null},420)}
+function streakCheerText(streak){streak=parseInt(streak,10)||0;if(streak>=10)return'Xuất sắc! Chuỗi vàng '+streak+' câu';if(streak>=7)return'Quá đỉnh! Giữ đà nào';if(streak>=5)return'Tuyệt vời! Đang bùng nổ';if(streak>=3)return'Giỏi lắm! Tiếp tục nhé';return'Khởi đầu đẹp! Cố lên'}
+function streakCheerIcon(streak){streak=parseInt(streak,10)||0;if(streak>=10)return'🏆';if(streak>=7)return'⚡';if(streak>=5)return'🔥';if(streak>=3)return'🌟';return'🎯'}
+function formatStreakNow(){try{let d=new Date();let pad=n=>String(n).padStart(2,'0');return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' · '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}catch(e){return ''}}
+function countCorrectAnswersNow(){let n=0;for(let i=0;i<(QUESTIONS||[]).length;i++){let r=RESULTS[i]||CHECKED[i];if(r&&r.ok===true)n++}return n}
+function avgSecPerCorrectNow(){let n=countCorrectAnswersNow();if(n<=0)return 0;return Math.max(1,Math.round((QUIZ_ELAPSED||0)/n))}
+function showStreakToast(streak,qIdx){if(!(USER&&USER.hoten)&&!(USER&&USER.mahs))return;if(streak<2)return;let el=document.getElementById('streakToast');if(!el)return;let name=String((USER&&USER.hoten)||(USER&&USER.mahs)||'Học sinh').trim();let lop=String((USER&&USER.lop)||'').trim();let q=applyResolvedDang(QUESTIONS[qIdx]||{});let work=currentQuizWorkTitle();let chosen=formatChosenAnswerBrief(q,ANSWERS[qIdx]);let cheer=streakCheerText(streak);let icon=streakCheerIcon(streak);let who=esc(name)+(lop?(' · Lớp '+esc(lop)):'');let when=formatStreakNow();let avgOk=avgSecPerCorrectNow();let avgOkTxt=avgOk?fmtTime(avgOk):'';let meta='Đúng liên tiếp <b>'+streak+'</b> câu · Câu '+(qIdx+1);let workHtml='<div><b>Bài làm:</b> '+esc(work)+'</div><div style="margin-top:3px">'+esc(chosen)+'</div>'+(avgOkTxt?('<div style="margin-top:4px">⚡ TB thời gian / câu đúng: <b>'+esc(avgOkTxt)+'</b></div>'):'');el.innerHTML='<div class="streakToastInner"><div class="streakToastCheer">'+icon+' '+esc(cheer)+'</div><div class="streakToastHead"><div class="streakToastBadge">'+icon+'</div><div><div class="streakToastTitle">'+who+'</div><div class="streakToastSub">Chuỗi đúng đang tăng — đừng dừng lại!</div></div></div><div class="streakToastMeta">'+meta+'</div><div class="streakToastWork">'+workHtml+'</div><div class="streakToastTime">🕒 Làm bài: '+esc(when||'—')+(avgOkTxt?(' · TB/câu đúng '+esc(avgOkTxt)):'')+'</div><div class="streakToastAd"><strong>📚 Lớp học Thầy Minh</strong>Zalo: <a href="https://zalo.me/0946111107" target="_blank" rel="noopener">0946.111.107</a></div><div class="streakToastBar" aria-hidden="true"><i></i></div></div>';el.classList.remove('hideDown','show');void el.offsetWidth;el.classList.add('show');if(STREAK_TOAST_TIMER){clearTimeout(STREAK_TOAST_TIMER);STREAK_TOAST_TIMER=null}STREAK_TOAST_TIMER=setTimeout(function(){hideStreakToast(false)},3000)}
+
+function longestCorrectStreakFromResults(resultsMap){
+  let best=0,cur=0;
+  for(let i=0;i<QUESTIONS.length;i++){
+    let r=resultsMap[i];
+    if(r&&r.ok===true){cur++;if(cur>best)best=cur}else{cur=0}
+  }
+  return best;
+}
+function showExamFinishToast(j){
+  if(USER&&(USER.is_admin||USER.is_trial))return;
+  let el=document.getElementById('streakToast');if(!el)return;
+  let name=String((USER&&USER.hoten)||(USER&&USER.mahs)||'Học sinh').trim();
+  let lop=String((USER&&USER.lop)||'').trim();
+  let work=currentQuizWorkTitle();
+  let when=formatStreakNow();
+  let score=(j&&j.score!=null)?j.score:'—';
+  let ok=parseInt(j&&j.correct_count,10)||0;
+  let tot=parseInt(j&&j.auto_count,10)||QUESTIONS.length||0;
+  let streak=longestCorrectStreakFromResults(RESULTS);
+  let cheer=streak>=5?'Hoàn thành xuất sắc!':(ok>=Math.ceil(tot*0.7)?'Nộp bài tốt lắm!':'Đã nộp bài kiểm tra');
+  let icon=streak>=5?'🏆':'📝';
+  let who=esc(name)+(lop?(' · Lớp '+esc(lop)):'');
+  let meta='Điểm <b>'+esc(String(score))+'/10</b> · Đúng <b>'+ok+'</b>/'+tot+(streak>=2?(' · Chuỗi đúng dài nhất <b>'+streak+'</b>'):'');
+  let ts=(j&&j.time_stats)||{};let avgTxt=ts.avg_text||'';let avgN=parseInt(ts.count,10)||0;let avgOkSec=parseInt(j&&j.avg_sec_per_correct,10)||0;if(!avgOkSec&&ok>0)avgOkSec=Math.max(1,Math.round((QUIZ_ELAPSED||0)/ok));let avgOkTxt=avgOkSec?fmtTime(avgOkSec):'';let histOk=ts.avg_per_correct_text||'';let histOkN=parseInt(ts.correct_sample_count,10)||0;let workHtml='<div><b>Bài kiểm tra:</b> '+esc(work)+'</div><div style="margin-top:3px">⏱ Thời gian làm: <b>'+esc(fmtTime(QUIZ_ELAPSED||0))+'</b>'+(avgOkTxt?(' · <b>TB / câu đúng: '+esc(avgOkTxt)+'</b>'):'')+'</div>'+(histOk&&histOkN?('<div style="margin-top:3px">📊 TB câu đúng các lượt trước: <b>'+esc(histOk)+'</b> ('+histOkN+' lượt)</div>'):'')+(avgTxt&&avgN?('<div style="margin-top:3px">TB cả bài: '+esc(avgTxt)+' ('+avgN+' lượt)</div>'):'');
+  el.innerHTML='<div class="streakToastInner"><div class="streakToastCheer">'+icon+' '+esc(cheer)+'</div><div class="streakToastHead"><div class="streakToastBadge">'+icon+'</div><div><div class="streakToastTitle">'+who+'</div><div class="streakToastSub">Kết quả sau khi nộp bài</div></div></div><div class="streakToastMeta">'+meta+'</div><div class="streakToastWork">'+workHtml+'</div><div class="streakToastTime">🕒 Nộp bài: '+esc(when||'—')+'</div><div class="streakToastAd"><strong>📚 Lớp học Thầy Minh</strong>Zalo: <a href="https://zalo.me/0946111107" target="_blank" rel="noopener">0946.111.107</a></div><div class="streakToastBar" aria-hidden="true"><i></i></div></div>';
+  el.classList.remove('hideDown','show');void el.offsetWidth;el.classList.add('show');
+  if(STREAK_TOAST_TIMER){clearTimeout(STREAK_TOAST_TIMER);STREAK_TOAST_TIMER=null}
+  STREAK_TOAST_TIMER=setTimeout(function(){hideStreakToast(false)},3500);
+}
+function noteAnswerStreak(ok,qIdx){if(USER&&(USER.is_admin||USER.is_trial))return;if(EXAM_MODE&&!SUBMITTED)return;if(ok===true){CORRECT_STREAK=(CORRECT_STREAK||0)+1;if(CORRECT_STREAK>=2)showStreakToast(CORRECT_STREAK,qIdx)}else if(ok===false){CORRECT_STREAK=0}}
+async function autoCheckCurrentQuestion(){if(SUBMITTED||USER.is_admin||USER.is_trial)return;if(LOCKED_Q[CUR]||CHECKED[CUR]||RESULTS[CUR])return;let q=applyResolvedDang(QUESTIONS[CUR]);if(!q||q.Dang=='Tự luận')return;let ans=ANSWERS[CUR];if(ans==null)return;if(Array.isArray(ans)?ans.every(v=>!v):String(ans).trim()==='')return;LOCKED_Q[CUR]=true;let qIdx=CUR;try{let j=await api('/api/check-one',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,answer:ans,...quizRestorePayload()})});CHECKED[qIdx]=j;RESULTS[qIdx]=j;noteAnswerStreak(j&&j.ok===true,qIdx);updateResultBox(qIdx);renderQuestion()}catch(e){LOCKED_Q[qIdx]=false;renderQuestion();alert(e.message||'Không kiểm tra được câu này.')}}
 function ensureNavClickDelegation(){}
 function bindNavNumClicks(){let nav=document.getElementById('navNums');if(!nav)return;nav.querySelectorAll('button.num[data-nav-idx]').forEach(btn=>{let idx=parseInt(btn.getAttribute('data-nav-idx'),10);if(!Number.isFinite(idx))return;btn.onclick=function(e){if(e){e.preventDefault();e.stopPropagation()}goQ(idx);return false}})}
 function scrollNavActiveIntoView(smooth){let nav=document.getElementById('navNums');if(!nav)return;let btn=nav.querySelector('button.num.active');if(btn&&btn.scrollIntoView)btn.scrollIntoView({block:'nearest',inline:'nearest',behavior:smooth?'smooth':'auto'})}
@@ -21736,7 +22831,7 @@ function adminNavCtxEdit(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(id
 async function adminNavCtxReview(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await toggleQuestionReviewAtIndex(idx)}
 async function adminNavCtxDelete(){let idx=ADMIN_NAV_CTX_IDX;hideAdminNavCtxMenu();if(idx>=0)await deleteQuestionAtIndex(idx)}function goQ(i){i=parseInt(i,10);if(!Number.isFinite(i)||i<0||i>=QUESTIONS.length)return;if(i!==CUR&&LEARNING_OPEN_KIND==='translate'){stopTranslateEnSpeech();TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_CHUNKS=[];LEARNING_OPEN_KIND=''}if(i!==CUR)saveCurrent();CUR=i;renderQuestion();scrollNavActiveIntoView(true)}function prevQ(){if(CUR>0){saveCurrent();CUR--;renderQuestion()}else{alert('Đang ở câu đầu tiên của đề.')}}function nextQ(){if(CUR<QUESTIONS.length-1){saveCurrent();CUR++;renderQuestion()}else{saveCurrent();alert('✅ Đã hết đề. Thầy/các em có thể xem lại các câu.')}} 
 function finishHintRequest(qIdx,j){stopHintLoadingTimer();HINT_LOADING_SINCE=0;setHintLoading(false);if(CUR===qIdx){renderHintBox(j||HINT_BY_Q[qIdx]||{});if(j&&j.hide_5050&&j.hide_5050.length)applyAuto5050(j.hide_5050);let scrollEl=isAdminViewer()?document.getElementById('solution'):document.getElementById('hintBox');if(scrollEl&&!scrollEl.classList.contains('hide'))scrollEl.scrollIntoView({behavior:'smooth',block:'nearest'})}else{let hb=document.getElementById('hintBox');if(hb&&USER.can_quiz_ai_hint===false&&!HINT_BY_Q[CUR]&&!SIMILAR_BY_Q[CUR]){hb.classList.add('hide','hintBoxQuizDisabled');hb.innerHTML=''}if(hb){hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML=''}}let rb=document.getElementById('resultBox');if(rb&&CUR===qIdx){if(USER.is_admin){rb.textContent=isMobileQuizUI()?'ADMIN':'ADMIN: đang xem đáp án/lời giải';syncAdminResultBox()}else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}syncHintButtons(USER.can_ai_hint!==false)}
-function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTIONS.length){return}if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=(USER&&USER.can_ai_hint)!==false;try{ensureLearningQuickBar()}catch(e){console.warn('ensureLearningQuickBar',e)}syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'||LEARNING_OPEN_KIND==='openclaw'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='pdf'){try{renderLearningPdfPanel()}catch(e){console.warn('renderLearningPdfPanel',e)}}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER&&USER.hoten||USER&&USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length} · ${idHtml}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){if(qtextEl){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}}else{if(qtextEl){qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+(splitImg?'':qImgHtml)}};let b50El=document.getElementById('btn5050');if(b50El)b50El.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.correct==L||(fb.ok===true&&fb.chosen==L))cls+=' correct';if(fb.chosen==L&&fb.ok===false)cls+=' wrong'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if(isQuestionChecked(CUR)&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');if(optEl){optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${html}</div></div>`:html}if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER&&USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMathWithRetry(FULLDE_ON?3:2,60);syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar();}
+function renderQuestion(){let q=applyResolvedDang(QUESTIONS[CUR]||{});if(!QUESTIONS.length){return}if(q.Dang=='Trắc nghiệm'){let hasOpt=false;for(let L of ['A','B','C','D'])if(q[L])hasOpt=true;if(!hasOpt&&looksShortAnswerClient(q))q.Dang='Trả lời ngắn'}renderNav();let canAi=(USER&&USER.can_ai_hint)!==false;try{ensureLearningQuickBar()}catch(e){console.warn('ensureLearningQuickBar',e)}syncLearningToggleUI();syncMiniCalcUI();let hb=document.getElementById('hintBox');if(hb){if(LEARNING_OPEN_KIND==='assistant'||LEARNING_OPEN_KIND==='openclaw'){LEARNING_OPEN_KIND='';hb.classList.add('hide');hb.classList.remove('aiAssistOpen','learningOpen');hb.innerHTML=''}else if(LEARNING_OPEN_KIND==='translate'){LEARNING_OPEN_KIND=''}else if(LEARNING_OPEN_KIND==='pdf'){try{renderLearningPdfPanel()}catch(e){console.warn('renderLearningPdfPanel',e)}}else if(LEARNING_OPEN_KIND==='theory'){loadLearningPanelContent('theory',false)}else if(LEARNING_OPEN_KIND==='method'){loadLearningPanelContent('method',false)}else if(HINT_LOADING&&HINT_LOADING_Q===CUR&&!HINT_BY_Q[CUR]){hb.classList.remove('learningOpen');showHintLoadingBox()}else if(canAi&&(HINT_BY_Q[CUR]||SIMILAR_BY_Q[CUR])){hb.classList.remove('learningOpen');hb.classList.remove('hintBoxLoading');renderHintBox(HINT_BY_Q[CUR]||{})}else if(canAi&&SIMILAR_LOADING&&SIMILAR_LOADING_Q===CUR){hb.classList.remove('learningOpen');hb.classList.remove('hide');hb.classList.remove('hintBoxLoading');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b><div class="muted" style="margin-top:6px;font-size:13px">Soạn câu mới cùng dạng, có đáp án và lời giải…</div></div></div>'}else{hb.classList.add('hide');hb.classList.remove('hintBoxLoading');hb.classList.remove('learningOpen');hb.innerHTML=''}}let who=(USER&&USER.hoten||USER&&USER.mahs||'').trim();let prefix=who?`${who} | `:'';let idHtml=q.ID?`<button type="button" class="qidIdBadge" onclick="copyQuestionId()" title="Bấm để chép ID câu">ID: ${esc(q.ID)}</button>`:`<span class="qidIdBadge qidIdEmpty">ID: —</span>`;let solTag=q.has_full_solution?'<span class="tag solFullTag" style="font-size:11px;padding:2px 6px">📗 LG đầy đủ</span>':(q.sol_status==='partial'?'<span class="tag solPartTag" style="font-size:11px;padding:2px 6px">📝 LG một phần</span>':'');document.getElementById('qid').innerHTML=isMobileQuizUI()?`Câu ${CUR+1}/${QUESTIONS.length} · ${idHtml}${formatMucDoBadges(q.MucDo)?' · '+formatMucDoBadges(q.MucDo):''}`:`${prefix?esc(prefix):''}Câu ${CUR+1}/${QUESTIONS.length} | ${idHtml} | ${formatMucDoBadges(q.MucDo)||'<span class="mucdoBadge mucdo-empty" title="Chưa ghi cột I">—</span>'} · <span class="qidDang">${esc(q.Dang||'')}</span>${q.NangLucVatLy?' · <span class="tag" title="Năng lực vật lí">'+esc(q.NangLucVatLy)+'</span>':''}${solTag?' · '+solTag:''}`;let solFigOnly=hinhanhIsSolutionFigure(q);let qImgHtml=(q.HinhAnh&&!solFigOnly)?buildQimgHtml(q.HinhAnh):'';let splitImg=usesImgSplit(q);let splitTln=isTlnImgSplit(q);let secLbl=quizSectionLabel(CUR);let secHead=(secLbl&&!isMobileQuizUI())?`<div class="quizSectionHead">📂 Phần: ${esc(secLbl)}</div>`:'';let qtextEl=document.getElementById('qtext');if(splitTln){if(qtextEl){qtextEl.innerHTML=secHead;qtextEl.classList.toggle('hide',!secHead)}}else{if(qtextEl){qtextEl.classList.remove('hide');qtextEl.innerHTML=secHead+renderQuizFieldHtml(q.CauHoi||'')+(splitImg?'':qImgHtml)}};let b50El=document.getElementById('btn5050');if(b50El)b50El.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=SUBMITTED||q.Dang!='Trắc nghiệm'||!(USER&&USER.can_5050)||LOCKED_Q[CUR];syncHintButtons(canAi);let html='';if(q.Dang=='Trắc nghiệm'){for(let L of ['A','B','C','D']){if(!q[L])continue;let checked=ANSWERS[CUR]==L?'checked':'';let cls='opt';let correct=(q.DapAn||'').toUpperCase().match(/[ABCD]/)?.[0]||'';if(isAdminViewer()&&!EXAM_MODE&&correct==L)cls+=' correct';let fb=RESULTS[CUR]||CHECKED[CUR];if((SUBMITTED||fb)&&fb){if(fb.chosen==L&&fb.ok===true)cls+=' correct';else if(fb.chosen==L&&fb.ok===false)cls+=' wrong';else if((SUBMITTED||!EXAM_MODE)&&fb.correct==L)cls+=' correct'}html+=`<label id="opt_${L}" class="${cls}"><input type="radio" name="ans_${CUR}" value="${L}" ${checked} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()">${dsCircleHtml(L)}<span>${renderQuizFieldHtml(stripOptionPrefix(q[L],L))}</span></label>`}if(mcqOptsUse2Col(q))html=`<div class="mcqOptsGrid2">${html}</div>`}else if(q.Dang=='Đúng sai'){let old=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:['','','',''];let crFb=RESULTS[CUR]||CHECKED[CUR];let rows=getDsCheckRows(q,crFb,old);let tfHead=`<div class="tfOptsHead"><span></span><span></span><span class="tfColHead"><span class="tfLblFull">Đúng · Sai</span><span class="tfLblShort">Đ<br>S</span></span></div>`;let tfRows='';for(let idx=0;idx<4;idx++){let L=['A','B','C','D'][idx];if(!q[L])continue;let cls='tfrow';let rr=rows.find(x=>x.letter===L);if((SUBMITTED||(!EXAM_MODE&&isQuestionChecked(CUR)))&&rr){if(rr.ok===true)cls+=' correct';else if(rr.ok===false)cls+=' wrong'}tfRows+=`<div class="${cls}">${dsCircleHtml(L)}<div class="tfStmt">${renderQuizFieldHtml(q[L])}</div><div class="tfOpts"><label class="tfOpt tfD" title="Đúng"><input type="radio" name="tf_${CUR}_${L}" value="Đ" ${old[idx]=='Đ'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Đúng</span><span class="tfLbl tfLblShort">Đ</span></label><label class="tfOpt tfS" title="Sai"><input type="radio" name="tf_${CUR}_${L}" value="S" ${old[idx]=='S'?'checked':''} ${(SUBMITTED||LOCKED_Q[CUR])?'disabled':''} onchange="saveCurrent()"><span class="tfLbl tfLblFull">Sai</span><span class="tfLbl tfLblShort">S</span></label></div></div>`}html=tfHead+tfRows}else if(q.Dang=='Trả lời ngắn'){html=buildShortAnsHtml(q,{compact:true,withQuestion:splitTln})}else{html=`<div style="margin-top:10px"><label style="display:block;font-weight:800;margin-bottom:8px">✏️ Bài làm tự luận</label><textarea id="essayAns" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Nhập bài làm tự luận..." ${SUBMITTED?'disabled':''} oninput="saveCurrent()">${esc(ANSWERS[CUR]||'')}</textarea></div>`}let optEl=document.getElementById('options');if(optEl){optEl.classList.toggle('mcqSplitWrap',splitImg);let splitCls='mcqSplit'+(q.Dang==='Đúng sai'?' mcqSplitDs':(splitTln?' mcqSplitTln':''));let splitOptsCls='mcqSplitOpts'+(mcqOptsUseSplitCol1(q)?' mcqSplitOptsCol1':'');optEl.innerHTML=splitImg?`<div class="${splitCls}"><div class="mcqSplitImg">${qImgHtml}</div><div class="${splitOptsCls}">${html}</div></div>`:html}if(!canShowSolutionNow()){VIP_Q_SHOW_ANS[CUR]=false;VIP_Q_SHOW_EXP[CUR]=false}else if(isAdminViewer()){VIP_Q_SHOW_ANS[CUR]=true;VIP_Q_SHOW_EXP[CUR]=true}let canShowAns=canShowSolutionNow(),canShowExp=canShowSolutionNow();let showAns=canShowAns&&!!VIP_Q_SHOW_ANS[CUR],showExp=canShowExp&&!!VIP_Q_SHOW_EXP[CUR];let showBox=showAns||showExp;document.getElementById('solution').classList.toggle('hide',!showBox);if(showBox){let r=RESULTS[CUR]||{};let parts=[];if(showAns){let ansLine=q.Dang==='Đúng sai'?formatDsAnswerLine(q,null):(q.Dang==='Trắc nghiệm'?formatMcqAnswerBadge(q.DapAn||''):renderRichText(q.DapAn||''));parts.push(`<b>Đáp án:</b> ${ansLine}`)}if(showExp){let lg=q.LoiGiai||r.LoiGiai||'Chưa có lời giải.';parts.push(`<b>Lời giải:</b><br>${formatLoigiaiByDang(lg,q,q.Dang)}`)};document.getElementById('solution').innerHTML=parts.join('<br>')}syncQuestionMucDoChrome(q);syncAdminLearningBoard();if(USER&&USER.is_admin&&String(q.DangBaiTap||'').trim())loadDangSimilarityReport(q,false,false);updateAdminChrome();typesetQuizMathWithRetry(FULLDE_ON?3:2,60);syncMobileQuizToolbar();syncVipSolutionButtons();syncInfographicButtons();updateResultBox(CUR);if(MINI_CALC_OPEN)syncMiniCalcDisplay();syncQuestionReviewToolbar();}
 async function use5050(){saveCurrent();try{let j=await api('/api/fifty',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,...quizRestorePayload()})});for(let L of j.hide||[]){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}let b50=document.getElementById('btn5050');if(b50)b50.disabled=true;let bfs=document.getElementById('btnFs5050');if(bfs)bfs.disabled=true;let msg=`50-50: đã loại ${((j.hide||[]).join(', ')||'2 đáp án sai')}`;document.getElementById('resultBox').textContent=msg;document.getElementById('resultBox').style.color='#1d4ed8';if(j.message&&!String(j.message).toLowerCase().includes('đã loại'))alert(j.message)}catch(e){alert(e.message)}}
 function adminAiProviderLabel(p){p=String(p||'').toUpperCase();if(p==='ANTHROPIC'||p==='CLAUDE')return 'Claude';if(p==='OPENAI'||p==='GPT')return 'GPT';return 'Gemini'}
 function adminAiProviderShort(p){p=String(p||'').toUpperCase();if(p==='ANTHROPIC')return '✨ Claude';if(p==='OPENAI')return '✅ GPT';return '⚡ Gemini'}
@@ -22244,7 +23339,7 @@ function closeDangSimilarityModal(){let m=document.getElementById('dangSimModal'
 function renderDangSimilarityModal(rep){window.DANG_SIM_MODAL_REPORT=rep||null;ensureDangSimModal();let m=document.getElementById('dangSimModal');let sum=document.getElementById('dangSimSummary');let list=document.getElementById('dangSimList');let aiBox=document.getElementById('dangSimAiBox');let st=document.getElementById('dangSimStatus');if(!m||!sum||!list)return;if(sum)sum.textContent=rep.summary||'';if(aiBox){if(rep.ai_advice){aiBox.classList.remove('hide');aiBox.innerHTML='<b>🤖 Gợi ý AI:</b><br>'+formatHintDisplay(rep.ai_advice)}else{aiBox.classList.add('hide');aiBox.innerHTML=''}}if(st)st.textContent='Tick câu sẽ xóa (mặc định giữ dòng nhỏ hơn — câu cũ hơn). Có thể bấm «Xem» để mở câu trước khi xóa.';let pairs=(rep.pairs||[]).filter(p=>p.kind==='question_question');if(!pairs.length){list.innerHTML='<div class="muted">Không có cặp câu–câu để xóa tự động. Cặp câu–khung PP cần sửa khung Phương pháp thủ công.</div>'}else{list.innerHTML=pairs.map((p,i)=>{let pct=Math.round(parseFloat(p.similarity||0)*100);let delRow=dangSimDefaultDeleteRow(p);let keepRow=delRow===(parseInt(p.row_a,10)||0)?(parseInt(p.row_b,10)||0):(parseInt(p.row_a,10)||0);let delId=delRow===(parseInt(p.row_a,10)||0)?(p.id_a||''):(p.id_b||'');let snip=esc(shortText(p.snippet_a||'',90));return `<div class="dangSimPair" data-pair="${i}"><div class="dangSimPairHead">${pct}% · ${esc(p.id_a||'?')} (dòng ${p.row_a||'?'}) ↔ ${esc(p.id_b||'?')} (dòng ${p.row_b||'?'})</div><div class="dangSimPairSnip">${snip}</div><div class="dangSimPairActs"><label><input type="checkbox" class="dangSimDelChk" data-del-row="${delRow}" data-del-id="${escAttr(delId)}" checked> Xóa dòng ${delRow} · ${esc(delId||'—')} (giữ dòng ${keepRow})</label><button type="button" class="btn2 btnSmall" onclick="jumpDangSimQuestion(${parseInt(p.row_a,10)||0})">👁 A</button><button type="button" class="btn2 btnSmall" onclick="jumpDangSimQuestion(${parseInt(p.row_b,10)||0})">👁 B</button></div></div>`}).join('')}m.classList.remove('hide');try{typesetQuizMath()}catch(e){}}
 function jumpDangSimQuestion(row){row=parseInt(row,10)||0;if(!row)return;let idx=QUESTIONS.findIndex(q=>parseInt(q._row,10)===row);if(idx<0){alert('Câu dòng '+row+' không có trong phiên làm bài hiện tại.\nMở đề chứa câu này hoặc tìm trên Google Sheet.');return}saveCurrent();CUR=idx;renderNav();renderQuestion();closeDangSimilarityModal()}
 function collectDangSimDeleteRows(){let rows=[];document.querySelectorAll('#dangSimList .dangSimDelChk:checked').forEach(ch=>{let r=parseInt(ch.getAttribute('data-del-row'),10)||0;if(r>1)rows.push(r)});return [...new Set(rows)]}
-function purgeLocalQuestionsAfterDeletes(rows){let dels=new Set(rows.map(r=>parseInt(r,10)).filter(r=>r>1));if(!dels.size)return;let removedIdx=[];for(let i=QUESTIONS.length-1;i>=0;i--){if(dels.has(parseInt(QUESTIONS[i]._row,10)||0))removedIdx.push(i)}removedIdx.sort((a,b)=>b-a);for(let i of removedIdx){QUESTIONS.splice(i,1);reindexQuizMaps(i)}for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;let shift=[...dels].filter(d=>d<r).length;if(shift)qq._row=r-shift}if(CUR>=QUESTIONS.length)CUR=Math.max(0,QUESTIONS.length-1)}
+function purgeLocalQuestionsAfterDeletes(rows,ids){let dels=new Set(rows.map(r=>parseInt(r,10)).filter(r=>r>1));if(!dels.size&&!(ids&&ids.length))return;if(ids&&ids.length)clearOfflineDecksContainingIds(ids);else{let idList=[];for(let qq of QUESTIONS){if(dels.has(parseInt(qq._row,10)||0))idList.push(qq.ID||'')}clearOfflineDecksContainingIds(idList)}clearOfflineDeckForMade(CURRENT_MADE);if(!dels.size)return;let removedIdx=[];for(let i=QUESTIONS.length-1;i>=0;i--){if(dels.has(parseInt(QUESTIONS[i]._row,10)||0))removedIdx.push(i)}removedIdx.sort((a,b)=>b-a);for(let i of removedIdx){QUESTIONS.splice(i,1);reindexQuizMaps(i)}for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;let shift=[...dels].filter(d=>d<r).length;if(shift)qq._row=r-shift}if(CUR>=QUESTIONS.length)CUR=Math.max(0,QUESTIONS.length-1)}
 async function executeDangSimilarityDelete(){if(!USER.is_admin)return;let rows=collectDangSimDeleteRows();if(!rows.length){alert('Chưa tick câu nào để xóa.');return}if(!confirm('Xóa '+rows.length+' câu khỏi Google Sheet?\n\nDòng: '+rows.sort((a,b)=>a-b).join(', ')+'\n\nHành động không hoàn tác.'))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;let btn=document.getElementById('dangSimDeleteBtn');let st=document.getElementById('dangSimStatus');if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}if(st)st.textContent='⏳ Đang xóa '+rows.length+' dòng trên Google Sheet…';try{let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});purgeLocalQuestionsAfterDeletes(j.rows||rows);DANG_SIMILARITY_CACHE={};if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||0)+' câu.'));renderNav();renderQuestion();refreshCatalogFromMeta();let q=QUESTIONS[CUR]||{};if(String(q.DangBaiTap||'').trim()){let rep=await loadDangSimilarityReport(q,true,false);if(rep&&rep.pair_count)renderDangSimilarityModal(rep);else closeDangSimilarityModal()}else closeDangSimilarityModal();alert(j.message||('Đã xóa '+(j.deleted||0)+' câu.'))}catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa các câu đã chọn'}}}
 async function adminAnalyzeDangSimilarity(withAi){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!String(q.DangBaiTap||'').trim()){alert('Câu chưa có Dạng bài tập (cột H).');return}let rep=await loadDangSimilarityReport(q,true,!!withAi);if(!rep){alert('Không phân tích được.');return}if(LEARNING_OPEN_KIND==='method'){let hb=document.getElementById('hintBox');if(hb&&hb.classList.contains('learningOpen')){let items=(LEARNING_CACHE[learningCacheKey('method',q)]||{}).items||[];renderLearningPanel('method',items,(LEARNING_CACHE[learningCacheKey('method',q)]||{}).meta||{})}}renderDangSimilarityModal(rep)}
 function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let dbt=String(q.DangBaiTap||'').trim();let meta=[q.Mon,q.Lop?'Lớp '+q.Lop:'',q.Chuong,q.BaiHoc].filter(x=>String(x||'').trim()).join(' · ');let trangThai=String(q.TrangThai||'').trim();let isDuyet=(()=>{let kn=trangThai.toLowerCase().replace(/\s/g,'');return kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||trangThai==='ĐÃ DUYỆT'})();let reviewBadge=trangThai?`<span style="display:inline-block;margin-top:4px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;${isDuyet?'background:#dcfce7;color:#166534;border:1px solid #86efac':'background:#ffedd5;color:#9a3412;border:1px solid #fdba74'}">` +(isDuyet?'✅ Đã duyệt':'⏳ Chưa duyệt')+'</span>':'';scope.innerHTML=(dbt?`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:12px;font-weight:900;max-width:100%;word-break:break-word">🏷️ ${esc(dbt)}</span></div>`:`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:11px;font-weight:800">⚠ Chưa có Dạng BT</span></div>`)+(meta?`<div style="font-size:11px;color:var(--muted);line-height:1.4">${esc(meta)}</div>`:'') +reviewBadge}}
@@ -22296,7 +23391,7 @@ function renderTranslatePanel(){}
 async function requestTranslateEn(loai){openTranslateAiMode(normTranslateKind(loai||'CauHoi'))}
 async function requestSimilarQuestion(){if(USER.can_quiz_similar===false)return;if(!USER.can_ai_hint){alert('Tạo câu tương tự chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(SIMILAR_LOADING||HINT_LOADING)return;LEARNING_OPEN_KIND='';saveCurrent();let qIdx=CUR;setSimilarLoading(true,qIdx);if(HINT_BY_Q[qIdx])renderHintBox(HINT_BY_Q[qIdx]);else{let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b></div></div>'}}try{let j=await api('/api/hint/similar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,...quizRestorePayload()})});SIMILAR_BY_Q[qIdx]=j;if(CUR===qIdx)renderHintBox(HINT_BY_Q[qIdx]||{});let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide'))hb.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){alert('Không tạo được câu tương tự: '+e.message)}finally{if(SIMILAR_LOADING_Q===qIdx){setSimilarLoading(false);if(CUR===qIdx&&(HINT_BY_Q[qIdx]||SIMILAR_BY_Q[qIdx]))renderHintBox(HINT_BY_Q[qIdx]||{})}}}
 async function requestHint(){if(USER.can_quiz_ai_hint===false&&!isAdminViewer())return;if(!USER.can_quiz_ai_hint&&!isAdminViewer()){alert('Gợi ý AI đã tắt.');return}if(!USER.can_ai_hint){alert('Gợi ý AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(HINT_LOADING||SIMILAR_LOADING){return}LEARNING_OPEN_KIND='';saveCurrent();let qIdx=CUR;delete HINT_BY_Q[qIdx];setHintLoading(true,qIdx);beginHintLoadingTimer();showHintLoadingBox();let rb=document.getElementById('resultBox');if(rb)rb.style.color='#1d4ed8';let hintTimer=null;let hintDone=false;try{let ans=ANSWERS[qIdx];let hintBody={sid:SID,index:qIdx,answer:ans,...quizRestorePayload()};if(isAdminViewer())hintBody.admin_review_mode=getAdminReviewMode();HINT_ABORT_CTRL=new AbortController();let tms=hintClientTimeoutMs();hintTimer=setTimeout(()=>{abortHintFetch()},tms);let j=isAdminViewer()?await adminAiFetch('/api/hint',hintBody,{signal:HINT_ABORT_CTRL.signal}):await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hintBody),signal:HINT_ABORT_CTRL.signal});HINT_BY_Q[qIdx]=j;if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;hintDone=true;if(hintTimer){clearTimeout(hintTimer);hintTimer=null}finishHintRequest(qIdx,j)}catch(e){let msg=(e&&e.name==='AbortError')?'Quá thời gian chờ. Render Free giới hạn ~30 giây/request — chọn ⚡ Soát nhanh hoặc thử lại.':String(e.message||e);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>❌ Không lấy được gợi ý AI</b><div class="muted" style="margin-top:8px">'+esc(msg)+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}alert('Không lấy được gợi ý: '+msg)}finally{if(!hintDone){if(hintTimer)clearTimeout(hintTimer);stopHintLoadingTimer();HINT_LOADING_SINCE=0;if(HINT_LOADING_Q===qIdx)setHintLoading(false);syncHintButtons(USER.can_ai_hint!==false);if(CUR===qIdx&&rb){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}}}}
-async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm('Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS,...quizRestorePayload()})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}`;syncMobileQuizChrome();renderQuestion();renderNav()}
+async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm(EXAM_MODE?'Nộp bài kiểm tra? Sau khi nộp mới xem đáp án/lời giải.':'Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS,elapsed_sec:QUIZ_ELAPSED||0,...quizRestorePayload()})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;if(EXAM_MODE){USER.can_view_solution_live=true;for(let i=0;i<QUESTIONS.length;i++){let rr=RESULTS[i];if(rr){if(rr.DapAn!=null&&QUESTIONS[i])QUESTIONS[i].DapAn=rr.DapAn;if(rr.LoiGiai!=null&&QUESTIONS[i])QUESTIONS[i].LoiGiai=rr.LoiGiai}}}let avgOk=j.avg_per_correct_text||(j.avg_sec_per_correct?fmtTime(j.avg_sec_per_correct):'');let avgBit=avgOk?(` | TB/câu đúng ${avgOk}`):'';if(j.time_stats&&j.time_stats.avg_per_correct_text&&j.time_stats.correct_sample_count)avgBit+=` | TB chung ${j.time_stats.avg_per_correct_text}`;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}${avgBit}`;syncExamSubmitButton();syncMobileQuizChrome();renderQuestion();renderNav();if(EXAM_MODE){try{showExamFinishToast(j)}catch(e){console.warn('exam toast',e)}}}
 const QUESTION_FORM_FIELDS=['MaDe','ID','Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','QuyenTruyCap','TrangThai','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'];
 const QUESTION_EDIT_SAVE_FIELDS=['Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','QuyenTruyCap','TrangThai','LoiGiai','HinhAnh'];
 const QUESTION_FORM_LABELS={MaDe:'Mã đề (MaDe)',ID:'ID câu (để trống = tự tạo)',Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập - cột H',NangLucVatLy:'Năng lực vật lí - cột V',QuyenTruyCap:'Quyền (FREE/VIP)',TrangThai:'Trạng thái duyệt - cột TrangThai',MucDo:'Mức độ - cột I',Dang:'Dạng - cột J',CauHoi:'Câu hỏi / Nội dung - cột K',DapAn:'Đáp án - cột P',SaiSo:'Sai số - cột Q',LoiGiai:'Lời giải - cột R',HinhAnh:'Hình ảnh - cột T',A:'A - cột L',B:'B - cột M',C:'C - cột N',D:'D - cột O'};
@@ -24772,7 +25867,7 @@ let QUESTION_SAVE_BUSY=false;
 async function saveQuestionModal(){if(QUESTION_SAVE_BUSY)return;if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
 async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let saveBtn=document.getElementById('btnSaveQuestion');try{let q=QUESTIONS[CUR];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let form=readQuestionFormData();let updates={};for(let f of QUESTION_EDIT_SAVE_FIELDS)updates[f]=form[f]!=null?form[f]:(q[f]||'');updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\nVẫn lưu Sheet?'))return;QUESTION_SAVE_BUSY=true;if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;if(j.hinhanh){updates.HinhAnh=j.hinhanh}Object.assign(q,updates);q.reviewed_sheet=questionIsReviewedForAdmin(q);q.reviewed=q.reviewed_sheet;applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(j.hinhanh_warning?('\n\n⚠ '+j.hinhanh_warning):'')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.'))}catch(e){alert('Không lưu được: '+(e.message||e))}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();if(saveBtn)saveBtn.disabled=false}}
 async function saveAddQuestion(){if(QUESTION_SAVE_BUSY)return;let data=readQuestionFormData();if(!String(data.CauHoi||'').trim()){alert('Phải nhập nội dung câu hỏi.');return}QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang thêm…'}try{let j=await api('/api/question/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});let nq=applyResolvedDang(j.question||{});if(!nq._row)nq._row=j.row;let insertAt=Math.min(CUR+1,QUESTIONS.length);QUESTIONS.splice(insertAt,0,nq);insertQuizMaps(insertAt);CUR=regroupQuestionsByDang(nq._row);closeEdit();renderNav();renderQuestion();refreshCatalogFromMeta();alert('Đã thêm câu mới vào Google Sheet dòng '+j.row+(j.id?('\nID: '+j.id):''))}catch(e){alert('Không thêm được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
-async function deleteQuestionAtIndex(idx){if(!USER.is_admin)return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return}let msg='Xóa vĩnh viễn câu '+(idx+1)+' khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nApp tự cập nhật — không cần bấm Đồng bộ Sheet sau mỗi lần xóa.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});let deletedRow=parseInt(j.row,10)||0;let removedIdx=idx;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);refreshCatalogFromMeta();if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nMục lục đã tự cập nhật — không cần Đồng bộ Sheet.');return}if(CUR===removedIdx){if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1}else if(CUR>removedIdx)CUR--;closeEdit();renderNav();renderQuestion();syncQuestionReviewToolbar();document.getElementById('resultBox').textContent='Đã xóa câu '+(removedIdx+1)+' (dòng '+deletedRow+') — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
+async function deleteQuestionAtIndex(idx){if(!USER.is_admin)return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return}let msg='Xóa vĩnh viễn câu '+(idx+1)+' khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nApp tự cập nhật — không cần bấm Đồng bộ Sheet sau mỗi lần xóa.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});clearOfflineDecksContainingIds([q.ID||j.id||'']);clearOfflineDeckForMade(CURRENT_MADE);let deletedRow=parseInt(j.row,10)||0;let removedIdx=idx;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);refreshCatalogFromMeta();if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nMục lục đã tự cập nhật — không cần Đồng bộ Sheet.');return}if(CUR===removedIdx){if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1}else if(CUR>removedIdx)CUR--;closeEdit();renderNav();renderQuestion();syncQuestionReviewToolbar();document.getElementById('resultBox').textContent='Đã xóa câu '+(removedIdx+1)+' (dòng '+deletedRow+') — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
 async function deleteQuestion(){return deleteQuestionAtIndex(CUR)}
 setInterval(updateExamStrip,1000);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&FULLDE_ON){document.body.classList.add('fullde-mode')}if(!document.fullscreenElement){FS_ANS_FORCE=null;FS_EXP_FORCE=null;renderQuestion()}else if(FULLDE_ON){setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(2,100)},120)}});
@@ -26057,6 +27152,52 @@ function ldvlRefreshAdminDashboard(){
   set('ldvlNbMath',String(math||0));
   set('ldvlNbPhys',String(phys||0));
   ldvlRenderDashSyncPanel();
+  ldvlLoadAvgTimeStats(false);
+}
+async function ldvlLoadAvgTimeStats(force){
+  if(!USER||!USER.is_admin)return;
+  let box=document.getElementById('ldvlAvgTimeBox');
+  let stAvg=document.getElementById('ldvlStatAvgTime');
+  let stSub=document.getElementById('ldvlStatAvgTimeSub');
+  if(!force&&window.__LDVL_AVG_TIME_LOADED)return;
+  if(box)box.textContent='Đang đọc Ket_Qua…';
+  try{
+    let j=await api('/api/result-time-stats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({}),timeoutMs:60000});
+    window.__LDVL_AVG_TIME_LOADED=1;
+    let n=parseInt(j.count,10)||0;
+    if(stAvg)stAvg.textContent=n?(j.avg_per_correct_text&&j.avg_per_correct_text!=='—'?(j.avg_per_correct_text):(j.avg_text||'—')):'—';
+    if(stSub)stSub.textContent=n?('TB/câu đúng '+(j.avg_per_correct_text||'—')+' · '+n+' lượt'):'chưa có dữ liệu thời gian';
+    if(box){
+      if(!n){box.innerHTML='Chưa có lượt nộp nào ghi <b>thời gian làm bài</b>. Từ lần nộp sau (luyện/kiểm tra), app sẽ tự lưu rồi tính TB.';return}
+      let lines=[];
+      lines.push('<div style="margin-bottom:8px"><b>TB cả bài:</b> '+esc(j.avg_text||'—')+' · <b>TB / câu đúng:</b> '+esc(j.avg_per_correct_text||'—')+' · nhanh nhất '+esc(j.min_text||'—')+' · chậm nhất '+esc(j.max_text||'—')+' · <b>'+n+'</b> lượt</div>');
+      let bm=j.by_made||{};
+      let keys=Object.keys(bm);
+      if(keys.length){
+        keys.sort(function(a,b){return (bm[b].count||0)-(bm[a].count||0)});
+        lines.push('<div style="font-weight:800;margin:6px 0 4px">Theo đề (top)</div><ul style="margin:0;padding-left:18px">');
+        keys.slice(0,12).forEach(function(k){
+          let it=bm[k]||{};
+          let title=(CATALOG.find(function(x){return x.MaDe===k})||{});
+          let label=title.BaiHoc||title.De||k;
+          lines.push('<li><b>'+esc(label)+'</b>: TB bài '+esc(it.avg_text||'—')+(it.avg_per_correct_text&&it.avg_per_correct_text!=='—'?(' · TB/câu đúng '+esc(it.avg_per_correct_text)):'')+' ('+(it.count||0)+' lượt)</li>');
+        });
+        lines.push('</ul>');
+      }
+      let samples=j.samples||[];
+      if(samples.length){
+        lines.push('<div style="font-weight:800;margin:10px 0 4px">Lượt gần đây</div><ul style="margin:0;padding-left:18px">');
+        samples.slice().reverse().slice(0,8).forEach(function(s){
+          lines.push('<li>'+esc(s.hoten||s.mahs||'?')+' · '+esc(s.elapsed_text||'')+' · '+esc(s.ten_de||s.made||'')+' · '+esc(s.thoi_gian||'')+'</li>');
+        });
+        lines.push('</ul>');
+      }
+      box.innerHTML=lines.join('');
+    }
+  }catch(e){
+    if(stSub)stSub.textContent='không đọc được Ket_Qua';
+    if(box)box.textContent='Không tải được TB thời gian: '+(e.message||e);
+  }
 }
 window.LDVL_DASH_SYNC={mon:'',lop:'',chuong:'',bai:''};
 function ldvlMonKind(mon){
@@ -30711,19 +31852,123 @@ def api_start():
     if dang:
         dang = norm_dang(dang)
     dbt = _arg("dangbaitap") or _arg("dangbaitap_filter") or _arg("DangBaiTap")
+    exam_mode = str(_arg("exam_mode", "0")).lower() in ("1", "true", "yes")
+    include_pending = str(_arg("include_pending", "0")).lower() in ("1", "true", "yes")
+    exam_all = str(_arg("exam_all", "0")).lower() in ("1", "true", "yes")
+    exam_code = _arg("exam_code") or _arg("exam")
+    try:
+        num_questions = int(_arg("num_questions", "0") or "0")
+    except Exception:
+        num_questions = 0
+    ids_raw = body.get("question_ids") or body.get("ids") or []
+    if isinstance(ids_raw, str):
+        ids_raw = [x.strip() for x in re.split(r"[\n,;]+", ids_raw) if x.strip()]
+    if not isinstance(ids_raw, list):
+        ids_raw = []
+    exam_spec = body.get("exam_spec") or body.get("spec") or {}
+    if not isinstance(exam_spec, dict):
+        exam_spec = {}
     st = get_store()
     if not st.questions_loaded:
         st.start_questions_background(force=False)
         return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
-    return jsonify(st.start_quiz(
-        made,
-        shuffle_questions=shuffle_q,
-        shuffle_options=shuffle_a,
-        level_filter=level,
-        dang_filter=dang,
-        dangbaitap_filter=dbt,
-        group_by_dang=group_by_dang,
-    ))
+    try:
+        return jsonify(st.start_quiz(
+            made,
+            shuffle_questions=shuffle_q,
+            shuffle_options=shuffle_a,
+            level_filter=level,
+            dang_filter=dang,
+            dangbaitap_filter=dbt,
+            group_by_dang=group_by_dang,
+            exam_mode=exam_mode,
+            num_questions=num_questions,
+            include_pending=include_pending,
+            question_ids=[clean(x) for x in ids_raw if clean(x)],
+            exam_spec=exam_spec,
+            exam_all=exam_all,
+            exam_code=exam_code,
+        ))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/exam-pool", methods=["POST"])
+def api_exam_pool():
+    """Danh sách câu đã duyệt trong đề — để tick chọn khi giao bài kiểm tra."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    made = clean(body.get("made", ""))
+    if not made:
+        return jsonify({"error": "Thiếu mã đề."}), 400
+    st = get_store()
+    if not st.questions_loaded:
+        st.start_questions_background(force=False)
+        return jsonify({"error": "Dữ liệu đề đang nạp từ Google Sheet. Thầy chờ vài giây rồi bấm lại."}), 202
+    dang = clean(body.get("dang", "") or body.get("dang_filter", ""))
+    if dang:
+        dang = norm_dang(dang)
+    try:
+        return jsonify(st.list_exam_pool(
+            made,
+            level_filter=clean(body.get("level", "")).upper(),
+            dang_filter=dang,
+            dangbaitap_filter=clean(body.get("dangbaitap", "") or body.get("DangBaiTap", "")),
+        ))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/exam-assign", methods=["POST"])
+def api_exam_assign():
+    """ADMIN tạo bài kiểm tra → trả mã + link gửi học sinh."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN tạo link bài kiểm tra."}), 403
+    body = request.get_json(silent=True) or {}
+    try:
+        item = create_exam_assignment(body)
+        code = item["code"]
+        url_path = f"/?exam={urllib.parse.quote(code)}&start=1"
+        return jsonify({
+            "ok": True,
+            "code": code,
+            "made": item.get("made", ""),
+            "title": item.get("title", ""),
+            "path": url_path,
+            "url": request.url_root.rstrip("/") + url_path,
+            "message": "Đã tạo bài kiểm tra. Gửi link cho học sinh — các em đăng nhập rồi mở link để làm.",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/exam-assign/<code>", methods=["GET"])
+def api_exam_assign_get(code: str):
+    """Học sinh/ADMIN xem thông tin bài kiểm tra theo mã (không lộ đáp án)."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    item = get_exam_assignment(code)
+    if not item:
+        return jsonify({"error": "Không tìm thấy bài kiểm tra."}), 404
+    return jsonify({
+        "ok": True,
+        "code": item.get("code", ""),
+        "made": item.get("made", ""),
+        "title": item.get("title", ""),
+        "num_questions": item.get("num_questions", 0),
+        "exam_all": bool(item.get("exam_all")),
+        "exam_spec": item.get("exam_spec") or {},
+        "pick_count": len(item.get("question_ids") or []),
+        "level": item.get("level", ""),
+        "dang": item.get("dang", ""),
+        "dangbaitap": item.get("dangbaitap", ""),
+    })
 
 
 @app.route("/api/start-random", methods=["POST"])
@@ -32126,7 +33371,31 @@ def api_submit():
     body = request.get_json(silent=True) or {}
     restore = quiz_restore_payload_from_body(body)
     try:
-        return jsonify(get_store().submit(body.get("sid", ""), body.get("answers", {}), restore))
+        elapsed_sec = int(body.get("elapsed_sec") or body.get("elapsed") or 0)
+    except Exception:
+        elapsed_sec = 0
+    try:
+        return jsonify(
+            get_store().submit(body.get("sid", ""), body.get("answers", {}), restore, elapsed_sec=elapsed_sec)
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/result-time-stats", methods=["GET", "POST"])
+def api_result_time_stats():
+    """TB thời gian làm bài — ADMIN xem rộng; học sinh chỉ xem của mình."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    made = clean(body.get("made") or request.args.get("made") or "")
+    mahs = clean(body.get("mahs") or request.args.get("mahs") or "")
+    if not is_admin():
+        mahs = clean(session.get("mahs", ""))
+    try:
+        st = get_store()
+        return jsonify(st.compute_result_time_stats(made=made, mahs=mahs))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -33804,6 +35073,7 @@ def api_question_dedupe():
         return jsonify({"error": "Chỉ ADMIN được xóa câu trùng"}), 403
     body = request.get_json(silent=True) or {}
     dry_run = str(body.get("dry_run", "false")).lower() in ("1", "true", "yes")
+    made = clean(body.get("made", "") or body.get("MaDe", ""))
     try:
         max_delete = int(body.get("max_delete") or 0)
     except Exception:
@@ -33812,7 +35082,7 @@ def api_question_dedupe():
     try:
         st = get_store()
         st.ensure_questions_loaded()
-        return jsonify(st.remove_duplicate_questions(dry_run=dry_run, max_delete=max_delete))
+        return jsonify(st.remove_duplicate_questions(dry_run=dry_run, max_delete=max_delete, made=made))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -34216,7 +35486,7 @@ def student_local_json_page():
 
 /* ===== V12: thiết kế lại khung đề JSON cho rõ, đậm, dễ đọc ===== */
 body{background:linear-gradient(180deg,#eef5ff 0%,#f8fafc 38%,#eef2f7 100%)!important;color:#0f172a!important}
-.grid{grid-template-columns:350px minmax(0,1fr)!important;align-items:start}.grid>.card:nth-child(2){padding:16px!important;border-radius:22px!important;border:1px solid #bfdbfe!important;box-shadow:0 18px 45px rgba(15,23,42,.12)!important;background:linear-gradient(180deg,#fff,#f8fbff)!important}.grid>.card:nth-child(1){border-radius:20px!important;box-shadow:0 14px 36px rgba(15,23,42,.10)!important}.card h2{font-size:20px!important;color:#0f172a!important}.meta{margin:10px 0 12px!important}.tag{font-size:12px!important;font-weight:900!important;background:#e0ecff!important;border-color:#93c5fd!important;color:#1d4ed8!important;padding:5px 9px!important}.progress{height:12px!important;background:#e2e8f0!important;border-radius:999px!important}.bar{background:linear-gradient(90deg,#2563eb,#22c55e)!important}.qbox,#questionArea,#questionArea.small{color:#0f172a!important;font-size:19px!important;line-height:1.75!important;font-weight:500!important}.questionPaper{position:relative;background:#ffffff;border:2px solid #dbeafe;border-left:8px solid #2563eb;border-radius:20px;padding:18px 20px;margin:14px 0 14px;box-shadow:0 10px 28px rgba(37,99,235,.10)}.questionPaper:before{content:"ĐỀ BÀI";position:absolute;top:-12px;left:18px;background:#2563eb;color:#fff;font-size:11px;font-weight:1000;letter-spacing:.08em;border-radius:999px;padding:5px 10px;box-shadow:0 6px 14px rgba(37,99,235,.25)}.qTextMain{color:#0b1220!important;font-size:19px!important;line-height:1.8!important;font-weight:600!important;white-space:pre-wrap}.qTextMain .MathJax,.questionPaper .MathJax{font-size:105%!important}.questionPaper img,.qbox img{display:block;max-width:min(100%,560px)!important;max-height:440px!important;object-fit:contain;margin:14px auto 4px;border-radius:14px;border:1px solid #dbeafe;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.10)}.answerCard{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:13px;margin-top:10px}.answerTitle{font-weight:1000;color:#0f172a;margin:0 0 10px;display:flex;align-items:center;gap:8px}.opt{position:relative;border:2px solid #dbe5f2!important;background:#fff!important;border-radius:16px!important;padding:13px 15px!important;margin:10px 0!important;cursor:pointer!important;line-height:1.65!important;color:#0f172a!important;font-size:16px!important;box-shadow:0 4px 14px rgba(15,23,42,.04);transition:.15s ease}.opt:hover{border-color:#60a5fa!important;background:#eff6ff!important;transform:translateY(-1px)}.opt:has(input:checked){border-color:#2563eb!important;background:#dbeafe!important;box-shadow:0 8px 24px rgba(37,99,235,.18)}.opt b{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;margin-right:8px;border-radius:10px;background:#2563eb;color:#fff;font-weight:1000}.opt input{transform:scale(1.15);accent-color:#2563eb}.manualChoiceWrap{display:grid;grid-template-columns:repeat(4,minmax(70px,1fr));gap:10px}.manualChoice{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;border:2px solid #dbe5f2;border-radius:15px;background:#fff;font-weight:1000;cursor:pointer}.manualChoice:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.shortBox{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:14px;margin-top:12px}.shortBox input{font-size:18px!important;font-weight:800!important;border:2px solid #bfdbfe!important;background:#fff!important}.tfrow{border:2px solid #dbe5f2!important;border-radius:16px!important;background:#fff!important;padding:12px!important;color:#0f172a!important;box-shadow:0 4px 14px rgba(15,23,42,.04)}.tfrow>div{font-size:16px;line-height:1.6;font-weight:600}.tfrow label{font-weight:900;border:1px solid #dbe5f2;border-radius:12px;padding:9px;background:#f8fafc;cursor:pointer}.tfrow label:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.result{font-size:16px!important;font-weight:800!important;line-height:1.65!important;border-radius:16px!important}.loigiai{border:2px solid #86efac!important;border-left:8px solid #22c55e!important;background:#ecfdf5!important;color:#064e3b!important;border-radius:18px!important;padding:15px 17px!important;font-size:16px!important;line-height:1.75!important;box-shadow:0 8px 22px rgba(34,197,94,.12)}.solTitle{font-weight:1000;color:#065f46;margin-bottom:8px;font-size:17px}.emptyWarn{background:#fff7ed;border:2px dashed #fdba74;color:#9a3412;border-radius:16px;padding:12px;line-height:1.55;font-weight:700}.footerBtns{border-top:1px solid #dbe5f2;margin-top:14px}.footerBtns .btn{min-height:42px;border-radius:13px}.list button{font-size:13px;line-height:1.4}.list button.active{background:#dbeafe!important;border-left:5px solid #2563eb!important;color:#0f172a!important}@media(max-width:820px){.grid{grid-template-columns:1fr!important}.qbox,#questionArea,#questionArea.small,.qTextMain{font-size:17px!important}.questionPaper{padding:16px 14px}.manualChoiceWrap{grid-template-columns:repeat(2,1fr)}}
+.grid{grid-template-columns:350px minmax(0,1fr)!important;align-items:start}.grid>.card:nth-child(2){padding:16px!important;border-radius:22px!important;border:1px solid #bfdbfe!important;box-shadow:0 18px 45px rgba(15,23,42,.12)!important;background:linear-gradient(180deg,#fff,#f8fbff)!important}.grid>.card:nth-child(1){border-radius:20px!important;box-shadow:0 14px 36px rgba(15,23,42,.10)!important}.card h2{font-size:20px!important;color:#0f172a!important}.meta{margin:10px 0 12px!important}.tag{font-size:12px!important;font-weight:900!important;background:#e0ecff!important;border-color:#93c5fd!important;color:#1d4ed8!important;padding:5px 9px!important}.progress{height:12px!important;background:#e2e8f0!important;border-radius:999px!important}.bar{background:linear-gradient(90deg,#2563eb,#22c55e)!important}.qbox,#questionArea,#questionArea.small{color:#0f172a!important;font-size:19px!important;line-height:1.75!important;font-weight:500!important}.questionPaper{position:relative;background:#ffffff;border:2px solid #dbeafe;border-left:8px solid #2563eb;border-radius:20px;padding:18px 20px;margin:14px 0 14px;box-shadow:0 10px 28px rgba(37,99,235,.10)}.questionPaper:before{content:"ĐỀ BÀI";position:absolute;top:-12px;left:18px;background:#2563eb;color:#fff;font-size:11px;font-weight:1000;letter-spacing:.08em;border-radius:999px;padding:5px 10px;box-shadow:0 6px 14px rgba(37,99,235,.25)}.qTextMain{color:#0b1220!important;font-size:19px!important;line-height:1.8!important;font-weight:600!important;white-space:pre-wrap}.qTextMain .MathJax,.questionPaper .MathJax{font-size:105%!important}.questionPaper img,.qbox img{display:block;max-width:min(100%,560px)!important;max-height:440px!important;object-fit:contain;margin:14px auto 4px;border-radius:14px;border:1px solid #dbeafe;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.10)}.answerCard{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:13px;margin-top:10px}.answerTitle{font-weight:1000;color:#0f172a;margin:0 0 10px;display:flex;align-items:center;gap:8px}.opt{position:relative;border:2px solid #dbe5f2!important;background:#fff!important;border-radius:16px!important;padding:13px 15px!important;margin:10px 0!important;cursor:pointer!important;line-height:1.65!important;color:#0f172a!important;font-size:16px!important;box-shadow:0 4px 14px rgba(15,23,42,.04);transition:.15s ease}.opt:hover{border-color:#60a5fa!important;background:#eff6ff!important;transform:translateY(-1px)}.opt:has(input:checked){border-color:#2563eb!important;background:#dbeafe!important;box-shadow:0 8px 24px rgba(37,99,235,.18)}.opt.wrong:has(input:checked),.opt.wrong{border-color:#f87171!important;background:#fee2e2!important;box-shadow:inset 0 0 0 1px #f87171!important}.opt.correct:has(input:checked),.opt.correct{border-color:#4ade80!important;background:#dcfce7!important;box-shadow:inset 0 0 0 1px #4ade80!important}.opt b{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;margin-right:8px;border-radius:10px;background:#2563eb;color:#fff;font-weight:1000}.opt input{transform:scale(1.15);accent-color:#2563eb}.manualChoiceWrap{display:grid;grid-template-columns:repeat(4,minmax(70px,1fr));gap:10px}.manualChoice{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;border:2px solid #dbe5f2;border-radius:15px;background:#fff;font-weight:1000;cursor:pointer}.manualChoice:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.shortBox{background:#f8fafc;border:1px solid #dbe5f2;border-radius:18px;padding:14px;margin-top:12px}.shortBox input{font-size:18px!important;font-weight:800!important;border:2px solid #bfdbfe!important;background:#fff!important}.tfrow{border:2px solid #dbe5f2!important;border-radius:16px!important;background:#fff!important;padding:12px!important;color:#0f172a!important;box-shadow:0 4px 14px rgba(15,23,42,.04)}.tfrow>div{font-size:16px;line-height:1.6;font-weight:600}.tfrow label{font-weight:900;border:1px solid #dbe5f2;border-radius:12px;padding:9px;background:#f8fafc;cursor:pointer}.tfrow label:has(input:checked){background:#dbeafe;border-color:#2563eb;color:#1d4ed8}.result{font-size:16px!important;font-weight:800!important;line-height:1.65!important;border-radius:16px!important}.loigiai{border:2px solid #86efac!important;border-left:8px solid #22c55e!important;background:#ecfdf5!important;color:#064e3b!important;border-radius:18px!important;padding:15px 17px!important;font-size:16px!important;line-height:1.75!important;box-shadow:0 8px 22px rgba(34,197,94,.12)}.solTitle{font-weight:1000;color:#065f46;margin-bottom:8px;font-size:17px}.emptyWarn{background:#fff7ed;border:2px dashed #fdba74;color:#9a3412;border-radius:16px;padding:12px;line-height:1.55;font-weight:700}.footerBtns{border-top:1px solid #dbe5f2;margin-top:14px}.footerBtns .btn{min-height:42px;border-radius:13px}.list button{font-size:13px;line-height:1.4}.list button.active{background:#dbeafe!important;border-left:5px solid #2563eb!important;color:#0f172a!important}@media(max-width:820px){.grid{grid-template-columns:1fr!important}.qbox,#questionArea,#questionArea.small,.qTextMain{font-size:17px!important}.questionPaper{padding:16px 14px}.manualChoiceWrap{grid-template-columns:repeat(2,1fr)}}
 
 /* ===== V13: tự chấm + ẩn/mở bộ lọc để mở rộng đề ===== */
 .jsonLocalGrid{transition:.2s ease}.sidePanel{transition:.2s ease}.quizPanel{min-height:calc(100vh - 125px)}
