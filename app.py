@@ -7762,11 +7762,22 @@ class SheetStore:
         self.rebuild_indexes_after_admin_change()
         return {"ok": True, "updated": len(batch), "items": out_items}
 
+    def _question_field_col_1(self, field: str) -> int:
+        """Cột 1-indexed khi ghi Sheet — ưu tiên tiêu đề thực tế, fallback bố cục cố định."""
+        col0 = self._question_field_col0(field)
+        if col0 is None:
+            raise RuntimeError(f"Không tìm thấy cột {field} trên sheet Cau_Hoi.")
+        return int(col0) + 1
+
     def update_question_dangbaitap_bulk(self, updates: List[Dict[str, Any]]) -> Dict[str, Any]:
         """ADMIN duyệt hàng loạt Dạng bài tập: ghi nhanh cột H (DangBaiTap) cho nhiều câu."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được cập nhật Dạng bài tập hàng loạt")
-        fixed_col = SHEET_QUESTION_FIXED_COL_1.get("DangBaiTap", 8)
+        self.question_headers = list(
+            gsheet_call_retry("row_values Cau_Hoi DangBaiTap header", self.ws_questions.row_values, 1) or []
+        )
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        fixed_col = self._question_field_col_1("DangBaiTap")
         by_row: Dict[int, Dict[str, Any]] = {}
         for q in self.questions:
             try:
@@ -7810,7 +7821,47 @@ class SheetStore:
             raise RuntimeError("Không có câu hợp lệ để cập nhật Dạng bài tập.")
         gsheet_call_retry("batch_update Cau_Hoi DangBaiTap", self.ws_questions.batch_update, batch, value_input_option="RAW")
         self.rebuild_indexes_after_admin_change()
+        self._register_dbt_names_after_bulk(out_items)
         return {"ok": True, "updated": len(batch), "items": out_items}
+
+    def _register_dbt_names_after_bulk(self, out_items: List[Dict[str, Any]]) -> None:
+        """Sau khi ghi cột DangBaiTap: bổ sung tên dạng mới vào thứ tự hiển thị theo MaDe."""
+        if not out_items:
+            return
+        by_row: Dict[int, Dict[str, Any]] = {}
+        for q in self.questions:
+            try:
+                r = int(q.get("_row") or 0)
+            except Exception:
+                log_swallow("_register_dbt_names_after_bulk:row")
+                r = 0
+            if r >= 2:
+                by_row[r] = q
+        orders = load_dbt_orders()
+        touched = False
+        names_by_made: Dict[str, List[str]] = {}
+        for up in out_items:
+            try:
+                row = int(up.get("row") or 0)
+            except Exception:
+                log_swallow("_register_dbt_names_after_bulk:up_row")
+                row = 0
+            q = by_row.get(row) or {}
+            made = clean(q.get("MaDe") or up.get("MaDe") or "")
+            dbt = clean(up.get("DangBaiTap") or "")
+            if not made or not dbt or _is_bad_dangbaitap_value(dbt):
+                continue
+            lst = list(names_by_made.get(made) or orders.get(made) or [])
+            if not any(key_norm(x) == key_norm(dbt) for x in lst):
+                lst.append(dbt)
+                names_by_made[made] = lst
+                touched = True
+        if not touched:
+            return
+        for made, names in names_by_made.items():
+            orders = save_dbt_order_one(made, names, orders)
+        if self.catalog:
+            self.apply_dbt_orders_to_catalog(orders)
 
 
     def update_question_competency_bulk(self, updates: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -7902,7 +7953,11 @@ class SheetStore:
         if not base_qs:
             raise RuntimeError("Không tìm thấy câu trong chuyên đề này")
         base_rows = {int(q.get("_row") or 0) for q in base_qs if int(q.get("_row") or 0) >= 2}
-        fixed_col = SHEET_QUESTION_FIXED_COL_1.get("DangBaiTap", 8)
+        self.question_headers = list(
+            gsheet_call_retry("row_values Cau_Hoi merge DangBaiTap header", self.ws_questions.row_values, 1) or []
+        )
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        fixed_col = self._question_field_col_1("DangBaiTap")
         batch: List[Dict[str, Any]] = []
         out_items: List[Dict[str, Any]] = []
         merged_from: Dict[str, int] = {}
@@ -22478,12 +22533,12 @@ function bulkDbtConsolidateItems(items){
       let kn=normText(v);
       if(!kn||!remap[kn])return;
       let nv=remap[kn];
-      if(normText(nv)!==kn){
-        it.ai_dbt=nv;
-        it.reason=String(it.reason||'')+(' (gộp về «'+nv+'» — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài)').trim().slice(0,180);
-        it.matched_existing=true;
-        merged++;
-      }
+      if(normText(nv)===kn)return;
+      if(it.matched_existing===false)return;
+      it.ai_dbt=nv;
+      it.reason=String(it.reason||'')+(' (gộp về «'+nv+'» — tối đa '+DBT_MAX_PER_LESSON+' dạng/bài)').trim().slice(0,180);
+      it.matched_existing=true;
+      merged++;
     });
   }
   return {items,merged};
@@ -22537,7 +22592,8 @@ function bulkDbtSyncRowFromDom(pos){
   let sel=document.querySelector('[data-bulk-dbt="'+pos+'"]');
   if(sel){
     let v=String(sel.value||'').trim();
-    if(v&&v!=='__custom__'){it.ai_dbt=v;it.selected=!!it.selected}
+    if(sel.tagName==='INPUT'){it.ai_dbt=v;it.matched_existing=false}
+    else if(v&&v!=='__custom__'){it.ai_dbt=v;it.matched_existing=!!it.matched_existing}
   }
   let cb=document.querySelector('[data-bulk-dbt-check="'+pos+'"]');
   if(cb)it.selected=!!cb.checked;
@@ -22689,6 +22745,7 @@ function bulkDbtSet(pos,v){
   if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
   if(v==='__custom__'){let nv=prompt('Nhập Dạng bài tập:',ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt||ADMIN_DBT_REVIEW_ITEMS[pos].current_dbt||'');if(nv===null)return;v=String(nv).trim()}
   ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
+  ADMIN_DBT_REVIEW_ITEMS[pos].matched_existing=false;
   ADMIN_DBT_REVIEW_ITEMS[pos].selected=false;
   ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
   renderBulkDbtList();
@@ -22696,6 +22753,7 @@ function bulkDbtSet(pos,v){
 function bulkDbtInput(pos,v){
   if(!ADMIN_DBT_REVIEW_ITEMS[pos])return;
   ADMIN_DBT_REVIEW_ITEMS[pos].ai_dbt=String(v||'').trim();
+  ADMIN_DBT_REVIEW_ITEMS[pos].matched_existing=false;
   ADMIN_DBT_REVIEW_ITEMS[pos].selected=false;
   ADMIN_DBT_REVIEW_ITEMS[pos].saved=false;
 }
@@ -27894,7 +27952,10 @@ reason tối đa 20 từ.
                 continue
             ai_raw = clean(it.get("DangBaiTap") or it.get("dangbaitap") or "")
             suggestions = _merge_dangbaitap_suggestions(sug_by_idx.get(idx, []), meta_sug, limit=50)
-            val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(ai_raw, suggestions)
+            ai_used_existing = bool(it.get("used_existing"))
+            val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(
+                ai_raw, suggestions, allow_fuzzy=ai_used_existing
+            )
             if not val:
                 q["_AiDangBaiTap"] = ""
                 q["_AiReason"] = "GPT trả Dạng bài tập không hợp lệ."
@@ -27917,7 +27978,8 @@ reason tối đa 20 từ.
     cons = _consolidate_dangbaitap_per_lesson(questions, DBT_MAX_TYPES_PER_LESSON)
     if cons.get("merged"):
         meta["warnings"].append(
-            f"Đã gộp {cons['merged']} câu về tối đa {DBT_MAX_TYPES_PER_LESSON} dạng/bài cho gọn."
+            f"Gợi ý: trong bài có hơn {DBT_MAX_TYPES_PER_LESSON} dạng — đã gộp {cons['merged']} câu về dạng gần nhất. "
+            "Dạng mới (used_existing=false) vẫn được giữ nguyên khi bạn tick Lưu."
         )
     meta["dbt_lesson_consolidation"] = cons
 
@@ -30042,15 +30104,19 @@ def _consolidate_dangbaitap_per_lesson(
             if kn not in remap:
                 continue
             new_v = remap[kn]
-            if key_norm(new_v) != kn:
-                q["_AiDangBaiTap"] = new_v
-                q["_AiReason"] = (
-                    clean(q.get("_AiReason", ""))
-                    + f" (gộp về «{new_v}» — tối đa {max_types} dạng/bài)"
-                ).strip()[:180]
-                q["_AiMatchedExisting"] = True
-                n_merge += 1
-                merged_total += 1
+            if key_norm(new_v) == kn:
+                continue
+            # Giữ dạng mới do AI/admin chọn — không ép gộp về dạng cũ.
+            if q.get("_AiMatchedExisting") is False:
+                continue
+            q["_AiDangBaiTap"] = new_v
+            q["_AiReason"] = (
+                clean(q.get("_AiReason", ""))
+                + f" (gộp về «{new_v}» — tối đa {max_types} dạng/bài)"
+            ).strip()[:180]
+            q["_AiMatchedExisting"] = True
+            n_merge += 1
+            merged_total += 1
 
         lesson_stats[sk] = {"types": len(canonical), "merged": n_merge, "canonical": canonical}
 
@@ -30162,8 +30228,17 @@ def _merge_dangbaitap_suggestions(*lists: Iterable[str], limit: int = 50) -> Lis
     return out
 
 
-def _resolve_dangbaitap_to_suggestions(raw: str, suggestions: List[str]) -> Tuple[str, Optional[str], bool]:
-    """Chuẩn hóa tên AI về dạng đã có trong ngân hàng (tránh trùng gần giống)."""
+def _resolve_dangbaitap_to_suggestions(
+    raw: str,
+    suggestions: List[str],
+    *,
+    allow_fuzzy: bool = False,
+) -> Tuple[str, Optional[str], bool]:
+    """Chuẩn hóa tên AI về dạng đã có trong ngân hàng.
+
+    Mặc định chỉ khớp nguyên văn (key_norm) để vẫn lưu được dạng mới.
+    allow_fuzzy=True chỉ dùng khi AI xác nhận used_existing hoặc ADMIN bật đồng bộ mạnh.
+    """
     raw = clean(raw)
     if not raw or not suggestions:
         return raw, None, False
@@ -30171,6 +30246,8 @@ def _resolve_dangbaitap_to_suggestions(raw: str, suggestions: List[str]) -> Tupl
     for s in suggestions:
         if key_norm(s) == rn:
             return s, s, True
+    if not allow_fuzzy:
+        return raw, None, False
     best: Optional[str] = None
     best_score = -1
     for s in suggestions:
@@ -30289,7 +30366,10 @@ def api_ai_detect_dangbaitap_update():
     ai_raw = clean((obj or {}).get("DangBaiTap") or (obj or {}).get("dangbaitap") or "")
     if not ai_raw or _is_bad_dangbaitap_value(ai_raw):
         return jsonify({"error": "GPT chưa trả Dạng bài tập hợp lệ.", "raw": raw[:2000]}), 500
-    val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(ai_raw, suggestions)
+    ai_used_existing = bool((obj or {}).get("used_existing"))
+    val, synced_from, matched_existing = _resolve_dangbaitap_to_suggestions(
+        ai_raw, suggestions, allow_fuzzy=ai_used_existing
+    )
     row = int(body.get("row") or q.get("_row") or 0)
     qid = clean(body.get("id") or body.get("ID") or q.get("ID") or "")
     res = {
