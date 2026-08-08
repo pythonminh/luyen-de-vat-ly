@@ -8367,6 +8367,37 @@ class SheetStore:
             r = r[:width]
         return r
 
+    def _ensure_question_sheet_grid(self, min_rows: int, min_cols: int = 0) -> None:
+        """Nới lưới Cau_Hoi trước khi ghi — Sheets từ chối range vượt Max rows/cols."""
+        ws = self.ws_questions
+        if not ws:
+            return
+        try:
+            cur_rows = int(getattr(ws, "row_count", 0) or 0)
+            cur_cols = int(getattr(ws, "col_count", 0) or 0)
+        except Exception:
+            cur_rows, cur_cols = 0, 0
+            log_swallow("_ensure_question_sheet_grid:read_counts")
+        need_rows = max(cur_rows, int(min_rows or 0))
+        need_cols = max(cur_cols, int(min_cols or 0))
+        # Chừa thêm vài chục dòng trống để lần chèn sau không chạm trần ngay.
+        if need_rows > cur_rows:
+            need_rows = max(need_rows, cur_rows + 50, int(min_rows or 0) + 20)
+        if need_rows <= cur_rows and need_cols <= cur_cols:
+            return
+        kwargs: Dict[str, int] = {}
+        if need_rows > cur_rows:
+            kwargs["rows"] = need_rows
+        if need_cols > cur_cols:
+            kwargs["cols"] = need_cols
+        if not kwargs:
+            return
+        gsheet_call_retry(
+            f"resize Cau_Hoi grid rows>={need_rows} cols>={need_cols}",
+            ws.resize,
+            **kwargs,
+        )
+
     def _append_question_rows_at_col_a(self, rows: List[List[str]]) -> int:
         """Ghi dòng mới bắt đầu từ cột A — tránh lệch cột."""
         if not rows:
@@ -8376,6 +8407,7 @@ class SheetStore:
         padded = [r + [""] * (width - len(r)) if len(r) < width else r[:width] for r in padded]
         start_row = self._next_question_sheet_row()
         end_row = start_row + len(padded) - 1
+        self._ensure_question_sheet_grid(end_row, width)
         a1 = gspread.utils.rowcol_to_a1(start_row, 1)
         b1 = gspread.utils.rowcol_to_a1(end_row, width)
         gsheet_call_retry(
@@ -24720,7 +24752,11 @@ async function commitLatexImport(){
       if(!why&&j.skipped&&j.skipped.length)why='Bỏ qua '+j.skipped.length+' câu: '+j.skipped.slice(0,4).map(x=>x.reason||x.id||('#'+x.index)).join('; ');
       alert(why||'Không chèn được câu nào. Kiểm tra ô trạng thái bên dưới.');
     }
-  }catch(e){setLatexImportStatus('Lỗi chèn LaTeX: '+e.message,true)}
+  }catch(e){
+    let msg=String(e&&e.message||e||'');
+    if(/exceeds grid limits|Max rows/i.test(msg))msg='Sheet Cau_Hoi hết hàng trống — app sẽ tự nới lưới; hãy bấm Chèn lại. Chi tiết: '+msg;
+    setLatexImportStatus('Lỗi chèn LaTeX: '+msg,true);
+  }
 }
 
 
