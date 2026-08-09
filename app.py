@@ -20248,18 +20248,21 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .ldvlYtCard,.ldvlYtAdminPanel .pdf-list-row{cursor:pointer;-webkit-tap-highlight-color:rgba(37,99,235,.15)}
 .ldvlYtOpenFail{padding:16px;color:#e2e8f0;font-size:14px;line-height:1.5;text-align:center}
 /* Mô hình hóa */
-#mh-fs-scr{display:none;position:fixed;inset:0;z-index:10045;background:#0f172a;flex-direction:column}
+#mh-fs-scr{display:none;position:fixed;inset:0;z-index:10045;background:#0f172a;flex-direction:column;width:100%;height:100%;height:100dvh;max-height:-webkit-fill-available}
 #mh-fs-scr.on{display:flex!important}
 #mh-fs-body{flex:1;min-height:0;display:flex;flex-direction:column;background:#0b1220;overflow:hidden}
 #mh-fs-frame{flex:1;border:none;width:100%;background:#fff;min-height:0}
-#mh-fs-py{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;padding:10px;gap:8px}
+#mh-fs-py{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 #mh-fs-code{width:100%;min-height:120px;max-height:28vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.4;border-radius:8px;border:1px solid #334155;background:#111827;color:#e2e8f0;padding:10px;box-sizing:border-box;resize:vertical}
 #mh-fs-out{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.45;color:#bbf7d0;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;min-height:64px}
 #mh-fs-out:empty,#mh-fs-out.hide{display:none!important}
-#mh-fs-plot{background:#fff;border-radius:8px;padding:6px;min-height:0}
+#mh-fs-plot{background:#fff;border-radius:8px;padding:6px;min-height:120px}
 #mh-fs-plot img{max-width:100%;height:auto;display:block;margin:0 auto}
 #mh-fs-params{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:8px 10px;background:#111827;border:1px solid #334155;border-radius:8px}
 #mh-fs-params.hide{display:none}
+#mh-fs-status{flex-shrink:0}
+#mh-fs-dock{display:none;position:sticky;bottom:0;z-index:3;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#0b1220 28%);gap:8px}
+#mh-fs-dock .pdf-fs-btn{flex:1;justify-content:center;min-height:44px;font-size:14px;font-weight:800}
 .mhParam{display:flex;flex-direction:column;gap:3px;min-width:88px}
 .mhParam label{font-size:11px;font-weight:800;color:#93c5fd}
 .mhParam input{width:100%;box-sizing:border-box;padding:7px 8px;border-radius:7px;border:1px solid #475569;background:#0f172a;color:#f8fafc;font-weight:800;font-size:14px}
@@ -20270,19 +20273,25 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .mhParamCheckRow{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border:1px solid #475569;border-radius:7px;background:#0f172a;color:#f8fafc;cursor:pointer}
 .mhParamCheckRow input{width:18px;height:18px;margin:0;accent-color:#2563eb;cursor:pointer;flex:none}
 .mhParamCheckRow span{font-size:13px;font-weight:800;white-space:nowrap}
-.mhPiBtn{flex-shrink:0;min-width:36px;height:34px;padding:0 8px;border-radius:7px;border:1px solid #64748b;background:#1e293b;color:#fde68a;font-weight:900;font-size:14px;cursor:pointer}
+.mhPiBtn{flex-shrink:0;min-width:36px;height:34px;padding:0 8px;border-radius:7px;border:1px solid #64748b;background:#1e293b;color:#fde68a;font-weight:900;font-size:14px;cursor:pointer;touch-action:manipulation}
 .mhPiBtn:hover{background:#334155}
 #mh-fs-paramsHint{width:100%;font-size:11px;color:#94a3b8;margin:0;line-height:1.4}
-@media(max-width:600px){
-  #mh-fs-py{padding:6px;gap:6px;overflow-x:hidden}
-  #mh-fs-params{gap:7px;padding:8px}
+.ldvlMhCard{touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.2)}
+@media(max-width:760px){
+  .ldvlQnavBtn[data-ldvl-nav="model"] span{display:inline!important}
+  #mh-fs-scr .pdf-fs-bar{flex-wrap:wrap;height:auto;min-height:48px;padding:8px;gap:6px}
+  #mh-fs-scr .pdf-fs-bar #mh-fs-run{display:none}
+  #mh-fs-dock{display:flex}
+  #mh-fs-py{padding:8px 8px 0;gap:8px}
+  #mh-fs-params{gap:7px;padding:8px;position:sticky;top:0;z-index:2}
   .mhParam{min-width:calc(50% - 4px);flex:1 1 calc(50% - 4px)}
   .mhParamBool{min-width:calc(50% - 4px)}
-  .mhParamCheckRow{padding:0 8px}
-  #mh-fs-code{min-height:90px;max-height:22vh}
-  #mh-fs-plot{padding:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .mhParamCheckRow{padding:0 8px;min-height:40px}
+  #mh-fs-code{min-height:72px;max-height:18vh;font-size:11px}
+  #mh-fs-plot{padding:4px;min-height:160px;overflow-x:auto;-webkit-overflow-scrolling:touch}
   #mh-fs-plot img{width:100%;max-width:none;height:auto}
-  #mh-fs-out{min-height:0;max-height:26vh;overflow:auto;margin:0}
+  #mh-fs-out{min-height:0;max-height:22vh;overflow:auto;margin:0}
+  #mh-code-details:not([open]){margin-bottom:0}
 }
 .ldvlMhCard{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--border);cursor:pointer}
 .ldvlMhCard:hover{background:rgba(37,99,235,.06)}
@@ -21265,11 +21274,15 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   <div id="mh-fs-body">
     <iframe id="mh-fs-frame" class="hide" src="about:blank" allowfullscreen></iframe>
     <div id="mh-fs-py" class="hide">
+      <div id="mh-fs-status" class="muted" style="color:#93c5fd;font-size:12px;padding:2px 2px 0">Sẵn sàng chạy.</div>
       <div id="mh-fs-params" class="hide"></div>
-      <details open><summary style="color:#93c5fd;font-weight:800;cursor:pointer;margin-bottom:6px">Mã Python (có thể sửa số rồi bấm Chạy)</summary><textarea id="mh-fs-code" spellcheck="false"></textarea></details>
-      <div id="mh-fs-status" class="muted" style="color:#93c5fd;font-size:12px">Sẵn sàng chạy.</div>
       <div id="mh-fs-plot"></div>
-      <pre id="mh-fs-out"></pre>
+      <pre id="mh-fs-out" class="hide"></pre>
+      <details id="mh-code-details" class="hide"><summary style="color:#93c5fd;font-weight:800;cursor:pointer;margin:4px 0">Mã Python (chỉ ADMIN)</summary><textarea id="mh-fs-code" spellcheck="false"></textarea></details>
+      <div id="mh-fs-dock">
+        <button type="button" class="pdf-fs-btn" onclick="closeMhFs()">Đóng</button>
+        <button type="button" class="pdf-fs-btn" style="background:#2563eb;border-color:#1d4ed8" onclick="ldvlMhRunCurrent()"><i class="ti ti-player-play"></i> Chạy</button>
+      </div>
     </div>
   </div>
 </div>
@@ -28553,26 +28566,85 @@ function closeMhFs(){
   document.documentElement.style.overflow='';
   window.LDVL_MH_CUR=null;
 }
+function ldvlMhIsMobile(){
+  try{return window.matchMedia&&window.matchMedia('(max-width:760px)').matches;}catch(e){return /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent||'');}
+}
+function ldvlMhSetStatus(el,msg,isErr){
+  if(!el)return;
+  el.textContent=msg||'';
+  el.style.color=isErr?'#fca5a5':'#93c5fd';
+}
+function ldvlMhLoadScript(src,timeoutMs){
+  timeoutMs=timeoutMs||45000;
+  return new Promise(function(resolve,reject){
+    let done=false;
+    let s=document.createElement('script');
+    s.src=src;
+    s.async=true;
+    s.crossOrigin='anonymous';
+    let t=setTimeout(function(){
+      if(done)return;done=true;
+      try{s.remove();}catch(e){}
+      reject(new Error('Hết thời gian tải '+src));
+    },timeoutMs);
+    s.onload=function(){if(done)return;done=true;clearTimeout(t);resolve();};
+    s.onerror=function(){if(done)return;done=true;clearTimeout(t);try{s.remove();}catch(e){}reject(new Error('Lỗi mạng khi tải '+src));};
+    document.head.appendChild(s);
+  });
+}
 async function ldvlMhEnsurePyodide(statusEl){
   if(window.LDVL_PYODIDE)return window.LDVL_PYODIDE;
   if(window.LDVL_PYODIDE_LOADING)return window.LDVL_PYODIDE_LOADING;
   window.LDVL_PYODIDE_LOADING=(async function(){
-    if(statusEl)statusEl.textContent='⏳ Đang tải Python trong trình duyệt (lần đầu có thể 10–30s)…';
-    if(typeof loadPyodide!=='function'){
-      await new Promise(function(resolve,reject){
-        let s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
-        s.onload=resolve;s.onerror=function(){reject(new Error('Không tải được Pyodide (cần mạng).'));};
-        document.head.appendChild(s);
-      });
+    if(typeof WebAssembly!=='object'){
+      throw new Error('Máy/trình duyệt không hỗ trợ WebAssembly — hãy mở bằng Chrome hoặc Safari (không dùng trình duyệt trong Zalo/Facebook).');
     }
-    let py=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'});
-    if(statusEl)statusEl.textContent='⏳ Đang nạp numpy, matplotlib…';
-    await py.loadPackage(['numpy','matplotlib']);
-    window.LDVL_PYODIDE=py;
-    return py;
+    if(!navigator.onLine){
+      throw new Error('Điện thoại đang offline — cần mạng để tải Python lần đầu.');
+    }
+    let cdns=[
+      {js:'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js', index:'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'},
+      {js:'https://unpkg.com/pyodide@0.26.4/pyodide.js', index:'https://unpkg.com/pyodide@0.26.4/'},
+      {js:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js', index:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'}
+    ];
+    let lastErr=null;
+    for(let i=0;i<cdns.length;i++){
+      let c=cdns[i];
+      try{
+        ldvlMhSetStatus(statusEl,'⏳ Đang tải Python ('+(i+1)+'/'+cdns.length+') — lần đầu trên ĐT có thể 20–60s, giữ màn hình sáng…');
+        if(typeof loadPyodide!=='function'){
+          await ldvlMhLoadScript(c.js,50000);
+        }
+        if(typeof loadPyodide!=='function')throw new Error('loadPyodide chưa sẵn sàng');
+        let py=await Promise.race([
+          loadPyodide({indexURL:c.index}),
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('Hết thời gian khởi tạo Python'));},70000);})
+        ]);
+        ldvlMhSetStatus(statusEl,'⏳ Đang nạp numpy + matplotlib…');
+        await Promise.race([
+          py.loadPackage(['numpy','matplotlib']),
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('Hết thời gian nạp thư viện vẽ'));},120000);})
+        ]);
+        window.LDVL_PYODIDE=py;
+        window.LDVL_PYODIDE_CDN=c.index;
+        ldvlMhSetStatus(statusEl,'✅ Đã sẵn sàng Python.');
+        return py;
+      }catch(e){
+        lastErr=e;
+        console.warn('Pyodide CDN fail',c.js,e);
+        try{delete window.loadPyodide;}catch(err){}
+      }
+    }
+    throw lastErr||new Error('Không tải được Python trên điện thoại.');
   })();
-  try{return await window.LDVL_PYODIDE_LOADING;}finally{window.LDVL_PYODIDE_LOADING=null;}
+  try{
+    return await window.LDVL_PYODIDE_LOADING;
+  }catch(e){
+    window.LDVL_PYODIDE_LOADING=null;
+    throw e;
+  }finally{
+    if(window.LDVL_PYODIDE)window.LDVL_PYODIDE_LOADING=null;
+  }
 }
 function ldvlMhNormExpr(expr){
   return String(expr||'').trim()
@@ -28719,7 +28791,7 @@ function ldvlMhBuildParamUi(code){
     return [];
   }
   box.classList.remove('hide');
-  let html='<p id="mh-fs-paramsHint">Gõ số thường hoặc có <b>π</b>: <code>pi</code>, <code>pi/2</code>, <code>2*pi</code>, <code>-pi/4</code>. Tick đại lượng muốn hiện rồi bấm <b>Chạy lại</b>.</p>';
+  let html='<p id="mh-fs-paramsHint">Đổi số (hoặc gõ <b>π</b>: <code>pi/2</code>, <code>2*pi</code>) rồi bấm <b>Chạy</b>.</p>';
   html+=params.map(function(p){
     let id='mh-param-'+p.name;
     if(p.type==='boolean'){
@@ -28730,7 +28802,7 @@ function ldvlMhBuildParamUi(code){
     }
     return '<div class="mhParam"><label for="'+escAttr(id)+'">'+esc(p.name)+'</label><div class="mhParamRow"><input id="'+escAttr(id)+'" type="text" inputmode="text" value="'+escAttr(p.raw)+'" placeholder="vd: pi/2" autocomplete="off"><button type="button" class="mhPiBtn" title="Chèn π (pi)" onclick="ldvlMhInsertPi(\''+escAttr(id)+'\')">π</button></div></div>';
   }).join('');
-  html+='<button type="button" class="pdf-fs-btn" style="margin-left:auto" onclick="ldvlMhRunCurrent()"><i class="ti ti-player-play"></i> Chạy lại</button>';
+  if(!ldvlMhIsMobile())html+='<button type="button" class="pdf-fs-btn" style="margin-left:auto" onclick="ldvlMhRunCurrent()"><i class="ti ti-player-play"></i> Chạy lại</button>';
   box.innerHTML=html;
   params.forEach(function(p){
     let el=document.getElementById('mh-param-'+p.name);
@@ -28756,35 +28828,42 @@ async function ldvlMhRunCurrent(){
   let outEl=document.getElementById('mh-fs-out');
   let plotEl=document.getElementById('mh-fs-plot');
   let statusEl=document.getElementById('mh-fs-status');
-  let code=codeEl?codeEl.value:cur.code;
+  let isAdmin=!!(USER&&USER.is_admin);
+  /* Học sinh không xem code — chỉ chạy bản trong bộ nhớ + tham số */
+  let code=isAdmin&&codeEl?codeEl.value:(cur.code||'');
   let params=ldvlMhParseParams(code);
   if(params.length){
     code=ldvlMhApplyParamsToCode(code,params);
-    if(codeEl)codeEl.value=code;
+    cur.code=code;
+    window.LDVL_MH_CUR=cur;
+    if(isAdmin&&codeEl)codeEl.value=code;
     ldvlMhBuildParamUi(code);
   }
   if(outEl)outEl.textContent='';
   if(outEl)outEl.classList.add('hide');
-  if(plotEl)plotEl.innerHTML='';
+  if(plotEl)plotEl.innerHTML='<div style="padding:18px;text-align:center;color:#64748b;font-size:13px">⏳ Đang vẽ…</div>';
+  let mobile=ldvlMhIsMobile();
+  let dpi=mobile?90:120;
+  let figw=mobile?5.2:7;
+  let figh=mobile?3.2:3.8;
   try{
     let py=await ldvlMhEnsurePyodide(statusEl);
-    if(statusEl)statusEl.textContent='▶️ Đang chạy…';
+    ldvlMhSetStatus(statusEl,'▶️ Đang chạy…');
     py.setStdout({batched:function(s){if(outEl&&String(s||'').trim()){outEl.classList.remove('hide');outEl.textContent+=(outEl.textContent?'\n':'')+s;}}});
     py.setStderr({batched:function(s){
       let msg=String(s||'').trim();
-      /* plt.show() với backend Agg chỉ là cảnh báo vô hại; không hiện khung đen. */
       if(!msg||/Matplotlib is currently using agg.*cannot show the figure/i.test(msg))return;
       if(outEl){outEl.classList.remove('hide');outEl.textContent+=(outEl.textContent?'\n':'')+'⚠ '+msg;}
     }});
-    /* Capture matplotlib figures as PNG */
     await py.runPythonAsync(`
 import sys, io, base64
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-pi = float(np.pi)  # cho phép gõ pi, pi/2 trong mã
+pi = float(np.pi)
 plt.close('all')
+plt.rcParams.update({'figure.figsize': (${figw}, ${figh}), 'figure.dpi': ${dpi}, 'savefig.dpi': ${dpi}})
 `);
     await py.runPythonAsync(code);
     let figs=py.runPython(`
@@ -28793,27 +28872,38 @@ _out=[]
 for _num in list(plt.get_fignums()):
     _fig=plt.figure(_num)
     _buf=io.BytesIO()
-    _fig.savefig(_buf, format='png', dpi=120, bbox_inches='tight')
+    _fig.savefig(_buf, format='png', dpi=${dpi}, bbox_inches='tight')
     _out.append(base64.b64encode(_buf.getvalue()).decode('ascii'))
 _out
 `);
     let arr=figs&&figs.toJs?figs.toJs():(figs||[]);
+    if(plotEl)plotEl.innerHTML='';
     if(arr&&arr.length&&plotEl){
       arr.forEach(function(b64){
         let img=document.createElement('img');
         img.src='data:image/png;base64,'+b64;
         img.alt='Đồ thị';
+        img.loading='eager';
         plotEl.appendChild(img);
       });
+      try{plotEl.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
     }
-    if(statusEl)statusEl.textContent='✅ Đã chạy xong.';
-    if(outEl&&!outEl.textContent.trim()&&!(arr&&arr.length))outEl.textContent='(Không có print / đồ thị — thêm print(...) hoặc plt.show())';
+    ldvlMhSetStatus(statusEl,'✅ Đã chạy xong — đổi số rồi bấm Chạy lại.');
+    if(outEl&&!outEl.textContent.trim()&&!(arr&&arr.length)){
+      outEl.textContent='(Không có đồ thị — kiểm tra plt.show() trong mã)';
+      outEl.classList.remove('hide');
+    }
     if(outEl&&outEl.textContent.trim())outEl.classList.remove('hide');
     else if(outEl)outEl.classList.add('hide');
   }catch(e){
     console.warn('ldvlMhRunCurrent',e);
-    if(statusEl)statusEl.textContent='❌ Lỗi khi chạy.';
-    if(outEl){outEl.classList.remove('hide');outEl.textContent=String(e.message||e);}
+    let msg=String((e&&e.message)||e||'Lỗi');
+    ldvlMhSetStatus(statusEl,'❌ Không chạy được trên máy này',true);
+    if(plotEl)plotEl.innerHTML='';
+    if(outEl){
+      outEl.classList.remove('hide');
+      outEl.textContent=msg+'\n\nGợi ý điện thoại:\n• Mở bằng Chrome / Safari (không mở trong Zalo/FB)\n• Giữ Wi‑Fi, đợi lần đầu 20–60 giây\n• Bấm nút Chạy ở dưới màn hình để thử lại';
+    }
   }
 }
 function openMhFs(it){
@@ -28828,12 +28918,13 @@ function openMhFs(it){
   let run=document.getElementById('mh-fs-run');
   let newt=document.getElementById('mh-fs-newt');
   let codeEl=document.getElementById('mh-fs-code');
+  let codeDet=document.getElementById('mh-code-details');
   let outEl=document.getElementById('mh-fs-out');
   let plotEl=document.getElementById('mh-fs-plot');
   let statusEl=document.getElementById('mh-fs-status');
+  let mobile=ldvlMhIsMobile();
   if(tt)tt.textContent=it.name||'Mô hình hóa';
-  if(outEl)outEl.textContent='';
-  if(outEl)outEl.classList.add('hide');
+  if(outEl){outEl.textContent='';outEl.classList.add('hide');}
   if(plotEl)plotEl.innerHTML='';
   if(it.kind==='embed'){
     if(py)py.classList.add('hide');
@@ -28843,16 +28934,29 @@ function openMhFs(it){
   }else{
     if(fr){fr.classList.add('hide');fr.src='about:blank';}
     if(py)py.classList.remove('hide');
+    let isAdmin=!!(USER&&USER.is_admin);
+    if(codeDet){
+      codeDet.classList.toggle('hide',!isAdmin);
+      codeDet.open=!!(isAdmin&&!mobile);
+    }
     if(codeEl){
-      codeEl.value=it.code||'';
-      codeEl.readOnly=false;
-      codeEl.removeAttribute('readonly');
-      codeEl.oninput=function(){ldvlMhBuildParamUi(codeEl.value);};
+      if(isAdmin){
+        codeEl.value=it.code||'';
+        codeEl.readOnly=false;
+        codeEl.removeAttribute('readonly');
+        codeEl.oninput=function(){ldvlMhBuildParamUi(codeEl.value);};
+      }else{
+        codeEl.value='';
+        codeEl.readOnly=true;
+        codeEl.oninput=null;
+      }
     }
     ldvlMhBuildParamUi(it.code||'');
-    if(run)run.classList.remove('hide');
+    if(run)run.classList.toggle('hide',mobile);
     if(newt)newt.classList.add('hide');
-    if(statusEl)statusEl.textContent='Sửa số a, b, c… (ô phía trên hoặc trong mã) rồi bấm Chạy.';
+    ldvlMhSetStatus(statusEl, mobile
+      ? 'Đổi số → bấm Chạy (nút dưới). Lần đầu cần mạng để tải Python.'
+      : 'Đổi số rồi bấm Chạy.');
   }
   if(scr){
     scr.classList.add('on');
@@ -28860,7 +28964,10 @@ function openMhFs(it){
   }
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
-  if(it.kind==='python')setTimeout(function(){ldvlMhRunCurrent();},80);
+  if(it.kind==='python'){
+    /* Mobile: chờ chút để UI hiện rồi mới tải Python (tránh đơ cảm giác “không mở”) */
+    setTimeout(function(){ldvlMhRunCurrent();}, mobile?220:80);
+  }
 }
 function ldvlMhOpenById(sub,id){
   let it=ldvlMhAllItems(sub).find(function(x){return ldvlMhSameId(x.id,id);});
@@ -28875,8 +28982,20 @@ window.ldvlMhRunCurrent=ldvlMhRunCurrent;
 window.ldvlMhAdminPanelSync=ldvlMhAdminPanelSync;
 if(!window.__LDVL_MH_CLICK_BOUND){
   window.__LDVL_MH_CLICK_BOUND=1;
-  document.addEventListener('click',function(ev){
+  window.__LDVL_MH_TOUCH={x:0,y:0,moved:0};
+  document.addEventListener('touchstart',function(ev){
+    let t=ev.touches&&ev.touches[0];
+    if(!t)return;
+    window.__LDVL_MH_TOUCH={x:t.clientX,y:t.clientY,moved:0};
+  },{passive:true});
+  document.addEventListener('touchmove',function(ev){
+    let t=ev.touches&&ev.touches[0];
+    if(!t||!window.__LDVL_MH_TOUCH)return;
+    if(Math.abs(t.clientX-window.__LDVL_MH_TOUCH.x)>12||Math.abs(t.clientY-window.__LDVL_MH_TOUCH.y)>12)window.__LDVL_MH_TOUCH.moved=1;
+  },{passive:true});
+  function ldvlMhOnCardActivate(ev){
     let t=ev.target;if(!t||!t.closest)return;
+    if(t.closest('#mh-fs-scr'))return;
     let act=t.closest('[data-mh-act]');
     if(act){
       ev.preventDefault();ev.stopPropagation();
@@ -28889,12 +29008,22 @@ if(!window.__LDVL_MH_CLICK_BOUND){
     }
     let card=t.closest('[data-mh-id][data-mh-sub]');
     if(!card)return;
+    if(ev.type==='touchend'){
+      if(window.__LDVL_MH_TOUCH&&window.__LDVL_MH_TOUCH.moved)return;
+      if(window.__LDVL_MH_TOUCH_LOCK)return;
+      window.__LDVL_MH_TOUCH_LOCK=1;
+      setTimeout(function(){window.__LDVL_MH_TOUCH_LOCK=0;},450);
+    }else if(ev.type==='click'&&window.__LDVL_MH_TOUCH_LOCK){
+      return;
+    }
     let sub=card.getAttribute('data-mh-sub')||'math';
     let id=card.getAttribute('data-mh-id');
     if(!id)return;
     ev.preventDefault();
     ldvlMhOpenById(sub,id);
-  },true);
+  }
+  document.addEventListener('click',ldvlMhOnCardActivate,true);
+  document.addEventListener('touchend',ldvlMhOnCardActivate,{capture:true,passive:false});
 }
 function ldvlShowAdminPanel(id){ldvlAdminNav(null,'ap-'+(String(id||'').replace(/^/,'')||'dash'));}
 window.LDVL_ADMIN_STUDENT_MODE=false;
