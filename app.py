@@ -20075,10 +20075,18 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .pdf-frame-wrap iframe{width:100%;height:580px;border:none;display:block}
 
 /* link input */
-.link-row{display:flex;gap:8px}
-.link-row input{flex:1;padding:9px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:14px;font-family:inherit;outline:none}
+.link-row{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.link-row input{flex:1 1 160px;min-width:0;padding:9px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box}
 .link-row input:focus{border-color:var(--pdf);box-shadow:0 0 0 3px rgba(225,29,72,.1)}
 .link-row button{padding:9px 16px;border-radius:var(--r);background:var(--pdf);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0}
+.ldvlYtAdminFields{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.ldvlYtAdminFields label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800;color:var(--muted)}
+.ldvlYtAdminFields input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--inp);color:var(--text);font-size:14px}
+@media(max-width:760px){
+  .link-row{flex-direction:column}
+  .link-row input,.link-row button{width:100%;flex:1 1 auto}
+  .ldvlQnavBtn[data-ldvl-nav="video"] span{display:inline!important}
+}
 .pdf-list-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
 .pdf-list-row:last-child{border-bottom:none}
 .pdf-list-row:hover{background:var(--bg)}
@@ -21008,15 +21016,21 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <div id="ldvlYtAdminPanel" class="hide ldvlPdfAdminPanel">
       <div class="ldvlPdfAdminHead"><i class="ti ti-brand-youtube"></i> ADMIN — Thêm / sửa video YouTube theo <b>Môn · Lớp</b></div>
       <div id="ldvlYtAdminMath" class="ldvlPdfAdminSub">
-        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">📐 <b>Toán</b> — chọn lớp rồi dán link bài mẫu.</p>
-        <div class="link-row" style="margin-bottom:8px"><input id="yt-m-name" placeholder="Tên video / bài mẫu" style="flex:1"><input id="yt-m-url" placeholder="https://www.youtube.com/watch?v=... hoặc youtu.be/..." style="flex:2"></div>
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">📐 <b>Toán</b> — chọn lớp, điền tên, <b>dán link YouTube</b> rồi Thêm video.</p>
+        <div class="ldvlYtAdminFields">
+          <label>Tên video / bài mẫu<input id="yt-m-name" placeholder="VD: Bài mẫu · Phương trình bậc 2" autocomplete="off"></label>
+          <label>Link YouTube (bắt buộc)<input id="yt-m-url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..." autocomplete="off"></label>
+        </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="yt-m-lop" style="min-width:110px"></select><select id="yt-m-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="yt-m-add-btn" onclick="ldvlYtAdd('math')">➕ Thêm video</button><button type="button" class="btn2 hide" id="yt-m-cancel-btn" onclick="ldvlYtCancelEdit('math')">Hủy sửa</button></div>
         <div id="yt-m-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
         <div id="yt-m-list" class="panel" style="padding:0;margin:0"></div>
       </div>
       <div id="ldvlYtAdminPhys" class="ldvlPdfAdminSub hide">
-        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">🔭 <b>Vật lý</b> — chọn lớp rồi dán link bài mẫu.</p>
-        <div class="link-row" style="margin-bottom:8px"><input id="yt-p-name" placeholder="Tên video / bài mẫu" style="flex:1"><input id="yt-p-url" placeholder="https://www.youtube.com/watch?v=... hoặc youtu.be/..." style="flex:2"></div>
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">🔭 <b>Vật lý</b> — chọn lớp, điền tên, <b>dán link YouTube</b> rồi Thêm video.</p>
+        <div class="ldvlYtAdminFields">
+          <label>Tên video / bài mẫu<input id="yt-p-name" placeholder="VD: Bài mẫu · Định luật Newton" autocomplete="off"></label>
+          <label>Link YouTube (bắt buộc)<input id="yt-p-url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..." autocomplete="off"></label>
+        </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="yt-p-lop" style="min-width:110px"></select><select id="yt-p-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="yt-p-add-btn" onclick="ldvlYtAdd('phys')">➕ Thêm video</button><button type="button" class="btn2 hide" id="yt-p-cancel-btn" onclick="ldvlYtCancelEdit('phys')">Hủy sửa</button></div>
         <div id="yt-p-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
         <div id="yt-p-list" class="panel" style="padding:0;margin:0"></div>
@@ -27970,8 +27984,12 @@ function ldvlYtAdd(sub){
   let url=String((document.getElementById(pfx+'-url')||{}).value||'').trim();
   let quyen=String((document.getElementById(pfx+'-quyen')||{}).value||'FREE').trim();
   let lop=String((document.getElementById(pfx+'-lop')||{}).value||'').trim();
+  /* Nếu chỉ dán link vào ô tên (màn hẹp / cũ), tự nhận là URL */
+  if(!url&&ldvlYtExtractId(name)){url=name;name='';}
+  if(!url&&name&&/^https?:\/\//i.test(name)){url=name;name='';}
   let vid=ldvlYtExtractId(url);
-  if(!name||!vid){alert('Nhập tên và link YouTube hợp lệ (watch / youtu.be / shorts).');return;}
+  if(!vid){alert('Dán link YouTube vào ô «Link YouTube» (watch / youtu.be / shorts).');let ue=document.getElementById(pfx+'-url');if(ue)ue.focus();return;}
+  if(!name)name='Video '+vid;
   if(!lop){alert('Chọn lớp cho video.');return;}
   let row=ldvlYtNormItem({id:Date.now(),name,url,video_id:vid,quyen,lop,at:new Date().toISOString()});
   let items=ldvlYtAllItems(sub).slice();
