@@ -20255,6 +20255,7 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 #mh-fs-py{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;padding:10px;gap:8px}
 #mh-fs-code{width:100%;min-height:120px;max-height:28vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.4;border-radius:8px;border:1px solid #334155;background:#111827;color:#e2e8f0;padding:10px;box-sizing:border-box;resize:vertical}
 #mh-fs-out{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.45;color:#bbf7d0;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;min-height:64px}
+#mh-fs-out:empty,#mh-fs-out.hide{display:none!important}
 #mh-fs-plot{background:#fff;border-radius:8px;padding:6px;min-height:0}
 #mh-fs-plot img{max-width:100%;height:auto;display:block;margin:0 auto}
 #mh-fs-params{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:8px 10px;background:#111827;border:1px solid #334155;border-radius:8px}
@@ -20272,6 +20273,17 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .mhPiBtn{flex-shrink:0;min-width:36px;height:34px;padding:0 8px;border-radius:7px;border:1px solid #64748b;background:#1e293b;color:#fde68a;font-weight:900;font-size:14px;cursor:pointer}
 .mhPiBtn:hover{background:#334155}
 #mh-fs-paramsHint{width:100%;font-size:11px;color:#94a3b8;margin:0;line-height:1.4}
+@media(max-width:600px){
+  #mh-fs-py{padding:6px;gap:6px;overflow-x:hidden}
+  #mh-fs-params{gap:7px;padding:8px}
+  .mhParam{min-width:calc(50% - 4px);flex:1 1 calc(50% - 4px)}
+  .mhParamBool{min-width:calc(50% - 4px)}
+  .mhParamCheckRow{padding:0 8px}
+  #mh-fs-code{min-height:90px;max-height:22vh}
+  #mh-fs-plot{padding:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #mh-fs-plot img{width:100%;max-width:none;height:auto}
+  #mh-fs-out{min-height:0;max-height:26vh;overflow:auto;margin:0}
+}
 .ldvlMhCard{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--border);cursor:pointer}
 .ldvlMhCard:hover{background:rgba(37,99,235,.06)}
 .ldvlMhIco{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#dbeafe,#ede9fe);display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-size:22px;flex-shrink:0}
@@ -28640,15 +28652,16 @@ function ldvlMhParseParams(code){
     seen[name]=1;
     params.push({name:name,value:checked,raw:checked?'True':'False',lineIdx:lineIdx,mode:'single',type:'boolean',extra:null});
   }
-  let lines=code.split(/\r?\n/);
+  let lines=code.split(/\r?\n/), allowBool=true;
   lines.forEach(function(line,idx){
     /* Chỉ nhận biến cấu hình ở đầu dòng. Bỏ qua keyword thụt vào
        như linewidth=2, fontsize=10, alpha=0.3 trong lệnh vẽ. */
     if(/^\s+/.test(line))return;
     let t=line.replace(/#.*$/,'').trim();
     if(!t)return;
+    if(/^def\s+/.test(t))allowBool=false;
     let mb=t.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(True|False)\s*$/);
-    if(mb){addBool(mb[1],mb[2],idx);return;}
+    if(mb){if(allowBool)addBool(mb[1],mb[2],idx);return;}
     let m=t.match(new RegExp('^([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*('+exprPart+')\\s*$','i'));
     if(m){add(m[1],m[2],idx,'single');return;}
     /* dạng a, b, c = ... (số hoặc pi) */
@@ -28751,12 +28764,18 @@ async function ldvlMhRunCurrent(){
     ldvlMhBuildParamUi(code);
   }
   if(outEl)outEl.textContent='';
+  if(outEl)outEl.classList.add('hide');
   if(plotEl)plotEl.innerHTML='';
   try{
     let py=await ldvlMhEnsurePyodide(statusEl);
     if(statusEl)statusEl.textContent='▶️ Đang chạy…';
-    py.setStdout({batched:function(s){if(outEl)outEl.textContent+=(outEl.textContent?'\n':'')+s;}});
-    py.setStderr({batched:function(s){if(outEl)outEl.textContent+=(outEl.textContent?'\n':'')+'⚠ '+s;}});
+    py.setStdout({batched:function(s){if(outEl&&String(s||'').trim()){outEl.classList.remove('hide');outEl.textContent+=(outEl.textContent?'\n':'')+s;}}});
+    py.setStderr({batched:function(s){
+      let msg=String(s||'').trim();
+      /* plt.show() với backend Agg chỉ là cảnh báo vô hại; không hiện khung đen. */
+      if(!msg||/Matplotlib is currently using agg.*cannot show the figure/i.test(msg))return;
+      if(outEl){outEl.classList.remove('hide');outEl.textContent+=(outEl.textContent?'\n':'')+'⚠ '+msg;}
+    }});
     /* Capture matplotlib figures as PNG */
     await py.runPythonAsync(`
 import sys, io, base64
@@ -28789,10 +28808,12 @@ _out
     }
     if(statusEl)statusEl.textContent='✅ Đã chạy xong.';
     if(outEl&&!outEl.textContent.trim()&&!(arr&&arr.length))outEl.textContent='(Không có print / đồ thị — thêm print(...) hoặc plt.show())';
+    if(outEl&&outEl.textContent.trim())outEl.classList.remove('hide');
+    else if(outEl)outEl.classList.add('hide');
   }catch(e){
     console.warn('ldvlMhRunCurrent',e);
     if(statusEl)statusEl.textContent='❌ Lỗi khi chạy.';
-    if(outEl)outEl.textContent=String(e.message||e);
+    if(outEl){outEl.classList.remove('hide');outEl.textContent=String(e.message||e);}
   }
 }
 function openMhFs(it){
@@ -28812,6 +28833,7 @@ function openMhFs(it){
   let statusEl=document.getElementById('mh-fs-status');
   if(tt)tt.textContent=it.name||'Mô hình hóa';
   if(outEl)outEl.textContent='';
+  if(outEl)outEl.classList.add('hide');
   if(plotEl)plotEl.innerHTML='';
   if(it.kind==='embed'){
     if(py)py.classList.add('hide');
