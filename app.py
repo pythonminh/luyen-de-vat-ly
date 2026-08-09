@@ -3344,6 +3344,8 @@ DBT_MAX_TYPES_PER_LESSON = 6
 DBT_ORDER_FILE = os.path.join(APP_DIR, "data", "dbt_order.json")
 PDF_LINKS_FILE = os.path.join(APP_DIR, "data", "pdf_links.json")
 YOUTUBE_LINKS_FILE = os.path.join(APP_DIR, "data", "youtube_links.json")
+MODEL_APPS_FILE = os.path.join(APP_DIR, "data", "model_apps.json")
+MODEL_APP_CODE_MAX = 120000
 
 DELETED_QIDS_FILE = os.path.join(APP_DIR, "data", "deleted_question_ids.json")
 _DELETED_QIDS_LOCK = threading.Lock()
@@ -6520,6 +6522,7 @@ class SheetStore:
             "dbt_orders": dbt_orders,
             "pdf_links": pdf_links_public(),
             "youtube_links": youtube_links_public(),
+            "model_apps": model_apps_public(),
             "catalog": self.catalog,
             "duplicate_report": self.duplicate_report if is_admin() else {},
             "learning": {
@@ -19779,7 +19782,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 @media(max-width:520px){.ldvlQnavBtn{padding:8px 11px;font-size:11px}.ldvlQnavBtn i{font-size:16px}}
 @media(max-width:400px){.ldvlQnavBtn span{display:none}.ldvlQnavBtn{padding:8px 10px}}
 body.hdr-in-quiz .ldvlQuickNav{display:none!important}
-#homeFilterSection,#homeRandomSection,#homeCatalogSection,#ldvlStudentPdfSection,#ldvlStudentYtSection,#homeTopSection{
+#homeFilterSection,#homeRandomSection,#homeCatalogSection,#ldvlStudentPdfSection,#ldvlStudentYtSection,#ldvlStudentMhSection,#homeTopSection{
   scroll-margin-top:var(--ldvl-sticky-top,120px);
 }
 .homeNavFlash{animation:ldvlHomeNavFlash .85s ease}
@@ -19791,6 +19794,7 @@ body.hdr-in-quiz .ldvlQuickNav{display:none!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-home #homeToolsSection{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-pdf #ldvlStudentPdfSection{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-video #ldvlStudentYtSection{display:block!important}
+.ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-model #ldvlStudentMhSection{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-filter #homeFilterSection,
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-filter #catalogScopeBox{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-catalog #homeCatalogSection,
@@ -20243,6 +20247,41 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 #yt-fs-scr .pdf-fs-bar{flex-shrink:0;z-index:1}
 .ldvlYtCard,.ldvlYtAdminPanel .pdf-list-row{cursor:pointer;-webkit-tap-highlight-color:rgba(37,99,235,.15)}
 .ldvlYtOpenFail{padding:16px;color:#e2e8f0;font-size:14px;line-height:1.5;text-align:center}
+/* Mô hình hóa */
+#mh-fs-scr{display:none;position:fixed;inset:0;z-index:10045;background:#0f172a;flex-direction:column}
+#mh-fs-scr.on{display:flex!important}
+#mh-fs-body{flex:1;min-height:0;display:flex;flex-direction:column;background:#0b1220;overflow:hidden}
+#mh-fs-frame{flex:1;border:none;width:100%;background:#fff;min-height:0}
+#mh-fs-py{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;padding:10px;gap:8px}
+#mh-fs-code{width:100%;min-height:120px;max-height:28vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.4;border-radius:8px;border:1px solid #334155;background:#111827;color:#e2e8f0;padding:10px;box-sizing:border-box;resize:vertical}
+#mh-fs-out{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.45;color:#bbf7d0;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;min-height:64px}
+#mh-fs-plot{background:#fff;border-radius:8px;padding:6px;min-height:0}
+#mh-fs-plot img{max-width:100%;height:auto;display:block;margin:0 auto}
+#mh-fs-params{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:8px 10px;background:#111827;border:1px solid #334155;border-radius:8px}
+#mh-fs-params.hide{display:none}
+.mhParam{display:flex;flex-direction:column;gap:3px;min-width:88px}
+.mhParam label{font-size:11px;font-weight:800;color:#93c5fd}
+.mhParam input{width:100%;box-sizing:border-box;padding:7px 8px;border-radius:7px;border:1px solid #475569;background:#0f172a;color:#f8fafc;font-weight:800;font-size:14px}
+.mhParamRow{display:flex;gap:4px;align-items:center}
+.mhParamRow input{flex:1;min-width:0}
+.mhParamBool{min-width:128px;justify-content:center}
+.mhParamBool label{cursor:pointer;user-select:none}
+.mhParamCheckRow{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border:1px solid #475569;border-radius:7px;background:#0f172a;color:#f8fafc;cursor:pointer}
+.mhParamCheckRow input{width:18px;height:18px;margin:0;accent-color:#2563eb;cursor:pointer;flex:none}
+.mhParamCheckRow span{font-size:13px;font-weight:800;white-space:nowrap}
+.mhPiBtn{flex-shrink:0;min-width:36px;height:34px;padding:0 8px;border-radius:7px;border:1px solid #64748b;background:#1e293b;color:#fde68a;font-weight:900;font-size:14px;cursor:pointer}
+.mhPiBtn:hover{background:#334155}
+#mh-fs-paramsHint{width:100%;font-size:11px;color:#94a3b8;margin:0;line-height:1.4}
+.ldvlMhCard{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--border);cursor:pointer}
+.ldvlMhCard:hover{background:rgba(37,99,235,.06)}
+.ldvlMhIco{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#dbeafe,#ede9fe);display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-size:22px;flex-shrink:0}
+.ldvlMhName{font-weight:800;font-size:14px;line-height:1.35}
+.ldvlMhMeta{font-size:12px;color:var(--muted);margin-top:3px}
+.ldvlMhDesc{font-size:12.5px;color:var(--text);margin-top:5px;line-height:1.4}
+.ldvlMhAdminFields{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.ldvlMhAdminFields label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800;color:var(--muted)}
+.ldvlMhAdminFields input,.ldvlMhAdminFields textarea,.ldvlMhAdminFields select{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--inp,#fff);color:var(--text);font-size:14px;font-family:inherit}
+.ldvlMhAdminFields textarea{min-height:140px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.4}
 .ldvlYtCard{display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
 .ldvlYtCard:hover{background:rgba(37,99,235,.06)}
 .ldvlYtThumb{width:112px;height:63px;border-radius:8px;object-fit:cover;background:#0f172a;flex-shrink:0;border:1px solid var(--border)}
@@ -20561,6 +20600,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="home" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('home'),!1)"><i class="ti ti-home"></i><span>Trang chủ</span></button>
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="pdf" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('pdf'),!1)"><i class="ti ti-file-type-pdf"></i><span>PDF</span></button>
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="video" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('video'),!1)"><i class="ti ti-brand-youtube"></i><span>Video</span></button>
+    <button type="button" class="ldvlQnavBtn" data-ldvl-nav="model" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('model'),!1)"><i class="ti ti-atom"></i><span>Mô hình</span></button>
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="filter" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('filter'),!1)"><i class="ti ti-filter"></i><span>Lọc đề</span></button>
     <button type="button" class="ldvlQnavBtn on" data-ldvl-nav="catalog" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('catalog'),!1)"><i class="ti ti-list"></i><span>Mục lục</span></button>
   </nav>
@@ -20602,9 +20642,9 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 </header>
 <script>
 (function(){
-  var TABS=['home','pdf','video','filter','catalog'];
-  var TAB_IDS={home:'homeTopSection',pdf:'ldvlStudentPdfSection',video:'ldvlStudentYtSection',filter:'homeFilterSection',catalog:'homeCatalogSection'};
-  function normTab(t){if(t==='random')return 'filter';if(t==='yt'||t==='youtube')return 'video';return t;}
+  var TABS=['home','pdf','video','model','filter','catalog'];
+  var TAB_IDS={home:'homeTopSection',pdf:'ldvlStudentPdfSection',video:'ldvlStudentYtSection',model:'ldvlStudentMhSection',filter:'homeFilterSection',catalog:'homeCatalogSection'};
+  function normTab(t){if(t==='random')return 'filter';if(t==='yt'||t==='youtube')return 'video';if(t==='mh'||t==='mohinh'||t==='modelize')return 'model';return t;}
 
   function hdrH(){
     var h=document.getElementById('ldvlDashHdr');
@@ -20667,6 +20707,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     }
     try{if(t==='pdf'&&typeof window.ldvlPdfAdminPanelSync==='function')window.ldvlPdfAdminPanelSync();}catch(e){}
     try{if(t==='video'&&typeof window.ldvlYtAdminPanelSync==='function')window.ldvlYtAdminPanelSync();}catch(e){}
+    try{if(t==='model'&&typeof window.ldvlMhAdminPanelSync==='function')window.ldvlMhAdminPanelSync();}catch(e){}
   }
   window.ldvlApplyHomeTab=applyHomeTab;
   window.ldvlEnsureStudentHomeVisible=ensureStudentHomeVisible;
@@ -21043,6 +21084,51 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   </div>
 </div>
 
+<div class="homeSection homeNavPanel" id="ldvlStudentMhSection">
+  <div class="homeSectionHead">
+    <span class="homeSectionIcon">🧪</span>
+    <span class="homeSectionTitle">Mô hình hóa · Ứng dụng Python</span>
+  </div>
+  <div class="panel" style="margin:0">
+    <p class="muted" style="margin:0 0 10px;font-size:13px;line-height:1.45">Chọn <b>Môn → Lớp</b>, bấm ứng dụng để <b>chạy Python ngay trong app</b> (numpy / matplotlib) hoặc mở link nhúng.</p>
+    <div class="ldvlPdfStudentTabs" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <button type="button" class="btn ldvlMhStab on" id="ldvlMhTabMath" onclick="ldvlStudentMhTab('math')">📐 Toán</button>
+      <button type="button" class="btn2 ldvlMhStab" id="ldvlMhTabPhys" onclick="ldvlStudentMhTab('phys')">🔭 Vật lý</button>
+    </div>
+    <div class="ldvlYtLopTabs" id="ldvlMhLopTabs" aria-label="Chọn lớp mô hình"></div>
+    <div id="ldvlStudentMhList" class="panel" style="padding:0;margin:0"></div>
+    <div id="ldvlMhAdminPanel" class="hide ldvlPdfAdminPanel">
+      <div class="ldvlPdfAdminHead"><i class="ti ti-atom"></i> ADMIN — Thêm ứng dụng mô hình hóa (Python chạy trong app hoặc link nhúng)</div>
+      <div id="ldvlMhAdminMath" class="ldvlPdfAdminSub">
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">📐 <b>Toán</b> — dán mã Python (có <code>print</code> / <code>matplotlib</code>) hoặc URL trang nhúng.</p>
+        <div class="ldvlMhAdminFields">
+          <label>Tên ứng dụng<input id="mh-m-name" placeholder="VD: Đồ thị hàm sin" autocomplete="off"></label>
+          <label>Mô tả ngắn<input id="mh-m-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
+          <label>Loại<select id="mh-m-kind" onchange="ldvlMhKindUi('math')"><option value="python">Python trong app (Pyodide)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-m-code-wrap">Mã Python<textarea id="mh-m-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label id="mh-m-url-wrap" class="hide">Link nhúng<input id="mh-m-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
+        </div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-m-lop" style="min-width:110px"></select><select id="mh-m-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-m-add-btn" onclick="ldvlMhAdd('math')">➕ Thêm mô hình</button><button type="button" class="btn2 hide" id="mh-m-cancel-btn" onclick="ldvlMhCancelEdit('math')">Hủy sửa</button></div>
+        <div id="mh-m-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
+        <div id="mh-m-list" class="panel" style="padding:0;margin:0"></div>
+      </div>
+      <div id="ldvlMhAdminPhys" class="ldvlPdfAdminSub hide">
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">🔭 <b>Vật lý</b> — mô phỏng / thí nghiệm số bằng Python hoặc link nhúng.</p>
+        <div class="ldvlMhAdminFields">
+          <label>Tên ứng dụng<input id="mh-p-name" placeholder="VD: Ném xiên" autocomplete="off"></label>
+          <label>Mô tả ngắn<input id="mh-p-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
+          <label>Loại<select id="mh-p-kind" onchange="ldvlMhKindUi('phys')"><option value="python">Python trong app (Pyodide)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-p-code-wrap">Mã Python<textarea id="mh-p-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label id="mh-p-url-wrap" class="hide">Link nhúng<input id="mh-p-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
+        </div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-p-lop" style="min-width:110px"></select><select id="mh-p-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-p-add-btn" onclick="ldvlMhAdd('phys')">➕ Thêm mô hình</button><button type="button" class="btn2 hide" id="mh-p-cancel-btn" onclick="ldvlMhCancelEdit('phys')">Hủy sửa</button></div>
+        <div id="mh-p-edit-hint" class="hide" style="margin:-4px 0 10px;padding:8px 10px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:12px;color:#9a3412"></div>
+        <div id="mh-p-list" class="panel" style="padding:0;margin:0"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SECTION: Lọc đề (dùng chung cho mục lục + tự luyện) -->
 <div class="homeSection homeNavPanel" id="homeFilterSection">
   <div id="homePracticeSetupPanel" class="panel homePracticeSetupPanel"><div class="homeFilterHead"><b>Lọc đề</b><button type="button" class="btn2 homeFilterToggleBtn" id="homeFilterToggleBtn" onclick="toggleHomeFilterCollapse()" aria-expanded="true">▲ Thu gọn</button></div><div id="homeFilterBody" class="homeFilterBody">
@@ -21155,6 +21241,25 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <button type="button" class="pdf-fs-btn" onclick="closeYtFs()"><i class="ti ti-x"></i></button>
   </div>
   <iframe id="yt-fs-frame" src="about:blank" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+</div>
+<div id="mh-fs-scr">
+  <div class="pdf-fs-bar">
+    <button type="button" class="pdf-fs-btn" onclick="closeMhFs()"><i class="ti ti-arrow-left"></i> Đóng</button>
+    <span id="mh-fs-title">Mô hình hóa</span>
+    <button type="button" class="pdf-fs-btn" id="mh-fs-run" onclick="ldvlMhRunCurrent()"><i class="ti ti-player-play"></i> Chạy</button>
+    <button type="button" class="pdf-fs-btn" id="mh-fs-newt" title="Mở link ngoài"><i class="ti ti-external-link"></i> Tab mới</button>
+    <button type="button" class="pdf-fs-btn" onclick="closeMhFs()"><i class="ti ti-x"></i></button>
+  </div>
+  <div id="mh-fs-body">
+    <iframe id="mh-fs-frame" class="hide" src="about:blank" allowfullscreen></iframe>
+    <div id="mh-fs-py" class="hide">
+      <div id="mh-fs-params" class="hide"></div>
+      <details open><summary style="color:#93c5fd;font-weight:800;cursor:pointer;margin-bottom:6px">Mã Python (có thể sửa số rồi bấm Chạy)</summary><textarea id="mh-fs-code" spellcheck="false"></textarea></details>
+      <div id="mh-fs-status" class="muted" style="color:#93c5fd;font-size:12px">Sẵn sàng chạy.</div>
+      <div id="mh-fs-plot"></div>
+      <pre id="mh-fs-out"></pre>
+    </div>
+  </div>
 </div>
 <div id="startModal" class="modal hide"><div class="modalBox startModalBox">
 
@@ -22570,7 +22675,7 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
 let INIT_CONNECT_FAILS=0;
@@ -27240,6 +27345,8 @@ async function saveDangTheoryToSheet(){
 }
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
+    let mh=document.getElementById('mh-fs-scr');
+    if(mh&&mh.classList.contains('on')){closeMhFs();return;}
     let yt=document.getElementById('yt-fs-scr');
     if(yt&&yt.classList.contains('on')){closeYtFs();return;}
     let pdf=document.getElementById('pdf-fs-scr');
@@ -28164,6 +28271,609 @@ if(!window.__LDVL_YT_CLICK_BOUND){
     ldvlYtOpenById(sub,id);
   },true);
 }
+
+/* ── Mô hình hóa (Python Pyodide / link nhúng) ── */
+window.LDVL_STUDENT_MH_SUB='math';
+window.LDVL_STUDENT_MH_LOP='';
+try{window.LDVL_STUDENT_MH_LOP=localStorage.getItem('LDVL_MH_LOP')||'';}catch(e){}
+window.LDVL_MH_EDIT_ID=0;
+window.LDVL_MH_EDIT_SUB='';
+window.LDVL_MH_CUR=null;
+window.LDVL_PYODIDE=null;
+window.LDVL_PYODIDE_LOADING=null;
+function ldvlMhCanOpen(it){return ldvlPdfCanOpen(it);}
+function ldvlMhStorageKey(sub){return 'ldvl_model_apps_'+sub;}
+function ldvlMhLoad(sub){
+  try{let a=JSON.parse(localStorage.getItem(ldvlMhStorageKey(sub))||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}
+}
+function ldvlMhPersist(sub,items){
+  try{localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(items||[]));}catch(e){}
+}
+function ldvlMhSameId(a,b){return String(a||'')===String(b||'');}
+function ldvlMhNormItem(it){
+  it=it||{};
+  let kind=String(it.kind||'python').toLowerCase();
+  if(kind==='py')kind='python';
+  if(kind==='url')kind='embed';
+  if(kind!=='embed')kind='python';
+  return {
+    id:it.id||Date.now(),
+    name:String(it.name||'').trim(),
+    lop:String(it.lop||it.Lop||'').trim(),
+    quyen:String(it.quyen||'FREE').trim()||'FREE',
+    kind:kind,
+    desc:String(it.desc||'').trim(),
+    code:kind==='python'?String(it.code||''):'',
+    url:kind==='embed'?String(it.url||'').trim():'',
+    note:String(it.note||'').trim(),
+    at:it.at||''
+  };
+}
+function ldvlMhAllItems(sub){
+  let srv=(META&&META.model_apps&&META.model_apps[sub])||[];
+  let serverArr=Array.isArray(srv)?srv.map(ldvlMhNormItem).filter(function(x){return x.name&&((x.kind==='python'&&x.code)||(x.kind==='embed'&&x.url));}):[];
+  let local=ldvlMhLoad(sub).map(ldvlMhNormItem).filter(function(x){return x.name&&((x.kind==='python'&&x.code)||(x.kind==='embed'&&x.url));});
+  if(USER&&USER.is_admin){if(local.length)return local;return serverArr;}
+  if(serverArr.length)return serverArr;
+  return local;
+}
+function ldvlMhSyncFromMeta(force){
+  if(!META||!META.model_apps)return;
+  try{
+    ['math','phys'].forEach(function(sub){
+      let rows=META.model_apps[sub];
+      if(!Array.isArray(rows)||!rows.length)return;
+      if(force){localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(rows));return;}
+      if(USER&&USER.is_admin){
+        if(window.LDVL_MH_EDIT_ID&&window.LDVL_MH_EDIT_SUB===sub)return;
+        let local=ldvlMhLoad(sub);
+        if(Array.isArray(local)&&local.length)return;
+      }
+      localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(rows));
+    });
+  }catch(e){}
+}
+async function ldvlMhSaveServer(){
+  if(!USER||!USER.is_admin)return true;
+  try{
+    let payload={math:ldvlMhAllItems('math'),phys:ldvlMhAllItems('phys')};
+    let j=await api('/api/admin/model-apps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:20000});
+    if(j&&j.model_apps){
+      META=META||{};
+      META.model_apps=j.model_apps;
+      ldvlMhSyncFromMeta(true);
+      ldvlMhRenderList('math');ldvlMhRenderList('phys');
+    }
+    if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();
+    return true;
+  }catch(e){
+    console.warn('ldvlMhSaveServer',e);
+    alert('Lưu mô hình thất bại: '+(e.message||e));
+    return false;
+  }
+}
+function ldvlMhKindUi(sub){
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  let kind=String((document.getElementById(pfx+'-kind')||{}).value||'python');
+  let cw=document.getElementById(pfx+'-code-wrap');
+  let uw=document.getElementById(pfx+'-url-wrap');
+  if(cw)cw.classList.toggle('hide',kind!=='python');
+  if(uw)uw.classList.toggle('hide',kind!=='embed');
+}
+function ldvlMhFillLopSelect(sub){
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  let sel=document.getElementById(pfx+'-lop');
+  if(!sel)return;
+  let cur=sel.value||window.LDVL_STUDENT_MH_LOP||'';
+  let opts=(typeof ldvlYtLopOptions==='function')?ldvlYtLopOptions(sub):['10','11','12'];
+  ldvlMhAllItems(sub).forEach(function(it){if(it.lop&&opts.indexOf(it.lop)<0)opts.push(it.lop);});
+  if(cur&&opts.indexOf(cur)<0)opts=opts.concat([cur]);
+  sel.innerHTML=opts.map(function(l){return '<option value="'+escAttr(l)+'">'+esc(l)+'</option>';}).join('');
+  if(cur&&opts.indexOf(cur)>=0)sel.value=cur;else if(opts.length)sel.value=opts[0];
+}
+function ldvlMhSyncEditUi(sub){
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  let editing=!!(window.LDVL_MH_EDIT_ID&&window.LDVL_MH_EDIT_SUB===sub);
+  let add=document.getElementById(pfx+'-add-btn');
+  let cancel=document.getElementById(pfx+'-cancel-btn');
+  let hint=document.getElementById(pfx+'-edit-hint');
+  if(add)add.textContent=editing?'💾 Cập nhật mô hình':'➕ Thêm mô hình';
+  if(cancel)cancel.classList.toggle('hide',!editing);
+  if(hint){
+    hint.classList.toggle('hide',!editing);
+    if(editing)hint.innerHTML='Đang sửa: <b>'+esc(window.LDVL_MH_EDIT_NAME||'')+'</b>';
+  }
+  ldvlMhKindUi(sub);
+}
+function ldvlMhAdminPanelSync(){
+  let adm=!!(USER&&USER.is_admin);
+  let wrap=document.getElementById('ldvlMhAdminPanel');
+  if(wrap)wrap.classList.toggle('hide',!adm);
+  if(!adm)return;
+  let sub=window.LDVL_STUDENT_MH_SUB||'math';
+  let m=document.getElementById('ldvlMhAdminMath');
+  let p=document.getElementById('ldvlMhAdminPhys');
+  if(m)m.classList.toggle('hide',sub!=='math');
+  if(p)p.classList.toggle('hide',sub!=='phys');
+  ldvlMhFillLopSelect(sub);
+  ldvlMhRenderList(sub);
+  ldvlMhSyncEditUi(sub);
+}
+function ldvlStudentMhTab(sub){
+  window.LDVL_STUDENT_MH_SUB=sub||'math';
+  let tm=document.getElementById('ldvlMhTabMath');
+  let tp=document.getElementById('ldvlMhTabPhys');
+  if(tm)tm.className=(sub==='math'?'btn':'btn2')+' ldvlMhStab'+(sub==='math'?' on':'');
+  if(tp)tp.className=(sub==='phys'?'btn':'btn2')+' ldvlMhStab'+(sub==='phys'?' on':'');
+  ldvlStudentMhRender();
+  ldvlMhAdminPanelSync();
+}
+function ldvlStudentMhLop(lop){
+  window.LDVL_STUDENT_MH_LOP=String(lop||'');
+  try{localStorage.setItem('LDVL_MH_LOP',window.LDVL_STUDENT_MH_LOP);}catch(e){}
+  ldvlStudentMhRender();
+}
+function ldvlMhRenderLopTabs(sub){
+  let box=document.getElementById('ldvlMhLopTabs');
+  if(!box)return;
+  let used={};
+  ldvlMhAllItems(sub).forEach(function(it){let l=String(it.lop||'').trim();if(l)used[l]=1;});
+  let lops=Object.keys(used).sort(function(a,b){
+    let ka=ldvlYtLopSortKey(a),kb=ldvlYtLopSortKey(b);
+    return ka[0]-kb[0]||(ka[1]<kb[1]?-1:1);
+  });
+  if(!lops.length)lops=(typeof ldvlYtLopOptions==='function'?ldvlYtLopOptions(sub):['10','11','12']).slice(0,6);
+  let cur=String(window.LDVL_STUDENT_MH_LOP||'');
+  let html='<button type="button" class="btn2 ldvlYtLopBtn'+(cur?'':' on')+'" onclick="ldvlStudentMhLop(\'\')">Tất cả lớp</button>';
+  html+=lops.map(function(l){
+    return '<button type="button" class="btn2 ldvlYtLopBtn'+(cur===l?' on':'')+'" onclick="ldvlStudentMhLop(\''+String(l).replace(/'/g,"\\'")+'\')">'+esc(ldvlYtLopDisplay(l))+'</button>';
+  }).join('');
+  box.innerHTML=html;
+}
+function ldvlMhCardHtml(sub,it){
+  let kind=it.kind==='embed'?'Link nhúng':'Python';
+  return '<div class="ldvlMhCard" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'" role="button" tabindex="0"><div class="ldvlMhIco"><i class="ti ti-atom"></i></div><div style="min-width:0;flex:1"><div class="ldvlMhName">'+esc(it.name||'Mô hình')+'</div><div class="ldvlMhMeta"><span class="tag">'+esc(ldvlYtLopDisplay(it.lop))+'</span> · <span class="tag">'+esc(kind)+'</span> · <span class="tag">'+esc(it.quyen||'FREE')+'</span></div>'+(it.desc?('<div class="ldvlMhDesc">'+esc(it.desc)+'</div>'):'')+'</div></div>';
+}
+function ldvlStudentMhRender(){
+  let box=document.getElementById('ldvlStudentMhList');
+  if(!box)return;
+  let sub=window.LDVL_STUDENT_MH_SUB||'math';
+  ldvlMhRenderLopTabs(sub);
+  let all=ldvlMhAllItems(sub);
+  let openable=all.filter(ldvlMhCanOpen);
+  let items=ldvlYtFilterByLop(openable,window.LDVL_STUDENT_MH_LOP);
+  if(!items.length){
+    let msg=!all.length?('Chưa có mô hình môn '+ldvlYtMonLabel(sub)+(USER&&USER.is_admin?' — thêm ở khối ADMIN bên dưới.':'.')):(!openable.length?('Có mô hình nhưng cần VIP/SVIP.'):('Chưa có mô hình '+ldvlYtLopDisplay(window.LDVL_STUDENT_MH_LOP)+'.'));
+    box.innerHTML='<div class="muted" style="padding:12px">'+msg+'</div>';
+    return;
+  }
+  let groups=ldvlYtGroupByLop(items);
+  box.innerHTML=groups.map(function(g){
+    return '<div class="ldvlYtLopHead"><span>'+esc(ldvlYtLopDisplay(g.lop))+' · '+ldvlYtMonLabel(sub)+'</span><span class="muted" style="font-weight:700">'+g.items.length+'</span></div>'+g.items.map(function(it){return ldvlMhCardHtml(sub,it);}).join('');
+  }).join('');
+}
+function ldvlMhRenderList(sub){
+  ldvlMhFillLopSelect(sub);
+  let box=document.getElementById(sub==='phys'?'mh-p-list':'mh-m-list');
+  if(!box)return;
+  let items=ldvlMhAllItems(sub);
+  if(!items.length){box.innerHTML='<div class="muted" style="padding:10px">Chưa có mô hình.</div>';return;}
+  let groups=ldvlYtGroupByLop(items);
+  box.innerHTML='<div class="pdf-list-head"><span>Mô hình ('+items.length+')</span><span class="pdf-list-act-h">Sửa · Xóa</span></div>'+groups.map(function(g){
+    return '<div class="ldvlYtLopHead"><span>'+esc(ldvlYtLopDisplay(g.lop))+'</span><span class="muted" style="font-weight:700">'+g.items.length+'</span></div>'+g.items.map(function(it){
+      return '<div class="pdf-list-row" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'"><div class="pdf-list-ico"><i class="ti ti-atom"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+esc(it.name||'')+'</div><div class="pdf-list-meta"><span class="tag">'+esc(it.lop||'—')+'</span> · <span class="tag">'+(it.kind==='embed'?'Link':'Python')+'</span></div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" data-mh-act="edit" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Sửa</button><button type="button" class="pdfBtnDel" data-mh-act="del" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Xóa</button></div></div>';
+    }).join('');
+  }).join('');
+}
+function ldvlMhEdit(sub,id){
+  if(!USER||!USER.is_admin)return;
+  let it=ldvlMhAllItems(sub).find(function(x){return ldvlMhSameId(x.id,id);});
+  if(!it)return;
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  window.LDVL_MH_EDIT_SUB=sub;window.LDVL_MH_EDIT_ID=id;window.LDVL_MH_EDIT_NAME=it.name||'';
+  ldvlMhFillLopSelect(sub);
+  let set=function(k,v){let el=document.getElementById(pfx+'-'+k);if(el)el.value=v;};
+  set('name',it.name||'');set('desc',it.desc||'');set('kind',it.kind||'python');set('code',it.code||'');set('url',it.url||'');set('quyen',it.quyen||'FREE');
+  let li=document.getElementById(pfx+'-lop');
+  if(li&&it.lop){
+    if(![].some.call(li.options,function(o){return o.value===it.lop;})){let o=document.createElement('option');o.value=it.lop;o.textContent=it.lop;li.appendChild(o);}
+    li.value=it.lop;
+  }
+  ldvlMhSyncEditUi(sub);
+  if(typeof ldvlApplyHomeTab==='function')ldvlApplyHomeTab('model');
+  ldvlStudentMhTab(sub);
+}
+function ldvlMhCancelEdit(sub){
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  window.LDVL_MH_EDIT_ID=0;window.LDVL_MH_EDIT_SUB='';window.LDVL_MH_EDIT_NAME='';
+  ['name','desc','code','url'].forEach(function(k){let el=document.getElementById(pfx+'-'+k);if(el)el.value='';});
+  let kind=document.getElementById(pfx+'-kind');if(kind)kind.value='python';
+  ldvlMhSyncEditUi(sub);
+}
+function ldvlMhAdd(sub){
+  if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return;}
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  let name=String((document.getElementById(pfx+'-name')||{}).value||'').trim();
+  let desc=String((document.getElementById(pfx+'-desc')||{}).value||'').trim();
+  let kind=String((document.getElementById(pfx+'-kind')||{}).value||'python');
+  let code=String((document.getElementById(pfx+'-code')||{}).value||'');
+  let url=String((document.getElementById(pfx+'-url')||{}).value||'').trim();
+  let quyen=String((document.getElementById(pfx+'-quyen')||{}).value||'FREE').trim();
+  let lop=String((document.getElementById(pfx+'-lop')||{}).value||'').trim();
+  if(!name){alert('Nhập tên ứng dụng.');return;}
+  if(!lop){alert('Chọn lớp.');return;}
+  if(kind==='python'&&!code.trim()){alert('Dán mã Python.');return;}
+  if(kind==='embed'&&!url){alert('Dán link nhúng.');return;}
+  let row=ldvlMhNormItem({id:Date.now(),name,desc,kind,code,url,quyen,lop,at:new Date().toISOString()});
+  let items=ldvlMhAllItems(sub).slice();
+  let editId=window.LDVL_MH_EDIT_ID|0;
+  if(editId&&window.LDVL_MH_EDIT_SUB===sub){
+    let i=items.findIndex(function(x){return ldvlMhSameId(x.id,editId);});
+    row.id=editId;
+    if(i>=0)items[i]=Object.assign({},items[i],row);else items.unshift(row);
+    ldvlMhCancelEdit(sub);
+  }else{
+    items.unshift(row);
+    ldvlMhCancelEdit(sub);
+  }
+  window.LDVL_STUDENT_MH_LOP=lop;
+  try{localStorage.setItem('LDVL_MH_LOP',lop);}catch(e){}
+  ldvlMhPersist(sub,items);
+  ldvlMhRenderList(sub);
+  ldvlMhSaveServer().then(function(ok){
+    ldvlStudentMhRender();
+    alert(ok?'✅ Đã lưu mô hình.':'⚠ Đã lưu trên máy nhưng server lỗi.');
+  });
+}
+function ldvlMhDelete(sub,id){
+  if(!confirm('Xóa mô hình này?'))return;
+  ldvlMhPersist(sub,ldvlMhAllItems(sub).filter(function(x){return !ldvlMhSameId(x.id,id);}));
+  ldvlMhRenderList(sub);
+  ldvlMhSaveServer();
+  ldvlStudentMhRender();
+}
+function closeMhFs(){
+  let scr=document.getElementById('mh-fs-scr');
+  let fr=document.getElementById('mh-fs-frame');
+  if(fr)fr.src='about:blank';
+  if(scr)scr.classList.remove('on');
+  document.body.style.overflow='';
+  document.documentElement.style.overflow='';
+  window.LDVL_MH_CUR=null;
+}
+async function ldvlMhEnsurePyodide(statusEl){
+  if(window.LDVL_PYODIDE)return window.LDVL_PYODIDE;
+  if(window.LDVL_PYODIDE_LOADING)return window.LDVL_PYODIDE_LOADING;
+  window.LDVL_PYODIDE_LOADING=(async function(){
+    if(statusEl)statusEl.textContent='⏳ Đang tải Python trong trình duyệt (lần đầu có thể 10–30s)…';
+    if(typeof loadPyodide!=='function'){
+      await new Promise(function(resolve,reject){
+        let s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+        s.onload=resolve;s.onerror=function(){reject(new Error('Không tải được Pyodide (cần mạng).'));};
+        document.head.appendChild(s);
+      });
+    }
+    let py=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'});
+    if(statusEl)statusEl.textContent='⏳ Đang nạp numpy, matplotlib…';
+    await py.loadPackage(['numpy','matplotlib']);
+    window.LDVL_PYODIDE=py;
+    return py;
+  })();
+  try{return await window.LDVL_PYODIDE_LOADING;}finally{window.LDVL_PYODIDE_LOADING=null;}
+}
+function ldvlMhNormExpr(expr){
+  return String(expr||'').trim()
+    .replace(/,/g,'.')
+    .replace(/π/g,'pi')
+    .replace(/np\.pi/gi,'pi')
+    .replace(/math\.pi/gi,'pi')
+    .replace(/\s+/g,'');
+}
+function ldvlMhIsSafeExpr(expr){
+  let e=ldvlMhNormExpr(expr);
+  if(!e)return false;
+  if(/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(e))return true;
+  /* Cho phép số, pi, + - * / ( ) */
+  if(!/^[0-9+\-*/().pi]+$/i.test(e))return false;
+  if(/pi{2,}/i.test(e))return false;
+  try{
+    let js=e.replace(/pi/gi,'('+Math.PI+')');
+    let n=Function('"use strict";return ('+js+')')();
+    return typeof n==='number'&&isFinite(n);
+  }catch(err){return false;}
+}
+function ldvlMhEvalExpr(expr){
+  let e=ldvlMhNormExpr(expr);
+  if(/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(e))return Number(e);
+  let js=e.replace(/pi/gi,'('+Math.PI+')');
+  return Function('"use strict";return ('+js+')')();
+}
+function ldvlMhToPyExpr(expr){
+  let e=String(expr||'').trim().replace(/,/g,'.').replace(/π/g,'pi');
+  e=e.replace(/np\.pi/gi,'pi').replace(/math\.pi/gi,'pi');
+  e=e.replace(/\s+/g,' ');
+  if(/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(e.replace(/\s/g,'')))return e.replace(/\s/g,'');
+  /* giữ dạng đẹp: pi/2 → np.pi/2 */
+  e=e.replace(/\bpi\b/gi,'np.pi').replace(/\s+/g,'');
+  return e;
+}
+function ldvlMhDisplayExpr(raw){
+  let e=String(raw||'').trim();
+  e=e.replace(/np\.pi/gi,'pi').replace(/math\.pi/gi,'pi').replace(/π/g,'pi');
+  return e;
+}
+function ldvlMhInsertPi(inputId){
+  let el=document.getElementById(inputId);
+  if(!el)return;
+  let start=el.selectionStart|0, end=el.selectionEnd|0;
+  let v=String(el.value||'');
+  let ins='pi';
+  /* nếu đang trống → pi ; nếu vừa gõ số → *pi */
+  if(v&&/[0-9)]$/.test(v.slice(0,start).replace(/\s/g,''))&&!/pi$/i.test(v.slice(0,start).replace(/\s/g,'')))ins='*pi';
+  el.value=v.slice(0,start)+ins+v.slice(end);
+  let pos=start+ins.length;
+  try{el.setSelectionRange(pos,pos);}catch(e){}
+  el.focus();
+}
+function ldvlMhParseParams(code){
+  code=String(code||'');
+  let params=[], seen={};
+  let exprTok='(?:-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?|np\\.pi|math\\.pi|pi|π)';
+  let exprPart='(?:'+exprTok+')(?:\\s*[+\\-*/]\\s*(?:'+exprTok+'|\\([^)]*\\)|-?\\d+(?:\\.\\d+)?))*';
+  function add(name,val,lineIdx,mode,extra){
+    name=String(name||'').trim();
+    if(!name||seen[name])return;
+    if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name))return;
+    if(['np','plt','numpy','matplotlib','math','True','False','None','pi'].indexOf(name)>=0)return;
+    let raw=String(val||'').trim();
+    if(!ldvlMhIsSafeExpr(raw))return;
+    let n=ldvlMhEvalExpr(raw);
+    seen[name]=1;
+    params.push({name:name,value:n,raw:ldvlMhDisplayExpr(raw),lineIdx:lineIdx,mode:mode||'single',type:'number',extra:extra||null});
+  }
+  function addBool(name,val,lineIdx){
+    name=String(name||'').trim();
+    if(!name||seen[name])return;
+    if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name))return;
+    let checked=String(val||'').trim()==='True';
+    seen[name]=1;
+    params.push({name:name,value:checked,raw:checked?'True':'False',lineIdx:lineIdx,mode:'single',type:'boolean',extra:null});
+  }
+  let lines=code.split(/\r?\n/);
+  lines.forEach(function(line,idx){
+    /* Chỉ nhận biến cấu hình ở đầu dòng. Bỏ qua keyword thụt vào
+       như linewidth=2, fontsize=10, alpha=0.3 trong lệnh vẽ. */
+    if(/^\s+/.test(line))return;
+    let t=line.replace(/#.*$/,'').trim();
+    if(!t)return;
+    let mb=t.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(True|False)\s*$/);
+    if(mb){addBool(mb[1],mb[2],idx);return;}
+    let m=t.match(new RegExp('^([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*('+exprPart+')\\s*$','i'));
+    if(m){add(m[1],m[2],idx,'single');return;}
+    /* dạng a, b, c = ... (số hoặc pi) */
+    let m2=t.match(/^([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)+)\s*=\s*(.+)\s*$/);
+    if(m2){
+      let names=m2[1].split(',').map(function(s){return s.trim();});
+      let vals=m2[2].split(',').map(function(s){return s.trim();});
+      if(names.length===vals.length&&vals.every(ldvlMhIsSafeExpr)){
+        names.forEach(function(nm,i){add(nm,vals[i],idx,'tuple',{names:names,vals:vals.map(ldvlMhDisplayExpr)});});
+      }
+    }
+  });
+  return params;
+}
+function ldvlMhApplyParamsToCode(code,params){
+  let lines=String(code||'').split(/\r?\n/);
+  let byLine={};
+  (params||[]).forEach(function(p){
+    let el=document.getElementById('mh-param-'+p.name);
+    if(!el)return;
+    if(p.type==='boolean'){
+      byLine[p.lineIdx]={mode:'single',name:p.name,val:el.checked?'True':'False'};
+      return;
+    }
+    let typed=String(el.value||'').trim();
+    if(!typed||!ldvlMhIsSafeExpr(typed))return;
+    let v=ldvlMhToPyExpr(typed);
+    if(!byLine[p.lineIdx])byLine[p.lineIdx]={mode:p.mode,names:[],vals:[]};
+    if(p.mode==='tuple'&&p.extra){
+      byLine[p.lineIdx].mode='tuple';
+      byLine[p.lineIdx].names=p.extra.names.slice();
+      byLine[p.lineIdx].vals=(byLine[p.lineIdx].vals.length?byLine[p.lineIdx].vals:p.extra.vals.slice());
+      let ix=p.extra.names.indexOf(p.name);
+      if(ix>=0)byLine[p.lineIdx].vals[ix]=v;
+    }else{
+      byLine[p.lineIdx]={mode:'single',name:p.name,val:v};
+    }
+  });
+  Object.keys(byLine).forEach(function(k){
+    let i=parseInt(k,10), info=byLine[k];
+    if(!lines[i])return;
+    let indent=(lines[i].match(/^\s*/)||[''])[0];
+    if(info.mode==='tuple')lines[i]=indent+info.names.join(', ')+' = '+info.vals.join(', ');
+    else lines[i]=indent+info.name+' = '+info.val;
+  });
+  return lines.join('\n');
+}
+function ldvlMhBuildParamUi(code){
+  let box=document.getElementById('mh-fs-params');
+  if(!box)return [];
+  let params=ldvlMhParseParams(code);
+  if(!params.length){
+    box.classList.add('hide');
+    box.innerHTML='';
+    return [];
+  }
+  box.classList.remove('hide');
+  let html='<p id="mh-fs-paramsHint">Gõ số thường hoặc có <b>π</b>: <code>pi</code>, <code>pi/2</code>, <code>2*pi</code>, <code>-pi/4</code>. Tick đại lượng muốn hiện rồi bấm <b>Chạy lại</b>.</p>';
+  html+=params.map(function(p){
+    let id='mh-param-'+p.name;
+    if(p.type==='boolean'){
+      let checked=p.value?' checked':'';
+      let boolLabels={hien_x:'Li độ x',hien_v:'Vận tốc v',hien_a:'Gia tốc a'};
+      let boolLabel=boolLabels[p.name]||p.name;
+      return '<div class="mhParam mhParamBool"><label for="'+escAttr(id)+'">Lựa chọn</label><label class="mhParamCheckRow" for="'+escAttr(id)+'"><input id="'+escAttr(id)+'" type="checkbox"'+checked+'><span>'+esc(boolLabel)+'</span></label></div>';
+    }
+    return '<div class="mhParam"><label for="'+escAttr(id)+'">'+esc(p.name)+'</label><div class="mhParamRow"><input id="'+escAttr(id)+'" type="text" inputmode="text" value="'+escAttr(p.raw)+'" placeholder="vd: pi/2" autocomplete="off"><button type="button" class="mhPiBtn" title="Chèn π (pi)" onclick="ldvlMhInsertPi(\''+escAttr(id)+'\')">π</button></div></div>';
+  }).join('');
+  html+='<button type="button" class="pdf-fs-btn" style="margin-left:auto" onclick="ldvlMhRunCurrent()"><i class="ti ti-player-play"></i> Chạy lại</button>';
+  box.innerHTML=html;
+  params.forEach(function(p){
+    let el=document.getElementById('mh-param-'+p.name);
+    if(!el)return;
+    if(p.type==='boolean'){
+      el.addEventListener('change',function(){ldvlMhRunCurrent();});
+      return;
+    }
+    el.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();ldvlMhRunCurrent();}});
+  });
+  return params;
+}
+window.ldvlMhInsertPi=ldvlMhInsertPi;
+async function ldvlMhRunCurrent(){
+  let cur=window.LDVL_MH_CUR;
+  if(!cur)return;
+  if(cur.kind==='embed'){
+    let fr=document.getElementById('mh-fs-frame');
+    if(fr&&cur.url)fr.src=cur.url;
+    return;
+  }
+  let codeEl=document.getElementById('mh-fs-code');
+  let outEl=document.getElementById('mh-fs-out');
+  let plotEl=document.getElementById('mh-fs-plot');
+  let statusEl=document.getElementById('mh-fs-status');
+  let code=codeEl?codeEl.value:cur.code;
+  let params=ldvlMhParseParams(code);
+  if(params.length){
+    code=ldvlMhApplyParamsToCode(code,params);
+    if(codeEl)codeEl.value=code;
+    ldvlMhBuildParamUi(code);
+  }
+  if(outEl)outEl.textContent='';
+  if(plotEl)plotEl.innerHTML='';
+  try{
+    let py=await ldvlMhEnsurePyodide(statusEl);
+    if(statusEl)statusEl.textContent='▶️ Đang chạy…';
+    py.setStdout({batched:function(s){if(outEl)outEl.textContent+=(outEl.textContent?'\n':'')+s;}});
+    py.setStderr({batched:function(s){if(outEl)outEl.textContent+=(outEl.textContent?'\n':'')+'⚠ '+s;}});
+    /* Capture matplotlib figures as PNG */
+    await py.runPythonAsync(`
+import sys, io, base64
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+pi = float(np.pi)  # cho phép gõ pi, pi/2 trong mã
+plt.close('all')
+`);
+    await py.runPythonAsync(code);
+    let figs=py.runPython(`
+import io, base64, matplotlib.pyplot as plt
+_out=[]
+for _num in list(plt.get_fignums()):
+    _fig=plt.figure(_num)
+    _buf=io.BytesIO()
+    _fig.savefig(_buf, format='png', dpi=120, bbox_inches='tight')
+    _out.append(base64.b64encode(_buf.getvalue()).decode('ascii'))
+_out
+`);
+    let arr=figs&&figs.toJs?figs.toJs():(figs||[]);
+    if(arr&&arr.length&&plotEl){
+      arr.forEach(function(b64){
+        let img=document.createElement('img');
+        img.src='data:image/png;base64,'+b64;
+        img.alt='Đồ thị';
+        plotEl.appendChild(img);
+      });
+    }
+    if(statusEl)statusEl.textContent='✅ Đã chạy xong.';
+    if(outEl&&!outEl.textContent.trim()&&!(arr&&arr.length))outEl.textContent='(Không có print / đồ thị — thêm print(...) hoặc plt.show())';
+  }catch(e){
+    console.warn('ldvlMhRunCurrent',e);
+    if(statusEl)statusEl.textContent='❌ Lỗi khi chạy.';
+    if(outEl)outEl.textContent=String(e.message||e);
+  }
+}
+function openMhFs(it){
+  it=ldvlMhNormItem(it||{});
+  try{if(typeof closeYtFs==='function')closeYtFs();}catch(e){}
+  try{if(typeof closePdfFs==='function')closePdfFs();}catch(e){}
+  window.LDVL_MH_CUR=it;
+  let scr=document.getElementById('mh-fs-scr');
+  let fr=document.getElementById('mh-fs-frame');
+  let py=document.getElementById('mh-fs-py');
+  let tt=document.getElementById('mh-fs-title');
+  let run=document.getElementById('mh-fs-run');
+  let newt=document.getElementById('mh-fs-newt');
+  let codeEl=document.getElementById('mh-fs-code');
+  let outEl=document.getElementById('mh-fs-out');
+  let plotEl=document.getElementById('mh-fs-plot');
+  let statusEl=document.getElementById('mh-fs-status');
+  if(tt)tt.textContent=it.name||'Mô hình hóa';
+  if(outEl)outEl.textContent='';
+  if(plotEl)plotEl.innerHTML='';
+  if(it.kind==='embed'){
+    if(py)py.classList.add('hide');
+    if(fr){fr.classList.remove('hide');fr.src=it.url||'about:blank';}
+    if(run)run.classList.add('hide');
+    if(newt){newt.classList.remove('hide');newt.onclick=function(){if(it.url)window.open(it.url,'_blank','noopener');};}
+  }else{
+    if(fr){fr.classList.add('hide');fr.src='about:blank';}
+    if(py)py.classList.remove('hide');
+    if(codeEl){
+      codeEl.value=it.code||'';
+      codeEl.readOnly=false;
+      codeEl.removeAttribute('readonly');
+      codeEl.oninput=function(){ldvlMhBuildParamUi(codeEl.value);};
+    }
+    ldvlMhBuildParamUi(it.code||'');
+    if(run)run.classList.remove('hide');
+    if(newt)newt.classList.add('hide');
+    if(statusEl)statusEl.textContent='Sửa số a, b, c… (ô phía trên hoặc trong mã) rồi bấm Chạy.';
+  }
+  if(scr){
+    scr.classList.add('on');
+    try{document.body.appendChild(scr);}catch(e){}
+  }
+  document.body.style.overflow='hidden';
+  document.documentElement.style.overflow='hidden';
+  if(it.kind==='python')setTimeout(function(){ldvlMhRunCurrent();},80);
+}
+function ldvlMhOpenById(sub,id){
+  let it=ldvlMhAllItems(sub).find(function(x){return ldvlMhSameId(x.id,id);});
+  if(!it){alert('Không tìm thấy mô hình.');return;}
+  if(!ldvlMhCanOpen(it)){alert('Mô hình này cần quyền VIP/SVIP.');return;}
+  openMhFs(it);
+}
+window.ldvlMhOpenById=ldvlMhOpenById;
+window.openMhFs=openMhFs;
+window.closeMhFs=closeMhFs;
+window.ldvlMhRunCurrent=ldvlMhRunCurrent;
+window.ldvlMhAdminPanelSync=ldvlMhAdminPanelSync;
+if(!window.__LDVL_MH_CLICK_BOUND){
+  window.__LDVL_MH_CLICK_BOUND=1;
+  document.addEventListener('click',function(ev){
+    let t=ev.target;if(!t||!t.closest)return;
+    let act=t.closest('[data-mh-act]');
+    if(act){
+      ev.preventDefault();ev.stopPropagation();
+      let a=act.getAttribute('data-mh-act');
+      let sub=act.getAttribute('data-mh-sub')||'math';
+      let id=act.getAttribute('data-mh-id');
+      if(a==='edit')ldvlMhEdit(sub,id);
+      else if(a==='del')ldvlMhDelete(sub,id);
+      return;
+    }
+    let card=t.closest('[data-mh-id][data-mh-sub]');
+    if(!card)return;
+    let sub=card.getAttribute('data-mh-sub')||'math';
+    let id=card.getAttribute('data-mh-id');
+    if(!id)return;
+    ev.preventDefault();
+    ldvlMhOpenById(sub,id);
+  },true);
+}
 function ldvlShowAdminPanel(id){ldvlAdminNav(null,'ap-'+(String(id||'').replace(/^/,'')||'dash'));}
 window.LDVL_ADMIN_STUDENT_MODE=false;
 function ldvlApplyAdminHomeLayout(){
@@ -28234,7 +28944,7 @@ function ldvlOpenPracticeView(scrollId,monFilter){
     if(monFilter)ldvlAdminFilterMon(monFilter);
     else{refreshFilterOptions();renderCatalog();}
   }catch(e){console.warn('ldvlOpenPracticeView',e);}
-  var tabMap={random:'filter',homeFilterSection:'filter',homeRandomSection:'filter',homeCatalogSection:'catalog',ldvlStudentPdfSection:'pdf',ldvlStudentYtSection:'video',catalog:'catalog'};
+  var tabMap={random:'filter',homeFilterSection:'filter',homeRandomSection:'filter',homeCatalogSection:'catalog',ldvlStudentPdfSection:'pdf',ldvlStudentYtSection:'video',ldvlStudentMhSection:'model',catalog:'catalog'};
   var tab=tabMap[scrollId]||'catalog';
   setTimeout(function(){
     if(typeof window.ldvlApplyHomeTab==='function')window.ldvlApplyHomeTab(tab);
@@ -32303,6 +33013,101 @@ def youtube_links_public() -> Dict[str, Any]:
     }
 
 
+def _normalize_model_app_item(raw: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return None
+    name = clean(raw.get("name", ""))
+    kind = clean(raw.get("kind", "python")).lower() or "python"
+    if kind not in ("python", "embed", "py", "url"):
+        kind = "python"
+    if kind in ("py",):
+        kind = "python"
+    if kind == "url":
+        kind = "embed"
+    code = str(raw.get("code") or "")
+    if len(code) > MODEL_APP_CODE_MAX:
+        code = code[:MODEL_APP_CODE_MAX]
+    url = clean(raw.get("url", ""))
+    if not name:
+        return None
+    if kind == "python" and not clean(code):
+        return None
+    if kind == "embed" and not url:
+        return None
+    try:
+        pid = int(raw.get("id") or 0)
+    except Exception:
+        log_swallow("_normalize_model_app_item:id")
+        pid = 0
+    if not pid:
+        pid = int(time.time() * 1000)
+    return {
+        "id": pid,
+        "name": name,
+        "lop": clean(raw.get("lop", "") or raw.get("Lop", "")),
+        "quyen": clean(raw.get("quyen", "FREE")) or "FREE",
+        "kind": kind,
+        "desc": clean(raw.get("desc", "")),
+        "code": code if kind == "python" else "",
+        "url": url if kind == "embed" else "",
+        "note": clean(raw.get("note", "")),
+        "at": clean(raw.get("at", "")),
+    }
+
+
+def load_model_apps() -> Dict[str, Any]:
+    default: Dict[str, Any] = {"math": [], "phys": [], "updated_at": ""}
+    try:
+        if os.path.isfile(MODEL_APPS_FILE):
+            with open(MODEL_APPS_FILE, encoding="utf-8") as f:
+                obj = json.load(f)
+            if isinstance(obj, dict):
+                out = dict(default)
+                for sub in ("math", "phys"):
+                    raw = obj.get(sub) or []
+                    if isinstance(raw, list):
+                        items = []
+                        for row in raw:
+                            norm = _normalize_model_app_item(row)
+                            if norm:
+                                items.append(norm)
+                        out[sub] = items
+                out["updated_at"] = clean(obj.get("updated_at", ""))
+                return out
+    except Exception:
+        log_swallow("load_model_apps")
+    return default
+
+
+def save_model_apps(links: Dict[str, Any]) -> None:
+    payload = {
+        "math": [],
+        "phys": [],
+        "updated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
+    }
+    for sub in ("math", "phys"):
+        raw = (links or {}).get(sub) or []
+        if isinstance(raw, list):
+            for row in raw:
+                norm = _normalize_model_app_item(row)
+                if norm:
+                    payload[sub].append(norm)
+    os.makedirs(os.path.dirname(MODEL_APPS_FILE), exist_ok=True)
+    tmp = MODEL_APPS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, MODEL_APPS_FILE)
+
+
+def model_apps_public() -> Dict[str, Any]:
+    data = load_model_apps()
+    return {
+        "math": list(data.get("math") or []),
+        "phys": list(data.get("phys") or []),
+        "updated_at": clean(data.get("updated_at", "")),
+    }
+
+
 def save_dbt_order_one(made: str, names: List[str], orders: Optional[Dict[str, List[str]]] = None) -> Dict[str, List[str]]:
     """Lưu thứ tự một MaDe — file JSON + sheet DBT_ThuTu + cập nhật catalog RAM."""
     made = clean(made)
@@ -35510,6 +36315,37 @@ def api_admin_youtube_links():
             "ok": True,
             "youtube_links": youtube_links_public(),
             "message": "Đã lưu danh sách video YouTube lên server.",
+        }
+    )
+
+
+@app.route("/api/admin/model-apps", methods=["GET", "POST"])
+def api_admin_model_apps():
+    """ADMIN: lưu ứng dụng mô hình hóa (Python chạy trong app / link nhúng)."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được quản lý mô hình hóa."}), 403
+    if request.method == "GET":
+        return jsonify({"ok": True, "model_apps": model_apps_public()})
+    body = request.get_json(silent=True) or {}
+    for sub in ("math", "phys"):
+        for row in (body.get(sub) or []) if isinstance(body, dict) else []:
+            if not isinstance(row, dict):
+                continue
+            if not _normalize_model_app_item(row):
+                return jsonify(
+                    {
+                        "error": f"Ứng dụng không hợp lệ ({sub}): cần tên + (mã Python hoặc link nhúng)."
+                    }
+                ), 400
+    save_model_apps(body if isinstance(body, dict) else {})
+    return jsonify(
+        {
+            "ok": True,
+            "model_apps": model_apps_public(),
+            "message": "Đã lưu danh sách mô hình hóa lên server.",
         }
     )
 
