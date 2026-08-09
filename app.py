@@ -19799,7 +19799,8 @@ body.hdr-in-quiz .ldvlQuickNav{display:none!important}
 .ldvlDashV324 #homeFilterSection .homeFilterRandomPanel{margin-top:10px!important;border:1px solid #93c5fd;background:linear-gradient(135deg,#eff6ff,#f0fdf4)!important}
 .ldvlPdfAdminPanel{margin-top:14px;padding-top:12px;border-top:2px dashed #cbd5e1}
 .ldvlPdfAdminHead{font-weight:800;font-size:14px;color:#b91c1c;margin:0 0 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ldvlPdfAdminSub .pdf-list-row{cursor:default}
+.ldvlPdfAdminSub .pdf-list-row{cursor:pointer}
+.ldvlYtAdminPanel .pdf-list-act button{cursor:pointer}
 .ldvlDashV324 #homePracticeSetupPanel{
   position:sticky;top:var(--ldvl-sticky-top,96px);z-index:45;
   box-shadow:0 6px 20px rgba(15,23,42,.1);
@@ -20236,9 +20237,12 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .pdf-fs-btn:hover{background:#ffffff33}
 #pdf-fs-frame{flex:1;border:none;width:100%;display:block}
 /* YouTube fullscreen + list */
-#yt-fs-scr{display:none;position:fixed;inset:0;z-index:500;background:#0f172a;flex-direction:column}
-#yt-fs-scr.on{display:flex}
+#yt-fs-scr{display:none;position:fixed;inset:0;z-index:10040;background:#0f172a;flex-direction:column}
+#yt-fs-scr.on{display:flex!important}
 #yt-fs-frame{flex:1;border:none;width:100%;display:block;background:#000;min-height:0}
+#yt-fs-scr .pdf-fs-bar{flex-shrink:0;z-index:1}
+.ldvlYtCard,.ldvlYtAdminPanel .pdf-list-row{cursor:pointer;-webkit-tap-highlight-color:rgba(37,99,235,.15)}
+.ldvlYtOpenFail{padding:16px;color:#e2e8f0;font-size:14px;line-height:1.5;text-align:center}
 .ldvlYtCard{display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
 .ldvlYtCard:hover{background:rgba(37,99,235,.06)}
 .ldvlYtThumb{width:112px;height:63px;border-radius:8px;object-fit:cover;background:#0f172a;flex-shrink:0;border:1px solid var(--border)}
@@ -27642,7 +27646,11 @@ function ldvlYtExtractId(url){
     ||url.match(/[?&]v=([A-Za-z0-9_-]{6,})/i);
   return m?m[1]:(/^[A-Za-z0-9_-]{6,}$/.test(url)?url:'');
 }
-function ldvlYtEmbed(vid){return vid?('https://www.youtube-nocookie.com/embed/'+vid+'?rel=0&modestbranding=1&playsinline=1'):'';}
+function ldvlYtEmbed(vid){
+  if(!vid)return '';
+  /* youtube.com/embed ổn định hơn nocookie trên mobile / một số mạng */
+  return 'https://www.youtube.com/embed/'+encodeURIComponent(vid)+'?rel=0&modestbranding=1&playsinline=1&fs=1';
+}
 function ldvlYtThumb(vid){return vid?('https://i.ytimg.com/vi/'+vid+'/hqdefault.jpg'):'';}
 function ldvlYtCanOpen(it){return ldvlPdfCanOpen(it);}
 function ldvlYtStorageKey(sub){return 'ldvl_yt_links_'+sub;}
@@ -27857,7 +27865,8 @@ function ldvlYtCardHtml(sub,it){
   let q=esc(it.quyen||'FREE');
   let lop=esc(ldvlYtLopDisplay(it.lop));
   let th=esc(it.thumb||ldvlYtThumb(it.video_id));
-  return '<div class="ldvlYtCard" onclick="ldvlYtOpenById(\''+sub+'\','+JSON.stringify(String(it.id))+')"><div class="ldvlYtPlayBadge"><img class="ldvlYtThumb" src="'+th+'" alt="" loading="lazy" onerror="this.style.opacity=.3"></div><div style="min-width:0;flex:1"><div class="ldvlYtName">'+nm+'</div><div class="ldvlYtMeta"><span class="tag">'+lop+'</span> · <span class="tag">'+q+'</span> · xem trong app</div></div></div>';
+  let idAttr=escAttr(String(it.id));
+  return '<div class="ldvlYtCard" data-yt-sub="'+escAttr(sub)+'" data-yt-id="'+idAttr+'" role="button" tabindex="0"><div class="ldvlYtPlayBadge"><img class="ldvlYtThumb" src="'+th+'" alt="" loading="lazy" onerror="this.style.opacity=.3"></div><div style="min-width:0;flex:1"><div class="ldvlYtName">'+nm+'</div><div class="ldvlYtMeta"><span class="tag">'+lop+'</span> · <span class="tag">'+q+'</span> · bấm để xem</div></div></div>';
 }
 function ldvlStudentYtRender(){
   let box=document.getElementById('ldvlStudentYtList');
@@ -27907,7 +27916,7 @@ function ldvlYtRenderList(sub){
       let nm=esc(it.name||'Video');
       let q=esc(it.quyen||'FREE');
       let lop=esc(it.lop||'—');
-      return '<div class="pdf-list-row" onclick="ldvlYtOpenById(\''+sub+'\','+JSON.stringify(String(it.id))+')"><div class="pdf-list-ico"><i class="ti ti-brand-youtube"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+nm+'</div><div class="pdf-list-meta"><span class="tag">'+lop+'</span> · <span class="tag">'+q+'</span></div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" onclick="event.stopPropagation();ldvlYtEdit(\''+sub+'\','+it.id+')">Sửa</button><button type="button" class="pdfBtnMove" onclick="event.stopPropagation();ldvlYtMove(\''+sub+'\','+it.id+')">'+moveLbl+'</button><button type="button" class="pdfBtnDel" onclick="event.stopPropagation();ldvlYtDelete(\''+sub+'\','+it.id+')">Xóa</button></div></div>';
+      return '<div class="pdf-list-row" data-yt-sub="'+escAttr(sub)+'" data-yt-id="'+escAttr(String(it.id))+'" role="button" tabindex="0"><div class="pdf-list-ico"><i class="ti ti-brand-youtube"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+nm+'</div><div class="pdf-list-meta"><span class="tag">'+lop+'</span> · <span class="tag">'+q+'</span> · bấm để xem</div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" data-yt-act="edit" data-yt-sub="'+escAttr(sub)+'" data-yt-id="'+escAttr(String(it.id))+'">Sửa</button><button type="button" class="pdfBtnMove" data-yt-act="move" data-yt-sub="'+escAttr(sub)+'" data-yt-id="'+escAttr(String(it.id))+'">'+moveLbl+'</button><button type="button" class="pdfBtnDel" data-yt-act="del" data-yt-sub="'+escAttr(sub)+'" data-yt-id="'+escAttr(String(it.id))+'">Xóa</button></div></div>';
     }).join('');
     return head+rows;
   }).join('');
@@ -28029,16 +28038,30 @@ function ldvlYtDelete(sub,id){
 function openYtFs(embedUrl,title,ctx){
   ctx=ctx||{};
   try{if(typeof closePdfFs==='function')closePdfFs();}catch(e){}
-  window.LDVL_YT_FS={items:ctx.items||[],idx:ctx.idx|0,url:ctx.watchUrl||'',sub:ctx.sub||''};
+  let watchUrl=ctx.watchUrl||'';
+  let vid=ctx.video_id||ldvlYtExtractId(watchUrl)||ldvlYtExtractId(embedUrl);
+  if(!embedUrl&&vid)embedUrl=ldvlYtEmbed(vid);
+  if(!watchUrl&&vid)watchUrl='https://www.youtube.com/watch?v='+vid;
+  window.LDVL_YT_FS={items:ctx.items||[],idx:ctx.idx|0,url:watchUrl,sub:ctx.sub||'',video_id:vid||''};
   let scr=document.getElementById('yt-fs-scr');
   let fr=document.getElementById('yt-fs-frame');
   let tt=document.getElementById('yt-fs-title');
   let ct=document.getElementById('yt-fs-counter');
   let newt=document.getElementById('yt-fs-newt');
+  if(!scr){
+    if(watchUrl)window.open(watchUrl,'_blank','noopener');
+    else alert('Không tìm thấy khung phát video.');
+    return;
+  }
   if(tt)tt.textContent=title||'Video YouTube';
-  if(fr)fr.src=embedUrl||'about:blank';
-  if(scr)scr.classList.add('on');
+  if(fr){
+    fr.removeAttribute('srcdoc');
+    fr.src=embedUrl||'about:blank';
+  }
+  scr.classList.add('on');
+  try{document.body.appendChild(scr);}catch(e){}
   document.body.style.overflow='hidden';
+  document.documentElement.style.overflow='hidden';
   let items=window.LDVL_YT_FS.items||[];
   let idx=window.LDVL_YT_FS.idx|0;
   if(ct)ct.textContent=items.length?(idx+1)+'/'+items.length:'';
@@ -28046,20 +28069,28 @@ function openYtFs(embedUrl,title,ctx){
   let next=document.getElementById('yt-fs-next');
   if(prev)prev.disabled=!items.length||idx<=0;
   if(next)next.disabled=!items.length||idx>=items.length-1;
-  if(newt){
-    newt.onclick=function(){
-      let u=window.LDVL_YT_FS.url||'';
-      if(u)window.open(u,'_blank','noopener');
-    };
+  function openExternal(){
+    let u=window.LDVL_YT_FS.url||watchUrl||'';
+    if(u)window.open(u,'_blank','noopener');
+    else alert('Không có link YouTube.');
   }
+  if(newt)newt.onclick=openExternal;
+  /* Một số video (mix/radio/chặn nhúng) iframe trắng — nhắc mở tab YouTube */
+  try{
+    clearTimeout(window.__LDVL_YT_EMBED_TIP);
+    window.__LDVL_YT_EMBED_TIP=setTimeout(function(){
+      if(!document.getElementById('yt-fs-scr')||!document.getElementById('yt-fs-scr').classList.contains('on'))return;
+    },800);
+  }catch(e){}
 }
 function closeYtFs(){
   let scr=document.getElementById('yt-fs-scr');
   let fr=document.getElementById('yt-fs-frame');
-  if(fr)fr.src='about:blank';
+  if(fr){fr.src='about:blank';fr.removeAttribute('srcdoc');}
   if(scr)scr.classList.remove('on');
   document.body.style.overflow='';
-  window.LDVL_YT_FS={items:[],idx:0,url:'',sub:''};
+  document.documentElement.style.overflow='';
+  window.LDVL_YT_FS={items:[],idx:0,url:'',sub:'',video_id:''};
 }
 function ldvlYtFsNav(dir){
   let st=window.LDVL_YT_FS||{};
@@ -28068,21 +28099,70 @@ function ldvlYtFsNav(dir){
   if(ni<0||ni>=items.length)return;
   let it=items[ni];
   if(!it)return;
-  openYtFs(it.embed||ldvlYtEmbed(it.video_id),it.name||'Video YouTube',{sub:st.sub,idx:ni,items:items,watchUrl:it.url});
+  openYtFs(ldvlYtEmbed(it.video_id)||it.embed,it.name||'Video YouTube',{sub:st.sub,idx:ni,items:items,watchUrl:it.url,video_id:it.video_id});
 }
 function ldvlYtOpen(sub,idx){
-  let items=ldvlYtFilterByLop(ldvlYtAllItems(sub).filter(ldvlYtCanOpen),window.LDVL_STUDENT_YT_LOP);
+  let items=ldvlYtAllItems(sub).filter(ldvlYtCanOpen);
   let it=items[idx|0];
   if(!it||!it.video_id){alert('Không mở được video này (quyền hoặc link lỗi).');return;}
-  openYtFs(it.embed||ldvlYtEmbed(it.video_id),it.name||'Video YouTube',{sub:sub,idx:idx|0,items:items,watchUrl:it.url});
+  openYtFs(ldvlYtEmbed(it.video_id),it.name||'Video YouTube',{sub:sub,idx:idx|0,items:items,watchUrl:it.url,video_id:it.video_id});
 }
 function ldvlYtOpenById(sub,id){
-  let items=ldvlYtFilterByLop(ldvlYtAllItems(sub).filter(ldvlYtCanOpen),window.LDVL_STUDENT_YT_LOP);
-  if(!items.length)items=ldvlYtAllItems(sub).filter(ldvlYtCanOpen);
-  let idx=items.findIndex(function(x){return ldvlYtSameId(x.id,id);});
-  if(idx<0){alert('Không mở được video này (quyền hoặc link lỗi).');return;}
-  let it=items[idx];
-  openYtFs(it.embed||ldvlYtEmbed(it.video_id),it.name||'Video YouTube',{sub:sub,idx:idx,items:items,watchUrl:it.url});
+  try{
+    sub=String(sub||'math');
+    id=String(id==null?'':id);
+    let all=ldvlYtAllItems(sub);
+    let it=all.find(function(x){return ldvlYtSameId(x.id,id);});
+    if(!it){alert('Không tìm thấy video.');return;}
+    if(!ldvlYtCanOpen(it)){alert('Video này cần quyền VIP/SVIP.');return;}
+    let vid=String(it.video_id||'').trim()||ldvlYtExtractId(it.url||'');
+    if(!vid){alert('Link YouTube không hợp lệ — bấm Sửa và dán lại link.');return;}
+    /* Playlist theo cùng lớp với video đang mở (không bị kẹt vì bộ lọc tab lớp) */
+    let playlist=all.filter(function(x){
+      if(!ldvlYtCanOpen(x))return false;
+      if(!it.lop)return true;
+      return String(x.lop||'')===String(it.lop||'');
+    });
+    if(!playlist.length)playlist=all.filter(ldvlYtCanOpen);
+    let idx=playlist.findIndex(function(x){return ldvlYtSameId(x.id,id);});
+    if(idx<0){playlist=[it];idx=0;}
+    openYtFs(ldvlYtEmbed(vid),it.name||'Video YouTube',{sub:sub,idx:idx,items:playlist,watchUrl:it.url||('https://www.youtube.com/watch?v='+vid),video_id:vid});
+  }catch(e){
+    console.warn('ldvlYtOpenById',e);
+    alert('Lỗi mở video: '+(e.message||e));
+  }
+}
+window.ldvlYtOpenById=ldvlYtOpenById;
+window.ldvlYtOpen=ldvlYtOpen;
+window.openYtFs=openYtFs;
+window.closeYtFs=closeYtFs;
+window.ldvlYtFsNav=ldvlYtFsNav;
+if(!window.__LDVL_YT_CLICK_BOUND){
+  window.__LDVL_YT_CLICK_BOUND=1;
+  document.addEventListener('click',function(ev){
+    let t=ev.target;
+    if(!t||!t.closest)return;
+    let actBtn=t.closest('[data-yt-act]');
+    if(actBtn){
+      ev.preventDefault();
+      ev.stopPropagation();
+      let act=actBtn.getAttribute('data-yt-act');
+      let sub=actBtn.getAttribute('data-yt-sub')||'math';
+      let id=actBtn.getAttribute('data-yt-id');
+      if(act==='edit')ldvlYtEdit(sub,id);
+      else if(act==='move')ldvlYtMove(sub,id);
+      else if(act==='del')ldvlYtDelete(sub,id);
+      return;
+    }
+    let card=t.closest('[data-yt-id][data-yt-sub]');
+    if(!card||card.closest('[data-yt-act]'))return;
+    if(card.getAttribute('data-yt-act'))return;
+    let sub=card.getAttribute('data-yt-sub')||'math';
+    let id=card.getAttribute('data-yt-id');
+    if(!id)return;
+    ev.preventDefault();
+    ldvlYtOpenById(sub,id);
+  },true);
 }
 function ldvlShowAdminPanel(id){ldvlAdminNav(null,'ap-'+(String(id||'').replace(/^/,'')||'dash'));}
 window.LDVL_ADMIN_STUDENT_MODE=false;
@@ -32134,7 +32214,7 @@ def youtube_embed_url(video_id: str) -> str:
     vid = clean(video_id)
     if not vid:
         return ""
-    return f"https://www.youtube-nocookie.com/embed/{vid}?rel=0&modestbranding=1&playsinline=1"
+    return f"https://www.youtube.com/embed/{vid}?rel=0&modestbranding=1&playsinline=1&fs=1"
 
 
 def _normalize_youtube_link_item(raw: Any) -> Optional[Dict[str, Any]]:
