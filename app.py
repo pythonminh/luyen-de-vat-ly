@@ -7798,7 +7798,7 @@ class SheetStore:
                 "C": clean(q.get("C")),
                 "D": clean(q.get("D")),
             })
-            if len(refs) >= 3:
+            if len(refs) >= 2:
                 break
 
         force, allow = admin_ai_body_params(spec)
@@ -14513,23 +14513,27 @@ def ai_generate_question_batch_from_provider(
         "Mỗi câu phải đúng kiến thức, đúng loại câu, có đáp án và lời giải tự kiểm tra."
     )
     user_prompt = build_ai_generate_questions_prompt(spec, references)
-    count = int(spec.get("count") or 1)
+    count = max(1, int(spec.get("count") or 1))
     dang = spec.get("Dang") or ""
     wants_tikz = bool(spec.get("wants_tikz")) or ai_gen_wants_tikz(spec)
-    per_q = 2800 if dang == "Đúng sai" else (2200 if dang == "Tự luận" else 1600)
+    fp_now = admin_ai_resolve_force(force_provider)
+    # Render gunicorn timeout ~120s: luôn cắt nhỏ đợt + token để AI kịp trả JSON
+    if fp_now == "ANTHROPIC":
+        count = min(count, 1)
+    else:
+        count = min(count, 2)
+    per_q = 2200 if dang == "Đúng sai" else (1800 if dang == "Tự luận" else 1400)
     if wants_tikz:
-        per_q += 1200
-    tok_cap = 16000 if wants_tikz else 12000
-    max_tokens = min(tok_cap, max(4000, count * per_q))
-    gen_timeout = 75
+        per_q += 800
+    tok_cap = 8000 if wants_tikz else 5500
+    max_tokens = min(tok_cap, max(2800, count * per_q))
+    gen_timeout = 48
     temp = 0.22
     model_openai = clean(cfg.get("openai_admin_model") or cfg.get("openai_model") or DEFAULT_OPENAI_ADMIN_MODEL) or DEFAULT_OPENAI_ADMIN_MODEL
     model_gemini = clean(os.environ.get("GEMINI_ADMIN_MODEL", DEFAULT_GEMINI_ADMIN_MODEL)) or DEFAULT_GEMINI_ADMIN_MODEL
-    # Claude trên Render dễ timeout nếu batch lớn / token cao
-    if admin_ai_resolve_force(force_provider) == "ANTHROPIC":
-        count = min(count, 2)
-        max_tokens = min(max_tokens, 6000)
-        gen_timeout = min(gen_timeout, 55)
+    if fp_now == "ANTHROPIC":
+        max_tokens = min(max_tokens, 4500)
+        gen_timeout = min(gen_timeout, 42)
     last_error = ""
     raw_text = ""
     last_finish = ""
@@ -14557,8 +14561,13 @@ def ai_generate_question_batch_from_provider(
 
     def try_gemini(tok: int) -> bool:
         nonlocal last_error, raw_text, used_provider, key_index, model_used, gemini_saw_quota, last_finish
-        models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
-        for idx, api_key in enumerate(gemini_keys, start=1):
+        # Chỉ 1 model chính + tối đa 1 fallback — tránh vòng lặp nhiều model làm quá timeout Render
+        models = [model_gemini]
+        for m in GEMINI_HINT_MODEL_FALLBACKS:
+            if m != model_gemini:
+                models.append(m)
+                break
+        for idx, api_key in enumerate(gemini_keys[:2], start=1):
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
                     api_key, gmodel, sys_prompt, user_prompt, tok, temp, timeout=gen_timeout
@@ -14574,6 +14583,7 @@ def ai_generate_question_batch_from_provider(
                 last_finish = finish or last_finish
                 if _is_quota_or_rate_error(last_error):
                     gemini_saw_quota = True
+                    break
         return False
 
     def try_anthropic(tok: int) -> bool:
@@ -14623,10 +14633,13 @@ def ai_generate_question_batch_from_provider(
         raise RuntimeError("AI chưa tạo được câu: " + (last_error or "không có phản hồi."))
 
     raw_items = _extract_ai_question_list(raw_text)
+    # Chỉ retry nhẹ khi bị cắt token — tránh gọi AI lần 2 làm gunicorn 500
     if not raw_items and raw_text:
-        retry_tok = min(tok_cap, max(max_tokens * 2, 7000))
-        if retry_tok > max_tokens and call_provider(retry_tok):
-            raw_items = _extract_ai_question_list(raw_text)
+        cut = "MAX_TOKENS" in (last_finish or "").upper() or "LENGTH" in (last_finish or "").upper()
+        if cut:
+            retry_tok = min(tok_cap, max_tokens + 1500)
+            if retry_tok > max_tokens and call_provider(retry_tok):
+                raw_items = _extract_ai_question_list(raw_text)
     if not raw_items:
         preview = short_plain_text(raw_text, 300)
         prov = "Gemini" if used_provider == "GEMINI" else "GPT"
@@ -21337,7 +21350,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <label class="aiGenWide">Dạng bài tập (cột H) *<input id="agDangBaiTap" list="agDangBaiTapList" placeholder="VD: Sai số của phép đo gián tiếp"><datalist id="agDangBaiTapList"></datalist></label>
     <label>Dạng câu hỏi *<select id="agDang"><option>Trắc nghiệm</option><option>Đúng sai</option><option>Trả lời ngắn</option><option>Tự luận</option></select></label>
     <label>Mức độ *<select id="agMucDo"><option>NB</option><option>TH</option><option selected>VD</option><option>VDC</option></select></label>
-    <label>Số lượng câu *<input id="agCount" type="number" min="1" max="30" value="5"></label>
+    <label>Số lượng câu * <span class="muted" style="font-weight:600">(nên 2–5; app tự tách đợt nhỏ)</span><input id="agCount" type="number" min="1" max="30" value="3"></label>
     <label>Bộ đề<input id="agBoDe" value="Ngân hàng AI"></label>
     <label class="aiGenWide">Tên đề / nhóm câu<input id="agDe" placeholder="Tự lấy theo Bài học · Dạng bài tập"></label>
     <label>Quyền<select id="agQuyen"><option>VIP</option><option>FREE</option></select></label>
@@ -23350,7 +23363,76 @@ async function aiGenRerenderTikz(i){let ta=document.querySelector('.aiGenTikzTa[
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
 function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
-async function generateAiQuestionBank(){if(AI_GEN_BUSY)return;if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())return;let total=Math.max(1,Math.min(30,parseInt(val('agCount'),10)||1));if(AI_GEN_QUESTIONS.length&&!confirm('Tạo mới sẽ thay bản xem trước hiện tại. Tiếp tục?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='AG_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);let st=document.getElementById('agStatus'),warnings=[];setAiGenBusy(true);renderAiGenPreview();try{let attempts=0,maxAttempts=Math.max(6,Math.ceil(total/2)+5);while(AI_GEN_QUESTIONS.length<total&&attempts<maxAttempts){attempts++;let remaining=total-AI_GEN_QUESTIONS.length,batch=Math.min((adminChosenAiProvider()==='ANTHROPIC'?2:4),remaining);if(st)st.textContent=`Đang tạo đợt ${attempts} (${adminAiProviderShort(adminChosenAiProvider())}): cần thêm ${remaining} câu (đã có ${AI_GEN_QUESTIONS.length}/${total})…`;let body=aiGenPayload(batch,AI_GEN_QUESTIONS.length);let j=await adminAiFetch('/api/admin/ai-generate-questions',body,{timeoutMs:95000});let before=AI_GEN_QUESTIONS.length,seen=new Set(AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').toLowerCase().replace(/\s+/g,' ').trim()));for(let q of (j.questions||[])){let k=String(q.CauHoi||'').toLowerCase().replace(/\s+/g,' ').trim();if(k&&!seen.has(k)){seen.add(k);AI_GEN_QUESTIONS.push(q);if(AI_GEN_QUESTIONS.length>=total)break}}if(j.warnings&&j.warnings.length)warnings.push(...j.warnings);renderAiGenPreview();if(AI_GEN_QUESTIONS.length===before){warnings.push('Một đợt không nhận được câu mới; đã dừng để tránh gọi lặp.');break}}let done=AI_GEN_QUESTIONS.length;if(st)st.textContent=`Đã tạo ${done}/${total} câu.`+(warnings.length?'\n⚠ '+warnings.slice(-6).join('\n⚠ '):'')+(done<total?'\nCó thể bấm Tạo câu hỏi lần nữa để tạo lại đủ số lượng.':'\nHãy xem trước, sửa JSON nếu cần rồi bấm Lưu tất cả.');if(!done)throw new Error('AI chưa trả được câu hợp lệ.')}catch(e){if(st)st.textContent=`Đã giữ ${AI_GEN_QUESTIONS.length} câu tạo được.\nLỗi: ${e.message||e}`;if(!AI_GEN_QUESTIONS.length)alert('Không tạo được câu: '+(e.message||e))}finally{setAiGenBusy(false);renderAiGenPreview()}}
+async function generateAiQuestionBank(){
+  if(AI_GEN_BUSY)return;
+  if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())return;
+  let total=Math.max(1,Math.min(30,parseInt(val('agCount'),10)||1));
+  if(AI_GEN_QUESTIONS.length&&!confirm('Tạo mới sẽ thay bản xem trước hiện tại. Tiếp tục?'))return;
+  AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;
+  AI_GEN_REQUEST_ID='AG_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
+  let st=document.getElementById('agStatus'),warnings=[];
+  setAiGenBusy(true);renderAiGenPreview();
+  function agBatchSize(remaining,forceOne){
+    if(forceOne)return 1;
+    let p=adminChosenAiProvider();
+    let cap=(p==='ANTHROPIC')?1:2;
+    return Math.min(cap,remaining);
+  }
+  async function agFetchBatch(batch){
+    let body=aiGenPayload(batch,AI_GEN_QUESTIONS.length);
+    return await adminAiFetch('/api/admin/ai-generate-questions',body,{timeoutMs:100000});
+  }
+  function agMergeQuestions(list){
+    let before=AI_GEN_QUESTIONS.length;
+    let seen=new Set(AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').toLowerCase().replace(/\s+/g,' ').trim()));
+    for(let q of (list||[])){
+      let k=String(q.CauHoi||'').toLowerCase().replace(/\s+/g,' ').trim();
+      if(k&&!seen.has(k)){
+        seen.add(k);AI_GEN_QUESTIONS.push(q);
+        if(AI_GEN_QUESTIONS.length>=total)break;
+      }
+    }
+    return AI_GEN_QUESTIONS.length-before;
+  }
+  try{
+    let attempts=0,maxAttempts=Math.max(10,total*3+4),failStreak=0;
+    while(AI_GEN_QUESTIONS.length<total&&attempts<maxAttempts){
+      attempts++;
+      let remaining=total-AI_GEN_QUESTIONS.length;
+      let forceOne=failStreak>0;
+      let batch=agBatchSize(remaining,forceOne);
+      if(st)st.textContent=`Đang tạo đợt ${attempts} (${adminAiProviderShort(adminChosenAiProvider())}): ${batch} câu/lần — cần thêm ${remaining} (đã có ${AI_GEN_QUESTIONS.length}/${total})…`;
+      try{
+        let j=await agFetchBatch(batch);
+        if(j.warnings&&j.warnings.length)warnings.push(...j.warnings);
+        let added=agMergeQuestions(j.questions||[]);
+        renderAiGenPreview();
+        if(added>0){failStreak=0;continue;}
+        if(batch>1){
+          warnings.push('Đợt '+attempts+' không đủ câu — thử lại 1 câu…');
+          failStreak++;
+          continue;
+        }
+        failStreak++;
+        if(failStreak>=3){warnings.push('Nhiều đợt liên tiếp không nhận câu mới; dừng.');break;}
+      }catch(err){
+        let msg=String((err&&err.message)||err||'');
+        warnings.push('Đợt '+attempts+': '+msg.slice(0,180));
+        failStreak++;
+        if(st)st.textContent=`⚠ Lỗi đợt ${attempts}, đang thử lại với 1 câu… (đã có ${AI_GEN_QUESTIONS.length}/${total})\n`+msg.slice(0,220);
+        if(failStreak>=5)throw err;
+        await new Promise(r=>setTimeout(r,900));
+      }
+    }
+    let done=AI_GEN_QUESTIONS.length;
+    if(st)st.textContent=`Đã tạo ${done}/${total} câu.`+(warnings.length?'\n⚠ '+warnings.slice(-8).join('\n⚠ '):'')+(done<total?'\nCó thể bấm Tạo câu hỏi lần nữa để bổ sung.':'\nHãy xem trước, sửa JSON nếu cần rồi bấm Lưu tất cả.');
+    if(!done)throw new Error(warnings.slice(-1)[0]||'AI chưa trả được câu hợp lệ. Thử Gemini + 2 câu/lần.');
+  }catch(e){
+    if(st)st.textContent=`Đã giữ ${AI_GEN_QUESTIONS.length} câu tạo được.\nLỗi: ${e.message||e}`;
+    if(!AI_GEN_QUESTIONS.length)alert('Không tạo được câu: '+(e.message||e));
+  }finally{setAiGenBusy(false);renderAiGenPreview()}
+}
+
 async function saveAiGeneratedQuestions(){if(AI_GEN_BUSY||AI_GEN_SAVED)return;if(!applyAiGenJsonEdit())return;if(!AI_GEN_QUESTIONS.length)return;if(!confirm(`Lưu ${AI_GEN_QUESTIONS.length} câu vào Google Sheet Cau_Hoi?\n\nApp sẽ tự bỏ qua câu trùng nội dung.`))return;let st=document.getElementById('agStatus'),sb=document.getElementById('agSaveBtn');if(sb){sb.disabled=true;sb.textContent='⏳ Đang lưu…'}try{let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:AI_GEN_QUESTIONS}),timeoutMs:65000},0);AI_GEN_SAVED=true;if(st)st.textContent=`✅ Đã lưu ${j.created||0} câu vào Google Sheet`+(j.start_row?` từ dòng ${j.start_row} đến ${j.end_row}`:'')+(j.skipped&&j.skipped.length?`\nBỏ qua ${j.skipped.length} câu trùng/không hợp lệ.`:'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?`\n⚠ Ảnh: ${j.hinhanh_warnings.join(' · ')}`:'');await refreshCatalogFromMeta()}catch(e){AI_GEN_SAVED=false;if(st)st.textContent='❌ Không lưu được: '+(e.message||e);alert('Không lưu được: '+(e.message||e))}finally{if(sb){sb.textContent='💾 Lưu tất cả vào Google Sheet';sb.disabled=AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}}}
 
 function quizLevelPrimary(q){let u=String((q&&q.MucDo)||'').toUpperCase();if(/\bVDC\b/.test(u))return'VDC';if(/\bVD\b/.test(u))return'VD';if(/\bTH\b/.test(u))return'TH';if(/\bNB\b/.test(u))return'NB';return''}
@@ -23677,9 +23759,9 @@ let method=opts.method||'POST';let headers=Object.assign({'Content-Type':'applic
 function adminFriendlyHttpError(txt,status){
   let s=String(txt||'').replace(/\s+/g,' ').trim();
   if(/Internal Server Error|502 Bad Gateway|504 Gateway|Cloudflare|gunicorn|Worker|timeout/i.test(s)||(status>=500)){
-    return 'Server lỗi tạm thời (HTTP '+(status||500)+') khi gọi AI.\nThường do request quá lâu / Claude timeout trên Render.\n\nThử: chọn ⚡ Gemini, giảm còn 2–3 câu/lần, hoặc tạo lại sau vài giây.';
+    return 'Server lỗi tạm thời (HTTP '+(status||500)+') khi gọi AI.\nThường do request quá lâu trên Render (worker bị cắt).\n\nApp sẽ tự thử lại với ít câu hơn. Hoặc giảm còn 2 câu/lần rồi bấm Tạo lại.';
   }
-  if(s.startsWith('<')||/<html/i.test(s))return 'Server trả HTML lỗi (HTTP '+(status||'?')+') — không phải JSON. Thử Gemini hoặc giảm số câu.';
+  if(s.startsWith('<')||/<html/i.test(s))return 'Server trả HTML lỗi (HTTP '+(status||'?')+') — không phải JSON. Thử lại (app tự giảm số câu).';
   return s.slice(0,280)||('HTTP '+(status||'?'));
 }
 // Bắt lỗi billing/account inactive — tự chuyển Gemini/Claude
