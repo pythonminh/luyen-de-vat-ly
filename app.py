@@ -13980,10 +13980,8 @@ def normalize_ai_generation_spec(raw: Dict[str, Any]) -> Dict[str, Any]:
             14,
         )
     if not out["MaDe"]:
-        out["MaDe"] = "AI_" + stable_hash(
-            f"{out['request_id']}|{out['Mon']}|{out['Lop']}|{out['BaiHoc']}|{out['DangBaiTap']}",
-            12,
-        )
+        # Cùng khóa thẻ bài với catalog → sau lưu thấy ngay trong đúng bài học
+        out["MaDe"] = catalog_group_key(out)
     avoid = raw.get("avoid_stems") or raw.get("avoid") or []
     if isinstance(avoid, str):
         avoid = [x.strip() for x in avoid.split("\n") if x.strip()]
@@ -14389,6 +14387,7 @@ def coerce_ai_generated_question(raw: Dict[str, Any], spec: Dict[str, Any], ordi
     data["Dang"] = spec["Dang"]
     data["MucDo"] = spec["MucDo"]
     data["QuyenTruyCap"] = spec["QuyenTruyCap"]
+    data["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
     for f in ("CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"):
         data[f] = normalize_latex_light(data.get(f, ""))
     if not data["CauHoi"]:
@@ -14472,10 +14471,13 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
         elif data["Dang"] in ("Trả lời ngắn", "Tự luận"):
             for L in "ABCD":
                 data[L] = ""
+        if not data.get("TrangThai"):
+            data["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
         if not data["ID"]:
             data["ID"] = "AIQ_" + stable_hash(f"save|{i}|{data['CauHoi']}|{time.time()}|{random.random()}", 14)
+        # MaDe ổn định theo bài — gom vào đúng thẻ catalog (GRP_/AI_ cùng bài)
         if not data["MaDe"]:
-            data["MaDe"] = "AI_" + stable_hash(f"{data.get('De')}|{data.get('BaiHoc')}|{time.time()}", 12)
+            data["MaDe"] = catalog_group_key(data)
         data.pop("_ai_tikz_warning", None)
         tikz_extra = clean(data.pop("Tikz", None) or "")
         if tikz_extra:
@@ -23433,7 +23435,71 @@ async function generateAiQuestionBank(){
   }finally{setAiGenBusy(false);renderAiGenPreview()}
 }
 
-async function saveAiGeneratedQuestions(){if(AI_GEN_BUSY||AI_GEN_SAVED)return;if(!applyAiGenJsonEdit())return;if(!AI_GEN_QUESTIONS.length)return;if(!confirm(`Lưu ${AI_GEN_QUESTIONS.length} câu vào Google Sheet Cau_Hoi?\n\nApp sẽ tự bỏ qua câu trùng nội dung.`))return;let st=document.getElementById('agStatus'),sb=document.getElementById('agSaveBtn');if(sb){sb.disabled=true;sb.textContent='⏳ Đang lưu…'}try{let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:AI_GEN_QUESTIONS}),timeoutMs:65000},0);AI_GEN_SAVED=true;if(st)st.textContent=`✅ Đã lưu ${j.created||0} câu vào Google Sheet`+(j.start_row?` từ dòng ${j.start_row} đến ${j.end_row}`:'')+(j.skipped&&j.skipped.length?`\nBỏ qua ${j.skipped.length} câu trùng/không hợp lệ.`:'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?`\n⚠ Ảnh: ${j.hinhanh_warnings.join(' · ')}`:'');await refreshCatalogFromMeta()}catch(e){AI_GEN_SAVED=false;if(st)st.textContent='❌ Không lưu được: '+(e.message||e);alert('Không lưu được: '+(e.message||e))}finally{if(sb){sb.textContent='💾 Lưu tất cả vào Google Sheet';sb.disabled=AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}}}
+async function saveAiGeneratedQuestions(){
+  if(AI_GEN_BUSY||AI_GEN_SAVED)return;
+  // Đồng bộ JSON nếu có; không chặn lưu khi textarea trống nếu đã có bản xem trước trong RAM
+  try{
+    let ta=document.getElementById('agJson');
+    let raw=String((ta&&ta.value)||'').trim();
+    if(raw){
+      if(!applyAiGenJsonEdit())return;
+    }else if(AI_GEN_QUESTIONS.length){
+      syncAiGenJson();
+    }
+  }catch(e){}
+  if(!AI_GEN_QUESTIONS.length){alert('Chưa có câu trong bản xem trước để lưu.');return}
+  if(!confirm('Lưu '+AI_GEN_QUESTIONS.length+' câu vào Google Sheet Cau_Hoi?\n\n• Trạng thái: CHƯA DUYỆT (ADMIN soát rồi mới duyệt)\n• App bỏ qua câu trùng nội dung.'))return;
+  let st=document.getElementById('agStatus'),sb=document.getElementById('agSaveBtn');
+  if(sb){sb.disabled=true;sb.textContent='⏳ Đang lưu…'}
+  try{
+    let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:AI_GEN_QUESTIONS}),timeoutMs:90000},0);
+    let created=parseInt(j.created,10)||0;
+    let skipped=(j.skipped&&j.skipped.length)||0;
+    if(created>0){
+      AI_GEN_SAVED=true;
+      let made=j.group_key||(j.questions&&j.questions[0]&&(j.questions[0].MaDe||j.questions[0].GroupKey))||(AI_GEN_QUESTIONS[0]&&AI_GEN_QUESTIONS[0].MaDe)||'';
+      let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');
+      if(st)st.textContent='✅ Đã lưu '+created+' câu vào Google Sheet'+(j.start_row?(' từ dòng '+j.start_row+' đến '+j.end_row):'')+(skipped?('\nBỏ qua '+skipped+' câu trùng/không hợp lệ.'):'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?('\n⚠ Ảnh: '+j.hinhanh_warnings.join(' · ')):'')+'\n📌 Câu mới = CHƯA DUYỆT. Mở đề → tick «ADMIN: gồm cả câu chưa duyệt» để xem/soát.';
+      try{await refreshCatalogFromMeta()}catch(e){}
+      try{
+        if(mon)setSel('fMon',mon);refreshFilterOptions();
+        if(lop)setSel('fLop',lop);refreshFilterOptions();
+        if(chuong)setSel('fChuong',chuong);refreshFilterOptions();
+        if(bai)setSel('fBaiHoc',bai);refreshFilterOptions();
+        if(typeof renderCatalog==='function')renderCatalog();
+      }catch(e2){}
+      let go=confirm('Đã lưu '+created+' câu (CHƯA DUYỆT).\n\nBấm OK để mở đề và xem luôn câu vừa tạo (gồm chưa duyệt).');
+      if(go){
+        let item=null;
+        if(made)item=CATALOG.find(x=>x.MaDe===made||x.GroupKey===made)||null;
+        if(!item)item=CATALOG.find(x=>String(x.Mon||'').toLowerCase().replace(/\s+/g,' ').trim()===String(mon||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.Lop||'').toLowerCase().replace(/\s+/g,' ').trim()===String(lop||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.Chuong||'').toLowerCase().replace(/\s+/g,' ').trim()===String(chuong||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.BaiHoc||'').toLowerCase().replace(/\s+/g,' ').trim()===String(bai||'').toLowerCase().replace(/\s+/g,' ').trim())||null;
+        let openMade=item?(item.MaDe||item.GroupKey):made;
+        if(openMade&&typeof openStartModal==='function'){
+          openStartModal(openMade,'');
+          setTimeout(function(){
+            let ip=document.getElementById('chkIncludePending');
+            if(ip){ip.checked=true;}
+            if(typeof syncStartExamUi==='function')syncStartExamUi();
+          },80);
+        }else{
+          alert('Đã lưu. Hãy mở thẻ bài tương ứng → tick «gồm cả câu chưa duyệt» → Bắt đầu.');
+        }
+      }
+    }else{
+      AI_GEN_SAVED=false;
+      let reason=(j.message||'')||(skipped?('Bỏ qua '+skipped+' câu (trùng nội dung?).'):'Không chèn được câu nào.');
+      if(st)st.textContent='⚠ '+reason;
+      alert('Không lưu được câu mới.\n'+reason);
+    }
+  }catch(e){
+    AI_GEN_SAVED=false;
+    if(st)st.textContent='❌ Không lưu được: '+(e.message||e);
+    alert('Không lưu được: '+(e.message||e));
+  }finally{
+    if(sb){sb.textContent='💾 Lưu tất cả vào Google Sheet';sb.disabled=AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
+  }
+}
+
 
 function quizLevelPrimary(q){let u=String((q&&q.MucDo)||'').toUpperCase();if(/\bVDC\b/.test(u))return'VDC';if(/\bVD\b/.test(u))return'VD';if(/\bTH\b/.test(u))return'TH';if(/\bNB\b/.test(u))return'NB';return''}
 function quizSectionKey(q){q=applyResolvedDang(q||{});return String(q.Dang||'').trim()||'Câu hỏi'}
@@ -37862,6 +37928,9 @@ def api_admin_ai_generate_save():
         st.ensure_questions_loaded()
         result = st.add_questions_bulk(items)
         result["source"] = "AI_GENERATOR"
+        if result.get("created") and items:
+            result["group_key"] = catalog_group_key(items[0])
+            result["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
