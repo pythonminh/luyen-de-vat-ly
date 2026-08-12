@@ -2171,6 +2171,57 @@ def now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def stamp_ngay_cap_nhat() -> str:
+    """Ngày giờ cập nhật câu/dạng — ghi cột NgayCapNhat trên Cau_Hoi."""
+    return datetime.now().strftime("%d/%m/%Y %H:%M")
+
+
+def parse_ngay_cap_nhat(s: Any) -> Optional[datetime]:
+    t = clean(s)
+    if not t:
+        return None
+    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d-%m-%Y %H:%M", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(t, fmt)
+        except Exception:
+            pass
+    if len(t) >= 16:
+        try:
+            return datetime.strptime(t[:16], "%d/%m/%Y %H:%M")
+        except Exception:
+            pass
+    if len(t) >= 10:
+        try:
+            return datetime.strptime(t[:10], "%d/%m/%Y")
+        except Exception:
+            pass
+        try:
+            return datetime.strptime(t[:10], "%Y-%m-%d")
+        except Exception:
+            pass
+    return None
+
+
+def format_dbt_updated_short(s: Any) -> str:
+    """Ghi chú nhỏ sau tên dạng: dd/mm/yy."""
+    dt = parse_ngay_cap_nhat(s)
+    if dt:
+        return dt.strftime("%d/%m/%y")
+    t = clean(s)
+    return t[:8] if t else ""
+
+
+def max_ngay_cap_nhat(a: Any, b: Any) -> str:
+    """Giữ chuỗi ngày mới hơn (để gom theo dạng BT)."""
+    da, db = parse_ngay_cap_nhat(a), parse_ngay_cap_nhat(b)
+    if da and db:
+        return clean(a) if da >= db else clean(b)
+    if da:
+        return clean(a)
+    if db:
+        return clean(b)
+    return clean(a) or clean(b)
+
 
 def format_duration_vn(sec: Any) -> str:
     """Giây → mm:ss hoặc hh:mm:ss."""
@@ -3235,12 +3286,13 @@ ALIASES: Dict[str, List[str]] = {
     "Diem": ["Diem", "Điểm"],
     "HinhAnh": ["HinhAnh", "Hình ảnh", "Hình Ảnh", "Image", "LinkHinhAnh", "Link hình ảnh", "Link ảnh", "Anh", "Ảnh"],
     "QuyenTruyCap": ["QuyenTruyCap", "Quyền truy cập", "Quyen", "Goi", "Gói"],
+    "NgayCapNhat": ["NgayCapNhat", "Ngày cập nhật", "Ngay Cap Nhat", "UpdatedAt", "LastUpdated", "CapNhat"],
     # HOC_VIEN
     "MaHS": ["MaHS", "Mã HS", "Mã học sinh", "TaiKhoan", "Tài khoản", "Username"],
     "HoTen": ["HoTen", "Họ tên", "Họ Tên", "Tên", "Name"],
     "MatKhau": ["MatKhau", "Mật khẩu", "Mat Khau", "Password"],
     "LoaiTaiKhoan": ["LoaiTaiKhoan", "Loại tài khoản", "Loai TK", "Role", "Quyen"],
-    "TrangThai": ["TrangThai", "Trạng thái", "Status"],
+    "TrangThai": ["TrangThai", "Trạng thái", "Trạng Thái", "Status", "Duyet", "Duyệt"],
     "SoDienThoai": ["SoDienThoai", "Số điện thoại", "SDT", "SĐT", "Phone"],
     "DeviceId": ["DeviceId", "DeviceID", "Thiết bị"],
     "NgayDangKy": ["NgayDangKy", "Ngày đăng ký", "Ngay Dang Ky", "RegisterAt", "CreatedAt"],
@@ -3261,6 +3313,7 @@ QUESTION_FIELDS = [
     "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap",
     "MucDo", "Dang", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo",
     "LoiGiai", "Diem", "HinhAnh", "QuyenTruyCap", "TrangThai", "NangLucVatLy",
+    "NgayCapNhat",
 ]
 
 EDITABLE_FIELDS = ["Mon", "Lop", "Chuong", "BaiHoc", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "MucDo", "Dang", "DangBaiTap", "NangLucVatLy", "LoiGiai", "HinhAnh", "QuyenTruyCap", "TrangThai"]
@@ -3344,6 +3397,7 @@ SHEET_QUESTION_FIXED_COL_1: Dict[str, int] = {
 DBT_FILTER_UNCLASSIFIED = "__CHUA_PHAN_LOAI__"
 DBT_MAX_TYPES_PER_LESSON = 6
 DBT_ORDER_FILE = os.path.join(APP_DIR, "data", "dbt_order.json")
+DBT_UPDATED_FILE = os.path.join(APP_DIR, "data", "dbt_updated.json")
 PDF_LINKS_FILE = os.path.join(APP_DIR, "data", "pdf_links.json")
 YOUTUBE_LINKS_FILE = os.path.join(APP_DIR, "data", "youtube_links.json")
 MODEL_APPS_FILE = os.path.join(APP_DIR, "data", "model_apps.json")
@@ -5394,6 +5448,7 @@ class SheetStore:
             self.load_questions_from_json_runtime(replace=True)
         else:
             self.ensure_question_competency_header()
+            self.ensure_question_ngaycapnhat_header()
             self.load_questions()
             if self.question_source_mode in ("SHEET_JSON", "SHEET+JSON", "BOTH", "MIX", "MIXED"):
                 self.load_questions_from_json_runtime(replace=False)
@@ -5437,6 +5492,33 @@ class SheetStore:
             [["NangLucVatLy"]],
             value_input_option="USER_ENTERED",
         )
+
+    def ensure_question_ngaycapnhat_header(self) -> None:
+        """Tự thêm cột NgayCapNhat ở cuối Cau_Hoi — dùng ghi chú ngày cập nhật dạng BT."""
+        if self.ws_questions is None:
+            return
+        headers = list(gsheet_call_retry("row_values Cau_Hoi header NgayCapNhat", self.ws_questions.row_values, 1) or [])
+        if find_col(headers, "NgayCapNhat") is not None:
+            self.question_headers = headers
+            self.question_col_index = resolve_question_col_index(headers)
+            return
+        target_col = len(headers) + 1
+        try:
+            if getattr(self.ws_questions, "col_count", 0) < target_col:
+                gsheet_call_retry("resize Cau_Hoi NgayCapNhat", self.ws_questions.resize, cols=target_col)
+        except Exception:
+            log_swallow("ensure_question_ngaycapnhat_header:resize")
+        a1 = gspread.utils.rowcol_to_a1(1, target_col)
+        gsheet_call_retry(
+            "create NgayCapNhat header",
+            self.ws_questions.update,
+            a1,
+            [["NgayCapNhat"]],
+            value_input_option="USER_ENTERED",
+        )
+        headers = list(headers) + ["NgayCapNhat"]
+        self.question_headers = headers
+        self.question_col_index = resolve_question_col_index(headers)
 
     def _ensure_question_headers(self) -> bool:
         """Đảm bảo đã có header + map cột Cau_Hoi (từ RAM hoặc Sheet)."""
@@ -6362,11 +6444,14 @@ class SheetStore:
                 bump_count(g["DangBaiTapCounts"], DBT_FILTER_UNCLASSIFIED)
                 dbt_key = DBT_FILTER_UNCLASSIFIED
             dbt_detail = g["DbtDetailCounts"].setdefault(
-                dbt_key, {"dang": {}, "level": {}}
+                dbt_key, {"dang": {}, "level": {}, "updated": ""}
             )
             bump_count(dbt_detail["dang"], ed)
             for lv in question_mucdo_parts(q):
                 bump_count(dbt_detail["level"], lv)
+            q_upd = clean(q.get("NgayCapNhat", ""))
+            if q_upd:
+                dbt_detail["updated"] = max_ngay_cap_nhat(dbt_detail.get("updated", ""), q_upd)
             access = access_level_from_text(q.get("QuyenTruyCap", ""))
             g["QuyenTruyCapSet"].add(access)
             sol = question_solution_status(q)
@@ -6378,6 +6463,9 @@ class SheetStore:
                 g["SolNone"] += 1
         out: List[Dict[str, Any]] = []
         dbt_orders_cache = load_dbt_orders()
+        dbt_updated_cache = load_dbt_updated_map()
+        dbt_updated_dirty = False
+        seed_stamp = stamp_ngay_cap_nhat()
         for g in groups.values():
             item = dict(g)
             item["MucDo"] = ", ".join(sorted(item.pop("MucDoSet"), key=key_norm))
@@ -6394,12 +6482,35 @@ class SheetStore:
             item["QuyenTruyCap"] = "VIP" if "VIP" in access_values else "FREE"
             item["IsFree"] = item["QuyenTruyCap"] == "FREE"
             dbt_counts = dict(item.pop("DangBaiTapCounts", {}))
+            dbt_detail_raw = dict(item.pop("DbtDetailCounts", {}))
+            # Điền ngày cập nhật dạng: Sheet NgayCapNhat → file bền → seed lần đầu
+            gk = clean(item.get("MaDe", ""))
+            for dbt_key, detail in dbt_detail_raw.items():
+                if not isinstance(detail, dict):
+                    continue
+                if dbt_key == DBT_FILTER_UNCLASSIFIED:
+                    continue
+                cur = clean(detail.get("updated", ""))
+                map_k = dbt_updated_map_key(gk, dbt_key)
+                mapped = clean(dbt_updated_cache.get(map_k, ""))
+                if cur:
+                    newer = max_ngay_cap_nhat(cur, mapped) or cur
+                    detail["updated"] = newer
+                    if newer != mapped:
+                        dbt_updated_cache[map_k] = newer
+                        dbt_updated_dirty = True
+                elif mapped:
+                    detail["updated"] = mapped
+                else:
+                    detail["updated"] = seed_stamp
+                    dbt_updated_cache[map_k] = seed_stamp
+                    dbt_updated_dirty = True
             item["FilterCounts"] = {
                 "dang": dict(item.pop("DangCounts")),
                 "level": dict(item.pop("LevelCounts")),
                 "combo": dict(item.pop("ComboCounts")),
                 "dangbaitap": dbt_counts,
-                "dbt_detail": dict(item.pop("DbtDetailCounts", {})),
+                "dbt_detail": dbt_detail_raw,
             }
             made_key = clean(item.get("MaDe", ""))
             if made_key and dbt_counts:
@@ -6409,6 +6520,8 @@ class SheetStore:
                 item["DangBaiTap"] = ", ".join(sorted(dbt_counts.keys(), key=key_norm))
             out.append(item)
         out.sort(key=catalog_sort_key)
+        if dbt_updated_dirty:
+            save_dbt_updated_map(dbt_updated_cache)
         return out
 
     def apply_dbt_orders_to_catalog(self, orders: Optional[Dict[str, List[str]]] = None) -> None:
@@ -8519,6 +8632,19 @@ class SheetStore:
         if not batch:
             raise RuntimeError("Không có cột nào phù hợp để cập nhật. Kiểm tra cấu trúc sheet Cau_Hoi.")
 
+        # Ghi ngày cập nhật (cột NgayCapNhat) — dùng hiển thị ghi chú sau từng dạng BT
+        try:
+            self.ensure_question_ngaycapnhat_header()
+            col0 = (self.question_col_index or {}).get("NgayCapNhat")
+            if col0 is not None:
+                stamp = stamp_ngay_cap_nhat()
+                a1u = gspread.utils.rowcol_to_a1(row_number, col0 + 1)
+                batch.append({"range": a1u, "values": [[stamp]]})
+                updates["NgayCapNhat"] = stamp
+                updated_fields.append(f"NgayCapNhat->{a1u}")
+        except Exception:
+            log_swallow("update_question:NgayCapNhat")
+
         gsheet_call_retry("batch_update Cau_Hoi", self.ws_questions.batch_update, batch, value_input_option="RAW")
 
         # Cập nhật ngay trong RAM để tránh đọc lại cả Google Sheet sau khi lưu.
@@ -8532,11 +8658,19 @@ class SheetStore:
             if same_row or same_id:
                 q["_row"] = int(row_number)
                 for field, value in updates.items():
-                    if field in EDITABLE_FIELDS:
+                    if field in EDITABLE_FIELDS or field == "NgayCapNhat":
                         q[field] = clean(value)
                 q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
                 q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
                 q["Dang"] = effective_dang(q)
+                try:
+                    touch_dbt_updated(
+                        catalog_group_key(q),
+                        clean(q.get("DangBaiTap", "")),
+                        clean(q.get("NgayCapNhat", "")) or stamp_ngay_cap_nhat(),
+                    )
+                except Exception:
+                    log_swallow("update_question:touch_dbt_updated")
                 break
         self.rebuild_indexes_after_admin_change()
         out = {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields}
@@ -8687,6 +8821,12 @@ class SheetStore:
         batch = []
         out_items = []
         seen = set()
+        stamp = stamp_ngay_cap_nhat()
+        try:
+            self.ensure_question_ngaycapnhat_header()
+        except Exception:
+            log_swallow("update_question_dangbaitap_bulk:NgayCapNhat_header")
+        ngay_col0 = (self.question_col_index or {}).get("NgayCapNhat")
         for up in updates or []:
             try:
                 row = int(up.get("row") or 0)
@@ -8707,6 +8847,10 @@ class SheetStore:
                 raise RuntimeError(f"Dòng {row} không khớp ID trong RAM. Hãy bấm Đồng bộ Sheet rồi thử lại.")
             a1 = gspread.utils.rowcol_to_a1(row, fixed_col)
             batch.append({"range": a1, "values": [[dbt]]})
+            if ngay_col0 is not None:
+                a1u = gspread.utils.rowcol_to_a1(row, ngay_col0 + 1)
+                batch.append({"range": a1u, "values": [[stamp]]})
+                q["NgayCapNhat"] = stamp
             q["DangBaiTap"] = dbt
             out_items.append({
                 "index": up.get("index"),
@@ -8717,9 +8861,17 @@ class SheetStore:
         if not batch:
             raise RuntimeError("Không có câu hợp lệ để cập nhật Dạng bài tập.")
         gsheet_call_retry("batch_update Cau_Hoi DangBaiTap", self.ws_questions.batch_update, batch, value_input_option="RAW")
+        try:
+            for it in out_items:
+                row = int(it.get("row") or 0)
+                q = by_row.get(row)
+                if q:
+                    touch_dbt_updated(catalog_group_key(q), clean(it.get("DangBaiTap", "")), stamp)
+        except Exception:
+            log_swallow("update_question_dangbaitap_bulk:touch_dbt")
         self.rebuild_indexes_after_admin_change()
         self._register_dbt_names_after_bulk(out_items)
-        return {"ok": True, "updated": len(batch), "items": out_items}
+        return {"ok": True, "updated": len(out_items), "items": out_items}
 
     def _register_dbt_names_after_bulk(self, out_items: List[Dict[str, Any]]) -> None:
         """Sau khi ghi cột DangBaiTap: bổ sung tên dạng mới vào thứ tự hiển thị theo MaDe."""
@@ -9424,6 +9576,13 @@ class SheetStore:
             if col0 >= len(row):
                 row.extend([""] * (col0 + 1 - len(row)))
             row[col0] = val
+        # Ngày cập nhật — ghi chú nhỏ sau từng dạng BT trên mục lục
+        stamp = clean(data.get("NgayCapNhat")) or stamp_ngay_cap_nhat()
+        col_u = self._question_field_col0("NgayCapNhat")
+        if col_u is not None:
+            if col_u >= len(row):
+                row.extend([""] * (col_u + 1 - len(row)))
+            row[col_u] = stamp
         return self._pad_question_sheet_row(row)
 
     def _write_question_field_to_row(
@@ -9605,6 +9764,7 @@ class SheetStore:
 
         with self.add_question_lock:
             self.ensure_question_competency_header()
+            self.ensure_question_ngaycapnhat_header()
             self.question_headers = self.ws_questions.row_values(1)
             self.question_col_index = resolve_question_col_index(self.question_headers)
             dup_row = self._find_recent_sheet_duplicate(data)
@@ -9665,6 +9825,7 @@ class SheetStore:
 
         with self.add_question_lock:
             self.ensure_question_competency_header()
+            self.ensure_question_ngaycapnhat_header()
             self.question_headers = self.ws_questions.row_values(1)
             self.question_col_index = resolve_question_col_index(self.question_headers)
             if not self.question_headers:
@@ -17988,6 +18149,14 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
 .startDbtOpt input{width:14px;height:14px;flex-shrink:0;margin:2px 0 0;accent-color:#1d4ed8}
 .startDbtOpt span{min-width:0;flex:1}
 .startDbtOpt b{font-size:12.5px;font-weight:800;word-break:break-word}
+.startDbtUpdated,.bookDbtUpdated{
+  display:inline-block;margin-left:4px;font-size:10px;font-weight:700;
+  color:#1d4ed8;opacity:1;white-space:nowrap;
+}
+.bookDbtMeta{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0;min-width:2.2em}
+.bookDbtUpdated{margin-left:0;font-size:9.5px;line-height:1.1;color:#64748b}
+html[data-theme='dark'] .startDbtUpdated{color:#93c5fd}
+html[data-theme='dark'] .bookDbtUpdated{color:#94a3b8}
 .startDbtOpt:has(input:checked){
     border-color:#1d4ed8!important;
     background:#eff6ff!important;
@@ -23484,7 +23653,7 @@ function renderStartDangBaiTapPicker(made,preselect){
     let adminHint=USER.is_admin?' <span class="muted">· ADMIN: vào đề → 🏷️ Gợi ý Dạng BT</span>':'';
     html+=`<label class="startDbtOpt startDbtUncls"><input type="radio" name="startDbtPick" value="${escAttr(DBT_UNCLASSIFIED)}"${on}> <span><b>❓ ${esc(DBT_UNCLASSIFIED_LABEL)}</b> — ${uncls} câu${adminHint}</span></label>`;
   }
-  for(let [d,n] of dbts){let cnt=n||'';let on=preselect&&normText(preselect)===normText(d)?' checked':'';html+=`<label class="startDbtOpt"><input type="radio" name="startDbtPick" value="${escAttr(d)}"${on}> <span><b>${esc(d)}</b>${cnt?(' · '+cnt+' câu'):''}</span></label>`}
+  for(let [d,n] of dbts){let cnt=n||'';let on=preselect&&normText(preselect)===normText(d)?' checked':'';let upd=catalogDbtUpdated(item,d);html+=`<label class="startDbtOpt"><input type="radio" name="startDbtPick" value="${escAttr(d)}"${on}> <span><b>${esc(d)}</b>${cnt?(' · '+cnt+' câu'):''}${upd?(' <span class="startDbtUpdated" title="Cập nhật dạng">'+esc(upd)+'</span>'):''}</span></label>`}
   list.innerHTML=html;
   let mbar=document.getElementById('startDbtMergeBar');
   if(mbar)mbar.classList.toggle('hide',!(USER.is_admin&&dbts.length>=1));
@@ -27482,13 +27651,16 @@ function v246ShortDangLabel(d){let t=String(d||'').trim();if(t==='Trắc nghiệ
 function v246DangCssClass(d){if(d==='Trắc nghiệm')return 'dang-tn';if(d==='Đúng sai')return 'dang-ds';if(d==='Trả lời ngắn')return 'dang-tln';if(d==='Tự luận')return 'dang-tl';return 'dang-other'}
 function v246SumFilterDangs(entries){let totals={};for(let x of entries||[]){let fc=x&&x.FilterCounts;if(fc&&fc.dang){for(let k in fc.dang){let nd=normDangClient(k);totals[nd]=(totals[nd]||0)+(parseInt(fc.dang[k],10)||0)}continue}let sc=parseInt(x.SoCau,10)||0;if(!sc)continue;let parts=String(x.Dang||'').split(/[,;|]+/).map(s=>s.trim()).filter(Boolean);if(parts.length===1)totals[normDangClient(parts[0])]=(totals[normDangClient(parts[0])]||0)+sc;else if(parts.length>1)parts.forEach(p=>{let nd=normDangClient(p);totals[nd]=(totals[nd]||0)+Math.round(sc/parts.length)})}return totals}
 function v246DangCountTags(entries){let totals=v246SumFilterDangs(entries);let order=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];let out=[];for(let d of order){let n=totals[d]||0;if(n)out.push(`<span class="bookTag ${v246DangCssClass(d)}" title="${escAttr(d)}: ${n} câu">${v246ShortDangLabel(d)}·${n}</span>`)}for(let d in totals){if(!order.includes(d)&&(totals[d]||0))out.push(`<span class="bookTag ${v246DangCssClass(d)}" title="${escAttr(d)}: ${totals[d]} câu">${esc(v246ShortDangLabel(d))}·${totals[d]}</span>`)}return out.join('')}
-function v246MergeDbtDetail(entries,dbtKey){let dang={},level={};for(let x of entries||[]){let block=x&&x.FilterCounts&&x.FilterCounts.dbt_detail&&x.FilterCounts.dbt_detail[dbtKey];if(!block)continue;if(block.dang)for(let k in block.dang){let nd=normDangClient(k);dang[nd]=(dang[nd]||0)+(parseInt(block.dang[k],10)||0)}if(block.level)for(let k in block.level){level[k]=(level[k]||0)+(parseInt(block.level[k],10)||0)}}return {dang,level}}
+function v246FmtDbtDate(u){u=String(u||'').trim();if(!u)return '';let m=u.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return u.slice(0,8);let yy=m[3].length===4?m[3].slice(2):m[3];return m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+yy}
+function v246MergeDbtDetail(entries,dbtKey){let dang={},level={},updated='';for(let x of entries||[]){let block=x&&x.FilterCounts&&x.FilterCounts.dbt_detail&&x.FilterCounts.dbt_detail[dbtKey];if(!block)continue;if(block.dang)for(let k in block.dang){let nd=normDangClient(k);dang[nd]=(dang[nd]||0)+(parseInt(block.dang[k],10)||0)}if(block.level)for(let k in block.level){level[k]=(level[k]||0)+(parseInt(block.level[k],10)||0)}if(block.updated){if(!updated)updated=String(block.updated);else{let a=String(block.updated),b=updated;let pa=a.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/),pb=b.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(pa&&pb){let da=new Date((pa[3].length===2?2000+parseInt(pa[3],10):parseInt(pa[3],10)),parseInt(pa[2],10)-1,parseInt(pa[1],10));let db=new Date((pb[3].length===2?2000+parseInt(pb[3],10):parseInt(pb[3],10)),parseInt(pb[2],10)-1,parseInt(pb[1],10));if(da>=db)updated=a}else if(a>b)updated=a}}}return {dang,level,updated}}
+function v246DbtUpdatedNote(dbtKey,entries){if(!dbtKey||dbtKey===DBT_UNCLASSIFIED)return '';let u=(v246MergeDbtDetail(entries,dbtKey).updated||'').trim();if(!u)return '';let short=v246FmtDbtDate(u);return `<span class="bookDbtUpdated" title="Ngày cập nhật dạng: ${escAttr(u)}">${esc(short)}</span>`}
+function catalogDbtUpdated(item,dbtKey){item=item||{};let block=((item.FilterCounts||{}).dbt_detail||{})[dbtKey];let u=block&&block.updated?String(block.updated).trim():'';return u?v246FmtDbtDate(u):''}
 function v246DbtDangTipText(dbtKey,entries){let det=v246MergeDbtDetail(entries,dbtKey);let order=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];let bits=order.filter(d=>(det.dang[d]||0)>0).map(d=>v246ShortDangLabel(d)+': '+det.dang[d]);return bits.join(' · ')}
 function v246DbtDangMiniHtml(dbtKey,entries){let det=v246MergeDbtDetail(entries,dbtKey);let order=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];let out=[];for(let d of order){let n=det.dang[d]||0;if(n)out.push(`<span class="bookDbtMini bookDbtMini-${v246DangCssClass(d).replace('dang-','')}">${v246ShortDangLabel(d)}·${n}</span>`)}return out.length?`<span class="bookDbtMiniRow">${out.join('')}</span>`:''}
 function v246SumFilterLevels(entries){let levels=['NB','TH','VD','VDC'];let totals={NB:0,TH:0,VD:0,VDC:0};for(let x of entries||[]){let fc=x&&x.FilterCounts;if(fc&&fc.level){for(let lv of levels)totals[lv]+=parseInt(fc.level[lv],10)||0;continue}let sc=parseInt(x.SoCau,10)||0;if(!sc)continue;let md=String(x.MucDo||'').trim().toUpperCase();let parts=md.split(/[,;|/]+/).map(s=>s.trim()).filter(Boolean);let hit=parts.filter(p=>levels.includes(p));if(hit.length===1)totals[hit[0]]+=sc;else if(hit.length>1)hit.forEach(lv=>{totals[lv]+=Math.round(sc/hit.length)})}return totals}
 function v246LevelTags(entries){let levels=['NB','TH','VD','VDC'];let totals=v246SumFilterLevels(entries);let out=[];for(let lv of levels){let n=totals[lv]||0;if(n)out.push(`<span class="bookTag ${lv.toLowerCase()}" title="${lv}: ${n} câu">${lv}·${n}</span>`)}return out.join('')}
 function v246LessonCard(mon,khoi,chuong,bai,entries){
-  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let made=String(primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;let mini=v246DbtDangMiniHtml(it.d,entries);let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" onclick="openStartModal('${made}','${dd}')" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(shortText(it.label,72))}</span>${mini}</span>${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}</button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
+  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let made=String(primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" onclick="openStartModal('${made}','${dd}')" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(shortText(it.label,72))}</span>${mini}</span><span class="bookDbtMeta">${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
   let orderBtn=(USER&&USER.is_admin&&made&&dbtPairs.length)?`<button type="button" class="bookExamBtn" onclick="openDbtOrderModal('${made}')" title="ADMIN: sắp xếp thứ tự dạng BT">↕ Thứ tự dạng</button>`:'';
   let madeRaw=String(primary.MaDe||'');let shareTools=madeRaw?v246ShareToolsHtml(primary,made):'';
   return `<div class="bookLessonCard${selected}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${esc(bai||'Chưa rõ bài')}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangCountTags(entries)}</div>${dbtBtns?`<div class="bookDbtRow" id="bookDbtRow_${escAttr(madeRaw)}">${dbtBtns}${dbtItems.length>5?`<div class="bookDbtMoreHint">↕ ${dbtItems.length} dạng — kéo xuống để xem hết (Sheet có đủ)</div>`:''}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
@@ -33809,6 +33981,56 @@ def save_dbt_orders(orders: Dict[str, List[str]]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DBT_ORDER_FILE)
+
+
+def dbt_updated_map_key(group_key: str, dbt: str) -> str:
+    return key_norm(group_key) + "||" + key_norm(dbt)
+
+
+def load_dbt_updated_map() -> Dict[str, str]:
+    """Ngày cập nhật từng dạng BT (bền trên disk; bổ sung khi chưa có cột NgayCapNhat)."""
+    try:
+        if not os.path.isfile(DBT_UPDATED_FILE):
+            return {}
+        with open(DBT_UPDATED_FILE, encoding="utf-8") as f:
+            obj = json.load(f)
+        raw = obj.get("dates") if isinstance(obj, dict) else obj
+        if not isinstance(raw, dict):
+            return {}
+        out: Dict[str, str] = {}
+        for k, v in raw.items():
+            kk, vv = clean(k), clean(v)
+            if kk and vv:
+                out[kk] = vv
+        return out
+    except Exception:
+        log_swallow("load_dbt_updated_map")
+        return {}
+
+
+def save_dbt_updated_map(dates: Dict[str, str]) -> None:
+    try:
+        os.makedirs(os.path.dirname(DBT_UPDATED_FILE), exist_ok=True)
+        tmp = DBT_UPDATED_FILE + ".tmp"
+        payload = {"dates": dates, "updated_at": stamp_ngay_cap_nhat()}
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, DBT_UPDATED_FILE)
+    except Exception:
+        log_swallow("save_dbt_updated_map")
+
+
+def touch_dbt_updated(group_key: str, dbt: str, when: str = "") -> None:
+    """Ghi nhận ngày cập nhật một dạng (sau sửa câu / gán dạng)."""
+    dbt = clean(dbt)
+    if not dbt or _is_bad_dangbaitap_value(dbt):
+        return
+    when = clean(when) or stamp_ngay_cap_nhat()
+    mp = load_dbt_updated_map()
+    k = dbt_updated_map_key(group_key, dbt)
+    prev = mp.get(k, "")
+    mp[k] = max_ngay_cap_nhat(prev, when) or when
+    save_dbt_updated_map(mp)
 
 
 def _normalize_pdf_link_item(raw: Any) -> Optional[Dict[str, Any]]:
