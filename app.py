@@ -5436,6 +5436,87 @@ class SheetStore:
             value_input_option="USER_ENTERED",
         )
 
+    def _ensure_question_headers(self) -> bool:
+        """Đảm bảo đã có header + map cột Cau_Hoi (từ RAM hoặc Sheet)."""
+        if self.question_headers and self.question_col_index:
+            return True
+        if self.ws_questions is None:
+            try:
+                self.connect()
+                self.ws_questions = self.worksheet_or_none("Cau_Hoi")
+            except Exception:
+                log_swallow("_ensure_question_headers:connect")
+                return False
+        if self.ws_questions is None:
+            return False
+        try:
+            headers = list(gsheet_call_retry("row_values Cau_Hoi header", self.ws_questions.row_values, 1) or [])
+        except Exception:
+            log_swallow("_ensure_question_headers:header")
+            return False
+        if not headers:
+            return False
+        self.question_headers = headers
+        self.question_col_index = resolve_question_col_index(headers)
+        return True
+
+    def _question_from_row_vals(self, row_vals: List[Any], row_idx: int) -> Optional[Dict[str, Any]]:
+        """Parse 1 dòng Cau_Hoi → dict câu hỏi (None nếu thiếu nội dung)."""
+        if not self._ensure_question_headers():
+            return None
+        headers = self.question_headers or []
+        cols = self.question_col_index or {}
+        row_vals = list(row_vals or [])
+        raw = {headers[i]: row_vals[i] if i < len(row_vals) else "" for i in range(len(headers))}
+        q = canonical_question(raw)
+
+        for field in ("CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"):
+            v = row_val(row_vals, cols.get(field))
+            if field in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
+                q[field] = normalize_latex_text(v if v else q.get(field, ""))
+            elif field == "DapAn":
+                if not v:
+                    continue
+                if any(x in v for x in ("$", "\\", "{", "}")):
+                    q[field] = normalize_latex_text(v)
+                else:
+                    q[field] = v
+            elif v:
+                q[field] = v
+
+        t_col = cols.get("HinhAnh", 19 if len(headers) > 19 else None)
+        if t_col is not None:
+            t_img = row_val(row_vals, t_col)
+            if is_probably_link_or_drive(t_img) or (t_img and not clean(q.get("HinhAnh"))):
+                q["HinhAnh"] = t_img
+
+        u_col = cols.get("QuyenTruyCap", 20 if len(headers) > 20 else None)
+        if u_col is not None and not clean(q.get("QuyenTruyCap")):
+            q["QuyenTruyCap"] = row_val(row_vals, u_col)
+
+        tt_col = cols.get("TrangThai")
+        if tt_col is not None:
+            q["TrangThai"] = row_val(row_vals, tt_col)
+
+        q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+
+        md = row_val(row_vals, cols.get("MucDo"))
+        if md:
+            q["MucDo"] = md
+        dang_raw = row_val(row_vals, cols.get("Dang"))
+        if dang_raw:
+            q["_DangCol"] = dang_raw
+        elif clean(q.get("Dang", "")):
+            q["_DangCol"] = clean(q.get("Dang", ""))
+
+        q["Dang"] = effective_dang(q)
+        q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
+
+        if not clean(q.get("CauHoi")):
+            return None
+        q["_row"] = int(row_idx)
+        return q
+
     def load_questions(self):
         values = self.ws_questions.get_all_values()
         if not values:
@@ -5446,60 +5527,10 @@ class SheetStore:
         self.question_headers = values[0]
         self.question_col_index = resolve_question_col_index(self.question_headers)
         self.questions = []
-        cols = self.question_col_index
         for idx, row_vals in enumerate(values[1:], start=2):
-            raw = {self.question_headers[i]: row_vals[i] if i < len(row_vals) else "" for i in range(len(self.question_headers))}
-            q = canonical_question(raw)
-
-            # Nội dung / đáp án: đọc đúng cột theo tiêu đề (G=Dạng, I=Câu hỏi hoặc J=Dạng, K=Câu hỏi...).
-            for field in ("CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"):
-                v = row_val(row_vals, cols.get(field))
-                if field in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
-                    q[field] = normalize_latex_text(v if v else q.get(field, ""))
-                elif field == "DapAn":
-                    if not v:
-                        continue
-                    if any(x in v for x in ("$", "\\", "{", "}")):
-                        q[field] = normalize_latex_text(v)
-                    else:
-                        q[field] = v
-                elif v:
-                    q[field] = v
-
-            # Cột T (index 19) hoặc cột HinhAnh theo header.
-            t_col = cols.get("HinhAnh", 19 if len(self.question_headers) > 19 else None)
-            if t_col is not None:
-                t_img = row_val(row_vals, t_col)
-                if is_probably_link_or_drive(t_img) or (t_img and not clean(q.get("HinhAnh"))):
-                    q["HinhAnh"] = t_img
-
-            u_col = cols.get("QuyenTruyCap", 20 if len(self.question_headers) > 20 else None)
-            if u_col is not None and not clean(q.get("QuyenTruyCap")):
-                q["QuyenTruyCap"] = row_val(row_vals, u_col)
-
-            tt_col = cols.get("TrangThai")
-            if tt_col is not None:
-                q["TrangThai"] = row_val(row_vals, tt_col)
-
-            q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
-
-            # Mức độ + Dạng: ƯU TIÊN tiêu đề cột (G=Dạng hoặc J=Dạng), KHÔNG ghi đè bằng nội dung câu hỏi / đáp án A.
-            md = row_val(row_vals, cols.get("MucDo"))
-            if md:
-                q["MucDo"] = md
-            dang_raw = row_val(row_vals, cols.get("Dang"))
-            if dang_raw:
-                q["_DangCol"] = dang_raw
-            elif clean(q.get("Dang", "")):
-                q["_DangCol"] = clean(q.get("Dang", ""))
-
-            q["Dang"] = effective_dang(q)
-            q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
-
-            if not clean(q.get("CauHoi")):
-                continue
-            q["_row"] = idx
-            self.questions.append(q)
+            q = self._question_from_row_vals(row_vals, idx)
+            if q:
+                self.questions.append(q)
         reconcile_deleted_question_ids_with_loaded([q.get("ID", "") for q in self.questions])
         self.apply_deleted_question_tombstones()
         self.duplicate_report = analyze_question_duplicates(self.questions)
@@ -6586,8 +6617,95 @@ class SheetStore:
             "preview": preview,
         }
 
+    def find_question_row_on_sheet(self, qid: str) -> int:
+        """Tìm số dòng ID trên cột A của Cau_Hoi (0 = không thấy)."""
+        qid = clean(qid)
+        if not qid:
+            return 0
+        if self.ws_questions is None:
+            try:
+                self.connect()
+                self.ws_questions = self.worksheet_or_none("Cau_Hoi")
+            except Exception:
+                log_swallow("find_question_row_on_sheet:ws")
+                return 0
+        if self.ws_questions is None:
+            return 0
+        try:
+            cell = gsheet_call_retry(
+                "find ID Cau_Hoi colA",
+                self.ws_questions.find,
+                qid,
+                in_column=1,
+            )
+            return int(getattr(cell, "row", 0) or 0)
+        except Exception:
+            # gspread raise khi không thấy ô
+            return 0
+
+    def fetch_question_from_sheet_by_id(self, qid: str) -> Optional[Dict[str, Any]]:
+        """Đọc đúng 1 câu từ Sheet theo ID (bỏ qua cache RAM cũ)."""
+        qid = clean(qid)
+        if not qid:
+            return None
+        row = self.find_question_row_on_sheet(qid)
+        if row <= 1:
+            return None
+        if not self._ensure_question_headers():
+            return None
+        try:
+            row_vals = list(gsheet_call_retry(
+                f"row_values Cau_Hoi {row}",
+                self.ws_questions.row_values,
+                row,
+            ) or [])
+        except Exception:
+            log_swallow("fetch_question_from_sheet_by_id:row")
+            return None
+        q = self._question_from_row_vals(row_vals, row)
+        if not q:
+            return None
+        # Khớp ID cột A (phòng find nhầm)
+        if clean(q.get("ID", "")).upper() != qid.upper():
+            # Một số sheet header lệch: ép ID từ cột A
+            a_val = clean(row_vals[0] if row_vals else "")
+            if a_val.upper() != qid.upper():
+                return None
+            q["ID"] = a_val or qid
+        return q
+
+    def ingest_question_into_ram(self, q: Dict[str, Any]) -> None:
+        """Gắn 1 câu Sheet vào RAM + index để Mở đề / sửa ngay (không cần đợi Đồng bộ full)."""
+        if not q or not clean(q.get("CauHoi")):
+            return
+        # Điền Mon trống theo các câu cùng Lop|Chuong|BaiHoc đã có trong RAM
+        if not clean(q.get("Mon", "")):
+            k = "|".join(key_norm(q.get(x, "")) for x in ["Lop", "Chuong", "BaiHoc"])
+            votes: Counter = Counter()
+            for x in self.questions:
+                mon = clean(x.get("Mon", ""))
+                if not mon:
+                    continue
+                kx = "|".join(key_norm(x.get(f, "")) for f in ["Lop", "Chuong", "BaiHoc"])
+                if kx == k:
+                    votes[mon] += 1
+            if votes:
+                q["Mon"] = votes.most_common(1)[0][0]
+        row = int(q.get("_row") or 0)
+        qid = clean(q.get("ID", ""))
+        kept = []
+        for x in self.questions:
+            if row and int(x.get("_row") or 0) == row:
+                continue
+            if qid and clean(x.get("ID", "")) == qid:
+                continue
+            kept.append(x)
+        kept.append(q)
+        self.questions = kept
+        self.rebuild_question_indexes()
+
     def lookup_questions_by_id(self, qid: str) -> Dict[str, Any]:
-        """Tra cứu câu theo ID (cột A) — hỗ trợ khớp một phần."""
+        """Tra cứu câu theo ID (cột A) — RAM trước, miss thì đọc thẳng Sheet."""
         self.ensure_questions_loaded()
         qid = clean(qid)
         if not qid:
@@ -6602,8 +6720,9 @@ class SheetStore:
             hits.append(self._lookup_match_item(q))
         if not hits:
             u = qid.upper()
+            # Khớp đúng ID không phân biệt hoa thường trước
             for kid, qs in self.by_id.items():
-                if u not in kid.upper():
+                if kid.upper() != u:
                     continue
                 for q in qs:
                     row = int(q.get("_row") or 0)
@@ -6611,9 +6730,42 @@ class SheetStore:
                         continue
                     seen_rows.add(row)
                     hits.append(self._lookup_match_item(q))
-                if len(hits) >= 25:
-                    break
-        return {"id": qid, "matches": hits[:25], "count": len(hits[:25])}
+            if not hits:
+                for kid, qs in self.by_id.items():
+                    if u not in kid.upper():
+                        continue
+                    for q in qs:
+                        row = int(q.get("_row") or 0)
+                        if row in seen_rows:
+                            continue
+                        seen_rows.add(row)
+                        hits.append(self._lookup_match_item(q))
+                    if len(hits) >= 25:
+                        break
+        sheet_hit = False
+        if not hits:
+            try:
+                q_sheet = self.fetch_question_from_sheet_by_id(qid)
+            except Exception:
+                log_swallow("lookup_questions_by_id:sheet")
+                q_sheet = None
+            if q_sheet:
+                sheet_hit = True
+                try:
+                    self.ingest_question_into_ram(q_sheet)
+                except Exception:
+                    log_swallow("lookup_questions_by_id:ingest")
+                hits.append(self._lookup_match_item(q_sheet))
+                # Nạp nền full để mục lục/đếm câu bắt kịp Sheet
+                try:
+                    self.start_questions_background(force=True)
+                except Exception:
+                    log_swallow("lookup_questions_by_id:bg_sync")
+        out = {"id": qid, "matches": hits[:25], "count": len(hits[:25])}
+        if sheet_hit:
+            out["from_sheet"] = True
+            out["message"] = "ID lấy trực tiếp từ Sheet (RAM chưa Đồng bộ đủ)."
+        return out
 
     def search_questions_by_keyword(
         self,
@@ -22162,8 +22314,8 @@ function syncRpExportLatexBtn(){let b=document.getElementById('btnRpExportLatex'
 let ID_LOOKUP_MATCHES=[];
 function setVal(id,v){let el=document.getElementById(id);if(el)el.value=v==null?'':String(v)}
 function findQuestionIndexById(id){let u=String(id||'').trim().toUpperCase();if(!u)return -1;for(let i=0;i<QUESTIONS.length;i++){let qid=String(QUESTIONS[i].ID||'').trim().toUpperCase();if(qid===u)return i}return -1}
-async function lookupQuestionById(){let raw=String(val('fIdLookup')||'').trim();if(!raw){alert('Nhập ID câu.');return}let box=document.getElementById('idLookupResult');if(box)box.innerHTML='<span class="muted">Đang tìm…</span>';try{let j=await api('/api/question/lookup?id='+encodeURIComponent(raw));if(j.loading){if(box)box.innerHTML='<span class="muted">'+esc(j.message||j.error||'Đang nạp Sheet…')+'</span>';setTimeout(lookupQuestionById,2500);return}renderIdLookupResult(j)}catch(e){if(box)box.innerHTML='<span style="color:#991b1b">'+esc(e.message)+'</span>'}}
-function renderIdLookupResult(j){let box=document.getElementById('idLookupResult');if(!box)return;let matches=j.matches||[];ID_LOOKUP_MATCHES=matches;if(!matches.length){box.innerHTML='<span class="muted">Không tìm thấy ID «'+esc(j.id||val('fIdLookup')||'')+'».</span>';return}let admin=!!USER.is_admin;box.innerHTML=matches.map((m,i)=>{let openBtn=`<button class="btn" type="button" onclick="openQuestionByIdMatch(${i},false)">🚀 Mở đề</button>`;let editBtn=admin?`<button class="btn2" type="button" onclick="openQuestionByIdMatch(${i},true)">✏️ Mở & sửa</button>`:'';let copyBtn=m.ID?`<button class="btn2" type="button" onclick="copyIdFromLookup('${escAttr(m.ID)}')">📋 Chép ID</button>`:'';return `<div class="idLookupCard"><h4>ID: ${esc(m.ID)} · Câu ${m.question_no||'?'} · ${esc(m.MaDe)}</h4><div class="idLookupMeta"><span class="tag">${esc(m.Mon)}</span> Lớp ${esc(m.Lop)} · ${esc(m.Chuong||'')} · ${esc(m.BaiHoc||'')}</div><div class="idLookupMeta">${esc(m.Dang||'')} · ${esc(m.MucDo||'')} · ${esc(m.QuyenTruyCap||'VIP')}</div><div class="idLookupPreview">${esc(m.preview||'')}</div><div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">${openBtn}${editBtn}${copyBtn}</div></div>`}).join('')}
+async function lookupQuestionById(){let raw=String(val('fIdLookup')||'').trim();if(!raw){alert('Nhập ID câu.');return}let box=document.getElementById('idLookupResult');if(box)box.innerHTML='<span class="muted">Đang tìm…</span>';try{let j=await api('/api/question/lookup?id='+encodeURIComponent(raw));if(j.loading){if(box)box.innerHTML='<span class="muted">'+esc(j.message||j.error||'Đang nạp Sheet…')+'</span>';setTimeout(lookupQuestionById,2500);return}renderIdLookupResult(j);if(j.from_sheet&&j.message){let note=document.createElement('div');note.className='muted';note.style.cssText='margin-top:6px;font-size:12px;color:#1d4ed8';note.textContent=j.message;if(box)box.appendChild(note)}}catch(e){if(box)box.innerHTML='<span style="color:#991b1b">'+esc(e.message)+'</span>'}}
+function renderIdLookupResult(j){let box=document.getElementById('idLookupResult');if(!box)return;let matches=j.matches||[];ID_LOOKUP_MATCHES=matches;if(!matches.length){let hint=j.hint?('<br><span class="muted" style="font-size:12px">'+esc(j.hint)+'</span>'):'';let syncHint=(USER&&USER.is_admin)?'<br><span class="muted" style="font-size:12px">Nếu vừa thêm trên Sheet: bấm <b>Đồng bộ</b> rồi tìm lại.</span>':'';box.innerHTML='<span class="muted">Không tìm thấy ID «'+esc(j.id||val('fIdLookup')||'')+'».</span>'+hint+syncHint;return}let admin=!!USER.is_admin;box.innerHTML=matches.map((m,i)=>{let openBtn=`<button class="btn" type="button" onclick="openQuestionByIdMatch(${i},false)">🚀 Mở đề</button>`;let editBtn=admin?`<button class="btn2" type="button" onclick="openQuestionByIdMatch(${i},true)">✏️ Mở & sửa</button>`:'';let copyBtn=m.ID?`<button class="btn2" type="button" onclick="copyIdFromLookup('${escAttr(m.ID)}')">📋 Chép ID</button>`:'';return `<div class="idLookupCard"><h4>ID: ${esc(m.ID)} · Câu ${m.question_no||'?'} · ${esc(m.MaDe)}</h4><div class="idLookupMeta"><span class="tag">${esc(m.Mon)}</span> Lớp ${esc(m.Lop)} · ${esc(m.Chuong||'')} · ${esc(m.BaiHoc||'')}</div><div class="idLookupMeta">${esc(m.Dang||'')} · ${esc(m.MucDo||'')} · ${esc(m.QuyenTruyCap||'VIP')}</div><div class="idLookupPreview">${esc(m.preview||'')}</div><div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">${openBtn}${editBtn}${copyBtn}</div></div>`}).join('')}
 async function copyIdFromLookup(id){let ok=await copyTextToClipboard(id);alert(ok?'✅ Đã chép ID: '+id:'Không chép được.')}
 async function openQuestionByIdMatch(idx,doEdit){let m=ID_LOOKUP_MATCHES[idx];if(!m||!m.MaDe){alert('Không có mã đề.');return}if(USER.is_trial&&(m.QuyenTruyCap||'VIP')!=='FREE'){alert('Tài khoản dùng thử chỉ mở đề FREE.');return}await startQuiz(m.MaDe,false,false,'','');let qIdx=findQuestionIndexById(m.ID);if(qIdx<0)qIdx=Math.max(0,parseInt(m.index_in_de,10)||0);saveCurrent();CUR=qIdx;renderQuestion();if(doEdit&&USER.is_admin)openEdit()}
 async function copyQuestionId(){let q=QUESTIONS[CUR];let id=String(q&&q.ID||'').trim();if(!id){alert('Câu này chưa có ID.');return}let ok=await copyTextToClipboard(id);alert(ok?'✅ Đã chép ID: '+id:'Không chép được. Hãy chọn và chép thủ công.')}
@@ -36374,7 +36526,10 @@ def api_question_lookup():
             "loading": True,
             "message": "Đang nạp Sheet, thử lại sau vài giây.",
         })
-    return jsonify(st.lookup_questions_by_id(qid))
+    out = st.lookup_questions_by_id(qid)
+    if qid and not (out.get("matches") or []):
+        out["hint"] = "Không thấy ID trên Sheet. Kiểm tra chính tả hoặc bấm Đồng bộ."
+    return jsonify(out)
 
 
 @app.route("/api/question/keyword-search", methods=["POST"])
