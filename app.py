@@ -17703,21 +17703,25 @@ body.fullde-mode:not(.mobile-quiz-ui) #qtext mjx-container,
 body.fullde-mode:not(.mobile-quiz-ui) #options mjx-container,
 body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!important;overflow-x:auto!important}
 
-/* ===== V322e: Start Modal — game-style compact ===== */
+/* ===== V322e / V360: Start Modal — compact + màn nhỏ cuộn được ===== */
 .startModalBox{
-    max-width:400px!important;
+    max-width:min(420px,96vw)!important;
+    max-height:min(92dvh,92vh)!important;
     padding:0!important;
     border-radius:18px!important;
     overflow:hidden!important;
     box-shadow:0 20px 60px #0003!important;
+    display:flex!important;
+    flex-direction:column!important;
 }
 .startModalHead{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:13px 16px 11px;
+    padding:12px 14px 10px;
     background:linear-gradient(135deg,#1d4ed8,#4f46e5);
     color:#fff;
+    flex-shrink:0;
 }
 .startModalTitle{
     font-size:15px;
@@ -17735,6 +17739,38 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
     cursor:pointer!important;
     width:auto!important;
 }
+.startModalBody{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding-bottom:6px;
+}
+.startMainTabs{
+  display:grid;grid-template-columns:1fr 1fr;gap:0;
+  margin:0;border-bottom:1px solid var(--border);flex-shrink:0;
+  position:sticky;top:0;z-index:3;background:var(--surface);
+}
+.startMainTab{
+  border:none!important;border-radius:0!important;background:transparent!important;
+  color:var(--muted)!important;font-weight:900!important;font-size:13px!important;
+  padding:10px 8px!important;cursor:pointer!important;width:100%!important;
+  box-shadow:none!important;border-bottom:2px solid transparent!important;
+}
+.startMainTab.isActive{
+  color:#1d4ed8!important;border-bottom-color:#1d4ed8!important;background:#eff6ff!important;
+}
+.startPane{padding-bottom:8px}
+.startNextTabBtn,.startBackTabBtn{
+  display:block;width:calc(100% - 28px);margin:10px 14px 6px!important;
+  font-weight:900!important;padding:10px 12px!important;border-radius:10px!important;
+}
+.startDbtEmptyHint{margin:10px 14px;font-size:12px;line-height:1.4}
+#startPaneDbt .startDbtList{max-height:min(52vh,380px)}
+#startPaneDbt .startDbtSection{margin-top:8px!important}
+
 .startFilterNote{
     margin:10px 14px 0!important;
     padding:7px 10px!important;
@@ -17744,6 +17780,7 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
     color:#166534!important;
     font-weight:800!important;
     font-size:12px!important;
+    line-height:1.35!important;
 }
 
 /* Dạng BT picker */
@@ -17767,7 +17804,7 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
     padding-top:0!important;
 }
 .startDbtList{
-    max-height:200px;
+    max-height:min(28vh,180px);
     overflow-y:auto;
     overflow-x:hidden;
     display:flex;
@@ -17775,25 +17812,28 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
     gap:2px;
     -webkit-overflow-scrolling:touch;
     scrollbar-width:thin;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:4px;
+    background:var(--bg);
 }
-/* radio item compact */
 .startDbtOpt{
     display:flex!important;
-    align-items:center!important;
+    align-items:flex-start!important;
     gap:8px!important;
-    padding:7px 10px!important;
+    padding:7px 9px!important;
     border-radius:8px!important;
     border:1.5px solid var(--border)!important;
     cursor:pointer!important;
-    font-size:13px!important;
-    line-height:1.3!important;
+    font-size:12.5px!important;
+    line-height:1.35!important;
     transition:border-color .12s,background .12s!important;
     background:var(--surface)!important;
 }
 .startDbtOpt:hover{background:var(--btn2-bg)!important;border-color:#93c5fd!important}
-.startDbtOpt input{width:14px;height:14px;flex-shrink:0;margin:0;accent-color:#1d4ed8}
-.startDbtOpt span{min-width:0}
-.startDbtOpt b{font-size:13px;font-weight:800}
+.startDbtOpt input{width:14px;height:14px;flex-shrink:0;margin:2px 0 0;accent-color:#1d4ed8}
+.startDbtOpt span{min-width:0;flex:1}
+.startDbtOpt b{font-size:12.5px;font-weight:800;word-break:break-word}
 .startDbtOpt:has(input:checked){
     border-color:#1d4ed8!important;
     background:#eff6ff!important;
@@ -17838,7 +17878,22 @@ html[data-theme='dark'] .startDbtOpt:has(input:checked){
     text-align:center;
     transition:border-color .12s,background .12s;
     user-select:none;
+    min-height:100%;
+    box-sizing:border-box;
 }
+.startToggleBodyWide{
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    text-align:left!important;
+    gap:8px!important;
+    padding:7px 10px!important;
+}
+.startToggleWide{display:block;margin-bottom:4px!important}
+.startToggleRow.startToggleRowCompact .startToggleBody{padding:6px 4px;gap:2px}
+.startToggleRow.startToggleRowCompact .startToggleIcon{font-size:15px}
+.startToggleRow.startToggleRowCompact .startToggleText b{font-size:10px}
+.startToggleRow.startToggleRowCompact .startToggleSub{font-size:9px}
 .startToggle:hover .startToggleBody{background:var(--btn2-bg);border-color:#93c5fd}
 .startToggle input:checked + .startToggleBody{
     border-color:#1d4ed8;
@@ -17848,28 +17903,34 @@ html[data-theme='dark'] .startDbtOpt:has(input:checked){
 html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     background:#1e3a5f;border-color:#3b82f6;box-shadow:0 0 0 2px #1e3a5f;
 }
-.startToggleIcon{font-size:18px;line-height:1}
-.startToggleText{display:flex;flex-direction:column;gap:1px}
+.startToggleIcon{font-size:18px;line-height:1;flex-shrink:0}
+.startToggleText{display:flex;flex-direction:column;gap:1px;min-width:0}
 .startToggleText b{font-size:11px;font-weight:900;color:var(--text)}
 .startToggleSub{font-size:10px;color:var(--muted);line-height:1.2}
 
-/* Footer */
+/* Footer luôn hiện */
 .startModalFooter{
     display:flex;
     gap:6px;
     align-items:center;
-    justify-content:flex-end;
-    padding:12px 14px 14px;
-    margin-top:10px;
+    justify-content:stretch;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+    margin-top:0;
     border-top:1px solid var(--border);
+    background:var(--surface);
+    flex-shrink:0;
+    position:sticky;
+    bottom:0;
+    z-index:2;
 }
+.startModalFooter > button{flex:1 1 0;min-width:0;text-align:center}
 .startBtnCancel{
     background:var(--surface)!important;
     color:var(--muted)!important;
     border:1px solid var(--border)!important;
     border-radius:8px!important;
     font-size:13px!important;
-    padding:7px 13px!important;
+    padding:9px 8px!important;
     cursor:pointer!important;
     font-weight:700!important;
     width:auto!important;
@@ -17880,7 +17941,7 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     border:1px solid var(--border)!important;
     border-radius:8px!important;
     font-size:13px!important;
-    padding:7px 13px!important;
+    padding:9px 8px!important;
     cursor:pointer!important;
     font-weight:800!important;
     width:auto!important;
@@ -17891,22 +17952,102 @@ html[data-theme='dark'] .startToggle input:checked + .startToggleBody{
     border:none!important;
     border-radius:9px!important;
     font-size:14px!important;
-    padding:8px 18px!important;
+    padding:9px 10px!important;
     cursor:pointer!important;
     font-weight:900!important;
     width:auto!important;
     box-shadow:0 4px 12px #1d4ed844!important;
     letter-spacing:.2px!important;
+    flex:1.35 1 0!important;
 }
 .startBtnGo:hover{filter:brightness(1.08)!important}
+#startExamPanel,.startExamPanel{
+  margin:0 14px 6px!important;
+  padding:8px!important;
+  border:1px solid var(--border)!important;
+  border-radius:10px!important;
+  background:var(--bg)!important;
+}
+.startExamTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 6px}
+.startExamTabs .startExamTab{padding:5px 4px!important;font-size:11px!important;width:100%!important}
+.startExamPresetRow,.startExamByTypeRow,.startExamPickTools,.startExamLinkRow{
+  display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+}
+.startExamNum{width:64px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);font-weight:800;font-size:12px}
+.startExamByTypeRow label{font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px}
+.startExamByTypeRow input{width:48px;padding:4px 5px;border-radius:7px;border:1px solid var(--border);font-weight:800}
+.startExamPickList{max-height:110px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px;background:var(--surface);margin-top:4px}
+.startExamSummary{font-size:12px;font-weight:800;margin-right:auto}
+.startExamLinkRow{margin-top:6px}
+.startExamHelp{margin-top:4px;font-size:11px}
+.startExamHelp summary{cursor:pointer;font-weight:800;color:var(--muted)}
+.startExamHelp p{margin:4px 0 0;font-size:11px;line-height:1.35}
+.startExamMiniNote{margin:4px 0 0!important;font-size:11px!important}
+.startExamHint{margin:4px 14px 0!important;font-size:11px!important;line-height:1.3!important}
+.startExamToggle .startToggleSub{font-size:10px}
+#startExamHint{margin:4px 14px 0!important}
 
-@media(max-width:480px){
-    .startModalBox{max-width:100%!important;border-radius:14px!important}
-    .startToggleRow{grid-template-columns:repeat(3,1fr);gap:4px}
-    .startToggleBody{padding:6px 4px}
-    .startToggleIcon{font-size:16px}
-    .startToggleText b{font-size:10px}
-    .startToggleSub{font-size:9px}
+
+/* Điện thoại / máy tính bảng nhỏ (~ dưới 8") */
+@media (max-width:900px),(max-height:740px){
+    #startModal.modal{
+        align-items:flex-end!important;
+        padding:0!important;
+    }
+    .startModalBox{
+        max-width:100%!important;
+        width:100%!important;
+        max-height:min(94dvh,94vh)!important;
+        border-radius:16px 16px 0 0!important;
+        margin:0!important;
+    }
+    .startModalHead{padding:10px 12px}
+    .startModalTitle{font-size:14px}
+
+    .startMainTab{font-size:12px!important;padding:9px 6px!important}
+    #startPaneDbt .startDbtList{max-height:min(58vh,420px)}
+    body.start-exam-open .startDbtList{max-height:min(58vh,420px)}
+    .startSectionLabel{margin:0 12px 3px;padding-top:6px;font-size:10px}
+    .startSectionLower{padding-top:4px!important;margin-bottom:2px!important}
+    .startFilterNote{margin:8px 12px 0!important;font-size:11px!important;padding:6px 8px!important}
+    .startDbtSection{margin:8px 12px 0!important}
+    .startDbtList{max-height:min(26vh,160px)}
+    .startDbtOpt{padding:6px 8px!important;font-size:12px!important}
+    .startDbtOpt b{font-size:12px}
+    /* Nửa dưới: tuỳ chọn + kiểm tra siêu gọn */
+    .startToggleRow{grid-template-columns:1fr 1fr 1fr;gap:4px;margin:0 12px}
+    .startToggleRow.startToggleRowCompact .startToggleBody{
+        flex-direction:row!important;align-items:center!important;justify-content:center!important;
+        text-align:center!important;gap:4px!important;padding:6px 4px!important;min-height:0!important;
+    }
+    .startToggleRow.startToggleRowCompact .startToggleIcon{font-size:14px}
+    .startToggleRow.startToggleRowCompact .startToggleText b{font-size:10px;line-height:1.15}
+    .startToggleRow.startToggleRowCompact .startToggleSub{display:none!important}
+    .startToggleWide{margin:2px 12px 4px!important}
+    .startToggleBodyWide{padding:6px 8px!important;gap:6px!important}
+    .startToggleBodyWide .startToggleIcon{font-size:14px}
+    .startToggleBodyWide .startToggleText b{font-size:11px}
+    .startToggleBodyWide .startToggleSub{font-size:9px;line-height:1.2}
+    .startPendingWrap{margin:4px 12px 0!important;font-size:11px!important}
+    #startExamPanel,.startExamPanel{margin:0 12px 4px!important;padding:6px!important}
+    .startExamTabs{gap:3px;margin-bottom:4px}
+    .startExamTabs .startExamTab{font-size:10px!important;padding:4px 2px!important}
+    .startExamPickList{max-height:88px}
+    .startExamHelp{display:none}
+    .startExamHint{display:none!important}
+    body.start-exam-open .startFilterNote{display:none!important}
+    body.start-exam-open .startDbtList{max-height:min(14vh,90px)}
+    body.start-exam-open .startDbtMergeBar{display:none!important}
+
+    .startModalFooter{gap:5px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
+    .startBtnCancel,.startBtnKeep,.startBtnGo{font-size:12px!important;padding:10px 6px!important}
+}
+@media (max-width:380px),(max-height:620px){
+    .startDbtList{max-height:min(24vh,150px)}
+    .startToggleRow.startToggleRowCompact .startToggleText b{font-size:9.5px}
+    .startToggleBodyWide .startToggleSub{display:none!important}
+    .startModalFooter{flex-wrap:nowrap;gap:4px}
+    .startBtnCancel,.startBtnKeep,.startBtnGo{font-size:11px!important;padding:9px 4px!important}
 }
 
 /* ===== V322d / V344: Home page layout — section rõ, gọn ===== */
@@ -21511,8 +21652,14 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   <button type="button" class="startModalClose" onclick="closeStartModal()">✕</button>
 </div>
 
-<p id="startFilterNote" class="hide startFilterNote"></p>
+<div class="startModalBody">
+<div class="startMainTabs" role="tablist">
+  <button type="button" class="startMainTab isActive" id="startTabDbtBtn" onclick="setStartModalTab(1)">1. Dạng BT</button>
+  <button type="button" class="startMainTab" id="startTabOptsBtn" onclick="setStartModalTab(2)">2. Tuỳ chọn</button>
+</div>
 
+<div id="startPaneDbt" class="startPane">
+<p id="startFilterNote" class="hide startFilterNote"></p>
 <!-- Chọn dạng BT (ẩn nếu không có) -->
 <div id="startDangBaiTapBox" class="hide startDbtSection">
   <div class="startSectionLabel">📋 Chọn dạng bài tập</div>
@@ -21522,10 +21669,14 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <button type="button" class="btn2 startSmallBtn" onclick="openDbtMergeModal(CURRENT_MADE)">🔀 Gộp BT</button>
   </div>
 </div>
+<p id="startDbtEmptyHint" class="muted startDbtEmptyHint hide">Không có danh sách dạng BT — sang tab <b>Tuỳ chọn</b> rồi Bắt đầu.</p>
+<button type="button" class="btn startNextTabBtn" onclick="setStartModalTab(2)">Tiếp: Tuỳ chọn →</button>
+</div>
 
+<div id="startPaneOpts" class="startPane hide">
 <!-- Tuỳ chọn xáo trộn — 3 toggle pill gọn -->
-<div class="startSectionLabel" style="margin-top:10px">🎮 Tuỳ chọn</div>
-<div class="startToggleRow">
+<div class="startSectionLabel startSectionLower" style="margin-top:4px">🎮 Tuỳ chọn</div>
+<div class="startToggleRow startToggleRowCompact">
   <label class="startToggle">
     <input type="checkbox" id="chkShuffleQ">
     <span class="startToggleBody">
@@ -21550,59 +21701,61 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 </div>
 
 <!-- Chế độ kiểm tra: HS không xem ĐA/LG -->
-<div class="startSectionLabel" style="margin-top:12px">📝 Kiểm tra</div>
-<label class="startToggle" style="margin-bottom:8px">
+<label class="startToggle startToggleWide startExamToggle" style="margin:6px 14px 4px">
   <input type="checkbox" id="chkExamMode" onchange="syncStartExamUi()">
-  <span class="startToggleBody">
+  <span class="startToggleBody startToggleBodyWide">
     <span class="startToggleIcon">🧪</span>
-    <span class="startToggleText"><b>Làm bài kiểm tra</b><span class="startToggleSub">Ẩn đáp án · lời giải · giao số câu</span></span>
+    <span class="startToggleText"><b>Kiểm tra</b><span class="startToggleSub">Ẩn ĐA/LG · chọn số câu</span></span>
   </span>
 </label>
-<div id="startExamPanel" class="hide" style="margin-top:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--bg)">
-  <div class="startToggleRow" style="margin-bottom:8px">
-    <button type="button" class="btn2 startExamTab" data-exam-tab="preset" onclick="setExamPickTab('preset')">Nút sẵn</button>
-    <button type="button" class="btn2 startExamTab" data-exam-tab="bytype" onclick="setExamPickTab('bytype')">Theo dạng</button>
-    <button type="button" class="btn2 startExamTab" data-exam-tab="pick" onclick="setExamPickTab('pick')">Tick chọn</button>
+<div id="startExamPanel" class="hide startExamPanel">
+  <div class="startExamTabs">
+    <button type="button" class="btn2 startExamTab startSmallBtn" data-exam-tab="preset" onclick="setExamPickTab('preset')">Sẵn</button>
+    <button type="button" class="btn2 startExamTab startSmallBtn" data-exam-tab="bytype" onclick="setExamPickTab('bytype')">Dạng</button>
+    <button type="button" class="btn2 startExamTab startSmallBtn" data-exam-tab="pick" onclick="setExamPickTab('pick')">Tick</button>
   </div>
   <div id="examTabPreset">
-    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-      <button type="button" class="btn2" onclick="setExamPreset(10)">10 câu</button>
-      <button type="button" class="btn2" onclick="setExamPreset(20)">20 câu</button>
-      <button type="button" class="btn2" onclick="setExamPreset(28)">28 câu</button>
-      <button type="button" class="btn2" onclick="setExamPreset('all')">Tất cả</button>
-      <input type="number" id="startNumQuestions" min="1" max="200" step="1" placeholder="hoặc số khác" style="width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="EXAM_PICK_ALL=false;EXAM_PICK_IDS=[];updateExamPickSummary()">
+    <div class="startExamPresetRow">
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamPreset(10)">10</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamPreset(20)">20</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamPreset(28)">28</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamPreset('all')">All</button>
+      <input type="number" id="startNumQuestions" class="startExamNum" min="1" max="200" step="1" placeholder="số" oninput="EXAM_PICK_ALL=false;EXAM_PICK_IDS=[];updateExamPickSummary()">
     </div>
-    <p class="muted" style="margin:6px 0 0;font-size:12px">Bốc ngẫu nhiên trong câu <b>đã duyệt</b> của đề/bộ lọc hiện tại.</p>
   </div>
   <div id="examTabByType" class="hide">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
-      <label style="font-size:12px">TN<br><input type="number" id="examSpecTn" min="0" max="99" value="10" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
-      <label style="font-size:12px">Đ/S<br><input type="number" id="examSpecDs" min="0" max="99" value="4" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
-      <label style="font-size:12px">TLN<br><input type="number" id="examSpecTln" min="0" max="99" value="6" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-weight:800" oninput="updateExamPickSummary()"></label>
-      <button type="button" class="btn2" onclick="setExamSpecPreset(10,4,6)">10+4+6</button>
-      <button type="button" class="btn2" onclick="setExamSpecPreset(18,4,6)">18+4+6</button>
+    <div class="startExamByTypeRow">
+      <label>TN <input type="number" id="examSpecTn" min="0" max="99" value="10" oninput="updateExamPickSummary()"></label>
+      <label>Đ/S <input type="number" id="examSpecDs" min="0" max="99" value="4" oninput="updateExamPickSummary()"></label>
+      <label>TLN <input type="number" id="examSpecTln" min="0" max="99" value="6" oninput="updateExamPickSummary()"></label>
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamSpecPreset(10,4,6)">10+4+6</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="setExamSpecPreset(18,4,6)">18+4+6</button>
     </div>
-    <p id="examByTypeCounts" class="muted" style="margin:6px 0 0;font-size:12px">Có trong đề: —</p>
+    <p id="examByTypeCounts" class="muted startExamMiniNote">Có trong đề: —</p>
   </div>
   <div id="examTabPick" class="hide">
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-      <button type="button" class="btn2" onclick="loadExamPoolList(true)">↻ Tải danh sách</button>
-      <button type="button" class="btn2" onclick="examPickSelectAll(true)">Chọn tất cả</button>
-      <button type="button" class="btn2" onclick="examPickSelectAll(false)">Bỏ chọn</button>
+    <div class="startExamPickTools">
+      <button type="button" class="btn2 startSmallBtn" onclick="loadExamPoolList(true)">↻ Tải</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="examPickSelectAll(true)">Tất cả</button>
+      <button type="button" class="btn2 startSmallBtn" onclick="examPickSelectAll(false)">Bỏ</button>
     </div>
-    <div id="examPickList" style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:6px;background:var(--surface)"></div>
+    <div id="examPickList" class="startExamPickList"></div>
   </div>
-  <p id="examPickSummary" style="margin:8px 0 0;font-size:13px;font-weight:700">Đã chọn: 0 câu</p>
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
-    <button type="button" class="btn" id="btnCreateExamLink" onclick="createAndCopyExamLink()">📋 Tạo &amp; chép link gửi học sinh</button>
+  <div class="startExamLinkRow">
+    <span id="examPickSummary" class="startExamSummary">0 câu</span>
+    <button type="button" class="btn startSmallBtn" id="btnCreateExamLink" onclick="createAndCopyExamLink()">📋 Chép link HS</button>
   </div>
-  <p class="muted" style="margin:6px 0 0;font-size:12px;line-height:1.4">ADMIN cấu hình xong → bấm nút này → gửi link Zalo/Messenger. Học sinh đăng nhập rồi mở link là vào đúng bài kiểm tra (không xem đáp án).</p>
+  <details class="startExamHelp"><summary>Hướng dẫn gửi link</summary><p class="muted">Cấu hình xong → chép link → gửi Zalo/Messenger. HS đăng nhập mở link vào bài (không xem đáp án tới khi nộp).</p></details>
 </div>
-<label id="startIncludePendingWrap" class="hide" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px">
+<label id="startIncludePendingWrap" class="hide startPendingWrap" style="display:flex;gap:8px;align-items:flex-start;margin:6px 14px 0;font-size:12px;line-height:1.35">
   <input type="checkbox" id="chkIncludePending">
-  <span>ADMIN: gồm cả câu <b>chưa duyệt</b> (soát đề) — tắt thì trùng VIP</span>
+  <span>ADMIN: gồm câu <b>chưa duyệt</b></span>
 </label>
-<p id="startExamHint" class="muted hide" style="margin:8px 0 0;font-size:12px;line-height:1.4">Học sinh không xem Đáp án/Lời giải cho đến khi nộp bài.</p>
+<p id="startExamHint" class="muted hide startExamHint">Ẩn ĐA/LG tới khi nộp bài.</p>
+<button type="button" class="btn2 startBackTabBtn" onclick="setStartModalTab(1)">← Về dạng BT</button>
+</div>
+
+</div><!-- /.startModalBody -->
 
 <!-- Footer nút -->
 <div class="startModalFooter">
@@ -23181,8 +23334,36 @@ function renderStartDangBaiTapPicker(made,preselect){
   list.innerHTML=html;
   let mbar=document.getElementById('startDbtMergeBar');
   if(mbar)mbar.classList.toggle('hide',!(USER.is_admin&&dbts.length>=1));
+
+  try{
+    let box=document.getElementById('startDangBaiTapBox');
+    let empty=document.getElementById('startDbtEmptyHint');
+    let pane=document.getElementById('startPaneDbt');
+    if(empty&&pane&&!pane.classList.contains('hide')){
+      empty.classList.toggle('hide',!(box&&box.classList.contains('hide')));
+    }
+  }catch(e){}
 }
-function closeStartModal(){let m=document.getElementById('startModal');if(m)m.classList.add('hide')}
+
+function setStartModalTab(tab){
+  tab=(tab===2)?2:1;
+  let p1=document.getElementById('startPaneDbt'),p2=document.getElementById('startPaneOpts');
+  let b1=document.getElementById('startTabDbtBtn'),b2=document.getElementById('startTabOptsBtn');
+  if(p1)p1.classList.toggle('hide',tab!==1);
+  if(p2)p2.classList.toggle('hide',tab!==2);
+  if(b1)b1.classList.toggle('isActive',tab===1);
+  if(b2)b2.classList.toggle('isActive',tab===2);
+  try{document.body.classList.toggle('start-tab-opts',tab===2)}catch(e){}
+  let box=document.getElementById('startDangBaiTapBox');
+  let empty=document.getElementById('startDbtEmptyHint');
+  if(empty){
+    let noDbt=!box||box.classList.contains('hide');
+    empty.classList.toggle('hide',!(tab===1&&noDbt));
+  }
+  let body=document.querySelector('#startModal .startModalBody');
+  if(body)try{body.scrollTop=0}catch(e){}
+}
+function closeStartModal(){try{document.body.classList.remove('start-tab-opts','start-exam-open')}catch(e){}let m=document.getElementById('startModal');if(m)m.classList.add('hide')}
 let EXAM_PICK_TAB='preset',EXAM_PICK_ALL=false,EXAM_PICK_IDS=[],EXAM_POOL_CACHE=null;
 function setExamPickTab(tab){
   EXAM_PICK_TAB=tab||'preset';
@@ -23275,7 +23456,7 @@ function examPickSelectAll(on){
   renderExamPickList();updateExamPickSummary();
 }
 function syncStartExamUi(){
-  let exam=!!(document.getElementById('chkExamMode')&&document.getElementById('chkExamMode').checked);
+  let exam=!!(document.getElementById('chkExamMode')&&document.getElementById('chkExamMode').checked);try{document.body.classList.toggle('start-exam-open',exam)}catch(e){}
   let panel=document.getElementById('startExamPanel');if(panel)panel.classList.toggle('hide',!exam);
   let hint=document.getElementById('startExamHint');if(hint)hint.classList.toggle('hide',!exam);
   let pend=document.getElementById('startIncludePendingWrap');
