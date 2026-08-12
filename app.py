@@ -208,7 +208,9 @@ GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
 # GHI CHÚ: toàn bộ Chat AI (bóng chat học sinh, Trợ lý AI, chat trang JSON) đã
 # được gỡ. Công cụ AI của ADMIN (Soát đề, sinh lời giải, LaTeX) vẫn giữ nguyên.
 # =============================================================================
-SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "90") or 90), 300))
+# Sheet Cau_Hoi ~9k–10k dòng: Render Free cần >90s. Local nhanh nên thấy đủ chương (IV…),
+# còn bản deploy timeout sớm → thiếu Chương IV / câu mới.
+SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC", "180") or 180), 300))
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
@@ -34807,10 +34809,16 @@ def api_sync():
         f"⚠ Có {unknown} câu cột Dang không rõ — vào ADMIN → Sửa câu → chọn lại Dạng câu."
     ) if unknown else ""
 
+    prev_n = len(qs_cache)
     return jsonify({
         "ok":      True,
         "loading": True,
-        "message": "Đã bắt đầu đồng bộ Google Sheet ở nền. Trang sẽ tự cập nhật sau vài giây.",
+        "message": (
+            "Đã bắt đầu đồng bộ Google Sheet ở nền. Sheet lớn (~9–10k dòng) có thể mất "
+            "1–3 phút trên Render — đợi số câu hỏi trên header tăng đủ rồi Ctrl+F5. "
+            f"(RAM trước sync: {prev_n} câu)."
+        ),
+        "prev_count_questions": prev_n,
         # ── Thống kê dạng bài (từ cache trước sync) ──────────────────────────
         "dang_counts":        dang_report.get("counts", {}),
         "dang_unknown_count": unknown,
