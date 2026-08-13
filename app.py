@@ -3403,6 +3403,65 @@ YOUTUBE_LINKS_FILE = os.path.join(APP_DIR, "data", "youtube_links.json")
 MODEL_APPS_FILE = os.path.join(APP_DIR, "data", "model_apps.json")
 MODEL_APP_CODE_MAX = 120000
 
+
+def sanitize_pyodide_model_code(code: Any) -> str:
+    """Chuẩn hóa mã AI để chạy trên Pyodide (numpy + matplotlib)."""
+    if isinstance(code, list):
+        code = "\n".join(str(x) for x in code)
+    s = str(code or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not s:
+        return ""
+    # Gỡ fence markdown nếu AI bọc ngoài JSON
+    s = re.sub(r"^```(?:python|py)?\s*\n?", "", s, flags=re.I)
+    s = re.sub(r"\n?```\s*$", "", s)
+    s = s.strip()
+    # Thư viện không có trên Pyodide app
+    banned = (
+        "scipy", "pandas", "sympy", "sklearn", "tensorflow", "torch",
+        "pygame", "tkinter", "PIL", "cv2", "requests", "seaborn", "plotly",
+        "manim", "numba", "jax",
+    )
+    lines_out: List[str] = []
+    for line in s.split("\n"):
+        low = line.strip().lower()
+        if low.startswith("import ") or low.startswith("from "):
+            if any(re.search(rf"\b{re.escape(b)}\b", low) for b in banned):
+                lines_out.append("# " + line + "  # không hỗ trợ trên app — đã bỏ")
+                continue
+        # plt.show() trên Agg không vẽ — app tự chụp figure
+        line2 = re.sub(r"\bplt\.show\s*\(\s*\)", "pass  # app tự hiện đồ thị", line)
+        line2 = re.sub(r"\bpyplot\.show\s*\(\s*\)", "pass  # app tự hiện đồ thị", line2)
+        # chặn I/O nguy hiểm
+        if re.search(r"\b(input|open|exec|eval|__import__)\s*\(", line2):
+            lines_out.append("# " + line2 + "  # đã chặn trên app")
+            continue
+        lines_out.append(line2)
+    out = "\n".join(lines_out).strip()
+    if len(out) > MODEL_APP_CODE_MAX:
+        out = out[:MODEL_APP_CODE_MAX]
+    return out
+
+
+def extract_model_code_from_ai_obj(raw: Dict[str, Any]) -> str:
+    """Lấy mã Python từ nhiều kiểu JSON AI hay trả."""
+    if not isinstance(raw, dict):
+        return ""
+    for key in ("code", "python", "source", "script", "py"):
+        v = raw.get(key)
+        if isinstance(v, list):
+            joined = "\n".join(str(x) for x in v).strip()
+            if joined:
+                return sanitize_pyodide_model_code(joined)
+        s = str(v or "").strip()
+        if s:
+            return sanitize_pyodide_model_code(s)
+    # đôi khi nhét trong markdown field
+    for key in ("content", "text", "answer"):
+        s = str(raw.get(key) or "")
+        m = re.search(r"```(?:python|py)?\s*([\s\S]+?)```", s, flags=re.I)
+        if m:
+            return sanitize_pyodide_model_code(m.group(1))
+    return ""
 DELETED_QIDS_FILE = os.path.join(APP_DIR, "data", "deleted_question_ids.json")
 _DELETED_QIDS_LOCK = threading.Lock()
 _DELETED_QIDS_CACHE: Optional[set] = None
@@ -29504,9 +29563,10 @@ async function ldvlMhAiGenerate(sub,alsoSave){
   try{
     if(btn){btn.disabled=true;btn.textContent='⏳ AI đang tạo…';}
     let body={sub:sub,topic:topic,lop:lop,quyen:quyen};
-    let j=await adminAiFetch('/api/admin/ai-generate-model',body,{timeoutMs:90000});
+    let j=await adminAiFetch('/api/admin/ai-generate-model',body,{timeoutMs:100000});
     let it=ldvlMhNormItem(Object.assign({kind:'python',quyen:quyen},j.item||{}));
-    if(!it.code){alert('AI chưa trả mã Python.');return;}
+    it.code=ldvlMhSanitizeCode(it.code||'');
+    if(!it.code){alert('AI chưa trả mã Python.\n'+(j.raw?('Gợi ý raw: '+String(j.raw).slice(0,180)):'Thử lại hoặc đổi Gemini/Claude.'));return;}
     let set=function(k,v){let el=document.getElementById(pfx+'-'+k);if(el)el.value=v;};
     set('name',it.name||topic);set('desc',it.desc||'');set('formula',it.formula||'');set('kind','python');set('code',it.code||'');set('url','');
     if(topicEl&&!topicEl.value.trim())topicEl.value=it.name||topic;
@@ -29523,10 +29583,11 @@ async function ldvlMhAiGenerate(sub,alsoSave){
     if(alsoSave){
       ldvlMhAdd(sub);
     }else{
-      alert('✅ AI ('+(j.provider_used||adminAiProviderShort(adminChosenAiProvider()))+') đã điền tên / công thức / mã Python.\nXem lại rồi bấm «💾 Lưu mô hình».');
+      alert('✅ AI ('+(j.provider_used||adminAiProviderShort(adminChosenAiProvider()))+') đã điền tên / công thức / mã Python.\nXem lại rồi bấm «💾 Lưu mô hình» — sau đó mở để chạy trong app.');
     }
   }catch(e){
-    alert('AI tạo mô hình lỗi: '+(typeof apiNetworkErrorMsg==='function'?apiNetworkErrorMsg(e):(e.message||e)));
+    let msg=typeof apiNetworkErrorMsg==='function'?apiNetworkErrorMsg(e):(e.message||e);
+    alert('AI tạo mô hình lỗi: '+msg+'\n\nGợi ý:\n• Kiểm tra Key AI (Gemini/Claude)\n• Đổi nhà AI rồi thử lại\n• Chủ đề ngắn gọn hơn (vd: Ném xiên lớp 10)');
   }finally{
     if(btn){btn.disabled=false;btn.textContent=old||(alsoSave?'🤖 AI tạo & lưu':'🤖 AI tạo mô hình');}
   }
@@ -29813,6 +29874,20 @@ function ldvlMhBuildParamUi(code){
   return params;
 }
 window.ldvlMhInsertPi=ldvlMhInsertPi;
+function ldvlMhSanitizeCode(code){
+  let s=String(code||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+  if(!s)return '';
+  s=s.replace(/^```(?:python|py)?\s*\n?/i,'').replace(/\n?```\s*$/,'');
+  let banned=/^\s*(import|from)\s+(scipy|pandas|sympy|sklearn|tensorflow|torch|pygame|tkinter|PIL|cv2|requests|seaborn|plotly|manim|numba|jax)\b/i;
+  let lines=s.split('\n').map(function(line){
+    if(banned.test(line))return '# '+line+'  # không hỗ trợ trên app';
+    line=line.replace(/\bplt\.show\s*\(\s*\)/g,'pass  # app tự hiện đồ thị');
+    line=line.replace(/\bpyplot\.show\s*\(\s*\)/g,'pass  # app tự hiện đồ thị');
+    if(/\b(input|open|exec|eval|__import__)\s*\(/.test(line))return '# '+line+'  # đã chặn';
+    return line;
+  });
+  return lines.join('\n').trim();
+}
 async function ldvlMhRunCurrent(){
   let cur=window.LDVL_MH_CUR;
   if(!cur)return;
@@ -29828,6 +29903,7 @@ async function ldvlMhRunCurrent(){
   let isAdmin=!!(USER&&USER.is_admin);
   /* Học sinh không xem code — chỉ chạy bản trong bộ nhớ + tham số */
   let code=isAdmin&&codeEl?codeEl.value:(cur.code||'');
+  code=ldvlMhSanitizeCode(code);
   let params=ldvlMhParseParams(code);
   if(params.length){
     code=ldvlMhApplyParamsToCode(code,params);
@@ -29862,7 +29938,15 @@ pi = float(np.pi)
 plt.close('all')
 plt.rcParams.update({'figure.figsize': (${figw}, ${figh}), 'figure.dpi': ${dpi}, 'savefig.dpi': ${dpi}})
 `);
-    await py.runPythonAsync(code);
+    try{
+      await py.runPythonAsync(code);
+    }catch(runErr){
+      let em=String((runErr&&runErr.message)||runErr||'');
+      if(/ModuleNotFoundError|No module named/i.test(em)){
+        throw new Error(em+'\n\nApp chỉ hỗ trợ numpy + matplotlib. Sửa lại mã (bỏ scipy/pandas/…) rồi Chạy lại.');
+      }
+      throw runErr;
+    }
     let figs=py.runPython(`
 import io, base64, matplotlib.pyplot as plt
 _out=[]
@@ -29887,7 +29971,7 @@ _out
     }
     ldvlMhSetStatus(statusEl,'✅ Đã chạy xong — đổi số rồi bấm Chạy lại.');
     if(outEl&&!outEl.textContent.trim()&&!(arr&&arr.length)){
-      outEl.textContent='(Không có đồ thị — kiểm tra plt.show() trong mã)';
+      outEl.textContent='(Không có đồ thị — kiểm tra plt.plot / plt.figure trong mã)';
       outEl.classList.remove('hide');
     }
     if(outEl&&outEl.textContent.trim())outEl.classList.remove('hide');
@@ -29899,7 +29983,7 @@ _out
     if(plotEl)plotEl.innerHTML='';
     if(outEl){
       outEl.classList.remove('hide');
-      outEl.textContent=msg+'\n\nGợi ý điện thoại:\n• Mở bằng Chrome / Safari (không mở trong Zalo/FB)\n• Giữ Wi‑Fi, đợi lần đầu 20–60 giây\n• Bấm nút Chạy ở dưới màn hình để thử lại';
+      outEl.textContent=msg+'\n\nGợi ý:\n• Mở Chrome/Safari (không mở trong Zalo/FB)\n• Giữ Wi‑Fi, lần đầu chờ 20–60s tải Python\n• Mã chỉ dùng numpy + matplotlib\n• ADMIN: mở mã → bỏ import lạ → Chạy lại';
     }
   }
 }
@@ -34231,7 +34315,7 @@ def _normalize_model_app_item(raw: Any) -> Optional[Dict[str, Any]]:
         kind = "python"
     if kind == "url":
         kind = "embed"
-    code = str(raw.get("code") or "")
+    code = sanitize_pyodide_model_code(raw.get("code") or "")
     if len(code) > MODEL_APP_CODE_MAX:
         code = code[:MODEL_APP_CODE_MAX]
     url = clean(raw.get("url", ""))
@@ -37596,40 +37680,39 @@ def api_admin_ai_generate_model():
         admin_ai_require_provider_keys(force, ant)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    lop_hint = lop or "theo chủ đề"
     sys_prompt = (
-        "Bạn là giáo viên THPT Việt Nam, chuyên mô hình hóa số bằng Python (numpy, matplotlib). "
-        "Chỉ trả JSON hợp lệ, không markdown, không giải thích ngoài JSON."
+        "Bạn là giáo viên THPT Việt Nam, chuyên mô hình hóa / mô phỏng số bằng Python. "
+        "Chỉ trả đúng 1 JSON object, không markdown ngoài JSON, không giải thích."
     )
     user_prompt = "\n".join(
         [
-            f"Tạo MỘT ứng dụng mô hình hóa môn {mon_label}"
+            f"Tạo MỘT ứng dụng mô hình hóa/mô phỏng môn {mon_label}"
             + (f", lớp {lop}" if lop else "")
-            + ".",
+            + " chạy ngay trong trình duyệt (Pyodide).",
             f"Chủ đề / yêu cầu: {topic}",
             "",
-            "Trả đúng JSON object với các khóa:",
-            '{"name":"...","desc":"...","formula":"...","lop":"...","code":"..."}',
+            'Trả đúng JSON: {"name":"...","desc":"...","formula":"...","lop":"...","code":"..."}',
             "",
-            "Quy tắc:",
-            "- name: tên ngắn tiếng Việt (≤80 ký tự).",
-            "- desc: 1 câu mô tả học sinh thấy gì khi chạy.",
-            "- formula: công thức chính dạng LaTeX ngắn trong $...$ (VD: $y=a\\\\sin(bx+c)$). Có thể để chuỗi rỗng nếu không có.",
-            "- lop: lớp 10/11/12 (ưu tiên " + (lop or "theo chủ đề") + ").",
-            "- code: mã Python chạy được trên Pyodide: chỉ dùng numpy + matplotlib.pyplot.",
-            "- Đặt tham số số gần đầu file (a=..., v0=..., ...) để học sinh chỉnh.",
-            "- Dùng plt.show() hoặc plt.figure; có print kết quả số nếu phù hợp.",
-            "- Không import thư viện khác ngoài numpy/matplotlib.",
-            "- Không dùng input(); không truy cập mạng/file.",
-            "- Công thức trong code có thể dùng np.pi; bình luận tiếng Việt ngắn.",
+            "Quy tắc bắt buộc cho khóa code:",
+            "- Chỉ import numpy và matplotlib.pyplot (có thể `import numpy as np` / `import matplotlib.pyplot as plt`).",
+            "- CẤM: scipy, pandas, sympy, seaborn, plotly, pygame, tkinter, requests, PIL, animation GUI.",
+            "- Đặt tham số số ở ĐẦU file dạng dòng riêng: v0 = 10, alpha = 45, a = 1 (để học sinh chỉnh).",
+            "- Vẽ bằng plt.figure / plt.plot / plt.scatter…; có thể gọi plt.show() (app sẽ tự hiện ảnh).",
+            "- Không dùng input(), open(), file, mạng.",
+            "- Code ngắn gọn, chạy được, có chú thích tiếng Việt ngắn.",
+            "- name ≤ 80 ký tự tiếng Việt; desc 1 câu; formula LaTeX trong $...$ hoặc rỗng.",
+            f"- lop: 10 hoặc 11 hoặc 12 (ưu tiên {lop_hint}).",
+            "- Trong JSON, ký tự trong code phải escape đúng (\\n cho xuống dòng).",
         ]
     )
     try:
         txt, provider, model, _ki = admin_ai_call_text(
             sys_prompt,
             user_prompt,
-            max_tokens=3500,
-            temp=0.25,
-            timeout=70,
+            max_tokens=6000,
+            temp=0.2,
+            timeout=85,
             force_provider=force,
             allow_gpt_fallback=allow,
             extra_anthropic_key=ant,
@@ -37638,33 +37721,53 @@ def api_admin_ai_generate_model():
         return admin_ai_quota_json(e)
     except Exception as e:
         return jsonify({"error": str(e) or "AI không tạo được mô hình."}), 400
-    raw = _json_loads_ai_lenient(txt) if txt else None
+    if not clean(txt):
+        return jsonify({"error": "AI không trả nội dung. Thử lại hoặc đổi Gemini/Claude/GPT."}), 400
+    raw = _json_loads_ai_lenient(txt)
     if isinstance(raw, list) and raw and isinstance(raw[0], dict):
         raw = raw[0]
     if not isinstance(raw, dict):
-        # Thử tách object JSON thô từ markdown fence
         mobj = re.search(r"\{[\s\S]*\}", str(txt or ""))
         if mobj:
-            try:
-                raw = _json_loads_ai_lenient(mobj.group(0))
-            except Exception:
-                raw = None
-        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
-            raw = raw[0]
+            raw = _json_loads_ai_lenient(mobj.group(0))
+            if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+                raw = raw[0]
     if not isinstance(raw, dict):
-        return jsonify({"error": "AI không trả JSON hợp lệ.", "raw": (txt or "")[:500]}), 400
+        # Fallback: lấy khối ```python nếu AI không trả JSON
+        mcode = re.search(r"```(?:python|py)?\s*([\s\S]+?)```", str(txt or ""), flags=re.I)
+        if mcode:
+            code_fb = sanitize_pyodide_model_code(mcode.group(1))
+            if code_fb:
+                raw = {
+                    "name": topic[:80],
+                    "desc": f"Mô phỏng {topic}",
+                    "formula": "",
+                    "lop": lop,
+                    "code": code_fb,
+                }
+    if not isinstance(raw, dict):
+        return jsonify({
+            "error": "AI không trả JSON hợp lệ. Bấm lại hoặc đổi nhà AI (Gemini/Claude).",
+            "raw": (txt or "")[:800],
+        }), 400
     name = clean(raw.get("name") or topic)[:120]
-    desc = clean(raw.get("desc") or "")[:300]
+    desc = clean(raw.get("desc") or raw.get("description") or "")[:300]
     formula = clean(raw.get("formula") or raw.get("cong_thuc") or "")[:800]
-    code = str(raw.get("code") or "").strip()
+    code = extract_model_code_from_ai_obj(raw)
     out_lop = clean(raw.get("lop") or lop) or lop
     if not code:
-        return jsonify({"error": "AI chưa trả mã Python.", "raw": (txt or "")[:500]}), 400
-    if len(code) > MODEL_APP_CODE_MAX:
-        code = code[:MODEL_APP_CODE_MAX]
+        return jsonify({
+            "error": "AI chưa trả mã Python (khóa code trống). Thử lại / đổi AI.",
+            "raw": (txt or "")[:800],
+        }), 400
+    # Cảnh báo nhẹ nếu thiếu matplotlib/numpy nhưng vẫn cho lưu
+    low = code.lower()
+    if "matplotlib" not in low and "pyplot" not in low and "plt." not in low:
+        # vẫn OK nếu chỉ print số; không chặn
+        pass
     item = {
         "name": name,
-        "desc": desc,
+        "desc": desc or f"Mô phỏng: {name}",
         "formula": formula,
         "lop": out_lop,
         "kind": "python",
