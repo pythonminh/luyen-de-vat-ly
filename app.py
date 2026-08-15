@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V386_SAMSUNG_SCROLL_2026_07_12"
+APP_VERSION = "V387_DBT_FULLNAME_2026_08_14"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -552,6 +552,11 @@ def clean(v: Any) -> str:
     if re.fullmatch(r"\d+\.0", s):
         s = s[:-2]
     return s
+
+
+def one_line(v: Any) -> str:
+    """Gộp xuống dòng / khoảng trắng thừa — dùng cho tên dạng BT, không đụng CauHoi."""
+    return re.sub(r"\s+", " ", clean(v)).strip()
 
 
 # ------------------------------------------------------------------
@@ -2658,11 +2663,11 @@ def dangbaitap_matches(q: Dict[str, Any], dbt_filter: str) -> bool:
         key_norm("chưa gán"),
     }:
         return dangbaitap_is_unclassified(q)
-    qv = clean(q.get("DangBaiTap", ""))
+    qv = one_line(q.get("DangBaiTap", ""))
     if not qv:
         return False
     qn = key_norm(qv)
-    fn = key_norm(fn)
+    fn = key_norm(one_line(fn))
     return qn == fn or fn in qn or qn in fn
 
 
@@ -3727,6 +3732,7 @@ def resolve_user_status(raw: Dict[str, Any]) -> str:
 
 def canonical_question(row: Dict[str, Any]) -> Dict[str, str]:
     q = {f: get_field(row, f) for f in QUESTION_FIELDS}
+    q["DangBaiTap"] = one_line(q.get("DangBaiTap", ""))
     for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai"):
         q[f] = normalize_latex_text(q.get(f, ""))
     da = clean(q.get("DapAn", ""))
@@ -3755,6 +3761,7 @@ def client_question_to_internal(raw: Any) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     for f in QUESTION_FIELDS:
         out[f] = clean(raw.get(f, ""))
+    out["DangBaiTap"] = one_line(out.get("DangBaiTap", ""))
     out["Dang"] = effective_dang(out)
     out["NangLucVatLy"] = norm_nang_luc_vat_ly(out.get("NangLucVatLy", ""))
     out["HinhAnh"] = normalize_image_src(out.get("HinhAnh"))
@@ -5654,6 +5661,7 @@ class SheetStore:
 
         q["Dang"] = effective_dang(q)
         q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
+        q["DangBaiTap"] = one_line(q.get("DangBaiTap", ""))
 
         if not clean(q.get("CauHoi")):
             return None
@@ -6495,7 +6503,7 @@ class SheetStore:
                 g["BoDeSet"].add(q["BoDe"])
             if q.get("De"):
                 g["DeSet"].add(q["De"])
-            dbt = clean(q.get("DangBaiTap", ""))
+            dbt = one_line(q.get("DangBaiTap", ""))
             if dbt and not _is_bad_dangbaitap_value(dbt):
                 bump_count(g["DangBaiTapCounts"], dbt)
                 dbt_key = dbt
@@ -8910,7 +8918,7 @@ class SheetStore:
                 a1u = gspread.utils.rowcol_to_a1(row, ngay_col0 + 1)
                 batch.append({"range": a1u, "values": [[stamp]]})
                 q["NgayCapNhat"] = stamp
-            q["DangBaiTap"] = dbt
+            q["DangBaiTap"] = one_line(dbt)
             out_items.append({
                 "index": up.get("index"),
                 "row": row,
@@ -9083,7 +9091,7 @@ class SheetStore:
             batch.append({"range": a1, "values": [[new_name]]})
             src = old_canon[kn]
             merged_from[src] = merged_from.get(src, 0) + 1
-            q["DangBaiTap"] = new_name
+            q["DangBaiTap"] = one_line(new_name)
             out_items.append({"row": row, "ID": clean(q.get("ID", "")), "from": src, "DangBaiTap": new_name})
         if not batch:
             raise RuntimeError("Không có câu nào mang các tên đã chọn trong chuyên đề này")
@@ -18207,7 +18215,10 @@ body.fullde-mode:not(.mobile-quiz-ui) #solution mjx-container{max-width:100%!imp
 .startDbtOpt:hover{background:var(--btn2-bg)!important;border-color:#93c5fd!important}
 .startDbtOpt input{width:14px;height:14px;flex-shrink:0;margin:2px 0 0;accent-color:#1d4ed8}
 .startDbtOpt span{min-width:0;flex:1}
-.startDbtOpt b{font-size:12.5px;font-weight:800;word-break:break-word}
+.startDbtOpt .startDbtBody{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.startDbtOpt b,.startDbtName{font-size:12.5px;font-weight:800;word-break:break-word;white-space:normal;overflow:visible;line-height:1.35}
+.startDbtMeta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;font-weight:700;color:var(--muted);line-height:1.3}
+.bookDbtText{min-width:0!important;overflow:visible!important;text-overflow:unset!important;white-space:normal!important;word-break:break-word!important;line-height:1.35!important}
 .startDbtUpdated,.bookDbtUpdated{
   display:inline-block;margin-left:4px;font-size:10px;font-weight:700;
   color:#1d4ed8;opacity:1;white-space:nowrap;
@@ -21370,6 +21381,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <button type="button" onclick="dedupeHinhAnhImages();closeAdminMoreMenu()">🖼 Gộp ảnh trùng</button>
           <button type="button" onclick="window.open('/admin/json','_blank');closeAdminMoreMenu()">📦 Đề JSON</button>
           <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
+          <button type="button" onclick="downloadBankJson();closeAdminMoreMenu()">📦 Xuất JSON toàn bộ Sheet</button>
         </div>
       </span>
 
@@ -22535,7 +22547,9 @@ function clearOfflineDecksContainingIds(ids){let set=new Set((ids||[]).map(x=>St
 function offlineGradeOne(q,ans){let dang=typeof resolveDang==='function'?resolveDang(q):String((q&&q.Dang)||'Trắc nghiệm');let cor=String((q&&q.DapAn)||'').trim(),chosen=String(ans==null?'':ans).trim();if(dang==='Trắc nghiệm'){let c=offlineNormLetter(cor),ch=offlineNormLetter(chosen);return{ok:!!(c&&ch&&c===ch),correct:c,chosen:ch,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}if(dang==='Đúng sai'){let corr=parseTfClient(cor),sel=parseTfClient(ans),bitsC=[],bitsS=[];for(let i=0;i<4;i++){let L='ABCD'[i];if(!String(q[L]||'').trim())continue;bitsC.push(corr[i]||'');bitsS.push(sel[i]||'')}let ok=bitsC.length>=2&&bitsC.every(Boolean)&&bitsS.every(Boolean)&&bitsC.join(',')===bitsS.join(',');return{ok,correct:cor,chosen:bitsS.join(','),DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}if(dang==='Trả lời ngắn'){let cn=offlineParseFloatVn(cor),un=offlineParseFloatVn(chosen),tol=offlineParseFloatVn(q.SaiSo);if(tol==null)tol=0;if(cn!=null&&un!=null)return{ok:Math.abs(cn-un)<=tol+1e-12,correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''};return{ok:normText(cor)===normText(chosen),correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}return{ok:false,correct:cor,chosen,DapAn:q.DapAn||'',LoiGiai:q.LoiGiai||''}}
 function routeCachedApi(url,opts){if(window.LDVL_OFFLINE)return null;let method=String((opts&&opts.method)||'GET').toUpperCase();let path=String(url||'').split('?')[0];let body={};try{body=JSON.parse((opts&&opts.body)||'{}')}catch(e){}if(path==='/api/start'&&method==='POST'){let made=String(body.made||body.MaDe||'').trim();let hit=offlineCacheDeck(made);if(!hit||!hit.deck)return{error:'Đề «'+made+'» chưa lưu offline. Khi có mạng, bấm 📴 Lưu offline ở mục lục.'};let deck=Object.assign({},hit.deck);let sid=deck.sid||('off_'+made);LDVL_OFFLINE_SESSIONS[sid]=deck;return Object.assign({},deck,{sid})}if(path==='/api/check-one'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn — mở lại đề.'};let idx=parseInt(body.index,10)||0,qs=ses.questions||[],q=qs[idx];if(!q)return{error:'Câu không hợp lệ'};let g=offlineGradeOne(q,body.answer);return{index:idx,ID:q.ID,Dang:q.Dang,ok:g.ok,correct:g.correct,chosen:g.chosen,DapAn:g.DapAn,LoiGiai:g.LoiGiai}}if(path==='/api/submit'&&method==='POST'){let ses=LDVL_OFFLINE_SESSIONS[body.sid];if(!ses)return{error:'Phiên làm bài hết hạn.'};let qs=ses.questions||[],answers=body.answers||{},results=[],correct=0,auto=0;for(let i=0;i<qs.length;i++){let q=qs[i],dang=typeof resolveDang==='function'?resolveDang(q):String(q.Dang||'');if(dang==='Tự luận')continue;auto++;let g=offlineGradeOne(q,answers[i]);if(g.ok)correct++;results.push({index:i,ok:g.ok,correct:g.correct,chosen:g.chosen})}return{score:auto?Math.round(correct/auto*100)/10:0,correct_count:correct,auto_count:auto,results}}return null}
 async function saveExamOffline(made){made=String(made||'').trim();if(!made)return;let item=CATALOG.find(x=>x.MaDe===made);if(!item){alert('Không tìm thấy đề.');return}if(!confirm('Lưu đề «'+examDisplayTitle(item)+'» vào máy để luyện khi mất mạng?\n\nCó thể lưu nhiều đề — app tự dùng bản đã lưu.'))return;let btn=window.event&&window.event.target;if(btn&&btn.tagName==='BUTTON'){btn.disabled=true;btn.textContent='⏳ Đang lưu...'}try{let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({made,shuffle_questions:false,shuffle_options:false,group_by_dang:true})});let cache=readOfflineCache();cache.decks=cache.decks||{};cache.decks[made]={deck:j,item:item,saved_at:new Date().toISOString()};cache.saved_at=cache.saved_at||{};cache.saved_at[made]=cache.decks[made].saved_at;if(!writeOfflineCache(cache))throw new Error('Bộ nhớ máy đầy — hãy xóa bớt đề offline cũ.');alert('✅ Đã lưu offline:\n'+examDisplayTitle(item)+'\n\nKhi mất mạng, mở lại đề này — app dùng bản đã lưu.')}catch(e){alert('Lưu offline thất bại: '+(e.message||e))}finally{if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='📴 Lưu offline'}}}
-async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN được tải gói offline APK.');return}if(!confirm('Tải ZIP gói offline (toàn bộ đề)?\n\nCó thể chờ vài phút nếu nhiều đề.'))return;try{let r=await fetch('/api/admin/offline-pack',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='luyen-de-offline.zip';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải gói offline ZIP.\n\nGiải nén vào assets Android hoặc mở index.html trong gói.')}catch(e){alert('Tải gói offline thất bại: '+(e.message||e))}}
+async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN được tải gói offline APK.');return}if(!confirm('Tải ZIP gói offline (toàn bộ đề + JSON bank)?\n\nNên chạy trên máy mạnh / hoặc python build_offline_pack.py nếu Sheet rất lớn.\nCó thể chờ vài phút.'))return;try{let r=await fetch('/api/admin/offline-pack',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='luyen-de-offline.zip';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải gói offline ZIP.\n\n• www/ → nhét vào APK (Capacitor/Android assets)\n• pack/bank.json = toàn bộ câu JSON\n• Xem README.txt trong ZIP')}catch(e){alert('Tải gói offline thất bại: '+(e.message||e))}}
+async function downloadBankJson(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}if(!confirm('Xuất JSON toàn bộ câu hỏi đang nạp từ Google Sheet?\n\nDùng để nhét APK hoặc đặt QUESTION_SOURCE=JSON_ONLY (đọc mượt, không lag Sheet).'))return;try{let r=await fetch('/api/admin/export-bank-json',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='bank_full.json';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải '+fn+'.\n\nCopy vào data/json_questions/bank_full.json rồi đặt QUESTION_SOURCE=JSON_ONLY nếu muốn server đọc JSON thay Sheet.')}catch(e){alert('Xuất JSON thất bại: '+(e.message||e))}}
+window.downloadBankJson=downloadBankJson;
 function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));let latexBtn=(USER&&USER.is_admin)?`<button type="button" class="btnShare" onclick="downloadExamLatex('${madeEsc}')" title="Tải file .tex (\\begin{ex}...\\choiceTF...\\loigiai)">📄 Xuất LaTeX</button>`:'';return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button>${latexBtn}</span></div>`}
 function latexExportDownloadUrl(params){let p=new URLSearchParams();Object.keys(params||{}).forEach(function(k){let v=params[k];if(v!=null&&String(v).trim()!=='')p.set(k,String(v))});p.set('download','1');return '/api/latex/export?'+p.toString()}
 function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made||x.GroupKey===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
@@ -22784,9 +22798,10 @@ function restoreLatexTabular(s){return String(s||'').replace(/@@LTXTAB(\d+)@@/g,
 function normalizeDisplayBreaks(s){return String(s||'').replace(/\\r\\n/g,'\\n').replace(/\\n(?=\s*(?:[0-9A-ZÀ-ỸĐ]|[-•]))/g,'\n')}
 function finalizeRichTokens(s){return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>').replace(/@@B@@/g,'<b>').replace(/@@\/B@@/g,'</b>').replace(/@@I@@/g,'<i>').replace(/@@\/I@@/g,'</i>').replace(/@@U@@/g,'<u>').replace(/@@\/U@@/g,'</u>').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
 function renderRichText(s){s=normalizeDisplayBreaks(String(s||'').trim());s=s.replace(/\?\?\s*/g,'');s=convertLatexTabular(s);s=stripLatexListMarkup(s);s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'<br>• ');s=applyLatexTextFmtOutsideMath(s);s=applyMarkdownBoldOutsideMath(s);s=escHtmlKeepMath(s);s=restoreLatexTabular(s);return finalizeRichTokens(s)}
-function escAttr(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function shortText(s,n=90){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n-1)+'…':s}
-function normText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d')}
+function oneLineText(s){return String(s||'').replace(/[\r\n\u00a0]+/g,' ').replace(/\s+/g,' ').trim()}
+function escAttr(s){return oneLineText(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function shortText(s,n=90){s=oneLineText(s);return s.length>n?s.slice(0,n-1)+'…':s}
+function normText(s){return oneLineText(String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d'))}
 function normDangClient(s){let t=String(s||'').replace(/[/\\]+/g,' ');let k=normText(t).replace(/[\/\\-]/g,' ');let k2=k.replace(/\s+/g,'');if(/dung\s*sai|dungsai|d\/s|true\s*false|truefalse/.test(k)||k2.includes('ds')||/\b(ds|tf)\b/.test(k))return 'Đúng sai';if(/tra\s*loi\s*ngan|short|tln|shortans/.test(k))return 'Trả lời ngắn';if(/tu\s*luan|essay/.test(k)||k==='tl')return 'Tự luận';if(/trac\s*nghiem|tracnghiem|mcq|multiple\s*choice/.test(k)||k==='tn'||k==='tn4')return 'Trắc nghiệm';return 'Trắc nghiệm'}
 function tfTokenClient(p){let t=normText(p);if(!String(p||'').trim())return '';if(String(p).trim()==='Đ'||String(p).trim()==='D'||t==='d'||t==='dung'||t==='true')return 'Đ';if(String(p).trim()==='S'||t==='s'||t==='sai'||t==='false')return 'S';return ''}
 function parseTfClient(v){let raw=String(v||'').trim();if(!raw)return [];let parts=raw.split(/[,;|/\n]+/).map(x=>x.trim()).filter(Boolean);if(parts.length>=2){let out=parts.map(tfTokenClient);if(out.filter(x=>x==='Đ'||x==='S').length>=2)return out}let s=raw.toUpperCase().replace(/\u0110/g,'D').replace(/\u0111/g,'D').replace(/DUNG/g,'D').replace(/TRUE/g,'D').replace(/SAI/g,'S').replace(/FALSE/g,'S');return (s.match(/[DSĐ]/g)||[]).map(c=>(c==='S'?'S':'Đ')).slice(0,4)}
@@ -23645,8 +23660,22 @@ function catalogDbtCounts(item){
   item=item||{};
   let fc=(item.FilterCounts||{}).dangbaitap||{};
   let pairs;
-  if(fc&&typeof fc==='object'&&!Array.isArray(fc))pairs=Object.entries(fc).map(([k,v])=>[String(k||''),parseInt(v,10)||0]).filter(x=>x[0]&&x[0]!==DBT_UNCLASSIFIED);
-  else pairs=v246UniqTextFromEntries([item],'DangBaiTap',99).map(d=>[d,0]);
+  if(fc&&typeof fc==='object'&&!Array.isArray(fc)){
+    let mp={};
+    Object.entries(fc).forEach(([k,v])=>{
+      let name=oneLineText(k);
+      if(!name||name===DBT_UNCLASSIFIED)return;
+      mp[name]=(mp[name]||0)+(parseInt(v,10)||0);
+    });
+    pairs=Object.entries(mp);
+  }else{
+    let mp={};
+    v246UniqTextFromEntries([item],'DangBaiTap',99).forEach(d=>{
+      let name=oneLineText(d);
+      if(name)mp[name]=mp[name]||0;
+    });
+    pairs=Object.entries(mp);
+  }
   return sortDbtPairs(pairs,item.MaDe||'',item);
 }
 function getDbtOrderList(made,item){
@@ -23712,7 +23741,7 @@ function renderStartDangBaiTapPicker(made,preselect){
     let adminHint=USER.is_admin?' <span class="muted">· ADMIN: vào đề → 🏷️ Gợi ý Dạng BT</span>':'';
     html+=`<label class="startDbtOpt startDbtUncls"><input type="radio" name="startDbtPick" value="${escAttr(DBT_UNCLASSIFIED)}"${on}> <span><b>❓ ${esc(DBT_UNCLASSIFIED_LABEL)}</b> — ${uncls} câu${adminHint}</span></label>`;
   }
-  for(let [d,n] of dbts){let cnt=n||'';let on=preselect&&normText(preselect)===normText(d)?' checked':'';let upd=catalogDbtUpdated(item,d);html+=`<label class="startDbtOpt"><input type="radio" name="startDbtPick" value="${escAttr(d)}"${on}> <span><b>${esc(d)}</b>${cnt?(' · '+cnt+' câu'):''}${upd?(' <span class="startDbtUpdated" title="Cập nhật dạng">'+esc(upd)+'</span>'):''}</span></label>`}
+  for(let [d,n] of dbts){let cnt=n||'';let dName=oneLineText(d);let on=preselect&&normText(preselect)===normText(dName)?' checked':'';let upd=catalogDbtUpdated(item,d);html+=`<label class="startDbtOpt"><input type="radio" name="startDbtPick" value="${escAttr(dName)}"${on}> <span class="startDbtBody"><b class="startDbtName">${esc(dName)}</b><span class="startDbtMeta">${cnt?('<span>'+cnt+' câu</span>'):''}${upd?('<span class="startDbtUpdated" title="Cập nhật dạng">'+esc(upd)+'</span>'):''}</span></span></label>`}
   list.innerHTML=html;
   let mbar=document.getElementById('startDbtMergeBar');
   if(mbar)mbar.classList.toggle('hide',!(USER.is_admin&&dbts.length>=1));
@@ -26081,7 +26110,7 @@ function renderDbtMergeModal(item){
   let box=document.getElementById('dbtMergeList');
   if(box){
     if(!DBT_MERGE_ITEMS.length){box.innerHTML='<div class="muted">Chưa có dạng nào để gộp trong chuyên đề này.</div>';return}
-    box.innerHTML=DBT_MERGE_ITEMS.map(([d,n],i)=>`<label class="startDbtOpt dbtMergePickRow"><input type="checkbox" class="dbtMergePick" value="${escAttr(d)}" data-count="${n||0}" onchange="dbtMergePreview()"> <span><b>${esc(d)}</b> · ${n||0} câu</span></label>`).join('');
+    box.innerHTML=DBT_MERGE_ITEMS.map(([d,n],i)=>`<label class="startDbtOpt dbtMergePickRow"><input type="checkbox" class="dbtMergePick" value="${escAttr(oneLineText(d))}" data-count="${n||0}" onchange="dbtMergePreview()"> <span class="startDbtBody"><b class="startDbtName">${esc(oneLineText(d))}</b><span class="startDbtMeta">${n||0} câu</span></span></label>`).join('');
   }
   let nn=document.getElementById('dbtMergeNewName');if(nn&&!nn.value)nn.value='';
   dbtMergePreview();
@@ -26273,7 +26302,7 @@ function renderChapterDbtBoard(){
         <span class="cdbtDangNum">${ni+1}</span>
         <label class="cdbtDangLabel">
           <input type="checkbox" ${picked?'checked':''} onchange="chapterDbtTogglePick(${li},${ni},this.checked)">
-          <span class="cdbtDangName">${esc(name)}</span>
+          <span class="cdbtDangName">${esc(oneLineText(name))}</span>
           ${cnt?`<span class="cdbtDangCount">${cnt} câu</span>`:''}
           ${altNote}
         </label>
@@ -27618,7 +27647,7 @@ function v246EnsureBookCss(){
   .bookShelfV246{display:block}.bookSubjectBlock{margin:12px 0 16px}.bookSubjectTitle{padding:11px 12px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;box-shadow:0 2px 8px #1d4ed833;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookSubjectTitle small{font-size:12px;opacity:.95;font-weight:800}
   .bookGradeBlock{margin:10px 0 12px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 4px #0f172a0f}.bookGradeHead{padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookGradeHead .bookMini{font-size:12px;color:#64748b;font-weight:800}
   .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;position:relative;z-index:2}.bookChapterHead .bookChapterDbtBtn{flex-shrink:0;cursor:pointer;position:relative;z-index:3}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
-  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
+  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
   .bookLessonCard.selectedLesson{outline:2px solid #1d4ed8;background:#f8fbff}.bookLessonCard.shareTarget{outline:3px solid #60a5fa;box-shadow:0 0 0 4px #dbeafe}.bookLessonCard.catalogFlash{outline:3px solid #22c55e!important;box-shadow:0 0 0 4px #bbf7d088!important;animation:catalogFlashPulse .85s ease-in-out 2}@keyframes catalogFlashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.bookLessonCard .shareRow{margin-top:6px;flex-wrap:wrap}.bookLessonCard .shareBtns{flex-wrap:wrap}.bookEmpty{padding:14px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc}
   html[data-theme='dark'] .bookIntroV246{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}html[data-theme='dark'] .bookIntroTitle{color:#bfdbfe}html[data-theme='dark'] .bookStat{background:#0f172a;border-color:#334155;color:#bfdbfe}html[data-theme='dark'] .bookGradeBlock,html[data-theme='dark'] .bookLessonCard{background:#111827;border-color:#334155}html[data-theme='dark'] .bookGradeHead{background:#1e293b;color:#e5e7eb}html[data-theme='dark'] .bookChapterBlock{background:#0f172a;border-color:#1d4ed8}html[data-theme='dark'] .bookChapterHead{background:#1e3a5f;color:#bfdbfe}html[data-theme='dark'] .bookLessonTitle{color:#e5e7eb}html[data-theme='dark'] .bookTag{background:#1e293b;border-color:#475569;color:#cbd5e1}html[data-theme='dark'] .bookTag.bookTagDang{background:#0f172a;border-color:#475569;color:#94a3b8}
   .bookLessonTags.bookLessonTagsCompact{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:1px}.bookLessonTags.bookLessonTagsCompact::-webkit-scrollbar{display:none}.bookTag.bookTagDang{color:#475569;border-color:#cbd5e1;background:#f1f5f9;letter-spacing:-.02em}
@@ -27719,7 +27748,7 @@ function v246DbtDangMiniHtml(dbtKey,entries){let det=v246MergeDbtDetail(entries,
 function v246SumFilterLevels(entries){let levels=['NB','TH','VD','VDC'];let totals={NB:0,TH:0,VD:0,VDC:0};for(let x of entries||[]){let fc=x&&x.FilterCounts;if(fc&&fc.level){for(let lv of levels)totals[lv]+=parseInt(fc.level[lv],10)||0;continue}let sc=parseInt(x.SoCau,10)||0;if(!sc)continue;let md=String(x.MucDo||'').trim().toUpperCase();let parts=md.split(/[,;|/]+/).map(s=>s.trim()).filter(Boolean);let hit=parts.filter(p=>levels.includes(p));if(hit.length===1)totals[hit[0]]+=sc;else if(hit.length>1)hit.forEach(lv=>{totals[lv]+=Math.round(sc/hit.length)})}return totals}
 function v246LevelTags(entries){let levels=['NB','TH','VD','VDC'];let totals=v246SumFilterLevels(entries);let out=[];for(let lv of levels){let n=totals[lv]||0;if(n)out.push(`<span class="bookTag ${lv.toLowerCase()}" title="${lv}: ${n} câu">${lv}·${n}</span>`)}return out.join('')}
 function v246LessonCard(mon,khoi,chuong,bai,entries){
-  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let made=String(primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" onclick="openStartModal('${made}','${dd}')" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(shortText(it.label,72))}</span>${mini}</span><span class="bookDbtMeta">${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
+  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let made=String(primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" data-made="${escAttr(primary.MaDe||'')}" data-dbt="${escAttr(oneLineText(it.d||''))}" onclick="openStartModal(this.dataset.made,this.dataset.dbt)" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(oneLineText(it.label))}</span>${mini}</span><span class="bookDbtMeta">${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
   let orderBtn=(USER&&USER.is_admin&&made&&dbtPairs.length)?`<button type="button" class="bookExamBtn" onclick="openDbtOrderModal('${made}')" title="ADMIN: sắp xếp thứ tự dạng BT">↕ Thứ tự dạng</button>`:'';
   let madeRaw=String(primary.MaDe||'');let shareTools=madeRaw?v246ShareToolsHtml(primary,made):'';
   return `<div class="bookLessonCard${selected}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${esc(bai||'Chưa rõ bài')}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangCountTags(entries)}</div>${dbtBtns?`<div class="bookDbtRow" id="bookDbtRow_${escAttr(madeRaw)}">${dbtBtns}${dbtItems.length>5?`<div class="bookDbtMoreHint">↕ ${dbtItems.length} dạng — kéo xuống để xem hết (Sheet có đủ)</div>`:''}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
@@ -38856,8 +38885,27 @@ def build_offline_pack_data(st: Any) -> Dict[str, Any]:
 
 
 def build_offline_pack_zip(st: Any) -> bytes:
-    """ZIP gồm index.html + pack/data.json + manifest để giải nén vào assets Android."""
+    """ZIP gồm index.html + pack/data.json + pack/bank.json + manifest để giải nén vào assets Android."""
     pack = build_offline_pack_data(st)
+    # Ngân hàng phẳng — tablet đọc mượt, không gọi Google Sheet
+    bank = {
+        "version": APP_VERSION,
+        "built_at": pack.get("built_at"),
+        "count": len(st.questions or []),
+        "questions": [
+            {
+                k: q.get(k, "")
+                for k in (
+                    "ID", "MaDe", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc",
+                    "DangBaiTap", "MucDo", "Dang", "CauHoi", "A", "B", "C", "D",
+                    "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap", "TrangThai",
+                    "NangLucVatLy", "NgayCapNhat", "_row",
+                )
+            }
+            for q in (st.questions or [])
+        ],
+        "catalog": pack.get("meta", {}).get("catalog") or [],
+    }
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("www/index.html", render_offline_app_html())
@@ -38868,7 +38916,7 @@ def build_offline_pack_zip(st: Any) -> bytes:
                 {
                     "name": "Luyện đề Offline",
                     "short_name": "Luyện đề",
-                    "start_url": "/?source=apk",
+                    "start_url": "./index.html",
                     "display": "standalone",
                     "theme_color": "#1d4ed8",
                     "background_color": "#f5f7fb",
@@ -38877,10 +38925,47 @@ def build_offline_pack_zip(st: Any) -> bytes:
             ),
         )
         zf.writestr("www/pack/data.json", json.dumps(pack, ensure_ascii=False))
+        zf.writestr("www/pack/bank.json", json.dumps(bank, ensure_ascii=False))
+        zf.writestr(
+            "data/json_questions/bank_full.json",
+            json.dumps(
+                {
+                    "title": "Ngân hàng full từ Google Sheet",
+                    "exportedAt": datetime.now().isoformat(timespec="seconds"),
+                    "count": bank["count"],
+                    "questions": bank["questions"],
+                },
+                ensure_ascii=False,
+            ),
+        )
         zf.writestr(
             "README.txt",
-            "Giải nén vào android/app/src/main/assets/\n"
-            "Sau đó chạy: cd android && gradlew.bat assembleDebug\n",
+            "\n".join(
+                [
+                    "GÓI OFFLINE — Luyện đề AI (máy tính bảng / APK)",
+                    "=============================================",
+                    "",
+                    "1) Cách dùng nhanh trên máy tính bảng (không cần APK):",
+                    "   - Giải nén ZIP",
+                    "   - Mở www/index.html bằng Chrome (hoặc copy cả thư mục www vào máy tính bảng)",
+                    "",
+                    "2) Đóng APK Android (Khuyến nghị: Capacitor / Android Studio):",
+                    "   - Copy toàn bộ thư mục www/ vào android/app/src/main/assets/public/",
+                    "   - Hoặc: npx cap sync sau khi đặt www làm webDir",
+                    "   - Build APK: cd android && gradlew.bat assembleDebug",
+                    "",
+                    "3) File quan trọng:",
+                    "   - www/pack/data.json  : meta + từng đề đã ghép sẵn (luyện mượt, không Sheet)",
+                    "   - www/pack/bank.json  : toàn bộ câu hỏi JSON phẳng",
+                    "   - data/json_questions/bank_full.json : dùng QUESTION_SOURCE=JSON_ONLY trên server",
+                    "",
+                    "4) Cập nhật đề mới:",
+                    "   - Chạy trên máy: python build_offline_pack.py",
+                    "   - Hoặc ADMIN trên web: menu ⋮ → Tải gói offline APK",
+                    "   - Rồi cài lại APK / copy lại thư mục www",
+                    "",
+                ]
+            ),
         )
     return buf.getvalue()
 
@@ -38914,9 +38999,16 @@ OFFLINE_SHIM_JS = r"""
   }
   async function ensurePack(){
     if(pack)return pack;
-    let r=await fetch('/pack/data.json',{cache:'no-store'});
-    if(!r.ok)throw new Error('Thiếu gói offline /pack/data.json — chạy build_offline_pack.py trước khi đóng APK.');
-    pack=await r.json();return pack;
+    let urls=['./pack/data.json','pack/data.json','/pack/data.json'];
+    let lastErr=null;
+    for(let i=0;i<urls.length;i++){
+      try{
+        let r=await fetch(urls[i],{cache:'no-store'});
+        if(!r.ok){lastErr=new Error('HTTP '+r.status+' '+urls[i]);continue;}
+        pack=await r.json();return pack;
+      }catch(e){lastErr=e;}
+    }
+    throw lastErr||new Error('Thiếu gói offline pack/data.json — chạy python build_offline_pack.py trước khi đóng APK.');
   }
   function routeOffline(path,opts){
     opts=opts||{};let method=String(opts.method||'GET').toUpperCase(),body=readBody(opts);
@@ -38989,11 +39081,63 @@ def api_admin_offline_pack():
     try:
         st = get_store()
         blob = build_offline_pack_zip(st)
-        pack = build_offline_pack_data(st)
         fname = f"luyen-de-offline-{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
         return send_file(
             io.BytesIO(blob),
             mimetype="application/zip",
+            as_attachment=True,
+            download_name=fname,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/admin/export-bank-json", methods=["POST", "GET"])
+def api_admin_export_bank_json():
+    """ADMIN: tải JSON toàn bộ câu hỏi từ Sheet (để nhét APK / JSON_ONLY)."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được xuất ngân hàng JSON."}), 403
+    try:
+        st = get_store()
+        st.ensure_questions_loaded(force=True)
+        save_disk = clean(request.args.get("save") or (request.get_json(silent=True) or {}).get("save") or "")
+        payload = {
+            "title": "Ngân hàng full từ Google Sheet",
+            "exportedAt": datetime.now().isoformat(timespec="seconds"),
+            "count": len(st.questions or []),
+            "questions": [
+                {
+                    k: q.get(k, "")
+                    for k in (
+                        "ID", "MaDe", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc",
+                        "DangBaiTap", "MucDo", "Dang", "CauHoi", "A", "B", "C", "D",
+                        "DapAn", "SaiSo", "LoiGiai", "HinhAnh", "QuyenTruyCap", "TrangThai",
+                        "NangLucVatLy", "NgayCapNhat", "_row",
+                    )
+                }
+                for q in (st.questions or [])
+            ],
+        }
+        if save_disk in ("1", "true", "yes", "on"):
+            out_dir = os.path.join(APP_DIR, "data", "json_questions")
+            os.makedirs(out_dir, exist_ok=True)
+            out_path = os.path.join(out_dir, "bank_full.json")
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            return jsonify({
+                "ok": True,
+                "count": payload["count"],
+                "path": out_path,
+                "message": f"Đã lưu {payload['count']} câu vào data/json_questions/bank_full.json",
+            })
+        raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        fname = f"bank_full_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+        return send_file(
+            io.BytesIO(raw),
+            mimetype="application/json",
             as_attachment=True,
             download_name=fname,
         )
