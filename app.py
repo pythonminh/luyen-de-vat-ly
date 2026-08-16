@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V389_TLN_PHONE_INPUT_2026_08_15"
+APP_VERSION = "V391_NOTEBOOK_HEADER_ALIGN_2026_08_16"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -8237,6 +8237,7 @@ class SheetStore:
         index: int,
         answer: Any = None,
         restore_payload: Optional[Dict[str, Any]] = None,
+        style: str = "poster",
     ) -> Dict[str, Any]:
         if not can_use_infographic():
             raise RuntimeError("Infographic chỉ dành tài khoản VIP / SVIP / ADMIN.")
@@ -8249,7 +8250,8 @@ class SheetStore:
             ok, _, _ = check_answer(q, answer)
             if not ok:
                 raise RuntimeError("Phải trả lời đúng câu này mới mở khóa infographic.")
-        prompt = build_gemini_infographic_prompt(q)
+        style_n = _norm_image_prompt_style(style)
+        prompt = build_gemini_image_prompt(q, style_n)
         dang = effective_dang(q)
         spec = _infographic_dang_spec(dang)
         warnings = _infographic_completeness_warnings(q)
@@ -8257,6 +8259,7 @@ class SheetStore:
             "index": index,
             "id": clean(q.get("ID", "")),
             "prompt": prompt,
+            "style": style_n,
             "has_image": bool(clean(q.get("HinhAnh", ""))),
             "mucdo": infographic_mucdo_label(q),
             "dang": dang,
@@ -8271,6 +8274,7 @@ class SheetStore:
         index: int,
         answer: Any = None,
         restore_payload: Optional[Dict[str, Any]] = None,
+        style: str = "poster",
     ) -> Dict[str, Any]:
         if not can_use_infographic():
             raise RuntimeError("Infographic chỉ dành tài khoản VIP / SVIP / ADMIN.")
@@ -8283,12 +8287,13 @@ class SheetStore:
             ok, _, _ = check_answer(q, answer)
             if not ok:
                 raise RuntimeError("Phải trả lời đúng câu này mới mở khóa infographic.")
-        prompt = build_gemini_infographic_prompt(q)
+        style_n = _norm_image_prompt_style(style)
+        prompt = build_gemini_image_prompt(q, style_n)
         vision = prepare_question_vision(q)
         keys = load_ai_keys("GEMINI")
         if not keys:
             raise RuntimeError(
-                "Chưa có GEMINI_API_KEY trên Render — không vẽ poster tự động. "
+                "Chưa có GEMINI_API_KEY trên Render — không vẽ ảnh tự động. "
                 "Dùng «Chép prompt» và dán Gemini thủ công."
             )
         ref_b64 = vision.get("image_b64", "") if vision.get("vision_ready") else ""
@@ -8303,7 +8308,7 @@ class SheetStore:
                 timeout=INFOGRAPHIC_HTTP_MAX_SEC - 2,
             )
             if img_b64:
-                print(f"[INFOGRAPHIC_GEN] model={model_used} key=#{idx}")
+                print(f"[INFOGRAPHIC_GEN] style={style_n} model={model_used} key=#{idx}")
                 break
             if _is_quota_or_rate_error(err or ""):
                 continue
@@ -8318,6 +8323,7 @@ class SheetStore:
             "id": clean(q.get("ID", "")),
             "image_data_url": f"data:{mime or 'image/png'};base64,{img_b64}",
             "model": model_used,
+            "style": style_n,
             "has_reference_image": bool(ref_b64),
             "mucdo": infographic_mucdo_label(q),
             "dang": effective_dang(q),
@@ -11567,8 +11573,419 @@ def _infographic_completeness_warnings(q: Dict[str, Any]) -> List[str]:
     return warnings
 
 
+NOTEBOOK_PAGE_BRAND_NAME = "Lớp Học Thầy Minh"
+NOTEBOOK_PAGE_BRAND_ZALO = "0946111107"
+
+
+def _norm_image_prompt_style(style: Any) -> str:
+    s = key_norm(style).replace(" ", "")
+    if s in (
+        "notebook",
+        "vo",
+        "trangvo",
+        "trangvoghibai",
+        "page",
+        "so",
+        "handwritten",
+        "voghibai",
+        "notebookpage",
+    ):
+        return "notebook"
+    if "trangvo" in s or "notebook" in s:
+        return "notebook"
+    return "poster"
+
+
+def notebook_mucdo_pen_hint(label: str) -> str:
+    """Màu nhãn mức độ trên trang vở (bút, không badge 3D)."""
+    if not label:
+        return "Sheet chưa ghi mức độ (cột I) — vẫn ghi «MỨC ĐỘ: ?» bằng bút tím nhỏ."
+    u = key_norm(label)
+    hints: List[str] = []
+    if "nb" in u or "nen tang" in u:
+        hints.append("NB → bút xanh lá")
+    if re.search(r"\bth\b", u) or "thong hieu" in u:
+        hints.append("TH → bút xanh dương")
+    if "vdc" in u:
+        hints.append("VDC → bút đỏ")
+    elif re.search(r"\bvd\b", u) or "van dung" in u:
+        hints.append("VD → bút cam")
+    if not hints:
+        hints.append(f"Ghi đúng «{label}» bằng bút màu nổi bật vừa phải")
+    return " | ".join(hints)
+
+
+def _notebook_must_show_items(dang: str) -> List[str]:
+    if dang == "Đúng sai":
+        return [
+            "Mức độ (nhãn nhỏ viết tay, không badge 3D poster)",
+            "Đề bài / câu dẫn đầy đủ",
+            "Đủ mệnh đề A/B/C/D kèm Đúng hoặc Sai",
+            "Đáp án tổng hợp A=… · B=…",
+            "Hình minh họa kiểu vẽ trong vở",
+            "Lời giải từng ý đầy đủ",
+            "Kết luận cuối bài bằng bút đỏ",
+        ]
+    if dang == "Trả lời ngắn":
+        return [
+            "Mức độ (nhãn nhỏ viết tay)",
+            "Đề bài đầy đủ",
+            "Ô/khung đáp án ngắn (số hoặc biểu thức)",
+            "Hình minh họa kiểu vẽ trong vở",
+            "Lời giải đầy đủ từng bước",
+            "Kết luận cuối bài bằng bút đỏ",
+        ]
+    if dang == "Tự luận":
+        return [
+            "Mức độ (nhãn nhỏ viết tay)",
+            "Đề bài đầy đủ",
+            "Kết quả chính nếu Sheet có cột P",
+            "Hình minh họa kiểu vẽ trong vở",
+            "Lời giải đầy đủ",
+            "Kết luận cuối bài bằng bút đỏ",
+        ]
+    return [
+        "Mức độ (nhãn nhỏ viết tay, không badge 3D poster)",
+        "Đề bài đầy đủ",
+        "4 phương án A/B/C/D",
+        "Đáp án đúng (khoanh đỏ / ✓ đỏ / gạch chân đỏ)",
+        "Hình minh họa kiểu vẽ trong vở",
+        "Lời giải đầy đủ",
+        "Kết luận cuối bài bằng bút đỏ",
+    ]
+
+
+def _notebook_page_style_rules() -> List[str]:
+    return [
+        "═══ PHONG CÁCH CHÍNH: TRANG VỞ GHI BÀI ═══",
+        "Ảnh phải giống trang vở học sinh THPT ghi bài bằng tay — không giống slide, website, poster quảng cáo.",
+        "",
+        "Giấy:",
+        "• giấy trắng hơi ngà hoặc trắng xanh rất nhẹ",
+        "• có các dòng kẻ ngang màu xanh nhạt",
+        "• có lề đỏ thẳng đứng bên trái",
+        "• khoảng cách dòng đều như vở học sinh Việt Nam",
+        "• có texture giấy rất nhẹ",
+        "• mép giấy tự nhiên",
+        "• bóng đổ rất nhẹ như trang tập đặt trên bàn",
+        "• nền sáng, sạch, dễ đọc",
+        "",
+        "Ngay thẳng (BẮT BUỘC):",
+        "• Chụp thẳng từ trên xuống — trang vở không nghiêng, không xoay, không méo phối cảnh",
+        "• Dòng kẻ ngang phải song song mép trên/dưới ảnh; lề đỏ thẳng đứng, vuông góc với dòng kẻ",
+        "• Chữ viết nằm đúng trên dòng kẻ, hàng thẳng, không lệch, không chéo, không leo dòng",
+        "• Header trái và phải cùng một hàng ngang đầu trang, căn đều như tiêu đề vở thật",
+        "",
+        "Tỷ lệ ảnh:",
+        "• ưu tiên dọc 3:4 hoặc 4:5",
+        "• giống một trang tập A4/A5 được chụp thẳng từ trên xuống",
+    ]
+
+
+def _notebook_page_pen_rules() -> List[str]:
+    return [
+        "═══ CHỮ VIẾT TRONG VỞ ═══",
+        "Phong cách chữ viết tay đẹp, sạch, đều nét, dễ đọc — giống giáo viên hoặc học sinh viết bài cẩn thận.",
+        "Không viết nguệch ngoạc. Chữ phải ngay hàng, thẳng dòng kẻ.",
+        "",
+        "Màu bút:",
+        "• Tên bài (góc trái trên): BÚT XANH — bắt buộc, chữ đậm, rõ",
+        f"• «{NOTEBOOK_PAGE_BRAND_NAME}» (góc phải trên): BÚT ĐỎ — bắt buộc, chữ đậm, nổi bật",
+        "• ID và số Zalo: bút xanh hoặc đen, nhỏ hơn một chút, vẫn thẳng hàng",
+        "• Nội dung chính: bút xanh",
+        "• Tiêu đề mục (ĐỀ BÀI, LỜI GIẢI): bút xanh đậm hoặc tím",
+        "• Công thức quan trọng: bút xanh/đen, có thể gạch chân",
+        "• Đáp án đúng: bút đỏ",
+        "• Kết luận: bút đỏ hoặc đóng khung đỏ",
+        "• Ghi chú phụ: có thể dùng tím hoặc xanh lá nhẹ",
+        "Không dùng quá nhiều màu.",
+    ]
+
+
+def _notebook_formula_rules() -> List[str]:
+    return [
+        "═══ KÝ HIỆU & CÔNG THỨC — BẮT BUỘC ĐÚNG ═══",
+        "Tuyệt đối không để lộ mã LaTeX như: $  \\frac  \\text  \\mathrm  \\cdot  \\begin  \\end",
+        "Công thức phải hiển thị như ký hiệu toán học viết tay chuẩn.",
+        "• Chữ Hy Lạp: α β γ Δ θ λ μ ν ρ σ τ φ ω Ω π — viết đúng hình dạng",
+        "• Chỉ số: v₀, x₁, I₀, Uₘ",
+        "• Số mũ: A², ω², 10⁸, m/s²",
+        "• Vectơ: F⃗, v⃗, a⃗, B⃗",
+        "• Đơn vị: m, kg, s, A, V, Ω, W, J, N, Hz, °C",
+        "• Phân số: a/b hoặc tử/mẫu viết dọc tay — không dùng \\frac",
+        "• Copy đúng số liệu & ký hiệu từ Sheet — chỉ đổi LaTeX sang viết tay, không đổi giá trị",
+    ]
+
+
+def build_gemini_notebook_page_prompt(q: Dict[str, Any]) -> str:
+    """Prompt Gemini vẽ một trang vở ghi bài THPT — header lớp + nội dung Sheet."""
+    dang = effective_dang(q)
+    spec = _infographic_dang_spec(dang)
+    q_text = latex_to_infographic_plain(q.get("CauHoi", ""), preserve_lines=True)
+    opts_lines = _infographic_format_options(q, dang)
+    dapan = _infographic_format_dapan(q, dang)
+    loigiai = _infographic_format_loigiai(q, dang)
+    hinh = clean(q.get("HinhAnh", ""))
+    mucdo = infographic_mucdo_label(q)
+    bai_hoc = clean(q.get("BaiHoc", "")) or clean(q.get("De", ""))
+    qid = clean(q.get("ID", ""))
+    mon = clean(q.get("Mon", "Vật lý")) or "Vật lý"
+    chuong = clean(q.get("Chuong", ""))
+    dang_bt = clean(q.get("DangBaiTap", ""))
+    made = clean(q.get("MaDe", ""))
+    correct = norm_letter(q.get("DapAn")) if dang == "Trắc nghiệm" else ""
+    mucdo_block = mucdo or "(trống — cột I chưa ghi NB/TH/VD/VDC)"
+    lines = [
+        "Bạn vẽ **TRANG VỞ GHI BÀI GIÁO DỤC VẬT LÝ/TOÁN THPT** — giống một trang tập học sinh được ghi bài cực kỳ sạch, khoa học, đẹp mắt, rõ ràng; có dòng kẻ, lề đỏ, chữ viết tay chuẩn, công thức đúng, hình minh họa như giáo viên hoặc học sinh giỏi tự ghi trong vở.",
+        "",
+        "**Đây KHÔNG phải poster Canva, KHÔNG phải infographic card gradient.**",
+        "Toàn bộ ảnh phải tạo cảm giác như **một trang vở thật đang mở trên bàn học**, nội dung được trình bày trực tiếp trên giấy.",
+        "",
+        "═══ 1) YÊU CẦU BẮT BUỘC PHẦN ĐẦU TRANG ═══",
+        "",
+        "BẮT BUỘC phải có dòng thông tin ở phía trên trang vở như sau:",
+        "",
+        "### Góc trái trên — cùng một hàng ngang đầu trang",
+        "Ghi rõ, **chữ Tên bài bằng bút XANH**, viết ngay hàng trên dòng kẻ:",
+        f"* **Tên bài:** {bai_hoc or '(chưa có tên bài trên Sheet — ghi môn/chương nếu có, không bịa)'}  ← BÚT XANH",
+        f"* **ID:** {qid or '(chưa có ID — để trống, không bịa mã)'}",
+        "Trình bày ở **góc trái trên**, căn trái, thẳng hàng với lề đỏ.",
+        "",
+        "### Góc phải trên — cùng hàng với tên bài, căn phải",
+        "Ghi rõ, **chữ Lớp học Thầy Minh bằng bút ĐỎ**:",
+        f"* **{NOTEBOOK_PAGE_BRAND_NAME}**  ← BÚT ĐỎ, chữ đậm",
+        f"* **zalo {NOTEBOOK_PAGE_BRAND_ZALO}**  ← ngay dưới hoặc cùng khối, căn phải",
+        "Trình bày ở **góc phải trên**, ngay hàng đầu trang, căn phải, nổi bật vừa phải.",
+        "",
+        "### Lưu ý căn chỉnh & màu",
+        "• Hai khối trái/phải phải nằm **cùng dòng đầu trang**, cân đối, **ngay thẳng** — không lệch, không chéo, không một bên cao một bên thấp.",
+        "• Chữ nằm đúng dòng kẻ; lề đỏ thẳng đứng; trang không nghiêng.",
+        "• Tên bài = bút xanh. «Lớp Học Thầy Minh» = bút đỏ.",
+        "• Không được bỏ sót.",
+        f"• Không viết sai số điện thoại. Phải đúng: {NOTEBOOK_PAGE_BRAND_ZALO}",
+        f"• Không thay đổi nội dung chữ «{NOTEBOOK_PAGE_BRAND_NAME}».",
+        "",
+        "═══ 2) LOẠI CÂU — BẮT BUỘC TUÂN THEO ═══",
+        f"* **Dạng:** {spec['title']}",
+        f"* **Mô tả:** {spec['desc']}",
+        "Trên trang vở phải có đầy đủ:",
+    ]
+    for item in _notebook_must_show_items(dang):
+        lines.append(f"* {item}")
+    lines.extend(
+        [
+            "Không được bỏ phần nào.",
+            "",
+        ]
+    )
+    lines.extend(_notebook_page_style_rules())
+    lines.append("")
+    lines.extend(_notebook_page_pen_rules())
+    lines.extend(
+        [
+            "",
+            "═══ 5) CẤU TRÚC TRANG VỞ ═══",
+            "Trình bày từ trên xuống theo thứ tự:",
+            "",
+            "### (A) HEADER ĐẦU TRANG — một hàng ngang, ngay thẳng",
+            "* Góc trái trên (căn trái, cùng baseline với góc phải):",
+            "  * Tên bài — **bút xanh**",
+            "  * ID",
+            "* Góc phải trên (căn phải, cùng hàng):",
+            f"  * {NOTEBOOK_PAGE_BRAND_NAME} — **bút đỏ**",
+            f"  * zalo {NOTEBOOK_PAGE_BRAND_ZALO}",
+            "",
+            "### (B) THÔNG TIN NGẮN",
+            "Ghi bên dưới header:",
+            f"* **Môn:** {mon}",
+        ]
+    )
+    if chuong:
+        lines.append(f"* **Chương:** {chuong}")
+    if dang_bt:
+        lines.append(f"* **Dạng:** {dang_bt}")
+    if made:
+        lines.append(f"* **Mã đề:** {made}")
+    lines.extend(
+        [
+            "",
+            "### (C) MỨC ĐỘ",
+            "Ghi một nhãn nhỏ:",
+            f"* **MỨC ĐỘ: {mucdo_block}**",
+            "Có thể đặt gần phía trên, nhưng vẫn theo phong cách vở ghi, không làm kiểu badge 3D poster.",
+            f"Màu theo mức độ: {notebook_mucdo_pen_hint(mucdo)}",
+            "• NB → xanh lá · TH → xanh dương · VD → cam · VDC → đỏ",
+            "",
+            "═══ 6) ĐỀ BÀI ═══",
+            "Viết tiêu đề: **ĐỀ BÀI**",
+            "Gạch chân nhẹ bằng bút màu.",
+            "Chép **NGUYÊN VĂN** nội dung sau — không sửa câu chữ, không tóm tắt, không thêm dữ kiện:",
+            "",
+            q_text or "(trống — không tự bịa đề)",
+            "",
+            "═══ 7) PHƯƠNG ÁN / ĐÁP ÁN ═══",
+        ]
+    )
+    if dang == "Trắc nghiệm":
+        lines.append("Viết đủ các phương án (trình bày giống học sinh chép câu trắc nghiệm trong vở):")
+        if opts_lines:
+            lines.extend(opts_lines)
+        else:
+            lines.append("(Sheet thiếu phương án A–D — không bịa)")
+        if correct:
+            lines.extend(
+                [
+                    "",
+                    "### Đáp án đúng",
+                    f"* Khoanh tròn **{correct}** bằng bút đỏ",
+                    "  hoặc đánh dấu ✓ đỏ cạnh phương án đúng",
+                    "  hoặc gạch chân đỏ phương án đúng",
+                    "Ngay dưới phần này ghi:",
+                    f"* **Đáp án: {correct}**",
+                ]
+            )
+        elif dapan:
+            lines.extend(["", f"* **{dapan}** — ghi bằng bút đỏ"])
+    elif dang == "Đúng sai":
+        lines.append("Chép đủ mệnh đề A–D, mỗi ý ghi Đúng hoặc Sai bằng bút đỏ theo Sheet:")
+        if opts_lines:
+            lines.extend(opts_lines)
+        if dapan:
+            lines.append(f"Tổng hợp: {dapan}")
+    elif dang == "Trả lời ngắn":
+        lines.append("Không có A/B/C/D. Viết khung đáp án ngắn bằng bút đỏ:")
+        lines.append(f"**Đáp án:** {dapan or '(trống — cột P)'}")
+        saiso = clean(q.get("SaiSo", ""))
+        if saiso:
+            lines.append(f"Sai số cho phép: {latex_to_infographic_plain(saiso)}")
+    else:
+        if opts_lines:
+            lines.extend(opts_lines)
+        if dapan:
+            lines.append(f"Kết quả / đáp án chính: {dapan}")
+        elif not opts_lines:
+            lines.append("(Dạng tự luận — không có phương án A/B/C/D)")
+    lines.extend(
+        [
+            "",
+            "═══ 8) HÌNH MINH HỌA ═══",
+        ]
+    )
+    if hinh:
+        lines.extend(
+            [
+                f"Sheet có link/mô tả hình: {hinh}",
+                "Hãy vẽ lại **hình minh họa kiểu vẽ trong vở học sinh** theo nội dung đó: nét sạch như dùng thước và bút chì/bút mực, có chú thích ký hiệu.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Sheet chưa có link hình, nên hãy tự vẽ **hình minh họa kiểu vẽ trong vở học sinh**, bám sát nội dung đề bài và lời giải (sơ đồ, trục, vectơ, mạch, đồ thị… tùy đúng bài).",
+                "Nét vẽ sạch, như dùng thước và bút chì/bút mực. Có chú thích ký hiệu cần thiết.",
+            ]
+        )
+    lines.extend(
+        [
+            "Không clip-art. Không phong cách hoạt hình. Không đưa cả bài giải dài vào hình.",
+            "",
+            "═══ 9) LỜI GIẢI ═══",
+            "Viết tiêu đề: **LỜI GIẢI**",
+            "Gạch chân.",
+            "Chép **đầy đủ nội dung lời giải**, nhưng chuyển công thức sang ký hiệu toán học chuẩn, không để raw LaTeX.",
+            "Có thể trình bày Bước 1, Bước 2… nhưng không được làm sai nội dung.",
+            "",
+            loigiai or "(trống — ghi «Chưa có bài giải trên Sheet», không tự viết)",
+            "",
+            "### Kết luận cuối",
+            "Dùng bút đỏ chốt đáp án/kết luận. Có thể đóng khung đỏ phần kết luận.",
+        ]
+    )
+    if dang == "Trắc nghiệm" and correct:
+        lines.append(f"* **⇒ Đáp án {correct}**")
+    elif dapan:
+        lines.append(f"* **⇒ {dapan}**")
+    lines.extend(
+        [
+            "",
+        ]
+    )
+    lines.extend(_notebook_formula_rules())
+    lines.extend(
+        [
+            "",
+            "═══ 11) DỮ LIỆU NGUỒN — PHẢI GIỮ ĐÚNG ═══",
+            "",
+            "### Metadata",
+            f"* Môn: {mon}",
+            f"* Chương: {chuong or '(trống)'}",
+            f"* Bài học: {bai_hoc or '(trống)'}",
+            f"* Dạng bài tập: {dang_bt or '(chưa gán)'}",
+            f"* ID câu: {qid or '(trống)'}",
+            f"* Mã đề: {made or '(trống)'}",
+            f"* Mức độ: {mucdo_block}",
+            "",
+            "### Nội dung — COPY NGUYÊN VĂN, không paraphrase làm sai",
+            "**Đề bài:**",
+            q_text or "(trống)",
+            "",
+        ]
+    )
+    if opts_lines:
+        lines.append("**Phương án / mệnh đề:**")
+        lines.extend(opts_lines)
+        lines.append("")
+    if dapan:
+        lines.extend([f"**Đáp án đúng:** {dapan}", ""])
+    lines.extend(
+        [
+            "**Lời giải cốt lõi:**",
+            loigiai or "(trống)",
+            "",
+            "═══ 12) NHỮNG THỨ KHÔNG ĐƯỢC XUẤT HIỆN ═══",
+            "* Không poster Canva",
+            "* Không card gradient",
+            "* Không infographic chia khối",
+            "* Không chữ “KHỐI”",
+            "* Không emoji",
+            "* Không clip-art trẻ em",
+            "* Không tiếng Anh",
+            "* Không dashboard",
+            "* Không giao diện website",
+            "* Không watermark AI",
+            "* Không raw LaTeX",
+            "* Không công thức sai",
+            f"* Không viết sai «{NOTEBOOK_PAGE_BRAND_NAME}» hoặc số Zalo {NOTEBOOK_PAGE_BRAND_ZALO}",
+            "",
+            "═══ 13) YÊU CẦU HÌNH ẢNH CUỐI ═══",
+            "Xuất **một trang vở ghi bài Vật lý/Toán THPT hoàn chỉnh**, nhìn từ trên xuống, sạch, sáng, khoa học, giống một học sinh giỏi hoặc giáo viên đã trình bày cẩn thận trong tập.",
+            "Ảnh bắt buộc phải có:",
+            "* **góc trái trên:** tên bài (bút xanh) + ID — căn trái, ngay thẳng",
+            f"* **góc phải trên:** {NOTEBOOK_PAGE_BRAND_NAME} (bút đỏ) + zalo {NOTEBOOK_PAGE_BRAND_ZALO} — căn phải, cùng hàng",
+            f"* mức độ {mucdo_block}",
+            "* đề bài",
+            "* phương án hoặc đáp án (đúng dạng câu)",
+            "* hình minh họa kiểu vẽ trong vở",
+            "* lời giải đầy đủ",
+            "* kết luận cuối bằng bút đỏ",
+            "* Header ngay thẳng: trái–phải cùng hàng; tên bài xanh; «Lớp Học Thầy Minh» đỏ",
+            "",
+            "Phải tạo cảm giác:",
+            "**“Đây là một trang bài học thật trong vở.”**",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def build_gemini_image_prompt(q: Dict[str, Any], style: Any = "poster") -> str:
+    """Chọn prompt poster infographic hoặc trang vở ghi bài."""
+    if _norm_image_prompt_style(style) == "notebook":
+        return build_gemini_notebook_page_prompt(q)
+    return build_gemini_infographic_prompt(q)
+
+
 def build_gemini_infographic_prompt(q: Dict[str, Any]) -> str:
-    """Prompt Gemini tạo ảnh trang vở học sinh — ký hiệu khoa học đúng, đủ TN/Đ/S/TLN/TL."""
+    """Prompt Gemini tạo poster infographic giáo dục — ký hiệu khoa học đúng, đủ TN/Đ/S/TLN/TL."""
     dang = effective_dang(q)
     spec = _infographic_dang_spec(dang)
     q_text = latex_to_infographic_plain(q.get("CauHoi", ""), preserve_lines=True)
@@ -16472,12 +16889,12 @@ def user_benefits_list() -> List[str]:
             "⚡ Soát đề GPT (Nhanh / Kỹ) — đối chiếu Sheet P/R",
             "Sửa · thêm · xóa câu trên Google Sheet",
             "Đồng bộ Sheet, xóa trùng, test key AI",
-            "Prompt infographic cho từng câu",
+            "Prompt ảnh Gemini (poster / trang vở) cho từng câu",
         ]
     if is_svip():
         return [
             "",
-            "Vẽ poster infographic (Gemini) khi trả lời đúng",
+            "Vẽ poster hoặc trang vở (Gemini) khi trả lời đúng",
             "Xem đáp án & lời giải sau khi làm/chấm câu",
             "Loại 2 đáp án sai (50-50) ở trắc nghiệm",
             "Nộp bài & chấm điểm đầy đủ",
@@ -22427,7 +22844,7 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
 </div>
-</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Infographic</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí" oninput="latexImportRefreshDbtList()"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10" oninput="latexImportRefreshDbtList()"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể" oninput="latexImportRefreshDbtList()"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..." oninput="latexImportRefreshDbtList()"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><select id="latexDefDangBaiTap_pick" class="adminDbtSelect" style="width:100%;margin:0 0 4px" onchange="latexImportDbtPickChange()"><option value="">— Chọn hoặc gõ mới —</option></select><input id="latexDefDangBaiTap" placeholder="Dạng bài tập (cột H trên Sheet)" oninput="latexImportDbtInputChange()" /><span id="latexDefDangBaiTap_scope" class="muted" style="display:block;font-size:11px;margin-top:3px"></span></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Ảnh câu hỏi</h3><p id="infographicModalDesc" class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><div id="infographicStylePicker" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px"><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid #1d4ed8;border-radius:10px;cursor:pointer;font-weight:800;font-size:13px;background:#eff6ff;color:#1e3a8a"><input type="radio" name="infographicStyle" value="poster" checked onchange="onInfographicStyleChange()">📊 Poster infographic</label><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:800;font-size:13px"><input type="radio" name="infographicStyle" value="notebook" onchange="onInfographicStyleChange()">📓 Trang vở ghi bài</label></div><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí" oninput="latexImportRefreshDbtList()"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10" oninput="latexImportRefreshDbtList()"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể" oninput="latexImportRefreshDbtList()"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..." oninput="latexImportRefreshDbtList()"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><select id="latexDefDangBaiTap_pick" class="adminDbtSelect" style="width:100%;margin:0 0 4px" onchange="latexImportDbtPickChange()"><option value="">— Chọn hoặc gõ mới —</option></select><input id="latexDefDangBaiTap" placeholder="Dạng bài tập (cột H trên Sheet)" oninput="latexImportDbtInputChange()" /><span id="latexDefDangBaiTap_scope" class="muted" style="display:block;font-size:11px;margin-top:3px"></span></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -24498,7 +24915,7 @@ function canShowSolutionNow(){if(!canViewSolutionLive())return false;if(isAdminV
 function canUseInfographicRole(){return !!(USER.is_admin||canViewSolutionLive())}
 function isQuestionCorrect(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;let r=SUBMITTED?RESULTS[qIdx]:(RESULTS[qIdx]||CHECKED[qIdx]);return !!(r&&r.ok===true)}
 function canUnlockInfographic(qIdx){if(!canUseInfographicRole())return false;if(USER.is_admin)return true;return isQuestionCorrect(qIdx)}
-function syncInfographicButtons(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let roleOk=canUseInfographicRole()&&inQuiz;let ready=canUnlockInfographic(CUR);let lockTip='Trả lời đúng câu này mới mở khóa infographic.';for(let spec of [['btnFsInfographic',false],['btnInfographic',true]]){let b=document.getElementById(spec[0]);if(!b)continue;if(spec[1]&&!USER.is_admin){b.classList.add('hide');continue}b.classList.toggle('hide',!roleOk);if(!USER.is_admin||!spec[1]){b.disabled=!ready;b.title=ready?'Tạo prompt infographic chính xác từ Sheet':lockTip;b.classList.toggle('vipSolLocked',!ready)}else{b.disabled=false;b.title='Tạo prompt infographic (ADMIN — không cần làm bài)'}}}
+function syncInfographicButtons(){let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));let roleOk=canUseInfographicRole()&&inQuiz;let ready=canUnlockInfographic(CUR);let lockTip='Trả lời đúng câu này mới mở khóa infographic.';for(let spec of [['btnFsInfographic',false],['btnInfographic',true]]){let b=document.getElementById(spec[0]);if(!b)continue;if(spec[1]&&!USER.is_admin){b.classList.add('hide');continue}b.classList.toggle('hide',!roleOk);if(!USER.is_admin||!spec[1]){b.disabled=!ready;b.title=ready?'Tạo prompt ảnh Gemini (poster hoặc trang vở) từ Sheet':lockTip;b.classList.toggle('vipSolLocked',!ready)}else{b.disabled=false;b.title='Tạo prompt ảnh Gemini — poster hoặc trang vở (ADMIN — không cần làm bài)'}}}
 function syncExamSubmitButton(){let b=document.getElementById('btnExamSubmit');if(!b)return;let show=!!EXAM_MODE&&!SUBMITTED&&!(USER&&USER.is_trial);b.classList.toggle('hide',!show);b.disabled=!show}
 function syncVipSolutionButtons(){syncExamSubmitButton();let roleOk=canViewSolutionLive()&&!(EXAM_MODE&&!SUBMITTED);let ready=canShowSolutionNow();let on=ready&&!!VIP_Q_SHOW_ANS[CUR],ex=ready&&!!VIP_Q_SHOW_EXP[CUR];let mobile=isMobileQuizUI();let lockTip='Làm và chấm câu này trước khi xem đáp án / lời giải.';let mv=document.getElementById('mobileDockVipBtns');if(mv)mv.classList.toggle('hide',!roleOk);let vt=document.getElementById('vipSolBtnsTop');if(vt)vt.classList.toggle('hide',!roleOk||mobile);for(let id of ['btnQuizShowAns','btnQuizShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let id of ['btnFsShowAns','btnFsShowExp']){let b=document.getElementById(id);if(b)b.classList.toggle('hide',!roleOk||mobile)}for(let spec of [['btnMobileShowAns',on,'Ẩn ĐA','Đáp án'],['btnMobileShowExp',ex,'Ẩn LG','Lời giải'],['btnTopShowAns',on,'Ẩn ĐA','Đáp án'],['btnTopShowExp',ex,'Ẩn LG','Lời giải'],['btnQuizShowAns',on,'Ẩn ĐA','Đáp án'],['btnQuizShowExp',ex,'Ẩn LG','Lời giải'],['btnFsShowAns',on,'Ẩn ĐA','Đáp án'],['btnFsShowExp',ex,'Ẩn LG','Lời giải']]){let b=document.getElementById(spec[0]);if(!b)continue;b.classList.toggle('active',spec[1]);b.textContent=spec[1]?spec[2]:spec[3];if(!isAdminViewer()){b.disabled=!ready;b.title=ready?(spec[1]?'Ẩn':'Xem/ẩn')+(spec[0].includes('Exp')?' lời giải':' đáp án'):lockTip;b.classList.toggle('vipSolLocked',!ready)}}}
 function toggleQuestionAnswer(e){if(e&&e.stopPropagation)e.stopPropagation();if(!canViewSolutionLive()){alert('Chỉ VIP / SVIP / ADMIN được xem đáp án khi làm bài.');return}if(!canShowSolutionNow()){alert('Hãy làm và chấm câu này trước khi xem đáp án.');return}VIP_Q_SHOW_ANS[CUR]=!VIP_Q_SHOW_ANS[CUR];renderQuestion()}
@@ -27881,10 +28298,16 @@ async function commitLatexImport(){
 function openAddQuestion(){if(!USER.is_admin){alert('Chỉ ADMIN.');return}if(!QUESTIONS.length){alert('Hãy mở một đề trước khi thêm câu.');return}QUESTION_MODAL_MODE='add';ADMIN_SIMILAR_EDIT_TIPS=null;let tpl=QUESTIONS[CUR]||{};let seed={MaDe:tpl.MaDe||CURRENT_MADE||'',Mon:tpl.Mon||'',Lop:tpl.Lop||'',Chuong:tpl.Chuong||'',BaiHoc:tpl.BaiHoc||tpl.De||'',DangBaiTap:tpl.DangBaiTap||'',NangLucVatLy:tpl.NangLucVatLy||'',QuyenTruyCap:tpl.QuyenTruyCap||'VIP',MucDo:tpl.MucDo||'',Dang:tpl.Dang||'Trắc nghiệm',CauHoi:'',A:'',B:'',C:'',D:'',DapAn:'',SaiSo:'',LoiGiai:'',HinhAnh:'',ID:''};renderQuestionForm(seed);syncQuestionModalChrome();document.getElementById('modal').classList.remove('hide')}
 function closeEdit(){ADMIN_SIMILAR_EDIT_TIPS=null;document.getElementById('modal').classList.add('hide')}
 function closeInfographicModal(){let m=document.getElementById('infographicModal');if(m)m.classList.add('hide')}
-async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');let wrap=document.getElementById('infographicImageWrap');let status=document.getElementById('infographicGenStatus');if(wrap)wrap.classList.add('hide');if(status){status.classList.add('hide');status.textContent=''}if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();title.textContent='📊 Infographic · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let parts=['📊 Infographic · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
-function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}navigator.clipboard.writeText(ta.value).then(()=>alert('Đã chép prompt.\n\nDán Gemini — poster hiện đại đầy màu, 4 card gradient, không chữ Khối.')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
+let INFOGRAPHIC_STYLE='poster';
 let INFOGRAPHIC_GEN_BUSY=false;
-async function generateInfographicImage(){if(INFOGRAPHIC_GEN_BUSY)return;if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let btn=document.getElementById('btnGenerateInfographic');let status=document.getElementById('infographicGenStatus');let wrap=document.getElementById('infographicImageWrap');let img=document.getElementById('infographicGeneratedImg');INFOGRAPHIC_GEN_BUSY=true;if(btn){btn.disabled=true;btn.textContent='⏳ Đang vẽ…'}if(status){status.classList.remove('hide');status.textContent='Đang gọi Gemini vẽ poster — thường 30–60 giây…'}try{let j=await api('/api/infographic-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:CUR,answer:ANSWERS[CUR],...quizRestorePayload()})});if(img&&j.image_data_url){img.src=j.image_data_url;if(wrap)wrap.classList.remove('hide')}if(status)status.textContent='✅ Đã vẽ poster'+(j.model?' · '+j.model:'')+(j.has_reference_image?' · có ảnh tham chiếu cột T':'')}catch(e){if(status)status.textContent='❌ '+esc(e.message||e);alert('Không vẽ được poster: '+(e.message||e)+'\n\nVẫn có thể «Chép prompt» và dán Gemini thủ công.')}finally{INFOGRAPHIC_GEN_BUSY=false;if(btn){btn.disabled=false;btn.textContent='🎨 Vẽ poster (Gemini)'}}}
+function currentInfographicStyle(){let el=document.querySelector('input[name="infographicStyle"]:checked');let v=String((el&&el.value)||INFOGRAPHIC_STYLE||'poster').toLowerCase();INFOGRAPHIC_STYLE=(v==='notebook'||v==='vo')?'notebook':'poster';return INFOGRAPHIC_STYLE}
+function syncInfographicStyleUI(){let style=currentInfographicStyle();document.querySelectorAll('#infographicStylePicker label').forEach(function(lb){let inp=lb.querySelector('input');let on=!!(inp&&inp.checked);lb.style.borderColor=on?'#1d4ed8':'var(--border)';lb.style.background=on?'#eff6ff':'var(--surface)';lb.style.color=on?'#1e3a8a':''});let desc=document.getElementById('infographicModalDesc');if(desc)desc.innerHTML=style==='notebook'?'Gemini vẽ <b>một trang vở ghi bài</b> — giấy kẻ, lề đỏ, chữ viết tay sạch, công thức chuẩn. Góc trái: tên bài + ID · Góc phải: <b>Lớp Học Thầy Minh</b> + zalo <b>0946111107</b>. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.':'Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.';let btn=document.getElementById('btnGenerateInfographic');if(btn&&!INFOGRAPHIC_GEN_BUSY)btn.textContent=style==='notebook'?'📓 Vẽ trang vở (Gemini)':'🎨 Vẽ poster (Gemini)';let img=document.getElementById('infographicGeneratedImg');if(img)img.alt=style==='notebook'?'Trang vở Gemini':'Poster Gemini'}
+function onInfographicStyleChange(){syncInfographicStyleUI();let modal=document.getElementById('infographicModal');if(modal&&!modal.classList.contains('hide'))refreshInfographicPrompt(true)}
+function infographicStyleApiBody(){return {sid:SID,index:CUR,answer:ANSWERS[CUR],style:currentInfographicStyle(),...quizRestorePayload()}}
+async function openInfographicPrompt(){if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');let modal=document.getElementById('infographicModal');let wrap=document.getElementById('infographicImageWrap');let status=document.getElementById('infographicGenStatus');if(wrap)wrap.classList.add('hide');if(status){status.classList.add('hide');status.textContent=''}if(!ta||!modal){alert('Không tìm thấy hộp prompt.');return}ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';syncInfographicStyleUI();if(title){let q=QUESTIONS[CUR]||{};let md=String(q.MucDo||'').trim();let kind=currentInfographicStyle()==='notebook'?'📓 Trang vở':'📊 Infographic';title.textContent=kind+' · Câu '+(CUR+1)+(q.ID?' · ID '+q.ID:'')+(md?' · Mức độ '+md:'')}modal.classList.remove('hide');await refreshInfographicPrompt()}
+async function refreshInfographicPrompt(quiet){let ta=document.getElementById('infographicPromptText');let title=document.getElementById('infographicModalTitle');if(!ta)return;ta.value='Đang tạo prompt từ Sheet (câu hiện tại)…';try{let j=await api('/api/infographic-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(infographicStyleApiBody())});ta.value=j.prompt||'';if(!ta.value)ta.value='Không tạo được prompt.';if(title){let q=QUESTIONS[CUR]||{};let kind=(j.style==='notebook'||currentInfographicStyle()==='notebook')?'📓 Trang vở':'📊 Infographic';let parts=[kind+' · Câu '+(CUR+1)];if(q.ID)parts.push('ID '+q.ID);let md=String(j.mucdo||q.MucDo||'').trim();if(md)parts.push('Mức độ '+md);if(j.dang_title)parts.push(j.dang_title);title.textContent=parts.join(' · ')}if(!quiet&&j.warnings&&j.warnings.length)alert('⚠️ Kiểm tra Sheet:\n'+j.warnings.join('\n'))}catch(e){ta.value='';alert('Không tạo được prompt: '+(e.message||e))}}
+function copyInfographicPrompt(){let ta=document.getElementById('infographicPromptText');if(!ta||!String(ta.value||'').trim()){alert('Chưa có prompt.');return}let notebook=currentInfographicStyle()==='notebook';navigator.clipboard.writeText(ta.value).then(()=>alert(notebook?'Đã chép prompt.\n\nDán Gemini — trang vở ghi bài, lề đỏ, chữ viết tay, header Lớp Học Thầy Minh.':'Đã chép prompt.\n\nDán Gemini — poster hiện đại đầy màu, 4 card gradient, không chữ Khối.')).catch(()=>{ta.focus();ta.select();try{document.execCommand('copy');alert('Đã chép (Ctrl+C).')}catch(e){alert('Chọn text trong ô rồi Ctrl+C.')}})}
+async function generateInfographicImage(){if(INFOGRAPHIC_GEN_BUSY)return;if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let btn=document.getElementById('btnGenerateInfographic');let status=document.getElementById('infographicGenStatus');let wrap=document.getElementById('infographicImageWrap');let img=document.getElementById('infographicGeneratedImg');let notebook=currentInfographicStyle()==='notebook';INFOGRAPHIC_GEN_BUSY=true;if(btn){btn.disabled=true;btn.textContent='⏳ Đang vẽ…'}if(status){status.classList.remove('hide');status.textContent=notebook?'Đang gọi Gemini vẽ trang vở — thường 30–60 giây…':'Đang gọi Gemini vẽ poster — thường 30–60 giây…'}try{let j=await api('/api/infographic-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(infographicStyleApiBody())});if(img&&j.image_data_url){img.src=j.image_data_url;if(wrap)wrap.classList.remove('hide')}let doneStyle=(j.style==='notebook'||notebook)?'trang vở':'poster';if(status)status.textContent='✅ Đã vẽ '+doneStyle+(j.model?' · '+j.model:'')+(j.has_reference_image?' · có ảnh tham chiếu cột T':'')}catch(e){if(status)status.textContent='❌ '+esc(e.message||e);alert('Không vẽ được ảnh: '+(e.message||e)+'\n\nVẫn có thể «Chép prompt» và dán Gemini thủ công.')}finally{INFOGRAPHIC_GEN_BUSY=false;if(btn){btn.disabled=false;btn.textContent=currentInfographicStyle()==='notebook'?'📓 Vẽ trang vở (Gemini)':'🎨 Vẽ poster (Gemini)'}}}
 let QUESTION_SAVE_BUSY=false;
 async function saveQuestionModal(){if(QUESTION_SAVE_BUSY)return;if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
 async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let saveBtn=document.getElementById('btnSaveQuestion');try{let q=QUESTIONS[CUR];if(!q){alert('Không có câu hiện tại.');return}if(!q._row&&!String(q.ID||'').trim()){alert('Không xác định dòng Sheet. Hãy bấm Đồng bộ Sheet rồi mở lại câu.');return}let form=readQuestionFormData();let updates={};for(let f of QUESTION_EDIT_SAVE_FIELDS)updates[f]=form[f]!=null?form[f]:(q[f]||'');updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\nVẫn lưu Sheet?'))return;QUESTION_SAVE_BUSY=true;if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;if(j.hinhanh){updates.HinhAnh=j.hinhanh}Object.assign(q,updates);q.reviewed_sheet=questionIsReviewedForAdmin(q);q.reviewed=q.reviewed_sheet;applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(j.hinhanh_warning?('\n\n⚠ '+j.hinhanh_warning):'')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.'))}catch(e){alert('Không lưu được: '+(e.message||e))}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();if(saveBtn)saveBtn.disabled=false}}
@@ -36688,10 +37111,11 @@ def api_infographic_prompt():
         log_swallow("api_infographic_prompt:31453")
         idx = 0
     answer = data.get("answer", "")
+    style = data.get("style") or data.get("prompt_style") or "poster"
     st = get_store()
     restore = quiz_restore_payload_from_body(data)
     try:
-        return jsonify(st.infographic_prompt_one(sid, idx, answer, restore))
+        return jsonify(st.infographic_prompt_one(sid, idx, answer, restore, style))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -36711,11 +37135,12 @@ def api_infographic_generate():
         log_swallow("api_infographic_generate:31475")
         idx = 0
     answer = data.get("answer", "")
+    style = data.get("style") or data.get("prompt_style") or "poster"
     st = get_store()
     restore = quiz_restore_payload_from_body(data)
 
     def _work():
-        return st.infographic_generate_one(sid, idx, answer, restore)
+        return st.infographic_generate_one(sid, idx, answer, restore, style)
 
     try:
         with ThreadPoolExecutor(max_workers=1) as pool:
@@ -36725,7 +37150,7 @@ def api_infographic_generate():
         return jsonify(
             {
                 "error": (
-                    f"Vẽ poster quá {INFOGRAPHIC_HTTP_MAX_SEC}s — thử lại hoặc "
+                    f"Vẽ ảnh quá {INFOGRAPHIC_HTTP_MAX_SEC}s — thử lại hoặc "
                     "dùng «Chép prompt» dán Gemini thủ công."
                 )
             }
