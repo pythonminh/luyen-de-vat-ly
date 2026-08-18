@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V424_READ_DE_DEBATE"
+APP_VERSION = "V425_SAVE_FAST"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -5678,8 +5678,15 @@ class SheetStore:
         """Tự thêm cột NangLucVatLy ở cuối Cau_Hoi; ưu tiên cột V để không dịch H–U."""
         if self.ws_questions is None:
             return
+        if self.question_col_index and self.question_col_index.get("NangLucVatLy") is not None:
+            return
+        headers = list(self.question_headers or [])
+        if headers and find_col(headers, "NangLucVatLy") is not None:
+            return
         headers = list(gsheet_call_retry("row_values Cau_Hoi header", self.ws_questions.row_values, 1) or [])
         if find_col(headers, "NangLucVatLy") is not None:
+            self.question_headers = headers
+            self.question_col_index = resolve_question_col_index(headers)
             return
         target_col = max(22, len(headers) + 1)  # V nếu bảng hiện tại kết thúc trước V
         try:
@@ -10068,7 +10075,31 @@ class SheetStore:
         return max(len(headers), canon, max(SHEET_QUESTION_FIXED_COL_1.values(), default=22))
 
     def _next_question_sheet_row(self) -> int:
-        """Dòng trống kế tiếp (theo cột A)."""
+        """Dòng trống kế tiếp — ưu tiên RAM, chỉ đọc vài ô cuối cột A (không quét cả cột)."""
+        ram_max = 1
+        for q in self.questions or []:
+            try:
+                ram_max = max(ram_max, int(q.get("_row") or 0))
+            except Exception:
+                log_swallow("_next_question_sheet_row:ram")
+        if ram_max >= 2 and self.ws_questions:
+            try:
+                a1 = gspread.utils.rowcol_to_a1(ram_max, 1)
+                b1 = gspread.utils.rowcol_to_a1(ram_max + 8, 1)
+                block = gsheet_call_retry("get Cau_Hoi A tail", self.ws_questions.get, f"{a1}:{b1}") or []
+                last = ram_max
+                for off, row_vals in enumerate(block):
+                    cell = ""
+                    if isinstance(row_vals, list):
+                        cell = row_vals[0] if row_vals else ""
+                    else:
+                        cell = row_vals
+                    if clean(cell):
+                        last = ram_max + off
+                return max(2, last + 1)
+            except Exception:
+                log_swallow("_next_question_sheet_row:peek")
+                return ram_max + 1
         try:
             col_a = gsheet_call_retry("col_values Cau_Hoi A", self.ws_questions.col_values, 1) or []
             return max(2, len(col_a) + 1)
@@ -10130,38 +10161,38 @@ class SheetStore:
             return 0, 0
 
     def _ensure_question_sheet_grid(self, min_rows: int, min_cols: int = 0) -> None:
-        """Nới lưới Cau_Hoi trước khi ghi — Sheets từ chối range vượt Max rows/cols."""
+        """Nới lưới Cau_Hoi chỉ khi thật sự thiếu hàng/cột — tránh resize mỗi lần lưu."""
         ws = self.ws_questions
         if not ws:
             return
-        cur_rows, cur_cols = self._refresh_question_sheet_grid_meta()
-        need_rows = max(cur_rows, int(min_rows or 0))
-        need_cols = max(cur_cols, int(min_cols or 0), 23)
-        # Chừa buffer để lần sau không đụng trần ngay
-        if need_rows >= cur_rows:
-            need_rows = max(need_rows + 30, cur_rows + 80, int(min_rows or 0) + 50)
-        if need_cols > cur_cols:
-            need_cols = max(need_cols, cur_cols)
-        if need_rows <= cur_rows and need_cols <= cur_cols:
+        min_rows = int(min_rows or 0)
+        min_cols = max(int(min_cols or 0), 23)
+        cur_rows = int(getattr(ws, "row_count", 0) or 0)
+        cur_cols = int(getattr(ws, "col_count", 0) or 0)
+        if cur_rows >= min_rows and cur_cols >= min_cols:
             return
-        # Luôn gửi đủ rows+cols — tránh lỗi gspread khi chỉ truyền 1 tham số
+        cur_rows, cur_cols = self._refresh_question_sheet_grid_meta()
+        if cur_rows >= min_rows and cur_cols >= min_cols:
+            return
+        need_rows = max(min_rows + 50, cur_rows)
+        need_cols = max(min_cols, cur_cols, 23)
         gsheet_call_retry(
-            f"resize Cau_Hoi grid rows={need_rows} cols={max(need_cols, cur_cols or need_cols)}",
+            f"resize Cau_Hoi grid rows={need_rows} cols={need_cols}",
             ws.resize,
             rows=need_rows,
-            cols=max(need_cols, cur_cols or need_cols),
+            cols=need_cols,
         )
         new_rows, new_cols = self._refresh_question_sheet_grid_meta()
-        if new_rows < int(min_rows or 0):
-            extra = max(80, int(min_rows or 0) - new_rows + 20)
+        if new_rows < min_rows:
+            extra = max(80, min_rows - new_rows + 20)
             try:
                 gsheet_call_retry(f"add_rows Cau_Hoi +{extra}", ws.add_rows, extra)
             except Exception:
                 log_swallow("_ensure_question_sheet_grid:add_rows")
                 gsheet_call_retry(
-                    f"resize Cau_Hoi fallback rows={int(min_rows or 0)+100}",
+                    f"resize Cau_Hoi fallback rows={min_rows + 100}",
                     ws.resize,
-                    rows=int(min_rows or 0) + 100,
+                    rows=min_rows + 100,
                     cols=max(new_cols, cur_cols, 23),
                 )
 
@@ -10486,10 +10517,11 @@ class SheetStore:
             raise RuntimeError("Không có câu hỏi để nhập.")
 
         with self.add_question_lock:
+            if not self.question_headers:
+                self.question_headers = list(self.ws_questions.row_values(1) or [])
+                self.question_col_index = resolve_question_col_index(self.question_headers)
             self.ensure_question_competency_header()
             self.ensure_question_ngaycapnhat_header()
-            self.question_headers = self.ws_questions.row_values(1)
-            self.question_col_index = resolve_question_col_index(self.question_headers)
             if not self.question_headers:
                 headers_row = self.ws_questions.row_values(1)
                 self.question_headers = headers_row
@@ -10506,7 +10538,8 @@ class SheetStore:
                 except Exception:
                     log_swallow("add_questions_bulk:8565")
                     pass
-            self._extend_fingerprints_from_sheet_tail(existing_fp)
+            if not self.questions_loaded or len(existing_fp) < 8:
+                self._extend_fingerprints_from_sheet_tail(existing_fp)
 
             rows: List[List[str]] = []
             prepared: List[Dict[str, Any]] = []
@@ -10562,16 +10595,17 @@ class SheetStore:
 
             start_row = self._append_question_rows_at_col_a(rows)
 
-            new_questions: List[Dict[str, Any]] = self._read_appended_question_rows(start_row, len(rows))
-
+            new_questions: List[Dict[str, Any]] = []
+            for off, data in enumerate(prepared):
+                q = self._question_from_prepared_data(start_row + off, data)
+                if q:
+                    new_questions.append(q)
             if len(new_questions) < len(rows):
+                fetched = self._read_appended_question_rows(start_row, len(rows))
                 have = {int(q.get("_row") or 0) for q in new_questions}
-                for off, data in enumerate(prepared):
-                    rn = start_row + off
-                    if rn in have:
-                        continue
-                    q = self._question_from_prepared_data(rn, data)
-                    if q:
+                for q in fetched:
+                    rn = int(q.get("_row") or 0)
+                    if rn and rn not in have:
                         new_questions.append(q)
 
             new_questions.sort(key=lambda x: int(x.get("_row") or 0))
@@ -10580,7 +10614,6 @@ class SheetStore:
             for q in new_questions:
                 self.patch_quiz_sessions_after_row_add(q)
 
-            self.duplicate_report = analyze_question_duplicates(self.questions)
             self.rebuild_indexes_after_admin_change()
 
             return {
@@ -10591,7 +10624,6 @@ class SheetStore:
                 "start_row": start_row if new_questions else None,
                 "end_row": (start_row + len(new_questions) - 1) if new_questions else None,
                 "ids": [q.get("ID", "") for q in new_questions],
-                "questions": [self.public_question(q, len(self.questions) - len(new_questions) + i, reveal=True) for i, q in enumerate(new_questions)],
             }
 
 
@@ -26117,16 +26149,27 @@ async function saveAiGeneratedQuestions(){
   if(!AI_GEN_QUESTIONS.length){alert('Chưa có câu trong bản xem trước để lưu.');return}
   if(!confirm('Lưu '+AI_GEN_QUESTIONS.length+' câu vào Google Sheet Cau_Hoi?\n\n• Trạng thái: CHƯA DUYỆT (ADMIN soát rồi mới duyệt)\n• App bỏ qua câu trùng nội dung.'))return;
   let st=document.getElementById('agStatus'),sb=document.getElementById('agSaveBtn');
+  let created=0,skipped=[],warns=[],startRow=0,endRow=0,groupKey='';
   if(sb){sb.disabled=true;sb.textContent='⏳ Đang lưu…'}
   try{
-    let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:AI_GEN_QUESTIONS}),timeoutMs:90000},0);
-    let created=parseInt(j.created,10)||0;
-    let skipped=(j.skipped&&j.skipped.length)||0;
+    let n=AI_GEN_QUESTIONS.length;
+    for(let i=0;i<n;i++){
+      if(st)st.textContent='⏳ Đang lưu câu '+(i+1)+'/'+n+' lên Google Sheet…';
+      if(sb)sb.textContent='⏳ '+(i+1)+'/'+n;
+      let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:[AI_GEN_QUESTIONS[i]]}),timeoutMs:40000},0);
+      created+=parseInt(j.created,10)||0;
+      if(Array.isArray(j.skipped)&&j.skipped.length)skipped=skipped.concat(j.skipped);
+      if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)warns=warns.concat(j.hinhanh_warnings);
+      if(j.start_row){if(!startRow)startRow=j.start_row;endRow=j.end_row||j.start_row}
+      if(j.group_key)groupKey=j.group_key;
+    }
+    let j={created:created,skipped:skipped,hinhanh_warnings:warns,start_row:startRow,end_row:endRow,group_key:groupKey};
+    let skipN=skipped.length;
     if(created>0){
       AI_GEN_SAVED=true;
-      let made=j.group_key||(j.questions&&j.questions[0]&&(j.questions[0].MaDe||j.questions[0].GroupKey))||(AI_GEN_QUESTIONS[0]&&AI_GEN_QUESTIONS[0].MaDe)||'';
+      let made=j.group_key||(AI_GEN_QUESTIONS[0]&&AI_GEN_QUESTIONS[0].MaDe)||'';
       let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');
-      if(st)st.textContent='✅ Đã lưu '+created+' câu vào Google Sheet'+(j.start_row?(' từ dòng '+j.start_row+' đến '+j.end_row):'')+(skipped?('\nBỏ qua '+skipped+' câu trùng/không hợp lệ.'):'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?('\n⚠ Ảnh: '+j.hinhanh_warnings.join(' · ')):'')+'\n📌 Câu mới = CHƯA DUYỆT — mở đề sẽ thấy ngay (viền cam + nhãn ⚠).';
+      if(st)st.textContent='✅ Đã lưu '+created+' câu vào Google Sheet'+(j.start_row?(' từ dòng '+j.start_row+' đến '+j.end_row):'')+(skipN?('\nBỏ qua '+skipN+' câu trùng/không hợp lệ.'):'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?('\n⚠ Ảnh: '+j.hinhanh_warnings.join(' · ')):'')+'\n📌 Câu mới = CHƯA DUYỆT — mở đề sẽ thấy ngay (viền cam + nhãn ⚠).';
       try{await refreshCatalogFromMeta()}catch(e){}
       try{
         if(mon)setSel('fMon',mon);refreshFilterOptions();
@@ -26154,14 +26197,15 @@ async function saveAiGeneratedQuestions(){
       }
     }else{
       AI_GEN_SAVED=false;
-      let reason=(j.message||'')||(skipped?('Bỏ qua '+skipped+' câu (trùng nội dung?).'):'Không chèn được câu nào.');
+      let reason=(j.message||'')||(skipN?('Bỏ qua '+skipN+' câu (trùng nội dung?).'):'Không chèn được câu nào.');
       if(st)st.textContent='⚠ '+reason;
       alert('Không lưu được câu mới.\n'+reason);
     }
   }catch(e){
     AI_GEN_SAVED=false;
-    if(st)st.textContent='❌ Không lưu được: '+(e.message||e);
-    alert('Không lưu được: '+(e.message||e));
+    let extra=created?('Đã ghi được '+created+' câu. Bấm lưu lại — câu trùng sẽ bỏ qua. '):'';
+    if(st)st.textContent='❌ Không lưu được: '+extra+(e.message||e);
+    alert('Không lưu được: '+extra+(e.message||e));
   }finally{
     if(sb){sb.textContent='💾 Lưu tất cả vào Google Sheet';sb.disabled=AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
   }
@@ -41396,7 +41440,7 @@ def api_admin_ai_generate_save():
             result["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e) or "Không lưu được câu lên Google Sheet. Thử lại — câu đã ghi sẽ bị bỏ qua nếu trùng."}), 400
 
 
 @app.route("/api/question/create", methods=["POST"])
