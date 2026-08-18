@@ -3323,6 +3323,14 @@ QUESTION_FIELDS = [
 
 EDITABLE_FIELDS = ["Mon", "Lop", "Chuong", "BaiHoc", "CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "MucDo", "Dang", "DangBaiTap", "NangLucVatLy", "LoiGiai", "HinhAnh", "QuyenTruyCap", "TrangThai"]
 
+# Cập nhật không đổi số câu / bộ lọc mục lục — bỏ rebuild catalog sau lưu (nhanh hơn nhiều).
+_CATALOG_NEUTRAL_UPDATE_FIELDS = frozenset({"LoiGiai", "DapAn", "SaiSo", "TrangThai", "NgayCapNhat"})
+
+
+def is_lightweight_question_update(updates: Dict[str, Any]) -> bool:
+    keys = {k for k in (updates or {}) if k in EDITABLE_FIELDS or k == "NgayCapNhat"}
+    return bool(keys) and keys <= _CATALOG_NEUTRAL_UPDATE_FIELDS
+
 CREATE_QUESTION_FIELDS = [
     "MaDe", "ID", "BoDe", "De", "Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap", "NangLucVatLy",
     "QuyenTruyCap", "Diem",
@@ -5338,15 +5346,16 @@ def _is_transient_gsheet_error(exc: Exception) -> bool:
     ])
 
 
-def gsheet_call_retry(label: str, fn, *args, **kwargs):
+def gsheet_call_retry(label: str, fn, *args, max_attempts: int = 4, **kwargs):
     """Gọi Google Sheet có retry nhẹ để tránh lỗi lúc mạng/Render/Google bị nghẽn."""
     last_err = None
-    for attempt in range(4):
+    attempts = max(1, int(max_attempts or 4))
+    for attempt in range(attempts):
         try:
             return fn(*args, **kwargs)
         except Exception as e:
             last_err = e
-            if attempt >= 3 or not _is_transient_gsheet_error(e):
+            if attempt >= attempts - 1 or not _is_transient_gsheet_error(e):
                 raise
             time.sleep(min(0.8 * (2 ** attempt) + random.random() * 0.35, 5.0))
     raise last_err
@@ -5702,6 +5711,12 @@ class SheetStore:
         """Tự thêm cột NgayCapNhat ở cuối Cau_Hoi — dùng ghi chú ngày cập nhật dạng BT."""
         if self.ws_questions is None:
             return
+        if self.question_col_index and self.question_col_index.get("NgayCapNhat") is not None:
+            return
+        headers = list(self.question_headers or [])
+        if headers and find_col(headers, "NgayCapNhat") is not None:
+            self.question_col_index = resolve_question_col_index(headers)
+            return
         headers = list(gsheet_call_retry("row_values Cau_Hoi header NgayCapNhat", self.ws_questions.row_values, 1) or [])
         if find_col(headers, "NgayCapNhat") is not None:
             self.question_headers = headers
@@ -5870,14 +5885,63 @@ class SheetStore:
                 self.by_id.setdefault(qid, []).append(q)
         self.catalog = self.build_catalog()
 
-    def rebuild_indexes_after_admin_change(self):
+    def rebuild_indexes_after_admin_change(self, rebuild_catalog: bool = True):
         """Cập nhật lại by_made/catalog từ RAM, không đọc lại toàn bộ Google Sheet.
         Việc đọc lại toàn bộ Cau_Hoi sau mỗi lần lưu/xóa rất chậm trên Render Free
         và dễ làm trình duyệt báo Không đọc được phản hồi.
         """
-        self.rebuild_question_indexes()
+        if rebuild_catalog:
+            self.rebuild_question_indexes()
         self.loaded_at = now_str()
 
+    def _question_row_id_from_ram(self, row_number: int, expected_id: str = "") -> str:
+        try:
+            row_number = int(row_number)
+        except Exception:
+            return ""
+        if row_number < 2:
+            return ""
+        for qq in self.questions or []:
+            try:
+                if int(qq.get("_row") or 0) == row_number:
+                    return clean(qq.get("ID", ""))
+            except Exception:
+                log_swallow("_question_row_id_from_ram:row")
+        expected_id = clean(expected_id)
+        if expected_id:
+            for qq in (self.by_id or {}).get(expected_id) or []:
+                try:
+                    if int(qq.get("_row") or 0) == row_number:
+                        return expected_id
+                except Exception:
+                    log_swallow("_question_row_id_from_ram:id")
+        return ""
+
+    def _find_sheet_row_by_question_id(self, question_id: str) -> Optional[int]:
+        """Tìm lại dòng thật trên Google Sheet theo ID — ưu tiên RAM, tránh đọc cả cột ID."""
+        question_id = clean(question_id)
+        if not question_id:
+            return None
+        for qq in (self.by_id or {}).get(question_id) or []:
+            try:
+                r = int(qq.get("_row") or 0)
+            except Exception:
+                log_swallow("_find_sheet_row_by_question_id:ram")
+                continue
+            if r >= 2:
+                return r
+        id_col = self._question_id_col_1()
+        if self.ws_questions is None:
+            return None
+        try:
+            ids = gsheet_call_retry("col_values Cau_Hoi ID", self.ws_questions.col_values, id_col)
+            for i, v in enumerate(ids, start=1):
+                if i >= 2 and clean(v) == question_id:
+                    return i
+        except Exception:
+            log_swallow("_find_sheet_row_by_question_id:7441")
+            return None
+        return None
 
     def apply_deleted_question_tombstones(self) -> int:
         """Bỏ câu đã xóa khỏi RAM (kể cả worker khác chưa kịp Đồng bộ Sheet)."""
@@ -9034,26 +9098,19 @@ class SheetStore:
             log_swallow("_question_id_col_1:7427")
             return 2
 
-    def _find_sheet_row_by_question_id(self, question_id: str) -> Optional[int]:
-        """Tìm lại dòng thật trên Google Sheet theo ID để tránh ghi nhầm sau khi Sheet bị sort/chèn/xóa."""
-        question_id = clean(question_id)
-        if not question_id:
-            return None
-        id_col = self._question_id_col_1()
-        try:
-            ids = gsheet_call_retry("col_values Cau_Hoi ID", self.ws_questions.col_values, id_col)
-            for i, v in enumerate(ids, start=1):
-                if i >= 2 and clean(v) == question_id:
-                    return i
-        except Exception:
-            log_swallow("_find_sheet_row_by_question_id:7441")
-            return None
-        return None
-
-    def update_question(self, row_number: int, updates: Dict[str, Any], expected_id: str = "") -> Dict[str, Any]:
+    def update_question(
+        self,
+        row_number: int,
+        updates: Dict[str, Any],
+        expected_id: str = "",
+        skip_catalog_rebuild: bool = False,
+    ) -> Dict[str, Any]:
         """ADMIN sửa câu hỏi — ghi đúng cột theo tiêu đề Sheet Cau_Hoi (không đoán cột K/L…)."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được sửa câu hỏi")
+        self.connect()
+        if self.ws_questions is None:
+            self.ws_questions = self.worksheet_or_none("Cau_Hoi")
         if self.ws_questions is None:
             raise RuntimeError("Chưa kết nối Google Sheet Cau_Hoi. Kiểm tra GOOGLE_SHEET_ID / credentials.")
         if not self._ensure_question_headers():
@@ -9064,6 +9121,16 @@ class SheetStore:
             row_number = int(row_number or 0)
         except Exception:
             row_number = 0
+        if expected_id:
+            for qq in (self.by_id or {}).get(expected_id) or []:
+                try:
+                    r = int(qq.get("_row") or 0)
+                except Exception:
+                    log_swallow("update_question:ram_row_by_id")
+                    continue
+                if r >= 2:
+                    row_number = r
+                    break
         if row_number < 2 and expected_id:
             found_row = self._find_sheet_row_by_question_id(expected_id)
             if found_row and found_row >= 2:
@@ -9071,62 +9138,81 @@ class SheetStore:
         if row_number < 2:
             raise RuntimeError("Dòng Google Sheet không hợp lệ. Hãy Đồng bộ Sheet rồi lưu lại.")
 
-        # Chống lỗi "lâu lâu lưu không vào / lưu nhầm dòng": nếu Google Sheet bị sort,
-        # chèn/xóa dòng ngoài app thì _row trong RAM có thể cũ. Khi client gửi kèm ID,
-        # server kiểm tra lại ô ID trước khi ghi; nếu lệch thì tự tìm lại dòng theo ID.
-        if expected_id:
-            id_col = self._question_id_col_1()
-            a1_id = gspread.utils.rowcol_to_a1(row_number, id_col)
-            try:
-                actual_id = clean(gsheet_call_retry("read Cau_Hoi ID", self.ws_questions.acell, a1_id).value)
-            except Exception:
-                log_swallow("update_question:7468")
-                actual_id = ""
-            if actual_id and actual_id != expected_id:
+        gs_attempts = 2 if skip_catalog_rebuild else 4
+
+        # Chống lỗi ghi nhầm dòng khi Sheet bị sort — fast path tin RAM, bỏ acell (tránh timeout Render).
+        if expected_id and not skip_catalog_rebuild:
+            ram_id = self._question_row_id_from_ram(row_number, expected_id)
+            if ram_id and ram_id == expected_id:
+                pass
+            else:
+                id_col = self._question_id_col_1()
+                a1_id = gspread.utils.rowcol_to_a1(row_number, id_col)
+                try:
+                    actual_id = clean(
+                        gsheet_call_retry(
+                            "read Cau_Hoi ID",
+                            self.ws_questions.acell,
+                            a1_id,
+                            max_attempts=gs_attempts,
+                        ).value
+                    )
+                except Exception:
+                    log_swallow("update_question:7468")
+                    actual_id = ""
+                if actual_id and actual_id != expected_id:
+                    found_row = self._find_sheet_row_by_question_id(expected_id)
+                    if found_row and found_row >= 2:
+                        row_number = int(found_row)
+                    else:
+                        raise RuntimeError(
+                            f"Dòng {row_number} không khớp ID. App đang giữ ID {expected_id}, "
+                            f"nhưng Sheet đang là {actual_id}. Hãy bấm Đồng bộ Sheet rồi lưu lại."
+                        )
+        elif expected_id and skip_catalog_rebuild:
+            ram_id = self._question_row_id_from_ram(row_number, expected_id)
+            if ram_id and ram_id != expected_id:
                 found_row = self._find_sheet_row_by_question_id(expected_id)
                 if found_row and found_row >= 2:
                     row_number = int(found_row)
-                else:
-                    raise RuntimeError(
-                        f"Dòng {row_number} không khớp ID. App đang giữ ID {expected_id}, "
-                        f"nhưng Sheet đang là {actual_id}. Hãy bấm Đồng bộ Sheet rồi lưu lại."
-                    )
 
         # Tự nhận dạng lời giải cột R dạng A/B/C/D cho câu Đúng/Sai.
         # Nếu cột R ghi: A. Sai — ... B. Đúng — ... thì app tự chuẩn hóa R
         # và tự điền cột P thành A=Sai · B=Đúng ... khi P đang trống hoặc cũng là dạng Đ/S.
         updates = dict(updates or {})
-        try:
-            merged_q: Dict[str, Any] = {}
-            for qq in self.questions:
-                try:
-                    same_row2 = int(qq.get("_row") or 0) == int(row_number)
-                except Exception:
-                    log_swallow("update_question:7492")
-                    same_row2 = False
-                same_id2 = bool(expected_id and clean(qq.get("ID", "")) == expected_id)
-                if same_row2 or same_id2:
-                    merged_q = dict(qq)
-                    break
-            merged_q.update({k: clean(v) for k, v in updates.items()})
-            if any(f in updates for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh")):
-                patch = {
-                    f: clean(updates.get(f, merged_q.get(f, "")))
-                    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh")
-                }
-                patch = _maybe_extract_tikz_into_hinhanh(
-                    patch, only_fields=set(updates.keys()) | {"HinhAnh"}
-                )
-                for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh"):
-                    if f in updates or (
-                        f == "HinhAnh"
-                        and clean(patch.get("HinhAnh", ""))
-                        != clean(merged_q.get("HinhAnh", ""))
-                    ):
-                        updates[f] = patch.get(f, "")
-        except Exception:
-            log_swallow("update_question:7514")
-            pass
+        light_update = skip_catalog_rebuild and is_lightweight_question_update(updates)
+        if not light_update:
+            try:
+                merged_q: Dict[str, Any] = {}
+                for qq in self.questions:
+                    try:
+                        same_row2 = int(qq.get("_row") or 0) == int(row_number)
+                    except Exception:
+                        log_swallow("update_question:7492")
+                        same_row2 = False
+                    same_id2 = bool(expected_id and clean(qq.get("ID", "")) == expected_id)
+                    if same_row2 or same_id2:
+                        merged_q = dict(qq)
+                        break
+                merged_q.update({k: clean(v) for k, v in updates.items()})
+                if any(f in updates for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh")):
+                    patch = {
+                        f: clean(updates.get(f, merged_q.get(f, "")))
+                        for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh")
+                    }
+                    patch = _maybe_extract_tikz_into_hinhanh(
+                        patch, only_fields=set(updates.keys()) | {"HinhAnh"}
+                    )
+                    for f in ("CauHoi", "A", "B", "C", "D", "LoiGiai", "HinhAnh"):
+                        if f in updates or (
+                            f == "HinhAnh"
+                            and clean(patch.get("HinhAnh", ""))
+                            != clean(merged_q.get("HinhAnh", ""))
+                        ):
+                            updates[f] = patch.get(f, "")
+            except Exception:
+                log_swallow("update_question:7514")
+                pass
 
         hinhanh_warn = ""
         if "HinhAnh" in updates:
@@ -9188,20 +9274,38 @@ class SheetStore:
             hint = (" Thiếu cột: " + ", ".join(missing_cols) + ".") if missing_cols else ""
             raise RuntimeError("Không có cột nào phù hợp để cập nhật." + hint + " Kiểm tra tiêu đề sheet Cau_Hoi.")
 
-        # Ghi ngày cập nhật (cột NgayCapNhat) — dùng hiển thị ghi chú sau từng dạng BT
-        try:
-            self.ensure_question_ngaycapnhat_header()
-            col0 = (self.question_col_index or {}).get("NgayCapNhat")
-            if col0 is not None:
-                stamp = stamp_ngay_cap_nhat()
-                a1u = gspread.utils.rowcol_to_a1(row_number, col0 + 1)
-                batch.append({"range": a1u, "values": [[stamp]]})
-                updates["NgayCapNhat"] = stamp
-                updated_fields.append(f"NgayCapNhat->{a1u}")
-        except Exception:
-            log_swallow("update_question:NgayCapNhat")
+        # Ghi ngày cập nhật (cột NgayCapNhat) — fast path chỉ ghi nếu cột đã có trong RAM.
+        if skip_catalog_rebuild:
+            try:
+                col0 = (self.question_col_index or {}).get("NgayCapNhat")
+                if col0 is not None:
+                    stamp = stamp_ngay_cap_nhat()
+                    a1u = gspread.utils.rowcol_to_a1(row_number, col0 + 1)
+                    batch.append({"range": a1u, "values": [[stamp]]})
+                    updates["NgayCapNhat"] = stamp
+                    updated_fields.append(f"NgayCapNhat->{a1u}")
+            except Exception:
+                log_swallow("update_question:NgayCapNhat:fast")
+        else:
+            try:
+                self.ensure_question_ngaycapnhat_header()
+                col0 = (self.question_col_index or {}).get("NgayCapNhat")
+                if col0 is not None:
+                    stamp = stamp_ngay_cap_nhat()
+                    a1u = gspread.utils.rowcol_to_a1(row_number, col0 + 1)
+                    batch.append({"range": a1u, "values": [[stamp]]})
+                    updates["NgayCapNhat"] = stamp
+                    updated_fields.append(f"NgayCapNhat->{a1u}")
+            except Exception:
+                log_swallow("update_question:NgayCapNhat")
 
-        gsheet_call_retry("batch_update Cau_Hoi", self.ws_questions.batch_update, batch, value_input_option="RAW")
+        gsheet_call_retry(
+            "batch_update Cau_Hoi",
+            self.ws_questions.batch_update,
+            batch,
+            value_input_option="RAW",
+            max_attempts=gs_attempts,
+        )
 
         # Cập nhật ngay trong RAM để tránh đọc lại cả Google Sheet sau khi lưu.
         for q in self.questions:
@@ -9228,8 +9332,8 @@ class SheetStore:
                 except Exception:
                     log_swallow("update_question:touch_dbt_updated")
                 break
-        self.rebuild_indexes_after_admin_change()
-        out = {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields}
+        self.rebuild_indexes_after_admin_change(rebuild_catalog=not skip_catalog_rebuild)
+        out = {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields, "fast": bool(skip_catalog_rebuild)}
         if hinhanh_warn:
             out["hinhanh_warning"] = hinhanh_warn
         if "HinhAnh" in updates:
@@ -24250,7 +24354,7 @@ document.addEventListener('DOMContentLoaded',function(){
  * LEARNING_CACHE       cache API /api/learning/method theo Mon|Lop|…|DangBaiTap
  * HINT_BY_Q[CUR]       kết quả Soát đề GPT / Gợi ý AI cho từng câu
  * ========================================================================== */
-let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',CURRENT_DANGBAITAP='',DBT_UNCLASSIFIED='__CHUA_PHAN_LOAI__',DBT_UNCLASSIFIED_LABEL='Chưa phân loại',START_IS_RETRY=false,EXAM_MODE=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,CORRECT_STREAK=0,STREAK_TOAST_TIMER=null,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,MINI_CALC_OPEN=false,MINI_CALC_BY_Q={},QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},AI_LG_BY_Q={},ADMIN_LG_DRAFT_BY_Q={},AI_LG_LOADING=-1,AI_LG_ABORT_CTRL=null,QUIZ_TTS_ON=false,QUIZ_TTS_KIND="",QUIZ_TTS_CHUNKS=[],QUIZ_TTS_IDX=0,QUIZ_TALK_BY_Q={},QUIZ_TALK_LOADING=-1,QUIZ_TALK_ABORT_CTRL=null,QUIZ_DEBATE_BY_Q={},QUIZ_DEBATE_LOADING=-1,QUIZ_DEBATE_ABORT_CTRL=null,ADMIN_LG_SAVE_BUSY=false,QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={},ADMIN_SIMILAR_EDIT_TIPS=null,LEARNING_OPEN_KIND='',LEARNING_CACHE={},LEARNING_LOADING=false,LEARNING_PANEL_COLLAPSED=false,TRANSLATE_BY_Q={},TRANSLATE_KIND='CauHoi',TRANSLATE_LOADING=false,TRANSLATE_SIDE_LOADING={},TRANSLATE_AUTO_QUEUE=[],TRANSLATE_SPEECH_CHUNKS=[],TRANSLATE_SPEECH_CHUNK_IDX=0,TRANSLATE_SPEECH_REPEAT=false,TRANSLATE_TTS_ACTIVE_BTN='',TRANSLATE_SPEECH_ACTIVE=false,TRANSLATE_SPEECH_AUTO_PLAY=false,TRANSLATE_SPEECH_RATE=0.92,FLAGGED={},FLAGGED_SID=null,PED_FORMULA_CACHE={},PED_FORMULA_LOADING={};
+let META=null,CATALOG=[],USER={},SID='',QUESTIONS=[],CUR=0,ANSWERS={},SUBMITTED=false,RESULTS={},CHECKED={},LOCKED_Q={},CURRENT_MADE='',CURRENT_LEVEL='',CURRENT_DANG='',CURRENT_DANGBAITAP='',DBT_UNCLASSIFIED='__CHUA_PHAN_LOAI__',DBT_UNCLASSIFIED_LABEL='Chưa phân loại',START_IS_RETRY=false,EXAM_MODE=false,GROUP_BY_DANG=true,RANDOM_PRACTICE=false,RP_SCOPE_LOCKED=false,QUIZ_ELAPSED=0,QUIZ_TIMER=null,FS_ANS_FORCE=null,FS_EXP_FORCE=null,FULLDE_ON=false,FS_NAV_HIDDEN=false,COMPLETED_NOTICE=false,CORRECT_STREAK=0,STREAK_TOAST_TIMER=null,HINT_BY_Q={},HINT_LOADING=false,HINT_LOADING_Q=null,HINT_LOADING_TICK=null,HINT_LOADING_SINCE=0,HINT_ABORT_CTRL=null,HINT_WATCHDOG=null,SIMILAR_BY_Q={},SIMILAR_LOADING=false,SIMILAR_LOADING_Q=null,MOBILE_QUIZ_TOOLS_OPEN=false,MOBILE_NAV_OPEN=false,MINI_CALC_OPEN=false,MINI_CALC_BY_Q={},QUIZ_SCROLL_Y=0,VIP_Q_SHOW_ANS={},VIP_Q_SHOW_EXP={},AI_LG_BY_Q={},ADMIN_LG_DRAFT_BY_Q={},AI_LG_LOADING=-1,AI_LG_ABORT_CTRL=null,QUIZ_TTS_ON=false,QUIZ_TTS_KIND="",QUIZ_TTS_CHUNKS=[],QUIZ_TTS_IDX=0,QUIZ_TALK_BY_Q={},QUIZ_TALK_LOADING=-1,QUIZ_TALK_ABORT_CTRL=null,QUIZ_DEBATE_BY_Q={},QUIZ_DEBATE_LOADING=-1,QUIZ_DEBATE_ABORT_CTRL=null,ADMIN_LG_SAVE_BUSY=false,ADMIN_LG_SAVED_AT=0,ADMIN_LG_SAVED_TOAST_TIMER=null,QUESTION_MODAL_MODE='edit',ADMIN_HINT_SAVED={},ADMIN_SIMILAR_EDIT_TIPS=null,LEARNING_OPEN_KIND='',LEARNING_CACHE={},LEARNING_LOADING=false,LEARNING_PANEL_COLLAPSED=false,TRANSLATE_BY_Q={},TRANSLATE_KIND='CauHoi',TRANSLATE_LOADING=false,TRANSLATE_SIDE_LOADING={},TRANSLATE_AUTO_QUEUE=[],TRANSLATE_SPEECH_CHUNKS=[],TRANSLATE_SPEECH_CHUNK_IDX=0,TRANSLATE_SPEECH_REPEAT=false,TRANSLATE_TTS_ACTIVE_BTN='',TRANSLATE_SPEECH_ACTIVE=false,TRANSLATE_SPEECH_AUTO_PLAY=false,TRANSLATE_SPEECH_RATE=0.92,FLAGGED={},FLAGGED_SID=null,PED_FORMULA_CACHE={},PED_FORMULA_LOADING={};
 let ADMIN_REVIEW_MODE='fast';
 function initAdminReviewMode(){try{ADMIN_REVIEW_MODE=localStorage.getItem('adminReviewMode')||'fast'}catch(e){ADMIN_REVIEW_MODE='fast'}if(ADMIN_REVIEW_MODE!=='full')ADMIN_REVIEW_MODE='fast';if(typeof onAdminReviewModeChange==='function')onAdminReviewModeChange(ADMIN_REVIEW_MODE);else try{localStorage.setItem('adminReviewMode',ADMIN_REVIEW_MODE);['adminReviewMode','adminReviewModeFs'].forEach(function(id){let el=document.getElementById(id);if(el)el.value=ADMIN_REVIEW_MODE})}catch(e2){}}
 const THEME_KEY='LDVL_THEME';
@@ -26253,6 +26357,7 @@ async function maybeCommitShortAnswerBeforeLeave(){let q=applyResolvedDang(QUEST
 function currentQuizWorkTitle(){let item=CATALOG.find(x=>x.MaDe===CURRENT_MADE)||{};if(item&&(item.Mon||item.BaiHoc||item.De))return examDisplayTitle(item);let q=QUESTIONS[0]||{};let de=String((q.De||q.BaiHoc||CURRENT_MADE||'Bài luyện tập')).trim();return de||'Bài luyện tập'}
 function formatChosenAnswerBrief(q,ans){q=q||{};if(q.Dang==='Trắc nghiệm')return 'Chọn '+String(ans||'—');if(q.Dang==='Đúng sai'){let arr=Array.isArray(ans)?ans:[];let bits=[];for(let i=0;i<4;i++){if(!q[['A','B','C','D'][i]])continue;bits.push((['A','B','C','D'][i])+'='+(arr[i]||'?'))}return bits.join(' · ')||'Đã chọn Đúng/Sai'}if(q.Dang==='Trả lời ngắn')return 'TLN: '+String(ans||'').trim();return String(ans||'').trim()||'Đã trả lời'}
 function hideStreakToast(instant){let el=document.getElementById('streakToast');if(!el)return;if(STREAK_TOAST_TIMER){clearTimeout(STREAK_TOAST_TIMER);STREAK_TOAST_TIMER=null}if(instant){el.classList.remove('show','hideDown');el.innerHTML='';return}el.classList.add('hideDown');el.classList.remove('show');STREAK_TOAST_TIMER=setTimeout(function(){el.classList.remove('show','hideDown');el.innerHTML='';STREAK_TOAST_TIMER=null},420)}
+function showAdminLoiGiaiSavedToast(msg){msg=String(msg||'Lời giải đã được lưu').trim();let el=document.getElementById('streakToast');if(!el)return;if(STREAK_TOAST_TIMER){clearTimeout(STREAK_TOAST_TIMER);STREAK_TOAST_TIMER=null}if(ADMIN_LG_SAVED_TOAST_TIMER){clearTimeout(ADMIN_LG_SAVED_TOAST_TIMER);ADMIN_LG_SAVED_TOAST_TIMER=null}hideStreakToast(true);el.innerHTML='<div class="streakToastInner"><div class="streakToastCheer">✅ Đã lưu</div><div class="streakToastHead"><div class="streakToastBadge">💾</div><div><div class="streakToastTitle">'+esc(msg)+'</div><div class="streakToastSub">Đã ghi lên Google Sheet (cột R)</div></div></div><div class="streakToastBar" aria-hidden="true"><i></i></div></div>';el.classList.remove('hideDown');requestAnimationFrame(function(){el.classList.add('show')});ADMIN_LG_SAVED_TOAST_TIMER=setTimeout(function(){hideStreakToast(false);ADMIN_LG_SAVED_TOAST_TIMER=null},2600)}
 function streakCheerText(streak){streak=parseInt(streak,10)||0;if(streak>=10)return'Xuất sắc! Chuỗi vàng '+streak+' câu';if(streak>=7)return'Quá đỉnh! Giữ đà nào';if(streak>=5)return'Tuyệt vời! Đang bùng nổ';if(streak>=3)return'Giỏi lắm! Tiếp tục nhé';return'Khởi đầu đẹp! Cố lên'}
 function streakCheerIcon(streak){streak=parseInt(streak,10)||0;if(streak>=10)return'🏆';if(streak>=7)return'⚡';if(streak>=5)return'🔥';if(streak>=3)return'🌟';return'🎯'}
 function formatStreakNow(){try{let d=new Date();let pad=n=>String(n).padStart(2,'0');return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' · '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}catch(e){return ''}}
@@ -29785,7 +29890,7 @@ async function toggleQuizAiTalk(){if(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='talk'){stopQu
 function canGenerateQuizLoiGiai(){if(EXAM_MODE&&!SUBMITTED)return false;if(!USER||!(USER.can_ai_hint!==false))return false;return !!(isAdminViewer()||canViewSolutionLive())}
 function canAdminEditLoiGiaiInline(){return !!isAdminViewer()}
 function syncAdminLoiGiaiEditBtn(){let on=canAdminEditLoiGiaiInline();for(let id of ['btnEditLoiGiai','btnFsEditLoiGiai','btnReadLoiGiai','btnFsReadLoiGiai']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('hide',!on)}}
-function syncAdminLoiGiaiPanel(){let panel=document.getElementById('adminLoiGiaiPanel');let sol=document.getElementById('solution');let adm=canAdminEditLoiGiaiInline();if(!panel&&adm&&sol&&sol.parentNode){panel=document.createElement('div');panel.id='adminLoiGiaiPanel';panel.className='adminLoiGiaiEdit';panel.innerHTML='<div class="adminLoiGiaiEditHead"><span>✏️ Chỉnh sửa lời giải (cột R) — soát xong bấm Lưu</span><span id="adminLgSaveStatus" class="adminLgSaveStatus">Sheet</span></div><textarea id="adminLoiGiaiTa" class="adminLoiGiaiTa" rows="8" spellcheck="false" placeholder="Sửa lời giải tại đây (LaTeX $...$). Có lời giải vẫn sửa được." oninput="onAdminLoiGiaiDraftInput(this)"></textarea><div class="quizLgGenRow"><button type="button" class="btnGreen btnSmall" id="btnSaveAdminLoiGiai" onclick="saveAdminLoiGiaiInline()">💾 Lưu lời giải</button><button type="button" class="btn2 btnSmall" onclick="previewAdminLoiGiaiInline()">👁 Xem trước</button><button type="button" class="btn2 btnSmall" id="btnPanelReadLoiGiai" onclick="toggleReadLoiGiai()">🔊 Đọc lời giải</button><button type="button" class="btn2 btnSmall" id="btnPanelDebate" onclick="toggleQuizDebate()">⚖ Phản biện</button><button type="button" class="btn2 btnSmall" id="btnGenLoiGiai" onclick="generateQuizLoiGiai()">✨ Viết lại bằng AI</button><button type="button" class="btnRed btnSmall hide" id="btnCancelLoiGiai" onclick="cancelGenerateQuizLoiGiai()">⏹ Hủy AI</button></div>';sol.parentNode.insertBefore(panel,sol.nextSibling)}if(!panel)return;let show=adm&&sol&&!sol.classList.contains('hide');panel.classList.toggle('hide',!show);if(!show)return;let ta=document.getElementById('adminLoiGiaiTa');if(ta&&AI_LG_LOADING!==CUR){let sameQ=String(ta.getAttribute('data-lg-qidx')||'')===String(CUR);if(!sameQ||document.activeElement!==ta){ta.value=adminLoiGiaiDraftText();ta.setAttribute('data-lg-qidx',String(CUR))}if(!ta._lgBound){ta._lgBound=1;ta.addEventListener('input',function(){onAdminLoiGiaiDraftInput(ta)})}}let st=document.getElementById('adminLgSaveStatus');if(st&&ADMIN_LG_DRAFT_BY_Q[CUR]==null&&AI_LG_LOADING!==CUR){st.textContent=String((currentQuestion()||{}).LoiGiai||'').trim()?'Đã khớp Sheet':'Chưa có trên Sheet';st.className='adminLgSaveStatus'}syncAdminLoiGiaiGenBtn()}
+function syncAdminLoiGiaiPanel(){let panel=document.getElementById('adminLoiGiaiPanel');let sol=document.getElementById('solution');let adm=canAdminEditLoiGiaiInline();if(!panel&&adm&&sol&&sol.parentNode){panel=document.createElement('div');panel.id='adminLoiGiaiPanel';panel.className='adminLoiGiaiEdit';panel.innerHTML='<div class="adminLoiGiaiEditHead"><span>✏️ Chỉnh sửa lời giải (cột R) — soát xong bấm Lưu</span><span id="adminLgSaveStatus" class="adminLgSaveStatus">Sheet</span></div><textarea id="adminLoiGiaiTa" class="adminLoiGiaiTa" rows="8" spellcheck="false" placeholder="Sửa lời giải tại đây (LaTeX $...$). Có lời giải vẫn sửa được." oninput="onAdminLoiGiaiDraftInput(this)"></textarea><div class="quizLgGenRow"><button type="button" class="btnGreen btnSmall" id="btnSaveAdminLoiGiai" onclick="saveAdminLoiGiaiInline()">💾 Lưu lời giải</button><button type="button" class="btn2 btnSmall" onclick="previewAdminLoiGiaiInline()">👁 Xem trước</button><button type="button" class="btn2 btnSmall" id="btnPanelReadLoiGiai" onclick="toggleReadLoiGiai()">🔊 Đọc lời giải</button><button type="button" class="btn2 btnSmall" id="btnPanelDebate" onclick="toggleQuizDebate()">⚖ Phản biện</button><button type="button" class="btn2 btnSmall" id="btnGenLoiGiai" onclick="generateQuizLoiGiai()">✨ Viết lại bằng AI</button><button type="button" class="btnRed btnSmall hide" id="btnCancelLoiGiai" onclick="cancelGenerateQuizLoiGiai()">⏹ Hủy AI</button></div>';sol.parentNode.insertBefore(panel,sol.nextSibling)}if(!panel)return;let show=adm&&sol&&!sol.classList.contains('hide');panel.classList.toggle('hide',!show);if(!show)return;let ta=document.getElementById('adminLoiGiaiTa');if(ta&&AI_LG_LOADING!==CUR){let sameQ=String(ta.getAttribute('data-lg-qidx')||'')===String(CUR);if(!sameQ||document.activeElement!==ta){ta.value=adminLoiGiaiDraftText();ta.setAttribute('data-lg-qidx',String(CUR))}if(!ta._lgBound){ta._lgBound=1;ta.addEventListener('input',function(){onAdminLoiGiaiDraftInput(ta)})}}let st=document.getElementById('adminLgSaveStatus');if(st&&ADMIN_LG_DRAFT_BY_Q[CUR]==null&&AI_LG_LOADING!==CUR){if(ADMIN_LG_SAVED_AT&&Date.now()-ADMIN_LG_SAVED_AT<6000){st.textContent='Lời giải đã được lưu';st.className='adminLgSaveStatus'}else{st.textContent=String((currentQuestion()||{}).LoiGiai||'').trim()?'Đã khớp Sheet':'Chưa có trên Sheet';st.className='adminLgSaveStatus'}}syncAdminLoiGiaiGenBtn()}
 function syncAdminLoiGiaiGenBtn(){let busy=AI_LG_LOADING===CUR;let btn=document.getElementById('btnGenLoiGiai');if(btn){btn.disabled=busy;btn.textContent=busy?'⏳ Đang gọi AI…':'✨ Viết lại bằng AI'}let cancel=document.getElementById('btnCancelLoiGiai');if(cancel)cancel.classList.toggle('hide',!busy)}
 function cancelGenerateQuizLoiGiai(){let ctrl=AI_LG_ABORT_CTRL;AI_LG_LOADING=-1;AI_LG_ABORT_CTRL=null;if(ctrl){try{ctrl.abort()}catch(e){}}syncAdminLoiGiaiGenBtn();let st=document.getElementById('adminLgSaveStatus');if(st){st.textContent='Đã hủy AI — sửa tay rồi Lưu';st.className='adminLgSaveStatus dirty'}}
 function startAdminLoiGiaiEdit(){if(!canAdminEditLoiGiaiInline()){alert('Chỉ ADMIN sửa lời giải tại đây.');return}if(AI_LG_LOADING===CUR)cancelGenerateQuizLoiGiai();VIP_Q_SHOW_EXP[CUR]=true;VIP_Q_SHOW_ANS[CUR]=true;renderQuestion();setTimeout(function(){let box=document.getElementById('adminLoiGiaiPanel')||document.getElementById('solution');if(box)box.scrollIntoView({behavior:'smooth',block:'center'});let ta=document.getElementById('adminLoiGiaiTa');if(ta){try{ta.focus()}catch(e){}}},80)}
@@ -29795,7 +29900,7 @@ function previewAdminLoiGiaiInline(){let ta=document.getElementById('adminLoiGia
 function buildQuizLoiGiaiHtml(q,r){q=q||currentQuestion()||{};r=r||RESULTS[CUR]||CHECKED[CUR]||{};let sheetLg=String(q.LoiGiai||(r&&(r.LoiGiai||r.loigiai))||'').trim();let aiLg=String((AI_LG_BY_Q[CUR]||{}).text||'').trim();let draftStored=ADMIN_LG_DRAFT_BY_Q[CUR]!=null?String(ADMIN_LG_DRAFT_BY_Q[CUR]||''):'';let lg=String(draftStored||sheetLg||aiLg||'').trim();let busy=AI_LG_LOADING===CUR;if(!lg&&LOCKED_Q[CUR]&&!CHECKED[CUR]&&!RESULTS[CUR])return '<b>Lời giải:</b><br><span class="muted">Đang lấy lời giải của câu này…</span>';let lgHtml=lg?formatLoigiaiByDang(lg,q,q.Dang):'<span class="muted">Chưa có lời giải trên Sheet.</span>';if(!canAdminEditLoiGiaiInline()){let genBtn='';if(canGenerateQuizLoiGiai()&&!sheetLg)genBtn=`<div class="quizLgGenRow"><button type="button" class="btn2 btnSmall" id="btnGenLoiGiai" onclick="generateQuizLoiGiai()" ${busy?'disabled':''}>${busy?'⏳ Đang viết lời giải…':'✨ Tự thêm lời giải'}</button></div>`;return `<b>Lời giải:</b><br>${lgHtml}${genBtn}`}return `<div class="adminLgHeadRow"><b>Lời giải:</b></div><div id="adminLoiGiaiPreview" class="adminLoiGiaiPreview">${lgHtml}</div>`}
 function currentQuizLoiGiaiText(q){q=q||currentQuestion()||{};let ta=document.getElementById('adminLoiGiaiTa');let taOk=ta&&String(ta.getAttribute('data-lg-qidx')||'')===String(CUR);let fromTa=taOk?String(ta.value||'').trim():'';if(fromTa)return fromTa;if(ADMIN_LG_DRAFT_BY_Q[CUR]!=null){let d=String(ADMIN_LG_DRAFT_BY_Q[CUR]||'').trim();if(d)return d}let sheet=String(q.LoiGiai||'').trim();if(sheet)return sheet;let r=RESULTS[CUR]||CHECKED[CUR]||{};let fromR=String((r&&(r.LoiGiai||r.loigiai))||'').trim();if(fromR)return fromR;let h=HINT_BY_Q[CUR]||{};let fromH=String(h.sheet_loigiai||h.suggested_loigiai||'').trim();if(fromH)return fromH;let ai=AI_LG_BY_Q[CUR]||{};return String(ai.text||'').trim()}
 async function generateQuizLoiGiai(){if(AI_LG_LOADING===CUR){cancelGenerateQuizLoiGiai();return}if(!canGenerateQuizLoiGiai()){alert('Tự thêm lời giải dành VIP / SVIP / ADMIN.');return}if(!canShowSolutionNow()&&!isAdminViewer()){alert('Hãy làm và chấm câu này trước.');return}if(!SID||!QUESTIONS.length)return;if(isAdminViewer()&&typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())return;let qIdx=CUR;let q=QUESTIONS[qIdx]||{};if(canAdminEditLoiGiaiInline()&&String(q.LoiGiai||'').trim()&&!confirm('AI viết lại lời giải vào ô bên dưới — chưa lưu Sheet.\n\nKhông cần đợi AI: sửa tay trong ô rồi bấm «Lưu lời giải».\n\nVẫn gọi AI?'))return;saveCurrent();AI_LG_ABORT_CTRL=new AbortController();AI_LG_LOADING=qIdx;syncAdminLoiGiaiGenBtn();try{let body={sid:SID,index:qIdx,answer:ANSWERS[qIdx],save:false,...quizRestorePayload()};quizAttachAnthropicKey(body);if(isAdminViewer()){body.admin_ai_provider=typeof adminChosenAiProvider==='function'?adminChosenAiProvider():'GEMINI';body.admin_ai_allow_gpt_fallback=true}let j=isAdminViewer()&&typeof adminAiFetch==='function'?await adminAiFetch('/api/quiz/generate-loigiai',body,{signal:AI_LG_ABORT_CTRL.signal,timeoutMs:28000}):await api('/api/quiz/generate-loigiai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AI_LG_ABORT_CTRL.signal,timeoutMs:28000},0);if(AI_LG_LOADING!==qIdx)return;let text=String(j.text||'').trim();if(!text)throw new Error('AI chưa trả lời giải.');AI_LG_BY_Q[qIdx]={text:text,provider:j.provider||''};if(canAdminEditLoiGiaiInline()){ADMIN_LG_DRAFT_BY_Q[qIdx]=text;let ta=document.getElementById('adminLoiGiaiTa');if(ta)ta.value=text;let st=document.getElementById('adminLgSaveStatus');if(st){st.textContent=(j.provider==='ANTHROPIC'?'Claude':'AI')+' đã viết — chưa lưu Sheet';st.className='adminLgSaveStatus dirty'}if(typeof previewAdminLoiGiaiInline==='function')previewAdminLoiGiaiInline();VIP_Q_SHOW_EXP[CUR]=true}else if(CUR===qIdx){VIP_Q_SHOW_EXP[CUR]=true;renderQuestion()}}catch(e){if(AI_LG_LOADING!==qIdx)return;let msg=String(e&&e.message||e||'');if(/abort|hủy|quá lâu/i.test(msg)){let st=document.getElementById('adminLgSaveStatus');if(st){st.textContent='AI chậm — sửa tay rồi Lưu';st.className='adminLgSaveStatus dirty'}return}alert('Không viết được lời giải: '+msg+'\n\nSửa tay trong ô rồi bấm «Lưu lời giải».')}finally{if(AI_LG_LOADING===qIdx){AI_LG_LOADING=-1;AI_LG_ABORT_CTRL=null;syncAdminLoiGiaiGenBtn()}}}
-async function saveAdminLoiGiaiInline(){if(!canAdminEditLoiGiaiInline()){alert('Chỉ ADMIN sửa lời giải tại đây.');return}if(AI_LG_LOADING===CUR)cancelGenerateQuizLoiGiai();if(ADMIN_LG_SAVE_BUSY)return;let q=QUESTIONS[CUR];if(!q)return;let text=currentQuizLoiGiaiText(q);if(!q._row&&!String(q.ID||'').trim()){alert('Không xác định dòng Sheet.');return}let updates={LoiGiai:text};try{updates=autoSyncDsLoigiaiAbcd(updates,q);text=String(updates.LoiGiai!=null?updates.LoiGiai:text)}catch(e){}let miss=adminLoigiaiMissingLetters(text,q);if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;ADMIN_LG_SAVE_BUSY=true;let btn=document.getElementById('btnSaveAdminLoiGiai');if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu…'}try{let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',updates:{LoiGiai:text}})});q.LoiGiai=text;if(j.row)q._row=parseInt(j.row,10)||q._row;delete ADMIN_LG_DRAFT_BY_Q[CUR];AI_LG_BY_Q[CUR]={text:text,saved:true};if(HINT_BY_Q[CUR])HINT_BY_Q[CUR].sheet_loigiai=text;let st=document.getElementById('adminLgSaveStatus');if(st){st.textContent='Đã lưu Sheet';st.className='adminLgSaveStatus'}let rb=document.getElementById('resultBox');if(rb){rb.textContent='Đã lưu lời giải cột R'+(j.row?(' · dòng '+j.row):'');rb.style.color='#166534'}renderQuestion()}catch(e){alert('Không lưu được: '+(e.message||e))}finally{ADMIN_LG_SAVE_BUSY=false;let b=document.getElementById('btnSaveAdminLoiGiai');if(b){b.disabled=false;b.textContent='💾 Lưu lời giải'}}}
+async function saveAdminLoiGiaiInline(){if(!canAdminEditLoiGiaiInline()){alert('Chỉ ADMIN sửa lời giải tại đây.');return}if(AI_LG_LOADING===CUR)cancelGenerateQuizLoiGiai();if(ADMIN_LG_SAVE_BUSY)return;let q=QUESTIONS[CUR];if(!q)return;let text=currentQuizLoiGiaiText(q);if(!q._row&&!String(q.ID||'').trim()){alert('Không xác định dòng Sheet.');return}let patch={LoiGiai:text};try{patch=autoSyncDsLoigiaiAbcd(patch,q);text=String(patch.LoiGiai!=null?patch.LoiGiai:text)}catch(e){}let miss=adminLoigiaiMissingLetters(text,q);if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;ADMIN_LG_SAVE_BUSY=true;let btn=document.getElementById('btnSaveAdminLoiGiai');if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu…'}try{let saveUpdates={LoiGiai:text};if(patch.DapAn!=null&&String(patch.DapAn).trim())saveUpdates.DapAn=patch.DapAn;let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',updates:saveUpdates,fast:1}),timeoutMs:28000},1);q.LoiGiai=text;if(saveUpdates.DapAn)q.DapAn=saveUpdates.DapAn;if(j.row)q._row=parseInt(j.row,10)||q._row;delete ADMIN_LG_DRAFT_BY_Q[CUR];AI_LG_BY_Q[CUR]={text:text,saved:true};if(HINT_BY_Q[CUR])HINT_BY_Q[CUR].sheet_loigiai=text;ADMIN_LG_SAVED_AT=Date.now();let st=document.getElementById('adminLgSaveStatus');if(st){st.textContent='Lời giải đã được lưu';st.className='adminLgSaveStatus'}let rb=document.getElementById('resultBox');if(rb){rb.textContent='Lời giải đã được lưu'+(j.row?(' · dòng '+j.row):'');rb.style.color='#166534'}showAdminLoiGiaiSavedToast('Lời giải đã được lưu');try{previewAdminLoiGiaiInline()}catch(e){}syncAdminLoiGiaiPanel()}catch(e){alert('Không lưu được: '+(e.message||e))}finally{ADMIN_LG_SAVE_BUSY=false;let b=document.getElementById('btnSaveAdminLoiGiai');if(b){b.disabled=false;b.textContent='💾 Lưu lời giải'}}}
 async function saveGeneratedLoiGiai(){return saveAdminLoiGiaiInline()}
 let INFOGRAPHIC_STYLE='poster';
 let INFOGRAPHIC_GEN_BUSY=false;
@@ -39863,12 +39968,29 @@ def api_question_update():
     if not is_admin():
         return jsonify({"error": "Chỉ ADMIN được sửa câu hỏi"}), 403
     body = request.get_json(silent=True) or {}
+    updates = body.get("updates") or {}
+    if not isinstance(updates, dict):
+        return jsonify({"error": "updates phải là object JSON"}), 400
+    fast = body.get("fast") in (1, True, "1", "true") or is_lightweight_question_update(updates)
     try:
         st = get_store()
-        st.ensure_questions_loaded()
-        return jsonify(st.update_question(int(body.get("row", 0)), body.get("updates", {}), body.get("id") or body.get("ID") or ""))
+        st.connect()
+        if st.ws_questions is None:
+            st.ws_questions = st.worksheet_or_none("Cau_Hoi")
+        if not st.questions_loaded or not st.questions:
+            st.ensure_questions_loaded()
+        elif not fast:
+            st.apply_deleted_question_tombstones()
+        return jsonify(
+            st.update_question(
+                int(body.get("row", 0) or 0),
+                updates,
+                body.get("id") or body.get("ID") or "",
+                skip_catalog_rebuild=fast,
+            )
+        )
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e) or "Lỗi lưu câu hỏi"}), 400
 
 
 @app.route("/api/question/review", methods=["POST"])
