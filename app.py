@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V425_SAVE_FAST"
+APP_VERSION = "V426_LATEX_INSERT"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -29606,15 +29606,17 @@ function readLatexImportFile(inp){
   rd.onerror=()=>setLatexImportStatus('Không đọc được file.',true);
   rd.readAsText(f,'utf-8');
 }
-async function latexImportCall(commit,levelOverrides){
+async function latexImportCall(commit,levelOverrides,extra){
+  extra=extra||{};
   let ta=document.getElementById('latexImportText');
   let tex=ta?String(ta.value||''):'';
   if(!tex.trim()){alert('Chưa có nội dung LaTeX.');return null}
   let zipInp=document.getElementById('latexAssetZipInput');
   let zipFile=zipInp&&zipInp.files&&zipInp.files[0]?zipInp.files[0]:null;
-  let aiLevel=(val('latexDefMucDo')==='AI');
+  if(extra.skip_questions)zipFile=null;
+  let aiLevel=!extra.skip_questions&&(val('latexDefMucDo')==='AI');
   levelOverrides=Array.isArray(levelOverrides)?levelOverrides:[];
-  setLatexImportStatus(commit?'⏳ Đang chèn vào Google Sheet...':'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
+  setLatexImportStatus(commit?(extra.skip_questions?'⏳ Đang lưu khung lý thuyết…':'⏳ Đang chèn vào Google Sheet...'):'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
   let j;
   if(zipFile){
     let buildFd=useGpt=>{
@@ -29628,12 +29630,13 @@ async function latexImportCall(commit,levelOverrides){
       if(useGpt){fd.set('admin_ai_provider','OPENAI');fd.set('admin_ai_allow_gpt_fallback','true')}
       return fd;
     };
-    if(aiLevel)j=await adminAiFetchForm('/api/latex/import',buildFd,{});
-    else j=await api('/api/latex/import',{method:'POST',body:buildFd(false)});
+    if(aiLevel)j=await adminAiFetchForm('/api/latex/import',buildFd,{timeoutMs:90000});
+    else j=await api('/api/latex/import',{method:'POST',body:buildFd(false),timeoutMs:90000});
   }else{
     let payload={tex:tex,defaults:currentLatexDefaults(),commit:!!commit,ai_level:aiLevel,level_overrides:levelOverrides};
-    if(aiLevel)j=await adminAiFetch('/api/latex/import',payload);
-    else j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(extra&&extra.skip_questions)payload.skip_questions=true;
+    if(aiLevel)j=await adminAiFetch('/api/latex/import',payload,{timeoutMs:90000});
+    else j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:90000});
   }
   return j;
 }
@@ -29687,12 +29690,51 @@ function setAllLatexLevelsFromDefault(){
   document.querySelectorAll('#latexImportPreview select[data-level-index]').forEach(sel=>{sel.value=lv});
   setLatexImportStatus((document.getElementById('latexImportStatus')?.textContent||'')+'\nĐã gán mức '+lv+' cho tất cả câu trong preview.');
 }
+function latexPreviewFieldHtml(s){
+  try{if(typeof renderQuizFieldHtml==='function')return renderQuizFieldHtml(s||'')}catch(e){}
+  return escHtmlKeepMath(s||'');
+}
+function latexQuestionsFromPreview(pre){
+  let defs=currentLatexDefaults();
+  let ov={};
+  collectLatexLevelOverrides().forEach(o=>{ov[o.index]=o.MucDo});
+  let qs=(pre&&(pre.questions||pre.sample))||[];
+  let allow=['NB','TH','VD','VDC'];
+  return qs.map(function(q,i){
+    q=q||{};
+    let idx=q.index||(i+1);
+    let lv=String(ov[idx]||q.MucDo||defs.MucDo||'TH').toUpperCase();
+    if(allow.indexOf(lv)<0)lv='TH';
+    return {
+      ID:q.ID||'',
+      MaDe:q.MaDe||defs.MaDe||'',
+      Mon:q.Mon||defs.Mon||'',
+      Lop:q.Lop||defs.Lop||'',
+      Chuong:q.Chuong||defs.Chuong||'',
+      BaiHoc:q.BaiHoc||defs.BaiHoc||'',
+      DangBaiTap:q.DangBaiTap||defs.DangBaiTap||'',
+      BoDe:q.BoDe||defs.BoDe||'',
+      De:q.De||defs.De||'',
+      MucDo:lv,
+      Dang:q.Dang||'Trắc nghiệm',
+      CauHoi:q.CauHoi||'',
+      A:q.A||'',B:q.B||'',C:q.C||'',D:q.D||'',
+      DapAn:q.DapAn||'',
+      SaiSo:q.SaiSo||'',
+      LoiGiai:q.LoiGiai||'',
+      HinhAnh:q.HinhAnh||'',
+      QuyenTruyCap:q.QuyenTruyCap||defs.QuyenTruyCap||'VIP',
+      Diem:defs.Diem||'1',
+      TrangThai:'CHƯA DUYỆT'
+    };
+  });
+}
 function latexImportQuestionCard(q,i){
   q=q||{};
   let idx=q.index||i+1;
   let opts='';
   for(let L of ['A','B','C','D']){
-    if(String(q[L]||'').trim()) opts+=`<div style="margin:4px 0"><b>${L}.</b> ${escHtmlKeepMath(q[L])}</div>`;
+    if(String(q[L]||'').trim()) opts+=`<div style="margin:4px 0"><b>${L}.</b> ${latexPreviewFieldHtml(q[L])}</div>`;
   }
   let aiLv=String(q._AiMucDo||q.AiMucDo||'').toUpperCase();
   let aiConf=String(q._AiConfidence||q.AiConfidence||'').trim();
@@ -29702,7 +29744,7 @@ function latexImportQuestionCard(q,i){
   let aiBox=aiLv?`<div style="margin-top:6px;padding:7px 9px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:12px"><b>🤖 GPT ADMIN gợi ý:</b> ${esc(aiLv)}${aiConf?' · tin cậy '+esc(aiConf):''}${aiReason?' · '+esc(aiReason):''}</div>`:'';
   let levelSelect=`<label style="display:flex;align-items:center;gap:6px;font-size:12px"><b>Mức chèn Sheet:</b><select data-level-index="${idx}" data-ai-level="${esc(aiLv)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">${latexLevelOptions(chosen)}</select></label>`;
   let img=q.HinhAnh?`<div class="muted" style="margin-top:6px;font-size:12px">🖼 Hình: ${esc(q.HinhAnh)}</div>`:'';
-  let lg=q.LoiGiai?`<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Xem lời giải</summary><div style="margin-top:5px;line-height:1.45">${escHtmlKeepMath(q.LoiGiai)}</div></details>`:'';
+  let lg=q.LoiGiai?`<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Xem lời giải</summary><div style="margin-top:5px;line-height:1.45">${latexPreviewFieldHtml(q.LoiGiai)}</div></details>`:'';
   let warn=q.warning?`<div style="margin-top:6px;color:#991b1b;font-size:12px">⚠ ${esc(q.warning)}</div>`:'';
   return `<div class="latexQCard" style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(248,250,252,.88);box-shadow:0 1px 3px rgba(15,23,42,.08)">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
@@ -29713,7 +29755,7 @@ function latexImportQuestionCard(q,i){
       <span class="muted" style="font-size:11px">ID: ${esc(q.ID||'AUTO')}</span>
     </div>
     ${aiBox}
-    <div style="white-space:normal;line-height:1.5;margin-top:8px"><b>Đề:</b> ${escHtmlKeepMath(q.CauHoi||'')}</div>
+    <div style="white-space:normal;line-height:1.5;margin-top:8px"><b>Đề:</b> ${latexPreviewFieldHtml(q.CauHoi||'')}</div>
     ${opts?`<div style="margin-top:7px;padding-left:4px">${opts}</div>`:''}
     <div style="margin-top:7px"><b>Đáp án:</b> <span style="font-weight:800;color:#166534">${esc(q.DapAn||'—')}</span>${q.SaiSo?` <span class="muted"> · Sai số: ${esc(q.SaiSo)}</span>`:''}</div>
     ${img}${lg}${warn}
@@ -29733,7 +29775,7 @@ function renderLatexImportPreview(j,commitDone=false){
   if(lessons.length){theoryHtml+='<div style="margin:8px 0 12px;padding:10px;border:1px solid #67e8f9;border-radius:10px;background:#ecfeff"><b>📚 Lý thuyết bài học ('+lessons.length+')</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">'+lessons.map(g=>'<span class="tag">'+esc((g.Chuong?g.Chuong+' · ':'')+(g.BaiHoc||g.TieuDe||'Bài học'))+(g.action?' · '+esc(g.action):'')+'</span>').join('')+'</div></div>'}
   if(groups.length){theoryHtml+='<div style="margin:8px 0 12px;padding:10px;border:1px solid #93c5fd;border-radius:10px;background:var(--btn2-bg)"><b>📘 Khung Dạng bài tập ('+groups.length+')</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">'+groups.map(g=>'<span class="tag">'+esc(g.DangBaiTap||'Dạng chưa tên')+(g.action?' · '+esc(g.action):'')+'</span>').join('')+'</div></div>'}
   box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>${title}</b><span class="muted">${qs.length} câu · ${lessons.length} LT · ${groups.length} khung</span><div style="display:flex;gap:6px;flex-wrap:wrap">${buttons}</div></div>`+theoryHtml+qs.map((q,i)=>latexImportQuestionCard(q,i)).join('');
-  try{typesetQuizMath()}catch(e){}
+  try{if(typeof typesetNow==='function')typesetNow([box]);else typesetQuizMath()}catch(e){}
 }
 function appendLatexInsertedQuestions(j){
   let qs=(j&&j.questions)||[];
@@ -29760,6 +29802,7 @@ async function previewLatexImport(){
   }catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
 }
 async function commitLatexImport(){
+  let created=0;
   try{
     let pre=window.LAST_LATEX_PREVIEW_DATA;
     if(!pre||(!((pre.questions||pre.sample||[]).length)&&!((pre.theory_groups||[]).length)&&!((pre.theory_lessons||[]).length))){
@@ -29770,26 +29813,66 @@ async function commitLatexImport(){
       renderLatexImportPreview(pre,false);
       return;
     }
-    let overrides=collectLatexLevelOverrides();
-    let msg=latexImportSummary(pre)+'\n\nChèn '+(overrides.length||pre.parsed||0)+' câu, '+((pre.theory_lessons||[]).length)+' lý thuyết bài học và '+((pre.theory_groups||[]).length)+' khung Dạng bài tập vào Google Sheet?';
+    let items=latexQuestionsFromPreview(pre);
+    let theoryN=((pre.theory_groups||[]).length)+((pre.theory_lessons||[]).length);
+    if(!items.length&&!theoryN){alert('Chưa có câu hoặc học liệu để chèn.');return}
+    let msg=latexImportSummary(pre)+'\n\nChèn '+items.length+' câu, '+((pre.theory_lessons||[]).length)+' lý thuyết bài học và '+((pre.theory_groups||[]).length)+' khung Dạng bài tập vào Google Sheet?\n\nApp chèn từng nhóm 8 câu để tránh máy chủ phản hồi quá lâu.';
     if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
-    let j=await latexImportCall(true,overrides);
-    setLatexImportStatus(latexImportSummary(j));
-    if(j.created>0||(j.theory_saved&&j.theory_saved.length)||(j.theory_lessons_saved&&j.theory_lessons_saved.length)){
-      if(j.created>0)appendLatexInsertedQuestions(j);
+    let skipped=[],warns=[],startRow=0,endRow=0,inserted=[];
+    const CHUNK=8;
+    for(let i=0;i<items.length;i+=CHUNK){
+      let chunk=items.slice(i,i+CHUNK);
+      let a=i+1,b=i+chunk.length;
+      setLatexImportStatus('⏳ Đang chèn câu '+a+'–'+b+'/'+items.length+' lên Google Sheet…');
+      let j=await api('/api/latex/save-questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:chunk,defaults:currentLatexDefaults()}),timeoutMs:45000},0);
+      created+=parseInt(j.created,10)||0;
+      if(Array.isArray(j.skipped)&&j.skipped.length)skipped=skipped.concat(j.skipped);
+      if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)warns=warns.concat(j.hinhanh_warnings);
+      if(j.start_row){if(!startRow)startRow=j.start_row;endRow=j.end_row||j.start_row}
+      let skipIdx={};
+      (j.skipped||[]).forEach(s=>{skipIdx[parseInt(s.index,10)||0]=1});
+      chunk.forEach(function(q,ci){if(!skipIdx[ci+1])inserted.push(q)});
+    }
+    let theorySaved=[],lessonSaved=[],theoryErrors=[],lessonErrors=[];
+    if(theoryN){
+      setLatexImportStatus('⏳ Đang lưu khung lý thuyết… (đã chèn '+created+' câu)');
+      let tj=await latexImportCall(true,[],{skip_questions:true});
+      if(tj){
+        theorySaved=tj.theory_saved||[];
+        lessonSaved=tj.theory_lessons_saved||[];
+        theoryErrors=tj.theory_errors||[];
+        lessonErrors=tj.theory_lessons_errors||[];
+      }
+    }
+    let j={
+      created:created,skipped:skipped,hinhanh_warnings:warns,start_row:startRow,end_row:endRow,
+      questions:inserted,parsed:pre.parsed,total_blocks:pre.total_blocks,counts:pre.counts,
+      warnings:(pre.warnings||[]).concat(warns.map(w=>({index:0,warning:w}))),
+      media:pre.media,message:'',
+      theory_saved:theorySaved,theory_lessons_saved:lessonSaved,
+      theory_errors:theoryErrors,theory_lessons_errors:lessonErrors,
+      theory_groups_count:(pre.theory_groups||[]).length,
+      theory_lessons_count:(pre.theory_lessons||[]).length
+    };
+    if(!created&&skipped.length)j.message='Không chèn được câu mới. '+(skipped.slice(0,6).map(x=>x.reason||x.id||('#'+x.index)).join(' | '));
+    setLatexImportStatus(latexImportSummary(j)+(created?('\nĐã chèn '+created+' câu'+(startRow?(' · dòng '+startRow+' → '+endRow):'')):'')+(skipped.length?('\nBỏ qua '+skipped.length+' câu.'):''));
+    if(created>0||theorySaved.length||lessonSaved.length){
+      if(created>0)appendLatexInsertedQuestions(j);
       DANG_THEORY_CACHE={};
       LEARNING_CACHE={};
       renderLatexImportPreview(j,true);
       window.LAST_LATEX_PREVIEW_DATA=null;
-      alert('Đã chèn '+(j.created||0)+' câu, lưu '+((j.theory_lessons_saved||[]).length)+' lý thuyết (Ly_Thuyet) và '+((j.theory_saved||[]).length)+' khung dạng (Phuong_Phap).');
+      try{await refreshCatalogFromMeta()}catch(e2){}
+      alert('Đã chèn '+(created||0)+' câu, lưu '+(lessonSaved.length)+' lý thuyết (Ly_Thuyet) và '+(theorySaved.length)+' khung dạng (Phuong_Phap).'+(skipped.length?('\nBỏ qua '+skipped.length+' câu trùng/không hợp lệ.'):'')+'\n\n⚠ Cảnh báo Drive quota không chặn chèn câu — TikZ giữ trong cột T. Nếu thiếu ảnh: upload tay rồi dán link cột T.');
     }else{
       let why=j.message||'';
-      if(!why&&j.skipped&&j.skipped.length)why='Bỏ qua '+j.skipped.length+' câu: '+j.skipped.slice(0,4).map(x=>x.reason||x.id||('#'+x.index)).join('; ');
+      if(!why&&skipped.length)why='Bỏ qua '+skipped.length+' câu: '+skipped.slice(0,4).map(x=>x.reason||x.id||('#'+x.index)).join('; ');
       alert(why||'Không chèn được câu nào. Kiểm tra ô trạng thái bên dưới.');
     }
   }catch(e){
     let msg=String(e&&e.message||e||'');
     if(/exceeds grid limits|Max rows/i.test(msg))msg='Sheet Cau_Hoi hết hàng trống — app sẽ tự nới lưới; hãy bấm Chèn lại. Chi tiết: '+msg;
+    if(typeof created==='number'&&created>0)msg='Đã ghi được '+created+' câu. Bấm Chèn lại — câu trùng sẽ bỏ qua. '+msg;
     setLatexImportStatus('Lỗi chèn LaTeX: '+msg,true);
   }
 }
@@ -41108,6 +41191,7 @@ def api_latex_import():
     level_overrides: Any = []
     ai_level_explicit: Any = None
     ai_body: Dict[str, Any] = {}
+    skip_questions = False
     if request.content_type and "multipart/form-data" in request.content_type:
         tex = request.form.get("tex", "")
         try:
@@ -41116,6 +41200,7 @@ def api_latex_import():
             log_swallow("api_latex_import:33198")
             defaults = {}
         commit = str(request.form.get("commit", "false")).lower() in ("1", "true", "yes", "on")
+        skip_questions = str(request.form.get("skip_questions", "false")).lower() in ("1", "true", "yes", "on")
         ai_level_explicit = request.form.get("ai_level", "")
         try:
             level_overrides = json.loads(request.form.get("level_overrides", "[]") or "[]")
@@ -41132,6 +41217,7 @@ def api_latex_import():
         tex = body.get("tex", "")
         defaults = body.get("defaults") or {}
         commit = str(body.get("commit", "false")).lower() in ("1", "true", "yes", "on")
+        skip_questions = str(body.get("skip_questions", "false")).lower() in ("1", "true", "yes", "on")
         ai_level_explicit = body.get("ai_level")
         level_overrides = body.get("level_overrides") or []
         ai_body = body
@@ -41143,12 +41229,26 @@ def api_latex_import():
 
     try:
         ai_level = _latex_ai_level_requested(defaults, ai_level_explicit)
+        if skip_questions:
+            ai_level = False
         defaults_for_parse = dict(defaults or {})
         if ai_level:
             # Không để giá trị "AI" bị ghi thẳng vào cột MucDo.
             defaults_for_parse["MucDo"] = ""
-        asset_ctx = _build_latex_asset_context(commit, assets_zip=asset_zip)
-        parsed = parse_latex_questions_2026(str(tex), defaults_for_parse, asset_ctx=asset_ctx)
+        asset_ctx = _build_latex_asset_context(commit and not skip_questions, assets_zip=asset_zip)
+        if skip_questions:
+            parsed = {
+                "questions": [],
+                "parsed": 0,
+                "total_blocks": 0,
+                "skipped": [],
+                "skipped_count": 0,
+                "counts": {},
+                "warnings": [],
+                "media": {},
+            }
+        else:
+            parsed = parse_latex_questions_2026(str(tex), defaults_for_parse, asset_ctx=asset_ctx)
         theory_groups = parse_latex_theory_groups_2026(str(tex), defaults_for_parse)
         theory_lessons = parse_latex_lesson_theory_2026(str(tex), defaults_for_parse)
         ai_meta: Dict[str, Any] = {"ai_level": ai_level, "ai_level_done": False, "ai_model": "", "ai_provider": "OPENAI", "ai_level_error": "", "warnings": []}
@@ -41179,6 +41279,14 @@ def api_latex_import():
                     "index": idx,
                     "ID": q.get("ID", ""),
                     "MaDe": q.get("MaDe", ""),
+                    "Mon": q.get("Mon", ""),
+                    "Lop": q.get("Lop", ""),
+                    "Chuong": q.get("Chuong", ""),
+                    "BaiHoc": q.get("BaiHoc", ""),
+                    "DangBaiTap": q.get("DangBaiTap", ""),
+                    "BoDe": q.get("BoDe", ""),
+                    "De": q.get("De", ""),
+                    "QuyenTruyCap": q.get("QuyenTruyCap", ""),
                     "Dang": q.get("Dang", ""),
                     "MucDo": q.get("MucDo", ""),
                     "_AiMucDo": q.get("_AiMucDo", ""),
@@ -41238,16 +41346,19 @@ def api_latex_import():
         st = get_store()
         st.ensure_questions_loaded()
         qs_bulk = parsed.get("questions", []) or []
-        if not qs_bulk:
-            return jsonify({
-                "error": "Không đọc được câu nào từ LaTeX.",
-                "total_blocks": parsed.get("total_blocks", 0),
-                "parsed": 0,
-                "skipped_count": parsed.get("skipped_count", 0),
-                "skipped": (parsed.get("skipped", []) or [])[:50],
-                "warnings": parsed.get("warnings", [])[:30],
-            }), 400
-        res = st.add_questions_bulk(qs_bulk)
+        if skip_questions:
+            res = {"ok": True, "created": 0, "skipped": [], "ids": []}
+        else:
+            if not qs_bulk:
+                return jsonify({
+                    "error": "Không đọc được câu nào từ LaTeX.",
+                    "total_blocks": parsed.get("total_blocks", 0),
+                    "parsed": 0,
+                    "skipped_count": parsed.get("skipped_count", 0),
+                    "skipped": (parsed.get("skipped", []) or [])[:50],
+                    "warnings": parsed.get("warnings", [])[:30],
+                }), 400
+            res = st.add_questions_bulk(qs_bulk)
         theory_saved: List[Dict[str, Any]] = []
         theory_errors: List[str] = []
         lesson_saved: List[Dict[str, Any]] = []
@@ -41298,6 +41409,44 @@ def api_latex_import():
         return jsonify(res)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/latex/save-questions", methods=["POST"])
+def api_latex_save_questions():
+    """Chèn câu đã parse từ Đọc thử — không parse lại .tex, không upload Drive."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
+    body = request.get_json(silent=True) or {}
+    items = body.get("questions") or body.get("items") or []
+    if not isinstance(items, list) or not items:
+        return jsonify({"error": "Chưa có câu hỏi để chèn."}), 400
+    if len(items) > 12:
+        return jsonify({"error": "Mỗi lần chỉ chèn tối đa 12 câu. App sẽ tự chia nhỏ."}), 400
+    defaults = body.get("defaults") or {}
+    if not isinstance(defaults, dict):
+        defaults = {}
+    prepared: List[Dict[str, Any]] = []
+    for raw in items:
+        if not isinstance(raw, dict):
+            continue
+        q = dict(raw)
+        for k, v in defaults.items():
+            if not clean(q.get(k, "")) and clean(v):
+                q[k] = v
+        prepared.append(q)
+    if not prepared:
+        return jsonify({"error": "Chưa có câu hỏi để chèn."}), 400
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        result = st.add_questions_bulk(prepared)
+        result["source"] = "LATEX_IMPORT"
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e) or "Không chèn được câu lên Google Sheet."}), 400
 
 
 @app.route("/api/img/drive/<path:file_ref>")
