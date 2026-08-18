@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V426_LATEX_INSERT"
+APP_VERSION = "V429_CLAUDE_ENV"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -3262,6 +3262,23 @@ def require_login_json():
     return None
 
 
+def questions_store_ready_or_loading():
+    """Không chờ nạp cả sheet trong request lưu — Render cắt 30s thành HTML 500."""
+    st = get_store()
+    if st.questions_loaded:
+        return st, None
+    try:
+        st.start_questions_background(force=False)
+    except Exception:
+        log_swallow("questions_store_ready_or_loading")
+    return st, (
+        jsonify({
+            "error": "Google Sheet chưa nạp xong. Đợi khoảng 10 giây rồi bấm Lưu lại.",
+            "loading": True,
+        }),
+        503,
+    )
+
 
 # ============================================================
 # ÁNH XẠ CỘT
@@ -5901,6 +5918,51 @@ class SheetStore:
             self.rebuild_question_indexes()
         self.loaded_at = now_str()
 
+    def _index_new_questions_fast(self, new_questions: List[Dict[str, Any]]) -> None:
+        """Gắn câu mới vào RAM — không rebuild catalog cả ngân hàng (10k câu + đọc sheet DBT)."""
+        if not new_questions:
+            return
+        for q in new_questions:
+            q["Dang"] = effective_dang(q)
+            self.by_made.setdefault(q.get("MaDe", ""), []).append(q)
+            self.by_group.setdefault(catalog_group_key(q), []).append(q)
+            qid = clean(q.get("ID", ""))
+            if qid:
+                self.by_id.setdefault(qid, []).append(q)
+            self._patch_catalog_item_after_add(q)
+        self.loaded_at = now_str()
+
+    def _patch_catalog_item_after_add(self, q: Dict[str, Any]) -> None:
+        gk = catalog_group_key(q)
+        if not gk:
+            return
+        item = None
+        for it in self.catalog or []:
+            if clean(it.get("MaDe", "")) == gk or clean(it.get("GroupKey", "")) == gk:
+                item = it
+                break
+        if not item:
+            access = access_level_from_text(q.get("QuyenTruyCap", "VIP"))
+            self.catalog.append({
+                "MaDe": gk,
+                "GroupKey": gk,
+                "Lop": q.get("Lop", ""),
+                "Mon": q.get("Mon", ""),
+                "Chuong": q.get("Chuong", ""),
+                "BaiHoc": q.get("BaiHoc", ""),
+                "DangBaiTap": q.get("DangBaiTap", ""),
+                "BoDe": q.get("BoDe", ""),
+                "De": q.get("De", "") or q.get("BaiHoc", ""),
+                "SoCau": 1,
+                "QuyenTruyCap": access,
+                "IsFree": access == "FREE",
+            })
+            return
+        try:
+            item["SoCau"] = int(item.get("SoCau") or 0) + 1
+        except Exception:
+            item["SoCau"] = 1
+
     def _question_row_id_from_ram(self, row_number: int, expected_id: str = "") -> str:
         try:
             row_number = int(row_number)
@@ -7949,8 +8011,19 @@ class SheetStore:
         if not sid:
             raise RuntimeError("Phiên làm bài không hợp lệ.")
         ses = self.quiz_sessions.get(sid)
-        if not ses and restore_payload and restore_payload.get("questions"):
+        raw_qs = (restore_payload or {}).get("questions") if restore_payload else None
+        need_restore = isinstance(raw_qs, list) and bool(raw_qs)
+        if not ses and need_restore:
             ses = self.restore_quiz_session(sid, restore_payload)
+        elif ses and need_restore:
+            try:
+                client_n = len(raw_qs)
+                server_n = len(ses.get("questions") or [])
+            except Exception:
+                client_n, server_n = 0, 0
+            # Chèn LaTeX / restart app: trình duyệt có nhiều câu hơn phiên RAM cũ.
+            if client_n and client_n != server_n:
+                ses = self.restore_quiz_session(sid, restore_payload)
         if not ses:
             raise RuntimeError(
                 "Phiên làm bài đã hết hạn (server vừa khởi động lại). "
@@ -8414,8 +8487,7 @@ class SheetStore:
         q = qs[index]
         cfg = ai_runtime_config()
         ant_keys = load_ai_keys("ANTHROPIC")
-        if extra_anthropic_key and _is_anthropic_api_key(extra_anthropic_key):
-            ant_keys = [extra_anthropic_key] + [k for k in ant_keys if k != extra_anthropic_key]
+        extra_anthropic_key = ""
         if not cfg.get("has_keys") and not ant_keys:
             raise RuntimeError(
                 "Chưa có key AI (Gemini/GPT/Claude). Nạp key tại 🔑 Key AI hoặc cấu hình .env."
@@ -10197,39 +10269,52 @@ class SheetStore:
                 )
 
     def _append_question_rows_at_col_a(self, rows: List[List[str]]) -> int:
-        """Ghi dòng mới bắt đầu từ cột A — tránh lệch cột."""
+        """Ghi dòng mới bằng append_rows — không resize lưới, không quét cột A."""
         if not rows:
             return 0
         padded = [self._pad_question_sheet_row(r) for r in rows]
         width = max(len(r) for r in padded)
         padded = [r + [""] * (width - len(r)) if len(r) < width else r[:width] for r in padded]
-        start_row = self._next_question_sheet_row()
-        end_row = start_row + len(padded) - 1
-        self._ensure_question_sheet_grid(end_row, width)
-        a1 = gspread.utils.rowcol_to_a1(start_row, 1)
-        b1 = gspread.utils.rowcol_to_a1(end_row, width)
+        fallback = 2
+        for q in self.questions or []:
+            try:
+                fallback = max(fallback, int(q.get("_row") or 0) + 1)
+            except Exception:
+                log_swallow("_append_question_rows_at_col_a:fallback")
+        resp = None
         try:
-            gsheet_call_retry(
-                f"update Cau_Hoi {a1}:{b1}",
-                self.ws_questions.update,
-                f"{a1}:{b1}",
+            resp = gsheet_call_retry(
+                "append_rows Cau_Hoi",
+                self.ws_questions.append_rows,
                 padded,
                 value_input_option="RAW",
+                insert_data_option="OVERWRITE",
+                table_range="A1",
+                max_attempts=2,
+            )
+        except TypeError:
+            resp = gsheet_call_retry(
+                "append_rows Cau_Hoi basic",
+                self.ws_questions.append_rows,
+                padded,
+                value_input_option="RAW",
+                max_attempts=2,
             )
         except Exception as e:
             msg = str(e or "")
             if "exceeds grid limits" in msg.lower() or "max rows" in msg.lower():
-                self._ensure_question_sheet_grid(end_row + 200, width)
-                gsheet_call_retry(
-                    f"update Cau_Hoi retry {a1}:{b1}",
-                    self.ws_questions.update,
-                    f"{a1}:{b1}",
+                end_guess = fallback + len(padded) + 80
+                self._ensure_question_sheet_grid(end_guess, width)
+                resp = gsheet_call_retry(
+                    "append_rows Cau_Hoi after resize",
+                    self.ws_questions.append_rows,
                     padded,
                     value_input_option="RAW",
+                    max_attempts=2,
                 )
             else:
                 raise
-        return start_row
+        return _gsheet_append_response_start_row(resp, fallback)
 
     def _question_field_col0(self, field: str) -> Optional[int]:
         """Cột 0-indexed khi ghi dòng — ưu tiên tiêu đề Sheet thực tế, fallback bố cục cố định."""
@@ -10538,7 +10623,7 @@ class SheetStore:
                 except Exception:
                     log_swallow("add_questions_bulk:8565")
                     pass
-            if not self.questions_loaded or len(existing_fp) < 8:
+            if not self.questions_loaded:
                 self._extend_fingerprints_from_sheet_tail(existing_fp)
 
             rows: List[List[str]] = []
@@ -10614,7 +10699,7 @@ class SheetStore:
             for q in new_questions:
                 self.patch_quiz_sessions_after_row_add(q)
 
-            self.rebuild_indexes_after_admin_change()
+            self._index_new_questions_fast(new_questions)
 
             return {
                 "ok": True,
@@ -11495,17 +11580,23 @@ def load_ai_keys(prefix: str) -> List[str]:
     """Ưu tiên key tự nạp, sau đó key Render ENV.
 
     Chính sách quyền:
-    - ADMIN: GEMINI, OPENAI, ANTHROPIC (key tự nạp + ENV).
-    - VIP/S.VIP: GEMINI (tự nạp + pool lớp); Claude chỉ key tự nạp (sk-ant-…),
-      không dùng ANTHROPIC_API_KEY trên server.
-    - OPENAI chỉ ADMIN.
+    - ADMIN: GEMINI, OPENAI; Claude chỉ từ ENV (ANTHROPIC_API_KEY).
+    - VIP/S.VIP: GEMINI (tự nạp + pool lớp). Không dùng Claude.
+    - OPENAI / ANTHROPIC chỉ ADMIN.
     - FREE/TRIAL không đi tới đây vì đã bị chặn ở require_ai_hint_json().
     """
     pfx = clean(prefix).upper()
-    if pfx == "OPENAI" and not is_admin():
+    if pfx in ("OPENAI", "ANTHROPIC") and not is_admin():
         return []
     merged: List[str] = []
     seen: set = set()
+    if pfx == "ANTHROPIC":
+        env_part = load_ai_keys_from_env(pfx)
+        for k in env_part:
+            if k and k not in seen:
+                seen.add(k)
+                merged.append(k)
+        return merged[:MAX_AI_KEYS_PER_PROVIDER]
     user_part = load_user_ai_keys(pfx)
     env_part = load_ai_keys_from_env(pfx) if (is_admin() or pfx == "GEMINI") else []
     for k in user_part + env_part:
@@ -14733,19 +14824,15 @@ def admin_ai_quota_json(err: AdminGeminiQuotaError):
 
 
 def _admin_anthropic_keys(extra_key: str = "") -> List[str]:
-    """Claude key đang dùng: key tự nạp (+ ENV nếu ADMIN) và key gửi từ trình duyệt."""
-    keys = list(load_ai_keys("ANTHROPIC"))
-    ek = clean(extra_key)
-    if ek and _is_anthropic_api_key(ek) and ek not in keys:
-        keys = [ek] + keys
-    return keys
+    """Claude của ADMIN: chỉ ANTHROPIC_API_KEY trên ENV. Bỏ qua key dán từ trình duyệt."""
+    if not is_admin():
+        return []
+    return list(load_ai_keys_from_env("ANTHROPIC"))
 
 
 def _debate_anthropic_keys(extra_key: str = "") -> List[str]:
-    """Phản biện: chỉ ADMIN được Claude (key tự nạp / ENV / dán sk-ant-…)."""
-    if not is_admin():
-        return []
-    return _admin_anthropic_keys(extra_key)
+    """Phản biện: cột Claude chỉ ADMIN, chỉ key ENV."""
+    return _admin_anthropic_keys()
 
 
 def _user_gemini_keys(extra_key: str = "") -> List[str]:
@@ -14772,8 +14859,8 @@ def admin_ai_require_provider_keys(force_provider: str, extra_anthropic_key: str
     if fp == "ANTHROPIC":
         if not _admin_anthropic_keys(extra_anthropic_key):
             raise RuntimeError(
-                "Chọn Claude nhưng chưa có Anthropic key. "
-                "Vào 🔑 Key AI → dán sk-ant-... → Lưu → Kiểm tra kết nối AI."
+                "Chọn Claude nhưng chưa có ANTHROPIC_API_KEY trên server (ENV). "
+                "Chỉ ADMIN được dùng Claude từ biến môi trường."
             )
         return
     if fp == "OPENAI":
@@ -14814,10 +14901,6 @@ def admin_ai_call_text(
     openai_keys = load_ai_keys("OPENAI") if is_admin() else []
     gemini_keys = load_ai_keys("GEMINI")
     anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
-    # Thêm key từ client (localStorage) nếu chưa có trong server config
-    if extra_anthropic_key and _is_anthropic_api_key(extra_anthropic_key):
-        if extra_anthropic_key not in anthropic_keys:
-            anthropic_keys = [extra_anthropic_key] + anthropic_keys
     gemini_saw_quota = False
     last_error = ""
     model_openai = (
@@ -16070,9 +16153,6 @@ def ai_generate_question_batch_from_provider(
     openai_keys = load_ai_keys("OPENAI")
     gemini_keys = load_ai_keys("GEMINI")
     anthropic_keys = load_ai_keys("ANTHROPIC") if is_admin() else []
-    if extra_anthropic_key and _is_anthropic_api_key(extra_anthropic_key):
-        if extra_anthropic_key not in anthropic_keys:
-            anthropic_keys = [extra_anthropic_key] + anthropic_keys
     if not openai_keys and not gemini_keys and not anthropic_keys:
         raise RuntimeError("Chưa có key AI (Gemini/GPT/Claude) để ADMIN tạo câu hỏi.")
 
@@ -17435,7 +17515,11 @@ def ai_quiz_debate_loigiai(
             except Exception as e:
                 claude_err = str(e) or "Claude quá lâu."
         else:
-            claude_err = "Cột Claude chỉ dành ADMIN."
+            claude_err = (
+                "Chưa có ANTHROPIC_API_KEY trên server."
+                if is_admin()
+                else "Cột Claude chỉ dành ADMIN (key ENV)."
+            )
 
     if not gemini_txt and openai_keys and is_admin():
         gemini_txt, gemini_err = call_gpt(sys_g, user_g)
@@ -25368,7 +25452,7 @@ function hasOwnGeminiKey(){if(_pickGeminiKeyRaw((document.getElementById('quizDe
 function quizAttachGeminiKey(body){body=body||{};let el=document.getElementById('myApiKeys');let qk=document.getElementById('quizDebateGeminiKey');let g=_pickGeminiKeyRaw((qk&&qk.value)||'')||_pickGeminiKeyRaw((el&&el.value)||'')||_pickGeminiKeyRaw(_loadGeminiKey());if(g)body.gemini_key=g;return body}
 function hasOwnClaudeKey(){let el=document.getElementById('myAnthropicKey');let v=String((el&&el.value)||(typeof _loadAnthropicKey==='function'?_loadAnthropicKey():'')||'').trim();if(v.indexOf('sk-ant-')===0)return true;return !!(USER&&(parseInt(USER.ai_user_anthropic_keys,10)||0)>0)}
 function showClaudeDebate(){return !!isAdminViewer()}
-function quizAttachAnthropicKey(body){body=body||{};if(!isAdminViewer())return body;let el=document.getElementById('myAnthropicKey');let ant=(el&&String(el.value||'').trim())||(typeof _loadAnthropicKey==='function'?_loadAnthropicKey():'');if(ant&&String(ant).startsWith('sk-ant-'))body.anthropic_key=ant;return body}
+function quizAttachAnthropicKey(body){body=body||{};return body}
 function quizAttachAiKeys(body){quizAttachAnthropicKey(body);quizAttachGeminiKey(body);return body}
 function quizDebateKeyBoxHtml(){return '<div id="quizDebateKeyBox" class="quizDebateKeyBox hide"><b>Nhập Gemini key ngay tại đây</b><p>Lấy key miễn phí: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> → Create API key → copy → dán ô dưới.</p><input id="quizDebateGeminiKey" autocomplete="off" placeholder="AIza... hoặc AQ..."><div class="quizDebateKeyRow"><button type="button" class="btnGreen btnSmall" onclick="saveQuizDebateGeminiKey()">💾 Lưu key rồi phản biện</button><button type="button" class="btn2 btnSmall" onclick="openGeminiKeyPage()">↗ Mở trang lấy key</button><button type="button" class="btn2 btnSmall" onclick="continueDebateWithClassKey()">Dùng key lớp</button></div></div>'}
 let DEBATE_ALLOW_POOL=false,DEBATE_RESUME='';
@@ -26156,7 +26240,20 @@ async function saveAiGeneratedQuestions(){
     for(let i=0;i<n;i++){
       if(st)st.textContent='⏳ Đang lưu câu '+(i+1)+'/'+n+' lên Google Sheet…';
       if(sb)sb.textContent='⏳ '+(i+1)+'/'+n;
-      let j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:[AI_GEN_QUESTIONS[i]]}),timeoutMs:40000},0);
+      let j=null,lastErr='';
+      for(let attempt=0;attempt<3;attempt++){
+        try{
+          j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:[AI_GEN_QUESTIONS[i]]}),timeoutMs:25000},0);
+          lastErr='';
+          break;
+        }catch(err){
+          lastErr=String(err&&err.message||err||'');
+          if(!/500|503|502|504|Internal Server|timeout|quá lâu|chưa nạp xong|loading/i.test(lastErr)||attempt>=2)throw err;
+          if(st)st.textContent='⏳ Câu '+(i+1)+'/'+n+' — máy chủ bận, thử lại '+(attempt+2)+'/3…';
+          await sleepMs(1400*(attempt+1));
+        }
+      }
+      if(!j)throw new Error(lastErr||'Không lưu được câu.');
       created+=parseInt(j.created,10)||0;
       if(Array.isArray(j.skipped)&&j.skipped.length)skipped=skipped.concat(j.skipped);
       if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)warns=warns.concat(j.hinhanh_warnings);
@@ -39790,13 +39887,15 @@ def api_quiz_debate_loigiai():
         ses = st.check_quiz_session(sid, restore)
         qs = ses["questions"]
         if not (0 <= idx < len(qs)):
-            raise RuntimeError("Số câu không hợp lệ")
+            raise RuntimeError(
+                "Phiên làm bài không khớp câu đang mở. Bấm ← Về mục lục rồi mở lại đề, sau đó phản biện lại."
+            )
         q = qs[idx]
         if not is_admin():
             if not can_view_solution_live():
                 raise RuntimeError("Hãy làm và chấm câu này trước khi phản biện lời giải.")
         loigiai = clean(data.get("loigiai", "")) or clean(q.get("LoiGiai", ""))
-        extra_ant = clean(data.get("anthropic_key", ""))
+        extra_ant = ""
         extra_gem = clean(data.get("gemini_key", "") or data.get("gemini_keys", ""))
         out = ai_quiz_debate_loigiai(
             q, loigiai, extra_anthropic_key=extra_ant, extra_gemini_key=extra_gem
@@ -41440,8 +41539,9 @@ def api_latex_save_questions():
     if not prepared:
         return jsonify({"error": "Chưa có câu hỏi để chèn."}), 400
     try:
-        st = get_store()
-        st.ensure_questions_loaded()
+        st, loading = questions_store_ready_or_loading()
+        if loading:
+            return loading
         result = st.add_questions_bulk(prepared)
         result["source"] = "LATEX_IMPORT"
         return jsonify(result)
@@ -41580,8 +41680,9 @@ def api_admin_ai_generate_save():
     body = request.get_json(silent=True) or {}
     try:
         items = validate_ai_generated_questions_for_save(body.get("questions") or body.get("items") or [])
-        st = get_store()
-        st.ensure_questions_loaded()
+        st, loading = questions_store_ready_or_loading()
+        if loading:
+            return loading
         result = st.add_questions_bulk(items)
         result["source"] = "AI_GENERATOR"
         if result.get("created") and items:
