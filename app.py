@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V430_STRIP_CENTER"
+APP_VERSION = "V438_BULK_SAVE_BY_ID"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -3990,26 +3990,83 @@ def question_content_fingerprint(q: Dict[str, Any]) -> str:
     """Dấu vết nội dung để xóa trùng Sheet — bỏ MaDe/ID (câu paste lại chỉ khác ID vẫn bắt được).
 
     Gom theo bài học (Mon|Lop|Chuong|BaiHoc) + nội dung đã chuẩn hóa.
-    Trắc nghiệm: sắp xếp A–D theo chữ (không phụ thuộc thứ tự phương án / xáo đáp án).
+    Giữ nguyên công thức LaTeX trong A–D để câu vector chỉ khác hệ số không bị gộp.
     """
     lesson = "|".join(key_norm(clean(q.get(x, ""))) for x in ("Mon", "Lop", "Chuong", "BaiHoc"))
+    cau_raw = re.sub(r"\s+", " ", clean(q.get("CauHoi", "")))[:400]
+    opt_raw = "|".join(re.sub(r"\s+", " ", clean(q.get(L, "")))[:180] for L in "ABCD")
     if _is_mcq_for_dup(q):
         cau = question_dup_text(q.get("CauHoi", ""), 2500)
         opts_key, ans_txt, _ = _mcq_dup_parts(q)
-        parts = [lesson, "tn", cau, ans_txt, opts_key]
+        parts = [lesson, "tn", cau, cau_raw, ans_txt, opts_key, opt_raw]
     else:
         dang = key_norm(effective_dang(q))
         parts = [
             lesson,
             dang,
             question_dup_text(q.get("CauHoi", ""), 2500),
+            cau_raw,
             question_dup_text(q.get("DapAn", ""), 300),
             question_dup_text(strip_mcq_option_prefix(q.get("A", ""), "A"), 400),
             question_dup_text(strip_mcq_option_prefix(q.get("B", ""), "B"), 400),
             question_dup_text(strip_mcq_option_prefix(q.get("C", ""), "C"), 400),
             question_dup_text(strip_mcq_option_prefix(q.get("D", ""), "D"), 400),
+            opt_raw,
         ]
     return stable_hash("|".join(parts), 16)
+
+
+def build_question_dup_index(
+    questions: List[Dict[str, Any]],
+) -> Tuple[set, set, Dict[str, Tuple[str, Any]], Dict[str, Any]]:
+    """(fingerprints, ids, fp→(id,row), id→row) để báo trùng, không tự xóa."""
+    existing_fp: set = set()
+    existing_ids: set = set()
+    fp_meta: Dict[str, Tuple[str, Any]] = {}
+    id_row: Dict[str, Any] = {}
+    for q in questions or []:
+        try:
+            qid0 = clean(q.get("ID", ""))
+            if qid0:
+                existing_ids.add(qid0)
+                if qid0 not in id_row:
+                    id_row[qid0] = q.get("_row")
+            fp0 = question_content_fingerprint(q)
+            existing_fp.add(fp0)
+            if fp0 not in fp_meta:
+                fp_meta[fp0] = (qid0, q.get("_row"))
+        except Exception:
+            log_swallow("build_question_dup_index")
+    return existing_fp, existing_ids, fp_meta, id_row
+
+
+def lookup_question_dup(
+    q: Dict[str, Any],
+    existing_fp: set,
+    existing_ids: set,
+    fp_meta: Dict[str, Tuple[str, Any]],
+    id_row: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    seed = {f: clean(q.get(f, "")) for f in QUESTION_FIELDS}
+    try:
+        fp = question_content_fingerprint(canonical_question(seed))
+    except Exception:
+        fp = question_content_fingerprint(q)
+    qid = clean(q.get("ID", ""))
+    if qid and qid in existing_ids:
+        return {
+            "kind": "id",
+            "existing_id": qid,
+            "existing_row": id_row.get(qid),
+        }
+    if fp in existing_fp:
+        old_id, old_row = fp_meta.get(fp, ("", ""))
+        return {
+            "kind": "content",
+            "existing_id": old_id,
+            "existing_row": old_row,
+        }
+    return None
 
 
 def question_mcq_shuffle_fingerprint(q: Dict[str, Any]) -> str:
@@ -4952,9 +5009,20 @@ def _drive_upload_png_bytes(png_bytes: bytes, filename: str, folder_id: str) -> 
     return file_id
 
 
+_DRIVE_SA_QUOTA_STATE = {"blocked": False}
+
+
 def _is_sa_storage_quota_error(detail: str) -> bool:
     d = clean(detail).lower()
     return "storagequota" in d.replace(" ", "") or "service accounts do not have storage" in d
+
+
+def _drive_sa_quota_blocked() -> bool:
+    return bool(_DRIVE_SA_QUOTA_STATE.get("blocked")) and not _gas_upload_configured()
+
+
+def _mark_drive_sa_quota_blocked() -> None:
+    _DRIVE_SA_QUOTA_STATE["blocked"] = True
 
 
 def _gas_upload_configured() -> bool:
@@ -4992,6 +5060,8 @@ def _publish_png_via_gas(png_bytes: bytes, filename: str) -> Tuple[str, str]:
 
 def _publish_png_bytes_to_drive(png_bytes: bytes, filename: str = "") -> Tuple[str, str]:
     """Upload PNG: GAS (nếu cấu hình) hoặc service account."""
+    if _drive_sa_quota_blocked():
+        return "", ""
     name = filename or f"tikz_{uuid.uuid4().hex[:8]}.png"
     if _gas_upload_configured():
         gas_url, gas_err = _publish_png_via_gas(png_bytes, name)
@@ -5011,6 +5081,7 @@ def _publish_png_bytes_to_drive(png_bytes: bytes, filename: str = "") -> Tuple[s
     except Exception as e:
         sa_err = _drive_api_error_detail(e)
     if _is_sa_storage_quota_error(sa_err):
+        _mark_drive_sa_quota_blocked()
         if not _gas_upload_configured():
             return "", (
                 sa_err
@@ -5153,12 +5224,19 @@ def _finalize_hinhanh_for_sheet(value: Any) -> Tuple[str, str]:
             _remember_drive_folder_from_url(img_clean)
             img_clean = ""
         elif low.startswith("/static/latex_assets/") or low.startswith("static/latex_assets/"):
-            uploaded, err = _upload_static_latex_image_to_drive(img_clean)
+            uploaded, err = "", ""
+            if not _drive_sa_quota_blocked():
+                uploaded, err = _upload_static_latex_image_to_drive(img_clean)
             if uploaded:
                 img_clean = uploaded
             else:
                 img_clean = normalize_image_src(img_clean)
-                warn = err or _drive_setup_hint("Ảnh chưa lên Drive")
+                if tz:
+                    warn = ""
+                elif err and not _is_sa_storage_quota_error(err):
+                    warn = err
+                elif err:
+                    warn = ""
         else:
             img_clean = normalize_image_src(img_clean)
 
@@ -9548,30 +9626,26 @@ class SheetStore:
         out_items = []
         seen = set()
         for up in updates or []:
-            try:
-                row = int(up.get("row") or 0)
-            except Exception:
-                log_swallow("update_question_levels_bulk:7682")
-                row = 0
+            row, q = self._resolve_bulk_update_target(up, by_row)
             if row < 2 or row in seen:
                 continue
             seen.add(row)
             lv = _norm_mucdo_4(up.get("MucDo") or up.get("mucdo") or up.get("level"))
             if not lv:
                 continue
-            q = by_row.get(row)
             if not q:
-                continue
+                q = by_row.get(row)
             want_id = clean(up.get("ID") or up.get("id") or "")
-            if want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
-                raise RuntimeError(f"Dòng {row} không khớp ID trong RAM. Hãy bấm Đồng bộ Sheet rồi thử lại.")
+            if q and want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
+                continue
             a1 = gspread.utils.rowcol_to_a1(row, mucdo_col)
             batch.append({"range": a1, "values": [[lv]]})
-            q["MucDo"] = lv
+            if q:
+                q["MucDo"] = lv
             out_items.append({
                 "index": up.get("index"),
                 "row": row,
-                "ID": clean(q.get("ID", "")),
+                "ID": clean((q or {}).get("ID", "") or want_id),
                 "MucDo": lv,
             })
         if not batch:
@@ -9579,6 +9653,39 @@ class SheetStore:
         gsheet_call_retry("batch_update Cau_Hoi MucDo", self.ws_questions.batch_update, batch, value_input_option="RAW")
         self.rebuild_indexes_after_admin_change()
         return {"ok": True, "updated": len(batch), "items": out_items}
+
+    def _resolve_bulk_update_target(
+        self,
+        up: Dict[str, Any],
+        by_row: Dict[int, Dict[str, Any]],
+    ) -> Tuple[int, Optional[Dict[str, Any]]]:
+        """Tìm dòng ghi Sheet: ưu tiên row, lệch/thiếu thì theo ID (câu vừa chèn LaTeX)."""
+        try:
+            row = int(up.get("row") or up.get("_row") or 0)
+        except Exception:
+            row = 0
+        want_id = clean(up.get("ID") or up.get("id") or "")
+        q = by_row.get(row) if row >= 2 else None
+        if q and want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
+            q = None
+        if not q and want_id:
+            hits = list((self.by_id or {}).get(want_id) or [])
+            if not hits:
+                hits = [qq for qq in (self.questions or []) if clean(qq.get("ID", "")) == want_id]
+            if hits:
+                q = hits[-1]
+                try:
+                    row = int(q.get("_row") or 0)
+                except Exception:
+                    row = 0
+            if row < 2:
+                found = self._find_sheet_row_by_question_id(want_id)
+                if found:
+                    row = int(found)
+                    q = by_row.get(row) or q
+        if row < 2:
+            return 0, None
+        return row, q
 
     def _question_field_col_1(self, field: str) -> int:
         """Cột 1-indexed khi ghi Sheet — ưu tiên tiêu đề thực tế, fallback bố cục cố định."""
@@ -9615,34 +9722,31 @@ class SheetStore:
             log_swallow("update_question_dangbaitap_bulk:NgayCapNhat_header")
         ngay_col0 = (self.question_col_index or {}).get("NgayCapNhat")
         for up in updates or []:
-            try:
-                row = int(up.get("row") or 0)
-            except Exception:
-                log_swallow("update_question_dangbaitap_bulk:7730")
-                row = 0
+            row, q = self._resolve_bulk_update_target(up, by_row)
             if row < 2 or row in seen:
                 continue
             seen.add(row)
             dbt = clean(up.get("DangBaiTap") or up.get("dangbaitap") or "")
             if not dbt or _is_bad_dangbaitap_value(dbt):
                 continue
-            q = by_row.get(row)
             if not q:
-                continue
+                q = by_row.get(row)
             want_id = clean(up.get("ID") or up.get("id") or "")
-            if want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
-                raise RuntimeError(f"Dòng {row} không khớp ID trong RAM. Hãy bấm Đồng bộ Sheet rồi thử lại.")
+            if q and want_id and clean(q.get("ID", "")) and want_id != clean(q.get("ID", "")):
+                continue
             a1 = gspread.utils.rowcol_to_a1(row, fixed_col)
             batch.append({"range": a1, "values": [[dbt]]})
             if ngay_col0 is not None:
                 a1u = gspread.utils.rowcol_to_a1(row, ngay_col0 + 1)
                 batch.append({"range": a1u, "values": [[stamp]]})
-                q["NgayCapNhat"] = stamp
-            q["DangBaiTap"] = one_line(dbt)
+                if q:
+                    q["NgayCapNhat"] = stamp
+            if q:
+                q["DangBaiTap"] = one_line(dbt)
             out_items.append({
                 "index": up.get("index"),
                 "row": row,
-                "ID": clean(q.get("ID", "")),
+                "ID": clean((q or {}).get("ID", "") or want_id),
                 "DangBaiTap": dbt,
             })
         if not batch:
@@ -10476,13 +10580,17 @@ class SheetStore:
             q["DapAn"] = normalize_latex_text(da)
         q["Dang"] = effective_dang(q)
         q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
-        q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+        raw_hinh = clean((data or {}).get("HinhAnh", ""))
+        if raw_hinh and ("\n" in raw_hinh or raw_hinh.lower().startswith("tikzraw:")):
+            q["HinhAnh"] = raw_hinh
+        else:
+            q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
         if not clean(q.get("CauHoi")):
             return None
         q["_row"] = row_number
         return q
 
-    def _extend_fingerprints_from_sheet_tail(self, existing_fp: set, lookback: int = 48) -> None:
+    def _extend_fingerprints_from_sheet_tail(self, existing_fp: set, lookback: int = 48, existing_ids: Optional[set] = None) -> None:
         """Bổ sung fingerprint từ vài chục dòng cuối Sheet — tránh chèn trùng khi RAM chưa kịp nạp."""
         if not self.ws_questions:
             return
@@ -10507,6 +10615,10 @@ class SheetStore:
                     continue
                 try:
                     existing_fp.add(question_content_fingerprint(q))
+                    if existing_ids is not None:
+                        qid = clean(q.get("ID", ""))
+                        if qid:
+                            existing_ids.add(qid)
                 except Exception:
                     log_swallow("_extend_fingerprints_from_sheet_tail:8413")
                     pass
@@ -10640,7 +10752,14 @@ class SheetStore:
             }
 
 
-    def add_questions_bulk(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def add_questions_bulk(
+        self,
+        items: List[Dict[str, Any]],
+        allow_duplicates: bool = False,
+        skip_content_dup: bool = True,
+        insert_all: bool = False,
+        index_base: int = 0,
+    ) -> Dict[str, Any]:
         """ADMIN nhập nhiều câu hỏi đã parse từ LaTeX vào cuối sheet Cau_Hoi."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được nhập câu hỏi")
@@ -10662,29 +10781,32 @@ class SheetStore:
             if not headers:
                 raise RuntimeError("Sheet Cau_Hoi không có tiêu đề cột.")
 
-            existing_fp = set()
-            for q in self.questions or []:
-                try:
-                    existing_fp.add(question_content_fingerprint(q))
-                except Exception:
-                    log_swallow("add_questions_bulk:8565")
-                    pass
+            existing_fp, existing_ids, fp_meta, id_row = build_question_dup_index(self.questions)
             if not self.questions_loaded:
-                self._extend_fingerprints_from_sheet_tail(existing_fp)
+                self._extend_fingerprints_from_sheet_tail(existing_fp, existing_ids=existing_ids)
 
             rows: List[List[str]] = []
             prepared: List[Dict[str, Any]] = []
+            prepared_idx: List[int] = []
             skipped: List[Dict[str, Any]] = []
             img_warns: List[str] = []
+            pending_dups: List[Optional[Dict[str, Any]]] = []
 
             for idx, raw in enumerate(items, start=1):
+                report_idx = int(index_base or 0) + idx
                 data = {k: clean(v) for k, v in (raw or {}).items()}
                 if not clean(data.get("CauHoi")):
-                    skipped.append({"index": idx, "reason": "Thiếu CauHoi"})
+                    skipped.append({"index": report_idx, "reason": "Thiếu CauHoi"})
                     continue
 
                 hz = clean(data.pop("_hinhanh_warning", ""))
-                if hz:
+                tikz_extra = clean(data.pop("Tikz", "") or "")
+                img_link, tz_in = _parse_hinhanh_cell(data.get("HinhAnh", ""))
+                img_clean = img_link if img_link and not str(img_link).lower().startswith("tikzraw:") else ""
+                tz = tikz_extra or tz_in or _extract_tikz_block(data.get("HinhAnh", ""))
+                if img_clean or tz:
+                    data["HinhAnh"] = _build_hinhanh_cell(img_clean, tz)
+                if hz and not tz and not _is_sa_storage_quota_error(hz):
                     img_warns.append(f"Câu {idx}: {hz}")
 
                 seed = {f: data.get(f, "") for f in QUESTION_FIELDS}
@@ -10695,23 +10817,65 @@ class SheetStore:
                     data["MaDe"] = cq.get("MaDe", "")
 
                 fp = question_content_fingerprint(canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS}))
-                if fp in existing_fp:
-                    skipped.append({"index": idx, "id": data.get("ID", ""), "reason": "Trùng nội dung đã có"})
-                    continue
+                qid_now = clean(data.get("ID", ""))
+                dup_hit: Optional[Dict[str, Any]] = None
+                if qid_now and qid_now in existing_ids:
+                    dup_hit = {
+                        "index": report_idx,
+                        "kind": "id",
+                        "existing_id": qid_now,
+                        "existing_row": id_row.get(qid_now),
+                        "cau": clean(data.get("CauHoi", ""))[:90],
+                    }
+                    if insert_all or allow_duplicates:
+                        data["ID"] = "LATEX_" + stable_hash(f"dup|{time.time()}|{idx}|{random.random()}", 12)
+                        qid_now = data["ID"]
+                    else:
+                        skipped.append({**dup_hit, "id": dup_hit.get("existing_id", ""), "reason": "Trùng ID đã có"})
+                        continue
+                elif fp in existing_fp:
+                    old_id, old_row = fp_meta.get(fp, ("", ""))
+                    dup_hit = {
+                        "index": report_idx,
+                        "kind": "content",
+                        "existing_id": old_id,
+                        "existing_row": old_row,
+                        "cau": clean(data.get("CauHoi", ""))[:90],
+                    }
+                    if not insert_all and skip_content_dup and not allow_duplicates:
+                        skipped.append({**dup_hit, "id": data.get("ID", ""), "reason": "Trùng nội dung đã có"})
+                        continue
+                    if allow_duplicates and qid_now and qid_now in existing_ids:
+                        data["ID"] = "LATEX_" + stable_hash(f"dup|{time.time()}|{idx}|{random.random()}", 12)
+                        qid_now = data["ID"]
                 existing_fp.add(fp)
+                if qid_now:
+                    existing_ids.add(qid_now)
+                    id_row.setdefault(qid_now, None)
+                if fp not in fp_meta:
+                    fp_meta[fp] = (qid_now, None)
 
                 row = self._build_question_row(data, cq)
 
                 rows.append(row)
                 prepared.append(data)
+                prepared_idx.append(report_idx)
+                pending_dups.append(dup_hit)
 
             if not rows:
                 dup_n = sum(1 for s in skipped if "Trùng" in clean(s.get("reason", "")))
                 msg = "Không có câu mới để nhập."
                 if dup_n and dup_n == len(skipped):
+                    sample = next((s for s in skipped if s.get("existing_id") or s.get("existing_row")), {}) or {}
+                    hint_id = clean(sample.get("existing_id", ""))
+                    hint_row = sample.get("existing_row") or ""
+                    where = ""
+                    if hint_id or hint_row:
+                        where = f" Ví dụ ID {hint_id}" + (f", dòng {hint_row}" if hint_row else "") + "."
                     msg = (
-                        f"Không chèn được: {dup_n} câu trùng nội dung đã có trên Sheet "
-                        f"(cùng mã đề + câu hỏi). Kiểm tra Google Sheet hoặc đổi Tên đề / Mã đề."
+                        f"Không chèn thêm: {dup_n} câu đã có trên Sheet "
+                        f"(cùng môn/lớp/chương/bài + cùng nội dung đề).{where} "
+                        f"Mở mục lục, lọc CHƯA DUYỆT. Muốn bản sao thì xác nhận chèn lại."
                     )
                 elif skipped:
                     msg = "Không có câu mới để nhập. " + "; ".join(
@@ -10721,7 +10885,10 @@ class SheetStore:
                     "ok": True,
                     "created": 0,
                     "skipped": skipped,
+                    "dup_hits": [],
+                    "inserted": [],
                     "message": msg,
+                    "already_exists": bool(dup_n and dup_n == len(skipped)),
                 }
 
             start_row = self._append_question_rows_at_col_a(rows)
@@ -10747,10 +10914,31 @@ class SheetStore:
 
             self._index_new_questions_fast(new_questions)
 
+            dup_hits: List[Dict[str, Any]] = []
+            for i, hit in enumerate(pending_dups):
+                if not hit:
+                    continue
+                qn = new_questions[i] if i < len(new_questions) else None
+                if qn:
+                    hit["new_id"] = clean(qn.get("ID", ""))
+                    hit["new_row"] = qn.get("_row")
+                dup_hits.append(hit)
+
+            inserted_out: List[Dict[str, Any]] = []
+            for i, data in enumerate(prepared):
+                qn = new_questions[i] if i < len(new_questions) else None
+                inserted_out.append({
+                    "index": prepared_idx[i] if i < len(prepared_idx) else (int(index_base or 0) + i + 1),
+                    "id": clean((qn or data).get("ID", "")),
+                    "row": (qn.get("_row") if qn else None) or (start_row + i),
+                })
+
             return {
                 "ok": True,
                 "created": len(new_questions),
                 "skipped": skipped,
+                "dup_hits": dup_hits,
+                "inserted": inserted_out,
                 "hinhanh_warnings": img_warns,
                 "start_row": start_row if new_questions else None,
                 "end_row": (start_row + len(new_questions) - 1) if new_questions else None,
@@ -27967,8 +28155,8 @@ async function bulkDbtApplySelected(){
   bulkDbtSyncAllFromDom();
   let selected=ADMIN_DBT_REVIEW_ITEMS.filter(it=>it.selected&&bulkDbtChosen(it));
   if(!selected.length){alert('Chưa tick câu nào có Dạng bài tập.\n\nTick ô «Chấp nhận» hoặc bấm «✅ Tick tất cả gợi ý» sau khi GPT xong.');return}
-  let noRow=selected.filter(it=>!it.row||parseInt(it.row,10)<2);
-  if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
+  let noRow=selected.filter(it=>(!it.row||parseInt(it.row,10)<2)&&!String(it.ID||'').trim());
+  if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet lẫn ID. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
   if(!confirm('Ghi Dạng bài tập cho '+selected.length+' câu vào cột H Google Sheet?'))return;
   let updates=selected.map(it=>({index:it.index,row:parseInt(it.row,10),ID:it.ID,DangBaiTap:bulkDbtChosen(it)}));
   let st=document.getElementById('bulkDbtStatus');
@@ -28165,8 +28353,8 @@ async function bulkLevelApplySelected(){
   bulkLevelSyncAllFromDom();
   let selected=ADMIN_LEVEL_REVIEW_ITEMS.filter(it=>it.selected&&bulkLevelChosen(it));
   if(!selected.length){alert('Chưa tick câu nào có mức độ.\n\nTick ô «Chấp nhận» hoặc bấm «✅ Tick tất cả gợi ý» sau khi GPT xong.');return}
-  let noRow=selected.filter(it=>!it.row||parseInt(it.row,10)<2);
-  if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
+  let noRow=selected.filter(it=>(!it.row||parseInt(it.row,10)<2)&&!String(it.ID||'').trim());
+  if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet lẫn ID. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
   if(!confirm('Ghi mức độ cho '+selected.length+' câu vào cột I Google Sheet?'))return;
   let updates=selected.map(it=>({index:it.index,row:parseInt(it.row,10),ID:it.ID,MucDo:bulkLevelChosen(it)}));
   let st=document.getElementById('bulkLevelStatus');
@@ -29803,7 +29991,12 @@ function latexImportSummary(j){
   if(j.theory_lessons_errors&&j.theory_lessons_errors.length)lines.push('Lỗi Ly_Thuyet: '+j.theory_lessons_errors.slice(0,5).join(' | '));
   if(j.skipped&&j.skipped.length)lines.push('Chi tiết bỏ qua: '+j.skipped.slice(0,12).map(x=>'#'+(x.index||'?')+' '+(x.reason||x.warning||x.id||'')).join(' | '));
   if(j.media){lines.push('Media: includegraphics='+((j.media&&j.media.includegraphics)||0)+' · TikZ='+((j.media&&j.media.tikz)||0)+' · đã xử lý='+((j.media&&j.media.resolved)||0));}
-  if(j.warnings&&j.warnings.length)lines.push('Cảnh báo: '+j.warnings.slice(0,8).map(w=>'#'+(w.index||'?')+' '+(w.warning||w.reason||'')).join(' | '));
+  let warns=(j.warnings||[]).filter(w=>!/storage quota|service accounts do not have storage/i.test(String(w.warning||w.reason||'')));
+  if(warns.length)lines.push('Cảnh báo: '+warns.slice(0,8).map(w=>'#'+(w.index||'?')+' '+(w.warning||w.reason||'')).join(' | '));
+  if((j.media&&j.media.tikz)||(j.questions||[]).some(q=>parseHinhanhCellClient((q&&q.HinhAnh)||'').tikz))lines.push('Mã TikZ sẽ lưu cột T (dòng tikzraw) — sửa được sau khi chèn. Drive quota không chặn chèn.');
+  let dupN=(j.questions||[]).filter(q=>q&&(q.dup||q.dup_id)).length;
+  if(dupN)lines.push('⚠ '+dupN+' câu có thể trùng Sheet — vẫn hiện đủ để ADMIN xem, quyết định khi chèn.');
+  if((j.dup_hits||[]).length)lines.push('Sau khi chèn: '+(j.dup_hits.length)+' câu trùng — ADMIN chọn giữ cả hai hoặc xóa bản mới.');
   return lines.join('\n');
 }
 function latexImportDangShort(d){d=String(d||'');if(d==='Trắc nghiệm')return 'TN';if(d==='Đúng sai')return 'Đ/S';if(d==='Trả lời ngắn')return 'TLN';if(d==='Tự luận')return 'TL';return d||'—'}
@@ -29866,7 +30059,8 @@ function latexQuestionsFromPreview(pre){
       DapAn:q.DapAn||'',
       SaiSo:q.SaiSo||'',
       LoiGiai:q.LoiGiai||'',
-      HinhAnh:q.HinhAnh||'',
+      HinhAnh:(function(){let p=parseHinhanhCellClient(q.HinhAnh||'');let img=p.img&&!/^tikzraw:/i.test(p.img)?p.img:'';return buildHinhanhCellClient(img,p.tikz||q.Tikz||'')||q.HinhAnh||''})(),
+      Tikz:q.Tikz||'',
       QuyenTruyCap:q.QuyenTruyCap||defs.QuyenTruyCap||'VIP',
       Diem:defs.Diem||'1',
       TrangThai:'CHƯA DUYỆT'
@@ -29887,17 +30081,29 @@ function latexImportQuestionCard(q,i){
   if(!['NB','TH','VD','VDC'].includes(chosen)) chosen=aiLv||'TH';
   let aiBox=aiLv?`<div style="margin-top:6px;padding:7px 9px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:12px"><b>🤖 GPT ADMIN gợi ý:</b> ${esc(aiLv)}${aiConf?' · tin cậy '+esc(aiConf):''}${aiReason?' · '+esc(aiReason):''}</div>`:'';
   let levelSelect=`<label style="display:flex;align-items:center;gap:6px;font-size:12px"><b>Mức chèn Sheet:</b><select data-level-index="${idx}" data-ai-level="${esc(aiLv)}" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px">${latexLevelOptions(chosen)}</select></label>`;
-  let img=q.HinhAnh?`<div class="muted" style="margin-top:6px;font-size:12px">🖼 Hình: ${esc(q.HinhAnh)}</div>`:'';
+  let parsedHa=parseHinhanhCellClient(q.HinhAnh||'');
+  let imgUrl=parsedHa.img&&!/^tikzraw:/i.test(parsedHa.img)?parsedHa.img:'';
+  let hasTz=!!(parsedHa.tikz||q.Tikz);
+  let img=(imgUrl||hasTz)?`<div style="margin-top:8px">${imgUrl?buildQimgHtml(imgUrl):''}<div class="muted" style="font-size:12px;margin-top:4px">${imgUrl?'🖼 '+esc(imgUrl):'🖼 TikZ'}${hasTz?' · mã TikZ sẽ lưu cột T.':''}</div></div>`:'';
   let lg=q.LoiGiai?`<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#1d4ed8">Xem lời giải</summary><div style="margin-top:5px;line-height:1.45">${latexPreviewFieldHtml(q.LoiGiai)}</div></details>`:'';
-  let warn=q.warning?`<div style="margin-top:6px;color:#991b1b;font-size:12px">⚠ ${esc(q.warning)}</div>`:'';
-  return `<div class="latexQCard" style="margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(248,250,252,.88);box-shadow:0 1px 3px rgba(15,23,42,.08)">
+  let warnMsg=String(q.warning||'');
+  if(/storage quota|service accounts do not have storage|Apps Script upload/i.test(warnMsg))warnMsg='';
+  let warn=warnMsg?`<div style="margin-top:6px;color:#991b1b;font-size:12px">⚠ ${esc(warnMsg)}</div>`:'';
+  let isIdDup=q.dup_kind==='id'||(q.dup_id&&q.ID&&String(q.dup_id)===String(q.ID));
+  let dupTxt=isIdDup
+    ?('Câu '+idx+' trùng ID với Sheet: '+esc(q.dup_id||q.ID||'')+(q.dup_row?(' · dòng '+esc(q.dup_row)):''))
+    :('Câu '+idx+' gần giống nội dung Sheet'+(q.dup_id?(': ID '+esc(q.dup_id)):'')+(q.dup_row?(' · dòng '+esc(q.dup_row)):'')+(q.ID&&q.dup_id&&String(q.ID)!==String(q.dup_id)?('. ID câu này: '+esc(q.ID)):'') );
+  let dupBox=(q.dup||q.dup_id)?`<div style="margin:0 0 8px;padding:7px 9px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12px;line-height:1.4"><b>⚠ ${dupTxt}</b><div style="font-weight:500;margin-top:3px">Vẫn hiện đủ. Khi chèn ADMIN chọn giữ cả hai hoặc xóa bản mới.</div></div>`:'';
+  return `<div class="latexQCard" style="margin:12px 0;padding:12px;border:1px solid ${q.dup||q.dup_id?'#fdba74':'var(--border)'};border-left:5px solid ${q.dup||q.dup_id?'#ea580c':'transparent'};border-radius:14px;background:rgba(248,250,252,.88);box-shadow:0 1px 3px rgba(15,23,42,.08)">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <b style="color:#0f172a">Câu ${idx}</b>
+      ${q.dup||q.dup_id?'<span class="tag" style="background:#fff7ed;color:#9a3412;border:1px solid #fdba74">TRÙNG</span>':''}
       <span class="tag">${esc(latexImportDangShort(q.Dang))}</span>
       <span class="mucdoBadge ${mucdoBadgeClass(chosen)}">${esc(chosen||'—')}</span>
       ${levelSelect}
       <span class="muted" style="font-size:11px">ID: ${esc(q.ID||'AUTO')}</span>
     </div>
+    ${dupBox}
     ${aiBox}
     <div style="white-space:normal;line-height:1.5;margin-top:8px"><b>Đề:</b> ${latexPreviewFieldHtml(q.CauHoi||'')}</div>
     ${opts?`<div style="margin-top:7px;padding-left:4px">${opts}</div>`:''}
@@ -29960,22 +30166,85 @@ async function commitLatexImport(){
     let items=latexQuestionsFromPreview(pre);
     let theoryN=((pre.theory_groups||[]).length)+((pre.theory_lessons||[]).length);
     if(!items.length&&!theoryN){alert('Chưa có câu hoặc học liệu để chèn.');return}
-    let msg=latexImportSummary(pre)+'\n\nChèn '+items.length+' câu, '+((pre.theory_lessons||[]).length)+' lý thuyết bài học và '+((pre.theory_groups||[]).length)+' khung Dạng bài tập vào Google Sheet?\n\nApp chèn từng nhóm 8 câu để tránh máy chủ phản hồi quá lâu.';
+    let msg=latexImportSummary(pre)+'\n\nChèn HẾT '+items.length+' câu (câu trùng vẫn chèn). Sau đó ADMIN chọn: giữ cả hai hoặc xóa bản mới trùng.\n\nApp chèn từng nhóm 8 câu.';
     if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
-    let skipped=[],warns=[],startRow=0,endRow=0,inserted=[];
-    const CHUNK=8;
-    for(let i=0;i<items.length;i+=CHUNK){
-      let chunk=items.slice(i,i+CHUNK);
-      let a=i+1,b=i+chunk.length;
-      setLatexImportStatus('⏳ Đang chèn câu '+a+'–'+b+'/'+items.length+' lên Google Sheet…');
-      let j=await api('/api/latex/save-questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:chunk,defaults:currentLatexDefaults()}),timeoutMs:45000},0);
-      created+=parseInt(j.created,10)||0;
-      if(Array.isArray(j.skipped)&&j.skipped.length)skipped=skipped.concat(j.skipped);
-      if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)warns=warns.concat(j.hinhanh_warnings);
-      if(j.start_row){if(!startRow)startRow=j.start_row;endRow=j.end_row||j.start_row}
-      let skipIdx={};
-      (j.skipped||[]).forEach(s=>{skipIdx[parseInt(s.index,10)||0]=1});
-      chunk.forEach(function(q,ci){if(!skipIdx[ci+1])inserted.push(q)});
+    async function pushLatexChunks(){
+      let out={created:0,skipped:[],warns:[],startRow:0,endRow:0,inserted:[],dupHits:[]};
+      const CHUNK=8;
+      for(let i=0;i<items.length;i+=CHUNK){
+        let chunk=items.slice(i,i+CHUNK);
+        let a=i+1,b=i+chunk.length;
+        setLatexImportStatus('⏳ Đang chèn câu '+a+'–'+b+'/'+items.length+' lên Google Sheet…');
+        let payload={questions:chunk,defaults:currentLatexDefaults(),index_base:i,allow_duplicates:true};
+        let j=await api('/api/latex/save-questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:45000},0);
+        out.created+=parseInt(j.created,10)||0;
+        if(Array.isArray(j.skipped)&&j.skipped.length)out.skipped=out.skipped.concat(j.skipped);
+        if(Array.isArray(j.dup_hits)&&j.dup_hits.length)out.dupHits=out.dupHits.concat(j.dup_hits);
+        if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)out.warns=out.warns.concat(j.hinhanh_warnings);
+        if((parseInt(j.created,10)||0)>0&&j.start_row){if(!out.startRow)out.startRow=j.start_row;out.endRow=j.end_row||j.start_row}
+        let skipIdx={};
+        (j.skipped||[]).forEach(s=>{skipIdx[parseInt(s.index,10)||0]=1});
+        let k=0;
+        chunk.forEach(function(q,ci){
+          let idx=i+ci+1;
+          if(skipIdx[idx])return;
+          q._latexIdx=idx;
+          let inf=(j.inserted||[]).find(x=>parseInt(x.index,10)===idx);
+          if(inf){
+            if(inf.row)q._row=parseInt(inf.row,10);
+            if(inf.id)q.ID=inf.id;
+          }else if(parseInt(j.start_row,10)){
+            q._row=parseInt(j.start_row,10)+k;
+            if((j.ids||[])[k])q.ID=j.ids[k];
+          }
+          k++;
+          out.inserted.push(q);
+        });
+      }
+      return out;
+    }
+    let pack=await pushLatexChunks();
+    created=pack.created;
+    let skipped=pack.skipped,warns=pack.warns,startRow=pack.startRow,endRow=pack.endRow,inserted=pack.inserted,dupHits=pack.dupHits||[];
+    let dupKept=0,dupDropped=0;
+    if(dupHits.length){
+      let lines=dupHits.slice(0,14).map(d=>{
+        let n='#'+(d.index||'?');
+        let old=(d.existing_id?('ID '+d.existing_id):'')+(d.existing_row?(' dòng '+d.existing_row):'');
+        let neu=d.new_row?('bản mới dòng '+d.new_row):'';
+        return n+' '+(d.kind==='id'?'cùng ID':'gần giống')+(old?(' với '+old):'')+(neu?(' → '+neu):'')+(d.cau?(' · '+String(d.cau).slice(0,50)): '');
+      });
+      let drop=confirm('Đã chèn hết '+created+' câu lên Sheet.\n\n'+dupHits.length+' câu TRÙNG (đã hiện đủ khi Đọc thử, vẫn đã chèn):\n'+lines.join('\n')+(dupHits.length>14?'\n…':'')+'\n\nOK = XÓA bản mới trùng (giữ câu cũ trên Sheet).\nCancel = GIỮ CẢ HAI.');
+      if(drop){
+        let rows=dupHits.map(d=>parseInt(d.new_row,10)).filter(n=>n>1);
+        if(rows.length){
+          setLatexImportStatus('⏳ Đang xóa '+rows.length+' bản mới trùng theo quyết định ADMIN…');
+          try{
+            await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:rows}),timeoutMs:60000},0);
+            let dropIdx={};
+            dupHits.forEach(d=>{dropIdx[parseInt(d.index,10)||0]=1});
+            inserted=inserted.filter(function(q){return !dropIdx[q._latexIdx]});
+            let dels=rows.slice().sort((a,b)=>a-b);
+            inserted.forEach(function(q){
+              let r=parseInt(q._row,10)||0;
+              let shift=dels.filter(d=>d<r).length;
+              if(shift)q._row=r-shift;
+            });
+            created=Math.max(0,created-rows.length);
+            skipped=skipped.concat(dupHits.map(d=>({index:d.index,id:d.existing_id,reason:'ADMIN xóa bản mới trùng'})));
+            dupDropped=rows.length;
+            dupHits=[];
+          }catch(delErr){alert('Đã chèn nhưng xóa bản trùng lỗi: '+(delErr.message||delErr)+'\nCâu mới vẫn còn trên Sheet.');}
+        }
+      }else{
+        dupKept=dupHits.length;
+        let byIdx={};
+        dupHits.forEach(d=>{byIdx[parseInt(d.index,10)||0]=d});
+        inserted.forEach(function(q){
+          let d=byIdx[q._latexIdx];
+          if(d){q.dup=true;q.dup_kind=d.kind;q.dup_id=d.existing_id;q.dup_row=d.existing_row}
+        });
+      }
     }
     let theorySaved=[],lessonSaved=[],theoryErrors=[],lessonErrors=[];
     if(theoryN){
@@ -29992,13 +30261,21 @@ async function commitLatexImport(){
       created:created,skipped:skipped,hinhanh_warnings:warns,start_row:startRow,end_row:endRow,
       questions:inserted,parsed:pre.parsed,total_blocks:pre.total_blocks,counts:pre.counts,
       warnings:(pre.warnings||[]).concat(warns.map(w=>({index:0,warning:w}))),
-      media:pre.media,message:'',
+      media:pre.media,message:'',dup_hits:dupHits,
       theory_saved:theorySaved,theory_lessons_saved:lessonSaved,
       theory_errors:theoryErrors,theory_lessons_errors:lessonErrors,
       theory_groups_count:(pre.theory_groups||[]).length,
       theory_lessons_count:(pre.theory_lessons||[]).length
     };
-    if(!created&&skipped.length)j.message='Không chèn được câu mới. '+(skipped.slice(0,6).map(x=>x.reason||x.id||('#'+x.index)).join(' | '));
+    if(!created&&skipped.length){
+      if(skipped.every(x=>/trung noi dung|trùng nội dung/i.test(String(x.reason||'')))){
+        let ids=skipped.map(x=>x.existing_id||x.id).filter(Boolean).slice(0,5);
+        j.message='Các câu đã có trên Sheet — không chèn lần 2. Mở mục lục, lọc Chưa duyệt.'+(ids.length?(' ID: '+ids.join(', ')):'');
+        j.already_exists=true;
+      }else{
+        j.message='Không chèn được câu mới. '+skipped.slice(0,6).map(x=>x.reason||x.id||('#'+x.index)).join(' | ');
+      }
+    }
     setLatexImportStatus(latexImportSummary(j)+(created?('\nĐã chèn '+created+' câu'+(startRow?(' · dòng '+startRow+' → '+endRow):'')):'')+(skipped.length?('\nBỏ qua '+skipped.length+' câu.'):''));
     if(created>0||theorySaved.length||lessonSaved.length){
       if(created>0)appendLatexInsertedQuestions(j);
@@ -30007,7 +30284,8 @@ async function commitLatexImport(){
       renderLatexImportPreview(j,true);
       window.LAST_LATEX_PREVIEW_DATA=null;
       try{await refreshCatalogFromMeta()}catch(e2){}
-      alert('Đã chèn '+(created||0)+' câu, lưu '+(lessonSaved.length)+' lý thuyết (Ly_Thuyet) và '+(theorySaved.length)+' khung dạng (Phuong_Phap).'+(skipped.length?('\nBỏ qua '+skipped.length+' câu trùng/không hợp lệ.'):'')+'\n\n⚠ Cảnh báo Drive quota không chặn chèn câu — TikZ giữ trong cột T. Nếu thiếu ảnh: upload tay rồi dán link cột T.');
+      let dupNote=dupDropped?('\nĐã xóa '+dupDropped+' bản mới trùng (giữ câu cũ).'):(dupKept?('\nGiữ cả hai: '+dupKept+' câu trùng vẫn nằm trên Sheet.'):'');
+      alert('Đã chèn '+(created||0)+' câu, lưu '+(lessonSaved.length)+' lý thuyết (Ly_Thuyet) và '+(theorySaved.length)+' khung dạng (Phuong_Phap).'+dupNote+(skipped.length&&!dupDropped?('\nBỏ qua '+skipped.length+' câu không hợp lệ.'):'')+'\n\n⚠ Cảnh báo Drive quota không chặn chèn câu — TikZ giữ trong cột T. Nếu thiếu ảnh: upload tay rồi dán link cột T.');
     }else{
       let why=j.message||'';
       if(!why&&skipped.length)why='Bỏ qua '+skipped.length+' câu: '+skipped.slice(0,4).map(x=>x.reason||x.id||('#'+x.index)).join('; ');
@@ -33592,6 +33870,25 @@ def _compile_tikz_pdf_via_cloud(tex_doc: str) -> Tuple[bytes, str]:
         return b"", f"Không gọi được dịch vụ biên dịch LaTeX: {str(e)[:200]}"
 
 
+def _maybe_publish_tikz_png(png_path: str, ctx: Optional[Dict[str, Any]], warn_ix: Any) -> str:
+    """Upload Drive khi commit. Đọc thử không gọi Drive. Quota SA không chặn PNG cache."""
+    if not png_path or not os.path.exists(png_path):
+        return ""
+    if ctx is not None and not ctx.get("commit"):
+        return ""
+    if _drive_sa_quota_blocked():
+        return ""
+    drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
+    if drive_url:
+        return drive_url
+    if drive_err and _is_sa_storage_quota_error(drive_err):
+        _mark_drive_sa_quota_blocked()
+        return ""
+    if drive_err and ctx is not None:
+        ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": drive_err})
+    return ""
+
+
 def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str, q_idx: Any = None) -> str:
     """Chuyển PDF → PNG (PyMuPDF hoặc pdftoppm)."""
     if not pdf_bytes or not ctx:
@@ -33608,11 +33905,9 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str, q_i
         pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
         pix.save(png_path)
         ctx["media"]["resolved"] += 1
-        drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
+        drive_url = _maybe_publish_tikz_png(png_path, ctx, warn_ix)
         if drive_url:
             return drive_url
-        if drive_err:
-            ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": drive_err})
         return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except ImportError:
         pass
@@ -33636,11 +33931,9 @@ def _pdf_bytes_to_png_file(pdf_bytes: bytes, ctx: Dict[str, Any], name: str, q_i
         )
         if os.path.exists(png_path):
             ctx["media"]["resolved"] += 1
-            drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
+            drive_url = _maybe_publish_tikz_png(png_path, ctx, warn_ix)
             if drive_url:
                 return drive_url
-            if drive_err:
-                ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": drive_err})
             return _asset_url_for(ctx["batch"], os.path.basename(png_path))
     except Exception as e:
         ctx.setdefault("warnings", []).append({"index": warn_ix, "warning": "pdftoppm: " + str(e)[:160]})
@@ -33708,11 +34001,9 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
                     png_path = out_prefix + ".png"
                     if os.path.exists(png_path):
                         ctx["media"]["resolved"] += 1
-                        drive_url, drive_err = _publish_png_to_drive(png_path, os.path.basename(png_path))
+                        drive_url = _maybe_publish_tikz_png(png_path, ctx, idx)
                         if drive_url:
                             return _prefer_cache_url(drive_url)
-                        if drive_err:
-                            ctx.setdefault("warnings", []).append({"index": idx, "warning": drive_err})
                         return _prefer_cache_url(_asset_url_for(ctx["batch"], os.path.basename(png_path)))
         except Exception as e:
             ctx.setdefault("warnings", []).append({"index": idx, "warning": "TikZ local: " + str(e)[:180]})
@@ -33728,12 +34019,16 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
 
 
 def _latex_extract_media(text: str, ctx: Optional[Dict[str, Any]], idx: int) -> Tuple[str, str]:
-    """Gỡ includegraphics/TikZ khỏi câu hỏi, trả về text sạch + link ảnh cột HinhAnh."""
+    """Gỡ includegraphics/TikZ khỏi câu hỏi; cột T = URL ảnh + tikzraw (sửa được)."""
     refs: List[str] = []
+    tikz_codes: List[str] = []
     src = text or ""
 
     def tikz_repl(m: re.Match) -> str:
-        url = _compile_tikz_to_png(m.group(0), ctx, idx, len(refs) + 1)
+        code = m.group(0)
+        if code:
+            tikz_codes.append(code)
+        url = _compile_tikz_to_png(code, ctx, idx, len(refs) + 1)
         if url:
             refs.append(url)
         return " "
@@ -33755,6 +34050,17 @@ def _latex_extract_media(text: str, ctx: Optional[Dict[str, Any]], idx: int) -> 
     )
     src = _LATEX_INCLUDE_RE.sub(img_repl, src)
     refs = [r for r in refs if clean(r)]
+    img = ""
+    for r in refs:
+        parsed_img, _tz = _parse_hinhanh_cell(r)
+        cand = parsed_img or r
+        if cand and not str(cand).lower().startswith("tikzraw:"):
+            img = cand
+            break
+    tz = "\n\n".join(tikz_codes) if tikz_codes else ""
+    built = _build_hinhanh_cell(img, tz)
+    if built:
+        return src, built
     return src, "; ".join(refs)
 
 def _latex_skip_ws(s: str, pos: int) -> int:
@@ -34184,7 +34490,7 @@ def _latex_warn_by_index(warnings: Any) -> Dict[str, str]:
             continue
         k = _latex_warn_index_key(w.get("index"))
         msg = clean(w.get("warning") or w.get("reason") or "")
-        if not msg:
+        if not msg or _is_sa_storage_quota_error(msg):
             continue
         out[k] = (out.get(k, "") + (" · " if out.get(k) else "") + msg)
     return out
@@ -34320,7 +34626,13 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
         counts[effective_dang(q)] = counts.get(effective_dang(q), 0) + 1
 
     if asset_ctx:
-        errors.extend(asset_ctx.get("warnings", []))
+        for w in asset_ctx.get("warnings") or []:
+            msg = ""
+            if isinstance(w, dict):
+                msg = clean(w.get("warning") or w.get("reason") or "")
+            if _is_sa_storage_quota_error(msg):
+                continue
+            errors.append(w)
 
     return {
         "ok": True,
@@ -41448,8 +41760,27 @@ def api_latex_import():
                     "SaiSo": q.get("SaiSo", ""),
                     "LoiGiai": q.get("LoiGiai", ""),
                     "HinhAnh": q.get("HinhAnh", ""),
+                    "Tikz": _parse_hinhanh_cell(q.get("HinhAnh", ""))[1],
                     "warning": warn_by_index.get(str(idx), ""),
                 })
+            try:
+                st_prev = get_store()
+                if st_prev and (st_prev.questions or []):
+                    existing_fp, existing_ids, fp_meta, id_row = build_question_dup_index(st_prev.questions)
+                    defs_prev = defaults if isinstance(defaults, dict) else {}
+                    for pq in preview_questions:
+                        merged = dict(pq)
+                        for k, v in defs_prev.items():
+                            if not clean(merged.get(k, "")) and clean(v):
+                                merged[k] = v
+                        info = lookup_question_dup(merged, existing_fp, existing_ids, fp_meta, id_row)
+                        if info:
+                            pq["dup"] = True
+                            pq["dup_kind"] = info.get("kind", "")
+                            pq["dup_id"] = info.get("existing_id", "")
+                            pq["dup_row"] = info.get("existing_row") or ""
+            except Exception:
+                log_swallow("api_latex_import:preview_dup")
             return jsonify({
                 "ok": True,
                 "dry_run": True,
@@ -41586,11 +41917,24 @@ def api_latex_save_questions():
         prepared.append(q)
     if not prepared:
         return jsonify({"error": "Chưa có câu hỏi để chèn."}), 400
+    allow_dup = str(body.get("allow_duplicates") or body.get("force") or "").lower() in (
+        "1", "true", "yes", "on",
+    )
+    try:
+        index_base = max(0, int(body.get("index_base") or 0))
+    except Exception:
+        index_base = 0
     try:
         st, loading = questions_store_ready_or_loading()
         if loading:
             return loading
-        result = st.add_questions_bulk(prepared)
+        result = st.add_questions_bulk(
+            prepared,
+            allow_duplicates=True,
+            skip_content_dup=False,
+            insert_all=True,
+            index_base=index_base,
+        )
         result["source"] = "LATEX_IMPORT"
         return jsonify(result)
     except Exception as e:
