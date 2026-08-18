@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V429_CLAUDE_ENV"
+APP_VERSION = "V430_STRIP_CENTER"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -962,6 +962,23 @@ def _strip_latex_list_markup(t: str) -> str:
     return t
 
 
+_LATEX_CENTER_ENV_RE = re.compile(
+    r"\\begin\s*\{\s*center\s*\}(.*?)\\end\s*\{\s*center\s*\}",
+    flags=re.DOTALL | re.I,
+)
+
+
+def _strip_latex_center_env(t: str) -> str:
+    """Bỏ \\begin{center}...\\end{center}, giữ nội dung bên trong."""
+    out = str(t or "")
+    for _ in range(8):
+        nxt = _LATEX_CENTER_ENV_RE.sub(r"\1", out)
+        if nxt == out:
+            break
+        out = nxt
+    return out
+
+
 _LATEX_UNITS_BETWEEN_MATH = (
     r"rad|deg|m|km|cm|mm|μm|nm|"
     r"s|ms|min|h|"
@@ -1227,6 +1244,7 @@ def normalize_latex_text(s: Any) -> str:
     t = clean(s)
     if not t:
         return ""
+    t = _strip_latex_center_env(t)
     t = _latex_paren_delims_to_dollar(t)
     if re.search(r"\\(?:begin\s*\{|\\item\b)", t, re.I):
         t = _strip_latex_list_markup(t)
@@ -5115,28 +5133,41 @@ def _upload_static_latex_image_to_drive(src: str) -> Tuple[str, str]:
 
 
 def _finalize_hinhanh_for_sheet(value: Any) -> Tuple[str, str]:
-    """Chuẩn hóa cột T trước khi ghi Sheet: bỏ link folder, đẩy ảnh tạm lên Drive."""
+    """Chuẩn hóa cột T: URL ảnh (Drive nếu được) + tikzraw, không làm mất mã TikZ."""
     s = clean(value)
     if not s:
         return "", ""
     if is_drive_folder_url(s):
         _remember_drive_folder_from_url(s)
         return "", ""
-    if "\n" in s or "\r" in s:
-        img, tz = _parse_hinhanh_cell(s)
-        img_clean = img if img and not img.lower().startswith("tikzraw:") else ""
-        built = _build_hinhanh_cell(img_clean, tz)
-        if built:
-            return built, ""
+
+    img, tz = _parse_hinhanh_cell(s)
+    img_clean = img if img and not img.lower().startswith("tikzraw:") else ""
+    if not img_clean and "\n" not in s and "\r" not in s and not s.lower().startswith("tikzraw:"):
+        img_clean = s
+
+    warn = ""
+    if img_clean:
+        low = img_clean.lower()
+        if is_drive_folder_url(img_clean):
+            _remember_drive_folder_from_url(img_clean)
+            img_clean = ""
+        elif low.startswith("/static/latex_assets/") or low.startswith("static/latex_assets/"):
+            uploaded, err = _upload_static_latex_image_to_drive(img_clean)
+            if uploaded:
+                img_clean = uploaded
+            else:
+                img_clean = normalize_image_src(img_clean)
+                warn = err or _drive_setup_hint("Ảnh chưa lên Drive")
+        else:
+            img_clean = normalize_image_src(img_clean)
+
+    built = _build_hinhanh_cell(img_clean, tz)
+    if built:
+        return built, warn
     if s.lower().startswith("tikzraw:"):
-        return s, ""
-    low = s.lower()
-    if low.startswith("/static/latex_assets/") or low.startswith("static/latex_assets/"):
-        uploaded, err = _upload_static_latex_image_to_drive(s)
-        if uploaded:
-            return uploaded, ""
-        return normalize_image_src(s), err or _drive_setup_hint("Ảnh chưa lên Drive")
-    return normalize_image_src(s), ""
+        return s, warn
+    return normalize_image_src(s), warn
 
 
 def _guess_image_mime(data: bytes, src: str = "") -> str:
@@ -9294,7 +9325,19 @@ class SheetStore:
                 pass
 
         hinhanh_warn = ""
-        if "HinhAnh" in updates:
+        tikz_code = clean(updates.pop("Tikz", "") or "")
+        if "HinhAnh" in updates or tikz_code:
+            raw_h = updates.get("HinhAnh", "")
+            img, tz_in_cell = _parse_hinhanh_cell(raw_h)
+            img_clean = img if img and not img.lower().startswith("tikzraw:") else ""
+            if not img_clean:
+                cand = clean(raw_h)
+                if cand and "\n" not in cand and not cand.lower().startswith("tikzraw:"):
+                    img_clean = cand
+            tz = tikz_code or tz_in_cell
+            if not tz:
+                tz = _extract_tikz_block(raw_h)
+            updates["HinhAnh"] = _build_hinhanh_cell(img_clean, tz)
             updates["HinhAnh"], hinhanh_warn = _finalize_hinhanh_for_sheet(updates.get("HinhAnh"))
 
         merged_for_norm: Dict[str, Any] = {}
@@ -9399,7 +9442,10 @@ class SheetStore:
                 for field, value in updates.items():
                     if field in EDITABLE_FIELDS or field == "NgayCapNhat":
                         q[field] = clean(value)
-                q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
+                if "HinhAnh" in updates:
+                    q["HinhAnh"] = updates.get("HinhAnh", "")
+                else:
+                    q["HinhAnh"] = normalize_image_src(q.get("HinhAnh"))
                 q["NangLucVatLy"] = norm_nang_luc_vat_ly(q.get("NangLucVatLy", ""))
                 q["Dang"] = effective_dang(q)
                 try:
@@ -24863,6 +24909,7 @@ function esc(s){return String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;
 function escapeHtmlInMathChunk(chunk){return String(chunk||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function findLatexMathSpan(s,from){let n=String(s||'').length,depth=0;for(let i=from;i<n;i++){let c=s[i];if(c==='\\'){if(i+1<n&&(s[i+1]==='{'||s[i+1]==='}')){i+=2;continue}i++;continue}if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c==='$'&&depth===0){if(i+1<n&&s[i+1]==='$'){let close=s.indexOf('$$',i+2);if(close<0)return{start:i,end:-1};return{start:i,end:close+1}}let close=s.indexOf('$',i+1);if(close<0)return{start:i,end:-1};return{start:i,end:close}}}return null}
 function escHtmlKeepMath(s){let out='',i=0,n=String(s||'').length;while(i<n){let span=findLatexMathSpan(s,i);if(!span){out+=esc(s.slice(i));break}if(span.end<0){out+=esc(s.slice(i));break}out+=esc(s.slice(i,span.start));out+=escapeHtmlInMathChunk(s.slice(span.start,span.end+1));i=span.end+1}return out}
+function stripLatexCenterEnv(s){s=String(s||'');let re=/\\begin\s*\{\s*center\s*\}([\s\S]*?)\\end\s*\{\s*center\s*\}/gi;for(let i=0;i<8;i++){let n=s.replace(re,'$1');if(n===s)break;s=n;re.lastIndex=0}return s}
 function stripLatexListMarkup(s){s=String(s||'');s=s.replace(/\\begin\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*enumerate\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemize\s*\}/gi,'');s=s.replace(/\\begin\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/\\end\s*\{\s*itemchoice\s*\}/gi,'');s=s.replace(/(?:^|\n)\s*•\s*ch\s+/gi,'\n• ');s=s.replace(/•\s*ch\s+/gi,'• ');s=s.replace(/\\item\s*/gi,'\n• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'\n• ');return s}
 function mergeBrokenDfracSqrt(s){if(String(s||'').indexOf('$')<0)return String(s||'');let t=String(s||''),prev=null;while(prev!==t){prev=t;t=t.replace(/(\$[^$\n]*?-?)\\dfrac\{(\d+)\}\$\s*\$\(\\sqrt\{([^}]+)\}\)\$/g,function(_,pre,n,rt){return pre+'\\dfrac{'+n+'}{\\sqrt{'+rt+'}}$'})}return t.replace(/\$\(\s*\\/g,'$\\')}
 function mergeUnitBetweenMath(s){let units='rad|deg|m|km|cm|mm|s|ms|kg|g|N|J|W|Pa|kPa|Hz|V|A';return String(s||'').replace(new RegExp('(\\\\$[^$\\n]+?\\\\$)\\\\s*('+units+')\\\\s*(\\\\$[^$\\n]*=[^$\\n]*\\\\$)','gi'),function(m,g1,u,g3){let a=g1.slice(1,-1).trim(),b=g3.slice(1,-1).trim();if(!b.startsWith('='))return m;return '$'+fixOneMathInner(a+'\\,\\mathrm{'+u+'}'+b)+'$'})}
@@ -24892,7 +24939,7 @@ function convertLatexTabular(s){LATEX_TAB_HTML=[];return String(s||'').replace(/
 function restoreLatexTabular(s){return String(s||'').replace(/@@LTXTAB(\d+)@@/g,function(_,i){return LATEX_TAB_HTML[+i]||''})}
 function normalizeDisplayBreaks(s){return String(s||'').replace(/\\r\\n/g,'\\n').replace(/\\n(?=\s*(?:[0-9A-ZÀ-ỸĐ]|[-•]))/g,'\n')}
 function finalizeRichTokens(s){return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>').replace(/@@B@@/g,'<b>').replace(/@@\/B@@/g,'</b>').replace(/@@I@@/g,'<i>').replace(/@@\/I@@/g,'</i>').replace(/@@U@@/g,'<u>').replace(/@@\/U@@/g,'</u>').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
-function renderRichText(s){s=normalizeDisplayBreaks(String(s||'').trim());s=s.replace(/\?\?\s*/g,'');s=convertLatexTabular(s);s=stripLatexListMarkup(s);s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'<br>• ');s=applyLatexTextFmtOutsideMath(s);s=applyMarkdownBoldOutsideMath(s);s=escHtmlKeepMath(s);s=restoreLatexTabular(s);return finalizeRichTokens(s)}
+function renderRichText(s){s=normalizeDisplayBreaks(String(s||'').trim());s=s.replace(/\?\?\s*/g,'');s=stripLatexCenterEnv(s);s=convertLatexTabular(s);s=stripLatexListMarkup(s);s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'<br>• ');s=applyLatexTextFmtOutsideMath(s);s=applyMarkdownBoldOutsideMath(s);s=escHtmlKeepMath(s);s=restoreLatexTabular(s);return finalizeRichTokens(s)}
 function oneLineText(s){return String(s||'').replace(/[\r\n\u00a0]+/g,' ').replace(/\s+/g,' ').trim()}
 function escAttr(s){return String(s||'').replace(/[&<>"'\n\r]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','\n':' ','\r':' '}[m]))}
 function shortText(s,n=90){s=oneLineText(s);return s.length>n?s.slice(0,n-1)+'…':s}
@@ -33818,6 +33865,7 @@ def _latex_clean_body(s: Any) -> str:
     t = re.sub(r"^\s*(?:%\[[^\]]*\]\s*)+", "", t)
     # Tag robot Word: [TTN], [TDS], [TLN]… (đầu dòng, không nhầm [0D1N1-1]).
     t = re.sub(r"(?m)^\s*\[(?:TTN|TDS|TLN|TL|TN|DS)\]\s*", "", t, flags=re.I)
+    t = _strip_latex_center_env(t)
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = re.sub(r"[ \t]{2,}", " ", t)
     t = _latex_convert_robot_text_cmds(t.strip())
