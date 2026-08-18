@@ -3802,6 +3802,66 @@ def lesson_catalog_key(item: Dict[str, Any]) -> str:
     return "|".join(key_norm(clean(item.get(f, ""))) for f in ("Lop", "Mon", "Chuong", "BaiHoc"))
 
 
+STUDENT_PROGRESS_COMPLETE_PCT = 70.0
+
+
+def lesson_progress_key_from_item(item: Dict[str, Any]) -> str:
+    """Khóa tiến độ theo Môn|Lớp|Chương|Bài học."""
+    return "|".join(key_norm(clean(item.get(f, ""))) for f in ("Mon", "Lop", "Chuong", "BaiHoc"))
+
+
+def chapter_progress_key_from_item(item: Dict[str, Any]) -> str:
+    return "|".join(key_norm(clean(item.get(f, ""))) for f in ("Mon", "Lop", "Chuong"))
+
+
+def practice_session_key(made: str, dangbaitap: str = "") -> str:
+    made = clean(made)
+    dbt = clean(dangbaitap)
+    return made + ("|" + key_norm(dbt) if dbt else "")
+
+
+def _result_attempt_pct(score: Any, so_dung: Any, tong: Any, detail: Optional[Dict[str, Any]] = None) -> float:
+    try:
+        tong_i = int(tong or 0)
+        dung_i = int(so_dung or 0)
+        if tong_i > 0:
+            return round(100.0 * dung_i / tong_i, 1)
+    except Exception:
+        log_swallow("_result_attempt_pct:tong")
+    try:
+        sc = float(score or 0)
+        if sc > 0:
+            return round(min(100.0, sc * 10.0), 1)
+    except Exception:
+        log_swallow("_result_attempt_pct:score")
+    if isinstance(detail, dict):
+        try:
+            auto = int(detail.get("tong_cau_cham_tu_dong") or detail.get("auto_count") or 0)
+            dung = int(detail.get("so_dung") or detail.get("correct_count") or 0)
+            if auto > 0:
+                return round(100.0 * dung / auto, 1)
+        except Exception:
+            log_swallow("_result_attempt_pct:detail")
+    return 0.0
+
+
+def _merge_progress_entry(cur: Optional[Dict[str, Any]], pct: float, attempted: int = 0) -> Dict[str, Any]:
+    cur = dict(cur or {})
+    attempts = int(cur.get("attempts") or 0) + 1
+    best = float(cur.get("best_pct") or 0)
+    if pct > best:
+        best = pct
+    done = bool(cur.get("done")) or attempts > 0 or attempted > 0
+    complete = bool(cur.get("complete")) or best >= STUDENT_PROGRESS_COMPLETE_PCT
+    return {
+        "attempts": attempts,
+        "best_pct": round(best, 1),
+        "last_pct": round(float(pct or 0), 1),
+        "done": done,
+        "complete": complete,
+    }
+
+
 def merge_unique_field_values(field: str, *lists: Iterable[Any]) -> List[str]:
     seen: set = set()
     out: List[str] = []
@@ -3837,6 +3897,52 @@ def question_dup_text(text: Any, n: int = 2500) -> str:
     return (s or "")[: max(0, int(n))]
 
 
+def strip_mcq_option_prefix(text: Any, letter: str = "") -> str:
+    """Bỏ tiền tố A. / B) … khi so trùng phương án."""
+    t = clean(text)
+    if not t:
+        return ""
+    L = clean(letter).upper()
+    if L in "ABCD":
+        m = re.match(rf"^\s*{L}\s*[\.\)\:]\s*", t, flags=re.I)
+        if m:
+            return t[m.end() :].strip()
+    m = re.match(r"^\s*[ABCD]\s*[\.\)\:]\s*", t, flags=re.I)
+    if m:
+        return t[m.end() :].strip()
+    return t
+
+
+def _is_mcq_for_dup(q: Dict[str, Any]) -> bool:
+    return effective_dang(q) == "Trắc nghiệm"
+
+
+def _mcq_dup_parts(q: Dict[str, Any]) -> Tuple[str, str, Dict[str, str]]:
+    """(opts_key sorted, ans_txt, opt_map) — không phụ thuộc vị trí A–D."""
+    opt_map: Dict[str, str] = {}
+    opts: List[str] = []
+    for L in ("A", "B", "C", "D"):
+        t = question_dup_text(strip_mcq_option_prefix(q.get(L, ""), L), 400)
+        if t:
+            opts.append(t)
+            opt_map[L] = t
+    opts_key = "|".join(sorted(opts))
+    ans_L = norm_letter(q.get("DapAn", ""))
+    ans_txt = opt_map.get(ans_L, "")
+    if not ans_txt:
+        dap_norm = question_dup_text(q.get("DapAn", ""), 400)
+        if dap_norm in opt_map.values():
+            ans_txt = dap_norm
+        else:
+            for t in opt_map.values():
+                if t and dap_norm and (t == dap_norm or t in dap_norm or dap_norm in t):
+                    ans_txt = t
+                    break
+            if not ans_txt:
+                ans_txt = dap_norm
+    return opts_key, ans_txt, opt_map
+
+
 def question_content_fingerprint(q: Dict[str, Any]) -> str:
     """Dấu vết nội dung để xóa trùng Sheet — bỏ MaDe/ID (câu paste lại chỉ khác ID vẫn bắt được).
 
@@ -3844,31 +3950,34 @@ def question_content_fingerprint(q: Dict[str, Any]) -> str:
     Trắc nghiệm: sắp xếp A–D theo chữ (không phụ thuộc thứ tự phương án / xáo đáp án).
     """
     lesson = "|".join(key_norm(clean(q.get(x, ""))) for x in ("Mon", "Lop", "Chuong", "BaiHoc"))
-    dang = key_norm(norm_dang(q.get("Dang", "")) or clean(q.get("Dang", "")) or effective_dang(q))
-    cau = question_dup_text(q.get("CauHoi", ""), 2500)
-    if "trac nghiem" in dang or dang in ("tn", "mcq"):
-        opts = []
-        opt_map = {}
-        for L in ("A", "B", "C", "D"):
-            t = question_dup_text(q.get(L, ""), 400)
-            if t:
-                opts.append(t)
-                opt_map[L] = t
-        opts_key = "|".join(sorted(opts))
-        ans_L = norm_letter(q.get("DapAn", ""))
-        ans_txt = opt_map.get(ans_L) or question_dup_text(q.get("DapAn", ""), 300)
+    if _is_mcq_for_dup(q):
+        cau = question_dup_text(q.get("CauHoi", ""), 2500)
+        opts_key, ans_txt, _ = _mcq_dup_parts(q)
         parts = [lesson, "tn", cau, ans_txt, opts_key]
     else:
+        dang = key_norm(effective_dang(q))
         parts = [
             lesson,
             dang,
-            cau,
+            question_dup_text(q.get("CauHoi", ""), 2500),
             question_dup_text(q.get("DapAn", ""), 300),
-            question_dup_text(q.get("A", ""), 400),
-            question_dup_text(q.get("B", ""), 400),
-            question_dup_text(q.get("C", ""), 400),
-            question_dup_text(q.get("D", ""), 400),
+            question_dup_text(strip_mcq_option_prefix(q.get("A", ""), "A"), 400),
+            question_dup_text(strip_mcq_option_prefix(q.get("B", ""), "B"), 400),
+            question_dup_text(strip_mcq_option_prefix(q.get("C", ""), "C"), 400),
+            question_dup_text(strip_mcq_option_prefix(q.get("D", ""), "D"), 400),
         ]
+    return stable_hash("|".join(parts), 16)
+
+
+def question_mcq_shuffle_fingerprint(q: Dict[str, Any]) -> str:
+    """TN trùng khi cùng bộ 4 phương án + cùng đáp án đúng (bỏ qua xáo A–D / đề hỏi khác nhẹ)."""
+    if not _is_mcq_for_dup(q):
+        return ""
+    lesson = "|".join(key_norm(clean(q.get(x, ""))) for x in ("Mon", "Lop", "Chuong", "BaiHoc"))
+    opts_key, ans_txt, _ = _mcq_dup_parts(q)
+    if not opts_key or len([x for x in opts_key.split("|") if x]) < 2:
+        return ""
+    parts = [lesson, "tn_shuffle", ans_txt, opts_key]
     return stable_hash("|".join(parts), 16)
 
 
@@ -3876,6 +3985,7 @@ def analyze_question_duplicates(questions: List[Dict[str, Any]]) -> Dict[str, An
     """Thống kê dòng trùng ID hoặc trùng nội dung (cùng bài + cùng đề/đáp án/A–D; bỏ qua ID/MaDe)."""
     by_id: Dict[str, List[int]] = {}
     by_fp: Dict[str, List[int]] = {}
+    by_fp_shuffle: Dict[str, List[int]] = {}
     for q in questions:
         row = int(q.get("_row") or 0)
         if not row:
@@ -3885,12 +3995,18 @@ def analyze_question_duplicates(questions: List[Dict[str, Any]]) -> Dict[str, An
         if qid:
             by_id.setdefault(qid, []).append(row)
         by_fp.setdefault(fp, []).append(row)
+        fp_sh = question_mcq_shuffle_fingerprint(q)
+        if fp_sh:
+            by_fp_shuffle.setdefault(fp_sh, []).append(row)
     dup_ids = {k: sorted(v) for k, v in by_id.items() if len(v) > 1}
     dup_content = {k: sorted(v) for k, v in by_fp.items() if len(v) > 1}
+    dup_shuffle = {k: sorted(v) for k, v in by_fp_shuffle.items() if len(v) > 1}
     duplicate_rows: set = set()
     for rows in dup_ids.values():
         duplicate_rows.update(rows[1:])
     for rows in dup_content.values():
+        duplicate_rows.update(rows[1:])
+    for rows in dup_shuffle.values():
         duplicate_rows.update(rows[1:])
     samples: List[str] = []
     for qid, rows in list(dup_ids.items())[:5]:
@@ -3905,9 +4021,18 @@ def analyze_question_duplicates(questions: List[Dict[str, Any]]) -> Dict[str, An
             samples.append(f"Trùng nội dung ({tip}…): dòng {', '.join(map(str, rows))}")
         elif rows[0] not in shown_rows:
             samples.append(f"Trùng nội dung ({tip}…): dòng {', '.join(map(str, rows))}")
+    for fp, rows in list(dup_shuffle.items())[:6]:
+        if len(rows) < 2:
+            continue
+        q0 = next((x for x in questions if int(x.get("_row") or 0) == rows[0]), {})
+        tip = clean(q0.get("CauHoi", ""))[:50]
+        if any(r in shown_rows for r in rows[1:]):
+            continue
+        samples.append(f"Trùng TN (cùng phương án, xáo A–D — {tip}…): dòng {', '.join(map(str, rows))}")
     return {
         "duplicate_id_groups": len(dup_ids),
         "duplicate_content_groups": len(dup_content),
+        "duplicate_mcq_shuffle_groups": len(dup_shuffle),
         "extra_duplicate_rows": len(duplicate_rows),
         "samples": samples[:8],
     }
@@ -4303,6 +4428,7 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
 
     by_id: Dict[str, int] = {}
     by_fp: Dict[str, int] = {}
+    by_fp_shuffle: Dict[str, int] = {}
     for row, q in rows_data.items():
         qid = clean(q.get("ID", ""))
         fp = question_content_fingerprint(q)
@@ -4320,6 +4446,13 @@ def plan_sheet_duplicate_removals(questions: List[Dict[str, Any]]) -> Dict[str, 
             union(row, prev_fp)
         else:
             by_fp[fp] = row
+        fp_sh = question_mcq_shuffle_fingerprint(q)
+        if fp_sh:
+            prev_sh = by_fp_shuffle.get(fp_sh)
+            if prev_sh is not None:
+                union(row, prev_sh)
+            else:
+                by_fp_shuffle[fp_sh] = row
 
     clusters: Dict[int, List[int]] = defaultdict(list)
     for r in rows_data:
@@ -4386,6 +4519,7 @@ def dedupe_questions_by_content(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]
     )
     seen_id: set = set()
     seen_fp: set = set()
+    seen_fp_shuffle: set = set()
     out: List[Dict[str, Any]] = []
     for q in ordered:
         qid = clean(q.get("ID", ""))
@@ -4396,7 +4530,12 @@ def dedupe_questions_by_content(qs: List[Dict[str, Any]]) -> List[Dict[str, Any]
         fp = lesson_content_fingerprint(q)
         if fp in seen_fp:
             continue
+        fp_sh = question_mcq_shuffle_fingerprint(q)
+        if fp_sh and fp_sh in seen_fp_shuffle:
+            continue
         seen_fp.add(fp)
+        if fp_sh:
+            seen_fp_shuffle.add(fp_sh)
         out.append(q)
     return out
 
@@ -6761,6 +6900,7 @@ class SheetStore:
             },
             "strict_question_review": strict_question_review(),
             "question_review_approved_label": QUESTION_REVIEW_APPROVED_LABEL,
+            "student_progress": self.compute_student_practice_progress(session.get("mahs", "")),
         }
 
     def public_question(self, q: Dict[str, Any], index: int, reveal: bool = False) -> Dict[str, Any]:
@@ -8344,6 +8484,7 @@ class SheetStore:
         correct_count = 0
         auto_count = 0
         exam_mode = bool(ses.get("exam_mode"))
+        dbt_filter = clean(ses.get("dangbaitap_filter", ""))
         # Sau nộp bài kiểm tra: luôn trả ĐA/LG để xem lại (VIP/ADMIN vẫn xem như cũ).
         reveal = exam_mode or can_view_solution_after_submit() or is_admin()
         for i, q in enumerate(qs):
@@ -8376,6 +8517,7 @@ class SheetStore:
             ses.get("level_filter", ""),
             elapsed_sec=elapsed_sec,
             exam_mode=exam_mode,
+            dangbaitap_filter=dbt_filter,
         )
         time_stats = {}
         try:
@@ -8410,6 +8552,7 @@ class SheetStore:
         level_filter: str = "",
         elapsed_sec: int = 0,
         exam_mode: bool = False,
+        dangbaitap_filter: str = "",
     ):
         try:
             u = current_user_public()
@@ -8423,6 +8566,7 @@ class SheetStore:
             avg_per_correct = int(round(elapsed_sec / so_dung_i)) if so_dung_i > 0 and elapsed_sec > 0 else 0
             detail = {
                 "level_filter": clean(level_filter).upper(),
+                "dangbaitap_filter": clean(dangbaitap_filter),
                 "so_dung": so_dung_i,
                 "so_sai": so_sai,
                 "tong_cau_cham_tu_dong": int(tong or 0),
@@ -8573,6 +8717,312 @@ class SheetStore:
                 "avg_per_correct_text": format_duration_vn(ac) if ac else "—",
             }
         out["by_made"] = made_avg
+        return out
+
+    def compute_student_practice_progress(self, mahs: str = "", limit_rows: int = 1500) -> Dict[str, Any]:
+        """Tiến độ luyện tập học viên từ Ket_Qua — nhãn Đã làm / Hoàn thành trên mục lục."""
+        mahs = clean(mahs)
+        out: Dict[str, Any] = {
+            "complete_pct": STUDENT_PROGRESS_COMPLETE_PCT,
+            "lessons": {},
+            "chapters": {},
+            "practices": {},
+            "made_map": {},
+        }
+        if not mahs:
+            return out
+        made_to_lesson: Dict[str, str] = {}
+        made_to_chapter: Dict[str, str] = {}
+        for item in self.catalog or []:
+            lk = lesson_progress_key_from_item(item)
+            ck = chapter_progress_key_from_item(item)
+            if not lk.replace("|", "").strip():
+                continue
+            for mk in re.split(r"\|", clean(item.get("MaDe", "")) or clean(item.get("GroupKey", ""))):
+                mk = clean(mk)
+                if mk:
+                    made_to_lesson[mk] = lk
+                    made_to_chapter[mk] = ck
+            gk = clean(item.get("GroupKey", "")) or clean(item.get("MaDe", ""))
+            if gk:
+                made_to_lesson[gk] = lk
+                made_to_chapter[gk] = ck
+        out["made_map"] = made_to_lesson
+        try:
+            self.connect()
+            if not self.ws_results:
+                self.ws_results = self.ensure_ws("Ket_Qua", [
+                    "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
+                ])
+            values = self.ws_results.get_all_values()
+        except Exception:
+            log_swallow("compute_student_practice_progress:read")
+            return out
+        if not values or len(values) < 2:
+            return out
+        headers = [clean(h) for h in values[0]]
+
+        def col(*names):
+            for n in names:
+                for i, h in enumerate(headers):
+                    if key_norm(h) == key_norm(n):
+                        return i
+            return -1
+
+        i_mahs = col("MaHS")
+        i_made = col("MaDe")
+        i_score = col("Diem")
+        i_dung = col("SoDung")
+        i_tong = col("TongCau")
+        i_chi = col("ChiTiet")
+        rows = values[1:]
+        if limit_rows > 0 and len(rows) > limit_rows:
+            rows = rows[-limit_rows:]
+        lessons: Dict[str, Dict[str, Any]] = {}
+        chapters: Dict[str, Dict[str, Any]] = {}
+        practices: Dict[str, Dict[str, Any]] = {}
+
+        def bump(store: Dict[str, Dict[str, Any]], key: str, pct: float) -> None:
+            if not key or not key.replace("|", "").strip():
+                return
+            store[key] = _merge_progress_entry(store.get(key), pct)
+
+        for row in rows:
+            def cell(idx):
+                if idx < 0 or idx >= len(row):
+                    return ""
+                return row[idx]
+
+            if key_norm(clean(cell(i_mahs))) != key_norm(mahs):
+                continue
+            row_made = clean(cell(i_made))
+            if not row_made:
+                continue
+            detail: Dict[str, Any] = {}
+            raw_chi = cell(i_chi)
+            if raw_chi:
+                try:
+                    parsed = json.loads(raw_chi)
+                    if isinstance(parsed, dict):
+                        detail = parsed
+                except Exception:
+                    detail = {}
+            pct = _result_attempt_pct(cell(i_score), cell(i_dung), cell(i_tong), detail)
+            dbt = clean(detail.get("dangbaitap_filter") or detail.get("dangbaitap") or "")
+            pk = practice_session_key(row_made, dbt)
+            bump(practices, pk, pct)
+            bump(practices, practice_session_key(row_made, ""), pct)
+            for mk in re.split(r"\|", row_made):
+                mk = clean(mk)
+                if not mk:
+                    continue
+                lk = made_to_lesson.get(mk, "")
+                ck = made_to_chapter.get(mk, "")
+                if lk:
+                    bump(lessons, lk, pct)
+                if ck:
+                    bump(chapters, ck, pct)
+            lk_direct = made_to_lesson.get(row_made, "")
+            ck_direct = made_to_chapter.get(row_made, "")
+            if lk_direct:
+                bump(lessons, lk_direct, pct)
+            if ck_direct:
+                bump(chapters, ck_direct, pct)
+
+        out["lessons"] = lessons
+        out["chapters"] = chapters
+        out["practices"] = practices
+        return out
+
+    def compute_student_practice_log(self, mahs: str = "", limit_rows: int = 400) -> Dict[str, Any]:
+        """Nhật ký chi tiết làm bài học viên — tab Rèn luyện."""
+        mahs = clean(mahs)
+        out: Dict[str, Any] = {
+            "complete_pct": STUDENT_PROGRESS_COMPLETE_PCT,
+            "summary": {
+                "total_attempts": 0,
+                "unique_practices": 0,
+                "complete_count": 0,
+                "done_count": 0,
+            },
+            "attempts": [],
+            "groups": [],
+        }
+        if not mahs:
+            return out
+        made_meta: Dict[str, Dict[str, str]] = {}
+        for item in self.catalog or []:
+            meta = {
+                "Mon": clean(item.get("Mon", "")),
+                "Lop": clean(item.get("Lop", "")),
+                "Chuong": clean(item.get("Chuong", "")),
+                "BaiHoc": clean(item.get("BaiHoc", "")) or clean(item.get("De", "")),
+            }
+            for mk in re.split(r"\|", clean(item.get("MaDe", "")) or clean(item.get("GroupKey", ""))):
+                mk = clean(mk)
+                if mk and mk not in made_meta:
+                    made_meta[mk] = meta
+            gk = clean(item.get("GroupKey", "")) or clean(item.get("MaDe", ""))
+            if gk and gk not in made_meta:
+                made_meta[gk] = meta
+        try:
+            self.connect()
+            if not self.ws_results:
+                self.ws_results = self.ensure_ws("Ket_Qua", [
+                    "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
+                ])
+            values = self.ws_results.get_all_values()
+        except Exception:
+            log_swallow("compute_student_practice_log:read")
+            return out
+        if not values or len(values) < 2:
+            return out
+        headers = [clean(h) for h in values[0]]
+
+        def col(*names):
+            for n in names:
+                for i, h in enumerate(headers):
+                    if key_norm(h) == key_norm(n):
+                        return i
+            return -1
+
+        i_time = col("ThoiGian")
+        i_mahs = col("MaHS")
+        i_made = col("MaDe")
+        i_tende = col("TenDe")
+        i_score = col("Diem")
+        i_dung = col("SoDung")
+        i_tong = col("TongCau")
+        i_chi = col("ChiTiet")
+        rows = values[1:]
+        if limit_rows > 0 and len(rows) > limit_rows:
+            rows = rows[-limit_rows:]
+        attempts: List[Dict[str, Any]] = []
+        groups: Dict[str, Dict[str, Any]] = {}
+
+        for row in rows:
+            def cell(idx):
+                if idx < 0 or idx >= len(row):
+                    return ""
+                return row[idx]
+
+            if key_norm(clean(cell(i_mahs))) != key_norm(mahs):
+                continue
+            row_made = clean(cell(i_made))
+            if not row_made:
+                continue
+            detail: Dict[str, Any] = {}
+            raw_chi = cell(i_chi)
+            if raw_chi:
+                try:
+                    parsed = json.loads(raw_chi)
+                    if isinstance(parsed, dict):
+                        detail = parsed
+                except Exception:
+                    detail = {}
+            score_raw = cell(i_score)
+            so_dung = cell(i_dung)
+            tong = cell(i_tong)
+            try:
+                score_f = float(score_raw or 0)
+            except Exception:
+                score_f = 0.0
+            pct = _result_attempt_pct(score_raw, so_dung, tong, detail)
+            level = clean(detail.get("level_filter") or detail.get("level") or "")
+            dbt = clean(detail.get("dangbaitap_filter") or detail.get("dangbaitap") or "")
+            meta = made_meta.get(row_made.split("|")[0].strip(), {})
+            if not meta:
+                for mk in re.split(r"\|", row_made):
+                    mk = clean(mk)
+                    if mk in made_meta:
+                        meta = made_meta[mk]
+                        break
+            time_s = clean(cell(i_time))
+            title = clean(cell(i_tende)) or meta.get("BaiHoc", "") or row_made
+            complete = pct >= STUDENT_PROGRESS_COMPLETE_PCT
+            att = {
+                "time": time_s,
+                "time_sort": (parse_datetime_any(time_s) or datetime.min).isoformat(),
+                "made": row_made,
+                "title": title,
+                "mon": meta.get("Mon", ""),
+                "lop": meta.get("Lop", ""),
+                "chuong": meta.get("Chuong", ""),
+                "bai_hoc": meta.get("BaiHoc", ""),
+                "level": level,
+                "dangbaitap": dbt,
+                "score": score_f,
+                "correct": int(so_dung or 0) if str(so_dung or "").strip().isdigit() else 0,
+                "total": int(tong or 0) if str(tong or "").strip().isdigit() else 0,
+                "pct": pct,
+                "complete": complete,
+                "done": True,
+                "elapsed_text": clean(detail.get("thoi_gian_lam") or ""),
+                "exam_mode": bool(detail.get("exam_mode")),
+            }
+            attempts.append(att)
+            pk = practice_session_key(row_made, dbt)
+            g = groups.get(pk)
+            if not g:
+                g = {
+                    "key": pk,
+                    "made": row_made,
+                    "title": title,
+                    "mon": att["mon"],
+                    "lop": att["lop"],
+                    "chuong": att["chuong"],
+                    "bai_hoc": att["bai_hoc"],
+                    "dangbaitap": dbt,
+                    "level": level,
+                    "attempts": 0,
+                    "best_pct": 0.0,
+                    "last_pct": 0.0,
+                    "last_score": 0.0,
+                    "last_time": "",
+                    "last_time_sort": "",
+                    "complete": False,
+                    "done": False,
+                }
+                groups[pk] = g
+            g["attempts"] = int(g.get("attempts") or 0) + 1
+            g["done"] = True
+            if pct >= float(g.get("best_pct") or 0):
+                g["best_pct"] = pct
+            g["last_pct"] = pct
+            g["last_score"] = score_f
+            g["last_time"] = time_s
+            g["last_time_sort"] = att["time_sort"]
+            if complete:
+                g["complete"] = True
+            if level and not g.get("level"):
+                g["level"] = level
+
+        group_list = sorted(
+            groups.values(),
+            key=lambda x: x.get("last_time_sort") or "",
+            reverse=True,
+        )
+        complete_count = sum(1 for g in group_list if g.get("complete"))
+        asc_attempts = sorted(attempts, key=lambda x: x.get("time_sort") or "")
+        nth_by_pk: Dict[str, int] = {}
+        totals_by_pk: Dict[str, int] = {}
+        for att in asc_attempts:
+            pk = practice_session_key(att.get("made", ""), att.get("dangbaitap", ""))
+            nth_by_pk[pk] = int(nth_by_pk.get(pk) or 0) + 1
+            att["attempt_no"] = nth_by_pk[pk]
+            totals_by_pk[pk] = nth_by_pk[pk]
+        for att in attempts:
+            pk = practice_session_key(att.get("made", ""), att.get("dangbaitap", ""))
+            att["attempt_total"] = int(totals_by_pk.get(pk) or att.get("attempt_no") or 1)
+        attempts.sort(key=lambda x: x.get("time_sort") or "", reverse=True)
+        out["attempts"] = attempts
+        out["groups"] = group_list
+        out["summary"] = {
+            "total_attempts": len(attempts),
+            "unique_practices": len(group_list),
+            "complete_count": complete_count,
+            "done_count": len(group_list),
+        }
         return out
 
     def _question_id_col_1(self) -> int:
@@ -21859,7 +22309,46 @@ body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Googl
 @media(max-width:520px){.ldvlQnavBtn{padding:8px 11px;font-size:11px}.ldvlQnavBtn i{font-size:16px}}
 @media(max-width:400px){.ldvlQnavBtn span{display:none}.ldvlQnavBtn{padding:8px 10px}}
 body.hdr-in-quiz .ldvlQuickNav{display:none!important}
-#homeFilterSection,#homeRandomSection,#homeCatalogSection,#ldvlStudentPdfSection,#ldvlStudentYtSection,#ldvlStudentMhSection,#homeTopSection{
+.ldvlProgressPanel{padding:4px 2px 8px}
+.ldvlProgressStudentCard{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;border:1px solid #93c5fd;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.ldvlProgressStudentMain{display:flex;align-items:center;gap:12px;flex:1;min-width:200px}
+.ldvlProgressStudentAvatar{width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#2563eb,#16a34a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;flex-shrink:0;box-shadow:0 2px 8px #2563eb33}
+.ldvlProgressStudentName{font-size:17px;font-weight:950;color:#0f172a;line-height:1.25}
+.ldvlProgressStudentMeta{font-size:12px;color:#64748b;line-height:1.45;margin-top:2px}
+.ldvlProgressStudentAttempts{text-align:center;border:1px solid #bfdbfe;background:#fff;border-radius:12px;padding:8px 14px;min-width:88px}
+.ldvlProgressStudentAttempts b{display:block;font-size:26px;font-weight:950;color:#1d4ed8;line-height:1}
+.ldvlProgressStudentAttempts span{font-size:11px;font-weight:850;color:#64748b}
+.ldvlProgressAttemptBadge{display:inline-flex;align-items:center;border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:900;margin-left:6px;white-space:nowrap}
+.ldvlProgressGroupAttempts{font-size:13px;font-weight:950;color:#1d4ed8;border:1px solid #93c5fd;background:#eff6ff;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.ldvlProgressIntro{font-size:13px;line-height:1.45;margin-bottom:10px}
+.ldvlProgressSummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.ldvlProgressStat{border:1px solid #bfdbfe;background:linear-gradient(180deg,#eff6ff,#fff);border-radius:12px;padding:10px 12px;text-align:center}
+.ldvlProgressStat b{display:block;font-size:22px;font-weight:950;color:#1d4ed8;line-height:1.1}
+.ldvlProgressStat span{font-size:11px;font-weight:800;color:#64748b}
+.ldvlProgressGroups{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.ldvlProgressGroup{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px 12px;box-shadow:0 1px 3px #0f172a0a}
+.ldvlProgressGroupHead{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-start;justify-content:space-between}
+.ldvlProgressGroupTitle{font-weight:950;color:#0f172a;line-height:1.35;flex:1;min-width:160px}
+.ldvlProgressGroupMeta{font-size:12px;color:#64748b;line-height:1.4;margin-top:4px}
+.ldvlProgressGroupTags{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.ldvlProgressLogHead{margin:8px 0 6px;font-size:14px;color:#1e3a8a}
+.ldvlProgressLog{display:flex;flex-direction:column;gap:6px;max-height:min(62vh,520px);overflow:auto;padding-right:2px}
+.ldvlProgressRow{display:grid;grid-template-columns:minmax(92px,110px) minmax(0,1fr) auto;gap:8px;align-items:flex-start;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;padding:8px 10px;font-size:12px;line-height:1.35}
+.ldvlProgressRowTime{font-weight:850;color:#475569;white-space:nowrap}
+.ldvlProgressRowTitle{font-weight:900;color:#0f172a}
+.ldvlProgressRowSub{color:#64748b;margin-top:2px}
+.ldvlProgressRowScore{text-align:right;font-weight:950;color:#1d4ed8;white-space:nowrap}
+.ldvlProgressRowScore small{display:block;font-size:10px;font-weight:800;color:#64748b}
+.ldvlProgressEmpty{padding:16px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc;text-align:center;line-height:1.5}
+html[data-theme='dark'] .ldvlProgressStat{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}
+html[data-theme='dark'] .ldvlProgressStat b{color:#bfdbfe}
+html[data-theme='dark'] .ldvlProgressGroup,html[data-theme='dark'] .ldvlProgressRow{background:#111827;border-color:#334155}
+html[data-theme='dark'] .ldvlProgressStudentCard{background:linear-gradient(135deg,#172554,#0f172a);border-color:#1d4ed8}
+html[data-theme='dark'] .ldvlProgressStudentName{color:#e5e7eb}
+html[data-theme='dark'] .ldvlProgressStudentAttempts{background:#0f172a;border-color:#334155}
+html[data-theme='dark'] .ldvlProgressGroupTitle,html[data-theme='dark'] .ldvlProgressRowTitle{color:#e5e7eb}
+@media(max-width:640px){.ldvlProgressRow{grid-template-columns:1fr;gap:4px}.ldvlProgressRowScore{text-align:left}}
+#homeFilterSection,#homeRandomSection,#homeCatalogSection,#homeProgressSection,#ldvlStudentPdfSection,#ldvlStudentYtSection,#ldvlStudentMhSection,#homeTopSection{
   scroll-margin-top:var(--ldvl-sticky-top,120px);
 }
 .homeNavFlash{animation:ldvlHomeNavFlash .85s ease}
@@ -21876,6 +22365,7 @@ body.hdr-in-quiz .ldvlQuickNav{display:none!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-filter #catalogScopeBox{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-catalog #homeCatalogSection,
 .ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-catalog #catalogScopeBox{display:block!important}
+.ldvlDashV324 #ldvlStudentHome.homeTabMode.homeTab-progress #homeProgressSection{display:block!important}
 .ldvlDashV324 #ldvlStudentHome.homeTabMode .homeNavPanel.homeNavPanelOn{display:block!important}
 .ldvlDashV324 #homeFilterSection .homeFilterRandomPanel{margin-top:10px!important;border:1px solid #93c5fd;background:linear-gradient(135deg,#eff6ff,#f0fdf4)!important}
 .ldvlPdfAdminPanel{margin-top:14px;padding-top:12px;border-top:2px dashed #cbd5e1}
@@ -22703,6 +23193,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="model" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('model'),!1)"><i class="ti ti-atom"></i><span>Mô hình</span></button>
     <button type="button" class="ldvlQnavBtn" data-ldvl-nav="filter" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('filter'),!1)"><i class="ti ti-filter"></i><span>Lọc đề</span></button>
     <button type="button" class="ldvlQnavBtn on" data-ldvl-nav="catalog" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('catalog'),!1)"><i class="ti ti-list"></i><span>Mục lục</span></button>
+    <button type="button" class="ldvlQnavBtn hide" id="ldvlQnavProgress" data-ldvl-nav="progress" onclick="return window.ldvlQnavClick&&(ldvlQnavClick('progress'),!1)"><i class="ti ti-chart-dots"></i><span>Rèn luyện</span></button>
   </nav>
   <div class="hdrToolbar">
     <details class="hdrSrcDrop" id="hdrSrcDrop">
@@ -22743,8 +23234,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 </header>
 <script>
 (function(){
-  var TABS=['home','pdf','video','model','filter','catalog'];
-  var TAB_IDS={home:'homeTopSection',pdf:'ldvlStudentPdfSection',video:'ldvlStudentYtSection',model:'ldvlStudentMhSection',filter:'homeFilterSection',catalog:'homeCatalogSection'};
+  var TABS=['home','pdf','video','model','filter','catalog','progress'];
+  var TAB_IDS={home:'homeTopSection',pdf:'ldvlStudentPdfSection',video:'ldvlStudentYtSection',model:'ldvlStudentMhSection',filter:'homeFilterSection',catalog:'homeCatalogSection',progress:'homeProgressSection'};
   function normTab(t){if(t==='random')return 'filter';if(t==='yt'||t==='youtube')return 'video';if(t==='mh'||t==='mohinh'||t==='modelize')return 'model';return t;}
 
   function hdrH(){
@@ -22809,6 +23300,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     try{if(t==='pdf'&&typeof window.ldvlPdfAdminPanelSync==='function')window.ldvlPdfAdminPanelSync();}catch(e){}
     try{if(t==='video'&&typeof window.ldvlYtAdminPanelSync==='function')window.ldvlYtAdminPanelSync();}catch(e){}
     try{if(t==='model'&&typeof window.ldvlMhAdminPanelSync==='function')window.ldvlMhAdminPanelSync();}catch(e){}
+    try{if(t==='progress'&&typeof window.ldvlStudentProgressLoad==='function')window.ldvlStudentProgressLoad();}catch(e){}
   }
   window.ldvlApplyHomeTab=applyHomeTab;
   window.ldvlEnsureStudentHomeVisible=ensureStudentHomeVisible;
@@ -23333,6 +23825,36 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   </div>
   <div id="catalogBody" class="panel collapsibleBody">
     <div id="catalog" class="grid" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<div class="homeSection homeNavPanel" id="homeProgressSection">
+  <div class="homeSectionHead" style="margin-top:0">
+    <span class="homeSectionIcon">📈</span>
+    <span class="homeSectionTitle">Quá trình rèn luyện</span>
+    <button type="button" class="btn2" id="ldvlProgressRefreshBtn" onclick="ldvlStudentProgressLoad(true)" title="Tải lại từ Ket_Qua">🔄 Làm mới</button>
+  </div>
+  <div id="homeProgressBody" class="panel collapsibleBody">
+    <div id="ldvlStudentProgressPanel" class="ldvlProgressPanel">
+      <div id="ldvlProgressStudentCard" class="ldvlProgressStudentCard hide">
+        <div class="ldvlProgressStudentMain">
+          <div id="ldvlProgressStudentAvatar" class="ldvlProgressStudentAvatar">?</div>
+          <div>
+            <div id="ldvlProgressStudentName" class="ldvlProgressStudentName">Học viên</div>
+            <div id="ldvlProgressStudentMeta" class="ldvlProgressStudentMeta"></div>
+          </div>
+        </div>
+        <div class="ldvlProgressStudentAttempts">
+          <b id="ldvlProgressStudentAttemptCount">0</b>
+          <span>lần làm bài</span>
+        </div>
+      </div>
+      <div class="ldvlProgressIntro muted">Theo dõi bài đã làm, thời gian, mức độ, điểm và số lần luyện tập (≥ <b id="ldvlProgressPctLabel">70</b>% = hoàn thành).</div>
+      <div id="ldvlProgressSummary" class="ldvlProgressSummary"></div>
+      <div id="ldvlProgressGroups" class="ldvlProgressGroups"></div>
+      <div class="ldvlProgressLogHead"><b>📋 Chi tiết từng lần làm</b> <span class="muted" style="font-size:12px;font-weight:700">(ghi rõ lần thứ mấy)</span></div>
+      <div id="ldvlProgressLog" class="ldvlProgressLog"></div>
+    </div>
   </div>
 </div>
 </div></div>
@@ -24841,6 +25363,7 @@ function updateAdminChrome(){
   if(adm){ensureQuizAdminAiInternetButton();syncAdminComposeChrome();bindAdminNavContextMenu();try{initAdminAiGenerator()}catch(e){}}
   if(typeof ldvlApplyAdminHomeLayout==='function')ldvlApplyAdminHomeLayout();
   if(typeof ldvlPdfAdminPanelSync==='function')ldvlPdfAdminPanelSync();
+  try{if(typeof ldvlStudentProgressSyncNav==='function')ldvlStudentProgressSyncNav()}catch(e){}
 }
 function closeAdminMoreMenu(){let m=document.getElementById('adminMoreMenu');if(m)m.classList.add('hide')}
 function toggleAdminMoreMenu(ev){if(ev)ev.stopPropagation();let m=document.getElementById('adminMoreMenu');if(!m)return;let willOpen=m.classList.contains('hide');closeAdminMoreMenu();if(willOpen)m.classList.remove('hide')}
@@ -24849,7 +25372,7 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q);AI_LG_BY_Q=shiftInsert(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=shiftInsert(ADMIN_LG_DRAFT_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);AI_LG_BY_Q=remap(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=remap(ADMIN_LG_DRAFT_BY_Q);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
 let INIT_CONNECT_FAILS=0;
@@ -24896,6 +25419,7 @@ async function init(){
   }
   USER=META.user||{};
   renderUserAiProfile(USER);
+  try{mergeStudentProgressFromLocal()}catch(e){}
   try{initAdminReviewMode()}catch(e){console.error('initAdminReviewMode',e)}
   try{initAdminChosenAiProvider()}catch(e){console.error('initAdminChosenAiProvider',e)}
   updateAdminChrome();
@@ -24932,6 +25456,7 @@ async function init(){
   // API cấu hình AI chạy nền, không được chặn giao diện chính.
   loadAiKeyPanel().catch(function(e){let st=document.getElementById('aiKeyStatus');if(st)st.textContent='Không tải trạng thái key: '+(e&&e.message?e.message:e)});
   if(typeof ldvlQuickNavSyncVisibility==='function')ldvlQuickNavSyncVisibility();
+  try{if(typeof ldvlStudentProgressSyncNav==='function')ldvlStudentProgressSyncNav()}catch(e){}
   if(typeof window.ldvlApplyHomeTab==='function')window.ldvlApplyHomeTab(localStorage.getItem('LDVL_HOME_TAB')||'catalog');
 }
 function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClient(dang);if(fc.dang[nd]!=null)return fc.dang[nd];let n=0;for(let k in fc.dang)if(normDangClient(k)===nd)n+=fc.dang[k]||0;return n}
@@ -25545,7 +26070,7 @@ function quizSectionTitle(q){q=applyResolvedDang(q||{});return String(q.Dang||''
 function quizSectionLabel(i){if(!GROUP_BY_DANG||!QUESTIONS.length)return null;let q=applyResolvedDang(QUESTIONS[i]);if(i===0)return quizSectionTitle(q);let prev=applyResolvedDang(QUESTIONS[i-1]);return quizSectionKey(q)!==quizSectionKey(prev)?quizSectionTitle(q):null}
 function enterQuizSession(j,made,lv,dgNorm,dg,applyClientFilter,dbtPref){if(getShareParams().de)clearShareQuery();SID=j.sid;GROUP_BY_DANG=j.group_by_dang!==false;RANDOM_PRACTICE=!!j.random_practice;EXAM_MODE=!!j.exam_mode;if(typeof j.admin==='boolean')USER.is_admin=j.admin;if(typeof j.can_view_solution_live==='boolean')USER.can_view_solution_live=j.can_view_solution_live;if(EXAM_MODE)USER.can_view_solution_live=false;if(typeof j.review_strict==='boolean'){META=META||{};META.strict_question_review=j.review_strict}QUESTIONS=(j.questions||[]).map(q=>applyResolvedDang(q));if(applyClientFilter&&(lv||dgNorm||dg)){QUESTIONS=applyQuizFilters(QUESTIONS,lv,dgNorm||dg)}if(!QUESTIONS.length){let item=CATALOG.find(x=>x.MaDe==made)||{};let mc=filterMatchCount(item,lv,dgNorm||dg);let msg=RANDOM_PRACTICE?'Không ghép được đề ngẫu nhiên.':'Không có câu';if(lv&&dg)msg+=` mức ${lv} dạng ${dgNorm||dg}`;else if(dg)msg+=` dạng ${dgNorm||dg}`;else if(lv)msg+=` mức ${lv}`;msg+=' trong đề này.';if(mc)msg+=`\n\nMục lục báo có ${mc} câu — bấm 🔄 Đồng bộ Sheet, Ctrl+F5, thử lại.`;else if(lv&&dg)msg+='\n\nThử bỏ Mức độ hoặc Dạng câu về Tất cả.';alert(msg);return}CURRENT_MADE=made;CURRENT_LEVEL=lv;CURRENT_DANG=dgNorm||dg||j.dang_filter||'';CURRENT_DANGBAITAP=String(dbtPref||j.dangbaitap_filter||'').trim();CUR=0;ANSWERS={};SUBMITTED=!!USER.is_admin&&!EXAM_MODE;RESULTS={};CHECKED={};LOCKED_Q={};COMPLETED_NOTICE=false;CORRECT_STREAK=0;hideStreakToast(true);HINT_BY_Q={};SIMILAR_BY_Q={};SIMILAR_LOADING=false;SIMILAR_LOADING_Q=null;FS_ANS_FORCE=null;FS_EXP_FORCE=null;VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};LEARNING_OPEN_KIND='';LEARNING_CACHE={};DANG_SIMILARITY_CACHE={};LEARNING_LOADING=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;MINI_CALC_BY_Q={};document.getElementById('home').classList.add('hide');document.getElementById('quiz').classList.remove('hide');document.getElementById('resultBox').textContent=adminQuizStatusLine()||(USER.is_trial?'DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm':'');let c=CATALOG.find(x=>x.MaDe==made)||{};let lvTag=lv?` | Mức: ${lv}`:'';let n=QUESTIONS.length;let dgShow=CURRENT_DANG||j.dang_filter||'';let dgTag=dgShow?` | Loại câu: ${dgShow}`:'';let dbtShow=CURRENT_DANGBAITAP||j.dangbaitap_filter||'';let dbtTag=dbtShow?` | Dạng BT: ${dbtFilterLabel(dbtShow)} (${n} câu)`:'';if(isDbtUnclassifiedFilter(dbtShow))dbtTag+=USER.is_admin?' · ADMIN: 🏷️ Gợi ý Dạng BT':'';let examTag=EXAM_MODE?' | 🧪 Kiểm tra':'';if(RANDOM_PRACTICE||j.random_title){document.getElementById('quizTitle').textContent=`🎲 ${j.random_title||'Tự luyện ngẫu nhiên'} | ${n} câu${lvTag}${examTag}`}else{document.getElementById('quizTitle').textContent=`${c.Mon||''} ${c.Lop?'- Lớp '+c.Lop:''} | ${c.De||c.BaiHoc||''}${lvTag}${dgTag}${dbtTag}${examTag}`}updateFilterBadge(lv,dgShow,n,dbtShow);updateShuffleBadge(j);startQuizTimer();updateAdminChrome();renderNav();renderQuestion();MOBILE_NAV_OPEN=false;syncMobileQuizChrome();if(j.trial_message)alert(j.trial_message)}
 async function startQuiz(made,shuffleQ=false,shuffleA=false,level='',dang='',groupByDang=true,dangbaitap='',examMode=false,numQuestions=0,includePending,questionIds=null,examSpec=null,examAll=false){try{let lv=(level||val('fMucDo')||CURRENT_LEVEL||'').trim().toUpperCase();let dg=(dang||val('fDang')||CURRENT_DANG||'').trim();let dgNorm=dg?normDangClient(dg):'';let dbt=String(dangbaitap!=null?dangbaitap:(CURRENT_DANGBAITAP||val('fDangBaiTap')||'')).trim();let body={made,shuffle_q:shuffleQ?1:0,shuffle_a:shuffleA?1:0,level:lv,dang:dgNorm||dg,dangbaitap:dbt,group_by_dang:groupByDang?1:0,exam_mode:examMode?1:0,num_questions:numQuestions||0,exam_all:examAll?1:0,question_ids:questionIds||[],exam_spec:examSpec||{}};if(includePending===true||includePending===1)body.include_pending=1;else if(includePending===false||includePending===0)body.include_pending=0;else if(USER&&USER.is_admin&&!examMode)body.include_pending=1;let j=await api('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});enterQuizSession(j,made,lv,dgNorm,dg,true,dbt)}catch(e){alert('Không mở được đề: '+e.message)}}
-function backHome(){stopQuizTimer();EXAM_MODE=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};AI_LG_BY_Q={};ADMIN_LG_DRAFT_BY_Q={};AI_LG_LOADING=-1;QUIZ_TTS_ON=false;stopQuizQuestionSpeech();LEARNING_OPEN_KIND='';LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
+function backHome(){stopQuizTimer();EXAM_MODE=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;MOBILE_NAV_OPEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MINI_CALC_OPEN=false;MINI_CALC_BY_Q={};VIP_Q_SHOW_ANS={};VIP_Q_SHOW_EXP={};AI_LG_BY_Q={};ADMIN_LG_DRAFT_BY_Q={};AI_LG_LOADING=-1;QUIZ_TTS_ON=false;stopQuizQuestionSpeech();LEARNING_OPEN_KIND='';LEARNING_CACHE={};LEARNING_LOADING=false;LEARNING_PANEL_COLLAPSED=false;TRANSLATE_BY_Q={};TRANSLATE_KIND='CauHoi';TRANSLATE_LOADING=false;TRANSLATE_SIDE_LOADING={};TRANSLATE_AUTO_QUEUE=[];TRANSLATE_SPEECH_CHUNKS=[];TRANSLATE_SPEECH_CHUNK_IDX=0;TRANSLATE_SPEECH_REPEAT=false;TRANSLATE_TTS_ACTIVE_BTN='';stopTranslateEnSpeech();unlockQuizPageScroll();document.body.classList.remove('mini-calc-open');let mcb=document.getElementById('miniCalcBackdrop');if(mcb)mcb.classList.add('hide');updateFilterBadge('','',null,'');document.getElementById('quiz').classList.add('hide');document.getElementById('home').classList.remove('hide');if(USER&&USER.is_admin){LDVL_ADMIN_STUDENT_MODE=false;if(typeof ldvlAdminNav==='function')ldvlAdminNav(document.getElementById('ldvlNavDash'),'ap-dash');}syncMobileQuizChrome();setTimeout(forceMobileHomeScroll,0);updateAdminChrome();try{mergeStudentProgressFromLocal();renderCatalog();if(window.__CATALOG_FLASH_SCOPE){flashCatalogLesson(window.__CATALOG_FLASH_SCOPE);window.__CATALOG_FLASH_SCOPE=null}}catch(e){}}
 function ensureFullModeOverrides(){
     let fsId='LDVL_FS_OVR_V334';
     let prev=document.getElementById(fsId);
@@ -26408,7 +26933,7 @@ function renderTranslatePanel(){}
 async function requestTranslateEn(loai){openTranslateAiMode(normTranslateKind(loai||'CauHoi'))}
 async function requestSimilarQuestion(){if(!USER.can_quiz_similar){alert('Tạo câu tương tự chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(EXAM_MODE&&!SUBMITTED){alert('Chế độ kiểm tra: nộp bài xong mới tạo câu tương tự.');return}if(SIMILAR_LOADING||HINT_LOADING)return;LEARNING_OPEN_KIND='';saveCurrent();let qIdx=CUR;setSimilarLoading(true,qIdx);if(HINT_BY_Q[qIdx])renderHintBox(HINT_BY_Q[qIdx]);else{let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hide');hb.innerHTML='<b>📝 Tạo câu tương tự</b><div class="hintLoadingPanel"><div class="hintSpinBig"></div><div><b>Đang gọi AI…</b></div></div>'}}try{let j=await api('/api/hint/similar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,index:qIdx,...quizRestorePayload()})});SIMILAR_BY_Q[qIdx]=j;if(CUR===qIdx)renderHintBox(HINT_BY_Q[qIdx]||{});let hb=document.getElementById('hintBox');if(hb&&!hb.classList.contains('hide'))hb.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){alert('Không tạo được câu tương tự: '+e.message)}finally{if(SIMILAR_LOADING_Q===qIdx){setSimilarLoading(false);if(CUR===qIdx&&(HINT_BY_Q[qIdx]||SIMILAR_BY_Q[qIdx]))renderHintBox(HINT_BY_Q[qIdx]||{})}}}
 async function requestHint(){if(USER.can_quiz_ai_hint===false&&!isAdminViewer())return;if(!USER.can_quiz_ai_hint&&!isAdminViewer()){alert('Gợi ý AI đã tắt.');return}if(!USER.can_ai_hint){alert('Gợi ý AI chỉ dành tài khoản VIP / SVIP / ADMIN.');return}if(HINT_LOADING||SIMILAR_LOADING){return}LEARNING_OPEN_KIND='';saveCurrent();let qIdx=CUR;delete HINT_BY_Q[qIdx];setHintLoading(true,qIdx);beginHintLoadingTimer();showHintLoadingBox();let rb=document.getElementById('resultBox');if(rb)rb.style.color='#1d4ed8';let hintTimer=null;let hintDone=false;try{let ans=ANSWERS[qIdx];let hintBody={sid:SID,index:qIdx,answer:ans,...quizRestorePayload()};if(isAdminViewer())hintBody.admin_review_mode=getAdminReviewMode();HINT_ABORT_CTRL=new AbortController();let tms=hintClientTimeoutMs();hintTimer=setTimeout(()=>{abortHintFetch()},tms);let j=isAdminViewer()?await adminAiFetch('/api/hint',hintBody,{signal:HINT_ABORT_CTRL.signal}):await api('/api/hint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hintBody),signal:HINT_ABORT_CTRL.signal});HINT_BY_Q[qIdx]=j;if(j.admin_review)ADMIN_HINT_SAVED[qIdx]=false;hintDone=true;if(hintTimer){clearTimeout(hintTimer);hintTimer=null}finishHintRequest(qIdx,j)}catch(e){let msg=(e&&e.name==='AbortError')?'Quá thời gian chờ. Render Free giới hạn ~30 giây/request — chọn ⚡ Soát nhanh hoặc thử lại.':String(e.message||e);if(CUR===qIdx){let hb=document.getElementById('hintBox');if(hb){hb.classList.remove('hintBoxLoading');hb.classList.remove('hide');hb.innerHTML='<b>❌ Không lấy được gợi ý AI</b><div class="muted" style="margin-top:8px">'+esc(msg)+'</div><div style="margin-top:8px"><button type="button" class="btn2" onclick="requestHint()">Thử lại</button></div>'}}alert('Không lấy được gợi ý: '+msg)}finally{if(!hintDone){if(hintTimer)clearTimeout(hintTimer);stopHintLoadingTimer();HINT_LOADING_SINCE=0;if(HINT_LOADING_Q===qIdx)setHintLoading(false);syncHintButtons(USER.can_ai_hint!==false);if(CUR===qIdx&&rb){if(USER.is_admin)rb.textContent='ADMIN: đang xem đáp án/lời giải';else if(USER.is_trial)rb.textContent='DÙNG THỬ: chỉ luyện đề FREE, không chấm điểm';else rb.textContent=''}}}}
-async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm(EXAM_MODE?'Nộp bài kiểm tra? Sau khi nộp mới xem đáp án/lời giải.':'Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS,elapsed_sec:QUIZ_ELAPSED||0,...quizRestorePayload()})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;if(EXAM_MODE){USER.can_view_solution_live=true;for(let i=0;i<QUESTIONS.length;i++){let rr=RESULTS[i];if(rr){if(rr.DapAn!=null&&QUESTIONS[i])QUESTIONS[i].DapAn=rr.DapAn;if(rr.LoiGiai!=null&&QUESTIONS[i])QUESTIONS[i].LoiGiai=rr.LoiGiai}}}let avgOk=j.avg_per_correct_text||(j.avg_sec_per_correct?fmtTime(j.avg_sec_per_correct):'');let avgBit=avgOk?(` | TB/câu đúng ${avgOk}`):'';if(j.time_stats&&j.time_stats.avg_per_correct_text&&j.time_stats.correct_sample_count)avgBit+=` | TB chung ${j.time_stats.avg_per_correct_text}`;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}${avgBit}`;syncExamSubmitButton();syncMobileQuizChrome();renderQuestion();renderNav();if(EXAM_MODE){try{showExamFinishToast(j)}catch(e){console.warn('exam toast',e)}}}
+async function submitQuiz(){if(USER.is_trial){alert('Tài khoản dùng thử không được nộp/chấm điểm.');return;}saveCurrent();if(!confirm(EXAM_MODE?'Nộp bài kiểm tra? Sau khi nộp mới xem đáp án/lời giải.':'Nộp bài?'))return;let j=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:SID,answers:ANSWERS,elapsed_sec:QUIZ_ELAPSED||0,...quizRestorePayload()})});SUBMITTED=true;stopQuizTimer();RESULTS={};for(let r of j.results)RESULTS[r.index]=r;if(EXAM_MODE){USER.can_view_solution_live=true;for(let i=0;i<QUESTIONS.length;i++){let rr=RESULTS[i];if(rr){if(rr.DapAn!=null&&QUESTIONS[i])QUESTIONS[i].DapAn=rr.DapAn;if(rr.LoiGiai!=null&&QUESTIONS[i])QUESTIONS[i].LoiGiai=rr.LoiGiai}}}let avgOk=j.avg_per_correct_text||(j.avg_sec_per_correct?fmtTime(j.avg_sec_per_correct):'');let avgBit=avgOk?(` | TB/câu đúng ${avgOk}`):'';if(j.time_stats&&j.time_stats.avg_per_correct_text&&j.time_stats.correct_sample_count)avgBit+=` | TB chung ${j.time_stats.avg_per_correct_text}`;document.getElementById('resultBox').textContent=`Điểm: ${j.score}/10 | Đúng ${j.correct_count}/${j.auto_count} | ⏱ ${fmtTime(QUIZ_ELAPSED)}${avgBit}`;syncExamSubmitButton();syncMobileQuizChrome();renderQuestion();renderNav();try{recordPracticeProgressFromSubmit(j)}catch(e){}if(EXAM_MODE){try{showExamFinishToast(j)}catch(e){console.warn('exam toast',e)}}}
 const QUESTION_FORM_FIELDS=['MaDe','ID','Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','QuyenTruyCap','TrangThai','MucDo','Dang','CauHoi','A','B','C','D','DapAn','SaiSo','LoiGiai','HinhAnh'];
 const QUESTION_EDIT_SAVE_FIELDS=['Mon','Lop','Chuong','BaiHoc','DangBaiTap','NangLucVatLy','CauHoi','A','B','C','D','DapAn','SaiSo','MucDo','Dang','QuyenTruyCap','TrangThai','LoiGiai','HinhAnh'];
 const QUESTION_FORM_LABELS={MaDe:'Mã đề (MaDe)',ID:'ID câu (để trống = tự tạo)',Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập - cột H',NangLucVatLy:'Năng lực vật lí - cột V',QuyenTruyCap:'Quyền (FREE/VIP)',TrangThai:'Trạng thái duyệt - cột TrangThai',MucDo:'Mức độ - cột I',Dang:'Dạng - cột J',CauHoi:'Câu hỏi / Nội dung - cột K',DapAn:'Đáp án - cột P',SaiSo:'Sai số - cột Q',LoiGiai:'Lời giải - cột R',HinhAnh:'Hình ảnh - cột T',A:'A - cột L',B:'B - cột M',C:'C - cột N',D:'D - cột O'};
@@ -29207,12 +29732,16 @@ function quizSpeechPlain(s){
 }
 function quizSpeakChoiceLetter(L){return ({A:'a',B:'bê',C:'xê',D:'đê'}[String(L||'').toUpperCase()]||L)}
 function buildQuizReadAloudText(){let q=currentQuestion()||{};let parts=[];let stem=quizSpeechPlain(q.CauHoi||'');if(stem)parts.push('Câu hỏi. '+stem);for(let L of ['A','B','C','D']){let v=quizSpeechPlain(q[L]||'');if(v)parts.push('Phương án '+quizSpeakChoiceLetter(L)+'. '+v)}return parts.join(' ')}
-function quizTtsVoiceScore(v){let lang=String(v.lang||'').replace(/_/g,'-').toLowerCase();let name=String(v.name||'').toLowerCase();let n=0;if(lang==='vi-vn'||lang==='vi')n+=120;else if(lang.indexOf('vi-')===0)n+=100;if(/tiếng việt|tieng viet|vietnamese/.test(name))n+=110;if(/google.*(việt|viet)|microsoft.*(an|hoaimy|hoai my|linh)/.test(name))n+=90;if(/\b(david|zira|mark|hazel|susan|samantha|alex|daniel|karen|moira|ravi|heera)\b/.test(name))n-=200;return n}
+function isQuizViSpeechVoice(v){if(!v)return false;let lang=String(v.lang||'').replace(/_/g,'-').toLowerCase();if(lang==='vi-vn'||lang==='vi'||lang.indexOf('vi-')===0)return true;let name=String(v.name||'').toLowerCase();return /vietnamese|tiếng việt|tieng viet|\(việt|\(viet|vi-vn|việt nam|viet nam|hoai\s*my|hoaimy|nam\s*minh|namminh|google.*việt|google.*viet/.test(name)}
+function quizTtsVoiceGender(v){let name=String(v.name||'').toLowerCase();let compact=name.replace(/\s/g,'');if(/hoai\s*my|hoaimy|linh\s*san|\bfemale\b|nữ|woman|girl/.test(name))return 'Nữ';if(/nam\s*minh|namminh|\bmale\b/.test(name)||/namminh/.test(compact))return 'Nam';return ''}
+function quizTtsVoiceDisplayLabel(v){let raw=String(v.name||'Giọng Việt');let g=quizTtsVoiceGender(v);let short=raw;if(/hoai\s*my|hoaimy/i.test(raw))short='Hoài My';else if(/nam\s*minh|namminh/i.test(raw))short='Nam Minh';else if(/google/i.test(raw)&&/vi/i.test(raw))short='Google Tiếng Việt';else if(/microsoft/i.test(raw))short=raw.replace(/^Microsoft\s+/i,'').replace(/\s*Online.*$/i,'').trim();return g?(short+' ('+g+')'):short}
+function quizTtsVoiceScore(v){if(!isQuizViSpeechVoice(v))return -999;let lang=String(v.lang||'').replace(/_/g,'-').toLowerCase();let name=String(v.name||'').toLowerCase();let n=0;if(lang==='vi-vn'||lang==='vi')n+=120;else if(lang.indexOf('vi-')===0)n+=100;if(/tiếng việt|tieng viet|vietnamese/.test(name))n+=110;if(/google.*(việt|viet)/.test(name))n+=95;if(/hoai\s*my|hoaimy/.test(name))n+=92;if(/nam\s*minh|namminh/.test(name))n+=90;if(/natural/.test(name))n+=8;if(/online/.test(name))n+=4;return n}
+function quizTtsListViVoices(){if(typeof speechSynthesis==='undefined')return [];let voices=speechSynthesis.getVoices?speechSynthesis.getVoices():[];return voices.filter(isQuizViSpeechVoice).slice().sort(function(a,b){return quizTtsVoiceScore(b)-quizTtsVoiceScore(a)})}
 function quizTtsSavedVoiceURI(){try{return String(localStorage.getItem('LDVL_QUIZ_TTS_VOICE')||'')}catch(e){return ''}}
 function quizTtsRate(){try{let r=parseFloat(localStorage.getItem('LDVL_QUIZ_TTS_RATE')||'0.9');if(!(r>=0.55&&r<=1.35))r=0.9;return r}catch(e){return 0.9}}
-function pickQuizViVoice(){if(typeof speechSynthesis==='undefined')return null;let voices=speechSynthesis.getVoices?speechSynthesis.getVoices():[];if(!voices.length)return null;let want=quizTtsSavedVoiceURI();if(want){for(let i=0;i<voices.length;i++){let v=voices[i];if(v.voiceURI===want||v.name===want)return v}}let ranked=voices.slice().sort(function(a,b){return quizTtsVoiceScore(b)-quizTtsVoiceScore(a)});return ranked.length&&quizTtsVoiceScore(ranked[0])>0?ranked[0]:null}
+function pickQuizViVoice(){if(typeof speechSynthesis==='undefined')return null;let voices=quizTtsListViVoices();if(!voices.length)return null;let want=quizTtsSavedVoiceURI();if(want){for(let i=0;i<voices.length;i++){let v=voices[i];if(v.voiceURI===want||v.name===want)return v}}return voices[0]}
 function quizTtsOptEsc(s){return String(s||'').replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
-function fillQuizTtsVoiceSelect(){let sel=document.getElementById('quizTtsVoice');if(!sel||typeof speechSynthesis==='undefined')return;let voices=speechSynthesis.getVoices?speechSynthesis.getVoices():[];let rateSel=document.getElementById('quizTtsRate');if(rateSel){let rv=String(quizTtsRate());if(!rateSel.querySelector('option[value="'+rv+'"]'))rv='0.9';rateSel.value=rv}if(!voices.length){if(!sel.options.length||sel.getAttribute('data-n')!=='0'){sel.innerHTML='<option value="">Đang tải giọng…</option>';sel.setAttribute('data-n','0')}return}if(sel.getAttribute('data-n')===String(voices.length)&&sel.options.length>1)return;let ranked=voices.slice().sort(function(a,b){return quizTtsVoiceScore(b)-quizTtsVoiceScore(a)});let want=quizTtsSavedVoiceURI();let html='<option value="">Tự chọn giọng Việt</option>';for(let i=0;i<ranked.length;i++){let v=ranked[i];let uri=v.voiceURI||v.name||'';let lab=(v.name||'Giọng')+(v.lang?' · '+v.lang:'');html+='<option value="'+quizTtsOptEsc(uri)+'"'+(want&&(want===uri||want===v.name)?' selected':'')+'>'+quizTtsOptEsc(lab)+'</option>'}sel.innerHTML=html;sel.setAttribute('data-n',String(voices.length))}
+function fillQuizTtsVoiceSelect(){let sel=document.getElementById('quizTtsVoice');if(!sel||typeof speechSynthesis==='undefined')return;let all=speechSynthesis.getVoices?speechSynthesis.getVoices():[];let viVoices=quizTtsListViVoices();let rateSel=document.getElementById('quizTtsRate');if(rateSel){let rv=String(quizTtsRate());if(!rateSel.querySelector('option[value="'+rv+'"]'))rv='0.9';rateSel.value=rv}if(!all.length){if(!sel.options.length||sel.getAttribute('data-n')!=='0'){sel.innerHTML='<option value="">Đang tải giọng…</option>';sel.setAttribute('data-n','0')}return}if(sel.getAttribute('data-n')===String(viVoices.length)&&sel.options.length>0)return;let want=quizTtsSavedVoiceURI();let html='';if(!viVoices.length){html='<option value="">Chưa có giọng Việt</option>'}else{html='<option value="">Tự chọn (Nam/Nữ)</option>';for(let i=0;i<viVoices.length;i++){let v=viVoices[i];let uri=v.voiceURI||v.name||'';let lab=quizTtsVoiceDisplayLabel(v);html+='<option value="'+quizTtsOptEsc(uri)+'"'+(want&&(want===uri||want===v.name)?' selected':'')+'>'+quizTtsOptEsc(lab)+'</option>'}}sel.innerHTML=html;sel.setAttribute('data-n',String(viVoices.length))}
 function bindQuizTtsVoices(){if(window._LDVL_QUIZ_TTS_VOICES_BOUND)return;window._LDVL_QUIZ_TTS_VOICES_BOUND=1;try{if(typeof speechSynthesis!=='undefined'&&speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',function(){let sel=document.getElementById('quizTtsVoice');if(sel)sel.removeAttribute('data-n');fillQuizTtsVoiceSelect()})}catch(e){}fillQuizTtsVoiceSelect()}
 function onQuizTtsVoiceChange(){let sel=document.getElementById('quizTtsVoice');try{localStorage.setItem('LDVL_QUIZ_TTS_VOICE',sel?String(sel.value||''):'')}catch(e){}}
 function onQuizTtsRateChange(el){let r=parseFloat(el&&el.value||'0.9');if(!(r>=0.55&&r<=1.35))r=0.9;try{localStorage.setItem('LDVL_QUIZ_TTS_RATE',String(r))}catch(e){}}
@@ -29341,7 +29870,7 @@ function v246EnsureBookCss(){
   .bookShelfV246{display:block}.bookSubjectBlock{margin:12px 0 16px}.bookSubjectTitle{padding:11px 12px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;box-shadow:0 2px 8px #1d4ed833;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookSubjectTitle small{font-size:12px;opacity:.95;font-weight:800}
   .bookGradeBlock{margin:10px 0 12px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 4px #0f172a0f}.bookGradeHead{padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookGradeHead .bookMini{font-size:12px;color:#64748b;font-weight:800}
   .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;position:relative;z-index:2}.bookChapterHead .bookChapterDbtBtn{flex-shrink:0;cursor:pointer;position:relative;z-index:3}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
-  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
+  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookTag.bookTagDone{background:#fef9c3;border-color:#facc15;color:#854d0e}.bookTag.bookTagComplete{background:#dcfce7;border-color:#22c55e;color:#166534}.bookLessonProg,.bookChapterProg{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle}.bookLessonCard.lessonDone{border-color:#fde68a;background:#fffbeb}.bookLessonCard.lessonComplete{border-color:#86efac;background:#f0fdf4}.bookChapterBlock.isChapterComplete .bookChapterHead{background:#dcfce7;border-color:#86efac}.bookDbtBtn.isPracticeDone{border-color:#fde68a;background:#fffbeb}.bookDbtBtn.isPracticeComplete{border-color:#86efac;background:#f0fdf4}.bookDbtProg{font-size:10px;font-weight:950;margin-right:3px}.bookDbtProgDone{color:#ca8a04}.bookDbtProgComplete{color:#16a34a}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
   .bookLessonCard.selectedLesson{outline:2px solid #1d4ed8;background:#f8fbff}.bookLessonCard.shareTarget{outline:3px solid #60a5fa;box-shadow:0 0 0 4px #dbeafe}.bookLessonCard.catalogFlash{outline:3px solid #22c55e!important;box-shadow:0 0 0 4px #bbf7d088!important;animation:catalogFlashPulse .85s ease-in-out 2}@keyframes catalogFlashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.bookLessonCard .shareRow{margin-top:6px;flex-wrap:wrap}.bookLessonCard .shareBtns{flex-wrap:wrap}.bookEmpty{padding:14px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc}
   html[data-theme='dark'] .bookIntroV246{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}html[data-theme='dark'] .bookIntroTitle{color:#bfdbfe}html[data-theme='dark'] .bookStat{background:#0f172a;border-color:#334155;color:#bfdbfe}html[data-theme='dark'] .bookGradeBlock,html[data-theme='dark'] .bookLessonCard{background:#111827;border-color:#334155}html[data-theme='dark'] .bookGradeHead{background:#1e293b;color:#e5e7eb}html[data-theme='dark'] .bookChapterBlock{background:#0f172a;border-color:#1d4ed8}html[data-theme='dark'] .bookChapterHead{background:#1e3a5f;color:#bfdbfe}html[data-theme='dark'] .bookLessonTitle{color:#e5e7eb}html[data-theme='dark'] .bookTag{background:#1e293b;border-color:#475569;color:#cbd5e1}html[data-theme='dark'] .bookTag.bookTagDang{background:#0f172a;border-color:#475569;color:#94a3b8}
   .bookLessonTags.bookLessonTagsCompact{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:1px}.bookLessonTags.bookLessonTagsCompact::-webkit-scrollbar{display:none}.bookTag.bookTagDang{color:#475569;border-color:#cbd5e1;background:#f1f5f9;letter-spacing:-.02em}
@@ -29441,11 +29970,45 @@ function v246DbtDangTipText(dbtKey,entries){let det=v246MergeDbtDetail(entries,d
 function v246DbtDangMiniHtml(dbtKey,entries){let det=v246MergeDbtDetail(entries,dbtKey);let order=['Trắc nghiệm','Đúng sai','Trả lời ngắn','Tự luận'];let out=[];for(let d of order){let n=det.dang[d]||0;if(n)out.push(`<span class="bookDbtMini bookDbtMini-${v246DangCssClass(d).replace('dang-','')}">${v246ShortDangLabel(d)}·${n}</span>`)}return out.length?`<span class="bookDbtMiniRow">${out.join('')}</span>`:''}
 function v246SumFilterLevels(entries){let levels=['NB','TH','VD','VDC'];let totals={NB:0,TH:0,VD:0,VDC:0};for(let x of entries||[]){let fc=x&&x.FilterCounts;if(fc&&fc.level){for(let lv of levels)totals[lv]+=parseInt(fc.level[lv],10)||0;continue}let sc=parseInt(x.SoCau,10)||0;if(!sc)continue;let md=String(x.MucDo||'').trim().toUpperCase();let parts=md.split(/[,;|/]+/).map(s=>s.trim()).filter(Boolean);let hit=parts.filter(p=>levels.includes(p));if(hit.length===1)totals[hit[0]]+=sc;else if(hit.length>1)hit.forEach(lv=>{totals[lv]+=Math.round(sc/hit.length)})}return totals}
 function v246LevelTags(entries){let levels=['NB','TH','VD','VDC'];let totals=v246SumFilterLevels(entries);let out=[];for(let lv of levels){let n=totals[lv]||0;if(n)out.push(`<span class="bookTag ${lv.toLowerCase()}" title="${lv}: ${n} câu">${lv}·${n}</span>`)}return out.join('')}
+const STUDENT_PROGRESS_COMPLETE_PCT=70;
+function studentProgressEnabled(){return !!(USER&&USER.mahs&&(!USER.is_admin||window.LDVL_ADMIN_STUDENT_MODE))}
+function lessonProgressKeyFromParts(mon,khoi,chuong,bai){return [normText(mon||''),normText(khoi||''),normText(chuong||''),normText(bai||'')].join('|')}
+function chapterProgressKeyFromParts(mon,khoi,chuong){return [normText(mon||''),normText(khoi||''),normText(chuong||'')].join('|')}
+function practiceProgressKey(made,dbt){made=String(made||'').trim();dbt=String(dbt||'').trim();return made+(dbt?'|'+normText(dbt):'')}
+function localPracticeProgressStorageKey(){return 'LDVL_PRACTICE_PROGRESS_V1|'+(USER&&USER.mahs?String(USER.mahs).trim():'')}
+function loadLocalPracticeProgress(){if(!studentProgressEnabled())return null;try{let raw=localStorage.getItem(localPracticeProgressStorageKey());if(!raw)return null;let j=JSON.parse(raw);return j&&typeof j==='object'?j:null}catch(e){return null}}
+function saveLocalPracticeProgress(data){if(!studentProgressEnabled())return;try{localStorage.setItem(localPracticeProgressStorageKey(),JSON.stringify(data||{}))}catch(e){}}
+function mergeProgressEntryClient(cur,pct){cur=cur||{};let attempts=(parseInt(cur.attempts,10)||0)+1;let best=parseFloat(cur.best_pct)||0;let p=parseFloat(pct)||0;if(p>best)best=p;let done=!!cur.done||attempts>0;let complete=!!cur.complete||best>=STUDENT_PROGRESS_COMPLETE_PCT;return {attempts,best_pct:Math.round(best*10)/10,last_pct:Math.round(p*10)/10,done,complete}}
+function mergeProgressMaps(dst,src){dst=dst||{};src=src||{};for(let k in src){if(!Object.prototype.hasOwnProperty.call(src,k))continue;let s=src[k]||{};let d=dst[k]||{};let best=Math.max(parseFloat(d.best_pct)||0,parseFloat(s.best_pct)||0);dst[k]={attempts:(parseInt(d.attempts,10)||0)+(parseInt(s.attempts,10)||0),best_pct:Math.round(best*10)/10,last_pct:Math.round((parseFloat(s.last_pct)||parseFloat(d.last_pct)||0)*10)/10,done:!!(d.done||s.done),complete:!!(d.complete||s.complete||best>=STUDENT_PROGRESS_COMPLETE_PCT)};if((parseInt(dst[k].attempts,10)||0)<1&&(dst[k].done||dst[k].complete))dst[k].attempts=1}return dst}
+function mergeStudentProgressFromLocal(){if(!studentProgressEnabled())return;let local=loadLocalPracticeProgress();let server=(META&&META.student_progress)||{};if(!local&&!server)return;META=META||{};let merged={complete_pct:STUDENT_PROGRESS_COMPLETE_PCT,lessons:{},chapters:{},practices:{},made_map:server.made_map||{}};mergeProgressMaps(merged.lessons,server.lessons||{});mergeProgressMaps(merged.chapters,server.chapters||{});mergeProgressMaps(merged.practices,server.practices||{});if(local){mergeProgressMaps(merged.lessons,local.lessons||{});mergeProgressMaps(merged.chapters,local.chapters||{});mergeProgressMaps(merged.practices,local.practices||{})}META.student_progress=merged}
+function getMergedStudentProgress(){mergeStudentProgressFromLocal();return (META&&META.student_progress)||{lessons:{},chapters:{},practices:{}}}
+function progressLookup(map,key){if(!map||!key)return null;return map[key]||null}
+function progressStatusTags(entry){if(!studentProgressEnabled()||!entry)return '';if(entry.complete)return `<span class="bookTag bookTagComplete" title="Đạt ${Math.round(entry.best_pct||STUDENT_PROGRESS_COMPLETE_PCT)}% trở lên">✓ Hoàn thành</span>`;if(entry.done)return `<span class="bookTag bookTagDone" title="Đã nộp bài luyện tập">Đã làm</span>`;return ''}
+function lessonProgressForCard(mon,khoi,chuong,bai,entries){if(!studentProgressEnabled())return null;let p=(entries&&entries[0])||{};let lop=String(p.Lop||khoi||'').trim();let key=lessonProgressKeyFromParts(mon,lop,chuong,bai);let sp=getMergedStudentProgress();return progressLookup(sp.lessons,key)}
+function chapterProgressForCard(mon,khoi,chuong,chList){if(!studentProgressEnabled())return null;let p=(chList&&chList[0])||{};let lop=String(p.Lop||khoi||'').trim();let key=chapterProgressKeyFromParts(mon,lop,chuong);let sp=getMergedStudentProgress();return progressLookup(sp.chapters,key)}
+function practiceProgressForSession(made,dbt){if(!studentProgressEnabled())return null;let sp=getMergedStudentProgress();return progressLookup(sp.practices,practiceProgressKey(made,dbt))||progressLookup(sp.practices,practiceProgressKey(made,''))}
+function resultAttemptPctFromSubmit(j){j=j||{};let auto=parseInt(j.auto_count,10)||0;let correct=parseInt(j.correct_count,10)||0;if(auto>0)return Math.round(1000*correct/auto)/10;let sc=parseFloat(j.score)||0;if(sc>0)return Math.min(100,Math.round(sc*100)/10);return 0}
+function recordPracticeProgressFromSubmit(j){if(!studentProgressEnabled()||!CURRENT_MADE)return;let pct=resultAttemptPctFromSubmit(j);let made=String(CURRENT_MADE||'').trim();let dbt=String(CURRENT_DANGBAITAP||'').trim();let item=CATALOG.find(x=>x.MaDe===made)||QUESTIONS[0]||{};let mon=item.Mon||'';let lop=item.Lop||'';let chuong=item.Chuong||'';let bai=item.BaiHoc||item.De||'';let lk=lessonProgressKeyFromParts(mon,lop,chuong,bai);let ck=chapterProgressKeyFromParts(mon,lop,chuong);let pk=practiceProgressKey(made,dbt);let local=loadLocalPracticeProgress()||{complete_pct:STUDENT_PROGRESS_COMPLETE_PCT,lessons:{},chapters:{},practices:{}};local.lessons=local.lessons||{};local.chapters=local.chapters||{};local.practices=local.practices||{};local.lessons[lk]=mergeProgressEntryClient(local.lessons[lk],pct);local.chapters[ck]=mergeProgressEntryClient(local.chapters[ck],pct);local.practices[pk]=mergeProgressEntryClient(local.practices[pk],pct);if(!dbt)local.practices[practiceProgressKey(made,'')]=mergeProgressEntryClient(local.practices[practiceProgressKey(made,'')],pct);saveLocalPracticeProgress(local);if(META){META.student_progress=META.student_progress||{lessons:{},chapters:{},practices:{}};META.student_progress.lessons=mergeProgressMaps(META.student_progress.lessons||{},local.lessons);META.student_progress.chapters=mergeProgressMaps(META.student_progress.chapters||{},local.chapters);META.student_progress.practices=mergeProgressMaps(META.student_progress.practices||{},local.practices)}try{ldvlStudentProgressPushLocalAttempt(j,item,pct)}catch(e){}try{if(window.__LDVL_PROGRESS_TAB_OPEN)ldvlStudentProgressLoad(true)}catch(e){}}
+let LDVL_PRACTICE_LOG_CACHE=null;
+let LDVL_PRACTICE_LOG_LOADING=false;
+function ldvlStudentProgressSyncNav(){let btn=document.getElementById('ldvlQnavProgress');if(!btn)return;let show=!!(USER&&USER.mahs&&(!USER.is_admin||window.LDVL_ADMIN_STUDENT_MODE)&&!USER.is_trial);btn.classList.toggle('hide',!show)}
+function ldvlProgressPctLabel(pct){return Math.round(parseFloat(pct)||STUDENT_PROGRESS_COMPLETE_PCT)}
+function ldvlStudentProgressPushLocalAttempt(j,item,pct){if(!studentProgressEnabled())return;item=item||{};j=j||{};let made=String(CURRENT_MADE||'').trim();let dbt=String(CURRENT_DANGBAITAP||'').trim();let lv=String(CURRENT_LEVEL||'').trim();let att={time:new Date().toISOString().slice(0,19).replace('T',' '),time_sort:new Date().toISOString(),made,title:String(item.De||item.BaiHoc||made||'').trim(),mon:item.Mon||'',lop:item.Lop||'',chuong:item.Chuong||'',bai_hoc:item.BaiHoc||item.De||'',level:lv,dangbaitap:dbt,score:parseFloat(j.score)||0,correct:parseInt(j.correct_count,10)||0,total:parseInt(j.auto_count,10)||0,pct:pct,complete:pct>=STUDENT_PROGRESS_COMPLETE_PCT,done:true,elapsed_text:fmtTime(QUIZ_ELAPSED||0),exam_mode:!!EXAM_MODE,_local:1};let key=localPracticeProgressStorageKey()+'|log';let arr=[];try{arr=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){arr=[]}if(!Array.isArray(arr))arr=[];arr.unshift(att);if(arr.length>80)arr=arr.slice(0,80);try{localStorage.setItem(key,JSON.stringify(arr))}catch(e){}}
+function ldvlStudentProgressMergeLocalLog(serverLog){serverLog=serverLog||{attempts:[],groups:[],summary:{}};let key=localPracticeProgressStorageKey()+'|log';let local=[];try{local=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){local=[]}if(!Array.isArray(local)||!local.length)return serverLog;let attempts=(serverLog.attempts||[]).slice();let seen=new Set(attempts.map(a=>[a.time,a.made,a.score,a.pct].join('|')));for(let a of local){let sig=[a.time,a.made,a.score,a.pct].join('|');if(seen.has(sig))continue;seen.add(sig);attempts.unshift(a)}attempts.sort((a,b)=>String(b.time_sort||b.time||'').localeCompare(String(a.time_sort||a.time||'')));let out=Object.assign({},serverLog,{attempts});out.summary=Object.assign({},serverLog.summary||{},{total_attempts:attempts.length});return out}
+function ldvlProgressFormatStudentCard(data){data=data||{};let st=data.student||{};let u=USER||{};let hoten=String(st.hoten||u.hoten||'').trim()||'Học viên';let mahs=String(st.mahs||u.mahs||'').trim();let lop=String(st.lop||u.lop||'').trim();let role=String(st.role_label||u.role_label||'').trim();let card=document.getElementById('ldvlProgressStudentCard');let av=document.getElementById('ldvlProgressStudentAvatar');let nm=document.getElementById('ldvlProgressStudentName');let meta=document.getElementById('ldvlProgressStudentMeta');let cnt=document.getElementById('ldvlProgressStudentAttemptCount');if(!card)return;card.classList.remove('hide');if(av)av.textContent=(hoten.charAt(0)||'?').toUpperCase();if(nm)nm.textContent=hoten;let bits=[];if(mahs)bits.push('Mã HS: '+mahs);if(lop)bits.push('Lớp '+lop);if(role)bits.push(role);if(meta)meta.textContent=bits.join(' · ')||'Đang theo dõi tiến độ rèn luyện';let total=(data.summary&&data.summary.total_attempts)||0;if(cnt)cnt.textContent=String(total)}
+function ldvlProgressAnnotateAttempts(attempts){attempts=(attempts||[]).slice();let asc=attempts.slice().sort((a,b)=>String(a.time_sort||a.time||'').localeCompare(String(b.time_sort||b.time||'')));let nth={},totals={};for(let a of asc){let pk=practiceProgressKey(a.made,a.dangbaitap);nth[pk]=(nth[pk]||0)+1;a.attempt_no=nth[pk];totals[pk]=nth[pk]}for(let a of attempts){let pk=practiceProgressKey(a.made,a.dangbaitap);a.attempt_total=totals[pk]||a.attempt_no||1}return attempts.sort((a,b)=>String(b.time_sort||b.time||'').localeCompare(String(a.time_sort||a.time||'')))}
+function ldvlStudentProgressRender(data){data=data||{};ldvlProgressFormatStudentCard(data);let pctLbl=document.getElementById('ldvlProgressPctLabel');if(pctLbl)pctLbl.textContent=String(ldvlProgressPctLabel(data.complete_pct));let sumEl=document.getElementById('ldvlProgressSummary');let grpEl=document.getElementById('ldvlProgressGroups');let logEl=document.getElementById('ldvlProgressLog');if(!sumEl||!grpEl||!logEl)return;let sm=data.summary||{};sumEl.innerHTML=[{v:sm.total_attempts||0,l:'Tổng lần làm'},{v:sm.unique_practices||0,l:'Chủ đề / dạng BT'},{v:sm.complete_count||0,l:'Đã hoàn thành'},{v:ldvlProgressPctLabel(data.complete_pct)+'%',l:'Ngưỡng HT'}].map(x=>`<div class="ldvlProgressStat"><b>${esc(String(x.v))}</b><span>${esc(x.l)}</span></div>`).join('');let groups=data.groups||[];if(!groups.length)grpEl.innerHTML='<div class="ldvlProgressEmpty">Chưa có bài nào được ghi nhận. Hãy vào <b>Mục lục</b>, chọn dạng BT và bấm <b>Nộp bài</b> sau khi làm xong.</div>';else grpEl.innerHTML=groups.map(g=>{let tags=progressStatusTags({done:!!g.done,complete:!!g.complete,best_pct:g.best_pct});let scope=[g.mon,g.lop?('Lớp '+g.lop):'',g.chuong,g.bai_hoc].filter(Boolean).join(' · ');let dbt=g.dangbaitap?('<span class="bookTag bookTagDang">'+esc(oneLineText(g.dangbaitap))+'</span>'):'';let lv=g.level?('<span class="bookTag '+String(g.level).toLowerCase()+'">'+esc(g.level)+'</span>'):'';let attN=parseInt(g.attempts,10)||0;let attBadge=attN?`<span class="ldvlProgressGroupAttempts" title="Đã làm bài này">🔁 ${attN} lần</span>`:'';return `<div class="ldvlProgressGroup"><div class="ldvlProgressGroupHead"><div class="ldvlProgressGroupTitle">${esc(g.title||g.made||'Bài luyện')}</div><div class="ldvlProgressGroupTags">${attBadge}${tags}${dbt}${lv}</div></div><div class="ldvlProgressGroupMeta">${esc(scope)}${g.last_time?(' · Lần cuối: '+esc(g.last_time)):''} · Đã làm <b>${esc(String(attN||0))}</b> lần · Điểm cao nhất: <b>${esc(String(Math.round((g.best_pct||0)*10)/10))}%</b> · Lần gần nhất: <b>${esc(String(g.last_score||0))}/10</b></div></div>`}).join('');let attempts=ldvlProgressAnnotateAttempts((data.attempts||[]).slice());if(!attempts.length)logEl.innerHTML='<div class="ldvlProgressEmpty">Chưa có lịch sử chi tiết.</div>';else logEl.innerHTML=attempts.map(a=>{let tags=a.complete?'<span class="bookTag bookTagComplete">✓ HT</span>':(a.done?'<span class="bookTag bookTagDone">Đã làm</span>':'');let attemptBit=(a.attempt_no?`<span class="ldvlProgressAttemptBadge">Lần ${esc(String(a.attempt_no))}${(a.attempt_total||0)>1?'/'+esc(String(a.attempt_total)):''}</span>`:'');let bits=[a.mon,a.chuong,a.bai_hoc,a.level?('Mức '+a.level):'',a.dangbaitap?oneLineText(a.dangbaitap):''].filter(Boolean);return `<div class="ldvlProgressRow"><div class="ldvlProgressRowTime">${esc(a.time||'—')}</div><div><div class="ldvlProgressRowTitle">${esc(a.title||a.made||'Bài luyện')}${attemptBit} ${tags}</div><div class="ldvlProgressRowSub">${esc(bits.join(' · '))}${a.elapsed_text?(' · ⏱ '+esc(a.elapsed_text)):''}${a.exam_mode?' · 🧪 Kiểm tra':''}</div></div><div class="ldvlProgressRowScore">${esc(String(a.score!=null?a.score:''))}/10<small>${esc(String(a.correct||0))}/${esc(String(a.total||0))} · ${esc(String(a.pct||0))}%</small></div></div>`}).join('')}
+async function ldvlStudentProgressLoad(force){if(!studentProgressEnabled()){ldvlStudentProgressRender({attempts:[],groups:[],summary:{},student:{hoten:(USER&&USER.hoten)||'',mahs:(USER&&USER.mahs)||'',lop:(USER&&USER.lop)||'',role_label:(USER&&USER.role_label)||''},complete_pct:STUDENT_PROGRESS_COMPLETE_PCT});return}let panel=document.getElementById('ldvlStudentProgressPanel');if(panel&&!force&&LDVL_PRACTICE_LOG_CACHE){ldvlStudentProgressRender(LDVL_PRACTICE_LOG_CACHE);return}if(LDVL_PRACTICE_LOG_LOADING)return;LDVL_PRACTICE_LOG_LOADING=true;let sumEl=document.getElementById('ldvlProgressSummary');if(sumEl&&!LDVL_PRACTICE_LOG_CACHE)sumEl.innerHTML='<div class="muted" style="grid-column:1/-1">⏳ Đang tải nhật ký rèn luyện…</div>';try{let j=await api('/api/student-practice-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({}),timeoutMs:60000});j=ldvlStudentProgressMergeLocalLog(j);LDVL_PRACTICE_LOG_CACHE=j;ldvlStudentProgressRender(j)}catch(e){let msg=String(e&&e.message||e||'Không tải được');ldvlStudentProgressRender({attempts:[],groups:[],summary:{},complete_pct:STUDENT_PROGRESS_COMPLETE_PCT});let logEl=document.getElementById('ldvlProgressLog');if(logEl)logEl.innerHTML='<div class="ldvlProgressEmpty">⚠ '+esc(msg)+'</div>'}finally{LDVL_PRACTICE_LOG_LOADING=false}}
+window.ldvlStudentProgressLoad=ldvlStudentProgressLoad;
+window.ldvlStudentProgressSyncNav=ldvlStudentProgressSyncNav;
+(function(){let sh=document.getElementById('ldvlStudentHome');if(!sh)return;let obs=new MutationObserver(function(){window.__LDVL_PROGRESS_TAB_OPEN=sh.classList.contains('homeTab-progress')});obs.observe(sh,{attributes:true,attributeFilter:['class']})})();
 function v246LessonCard(mon,khoi,chuong,bai,entries){
-  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let lessonMade=catalogLessonMadeForPractice(entries);let made=String(lessonMade||primary.MaDe||'').replace(/'/g,"\\'");let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" data-made="${escAttr(lessonMade||primary.MaDe||'')}" data-dbt="${escAttr(oneLineText(it.d||''))}" onclick="openStartModal(this.dataset.made,this.dataset.dbt)" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(oneLineText(it.label))}</span>${mini}</span><span class="bookDbtMeta">${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
+  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let lessonMade=catalogLessonMadeForPractice(entries);let made=String(lessonMade||primary.MaDe||'').replace(/'/g,"\\'");let lessonProg=lessonProgressForCard(mon,khoi,chuong,bai,entries);let progTags=progressStatusTags(lessonProg);let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let pp=practiceProgressForSession(lessonMade||primary.MaDe||'',it.d||'');if(pp&&pp.complete)cls+=' isPracticeComplete';else if(pp&&pp.done)cls+=' isPracticeDone';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;if(pp&&pp.complete)title+=' · Hoàn thành '+Math.round(pp.best_pct||0)+'%';else if(pp&&pp.done)title+=' · Đã làm';let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let progMini=(pp&&pp.complete)?'<span class="bookDbtProg bookDbtProgComplete">✓</span>':((pp&&pp.done)?'<span class="bookDbtProg bookDbtProgDone">✓</span>':'');let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" data-made="${escAttr(lessonMade||primary.MaDe||'')}" data-dbt="${escAttr(oneLineText(it.d||''))}" onclick="openStartModal(this.dataset.made,this.dataset.dbt)" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(oneLineText(it.label))}</span>${mini}</span><span class="bookDbtMeta">${progMini}${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
   let orderBtn=(USER&&USER.is_admin&&made&&dbtPairs.length)?`<button type="button" class="bookExamBtn" onclick="openDbtOrderModal('${made}')" title="ADMIN: sắp xếp thứ tự dạng BT">↕ Thứ tự dạng</button>`:'';
   let madeRaw=String(primary.MaDe||'');let shareTools=madeRaw?v246ShareToolsHtml(primary,made):'';
-  return `<div class="bookLessonCard${selected}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${esc(bai||'Chưa rõ bài')}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangCountTags(entries)}</div>${dbtBtns?`<div class="bookDbtRow" id="bookDbtRow_${escAttr(madeRaw)}">${dbtBtns}${dbtItems.length>5?`<div class="bookDbtMoreHint">↕ ${dbtItems.length} dạng — kéo xuống để xem hết (Sheet có đủ)</div>`:''}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
+  let cardCompleteCls=(lessonProg&&lessonProg.complete)?' lessonComplete':'';
+  let cardDoneCls=(lessonProg&&lessonProg.done&&!lessonProg.complete)?' lessonDone':'';
+  return `<div class="bookLessonCard${selected}${cardCompleteCls}${cardDoneCls}" id="shareCard_${escAttr(madeRaw)}" data-bai="${escAttr(bai||'')}" data-chuong="${escAttr(chuong||'')}"><div class="bookLessonTitle">${esc(bai||'Chưa rõ bài')}${progTags?`<span class="bookLessonProg">${progTags}</span>`:''}</div><div class="bookLessonSub">${esc(mon||'')} · Khối ${esc(khoi||'')} · ${esc(chuong||'Chưa rõ chương')}</div><div class="bookLessonTags bookLessonTagsCompact"><span class="bookTag" title="${qs} câu"><b>${qs}</b>c</span>${dbtPairs.length?`<span class="bookTag" title="${dbtPairs.length} dạng bài tập">${dbtPairs.length}dbt</span>`:`<span class="bookTag" title="${entries.length} thẻ đề">${entries.length} thẻ</span>`}${v246LevelTags(entries)}${v246DangCountTags(entries)}</div>${dbtBtns?`<div class="bookDbtRow" id="bookDbtRow_${escAttr(madeRaw)}">${dbtBtns}${dbtItems.length>5?`<div class="bookDbtMoreHint">↕ ${dbtItems.length} dạng — kéo xuống để xem hết (Sheet có đủ)</div>`:''}</div>`:''}<div class="bookExamRow">${allBtn}${orderBtn}</div>${shareTools}</div>`;
 }
 function v246GroupBy(list,fn){let mp=new Map();for(let x of list){let k=fn(x)||'Chưa rõ';if(!mp.has(k))mp.set(k,[]);mp.get(k).push(x)}return mp}
 function catalogCollapseKey(kind,parts){return 'LDVL_CAT_COLLAPSE_V256|'+kind+'|'+(parts||[]).map(x=>normText(x||'')).join('|')}
@@ -29476,7 +30039,7 @@ function v246BookHtml(list){
   let byMon=v246GroupBy(list,x=>x.Mon||'Chưa rõ môn');
   for(let [mon,monList] of byMon){let monQ=monList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);html+=`<section class="bookSubjectBlock"><div class="bookSubjectTitle"><span>${esc(mon)}</span><small>${monList.length} thẻ · ${monQ} câu</small></div>`;let byKhoi=v246GroupBy(monList,x=>{let k=deriveKhoi(x.Lop);if(k)return 'Khối '+k;let lop=String(x.Lop||'').trim();return lop?'Lớp '+lop:'Lớp khác';});
     for(let [khoiLabel,khoiList] of byKhoi){let khoi=khoiLabel.replace(/^(?:Khối|Lớp)\s*/,'');let gradeWord=khoiLabel.startsWith('Lớp')?'lớp':'khối';let kQ=khoiList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let gKey=catalogCollapseKey('grade',[mon,khoiLabel]);let gCollapsed=isCatalogCollapsedKey(gKey);html+=`<div class="bookGradeBlock${gCollapsed?' isCollapsed':''}"><div class="bookGradeHead"><span class="bookHeadTitle">${esc(khoiLabel)}</span><span class="bookHeadTools"><span class="bookMini">${khoiList.length} thẻ · ${kQ} câu</span>${catalogCollapseBtnHtml('grade',gKey,gCollapsed,gradeWord)}</span></div><div class="bookGradeBody">`;let byChuong=v246GroupBy(khoiList,x=>x.Chuong||'Chưa rõ chương');
-      if(!gCollapsed)for(let [chuong,chList] of byChuong){let chQ=chList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let chKey=catalogCollapseKey('chapter',[mon,khoiLabel,chuong]);let chCollapsed=isCatalogCollapsedKey(chKey);let chAdminBtn=(USER&&USER.is_admin)?`<button type="button" class="bookExamBtn bookChapterDbtBtn" data-mon="${escAttr(mon)}" data-khoi="${escAttr(khoi)}" data-chuong="${escAttr(chuong)}" title="ADMIN: gom, gộp, sắp thứ tự dạng BT cả chương">🏷️ Quản lý dạng BT</button>`:'';html+=`<div class="bookChapterBlock${chCollapsed?' isCollapsed':''}"><div class="bookChapterHead"><span class="bookHeadTitle">${esc(chuong)}</span><span class="bookHeadTools"><small>${chList.length} thẻ · ${chQ} câu</small>${catalogCollapseBtnHtml('chapter',chKey,chCollapsed,'chương')}${chAdminBtn}</span></div><div class="bookLessonList">`;let byBai=v246GroupBy(chList,x=>x.BaiHoc||x.De||'Chưa rõ bài');
+      if(!gCollapsed)for(let [chuong,chList] of byChuong){let chQ=chList.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let chKey=catalogCollapseKey('chapter',[mon,khoiLabel,chuong]);let chCollapsed=isCatalogCollapsedKey(chKey);let chProg=chapterProgressForCard(mon,khoi,chuong,chList);let chProgTags=progressStatusTags(chProg);let chCompleteCls=(chProg&&chProg.complete)?' isChapterComplete':'';let chAdminBtn=(USER&&USER.is_admin)?`<button type="button" class="bookExamBtn bookChapterDbtBtn" data-mon="${escAttr(mon)}" data-khoi="${escAttr(khoi)}" data-chuong="${escAttr(chuong)}" title="ADMIN: gom, gộp, sắp thứ tự dạng BT cả chương">🏷️ Quản lý dạng BT</button>`:'';html+=`<div class="bookChapterBlock${chCollapsed?' isCollapsed':''}${chCompleteCls}"><div class="bookChapterHead"><span class="bookHeadTitle">${esc(chuong)}${chProgTags?`<span class="bookChapterProg">${chProgTags}</span>`:''}</span><span class="bookHeadTools"><small>${chList.length} thẻ · ${chQ} câu</small>${catalogCollapseBtnHtml('chapter',chKey,chCollapsed,'chương')}${chAdminBtn}</span></div><div class="bookLessonList">`;let byBai=v246GroupBy(chList,x=>x.BaiHoc||x.De||'Chưa rõ bài');
         if(!chCollapsed)for(let [bai,baiList] of byBai){html+=v246LessonCard(mon,khoi,chuong,bai,baiList)}
         html+='</div></div>';
       }
@@ -38586,6 +39149,38 @@ def api_result_time_stats():
     try:
         st = get_store()
         return jsonify(st.compute_result_time_stats(made=made, mahs=mahs))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/student-practice-log", methods=["GET", "POST"])
+def api_student_practice_log():
+    """Nhật ký rèn luyện — học viên xem lịch sử làm bài của mình."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if is_trial():
+        return jsonify({"error": "Tài khoản dùng thử chưa lưu điểm — nâng VIP để theo dõi quá trình rèn luyện."}), 403
+    body = request.get_json(silent=True) or {}
+    mahs = clean(session.get("mahs", ""))
+    if not mahs:
+        return jsonify({"error": "Chưa đăng nhập."}), 401
+    limit = body.get("limit") or request.args.get("limit") or 400
+    try:
+        limit_i = max(20, min(int(limit), 800))
+    except Exception:
+        limit_i = 400
+    try:
+        st = get_store()
+        log = st.compute_student_practice_log(mahs=mahs, limit_rows=limit_i)
+        u = current_user_public()
+        log["student"] = {
+            "hoten": u.get("hoten", ""),
+            "mahs": u.get("mahs", ""),
+            "lop": u.get("lop", ""),
+            "role_label": u.get("role_label", ""),
+        }
+        return jsonify(log)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
