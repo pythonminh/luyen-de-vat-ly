@@ -137,7 +137,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V440_MOBILE_QUIZ_FIT"
+APP_VERSION = "V448_CR_DS"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -3580,6 +3580,33 @@ def reconcile_deleted_question_ids_with_loaded(loaded_ids) -> None:
         save_deleted_question_ids(keep)
 
 
+
+QUESTIONS_CACHE_FILE = os.path.join(APP_DIR, "data", "questions_cache.json")
+QUESTIONS_CACHE_SCHEMA = 1
+_QUESTIONS_CACHE_LOCK = threading.Lock()
+
+
+def _questions_disk_cache_enabled() -> bool:
+    raw = clean(os.environ.get("QUESTIONS_DISK_CACHE", "1")).lower()
+    return raw not in {"0", "false", "off", "no"}
+
+
+def _question_for_disk_cache(q: Dict[str, Any]) -> Dict[str, Any]:
+    row: Dict[str, Any] = {}
+    src = q or {}
+    for k in QUESTION_FIELDS:
+        v = src.get(k, "")
+        row[k] = "" if v is None else v
+    try:
+        row["_row"] = int(src.get("_row") or 0)
+    except Exception:
+        row["_row"] = 0
+    dang_col = clean(src.get("_DangCol", ""))
+    if dang_col:
+        row["_DangCol"] = dang_col
+    return row
+
+
 EXAM_ASSIGN_FILE = os.path.join(APP_DIR, "data", "exam_assignments.json")
 _EXAM_ASSIGN_LOCK = threading.Lock()
 _EXAM_ASSIGN_CACHE: Dict[str, Dict[str, Any]] = {}
@@ -5569,6 +5596,8 @@ class SheetStore:
         self.questions_loading = False
         self.questions_error = ""
         self.questions_load_started_at = 0.0
+        self.questions_from_cache = False
+        self._cache_save_gen = 0
         self.load_lock = threading.Lock()
         self.add_question_lock = threading.Lock()
         self.duplicate_report: Dict[str, Any] = {}
@@ -5615,8 +5644,106 @@ class SheetStore:
         self.load_users()
         self.users_loaded = True
 
+
+    def try_apply_questions_cache(self) -> bool:
+        """Nạp catalog từ file đĩa — tránh chờ Google Sheet 1–2 phút lúc app ngủ dậy."""
+        if not _questions_disk_cache_enabled():
+            return False
+        if self.questions_loaded and self.questions:
+            return True
+        path = QUESTIONS_CACHE_FILE
+        if not os.path.isfile(path):
+            return False
+        try:
+            with _QUESTIONS_CACHE_LOCK:
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+        except Exception:
+            log_swallow("try_apply_questions_cache:read")
+            return False
+        if not isinstance(raw, dict) or int(raw.get("schema") or 0) != QUESTIONS_CACHE_SCHEMA:
+            return False
+        qs = raw.get("questions")
+        if not isinstance(qs, list) or len(qs) < 8:
+            return False
+        out: List[Dict[str, Any]] = []
+        for item in qs:
+            if not isinstance(item, dict):
+                continue
+            q = _question_for_disk_cache(item)
+            if not clean(q.get("CauHoi")):
+                continue
+            out.append(q)
+        if len(out) < 8:
+            return False
+        self.questions = out
+        self.question_headers = list(raw.get("headers") or QUESTION_FIELDS)
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        lc = raw.get("lesson_catalog")
+        if isinstance(lc, list):
+            self.lesson_catalog_items = [x for x in lc if isinstance(x, dict)]
+            self.lesson_catalog_loaded = True
+        self.apply_deleted_question_tombstones()
+        self.duplicate_report = {}
+        self.rebuild_question_indexes()
+        self.question_source_mode = "CACHE"
+        self.json_source_info = {
+            "cache": True,
+            "file": path,
+            "count_questions": len(self.questions),
+            "saved_at": clean(raw.get("saved_at", "")),
+        }
+        self.questions_from_cache = True
+        self.questions_loaded = True
+        self.questions_error = ""
+        self.loaded_at = clean(raw.get("saved_at", "")) or now_str()
+        log.info("Nạp %s câu từ cache đĩa (bỏ qua chờ Google Sheet).", len(self.questions))
+        return True
+
+    def _save_questions_cache(self) -> None:
+        if not _questions_disk_cache_enabled():
+            return
+        if not self.questions:
+            return
+        payload = {
+            "schema": QUESTIONS_CACHE_SCHEMA,
+            "saved_at": now_str(),
+            "count": len(self.questions),
+            "headers": list(self.question_headers or QUESTION_FIELDS),
+            "questions": [_question_for_disk_cache(q) for q in self.questions],
+            "lesson_catalog": [
+                {k: clean(x.get(k, "")) for k in ("Lop", "Mon", "Chuong", "BaiHoc", "DangBaiTap")}
+                for x in (self.lesson_catalog_items or [])
+                if isinstance(x, dict)
+            ],
+        }
+        try:
+            os.makedirs(os.path.dirname(QUESTIONS_CACHE_FILE), exist_ok=True)
+            tmp = QUESTIONS_CACHE_FILE + ".tmp"
+            with _QUESTIONS_CACHE_LOCK:
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+                os.replace(tmp, QUESTIONS_CACHE_FILE)
+            log.info("Đã ghi cache đĩa %s câu.", payload["count"])
+        except Exception:
+            log_swallow("_save_questions_cache")
+
+    def schedule_questions_cache_save(self) -> None:
+        if not _questions_disk_cache_enabled() or not self.questions:
+            return
+        self._cache_save_gen = int(getattr(self, "_cache_save_gen", 0) or 0) + 1
+        gen = self._cache_save_gen
+
+        def worker():
+            time.sleep(1.6)
+            if gen != getattr(self, "_cache_save_gen", 0):
+                return
+            self._save_questions_cache()
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def ensure_questions_loaded(self, force: bool = False):
-        """Nạp Cau_Hoi + catalog khi thật sự cần. Lần đầu có thể chậm, các lần sau dùng RAM."""
+        """Nạp Cau_Hoi + catalog khi thật sự cần. Cache đĩa trước, Sheet chạy nền."""
         if self.questions_loaded and self.questions and not force:
             self.apply_deleted_question_tombstones()
             return
@@ -5625,22 +5752,34 @@ class SheetStore:
                 self.apply_deleted_question_tombstones()
                 return
             self.questions_error = ""
+            if (not force) and self.try_apply_questions_cache():
+                return
             with ThreadPoolExecutor(max_workers=1) as pool:
                 fut = pool.submit(self.load)
                 try:
                     fut.result(timeout=SHEET_LOAD_TIMEOUT_SEC)
                 except FuturesTimeout:
+                    if self.try_apply_questions_cache():
+                        self.questions_error = (
+                            f"Nạp Google Sheet quá {SHEET_LOAD_TIMEOUT_SEC}s — đang dùng bản cache đĩa."
+                        )
+                        return
                     raise RuntimeError(
                         f"Nạp Google Sheet quá {SHEET_LOAD_TIMEOUT_SEC}s. "
                         "Kiểm tra GOOGLE_SHEET_ID và GOOGLE_CREDENTIALS_JSON trên Render."
                     ) from None
 
     def start_questions_background(self, force: bool = False) -> None:
-        """Khởi động nạp dữ liệu nền để tránh request /api/meta bị timeout trên Render Free."""
-        if self.questions_loaded and self.questions and not force:
+        """Nạp cache đĩa ngay (nếu có), rồi đồng bộ Google Sheet nền."""
+        if self.questions_loaded and self.questions and not force and not self.questions_from_cache:
             return
+        if not self.questions_loaded:
+            try:
+                self.try_apply_questions_cache()
+            except Exception:
+                log_swallow("start_questions_background:cache")
         with self.load_lock:
-            if self.questions_loaded and self.questions and not force:
+            if self.questions_loaded and self.questions and not force and not self.questions_from_cache:
                 return
             if self.questions_loading:
                 return
@@ -5650,9 +5789,13 @@ class SheetStore:
 
         def worker():
             try:
-                self.ensure_questions_loaded(force=force)
+                self.ensure_questions_loaded(force=True)
+                self.questions_from_cache = False
             except Exception as e:
-                self.questions_error = str(e)
+                if self.questions_loaded and self.questions:
+                    self.questions_error = "Đang dùng cache đĩa. Sheet: " + str(e)
+                else:
+                    self.questions_error = str(e)
             finally:
                 self.questions_loading = False
                 self.questions_load_started_at = 0.0
@@ -5660,7 +5803,12 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
-        """Trả về nhanh cho trang chủ. Nếu chưa nạp xong, không bắt trình duyệt chờ Google Sheet."""
+        """Trả catalog ngay nếu có cache đĩa. Sheet đồng bộ nền, không chặn trang chủ."""
+        if not self.questions_loaded:
+            try:
+                self.try_apply_questions_cache()
+            except Exception:
+                log_swallow("meta_light:cache")
         if not self.questions_loaded:
             # Phòng worker treo: sau timeout + 15s thì cho phép khởi động lại nạp nền.
             if self.questions_loading and self.questions_load_started_at:
@@ -5678,7 +5826,8 @@ class SheetStore:
                 "loaded_at": self.loaded_at,
                 "loading": True,
                 "questions_loading": self.questions_loading,
-                "loading_message": "Hệ thống đang khởi động và nạp dữ liệu từ Google Sheet. Nếu dùng Render Free, lần đầu truy cập sau khi app ngủ có thể chờ khoảng 10–40 giây. Trang sẽ tự thử lại, thầy/các em không cần đăng nhập lại.",
+                "questions_from_cache": False,
+                "loading_message": "Lần đầu chưa có cache đĩa — đang nạp Google Sheet (có thể 1–2 phút trên Render Free). Lần sau sẽ mở ngay.",
                 "load_error": self.questions_error,
                 "count_questions": len(self.questions),
                 "count_catalog": len(self.catalog),
@@ -5687,9 +5836,13 @@ class SheetStore:
                 "dangbaitap_suggestions": [],
                 "catalog": [],
             }
+        if self.questions_from_cache:
+            self.start_questions_background(force=False)
         m = self.meta()
         m["loading"] = False
         m["load_error"] = self.questions_error
+        m["questions_from_cache"] = bool(self.questions_from_cache)
+        m["questions_refreshing"] = bool(self.questions_from_cache and self.questions_loading)
         return m
 
     def ensure_ws(self, name: str, headers: List[str]):
@@ -5798,7 +5951,12 @@ class SheetStore:
         self.load_users()
         self.questions_loaded = True
         self.users_loaded = True
+        self.questions_from_cache = False
         self.loaded_at = now_str()
+        try:
+            self._save_questions_cache()
+        except Exception:
+            log_swallow("load:save_questions_cache")
 
     def ensure_question_competency_header(self) -> None:
         """Tự thêm cột NangLucVatLy ở cuối Cau_Hoi; ưu tiên cột V để không dịch H–U."""
@@ -6026,6 +6184,7 @@ class SheetStore:
         if rebuild_catalog:
             self.rebuild_question_indexes()
         self.loaded_at = now_str()
+        self.schedule_questions_cache_save()
 
     def _index_new_questions_fast(self, new_questions: List[Dict[str, Any]]) -> None:
         """Gắn câu mới vào RAM — không rebuild catalog cả ngân hàng (10k câu + đọc sheet DBT)."""
@@ -17587,6 +17746,43 @@ def _quiz_debate_plain(s: str) -> str:
     return s.strip()
 
 
+def _quiz_debate_hook_rules(kind: str) -> str:
+    """Bám sát đề + nêu công thức. kind: debate | chat | script."""
+    k = clean(kind).lower()
+    if k == "chat":
+        return (
+            "BÁM SÁT ĐỀ VÀ NÊU CÔNG THỨC (mỗi lượt, trừ khi em nói hết thắc mắc):\n"
+            "1) Ý em: tóm tắt 1 câu.\n"
+            "2) Kết luận in rõ: ĐÚNG. hoặc SAI. hoặc ĐÚNG MỘT PHẦN.\n"
+            "3) Nhắc đúng 1 cụm chữ hoặc số liệu lấy nguyên từ ĐỀ BÀI / PHƯƠNG ÁN đang hiện.\n"
+            "4) Nêu công thức/định luật/tính chất mà CÂU NÀY dùng, bọc $...$ "
+            "(ví dụ $F=ma$, $U=IR$, $W=\\vec{F}\\cdot\\vec{s}$). Giải thích đại lượng nào đề cho, đại lượng nào cần tìm.\n"
+            "5) Dẫn chứng 2–4 ý: đề / phương án A–D / đáp án / lời giải / công thức vừa nêu. Không giảng bài chương khác, không lấy ví dụ ngoài đề.\n"
+            "Nếu em hỏi lan man: kéo về câu này, vẫn nêu công thức của bài. Không bịa số liệu."
+        )
+    if k == "script":
+        return (
+            "Kịch bản LỚP HỌC KÍCH THÍCH, khoảng 2 phút, 10–16 câu thoại:\n"
+            "- An đọc đề, nhấn số liệu then chốt (không bỏ số, đơn vị, điều kiện).\n"
+            "- Nếu có A/B/C/D: An, Bình, Chi, Dũng lần lượt đọc 4 phương án (đúng chữ nguồn).\n"
+            "- BẮT BUỘC tranh luận: một em chọn bẫy (công thức sai / gần đúng / quên điều kiện), một em phản. Không ai chỉ gật đồng ý.\n"
+            "- Ít nhất 2 lượt NÊU TÊN CÔNG THỨC bằng tiếng Việt nói được "
+            "(vd: «F bằng m a», «U bằng I nhân R», «công bằng lực nhân độ dịch chuyển nhân cosin alpha»). "
+            "Không đọc lệnh LaTeX như frac, vec, mathbb.\n"
+            "- Mỗi ý kiến phải neo vào một số liệu hoặc điều kiện trên đề — không bàn chuyện chung.\n"
+            "- Thầy Minh hỏi Socratic 1 câu (công thức nào khớp dữ kiện đề?), rồi chốt: công thức đúng + thay số đề + đáp án. "
+            "Nếu nguồn mâu thuẫn/sai thì nói thẳng.\n"
+            "- Giọng lớp thật: ngạc nhiên, phản biện, có nhịp; không diễn văn, không tiết lộ đáp án quá sớm."
+        )
+    return (
+        "BÁM SÁT ĐỀ: mọi nhận xét dùng số liệu, ký hiệu, điều kiện trong ĐỀ BÀI và PHƯƠNG ÁN gửi kèm. "
+        "Không giảng bài chung, không lấy ví dụ khác, không bịa hằng số.\n"
+        "CÔNG THỨC: nêu đúng công thức/định luật/tính chất mà CÂU NÀY dùng, bọc $...$. "
+        "Chỉ rõ đại lượng nào đề cho sẵn, đại lượng nào cần tìm. "
+        "Nếu lời giải thiếu/sai công thức: chỉ ra, viết công thức đúng, rồi đối chiếu số liệu đề."
+    )
+
+
 def _quiz_debate_context_prompt(
     context: Dict[str, Any],
     loigiai: str,
@@ -17600,6 +17796,8 @@ def _quiz_debate_context_prompt(
     dang = clean(ctx.get("Dang", "")) or clean(effective_dang(ctx))
     mon = clean(ctx.get("Mon", ""))
     lop = clean(ctx.get("Lop", ""))
+    chuong = clean(ctx.get("Chuong", ""))
+    baihoc = clean(ctx.get("BaiHoc", ""))
     dapan = clean(ctx.get("DapAn", ""))[:240]
     opts = []
     for L in "ABCD":
@@ -17611,7 +17809,8 @@ def _quiz_debate_context_prompt(
         sys_prompt = (
             "Bạn là trợ lý AI của Thầy Minh Vật Lý, đang nói chuyện với học sinh. "
             "Mở đầu đúng 1 câu: «Xin chào em. Mình là trợ lý AI của Thầy Minh Vật Lý.» "
-            "Phản biện LỜI GIẢI đã có. Tiếng Việt, rõ từng ý, sư phạm. Có thể dùng $...$ cho công thức. "
+            "Phản biện LỜI GIẢI đã có. Tiếng Việt, rõ từng ý, sư phạm. "
+            "Bám sát đề đang gửi: nêu công thức $...$ của đúng bài này, nhận xét theo số liệu/điều kiện trên đề. "
             "Mỗi công thức chỉ viết đúng một lần trong $...$ (MathJax), không lặp lại dạng chữ ngay sau. "
             "Không markdown heading, không ```. "
             "BẮT BUỘC phân tích lần lượt: Ý A là … / Ý B là … / Ý C là … / Ý D là … "
@@ -17621,8 +17820,9 @@ def _quiz_debate_context_prompt(
     else:
         sys_prompt = (
             f"Bạn là {role}, giáo viên THPT Việt Nam. "
-            "Phản biện LỜI GIẢI đã có. Tiếng Việt, rõ từng ý. Có thể dùng $...$ cho công thức. "
-            "Mỗi công thức chỉ viết ĐÚNG MỘT LẦN, bọc $...$ để MathJax hiện (ví dụ $1+2=3$, $\\mathbb{R}$). "
+            "Phản biện LỜI GIẢI đã có. Tiếng Việt, rõ từng ý. "
+            "Bám sát đề đang gửi: nêu công thức $...$ của đúng bài này, nhận xét theo số liệu/điều kiện trên đề. "
+            "Mỗi công thức chỉ viết ĐÚNG MỘT LẦN, bọc $...$ để MathJax hiện (ví dụ $F=ma$, $\\mathbb{R}$). "
             "Không viết lại dạng chữ ngay sau. Không dùng \\[ \\] hay \\( \\). "
             "Không markdown heading, không ```. "
             "BẮT BUỘC phân tích lần lượt: Ý A là … / Ý B là … / Ý C là … / Ý D là … "
@@ -17630,8 +17830,9 @@ def _quiz_debate_context_prompt(
         )
     lines = [
         f"Môn: {mon or '?'} · Lớp: {lop or '?'} · Dạng: {dang or '?'}",
+        f"Chương: {chuong or '?'} · Bài: {baihoc or '?'}",
         "",
-        "ĐỀ BÀI:",
+        "ĐỀ BÀI (bám sát từng số liệu/điều kiện dưới đây):",
         cauhoi or "(trống)",
     ]
     if opts:
@@ -17657,7 +17858,8 @@ def _quiz_debate_context_prompt(
             [
                 "",
                 abcd_rules or "Phân tích lời giải: đúng/sai chỗ nào, bước thiếu, cách trình bày.",
-                "Sau 4 ý (nếu có), thêm 1–3 câu nhận xét lời giải Sheet: thiếu bước / đã đủ / cần chặt hơn.",
+                _quiz_debate_hook_rules("debate"),
+                "Sau 4 ý (nếu có), thêm 1–3 câu nhận xét lời giải Sheet: thiếu bước / đã đủ / cần chặt hơn — luôn gắn số liệu đề.",
             ]
         )
     return sys_prompt, "\n".join(lines)
@@ -17670,6 +17872,8 @@ def _quiz_source_block(context: Dict[str, Any], loigiai: str) -> str:
     dang = clean(ctx.get("Dang", "")) or clean(effective_dang(ctx))
     mon = clean(ctx.get("Mon", ""))
     lop = clean(ctx.get("Lop", ""))
+    chuong = clean(ctx.get("Chuong", ""))
+    baihoc = clean(ctx.get("BaiHoc", ""))
     dapan = clean(ctx.get("DapAn", ""))[:240]
     opts = []
     for L in "ABCD":
@@ -17679,6 +17883,7 @@ def _quiz_source_block(context: Dict[str, Any], loigiai: str) -> str:
     lines = [
         "DỮ LIỆU NGUỒN — KHÔNG ĐƯỢC ÂM THẦM SỬA",
         f"Môn: {mon or '?'} · Lớp: {lop or '?'} · Dạng: {dang or '?'}",
+        f"Chương: {chuong or '?'} · Bài: {baihoc or '?'}",
         f"ID: {clean(ctx.get('ID', '')) or 'không có'}",
         "",
         "ĐỀ:",
@@ -17695,28 +17900,50 @@ def _quiz_source_block(context: Dict[str, Any], loigiai: str) -> str:
 
 
 def _quiz_local_class_script(context: Dict[str, Any], loigiai: str, analysis: str = "") -> str:
-    """Kịch bản mẫu không API — An/Bình/Chi/Dũng + Thầy Minh."""
+    """Kịch bản mẫu không API — An/Bình/Chi/Dũng + Thầy Minh, có tranh luận."""
     ctx = dict(context or {})
-    q = clean(ctx.get("CauHoi", ""))[:400] or "Đề đang trống."
+    q = clean(ctx.get("CauHoi", ""))[:420] or "Đề đang trống."
+    dang = clean(ctx.get("Dang", "")) or clean(effective_dang(ctx))
+    chuong = clean(ctx.get("Chuong", ""))
     names = ["An", "Bình", "Chi", "Dũng"]
-    lines = [f"An: {q}"]
-    has_opt = False
-    for i, L in enumerate("ABCD"):
+    opts = []
+    for L in "ABCD":
         stmt = clean(ctx.get(L, ""))
         if stmt:
-            has_opt = True
-            lines.append(f"{names[i]}: Phương án {L}. {stmt[:280]}")
-    lines.append("Bình: Mình chưa chọn ngay. Trước hết cần nhận dạng dữ kiện và quan hệ chính của bài.")
-    lines.append("Chi: Đồng ý. Ta nên kiểm tra công thức hoặc tính chất trước khi kết luận.")
+            opts.append((L, stmt[:280]))
+    lines = [
+        f"An: Đề này cho: {q}",
+        "Bình: Khoan chọn vội. Dễ bị bẫy nếu áp sai công thức, không khớp số liệu đề.",
+    ]
+    if opts:
+        L0, s0 = opts[0]
+        lines.append(f"{names[0]}: Mình nghiêng {L0}: {s0}")
+        if len(opts) > 1:
+            L1, s1 = opts[1]
+            lines.append(f"{names[1]}: Không đồng ý ngay. {L1} cũng nghe có lý: {s1}")
+        if len(opts) > 2:
+            L2, s2 = opts[2]
+            lines.append(
+                f"{names[2]}: Hai hướng đó xung đột. {L2}: {s2} — đề đang hỏi gì, công thức nào mới khớp dữ kiện?"
+            )
+        if len(opts) > 3:
+            L3, s3 = opts[3]
+            lines.append(f"{names[3]}: Còn {L3}: {s3}. Có thể là nhiễu nếu quên điều kiện trên đề.")
+    else:
+        lines.append("Chi: Tách dữ kiện đề: cái nào cho sẵn, cái nào cần tìm.")
+        lines.append("Dũng: Rồi mới nêu công thức, thay đúng số trên đề.")
+    topic = dang or chuong or "bài này"
+    lines.append(f"Chi: Dạng {topic} thì công thức xương sống là gì? Đừng nhớ máy móc.")
     if clean(analysis):
-        lines.append("Dũng: Phần phản biện AI vừa nêu điểm cần kiểm chứng — mình nghe Thầy chốt.")
+        lines.append("Dũng: Phản biện AI vừa chỉ chỗ cần kiểm — nghe Thầy chốt công thức rồi đối chiếu đề.")
     elif clean(loigiai):
-        lg = clean(loigiai)[:320]
-        lines.append(f"Thầy Minh: Theo lời giải nguồn, {lg}")
+        lg = clean(loigiai)[:280]
+        lines.append(f"Dũng: Lời giải nguồn viết: {lg}")
     da = clean(ctx.get("DapAn", ""))[:120]
     lines.append(
-        f"Thầy Minh: Kết luận theo dữ liệu nguồn là {da or 'xem lại đáp án Sheet'}. "
-        "Nếu nguồn có sai sót thì cần sửa sau khi đã kiểm chứng. Kịch bản này chỉ draft máy, chưa ghi Sheet."
+        "Thầy Minh: Tranh luận tốt. Bám sát đề, nêu đúng công thức của bài, thay đúng số liệu rồi mới kết luận. "
+        f"Theo nguồn, đáp án là {da or 'cần đối chiếu lại Sheet'}. "
+        "Nếu nguồn lệch đề thì nói thẳng. Đây là draft máy, chưa ghi Sheet."
     )
     return "\n".join(lines)
 
@@ -17738,21 +17965,16 @@ def ai_quiz_class_script(
         return {"text": _quiz_local_class_script(context, loigiai, analysis), "provider": "LOCAL"}
     source = _quiz_source_block(context, loigiai)
     prompt = (
-        "Bạn là biên tập viên kịch bản giảng bài THPT bằng tiếng Việt.\n\n"
+        "Bạn là biên tập viên kịch bản giảng bài THPT bằng tiếng Việt, giọng lớp thật, có tranh luận.\n\n"
         f"{source}\n\n"
         f"PHÂN TÍCH/PHẢN BIỆN ĐÃ CÓ:\n{clean(analysis)[:3500] or '[không có]'}\n\n"
-        "Hãy viết MỘT kịch bản đối thoại khoảng 2 phút:\n"
-        "- An đọc đề.\n"
-        "- Nếu có A/B/C/D: An, Bình, Chi, Dũng lần lượt đọc 4 phương án.\n"
-        "- Sau đó học sinh thảo luận ngắn, có phản biện thật, không chỉ đồng ý nhau.\n"
-        "- Không tiết lộ đáp án quá sớm.\n"
-        "- Thầy Minh chốt sau cùng dựa trên lập luận đúng.\n"
-        "- Không đọc tên lệnh LaTeX.\n"
-        "- Công thức/vectơ phải diễn đạt tự nhiên bằng tiếng Việt.\n"
-        "- Nếu nguồn có mâu thuẫn/sai được phát hiện trong phần phân tích, giáo viên phải nói rõ.\n"
+        f"{_quiz_debate_hook_rules('script')}\n"
         "Chỉ trả về kịch bản với nhãn An:, Bình:, Chi:, Dũng:, Thầy Minh:. Không giải thích ngoài kịch bản."
     )
-    sys_p = "Chỉ trả kịch bản thoại tiếng Việt. Không markdown, không ```."
+    sys_p = (
+        "Chỉ trả kịch bản thoại tiếng Việt, kích thích, bám sát đề. "
+        "Học sinh phải nêu công thức bằng lời. Không markdown, không ```."
+    )
     cfg = ai_runtime_config()
     last = ""
     if prov == "ANTHROPIC" and is_admin():
@@ -17763,7 +17985,7 @@ def ai_quiz_class_script(
         )
         for api_key in ant_keys:
             txt, finish, err = _anthropic_chat_call(
-                api_key, model_anthropic, sys_p, prompt, 1600, 0.35, timeout=40
+                api_key, model_anthropic, sys_p, prompt, 1800, 0.48, timeout=40
             )
             if txt:
                 return {"text": _quiz_debate_plain(txt), "provider": "ANTHROPIC"}
@@ -17777,12 +17999,34 @@ def ai_quiz_class_script(
     for api_key in gemini_keys:
         for gmodel in models:
             txt, finish, err = _gemini_hint_call(
-                api_key, gmodel, sys_p, prompt, 1600, 0.35, timeout=40
+                api_key, gmodel, sys_p, prompt, 1800, 0.48, timeout=40
             )
             if txt:
                 return {"text": _quiz_debate_plain(txt), "provider": "GEMINI"}
             last = err or finish or last
     return {"text": _quiz_local_class_script(context, loigiai, analysis), "provider": "LOCAL", "warning": last}
+
+
+
+def _quiz_debate_question_from_request(data: Dict[str, Any], idx: int) -> Dict[str, Any]:
+    """Lấy câu đang mở từ phiên RAM; nếu hết phiên thì dùng question gọn từ client (không cần cả đề)."""
+    sid = clean((data or {}).get("sid"))
+    restore = quiz_restore_payload_from_body(data or {})
+    body_q = (data or {}).get("question") if isinstance((data or {}).get("question"), dict) else None
+    sess_err = None
+    try:
+        ses = get_store().check_quiz_session(sid, restore)
+        qs = ses.get("questions") or []
+        if 0 <= idx < len(qs) and qs[idx]:
+            return dict(qs[idx])
+        sess_err = RuntimeError("Phiên làm bài không khớp câu đang mở.")
+    except Exception as e:
+        sess_err = e
+    if body_q and clean(body_q.get("CauHoi", "")):
+        return dict(body_q)
+    if sess_err:
+        raise sess_err
+    raise RuntimeError("Chưa có đề bài.")
 
 
 def ai_quiz_debate_loigiai(
@@ -17791,8 +18035,9 @@ def ai_quiz_debate_loigiai(
     *,
     extra_anthropic_key: str = "",
     extra_gemini_key: str = "",
+    force_provider: str = "",
 ) -> Dict[str, str]:
-    """Gemini phân tích độc lập → Claude phản biện (ADMIN) → Gemini tổng hợp. Không ghi Sheet."""
+    """1 bước phản biện. VIP: Gemini. ADMIN: Claude (ENV) hoặc Gemini. Không ghi Sheet."""
     loigiai = clean(loigiai)
     if not loigiai:
         raise RuntimeError("Chưa có lời giải để phản biện.")
@@ -17821,7 +18066,7 @@ def ai_quiz_debate_loigiai(
         for api_key in gemini_keys:
             for gmodel in models:
                 txt, finish, err = _gemini_hint_call(
-                    api_key, gmodel, sys_prompt, user_prompt, 1400, 0.22, timeout=40
+                    api_key, gmodel, sys_prompt, user_prompt, 1100, 0.22, timeout=22
                 )
                 if txt:
                     return _quiz_debate_plain(txt), ""
@@ -17832,7 +18077,7 @@ def ai_quiz_debate_loigiai(
         last = ""
         for api_key in ant_keys:
             txt, finish, err = _anthropic_chat_call(
-                api_key, model_anthropic, sys_prompt, user_prompt, 1400, 0.22, timeout=40
+                api_key, model_anthropic, sys_prompt, user_prompt, 1100, 0.22, timeout=22
             )
             if txt:
                 return _quiz_debate_plain(txt), ""
@@ -17843,75 +18088,50 @@ def ai_quiz_debate_loigiai(
         last = ""
         for api_key in openai_keys:
             txt, finish, err = _openai_chat_call(
-                api_key, model_openai, sys_prompt, user_prompt, 1400, 0.22, timeout=40
+                api_key, model_openai, sys_prompt, user_prompt, 1100, 0.22, timeout=22
             )
             if txt:
                 return _quiz_debate_plain(txt), ""
             last = err or finish or last
         return "", last or "GPT không phản hồi."
 
-    source = _quiz_source_block(context, loigiai)
-    abcd_rules = _quiz_abcd_analysis_rules(context, spoken=False)
-    sys_g = (
-        "Bạn là giáo viên Vật lý/Toán THPT, ưu tiên tính chính xác và giải thích cho học sinh. "
-        "Tiếng Việt. Có thể dùng $...$ cho công thức, mỗi công thức một lần. Không markdown heading, không ```."
-    )
-    user_g1 = (
-        f"{source}\n\nYÊU CẦU:\n"
-        "Phân tích độc lập, kiểm chứng toán/vật lý. Nêu: (1) nhận dạng dạng bài; "
-        "(2) dữ kiện và điều cần tìm; (3) lập luận/công thức; (4) kiểm tra đáp án; "
-        "(5) phát hiện nếu nguồn mâu thuẫn hoặc sai; (6) cách giải thích cho học sinh THPT. "
-        "Không tự sửa nguồn mà không nói rõ.\n"
-        f"{abcd_rules or ''}"
-    )
-    gemini_txt, gemini_err = call_gemini(sys_g, user_g1)
-    if not gemini_txt and openai_keys and is_admin():
-        gemini_txt, gemini_err = call_gpt(sys_g, user_g1)
-        if gemini_txt:
-            gemini_err = ""
+    want = clean(force_provider or "").upper()
+    use_claude = bool(ant_keys and is_admin() and want in {"", "ANTHROPIC", "CLAUDE"})
+    if is_admin() and want in {"GEMINI", "OPENAI", "GPT"}:
+        use_claude = False
 
     claude_txt, claude_err = "", ""
-    if ant_keys and gemini_txt:
-        sys_c = (
-            "Bạn là Claude, giáo viên THPT. Nhiệm vụ: phản biện phân tích của Gemini trên dữ liệu nguồn. "
-            "Tiếng Việt. $...$ cho công thức. Không markdown heading, không ```."
-        )
-        user_c = (
-            f"{source}\n\nPHÂN TÍCH CỦA GEMINI:\n{gemini_txt[:3500]}\n\n"
-            "NHIỆM VỤ PHẢN BIỆN:\nKiểm tra từng kết luận quan trọng của Gemini. "
-            "Chỉ ra điểm đúng, điểm thiếu, điểm sai nếu có. Tự kiểm chứng đáp án và lời giải nguồn. "
-            "Kết thúc bằng đề xuất kết luận tốt hơn."
-        )
+    gemini_txt, gemini_err = "", ""
+
+    if use_claude:
+        sys_c, user_c = _quiz_debate_context_prompt(context, loigiai, role="Claude")
         claude_txt, claude_err = call_claude(sys_c, user_c)
-    elif not ant_keys:
-        claude_err = (
-            "Chưa có ANTHROPIC_API_KEY trên server."
-            if is_admin()
-            else "Cột Claude chỉ dành ADMIN (key ENV)."
-        )
+        if claude_txt:
+            gemini_txt = claude_txt
+        elif gemini_keys:
+            sys_g, user_g = _quiz_debate_context_prompt(context, loigiai, role="gemini")
+            gemini_txt, gemini_err = call_gemini(sys_g, user_g)
+            if not gemini_txt and openai_keys:
+                gemini_txt, gemini_err = call_gpt(sys_g, user_g)
+                if gemini_txt:
+                    gemini_err = ""
+    else:
+        sys_g, user_g = _quiz_debate_context_prompt(context, loigiai, role="gemini")
+        gemini_txt, gemini_err = call_gemini(sys_g, user_g)
+        if not gemini_txt and openai_keys and is_admin():
+            gemini_txt, gemini_err = call_gpt(sys_g, user_g)
+            if gemini_txt:
+                gemini_err = ""
+        if not gemini_txt and ant_keys and is_admin():
+            sys_c, user_c = _quiz_debate_context_prompt(context, loigiai, role="Claude")
+            claude_txt, claude_err = call_claude(sys_c, user_c)
+            if claude_txt:
+                gemini_txt = claude_txt
 
-    final_txt = ""
-    if gemini_txt and claude_txt:
-        user_g2 = (
-            f"{source}\n\nPHÂN TÍCH BAN ĐẦU CỦA GEMINI:\n{gemini_txt[:2800]}\n\n"
-            f"PHẢN BIỆN CỦA CLAUDE:\n{claude_txt[:2800]}\n\n"
-            "NHIỆM VỤ CUỐI:\nTổng hợp kết luận cuối cùng. Ưu tiên lập luận kiểm chứng được. "
-            "Nếu Gemini và Claude bất đồng, nêu rõ điểm bất đồng và lý do chọn kết luận. "
-            "Đưa ra phương pháp giải thích ngắn gọn cho học sinh. Không âm thầm sửa nguồn."
-        )
-        final_txt, ferr = call_gemini(sys_g, user_g2)
-        if not final_txt and openai_keys and is_admin():
-            final_txt, ferr = call_gpt(sys_g, user_g2)
-        if not final_txt:
-            final_txt = gemini_txt
-            if ferr:
-                gemini_err = gemini_err or ferr
-    elif gemini_txt:
-        final_txt = gemini_txt
-
-    if not gemini_txt and not claude_txt:
+    final_txt = gemini_txt or claude_txt
+    if not final_txt:
         bits = [x for x in (claude_err, gemini_err) if x]
-        raise RuntimeError("Không phản biện được: " + " · ".join(bits or ["cả hai AI im lặng."]))
+        raise RuntimeError("Không phản biện được: " + " · ".join(bits or ["AI im lặng."]))
 
     return {
         "claude": claude_txt,
@@ -17921,7 +18141,7 @@ def ai_quiz_debate_loigiai(
         "gemini_reply": "",
         "claude_error": claude_err if not claude_txt else "",
         "gemini_error": gemini_err if not gemini_txt else "",
-        "mode": "studio3",
+        "mode": "one",
     }
 
 
@@ -17969,23 +18189,18 @@ def ai_quiz_debate_followup(
     )
     heard = "Học sinh vừa NÓI (giọng nói)" if spoken else "Học sinh vừa nêu ý kiến"
     sys_prompt = (
-        "Bạn là trợ lý AI của Thầy Minh Vật Lý. Nhiệm vụ: NGHE / đọc ý kiến học sinh rồi PHẢN BIỆN. "
-        "Tiếng Việt, sư phạm, rõ ràng. Có thể dùng $...$ cho công thức. Không markdown heading, không ```. "
-        "Không bịa số liệu, không bịa định luật. "
-        "BẮT BUỘC trả lời theo khung: "
-        "1) Ý em: tóm tắt 1 câu. "
-        "2) Kết luận in rõ: ĐÚNG. hoặc SAI. hoặc ĐÚNG MỘT PHẦN. "
-        "3) Dẫn chứng (2–4 ý). Mỗi ý phải gắn nguồn cụ thể: đề bài / phương án A–D trên màn hình / đáp án / lời giải / định luật–công thức–tính chất. "
-        "Nếu SAI: chỉ chỗ sai, nêu cách nghĩ đúng. "
-        "Nếu thiếu dữ kiện: nói rõ còn thiếu gì, không đoán bừa. "
-        "Kết thúc: «Em còn thắc mắc gì không? Có thể nói tiếp vào mic.» "
-        "Nếu học sinh nói không còn thắc mắc: khen ngắn, KHÔNG hỏi thêm."
+        "Bạn là trợ lý AI của Thầy Minh Vật Lý. Nhiệm vụ: NGHE / đọc ý kiến học sinh rồi PHẢN BIỆN sát đề đang mở. "
+        "Tiếng Việt, sư phạm, rõ ràng. Không markdown heading, không ```. "
+        "Không bịa số liệu, không bịa định luật, không giảng bài ngoài câu này. "
+        + _quiz_debate_hook_rules("chat")
+        + " Kết thúc: «Em còn thắc mắc gì không? Có thể nói tiếp vào mic.» "
+        "Nếu học sinh nói không còn thắc mắc: khen ngắn, KHÔNG hỏi thêm, không nhồi công thức."
     )
     lines = [
         f"Môn: {mon or 'Vật lý'} · Lớp: {lop or '?'} · Dạng: {dang or '?'}",
         f"Chương: {chuong or '?'} · Bài: {baihoc or '?'}",
         "",
-        "ĐỀ BÀI:",
+        "ĐỀ BÀI (bám sát từng số liệu/điều kiện):",
         cauhoi or "(trống)",
     ]
     if opts:
@@ -18008,14 +18223,14 @@ def ai_quiz_debate_followup(
             hist_lines.append(f"{role}: {text}")
     if hist_lines:
         lines.extend(["", "TRAO ĐỔI TRƯỚC:", *hist_lines])
-    lines.extend(["", f"{heard}:", msg, "", "Hãy phán ĐÚNG/SAI ý kiến trên và nêu dẫn chứng."])
+    lines.extend(["", f"{heard}:", msg, "", "Hãy phán ĐÚNG/SAI ý kiến trên, nêu công thức $...$ của bài, và bám sát đề đang gửi."])
     user_prompt = "\n".join(lines)
     last = ""
     models = [model_gemini] + [m for m in GEMINI_HINT_MODEL_FALLBACKS if m != model_gemini]
     for api_key in gemini_keys:
         for gmodel in models:
             txt, finish, err = _gemini_hint_call(
-                api_key, gmodel, sys_prompt, user_prompt, 900, 0.32, timeout=24
+                api_key, gmodel, sys_prompt, user_prompt, 1100, 0.28, timeout=24
             )
             if txt:
                 return {"text": _quiz_debate_plain(txt), "provider": "GEMINI"}
@@ -19627,7 +19842,7 @@ html[data-theme="dark"] .quizDebateKeyBox{background:#083344;border-color:#22d3e
 .quizDebateHead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:800;color:#155e75;margin-bottom:8px}
 .quizDebateGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quizDebatePanel.oneAi .quizDebateGrid{grid-template-columns:1fr}
-.quizDebatePanel.oneAi .quizDebateCard.claude{display:none}
+.quizDebatePanel.oneAi .quizDebateCard.claude,.quizDebatePanel.oneAi .quizDebateCard.final{display:none!important}
 .quizDebateCard{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--surface);min-height:80px}
 .quizDebateCard h4{margin:0 0 6px;font-size:13px}
 .quizDebateCard.claude{border-color:#c4b5fd;background:#f5f3ff}
@@ -19672,6 +19887,141 @@ html[data-theme="dark"] .quizScriptBox{background:#431407;border-color:#fb923c}
   mjx-container{max-width:100%!important}
   .quizDebateBody{max-height:min(26vh,200px)}
   .quizScriptBox textarea{min-height:72px}
+}
+@media(max-width:760px){.quizDebateGrid{grid-template-columns:1fr}}
+.quizClassRoom{position:fixed;inset:0;z-index:2800;display:flex;flex-direction:column;background:#eef2f7;color:#172033;height:100%;height:100dvh;max-height:100dvh;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.quizClassRoom.hide{display:none!important}
+body.quiz-classroom-open{overflow:hidden}
+.quizCrBar{min-height:52px;flex:0 0 auto;background:#fff;border-bottom:1px solid #dce3ed;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px}
+.quizCrBrand{font-weight:800;font-size:17px;line-height:1.2}
+.quizCrSub{font-size:12px;color:#718096;margin-top:2px}
+.quizCrBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.quizCrBtn{border:1px solid #ccd6e3;background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700;font-size:13px;min-height:40px}
+.quizCrBtn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+.quizCrBtn.ghost{background:#f8fafc}
+.quizCrTabs{display:none;flex:0 0 auto;gap:6px;padding:6px 8px;background:#fff;border-bottom:1px solid #e3e8ef}
+.quizCrTab{flex:1;min-height:40px;border:1px solid #ccd6e3;background:#f8fafc;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer}
+.quizCrTab.on{background:#2563eb;color:#fff;border-color:#2563eb}
+.quizCrTab:disabled{opacity:.42;cursor:not-allowed}
+.quizCrLgPane{display:none;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px;background:#f8fafc;min-height:0}
+.quizCrMain{flex:1;display:grid;grid-template-columns:40% 60%;min-height:0}
+.quizCrProblem{background:#f8fafc;padding:18px 20px;overflow:auto;-webkit-overflow-scrolling:touch;border-right:1px solid #dce3ed;min-width:0}
+.quizCrCard{background:#fff;border:1px solid #dce3ed;border-radius:16px;padding:18px;box-shadow:0 5px 18px #1720330b}
+.quizCrCard h2{margin:0 0 12px;font-size:18px}
+.quizCrStem{font-size:15.5px;line-height:1.65;overflow-wrap:anywhere;word-break:break-word}
+.quizCrStem mjx-container,.quizCrBubble mjx-container,.quizCrSol mjx-container,.quizCrAnswer mjx-container{max-width:100%!important;overflow-x:auto}
+.quizCrFig{margin:12px 0}
+.quizCrFig .qimg{max-width:100%;height:auto;max-height:min(42vh,280px);object-fit:contain;border-radius:10px}
+.quizCrAnswers{display:grid;gap:8px;margin-top:14px}
+.quizCrAnswer{padding:10px 12px;border:1px solid #d8e0ea;border-radius:10px;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere}
+.quizCrAnswer.correct{border-color:#22a06b;background:#ecfdf5}
+.quizCrAnswer.picked{box-shadow:inset 0 0 0 2px #2563eb}
+.quizCrAnswer.wrong{border-color:#ef4444;background:#fef2f2}
+.quizCrAnswer.nonepick{border-color:#fdba74;background:#fff7ed}
+.quizCrDsMeta{margin-top:8px;font-size:13px;font-weight:700;line-height:1.45;padding-top:8px;border-top:1px dashed #dbe3ee}
+.quizCrDsRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.quizCrDsChip{display:inline-flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;border:1px solid #dce3ed;font-size:13px;min-width:118px;line-height:1.35}
+.quizCrDsChip.ok{background:#ecfdf5;border-color:#86efac}
+.quizCrDsChip.bad{background:#fef2f2;border-color:#fecaca}
+.quizCrDsChip.none{background:#fff7ed;border-color:#fdba74}
+.quizCrDsChip small{font-weight:650;opacity:.9;font-size:12px}
+.quizCrWait{margin-top:14px;padding:12px 14px;border:1px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1e3a8a;font-size:13.5px;line-height:1.5}
+.quizCrVerdict{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid #dce3ed;font-size:14px;line-height:1.5}
+.quizCrVerdict.ok{background:linear-gradient(180deg,#ecfdf5,#fff);border-color:#86efac}
+.quizCrVerdict.bad{background:#fef2f2;border-color:#fecaca}
+.quizCrVerdict.none{background:#fff7ed;border-color:#fdba74}
+.quizCrBadge{display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#fef3c7,#fff7ed);border:1px solid #fbbf24}
+.quizCrBadgeIcon{font-size:34px;line-height:1}
+.quizCrSol{margin-top:12px;padding-top:12px;border-top:1px dashed #dbe3ee}
+.quizCrSol h3{margin:0 0 8px;font-size:16px}
+.quizCrRevealChat{align-self:stretch;max-width:100%;margin-top:4px}
+.quizCrOpenLg{display:none}
+.quizCrAnswer b{font-weight:800}
+.quizCrChat{background:#fff;display:flex;flex-direction:column;min-width:0;min-height:0}
+.quizCrHead{padding:12px 16px;border-bottom:1px solid #e3e8ef;display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto}
+.quizCrStatus{font-size:12px;color:#64748b}
+.quizCrMsgs{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.quizCrMsg{display:flex;gap:10px;max-width:88%;transition:transform .18s ease}
+.quizCrMsg.active{transform:scale(1.015)}
+.quizCrMsg.right{align-self:flex-end;flex-direction:row-reverse}
+.quizCrAv{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#e8eef7;flex:none;font-weight:800;font-size:16px}
+.quizCrMsg.teacher .quizCrAv{background:#fff0d9}
+.quizCrMsg.user .quizCrAv{background:#dbeafe}
+.quizCrBubble{background:#f1f5f9;border-radius:15px;padding:10px 13px;line-height:1.55;border:2px solid transparent;overflow-wrap:anywhere;font-size:14.5px}
+.quizCrMsg.teacher .quizCrBubble{background:#fff7e8}
+.quizCrMsg.user .quizCrBubble{background:#eff6ff}
+.quizCrMsg.active .quizCrBubble{border-color:#2563eb;box-shadow:0 5px 18px #2563eb22}
+.quizCrName{font-size:12px;font-weight:800;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.quizCrPlay{border:0;background:transparent;cursor:pointer;font-size:14px}
+.quizCrSplit{align-self:center;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.04em;margin:4px 0}
+.quizCrAiNote{max-width:100%;align-self:stretch}
+.quizCrAiNote .quizCrBubble{background:#eff6ff;max-height:28vh;overflow:auto}
+.quizCrFoot{border-top:1px solid #e3e8ef;padding:10px 14px;background:#fbfcfe;flex:0 0 auto}
+.quizCrNow{font-size:12px;color:#64748b;margin:0 0 6px}
+.quizCrProg{height:5px;background:#e7edf5;border-radius:9px;overflow:hidden}
+.quizCrBarFill{height:100%;width:0;background:#2563eb;transition:.2s}
+.quizCrAskRow{display:flex;gap:8px;align-items:flex-end;margin-top:10px}
+.quizCrAskRow textarea{flex:1;min-width:0;min-height:42px;border-radius:10px;border:1px solid #ccd6e3;padding:8px 10px;font-size:14px;resize:vertical}
+.quizCrTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px}
+html[data-theme="dark"] .quizClassRoom{background:#0f172a;color:#e5eef7}
+html[data-theme="dark"] .quizCrBar,html[data-theme="dark"] .quizCrChat,html[data-theme="dark"] .quizCrCard{background:#111827;border-color:#1f2937}
+html[data-theme="dark"] .quizCrProblem{background:#0b1220;border-color:#1f2937}
+html[data-theme="dark"] .quizCrHead,html[data-theme="dark"] .quizCrFoot{background:#0b1220;border-color:#1f2937}
+html[data-theme="dark"] .quizCrBubble{background:#1e293b}
+html[data-theme="dark"] .quizCrMsg.teacher .quizCrBubble{background:#3b2a12}
+html[data-theme="dark"] .quizCrMsg.user .quizCrBubble{background:#1e3a5f}
+html[data-theme="dark"] .quizCrAnswer{border-color:#334155}
+html[data-theme="dark"] .quizCrAnswer.nonepick{background:#431407;border-color:#fb923c}
+html[data-theme="dark"] .quizCrDsChip{border-color:#334155}
+html[data-theme="dark"] .quizCrDsChip.ok{background:#052e16;border-color:#16a34a}
+html[data-theme="dark"] .quizCrDsChip.bad{background:#450a0a;border-color:#ef4444}
+html[data-theme="dark"] .quizCrDsChip.none{background:#431407;border-color:#fb923c}
+html[data-theme="dark"] .quizCrWait{background:#1e3a5f;border-color:#3b82f6;color:#bfdbfe}
+html[data-theme="dark"] .quizCrVerdict.ok{background:#052e16;border-color:#16a34a}
+html[data-theme="dark"] .quizCrVerdict.bad{background:#450a0a;border-color:#ef4444}
+html[data-theme="dark"] .quizCrVerdict.none{background:#431407;border-color:#fb923c}
+html[data-theme="dark"] .quizCrBadge{background:#422006;border-color:#f59e0b}
+html[data-theme="dark"] .quizCrBtn{background:#1e293b;color:#e5eef7;border-color:#334155}
+html[data-theme="dark"] .quizCrTabs{background:#111827;border-color:#1f2937}
+html[data-theme="dark"] .quizCrTab{background:#1e293b;color:#e5eef7;border-color:#334155}
+html[data-theme="dark"] .quizCrTab.on{background:#2563eb;color:#fff;border-color:#2563eb}
+html[data-theme="dark"] .quizCrLgPane{background:#0b1220}
+@media(max-width:850px){
+  .quizCrTabs{display:flex}
+  .quizCrMain{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr)}
+  .quizCrProblem,.quizCrChat,.quizCrLgPane{border-right:0;max-height:none;height:100%;min-height:0}
+  .quizCrProblem{padding:10px;border-bottom:0}
+  .quizClassRoom.cr-tab-de .quizCrChat,.quizClassRoom.cr-tab-de .quizCrLgPane{display:none!important}
+  .quizClassRoom.cr-tab-chat .quizCrProblem,.quizClassRoom.cr-tab-chat .quizCrLgPane{display:none!important}
+  .quizClassRoom.cr-tab-lg .quizCrProblem,.quizClassRoom.cr-tab-lg .quizCrChat{display:none!important}
+  .quizClassRoom.cr-tab-lg .quizCrLgPane{display:block}
+  .quizCrBar{min-height:0;padding:6px 8px;flex-wrap:nowrap}
+  .quizCrBrand{font-size:14px}
+  .quizCrSub,.quizCrDeskOnly{display:none!important}
+  .quizCrBtn{padding:7px 9px;font-size:12.5px;min-height:38px}
+  .quizCrHead{padding:8px 10px}
+  .quizCrMsgs{padding:10px}
+  .quizCrMsg{max-width:94%}
+  .quizCrAv{width:32px;height:32px;font-size:14px}
+  .quizCrBubble{font-size:14.5px;padding:9px 11px}
+  .quizCrFoot{padding:8px 10px 10px}
+  .quizCrAskRow textarea{font-size:16px;min-height:40px}
+  .quizCrCard{padding:12px;border-radius:12px}
+  .quizCrCard h2{font-size:16px;margin-bottom:8px}
+  .quizCrStem{font-size:15px}
+  .quizCrAnswer{font-size:14px;padding:8px 10px}
+  .quizCrFig .qimg{max-height:min(28vh,180px)}
+  .quizCrProblem .quizCrSol,.quizCrProblem .quizCrVerdict,.quizCrRevealChat{display:none!important}
+  .quizCrWait{font-size:12.5px;padding:8px 10px;margin-top:10px}
+  .quizCrAiNote .quizCrBubble{max-height:22vh}
+  .quizCrOpenLg{display:block;width:100%;margin-top:10px;min-height:42px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-size:14px}
+}
+@media(max-width:430px){
+  .quizCrBrand{font-size:13px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .quizCrBtn{padding:6px 8px;font-size:12px;min-height:36px;border-radius:9px}
+  .quizCrTab{font-size:12px;min-height:38px;padding:0 4px}
+  .quizCrNow{font-size:11px}
+  .quizCrTools{margin-top:6px}
 }
 @media(max-width:760px){.quizDebateGrid{grid-template-columns:1fr}}
 @media(max-width:430px){
@@ -25298,7 +25648,7 @@ let LATEX_TAB_HTML=[];
 function convertLatexTabular(s){LATEX_TAB_HTML=[];return String(s||'').replace(/\\begin\s*\{tabular\*?\}\s*(\{[^}]*\})?\s*([\s\S]*?)\\end\s*\{tabular\*?\}/gi,function(_,colSpec,body){let spec=(colSpec||'').replace(/^\{|\}$/g,'');let aligns=[];for(let i=0;i<spec.length;i++){let c=spec[i];if(c==='c'||c==='l'||c==='r')aligns.push(c)}let html='<div class="latex-tabular-wrap"><table class="latex-tabular"><tbody>';let borderNext=false;for(let row of splitTabularRows(body)){row=row.trim();if(!row)continue;if(/^\\hline\s*$/i.test(row)){borderNext=true;continue}if(/^\\hline/i.test(row))row=row.replace(/^\\hline\s*/i,'');row=row.replace(/\\hline/g,'').trim();if(!row)continue;if(!row.includes('&'))continue;let cells=row.split('&').map(c=>c.trim());let trCls=borderNext?' class="hline-top"':'';borderNext=false;html+=`<tr${trCls}>`;for(let i=0;i<cells.length;i++){let al=aligns[i]||'c';let st=al==='r'?'text-align:right':(al==='l'?'text-align:left':'text-align:center');html+=`<td style="${st}">${cells[i]}</td>`}html+='</tr>'}html+='</tbody></table></div>';let id=LATEX_TAB_HTML.length;LATEX_TAB_HTML.push(html);return `@@LTXTAB${id}@@`})}
 function restoreLatexTabular(s){return String(s||'').replace(/@@LTXTAB(\d+)@@/g,function(_,i){return LATEX_TAB_HTML[+i]||''})}
 function normalizeDisplayBreaks(s){return String(s||'').replace(/\\r\\n/g,'\\n').replace(/\\n(?=\s*(?:[0-9A-ZÀ-ỸĐ]|[-•]))/g,'\n')}
-function finalizeRichTokens(s){return s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>').replace(/@@B@@/g,'<b>').replace(/@@\/B@@/g,'</b>').replace(/@@I@@/g,'<i>').replace(/@@\/I@@/g,'</i>').replace(/@@U@@/g,'<u>').replace(/@@\/U@@/g,'</u>').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
+function finalizeRichTokens(s){s=s.replace(/@@OL@@/g,'<ol class="latex-list">').replace(/@@\/OL@@/g,'</ol>').replace(/@@UL@@/g,'<ul class="latex-list">').replace(/@@\/UL@@/g,'</ul>').replace(/@@LI@@/g,'<li>').replace(/@@\/LI@@/g,'</li>').replace(/@@B@@/g,'<b>').replace(/@@\/B@@/g,'</b>').replace(/@@I@@/g,'<i>').replace(/@@\/I@@/g,'</i>').replace(/@@U@@/g,'<u>').replace(/@@\/U@@/g,'</u>');return applyFmtOutsideMath(s,function(x){return x.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')})}
 function renderRichText(s){s=normalizeDisplayBreaks(String(s||'').trim());s=s.replace(/\?\?\s*/g,'');s=stripLatexCenterEnv(s);s=convertLatexTabular(s);s=stripLatexListMarkup(s);s=normalizeLatexDelimiters(s);s=s.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@OL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/OL@@'});s=s.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gi,function(_,b){let items=b.split(/\\item\s*/i).map(x=>x.trim()).filter(Boolean);return '@@UL@@'+items.map(it=>'@@LI@@'+it+'@@/LI@@').join('')+'@@/UL@@'});s=s.replace(/\\item\s*/gi,'<br>• ');s=s.replace(/\\item(?=[A-Za-zÀ-ỹĐđ])/gi,'<br>• ');s=applyLatexTextFmtOutsideMath(s);s=applyMarkdownBoldOutsideMath(s);s=escHtmlKeepMath(s);s=restoreLatexTabular(s);return finalizeRichTokens(s)}
 function oneLineText(s){return String(s||'').replace(/[\r\n\u00a0]+/g,' ').replace(/\s+/g,' ').trim()}
 function escAttr(s){return String(s||'').replace(/[&<>"'\n\r]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','\n':' ','\r':' '}[m]))}
@@ -25352,13 +25702,15 @@ function mathJaxIsUsable(){let mj=window.MathJax;return !!(mj&&(mj.typesetPromis
 function ensureMathJaxCdnFallback(){if(mathJaxIsUsable()||document.getElementById('LDVL_MATHJAX_FALLBACK'))return;let s=document.createElement('script');s.id='LDVL_MATHJAX_FALLBACK';s.defer=true;s.crossOrigin='anonymous';s.src='https://unpkg.com/mathjax@3/es5/tex-svg.js';document.head.appendChild(s)}
 function waitForMathJaxReady(timeoutMs){timeoutMs=timeoutMs||15000;return new Promise(resolve=>{let t0=Date.now();let fbAt=t0+3500;(function tick(){let mj=window.MathJax;if(mathJaxIsUsable()){if(mj.startup&&mj.startup.promise){mj.startup.promise.then(()=>resolve(true)).catch(()=>resolve(false));return}resolve(true);return}if(Date.now()>=fbAt)ensureMathJaxCdnFallback();if(Date.now()-t0>=timeoutMs){resolve(false);return}setTimeout(tick,80)})()})}
 let QUIZ_MATH_GEN=0;
+let _mjTypesetChain=Promise.resolve();
+function enqueueMathJax(job){_mjTypesetChain=_mjTypesetChain.catch(function(){}).then(job);return _mjTypesetChain}
 function invalidateQuizMath(){QUIZ_MATH_GEN++}
 function nodeMathJaxBroken(el){if(!el||!el.querySelectorAll)return false;let mjx=el.querySelectorAll('mjx-container');if(!mjx.length)return false;for(let n of mjx){let t=String(n.textContent||'').trim();if(t)return false;try{if(n.getBoundingClientRect&&n.getBoundingClientRect().height>6)return false}catch(e){}}return true}
 function latexFallbackPlain(inner){let s=String(inner||'');s=s.replace(/\\(?:left|right)\s*/g,'');s=s.replace(/\\dfrac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,'($1)/($2)');s=s.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,'($1)/($2)');s=s.replace(/\\sqrt\s*\{([^{}]+)\}/g,'√($1)');s=s.replace(/\\text\s*\{([^{}]*)\}/g,' $1');s=s.replace(/\\mathrm\s*\{([^{}]*)\}/g,' $1');let map={omega:'ω',varphi:'φ',phi:'φ',pi:'π',theta:'θ',alpha:'α',beta:'β',Delta:'Δ',delta:'δ',pm:'±',cdot:'·',times:'×',leq:'≤',geq:'≥',neq:'≠',approx:'≈',cos:'cos',sin:'sin',tan:'tan',cot:'cot'};s=s.replace(/\\([A-Za-z]+)/g,(m,k)=>map[k]||k);let sub={'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉','+':'₊','-':'₋'};let sup={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻'};s=s.replace(/_\{([^{}]{1,4})\}/g,(m,a)=>a.split('').map(ch=>sub[ch]||ch).join(''));s=s.replace(/\^\{([^{}]{1,4})\}/g,(m,a)=>a.split('').map(ch=>sup[ch]||ch).join(''));s=s.replace(/_/g,'');s=s.replace(/\^/g,'');s=s.replace(/[{}]/g,'');return s.trim()}
 function applyLatexFallback(root){let list=root?(Array.isArray(root)?root:[root]).filter(Boolean):[document.body];for(let el of list){if(!el||!el.innerHTML)continue;if(el.querySelector&&el.querySelector('mjx-container')&&!nodeMathJaxBroken(el))continue;el.innerHTML=el.innerHTML.replace(/\$([^$<]{1,800})\$/g,function(_,inner){return '<span class="mjFallback">'+esc(latexFallbackPlain(inner))+'</span>'})}}
-function typesetNow(els){let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):[];if(!list.length)return Promise.resolve();return waitForMathJaxReady(15000).then(ok=>{if(!ok){applyLatexFallback(list);return}try{if(window.MathJax&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list).then(function(){if(list.some(nodeMathJaxBroken))applyLatexFallback(list)}).catch(function(){applyLatexFallback(list)});if(MathJax.typeset){try{MathJax.typeset(list);if(list.some(nodeMathJaxBroken))applyLatexFallback(list)}catch(e2){applyLatexFallback(list)}}})}
-function typesetDebateMath(){let els=[document.getElementById('quizDebateClaude'),document.getElementById('quizDebateGemini'),document.getElementById('quizDebateChatLog'),document.getElementById('quizDebatePanel')].filter(Boolean);return typesetNow(els)}
-function typeset(els){let gen=QUIZ_MATH_GEN;let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):null;return waitForMathJaxReady(15000).then(ok=>{if(gen!==QUIZ_MATH_GEN)return Promise.resolve();if(!ok){applyLatexFallback(list);return Promise.resolve()}let run=()=>{if(gen!==QUIZ_MATH_GEN)return Promise.resolve();try{if(list&&list.length&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list&&list.length?list:undefined).then(()=>{if(gen!==QUIZ_MATH_GEN)return;if(list&&list.some(nodeMathJaxBroken))applyLatexFallback(list)}).catch(()=>{if(gen===QUIZ_MATH_GEN)applyLatexFallback(list)});if(MathJax.typeset){try{MathJax.typeset(list&&list.length?list:undefined);if(list&&list.some(nodeMathJaxBroken))applyLatexFallback(list)}catch(e){applyLatexFallback(list)}}return Promise.resolve()};if(MathJax.startup&&MathJax.startup.promise)return MathJax.startup.promise.then(run).catch(()=>applyLatexFallback(list));return run()})}
+function typesetNow(els){let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):[];if(!list.length)return Promise.resolve();return enqueueMathJax(function(){return waitForMathJaxReady(15000).then(ok=>{if(!ok){applyLatexFallback(list);return}try{if(window.MathJax&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list).then(function(){if(list.some(nodeMathJaxBroken))applyLatexFallback(list)}).catch(function(){applyLatexFallback(list)});if(MathJax.typeset){try{MathJax.typeset(list);if(list.some(nodeMathJaxBroken))applyLatexFallback(list)}catch(e2){applyLatexFallback(list)}}})})}
+function typesetDebateMath(){let els=['quizDebateClaude','quizDebateGemini','quizDebateFinal','quizDebateChatLog'].map(function(id){return document.getElementById(id)}).filter(Boolean);return typesetNow(els)}
+function typeset(els){let gen=QUIZ_MATH_GEN;let list=els?(Array.isArray(els)?els:[els]).filter(Boolean):null;return enqueueMathJax(function(){return waitForMathJaxReady(15000).then(ok=>{if(gen!==QUIZ_MATH_GEN)return Promise.resolve();if(!ok){applyLatexFallback(list);return Promise.resolve()}let run=()=>{if(gen!==QUIZ_MATH_GEN)return Promise.resolve();try{if(list&&list.length&&MathJax.typesetClear)MathJax.typesetClear(list)}catch(e){}if(MathJax.typesetPromise)return MathJax.typesetPromise(list&&list.length?list:undefined).then(()=>{if(gen!==QUIZ_MATH_GEN)return;if(list&&list.some(nodeMathJaxBroken))applyLatexFallback(list)}).catch(()=>{if(gen===QUIZ_MATH_GEN)applyLatexFallback(list)});if(MathJax.typeset){try{MathJax.typeset(list&&list.length?list:undefined);if(list&&list.some(nodeMathJaxBroken))applyLatexFallback(list)}catch(e){applyLatexFallback(list)}}return Promise.resolve()};if(MathJax.startup&&MathJax.startup.promise)return MathJax.startup.promise.then(run).catch(()=>applyLatexFallback(list));return run()})})}
 let _theoryTypesetTimer=0;
 function typesetTheoryMath(){
   return new Promise(resolve=>{
@@ -25676,6 +26028,8 @@ function formatTnHintText(text,isSolution){text=String(text||'').trim();if(!text
 function applyAuto5050(hide){if(!hide||!hide.length)return;for(let L of hide){let el=document.getElementById('opt_'+L);if(el)el.classList.add('hidden5050')}let b=document.getElementById('btn5050');if(b)b.disabled=true;let bf=document.getElementById('btnFs5050');if(bf)bf.disabled=true;let rb=document.getElementById('resultBox');if(rb){rb.textContent='🎯 Đã loại 2 đáp án sai: '+hide.join(', ');rb.style.color='#1d4ed8'}}
 function hintRawText(){let j=HINT_BY_Q[CUR];return j?String(j.hint||''):''}
 function quizRestorePayload(){return{made:CURRENT_MADE||'',questions:QUESTIONS||[],level_filter:CURRENT_LEVEL||'',dang_filter:CURRENT_DANG||'',dangbaitap_filter:CURRENT_DANGBAITAP||''}}
+function quizDebateQuestionSlim(){let q=currentQuestion()||{};let o={};for(let k of ['ID','CauHoi','A','B','C','D','DapAn','LoiGiai','Dang','Mon','Lop','Chuong','BaiHoc','MucDo','DangBaiTap'])o[k]=q[k]||'';return o}
+function quizDebateRequestBody(extra){let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}let body=Object.assign({sid:SID,index:CUR,answer:ANSWERS[CUR],loigiai:lg,made:CURRENT_MADE||'',question:quizDebateQuestionSlim()},extra||{});quizAttachAiKeys(body);return body}
 function optionHasHeavyMath(text){text=String(text||'');return text.length>48||/\$|\\frac|\\sqrt|\\begin|\\\[|\\\(/.test(text)}function mcqOptIsShort(text){text=String(text||'').trim();if(!text)return true;if(/\[IMG\]|<img\b|\\includegraphics|tikz/i.test(text))return false;if(/\n/.test(text))return false;if(text.length>90)return false;let plain=text.replace(/\$\$/g,'').replace(/\$/g,'');plain=plain.replace(/\\[a-zA-Z]+(\{[^}]*\})?/g,'m');plain=plain.replace(/[{}^_\\]/g,'').replace(/\s+/g,' ').trim();return plain.length<=32}function mcqOptsUse2Col(q){if(!q||q.Dang!=='Trắc nghiệm')return false;if(usesImgSplit(q))return false;let n=0;for(let L of ['A','B','C','D']){if(!q[L])continue;n++;if(!mcqOptIsShort(q[L]))return false}return n>=2}
 function mcqOptsUseSplitCol1(q){if(!q||q.Dang!=='Trắc nghiệm')return false;if(!usesImgSplit(q))return false;let n=0;for(let L of ['A','B','C','D']){if(!q[L])continue;n++;if(!mcqOptIsShort(q[L]))return false}return n>=2}
 function needsAbcdStackedLayout(q,chunks){q=q||{};for(let L of ['A','B','C','D']){if(q[L]&&optionHasHeavyMath(q[L]))return true;let c=(chunks||[]).find(x=>x.letter===L);if(c&&c.body&&optionHasHeavyMath(c.body))return true}return false}
@@ -25770,7 +26124,7 @@ async function api(url,opts={},tries=2){
     let ctrl=new AbortController();
     let timer=setTimeout(()=>ctrl.abort(),timeoutMs);
     try{
-      let r=await fetch(url,{...opts,signal:opts.signal||ctrl.signal});
+      let fetchOpts=Object.assign({},opts||{});delete fetchOpts.timeoutMs;delete fetchOpts.skipLoginRedirect;delete fetchOpts.signal;let r=await fetch(url,{...fetchOpts,signal:opts.signal||ctrl.signal});
       let txt=await r.text();
       let j;
       try{j=txt?JSON.parse(txt):{};}
@@ -25778,7 +26132,7 @@ async function api(url,opts={},tries=2){
       let retryStatus=[429,500,502,503,504].includes(r.status);
       let retryMsg=/(quota|rate|timeout|temporarily|service unavailable|backend|deadline)/i.test(String((j&&j.error)||''));
       if((retryStatus||retryMsg)&&attempt<tries){await sleepMs(850*(attempt+1));continue}
-      if(!r.ok||j.error){if(r.status==401){let next=encodeURIComponent(location.pathname+location.search);location='/login?next='+next}throw new Error(j.error||'Lỗi API')}
+      if(!r.ok||j.error){if(r.status==401&&!opts.skipLoginRedirect){let next=encodeURIComponent(location.pathname+location.search);location='/login?next='+next}throw new Error(j.error||'Lỗi API')}
       return j;
     }catch(e){
       let canRetry=(e&&e.name==='AbortError')||/Failed to fetch|NetworkError|timeout|aborted/i.test(String(e&&e.message||e));
@@ -30577,18 +30931,411 @@ function quizTtsChunks(plain,maxLen){maxLen=maxLen||900;plain=String(plain||'').
 function buildQuizReadLoiGiaiText(){let q=currentQuestion()||{};let parts=[];let da=quizSpeechPlain(q.DapAn||'');if(da)parts.push('Đáp án. '+da);let raw='';try{raw=currentQuizLoiGiaiText(q)||''}catch(e){}if(!raw)raw=String((q.LoiGiai||'')||(ADMIN_LG_DRAFT_BY_Q[CUR]!=null?ADMIN_LG_DRAFT_BY_Q[CUR]:'')||((AI_LG_BY_Q[CUR]||{}).text||''));let lg=quizSpeechPlain(raw);if(lg)parts.push('Lời giải. '+lg);return parts.join(' ')}
 function syncQuizReadBtn(){let deOn=!!(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='de');let lgOn=!!(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='lg');let talkOn=!!(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='talk');let b=document.getElementById('btnReadQuestion');if(b){b.classList.toggle('ttsBtnOn',deOn);b.textContent=deOn?'⏸ Dừng đọc':'🔊 Đọc đề'}for(let id of ['btnReadLoiGiai','btnFsReadLoiGiai','btnPanelReadLoiGiai']){let x=document.getElementById(id);if(!x)continue;x.classList.toggle('ttsBtnOn',lgOn);x.textContent=lgOn?'⏸ Dừng đọc LG':'🔊 Đọc lời giải'}syncQuizAiTalkBtn(talkOn);try{syncQuizDebateBtn()}catch(e){}}function syncQuizAiTalkBtn(talkOn){talkOn=!!(talkOn||(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='talk'));let busy=QUIZ_TALK_LOADING===CUR;let allow=canUseQuizAiTalk();let idle=quizAiTalkIdleLabel(false);let idleFs=quizAiTalkIdleLabel(true);for(let id of ['btnAiTalk','btnFsAiTalk']){let x=document.getElementById(id);if(!x)continue;x.classList.toggle('hide',!allow);x.classList.toggle('ttsBtnOn',talkOn);x.classList.toggle('ttsBusy',busy&&!talkOn);x.disabled=busy&&!talkOn;if(busy&&!talkOn)x.textContent=(id==='btnFsAiTalk'?'⏳ AI…':'⏳ Đang soạn…');else if(talkOn)x.textContent=(id==='btnFsAiTalk'?'⏸ Dừng':'⏸ Dừng thảo luận');else x.textContent=(id==='btnFsAiTalk'?idleFs:idle)}}
 function quizAiTalkIdleLabel(fs){if(isAdminViewer()&&typeof adminChosenAiProvider==='function'){let p=adminChosenAiProvider();if(p==='ANTHROPIC')return fs?'🎙 Claude':'🎙 Claude thảo luận';if(p==='OPENAI')return fs?'🎙 GPT':'🎙 GPT thảo luận'}return fs?'🎙 Thảo luận':'🎙 AI thảo luận'}
-function stopQuizQuestionSpeech(){QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_TTS_CHUNKS=[];QUIZ_TTS_IDX=0;if(typeof speechSynthesis!=='undefined'){try{speechSynthesis.cancel()}catch(e){}}syncQuizReadBtn()}
-function speakNextQuizChunk(){if(!QUIZ_TTS_ON||!QUIZ_TTS_CHUNKS.length||QUIZ_TTS_IDX>=QUIZ_TTS_CHUNKS.length){let kind=QUIZ_TTS_KIND;QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_TTS_CHUNKS=[];QUIZ_TTS_IDX=0;syncQuizReadBtn();if(kind==='debate'){let ta=document.getElementById('quizDebateAsk');if(ta)try{ta.focus()}catch(e){}}return}try{let u=new SpeechSynthesisUtterance(QUIZ_TTS_CHUNKS[QUIZ_TTS_IDX++]);u.lang='vi-VN';u.rate=quizTtsRate();let v=pickQuizViVoice();if(v){u.voice=v;u.lang=v.lang&&String(v.lang).toLowerCase().indexOf('vi')===0?v.lang:'vi-VN'}u.onend=function(){speakNextQuizChunk()};u.onerror=function(){stopQuizQuestionSpeech()};speechSynthesis.speak(u)}catch(e){stopQuizQuestionSpeech();alert('Không đọc được: '+(e.message||e))}}
+function stopQuizQuestionSpeech(){QUIZ_CR_STOP=true;QUIZ_CR_PLAY=-1;QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_TTS_CHUNKS=[];QUIZ_TTS_IDX=0;if(typeof speechSynthesis!=='undefined'){try{speechSynthesis.cancel()}catch(e){}}try{document.querySelectorAll('.quizCrMsg.active').forEach(function(n){n.classList.remove('active')})}catch(e2){}syncQuizReadBtn()}
+function speakNextQuizChunk(){if(!QUIZ_TTS_ON||!QUIZ_TTS_CHUNKS.length||QUIZ_TTS_IDX>=QUIZ_TTS_CHUNKS.length){let kind=QUIZ_TTS_KIND;QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_TTS_CHUNKS=[];QUIZ_TTS_IDX=0;syncQuizReadBtn();if(kind==='debate'){let ta=debateAskEl();if(ta)try{ta.focus()}catch(e){}}return}try{let u=new SpeechSynthesisUtterance(QUIZ_TTS_CHUNKS[QUIZ_TTS_IDX++]);u.lang='vi-VN';u.rate=quizTtsRate();let v=pickQuizViVoice();if(v){u.voice=v;u.lang=v.lang&&String(v.lang).toLowerCase().indexOf('vi')===0?v.lang:'vi-VN'}u.onend=function(){speakNextQuizChunk()};u.onerror=function(){stopQuizQuestionSpeech()};speechSynthesis.speak(u)}catch(e){stopQuizQuestionSpeech();alert('Không đọc được: '+(e.message||e))}}
 function startQuizViSpeech(plain,kind,emptyMsg){if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined'){alert('Trình duyệt không hỗ trợ đọc (Text-to-Speech). Dùng Chrome hoặc Edge.');return}plain=String(plain||'').trim();if(!plain){alert(emptyMsg||'Không có nội dung để đọc.');return}stopQuizQuestionSpeech();let chunks=quizTtsChunks(plain,900);if(!chunks.length){alert(emptyMsg||'Không có nội dung để đọc.');return}let run=function(){try{stopTranslateEnSpeech();if(!window._LDVL_TTS_VI_WARN&&!pickQuizViVoice()){window._LDVL_TTS_VI_WARN=1;alert('Chưa có giọng tiếng Việt trên máy.\n\nWindows: Cài đặt → Thời gian và ngôn ngữ → Giọng nói → thêm Tiếng Việt.\nHoặc dùng Chrome (giọng Google Tiếng Việt).\n\nVẫn thử đọc bằng tiếng Việt.')}QUIZ_TTS_CHUNKS=chunks;QUIZ_TTS_IDX=0;QUIZ_TTS_KIND=kind;QUIZ_TTS_ON=true;syncQuizReadBtn();speakNextQuizChunk()}catch(e){stopQuizQuestionSpeech();alert('Không đọc được: '+(e.message||e))}};let voices=speechSynthesis.getVoices?speechSynthesis.getVoices():[];let kick=function(){setTimeout(run,80)};if(!voices.length){let done=false;let wait=function(){if(done)return;done=true;try{speechSynthesis.onvoiceschanged=null}catch(e2){}kick()};if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=wait;setTimeout(wait,700)}else kick()}
 function toggleReadQuestion(){if(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='de'){stopQuizQuestionSpeech();return}startQuizViSpeech(buildQuizReadAloudText(),'de','Không có nội dung đề để đọc.')}
 function toggleReadLoiGiai(){if(!canAdminEditLoiGiaiInline()&&!(typeof canShowSolutionNow==='function'&&canShowSolutionNow())){alert('Chỉ ADMIN đọc lời giải tại đây.');return}if(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='lg'){stopQuizQuestionSpeech();return}VIP_Q_SHOW_EXP[CUR]=true;let sol=document.getElementById('solution');if(sol)sol.classList.remove('hide');try{syncAdminLoiGiaiPanel()}catch(e){}startQuizViSpeech(buildQuizReadLoiGiaiText(),'lg','Chưa có lời giải / đáp án để đọc.')}
 function canUseQuizDebate(){if(!(USER&&USER.can_ai_hint!==false))return false;if(EXAM_MODE&&!SUBMITTED)return false;if(isAdminViewer())return true;return !!(typeof canShowSolutionNow==='function'&&canShowSolutionNow())}
-function quizDebateChatInnerHtml(){return '<div class="quizDebateChatHint muted">Bấm <b>🎤 Nói</b> để trợ lý nghe ý kiến em, rồi phán <b>đúng / sai</b> kèm dẫn chứng từ đề và lời giải. Cũng có thể gõ.</div><div id="quizDebateChatLog" class="quizDebateChatLog"></div><div class="quizDebateChatRow"><button type="button" class="btn2 btnSmall" id="btnDebateListen" onclick="toggleDebateListen()" title="Nói ý kiến — AI nghe rồi phản biện">🎤 Nói</button><textarea id="quizDebateAsk" rows="2" placeholder="Nói hoặc gõ ý kiến / thắc mắc…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendQuizDebateFollowup()}"></textarea><button type="button" class="btnStartStrong btnSmall" id="btnDebateAsk" onclick="sendQuizDebateFollowup()">Gửi</button></div>'}
+let QUIZ_CR_WANT=false,QUIZ_CR_PLAY=-1,QUIZ_CR_STOP=true,QUIZ_CR_LINES=[];
+function debateAskEl(){let a=document.getElementById('quizCrAsk');if(a&&QUIZ_CR_WANT)return a;return document.getElementById('quizDebateAsk')||a}
+function parseQuizClassScript(txt){
+  txt=String(txt||'').replace(/\r\n/g,'\n').trim();
+  if(!txt)return [];
+  let re=/^\s*(An|Bình|Binh|Chi|Dũng|Dung|Thầy Minh|Thay Minh|Trợ lý|Tro ly|Em)\s*[:：]\s*/i;
+  let out=[],cur=null;
+  txt.split('\n').forEach(function(line){
+    let m=String(line||'').match(re);
+    if(m){
+      if(cur&&String(cur.text||'').trim())out.push(cur);
+      cur={who:quizCrNormWho(m[1]),text:String(line).slice(m[0].length).trim()};
+    }else if(cur){
+      let extra=String(line||'').trim();
+      if(extra)cur.text+=(cur.text?' ':'')+extra;
+    }
+  });
+  if(cur&&String(cur.text||'').trim())out.push(cur);
+  return out;
+}
+function quizCrNormWho(w){
+  w=String(w||'').trim();
+  let t=w.normalize?w.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase():w.toLowerCase();
+  if(t.indexOf('thay')>=0)return 'Thầy Minh';
+  if(t.indexOf('tro ly')>=0||t.indexOf('troly')>=0)return 'Trợ lý';
+  if(t==='em')return 'Em';
+  if(t==='binh')return 'Bình';
+  if(t==='dung')return 'Dũng';
+  if(t==='chi')return 'Chi';
+  if(t==='an')return 'An';
+  return w;
+}
+function quizCrMeta(who){
+  who=quizCrNormWho(who);
+  if(who==='Thầy Minh')return {who:who,role:'teacher',av:'👨‍🏫',right:false};
+  if(who==='Trợ lý')return {who:who,role:'teacher',av:'⚡',right:false};
+  if(who==='Em')return {who:who,role:'user',av:'🧑',right:true};
+  if(who==='An')return {who:who,role:'student',av:'🟦',right:false};
+  if(who==='Bình')return {who:who,role:'student',av:'🟩',right:true};
+  if(who==='Chi')return {who:who,role:'student',av:'🟪',right:false};
+  if(who==='Dũng')return {who:who,role:'student',av:'🟧',right:true};
+  return {who:who,role:'student',av:'💬',right:false};
+}
+function quizCrLetterCorrect(q,L){
+  q=q||{};L=String(L||'').toUpperCase();
+  if(String(q.Dang||'')==='Đúng sai')return false;
+  let da=String(q.DapAn||'').trim();
+  if(!da)return false;
+  let up=da.toUpperCase().replace(/\s+/g,'');
+  if(up===L||up.charAt(0)===L)return true;
+  let only=up.replace(/[^A-D]/g,'');
+  if(only===L)return true;
+  try{if(typeof normText==='function'&&normText(da)===normText(q[L]||''))return true}catch(e){}
+  return false;
+}
+function quizCrHeard(){let d=QUIZ_DEBATE_BY_Q[CUR]||{};return !!d.heard}
+function quizCrStudentName(){return String((USER&&(USER.hoten||USER.mahs))||'em').trim()||'em'}
+function quizCrHasChoice(q){
+  q=q||currentQuestion()||{};
+  let ans=ANSWERS[CUR];
+  if(q.Dang==='Đúng sai'){
+    let arr=Array.isArray(ans)?ans:[];
+    return arr.some(function(x){return String(x||'').trim()});
+  }
+  return String(ans==null?'':ans).trim()!=='';
+}
+function quizCrChoiceState(){
+  let q=currentQuestion()||{};
+  if(!quizCrHasChoice(q))return {kind:'none',label:'chưa chọn'};
+  let r=RESULTS[CUR]||CHECKED[CUR];
+  if(r&&r.ok===true)return {kind:'ok',label:'đúng'};
+  return {kind:'bad',label:'chưa đúng'};
+}
+function quizCrDsLabel(v){
+  v=String(v||'').trim();
+  if(v==='S'||/^sai$/i.test(v))return 'Sai';
+  if(v==='Đ'||v==='D'||v==='d'||/^dung$/i.test(v)||/^đúng$/i.test(v))return 'Đúng';
+  return '';
+}
+function quizCrDsRows(q){
+  q=q||currentQuestion()||{};
+  if(String(q.Dang||'')!=='Đúng sai')return [];
+  try{return getDsCheckRows(q,RESULTS[CUR]||CHECKED[CUR],ANSWERS[CUR])||[]}catch(e){return []}
+}
+function quizCrDsCompareHtml(){
+  let rows=quizCrDsRows();
+  if(!rows.length)return '';
+  return '<div class="quizCrDsRow">'+rows.map(function(r){
+    let key=quizCrDsLabel(r.correct)||'?';
+    let em=quizCrDsLabel(r.chosen)||'chưa chọn';
+    let cls=r.ok===true?'ok':(r.ok===false?'bad':'none');
+    let mark=r.ok===true?'✓ đúng':(r.ok===false?'✗ chưa đúng':'? chưa chọn');
+    return '<span class="quizCrDsChip '+cls+'"><b>Ý '+esc(r.letter)+' · '+mark+'</b><small>Em chọn '+esc(em)+' · Đáp án '+esc(key)+'</small></span>';
+  }).join('')+'</div>';
+}
+function quizCrPickedLetter(q){
+  q=q||{};
+  if(String(q.Dang||'')!=='Trắc nghiệm')return '';
+  let a=String(ANSWERS[CUR]==null?'':ANSWERS[CUR]).trim().toUpperCase();
+  if(/^[A-D]/.test(a))return a.charAt(0);
+  return '';
+}
+function quizCrLoiGiaiHtml(){
+  let q=currentQuestion()||{};
+  let lg='';
+  try{lg=currentQuizLoiGiaiText(q)||''}catch(e){lg=String(q.LoiGiai||'')}
+  if(!String(lg||'').trim())return '<span class="muted">Chưa có lời giải trên Sheet.</span>';
+  try{if(typeof formatLoigiaiByDang==='function')return formatLoigiaiByDang(lg,q,q.Dang)}catch(e2){}
+  return typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(lg):esc(lg);
+}
+function quizCrVerdictHtml(){
+  let st=quizCrChoiceState();
+  let q=currentQuestion()||{};
+  let name=esc(quizCrStudentName());
+  let chosen='';
+  try{chosen=formatChosenAnswerBrief(q,ANSWERS[CUR])}catch(e){chosen=String(ANSWERS[CUR]==null?'':ANSWERS[CUR])}
+  let ds=String(q.Dang||'')==='Đúng sai';
+  let html='<div class="quizCrVerdict '+st.kind+'">';
+  if(st.kind==='ok'){
+    html+='<div class="quizCrBadge"><div class="quizCrBadgeIcon">🏅</div><div><b>Huy hiệu «Chọn đúng»</b><div>Khen <b>'+name+'</b> đã chọn đúng. Giữ đà này và luyện thêm để học tốt hơn nữa nhé!</div></div></div>';
+    html+='Nhận xét: kết quả em đã chọn là <b>đúng</b>'+(ds?' (đủ cả các ý).':(chosen?(' · '+esc(chosen)):''))+'.';
+  }else if(st.kind==='bad'){
+    html+='<b>Nhận xét:</b> kết quả em đã chọn là <b>chưa đúng</b>. ';
+    if(ds)html+='Xem từng ý A–D bên dưới: ý nào ✓ là khớp đáp án, ý nào ✗ là lệch.';
+    else html+=(chosen?('Em chọn '+esc(chosen)+'. '):'')+'Đối chiếu lời giải để hiểu chỗ lệch, rồi luyện tiếp.';
+  }else{
+    html+='<b>Nhận xét:</b> em <b>chưa chọn</b> đáp án. Đọc lời giải để nắm cách làm; lần sau nhớ chọn trước khi vào thảo luận.';
+  }
+  if(ds)html+=quizCrDsCompareHtml();
+  html+='</div>';
+  return html;
+}
+function quizCrAfterListenHtml(solId){
+  return quizCrVerdictHtml()+'<div class="quizCrSol" id="'+esc(solId||'')+'"><h3>📗 Lời giải</h3>'+quizCrLoiGiaiHtml()+'</div>';
+}
+function quizCrOnPlayAllDone(){
+  QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_CR_PLAY=-1;
+  try{syncQuizReadBtn()}catch(e){}
+  let d=QUIZ_DEBATE_BY_Q[CUR]||{};
+  d.heard=true;QUIZ_DEBATE_BY_Q[CUR]=d;
+  let st=document.getElementById('quizCrStatus');if(st)st.textContent='Đã nghe xong — xem lời giải';
+  renderQuizClassRoom();
+  try{
+    if(quizCrPhone())quizCrSetTab('lg');
+    else{
+      let sol=document.getElementById('quizCrSolLeft')||document.getElementById('quizCrSolChat');
+      if(sol)sol.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }catch(e2){}
+}
+function quizCrProblemHtml(){
+  let q=currentQuestion()||{};
+  let id=String(q.ID||'').trim();
+  let heard=quizCrHeard();
+  let html='<div class="quizCrCard"><h2>📘 Câu hỏi'+(id?(' · '+esc(id)):'')+'</h2>';
+  html+='<div class="quizCrStem">'+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(q.CauHoi||''):esc(q.CauHoi||''))+'</div>';
+  try{
+    if(String(q.HinhAnh||'').trim()&&typeof hinhanhIsSolutionFigure==='function'&&!hinhanhIsSolutionFigure(q)&&typeof buildQimgHtml==='function'){
+      html+='<div class="quizCrFig">'+buildQimgHtml(q.HinhAnh)+'</div>';
+    }
+  }catch(e){}
+  let opts=[];
+  for(let L of ['A','B','C','D']){if(String(q[L]||'').trim())opts.push(L)}
+  let picked=quizCrPickedLetter(q);
+  if(opts.length){
+    html+='<div class="quizCrAnswers">';
+    let isDs=String(q.Dang||'')==='Đúng sai';
+    let dsRows=heard&&isDs?quizCrDsRows(q):[];
+    for(let i=0;i<opts.length;i++){
+      let L=opts[i];
+      let body=typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(isDs?q[L]:(stripOptionPrefix?stripOptionPrefix(q[L],L):q[L])):esc(q[L]);
+      if(isDs){
+        let rr=dsRows.filter(function(x){return x.letter===L})[0]||null;
+        let idx='ABCD'.indexOf(L);
+        let chArr=Array.isArray(ANSWERS[CUR])?ANSWERS[CUR]:[];
+        let rawPick=String((rr&&rr.chosen)||(idx>=0?chArr[idx]:'')||'').trim();
+        if(rawPick==='D'||rawPick==='d')rawPick='Đ';
+        let emLab=quizCrDsLabel(rawPick);
+        let cls='quizCrAnswer';
+        let meta='';
+        if(heard&&rr){
+          if(rr.ok===true)cls+=' correct';
+          else if(rr.ok===false)cls+=' wrong';
+          else cls+=' nonepick';
+          let key=quizCrDsLabel(rr.correct)||'?';
+          let em=emLab||'chưa chọn';
+          let mark=rr.ok===true?' · ✓ em đúng ý này':(rr.ok===false?' · ✗ em chưa đúng ý này':' · em chưa chọn ý này');
+          meta='<div class="quizCrDsMeta">Đáp án: <b>'+esc(key)+'</b> · Em chọn: <b>'+esc(em)+'</b>'+mark+'</div>';
+        }else if(emLab){
+          cls+=' picked';
+          meta='<div class="quizCrDsMeta">Em chọn: <b>'+esc(emLab)+'</b></div>';
+        }
+        html+='<div class="'+cls+'"><div><b>'+esc(L)+'.</b> '+body+'</div>'+meta+'</div>';
+      }else{
+        let ok=heard&&quizCrLetterCorrect(q,L);
+        let mine=picked===L;
+        let cls='quizCrAnswer'+(ok?' correct':'')+(mine&&heard&&!ok?' wrong':'')+(mine?' picked':'');
+        html+='<div class="'+cls+'">'+(ok?'<b>':'')+esc(L)+'. '+(ok?'</b>':'')+body+(ok?' ✓':'')+(mine&&!heard?' · em chọn':'')+(mine&&heard&&ok?' · em chọn đúng':'')+(mine&&heard&&!ok?' · em chọn':'')+'</div>';
+      }
+    }
+    html+='</div>';
+  }
+  if(heard)html+='<button type="button" class="quizCrOpenLg" onclick="quizCrSetTab(\'lg\')">📗 Xem lời giải và nhận xét</button>'+quizCrAfterListenHtml('quizCrSolLeft');
+  else html+='<div class="quizCrWait">🎧 Nghe hết thảo luận (bấm <b>Phát toàn bộ</b>) để xem lời giải và nhận xét bài làm của em: đúng, chưa đúng, hoặc chưa chọn.</div>';
+  html+='</div>';
+  return html;
+}
+function quizCrScriptText(){
+  let d=QUIZ_DEBATE_BY_Q[CUR]||{};
+  let ta=document.getElementById('quizScriptText');
+  let txt=String((ta&&ta.value)||d.script||'').trim();
+  if(txt)return txt;
+  try{return localQuizClassScript()}catch(e){return ''}
+}
+function ensureQuizClassRoom(){
+  let el=document.getElementById('quizClassRoom');
+  if(el&&document.getElementById('quizCrTabs')&&document.getElementById('quizCrLgPane'))return el;
+  if(el)el.remove();
+  el=document.createElement('div');
+  el.id='quizClassRoom';
+  el.className='quizClassRoom hide cr-tab-chat';
+  el.innerHTML='<div class="quizCrBar"><div><div class="quizCrBrand">🎓 Classroom</div><div class="quizCrSub">Lớp Học Thầy Minh · nghe hết mới xem lời giải</div></div><div class="quizCrBtns"><button type="button" class="quizCrBtn" onclick="stopQuizCrPlay()">⏹ Dừng</button><button type="button" class="quizCrBtn primary" id="btnCrPlayAll" onclick="playQuizCrAll()">▶ Phát</button><button type="button" class="quizCrBtn ghost quizCrDeskOnly" onclick="makeQuizClassScript({auto:false})">✨ Tạo kịch bản</button><button type="button" class="quizCrBtn" onclick="closeQuizClassRoom()">✕ Đóng</button></div></div><div class="quizCrTabs" id="quizCrTabs"><button type="button" class="quizCrTab" data-tab="de" onclick="quizCrSetTab(\'de\')">📘 Đề</button><button type="button" class="quizCrTab on" data-tab="chat" onclick="quizCrSetTab(\'chat\')">💬 Thảo luận</button><button type="button" class="quizCrTab" data-tab="lg" id="quizCrTabLg" onclick="quizCrSetTab(\'lg\')">📗 Lời giải</button></div><div class="quizCrMain"><section class="quizCrProblem" id="quizCrProblem"></section><section class="quizCrLgPane" id="quizCrLgPane"></section><section class="quizCrChat"><div class="quizCrHead"><b>💬 Thảo luận</b><span class="quizCrStatus" id="quizCrStatus">Sẵn sàng</span></div><div class="quizCrMsgs" id="quizCrMsgs"></div><div class="quizCrFoot"><div class="quizCrNow" id="quizCrNow">Phát toàn bộ — lời giải hiện sau khi nghe hết</div><div class="quizCrProg"><div class="quizCrBarFill" id="quizCrBarFill"></div></div><div class="quizCrTools"><span>Tốc độ</span><select id="quizCrSpeed"><option value="0.85">0.85</option><option value="0.95" selected>0.95</option><option value="1.05">1.05</option><option value="1.15">1.15</option></select><span>×</span><button type="button" class="quizCrBtn ghost quizCrDeskOnly" onclick="downloadQuizClassScript()">Tải TXT</button><button type="button" class="quizCrBtn ghost quizCrDeskOnly" onclick="showQuizDebateKeyBox();closeQuizClassRoom()">🔑 Key</button></div><div class="quizCrAskRow"><button type="button" class="btn2 btnSmall" id="btnCrListen" onclick="toggleDebateListen()" title="Nói ý kiến">🎤 Nói</button><textarea id="quizCrAsk" rows="2" placeholder="Nói hoặc gõ ý kiến…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendQuizDebateFollowup()}"></textarea><button type="button" class="btnStartStrong btnSmall" id="btnCrAsk" onclick="sendQuizDebateFollowup()">Gửi</button></div></div></section></div>';
+  document.body.appendChild(el);
+  if(!window._quizCrEsc){
+    window._quizCrEsc=true;
+    document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&QUIZ_CR_WANT)closeQuizClassRoom()});
+  }
+  return el;
+}
+function quizCrPhone(){try{return window.matchMedia&&window.matchMedia('(max-width:850px)').matches}catch(e){return false}}
+function quizCrSetTab(tab){
+  tab=String(tab||'chat');
+  if(tab==='lg'&&!quizCrHeard()){tab='chat';let st=document.getElementById('quizCrStatus');if(st)st.textContent='Nghe hết thảo luận rồi mới mở lời giải'}
+  let el=ensureQuizClassRoom();
+  el.classList.remove('cr-tab-de','cr-tab-chat','cr-tab-lg');
+  el.classList.add('cr-tab-'+tab);
+  el.querySelectorAll('.quizCrTab').forEach(function(b){
+    let t=b.getAttribute('data-tab');
+    b.classList.toggle('on',t===tab);
+    if(t==='lg')b.disabled=!quizCrHeard();
+  });
+  if(tab==='lg'){
+    let pane=document.getElementById('quizCrLgPane');
+    if(pane){pane.innerHTML='<div class="quizCrCard"><h2>📗 Sau thảo luận</h2>'+quizCrAfterListenHtml('quizCrSolPhone')+'</div>';try{typesetNow([pane])}catch(e){}}
+  }
+}
+function openQuizClassRoom(){
+  QUIZ_CR_WANT=true;
+  let el=ensureQuizClassRoom();
+  el.classList.remove('hide');
+  document.body.classList.add('quiz-classroom-open');
+  window._QUIZ_CR_CUR=CUR;
+  renderQuizClassRoom();
+  if(quizCrPhone())quizCrSetTab(quizCrHeard()?'lg':'de');
+}
+function closeQuizClassRoom(){
+  QUIZ_CR_WANT=false;
+  stopQuizCrPlay();
+  document.body.classList.remove('quiz-classroom-open');
+  let el=document.getElementById('quizClassRoom');
+  if(el)el.classList.add('hide');
+}
+function quizCrRate(){
+  let el=document.getElementById('quizCrSpeed');
+  let r=parseFloat(el&&el.value);
+  if(r>=0.7&&r<=1.35)return r;
+  return quizTtsRate();
+}
+function quizCrVoiceFor(who){
+  let list=typeof quizTtsListViVoices==='function'?quizTtsListViVoices():[];
+  if(!list.length)return pickQuizViVoice();
+  who=quizCrNormWho(who);
+  let female=/^(An|Chi)$/.test(who);
+  let teacher=/Thầy|Trợ/.test(who);
+  if(female){
+    for(let i=0;i<list.length;i++){if(/hoai|female|nữ|my/i.test(list[i].name||''))return list[i]}
+  }
+  if(teacher||!female){
+    for(let i=0;i<list.length;i++){if(/nam\s*minh|namminh|\bmale\b/i.test(list[i].name||''))return list[i]}
+  }
+  return list[0]||pickQuizViVoice();
+}
+function renderQuizClassRoom(){
+  if(!QUIZ_CR_WANT)return;
+  let el=ensureQuizClassRoom();
+  let prob=document.getElementById('quizCrProblem');
+  if(prob)prob.innerHTML=quizCrProblemHtml();
+  let box=document.getElementById('quizCrMsgs');
+  if(!box)return;
+  let d=QUIZ_DEBATE_BY_Q[CUR]||{};
+  let busy=QUIZ_DEBATE_LOADING===CUR;
+  let lines=parseQuizClassScript(quizCrScriptText());
+  if(!lines.length&&!busy)lines=parseQuizClassScript(localQuizClassScript());
+  QUIZ_CR_LINES=[];
+  let html='';
+  let analysis=String(d.final||d.gemini||d.claude||'').trim();
+  if(analysis){
+    html+='<div class="quizCrMsg teacher quizCrAiNote"><div class="quizCrAv">⚡</div><div class="quizCrBubble"><details><summary class="quizCrName" style="cursor:pointer">Trợ lý Thầy Minh · nhận xét 1 bước</summary><div style="margin-top:8px">'+(typeof quizDebateCardHtml==='function'?quizDebateCardHtml(analysis,''):esc(analysis))+'</div></details></div></div>';
+  }
+  if(busy)html+='<div class="quizCrSplit">ĐANG PHẢN BIỆN LỜI GIẢI…</div>';
+  else html+='<div class="quizCrSplit">THẢO LUẬN CỦA LỚP</div>';
+  lines.forEach(function(row,i){
+    let meta=quizCrMeta(row.who);
+    let speak=typeof quizSpeechPlain==='function'?quizSpeechPlain(row.text):String(row.text||'');
+    QUIZ_CR_LINES.push({who:meta.who,text:speak,html:typeof prepareDebateLatex==='function'?prepareDebateLatex(row.text):row.text,kind:'script'});
+    let idx=QUIZ_CR_LINES.length-1;
+    html+='<div class="quizCrMsg '+meta.role+(meta.right?' right':'')+'" id="quizCrMsg'+idx+'"><div class="quizCrAv">'+meta.av+'</div><div class="quizCrBubble"><div class="quizCrName">'+esc(meta.who)+' <button type="button" class="quizCrPlay" onclick="playQuizCrLine('+idx+',false)" title="Đọc câu này">🔊</button></div><div>'+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(QUIZ_CR_LINES[idx].html):esc(row.text))+'</div></div></div>';
+  });
+  let chat=d.chat||[];
+  if(chat.length){
+    html+='<div class="quizCrSplit">EM HỎI THÊM</div>';
+    chat.forEach(function(m){
+      let isUser=m.role==='user';
+      let who=isUser?'Em':'Trợ lý';
+      let meta=quizCrMeta(who);
+      let raw=String(m.text||'');
+      let speak=typeof quizSpeechPlain==='function'?quizSpeechPlain(raw):raw;
+      QUIZ_CR_LINES.push({who:meta.who,text:speak,html:typeof prepareDebateLatex==='function'?prepareDebateLatex(raw):raw,kind:'follow'});
+      let idx=QUIZ_CR_LINES.length-1;
+      html+='<div class="quizCrMsg '+meta.role+(meta.right?' right':'')+'" id="quizCrMsg'+idx+'"><div class="quizCrAv">'+meta.av+'</div><div class="quizCrBubble"><div class="quizCrName">'+esc(meta.who)+' <button type="button" class="quizCrPlay" onclick="playQuizCrLine('+idx+',false)" title="Đọc câu này">🔊</button></div><div>'+(typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(QUIZ_CR_LINES[idx].html):esc(raw))+'</div></div></div>';
+    });
+  }
+  box.innerHTML=html||'<div class="muted">Chưa có thoại. Bấm Tạo kịch bản.</div>';
+  if(quizCrHeard()){
+    let extra=document.createElement('div');
+    extra.className='quizCrRevealChat';
+    extra.innerHTML='<div class="quizCrSplit">SAU THẢO LUẬN</div>'+quizCrAfterListenHtml('quizCrSolChat');
+    box.appendChild(extra);
+  }
+  let st=document.getElementById('quizCrStatus');
+  if(st)st.textContent=busy?'Đang phản biện…':(quizCrHeard()?'Đã nghe xong — xem lời giải':(analysis?'Nghe hết để xem lời giải':'Sẵn sàng'));
+  try{
+    let el=document.getElementById('quizClassRoom');
+    let tab='chat';
+    if(el){if(el.classList.contains('cr-tab-de'))tab='de';else if(el.classList.contains('cr-tab-lg'))tab='lg'}
+    quizCrSetTab(tab);
+  }catch(eTab){}
+  try{requestAnimationFrame(function(){typesetNow([prob,box]);setTimeout(function(){typesetNow([prob,box])},160)})}catch(e){}
+  if(!quizCrHeard()||(d.chat&&d.chat.length)){
+    try{box.scrollTop=box.scrollHeight}catch(e3){}
+  }
+}
+function stopQuizCrPlay(){
+  QUIZ_CR_STOP=true;QUIZ_CR_PLAY=-1;
+  try{if(typeof speechSynthesis!=='undefined')speechSynthesis.cancel()}catch(e){}
+  QUIZ_TTS_ON=false;QUIZ_TTS_KIND='';QUIZ_TTS_CHUNKS=[];QUIZ_TTS_IDX=0;
+  document.querySelectorAll('.quizCrMsg.active').forEach(function(n){n.classList.remove('active')});
+  let st=document.getElementById('quizCrStatus');if(st&&QUIZ_CR_WANT)st.textContent='Đã dừng';
+  try{syncQuizReadBtn()}catch(e3){}
+}
+function playQuizCrLine(i,auto){
+  i=parseInt(i,10)||0;
+  if(i<0||i>=QUIZ_CR_LINES.length){if(auto)quizCrOnPlayAllDone();return}
+  if(auto&&QUIZ_CR_LINES[i]&&QUIZ_CR_LINES[i].kind==='follow'){
+    let n=i;while(n<QUIZ_CR_LINES.length&&QUIZ_CR_LINES[n].kind==='follow')n++;
+    if(n<QUIZ_CR_LINES.length){playQuizCrLine(n,true);return}
+    quizCrOnPlayAllDone();return;
+  }
+  if(typeof speechSynthesis==='undefined'){alert('Trình duyệt không hỗ trợ đọc. Dùng Chrome hoặc Edge.');return}
+  QUIZ_CR_STOP=false;QUIZ_CR_PLAY=i;
+  if(quizCrPhone())quizCrSetTab('chat');
+  try{speechSynthesis.cancel()}catch(e){}
+  document.querySelectorAll('.quizCrMsg.active').forEach(function(n){n.classList.remove('active')});
+  let node=document.getElementById('quizCrMsg'+i);
+  if(node){node.classList.add('active');try{node.scrollIntoView({behavior:'smooth',block:'center'})}catch(e2){}}
+  let row=QUIZ_CR_LINES[i];
+  let st=document.getElementById('quizCrStatus');if(st)st.textContent='Đang đọc: '+row.who;
+  let now=document.getElementById('quizCrNow');if(now)now.textContent=(i+1)+'/'+QUIZ_CR_LINES.length+' · '+row.who;
+  let bar=document.getElementById('quizCrBarFill');if(bar)bar.style.width=(((i+1)/Math.max(1,QUIZ_CR_LINES.length))*100)+'%';
+  let u=new SpeechSynthesisUtterance(String(row.text||'').trim()||row.who);
+  u.lang='vi-VN';u.rate=quizCrRate();
+  let v=quizCrVoiceFor(row.who);if(v){u.voice=v;u.lang=v.lang&&String(v.lang).toLowerCase().indexOf('vi')===0?v.lang:'vi-VN'}
+  QUIZ_TTS_ON=true;QUIZ_TTS_KIND='classroom';
+  try{syncQuizReadBtn()}catch(e4){}
+  u.onend=function(){
+    if(auto&&!QUIZ_CR_STOP){
+      let n=i+1;
+      while(n<QUIZ_CR_LINES.length&&QUIZ_CR_LINES[n].kind==='follow')n++;
+      if(n<QUIZ_CR_LINES.length)setTimeout(function(){playQuizCrLine(n,true)},220);
+      else quizCrOnPlayAllDone();
+    }
+  };
+  u.onerror=function(){stopQuizCrPlay()};
+  try{speechSynthesis.speak(u)}catch(e5){stopQuizCrPlay();alert('Không đọc được: '+(e5.message||e5))}
+}
+function playQuizCrAll(){
+  if(!QUIZ_CR_LINES.length)renderQuizClassRoom();
+  if(!QUIZ_CR_LINES.length){alert('Chưa có kịch bản. Bấm Tạo kịch bản.');return}
+  if(quizCrPhone())quizCrSetTab('chat');
+  let start=0;
+  while(start<QUIZ_CR_LINES.length&&QUIZ_CR_LINES[start].kind==='follow')start++;
+  playQuizCrLine(start,true);
+}
+function quizDebateChatInnerHtml(){return '<div class="quizDebateChatHint muted">Bấm <b>🎤 Nói</b> để trợ lý nghe ý kiến em, rồi phán <b>đúng / sai</b>, nêu công thức $...$ và nhận xét bám sát đề. Cũng có thể gõ.</div><div id="quizDebateChatLog" class="quizDebateChatLog"></div><div class="quizDebateChatRow"><button type="button" class="btn2 btnSmall" id="btnDebateListen" onclick="toggleDebateListen()" title="Nói ý kiến — AI nghe rồi phản biện">🎤 Nói</button><textarea id="quizDebateAsk" rows="2" placeholder="Nói hoặc gõ ý kiến — trợ lý nêu công thức, bám sát đề…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendQuizDebateFollowup()}"></textarea><button type="button" class="btnStartStrong btnSmall" id="btnDebateAsk" onclick="sendQuizDebateFollowup()">Gửi</button></div>'}
 let DEBATE_SR=null,DEBATE_SR_ON=false,DEBATE_SR_FINAL='';
 function debateSpeechEngine(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;return SR?new SR():null}
-function debateListenBtnSet(on){let b=document.getElementById('btnDebateListen');if(!b)return;b.classList.toggle('listening',!!on);b.textContent=on?'⏹ Dừng':'🎤 Nói';b.disabled=false}
-function stopDebateListen(andSend){DEBATE_SR_ON=false;try{if(DEBATE_SR)DEBATE_SR.stop()}catch(e){}DEBATE_SR=null;debateListenBtnSet(false);if(andSend){let ta=document.getElementById('quizDebateAsk');let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(msg)sendQuizDebateFollowup(true)}}
-function toggleDebateListen(){if(DEBATE_SR_ON){stopDebateListen(true);return}if(!canUseQuizDebate()){alert('Hãy làm và chấm câu này trước.');return}stopQuizQuestionSpeech();let rec=debateSpeechEngine();if(!rec){alert('Trình duyệt không hỗ trợ nghe giọng nói.\nDùng Chrome hoặc Edge (có mic), hoặc gõ vào ô.');return}DEBATE_SR_FINAL='';DEBATE_SR=rec;DEBATE_SR_ON=true;rec.lang='vi-VN';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;rec.onresult=function(ev){let final='',interim='';for(let i=0;i<ev.results.length;i++){let t=String(ev.results[i][0]&&ev.results[i][0].transcript||'');if(ev.results[i].isFinal)final+=t+' ';else interim+=t}if(final)DEBATE_SR_FINAL=String(final).replace(/\s+/g,' ').trim();let ta=document.getElementById('quizDebateAsk');if(ta)ta.value=String(DEBATE_SR_FINAL+(interim?(' '+interim):'')).replace(/\s+/g,' ').trim()};rec.onerror=function(ev){let err=String((ev&&ev.error)||'');if(err==='not-allowed'||err==='service-not-allowed')alert('Chưa cho phép mic. Hãy cho phép microphone rồi bấm 🎤 Nói lại.');else if(err==='no-speech'){let st=document.getElementById('quizDebateStatus');if(st)st.textContent='Chưa nghe thấy. Nói lại gần mic.'}DEBATE_SR_ON=false;debateListenBtnSet(false)};rec.onend=function(){if(!DEBATE_SR_ON)return;DEBATE_SR_ON=false;debateListenBtnSet(false);let ta=document.getElementById('quizDebateAsk');let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(msg)sendQuizDebateFollowup(true)};try{rec.start();debateListenBtnSet(true);let st=document.getElementById('quizDebateStatus');if(st)st.textContent='Đang nghe… hãy nói ý kiến của em.'}catch(e){DEBATE_SR_ON=false;debateListenBtnSet(false);alert('Không bật mic được: '+(e.message||e))}}
+function debateListenBtnSet(on){for(let id of ['btnDebateListen','btnCrListen']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('listening',!!on);b.textContent=on?'⏹ Dừng':'🎤 Nói';b.disabled=false}}
+function stopDebateListen(andSend){DEBATE_SR_ON=false;try{if(DEBATE_SR)DEBATE_SR.stop()}catch(e){}DEBATE_SR=null;debateListenBtnSet(false);if(andSend){let ta=debateAskEl();let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(msg)sendQuizDebateFollowup(true)}}
+function toggleDebateListen(){if(DEBATE_SR_ON){stopDebateListen(true);return}if(!canUseQuizDebate()){alert('Hãy làm và chấm câu này trước.');return}stopQuizQuestionSpeech();let rec=debateSpeechEngine();if(!rec){alert('Trình duyệt không hỗ trợ nghe giọng nói.\nDùng Chrome hoặc Edge (có mic), hoặc gõ vào ô.');return}DEBATE_SR_FINAL='';DEBATE_SR=rec;DEBATE_SR_ON=true;rec.lang='vi-VN';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;rec.onresult=function(ev){let final='',interim='';for(let i=0;i<ev.results.length;i++){let t=String(ev.results[i][0]&&ev.results[i][0].transcript||'');if(ev.results[i].isFinal)final+=t+' ';else interim+=t}if(final)DEBATE_SR_FINAL=String(final).replace(/\s+/g,' ').trim();let ta=debateAskEl();if(ta)ta.value=String(DEBATE_SR_FINAL+(interim?(' '+interim):'')).replace(/\s+/g,' ').trim()};rec.onerror=function(ev){let err=String((ev&&ev.error)||'');if(err==='not-allowed'||err==='service-not-allowed')alert('Chưa cho phép mic. Hãy cho phép microphone rồi bấm 🎤 Nói lại.');else if(err==='no-speech'){let st=document.getElementById('quizDebateStatus');if(st)st.textContent='Chưa nghe thấy. Nói lại gần mic.'}DEBATE_SR_ON=false;debateListenBtnSet(false)};rec.onend=function(){if(!DEBATE_SR_ON)return;DEBATE_SR_ON=false;debateListenBtnSet(false);let ta=debateAskEl();let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(msg)sendQuizDebateFollowup(true)};try{rec.start();debateListenBtnSet(true);let st=document.getElementById('quizDebateStatus');if(st)st.textContent='Đang nghe… hãy nói ý kiến của em.'}catch(e){DEBATE_SR_ON=false;debateListenBtnSet(false);alert('Không bật mic được: '+(e.message||e))}}
 function syncQuizDebateBtn(){let on=!!(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='debate');let busy=QUIZ_DEBATE_LOADING===CUR;let allow=canUseQuizDebate();for(let id of ['btnDebateLoiGiai','btnFsDebateLoiGiai','btnPanelDebate']){let x=document.getElementById(id);if(!x)continue;x.classList.toggle('hide',!allow);x.classList.toggle('ttsBusy',busy);x.disabled=busy;if(busy)x.textContent=(id==='btnFsDebateLoiGiai'?'⏳ …':'⏳ Đang phản biện…');else x.textContent=(id==='btnFsDebateLoiGiai'?'⚖ Phản biện':'⚖ Phản biện')}let rd=document.getElementById('btnReadDebate');if(rd){rd.classList.toggle('ttsBtnOn',on);rd.textContent=on?'⏸ Dừng phản biện':'🔊 Đọc phản biện'}}
 
 function quizScriptAnalysisFrom(d){
@@ -30602,47 +31349,65 @@ function quizScriptAnalysisFrom(d){
 function localQuizClassScript(){
   let q=currentQuestion()||{};
   let names=['An','Bình','Chi','Dũng'];
-  let lines=['An: '+quizSpeechPlain(q.CauHoi||'Đề đang trống.')];
-  let i=0;
-  for(let L of ['A','B','C','D']){
-    if(String(q[L]||'').trim()){lines.push(names[i]+': Phương án '+L+'. '+quizSpeechPlain(q[L]));i++}
+  let de=quizSpeechPlain(q.CauHoi||'Đề đang trống.');
+  let dang=String(q.Dang||q.Chuong||'bài này').trim();
+  let lines=['An: Đề này cho: '+de,'Bình: Khoan chọn vội. Dễ bị bẫy nếu áp sai công thức, không khớp số liệu đề.'];
+  let opts=[];
+  for(let L of ['A','B','C','D']){if(String(q[L]||'').trim())opts.push([L,quizSpeechPlain(q[L])])}
+  if(opts.length){
+    lines.push(names[0]+': Mình nghiêng '+opts[0][0]+': '+opts[0][1]);
+    if(opts[1])lines.push(names[1]+': Không đồng ý ngay. '+opts[1][0]+' cũng nghe có lý: '+opts[1][1]);
+    if(opts[2])lines.push(names[2]+': Hai hướng đó xung đột. '+opts[2][0]+': '+opts[2][1]+' — đề đang hỏi gì, công thức nào mới khớp dữ kiện?');
+    if(opts[3])lines.push(names[3]+': Còn '+opts[3][0]+': '+opts[3][1]+'. Có thể là nhiễu nếu quên điều kiện trên đề.');
+  }else{
+    lines.push('Chi: Tách dữ kiện đề: cái nào cho sẵn, cái nào cần tìm.');
+    lines.push('Dũng: Rồi mới nêu công thức, thay đúng số trên đề.');
   }
-  lines.push('Bình: Mình chưa chọn ngay. Trước hết cần nhận dạng dữ kiện.');
-  lines.push('Chi: Đồng ý. Kiểm tra công thức trước khi kết luận.');
+  lines.push('Chi: Dạng '+dang+' thì công thức xương sống là gì? Đừng nhớ máy móc.');
   let da=String(q.DapAn||'').trim();
-  lines.push('Thầy Minh: Kết luận theo dữ liệu nguồn là '+(da||'xem lại đáp án')+'. Nếu nguồn sai thì sửa sau khi kiểm chứng. Đây là draft máy, chưa ghi Sheet.');
+  lines.push('Thầy Minh: Tranh luận tốt. Bám sát đề, nêu đúng công thức của bài, thay đúng số liệu rồi mới kết luận. Theo nguồn, đáp án là '+(da||'cần đối chiếu lại Sheet')+'. Nếu nguồn lệch đề thì nói thẳng. Đây là draft máy, chưa ghi Sheet.');
   return lines.join('\n');
 }
-async function makeQuizClassScript(){
-  if(!canUseQuizDebate()){alert('Hãy làm và chấm câu này trước.');return}
+async function makeQuizClassScript(opts){
+  opts=opts||{};
+  if(!canUseQuizDebate()){if(!opts.auto)alert('Hãy làm và chấm câu này trước.');return}
   let d=QUIZ_DEBATE_BY_Q[CUR]||{};
+  if(opts.auto&&d.scriptAi){if(QUIZ_CR_WANT)renderQuizClassRoom();return}
   let st=document.getElementById('quizScriptStatus');
   let ta=document.getElementById('quizScriptText');
+  let cr=document.getElementById('quizCrStatus');
   let prov=String((document.getElementById('quizScriptProvider')||{}).value||'gemini');
   if(prov==='local'){
     let txt=localQuizClassScript();
     if(ta)ta.value=txt;
     d.script=txt;QUIZ_DEBATE_BY_Q[CUR]=d;
     if(st)st.textContent='Đã tạo mẫu local. Draft máy — không ghi Sheet.';
+    openQuizClassRoom();
     return;
   }
   if(st)st.textContent='Đang viết kịch bản…';
+  if(cr)cr.textContent='Đang viết kịch bản lớp…';
   try{
     let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}
-    let body={sid:SID,index:CUR,answer:ANSWERS[CUR],loigiai:lg,analysis:quizScriptAnalysisFrom(d),provider:prov,...quizRestorePayload()};
-    quizAttachAiKeys(body);
-    let j=await api('/api/quiz/debate-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:70000},0);
+    let body=quizDebateRequestBody({sid:SID,index:CUR,answer:ANSWERS[CUR],loigiai:lg,analysis:quizScriptAnalysisFrom(d),provider:prov});
+    let j=await api('/api/quiz/debate-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:28000,skipLoginRedirect:true},0);
     let txt=String((j&&j.text)||'').trim()||localQuizClassScript();
     if(ta)ta.value=txt;
-    d.script=txt;QUIZ_DEBATE_BY_Q[CUR]=d;
+    d.script=txt;d.scriptAi=!(j&&j.provider==='LOCAL');QUIZ_DEBATE_BY_Q[CUR]=d;
     if(st)st.textContent='Đã tạo kịch bản ('+(j.provider||prov)+'). Draft máy — không ghi Sheet.'+(j.warning?(' · '+j.warning):'');
+    if(cr)cr.textContent='Đã có kịch bản lớp';
+    openQuizClassRoom();
   }catch(e){
     let txt=localQuizClassScript();
     if(ta)ta.value=txt;
+    d.script=txt;QUIZ_DEBATE_BY_Q[CUR]=d;
     if(st)st.textContent='AI lỗi, đã dùng mẫu local. '+(e.message||e);
+    if(cr)cr.textContent='Dùng kịch bản nháp';
+    openQuizClassRoom();
   }
 }
 function readQuizClassScript(){
+  if(QUIZ_CR_WANT){playQuizCrAll();return}
   let ta=document.getElementById('quizScriptText');
   let txt=String((ta&&ta.value)||'').trim();
   if(!txt){alert('Chưa có kịch bản. Bấm Tạo kịch bản trước.');return}
@@ -30661,26 +31426,24 @@ function downloadQuizClassScript(){
 function cancelQuizDebate(){let ctrl=QUIZ_DEBATE_ABORT_CTRL;QUIZ_DEBATE_LOADING=-1;QUIZ_DEBATE_ABORT_CTRL=null;if(ctrl){try{ctrl.abort()}catch(e){}}syncQuizDebateBtn()}
 function ensureQuizDebateStudioBox(){
   let panel=document.getElementById('quizDebatePanel');if(!panel)return panel;
-  if(!document.getElementById('quizDebateFinal')){
-    let card=document.createElement('div');
-    card.className='quizDebateCard final';
-    card.innerHTML='<h4>Tổng hợp cuối (Gemini)</h4><div id="quizDebateFinal" class="quizDebateBody muted">Chưa có.</div>';
-    let grid=panel.querySelector('.quizDebateGrid');
-    if(grid&&grid.nextSibling)panel.insertBefore(card,grid.nextSibling);else panel.appendChild(card);
-  }
+  panel.classList.add('oneAi');
+  let fin=document.getElementById('quizDebateFinal');
+  if(fin){let card=fin.closest('.quizDebateCard');if(card)card.style.display='none';else fin.style.display='none'}
   if(!document.getElementById('quizScriptBox')){
     let box=document.createElement('div');
     box.id='quizScriptBox';box.className='quizScriptBox';
-    box.innerHTML='<b>Kịch bản lớp học (draft máy — không ghi Sheet)</b><p class="note">An đọc đề. An/Bình/Chi/Dũng đọc A–D. Thầy Minh chốt. Tạo kịch bản, đọc thử hoặc tải TXT. Không lưu Sheet.</p><div class="quizLgGenRow"><button type="button" class="btn2 btnSmall" onclick="makeQuizClassScript()">Tạo kịch bản</button><button type="button" class="btn2 btnSmall" onclick="readQuizClassScript()">Đọc thử</button><button type="button" class="btn2 btnSmall" onclick="stopQuizQuestionSpeech()">Dừng</button><button type="button" class="btn2 btnSmall" onclick="downloadQuizClassScript()">Tải TXT</button></div><label class="muted" style="font-size:13px">Nguồn </label><select id="quizScriptSource"><option value="final">Kết luận thảo luận</option><option value="gemini">Gemini phân tích</option><option value="claude">Claude phản biện</option><option value="source">Lời giải nguồn</option></select> <select id="quizScriptProvider"><option value="gemini">Gemini viết</option><option value="local">Mẫu local, không API</option></select><textarea id="quizScriptText" placeholder="Kịch bản An / Bình / Chi / Dũng / Thầy Minh…"></textarea><div id="quizScriptStatus" class="muted" style="margin-top:6px;font-size:13px"></div>';
+    box.innerHTML='<b>Kịch bản lớp học (draft máy — không ghi Sheet)</b><p class="note">Kịch bản kích thích: học sinh tranh luận, nêu công thức bằng lời, bám số liệu đề. Tạo kịch bản, đọc thử hoặc tải TXT. Không lưu Sheet.</p><div class="quizLgGenRow"><button type="button" class="btn2 btnSmall" onclick="openQuizClassRoom()">🎓 Mở lớp học</button><button type="button" class="btn2 btnSmall" onclick="makeQuizClassScript()">Tạo kịch bản</button><button type="button" class="btn2 btnSmall" onclick="readQuizClassScript()">Đọc thử</button><button type="button" class="btn2 btnSmall" onclick="stopQuizQuestionSpeech()">Dừng</button><button type="button" class="btn2 btnSmall" onclick="downloadQuizClassScript()">Tải TXT</button></div><label class="muted" style="font-size:13px">Nguồn </label><select id="quizScriptSource"><option value="final">Phản biện 1 bước</option><option value="source">Lời giải nguồn</option></select> <select id="quizScriptProvider"><option value="gemini">Gemini viết</option><option value="local">Mẫu local, không API</option></select><textarea id="quizScriptText" placeholder="Kịch bản An / Bình / Chi / Dũng / Thầy Minh…"></textarea><div id="quizScriptStatus" class="muted" style="margin-top:6px;font-size:13px"></div>';
     let chat=document.getElementById('quizDebateChat');
     if(chat)panel.insertBefore(box,chat);else panel.appendChild(box);
   }
   return panel;
 }
-function ensureQuizDebatePanel(){let panel=document.getElementById('quizDebatePanel');if(panel){if(!document.getElementById('quizDebateChat')){let chat=document.createElement('div');chat.id='quizDebateChat';chat.className='quizDebateChat';chat.innerHTML=quizDebateChatInnerHtml();panel.appendChild(chat)}else if(!document.getElementById('btnDebateListen')){let row=panel.querySelector('.quizDebateChatRow');if(row){let b=document.createElement('button');b.type='button';b.className='btn2 btnSmall';b.id='btnDebateListen';b.title='Nói ý kiến — AI nghe rồi phản biện';b.setAttribute('onclick','toggleDebateListen()');b.textContent='🎤 Nói';row.insertBefore(b,row.firstChild)}let hint=panel.querySelector('.quizDebateChatHint');if(hint)hint.innerHTML='Bấm <b>🎤 Nói</b> để trợ lý nghe ý kiến em, rồi phán <b>đúng / sai</b> kèm dẫn chứng từ đề và lời giải. Cũng có thể gõ.'}ensureQuizDebateKeyBox();ensureQuizDebateStudioBox();return panel}let host=document.getElementById('adminLoiGiaiPanel')||document.getElementById('solution');if(!host||!host.parentNode)return null;panel=document.createElement('div');panel.id='quizDebatePanel';panel.className='quizDebatePanel hide';panel.innerHTML='<div class="quizDebateHead"><span>⚖ Trợ lý AI của Thầy Minh Vật Lý · nghe ý kiến · phán đúng/sai kèm dẫn chứng</span><span id="quizDebateStatus" class="muted"></span></div>'+quizDebateKeyBoxHtml()+'<div class="quizDebateGrid"><div class="quizDebateCard claude"><h4>✨ Claude</h4><div id="quizDebateClaude" class="quizDebateBody muted">Chưa phản biện.</div></div><div class="quizDebateCard gemini"><h4>⚡ Trợ lý Thầy Minh</h4><div id="quizDebateGemini" class="quizDebateBody muted">Chưa phản biện.</div></div></div><div class="quizLgGenRow"><button type="button" class="btn2 btnSmall" id="btnReadDebate" onclick="toggleReadDebate()">🔊 Đọc phản biện</button><button type="button" class="btn2 btnSmall" onclick="showQuizDebateKeyBox()">🔑 Key Gemini</button><button type="button" class="btnRed btnSmall hide" id="btnCancelDebate" onclick="cancelQuizDebate()">⏹ Hủy</button></div><div id="quizDebateChat" class="quizDebateChat">'+quizDebateChatInnerHtml()+'</div>';host.parentNode.insertBefore(panel,host.nextSibling);ensureQuizDebateStudioBox();return panel}
+function ensureQuizDebatePanel(){let panel=document.getElementById('quizDebatePanel');if(panel){if(!document.getElementById('quizDebateChat')){let chat=document.createElement('div');chat.id='quizDebateChat';chat.className='quizDebateChat';chat.innerHTML=quizDebateChatInnerHtml();panel.appendChild(chat)}else if(!document.getElementById('btnDebateListen')){let row=panel.querySelector('.quizDebateChatRow');if(row){let b=document.createElement('button');b.type='button';b.className='btn2 btnSmall';b.id='btnDebateListen';b.title='Nói ý kiến — AI nghe rồi phản biện';b.setAttribute('onclick','toggleDebateListen()');b.textContent='🎤 Nói';row.insertBefore(b,row.firstChild)}let hint=panel.querySelector('.quizDebateChatHint');if(hint)hint.innerHTML='Bấm <b>🎤 Nói</b> để trợ lý nghe ý kiến em, rồi phán <b>đúng / sai</b>, nêu công thức $...$ và nhận xét bám sát đề. Cũng có thể gõ.'}ensureQuizDebateKeyBox();ensureQuizDebateStudioBox();return panel}let host=document.getElementById('adminLoiGiaiPanel')||document.getElementById('solution');if(!host||!host.parentNode)return null;panel=document.createElement('div');panel.id='quizDebatePanel';panel.className='quizDebatePanel hide';panel.innerHTML='<div class="quizDebateHead"><span>⚖ Trợ lý AI của Thầy Minh Vật Lý · nghe ý kiến · phán đúng/sai kèm dẫn chứng</span><span id="quizDebateStatus" class="muted"></span></div>'+quizDebateKeyBoxHtml()+'<div class="quizDebateGrid"><div class="quizDebateCard gemini"><h4>⚡ Phản biện (1 bước)</h4><div id="quizDebateGemini" class="quizDebateBody muted">Chưa phản biện.</div></div></div><div class="quizLgGenRow"><button type="button" class="btn2 btnSmall" id="btnReadDebate" onclick="toggleReadDebate()">🔊 Đọc phản biện</button><button type="button" class="btn2 btnSmall" onclick="showQuizDebateKeyBox()">🔑 Key Gemini</button><button type="button" class="btnRed btnSmall hide" id="btnCancelDebate" onclick="cancelQuizDebate()">⏹ Hủy</button></div><div id="quizDebateChat" class="quizDebateChat">'+quizDebateChatInnerHtml()+'</div>';host.parentNode.insertBefore(panel,host.nextSibling);ensureQuizDebateStudioBox();return panel}
 function dedupeDebateMath(s){s=String(s||'');s=s.replace(/\$([^$]{1,160})\$\s*\$\1\$/g,function(_,a){return '$'+a+'$'});s=s.replace(/\$([^$]{1,160})\$\1/g,function(_,a){return '$'+a+'$'});return s}
-function quizDebateCardHtml(text,err){text=dedupeDebateMath(String(text||'').trim());err=String(err||'').trim();if(text)return (typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(text):(typeof formatHintDisplay==='function'?formatHintDisplay(text):String(text).replace(/\n/g,'<br>')));if(err)return '<span class="muted">'+esc(err)+'</span>';return '<span class="muted">Chưa có phản hồi.</span>'}
-function syncQuizDebatePanel(){let panel=ensureQuizDebatePanel();if(!panel)return;ensureQuizDebateKeyBox();let allow=canUseQuizDebate();let d=QUIZ_DEBATE_BY_Q[CUR];let busy=QUIZ_DEBATE_LOADING===CUR;let keyBox=document.getElementById('quizDebateKeyBox');let keyOpen=!!(keyBox&&!keyBox.classList.contains('hide'));let show=allow&&(busy||!!d||keyOpen);panel.classList.toggle('hide',!show);let showC=typeof showClaudeDebate==='function'?showClaudeDebate():true;panel.classList.toggle('oneAi',!showC);let c=document.getElementById('quizDebateClaude');let g=document.getElementById('quizDebateGemini');let st=document.getElementById('quizDebateStatus');let cancel=document.getElementById('btnCancelDebate');if(cancel)cancel.classList.toggle('hide',!busy);if(busy){if(st)st.textContent='Bước 1–3: Gemini phân tích → Claude phản biện → tổng hợp…';if(c)c.innerHTML=showC?'<span class="muted">Claude chờ phản biện Gemini…</span>':'';if(g)g.innerHTML='<span class="muted">Gemini đang phân tích nguồn…</span>';let f=document.getElementById('quizDebateFinal');if(f)f.innerHTML='<span class="muted">Chờ tổng hợp cuối…</span>';let ch=document.getElementById('quizDebateChat');if(ch)ch.classList.add('hide');syncQuizDebateBtn();return}if(d){if(st)st.textContent=(d.final||d.gemini||d.claude)?'3 bước xong — tạo kịch bản (không lưu Sheet) hoặc hỏi tiếp':'Bấm Phản biện để chạy Gemini → Claude → tổng hợp';if(c){c.classList.remove('muted');c.innerHTML=showC?quizDebateCardHtml(d.claude,d.claude_error):''}if(g){g.classList.remove('muted');g.innerHTML=quizDebateCardHtml(d.gemini,d.gemini_error)}let f=document.getElementById('quizDebateFinal');if(f){f.classList.remove('muted');f.innerHTML=quizDebateCardHtml(d.final||d.gemini,d.gemini_error)}let sta=document.getElementById('quizScriptStatus');if(sta&&!String((document.getElementById('quizScriptText')||{}).value||'').trim())sta.textContent='Draft máy. Chọn nguồn rồi Tạo kịch bản / Tải TXT.';if(d.script){let taS=document.getElementById('quizScriptText');if(taS&&!taS.value)taS.value=d.script}try{setTimeout(function(){typesetDebateMath()},80)}catch(e){}}try{renderQuizDebateChat()}catch(e3){}syncQuizDebateBtn()}
+function wrapBareTexCommandsInProse(s){return applyFmtOutsideMath(String(s||''),function(plain){return plain.replace(/\\([A-Za-z]+)(?:\s*(?:\[[^\]]*\]|\{[^{}]*\})){0,6}(?:\s*[_\^](?:\{[^{}]*\}|[^\s{])){0,4}/g,function(m,cmd){if(/^(begin|end|item|textbf|textit|emph|underline|newline|qquad|quad|enspace|hspace|vspace|color|textcolor|includegraphics)$/i.test(cmd))return m;return '$'+m+'$'})})}
+function prepareDebateLatex(s){s=dedupeDebateMath(String(s||''));s=s.replace(/\\\[([\s\S]*?)\\\]/g,function(_,x){return '$'+String(x).replace(/\s+/g,' ').trim()+'$'});s=s.replace(/\\\(([\s\S]*?)\\\)/g,function(_,x){return '$'+String(x).replace(/\s+/g,' ').trim()+'$'});s=s.replace(/\$\$([\s\S]*?)\$\$/g,function(_,x){return '$'+String(x).replace(/\s+/g,' ').trim()+'$'});s=s.replace(/\$([^$]+)\$/g,function(_,x){return '$'+String(x).replace(/\s+/g,' ').trim()+'$'});return wrapBareTexCommandsInProse(s)}
+function quizDebateCardHtml(text,err){text=prepareDebateLatex(String(text||'').trim());err=String(err||'').trim();if(text)return (typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(text):(typeof formatHintDisplay==='function'?formatHintDisplay(text):String(text).replace(/\n/g,'<br>')));if(err)return '<span class="muted">'+esc(err)+'</span>';return '<span class="muted">Chưa có phản hồi.</span>'}
+function syncQuizDebatePanel(){let panel=ensureQuizDebatePanel();if(!panel)return;ensureQuizDebateKeyBox();let allow=canUseQuizDebate();let d=QUIZ_DEBATE_BY_Q[CUR];let busy=QUIZ_DEBATE_LOADING===CUR;let keyBox=document.getElementById('quizDebateKeyBox');let keyOpen=!!(keyBox&&!keyBox.classList.contains('hide'));let show=allow&&(busy||!!d||keyOpen);panel.classList.toggle('hide',!show);panel.classList.add('oneAi');let showC=false;let c=document.getElementById('quizDebateClaude');let g=document.getElementById('quizDebateGemini');let st=document.getElementById('quizDebateStatus');let cancel=document.getElementById('btnCancelDebate');if(cancel)cancel.classList.toggle('hide',!busy);if(busy){if(st)st.textContent='Đang phản biện 1 bước…';if(c)c.innerHTML='';if(g)g.innerHTML='<span class="muted">Đang phản biện lời giải…</span>';let ch=document.getElementById('quizDebateChat');if(ch)ch.classList.add('hide');syncQuizDebateBtn();return}if(d){if(st)st.textContent=(d.final||d.gemini||d.claude)?'Đã phản biện 1 bước — hỏi tiếp hoặc tạo kịch bản (không lưu Sheet)':'Bấm Phản biện (1 bước)';if(c)c.innerHTML='';if(g){g.classList.remove('muted');g.innerHTML=quizDebateCardHtml(d.final||d.gemini||d.claude,d.gemini_error||d.claude_error)}let sta=document.getElementById('quizScriptStatus');if(sta&&!String((document.getElementById('quizScriptText')||{}).value||'').trim())sta.textContent='Draft máy. Bấm Tạo kịch bản để Gemini viết thoại kích thích (nêu công thức, bám đề).';if(d.script){let taS=document.getElementById('quizScriptText');if(taS&&!taS.value)taS.value=d.script}else{let taS=document.getElementById('quizScriptText');if(taS&&!String(taS.value||'').trim()){let seed=localQuizClassScript();taS.value=seed;d.script=seed;QUIZ_DEBATE_BY_Q[CUR]=d}}try{requestAnimationFrame(function(){typesetDebateMath();setTimeout(function(){typesetDebateMath()},160)})}catch(e){}}try{renderQuizDebateChat()}catch(e3){}if(QUIZ_CR_WANT)try{renderQuizClassRoom()}catch(e4){}syncQuizDebateBtn()}
 function debateSpeechHasBrand(s){let t=normText(String(s||'')).replace(/\s+/g,' ');return t.indexOf('thay minh')>=0}
 function debateSpeechHasAsk(s){let t=normText(String(s||'')).replace(/\s+/g,' ');return t.indexOf('thac mac')>=0}
 function wrapQuizDebateSpeech(body){let t=quizSpeechPlain(body||'');if(!t)return'';if(!debateSpeechHasBrand(t.slice(0,180)))t='Xin chào em. Mình là trợ lý AI của Thầy Minh Vật Lý. '+t;if(!debateSpeechHasAsk(t.slice(-160)))t=t+' Em còn thắc mắc gì không? Nếu có, hãy gõ câu hỏi ở ô bên dưới để mình trao đổi tiếp.';return t}
@@ -30688,9 +31451,9 @@ function stripDebateSpeechIntro(t){t=String(t||'').trim();t=t.replace(/^Xin chà
 function buildQuizReadDebateText(){let d=QUIZ_DEBATE_BY_Q[CUR]||{};let body=d.final||d.gemini||d.claude||'';let debate=wrapQuizDebateSpeech(body);if(!debate)return'';let rest=stripDebateSpeechIntro(debate);let de='';try{de=buildQuizReadAloudText()}catch(e){}let parts=['Xin chào em. Mình là trợ lý AI của Thầy Minh Vật Lý.'];if(de){parts.push('Mình đọc lại đề.');parts.push(de);parts.push('Bây giờ mình phản biện.')}if(rest)parts.push(rest);return parts.join(' ')}
 function toggleReadDebate(){if(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='debate'){stopQuizQuestionSpeech();return}startQuizViSpeech(buildQuizReadDebateText(),'debate','Chưa có phản biện để đọc. Bấm «Phản biện» trước.')}
 let QUIZ_DEBATE_CHAT_LOADING=-1;
-function renderQuizDebateChat(){let wrap=document.getElementById('quizDebateChat');let log=document.getElementById('quizDebateChatLog');let d=QUIZ_DEBATE_BY_Q[CUR];let busy=QUIZ_DEBATE_LOADING===CUR;if(wrap)wrap.classList.toggle('hide',busy||!d);if(!log)return;let chat=(d&&d.chat)||[];if(!chat.length){log.innerHTML='';return}log.innerHTML=chat.map(function(m){let who=m.role==='user'?'Em':'Trợ lý Thầy Minh';let cls=m.role==='user'?'user':'ai';let html=typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(m.text||''):(String(m.text||'').replace(/\n/g,'<br>'));return '<div class="quizDebateChatMsg '+cls+'"><div class="who">'+esc(who)+'</div>'+html+'</div>'}).join('');try{setTimeout(function(){typesetNow([log])},80)}catch(e){}try{log.scrollTop=log.scrollHeight}catch(e2){}}
-async function sendQuizDebateFollowup(fromSpeech){if(QUIZ_DEBATE_CHAT_LOADING===CUR||QUIZ_DEBATE_LOADING===CUR)return;if(DEBATE_SR_ON){DEBATE_SR_ON=false;try{if(DEBATE_SR)DEBATE_SR.stop()}catch(e){}DEBATE_SR=null;debateListenBtnSet(false)}if(!canUseQuizDebate()){alert('Hãy làm và chấm câu này trước.');return}if(!SID||!QUESTIONS.length)return;if(needQuizDebateGeminiKey('followup'))return;let ta=document.getElementById('quizDebateAsk');let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(!msg){if(fromSpeech)alert('Chưa nghe rõ. Bấm 🎤 Nói rồi nói lại gần mic.');else if(ta)ta.focus();return}let qIdx=CUR;let d=QUIZ_DEBATE_BY_Q[qIdx];if(!d){d={claude:'',gemini:'',chat:[],lg:'',fmt:'abcd'};QUIZ_DEBATE_BY_Q[qIdx]=d;try{ensureQuizDebatePanel();syncQuizDebatePanel()}catch(e){}}d.chat=d.chat||[];d.chat.push({role:'user',text:(fromSpeech?'🎤 ':'')+msg,spoken:!!fromSpeech});if(ta)ta.value='';DEBATE_SR_FINAL='';QUIZ_DEBATE_CHAT_LOADING=qIdx;let btn=document.getElementById('btnDebateAsk');if(btn){btn.disabled=true;btn.textContent='⏳ …'}renderQuizDebateChat();try{let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}let body={sid:SID,index:qIdx,answer:ANSWERS[qIdx],loigiai:lg,message:msg,spoken:fromSpeech?1:0,debate_text:d.gemini||d.claude||'',history:(d.chat||[]).slice(-8),...quizRestorePayload()};quizAttachAiKeys(body);let j=await api('/api/quiz/debate-followup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:32000},0);if(CUR!==qIdx)return;let text=String((j&&j.text)||'').trim();if(!text)throw new Error('Trợ lý chưa trả lời.');d.chat.push({role:'ai',text:text});renderQuizDebateChat();try{startQuizViSpeech(quizSpeechPlain(text)+(debateSpeechHasAsk(text)?'':' Em còn thắc mắc gì không? Có thể nói tiếp vào mic.'),'debate')}catch(e2){}}catch(e){if(CUR===qIdx&&d&&d.chat&&d.chat.length&&d.chat[d.chat.length-1].role==='user')d.chat.pop();renderQuizDebateChat();alert('Không trao đổi được: '+(e.message||e))}finally{if(QUIZ_DEBATE_CHAT_LOADING===qIdx)QUIZ_DEBATE_CHAT_LOADING=-1;if(btn){btn.disabled=false;btn.textContent='Gửi'}}}
-async function toggleQuizDebate(){if(QUIZ_DEBATE_LOADING===CUR){cancelQuizDebate();return}if(!canUseQuizDebate()){if(EXAM_MODE&&!SUBMITTED)alert('Chế độ kiểm tra: nộp bài xong mới phản biện.');else if(!(typeof canShowSolutionNow==='function'&&canShowSolutionNow())&&!isAdminViewer())alert('Hãy làm và chấm câu này trước, rồi mới phản biện lời giải.');else alert('Phản biện lời giải dành VIP / SVIP / ADMIN.');return}if(!SID||!QUESTIONS.length)return;let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}if(!String(lg||'').trim()){alert('Chưa có lời giải để phản biện.\nMở lời giải hoặc bấm «Viết lại bằng AI» trước.');return}if(needQuizDebateGeminiKey('debate'))return;let qIdx=CUR;let cached=QUIZ_DEBATE_BY_Q[qIdx];if(cached&&(cached.claude||cached.gemini)&&cached.lg===String(lg).slice(0,80)&&cached.fmt==='studio3'){VIP_Q_SHOW_EXP[CUR]=true;let sol=document.getElementById('solution');if(sol)sol.classList.remove('hide');syncQuizDebatePanel();try{let box=document.getElementById('quizDebatePanel');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){}return}saveCurrent();VIP_Q_SHOW_EXP[CUR]=true;let sol=document.getElementById('solution');if(sol)sol.classList.remove('hide');QUIZ_DEBATE_ABORT_CTRL=new AbortController();QUIZ_DEBATE_LOADING=qIdx;syncQuizDebatePanel();try{let body={sid:SID,index:qIdx,answer:ANSWERS[qIdx],loigiai:lg,...quizRestorePayload()};quizAttachAiKeys(body);if(isAdminViewer()){body.admin_ai_provider='ANTHROPIC';body.admin_ai_allow_gpt_fallback=true}let j=isAdminViewer()&&typeof adminAiFetch==='function'?await adminAiFetch('/api/quiz/debate-loigiai',body,{signal:QUIZ_DEBATE_ABORT_CTRL.signal,timeoutMs:110000,admin_ai_provider:'ANTHROPIC'}):await api('/api/quiz/debate-loigiai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:QUIZ_DEBATE_ABORT_CTRL.signal,timeoutMs:110000},0);if(QUIZ_DEBATE_LOADING!==qIdx)return;QUIZ_DEBATE_BY_Q[qIdx]={claude:j.claude||'',gemini:j.gemini||'',final:j.final||j.gemini||'',claude_error:j.claude_error||'',gemini_error:j.gemini_error||'',lg:String(lg).slice(0,80),fmt:'studio3'};if(CUR!==qIdx)return;syncQuizDebatePanel();let box=document.getElementById('quizDebatePanel');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){if(QUIZ_DEBATE_LOADING!==qIdx)return;let msg=String(e&&e.message||e||'');if(/abort|hủy|quá lâu/i.test(msg))return;alert('Không phản biện được: '+msg)}finally{if(QUIZ_DEBATE_LOADING===qIdx){QUIZ_DEBATE_LOADING=-1;QUIZ_DEBATE_ABORT_CTRL=null;syncQuizDebatePanel()}}}
+function renderQuizDebateChat(){let wrap=document.getElementById('quizDebateChat');let log=document.getElementById('quizDebateChatLog');let d=QUIZ_DEBATE_BY_Q[CUR];let busy=QUIZ_DEBATE_LOADING===CUR;if(wrap)wrap.classList.toggle('hide',busy||!d);if(!log)return;let chat=(d&&d.chat)||[];if(!chat.length){log.innerHTML='';return}log.innerHTML=chat.map(function(m){let who=m.role==='user'?'Em':'Trợ lý Thầy Minh';let cls=m.role==='user'?'user':'ai';let html=typeof renderQuizFieldHtml==='function'?renderQuizFieldHtml(typeof prepareDebateLatex==='function'?prepareDebateLatex(m.text||''):(m.text||'')):(String(m.text||'').replace(/\n/g,'<br>'));return '<div class="quizDebateChatMsg '+cls+'"><div class="who">'+esc(who)+'</div>'+html+'</div>'}).join('');try{setTimeout(function(){typesetNow([log])},80)}catch(e){}try{log.scrollTop=log.scrollHeight}catch(e2){}}
+async function sendQuizDebateFollowup(fromSpeech){if(QUIZ_DEBATE_CHAT_LOADING===CUR||QUIZ_DEBATE_LOADING===CUR)return;if(DEBATE_SR_ON){DEBATE_SR_ON=false;try{if(DEBATE_SR)DEBATE_SR.stop()}catch(e){}DEBATE_SR=null;debateListenBtnSet(false)}if(!canUseQuizDebate()){alert('Hãy làm và chấm câu này trước.');return}if(!SID||!QUESTIONS.length)return;if(needQuizDebateGeminiKey('followup'))return;let ta=debateAskEl();let msg=String((ta&&ta.value)||DEBATE_SR_FINAL||'').trim();if(!msg){if(fromSpeech)alert('Chưa nghe rõ. Bấm 🎤 Nói rồi nói lại gần mic.');else if(ta)ta.focus();return}let qIdx=CUR;let d=QUIZ_DEBATE_BY_Q[qIdx];if(!d){d={claude:'',gemini:'',chat:[],lg:'',fmt:'abcd'};QUIZ_DEBATE_BY_Q[qIdx]=d;try{ensureQuizDebatePanel();syncQuizDebatePanel()}catch(e){}}d.chat=d.chat||[];d.chat.push({role:'user',text:(fromSpeech?'🎤 ':'')+msg,spoken:!!fromSpeech});if(ta)ta.value='';DEBATE_SR_FINAL='';QUIZ_DEBATE_CHAT_LOADING=qIdx;let btn=document.getElementById('btnDebateAsk');let btn2=document.getElementById('btnCrAsk');if(btn){btn.disabled=true;btn.textContent='⏳ …'}if(btn2){btn2.disabled=true;btn2.textContent='⏳ …'}renderQuizDebateChat();if(QUIZ_CR_WANT)renderQuizClassRoom();try{let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}let body=quizDebateRequestBody({sid:SID,index:qIdx,answer:ANSWERS[qIdx],loigiai:lg,message:msg,spoken:fromSpeech?1:0,debate_text:d.final||d.gemini||d.claude||'',history:(d.chat||[]).slice(-8)});let j=await api('/api/quiz/debate-followup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:28000,skipLoginRedirect:true},0);if(CUR!==qIdx)return;let text=String((j&&j.text)||'').trim();if(!text)throw new Error('Trợ lý chưa trả lời.');d.chat.push({role:'ai',text:text});renderQuizDebateChat();if(QUIZ_CR_WANT)renderQuizClassRoom();try{startQuizViSpeech(quizSpeechPlain(text)+(debateSpeechHasAsk(text)?'':' Em còn thắc mắc gì không? Có thể nói tiếp vào mic.'),'debate')}catch(e2){}}catch(e){if(CUR===qIdx&&d&&d.chat&&d.chat.length&&d.chat[d.chat.length-1].role==='user')d.chat.pop();renderQuizDebateChat();if(QUIZ_CR_WANT)renderQuizClassRoom();alert('Không trao đổi được: '+(e.message||e))}finally{if(QUIZ_DEBATE_CHAT_LOADING===qIdx)QUIZ_DEBATE_CHAT_LOADING=-1;if(btn){btn.disabled=false;btn.textContent='Gửi'}if(btn2){btn2.disabled=false;btn2.textContent='Gửi'}}}
+async function toggleQuizDebate(){if(QUIZ_DEBATE_LOADING===CUR){cancelQuizDebate();return}if(!canUseQuizDebate()){if(EXAM_MODE&&!SUBMITTED)alert('Chế độ kiểm tra: nộp bài xong mới phản biện.');else if(!(typeof canShowSolutionNow==='function'&&canShowSolutionNow())&&!isAdminViewer())alert('Hãy làm và chấm câu này trước, rồi mới phản biện lời giải.');else alert('Phản biện lời giải dành VIP / SVIP / ADMIN.');return}if(!SID||!QUESTIONS.length)return;let lg='';try{lg=currentQuizLoiGiaiText()||''}catch(e){lg=String((currentQuestion()||{}).LoiGiai||'')}if(!String(lg||'').trim()){alert('Chưa có lời giải để phản biện.\nMở lời giải hoặc bấm «Viết lại bằng AI» trước.');return}if(needQuizDebateGeminiKey('debate'))return;let qIdx=CUR;let cached=QUIZ_DEBATE_BY_Q[qIdx];if(cached&&(cached.claude||cached.gemini)&&cached.lg===String(lg).slice(0,80)&&cached.fmt==='hook'){VIP_Q_SHOW_EXP[CUR]=true;let sol=document.getElementById('solution');if(sol)sol.classList.remove('hide');syncQuizDebatePanel();openQuizClassRoom();try{makeQuizClassScript({auto:true})}catch(e){}return}saveCurrent();VIP_Q_SHOW_EXP[CUR]=true;let sol=document.getElementById('solution');if(sol)sol.classList.remove('hide');QUIZ_DEBATE_ABORT_CTRL=new AbortController();QUIZ_DEBATE_LOADING=qIdx;syncQuizDebatePanel();openQuizClassRoom();try{let body=quizDebateRequestBody({sid:SID,index:qIdx,answer:ANSWERS[qIdx],loigiai:lg});if(isAdminViewer()){body.admin_ai_provider='ANTHROPIC';body.admin_ai_allow_gpt_fallback=true}let j=isAdminViewer()&&typeof adminAiFetch==='function'?await adminAiFetch('/api/quiz/debate-loigiai',body,{signal:QUIZ_DEBATE_ABORT_CTRL.signal,timeoutMs:28000,admin_ai_provider:'ANTHROPIC'}):await api('/api/quiz/debate-loigiai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:QUIZ_DEBATE_ABORT_CTRL.signal,timeoutMs:28000,skipLoginRedirect:true},0);if(QUIZ_DEBATE_LOADING!==qIdx)return;let prevD=QUIZ_DEBATE_BY_Q[qIdx]||{};QUIZ_DEBATE_BY_Q[qIdx]={claude:j.claude||'',gemini:j.gemini||'',final:j.final||j.gemini||j.claude||'',claude_error:j.claude_error||'',gemini_error:j.gemini_error||'',lg:String(lg).slice(0,80),fmt:'hook',chat:prevD.chat||[],script:prevD.script||'',scriptAi:!!prevD.scriptAi,heard:!!prevD.heard};if(CUR!==qIdx)return;syncQuizDebatePanel();openQuizClassRoom();try{makeQuizClassScript({auto:true})}catch(eS){}let box=document.getElementById('quizDebatePanel');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){if(QUIZ_DEBATE_LOADING!==qIdx)return;let msg=String(e&&e.message||e||'');if(/abort|hủy|quá lâu/i.test(msg))return;alert('Không phản biện được: '+msg)}finally{if(QUIZ_DEBATE_LOADING===qIdx){QUIZ_DEBATE_LOADING=-1;QUIZ_DEBATE_ABORT_CTRL=null;syncQuizDebatePanel();if(QUIZ_CR_WANT)renderQuizClassRoom()}}}
 function cancelQuizAiTalk(){let ctrl=QUIZ_TALK_ABORT_CTRL;QUIZ_TALK_LOADING=-1;QUIZ_TALK_ABORT_CTRL=null;if(ctrl){try{ctrl.abort()}catch(e){}}syncQuizAiTalkBtn()}
 async function toggleQuizAiTalk(){if(QUIZ_TTS_ON&&QUIZ_TTS_KIND==='talk'){stopQuizQuestionSpeech();return}if(QUIZ_TALK_LOADING===CUR){cancelQuizAiTalk();return}if(!canUseQuizAiTalk()){if(EXAM_MODE&&!SUBMITTED)alert('Chế độ kiểm tra: nộp bài xong mới dùng AI thảo luận.');else alert('AI thảo luận dành VIP / SVIP / ADMIN.');return}if(!SID||!QUESTIONS.length)return;if(isAdminViewer()&&typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())return;let qIdx=CUR;let spoil=quizAiTalkSpoil();let prov=isAdminViewer()&&typeof adminChosenAiProvider==='function'?adminChosenAiProvider():'GEMINI';let cached=QUIZ_TALK_BY_Q[qIdx];if(cached&&cached.text&&cached.spoil===spoil&&String(cached.provider||'')===String(prov||'')){startQuizViSpeech(quizSpeechPlain(cached.text),'talk','AI chưa soạn đoạn thảo luận.');return}saveCurrent();QUIZ_TALK_ABORT_CTRL=new AbortController();QUIZ_TALK_LOADING=qIdx;syncQuizAiTalkBtn();try{let body={sid:SID,index:qIdx,answer:ANSWERS[qIdx],spoil:spoil,...quizRestorePayload()};quizAttachAnthropicKey(body);if(isAdminViewer()){body.admin_ai_provider=prov;body.admin_ai_allow_gpt_fallback=true}let j=isAdminViewer()&&typeof adminAiFetch==='function'?await adminAiFetch('/api/quiz/speak-talk',body,{signal:QUIZ_TALK_ABORT_CTRL.signal,timeoutMs:28000}):await api('/api/quiz/speak-talk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:QUIZ_TALK_ABORT_CTRL.signal,timeoutMs:28000},0);if(QUIZ_TALK_LOADING!==qIdx)return;let text=String(j.text||'').trim();if(!text)throw new Error('AI chưa viết đoạn thảo luận.');QUIZ_TALK_BY_Q[qIdx]={text:text,spoil:spoil,provider:j.provider||prov||''};if(CUR!==qIdx)return;startQuizViSpeech(quizSpeechPlain(text),'talk','AI chưa soạn đoạn thảo luận.')}catch(e){if(QUIZ_TALK_LOADING!==qIdx)return;let msg=String(e&&e.message||e||'');if(/abort|hủy|quá lâu/i.test(msg))return;alert('Không thảo luận được: '+msg)}finally{if(QUIZ_TALK_LOADING===qIdx){QUIZ_TALK_LOADING=-1;QUIZ_TALK_ABORT_CTRL=null;syncQuizAiTalkBtn()}}}
 
@@ -40486,37 +41249,31 @@ def api_admin_ai_fix_loigiai():
 
 @app.route("/api/quiz/debate-loigiai", methods=["POST"])
 def api_quiz_debate_loigiai():
-    """VIP/SVIP/ADMIN: Gemini phân tích → Claude phản biện (ADMIN) → tổng hợp. Không ghi Sheet."""
+    """VIP/SVIP/ADMIN: 1 bước phản biện lời giải. Không ghi Sheet."""
     bad = require_login_json()
     if bad:
         return bad
     if not can_use_ai_hint():
         return jsonify({"error": "Phản biện lời giải chỉ dành VIP / SVIP / ADMIN."}), 403
     data = request.get_json(silent=True) or {}
-    sid = clean(data.get("sid"))
     try:
         idx = int(data.get("index", 0))
     except Exception:
         idx = 0
-    answer = data.get("answer", "")
-    st = get_store()
-    restore = quiz_restore_payload_from_body(data)
     try:
-        ses = st.check_quiz_session(sid, restore)
-        qs = ses["questions"]
-        if not (0 <= idx < len(qs)):
-            raise RuntimeError(
-                "Phiên làm bài không khớp câu đang mở. Bấm ← Về mục lục rồi mở lại đề, sau đó phản biện lại."
-            )
-        q = qs[idx]
+        q = _quiz_debate_question_from_request(data, idx)
         if not is_admin():
             if not can_view_solution_live():
                 raise RuntimeError("Hãy làm và chấm câu này trước khi phản biện lời giải.")
         loigiai = clean(data.get("loigiai", "")) or clean(q.get("LoiGiai", ""))
-        extra_ant = ""
         extra_gem = clean(data.get("gemini_key", "") or data.get("gemini_keys", ""))
+        force = clean(data.get("admin_ai_provider") or data.get("provider") or "")
         out = ai_quiz_debate_loigiai(
-            q, loigiai, extra_anthropic_key=extra_ant, extra_gemini_key=extra_gem
+            q,
+            loigiai,
+            extra_anthropic_key="",
+            extra_gemini_key=extra_gem,
+            force_provider=force,
         )
         return jsonify({"ok": True, **out})
     except AdminGeminiQuotaError as e:
@@ -40534,19 +41291,12 @@ def api_quiz_debate_script():
     if not can_use_ai_hint():
         return jsonify({"error": "Kịch bản lớp học dành VIP / SVIP / ADMIN."}), 403
     data = request.get_json(silent=True) or {}
-    sid = clean(data.get("sid"))
     try:
         idx = int(data.get("index", 0))
     except Exception:
         idx = 0
-    st = get_store()
-    restore = quiz_restore_payload_from_body(data)
     try:
-        ses = st.check_quiz_session(sid, restore)
-        qs = ses["questions"]
-        if not (0 <= idx < len(qs)):
-            raise RuntimeError("Phiên làm bài không khớp câu đang mở.")
-        q = qs[idx]
+        q = _quiz_debate_question_from_request(data, idx)
         if not is_admin():
             if not can_view_solution_live():
                 raise RuntimeError("Hãy làm và chấm câu này trước khi tạo kịch bản.")
@@ -40584,19 +41334,12 @@ def api_quiz_debate_followup():
     if not can_use_ai_hint():
         return jsonify({"error": "Trao đổi phản biện chỉ dành VIP / SVIP / ADMIN."}), 403
     data = request.get_json(silent=True) or {}
-    sid = clean(data.get("sid"))
     try:
         idx = int(data.get("index", 0))
     except Exception:
         idx = 0
-    st = get_store()
-    restore = quiz_restore_payload_from_body(data)
     try:
-        ses = st.check_quiz_session(sid, restore)
-        qs = ses["questions"]
-        if not (0 <= idx < len(qs)):
-            raise RuntimeError("Số câu không hợp lệ")
-        q = dict(qs[idx] or {})
+        q = _quiz_debate_question_from_request(data, idx)
         if not is_admin():
             if not can_view_solution_live():
                 raise RuntimeError("Hãy làm và chấm câu này trước khi trao đổi.")
