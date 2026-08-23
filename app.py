@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V471_CR_DS_CLOSE"
+APP_VERSION = "V472_MCQ_INTERVAL_DUP"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -4140,20 +4140,126 @@ def strip_mcq_option_prefix(text: Any, letter: str = "") -> str:
     return t
 
 
-def mcq_option_dup_key(q: Dict[str, Any], letter: str) -> str:
-    """Chuẩn hóa chữ một phương án để bắt trùng A–D — giữ số liệu, không nuốt $4$."""
-    L = clean(letter).upper()
-    t = strip_mcq_option_prefix(q.get(L, ""), L)
-    t = clean(t)
+# Lệnh LaTeX cùng nghĩa khi so trùng phương án (không xóa — tránh [2;5) = (2;5]).
+_MCQ_DUP_LATEX_TOKEN = {
+    "left": " ",
+    "right": " ",
+    "leq": " le ",
+    "leqslant": " le ",
+    "leqq": " le ",
+    "geq": " ge ",
+    "geqslant": " ge ",
+    "geqq": " ge ",
+    "neq": " ne ",
+    "ne": " ne ",
+    "infty": " infty ",
+    "cup": " cup ",
+    "cap": " cap ",
+    "in": " in ",
+    "notin": " notin ",
+    "pm": " pm ",
+    "times": " times ",
+    "cdot": " times ",
+    "div": " div ",
+    "emptyset": " empty ",
+    "varnothing": " empty ",
+    "subset": " subset ",
+    "subseteq": " subseteq ",
+    "setminus": " setminus ",
+    "backslash": " setminus ",
+    "to": " to ",
+    "rightarrow": " to ",
+    "mathbb": " ",
+    "mathrm": " ",
+    "mathbf": " ",
+    "mathit": " ",
+    "textrm": " ",
+    "text": " ",
+    "operatorname": " ",
+    "mid": " ",
+}
+
+
+def mcq_norm_dup_blob(text: Any) -> str:
+    """Chuẩn hóa chữ để bắt trùng A–D: bỏ $ / khoảng trắng, giữ ngoặc khoảng và dấu toán."""
+    t = clean(text)
     if not t:
         return ""
     t = re.sub(r"\$+", " ", t)
-    t = re.sub(r"\\[a-zA-Z]+", " ", t)
-    t = t.replace("{", " ").replace("}", " ")
+
+    def _latex_tok(m: re.Match) -> str:
+        name = m.group(1).lower()
+        return _MCQ_DUP_LATEX_TOKEN.get(name, f" {name} ")
+
+    t = re.sub(r"\\([a-zA-Z]+)", _latex_tok, t)
+    for src, dst in (
+        ("\u221e", " infty "),
+        ("\u222a", " cup "),
+        ("\u2229", " cap "),
+        ("\u2264", " le "),
+        ("\u2a7d", " le "),
+        ("\u2266", " le "),
+        ("\u2265", " ge "),
+        ("\u2a7e", " ge "),
+        ("\u2267", " ge "),
+        ("\u2260", " ne "),
+        ("\u2208", " in "),
+        ("\u2209", " notin "),
+        ("\u2205", " empty "),
+        ("\u00b1", " pm "),
+        ("\u00d7", " times "),
+        ("\u00f7", " div "),
+        ("\u2212", " minus "),
+        ("\u2013", " minus "),
+        ("\u2014", " minus "),
+        ("\u207a", " plus "),
+        ("\u207b", " minus "),
+        ("\u00b9", " 1 "),
+        ("\u00b2", " 2 "),
+        ("\u00b3", " 3 "),
+        ("\u2070", " 0 "),
+        ("\u2074", " 4 "),
+        ("\u2075", " 5 "),
+        ("\u2076", " 6 "),
+        ("\u2077", " 7 "),
+        ("\u2078", " 8 "),
+        ("\u2079", " 9 "),
+        ("\u2080", " 0 "),
+        ("\u2081", " 1 "),
+        ("\u2082", " 2 "),
+        ("\u2083", " 3 "),
+        ("\u2084", " 4 "),
+        ("\u2085", " 5 "),
+        ("\u2086", " 6 "),
+        ("\u2087", " 7 "),
+        ("\u2088", " 8 "),
+        ("\u2089", " 9 "),
+        ("\u2192", " to "),
+        ("(", " lp "),
+        (")", " rp "),
+        ("[", " lb "),
+        ("]", " rb "),
+        ("+", " plus "),
+        ("-", " minus "),
+        ("<", " lt "),
+        (">", " gt "),
+        ("=", " eq "),
+        (";", " sep "),
+        (",", " sep "),
+        ("{", " "),
+        ("}", " "),
+    ):
+        t = t.replace(src, dst)
     t = key_norm(t)
     t = re.sub(r"[^a-z0-9]+", " ", t)
     t = re.sub(r"\s+", " ", t).strip()
     return t[:400]
+
+
+def mcq_option_dup_key(q: Dict[str, Any], letter: str) -> str:
+    """Chuẩn hóa chữ một phương án để bắt trùng A–D — giữ số liệu và ngoặc khoảng."""
+    L = clean(letter).upper()
+    return mcq_norm_dup_blob(strip_mcq_option_prefix(q.get(L, ""), L))
 
 
 def mcq_duplicate_option_groups(q: Dict[str, Any]) -> List[List[str]]:
@@ -4176,11 +4282,7 @@ def mcq_letters_matching_key(q: Dict[str, Any], key_letter: str = "") -> List[st
     key_letter = norm_letter(key_letter or q.get("DapAn", ""))
     key = mcq_option_dup_key(q, key_letter) if key_letter else ""
     if not key:
-        dap = key_norm(clean(q.get("DapAn", "")))
-        dap = re.sub(r"[^a-z0-9]+", " ", dap)
-        dap = re.sub(r"\s+", " ", dap).strip()[:400]
-        if dap:
-            key = dap
+        key = mcq_norm_dup_blob(q.get("DapAn", ""))
     out: List[str] = []
     for L in "ABCD":
         t = mcq_option_dup_key(q, L)
@@ -26592,9 +26694,10 @@ function fieldHasInlineTikz(s){return /\\begin\s*\{\s*tikzpicture/i.test(String(
 function renderTextWithTikzBlocks(s){let split=theorySplitTikzSegments(String(s||'')),html='';for(let seg of split.segs){if(seg.type==='text'){let t=String(seg.content||'');if(!t.trim())continue;html+=renderRichText(t);continue}let tz=normalizeTikzBlockForRender(split.blocks[seg.idx]||'');if(!tz)continue;let id='inlineTikz_'+seg.uid;let enc=encodeTikzRawClient(tz);html+=`<div class="lgTikzSlot qimgWrap tikzRawWrap" id="${escAttr(id)}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ biểu đồ…</div></div>`;setTimeout(()=>renderTikzRawToImg(enc,id),0)}return html}
 function dsCircleHtml(L){return `<span class="dsCircle" aria-label="Ý ${L}">${L}</span>`}
 function stripOptionPrefix(text,L){text=String(text||'').trim();if(!text)return text;let m=text.match(new RegExp('^\\s*'+L+'\\s*[\\.\\)\\:]\\s*','i'));if(m)return text.slice(m[0].length).trim();let any=text.match(/^\s*[ABCD]\s*[\.\)\:]\s*/i);if(any)return text.slice(any[0].length).trim();return text}
-function mcqOptionNormText(q,L){L=String(L||'').toUpperCase();let t=String((q&&q[L])||'');t=typeof stripOptionPrefix==='function'?stripOptionPrefix(t,L):t;t=String(t||'').toLowerCase();try{t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(eN){}t=t.replace(/đ/g,'d').replace(/\$+/g,'').replace(/\\[a-zA-Z]+/g,' ').replace(/[{}]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();return t.slice(0,400)}
+function mcqNormDupBlob(t){t=String(t||'');if(!t)return '';t=t.replace(/\$+/g,' ');t=t.replace(/\\([a-zA-Z]+)/g,function(_,name){name=String(name||'').toLowerCase();let map={left:' ',right:' ',leq:' le ',leqslant:' le ',leqq:' le ',geq:' ge ',geqslant:' ge ',geqq:' ge ',neq:' ne ',ne:' ne ',infty:' infty ',cup:' cup ',cap:' cap ',in:' in ',notin:' notin ',pm:' pm ',times:' times ',cdot:' times ',div:' div ',emptyset:' empty ',varnothing:' empty ',subset:' subset ',subseteq:' subseteq ',setminus:' setminus ',backslash:' setminus ',to:' to ',rightarrow:' to ',mathbb:' ',mathrm:' ',mathbf:' ',mathit:' ',textrm:' ',text:' ',operatorname:' ',mid:' '};return Object.prototype.hasOwnProperty.call(map,name)?map[name]:(' '+name+' ')});t=t.replace(/\u221e/g,' infty ').replace(/\u222a/g,' cup ').replace(/\u2229/g,' cap ').replace(/[\u2264\u2a7d\u2266]/g,' le ').replace(/[\u2265\u2a7e\u2267]/g,' ge ').replace(/\u2260/g,' ne ').replace(/\u2208/g,' in ').replace(/\u2209/g,' notin ').replace(/\u2205/g,' empty ').replace(/\u00b1/g,' pm ').replace(/\u00d7/g,' times ').replace(/\u00f7/g,' div ').replace(/[\u2212\u2013\u2014]/g,' minus ').replace(/\u207a/g,' plus ').replace(/\u207b/g,' minus ').replace(/\u00b9/g,' 1 ').replace(/\u00b2/g,' 2 ').replace(/\u00b3/g,' 3 ').replace(/\u2070/g,' 0 ').replace(/\u2074/g,' 4 ').replace(/\u2075/g,' 5 ').replace(/\u2076/g,' 6 ').replace(/\u2077/g,' 7 ').replace(/\u2078/g,' 8 ').replace(/\u2079/g,' 9 ').replace(/\u2080/g,' 0 ').replace(/\u2081/g,' 1 ').replace(/\u2082/g,' 2 ').replace(/\u2083/g,' 3 ').replace(/\u2084/g,' 4 ').replace(/\u2085/g,' 5 ').replace(/\u2086/g,' 6 ').replace(/\u2087/g,' 7 ').replace(/\u2088/g,' 8 ').replace(/\u2089/g,' 9 ').replace(/\u2192/g,' to ').replace(/\(/g,' lp ').replace(/\)/g,' rp ').replace(/\[/g,' lb ').replace(/\]/g,' rb ').replace(/\+/g,' plus ').replace(/-/g,' minus ').replace(/</g,' lt ').replace(/>/g,' gt ').replace(/=/g,' eq ').replace(/;/g,' sep ').replace(/,/g,' sep ').replace(/[{}]/g,' ');t=t.toLowerCase();try{t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(eN){}t=t.replace(/đ/g,'d').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();return t.slice(0,400)}
+function mcqOptionNormText(q,L){L=String(L||'').toUpperCase();let t=String((q&&q[L])||'');t=typeof stripOptionPrefix==='function'?stripOptionPrefix(t,L):t;return mcqNormDupBlob(t)}
 function mcqDupOptionGroups(q){let buckets={},order=[];for(let L of ['A','B','C','D']){let t=mcqOptionNormText(q,L);if(!t)continue;if(!buckets[t]){buckets[t]=[];order.push(t)}buckets[t].push(L)}return order.map(function(k){return buckets[k]}).filter(function(g){return g.length>=2})}
-function mcqLettersMatchingKey(q,keyLetter){keyLetter=String(keyLetter||(q&&q.DapAn)||'').toUpperCase().replace(/[^A-D]/g,'').charAt(0)||'';let key=keyLetter?mcqOptionNormText(q,keyLetter):'';if(!key){let da=String((q&&q.DapAn)||'');try{da=da.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(eD){da=da.toLowerCase()}key=da.replace(/đ/g,'d').replace(/\$+/g,'').replace(/\\[a-zA-Z]+/g,' ').replace(/[{}]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim().slice(0,400)}let out=[];for(let L of ['A','B','C','D']){let t=mcqOptionNormText(q,L);if(t&&key&&t===key)out.push(L)}if(keyLetter&&out.indexOf(keyLetter)<0)out.unshift(keyLetter);return out}
+function mcqLettersMatchingKey(q,keyLetter){keyLetter=String(keyLetter||(q&&q.DapAn)||'').toUpperCase().replace(/[^A-D]/g,'').charAt(0)||'';let key=keyLetter?mcqOptionNormText(q,keyLetter):'';if(!key)key=mcqNormDupBlob(String((q&&q.DapAn)||''));let out=[];for(let L of ['A','B','C','D']){let t=mcqOptionNormText(q,L);if(t&&key&&t===key)out.push(L)}if(keyLetter&&out.indexOf(keyLetter)<0)out.unshift(keyLetter);return out}
 function mcqLetterCorrectAny(q,L){L=String(L||'').toUpperCase();let r=(typeof RESULTS!=='undefined'&&typeof CUR!=='undefined')?(RESULTS[CUR]||CHECKED[CUR]||{}):{};let eq=Array.isArray(r.equivalent_correct)?r.equivalent_correct.map(function(x){return String(x||'').toUpperCase()}):mcqLettersMatchingKey(q);return eq.indexOf(L)>=0}
 function mcqDefectHtml(q,cls){let groups=mcqDupOptionGroups(q);if(!groups.length)return '';let bits=groups.map(function(g){return g.join(' = ')});let spoil=false;try{spoil=!!((typeof quizCrHeard==='function'&&quizCrHeard())||CHECKED[CUR]||RESULTS[CUR]||SUBMITTED||(typeof canShowSolutionNow==='function'&&canShowSolutionNow())||(typeof isAdminViewer==='function'&&isAdminViewer()))}catch(eS){}let extra='';if(spoil){let eq=mcqLettersMatchingKey(q);if(eq.length>1)extra=' Chọn '+eq.join(' hoặc ')+' đều được công nhận đúng.'}return '<div class="'+(cls||'quizMcqDefect')+'">⚠ <b>Lỗi đề:</b> phương án trùng chữ «'+esc(bits.join('; '))+'».'+esc(extra)+' Không nên chấm một ý đúng / một ý sai.</div>'}
 function stripImmini(text){text=String(text||'').trim();let m=text.match(/\\immini\s*\{([\s\S]*)\}\s*$/i);if(m)return m[1].trim();return text.replace(/^\\immini\s*\{/i,'').replace(/\}\s*$/,'').trim()}
