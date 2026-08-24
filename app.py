@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V473_TTS_MOBILE_SLOW"
+APP_VERSION = "V474_LATEX_AI_PLACE"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -21191,6 +21191,7 @@ html[data-theme='dark'] .miniCalcRep{color:#6ee7b7}
 .aiGenPanel .aiGenGrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800;min-width:0}
 .aiGenPanel .aiGenGrid input,.aiGenPanel .aiGenGrid select,.aiGenPanel .aiGenGrid textarea{width:100%;min-width:0}
 .aiGenPanel .aiGenWide{grid-column:span 2}.aiGenPanel .aiGenFull{grid-column:1/-1}
+.aiGenPanel #agLatexSrc{min-height:150px;font-family:Consolas,monospace;font-size:12px;line-height:1.4}
 .aiGenToolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 .aiGenStatus{margin-top:9px;padding:8px 10px;border-radius:9px;background:#ffffffaa;border:1px dashed #86efac;white-space:pre-wrap;font-size:12px;line-height:1.45}
 .aiGenPreview{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
@@ -25684,7 +25685,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 <!-- SECTION 4: AI generate (ADMIN) -->
 <div id="adminAiGeneratePanel" class="panel hide aiGenPanel">
   <b>🤖 ADMIN: Tạo ngân hàng câu hỏi bằng AI (Gemini / Claude / GPT)</b>
-  <p class="muted" style="margin:6px 0 8px;line-height:1.45">Sinh câu theo <b>Dạng bài tập · Dạng câu hỏi · Mức độ · Số lượng</b>. <b>Chương / Bài học / Dạng bài tập</b> lấy từ sheet <b>DANH_MUC_BAI_HOC</b> (kể cả bài chưa có câu). Có thể gõ thêm nếu chưa có trên danh mục. App gọi từng đợt tối đa 4 câu; chỉ lưu Google Sheet sau khi ADMIN xem JSON.</p>
+  <p class="muted" style="margin:6px 0 8px;line-height:1.45">Sinh câu mới theo <b>Dạng bài tập · Dạng câu hỏi · Mức độ</b>, hoặc <b>dán nguồn LaTeX đang có</b> để app tách <code>\begin{ex}</code>, đọc <code>% Lớp / % Bài</code>, rồi AI gán đúng bài và dạng. Chỉ lưu Google Sheet sau khi ADMIN xem JSON.</p>
   <div class="aiGenGrid">
     <label>Môn *<select id="agMon" onchange="agScopeChange('mon')"><option value="">— Chọn môn —</option></select></label>
     <label>Lớp *<select id="agLop" onchange="agScopeChange('lop')"><option value="">— Chọn lớp —</option></select></label>
@@ -25699,6 +25700,9 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <label>Quyền<select id="agQuyen"><option>VIP</option><option>FREE</option></select></label>
     <label>Điểm/câu<input id="agDiem" placeholder="Có thể để trống"></label>
     <label class="aiGenFull">Yêu cầu thêm<textarea id="agExtra" rows="2" placeholder="VD: vẽ ảnh tikz đồ thị kèm theo; số liệu đẹp; ưu tiên bài tính toán thực tế..."></textarea></label>
+    <label class="aiGenFull">Nguồn LaTeX đang có (không bắt buộc)
+      <textarea id="agLatexSrc" rows="8" spellcheck="false" placeholder="Dán file .tex tại đây — ví dụ \section{Tích của một vectơ với một số}, % Lớp: Lớp 10, \begin{ex}…\choice / \choiceTF / \shortans / \loigiai.\nApp tách câu, điền Lớp/Bài nếu trống, AI gán Dạng bài tập (hoặc dùng ô Dạng bài tập phía trên nếu đã chọn)."></textarea>
+    </label>
   </div>
   <div id="agDriveSetup" class="hide" style="display:none"></div>
   <div class="aiGenToolbar">
@@ -25710,6 +25714,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
       </select>
     </label>
     <button type="button" class="btnStartStrong" id="agGenerateBtn" onclick="generateAiQuestionBank()">🤖 Tạo câu hỏi</button>
+    <button type="button" class="btn2" id="agImportLatexBtn" onclick="importLatexIntoAiGen()">📥 Tách LaTeX + AI gán bài/dạng</button>
     <button type="button" class="btn2" onclick="applyAiGenJsonEdit()">↻ Áp dụng JSON đã sửa</button>
     <button type="button" class="btn2" onclick="clearAiGeneratedQuestions()">🗑 Xóa bản xem trước</button>
     <button type="button" class="btnGreen" id="agSaveBtn" onclick="saveAiGeneratedQuestions()" disabled>💾 Lưu tất cả vào Google Sheet</button>
@@ -27959,7 +27964,7 @@ function openAdminAiGenForDbt(scope){
 }
 window.openAdminAiGenForDbt=openAdminAiGenForDbt;window.openAdminAiGenFromEl=openAdminAiGenFromEl;
 function aiGenPayload(count,offset){let antKey=_loadAnthropicKey();let p={Mon:val('agMon').trim(),Lop:val('agLop').trim(),Chuong:val('agChuong').trim(),BaiHoc:val('agBaiHoc').trim(),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};if(antKey)p.anthropic_key=antKey;for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
-function setAiGenBusy(on){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?'⏳ Đang tạo từng đợt…':'🤖 Tạo câu hỏi'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
+function setAiGenBusy(on,kind){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?(kind==='latex'?'⏳ Đang nhập LaTeX…':'⏳ Đang tạo từng đợt…'):'🤖 Tạo câu hỏi'}let ib=document.getElementById('agImportLatexBtn');if(ib){ib.disabled=!!on;ib.textContent=on?'⏳ Đang tách LaTeX…':'📥 Tách LaTeX + AI gán bài/dạng'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderQuizFieldHtml(q[L])}</div>`;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let tikzCode=parsed.tikz||q.Tikz||'';let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(adminPreviewHinhAnhSrcFromCell(q.HinhAnh))}</div>`:'';let tikzEdit=tikzCode?`<div class="aiGenTikzEdit" style="margin:8px 0"><div style="font-size:12px;font-weight:800;margin-bottom:4px">📐 TikZ (sửa được)</div><textarea class="aiGenTikzTa" data-idx="${i}" rows="7" style="width:100%;font-family:monospace;font-size:11px" oninput="aiGenTikzInput(${i},this)">${escFormVal(tikzCode)}</textarea><button type="button" class="btnSmall btn2" style="margin-top:4px" onclick="aiGenRerenderTikz(${i})">🔄 Vẽ lại xem trước</button></div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${tikzEdit}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
 function adminPreviewHinhAnhSrcFromCell(cell){let parsed=parseHinhanhCellClient(cell||'');if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return normalizeImageSrcClient(cell||'')}
@@ -27968,6 +27973,160 @@ async function aiGenRerenderTikz(i){let ta=document.querySelector('.aiGenTikzTa[
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
 function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
+function extractLatexSourceMeta(tex){
+  let raw=String(tex||'').replace(/\r\n/g,'\n');
+  let out={Mon:'',Lop:'',Chuong:'',BaiHoc:''};
+  let fold=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,' ').trim();
+  let map={lop:'Lop',mon:'Mon',chuong:'Chuong',bai:'BaiHoc','bai hoc':'BaiHoc',baihoc:'BaiHoc'};
+  let re=/^%\s*([^:\n]{1,40})\s*:\s*(.+?)\s*$/gm,m;
+  while((m=re.exec(raw))){
+    let field=map[fold(m[1])],val=String(m[2]||'').trim();
+    if(field&&val&&!out[field])out[field]=val;
+  }
+  let sec=raw.match(/\\section\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]+)\}/i);
+  let generic=/^\s*(bai tap|bài tập|trac nghiem|trắc nghiệm|tra loi|trả lời|luyen tap|luyện tập|ren luyen|rèn luyện)\b/i;
+  if(sec&&!out.BaiHoc&&!generic.test(sec[1]))out.BaiHoc=sec[1].trim();
+  let ch=raw.match(/\\chapter\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]+)\}/i);
+  if(ch&&!out.Chuong&&!generic.test(ch[1]))out.Chuong=ch[1].trim();
+  if(!out.Chuong){
+    let fm=raw.match(/Chuong\s*(\d+)\s*Bai/i);
+    if(fm){let roman={1:'I',2:'II',3:'III',4:'IV',5:'V',6:'VI',7:'VII',8:'VIII',9:'IX',10:'X',11:'XI',12:'XII'};out.Chuong='Chương '+(roman[parseInt(fm[1],10)]||fm[1]);}
+  }
+  return out;
+}
+function agMatchScopeValue(id,want){
+  let el=document.getElementById(id);if(!el||!want)return '';
+  let w=normText(want);
+  let opts=[];
+  if(el.tagName==='SELECT')opts=[].map.call(el.options,o=>String(o.value||'').trim()).filter(Boolean);
+  let hit=opts.find(v=>normText(v)===w);
+  if(!hit)hit=opts.find(v=>normText(v)===w.replace(/^lop\s+/,''));
+  if(!hit){
+    let num=(String(want).match(/\b(10|11|12|[6-9])\b/)||[])[0];
+    if(num)hit=opts.find(v=>normText(v)===num||normText(v)==='lop '+num);
+  }
+  if(!hit)hit=opts.find(v=>normText(v).indexOf(w)>=0||w.indexOf(normText(v))>=0);
+  if(hit){el.value=hit;return hit;}
+  if(el.tagName!=='SELECT'){el.value=want;return want;}
+  return '';
+}
+function agFillFromLatexMeta(meta){
+  meta=meta||{};
+  if(meta.Mon&&!String(val('agMon')||'').trim()){agMatchScopeValue('agMon',meta.Mon);agRefreshScopeOptions();}
+  if(meta.Lop&&!String(val('agLop')||'').trim()){agMatchScopeValue('agLop',meta.Lop);agRefreshScopeOptions();}
+  if(meta.Chuong&&!String(val('agChuong')||'').trim()){setVal('agChuong',meta.Chuong);agRefreshScopeOptions();}
+  if(meta.BaiHoc&&!String(val('agBaiHoc')||'').trim()){setVal('agBaiHoc',meta.BaiHoc);agRefreshScopeOptions();}
+  if(meta.BaiHoc&&!String(val('agDe')||'').trim())setVal('agDe',meta.BaiHoc);
+}
+function agQuestionFromLatex(src,form){
+  let q=Object.assign({},src||{});
+  delete q.index;delete q.dup;delete q.dup_kind;delete q.dup_id;delete q.dup_row;delete q.warning;
+  delete q._AiMucDo;delete q._AiConfidence;delete q._AiReason;
+  let meta={Mon:form.Mon,Lop:form.Lop,Chuong:form.Chuong,BaiHoc:form.BaiHoc,BoDe:form.BoDe,De:form.De,QuyenTruyCap:form.QuyenTruyCap,Diem:form.Diem};
+  for(let k in meta){if(meta[k]&&!String(q[k]||'').trim())q[k]=meta[k];}
+  if(!String(q.MucDo||'').trim())q.MucDo=form.MucDo||'VD';
+  if(form.DangBaiTap)q.DangBaiTap=form.DangBaiTap;
+  if(!String(q.BoDe||'').trim())q.BoDe=form.BoDe||'Ngân hàng AI';
+  if(!String(q.De||'').trim())q.De=[q.BaiHoc,q.DangBaiTap].filter(Boolean).join(' · ');
+  if(!String(q.QuyenTruyCap||'').trim())q.QuyenTruyCap=form.QuyenTruyCap||'VIP';
+  return q;
+}
+function agMergeLessonDbtCtx(ctx,items){
+  ctx=ctx||{};
+  for(let it of items||[]){
+    let sk=[it.Mon||'',it.Chuong||'',it.BaiHoc||''].join('|');
+    let name=String(it.ai_dbt||it.DangBaiTap||'').trim();
+    if(!name)continue;
+    if(!ctx[sk])ctx[sk]=[];
+    if(!ctx[sk].some(x=>normText(x)===normText(name)))ctx[sk].push(name);
+  }
+  return ctx;
+}
+async function agClassifyLatexDbt(list,stEl){
+  const BATCH=12;
+  let lessonCtx={},warns=[];
+  for(let s=0;s<list.length;s+=BATCH){
+    let batch=list.slice(s,s+BATCH);
+    let tagged=batch.map((q,j)=>({q,index:s+j})).filter(x=>!String(x.q.DangBaiTap||'').trim());
+    if(stEl)stEl.textContent='⏳ AI gán Dạng bài tập lô '+(Math.floor(s/BATCH)+1)+'/'+Math.ceil(list.length/BATCH)+' (câu '+(s+1)+'–'+(s+batch.length)+'/'+list.length+')…';
+    if(!tagged.length)continue;
+    let payload={
+      questions:tagged.map(x=>({
+        index:x.index,ID:x.q.ID||'',Mon:x.q.Mon||'',Lop:x.q.Lop||'',Chuong:x.q.Chuong||'',BaiHoc:x.q.BaiHoc||'',
+        Dang:x.q.Dang||'',MucDo:x.q.MucDo||'',CauHoi:x.q.CauHoi||'',A:x.q.A||'',B:x.q.B||'',C:x.q.C||'',D:x.q.D||'',
+        DangBaiTap:x.q.DangBaiTap||'',dangbaitap_suggestions:(typeof adminDangBaiTapSuggestionsForQuestion==='function'?adminDangBaiTapSuggestionsForQuestion(x.q):[])
+      })),
+      lesson_dbt_context:lessonCtx
+    };
+    try{
+      let j=await adminApiPost('/api/ai/detect-dangbaitap-bulk',payload,{timeoutMs:85000,bulk:true});
+      let byIndex={};
+      (j.items||[]).forEach(it=>{byIndex[String(it.index)]=it;});
+      tagged.forEach(x=>{
+        let it=byIndex[String(x.index)]||{};
+        let dbt=String(it.ai_dbt||it.DangBaiTap||'').trim();
+        if(dbt)x.q.DangBaiTap=dbt;
+      });
+      lessonCtx=agMergeLessonDbtCtx(lessonCtx,j.items||[]);
+    }catch(e){
+      warns.push('Lô '+(s+1)+'–'+(s+batch.length)+': '+(e.message||e));
+    }
+    if(s+BATCH<list.length)await sleepMs(2000);
+  }
+  return warns;
+}
+async function importLatexIntoAiGen(){
+  if(AI_GEN_BUSY)return;
+  if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}
+  let tex=String(val('agLatexSrc')||'').trim();
+  if(!tex){alert('Dán nguồn LaTeX vào ô «Nguồn LaTeX đang có» rồi bấm lại.');return}
+  if(AI_GEN_QUESTIONS.length&&!confirm('Nhập LaTeX sẽ thay bản xem trước hiện tại. Tiếp tục?'))return;
+  agFillFromLatexMeta(extractLatexSourceMeta(tex));
+  if(!String(val('agMon')||'').trim()){alert('Chọn Môn rồi bấm lại. Lớp/Bài sẽ lấy từ % Lớp / % Bài hoặc \\section nếu có.');return}
+  let st=document.getElementById('agStatus');
+  setAiGenBusy(true,'latex');
+  try{
+    if(st)st.textContent='⏳ Đang tách \\begin{ex} và đọc lớp/bài từ LaTeX…';
+    let form={
+      Mon:val('agMon').trim(),Lop:val('agLop').trim(),Chuong:val('agChuong').trim(),BaiHoc:val('agBaiHoc').trim(),
+      DangBaiTap:val('agDangBaiTap').trim(),MucDo:val('agMucDo'),BoDe:val('agBoDe').trim(),De:val('agDe').trim(),
+      QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim()
+    };
+    let j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:{Mon:form.Mon,Lop:form.Lop,Chuong:form.Chuong,BaiHoc:form.BaiHoc,BoDe:form.BoDe,De:form.De,QuyenTruyCap:form.QuyenTruyCap,Diem:form.Diem,MucDo:''},commit:false,ai_level:false}),timeoutMs:90000});
+    if(j&&j.source_meta)agFillFromLatexMeta(j.source_meta);
+    form.Mon=val('agMon').trim();form.Lop=val('agLop').trim();form.Chuong=val('agChuong').trim();form.BaiHoc=val('agBaiHoc').trim();
+    let rawQs=(j&&(j.questions||j.sample))||[];
+    if(!rawQs.length){
+      let theoryN=((j&&j.theory_lessons_count)||0)+((j&&j.theory_groups_count)||0);
+      throw new Error('Không thấy \\begin{ex}. '+ (theoryN?('File có '+theoryN+' khung lý thuyết — dùng «Nhập LaTeX» ở Công cụ để lưu lý thuyết.'):'Thêm môi trường ex cho bài tập rồi dán lại.'));
+    }
+    if(!form.Lop)throw new Error('Chưa có Lớp. Thêm % Lớp: Lớp 10 trong file hoặc chọn Lớp trên form.');
+    if(!form.Chuong)throw new Error('Chưa có Chương. Điền Chương (vd: Chương IV. Vectơ) rồi bấm lại.');
+    if(!form.BaiHoc)throw new Error('Chưa có Bài học. Thêm % Bài: … hoặc \\section{…} rồi bấm lại.');
+    let list=rawQs.map(q=>agQuestionFromLatex(q,form));
+    let dbtWarns=[];
+    if(form.DangBaiTap){
+      list.forEach(q=>{q.DangBaiTap=form.DangBaiTap;});
+    }else{
+      if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())throw new Error('Chọn AI rồi bấm lại để gán Dạng bài tập.');
+      dbtWarns=await agClassifyLatexDbt(list,st);
+    }
+    let missing=list.filter(q=>!String(q.DangBaiTap||'').trim()).length;
+    AI_GEN_QUESTIONS=list;AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='LX_'+Date.now();
+    renderAiGenPreview();
+    let c=j.counts||{};
+    let lines=['Đã tách '+list.length+' câu từ LaTeX → '+form.BaiHoc+(form.Chuong?(' · '+form.Chuong):'')+' · Lớp '+form.Lop+'.'];
+    lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0)+'. Giữ nguyên dạng từng câu (không ép Trắc nghiệm).');
+    if(form.DangBaiTap)lines.push('Đã gán Dạng bài tập trên form: '+form.DangBaiTap+'.');
+    else lines.push(missing?('Còn '+missing+' câu chưa có Dạng bài tập — điền ô Dạng bài tập rồi bấm lại, hoặc sửa JSON.'):'AI đã gán Dạng bài tập theo từng câu. Xem thẻ preview rồi bấm Lưu.');
+    if(dbtWarns.length)lines.push('⚠ '+dbtWarns.slice(0,4).join('\n⚠ '));
+    if(j.skipped_count)lines.push('Bỏ qua (lỗi parse): '+j.skipped_count+' câu.');
+    if(st)st.textContent=lines.join('\n');
+  }catch(e){
+    if(st)st.textContent='Lỗi nhập LaTeX: '+(e.message||e);
+    alert('Không nhập được LaTeX: '+(e.message||e));
+  }finally{setAiGenBusy(false);renderAiGenPreview()}
+}
 async function generateAiQuestionBank(){
   if(AI_GEN_BUSY)return;
   if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())return;
@@ -31730,10 +31889,19 @@ function jumpToLastInsertedLatexQuestions(){
   let st=window.LAST_LATEX_INSERT_START;
   if(typeof st==='number'&&st>=0&&QUESTIONS[st]){CUR=st;renderNav();renderQuestion();closeLatexImportModal();}
 }
+function fillLatexDefFromMeta(meta){
+  meta=meta||{};
+  let map={Mon:'latexDefMon',Lop:'latexDefLop',Chuong:'latexDefChuong',BaiHoc:'latexDefBaiHoc'};
+  for(let k in map){
+    if(!meta[k])continue;
+    let el=document.getElementById(map[k]);
+    if(el&&!String(el.value||'').trim())el.value=meta[k];
+  }
+}
 async function previewLatexImport(){
   try{
     let j=await latexImportCall(false);
-    if(j){window.LAST_LATEX_PREVIEW_DATA=j;setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
+    if(j){if(j.source_meta)fillLatexDefFromMeta(j.source_meta);window.LAST_LATEX_PREVIEW_DATA=j;setLatexImportStatus(latexImportSummary(j));renderLatexImportPreview(j,false)}
   }catch(e){setLatexImportStatus('Lỗi đọc LaTeX: '+e.message,true)}
 }
 async function commitLatexImport(){
@@ -37253,6 +37421,97 @@ def _latex_dangbt_at(markers: List[Tuple[int, int, str]], pos: int) -> str:
     return value
 
 
+_LATEX_GENERIC_HEADING_RE = re.compile(
+    r"(?i)^\s*(?:bài tập|bai tap|rèn luyện|ren luyen|luyện tập|luyen tap|"
+    r"trắc nghiệm|trac nghiem|đúng sai|dung sai|trả lời|tra loi|"
+    r"tự luận|tu luan|vận dụng|van dung|hoạt động|hoat dong|"
+    r"câu hỏi|cau hoi|ôn tập|on tap)\b"
+)
+_LATEX_META_COMMENT_RE = re.compile(r"^%\s*([^:\n]{1,40})\s*:\s*(.+?)\s*$", re.M)
+_LATEX_CHUONG_FILE_RE = re.compile(r"(?i)Chuong\s*(\d+)\s*Bai")
+_LATEX_ROMAN_BY_INT = {
+    1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI",
+    7: "VII", 8: "VIII", 9: "IX", 10: "X", 11: "XI", 12: "XII",
+}
+
+
+def _latex_fold_key(s: str) -> str:
+    t = unicodedata.normalize("NFD", str(s or ""))
+    t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
+    t = t.lower().replace("đ", "d")
+    t = re.sub(r"[^a-z0-9]+", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _latex_is_generic_heading(title: str) -> bool:
+    t = clean(title)
+    if not t:
+        return True
+    return bool(_LATEX_GENERIC_HEADING_RE.match(t))
+
+
+def extract_latex_source_meta(tex: str) -> Dict[str, str]:
+    """Đọc % Lớp/Môn/Chương/Bài và \\chapter/\\section để gán đúng bài."""
+    raw = str(tex or "").replace("\r\n", "\n").replace("\r", "\n")
+    out = {"Mon": "", "Lop": "", "Chuong": "", "BaiHoc": ""}
+    key_map = {
+        "lop": "Lop",
+        "mon": "Mon",
+        "chuong": "Chuong",
+        "bai": "BaiHoc",
+        "bai hoc": "BaiHoc",
+        "baihoc": "BaiHoc",
+    }
+    for m in _LATEX_META_COMMENT_RE.finditer(raw):
+        field = key_map.get(_latex_fold_key(m.group(1)))
+        val = clean(m.group(2))
+        if field and val and not out[field]:
+            out[field] = val
+    ch = _LATEX_CHAPTER_RE.search(raw)
+    if ch and not out["Chuong"]:
+        title = clean(ch.group(1))
+        if title and not _latex_is_generic_heading(title):
+            out["Chuong"] = title
+    sec = _LATEX_SECTION_RE.search(raw)
+    if sec and not out["BaiHoc"]:
+        title = clean(sec.group(1))
+        if title and not _latex_is_generic_heading(title):
+            out["BaiHoc"] = title
+    if not out["Chuong"]:
+        fm = _LATEX_CHUONG_FILE_RE.search(raw)
+        if fm:
+            n = int(fm.group(1))
+            out["Chuong"] = "Chương " + _LATEX_ROMAN_BY_INT.get(n, str(n))
+    return {k: v for k, v in out.items() if v}
+
+
+def _latex_heading_markers(tex: str) -> List[Tuple[int, str, str]]:
+    raw = str(tex or "")
+    marks: List[Tuple[int, str, str]] = []
+    for m in _LATEX_CHAPTER_RE.finditer(raw):
+        title = clean(m.group(1))
+        if title and not _latex_is_generic_heading(title):
+            marks.append((m.start(), "chapter", title))
+    for m in _LATEX_SECTION_RE.finditer(raw):
+        title = clean(m.group(1))
+        if title and not _latex_is_generic_heading(title):
+            marks.append((m.start(), "section", title))
+    marks.sort(key=lambda x: x[0])
+    return marks
+
+
+def _latex_heading_at(markers: List[Tuple[int, str, str]], pos: int) -> Tuple[str, str]:
+    chuong, bai = "", ""
+    for start, kind, title in markers:
+        if start > pos:
+            break
+        if kind == "chapter":
+            chuong, bai = title, ""
+        elif kind == "section":
+            bai = title
+    return chuong, bai
+
+
 def parse_latex_theory_groups_2026(tex: str, defaults: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """Tách khung dn/note/vidu theo từng \\dangbt để lưu sheet Phuong_Phap."""
     defaults = defaults or {}
@@ -37333,6 +37592,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
     tex = str(tex or "").replace("\r\n", "\n").replace("\r", "\n")
     blocks = list(_LATEX_EX_RE.finditer(tex))
     dangbt_markers = _latex_dangbt_markers(tex)
+    heading_markers = _latex_heading_markers(tex)
     out: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
     skipped: List[Dict[str, Any]] = []
@@ -37357,6 +37617,11 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             marker_dbt = _latex_dangbt_at(dangbt_markers, m.start())
             if marker_dbt:
                 q["DangBaiTap"] = marker_dbt
+            h_chuong, h_bai = _latex_heading_at(heading_markers, m.start())
+            if h_bai:
+                q["BaiHoc"] = h_bai
+            if h_chuong and not clean(defaults.get("Chuong", "")):
+                q["Chuong"] = h_chuong
             q["ID"] = clean(defaults.get("ID", "")) or _latex_meta_id(raw_block, idx)
             tag_mucdo = _latex_ex_mucdo(raw_block, defaults)
             if tag_mucdo:
@@ -44597,6 +44862,19 @@ def api_latex_import():
         ai_level = _latex_ai_level_requested(defaults, ai_level_explicit)
         if skip_questions:
             ai_level = False
+        source_meta: Dict[str, str] = {}
+        try:
+            source_meta = extract_latex_source_meta(str(tex))
+        except Exception:
+            log_swallow("api_latex_import:source_meta")
+            source_meta = {}
+        if not isinstance(defaults, dict):
+            defaults = {}
+        else:
+            defaults = dict(defaults)
+        for _mk in ("Mon", "Lop", "Chuong", "BaiHoc"):
+            if source_meta.get(_mk) and not clean(defaults.get(_mk, "")):
+                defaults[_mk] = source_meta[_mk]
         defaults_for_parse = dict(defaults or {})
         if ai_level:
             # Không để giá trị "AI" bị ghi thẳng vào cột MucDo.
@@ -44691,6 +44969,7 @@ def api_latex_import():
             return jsonify({
                 "ok": True,
                 "dry_run": True,
+                "source_meta": source_meta,
                 "total_blocks": parsed.get("total_blocks", 0),
                 "parsed": parsed.get("parsed", 0),
                 "skipped_count": parsed.get("skipped_count", 0),
@@ -44771,6 +45050,7 @@ def api_latex_import():
                 lesson_errors.append(f"{lesson_item.get('BaiHoc', '')}: {exc}")
         res.update({
             "dry_run": False,
+            "source_meta": source_meta,
             "total_blocks": parsed.get("total_blocks", 0),
             "parsed": parsed.get("parsed", 0),
             "skipped_count": parsed.get("skipped_count", 0),
