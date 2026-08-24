@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V474_LATEX_AI_PLACE"
+APP_VERSION = "V477_BATCH_SAVE"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -274,7 +274,7 @@ AI_HINT_SIMILAR_MAX_CHARS = max(
 AI_GENERATE_BATCH_MAX = max(1, min(int(os.environ.get("AI_GENERATE_BATCH_MAX", "4") or 4), 6))
 # Chỉ các trường AI cần sinh — metadata (MaDe, Mon, Lớp…) server tự gán từ form.
 AI_GEN_OUTPUT_FIELDS = ["CauHoi", "A", "B", "C", "D", "DapAn", "SaiSo", "LoiGiai"]
-AI_GENERATE_TOTAL_MAX = max(1, min(int(os.environ.get("AI_GENERATE_TOTAL_MAX", "30") or 30), 60))
+AI_GENERATE_TOTAL_MAX = max(1, min(int(os.environ.get("AI_GENERATE_TOTAL_MAX", "60") or 60), 80))
 MAX_AI_KEYS_PER_PROVIDER = max(1, min(int(os.environ.get("AI_MAX_KEYS", "3") or 3), 8))
 # Chỉ 2 model thật: flash-lite (mặc định) + flash. Không dùng gemini-3.1-* (thường 404).
 GEMINI_HINT_MODEL_FALLBACKS = [
@@ -11352,6 +11352,30 @@ class SheetStore:
             }
 
 
+    def _dup_existing_meta(self, existing_id: str = "", existing_row: Any = None) -> Dict[str, Any]:
+        """Bài/dạng/dòng của câu đã có — để ADMIN biết mở mục lục chỗ nào."""
+        row_i = 0
+        try:
+            row_i = int(existing_row or 0)
+        except Exception:
+            log_swallow("_dup_existing_meta:row")
+            row_i = 0
+        q = None
+        if row_i:
+            q = next((x for x in (self.questions or []) if int(x.get("_row") or 0) == row_i), None)
+        if not q and existing_id:
+            qid = clean(existing_id)
+            q = next((x for x in (self.questions or []) if clean(x.get("ID")) == qid), None)
+        if not q:
+            return {}
+        return {
+            "existing_baihoc": clean(q.get("BaiHoc", "")),
+            "existing_chuong": clean(q.get("Chuong", "")),
+            "existing_dangbaitap": clean(q.get("DangBaiTap", "")),
+            "existing_trangthai": clean(q.get("TrangThai", "")),
+            "existing_made": clean(q.get("MaDe", "")),
+        }
+
     def add_questions_bulk(
         self,
         items: List[Dict[str, Any]],
@@ -11431,7 +11455,12 @@ class SheetStore:
                         data["ID"] = "LATEX_" + stable_hash(f"dup|{time.time()}|{idx}|{random.random()}", 12)
                         qid_now = data["ID"]
                     else:
-                        skipped.append({**dup_hit, "id": dup_hit.get("existing_id", ""), "reason": "Trùng ID đã có"})
+                        skipped.append({
+                            **dup_hit,
+                            **self._dup_existing_meta(dup_hit.get("existing_id", ""), dup_hit.get("existing_row")),
+                            "id": dup_hit.get("existing_id", ""),
+                            "reason": "Trùng ID đã có",
+                        })
                         continue
                 elif fp in existing_fp:
                     old_id, old_row = fp_meta.get(fp, ("", ""))
@@ -11443,7 +11472,12 @@ class SheetStore:
                         "cau": clean(data.get("CauHoi", ""))[:90],
                     }
                     if not insert_all and skip_content_dup and not allow_duplicates:
-                        skipped.append({**dup_hit, "id": data.get("ID", ""), "reason": "Trùng nội dung đã có"})
+                        skipped.append({
+                            **dup_hit,
+                            **self._dup_existing_meta(old_id, old_row),
+                            "id": data.get("ID", ""),
+                            "reason": "Trùng nội dung đã có",
+                        })
                         continue
                     if allow_duplicates and qid_now and qid_now in existing_ids:
                         data["ID"] = "LATEX_" + stable_hash(f"dup|{time.time()}|{idx}|{random.random()}", 12)
@@ -11472,10 +11506,19 @@ class SheetStore:
                     where = ""
                     if hint_id or hint_row:
                         where = f" Ví dụ ID {hint_id}" + (f", dòng {hint_row}" if hint_row else "") + "."
+                    loc = " · ".join(
+                        x for x in (
+                            clean(sample.get("existing_chuong", "")),
+                            clean(sample.get("existing_baihoc", "")),
+                            clean(sample.get("existing_dangbaitap", "")),
+                        ) if x
+                    )
+                    at = (" Đang ở: " + loc + ".") if loc else ""
                     msg = (
                         f"Không chèn thêm: {dup_n} câu đã có trên Sheet "
-                        f"(cùng môn/lớp/chương/bài + cùng nội dung đề).{where} "
-                        f"Mở mục lục, lọc CHƯA DUYỆT. Muốn bản sao thì xác nhận chèn lại."
+                        f"(cùng môn/lớp/chương/bài + cùng nội dung đề).{where}{at} "
+                        f"Mở mục lục đúng bài/dạng đó, lọc CHƯA DUYỆT. "
+                        f"Nếu đang xem bài khác (vd. Bài 7) thì không thấy — có thể lần trước gán theo \\section."
                     )
                 elif skipped:
                     msg = "Không có câu mới để nhập. " + "; ".join(
@@ -16972,6 +17015,8 @@ def validate_ai_generated_questions_for_save(items: Any) -> List[Dict[str, Any]]
         data = {f: clean(raw.get(f, "")) for f in CREATE_QUESTION_FIELDS}
         if not data["CauHoi"]:
             raise RuntimeError(f"Câu {i}: thiếu CauHoi.")
+        if not data.get("DangBaiTap"):
+            data["DangBaiTap"] = clean(data.get("De", "")) or clean(data.get("BaiHoc", ""))
         missing_meta = [f for f in ("Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap") if not data.get(f)]
         if missing_meta:
             raise RuntimeError(f"Câu {i}: thiếu metadata " + ", ".join(missing_meta) + ".")
@@ -25685,7 +25730,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 <!-- SECTION 4: AI generate (ADMIN) -->
 <div id="adminAiGeneratePanel" class="panel hide aiGenPanel">
   <b>🤖 ADMIN: Tạo ngân hàng câu hỏi bằng AI (Gemini / Claude / GPT)</b>
-  <p class="muted" style="margin:6px 0 8px;line-height:1.45">Sinh câu mới theo <b>Dạng bài tập · Dạng câu hỏi · Mức độ</b>, hoặc <b>dán nguồn LaTeX đang có</b> để app tách <code>\begin{ex}</code>, đọc <code>% Lớp / % Bài</code>, rồi AI gán đúng bài và dạng. Chỉ lưu Google Sheet sau khi ADMIN xem JSON.</p>
+  <p class="muted" style="margin:6px 0 8px;line-height:1.45">Sinh câu mới theo <b>Dạng bài tập · Dạng câu hỏi · Mức độ</b>, hoặc <b>dán nguồn LaTeX đang có</b> để app tách <code>\begin{ex}</code>, đọc <code>% Lớp / % Bài</code>. <b>\section</b> = Dạng bài tập (không đổi Bài học đã chọn). Bản xem trước giữ trên máy này khi F5. Muốn thấy trên mục lục phải bấm <b>💾 Lưu tất cả vào Google Sheet</b> (lưu theo lô, không từng câu). Câu mới = <b>CHƯA DUYỆT</b>. Nếu báo trùng thì câu <b>đã có trên Sheet</b> — mở đúng bài/dạng đó, đừng chèn bản sao.</p>
   <div class="aiGenGrid">
     <label>Môn *<select id="agMon" onchange="agScopeChange('mon')"><option value="">— Chọn môn —</option></select></label>
     <label>Lớp *<select id="agLop" onchange="agScopeChange('lop')"><option value="">— Chọn lớp —</option></select></label>
@@ -27929,6 +27974,57 @@ async function startAdminComposeExam(){if(!USER||!USER.is_admin){alert('Chỉ AD
 function initAdminComposePanel(){syncAdminComposeChrome();if(USER&&USER.is_admin&&isAdminComposeOpen())refreshAdminComposeMatrix()}
 
 let AI_GEN_QUESTIONS=[],AI_GEN_BUSY=false,AI_GEN_SAVED=false,AI_GEN_REQUEST_ID='';
+const AG_DRAFT_KEY='LDVL_AI_GEN_DRAFT_V475';
+let AG_DRAFT_RESTORED=false;
+function agDraftForm(){
+  return {Mon:val('agMon'),Lop:val('agLop'),Chuong:val('agChuong'),BaiHoc:val('agBaiHoc'),DangBaiTap:val('agDangBaiTap'),Dang:val('agDang'),MucDo:val('agMucDo'),count:val('agCount'),BoDe:val('agBoDe'),De:val('agDe'),Quyen:val('agQuyen'),Diem:val('agDiem'),extra:val('agExtra'),latex:val('agLatexSrc')};
+}
+function agPersistDraft(){
+  try{
+    let payload={t:Date.now(),saved:!!AI_GEN_SAVED,request_id:AI_GEN_REQUEST_ID,form:agDraftForm(),questions:AI_GEN_QUESTIONS};
+    let s=JSON.stringify(payload);
+    if(s.length>4200000){payload.form.latex='';s=JSON.stringify(payload)}
+    localStorage.setItem(AG_DRAFT_KEY,s);
+  }catch(e){
+    try{let p={t:Date.now(),saved:!!AI_GEN_SAVED,request_id:AI_GEN_REQUEST_ID,form:Object.assign({},agDraftForm(),{latex:''}),questions:AI_GEN_QUESTIONS};localStorage.setItem(AG_DRAFT_KEY,JSON.stringify(p))}catch(e2){}
+  }
+}
+function agClearDraft(){try{localStorage.removeItem(AG_DRAFT_KEY)}catch(e){}}
+function agFallbackDbt(){return String(val('agDangBaiTap')||'').trim()||String(val('agDe')||'').trim()}
+function agEnsureQuestionsDbt(){
+  let dbt=agFallbackDbt(),bai=String(val('agBaiHoc')||'').trim(),n=0;
+  if(dbt&&!String(val('agDangBaiTap')||'').trim())setVal('agDangBaiTap',dbt);
+  for(let q of AI_GEN_QUESTIONS){
+    if(bai)q.BaiHoc=bai;
+    if(dbt&&!String(q.DangBaiTap||'').trim()){q.DangBaiTap=dbt;n++}
+  }
+  return n;
+}
+function agRestoreDraft(){
+  if(AG_DRAFT_RESTORED)return false;
+  AG_DRAFT_RESTORED=true;
+  let o=null;
+  try{o=JSON.parse(localStorage.getItem(AG_DRAFT_KEY)||'null')}catch(e){o=null}
+  if(!o||typeof o!=='object')return false;
+  if(o.t&&(Date.now()-o.t)>14*86400000)return false;
+  let f=o.form||{};
+  let map={Mon:'agMon',Lop:'agLop',Chuong:'agChuong',BaiHoc:'agBaiHoc',DangBaiTap:'agDangBaiTap',Dang:'agDang',MucDo:'agMucDo',count:'agCount',BoDe:'agBoDe',De:'agDe',Quyen:'agQuyen',Diem:'agDiem',extra:'agExtra',latex:'agLatexSrc'};
+  if(f.Mon){setVal('agMon',f.Mon);agRefreshScopeOptions()}
+  if(f.Lop){setVal('agLop',f.Lop);agRefreshScopeOptions()}
+  for(let k in map){if(k==='Mon'||k==='Lop')continue;if(f[k]!=null&&f[k]!=='')setVal(map[k],f[k])}
+  agRefreshScopeOptions();
+  AI_GEN_QUESTIONS=Array.isArray(o.questions)?o.questions.filter(x=>x&&typeof x==='object'):[];
+  AI_GEN_SAVED=!!o.saved&&AI_GEN_QUESTIONS.length>0;
+  AI_GEN_REQUEST_ID=o.request_id||'';
+  let st=document.getElementById('agStatus');
+  if(st&&AI_GEN_QUESTIONS.length){
+    st.textContent=AI_GEN_SAVED
+      ?('Đã khôi phục '+AI_GEN_QUESTIONS.length+' câu đã lưu Sheet. Mở mục lục đúng Bài học để xem (câu CHƯA DUYỆT).')
+      :('Đã khôi phục '+AI_GEN_QUESTIONS.length+' câu xem trước trên máy này — CHƯA lên Google Sheet. Bấm «Lưu tất cả vào Google Sheet» rồi mở mục lục.');
+  }
+  return AI_GEN_QUESTIONS.length>0||!!String(f.latex||'').trim();
+}
+try{window.addEventListener('beforeunload',function(){try{if(AI_GEN_QUESTIONS.length||String(val('agLatexSrc')||'').trim())agPersistDraft()}catch(e){}})}catch(e0){}
 function agUniqueKeep(items){let seen=new Set(),out=[];for(let x of items||[]){let v=String(x||'').trim();if(!v)continue;let k=normText(v);if(seen.has(k))continue;seen.add(k);out.push(v)}return out}
 function agSetOptions(id,items,keep,placeholder){let el=document.getElementById(id);if(!el)return;let vals=agUniqueKeep(items);let cur=keep!==undefined?String(keep||''):String(el.value||'');el.innerHTML=`<option value="">${esc(placeholder||'— Chọn —')}</option>`+vals.map(x=>`<option value="${escAttr(x)}">${esc(x)}</option>`).join('');let hit=vals.find(x=>normText(x)===normText(cur));el.value=hit||(vals.includes(cur)?cur:'')}
 function agSetCombo(inputId,listId,items,keep){let el=document.getElementById(inputId);let dl=document.getElementById(listId);let vals=agUniqueKeep(items);if(dl)dl.innerHTML=vals.map(x=>`<option value="${escAttr(x)}"></option>`).join('');if(el){let cur=keep!==undefined&&keep!==null?String(keep):String(el.value||'');let hit=vals.find(x=>normText(x)===normText(cur));el.value=hit||cur}}
@@ -27940,7 +28036,7 @@ function agParseDbtCell(raw){raw=String(raw||'').trim();if(!raw)return[];if(raw.
 function agDbtValues(list){let out=[],seen=new Set();for(let x of (list||[])){let parts=agParseDbtCell(x&&x.DangBaiTap);if(!parts.length){try{for(let pair of catalogDbtCounts(x))parts.push(String(pair&&pair[0]||'').trim())}catch(e){}}for(let d of parts){d=oneLineText(d);if(!d)continue;let k=normText(d);if(seen.has(k))continue;seen.add(k);out.push(d)}}return out}
 function agRefreshScopeOptions(){if(!USER||!USER.is_admin)return;let rows=agScopeRows();let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');agSetOptions('agMon',uniqField(rows,'Mon'),mon,'— Chọn môn —');let byMon=agFilterRows(rows,val('agMon'),'','','');agSetOptions('agLop',uniqField(byMon,'Lop'),lop,'— Chọn lớp —');let byLop=agFilterRows(rows,val('agMon'),val('agLop'),'','');agSetCombo('agChuong','agChuongList',uniqField(byLop,'Chuong'),chuong);let byCh=agFilterRows(rows,val('agMon'),val('agLop'),val('agChuong'),'');agSetCombo('agBaiHoc','agBaiHocList',uniqField(byCh,'BaiHoc'),bai);let dl=document.getElementById('agDangBaiTapList');if(dl){let scoped=agFilterRows(rows,val('agMon'),val('agLop'),val('agChuong'),val('agBaiHoc'));dl.innerHTML=agDbtValues(scoped).map(x=>`<option value="${escAttr(x)}"></option>`).join('')}}
 function agScopeChange(stage){if(stage==='mon'){setVal('agLop','');setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='lop'){setVal('agChuong','');setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='chuong'){setVal('agBaiHoc','');setVal('agDangBaiTap','')}else if(stage==='baihoc'){setVal('agDangBaiTap','')}agRefreshScopeOptions()}
-function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();if(first){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}try{syncAdminAiProviderChrome()}catch(e){}renderAiGenPreview()}
+function initAdminAiGenerator(){let p=document.getElementById('adminAiGeneratePanel');if(!p)return;if(!USER||!USER.is_admin){p.classList.add('hide');return}p.classList.remove('hide');let first=!document.getElementById('agMon').options.length||document.getElementById('agMon').options.length<=1;agRefreshScopeOptions();let restored=agRestoreDraft();if(first&&!restored){let fm=val('fMon'),fl=val('fLop'),fc=val('fChuong'),fb=val('fBaiHoc');if(fm)setVal('agMon',fm);agRefreshScopeOptions();if(fl)setVal('agLop',fl);agRefreshScopeOptions();if(fc)setVal('agChuong',fc);agRefreshScopeOptions();if(fb)setVal('agBaiHoc',fb);agRefreshScopeOptions()}try{syncAdminAiProviderChrome()}catch(e){}renderAiGenPreview()}
 function openAdminAiGenFromEl(el){if(!el)return;openAdminAiGenForDbt({Mon:el.getAttribute('data-mon')||'',Lop:el.getAttribute('data-lop')||'',Chuong:el.getAttribute('data-chuong')||'',BaiHoc:el.getAttribute('data-bai')||'',DangBaiTap:el.getAttribute('data-dbt')||'',Dang:el.getAttribute('data-dang')||''})}
 function openAdminAiGenForDbt(scope){
   if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}
@@ -27966,16 +28062,16 @@ window.openAdminAiGenForDbt=openAdminAiGenForDbt;window.openAdminAiGenFromEl=ope
 function aiGenPayload(count,offset){let antKey=_loadAnthropicKey();let p={Mon:val('agMon').trim(),Lop:val('agLop').trim(),Chuong:val('agChuong').trim(),BaiHoc:val('agBaiHoc').trim(),DangBaiTap:val('agDangBaiTap').trim(),Dang:val('agDang'),MucDo:val('agMucDo'),count,offset,BoDe:val('agBoDe').trim(),De:val('agDe').trim(),QuyenTruyCap:val('agQuyen'),Diem:val('agDiem').trim(),extra_instruction:val('agExtra').trim(),request_id:AI_GEN_REQUEST_ID,avoid_stems:AI_GEN_QUESTIONS.map(q=>String(q.CauHoi||'').slice(0,220))};if(antKey)p.anthropic_key=antKey;for(let k of ['Mon','Lop','Chuong','BaiHoc','DangBaiTap'])if(!p[k])throw new Error('Chưa nhập '+({Mon:'Môn',Lop:'Lớp',Chuong:'Chương',BaiHoc:'Bài học',DangBaiTap:'Dạng bài tập'}[k]));return p}
 function setAiGenBusy(on,kind){AI_GEN_BUSY=!!on;let b=document.getElementById('agGenerateBtn');if(b){b.disabled=!!on;b.textContent=on?(kind==='latex'?'⏳ Đang nhập LaTeX…':'⏳ Đang tạo từng đợt…'):'🤖 Tạo câu hỏi'}let ib=document.getElementById('agImportLatexBtn');if(ib){ib.disabled=!!on;ib.textContent=on?'⏳ Đang tách LaTeX…':'📥 Tách LaTeX + AI gán bài/dạng'}let s=document.getElementById('agSaveBtn');if(s)s.disabled=!!on||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
 function syncAiGenJson(){let ta=document.getElementById('agJson');if(ta)ta.value=JSON.stringify({questions:AI_GEN_QUESTIONS},null,2);let sb=document.getElementById('agSaveBtn');if(sb)sb.disabled=AI_GEN_BUSY||AI_GEN_SAVED||!AI_GEN_QUESTIONS.length}
-function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderQuizFieldHtml(q[L])}</div>`;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let tikzCode=parsed.tikz||q.Tikz||'';let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(adminPreviewHinhAnhSrcFromCell(q.HinhAnh))}</div>`:'';let tikzEdit=tikzCode?`<div class="aiGenTikzEdit" style="margin:8px 0"><div style="font-size:12px;font-weight:800;margin-bottom:4px">📐 TikZ (sửa được)</div><textarea class="aiGenTikzTa" data-idx="${i}" rows="7" style="width:100%;font-family:monospace;font-size:11px" oninput="aiGenTikzInput(${i},this)">${escFormVal(tikzCode)}</textarea><button type="button" class="btnSmall btn2" style="margin-top:4px" onclick="aiGenRerenderTikz(${i})">🔄 Vẽ lại xem trước</button></div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${tikzEdit}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box)}
+function renderAiGenPreview(){let box=document.getElementById('agPreview');if(!box)return;if(!AI_GEN_QUESTIONS.length){box.innerHTML='';syncAiGenJson();agPersistDraft();return}box.innerHTML=AI_GEN_QUESTIONS.map((q,i)=>{let opts='';for(let L of ['A','B','C','D'])if(q[L])opts+=`<div class="aiGenOpt"><b>${L}.</b> ${renderQuizFieldHtml(q[L])}</div>`;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let tikzCode=parsed.tikz||q.Tikz||'';let img=q.HinhAnh?`<div class="aiGenCardImg">${buildQimgHtml(adminPreviewHinhAnhSrcFromCell(q.HinhAnh))}</div>`:'';let tikzEdit=tikzCode?`<div class="aiGenTikzEdit" style="margin:8px 0"><div style="font-size:12px;font-weight:800;margin-bottom:4px">📐 TikZ (sửa được)</div><textarea class="aiGenTikzTa" data-idx="${i}" rows="7" style="width:100%;font-family:monospace;font-size:11px" oninput="aiGenTikzInput(${i},this)">${escFormVal(tikzCode)}</textarea><button type="button" class="btnSmall btn2" style="margin-top:4px" onclick="aiGenRerenderTikz(${i})">🔄 Vẽ lại xem trước</button></div>`:'';let warn=q._ai_tikz_warning?`<div class="aiGenTikzWarn muted" style="font-size:12px;color:#b45309;margin:6px 0">${esc(q._ai_tikz_warning)}</div>`:'';return `<div class="aiGenCard"><div class="aiGenCardHead"><div><b>Câu ${i+1}</b><div class="aiGenCardMeta">${esc(q.Dang||'')} · ${esc(q.MucDo||'')} · ${esc(q.DangBaiTap||'')}</div></div><button type="button" class="btnRed aiGenRemove" onclick="removeAiGenQuestion(${i})">Xóa</button></div><div class="aiGenCardStem">${renderRichText(q.CauHoi||'')}</div>${img}${tikzEdit}${warn}${opts}<div class="aiGenAnswer">Đáp án: ${renderRichText(q.DapAn||'')}</div><div class="aiGenSolution"><b>Lời giải:</b><br>${renderRichText(q.LoiGiai||'')}</div></div>`}).join('');syncAiGenJson();typeset(box);agPersistDraft()}
 function adminPreviewHinhAnhSrcFromCell(cell){let parsed=parseHinhanhCellClient(cell||'');if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return normalizeImageSrcClient(cell||'')}
 function aiGenTikzInput(i,el){let q=AI_GEN_QUESTIONS[i];if(!q||!el)return;let parsed=parseHinhanhCellClient(q.HinhAnh||'');let img=parsed.img&&!/^tikzraw:/i.test(parsed.img)?parsed.img:'';q.HinhAnh=buildHinhanhCellClient(img,el.value);syncAiGenJson()}
 async function aiGenRerenderTikz(i){let ta=document.querySelector('.aiGenTikzTa[data-idx="'+i+'"]');if(ta)aiGenTikzInput(i,ta);renderAiGenPreview()}
 function removeAiGenQuestion(i){if(AI_GEN_BUSY)return;AI_GEN_QUESTIONS.splice(i,1);AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Còn ${AI_GEN_QUESTIONS.length} câu trong bản xem trước.`}
-function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
+function clearAiGeneratedQuestions(){if(AI_GEN_BUSY)return;if(AI_GEN_QUESTIONS.length&&!confirm('Xóa toàn bộ bản xem trước hiện tại?'))return;AI_GEN_QUESTIONS=[];AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='';agClearDraft();renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent='Chưa tạo câu. Điền đủ các trường có dấu *.'}
 function applyAiGenJsonEdit(){if(AI_GEN_BUSY)return false;let raw=String((document.getElementById('agJson')||{}).value||'').trim();if(!raw){alert('JSON đang trống.');return false}try{let obj=JSON.parse(raw),arr=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(arr))throw new Error('JSON phải có questions: [...]');AI_GEN_QUESTIONS=arr.filter(x=>x&&typeof x==='object');AI_GEN_SAVED=false;renderAiGenPreview();let st=document.getElementById('agStatus');if(st)st.textContent=`Đã áp dụng JSON: ${AI_GEN_QUESTIONS.length} câu. Kiểm tra lại rồi bấm Lưu.`;return true}catch(e){alert('JSON không hợp lệ: '+e.message);return false}}
 function extractLatexSourceMeta(tex){
   let raw=String(tex||'').replace(/\r\n/g,'\n');
-  let out={Mon:'',Lop:'',Chuong:'',BaiHoc:''};
+  let out={Mon:'',Lop:'',Chuong:'',BaiHoc:'',De:'',DangBaiTap:'',Section:''};
   let fold=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,' ').trim();
   let map={lop:'Lop',mon:'Mon',chuong:'Chuong',bai:'BaiHoc','bai hoc':'BaiHoc',baihoc:'BaiHoc'};
   let re=/^%\s*([^:\n]{1,40})\s*:\s*(.+?)\s*$/gm,m;
@@ -27985,7 +28081,13 @@ function extractLatexSourceMeta(tex){
   }
   let sec=raw.match(/\\section\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]+)\}/i);
   let generic=/^\s*(bai tap|bài tập|trac nghiem|trắc nghiệm|tra loi|trả lời|luyen tap|luyện tập|ren luyen|rèn luyện)\b/i;
-  if(sec&&!out.BaiHoc&&!generic.test(sec[1]))out.BaiHoc=sec[1].trim();
+  if(sec&&!generic.test(sec[1])){
+    let secName=sec[1].trim();
+    out.Section=secName;
+    if(!out.De)out.De=secName;
+    if(!out.BaiHoc)out.BaiHoc=secName;
+    else out.DangBaiTap=secName;
+  }
   let ch=raw.match(/\\chapter\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]+)\}/i);
   if(ch&&!out.Chuong&&!generic.test(ch[1]))out.Chuong=ch[1].trim();
   if(!out.Chuong){
@@ -28016,7 +28118,9 @@ function agFillFromLatexMeta(meta){
   if(meta.Lop&&!String(val('agLop')||'').trim()){agMatchScopeValue('agLop',meta.Lop);agRefreshScopeOptions();}
   if(meta.Chuong&&!String(val('agChuong')||'').trim()){setVal('agChuong',meta.Chuong);agRefreshScopeOptions();}
   if(meta.BaiHoc&&!String(val('agBaiHoc')||'').trim()){setVal('agBaiHoc',meta.BaiHoc);agRefreshScopeOptions();}
-  if(meta.BaiHoc&&!String(val('agDe')||'').trim())setVal('agDe',meta.BaiHoc);
+  if((meta.Section||meta.De)&&!String(val('agDe')||'').trim())setVal('agDe',meta.Section||meta.De);
+  else if(meta.BaiHoc&&!String(val('agDe')||'').trim())setVal('agDe',meta.BaiHoc);
+  if((meta.DangBaiTap||meta.Section)&&!String(val('agDangBaiTap')||'').trim())setVal('agDangBaiTap',meta.DangBaiTap||meta.Section);
 }
 function agQuestionFromLatex(src,form){
   let q=Object.assign({},src||{});
@@ -28024,8 +28128,17 @@ function agQuestionFromLatex(src,form){
   delete q._AiMucDo;delete q._AiConfidence;delete q._AiReason;
   let meta={Mon:form.Mon,Lop:form.Lop,Chuong:form.Chuong,BaiHoc:form.BaiHoc,BoDe:form.BoDe,De:form.De,QuyenTruyCap:form.QuyenTruyCap,Diem:form.Diem};
   for(let k in meta){if(meta[k]&&!String(q[k]||'').trim())q[k]=meta[k];}
+  if(form.BaiHoc){
+    let qb=String(q.BaiHoc||'').trim();
+    if(qb&&qb!==form.BaiHoc&&!String(q.DangBaiTap||'').trim())q.DangBaiTap=qb;
+    q.BaiHoc=form.BaiHoc;
+  }
   if(!String(q.MucDo||'').trim())q.MucDo=form.MucDo||'VD';
-  if(form.DangBaiTap)q.DangBaiTap=form.DangBaiTap;
+  if(form._userDbt)q.DangBaiTap=form._userDbt;
+  else if(!String(q.DangBaiTap||'').trim()){
+    if(form.DangBaiTap)q.DangBaiTap=form.DangBaiTap;
+    else if(form.De)q.DangBaiTap=form.De;
+  }
   if(!String(q.BoDe||'').trim())q.BoDe=form.BoDe||'Ngân hàng AI';
   if(!String(q.De||'').trim())q.De=[q.BaiHoc,q.DangBaiTap].filter(Boolean).join(' · ');
   if(!String(q.QuyenTruyCap||'').trim())q.QuyenTruyCap=form.QuyenTruyCap||'VIP';
@@ -28081,6 +28194,7 @@ async function importLatexIntoAiGen(){
   let tex=String(val('agLatexSrc')||'').trim();
   if(!tex){alert('Dán nguồn LaTeX vào ô «Nguồn LaTeX đang có» rồi bấm lại.');return}
   if(AI_GEN_QUESTIONS.length&&!confirm('Nhập LaTeX sẽ thay bản xem trước hiện tại. Tiếp tục?'))return;
+  let userDbt=String(val('agDangBaiTap')||'').trim();
   agFillFromLatexMeta(extractLatexSourceMeta(tex));
   if(!String(val('agMon')||'').trim()){alert('Chọn Môn rồi bấm lại. Lớp/Bài sẽ lấy từ % Lớp / % Bài hoặc \\section nếu có.');return}
   let st=document.getElementById('agStatus');
@@ -28095,6 +28209,8 @@ async function importLatexIntoAiGen(){
     let j=await api('/api/latex/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tex:tex,defaults:{Mon:form.Mon,Lop:form.Lop,Chuong:form.Chuong,BaiHoc:form.BaiHoc,BoDe:form.BoDe,De:form.De,QuyenTruyCap:form.QuyenTruyCap,Diem:form.Diem,MucDo:''},commit:false,ai_level:false}),timeoutMs:90000});
     if(j&&j.source_meta)agFillFromLatexMeta(j.source_meta);
     form.Mon=val('agMon').trim();form.Lop=val('agLop').trim();form.Chuong=val('agChuong').trim();form.BaiHoc=val('agBaiHoc').trim();
+    form.DangBaiTap=val('agDangBaiTap').trim();form.De=val('agDe').trim();
+    if(!form.DangBaiTap&&form.De){form.DangBaiTap=form.De;setVal('agDangBaiTap',form.De);}
     let rawQs=(j&&(j.questions||j.sample))||[];
     if(!rawQs.length){
       let theoryN=((j&&j.theory_lessons_count)||0)+((j&&j.theory_groups_count)||0);
@@ -28103,22 +28219,35 @@ async function importLatexIntoAiGen(){
     if(!form.Lop)throw new Error('Chưa có Lớp. Thêm % Lớp: Lớp 10 trong file hoặc chọn Lớp trên form.');
     if(!form.Chuong)throw new Error('Chưa có Chương. Điền Chương (vd: Chương IV. Vectơ) rồi bấm lại.');
     if(!form.BaiHoc)throw new Error('Chưa có Bài học. Thêm % Bài: … hoặc \\section{…} rồi bấm lại.');
+    form._userDbt=userDbt;
     let list=rawQs.map(q=>agQuestionFromLatex(q,form));
-    let dbtWarns=[];
-    if(form.DangBaiTap){
-      list.forEach(q=>{q.DangBaiTap=form.DangBaiTap;});
-    }else{
-      if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())throw new Error('Chọn AI rồi bấm lại để gán Dạng bài tập.');
-      dbtWarns=await agClassifyLatexDbt(list,st);
-    }
-    let missing=list.filter(q=>!String(q.DangBaiTap||'').trim()).length;
     AI_GEN_QUESTIONS=list;AI_GEN_SAVED=false;AI_GEN_REQUEST_ID='LX_'+Date.now();
+    agPersistDraft();
+    let dbtWarns=[];
+    if(userDbt){
+      list.forEach(q=>{q.DangBaiTap=userDbt;});
+    }else{
+      list.forEach(q=>{if(!String(q.DangBaiTap||'').trim())q.DangBaiTap=form.DangBaiTap||form.De||'';});
+      if(list.some(q=>!String(q.DangBaiTap||'').trim())){
+        if(typeof adminEnsureAiReady==='function'&&!adminEnsureAiReady())throw new Error('Chọn AI rồi bấm lại để gán Dạng bài tập.');
+        dbtWarns=await agClassifyLatexDbt(list,st);
+      }
+    }
+    agEnsureQuestionsDbt();
+    try{agPersistDraft()}catch(eP){}
+    let missing=list.filter(q=>!String(q.DangBaiTap||'').trim()).length;
     renderAiGenPreview();
     let c=j.counts||{};
     let lines=['Đã tách '+list.length+' câu từ LaTeX → '+form.BaiHoc+(form.Chuong?(' · '+form.Chuong):'')+' · Lớp '+form.Lop+'.'];
     lines.push('TN: '+(c['Trắc nghiệm']||0)+' · Đ/S: '+(c['Đúng sai']||0)+' · TLN: '+(c['Trả lời ngắn']||0)+' · TL: '+(c['Tự luận']||0)+'. Giữ nguyên dạng từng câu (không ép Trắc nghiệm).');
-    if(form.DangBaiTap)lines.push('Đã gán Dạng bài tập trên form: '+form.DangBaiTap+'.');
-    else lines.push(missing?('Còn '+missing+' câu chưa có Dạng bài tập — điền ô Dạng bài tập rồi bấm lại, hoặc sửa JSON.'):'AI đã gán Dạng bài tập theo từng câu. Xem thẻ preview rồi bấm Lưu.');
+    if(userDbt)lines.push('Đã gán Dạng bài tập thầy chọn: '+userDbt+'.');
+    else{
+      let dbts=[];
+      list.forEach(q=>{let d=String(q.DangBaiTap||'').trim();if(d&&!dbts.some(x=>normText(x)===normText(d)))dbts.push(d)});
+      if(dbts.length)lines.push('Dạng bài tập theo \\section: '+dbts.slice(0,6).join(' · ')+(dbts.length>6?' …':'')+'. Bài học giữ: '+form.BaiHoc+'.');
+      if(missing)lines.push('Còn '+missing+' câu chưa có Dạng bài tập — điền ô Dạng bài tập rồi bấm lại, hoặc sửa JSON.');
+      else if(!dbts.length)lines.push('AI đã gán Dạng bài tập theo từng câu. Xem thẻ preview rồi bấm Lưu.');
+    }
     if(dbtWarns.length)lines.push('⚠ '+dbtWarns.slice(0,4).join('\n⚠ '));
     if(j.skipped_count)lines.push('Bỏ qua (lỗi parse): '+j.skipped_count+' câu.');
     if(st)st.textContent=lines.join('\n');
@@ -28197,8 +28326,38 @@ async function generateAiQuestionBank(){
   }finally{setAiGenBusy(false);renderAiGenPreview()}
 }
 
-async function saveAiGeneratedQuestions(){
-  if(AI_GEN_BUSY||AI_GEN_SAVED)return;
+function agNormKey(s){return String(s||'').toLowerCase().replace(/\s+/g,' ').trim()}
+async function agJumpCatalogTo(opts){
+  opts=opts||{};
+  let mon=opts.Mon||'',lop=opts.Lop||'',chuong=opts.Chuong||'',bai=opts.BaiHoc||'',dbt=opts.DangBaiTap||'',made=opts.MaDe||'';
+  try{
+    if(mon)setSel('fMon',mon);refreshFilterOptions();
+    if(lop)setSel('fLop',lop);refreshFilterOptions();
+    if(chuong)setSel('fChuong',chuong);refreshFilterOptions();
+    if(bai)setSel('fBaiHoc',bai);refreshFilterOptions();
+    if(dbt){try{setSel('fDangBaiTap',dbt);refreshFilterOptions()}catch(eDbt){}}
+    if(typeof renderCatalog==='function')renderCatalog();
+    if(typeof flashCatalogLesson==='function')flashCatalogLesson({BaiHoc:bai,De:bai});
+  }catch(e){}
+  let item=null;
+  if(made)item=CATALOG.find(x=>x.MaDe===made||x.GroupKey===made)||null;
+  if(!item)item=CATALOG.find(x=>agNormKey(x.Mon)===agNormKey(mon)&&agNormKey(x.Lop)===agNormKey(lop)&&agNormKey(x.Chuong)===agNormKey(chuong)&&agNormKey(x.BaiHoc)===agNormKey(bai))||null;
+  let openMade=item?(item.MaDe||item.GroupKey):made;
+  if(openMade&&typeof openStartModal==='function'){
+    openStartModal(openMade,dbt||'');
+    setTimeout(function(){
+      let ip=document.getElementById('chkIncludePending');
+      if(ip)ip.checked=true;
+      if(typeof syncStartExamUi==='function')syncStartExamUi();
+    },80);
+    return true;
+  }
+  return false;
+}
+
+async function saveAiGeneratedQuestions(force){
+  if(AI_GEN_BUSY){alert('Đang nhập/tách LaTeX — đợi nút hết «Đang…» rồi bấm Lưu tất cả vào Google Sheet.');return}
+  if(AI_GEN_SAVED&&!force){alert('Lô này đã lưu Sheet. Muốn lưu lại: bấm «Xóa bản xem trước» hoặc sửa JSON rồi Áp dụng.');return}
   // Đồng bộ JSON nếu có; không chặn lưu khi textarea trống nếu đã có bản xem trước trong RAM
   try{
     let ta=document.getElementById('agJson');
@@ -28210,25 +28369,30 @@ async function saveAiGeneratedQuestions(){
     }
   }catch(e){}
   if(!AI_GEN_QUESTIONS.length){alert('Chưa có câu trong bản xem trước để lưu.');return}
-  if(!confirm('Lưu '+AI_GEN_QUESTIONS.length+' câu vào Google Sheet Cau_Hoi?\n\n• Trạng thái: CHƯA DUYỆT (ADMIN soát rồi mới duyệt)\n• App bỏ qua câu trùng nội dung.'))return;
+  agEnsureQuestionsDbt();
+  if(AI_GEN_QUESTIONS.some(q=>!String(q.DangBaiTap||'').trim())){alert('Còn câu chưa có Dạng bài tập. Điền ô «Dạng bài tập» (vd: Tích của một vectơ với một số) rồi bấm Lưu.');return}
+  if(!confirm('Lưu '+AI_GEN_QUESTIONS.length+' câu vào Google Sheet Cau_Hoi?\n\n• Trạng thái: CHƯA DUYỆT (ADMIN soát rồi mới duyệt)\n• App bỏ qua câu trùng nội dung.\n• Lưu theo lô (nhanh hơn từng câu).\n• Mở lại: mục lục → đúng Bài học (không phải form này).'))return;
   let st=document.getElementById('agStatus'),sb=document.getElementById('agSaveBtn');
-  let created=0,skipped=[],warns=[],startRow=0,endRow=0,groupKey='';
+  let created=0,skipped=[],warns=[],startRow=0,endRow=0,groupKey='',serverMsg='';
   if(sb){sb.disabled=true;sb.textContent='⏳ Đang lưu…'}
   try{
     let n=AI_GEN_QUESTIONS.length;
-    for(let i=0;i<n;i++){
-      if(st)st.textContent='⏳ Đang lưu câu '+(i+1)+'/'+n+' lên Google Sheet…';
-      if(sb)sb.textContent='⏳ '+(i+1)+'/'+n;
+    const CHUNK=10;
+    for(let i=0;i<n;i+=CHUNK){
+      let chunk=AI_GEN_QUESTIONS.slice(i,i+CHUNK);
+      let a=i+1,b=i+chunk.length;
+      if(st)st.textContent='⏳ Đang lưu câu '+a+'–'+b+'/'+n+' lên Google Sheet…';
+      if(sb)sb.textContent='⏳ '+a+'–'+b+'/'+n;
       let j=null,lastErr='';
       for(let attempt=0;attempt<3;attempt++){
         try{
-          j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:[AI_GEN_QUESTIONS[i]]}),timeoutMs:25000},0);
+          j=await api('/api/admin/ai-generate-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:chunk,force:force?1:0,index_base:i}),timeoutMs:50000},0);
           lastErr='';
           break;
         }catch(err){
           lastErr=String(err&&err.message||err||'');
           if(!/500|503|502|504|Internal Server|timeout|quá lâu|chưa nạp xong|loading/i.test(lastErr)||attempt>=2)throw err;
-          if(st)st.textContent='⏳ Câu '+(i+1)+'/'+n+' — máy chủ bận, thử lại '+(attempt+2)+'/3…';
+          if(st)st.textContent='⏳ Câu '+a+'–'+b+'/'+n+' — máy chủ bận, thử lại '+(attempt+2)+'/3…';
           await sleepMs(1400*(attempt+1));
         }
       }
@@ -28238,44 +28402,52 @@ async function saveAiGeneratedQuestions(){
       if(Array.isArray(j.hinhanh_warnings)&&j.hinhanh_warnings.length)warns=warns.concat(j.hinhanh_warnings);
       if(j.start_row){if(!startRow)startRow=j.start_row;endRow=j.end_row||j.start_row}
       if(j.group_key)groupKey=j.group_key;
+      if(j.message)serverMsg=j.message;
+      try{agPersistDraft()}catch(eCh){}
     }
-    let j={created:created,skipped:skipped,hinhanh_warnings:warns,start_row:startRow,end_row:endRow,group_key:groupKey};
+    let j={created:created,skipped:skipped,hinhanh_warnings:warns,start_row:startRow,end_row:endRow,group_key:groupKey,message:serverMsg,already_exists:created===0&&skipped.length>0&&skipped.every(s=>/trùng/i.test(String(s.reason||'')))};
     let skipN=skipped.length;
     if(created>0){
       AI_GEN_SAVED=true;
+      try{agPersistDraft()}catch(eD){}
       let made=j.group_key||(AI_GEN_QUESTIONS[0]&&AI_GEN_QUESTIONS[0].MaDe)||'';
       let mon=val('agMon'),lop=val('agLop'),chuong=val('agChuong'),bai=val('agBaiHoc');
+      let dbt=(AI_GEN_QUESTIONS[0]&&AI_GEN_QUESTIONS[0].DangBaiTap)||val('agDangBaiTap')||'';
       if(st)st.textContent='✅ Đã lưu '+created+' câu vào Google Sheet'+(j.start_row?(' từ dòng '+j.start_row+' đến '+j.end_row):'')+(skipN?('\nBỏ qua '+skipN+' câu trùng/không hợp lệ.'):'')+(j.hinhanh_warnings&&j.hinhanh_warnings.length?('\n⚠ Ảnh: '+j.hinhanh_warnings.join(' · ')):'')+'\n📌 Câu mới = CHƯA DUYỆT — mở đề sẽ thấy ngay (viền cam + nhãn ⚠).';
       try{await refreshCatalogFromMeta()}catch(e){}
-      try{
-        if(mon)setSel('fMon',mon);refreshFilterOptions();
-        if(lop)setSel('fLop',lop);refreshFilterOptions();
-        if(chuong)setSel('fChuong',chuong);refreshFilterOptions();
-        if(bai)setSel('fBaiHoc',bai);refreshFilterOptions();
-        if(typeof renderCatalog==='function')renderCatalog();
-      }catch(e2){}
       let go=confirm('Đã lưu '+created+' câu (CHƯA DUYỆT).\n\nBấm OK để mở đề và xem luôn câu vừa tạo (gồm chưa duyệt).');
       if(go){
-        let item=null;
-        if(made)item=CATALOG.find(x=>x.MaDe===made||x.GroupKey===made)||null;
-        if(!item)item=CATALOG.find(x=>String(x.Mon||'').toLowerCase().replace(/\s+/g,' ').trim()===String(mon||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.Lop||'').toLowerCase().replace(/\s+/g,' ').trim()===String(lop||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.Chuong||'').toLowerCase().replace(/\s+/g,' ').trim()===String(chuong||'').toLowerCase().replace(/\s+/g,' ').trim()&&String(x.BaiHoc||'').toLowerCase().replace(/\s+/g,' ').trim()===String(bai||'').toLowerCase().replace(/\s+/g,' ').trim())||null;
-        let openMade=item?(item.MaDe||item.GroupKey):made;
-        if(openMade&&typeof openStartModal==='function'){
-          openStartModal(openMade,'');
-          setTimeout(function(){
-            let ip=document.getElementById('chkIncludePending');
-            if(ip){ip.checked=true;}
-            if(typeof syncStartExamUi==='function')syncStartExamUi();
-          },80);
-        }else{
-          alert('Đã lưu. Mở thẻ bài tương ứng → Bắt đầu (mặc định đã gồm câu chưa duyệt).');
-        }
+        let jumped=await agJumpCatalogTo({Mon:mon,Lop:lop,Chuong:chuong,BaiHoc:bai,DangBaiTap:dbt,MaDe:made});
+        if(!jumped)alert('Đã lưu. Mở thẻ bài tương ứng → Bắt đầu (mặc định đã gồm câu chưa duyệt).');
+      }else{
+        try{await agJumpCatalogTo({Mon:mon,Lop:lop,Chuong:chuong,BaiHoc:bai,DangBaiTap:dbt,MaDe:''})}catch(eCat){}
       }
     }else{
-      AI_GEN_SAVED=false;
-      let reason=(j.message||'')||(skipN?('Bỏ qua '+skipN+' câu (trùng nội dung?).'):'Không chèn được câu nào.');
-      if(st)st.textContent='⚠ '+reason;
-      alert('Không lưu được câu mới.\n'+reason);
+      AI_GEN_SAVED=true;
+      try{agPersistDraft()}catch(eD2){}
+      let s0=skipped[0]||{};
+      let loc=[s0.existing_chuong,s0.existing_baihoc,s0.existing_dangbaitap].filter(Boolean).join(' → ');
+      let detail=(j.message||('Không phải lỗi lưu: '+skipN+' câu ĐÃ CÓ trên Google Sheet.'))
+        +(loc&&!(j.message||'').includes(loc)?('\nĐang nằm ở: '+loc):'')
+        +(s0.existing_row?('\nVí dụ dòng Sheet: '+s0.existing_row+(s0.existing_id||s0.id?(' · ID '+(s0.existing_id||s0.id)):'')):'')
+        +(s0.existing_trangthai?('\nTrạng thái: '+s0.existing_trangthai):' · CHƯA DUYỆT')
+        +'\n\nApp không chèn bản sao. Mở mục lục đúng bài/dạng đó, bật CHƯA DUYỆT.';
+      if(st)st.textContent='⚠ '+detail;
+      try{await refreshCatalogFromMeta()}catch(eM){}
+      let jumped=false;
+      if(confirm(detail+'\n\nBấm OK để mở đúng bài đang chứa các câu này.')){
+        jumped=await agJumpCatalogTo({
+          Mon:val('agMon'),Lop:val('agLop'),
+          Chuong:s0.existing_chuong||val('agChuong'),
+          BaiHoc:s0.existing_baihoc||val('agBaiHoc'),
+          DangBaiTap:s0.existing_dangbaitap||'',
+          MaDe:s0.existing_made||j.group_key||''
+        });
+        if(!jumped)alert('Đã có trên Sheet. Lọc mục lục theo bài/dạng phía trên rồi bấm Bắt đầu (gồm chưa duyệt).');
+      }else if(!force&&confirm('Chèn BẢN SAO '+skipN+' câu lên Sheet? (sẽ nhân đôi — chỉ khi thật sự cần)')){
+        AI_GEN_SAVED=false;
+        return saveAiGeneratedQuestions(true);
+      }
     }
   }catch(e){
     AI_GEN_SAVED=false;
@@ -37453,7 +37625,7 @@ def _latex_is_generic_heading(title: str) -> bool:
 def extract_latex_source_meta(tex: str) -> Dict[str, str]:
     """Đọc % Lớp/Môn/Chương/Bài và \\chapter/\\section để gán đúng bài."""
     raw = str(tex or "").replace("\r\n", "\n").replace("\r", "\n")
-    out = {"Mon": "", "Lop": "", "Chuong": "", "BaiHoc": ""}
+    out = {"Mon": "", "Lop": "", "Chuong": "", "BaiHoc": "", "De": "", "DangBaiTap": "", "Section": ""}
     key_map = {
         "lop": "Lop",
         "mon": "Mon",
@@ -37473,10 +37645,16 @@ def extract_latex_source_meta(tex: str) -> Dict[str, str]:
         if title and not _latex_is_generic_heading(title):
             out["Chuong"] = title
     sec = _LATEX_SECTION_RE.search(raw)
-    if sec and not out["BaiHoc"]:
+    if sec:
         title = clean(sec.group(1))
         if title and not _latex_is_generic_heading(title):
-            out["BaiHoc"] = title
+            out["Section"] = title
+            if not out["De"]:
+                out["De"] = title
+            if not out["BaiHoc"]:
+                out["BaiHoc"] = title
+            else:
+                out["DangBaiTap"] = title
     if not out["Chuong"]:
         fm = _LATEX_CHUONG_FILE_RE.search(raw)
         if fm:
@@ -37618,8 +37796,17 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
             if marker_dbt:
                 q["DangBaiTap"] = marker_dbt
             h_chuong, h_bai = _latex_heading_at(heading_markers, m.start())
+            default_bai = clean(defaults.get("BaiHoc", ""))
             if h_bai:
-                q["BaiHoc"] = h_bai
+                if default_bai:
+                    # \section trong bài đã chọn = Dạng bài tập, không tạo bài học mới
+                    if not clean(q.get("DangBaiTap", "")):
+                        q["DangBaiTap"] = h_bai
+                    if not clean(q.get("De", "")):
+                        q["De"] = h_bai
+                    q["BaiHoc"] = default_bai
+                else:
+                    q["BaiHoc"] = h_bai
             if h_chuong and not clean(defaults.get("Chuong", "")):
                 q["Chuong"] = h_chuong
             q["ID"] = clean(defaults.get("ID", "")) or _latex_meta_id(raw_block, idx)
@@ -45262,7 +45449,12 @@ def api_admin_ai_generate_save():
         st, loading = questions_store_ready_or_loading()
         if loading:
             return loading
-        result = st.add_questions_bulk(items)
+        force = str(body.get("force") or body.get("allow_duplicates") or "").lower() in ("1", "true", "yes")
+        try:
+            index_base = int(body.get("index_base") or body.get("index_offset") or 0)
+        except Exception:
+            index_base = 0
+        result = st.add_questions_bulk(items, allow_duplicates=force, insert_all=force, index_base=index_base)
         result["source"] = "AI_GENERATOR"
         if result.get("created") and items:
             result["group_key"] = catalog_group_key(items[0])
