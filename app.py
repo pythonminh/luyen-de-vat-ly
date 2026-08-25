@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V477_BATCH_SAVE"
+APP_VERSION = "V479_DUP_DEL"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -10687,17 +10687,34 @@ class SheetStore:
                 new_qs.append(q)
             ses["questions"] = new_qs
 
-    def _batch_delete_question_rows(self, row_numbers: List[int]) -> None:
-        """Xóa nhiều dòng Sheet trong ít request nhất (tránh quota 429). Không dùng AI."""
-        rows = sorted({int(r) for r in row_numbers if int(r) > 0}, reverse=True)
+    def _merged_sheet_row_ranges_desc(self, row_numbers: List[int]) -> List[Tuple[int, int]]:
+        """Gộp dòng liên tiếp thành (start, end) inclusive 1-based, cao → thấp (deleteDimension)."""
+        rows = sorted({int(r) for r in row_numbers if int(r) > 1})
         if not rows:
+            return []
+        ranges: List[Tuple[int, int]] = []
+        start = prev = rows[0]
+        for r in rows[1:]:
+            if r == prev + 1:
+                prev = r
+            else:
+                ranges.append((start, prev))
+                start = prev = r
+        ranges.append((start, prev))
+        ranges.reverse()
+        return ranges
+
+    def _batch_delete_question_rows(self, row_numbers: List[int]) -> None:
+        """Xóa nhiều dòng Sheet trong ít request nhất (gộp dải liên tiếp, tránh ngủ 429 quá lâu)."""
+        ranges = self._merged_sheet_row_ranges_desc(row_numbers)
+        if not ranges:
             return
         self.connect()
         ws = self.ws_questions
         sheet_id = ws.id
-        chunk_size = 120
-        for off in range(0, len(rows), chunk_size):
-            chunk = rows[off : off + chunk_size]
+        chunk_size = 8
+        for off in range(0, len(ranges), chunk_size):
+            chunk = ranges[off : off + chunk_size]
             body = {
                 "requests": [
                     {
@@ -10705,34 +10722,30 @@ class SheetStore:
                             "range": {
                                 "sheetId": sheet_id,
                                 "dimension": "ROWS",
-                                "startIndex": row - 1,
-                                "endIndex": row,
+                                "startIndex": start - 1,
+                                "endIndex": end,
                             }
                         }
                     }
-                    for row in chunk
+                    for start, end in chunk
                 ]
             }
-            last_err: Optional[Exception] = None
-            for attempt in range(4):
-                try:
-                    ws.spreadsheet.batch_update(body)
-                    last_err = None
-                    break
-                except Exception as e:
-                    last_err = e
-                    msg = str(e).lower()
-                    if "429" in msg or "quota" in msg or "rate" in msg:
-                        time.sleep(8 + attempt * 12)
-                        continue
-                    raise
-            if last_err is not None:
-                raise RuntimeError(
-                    "Google Sheet giới hạn ghi (429) — xóa trùng không dùng AI, chỉ gọi API Sheet. "
-                    "Đợi ~1 phút rồi thử lại."
-                ) from last_err
-            if off + chunk_size < len(rows):
-                time.sleep(1.2)
+            try:
+                gsheet_call_retry(
+                    "batch delete Cau_Hoi rows",
+                    ws.spreadsheet.batch_update,
+                    body,
+                    max_attempts=3,
+                )
+            except Exception as e:
+                if _is_transient_gsheet_error(e):
+                    raise RuntimeError(
+                        "Google Sheet đang nghẽn (429/timeout) sau khi chèn. "
+                        "Đợi ~20 giây rồi xóa lại nhóm nhỏ — không chèn lại file LaTeX."
+                    ) from e
+                raise
+            if off + chunk_size < len(ranges):
+                time.sleep(0.35)
 
     def remove_duplicate_questions(
         self,
@@ -10872,7 +10885,24 @@ class SheetStore:
             **report,
         }
 
-    def delete_questions_rows_admin(self, row_numbers: List[int]) -> Dict[str, Any]:
+    def _schedule_duplicate_report(self) -> None:
+        """Quét trùng ngân hàng chạy nền — không chặn HTTP (Render/gunicorn dễ 500 HTML)."""
+        snapshot = list(self.questions or [])
+
+        def worker():
+            try:
+                self.duplicate_report = analyze_question_duplicates(snapshot)
+            except Exception:
+                log_swallow("duplicate_report after delete")
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def delete_questions_rows_admin(
+        self,
+        row_numbers: List[int],
+        *,
+        rebuild_dup_report: bool = False,
+    ) -> Dict[str, Any]:
         """ADMIN xóa nhiều dòng Cau_Hoi theo số dòng (dùng sau bảng trùng ≥70%)."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được xóa câu hỏi")
@@ -10882,8 +10912,11 @@ class SheetStore:
         with self.add_question_lock:
             self._batch_delete_question_rows(rows)
             self._purge_question_rows_in_memory(rows)
-        self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_indexes_after_admin_change()
+        if rebuild_dup_report:
+            self.duplicate_report = analyze_question_duplicates(self.questions)
+        else:
+            self._schedule_duplicate_report()
         return {
             "ok": True,
             "deleted": len(rows),
@@ -26770,10 +26803,12 @@ function tikzImgHtmlFromUrl(url,alt){return `<div class="qimgWrap"><img class="q
 async function renderTikzRawToImg(src,boxId){let box=document.getElementById(boxId);if(!box)return;try{let j=await tikzRenderFetch(src);if(j&&j.ok&&j.url){let wrap=document.createElement('div');wrap.innerHTML=tikzImgHtmlFromUrl(j.url);let node=wrap.firstElementChild;if(node)box.replaceWith(node);if(typeof typeset==='function')typeset((node&&node.parentElement)||document.body);return}box.outerHTML=tikzRawCodeFallback(src,(j&&j.error)||'Chưa vẽ được PNG')}catch(e){box.outerHTML=tikzRawCodeFallback(src,e.message||'Lỗi mạng')}}
 function isDriveFolderUrl(s){s=String(s||'').toLowerCase();return s.includes('drive.google.com')&&(s.includes('/folders/')||s.includes('/fold'))}
 function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+String(fid||'').trim()+'&sz=w1600'}
+function driveProxyUrl(fid){fid=String(fid||'').trim();return fid?('/api/img/drive/'+encodeURIComponent(fid)):''}
 function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
-function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/[\r\n]/.test(s)){let parsed=parseHinhanhCellClient(s);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return normalizeImageSrcClient(parsed.img);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);return ''}if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveThumbUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
-function qimgOnErrorAttr(){return ' onerror="if(!this.dataset.fbk){let fid=extractDriveFidClient(this.src);if(fid){this.dataset.fbk=\'1\';this.src=driveThumbUrl(fid);return}this.parentElement.outerHTML=\'<div class=\\\'qimgErr\\\'>Không tải được hình. File Drive cần quyền Anyone with link.</div>\'}"'}
-function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';if(/[\r\n]/.test(raw)){let parsed=parseHinhanhCellClient(raw);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return tikzImgHtmlFromUrl(normalizeImageSrcClient(parsed.img),'Hình minh họa')}src=normalizeImageSrcClient(raw);if(!src)return '';if(/^tikzraw:/i.test(src)){let cached=tikzImgFromCacheClient(src);if(cached)return tikzImgHtmlFromUrl(cached);let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(src,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ đồ thị TikZ…</div></div>`}return tikzImgHtmlFromUrl(src,'Hình minh họa')}
+function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/[\r\n]/.test(s)){let parsed=parseHinhanhCellClient(s);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return normalizeImageSrcClient(parsed.img);return ''}if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveProxyUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
+function qimgHandleError(el){if(!el)return;let fid=extractDriveFidClient(el.src)||extractDriveFidClient(el.getAttribute('data-drive')||'');let step=parseInt(el.dataset.fbk||'0',10)||0;if(step<1&&fid&&el.src.indexOf('/api/img/drive/')<0){el.dataset.fbk='1';el.src=driveProxyUrl(fid);return}if(step<2&&fid){el.dataset.fbk='2';el.src=driveThumbUrl(fid);return}let tz=el.getAttribute('data-tikzraw')||'';if(tz&&!el.dataset.tztry){el.dataset.tztry='1';let wrap=el.closest('.qimgWrap')||el.parentElement;if(wrap){wrap.id=wrap.id||('tikz_fb_'+Date.now().toString(36));wrap.className=(wrap.className||'')+' tikzRawWrap';wrap.innerHTML='<div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ lại hình từ mã TikZ…</div>';if(typeof renderTikzRawToImg==='function')renderTikzRawToImg(tz,wrap.id);return}}let box=el.parentElement;if(box)box.outerHTML='<div class="qimgErr">Không tải được hình. Mở Sửa câu → ô TikZ (hoặc để trống cột T rồi Lưu lại để vẽ từ LaTeX).</div>'}
+function qimgOnErrorAttr(){return ' onerror="try{qimgHandleError(this)}catch(e){}"'}
+function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';let parsed=parseHinhanhCellClient(raw);let tikzEnc=parsed.tikz?encodeTikzRawClient(parsed.tikz):(/^tikzraw:/i.test(raw)?raw:'');if(tikzEnc){let cached=tikzImgFromCacheClient(tikzEnc);if(cached)return tikzImgHtmlFromUrl(cached);let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(tikzEnc,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ hình TikZ từ LaTeX…</div></div>`}src=normalizeImageSrcClient(raw);if(!src)return '';return tikzImgHtmlFromUrl(src,'Hình minh họa')}
 function questionStemNeedsFigure(q){if(!q)return false;let scan=String(q.CauHoi||'');for(let L of ['A','B','C','D'])scan+='\n'+String(q[L]||'');if(/(?:hình\s*(?:vẽ|bên|sau|minh\s*họa)|xét\s+hình|trong\s+hình|như\s+hình|theo\s+hình|minh\s+họa)/i.test(scan))return true;return /\\begin\s*\{\s*tikzpicture|\\includegraphics|\\immini|\[IMG\]|<img\b|tikzraw:/i.test(scan)}
 function loigiaiForceSolutionOnly(lg){return /\[\s*LG-ONLY\s*\]/i.test(String(lg||''))}
 function stripLoigiaiLayoutMarkers(s){return String(s||'').replace(/\[\s*LG-ONLY\s*\]/gi,'').trim()}
@@ -29279,7 +29314,29 @@ function renderDangSimilarityModal(rep){window.DANG_SIM_MODAL_REPORT=rep||null;e
 function jumpDangSimQuestion(row){row=parseInt(row,10)||0;if(!row)return;let idx=QUESTIONS.findIndex(q=>parseInt(q._row,10)===row);if(idx<0){alert('Câu dòng '+row+' không có trong phiên làm bài hiện tại.\nMở đề chứa câu này hoặc tìm trên Google Sheet.');return}saveCurrent();CUR=idx;renderNav();renderQuestion();closeDangSimilarityModal()}
 function collectDangSimDeleteRows(){let rows=[];document.querySelectorAll('#dangSimList .dangSimDelChk:checked').forEach(ch=>{let r=parseInt(ch.getAttribute('data-del-row'),10)||0;if(r>1)rows.push(r)});return [...new Set(rows)]}
 function purgeLocalQuestionsAfterDeletes(rows,ids){let dels=new Set(rows.map(r=>parseInt(r,10)).filter(r=>r>1));if(!dels.size&&!(ids&&ids.length))return;if(ids&&ids.length)clearOfflineDecksContainingIds(ids);else{let idList=[];for(let qq of QUESTIONS){if(dels.has(parseInt(qq._row,10)||0))idList.push(qq.ID||'')}clearOfflineDecksContainingIds(idList)}clearOfflineDeckForMade(CURRENT_MADE);if(!dels.size)return;let removedIdx=[];for(let i=QUESTIONS.length-1;i>=0;i--){if(dels.has(parseInt(QUESTIONS[i]._row,10)||0))removedIdx.push(i)}removedIdx.sort((a,b)=>b-a);for(let i of removedIdx){QUESTIONS.splice(i,1);reindexQuizMaps(i)}for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;let shift=[...dels].filter(d=>d<r).length;if(shift)qq._row=r-shift}if(CUR>=QUESTIONS.length)CUR=Math.max(0,QUESTIONS.length-1)}
-async function executeDangSimilarityDelete(){if(!USER.is_admin)return;let rows=collectDangSimDeleteRows();if(!rows.length){alert('Chưa tick câu nào để xóa.');return}if(!confirm('Xóa '+rows.length+' câu khỏi Google Sheet?\n\nDòng: '+rows.sort((a,b)=>a-b).join(', ')+'\n\nHành động không hoàn tác.'))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;let btn=document.getElementById('dangSimDeleteBtn');let st=document.getElementById('dangSimStatus');if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}if(st)st.textContent='⏳ Đang xóa '+rows.length+' dòng trên Google Sheet…';try{let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});purgeLocalQuestionsAfterDeletes(j.rows||rows);DANG_SIMILARITY_CACHE={};if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||0)+' câu.'));renderNav();renderQuestion();refreshCatalogFromMeta();let q=QUESTIONS[CUR]||{};if(String(q.DangBaiTap||'').trim()){let rep=await loadDangSimilarityReport(q,true,false);if(rep&&rep.pair_count)renderDangSimilarityModal(rep);else closeDangSimilarityModal()}else closeDangSimilarityModal();alert(j.message||('Đã xóa '+(j.deleted||0)+' câu.'))}catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa các câu đã chọn'}}}
+async function deleteSheetRowsChunked(rows,opts){
+  opts=opts||{};
+  let uniq=[...new Set((rows||[]).map(r=>parseInt(r,10)).filter(n=>n>1))].sort(function(a,b){return b-a});
+  if(!uniq.length)return {ok:true,deleted:0,rows:[],message:'Không có dòng để xóa.'};
+  const CHUNK=Math.max(1,parseInt(opts.chunkSize,10)||4);
+  let allDeleted=[];
+  let total=uniq.length;
+  for(let i=0;i<uniq.length;i+=CHUNK){
+    let chunk=uniq.slice(i,i+CHUNK);
+    let done=Math.min(i+chunk.length,total);
+    if(typeof opts.onProgress==='function')opts.onProgress(done,total,chunk);
+    try{
+      let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:chunk,skip_dup_report:true}),timeoutMs:parseInt(opts.timeoutMs,10)||40000},0);
+      allDeleted=allDeleted.concat(j.rows||chunk);
+    }catch(e){
+      let extra=allDeleted.length?('Đã xóa '+allDeleted.length+'/'+total+' dòng, dừng giữa chừng: '):'';
+      throw new Error(extra+String((e&&e.message)||e||'Lỗi xóa dòng Sheet'));
+    }
+    if(i+CHUNK<uniq.length)await sleepMs(450);
+  }
+  return {ok:true,deleted:allDeleted.length,rows:allDeleted,message:'Đã xóa '+allDeleted.length+' câu khỏi Google Sheet.'};
+}
+async function executeDangSimilarityDelete(){if(!USER.is_admin)return;let rows=collectDangSimDeleteRows();if(!rows.length){alert('Chưa tick câu nào để xóa.');return}if(!confirm('Xóa '+rows.length+' câu khỏi Google Sheet?\n\nDòng: '+rows.sort((a,b)=>a-b).join(', ')+'\n\nHành động không hoàn tác.'))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa '+rows.length+' câu?'))return;let btn=document.getElementById('dangSimDeleteBtn');let st=document.getElementById('dangSimStatus');if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}if(st)st.textContent='⏳ Đang xóa '+rows.length+' dòng trên Google Sheet…';try{let j=await deleteSheetRowsChunked(rows,{onProgress:function(done,total){if(st)st.textContent='⏳ Đang xóa '+done+'/'+total+' dòng trên Google Sheet…'}});purgeLocalQuestionsAfterDeletes(j.rows||rows);DANG_SIMILARITY_CACHE={};if(st)st.textContent='✅ '+(j.message||('Đã xóa '+(j.deleted||0)+' câu.'));renderNav();renderQuestion();refreshCatalogFromMeta();let q=QUESTIONS[CUR]||{};if(String(q.DangBaiTap||'').trim()){let rep=await loadDangSimilarityReport(q,true,false);if(rep&&rep.pair_count)renderDangSimilarityModal(rep);else closeDangSimilarityModal()}else closeDangSimilarityModal();alert(j.message||('Đã xóa '+(j.deleted||0)+' câu.'))}catch(e){if(st)st.textContent='❌ '+(e.message||e);alert('Không xóa được: '+(e.message||e))}finally{if(btn){btn.disabled=false;btn.textContent='🗑️ Xóa các câu đã chọn'}}}
 async function adminAnalyzeDangSimilarity(withAi){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!String(q.DangBaiTap||'').trim()){alert('Câu chưa có Dạng bài tập (cột H).');return}let rep=await loadDangSimilarityReport(q,true,!!withAi);if(!rep){alert('Không phân tích được.');return}if(LEARNING_OPEN_KIND==='method'){let hb=document.getElementById('hintBox');if(hb&&hb.classList.contains('learningOpen')){let items=(LEARNING_CACHE[learningCacheKey('method',q)]||{}).items||[];renderLearningPanel('method',items,(LEARNING_CACHE[learningCacheKey('method',q)]||{}).meta||{})}}renderDangSimilarityModal(rep)}
 function syncAdminLearningBoard(){let board=document.getElementById('adminLearningBoard');if(!board)return;let inQuiz=!!(document.getElementById('quiz')&&!document.getElementById('quiz').classList.contains('hide'));board.classList.toggle('hide',!USER.is_admin||!inQuiz);let scope=document.getElementById('adminLearningScope');if(scope){let q=QUESTIONS[CUR]||{};let dbt=String(q.DangBaiTap||'').trim();let meta=[q.Mon,q.Lop?'Lớp '+q.Lop:'',q.Chuong,q.BaiHoc].filter(x=>String(x||'').trim()).join(' · ');let trangThai=String(q.TrangThai||'').trim();let isDuyet=(()=>{let kn=trangThai.toLowerCase().replace(/\s/g,'');return kn==='đãduyệt'||kn==='dadduyet'||kn==='approved'||kn==='daduyệt'||kn==='duyet'||kn==='ok'||kn==='✓'||trangThai==='ĐÃ DUYỆT'})();let reviewBadge=trangThai?`<span style="display:inline-block;margin-top:4px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;${isDuyet?'background:#dcfce7;color:#166534;border:1px solid #86efac':'background:#ffedd5;color:#9a3412;border:1px solid #fdba74'}">` +(isDuyet?'✅ Đã duyệt':'⏳ Chưa duyệt')+'</span>':'';scope.innerHTML=(dbt?`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:12px;font-weight:900;max-width:100%;word-break:break-word">🏷️ ${esc(dbt)}</span></div>`:`<div style="margin-bottom:5px"><span style="display:inline-block;padding:3px 10px;border-radius:7px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:11px;font-weight:800">⚠ Chưa có Dạng BT</span></div>`)+(meta?`<div style="font-size:11px;color:var(--muted);line-height:1.4">${esc(meta)}</div>`:'') +reviewBadge}}
 async function adminDetectDangBaiTapAndSave(autoOnly){if(!USER.is_admin)return;let q=QUESTIONS[CUR]||{};if(!q._row&&!autoOnly){alert('Câu chưa có dòng Sheet — không lưu được Dạng bài tập.');return}if(!confirm('GPT gán Dạng bài tập cho câu này và lưu Sheet?'))return;try{let j=await adminApiPost('/api/ai/detect-dangbaitap-update',{row:q._row,id:q.ID||'',question:q,dangbaitap_suggestions:adminDangBaiTapSuggestionsForQuestion(q)});if(j.DangBaiTap){q.DangBaiTap=j.DangBaiTap;LEARNING_CACHE={};renderQuestion();let sync=j.matched_existing?' (đồng bộ dạng có sẵn)':'';alert('Đã gán Dạng bài tập: '+j.DangBaiTap+sync+(j.reason?'\n'+j.reason:''))}}catch(e){alert('Không gán được: '+(e.message||e))}}
@@ -30042,7 +30099,7 @@ async function bulkDbtDeleteDupTicked(){
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang xóa…'}
   try{
     if(st)st.textContent='⏳ Đang xóa '+rows.length+' bản trùng…';
-    let j=await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
+    let j=await deleteSheetRowsChunked(rows,{onProgress:function(done,total){if(st)st.textContent='⏳ Đang xóa '+done+'/'+total+' bản trùng…'}});
     purgeLocalQuestionsAfterDeletes(j.rows||rows);
     BULK_DBT_DUP_FILTER='all';BULK_DBT_DUP_READY=false;
     ADMIN_DBT_REVIEW_ITEMS=QUESTIONS.map((q,i)=>{let old=oldById[String(q.ID||'').trim()||('_i'+i)]||{};return {index:i,row:q._row||'',ID:q.ID||'',Dang:q.Dang||resolveDang(q),Mon:q.Mon||'',Chuong:q.Chuong||'',BaiHoc:q.BaiHoc||'',current_dbt:String(q.DangBaiTap||'').trim(),prev_ai_dbt:String(old.prev_ai_dbt||'').trim(),ai_dbt:String(old.ai_dbt||q.DangBaiTap||'').trim(),matched_existing:!!old.matched_existing,suggestions:old.suggestions||adminDangBaiTapSuggestionsForQuestion(q),reason:String(old.reason||''),preview:questionPreviewShort(q),selected:!!old.selected&&!!String(old.ai_dbt||q.DangBaiTap||'').trim(),saved:!!old.saved,dup_delete:false}});
@@ -32131,7 +32188,7 @@ async function commitLatexImport(){
     let pack=await pushLatexChunks();
     created=pack.created;
     let skipped=pack.skipped,warns=pack.warns,startRow=pack.startRow,endRow=pack.endRow,inserted=pack.inserted,dupHits=pack.dupHits||[];
-    let dupKept=0,dupDropped=0;
+    let dupKept=0,dupDropped=0,dupDeleteFailed='';
     if(dupHits.length){
       let lines=dupHits.slice(0,14).map(d=>{
         let n='#'+(d.index||'?');
@@ -32145,7 +32202,7 @@ async function commitLatexImport(){
         if(rows.length){
           setLatexImportStatus('⏳ Đang xóa '+rows.length+' bản mới trùng theo quyết định ADMIN…');
           try{
-            await api('/api/admin/dang-similarity-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:rows}),timeoutMs:60000},0);
+            await deleteSheetRowsChunked(rows,{timeoutMs:40000,onProgress:function(done,total){setLatexImportStatus('⏳ Đang xóa '+done+'/'+total+' bản mới trùng theo quyết định ADMIN…');}});
             let dropIdx={};
             dupHits.forEach(d=>{dropIdx[parseInt(d.index,10)||0]=1});
             inserted=inserted.filter(function(q){return !dropIdx[q._latexIdx]});
@@ -32159,7 +32216,10 @@ async function commitLatexImport(){
             skipped=skipped.concat(dupHits.map(d=>({index:d.index,id:d.existing_id,reason:'ADMIN xóa bản mới trùng'})));
             dupDropped=rows.length;
             dupHits=[];
-          }catch(delErr){alert('Đã chèn nhưng xóa bản trùng lỗi: '+(delErr.message||delErr)+'\nCâu mới vẫn còn trên Sheet.');}
+          }catch(delErr){
+            dupDeleteFailed=String((delErr&&delErr.message)||delErr||'');
+            alert('Đã chèn nhưng xóa bản trùng lỗi: '+dupDeleteFailed+'\n\nCâu mới vẫn còn trên Sheet. Mở mục lục → đúng Bài học + dạng bài tập, lọc Chưa duyệt. Không chèn lại file này.');
+          }
         }
       }else{
         dupKept=dupHits.length;
@@ -32209,7 +32269,14 @@ async function commitLatexImport(){
       renderLatexImportPreview(j,true);
       window.LAST_LATEX_PREVIEW_DATA=null;
       try{await refreshCatalogFromMeta()}catch(e2){}
+      try{
+        if(typeof agJumpCatalogTo==='function'){
+          let d=currentLatexDefaults()||{};
+          await agJumpCatalogTo({Mon:d.Mon,Lop:d.Lop,Chuong:d.Chuong,BaiHoc:d.BaiHoc,DangBaiTap:d.DangBaiTap});
+        }
+      }catch(eJump){}
       let dupNote=dupDropped?('\nĐã xóa '+dupDropped+' bản mới trùng (giữ câu cũ).'):(dupKept?('\nGiữ cả hai: '+dupKept+' câu trùng vẫn nằm trên Sheet.'):'');
+      if(dupDeleteFailed)dupNote+='\n⚠ Xóa trùng chưa xong — bản copy còn trên Sheet. Lọc Chưa duyệt; không chèn lại file.';
       alert('Đã chèn '+(created||0)+' câu, lưu '+(lessonSaved.length)+' lý thuyết (Ly_Thuyet) và '+(theorySaved.length)+' khung dạng (Phuong_Phap).'+dupNote+(skipped.length&&!dupDropped?('\nBỏ qua '+skipped.length+' câu không hợp lệ.'):'')+'\n\n⚠ Cảnh báo Drive quota không chặn chèn câu — TikZ giữ trong cột T. Nếu thiếu ảnh: upload tay rồi dán link cột T.');
     }else{
       let why=j.message||'';
@@ -44574,7 +44641,12 @@ def api_admin_dang_similarity_delete():
     try:
         st = get_store()
         st.ensure_questions_loaded()
-        result = st.delete_questions_rows_admin(rows_in)
+        skip_dup = body.get("skip_dup_report")
+        rebuild_dup = False if skip_dup is None else (not bool(skip_dup))
+        # Mặc định bỏ quét trùng cả ngân hàng trong request này — tránh timeout Render 500 HTML.
+        if skip_dup is None:
+            rebuild_dup = False
+        result = st.delete_questions_rows_admin(rows_in, rebuild_dup_report=rebuild_dup)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
