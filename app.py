@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V479_DUP_DEL"
+APP_VERSION = "V480_MH_HTML"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -3604,6 +3604,38 @@ PDF_LINKS_FILE = os.path.join(APP_DIR, "data", "pdf_links.json")
 YOUTUBE_LINKS_FILE = os.path.join(APP_DIR, "data", "youtube_links.json")
 MODEL_APPS_FILE = os.path.join(APP_DIR, "data", "model_apps.json")
 MODEL_APP_CODE_MAX = 120000
+
+
+def looks_like_html_model_code(code: Any) -> bool:
+    """Nhận diện mô phỏng HTML/Canvas bị dán nhầm vào ô Python."""
+    s = str(code or "").lstrip("\ufeff").strip()
+    if not s:
+        return False
+    s = re.sub(r"^```(?:html|htm|javascript|js)?\s*\n?", "", s, flags=re.I)
+    head = s[:500].lstrip().lower()
+    if head.startswith("<!doctype html") or head.startswith("<html"):
+        return True
+    low = s.lower()
+    if "<canvas" in low and "<script" in low:
+        return True
+    if "<body" in low and "<script" in low and ("function " in low or "requestanimationframe" in low):
+        return True
+    return False
+
+
+def sanitize_html_model_code(code: Any) -> str:
+    """Giữ nguyên HTML/JS (canvas) — không đưa qua bộ lọc Python."""
+    if isinstance(code, list):
+        code = "\n".join(str(x) for x in code)
+    s = str(code or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not s:
+        return ""
+    s = re.sub(r"^```(?:html|htm|javascript|js)?\s*\n?", "", s, flags=re.I)
+    s = re.sub(r"\n?```\s*$", "", s)
+    s = s.strip()
+    if len(s) > MODEL_APP_CODE_MAX:
+        s = s[:MODEL_APP_CODE_MAX]
+    return s
 
 
 def sanitize_pyodide_model_code(code: Any) -> str:
@@ -25662,10 +25694,10 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
 <div class="homeSection homeNavPanel" id="ldvlStudentMhSection">
   <div class="homeSectionHead">
     <span class="homeSectionIcon">🧪</span>
-    <span class="homeSectionTitle">Mô hình hóa · Ứng dụng Python</span>
+    <span class="homeSectionTitle">Mô hình hóa · Ứng dụng</span>
   </div>
   <div class="panel" style="margin:0">
-    <p class="muted" style="margin:0 0 10px;font-size:13px;line-height:1.45">Chọn <b>Môn → Lớp</b>, bấm ứng dụng để <b>chạy Python ngay trong app</b> (numpy / matplotlib) hoặc mở link nhúng.</p>
+    <p class="muted" style="margin:0 0 10px;font-size:13px;line-height:1.45">Chọn <b>Môn → Lớp</b>, bấm ứng dụng để chạy <b>Python</b>, <b>HTML/Canvas</b> ngay trong app, hoặc mở link nhúng.</p>
     <div class="ldvlPdfStudentTabs" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <button type="button" class="btn ldvlMhStab on" id="ldvlMhTabMath" onclick="ldvlStudentMhTab('math')">📐 Toán</button>
       <button type="button" class="btn2 ldvlMhStab" id="ldvlMhTabPhys" onclick="ldvlStudentMhTab('phys')">🔭 Vật lý</button>
@@ -25673,9 +25705,9 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <div class="ldvlYtLopTabs" id="ldvlMhLopTabs" aria-label="Chọn lớp mô hình"></div>
     <div id="ldvlStudentMhList" class="panel" style="padding:0;margin:0"></div>
     <div id="ldvlMhAdminPanel" class="hide ldvlPdfAdminPanel">
-      <div class="ldvlPdfAdminHead"><i class="ti ti-atom"></i> ADMIN — Thêm ứng dụng mô hình hóa (Python chạy trong app hoặc link nhúng)</div>
+      <div class="ldvlPdfAdminHead"><i class="ti ti-atom"></i> ADMIN — Thêm ứng dụng mô hình hóa (Python, HTML/Canvas, hoặc link nhúng)</div>
       <div id="ldvlMhAdminMath" class="ldvlPdfAdminSub">
-        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">📐 <b>Toán</b> — AI (Gemini/Claude) tạo mã Python + công thức, rồi <b>Lưu</b>; hoặc dán tay / link nhúng.</p>
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">📐 <b>Toán</b> — AI tạo mã Python + công thức, rồi <b>Lưu</b>; hoặc dán HTML/Canvas / link nhúng.</p>
         <div class="ldvlMhAdminFields">
           <label>Chủ đề AI tạo<input id="mh-m-ai-topic" placeholder="VD: Đồ thị hàm bậc hai, giao điểm đường thẳng…" autocomplete="off"></label>
           <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 4px">
@@ -25686,8 +25718,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <label>Tên ứng dụng<input id="mh-m-name" placeholder="VD: Đồ thị hàm sin" autocomplete="off"></label>
           <label>Mô tả ngắn<input id="mh-m-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
           <label>Công thức (LaTeX)<input id="mh-m-formula" placeholder="VD: $y=a\sin(bx+c)$" autocomplete="off"></label>
-          <label>Loại<select id="mh-m-kind" onchange="ldvlMhKindUi('math')"><option value="python">Python trong app (Pyodide)</option><option value="embed">Link nhúng (iframe)</option></select></label>
-          <label id="mh-m-code-wrap">Mã Python<textarea id="mh-m-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label>Loại<select id="mh-m-kind" onchange="ldvlMhKindUi('math')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-m-code-wrap"><span id="mh-m-code-label">Mã Python</span><textarea id="mh-m-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
           <label id="mh-m-url-wrap" class="hide">Link nhúng<input id="mh-m-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-m-lop" style="min-width:110px"></select><select id="mh-m-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-m-add-btn" onclick="ldvlMhAdd('math')">💾 Lưu mô hình</button><button type="button" class="btn2 hide" id="mh-m-cancel-btn" onclick="ldvlMhCancelEdit('math')">Hủy sửa</button></div>
@@ -25695,7 +25727,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
         <div id="mh-m-list" class="panel" style="padding:0;margin:0"></div>
       </div>
       <div id="ldvlMhAdminPhys" class="ldvlPdfAdminSub hide">
-        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">🔭 <b>Vật lý</b> — AI tạo mô phỏng Python + công thức rồi lưu; hoặc dán tay / link nhúng.</p>
+        <p class="muted" style="margin:0 0 8px;font-size:12px;line-height:1.45">🔭 <b>Vật lý</b> — AI tạo mô phỏng Python; hoặc dán HTML/Canvas (vd. chuyển động Brown) / link nhúng.</p>
         <div class="ldvlMhAdminFields">
           <label>Chủ đề AI tạo<input id="mh-p-ai-topic" placeholder="VD: Ném xiên, dao động điều hòa, mạch RC…" autocomplete="off"></label>
           <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 4px">
@@ -25706,8 +25738,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <label>Tên ứng dụng<input id="mh-p-name" placeholder="VD: Ném xiên" autocomplete="off"></label>
           <label>Mô tả ngắn<input id="mh-p-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
           <label>Công thức (LaTeX)<input id="mh-p-formula" placeholder="VD: $x=v_0\cos\\alpha\\,t$" autocomplete="off"></label>
-          <label>Loại<select id="mh-p-kind" onchange="ldvlMhKindUi('phys')"><option value="python">Python trong app (Pyodide)</option><option value="embed">Link nhúng (iframe)</option></select></label>
-          <label id="mh-p-code-wrap">Mã Python<textarea id="mh-p-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label>Loại<select id="mh-p-kind" onchange="ldvlMhKindUi('phys')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-p-code-wrap"><span id="mh-p-code-label">Mã Python</span><textarea id="mh-p-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
           <label id="mh-p-url-wrap" class="hide">Link nhúng<input id="mh-p-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-p-lop" style="min-width:110px"></select><select id="mh-p-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-p-add-btn" onclick="ldvlMhAdd('phys')">💾 Lưu mô hình</button><button type="button" class="btn2 hide" id="mh-p-cancel-btn" onclick="ldvlMhCancelEdit('phys')">Hủy sửa</button></div>
@@ -35457,7 +35489,7 @@ if(!window.__LDVL_YT_CLICK_BOUND){
   },true);
 }
 
-/* ── Mô hình hóa (Python Pyodide / link nhúng) ── */
+/* ── Mô hình hóa (Python Pyodide / HTML Canvas / link nhúng) ── */
 window.LDVL_STUDENT_MH_SUB='math';
 window.LDVL_STUDENT_MH_LOP='';
 try{window.LDVL_STUDENT_MH_LOP=localStorage.getItem('LDVL_MH_LOP')||'';}catch(e){}
@@ -35475,12 +35507,54 @@ function ldvlMhPersist(sub,items){
   try{localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(items||[]));}catch(e){}
 }
 function ldvlMhSameId(a,b){return String(a||'')===String(b||'');}
+function ldvlMhLooksLikeHtml(code){
+  let s=String(code||'').replace(/^\uFEFF/,'').trim();
+  if(!s)return false;
+  s=s.replace(/^```(?:html|htm|javascript|js)?\s*\n?/i,'').replace(/\n?```\s*$/,'');
+  let head=s.slice(0,500).trim().toLowerCase();
+  if(head.indexOf('<!doctype html')===0||head.indexOf('<html')===0)return true;
+  let low=s.toLowerCase();
+  if(low.indexOf('<canvas')>=0&&low.indexOf('<script')>=0)return true;
+  if(low.indexOf('<body')>=0&&low.indexOf('<script')>=0&&(low.indexOf('function ')>=0||low.indexOf('requestanimationframe')>=0))return true;
+  return false;
+}
+function ldvlMhSanitizeHtml(code){
+  let s=String(code||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+  if(!s)return '';
+  s=s.replace(/^```(?:html|htm|javascript|js)?\s*\n?/i,'').replace(/\n?```\s*$/,'');
+  return s.trim();
+}
+function ldvlMhKindLabel(kind){
+  if(kind==='embed')return 'Link nhúng';
+  if(kind==='html')return 'HTML';
+  return 'Python';
+}
+function ldvlMhHasContent(x){
+  if(!x||!x.name)return false;
+  if(x.kind==='embed')return !!x.url;
+  return !!String(x.code||'').trim();
+}
+function ldvlMhSetFrameHtml(html){
+  let fr=document.getElementById('mh-fs-frame');
+  if(!fr)return;
+  html=ldvlMhSanitizeHtml(html);
+  fr.classList.remove('hide');
+  try{if(fr._blobUrl){URL.revokeObjectURL(fr._blobUrl);fr._blobUrl='';}}catch(e){}
+  fr.setAttribute('sandbox','allow-scripts allow-forms allow-modals');
+  fr.removeAttribute('src');
+  fr.srcdoc='';
+  fr.srcdoc=html||'<p style="padding:16px;font-family:sans-serif">Chưa có mã HTML.</p>';
+}
 function ldvlMhNormItem(it){
   it=it||{};
   let kind=String(it.kind||'python').toLowerCase();
   if(kind==='py')kind='python';
   if(kind==='url')kind='embed';
-  if(kind!=='embed')kind='python';
+  if(kind==='htm'||kind==='js'||kind==='javascript'||kind==='canvas')kind='html';
+  let code=String(it.code||'');
+  if(kind!=='embed'&&kind!=='html'&&ldvlMhLooksLikeHtml(code))kind='html';
+  if(kind!=='embed'&&kind!=='html')kind='python';
+  if(kind==='html')code=ldvlMhSanitizeHtml(code);
   return {
     id:it.id||Date.now(),
     name:String(it.name||'').trim(),
@@ -35489,7 +35563,7 @@ function ldvlMhNormItem(it){
     kind:kind,
     desc:String(it.desc||'').trim(),
     formula:String(it.formula||it.cong_thuc||'').trim(),
-    code:kind==='python'?String(it.code||''):'',
+    code:(kind==='python'||kind==='html')?code:'',
     url:kind==='embed'?String(it.url||'').trim():'',
     note:String(it.note||'').trim(),
     at:it.at||''
@@ -35497,8 +35571,8 @@ function ldvlMhNormItem(it){
 }
 function ldvlMhAllItems(sub){
   let srv=(META&&META.model_apps&&META.model_apps[sub])||[];
-  let serverArr=Array.isArray(srv)?srv.map(ldvlMhNormItem).filter(function(x){return x.name&&((x.kind==='python'&&x.code)||(x.kind==='embed'&&x.url));}):[];
-  let local=ldvlMhLoad(sub).map(ldvlMhNormItem).filter(function(x){return x.name&&((x.kind==='python'&&x.code)||(x.kind==='embed'&&x.url));});
+  let serverArr=Array.isArray(srv)?srv.map(ldvlMhNormItem).filter(ldvlMhHasContent):[];
+  let local=ldvlMhLoad(sub).map(ldvlMhNormItem).filter(ldvlMhHasContent);
   if(USER&&USER.is_admin){if(local.length)return local;return serverArr;}
   if(serverArr.length)return serverArr;
   return local;
@@ -35543,8 +35617,16 @@ function ldvlMhKindUi(sub){
   let kind=String((document.getElementById(pfx+'-kind')||{}).value||'python');
   let cw=document.getElementById(pfx+'-code-wrap');
   let uw=document.getElementById(pfx+'-url-wrap');
-  if(cw)cw.classList.toggle('hide',kind!=='python');
+  let isCode=(kind==='python'||kind==='html');
+  if(cw)cw.classList.toggle('hide',!isCode);
   if(uw)uw.classList.toggle('hide',kind!=='embed');
+  let lab=document.getElementById(pfx+'-code-label');
+  let ta=document.getElementById(pfx+'-code');
+  if(lab)lab.textContent=kind==='html'?'Mã HTML / JavaScript (canvas)':'Mã Python';
+  if(ta){
+    ta.placeholder=kind==='html'?'<!DOCTYPE html>\\n<html>... canvas + script mô phỏng ...</html>':'import numpy as np\\nimport matplotlib.pyplot as plt\\n...';
+    ta.style.minHeight=kind==='html'?'280px':'';
+  }
 }
 function ldvlMhFillLopSelect(sub){
   let pfx=sub==='phys'?'mh-p':'mh-m';
@@ -35618,7 +35700,7 @@ function ldvlMhRenderLopTabs(sub){
   box.innerHTML=html;
 }
 function ldvlMhCardHtml(sub,it){
-  let kind=it.kind==='embed'?'Link nhúng':'Python';
+  let kind=ldvlMhKindLabel(it.kind);
   let fml=it.formula?('<div class="ldvlMhFormula">'+renderRichText(it.formula)+'</div>'):'';
   return '<div class="ldvlMhCard" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'" role="button" tabindex="0"><div class="ldvlMhIco"><i class="ti ti-atom"></i></div><div style="min-width:0;flex:1"><div class="ldvlMhName">'+esc(it.name||'Mô hình')+'</div><div class="ldvlMhMeta"><span class="tag">'+esc(ldvlYtLopDisplay(it.lop))+'</span> · <span class="tag">'+esc(kind)+'</span> · <span class="tag">'+esc(it.quyen||'FREE')+'</span></div>'+(it.desc?('<div class="ldvlMhDesc">'+esc(it.desc)+'</div>'):'')+fml+'</div></div>';
 }
@@ -35649,7 +35731,7 @@ function ldvlMhRenderList(sub){
   let groups=ldvlYtGroupByLop(items);
   box.innerHTML='<div class="pdf-list-head"><span>Mô hình ('+items.length+')</span><span class="pdf-list-act-h">Sửa · Xóa</span></div>'+groups.map(function(g){
     return '<div class="ldvlYtLopHead"><span>'+esc(ldvlYtLopDisplay(g.lop))+'</span><span class="muted" style="font-weight:700">'+g.items.length+'</span></div>'+g.items.map(function(it){
-      return '<div class="pdf-list-row" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'"><div class="pdf-list-ico"><i class="ti ti-atom"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+esc(it.name||'')+'</div><div class="pdf-list-meta"><span class="tag">'+esc(it.lop||'—')+'</span> · <span class="tag">'+(it.kind==='embed'?'Link':'Python')+'</span></div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" data-mh-act="edit" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Sửa</button><button type="button" class="pdfBtnDel" data-mh-act="del" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Xóa</button></div></div>';
+      return '<div class="pdf-list-row" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'"><div class="pdf-list-ico"><i class="ti ti-atom"></i></div><div class="pdf-list-body"><div class="pdf-list-name">'+esc(it.name||'')+'</div><div class="pdf-list-meta"><span class="tag">'+esc(it.lop||'—')+'</span> · <span class="tag">'+esc(ldvlMhKindLabel(it.kind))+'</span></div></div><div class="pdf-list-act"><button type="button" class="pdfBtnEdit" data-mh-act="edit" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Sửa</button><button type="button" class="pdfBtnDel" data-mh-act="del" data-mh-sub="'+escAttr(sub)+'" data-mh-id="'+escAttr(String(it.id))+'">Xóa</button></div></div>';
     }).join('');
   }).join('');
 }
@@ -35692,7 +35774,13 @@ function ldvlMhAdd(sub){
   let lop=String((document.getElementById(pfx+'-lop')||{}).value||'').trim();
   if(!name){alert('Nhập tên ứng dụng.');return;}
   if(!lop){alert('Chọn lớp.');return;}
-  if(kind==='python'&&!code.trim()){alert('Dán mã Python (hoặc bấm AI tạo mô hình).');return;}
+  if(kind==='python'&&ldvlMhLooksLikeHtml(code)){
+    kind='html';
+    let kindEl=document.getElementById(pfx+'-kind');
+    if(kindEl)kindEl.value='html';
+    ldvlMhKindUi(sub);
+  }
+  if((kind==='python'||kind==='html')&&!code.trim()){alert(kind==='html'?'Dán mã HTML (có canvas + script).':'Dán mã Python (hoặc bấm AI tạo mô hình).');return;}
   if(kind==='embed'&&!url){alert('Dán link nhúng.');return;}
   let row=ldvlMhNormItem({id:Date.now(),name,desc,formula,kind,code,url,quyen,lop,at:new Date().toISOString()});
   let items=ldvlMhAllItems(sub).slice();
@@ -35765,7 +35853,12 @@ async function ldvlMhSaveCurrentCode(){
   let sub=window.LDVL_MH_CUR_SUB||window.LDVL_STUDENT_MH_SUB||'math';
   let codeEl=document.getElementById('mh-fs-code');
   let code=String(codeEl?codeEl.value:cur.code||'');
-  if(!String(code||'').trim()){alert('Mã Python trống.');return;}
+  if(cur.kind==='html'){
+    code=ldvlMhSanitizeHtml(code);
+    if(!String(code||'').trim()){alert('Mã HTML trống.');return;}
+  }else{
+    if(!String(code||'').trim()){alert('Mã Python trống.');return;}
+  }
   let items=ldvlMhAllItems(sub).slice();
   let i=items.findIndex(function(x){return ldvlMhSameId(x.id,cur.id);});
   if(i<0){alert('Không tìm thấy mô hình trong danh sách.');return;}
@@ -35773,7 +35866,7 @@ async function ldvlMhSaveCurrentCode(){
   window.LDVL_MH_CUR=items[i];
   ldvlMhPersist(sub,items);
   let ok=await ldvlMhSaveServer();
-  alert(ok?'✅ Đã lưu mã Python lên server.':'⚠ Lưu máy OK, server lỗi.');
+  alert(ok?(cur.kind==='html'?'✅ Đã lưu mã HTML lên server.':'✅ Đã lưu mã Python lên server.'):'⚠ Lưu máy OK, server lỗi.');
 }
 function ldvlMhDelete(sub,id){
   if(!confirm('Xóa mô hình này?'))return;
@@ -35785,7 +35878,12 @@ function ldvlMhDelete(sub,id){
 function closeMhFs(){
   let scr=document.getElementById('mh-fs-scr');
   let fr=document.getElementById('mh-fs-frame');
-  if(fr)fr.src='about:blank';
+  if(fr){
+    try{if(fr._blobUrl){URL.revokeObjectURL(fr._blobUrl);fr._blobUrl='';}}catch(e){}
+    fr.removeAttribute('sandbox');
+    fr.removeAttribute('srcdoc');
+    fr.src='about:blank';
+  }
   if(scr)scr.classList.remove('on');
   document.body.style.overflow='';
   document.documentElement.style.overflow='';
@@ -36064,10 +36162,18 @@ async function ldvlMhRunCurrent(){
     return;
   }
   let codeEl=document.getElementById('mh-fs-code');
+  let isAdmin=!!(USER&&USER.is_admin);
+  if(cur.kind==='html'||ldvlMhLooksLikeHtml(cur.code)||(isAdmin&&codeEl&&ldvlMhLooksLikeHtml(codeEl.value))){
+    cur.kind='html';
+    window.LDVL_MH_CUR=cur;
+    let html=cur.code||'';
+    if(isAdmin&&codeEl&&ldvlMhLooksLikeHtml(codeEl.value))html=codeEl.value;
+    ldvlMhSetFrameHtml(html);
+    return;
+  }
   let outEl=document.getElementById('mh-fs-out');
   let plotEl=document.getElementById('mh-fs-plot');
   let statusEl=document.getElementById('mh-fs-status');
-  let isAdmin=!!(USER&&USER.is_admin);
   /* Học sinh không xem code — chỉ chạy bản trong bộ nhớ + tham số */
   let code=isAdmin&&codeEl?codeEl.value:(cur.code||'');
   code=ldvlMhSanitizeCode(code);
@@ -36182,11 +36288,18 @@ function openMhFs(it,sub){
   }
   if(it.kind==='embed'){
     if(py)py.classList.add('hide');
-    if(fr){fr.classList.remove('hide');fr.src=it.url||'about:blank';}
+    if(fr){fr.classList.remove('hide');fr.removeAttribute('sandbox');fr.removeAttribute('srcdoc');fr.src=it.url||'about:blank';}
     if(run)run.classList.add('hide');
     if(newt){newt.classList.remove('hide');newt.onclick=function(){if(it.url)window.open(it.url,'_blank','noopener');};}
+  }else if(it.kind==='html'||ldvlMhLooksLikeHtml(it.code)){
+    it.kind='html';
+    window.LDVL_MH_CUR=it;
+    if(py)py.classList.add('hide');
+    if(fr)ldvlMhSetFrameHtml(it.code||'');
+    if(run)run.classList.remove('hide');
+    if(newt)newt.classList.add('hide');
   }else{
-    if(fr){fr.classList.add('hide');fr.src='about:blank';}
+    if(fr){fr.classList.add('hide');fr.removeAttribute('sandbox');fr.removeAttribute('srcdoc');fr.src='about:blank';}
     if(py)py.classList.remove('hide');
     let isAdmin=!!(USER&&USER.is_admin);
     if(codeDet){
@@ -40658,13 +40771,23 @@ def _normalize_model_app_item(raw: Any) -> Optional[Dict[str, Any]]:
         return None
     name = clean(raw.get("name", ""))
     kind = clean(raw.get("kind", "python")).lower() or "python"
-    if kind not in ("python", "embed", "py", "url"):
-        kind = "python"
     if kind in ("py",):
         kind = "python"
+    if kind in ("htm", "js", "javascript", "canvas"):
+        kind = "html"
     if kind == "url":
         kind = "embed"
-    code = sanitize_pyodide_model_code(raw.get("code") or "")
+    if kind not in ("python", "embed", "html"):
+        kind = "python"
+    raw_code = raw.get("code") or ""
+    if kind == "python" and looks_like_html_model_code(raw_code):
+        kind = "html"
+    if kind == "html":
+        code = sanitize_html_model_code(raw_code)
+    elif kind == "python":
+        code = sanitize_pyodide_model_code(raw_code)
+    else:
+        code = ""
     if len(code) > MODEL_APP_CODE_MAX:
         code = code[:MODEL_APP_CODE_MAX]
     url = clean(raw.get("url", ""))
@@ -40673,7 +40796,7 @@ def _normalize_model_app_item(raw: Any) -> Optional[Dict[str, Any]]:
         formula = formula[:800]
     if not name:
         return None
-    if kind == "python" and not clean(code):
+    if kind in ("python", "html") and not clean(code):
         return None
     if kind == "embed" and not url:
         return None
@@ -40692,7 +40815,7 @@ def _normalize_model_app_item(raw: Any) -> Optional[Dict[str, Any]]:
         "kind": kind,
         "desc": clean(raw.get("desc", "")),
         "formula": formula,
-        "code": code if kind == "python" else "",
+        "code": code if kind in ("python", "html") else "",
         "url": url if kind == "embed" else "",
         "note": clean(raw.get("note", "")),
         "at": clean(raw.get("at", "")),
