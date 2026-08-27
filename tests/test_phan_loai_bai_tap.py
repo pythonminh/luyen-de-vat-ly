@@ -50,11 +50,50 @@ Nêu dụng cụ cần dùng để đo gia tốc rơi tự do trong thí nghiệ
         self.assertIn("practical", question["exercise_types"])
         self.assertIn("analysis", question["exercise_types"])
 
+    def test_true_false_prompt_is_not_misclassified_as_calculation(self):
+        block = r"""
+% ===== Câu 3 =====
+% ID: TEST-03-DS
+% Mức: NB
+\begin{ex}
+Hãy đánh giá tính đúng sai của các nhận định sau đây.
+\choiceTF
+{\True Nhận định A}
+{Nhận định B}
+{\True Nhận định C}
+{Nhận định D}
+\loigiai{...}
+\end{ex}
+"""
+        question = self.classifier.classify_question_block(block, lesson_name="Bài kiểm tra khái niệm")
+        self.assertIsNotNone(question)
+        self.assertIn("multiple_choice", question["exercise_types"])
+        self.assertNotIn("calculation", question["exercise_types"])
+
+    def test_block_without_id_is_skipped(self):
+        block = r"""
+% ===== Câu 4 =====
+\begin{ex}
+Câu hỏi không có ID.
+\choice
+{\True A}
+{B}
+{C}
+{D}
+\loigiai{...}
+\end{ex}
+"""
+        self.assertIsNone(self.classifier.classify_question_block(block, lesson_name="Bài thiếu ID"))
+
     def test_complexity_mapping_and_summary(self):
         self.assertEqual(map_complexity("NB"), "dễ")
         self.assertEqual(map_complexity("TH"), "trung bình")
         self.assertEqual(map_complexity("VD"), "khó")
+        self.assertEqual(summarize_complexity({}), "trung bình")
+        self.assertEqual(summarize_complexity({"dễ": 4}), "dễ")
         self.assertEqual(summarize_complexity({"dễ": 3, "trung bình": 1}), "dễ")
+        self.assertEqual(summarize_complexity({"dễ": 1, "khó": 1}), "trung bình")
+        self.assertEqual(summarize_complexity({"dễ": 1, "trung bình": 2, "khó": 1}), "trung bình")
         self.assertEqual(summarize_complexity({"trung bình": 2, "khó": 2}), "khó")
 
 

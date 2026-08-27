@@ -96,10 +96,7 @@
         "liên hệ",
         "tổng hợp"
       ],
-      "patterns": [
-        "VD",
-        "VDC"
-      ]
+      "patterns": []
     },
     {
       "code": "comparison",
@@ -155,7 +152,8 @@
         "hình bên",
         "hình dưới",
         "đồ thị dao động"
-      ]
+      ],
+      "match_raw_block": true
     }
   ]
 }

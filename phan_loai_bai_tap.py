@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, List, Mapping, Optional
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -24,7 +24,7 @@ QUESTION_ID_RE = re.compile(r"%\s*ID:\s*([A-Za-z0-9\-]+)")
 LEVEL_RE = re.compile(r"%\s*Mức:\s*([A-Za-z0-9]+)")
 DANGBT_RE = re.compile(r"\\dangbt\{([^}]*)\}")
 QUESTION_TEXT_RE = re.compile(
-    r"\\begin\{(?:ex|bt)\}.*?(?:%\s*ID:.*?\n)?(?:%\s*Mức:.*?\n)?(.*?)(?=\\choiceTF|\\choice\b|\\shortans|\\loigiai\{|\\end\{(?:ex|bt)\})",
+    r"\\begin\{(?:ex|bt)\}(.*?)(?=\\choiceTF|\\choice\b|\\shortans|\\loigiai\{|\\end\{(?:ex|bt)\})",
     re.DOTALL,
 )
 
@@ -55,6 +55,8 @@ COMPLEXITY_WEIGHTS = {
     "khó": 3,
 }
 
+RESPONSE_FORMAT_CODES = {"multiple_choice", "short_answer_essay"}
+
 
 @dataclass(frozen=True)
 class ExerciseTypeRule:
@@ -64,6 +66,7 @@ class ExerciseTypeRule:
     description: str
     keywords: List[str]
     patterns: List[str]
+    match_raw_block: bool = False
 
 
 def normalize_whitespace(text: str) -> str:
@@ -71,7 +74,8 @@ def normalize_whitespace(text: str) -> str:
 
 
 def contains_keyword(text: str, keyword: str) -> bool:
-    return bool(re.search(rf"(?<!\w){re.escape(keyword.lower())}(?!\w)", text))
+    normalized_text = text.lower()
+    return bool(re.search(rf"(?<!\w){re.escape(keyword.lower())}(?!\w)", normalized_text))
 
 
 def infer_question_type(block: str, qid: Optional[str]) -> Optional[str]:
@@ -98,11 +102,14 @@ def map_complexity(level: Optional[str]) -> str:
     return LEVEL_TO_COMPLEXITY.get(level or "", "trung bình")
 
 
-def summarize_complexity(counter: Counter) -> str:
+def summarize_complexity(counter: Mapping[str, int]) -> str:
     total = sum(counter.values())
     if total == 0:
         return "trung bình"
-    weighted = sum(COMPLEXITY_WEIGHTS[name] * count for name, count in counter.items()) / total
+    weighted = sum(COMPLEXITY_WEIGHTS.get(name, 0) * count for name, count in counter.items()) / total
+    # 1.75 và 2.4 là các ngưỡng trung gian giữa ba mức trọng số 1-2-3:
+    # dưới 1.75 nghiêng rõ về "dễ", từ 1.75 đến dưới 2.4 xem là "trung bình",
+    # còn từ 2.4 trở lên nghiêng về "khó".
     if weighted < 1.75:
         return "dễ"
     if weighted < 2.4:
@@ -126,6 +133,7 @@ class PhysicsExerciseClassifier:
                 description=item["description"],
                 keywords=item.get("keywords", []),
                 patterns=item.get("patterns", []),
+                match_raw_block=item.get("match_raw_block", False),
             )
             for item in data["exercise_types"]
         ]
@@ -176,10 +184,21 @@ class PhysicsExerciseClassifier:
     ) -> List[str]:
         normalized = normalize_whitespace(" ".join(part for part in (lesson_name, raw_label, question_text) if part)).lower()
         matched: List[str] = []
+        application_rule = next((rule for rule in self.rules if rule.code == "application"), None)
 
         for rule in self.rules:
+            if rule.code == "application":
+                continue
             if self._matches_rule(rule, block, normalized, question_type, level):
                 matched.append(rule.code)
+
+        if application_rule and self._should_mark_application(
+            normalized=normalized,
+            level=level,
+            matched=matched,
+            rule=application_rule,
+        ):
+            matched.append(application_rule.code)
 
         if not matched:
             fallback = "short_answer_essay" if question_type in {"TL", "TLN"} else "multiple_choice"
@@ -201,9 +220,6 @@ class PhysicsExerciseClassifier:
         if rule.code == "short_answer_essay":
             return question_type in {"TL", "TLN"} or bool(re.search(r"\\shortans|\\begin\{bt\}", block))
 
-        if rule.code == "application" and level in {"VD", "VDC"}:
-            return True
-
         for keyword in rule.keywords:
             if contains_keyword(normalized, keyword):
                 return True
@@ -211,16 +227,36 @@ class PhysicsExerciseClassifier:
         for pattern in rule.patterns:
             if re.search(pattern, normalized, re.IGNORECASE):
                 return True
-            if rule.code == "graph_diagram" and re.search(pattern, block, re.IGNORECASE):
+            if rule.match_raw_block and re.search(pattern, block):
                 return True
 
         return False
+
+    def _should_mark_application(
+        self,
+        *,
+        normalized: str,
+        level: Optional[str],
+        matched: List[str],
+        rule: ExerciseTypeRule,
+    ) -> bool:
+        if self._matches_rule(rule, "", normalized, None, level):
+            return True
+        return level in {"VD", "VDC"} and any(code not in RESPONSE_FORMAT_CODES for code in matched)
 
     def _rule_order(self, code: str) -> int:
         return next((index for index, rule in enumerate(self.rules) if rule.code == code), len(self.rules))
 
     def classify_lesson(self, lesson_entry: Dict, repo_root: Path) -> Dict:
-        tex_path = repo_root / "ngan-hang" / lesson_entry["path"]
+        relative_path = Path(lesson_entry["path"])
+        if relative_path.parts and relative_path.parts[0] == "ngan-hang":
+            relative_parts = relative_path.parts[1:]
+            if not relative_parts:
+                raise ValueError(f"Đường dẫn bài học không hợp lệ: {lesson_entry['path']}")
+            relative_path = Path(*relative_parts)
+        tex_path = repo_root / "ngan-hang" / relative_path
+        if not tex_path.is_file():
+            raise FileNotFoundError(f"Không tìm thấy file TeX cho bài học: {tex_path}")
         content = tex_path.read_text(encoding="utf-8")
         blocks = QUESTION_SPLIT_RE.split(content)[1:]
 
@@ -228,10 +264,12 @@ class PhysicsExerciseClassifier:
         type_counter: Counter = Counter()
         complexity_counter: Counter = Counter()
         raw_label_counter: Counter = Counter()
+        skipped_blocks_without_id = 0
 
         for block in blocks:
             question = self.classify_question_block(block, lesson_name=lesson_entry["BaiHoc"])
             if not question:
+                skipped_blocks_without_id += 1
                 continue
             questions.append(question)
             type_counter.update(question["exercise_types"])
@@ -250,7 +288,7 @@ class PhysicsExerciseClassifier:
             "Lop": lesson_entry["Lop"],
             "Chuong": lesson_entry["Chuong"],
             "BaiHoc": lesson_entry["BaiHoc"],
-            "path": f"ngan-hang/{lesson_entry['path']}",
+            "path": f"ngan-hang/{relative_path.as_posix()}",
             "github": lesson_entry.get("github", ""),
             "total_questions": total_questions,
             "exercise_types": [rule.code for rule in self.rules if counts_by_type[rule.code] > 0],
@@ -262,6 +300,7 @@ class PhysicsExerciseClassifier:
                 "khó": complexity_counter.get("khó", 0),
             },
             "overall_complexity": summarize_complexity(complexity_counter),
+            "skipped_blocks_without_id": skipped_blocks_without_id,
             "raw_labels": dict(raw_label_counter.most_common()),
             "questions": questions,
         }
@@ -270,16 +309,33 @@ class PhysicsExerciseClassifier:
         index_data = json.loads(index_path.read_text(encoding="utf-8"))
         physics_lessons = [lesson for lesson in index_data["lessons"] if lesson.get("Mon") == "Vật lý"]
 
-        lessons = [self.classify_lesson(lesson, repo_root) for lesson in physics_lessons]
+        lessons = []
+        missing_lesson_files = []
+
+        for lesson in physics_lessons:
+            try:
+                lessons.append(self.classify_lesson(lesson, repo_root))
+            except FileNotFoundError as exc:
+                missing_lesson_files.append(
+                    {
+                        "BaiHoc": lesson.get("BaiHoc", ""),
+                        "path": lesson.get("path", ""),
+                        "error": str(exc),
+                    }
+                )
 
         summary_type_counter = Counter()
         summary_complexity_counter = Counter()
         total_questions = 0
+        total_skipped_blocks = 0
 
         for lesson in lessons:
             total_questions += lesson["total_questions"]
-            summary_type_counter.update(lesson["counts_by_type"])
-            summary_complexity_counter.update(lesson["counts_by_complexity"])
+            summary_type_counter.update({key: value for key, value in lesson["counts_by_type"].items() if value})
+            summary_complexity_counter.update(
+                {key: value for key, value in lesson["counts_by_complexity"].items() if value}
+            )
+            total_skipped_blocks += lesson["skipped_blocks_without_id"]
 
         return {
             "schema": 1,
@@ -297,6 +353,8 @@ class PhysicsExerciseClassifier:
                     "trung bình": summary_complexity_counter.get("trung bình", 0),
                     "khó": summary_complexity_counter.get("khó", 0),
                 },
+                "skipped_blocks_without_id": total_skipped_blocks,
+                "missing_lesson_files": len(missing_lesson_files),
             },
             "exercise_type_definitions": [
                 {
@@ -307,6 +365,9 @@ class PhysicsExerciseClassifier:
                 }
                 for rule in self.rules
             ],
+            "warnings": {
+                "missing_lesson_files": missing_lesson_files,
+            },
             "lessons": lessons,
         }
 
@@ -335,6 +396,9 @@ def main() -> None:
 
     print(f"Đã phân loại {metadata['summary']['lesson_count']} bài Vật lý.")
     print(f"Tổng số câu hỏi: {metadata['summary']['question_count']}.")
+    print(f"Số block thiếu ID: {metadata['summary']['skipped_blocks_without_id']}.")
+    if metadata["summary"]["missing_lesson_files"]:
+        print(f"Có {metadata['summary']['missing_lesson_files']} bài thiếu file TeX.")
     print(f"File đầu ra: {output_path}")
 
 

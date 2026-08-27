@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-27T08:18:13.214548+00:00",
+  "generated_at": "2026-08-27T08:23:55.004234+00:00",
   "source": "ngan-hang/Vật lý",
   "config_file": "bai_tap_phan_loai.json",
   "summary": {
@@ -11,7 +11,7 @@
       "short_answer_essay": 4622,
       "calculation": 8360,
       "practical": 1483,
-      "application": 6819,
+      "application": 6439,
       "comparison": 593,
       "analysis": 1964,
       "graph_diagram": 757
@@ -20,7 +20,9 @@
       "dễ": 1731,
       "trung bình": 3869,
       "khó": 5631
-    }
+    },
+    "skipped_blocks_without_id": 0,
+    "missing_lesson_files": 0
   },
   "exercise_type_definitions": [
     {
@@ -72,6 +74,9 @@
       "description": "Bài tập khai thác đồ thị, biểu đồ, hình vẽ hoặc mô tả hình học của hiện tượng vật lí."
     }
   ],
+  "warnings": {
+    "missing_lesson_files": []
+  },
   "lessons": [
     {
       "Mon": "Vật lý",
@@ -96,7 +101,7 @@
         "short_answer_essay": 79,
         "calculation": 62,
         "practical": 23,
-        "application": 111,
+        "application": 71,
         "comparison": 16,
         "analysis": 54,
         "graph_diagram": 4
@@ -106,7 +111,7 @@
         "short_answer_essay": 0.2811,
         "calculation": 0.2206,
         "practical": 0.0819,
-        "application": 0.395,
+        "application": 0.2527,
         "comparison": 0.0569,
         "analysis": 0.1922,
         "graph_diagram": 0.0142
@@ -117,6 +122,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 122,
         "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": 22,
@@ -417,8 +423,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Xây dựng một quy trình ngắn để giải quyết nhiệm vụ thuộc dạng “Phương pháp mô hình trong nghiên cứu Vật lí”.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -995,8 +1000,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Xây dựng một quy trình ngắn để giải quyết nhiệm vụ thuộc dạng “Phương pháp thực nghiệm trong nghiên cứu Vật lí”.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -1390,8 +1394,7 @@
           "raw_label": "Đối tượng nghiên cứu và mục tiêu của môn Vật lí",
           "question_preview": "Trong dạng “Đối tượng nghiên cứu và mục tiêu của môn Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1403,8 +1406,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đối tượng nghiên cứu và mục tiêu của môn Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1416,8 +1418,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đối tượng nghiên cứu và mục tiêu của môn Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1429,8 +1430,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đối tượng nghiên cứu và mục tiêu của môn Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1609,8 +1609,7 @@
           "raw_label": "Quá trình phát triển của Vật lí",
           "question_preview": "Xây dựng một quy trình ngắn để giải quyết nhiệm vụ thuộc dạng “Quá trình phát triển của Vật lí”.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -1649,8 +1648,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp mô hình trong nghiên cứu Vật lí” (bộ 1).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1704,8 +1702,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp mô hình trong nghiên cứu Vật lí” (bộ 5).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1756,8 +1753,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp mô hình trong nghiên cứu Vật lí” (bộ 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1916,8 +1912,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp thực nghiệm trong nghiên cứu Vật lí” (bộ 1).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -1929,8 +1924,7 @@
           "raw_label": "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống",
           "question_preview": "Xây dựng một quy trình ngắn để giải quyết nhiệm vụ thuộc dạng “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống”.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -1969,8 +1963,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp thực nghiệm trong nghiên cứu Vật lí” (bộ 5).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2024,8 +2017,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Xét các phát biểu sau về “Phương pháp thực nghiệm trong nghiên cứu Vật lí” (bộ 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2185,8 +2177,7 @@
           "raw_label": "Quá trình phát triển của Vật lí",
           "question_preview": "Xét các phát biểu sau về “Quá trình phát triển của Vật lí” (bộ 1).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2241,8 +2232,7 @@
           "raw_label": "Quá trình phát triển của Vật lí",
           "question_preview": "Xét các phát biểu sau về “Quá trình phát triển của Vật lí” (bộ 5).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2295,8 +2285,7 @@
           "raw_label": "Quá trình phát triển của Vật lí",
           "question_preview": "Xét các phát biểu sau về “Quá trình phát triển của Vật lí” (bộ 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2454,8 +2443,7 @@
           "raw_label": "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống",
           "question_preview": "Xét các phát biểu sau về “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống” (bộ 1).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2505,8 +2493,7 @@
           "raw_label": "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống",
           "question_preview": "Xét các phát biểu sau về “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống” (bộ 5).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2558,8 +2545,7 @@
           "raw_label": "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống",
           "question_preview": "Xét các phát biểu sau về “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống” (bộ 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2571,8 +2557,7 @@
           "raw_label": "Đối tượng nghiên cứu và mục tiêu của môn Vật lí",
           "question_preview": "Xây dựng một quy trình ngắn để giải quyết nhiệm vụ thuộc dạng “Đối tượng nghiên cứu và mục tiêu của môn Vật lí”.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -2730,8 +2715,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp mô hình trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2757,8 +2741,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp mô hình trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2783,8 +2766,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp mô hình trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2809,8 +2791,7 @@
           "raw_label": "Phương pháp mô hình trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp mô hình trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -2985,8 +2966,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp thực nghiệm trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3010,8 +2990,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp thực nghiệm trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3035,8 +3014,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp thực nghiệm trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3048,8 +3026,7 @@
           "raw_label": "Đối tượng nghiên cứu và mục tiêu của môn Vật lí",
           "question_preview": "Xét các phát biểu sau về “Đối tượng nghiên cứu và mục tiêu của môn Vật lí” (bộ 1).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3061,8 +3038,7 @@
           "raw_label": "Phương pháp thực nghiệm trong nghiên cứu Vật lí",
           "question_preview": "Trong dạng “Phương pháp thực nghiệm trong nghiên cứu Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3074,8 +3050,7 @@
           "raw_label": "Đối tượng nghiên cứu và mục tiêu của môn Vật lí",
           "question_preview": "Xét các phát biểu sau về “Đối tượng nghiên cứu và mục tiêu của môn Vật lí” (bộ 5).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3099,8 +3074,7 @@
           "raw_label": "Đối tượng nghiên cứu và mục tiêu của môn Vật lí",
           "question_preview": "Xét các phát biểu sau về “Đối tượng nghiên cứu và mục tiêu của môn Vật lí” (bộ 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3172,8 +3146,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Quá trình phát triển của Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3185,8 +3158,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Quá trình phát triển của Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3198,8 +3170,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Quá trình phát triển của Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3211,8 +3182,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Quá trình phát triển của Vật lí”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3296,8 +3266,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3309,8 +3278,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3322,8 +3290,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3335,8 +3302,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống”, phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -3820,6 +3786,7 @@
         "khó": 54
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 94,
         "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 13,
@@ -6433,6 +6400,7 @@
         "khó": 121
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 151,
         "Sai số": 35,
@@ -10876,7 +10844,7 @@
         "short_answer_essay": 20,
         "calculation": 30,
         "practical": 0,
-        "application": 54,
+        "application": 41,
         "comparison": 16,
         "analysis": 2,
         "graph_diagram": 6
@@ -10886,7 +10854,7 @@
         "short_answer_essay": 0.2128,
         "calculation": 0.3191,
         "practical": 0.0,
-        "application": 0.5745,
+        "application": 0.4362,
         "comparison": 0.1702,
         "analysis": 0.0213,
         "graph_diagram": 0.0638
@@ -10897,6 +10865,7 @@
         "khó": 49
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 57,
         "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 16,
@@ -11188,8 +11157,7 @@
           "raw_label": "Khái niệm và đặc điểm của chất điểm",
           "question_preview": "Trong 2 trường hợp đi vuông góc với bờ và chếch lên thượng nguồn, trường hợp nào đến được điểm dự kiến nhanh nhất?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11442,8 +11410,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một ô tô xuất phát từ điểm $M$, chạy thẳng về phía Bắc $90\\,\\text{km}$ đến điểm $N$, sau đó quay đầu chạy về phía Nam $130$ km đến điểm P. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11482,8 +11449,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một ô tô xuất phát từ điểm $M$, chạy thẳng về phía Bắc $90\\,\\text{km}$ đến điểm $N$, sau đó quay đầu chạy về phía Nam $130$ km đến điểm P. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11521,8 +11487,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một ô tô xuất phát từ điểm $M$, chạy thẳng về phía Bắc $90\\,\\text{km}$ đến điểm $N$, sau đó quay đầu chạy về phía Nam $130$ km đến điểm P. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11560,8 +11525,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một học sinh đi xe đạp từ trường (điểm O) về nhà theo đường thẳng hướng Tây được $500\\,\\text{m}$ đến điểm $A$, rồi nhớ ra quên đồ nên quay lại đi về phía Đông $300\\,\\text{m}$ đến điểm $B$ để lấy đồ ở nhà bạn. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11599,8 +11563,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một học sinh đi xe đạp từ trường (điểm O) về nhà theo đường thẳng hướng Tây được $500\\,\\text{m}$ đến điểm $A$, rồi nhớ ra quên đồ nên quay lại đi về phía Đông $300\\,\\text{m}$ đến điểm $B$ để lấy đồ ở nhà bạn. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11638,8 +11601,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một học sinh đi xe đạp từ trường (điểm O) về nhà theo đường thẳng hướng Tây được $500\\,\\text{m}$ đến điểm $A$, rồi nhớ ra quên đồ nên quay lại đi về phía Đông $300\\,\\text{m}$ đến điểm $B$ để lấy đồ ở nhà bạn. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -11677,8 +11639,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một học sinh đi xe đạp từ trường (điểm O) về nhà theo đường thẳng hướng Tây được $500\\,\\text{m}$ đến điểm $A$, rồi nhớ ra quên đồ nên quay lại đi về phía Đông $300\\,\\text{m}$ đến điểm $B$ để lấy đồ ở nhà bạn. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -12048,8 +12009,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một người đi bộ từ vị trí $A$ được $3,\\mathrm{km}$ về hướng Đông đến vị trí $B$, sau đó rẽ trái đi tiếp $4,\\mathrm{km}$ về hướng Bắc đến vị trí C. Quãng đường đi được và độ lớn độ dịch chuyển của người đó lần lượt là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -12061,8 +12021,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trên một bản đồ địa lí có tỉ xích $1,\\mathrm{cm}$ ứng với $10,\\mathrm{km}$, một vật di chuyển từ gốc tọa độ $O$ đến điểm A. Trên bản đồ, $OA=4,\\mathrm{cm}$ và hướng của $OA$ lệch $30^\\circ$ về phía Đông so với hướng Bắc. Độ lớn và hướng độ ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -12114,8 +12073,7 @@
           "raw_label": "Khái niệm và đặc điểm của chất điểm",
           "question_preview": "Một học sinh đi bộ từ nhà đến trường theo con đường thẳng dài $1,2\\,\\text{km}$, sau đó quay lại đi $0,4\\,\\text{km}$ để lấy sách bỏ quên rồi tiếp tục đến trường. Chọn chiều dương là chiều từ nhà đến trường, gốc tọa độ tại nhà. Xét các mệnh đ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -12127,8 +12085,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một ô tô xuất phát từ điểm $A$, đi thẳng về phía Đông $60\\,\\text{km}$ đến điểm $B$, sau đó quay đầu đi về phía Tây $20\\,\\text{km}$ đến điểm C. Chọn chiều dương hướng Đông, gốc tọa độ tại A. Xét các mệnh đề sau:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -12140,8 +12097,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một người đi xe đạp xuất phát từ điểm $M$, đi thẳng về phía Bắc $5\\,\\text{km}$ đến điểm $N$, rồi tiếp tục đi thẳng về phía Bắc thêm $3\\,\\text{km}$ đến điểm $P$, sau đó quay đầu đi thẳng về phía Nam $6$ km đến điểm Q. Chọn chiều dương hướng ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         }
       ]
@@ -12188,6 +12144,7 @@
         "khó": 42
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 21,
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 13,
@@ -13030,6 +12987,7 @@
         "khó": 29
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 17,
         "Nhận dạng chuyển động qua đồ thị": 14,
@@ -13791,6 +13749,7 @@
         "khó": 84
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 148,
         "Nhận biết lực, biểu diễn vectơ lực và các đặc trưng của lực": 1,
@@ -16155,6 +16114,7 @@
         "khó": 84
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết quán tính và nội dung định luật I Newton": 1,
@@ -18402,6 +18362,7 @@
         "khó": 84
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết nội dung và biểu thức định luật II Newton": 1,
@@ -20649,6 +20610,7 @@
         "khó": 90
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết lực và phản lực theo định luật III Newton": 1,
@@ -22902,6 +22864,7 @@
         "khó": 90
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết trọng lực, trọng lượng và lực căng dây": 1,
@@ -25164,6 +25127,7 @@
         "khó": 90
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết các loại lực ma sát và điều kiện xuất hiện": 1,
@@ -27393,7 +27357,7 @@
         "short_answer_essay": 72,
         "calculation": 108,
         "practical": 0,
-        "application": 73,
+        "application": 49,
         "comparison": 0,
         "analysis": 2,
         "graph_diagram": 0
@@ -27403,7 +27367,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.6667,
         "practical": 0.0,
-        "application": 0.4506,
+        "application": 0.3025,
         "comparison": 0.0,
         "analysis": 0.0123,
         "graph_diagram": 0.0
@@ -27414,6 +27378,7 @@
         "khó": 72
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết đặc điểm, phương và chiều của lực cản chất lưu": 1,
@@ -27517,8 +27482,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -27530,8 +27494,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -27543,8 +27506,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -27604,8 +27566,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -27641,8 +27602,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -27654,8 +27614,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -27667,8 +27626,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -27680,19 +27638,6 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
-          ]
-        },
-        {
-          "id": "AIQ",
-          "question_type": "TL",
-          "question_type_name": "Tự luận",
-          "difficulty_level": "TH",
-          "complexity": "trung bình",
-          "raw_label": "Chưa có dạng",
-          "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
-          "exercise_types": [
             "short_answer_essay"
           ]
         },
@@ -27712,13 +27657,12 @@
           "id": "AIQ",
           "question_type": "TL",
           "question_type_name": "Tự luận",
-          "difficulty_level": "VD",
-          "complexity": "khó",
+          "difficulty_level": "TH",
+          "complexity": "trung bình",
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -27730,8 +27674,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -27743,8 +27686,19 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
+          ]
+        },
+        {
+          "id": "AIQ",
+          "question_type": "TL",
+          "question_type_name": "Tự luận",
+          "difficulty_level": "VD",
+          "complexity": "khó",
+          "raw_label": "Chưa có dạng",
+          "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
+          "exercise_types": [
+            "short_answer_essay"
           ]
         },
         {
@@ -27756,8 +27710,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật chuyển động sang phải trong không khí. Lực cản của không khí có chiều nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28581,8 +28534,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -28594,8 +28546,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -28607,8 +28558,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -28668,8 +28618,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -28705,8 +28654,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28718,8 +28666,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28731,8 +28678,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28744,19 +28690,6 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
-          ]
-        },
-        {
-          "id": "AIQ",
-          "question_type": "TL",
-          "question_type_name": "Tự luận",
-          "difficulty_level": "TH",
-          "complexity": "trung bình",
-          "raw_label": "Chưa có dạng",
-          "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
-          "exercise_types": [
             "short_answer_essay"
           ]
         },
@@ -28776,13 +28709,12 @@
           "id": "AIQ",
           "question_type": "TL",
           "question_type_name": "Tự luận",
-          "difficulty_level": "VD",
-          "complexity": "khó",
+          "difficulty_level": "TH",
+          "complexity": "trung bình",
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28794,8 +28726,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -28807,8 +28738,19 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
+          ]
+        },
+        {
+          "id": "AIQ",
+          "question_type": "TL",
+          "question_type_name": "Tự luận",
+          "difficulty_level": "VD",
+          "complexity": "khó",
+          "raw_label": "Chưa có dạng",
+          "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
+          "exercise_types": [
+            "short_answer_essay"
           ]
         },
         {
@@ -28820,8 +28762,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cánh máy bay tạo lực nâng chủ yếu nhờ yếu tố nào?",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -29594,6 +29535,7 @@
         "khó": 72
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Phân tích lực và lập phương trình định luật II Newton": 1,
@@ -31827,6 +31769,7 @@
         "khó": 72
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết mômen lực và cánh tay đòn": 1,
@@ -34063,6 +34006,7 @@
         "khó": 90
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết dụng cụ và bố trí thí nghiệm tổng hợp lực": 1,
@@ -36523,6 +36467,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết động lượng và các đặc trưng của vectơ động lượng": 1,
@@ -38812,6 +38757,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết hệ kín và điều kiện bảo toàn động lượng": 1,
@@ -41072,6 +41018,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết dụng cụ và bố trí thí nghiệm va chạm": 1,
@@ -43474,7 +43421,7 @@
         "short_answer_essay": 60,
         "calculation": 147,
         "practical": 0,
-        "application": 100,
+        "application": 98,
         "comparison": 0,
         "analysis": 0,
         "graph_diagram": 6
@@ -43484,7 +43431,7 @@
         "short_answer_essay": 0.3659,
         "calculation": 0.8963,
         "practical": 0.0,
-        "application": 0.6098,
+        "application": 0.5976,
         "comparison": 0.0,
         "analysis": 0.0,
         "graph_diagram": 0.0366
@@ -43495,6 +43442,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Khái niệm cơ bản về chuyển động tròn đều": 1,
@@ -43712,8 +43660,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu thuộc dạng “Nhận biết chuyển động tròn và chuyển động tròn đều” ở tình huống số 4.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -43725,8 +43672,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu thuộc dạng “Nhận biết chuyển động tròn và chuyển động tròn đều” ở tình huống số 5.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -45771,6 +45717,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 156,
         "Nhận biết gia tốc hướng tâm và lực hướng tâm": 1,
@@ -48035,6 +47982,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 7
       },
@@ -48152,7 +48100,7 @@
         "short_answer_essay": 40,
         "calculation": 134,
         "practical": 1,
-        "application": 67,
+        "application": 66,
         "comparison": 0,
         "analysis": 10,
         "graph_diagram": 25
@@ -48162,7 +48110,7 @@
         "short_answer_essay": 0.2797,
         "calculation": 0.9371,
         "practical": 0.007,
-        "application": 0.4685,
+        "application": 0.4615,
         "comparison": 0.0,
         "analysis": 0.0699,
         "graph_diagram": 0.1748
@@ -48173,6 +48121,7 @@
         "khó": 64
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 61,
         "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 18,
@@ -49911,8 +49860,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Vật có $A=9$ cm và $\\omega=4$ rad/s. Tốc độ cực đại bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -50173,7 +50121,7 @@
         "short_answer_essay": 45,
         "calculation": 222,
         "practical": 3,
-        "application": 128,
+        "application": 127,
         "comparison": 0,
         "analysis": 12,
         "graph_diagram": 42
@@ -50183,7 +50131,7 @@
         "short_answer_essay": 0.2009,
         "calculation": 0.9911,
         "practical": 0.0134,
-        "application": 0.5714,
+        "application": 0.567,
         "comparison": 0.0,
         "analysis": 0.0536,
         "graph_diagram": 0.1875
@@ -50194,6 +50142,7 @@
         "khó": 122
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 64,
         "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 35,
@@ -50367,8 +50316,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Với $x=6\\cos(4\\pi t+\\pi/3)$ cm, pha tại $t=1/6$ s là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -53366,6 +53314,7 @@
         "khó": 113
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 74,
         "Liên hệ li độ - gia tốc": 28,
@@ -55888,7 +55837,7 @@
         "short_answer_essay": 31,
         "calculation": 67,
         "practical": 0,
-        "application": 50,
+        "application": 43,
         "comparison": 1,
         "analysis": 0,
         "graph_diagram": 13
@@ -55898,7 +55847,7 @@
         "short_answer_essay": 0.4133,
         "calculation": 0.8933,
         "practical": 0.0,
-        "application": 0.6667,
+        "application": 0.5733,
         "comparison": 0.0133,
         "analysis": 0.0,
         "graph_diagram": 0.1733
@@ -55909,6 +55858,7 @@
         "khó": 50
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 35,
         "Bài toán xác định thời điểm và quãng đường.": 12,
@@ -56009,8 +55959,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật nhỏ dao động điều hòa với biên độ $A = 5\\text{ cm}$. Quãng đường vật đi được sau 2 dao động toàn phần (2 chu kì) theo cm :",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -56022,8 +55971,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với chu kì $T$. Trong khoảng thời gian ngắn nhất khi đi từ vị trí biên có li độ $x_1 = A$ đến vị trí $x_2 = A/2$, chất điểm có tốc độ trung bình là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56079,8 +56027,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trong 10 dao động toàn phần chất điểm đi được quãng đường dài $120\\,\\text{cm}$. Quỹ đạo dao động của vật có chiều dài là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56132,8 +56079,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trong 10 dao động toàn phần chất điểm đi được quãng đường dài $120\\,\\text{cm}$. Quỹ đạo dao động của vật có chiều dài là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56187,8 +56133,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trong 10 dao động toàn phần chất điểm đi được quãng đường dài $120\\,\\text{cm}$. Quỹ đạo dao động của vật có chiều dài là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56242,8 +56187,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trong 10 dao động toàn phần chất điểm đi được quãng đường dài $120\\,\\text{cm}$. Quỹ đạo dao động của vật có chiều dài là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56868,8 +56812,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc lò xo gồm vật nặng có khối lượng $0{,}2$ kg và lò xo có độ cứng $80$ N/m. Con lắc lò xo dao động điều hòa với biên độ $3$ cm. Tốc độ cực đại của vật nặng bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -56980,7 +56923,7 @@
         "short_answer_essay": 122,
         "calculation": 249,
         "practical": 3,
-        "application": 142,
+        "application": 129,
         "comparison": 0,
         "analysis": 25,
         "graph_diagram": 41
@@ -56990,7 +56933,7 @@
         "short_answer_essay": 0.3812,
         "calculation": 0.7781,
         "practical": 0.0094,
-        "application": 0.4437,
+        "application": 0.4031,
         "comparison": 0.0,
         "analysis": 0.0781,
         "graph_diagram": 0.1281
@@ -57001,6 +56944,7 @@
         "khó": 142
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 102,
         "Tính động năng, thế năng và cơ năng tại một li độ hoặc thời điểm xác định": 45,
@@ -57784,8 +57728,7 @@
           "raw_label": "Chu kì biến thiên của động năng, thế năng",
           "question_preview": "Một chất điểm dao động điều hòa. Biết khoảng thời gian ngắn nhất giữa hai lần liên tiếp động năng bằng thế năng là $0,1\\ \\mathrm{s}$. Chu kì dao động của chất điểm là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -57842,8 +57785,7 @@
           "raw_label": "Chu kì biến thiên của động năng, thế năng",
           "question_preview": "Một chất điểm dao động điều hòa. Biết khoảng thời gian ngắn nhất giữa hai lần liên tiếp động năng bằng thế năng là $0,1\\ \\mathrm{s}$. Chu kì dao động của chất điểm là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -57900,8 +57842,7 @@
           "raw_label": "Chu kì biến thiên của động năng, thế năng",
           "question_preview": "Một chất điểm dao động điều hòa. Biết khoảng thời gian ngắn nhất giữa hai lần liên tiếp động năng bằng thế năng là $0,1\\ \\mathrm{s}$. Chu kì dao động của chất điểm là:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60491,8 +60432,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc lò xo có độ cứng của lò xo $k = 100$ N/m, khối lượng vật nặng $m = 1$ kg, dao động điều hòa với biên độ $A = 10$ cm dọc theo trục Ox nằm ngang. Chọn mốc thế năng tại vị trí cân bằng.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60531,8 +60471,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc lò xo có độ cứng của lò xo $k = 100$ N/m, khối lượng vật nặng $m = 1$ kg, dao động điều hòa với biên độ $A = 10$ cm dọc theo trục Ox nằm ngang. Chọn mốc thế năng tại vị trí cân bằng.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60777,8 +60716,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Vật dao động theo $x=8\\cos(5t)$ cm.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60914,8 +60852,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc đơn dao động điều hòa với biên độ góc $\\alpha_0$. Khi vật đi qua vị trí có li độ góc $\\alpha = \\pm \\dfrac{\\alpha_0}{\\sqrt{2}}$ thì tỉ số giữa động năng và thế năng của con lắc bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60939,8 +60876,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc đơn dao động điều hòa với biên độ góc $\\alpha_0$. Khi vật đi qua vị trí có li độ góc $\\alpha = \\pm \\dfrac{\\alpha_0}{\\sqrt{2}}$ thì tỉ số giữa động năng và thế năng của con lắc bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60966,8 +60902,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một con lắc đơn dao động điều hòa với biên độ góc $\\alpha_0$. Khi vật đi qua vị trí có li độ góc $\\alpha = \\pm \\dfrac{\\alpha_0}{\\sqrt{2}}$ thì tỉ số giữa động năng và thế năng của con lắc bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -60993,8 +60928,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với biên độ $A = 6\\ \\mathrm{cm}$. Khoảng cách từ chất điểm đến vị trí cân bằng tại nơi có động năng bằng ba lần thế năng bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61020,8 +60954,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với biên độ $A = 6\\ \\mathrm{cm}$. Khoảng cách từ chất điểm đến vị trí cân bằng tại nơi có động năng bằng ba lần thế năng bằng:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61320,8 +61253,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Con lắc lò xo có cơ năng 0.09 $J$ và biên độ $6\\,\\text{cm}$. Độ cứng lò xo bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61333,8 +61265,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Con lắc lò xo có cơ năng 0.2 $J$ và biên độ $10\\,\\text{cm}$. Độ cứng lò xo bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         }
       ]
@@ -61379,6 +61310,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 9
       },
@@ -61523,7 +61455,7 @@
         "short_answer_essay": 33,
         "calculation": 75,
         "practical": 11,
-        "application": 78,
+        "application": 42,
         "comparison": 6,
         "analysis": 0,
         "graph_diagram": 1
@@ -61533,7 +61465,7 @@
         "short_answer_essay": 0.2409,
         "calculation": 0.5474,
         "practical": 0.0803,
-        "application": 0.5693,
+        "application": 0.3066,
         "comparison": 0.0438,
         "analysis": 0.0,
         "graph_diagram": 0.0073
@@ -61544,6 +61476,7 @@
         "khó": 77
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 76,
         "quãng đường": 21,
@@ -61613,8 +61546,7 @@
           "raw_label": "quãng đường",
           "question_preview": "L11C1 Ôn Tập chương dao động – quãng đường: Vật có biên độ $7\\,\\text{cm}$, chu kì $2\\,\\text{s}$.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61667,8 +61599,7 @@
           "raw_label": "quãng đường",
           "question_preview": "L11C1 Ôn Tập chương dao động – quãng đường: Vật có biên độ $8\\,\\text{cm}$, chu kì $4\\,\\text{s}$.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61773,8 +61704,7 @@
           "raw_label": "Thời điểm vật qua x1",
           "question_preview": "L11C1 Ôn Tập chương dao động – Thời điểm vật qua x1: Vật có biên độ $10\\,\\text{cm}$, chu kì $2\\,\\text{s}$.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61828,8 +61758,7 @@
           "raw_label": "Thời điểm vật qua x1",
           "question_preview": "L11C1 Ôn Tập chương dao động – Thời điểm vật qua x1: Vật có biên độ $5\\,\\text{cm}$, chu kì $4\\,\\text{s}$.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -61923,8 +61852,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa với biên độ $A$ và chu kì $T$. Thời gian ngắn nhất để vật đi được quãng đường có độ dài $A\\sqrt{2}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62037,8 +61965,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa với chu kì $T$ và biên độ $A$. Quãng đường vật đi được tối đa trong khoảng thời gian $\\dfrac{7T}{6}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62089,8 +62016,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa với biên độ $A$ và chu kì $T$. Thời gian dài nhất để vật đi được quãng đường có độ dài $A$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62144,8 +62070,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa trên trục $Ox$. Gọi $t_1$ và $t_2$ lần lượt là khoảng thời gian ngắn nhất và dài nhất để vật đi được quãng đường bằng biên độ. Tỉ số $\\dfrac{t_1}{t_2}$ bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62254,8 +62179,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa với biên độ $10\\ \\text{cm}$. Quãng đường nhỏ nhất mà vật đi được trong $0,5\\ \\text{s}$ là $10\\ \\text{cm}$. Tốc độ lớn nhất của vật là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62310,8 +62234,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa dọc theo trục $Ox$, quanh vị trí cân bằng $O$ với biên độ $A$ và chu kì $T$. Trong khoảng thời gian $\\dfrac{T}{3}$, quãng đường lớn nhất mà vật có thể đi được là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62367,8 +62290,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một vật dao động điều hòa dọc theo trục $Ox$, quanh vị trí cân bằng $O$ với biên độ $A$ và chu kì $T$. Trong khoảng thời gian $\\dfrac{T}{4}$, quãng đường nhỏ nhất mà vật có thể đi được là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62394,8 +62316,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Chọn phương án sai khi nói về vật dao động điều hòa dọc theo trục $Ox$, với $O$ là vị trí cân bằng, biên độ $A$ và chu kì $T$.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62422,8 +62343,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Cho vật dao động điều hòa biên độ $A$, chu kì $T$. Quãng đường lớn nhất mà vật đi được trong khoảng thời gian $\\dfrac{5T}{4}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62450,8 +62370,7 @@
           "raw_label": "quãng đường",
           "question_preview": "Một chất điểm dao động điều hòa với biên độ $A$ và chu kì $T$. Trong khoảng thời gian $\\dfrac{T}{3}$, chất điểm không thể đi được quãng đường bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62463,8 +62382,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật dao động điều hòa với biên độ $A=6\\ \\text{cm}$ và chu kì $T=1,2\\ \\text{s}$. Quãng đường lớn nhất mà vật đi được trong khoảng thời gian $2\\ \\text{s}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62504,8 +62422,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trên trục $Ox$ với chu kì $T$ và biên độ $A$. Vị trí cân bằng của chất điểm trùng với gốc tọa độ. Trong khoảng thời gian $\\Delta t$ với $0\\lt \\Delta t<\\dfrac{T}{2}$, quãng đường lớn nhất và nhỏ nhất mà vật có",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62517,8 +62434,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật dao động điều hòa dọc theo trục $Ox$, quanh vị trí cân bằng $O$ với biên độ $A$. Trong khoảng thời gian $1\\ \\text{s}$, quãng đường nhỏ nhất mà vật có thể đi được là $A$. Chu kì dao động điều hòa là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62592,8 +62508,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khoảng thời gian ngắn nhất để vật dao động điều hòa chuyển động từ li độ $x_1=-\\dfrac{A}{2}$ đến $x_2=0,5A\\sqrt{3}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62619,8 +62534,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khoảng thời gian ngắn nhất mà một vật dao động điều hòa với chu kì $T$, biên độ $A$ thực hiện khi di chuyển giữa hai vị trí có li độ $x_1=\\dfrac{A}{2}$ và $x_2=0,5A\\sqrt{3}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62632,8 +62546,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm đang dao động điều hòa trên một đoạn thẳng. Trên đoạn thẳng đó có bảy điểm theo đúng thứ tự $M_1,M_2,M_3,M_4,M_5,M_6,M_7$, với $M_4$ là vị trí cân bằng. Biết cứ $0,05\\ \\text{s}$ thì chất điểm lại đi qua các điểm $M_1,M_2,M_3,M",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62645,8 +62558,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm đang dao động điều hòa trên một đoạn thẳng. Trên đoạn thẳng đó có năm điểm theo đúng thứ tự $M$, $N$, $O$, $P$ và $Q$, với $O$ là vị trí cân bằng. Biết cứ $0,05\\ \\text{s}$ thì chất điểm lại đi qua các điểm $M$, $N$, $O$, $P$ v",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62658,8 +62570,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một dao động điều hòa có chu kì dao động là $T$ và biên độ là $A$. Tại thời điểm ban đầu vật có li độ $x_0\\gt 0$. Thời gian ngắn nhất để vật đi từ vị trí ban đầu về vị trí cân bằng chỉ bằng một nửa thời gian ngắn nhất để vật đi từ vị trí ba",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62671,8 +62582,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một dao động điều hòa có chu kì dao động là $T$ và biên độ là $A$. Tại thời điểm ban đầu vật có li độ $x_0\\gt 0$. Thời gian ngắn nhất để vật đi từ vị trí ban đầu về vị trí cân bằng gấp đôi thời gian ngắn nhất để vật đi từ vị trí ban đầu về ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62684,8 +62594,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một dao động điều hòa có chu kì dao động là $T$ và biên độ là $A$. Tại thời điểm ban đầu vật có li độ $x_0\\gt 0$. Thời gian ngắn nhất để vật đi từ vị trí ban đầu về vị trí cân bằng cũng bằng thời gian ngắn nhất để vật đi từ vị trí ban đầu v",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62697,8 +62606,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm đang dao động điều hòa trên một đoạn thẳng xung quanh vị trí cân bằng $O$. Gọi $M$, $N$ là hai điểm trên đường thẳng cùng cách đều $O$. Biết cứ $0,05\\ \\text{s}$ thì chất điểm lại đi qua các điểm $M$, $O$, $N$ và tốc độ tại $M$",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62710,8 +62618,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm đang dao động điều hòa trên một đoạn thẳng. Trên đoạn thẳng đó có bảy điểm theo đúng thứ tự $M_1,M_2,M_3,M_4,M_5,M_6,M_7$, với $M_4$ là vị trí cân bằng. Biết cứ $0,05\\ \\text{s}$ thì chất điểm lại đi qua các điểm $M_1,M_2,M_3,M",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62801,8 +62708,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật nhỏ dao động điều hòa với biên độ $4\\ \\text{cm}$ và chu kì $2\\ \\text{s}$. Quãng đường vật đi được trong $4\\ \\text{s}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -62814,8 +62720,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật dao động điều hòa có chu kì $2\\ \\text{s}$, biên độ $10\\ \\text{cm}$. Khi vật cách vị trí cân bằng $6\\ \\text{cm}$, tốc độ của nó bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63232,8 +63137,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa theo quỹ đạo thẳng có chiều dài $8\\ \\text{cm}$. Thời gian ngắn nhất để vật đi từ vị trí có li độ $x_1=4\\ \\text{cm}$ đến $x_2=-2\\sqrt{3}\\ \\text{cm}$ là $2\\ \\text{s}$. Tốc độ cực đại của vật trong quá trình dao",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63245,8 +63149,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với chu kì $T$ trên trục $Ox$, với $O$ là vị trí cân bằng. Thời gian ngắn nhất vật đi từ li độ $x=\\dfrac{A}{\\sqrt{2}}$ đến li độ $x=\\dfrac{A}{2}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63258,8 +63161,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm đang dao động điều hòa trên một đoạn thẳng. Trên đoạn thẳng đó có năm điểm theo đúng thứ tự $M$, $N$, $O$, $P$ và $Q$, với $O$ là vị trí cân bằng. Biết cứ $0,05\\ \\text{s}$ thì chất điểm lại đi qua các điểm $M$, $N$, $O$, $P$ v",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63285,8 +63187,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với biên độ $4\\ \\text{cm}$ và chu kì $0,9\\ \\text{s}$. Khoảng thời gian ngắn nhất để nó đi từ vị trí có li độ $+3\\ \\text{cm}$ đến vị trí cân bằng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63298,8 +63199,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa với biên độ $4\\ \\text{cm}$ và chu kì $0,9\\ \\text{s}$. Khoảng thời gian ngắn nhất để nó đi từ vị trí có li độ $+3\\ \\text{cm}$ đến li độ $+4\\ \\text{cm}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63311,8 +63211,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trên trục $Ox$ với chu kì $T$. Vị trí cân bằng của chất điểm trùng với gốc tọa độ. Khoảng thời gian ngắn nhất để nó đi từ vị trí có li độ $x=A$ đến vị trí có li độ $x=-\\dfrac{A}{2}$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63324,8 +63223,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một chất điểm dao động điều hòa trên đoạn đường $PQ$, thời gian vật đi từ $P$ đến $Q$ là $0,25\\ \\text{s}$. Gọi $O$, $E$ lần lượt là trung điểm của $PQ$ và $OQ$. Thời gian ngắn nhất vật đi từ $E$ đến $Q$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63351,8 +63249,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một vật dao động điều hòa với biên độ $A$, chu kì $T$. Thời gian ngắn nhất vật đi từ vị trí $x=-0{,}5A$ đến vị trí có $x=+0{,}5A$ là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -63429,6 +63326,7 @@
         "khó": 78
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 85,
         "Thiết kế phương án thí nghiệm đo tần số của nguồn âm": 18,
@@ -65950,7 +65848,7 @@
         "short_answer_essay": 75,
         "calculation": 111,
         "practical": 2,
-        "application": 106,
+        "application": 103,
         "comparison": 14,
         "analysis": 42,
         "graph_diagram": 0
@@ -65960,7 +65858,7 @@
         "short_answer_essay": 0.4464,
         "calculation": 0.6607,
         "practical": 0.0119,
-        "application": 0.631,
+        "application": 0.6131,
         "comparison": 0.0833,
         "analysis": 0.25,
         "graph_diagram": 0.0
@@ -65971,6 +65869,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 71,
         "Nhận biết bức xạ điện từ theo nguồn phát và công dụng": 24,
@@ -66665,8 +66564,7 @@
           "question_preview": "Một học sinh giải bài sau nhưng bỏ qua điều kiện vật lí. Hãy sửa cách làm và trình bày lời giải đúng: Mô tả quan hệ phương và pha của $\\vec E$, $\\vec B$ và phương truyền sóng điện từ.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -67411,8 +67309,7 @@
           "raw_label": "Nhận biết bản chất và tính chất của sóng điện từ",
           "question_preview": "Phương pháp phù hợp nhất cho dạng “Nhận biết bản chất và tính chất của sóng điện từ” là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -67862,8 +67759,7 @@
           "raw_label": "Nhận biết bức xạ điện từ theo nguồn phát và công dụng",
           "question_preview": "Trong chuyên đề “Nhận biết bức xạ điện từ theo nguồn phát và công dụng”, Phương pháp phù hợp nhất cho dạng “Nhận biết bức xạ điện từ theo nguồn phát và công dụng” là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -68333,7 +68229,7 @@
         "short_answer_essay": 73,
         "calculation": 129,
         "practical": 5,
-        "application": 118,
+        "application": 111,
         "comparison": 6,
         "analysis": 6,
         "graph_diagram": 0
@@ -68343,7 +68239,7 @@
         "short_answer_essay": 0.432,
         "calculation": 0.7633,
         "practical": 0.0296,
-        "application": 0.6982,
+        "application": 0.6568,
         "comparison": 0.0355,
         "analysis": 0.0355,
         "graph_diagram": 0.0
@@ -68354,6 +68250,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 86,
         "Tính hiệu đường đi và bậc giao thoa": 20,
@@ -68769,8 +68666,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -68822,8 +68718,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -68877,8 +68772,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -69573,8 +69467,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”, Trên đoạn nối hai nguồn cùng pha, khoảng cách giữa hai cực đại liên tiếp bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -69629,8 +69522,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”, Hiện tượng giao thoa là bằng chứng rõ ràng của",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -69685,8 +69577,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”, Hai nguồn cùng pha cách nhau $10\\,\\text{cm}$, $\\lambda=2$ cm. Số cực đại trên đoạn nối hai nguồn, kể cả hai nguồn nếu thỏa điều kiện, là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -69740,8 +69631,7 @@
           "raw_label": "Nhận biết hiện tượng và điều kiện giao thoa sóng",
           "question_preview": "Trong dạng “Nhận biết hiện tượng và điều kiện giao thoa sóng”, Tại điểm có cực đại giao thoa, hai sóng thành phần đến đó",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -70716,7 +70606,7 @@
         "short_answer_essay": 75,
         "calculation": 112,
         "practical": 0,
-        "application": 107,
+        "application": 86,
         "comparison": 6,
         "analysis": 12,
         "graph_diagram": 0
@@ -70726,7 +70616,7 @@
         "short_answer_essay": 0.4386,
         "calculation": 0.655,
         "practical": 0.0,
-        "application": 0.6257,
+        "application": 0.5029,
         "comparison": 0.0351,
         "analysis": 0.0702,
         "graph_diagram": 0.0
@@ -70737,6 +70627,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 71,
         "Tần số riêng, họa âm và hiện tượng cộng hưởng": 24,
@@ -71152,8 +71043,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -71206,8 +71096,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -71261,8 +71150,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -71951,8 +71839,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”, Dây một đầu cố định, một đầu tự do có sóng dừng khi",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -71964,8 +71851,7 @@
           "raw_label": "Điều kiện có sóng dừng trên dây hai đầu cố định",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72006,8 +71892,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”, Dây hai đầu cố định dài $1\\,\\text{m}$ có 4 bụng. Bước sóng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72019,8 +71904,7 @@
           "raw_label": "Điều kiện có sóng dừng trên dây hai đầu cố định",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72061,8 +71945,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”, Trong một bó sóng, các điểm nằm giữa hai nút liên tiếp dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72074,8 +71957,7 @@
           "raw_label": "Điều kiện có sóng dừng trên dây hai đầu cố định",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72115,8 +71997,7 @@
           "raw_label": "Nhận biết sóng dừng, nút sóng và bụng sóng",
           "question_preview": "Trong dạng “Nhận biết sóng dừng, nút sóng và bụng sóng”, Hai bó sóng kề nhau dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72238,8 +72119,7 @@
           "raw_label": "Điều kiện có sóng dừng với một đầu tự do",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng với một đầu tự do”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72291,8 +72171,7 @@
           "raw_label": "Điều kiện có sóng dừng với một đầu tự do",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng với một đầu tự do”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72345,8 +72224,7 @@
           "raw_label": "Điều kiện có sóng dừng với một đầu tự do",
           "question_preview": "Xét các phát biểu sau trong dạng “Điều kiện có sóng dừng với một đầu tự do”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72892,8 +72770,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”, Dây một đầu cố định, một đầu tự do có sóng dừng khi",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72905,8 +72782,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”, Dây hai đầu cố định dài $1\\,\\text{m}$ có 4 bụng. Bước sóng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72918,8 +72794,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”, Trong một bó sóng, các điểm nằm giữa hai nút liên tiếp dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -72931,8 +72806,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng trên dây hai đầu cố định”, Hai bó sóng kề nhau dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -73018,8 +72892,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng với một đầu tự do”, Dây một đầu cố định, một đầu tự do có sóng dừng khi",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -73031,8 +72904,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng với một đầu tự do”, Dây hai đầu cố định dài $1\\,\\text{m}$ có 4 bụng. Bước sóng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -73044,8 +72916,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng với một đầu tự do”, Trong một bó sóng, các điểm nằm giữa hai nút liên tiếp dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -73057,8 +72928,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Điều kiện có sóng dừng với một đầu tự do”, Hai bó sóng kề nhau dao động",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -73120,6 +72990,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 81,
         "Phương trình sóng và độ lệch pha": 20,
@@ -75578,6 +75449,7 @@
         "khó": 96
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 85,
         "Tính tốc độ truyền âm từ số liệu thí nghiệm": 18,
@@ -78030,7 +77902,7 @@
         "short_answer_essay": 77,
         "calculation": 118,
         "practical": 0,
-        "application": 106,
+        "application": 104,
         "comparison": 6,
         "analysis": 60,
         "graph_diagram": 29
@@ -78040,7 +77912,7 @@
         "short_answer_essay": 0.4529,
         "calculation": 0.6941,
         "practical": 0.0,
-        "application": 0.6235,
+        "application": 0.6118,
         "comparison": 0.0353,
         "analysis": 0.3529,
         "graph_diagram": 0.1706
@@ -78051,6 +77923,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 54,
         "Khai thác đồ thị sóng và quan hệ pha giữa các điểm": 26,
@@ -79270,8 +79143,7 @@
           "question_preview": "Một học sinh giải bài sau nhưng bỏ qua điều kiện vật lí. Hãy sửa cách làm và trình bày lời giải đúng: Nêu hai điều kiện cần để hình thành sóng cơ từ một nguồn dao động.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -79878,8 +79750,7 @@
           "raw_label": "Nhận biết bản chất và sự truyền sóng cơ",
           "question_preview": "Phương pháp phù hợp nhất cho dạng “Nhận biết bản chất và sự truyền sóng cơ” là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -80506,6 +80377,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 69,
         "Nhận dạng loại sóng trong các môi trường và thiết bị thực tế": 24,
@@ -82981,6 +82853,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 9
       },
@@ -83143,6 +83016,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 20
       },
@@ -83456,6 +83330,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 11
       },
@@ -83643,6 +83518,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 9
       },
@@ -83803,6 +83679,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 9
       },
@@ -83966,6 +83843,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 10
       },
@@ -84136,6 +84014,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 24
       },
@@ -84483,6 +84362,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 16
       },
@@ -84742,6 +84622,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 25
       },
@@ -85107,6 +84988,7 @@
         "khó": 0
       },
       "overall_complexity": "dễ",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 24
       },
@@ -85464,7 +85346,7 @@
         "short_answer_essay": 72,
         "calculation": 73,
         "practical": 0,
-        "application": 92,
+        "application": 86,
         "comparison": 55,
         "analysis": 99,
         "graph_diagram": 27
@@ -85474,7 +85356,7 @@
         "short_answer_essay": 0.3711,
         "calculation": 0.3763,
         "practical": 0.0,
-        "application": 0.4742,
+        "application": 0.4433,
         "comparison": 0.2835,
         "analysis": 0.5103,
         "graph_diagram": 0.1392
@@ -85485,6 +85367,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 109,
         "Bài toán hiệu suất và hao phí của động cơ nhiệt": 31,
@@ -86047,8 +85930,7 @@
           "raw_label": "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
           "question_preview": "Xét các phát biểu sau về dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -86101,8 +85983,7 @@
           "raw_label": "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
           "question_preview": "Xét các phát biểu sau về dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -87581,8 +87462,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 3 thuộc dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -87594,8 +87474,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 7 thuộc dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -87607,8 +87486,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 4 thuộc dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -87620,8 +87498,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 8 thuộc dạng “Mô hình động học phân tử về cấu tạo chất và chuyển động Brown”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88193,7 +88070,7 @@
         "short_answer_essay": 66,
         "calculation": 46,
         "practical": 0,
-        "application": 69,
+        "application": 55,
         "comparison": 0,
         "analysis": 44,
         "graph_diagram": 27
@@ -88203,7 +88080,7 @@
         "short_answer_essay": 0.5156,
         "calculation": 0.3594,
         "practical": 0.0,
-        "application": 0.5391,
+        "application": 0.4297,
         "comparison": 0.0,
         "analysis": 0.3438,
         "graph_diagram": 0.2109
@@ -88214,6 +88091,7 @@
         "khó": 61
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 55,
         "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 19,
@@ -88385,8 +88263,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau về dạng “Các cách làm biến đổi nội năng của một vật” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88438,8 +88315,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau về dạng “Các cách làm biến đổi nội năng của một vật” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88582,8 +88458,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 3 thuộc dạng “Các cách làm biến đổi nội năng của một vật”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88633,8 +88508,7 @@
           "raw_label": "Các cách làm biến đổi nội năng của một vật",
           "question_preview": "Câu 7 thuộc dạng “Các cách làm biến đổi nội năng của một vật”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88646,8 +88520,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Xét các phát biểu sau về dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88685,8 +88558,7 @@
           "raw_label": "Các cách làm biến đổi nội năng của một vật",
           "question_preview": "Câu 4 thuộc dạng “Các cách làm biến đổi nội năng của một vật”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88698,8 +88570,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Xét các phát biểu sau về dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -88739,8 +88610,7 @@
           "raw_label": "Các cách làm biến đổi nội năng của một vật",
           "question_preview": "Câu 8 thuộc dạng “Các cách làm biến đổi nội năng của một vật”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89117,8 +88987,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Câu 3 thuộc dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89173,8 +89042,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Câu 7 thuộc dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89229,8 +89097,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Câu 4 thuộc dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89283,8 +89150,7 @@
           "raw_label": "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
           "question_preview": "Câu 8 thuộc dạng “Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89737,8 +89603,7 @@
           "raw_label": "Định luật I của nhiệt động lực học và quy ước dấu",
           "question_preview": "Xét các phát biểu sau về dạng “Định luật $I$ của nhiệt động lực học và quy ước dấu” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89793,8 +89658,7 @@
           "raw_label": "Định luật I của nhiệt động lực học và quy ước dấu",
           "question_preview": "Xét các phát biểu sau về dạng “Định luật $I$ của nhiệt động lực học và quy ước dấu” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -89971,7 +89835,7 @@
         "short_answer_essay": 36,
         "calculation": 30,
         "practical": 12,
-        "application": 53,
+        "application": 26,
         "comparison": 0,
         "analysis": 17,
         "graph_diagram": 0
@@ -89981,7 +89845,7 @@
         "short_answer_essay": 0.3364,
         "calculation": 0.2804,
         "practical": 0.1121,
-        "application": 0.4953,
+        "application": 0.243,
         "comparison": 0.0,
         "analysis": 0.1589,
         "graph_diagram": 0.0
@@ -89992,6 +89856,7 @@
         "khó": 53
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 48,
         "Thiết lập và chuyển đổi thang nhiệt độ mới": 13,
@@ -90026,8 +89891,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit",
           "question_preview": "Xét các phát biểu sau về dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90039,8 +89903,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau về dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit”",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90131,8 +89994,7 @@
           "raw_label": "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối",
           "question_preview": "Xét các phát biểu sau về dạng “Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90382,8 +90244,7 @@
           "raw_label": "Nguyên lí hoạt động và sử dụng nhiệt kế",
           "question_preview": "Xét các phát biểu sau về dạng “Nguyên lí hoạt động và sử dụng nhiệt kế” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90435,8 +90296,7 @@
           "raw_label": "Nguyên lí hoạt động và sử dụng nhiệt kế",
           "question_preview": "Xét các phát biểu sau về dạng “Nguyên lí hoạt động và sử dụng nhiệt kế” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90582,8 +90442,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit",
           "question_preview": "Câu 3 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90637,8 +90496,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit",
           "question_preview": "Câu 7 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90650,8 +90508,7 @@
           "raw_label": "Thiết lập và chuyển đổi thang nhiệt độ mới",
           "question_preview": "Xét các phát biểu sau về dạng “Thiết lập và chuyển đổi thang nhiệt độ mới” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90691,8 +90548,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit",
           "question_preview": "Câu 4 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90704,8 +90560,7 @@
           "raw_label": "Thiết lập và chuyển đổi thang nhiệt độ mới",
           "question_preview": "Xét các phát biểu sau về dạng “Thiết lập và chuyển đổi thang nhiệt độ mới” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90745,8 +90600,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit",
           "question_preview": "Câu 8 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90985,8 +90839,7 @@
           "raw_label": "Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin",
           "question_preview": "Câu 3 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -90998,8 +90851,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 7 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91011,8 +90863,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 4 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91024,8 +90875,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 8 thuộc dạng “Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91109,8 +90959,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 3 thuộc dạng “Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91122,8 +90971,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 7 thuộc dạng “Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91135,8 +90983,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 4 thuộc dạng “Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91148,8 +90995,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 8 thuộc dạng “Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91233,8 +91079,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 3 thuộc dạng “Nguyên lí hoạt động và sử dụng nhiệt kế”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91246,8 +91091,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 7 thuộc dạng “Nguyên lí hoạt động và sử dụng nhiệt kế”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91259,8 +91103,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 4 thuộc dạng “Nguyên lí hoạt động và sử dụng nhiệt kế”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91272,8 +91115,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 8 thuộc dạng “Nguyên lí hoạt động và sử dụng nhiệt kế”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91357,8 +91199,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 3 thuộc dạng “Thiết lập và chuyển đổi thang nhiệt độ mới”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91370,8 +91211,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 7 thuộc dạng “Thiết lập và chuyển đổi thang nhiệt độ mới”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91383,8 +91223,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 4 thuộc dạng “Thiết lập và chuyển đổi thang nhiệt độ mới”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -91396,8 +91235,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Câu 8 thuộc dạng “Thiết lập và chuyển đổi thang nhiệt độ mới”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         }
       ]
@@ -91425,7 +91263,7 @@
         "short_answer_essay": 78,
         "calculation": 164,
         "practical": 12,
-        "application": 95,
+        "application": 89,
         "comparison": 37,
         "analysis": 46,
         "graph_diagram": 30
@@ -91435,7 +91273,7 @@
         "short_answer_essay": 0.4216,
         "calculation": 0.8865,
         "practical": 0.0649,
-        "application": 0.5135,
+        "application": 0.4811,
         "comparison": 0.2,
         "analysis": 0.2486,
         "graph_diagram": 0.1622
@@ -91446,6 +91284,7 @@
         "khó": 95
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 75,
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 24,
@@ -92457,8 +92296,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Xét các phát biểu sau về dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -92512,8 +92350,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Xét các phát biểu sau về dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -93555,8 +93392,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Câu 3 thuộc dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -93582,8 +93418,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Câu 7 thuộc dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -93609,8 +93444,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Câu 4 thuộc dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -93636,8 +93470,7 @@
           "raw_label": "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
           "question_preview": "Câu 8 thuộc dạng “Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -94087,7 +93920,7 @@
         "short_answer_essay": 144,
         "calculation": 254,
         "practical": 17,
-        "application": 168,
+        "application": 155,
         "comparison": 3,
         "analysis": 44,
         "graph_diagram": 8
@@ -94097,7 +93930,7 @@
         "short_answer_essay": 0.5088,
         "calculation": 0.8975,
         "practical": 0.0601,
-        "application": 0.5936,
+        "application": 0.5477,
         "comparison": 0.0106,
         "analysis": 0.1555,
         "graph_diagram": 0.0283
@@ -94108,6 +93941,7 @@
         "khó": 167
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": 60,
         "Chưa có dạng": 44,
@@ -94268,8 +94102,7 @@
           "raw_label": "__CHUA_PHAN_LOAI__",
           "question_preview": "Một bình chứa khối khí có khối lượng riêng $\\rho$, $\\overline{v^2}$ là trung bình của các bình phương tốc độ phân tử. Áp suất khí trong bình theo mô hình động học phân tử là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -94323,8 +94156,7 @@
           "raw_label": "__CHUA_PHAN_LOAI__",
           "question_preview": "Số phân tử khí hydrogen chứa trong $1\\,\\mathrm{m^3}$ có áp suất $200\\,\\mathrm{mmHg}$ và tốc độ căn quân phương $2400\\,\\mathrm{m/s}$ là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -94378,8 +94210,7 @@
           "raw_label": "__CHUA_PHAN_LOAI__",
           "question_preview": "Khối lượng riêng của một chất khí bằng $6\\cdot 10^{-2}\\,\\mathrm{kg/m^3}$, tốc độ căn quân phương của chúng là $500\\,\\mathrm{m/s}$. Áp suất mà khí đó tác dụng lên thành bình là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -94654,8 +94485,7 @@
           "raw_label": "__CHUA_PHAN_LOAI__",
           "question_preview": "Một hộp kín hình lập phương cạnh $10\\,\\mathrm{cm}$ chứa khí lí tưởng đơn nguyên tử ở nhiệt độ $20^\\circ\\mathrm{C}$ và áp suất $1,2\\cdot 10^6\\,\\mathrm{Pa}$. Số phân tử khí chứa trong bình là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -95350,8 +95180,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Xét các phát biểu sau về dạng “Lí thuyết về nhiệt nóng chảy riêng” (bộ số 2).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -95404,8 +95233,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Xét các phát biểu sau về dạng “Lí thuyết về nhiệt nóng chảy riêng” (bộ số 3).",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -97023,8 +96851,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một lượng khí đựng trong xilanh có pit-tông chuyển động được. Các thông số trạng thái của lượng khí này là: $2\\ \\text{atm}$, $15\\ \\text{lít}$, $300\\ \\text{K}$. Khi pit-tông nén khí, áp suất của khí tăng lên tới $3,5\\ \\text{atm}$, thể tích g",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -97036,8 +96863,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu thể tích một lượng khí giảm $\\dfrac{1}{10}$ thì áp suất tăng $\\dfrac{1}{5}$ so với áp suất ban đầu và nhiệt độ tăng thêm $16^\\circ\\mathrm{C}$. Nhiệt độ ban đầu của khối khí là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -97063,8 +96889,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Một mol khí ở áp suất $2\\,\\mathrm{atm}$ và nhiệt độ $30^\\circ\\mathrm{C}$ thì chiếm một thể tích là",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -97232,8 +97057,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Câu 3 thuộc dạng “Lí thuyết về nhiệt nóng chảy riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -97259,8 +97083,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Câu 7 thuộc dạng “Lí thuyết về nhiệt nóng chảy riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -97286,8 +97109,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Câu 4 thuộc dạng “Lí thuyết về nhiệt nóng chảy riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -97314,8 +97136,7 @@
           "raw_label": "Lí thuyết về nhiệt nóng chảy riêng",
           "question_preview": "Câu 8 thuộc dạng “Lí thuyết về nhiệt nóng chảy riêng”. Phát biểu nào sau đây đúng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -98056,7 +97877,7 @@
         "short_answer_essay": 72,
         "calculation": 94,
         "practical": 11,
-        "application": 90,
+        "application": 77,
         "comparison": 7,
         "analysis": 29,
         "graph_diagram": 5
@@ -98066,7 +97887,7 @@
         "short_answer_essay": 0.4417,
         "calculation": 0.5767,
         "practical": 0.0675,
-        "application": 0.5521,
+        "application": 0.4724,
         "comparison": 0.0429,
         "analysis": 0.1779,
         "graph_diagram": 0.0307
@@ -98077,6 +97898,7 @@
         "khó": 79
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 85,
         "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 18,
@@ -98197,8 +98019,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nguồn 1000 $W$, hiệu suất 80",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -98275,8 +98096,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Thiết bị hiệu suất 80",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -98301,8 +98121,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét công thức HPt=Lm.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -98328,8 +98147,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nguồn 1200 $W$, hiệu suất 75",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -98381,8 +98199,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nguồn 2000 $W$, hiệu suất 60",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -99056,8 +98873,7 @@
           "raw_label": "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
           "question_preview": "Xét công thức Q=Lm.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -99110,8 +98926,7 @@
           "raw_label": "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
           "question_preview": "Một chất lỏng có L=8,0.10^ $5\\,\\text{J}$ /kg. Xét các phát biểu.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100002,8 +99817,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nước có L=2,3.10^ $6\\,\\text{J}$ /kg. Ý nghĩa đúng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100015,8 +99829,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "So với nhiệt lượng làm $1\\,\\text{kg}$ nước tăng 1 $K$, nhiệt lượng hóa hơi $1\\,\\text{kg}$ nước ở 100 ° $C$",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100237,8 +100050,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Hóa hơi hoàn toàn $0,4\\,\\text{kg}$ chất lỏng ở nhiệt độ sôi, biết L=0,9.10^ $6\\,\\text{J}$ /kg. Nhiệt lượng cần cung cấp là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100250,8 +100062,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cần 600 kJ để hóa hơi chất lỏng có L=2.10^ $6\\,\\text{J}$ /kg. Khối lượng chất lỏng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100263,8 +100074,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Hóa hơi hoàn toàn $0,6\\,\\text{kg}$ chất lỏng ở nhiệt độ sôi, biết L=1,5.10^ $6\\,\\text{J}$ /kg. Nhiệt lượng cần cung cấp là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100276,8 +100086,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cần 450 kJ để hóa hơi chất lỏng có L=1,5.10^ $6\\,\\text{J}$ /kg. Khối lượng chất lỏng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         }
       ]
@@ -100304,7 +100113,7 @@
         "short_answer_essay": 74,
         "calculation": 92,
         "practical": 6,
-        "application": 124,
+        "application": 106,
         "comparison": 6,
         "analysis": 0,
         "graph_diagram": 42
@@ -100314,7 +100123,7 @@
         "short_answer_essay": 0.4353,
         "calculation": 0.5412,
         "practical": 0.0353,
-        "application": 0.7294,
+        "application": 0.6235,
         "comparison": 0.0353,
         "analysis": 0.0,
         "graph_diagram": 0.2471
@@ -100325,6 +100134,7 @@
         "khó": 102
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 87,
         "Khối lượng riêng của chất khí trong quá trình đẳng áp": 18,
@@ -100847,8 +100657,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100861,8 +100670,7 @@
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, 3",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -100901,8 +100709,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100914,8 +100721,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, $\\rho\\sim1/T$, nên khối lượng riêng giảm 4 lần.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -100955,8 +100761,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -100968,8 +100773,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, undefined",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -101116,8 +100920,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101169,8 +100972,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101183,8 +100985,7 @@
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, 3",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -101221,8 +101022,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101234,8 +101034,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, $\\rho\\sim1/T$, nên khối lượng riêng giảm 4 lần.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -101286,8 +101085,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, undefined",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -101422,8 +101220,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, Khi áp suất không đổi và nhiệt độ tuyệt đối tăng gấp đôi, khối lượng riêng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101532,8 +101329,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, Quả bóng mềm căng hơn khi để nơi ấm, nếu áp suất gần không đổi, chủ yếu vì",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101642,8 +101438,7 @@
           "raw_label": "Khối lượng riêng của chất khí trong quá trình đẳng áp",
           "question_preview": "Trong dạng “Khối lượng riêng của chất khí trong quá trình đẳng áp”, Ở áp suất không đổi, thể tích ngoại suy bằng không tại",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -101970,8 +101765,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, Khi áp suất không đổi và nhiệt độ tuyệt đối tăng gấp đôi, khối lượng riêng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -102082,8 +101876,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, Quả bóng mềm căng hơn khi để nơi ấm, nếu áp suất gần không đổi, chủ yếu vì",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -102166,8 +101959,7 @@
           "raw_label": "Nhận biết quá trình đẳng áp và định luật Charles",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng áp và định luật Charles”, Ở áp suất không đổi, thể tích ngoại suy bằng không tại",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -102710,6 +102502,7 @@
         "khó": 170
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 109,
         "Xác định sự biến thiên khối lượng riêng của chất khí": 46,
@@ -106146,7 +105939,7 @@
         "short_answer_essay": 59,
         "calculation": 74,
         "practical": 0,
-        "application": 99,
+        "application": 80,
         "comparison": 15,
         "analysis": 5,
         "graph_diagram": 3
@@ -106156,7 +105949,7 @@
         "short_answer_essay": 0.4041,
         "calculation": 0.5068,
         "practical": 0.0,
-        "application": 0.6781,
+        "application": 0.5479,
         "comparison": 0.1027,
         "analysis": 0.0342,
         "graph_diagram": 0.0205
@@ -106167,6 +105960,7 @@
         "khó": 84
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 69,
         "Liên hệ áp suất với động năng tịnh tiến trung bình": 18,
@@ -106432,8 +106226,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -106538,8 +106331,7 @@
           "raw_label": "Công thức áp suất theo khối lượng riêng và tốc độ phân tử",
           "question_preview": "Xét các phát biểu sau trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -106593,8 +106385,7 @@
           "raw_label": "Công thức áp suất theo khối lượng riêng và tốc độ phân tử",
           "question_preview": "Xét các phát biểu sau trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -106607,8 +106398,7 @@
           "question_preview": "Trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”, 4",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -106662,8 +106452,7 @@
           "question_preview": "Trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”, $v_{rms}\\sim1/\\sqrt m$, nên giảm 2 lần.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -106714,8 +106503,7 @@
           "raw_label": "Công thức áp suất theo khối lượng riêng và tốc độ phân tử",
           "question_preview": "Trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”, undefined",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -107020,8 +106808,7 @@
           "raw_label": "Nguồn gốc áp suất khí và va chạm phân tử",
           "question_preview": "Xét các phát biểu sau trong dạng “Nguồn gốc áp suất khí và va chạm phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107060,8 +106847,7 @@
           "raw_label": "Công thức áp suất theo khối lượng riêng và tốc độ phân tử",
           "question_preview": "Trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”, Nếu giữ mật độ phân tử không đổi và tăng $T$ gấp đôi thì áp suất",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107073,8 +106859,7 @@
           "raw_label": "Nguồn gốc áp suất khí và va chạm phân tử",
           "question_preview": "Xét các phát biểu sau trong dạng “Nguồn gốc áp suất khí và va chạm phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107126,8 +106911,7 @@
           "raw_label": "Nguồn gốc áp suất khí và va chạm phân tử",
           "question_preview": "Xét các phát biểu sau trong dạng “Nguồn gốc áp suất khí và va chạm phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107166,8 +106950,7 @@
           "raw_label": "Công thức áp suất theo khối lượng riêng và tốc độ phân tử",
           "question_preview": "Trong dạng “Công thức áp suất theo khối lượng riêng và tốc độ phân tử”, Đơn vị của hằng số Boltzmann k là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107851,8 +107634,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Nguồn gốc áp suất khí và va chạm phân tử”, Nếu giữ mật độ phân tử không đổi và tăng $T$ gấp đôi thì áp suất",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107878,8 +107660,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Nguồn gốc áp suất khí và va chạm phân tử”, Đơn vị của hằng số Boltzmann k là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107955,8 +107736,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107982,8 +107762,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khi kiểm tra kết quả, tiêu chí vật lí quan trọng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -107995,8 +107774,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu giữ đúng các điều kiện của định luật, biểu thức nên dùng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -108086,8 +107864,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -108113,8 +107890,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khi kiểm tra kết quả, tiêu chí vật lí quan trọng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -108126,8 +107902,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu giữ đúng các điều kiện của định luật, biểu thức nên dùng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -108167,7 +107942,7 @@
         "short_answer_essay": 42,
         "calculation": 106,
         "practical": 0,
-        "application": 81,
+        "application": 71,
         "comparison": 0,
         "analysis": 9,
         "graph_diagram": 12
@@ -108177,7 +107952,7 @@
         "short_answer_essay": 0.3182,
         "calculation": 0.803,
         "practical": 0.0,
-        "application": 0.6136,
+        "application": 0.5379,
         "comparison": 0.0,
         "analysis": 0.0682,
         "graph_diagram": 0.0909
@@ -108188,6 +107963,7 @@
         "khó": 76
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 55,
         "Bài toán quá trình đẳng tích": 18,
@@ -108434,8 +108210,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109311,8 +109086,7 @@
           "raw_label": "Nhận diện và lựa chọn định luật khí phù hợp",
           "question_preview": "Xét dạng “Nhận diện và lựa chọn định luật khí phù hợp”: a) Bài mẫu cho kết quả 360. b) Kết quả bài mẫu gấp đôi 360. c) Lời giải phải nêu công thức trước khi thay số. d) Mọi dữ kiện số đều không cần đổi đơn vị.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109701,8 +109475,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khi kiểm tra kết quả, tiêu chí vật lí quan trọng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109714,8 +109487,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu giữ đúng các điều kiện của định luật, biểu thức nên dùng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109809,8 +109581,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109836,8 +109607,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khi kiểm tra kết quả, tiêu chí vật lí quan trọng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109849,8 +109619,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu giữ đúng các điều kiện của định luật, biểu thức nên dùng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109938,8 +109707,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Bước đầu tiên hợp lí khi giải bài là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109965,8 +109733,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Khi kiểm tra kết quả, tiêu chí vật lí quan trọng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -109978,8 +109745,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Nếu giữ đúng các điều kiện của định luật, biểu thức nên dùng là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110019,7 +109785,7 @@
         "short_answer_essay": 72,
         "calculation": 35,
         "practical": 0,
-        "application": 106,
+        "application": 69,
         "comparison": 6,
         "analysis": 41,
         "graph_diagram": 0
@@ -110029,7 +109795,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.216,
         "practical": 0.0,
-        "application": 0.6543,
+        "application": 0.4259,
         "comparison": 0.037,
         "analysis": 0.2531,
         "graph_diagram": 0.0
@@ -110040,6 +109806,7 @@
         "khó": 95
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 82,
         "Các thông số trạng thái của một lượng khí": 18,
@@ -110160,8 +109927,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110214,8 +109980,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110268,8 +110033,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Xét các phát biểu sau trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110335,8 +110099,7 @@
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Nêu giới hạn của mô hình khí lí tưởng.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -110362,8 +110125,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Khi nhiệt độ khí tăng, chuyển động nhiệt của phân tử nhìn chung",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110413,8 +110175,7 @@
           "raw_label": "Chuyển động Brown và bằng chứng về chuyển động phân tử",
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Ba thông số trạng thái cơ bản của một lượng khí là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110426,8 +110187,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110466,8 +110226,7 @@
           "raw_label": "Chuyển động Brown và bằng chứng về chuyển động phân tử",
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Va chạm giữa các phân tử khí lí tưởng được xem là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110479,8 +110238,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110521,8 +110279,7 @@
           "raw_label": "Chuyển động Brown và bằng chứng về chuyển động phân tử",
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Khi nén khí ở nhiệt độ không đổi, mật độ phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110534,8 +110291,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110576,8 +110332,7 @@
           "raw_label": "Chuyển động Brown và bằng chứng về chuyển động phân tử",
           "question_preview": "Trong dạng “Chuyển động Brown và bằng chứng về chuyển động phân tử”, Hiện tượng khuếch tán chứng tỏ các phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110655,8 +110410,7 @@
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Nêu giới hạn của mô hình khí lí tưởng.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -110694,8 +110448,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các thông số trạng thái của một lượng khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110745,8 +110498,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các thông số trạng thái của một lượng khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110797,8 +110549,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Các thông số trạng thái của một lượng khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110893,8 +110644,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Khi nhiệt độ khí tăng, chuyển động nhiệt của phân tử nhìn chung",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110948,8 +110698,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Ba thông số trạng thái cơ bản của một lượng khí là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -110976,8 +110725,7 @@
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Nêu giới hạn của mô hình khí lí tưởng.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -111003,8 +110751,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Va chạm giữa các phân tử khí lí tưởng được xem là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111058,8 +110805,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Khi nén khí ở nhiệt độ không đổi, mật độ phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111113,8 +110859,7 @@
           "raw_label": "Các luận điểm cơ bản của mô hình động học phân tử chất khí",
           "question_preview": "Trong dạng “Các luận điểm cơ bản của mô hình động học phân tử chất khí”, Hiện tượng khuếch tán chứng tỏ các phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111441,8 +111186,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Khi nhiệt độ khí tăng, chuyển động nhiệt của phân tử nhìn chung",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111495,8 +111239,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Ba thông số trạng thái cơ bản của một lượng khí là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111508,8 +111251,7 @@
           "raw_label": "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111550,8 +111292,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Va chạm giữa các phân tử khí lí tưởng được xem là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111563,8 +111304,7 @@
           "raw_label": "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111605,8 +111345,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Khi nén khí ở nhiệt độ không đổi, mật độ phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111618,8 +111357,7 @@
           "raw_label": "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí",
           "question_preview": "Xét các phát biểu sau trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111659,8 +111397,7 @@
           "raw_label": "Các thông số trạng thái của một lượng khí",
           "question_preview": "Trong dạng “Các thông số trạng thái của một lượng khí”, Hiện tượng khuếch tán chứng tỏ các phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -111877,8 +111614,7 @@
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Nêu giới hạn của mô hình khí lí tưởng.",
           "exercise_types": [
             "multiple_choice",
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -111960,8 +111696,7 @@
           "raw_label": "Chuyển động Brown và bằng chứng về chuyển động phân tử",
           "question_preview": "Xét các phát biểu về mô hình khí lí tưởng và giới hạn áp dụng của nó:",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112163,8 +111898,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Khi nhiệt độ khí tăng, chuyển động nhiệt của phân tử nhìn chung",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112176,8 +111910,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Ba thông số trạng thái cơ bản của một lượng khí là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112189,8 +111922,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Va chạm giữa các phân tử khí lí tưởng được xem là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112202,8 +111934,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Khi nén khí ở nhiệt độ không đổi, mật độ phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112215,8 +111946,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Đặc điểm cấu tạo và chuyển động phân tử ở thể khí”, Hiện tượng khuếch tán chứng tỏ các phân tử",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         }
       ]
@@ -112242,7 +111972,7 @@
         "short_answer_essay": 70,
         "calculation": 92,
         "practical": 0,
-        "application": 114,
+        "application": 95,
         "comparison": 0,
         "analysis": 6,
         "graph_diagram": 34
@@ -112252,7 +111982,7 @@
         "short_answer_essay": 0.4375,
         "calculation": 0.575,
         "practical": 0.0,
-        "application": 0.7125,
+        "application": 0.5938,
         "comparison": 0.0,
         "analysis": 0.0375,
         "graph_diagram": 0.2125
@@ -112263,6 +111993,7 @@
         "khó": 92
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 78,
         "Khối khí chịu áp suất của cột chất lỏng": 19,
@@ -112688,8 +112419,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, 110",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -112740,8 +112470,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, $\\rho_2/\\rho_1=p_2/p_1=4$.",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -112781,8 +112510,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối khí chịu áp suất của cột chất lỏng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112794,8 +112522,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, undefined",
           "exercise_types": [
-            "short_answer_essay",
-            "application"
+            "short_answer_essay"
           ]
         },
         {
@@ -112835,8 +112562,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối khí chịu áp suất của cột chất lỏng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -112887,8 +112613,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Xét các phát biểu sau trong dạng “Khối khí chịu áp suất của cột chất lỏng”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113044,8 +112769,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113098,8 +112822,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113152,8 +112875,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Xét các phát biểu sau trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”.",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113193,8 +112915,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Trên hệ trục p- $V$, đường đẳng nhiệt là",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113248,8 +112969,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Khi dùng định luật Boyle phải sử dụng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113301,8 +113021,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Muốn nén khí gần đẳng nhiệt nên thực hiện",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113356,8 +113075,7 @@
           "raw_label": "Khối khí chịu áp suất của cột chất lỏng",
           "question_preview": "Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Với lượng khí cố định đẳng nhiệt, khối lượng riêng tỉ lệ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113746,8 +113464,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”, Khí có $p_1=1$ atm, $V_1=4$ lít, nén còn 2 lít. $p_2$ bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113804,8 +113521,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”, Trong quá trình đẳng nhiệt, khối lượng riêng của khí tỉ lệ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113859,8 +113575,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”, Bơm xe đạp nóng lên rõ rệt thì quá trình nén",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113915,8 +113630,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”, Để quá trình gần đẳng nhiệt nên nén khí",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -113970,8 +113684,7 @@
           "raw_label": "Nhận biết quá trình đẳng nhiệt và định luật Boyle",
           "question_preview": "Trong dạng “Nhận biết quá trình đẳng nhiệt và định luật Boyle”, Áp suất tuyệt đối của cột khí bị giam bằng",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -114443,8 +114156,7 @@
           "raw_label": "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải từ trường của dòng điện thẳng, dòng điện tròn và ống dây là gì?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -114485,7 +114197,7 @@
         "short_answer_essay": 124,
         "calculation": 181,
         "practical": 10,
-        "application": 177,
+        "application": 174,
         "comparison": 70,
         "analysis": 104,
         "graph_diagram": 0
@@ -114495,7 +114207,7 @@
         "short_answer_essay": 0.4366,
         "calculation": 0.6373,
         "practical": 0.0352,
-        "application": 0.6232,
+        "application": 0.6127,
         "comparison": 0.2465,
         "analysis": 0.3662,
         "graph_diagram": 0.0
@@ -114506,6 +114218,7 @@
         "khó": 135
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 120,
         "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ": 36,
@@ -115917,8 +115630,7 @@
           "raw_label": "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải nhận biết từ trường, nguồn gây ra từ trường và tương tác từ là gì?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -117016,8 +116728,7 @@
           "raw_label": "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải từ trường của dòng điện thẳng, dòng điện tròn và ống dây là gì?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -118009,8 +117720,7 @@
           "raw_label": "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải nhận biết từ trường, nguồn gây ra từ trường và tương tác từ là gì?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -118491,7 +118201,7 @@
         "short_answer_essay": 145,
         "calculation": 266,
         "practical": 113,
-        "application": 187,
+        "application": 182,
         "comparison": 12,
         "analysis": 72,
         "graph_diagram": 55
@@ -118501,7 +118211,7 @@
         "short_answer_essay": 0.4421,
         "calculation": 0.811,
         "practical": 0.3445,
-        "application": 0.5701,
+        "application": 0.5549,
         "comparison": 0.0366,
         "analysis": 0.2195,
         "graph_diagram": 0.1677
@@ -118512,6 +118222,7 @@
         "khó": 160
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 148,
         "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ": 39,
@@ -119256,8 +118967,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Cân bằng và chuyển động của dây dẫn mang dòng điện trong từ trường?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -119779,8 +119489,7 @@
           "raw_label": "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ",
           "question_preview": "Ở một mặt phẳng nằm ngang cố định trong một từ trường đều có các đường sức từ nằm ngang, đặt một đoạn dây dẫn thẳng có dòng điện không đổi sao cho chiều của dòng điện hợp với chiều của đường sức một góc $\\alpha$. Khi thay đổi góc $\\alpha$, ",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -119874,8 +119583,7 @@
           "raw_label": "Cân bằng và chuyển động của dây dẫn mang dòng điện trong từ trường",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Cân bằng và chuyển động của dây dẫn mang dòng điện trong từ trường?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -120421,8 +120129,7 @@
           "raw_label": "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -122628,8 +122335,7 @@
           "raw_label": "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -123188,7 +122894,7 @@
         "short_answer_essay": 144,
         "calculation": 260,
         "practical": 12,
-        "application": 183,
+        "application": 181,
         "comparison": 12,
         "analysis": 114,
         "graph_diagram": 54
@@ -123198,7 +122904,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.8025,
         "practical": 0.037,
-        "application": 0.5648,
+        "application": 0.5586,
         "comparison": 0.037,
         "analysis": 0.3519,
         "graph_diagram": 0.1667
@@ -123209,6 +122915,7 @@
         "khó": 156
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 153,
         "Nhận biết từ thông và tính từ thông qua một diện tích": 38,
@@ -124536,8 +124243,7 @@
           "raw_label": "Nhận biết hiện tượng cảm ứng điện từ và điều kiện xuất hiện dòng điện cảm ứng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết hiện tượng cảm ứng điện từ và điều kiện xuất hiện dòng điện cảm ứng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -127588,8 +127294,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết hiện tượng cảm ứng điện từ và điều kiện xuất hiện dòng điện cảm ứng?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -127767,7 +127472,7 @@
         "short_answer_essay": 144,
         "calculation": 234,
         "practical": 12,
-        "application": 156,
+        "application": 152,
         "comparison": 12,
         "analysis": 72,
         "graph_diagram": 52
@@ -127777,7 +127482,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.7222,
         "practical": 0.037,
-        "application": 0.4815,
+        "application": 0.4691,
         "comparison": 0.037,
         "analysis": 0.2222,
         "graph_diagram": 0.1605
@@ -127788,6 +127493,7 @@
         "khó": 156
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 155,
         "Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều": 38,
@@ -129613,8 +129319,7 @@
           "raw_label": "Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -130152,8 +129857,7 @@
           "raw_label": "Thiết lập biểu thức suất điện động xoay chiều do máy phát tạo ra",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Thiết lập biểu thức suất điện động xoay chiều do máy phát tạo ra?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -131692,8 +131396,7 @@
           "raw_label": "Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -132070,8 +131773,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Thiết lập biểu thức suất điện động xoay chiều do máy phát tạo ra?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -132269,6 +131971,7 @@
         "khó": 156
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 155,
         "Truyền tải điện năng đi xa và giảm hao phí trên đường dây": 32,
@@ -136859,7 +136562,7 @@
         "short_answer_essay": 144,
         "calculation": 174,
         "practical": 12,
-        "application": 184,
+        "application": 178,
         "comparison": 12,
         "analysis": 114,
         "graph_diagram": 0
@@ -136869,7 +136572,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.537,
         "practical": 0.037,
-        "application": 0.5679,
+        "application": 0.5494,
         "comparison": 0.037,
         "analysis": 0.3519,
         "graph_diagram": 0.0
@@ -136880,6 +136583,7 @@
         "khó": 156
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 155,
         "Phân loại phổ sóng điện từ và nêu ứng dụng": 32,
@@ -138146,8 +137850,7 @@
           "raw_label": "Mô tả sự hình thành và lan truyền của sóng điện từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Mô tả sự hình thành và lan truyền của sóng điện từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -138684,8 +138387,7 @@
           "raw_label": "Nhận biết các tính chất cơ bản của sóng điện từ",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết các tính chất cơ bản của sóng điện từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -139221,8 +138923,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết điện trường biến thiên, từ trường biến thiên và điện từ trường?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -140749,8 +140450,7 @@
           "raw_label": "Nhận biết điện trường biến thiên, từ trường biến thiên và điện từ trường",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết điện trường biến thiên, từ trường biến thiên và điện từ trường?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -140993,8 +140693,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Mô tả sự hình thành và lan truyền của sóng điện từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -141120,8 +140819,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng dùng để giải Nhận biết các tính chất cơ bản của sóng điện từ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -141320,6 +141018,7 @@
         "khó": 168
       },
       "overall_complexity": "khó",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 152,
         "Tổng hợp đường sức từ và xác định chiều từ trường": 37,
@@ -145932,7 +145631,7 @@
         "short_answer_essay": 84,
         "calculation": 156,
         "practical": 7,
-        "application": 133,
+        "application": 132,
         "comparison": 20,
         "analysis": 56,
         "graph_diagram": 0
@@ -145942,7 +145641,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.8254,
         "practical": 0.037,
-        "application": 0.7037,
+        "application": 0.6984,
         "comparison": 0.1058,
         "analysis": 0.2963,
         "graph_diagram": 0.0
@@ -145953,6 +145652,7 @@
         "khó": 91
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 95,
         "Nhận biết đồng vị và tính nguyên tử khối trung bình": 19,
@@ -146953,8 +146653,7 @@
           "raw_label": "Nhận biết cấu tạo hạt nhân, nuclon, số khối và điện tích hạt nhân",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về nhận biết cấu tạo hạt nhân, nuclon, số khối và điện tích hạt nhân?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -148627,7 +148326,7 @@
         "short_answer_essay": 84,
         "calculation": 165,
         "practical": 8,
-        "application": 122,
+        "application": 121,
         "comparison": 39,
         "analysis": 61,
         "graph_diagram": 0
@@ -148637,7 +148336,7 @@
         "short_answer_essay": 0.4118,
         "calculation": 0.8088,
         "practical": 0.0392,
-        "application": 0.598,
+        "application": 0.5931,
         "comparison": 0.1912,
         "analysis": 0.299,
         "graph_diagram": 0.0
@@ -148648,6 +148347,7 @@
         "khó": 96
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 128,
         "Hoàn thành phương trình phản ứng hạt nhân": 20,
@@ -150264,8 +149964,7 @@
           "raw_label": "Nhận biết phản ứng hạt nhân và các định luật bảo toàn",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về nhận biết phản ứng hạt nhân và các định luật bảo toàn?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -151527,7 +151226,7 @@
         "short_answer_essay": 72,
         "calculation": 115,
         "practical": 6,
-        "application": 105,
+        "application": 104,
         "comparison": 18,
         "analysis": 48,
         "graph_diagram": 27
@@ -151537,7 +151236,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.7099,
         "practical": 0.037,
-        "application": 0.6481,
+        "application": 0.642,
         "comparison": 0.1111,
         "analysis": 0.2963,
         "graph_diagram": 0.1667
@@ -151548,6 +151247,7 @@
         "khó": 78
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 85,
         "Vận dụng định luật phóng xạ theo số hạt và khối lượng": 18,
@@ -151983,8 +151683,7 @@
           "raw_label": "Nhận biết hiện tượng phóng xạ và các tia phóng xạ",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về nhận biết hiện tượng phóng xạ và các tia phóng xạ?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -153845,7 +153544,7 @@
         "short_answer_essay": 84,
         "calculation": 98,
         "practical": 7,
-        "application": 105,
+        "application": 100,
         "comparison": 14,
         "analysis": 63,
         "graph_diagram": 0
@@ -153855,7 +153554,7 @@
         "short_answer_essay": 0.4444,
         "calculation": 0.5185,
         "practical": 0.037,
-        "application": 0.5556,
+        "application": 0.5291,
         "comparison": 0.0741,
         "analysis": 0.3333,
         "graph_diagram": 0.0
@@ -153866,6 +153565,7 @@
         "khó": 91
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 95,
         "Tính năng lượng trong phân hạch và nhiệt hạch": 19,
@@ -154294,8 +153994,7 @@
           "raw_label": "Cấu tạo và nguyên lí hoạt động của lò phản ứng hạt nhân",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về cấu tạo và nguyên lí hoạt động của lò phản ứng hạt nhân?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -154834,8 +154533,7 @@
           "raw_label": "Nhận biết phản ứng phân hạch và phản ứng dây chuyền",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về nhận biết phản ứng phân hạch và phản ứng dây chuyền?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -155373,8 +155071,7 @@
           "raw_label": "Nhận biết phản ứng nhiệt hạch và điều kiện xảy ra",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về nhận biết phản ứng nhiệt hạch và điều kiện xảy ra?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -156133,8 +155830,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về cấu tạo và nguyên lí hoạt động của lò phản ứng hạt nhân?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -156262,8 +155958,7 @@
           "raw_label": "Chưa có dạng",
           "question_preview": "Cơ sở Vật lí đúng để giải bài là gì về điện hạt nhân, nhiên liệu hạt nhân và xử lí chất thải?",
           "exercise_types": [
-            "multiple_choice",
-            "application"
+            "multiple_choice"
           ]
         },
         {
@@ -156477,6 +156172,7 @@
         "khó": 91
       },
       "overall_complexity": "trung bình",
+      "skipped_blocks_without_id": 0,
       "raw_labels": {
         "Chưa có dạng": 95,
         "Tổng hợp phương trình và năng lượng phản ứng hạt nhân": 19,
