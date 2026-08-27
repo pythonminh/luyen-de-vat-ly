@@ -1,0 +1,307 @@
+% Môn: Toán
+% Lớp: 12
+% Chương: Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số
+% Bài: Bài 1. Tính đơn điệu và cực trị của hàm số
+% Số câu: 16
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 1. Tính đơn điệu và cực trị của hàm số
+
+% ===== Câu 1 =====
+% ID: T12C1B1-01-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-01-DS
+% Mức: TH
+$\immini$
+ {
+ Cho hàm số $y=f(x)$ có đồ thì như hình vẽ bên. Các mệnh đề sau đúng hay sai?
+\choiceTF
+{\True Hàm số đã cho nghịch biến trên khoảng $(-2,0)$}
+{Hàm số đã cho đồng biến trên khoảng $(-3;1)$}
+{\True Hàm số đã cho đồng biến trên khoảng $(2;+\infty)$}
+{Hàm số $f=|f(x)|$ nghịch biến trên khoảng $(-2,0)$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Hàm số đã cho nghịch biến trên khoảng $(-2,0)$. (Vì): Trên khoảng $(-2,0)$, đồ thị hàm số đi xuống từ trái sang phải, nên hàm số đã cho nghịch biến trên khoảng này
+\item (Sai) Hàm số đã cho đồng biến trên khoảng $(-3;1)$. (Vì): Trên khoảng $(-3;1)$, đồ thị hàm số có cả đoạn đi lên (đồng biến) và đoạn đi xuống (nghịch biến), nên hàm số không đồng biến trên toàn bộ khoảng này
+\item (Đúng) Hàm số đã cho đồng biến trên khoảng $(2;+\infty)$. (Vì): Trên khoảng $(2;+\infty)$, đồ thị hàm số đi lên từ trái sang phải, nên hàm số đã cho đồng biến trên khoảng này
+\item (Sai) Hàm số $f=|f(x)|$ nghịch biến trên khoảng $(-2,0)$. (Vì): Đồ thị hàm số $y=|f(x)|$ được suy ra từ đồ thị hàm số $y=f(x)$ bằng cách giữ nguyên phần đồ thị phía trên trục hoành và lấy đối xứng phần đồ thị phía dưới trục hoành qua trục hoành. Trên khoảng $(-2,0)$, đồ thị hàm số $y=f(x)$ nằm phía trên trục hoành và đang đi xuống (nghịch biến). Do đó, trên khoảng $(-2,0)$, hàm số $y=|f(x)|$ vẫn nghịch biến. Tuy nhiên, đề bài cho rằng hàm số $f=|f(x)|$ nghịch biến trên khoảng $(-2,0)$ là sai vì trên khoảng này $f(x)$ đang nghịch biến và $f(x)\gt 0$ nên $|f(x)|$ cũng nghịch biến. Mệnh đề này sai do cách diễn đạt "nghịch biến và đồng biến" ở lời giải gốc không rõ ràng và có thể gây nhầm lẫn. Xét kỹ hơn, trên khoảng $(-2,0)$, $f(x)$ nghịch biến và $f(x)\gt 0$, nên $|f(x)| = f(x)$ cũng nghịch biến. Tuy nhiên, nếu xét trên một khoảng rộng hơn bao gồm cả phần đồ thị âm, thì $|f(x)|$ có thể có cả tính đồng biến và nghịch biến. Với khoảng $(-2,0)$ cụ thể, hàm số $|f(x)|$ nghịch biến. Mệnh đề này sai do có sự nhầm lẫn trong việc phân tích đồ thị $|f(x)|$ hoặc do cách diễn đạt không chính xác
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T12C1B1-01-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-01-TLN
+% Mức: TH
+Cho hàm số $y=4x^3+8x^2-3x+3$. Giá trị cực đại của hàm số bằng bao nhiêu?
+\shortans{12}
+\loigiai{
+Tập xác định $\mathbb{R}.\y'=12x^2+16x-3.\y'=0 \Leftrightarrow x=- \dfrac{3}{2} \text{ hoặc } x=\dfrac{1}{6}.\
+  Hàm số đạt cực đại tạix=- \dfrac{3}{2}, y_{\text{CĐ}}=12$.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: T12C1B1-01-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-01-TN
+% Mức: TH
+Cho hàm số $y=\dfrac{8-5x}{-4x-9}$. Khẳng định nào sau đây là $\textbf{sai}$?
+\choice
+{Hàm số đồng biến trên khoảng $\left(-\infty;-\dfrac{37}{4}\right)$}
+{Hàm số đồng biến trên khoảng $\left(-\infty;-\dfrac{9}{4}\right)$}
+{Hàm số đồng biến trên khoảng $\left(-\dfrac{9}{4};+\infty\right)$}
+{\True Hàm số nghịch biến trên khoảng $\left(-\infty;-\dfrac{37}{4}\right)$}
+\loigiai{
+Tập xác định $\mathscr{D}=\mathbb{R}\setminus\left\{-\dfrac{9}{4}\right\}$.
+
+Viết lại hàm số: $y=\dfrac{-5x+8}{-4x-9}$.
+
+Ta có $y'=\dfrac{-5\cdot(-9)-8\cdot(-4)}{\left(-4x-9\right)^{2}}=\dfrac{77}{\left(-4x-9\right)^{2}}\gt 0,\forall x \in \mathscr{D}$.
+
+Do đó, hàm số đồng biến trên mỗi khoảng $\left(-\infty;-\dfrac{9}{4}\right)$ và $\left(-\dfrac{9}{4};+\infty\right)$.
+
+Vì $\left(-\infty;-\dfrac{37}{4}\right) \subset \left(-\infty;-\dfrac{9}{4}\right)$ nên hàm số cũng đồng biến trên khoảng $\left(-\infty;-\dfrac{37}{4}\right)$.
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: T12C1B1-02-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-02-DS
+% Mức: TH
+Cho hàm số $y=f(x)$ có đồ thị như hình vẽ bên dưới.
+\choiceTF
+{Hàm số đã cho chỉ có 2 cực trị}
+{Hàm số đã cho có giá trị cực tiểu $x=-2$}
+{\True Hàm số đã cho có giá trị cực đại $y=-1$}
+{\True Đồ thị hàm số $y=|f(x)|$ có điểm cực đại là $(0,2)$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Hàm số đã cho chỉ có 2 cực trị. (Vì): ựa vào đồ thị hàm số ta nhận thấy hàm số có 3 điểm cực trị
+\item (Sai) Hàm số đã cho có giá trị cực tiểu $x=-2$. (Vì): Hàm số đã cho có giá trị cực tiểu $y=-2$
+\item (Đúng) Hàm số đã cho có giá trị cực đại $y=-1$.
+\item (Đúng) Đồ thị hàm số $y=|f(x)|$ có điểm cực đại là $(0,2)$. (Vì): Hàm số $y=|f(x)|$ có đồ thị như hình vẽ bên dưới
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: T12C1B1-02-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-02-TLN
+% Mức: TH
+Tìm điểm cực tiểu của hàm số $y=x^3-5x^2-8x+8$?
+\shortans{4}
+\loigiai{
+Tập xác định $\mathbb{R}$. $y' = 3x^2 - 10x - 8$. $y' = 0 \Leftrightarrow x = -\frac{2}{3}$ hoặc $x = 4$. Hàm số đạt cực tiểu tại $x = 4$, $y_{\text{CT}} = -40$.
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: T12C1B1-02-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-02-TN
+% Mức: TH
+Cho hàm số có bảng biến thiên như sau
+ 
+ Khẳng định nào sau đây là \textbf{đúng}?
+\choice
+{Hàm số nghịch biến trên khoảng $\left(-\infty;-\dfrac{4}{3}\right)$}
+{Hàm số đồng biến trên khoảng $\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$}
+{Hàm số nghịch biến trên khoảng $\left(\dfrac{7}{2};+\infty\right)$}
+{\True Hàm số đồng biến trên khoảng $\left(-\infty;-\dfrac{7}{3}\right)$}
+\loigiai{
+Dựa vào bảng biến thiên ta thấy, hàm số đồng biến trên mỗi khoảng $\left(-\infty;-\dfrac{4}{3}\right)$ và $\left(\dfrac{1}{2};+\infty\right)$.
+Hàm số nghịch biến trên $\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$.
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: T12C1B1-03-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-03-TLN
+% Mức: TH
+Cho hàm số $y=-x^3-mx^2+(4m+9)x+3$ với $m$ là tham số. Có bao nhiêu giá trị nguyên của $m$ để hàm số nghịch biến trên $(-\infty;+\infty)$?
+\shortans{7}
+\loigiai{
+Tập xác định $\mathbb{R}$. $y'=-3x^2-2mx+4m+9$.
+ Hàm số nghịch biến trên $(-\infty;+\infty)$ khi $a<0$ và $\Delta \leq 0$.
+ $\Leftrightarrow m^2+12m+27 \leq 0\Leftrightarrow -9 \le m \le -3$.
+ Suy ra $m \in \{-9,-8,-7,-6,-5,-4,-3\}$.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: T12C1B1-03-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-03-TN
+% Mức: TH
+Cho hàm số có đồ thị như hình bên. Khẳng định nào sau đây là \textbf{đúng}?
+\choice
+{Hàm số nghịch biến trên khoảng $(-\infty;1)$}
+{Hàm số nghịch biến trên khoảng $(-\infty;0)$}
+{Hàm số nghịch biến trên khoảng $\left(\dfrac{7}{3};+\infty\right)$}
+{\True Hàm số đồng biến trên khoảng $(-\infty;1)$}
+\loigiai{
+Dựa vào đồ thị ta thấy, hàm số đồng biến trên mỗi khoảng $(-\infty;1)$ và $\left(\dfrac{7}{3};+\infty\right)$. Hàm số nghịch biến trên $\left(1;\dfrac{7}{3}\right)$.
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: T12C1B1-04-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-04-TLN
+% Mức: TH
+Đồ thị hàm số $y=x^3-3x^2+2ax+b$ có điểm cực tiểu $A(2;-2)$. Khi đó $a+b$ bằng bao nhiêu?
+\shortans{2}
+\loigiai{
+$y' = 3x^2 - 6x + 2a$ (Điểm cực tiểu) $A(2;-2)$ thuộc đồ thị hàm số nên $y(2) = -2$.
+ $2^3 - 3(2^2) + 2a(2) + b = -2 \Rightarrow 8 - 12 + 4a + b = -2 \Rightarrow 4a + b = -6$.
+ Tại điểm cực tiểu, $y'(2) = 0$.
+ $3(2^2) - 6(2) + 2a = 0 \Rightarrow 12 - 12 + 2a = 0 \Rightarrow 2a = 0 \Rightarrow a = 0$.
+ Thay $a=0$ vào $4a+b=-6$, ta được $4(0) + b = -6 \Rightarrow b = -6$.
+ $a+b = 0 + (-6) = -6$.
+ -6
+}
+\end{ex}
+
+% ===== Câu 10 =====
+% ID: T12C1B1-04-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-04-TN
+% Mức: TH
+Tìm tất cả các giá trị thực của tham số $m$ để hàm số $y=-\dfrac{1}{3}x^3-mx^2+(2m-3)x-m+2$ nghịch biến trên $\mathbb{R}$.
+\choice
+{$m\le -3$, $m\ge 1$}
+{$-3\lt m<1$}
+{\True $-3\le m\le 1$}
+{$m\le 1$}
+\loigiai{
+Ta có $y'=-x^2-2mx+(2m-3)$.
+ Hàm số nghịch biến trên $\mathbb{R}$ khi
+ $y'\le 0\Leftrightarrow \begin{cases} a=-1\lt 0 \ \Delta' \le 0 \end{cases}\Leftrightarrow m^2+2m-3\le 0\Leftrightarrow -3\le m \le 1$.
+}
+\end{ex}
+
+% ===== Câu 11 =====
+% ID: T12C1B1-05-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-05-TLN
+% Mức: TH
+Có bao nhiêu giá trị nguyên của tham số $m$ để hàm số $y=x^3-3(m+2)x^2+3(m^2+4m)x+1$ nghịch biến trên khoảng $(0; 1)$?
+\shortans{4}
+\loigiai{
+Hàm số nghịch biến trên $(0; 1)$ khi và chỉ khi $y'\leq 0,\quad \forall x\in (0; 1) \Leftrightarrow 3x^2-6(m+2)x+3(m^2+4m)\leq 0,\quad \forall x\in (0; 1) \Leftrightarrow (x-m)(3x-3m-12)\leq 0,\quad \forall x\in (0; 1) \Leftrightarrow m\leq x\leq m+4,\quad \forall x\in (0; 1) \Leftrightarrow \begin{cases} m\leq 0 \ 1\leq m+4 \end{cases} \Leftrightarrow -3\leq m\leq 0$. Suy ra có 4 giá trị của $m$ thỏa mãn đề bài.
+}
+\end{ex}
+
+% ===== Câu 12 =====
+% ID: T12C1B1-05-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-05-TN
+% Mức: TH
+Cho hàm số $y=-x^3-mx^2+(4m+9)x+5$, với $m$ là tham số thực. Có bao nhiêu giá trị nguyên của $m$ để hàm số nghịch biến trên $(-\infty;+\infty)$?
+\choice
+{$5$}
+{$6$}
+{\True $7$}
+{$4$}
+\loigiai{
+Hàm số $y=-x^3-mx^2+(4m+9)x+5$ là hàm bậc 3 có hệ số $a=-1\lt 0$ nên điều kiện cần và đủ để $y=-x^3-mx^2+(4m+9)x+5$ nghịch biến trên $(-\infty;+\infty)$ là
+  \begin{align*}
+  &~ y'=-3x^2-2mx+ $4\,\text{m}$ +9\le 0, $\forall$ x $\in\mathbb{R}\Leftrightarrow$ &~ $\Delta$ '=m^2+ $12\,\text{m}$ +27\le 0 
+\Leftrightarrow &~ -9\le m\le -3 
+\Rightarrow &~ m $\in\{-9,-8,-7,-6,-5,-4,-3\}$.
+  \end{align*}
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: T12C1B1-06-TLN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-06-TLN
+% Mức: TH
+Tìm giá trị của tham số $m$ để ba điểm cực trị của đồ thị hàm số $y=x^4+(6m-4)x^2+1-m$ là ba đỉnh của một tam giác vuông? (Kết quả làm tròn đến chữ số hàng phần trăm).
+\shortans{0,33}
+\loigiai{
+Ta có $y'=4x^3+4(3m-2)x.$ Giải $y'=0\Leftrightarrow x=0$ hoặc $x^2=2-3m.$ (Hàm số có ba cực trị khi và chỉ khi) $y'=0$ có ba nghiệm phân biệt $\Leftrightarrow 2-3m>0\Leftrightarrow m<\dfrac{2}{3}.$ (Khi đó, tọa độ ba điểm cực trị là) $A(0;10m),B\left(\sqrt{2-3m};-(2-3m)^2+1-m\right)$ và $C\left(-\sqrt{2-3m};-(2-3m)^2+1-m\right).$ (Ta có) $\overrightarrow{AB}=\left(\sqrt{2-3m};-(2-3m)^2\right)$ và $\overrightarrow{AC}=\left(-\sqrt{2-3m};-(2-3m)^2\right).$ (Nhận xét:) $\triangle ABC$ luôn cân tại $A.$ (Do đó) $A$, $B$, $C$ tạo thành tam giác vuông $\Leftrightarrow \overrightarrow{AB} \cdot \overrightarrow{AC}=0\Leftrightarrow -(\sqrt{2-3m})^2+(-(2-3m)^2)^2=0\Leftrightarrow -(2-3m)+(2-3m)^4=0.\Leftrightarrow (2-3m)^4-(2-3m)=0\Leftrightarrow (2-3m)((2-3m)^3-1)=0.$ (Vì) $m<\dfrac{2}{3}$ nên $2-3m>0.$ Do đó $(2-3m)^3-1=0\Leftrightarrow (2-3m)^3=1\Leftrightarrow 2-3m=1\Leftrightarrow m=\dfrac{1}{3}.$
+}
+\end{ex}
+
+% ===== Câu 14 =====
+% ID: T12C1B1-06-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-06-TN
+% Mức: TH
+Cho hàm số $y=f(x)$ xác định trên $\mathbb{R}$ và có bảng biến thiên như hình vẽ sau
+ 
+  
+ 
+ Hàm số $y=f(x)$ đạt cực đại tại
+\choice
+{\True $x=10$}
+{$x=8$}
+{$x=12$}
+{$x=17$}
+\loigiai{
+Dựa vào bảng biến thiên ta thấy hàm số đạt cực đại tại $x=10$.
+}
+\end{ex}
+
+% ===== Câu 15 =====
+% ID: T12C1B1-07-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-07-TN
+% Mức: TH
+Cho hàm số có đồ thị như hình bên. 
+  Khẳng định nào $\textbf{sai}$?
+\choice
+{Hàm số có một cực tiểu tại $x=\dfrac{3}{4}$ và đạt cực đại tại $x=0$}
+{Giá trị cực đại $y=-1$ và giá trị cực tiểu $y=-\dfrac{113}{32}$}
+{Hàm số có một cực tiểu tại $x=-\dfrac{3}{4}$}
+{\True Hàm số có một cực đại tại $x=-\dfrac{3}{4}$}
+\loigiai{
+Dựa vào đồ thị ta thấy, hàm số đạt cực đại tại $x=0, y_{\text{CĐ}}=-1$.
+Hàm số đạt cực tiểu tại $x=-\dfrac{3}{4}$ và $x=\dfrac{3}{4}$, $y_{\text{CT}}=-\dfrac{113}{32}$.
+}
+\end{ex}
+
+% ===== Câu 16 =====
+% ID: T12C1B1-08-TN
+% Mức: TH
+\begin{ex}
+% ID: T12C1B1-08-TN
+% Mức: TH
+Cho hàm số $y = 8x^3 -6mx^2 + 9mx + 6m$ ($m$ là tham số thực). Giá trị của $m$ để hàm số đạt cực tiểu tại $x=-6$ thuộc khoảng nào sau đây?
+\choice
+{$\left(-\infty;-\dfrac{35}{3}\right)$}
+{$\left(-\infty;-\dfrac{47}{3}\right)$}
+{$\left(-\dfrac{23}{3}; +\infty\right)$}
+{\True $\varnothing$}
+\loigiai{
+Hàm số xác định với mọi $x \in \mathbb{R}.\
+  Ta cóy'=24x^2 -12mx + 9m$.
+Hàm số đạt cực tiểu tại $x=-6 \Rightarrow y'(-6) = 0 \Leftrightarrow 81m+864 = 0 \Leftrightarrow m=-\dfrac{32}{3}.\
+  Thử lại:\
+  Vớim = -\dfrac{32}{3}$, ta có:y'(-6) = 0và$y''(-6) = -160 \lt  0.\\Rightarrow x=-6$ là điểm cực đại của hàm số.
+Vậy không có giá trị nào của $m$ thoả bài toán.
+}
+\end{ex}

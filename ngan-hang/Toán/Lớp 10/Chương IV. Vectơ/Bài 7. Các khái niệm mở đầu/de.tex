@@ -1,0 +1,164 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương IV. Vectơ
+% Bài: Bài 7. Các khái niệm mở đầu
+% Số câu: 7
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 7. Các khái niệm mở đầu
+
+% ===== Câu 1 =====
+% ID: LATEX_D9230FDCEFEC
+% Mức: VD
+\dangbt{Áp dụng quy tắc ba điểm và quy tắc hình bình hành}
+\begin{ex}
+% ID: LATEX_D9230FDCEFEC
+% Mức: VD
+Cho hình vuông $(MNPQ)$ tâm $(H)$, có cạnh bằng $(1)$. Tính độ dài vectơ $\overrightarrow{u}=\overrightarrow{HQ}-\overrightarrow{HP}$.
+\choice
+{\True $(1)$}
+{$\frac{\sqrt{2}}{2}$}
+{$\sqrt{2}$}
+{$\sqrt{3}$}
+\loigiai{
+$|\overrightarrow{u}|=|\overrightarrow{HQ}-\overrightarrow{HP}|=|\overrightarrow{PQ}|=1.$
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: LATEX_4BC9261B4F3F
+% Mức: VD
+\dangbt{Đề 2}
+\begin{ex}
+% ID: LATEX_4BC9261B4F3F
+% Mức: VD
+Cho tứ giác $ABCD$. Gọi $M$, $N$, $P$ lần lượt là trung điểm của $AD$, $BC$ và $AC$. Biết $\overrightarrow{MP}=\overrightarrow{PN}$. Chọn câu \textbf{đúng}.
+\choice
+{$\overrightarrow{AC}=\overrightarrow{BD}$}
+{$\overrightarrow{AC}=\overrightarrow{BC}$}
+{\True $\overrightarrow{AD}=\overrightarrow{BC}$}
+{$\overrightarrow{AD}=\overrightarrow{BD}$}
+\loigiai{
+\begin{tikzpicture}[scale=1,line join=round,line cap=round,font= $\footnotesize,\ge stealth$]
+ $\def\d{4}\def\r{3}\path$ (0:0) coordinate (B)
+ ++ $(0:\d)$ coordinate (C)
+ ++ $(70:\r)$ coordinate (D)
+ ($(B)+(D)-(C)$) coordinate (A)
+ ($(A)!0.5!(C)$) coordinate (P)
+ ($(B)!0.5!(C)$) coordinate (N)
+ ($(A)!0.5!(D)$) coordinate (M);
+ $\draw$ (A)--(B)--(C)--(D)--cycle (A)--(C) ;
+ $\foreach\x/ \goc$ in {A/180,B/180,C/0,D/0,M/90,N/-90,P/90} 
+ $\fill(\x)$ circle (1pt) 
+ ($\x)+(\goc:3mm)$) node { $\x$ };
+ \end{tikzpicture}
+ 
+ Ta có $MP \parallel DC$, $MP=\dfrac{1}{2}DC$, $PN//AB$, $PN=\dfrac{1}{2}AB$.
+Mà $MP=PN \Rightarrow\overrightarrow{AB}=\overrightarrow{DC}\Rightarrow ABCD$ là hình bình hành $\Rightarrow\overrightarrow{AD}=\overrightarrow{BC}$.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: LATEX_5075D6E63DCD
+% Mức: VD
+\begin{ex}
+% ID: LATEX_5075D6E63DCD
+% Mức: VD
+Cho hình lục giác đều $ABCDEF$ tâm $O$. Số các vectơ khác vectơ không, cùng phương với vectơ $\overrightarrow{OB}$ có điểm đầu và điểm cuối là các đỉnh của lục giác là
+\choice
+{$4$}
+{\True $6$}
+{$8$}
+{$10$}
+\loigiai{
+\begin{tikzpicture}[scale=1,line join=round,line cap=round,font= $\footnotesize,\ge stealth$]
+ $\def\a{2}\path$ (0:0) coordinate (O)
+ $(0:\a)$ coordinate (C) 
+ $(60:\a)$ coordinate (D)
+ $(120:\a)$ coordinate (E)
+ $(180:\a)$ coordinate (F)
+ $(240:\a)$ coordinate (A)
+ $(300:\a)$ coordinate (B);
+ $\draw$ (A)--(B)--(C)--(D)--(E)--(F)--(A) (O)--(B);
+ $\foreach\x/ \goc$ in {A/180,B/-135,C/-45,D/0,E/90,F/180,O/0} 
+ $\fill(\x)$ circle (1pt)
+ ($\x)+(\goc:3mm)$) node { $\x$ }; 
+ \end{tikzpicture}
+ 
+ Các vectơ cùng phương với vectơ $\overrightarrow{OB}$ là
+$\overrightarrow{BE}$, $\overrightarrow{EB}$, $\overrightarrow{DC}$, $\overrightarrow{CD}$, $\overrightarrow{FA}$, $\overrightarrow{AF}$.
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: LATEX_3799B2AC01F5
+% Mức: VD
+\begin{ex}
+% ID: LATEX_3799B2AC01F5
+% Mức: VD
+Cho hình chữ nhật $ABCD$ có $AB=3$, $BC=4$. Tính độ dài của vectơ $\overrightarrow{CA}$.
+\choice
+{\True $\left|\overrightarrow{CA}\right|=5$}
+{$\left|\overrightarrow{CA}\right|=25$}
+{$\left|\overrightarrow{CA}\right|=7$}
+{$\left|\overrightarrow{CA}\right|=\sqrt 7$}
+\loigiai{
+Xét tam giác $ABC$ vuông tại $B$, ta có độ dài của vectơ $\overrightarrow{CA}$ bằng độ dài đoạn thẳng $CA$. Áp dụng định lý Pitago, ta có $CA = \sqrt{AB^2 + BC^2} = \sqrt{3^2 + 4^2} = \sqrt{9+16} = \sqrt{25} = 5$. Vậy $\left|\overrightarrow{CA}\right|=5$
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: LATEX_6800E2062BD7
+% Mức: VD
+\begin{ex}
+% ID: LATEX_6800E2062BD7
+% Mức: VD
+Cho tam giác $ABC$ đều cạnh $2a$. Gọi $M$ là trung điểm $BC$. Khi đó $\left|\overrightarrow{AM}\right|$ bằng
+\choice
+{$2a$}
+{$2a\sqrt 3$}
+{$4a$}
+{\True $a\sqrt 3$}
+\loigiai{
+Tam giác $ABC$ đều cạnh $2a$, $M$ là trung điểm $BC$. Do đó $BM = MC = \frac{1}{2} BC = a$.
+Tam giác $ABM$ vuông tại $M$. Áp dụng định lý Pitago trong tam giác vuông $ABM$, ta có:
+$AM^2 + BM^2 = AB^2AM^2 = AB^2 - BM^2AM = \sqrt{AB^2 - BM^2}$
+Thay số $AB = 2a$ và $BM = a$ vào công thức trên:
+$AM = \sqrt{(2a)^2 - a^2} = \sqrt{4a^2 - a^2} = \sqrt{3a^2} = a\sqrt{3}$.
+Vậy $\left|\overrightarrow{AM}\right| = AM = a\sqrt{3}$
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: LATEX_56B30F14CBE6
+% Mức: VD
+\begin{ex}
+% ID: LATEX_56B30F14CBE6
+% Mức: VD
+Cho hình thoi $ABCD$ tâm $O$, cạnh bằng $a$ và $\widehat A=60^\circ$. Kết luận nào sau đây là \textbf{đúng}?
+\choice
+{\True $\left|\overrightarrow{AO}\right|=\dfrac{a\sqrt 3}{2}$}
+{$\left|\overrightarrow{OA}\right|=a$}
+{$\left|\overrightarrow{OA}\right|=\left|\overrightarrow{OB}\right|$}
+{$\left|\overrightarrow{OA}\right|=\dfrac{a\sqrt 2}{2}$}
+\loigiai{
+Vì $ABCD$ là hình thoi có $\widehat A=60^\circ$ nên tam giác $ABD$ là tam giác đều. Do $O$ là tâm hình thoi nên $O$ là trung điểm của $BD$. Trong tam giác đều $ABD$, $AO$ là đường cao ứng với cạnh $BD$. Độ dài đường cao của tam giác đều cạnh $a$ là $\dfrac{a\sqrt 3}{2}$. Do đó, $\left|\overrightarrow{AO}\right|=\dfrac{a\sqrt 3}{2}$
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: LATEX_DF90EAC7B0AC
+% Mức: VDC
+\begin{ex}
+% ID: LATEX_DF90EAC7B0AC
+% Mức: VDC
+Cho tam giác nhọn $ABC$. Gọi $H$, $O$ lần lượt là trực tâm, tâm đường tròn ngoại tiếp của tam giác, $M$ là trung điểm của $BC$. Mệnh đề nào sau đây là \textbf{đúng}?
+\choice
+{\True Tam giác $ABC$ nhọn thì $\overrightarrow{AH}$, $\overrightarrow{OM}$ cùng hướng}
+{$\overrightarrow{AH}$, $\overrightarrow{OM}$ luôn cùng hướng}
+{$\overrightarrow{AH}$, $\overrightarrow{OM}$ cùng phương nhưng ngược hướng}
+{$\overrightarrow{AH}$, $\overrightarrow{OM}$ có cùng giá}
+\loigiai{
+Tam giác $ABC$ nhọn, $H$ là trực tâm nên $AH \perp BC$. $O$ là tâm đường tròn ngoại tiếp, $M$ là trung điểm $BC$ nên $OM \perp BC$. Do đó, $AH \parallel OM$. Vì tam giác $ABC$ nhọn nên trực tâm $H$ và tâm ngoại tiếp $O$ đều nằm trong tam giác. Khi đó, véctơ $\overrightarrow{AH}$ và $\overrightarrow{OM}$ cùng hướng
+}
+\end{ex}

@@ -1,0 +1,1182 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương I. Mệnh đề và tập hợp
+% Bài: Bài 2. Tập hợp và các phép toán trên tập hợp
+% Số câu: 56
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 2. Tập hợp và các phép toán trên tập hợp
+
+% ===== Câu 1 =====
+% ID: T10C1B2-01-DS
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-01-DS
+% Mức: VD
+Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên. Khi đó
+\choiceTF
+{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá}
+{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này sai
+\item (Đúng) Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này đúng
+\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá. (Vì): Gọi $L$ là tập hợp học sinh lớp $10C6$, ta có $|L| = 45$. Số học sinh không tham gia câu lạc bộ bóng đá là $|L| - |BĐ| = 45 - 18 = 27$. Mệnh đề này sai
+\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ. (Vì): ố học sinh không tham gia cả hai câu lạc bộ là $|L| - |BĐ \cup BR| = 45 - 23 = 22$. Mệnh đề này sai
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T10C1B2-01-TL
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{bt}
+% ID: T10C1B2-01-TL
+% Mức: NB
+Cho hai tập hợp $A=\{n \in \mathbb{Z} \mid -2 \lt  n \leq 4\}$ và $B=\{-1 ; 0;1;5\}$. Hãy xác định tập hợp $A \cup B$, $A \setminus B$.
+\loigiai{
+Ta có $A=\{-1; 0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0;1;5\}$.
+Suy ra $A \cup B=\{-1; 0 ; 1 ; 2 ; 3 ; 4; 5\}$ và $A \setminus B=\{2 ; 3 ; 4\}$.
+}
+\end{bt}
+
+% ===== Câu 3 =====
+% ID: T10C1B2-01-TLN
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-01-TLN
+% Mức: VD
+Cho tập $A=\left\{ x\in \mathbb{N}|~x(2-x)(x^2-3x-4)=0 \right\}$. Hỏi tập $A$ có bao nhiêu tập con ?
+\shortans{8}
+\loigiai{
+$x(2-x)(x^2-3x-4)=0 \Leftrightarrow x=0$ hoặc $2-x=0$ hoặc $x^2-3x-4=0$.
+$x=0 \in \mathbb{N}$.
+$2-x=0 \Leftrightarrow x=2 \in \mathbb{N}$.
+$x^2-3x-4=0 \Leftrightarrow (x-4)(x+1)=0 \Leftrightarrow x=4 \in \mathbb{N}$ hoặc $x=-1 \notin \mathbb{N}$.
+Vậy $A=\{0;2;4\}$.
+Số tập con của tập $A$ là $2^{|A|} = 2^3 = 8$.
+8
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: T10C1B2-01-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-01-TN
+% Mức: NB
+Cho $x$ là một phần tử của tập hợp $X$. Mệnh đề nào sau đây là $\textbf{đúng}$?
+\choice
+{\True $x \in X$}
+{$X \in x$}
+{$x \subset X$}
+{$\{x\} \in X$}
+\loigiai{
+Mệnh đề là đúng là $x \in X$. Kí hiệu $x$ là một phần tử của tập hợp $X$.
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: T10C1B2-02-DS
+% Mức: VD
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-02-DS
+% Mức: VD
+Cho các tập hợp $A=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\}$, $B=\{0 ; 1 ; 4 ; 5\}$ và $C=\{-4 ;-3 ; 1 ; 2 ; 5 ; 6\}$.
+\choiceTF
+{$A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$}
+{$A\cap B=\{0\}$}
+{\True $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$}
+{$A\cap B\cap C=\{1\}$}
+\loigiai{
+\begin{itemchoice}
+\item (Sai) $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$. (Vì): \cup B)$ và $C$ là tập hợp chứa các phần tử chung của hai tập hợp này. Ta có $
+\item (Sai) $A\cap B=\{0\}$. (Vì): Giao của hai tập hợp $A$ và $B$ là tập hợp chứa tất cả các phần tử vừa thuộc $A$ vừa thuộc $B$. Ta có $A\cap B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\} \cap \{0 ; 1 ; 4 ; 5\} = \{0 ; 1\}$. Mệnh đề cho là $\{0\}$, nên sai
+\item (Đúng) $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$. (Vì): Hợp của $A$ và $B$ là $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$. Giao của $
+\item (Sai) $A\cap B\cap C=\{1\}$.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: T10C1B2-02-TL
+% Mức: VD
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-02-TL
+% Mức: VD
+Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+\loigiai{
+Để $A \subset B$, ta cần có:
+[LG-ONLY]
+[HINH]
+$m-1 \ge -2$ và $4 \le 2m+2$.
+$m \ge -1$ và $2m \ge 2$.
+$m \ge -1$ và $m \ge 1$.
+Suy ra $m \ge 1$.
+Vì $m$ là số nguyên dương, nên $m \in \{1, 2, 3, 4\}$.
+Tuy nhiên, đề bài cho $A=(m-1; 4]$ và $B=(-2; 2m+2)$.
+Để $A \subset B$, ta cần:
+$m-1 \ge -2 \implies m \ge -1$.
+$4 \le 2m+2 \implies 2m \ge 2 \implies m \ge 1$.
+Kết hợp hai điều kiện, ta có $m \ge 1$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Kiểm tra lại điều kiện $A$ và $B$ khác rỗng:
+$m-1 \lt  4 \implies m \lt  5$.
+$-2 \lt  2m+2 \implies 2m \gt  -4 \implies m \gt  -2$.
+Vậy điều kiện để $A$ và $B$ khác rỗng là $-2 \lt  m \lt  5$.
+Kết hợp với điều kiện $m \ge 1$, ta có $1 \le m \lt  5$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Có 4 giá trị nguyên dương của $m$ thỏa mãn.
+
+$m \in \{1, 2, 3, 4\}$.
+}
+\end{bt}
+
+% ===== Câu 7 =====
+% ID: T10C1B2-02-TLN
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-02-TLN
+% Mức: VD
+Cho ba tập hợp $A=\{2; 5\}$, $B=\{5 ; x\}$, $C=\{x ; y ; 5\}$, biết $A=B=C$. Biết $x \neq y$, khi đó giá trị $x + y$ bằng
+\shortans{7}
+\loigiai{
+Vì $A=B$ nên $x=2$. Lại có $B=C$ nên $y=5$.
+Vậy $x+y=2+5=7$.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: T10C1B2-02-TN
+% Mức: NB
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-02-TN
+% Mức: NB
+Cách viết nào sau đây là $\textbf{sai}$?
+\choice
+{$(0 ;+\infty)=\{x \in \mathbb{R}| x>0\}$}
+{$[0 ; 5]=\{x \in \mathbb{R}| 0 \leqslant x \leqslant 5\}$}
+{$(0 ; 5)=\{x \in \mathbb{R}| 0\lt x<5\}$}
+{\True $[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$}
+\loigiai{
+Vì $[-1 ; 5)=\{x \in \mathbb{R} \mid -1 \leqslant x<5\}$ nên cách viết sau là sai: «$[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$».
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: T10C1B2-03-DS
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-03-DS
+% Mức: VD
+Cho hai tập hợp $A=\{x\in \mathbb{R}|~(x-1)(x-2)(x-3)=0\}$, $B=\{5;3;1\}$.
+\choiceTF
+{\True Tập hợp $A$ có $3$ phần tử}
+{Tập hợp $A\cup B$ có $6$ phần tử}
+{Tập hợp $A \subset B$}
+{Tập hợp $B \subset A$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có $3$ phần tử. (Vì): Phương trình $(x-1)(x-2)(x-3)=0$ có ba nghiệm phân biệt là $x=1$, $x=2$, $x=3$. Do đó, tập hợp $A=\{1;2;3\}$ có đúng $3$ phần tử
+\item (Sai) Tập hợp $A\cup B$ có $6$ phần tử. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Hợp của hai tập hợp $A\cup B$ bao gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ hoặc thuộc cả hai. Ta có $A\cup B = \{1;2;3;5\}$. Tập hợp này có $4$ phần tử, không phải $6$ phần tử
+\item (Sai) Tập hợp $A \subset B$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $A$ là tập con của $B$ ($A \subset B$), mọi phần tử của $A$ phải thuộc $B$. Tuy nhiên, phần tử $2$ thuộc $A$ nhưng không thuộc $B$. Do đó, $A$ không phải là tập con của $B$
+\item (Sai) Tập hợp $B \subset A$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $B$ là tập con của $A$ ($B \subset A$), mọi phần tử của $B$ phải thuộc $A$. Tuy nhiên, phần tử $5$ thuộc $B$ nhưng không thuộc $A$. Do đó, $B$ không phải là tập con của $A$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 10 =====
+% ID: T10C1B2-03-TL
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{bt}
+% ID: T10C1B2-03-TL
+% Mức: VD
+Lớp 10 $A$ có $45$ học sinh trong đó có $25$ em học giỏi môn Toán, $23$ em học giỏi môn Lý, $20$ em học giỏi môn Hóa, $11$ em học giỏi cả môn Toán và môn Lý, $8$ em học giỏi cả môn Lý và môn Hóa, $9$ em học giỏi cả môn Toán và môn Hóa. Hỏi lớp $10A$ có bao nhiêu bạn học giỏi cả ba môn Toán, Lý, Hóa? (biết rằng mỗi học sinh trong lớp học giỏi ít nhất một trong ba môn Toán, Lý, Hóa).
+\loigiai{
+Gọi $T$, $L$, $H$ lần lượt là tập hợp học sinh giỏi môn Toán, Lý, Hóa.
+Ta có công thức $|T \cup L \cup H| = |T| + |L| + |H| - |T \cap L| - |L \cap H| - |H \cap T| + |T \cap L \cap H|$.
+Thay số: $45 = 25 + 23 + 20 - 11 - 8 - 9 + |T \cap L \cap H|$.
+$\Leftrightarrow |T \cap L \cap H| = 45 - (25 + 23 + 20) + (11 + 8 + 9)$.
+$\Leftrightarrow |T \cap L \cap H| = 45 - 68 + 28$.
+$\Leftrightarrow |T \cap L \cap H| = 5$.
+Vậy có 5 học sinh giỏi cả ba môn Toán, Lý, Hóa.
+5
+}
+\end{bt}
+
+% ===== Câu 11 =====
+% ID: T10C1B2-03-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-03-TLN
+% Mức: VD
+Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
+\shortans{20}
+\loigiai{
+Gọi $A$ là tập hợp các học sinh chơi bóng đá, $B$ là tập hợp các học sinh chơi bóng bàn, $C$ là tập hợp các học sinh không chơi môn thể thao nào.
+Ta có
+ $|A|$ là số học sinh chơi bóng đá;
+$|B|$ là số học sinh chơi bóng bàn;
+$|C|$ là số học sinh không chơi môn thể thao nào.
+Khi đó số học sinh chỉ chơi một môn thể thao là:
+ $|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14=20$.
+}
+\end{ex}
+
+% ===== Câu 12 =====
+% ID: T10C1B2-03-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-03-TN
+% Mức: NB
+Cho tập hợp $A=\{x \in \mathbb{R} \mid 2 \leqslant x<5\}$. Phần bù của tập hợp $A$ trong $\mathbb{R}$ là tập nào sau đây?
+\choice
+{$[5 ;+\infty)$}
+{$(-\infty ; 2)$}
+{$(-\infty ; 2] \cup(5 ;+\infty)$}
+{\True $(-\infty ; 2) \cup[5 ;+\infty)$}
+\loigiai{
+Ta có $A = \{x \in \mathbb{R} \mid 2 \leqslant x<5\}
+ = [2;5)$.
+Khi đó phần bù của tập hợp $A$ trong $\mathbb{R}$ là
+ $\mathrm{C_{\mathbb{R}}A}
+ = \mathbb{R} \setminus A = (-\infty ; 2) \cup[5 ;+\infty)$.
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: T10C1B2-04-DS
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-04-DS
+% Mức: VD
+Cho hai tập hợp $A=\{n \in \mathbb{N}\mid (n^2-2n-3)(n^2-1)=0\}$ và $B=\{x \in \mathbb{R}\mid 2x^2-x+3=0\}$. Khi đó
+\choiceTF
+{\True Tập hợp $A$ có 2 phần tử.}
+{\True Tập hợp $A$ có 4 tập hợp con.}
+{\True Tập hợp $B$ là tập hợp rỗng.}
+{\True Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4.}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có 2 phần tử. (Vì): Tập hợp $A$ được xác định bởi phương trình $(n^2-2n-3)(n^2-1)=0$. Ta có $n^2-2n-3=0 \Leftrightarrow (n-3)(n+1)=0 \Leftrightarrow n=3$ hoặc $n=-1$. Ta có $n^2-1=0 \Leftrightarrow (n-1)(n+1)=0 \Leftrightarrow n=1$ hoặc $n=-1$. Vì $n \in \mathbb{N}$ (tập số tự nhiên), nên các giá trị của $n$ thỏa mãn là $n=1$ và $n=3$. Do đó, tập hợp $A = \{1; 3\}$. Tập hợp $A$ có 2 phần tử
+\item (Đúng) Tập hợp $A$ có 4 tập hợp con. (Vì): Số tập hợp con của một tập hợp có $k$ phần tử là $2^k$. Tập hợp $A$ có 2 phần tử, nên số tập hợp con của tập hợp $A$ là $2^2 = 4$
+\item (Đúng) Tập hợp $B$ là tập hợp rỗng. (Vì): Tập hợp $B$ được xác định bởi phương trình $2x^2-x+3=0$. Ta xét biệt thức $\Delta = b^2 - 4ac = (-1)^2 - 4(2)(3) = 1 - 24 = -23$. Vì $\Delta < 0$, phương trình $2x^2-x+3=0$ vô nghiệm. Do đó, tập hợp $B$ là tập hợp rỗng, ký hiệu là $B = \emptyset$
+\item (Đúng) Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4. (Vì): Tổng các phần tử của tập hợp $A$ là $1+3=4$. Tập hợp $B$ là tập hợp rỗng nên không có phần tử nào để tính tổng. Tổng các phần tử của tập hợp $A$ và tập hợp $B$ là $4+0=4$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 14 =====
+% ID: T10C1B2-04-TL
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-04-TL
+% Mức: VDC
+Cho $A=\left[m-3 ; \dfrac{m+2}{4}\right)$, $B=(-\infty ;-1) \cup [2 ;+\infty)$. Xác định $m$ để $(A \cap B=\varnothing)$.
+\loigiai{
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \leq 4m-12 \\,\text{m} \geq 2 \text{ và } m+2 \leq 8 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} 14 \leq 3m \\,\text{m} \geq 2 \text{ và } m \leq 6 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \geq \dfrac{14}{3} \\ 2 \leq m \leq 6 \end{array} \right.\Leftrightarrow m \in \left[2; 6\right] \cup \left[\dfrac{14}{3}; +\infty\right)$.
+
+Kiểm tra lại đề bài: $A \cap B = \varnothing$.
+Điều kiện để $A \cap B = \varnothing$ là khoảng $A$ nằm hoàn toàn bên trái hoặc hoàn toàn bên phải khoảng $B$.
+Trường hợp 1: Khoảng $A$ nằm hoàn toàn bên trái khoảng $B$.
+Điều này xảy ra khi phần tử cuối của $A$ nhỏ hơn phần tử đầu của phần bên trái của $B$.
+$\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+Trường hợp 2: Khoảng $A$ nằm hoàn toàn bên phải khoảng $B$.
+Điều này xảy ra khi phần tử đầu của $A$ lớn hơn hoặc bằng phần tử cuối của phần bên phải của $B$.
+$m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc có vẻ đã hiểu sai điều kiện giao rỗng.
+Ta có $A \cap B = \varnothing$ khi:
+1. Khoảng $A$ nằm hoàn toàn bên trái của $(-\infty; -1)$.
+   $\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+2. Khoảng $A$ nằm hoàn toàn bên phải của $[2; +\infty)$.
+   $m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc:
+$A\cap B=\varnothing \Leftrightarrow \left\{ \begin{aligned} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{aligned} \right.$
+Điều kiện này là để $A$ nằm trong $B$, không phải giao rỗng.
+
+Chỉnh lại theo đúng yêu cầu:
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \lt  -1 \\,\text{m}-3 \geq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \lt  -4 \\,\text{m} \geq 5 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \lt  -6 \\,\text{m} \geq 5 \end{array} \right.m \in (-\infty; -6) \cup [5; +\infty)$.
+}
+\end{bt}
+
+% ===== Câu 15 =====
+% ID: T10C1B2-04-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-04-TLN
+% Mức: VD
+Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \subset B$?
+\shortans{1}
+\loigiai{
+Để $A \subset B$, ta cần $m+1 \gt  0$ và $2m-1 \lt  6$.
+$m+1 \gt  0 \Leftrightarrow m \gt  -1$.
+$2m-1 \lt  6 \Leftrightarrow 2m \lt  7 \Leftrightarrow m \lt  \frac{7}{2}$.
+Kết hợp hai điều kiện, ta có $-1 \lt  m \lt  \frac{7}{2}$.
+Vì $m$ là số nguyên, các giá trị nguyên của $m$ thỏa mãn là $0, 1, 2, 3$.
+Tuy nhiên, đề bài cho tập hợp $A=[m+1;2m-1]$. Để tập hợp này có nghĩa, ta cần $m+1 \le 2m-1$, suy ra $m \ge 2$.
+Kết hợp điều kiện $m \ge 2$ với $-1 \lt  m \lt  \frac{7}{2}$, ta được $2 \le m \lt  \frac{7}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $2, 3$.
+Có 2 giá trị nguyên của $m$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 16 =====
+% ID: T10C1B2-04-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-04-TN
+% Mức: NB
+Cho tập hợp $A=\{2;4;7;8;9;12\}$. Đâu là một tập hợp con của $A$?
+\choice
+{$\mathscr{D}=\{5\}$}
+{$C=\{2;6;9\}$}
+{$B=\{3;4;7\}$}
+{\True $X=\{2;12\}$}
+\loigiai{
+tập hợp con của tập hợp $A$ là $X=\{2;12\}$.
+}
+\end{ex}
+
+% ===== Câu 17 =====
+% ID: T10C1B2-05-DS
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-05-DS
+% Mức: VD
+Lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa, $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi cả Lý và Hóa, $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa.
+\choiceTF
+{\True Số học sinh chỉ giỏi môn Toán là $1$ học sinh}
+{\True Số học sinh chỉ giỏi môn Lý là $1$ học sinh}
+{Số học sinh chỉ giỏi môn Hóa là $2$ học sinh}
+{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Số học sinh chỉ giỏi môn Toán là $1$ học sinh.
+\item (Đúng) Số học sinh chỉ giỏi môn Lý là $1$ học sinh.
+\item (Sai) Số học sinh chỉ giỏi môn Hóa là $2$ học sinh. (Vì): ố học sinh chỉ giỏi môn Hóa là $1$ học sinh, đề bài cho là $2$ học sinh
+\item (Đúng) Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 18 =====
+% ID: T10C1B2-05-TL
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-05-TL
+% Mức: VDC
+Cho tập hợp $A=(0 ;+\infty)$ và $B=\left\{x \in \mathbb{R} \mid m x^2-6 x+m-8=0\right\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \subset A$.
+\loigiai{
+Tập $B$ có đúng hai tập con $\Leftrightarrow B$ có đúng một phần tử.
+Do đó, phương trình $m x^2-6 x+m-8=0$ có duy nhất một nghiệm.
+
+Trường hợp 1: $m=0$.
+Phương trình trở thành $-6x-8=0 \Leftrightarrow x=-\dfrac{4}{3}$.
+Khi đó $B=\left\{-\dfrac{4}{3}\right\}$.
+Vì $-\dfrac{4}{3} \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Trường hợp 2: $m \neq 0$.
+Phương trình có nghiệm duy nhất $\Leftrightarrow \Delta'=0$.
+$\Delta' = (-3)^2 - m(m-8) = 9 - m^2 + 8m$.
+$\Delta'=0 \Leftrightarrow -m^2+8m+9=0 \Leftrightarrow m^2-8m-9=0 \Leftrightarrow (m-9)(m+1)=0$.
+$\Leftrightarrow m=9$ hoặc $m=-1$.
+
+Nếu $m=-1$:
+Phương trình là $-x^2-6x-9=0 \Leftrightarrow x^2+6x+9=0 \Leftrightarrow (x+3)^2=0 \Leftrightarrow x=-3$.
+Khi đó $B=\{-3\}$.
+Vì $-3 \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Nếu $m=9$:
+Phương trình là $9x^2-6x+1=0 \Leftrightarrow (3x-1)^2=0 \Leftrightarrow x=\dfrac{1}{3}$.
+Khi đó $B=\left\{\dfrac{1}{3}\right\}$.
+Vì $\dfrac{1}{3} \in A=(0 ;+\infty)$ nên $B \subset A$.
+
+Vậy $m=9$.
+9
+}
+\end{bt}
+
+% ===== Câu 19 =====
+% ID: T10C1B2-05-TLN
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-05-TLN
+% Mức: VD
+Lớp 10 $A$ có $45$ học sinh trong đó có $12$ bạn học sinh giỏi Văn, $9$ bạn học sinh giỏi Địa lí, và $30$ bạn không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu bạn học sinh giỏi cả hai môn Văn và Địa lí?
+\shortans{6}
+\loigiai{
+Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).
+Số học sinh giỏi cả 2 môn Văn và Địa lí là $12+9-15=6(học sinh)$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 20 =====
+% ID: T10C1B2-05-TN
+% Mức: NB
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-05-TN
+% Mức: NB
+Cho tập $A$ có $3$ phần tử, số tập con của tập $A$ bằng
+\choice
+{$6$}
+{$3$}
+{\True $8$}
+{$4$}
+\loigiai{
+Giả sử $A=\left\{ a;b;c \right\}$, các tập con của $A$ là: $\varnothing$, $\left\{ a \right\}$, $\left\{ b \right\}$, $\left\{ c \right\}$, $\left\{ a;b \right\}$, $\left\{ a;c \right\}$, $\left\{ b;c \right\}$, $\left\{ a;b;c \right\}$.
+Vậy có $8$ tập con của $A$.
+}
+\end{ex}
+
+% ===== Câu 21 =====
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \in \mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \subset B$. Có bao nhiêu tập con của $S$?
+\shortans{4}
+\loigiai{
+$A \subset B \Leftrightarrow \begin{cases} 2a-1 \lt  4 \\ 3a+5 \ge 7 \end{cases} \Leftrightarrow \begin{cases} a \lt  \frac{5}{2} \\ a \ge \frac{2}{3} \end{cases} \Leftrightarrow \frac{2}{3} \le a \lt  \frac{5}{2}$.
+$a \in \mathbb{Z} \Rightarrow S = \{1; 2\}$.
+Số tập con của $S$ là $2^{|S|} = 2^2 = 4$.
+4
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 22 =====
+% ID: T10C1B2-06-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-06-TN
+% Mức: NB
+Cho hai tập hợp $A=\{-1;2;3;5;7\}$, $B=\{1;2;3;4;5\}$. Khi đó giao của hai tập hợp là
+\choice
+{\True $\{2;3;5\}$}
+{$\{-1;2;3\}$}
+{$\{1;2;3;4;5\}$}
+{$\{2;3;4;5\}$}
+\loigiai{
+Giao của hai tập hợp $A$ và $B$, ký hiệu là $A\cap B$, là tập hợp gồm các phần tử vừa thuộc $A$ vừa thuộc $B$. 
+Ta có $A=\{-1;2;3;5;7\}$ và $B=\{1;2;3;4;5\}$. 
+Các phần tử chung của $A$ và $B$ là $2, 3, 5$. 
+Vậy $A\cap B = \{2;3;5\}$.
+}
+\end{ex}
+
+% ===== Câu 23 =====
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+Cho số thực $m<0$ và hai tập hợp $A=(-\infty ; 9m)$, $B=\left(\dfrac{4}{m};+\infty\right)$. Biết tất cả các giá trị thực của tham số $m \in (a,b)$ để $A \cap B \neq \varnothing$.
+Khi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).
+\shortans{0{,}67}
+\loigiai{
+Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
+
+ Nên hai tập hợp $A$ và $B$ giao nhau khác rỗng,
+  $\Leftrightarrow9\,\text{m}$ > $\dfrac{4}{m}\Leftrightarrow9\,\text{m}$ ^2<4 $\quad(\text{do }$ m<0)
+ $\Rightarrow$ m^2< $\dfrac{4}{9}\Leftrightarrow$ - $\dfrac{2}{3}$ < m < 0. 
+ Vậy $m \in \left(-\dfrac{2}{3};0\right)$ thỏa $A \cap B \neq \varnothing$. Khi đó $b-a = 0 - \left( -\dfrac{2}{3}\right) \approx 0,67$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 24 =====
+% ID: T10C1B2-07-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-07-TN
+% Mức: NB
+Hãy liệt kê các phần tử của tập hợp $X=\left\{n \in \mathbb{N}^{*} \mid n \leq 3\right\}$.
+\choice
+{$X=\{1 ; 2\}$}
+{\True $X=\{1 ; 2 ; 3\}$}
+{$X=\{0 ; 1 ; 2\}$}
+{$X=\{0 ; 1 ; 2 ; 3\}$}
+\loigiai{
+$X=\{1 ; 2 ; 3\}$.
+}
+\end{ex}
+
+% ===== Câu 25 =====
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
+\shortans{1}
+\loigiai{
+Để $B \neq \varnothing$, ta có $m \lt  4m - 1 \Leftrightarrow m \gt  \dfrac{1}{3}$.
+Để $B \subset A$, ta có $m \geq 1$ và $4m - 1 \leq 5$.
+$4m - 1 \leq 5 \Leftrightarrow 4m \leq 6 \Leftrightarrow m \leq \dfrac{3}{2}$.
+Kết hợp các điều kiện, ta có $1 \leq m \leq \dfrac{3}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $m=1$.
+Có 1 giá trị nguyên của $m$.
+1
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 26 =====
+% ID: T10C1B2-08-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-08-TN
+% Mức: NB
+Cho tập $A=\{0 ; 2 ; 4 ; 6 ; 8\}$; $B=\{3 ; 4 ; 5 ; 6 ; 7\}$. Tập $A \setminus B$ là
+\choice
+{$\{0 ; 6 ; 8\}$}
+{\True $\{0 ; 2 ; 8\}$}
+{$\{3 ; 6 ; 7\}$}
+{$\{0 ; 2\}$}
+\loigiai{
+Vì $A \setminus B$ gồm các phần tử thuộc tập hợp $A$ và không thuộc $B$ nên $A \setminus B=\{0 ; 2 ; 8\}$.
+}
+\end{ex}
+
+% ===== Câu 27 =====
+% ID: T10C1B2-09-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-09-TN
+% Mức: NB
+Cho hai tập hợp $A=\{1;2;3;4;5;6;7\}$, $B=\{5;6;7;8\}$. Tìm tập $C=A\cup B$.
+\choice
+{\True $C=\{1;2;3;4;5;6;7;8\}$}
+{$C=\{1;2;3;4;8\}$}
+{$C=\{5;6;7\}$}
+{$C=\{1;2;3;4\}$}
+\loigiai{
+Hợp của hai tập hợp $A$ và $B$, ký hiệu là $A \cup B$, là tập hợp gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ hoặc thuộc cả hai tập hợp. 
+Ta có $A = \{1; 2; 3; 4; 5; 6; 7\}$ và $B = \{5; 6; 7; 8\}$. 
+Khi đó, $A \cup B = \{1; 2; 3; 4; 5; 6; 7\} \cup \{5; 6; 7; 8\} = \{1; 2; 3; 4; 5; 6; 7; 8\}$. 
+Vậy tập $C = A \cup B = \{1; 2; 3; 4; 5; 6; 7; 8\}$.
+}
+\end{ex}
+
+% ===== Câu 28 =====
+% ID: T10C1B2-10-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-10-TN
+% Mức: NB
+Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 6\}$. Số phần tử của tập hợp $A$ là
+\choice
+{$8$}
+{\True $7$}
+{$5$}
+{$6$}
+\loigiai{
+$A=\{x \mid x \in \mathbb{N}, x \leq 6\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5;6 \}$. Do đó số phần tử của tập hợp $A$ là $7$.
+}
+\end{ex}
+
+% ===== Câu 29 =====
+% ID: T10C1B2-11-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-11-TN
+% Mức: NB
+Số phần tử của tập $C=\{ x \in \mathbb{Z} \mid -1 \leq x \leq 1\}$ là
+\choice
+{\True $3$}
+{$2$}
+{$1$}
+{$6$}
+\loigiai{
+Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+}
+\end{ex}
+
+% ===== Câu 30 =====
+% ID: T10C1B2-12-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-12-TN
+% Mức: NB
+Kí hiệu nào sau đây dùng để viết đúng mệnh đề «~ $\sqrt{2}$ không phải là số hữu tỉ~»?
+\choice
+{$\sqrt{2}\subset \mathbb{Q}$}
+{\True $\sqrt{2}\notin \mathbb{Q}$}
+{$\sqrt{2}\ne \mathbb{Q}$}
+{$\sqrt{2}\in \mathbb{Q}$}
+\loigiai{
+Cách viết đúng là $\sqrt{2} \notin \mathbb{Q}$.
+}
+\end{ex}
+
+% ===== Câu 31 =====
+% ID: T10C1B2-13-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-13-TN
+% Mức: NB
+Cách viết nào sau đây là đúng để mô tả «$x$ là một phần tử của tập hợp $A$»
+\choice
+{\True $x\in A$}
+{$\{x\} \in A$}
+{$x\subset A$}
+{$\{x\} \not \subset A$}
+\loigiai{
+Vì $x$ là phần tử cho nên ta có $x\in A$ là cách viết đúng.
+}
+\end{ex}
+
+% ===== Câu 32 =====
+% ID: T10C1B2-14-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-14-TN
+% Mức: NB
+Cho $A=\{0;1;2\}$, $B=\{-1;0;1\}$. Khi đó $A\cap B$ là
+\choice
+{$\{0\}$}
+{$\{-1;0;1\}$}
+{\True $\{0;1\}$}
+{$\{1\}$}
+\loigiai{
+Phần tử chung của hai tập hợp $A$ và $B$ là 0 và 1. Do đó, $A\cap B = \{0;1\}$.
+}
+\end{ex}
+
+% ===== Câu 33 =====
+% ID: T10C1B2-15-TN
+% Mức: NB
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-15-TN
+% Mức: NB
+Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Venn như sau. Khẳng định nào sau đây $\textbf{sai}$?
+\choice
+{$B \subset C_X A$}
+{$A \cap B=\varnothing$}
+{$A \subset C_X B$}
+{\True $A \cup B=X$}
+\loigiai{
+Nhìn biểu đồ, ta thấy $A \cup B \neq X$.
+}
+\end{ex}
+
+% ===== Câu 34 =====
+% ID: T10C1B2-16-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-16-TN
+% Mức: NB
+Cho tập hợp $X=\{0 ; 2 ; 5\}$. Tập hợp nào dưới đây $\textbf{không}$ phải là tập con của tập hợp $X$?
+\choice
+{$\varnothing$}
+{$\{2\}$}
+{$\{0 ; 2 ; 5\}$}
+{\True $\{0 ; 1 ; 2\}$}
+\loigiai{
+Ta có $1 \notin X$, vậy $\{0 ; 1 ; 2\} \not \subset\{0 ; 2 ; 5\}$.
+}
+\end{ex}
+
+% ===== Câu 35 =====
+% ID: T10C1B2-17-TN
+% Mức: NB
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-17-TN
+% Mức: NB
+Cho tập hợp $A=\{a ; b ; c\}$. Số tập con của tập hợp $A$ là
+\choice
+{6}
+{\True 8}
+{9}
+{7}
+\loigiai{
+Do tập hợp $A$ có 3 phần tử nên số tập con của tập hợp $A$ là $2^3=8$.
+}
+\end{ex}
+
+% ===== Câu 36 =====
+% ID: T10C1B2-18-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-18-TN
+% Mức: NB
+Cho tập hợp $A=[3;8)$, $B=(-\infty;4)$. Tìm $A\cap B$
+\choice
+{\True [3;4)}
+{[3;4]}
+{(3;4)}
+{(3;4]}
+\loigiai{
+Tập hợp $A$ bao gồm các số thực lớn hơn hoặc bằng 3 và nhỏ hơn 8. Tập hợp $B$ bao gồm các số thực nhỏ hơn 4. Giao của hai tập hợp $A$ và $B$ là tập hợp các phần tử thuộc cả $A$ và $B$. Do đó, $A\cap B$ bao gồm các số thực lớn hơn hoặc bằng 3 và nhỏ hơn 4. Vậy $A\cap B=[3;4)$.
+}
+\end{ex}
+
+% ===== Câu 37 =====
+% ID: T10C1B2-19-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-19-TN
+% Mức: NB
+Tập hợp $X=(-\infty;2]\cap (-6;+\infty)$ là
+\choice
+{$(-6;2)$}
+{\True $(-6;2]$}
+{$[-\infty;2]$}
+{$(-6;+\infty)$}
+\loigiai{
+Ta có $X=(-\infty;2]\cap (-6;+\infty)$. Giao của hai tập hợp này là tập hợp các phần tử thuộc cả hai tập hợp. Do đó, $X=(-6;2]$.
+}
+\end{ex}
+
+% ===== Câu 38 =====
+% ID: T10C1B2-20-TN
+% Mức: NB
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-20-TN
+% Mức: NB
+Cho tập hợp $A=[1;5]$, phát biểu nào sau đây đúng?
+\choice
+{$A=\{x \in \mathbb{R} \mid 1 \lt  x \lt  5\}$}
+{\True $A=\{x \in \mathbb{R} \mid 1 \leq x \leq 5\}$}
+{$A=\{x \in \mathbb{R} \mid 1 \leq x \lt  5\}$}
+{$A=\{x \in \mathbb{R} \mid 1 \lt  x \leq 5\}$}
+\loigiai{
+Ta có $A=[1;5]=\{x \in \mathbb{R} \mid 1 \leq x \leq 5\}$. Đoạn $[1;5]$ bao gồm cả hai đầu mút $1$ và $5$, tức là $x$ thỏa mãn $1 \leq x \leq 5$. Vậy phát biểu đúng là phương án B.
+}
+\end{ex}
+
+% ===== Câu 39 =====
+% ID: T10C1B2-21-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-21-TN
+% Mức: NB
+Cho tập hợp $A=\{ x \in \mathbb{N} |~(x-1)(2x+4)=0 \}$. Tập $A$ được viết theo kiểu liệt kê là
+\choice
+{$\{ -1;4 \}$}
+{\True $\{ 1 \}$}
+{$\{ 1;-2 \}$}
+{$\{ -1;-2 \}$}
+\loigiai{
+Ta có
+  (x-1)(2x+4)=0
+ $\Leftrightarrow$ hoặc{&x-1=0
+&2x+4=0}
+ $\Leftrightarrow$ hoặc{&x=1
+&x=-2 $\notin\mathbb{N}$.} 
+ Vậy $A=\{ x \in \mathbb{N} |~ (x-1)(2x+4)=0 \} = \{ 1 \}$.
+}
+\end{ex}
+
+% ===== Câu 40 =====
+% ID: T10C1B2-22-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-22-TN
+% Mức: NB
+Cho $A=[-1 ; 3]$; $B=(2 ; 5)$. Tìm mệnh đề $\textbf{sai}$.
+\choice
+{$B \setminus A=(3 ; 5)$}
+{$A \cap B=(2 ; 3]$}
+{$A \setminus B=[-1 ; 2]$}
+{\True $A \cup B=[-1 ; 5]$}
+\loigiai{
+Ta có $A \cup B=[-1 ; 5)$.
+}
+\end{ex}
+
+% ===== Câu 41 =====
+% ID: T10C1B2-23-TN
+% Mức: TH
+\begin{ex}
+% ID: T10C1B2-23-TN
+% Mức: TH
+Cho $A\subset B$. Khẳng định nào sau đây là đúng?
+\choice
+{$A \cup B = A$}
+{\True $A \cap B = A$}
+{$A \setminus B = \emptyset$}
+{$B \setminus A = B$}
+\loigiai{
+Vì $A\subset B$ nên mọi phần tử của $A$ đều thuộc $B$. Do đó, tập hợp các phần tử thuộc cả $A$ và $B$ chính là tập $A$. Vậy $A \cap B = A$.
+}
+\end{ex}
+
+% ===== Câu 42 =====
+% ID: T10C1B2-24-TN
+% Mức: TH
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-24-TN
+% Mức: TH
+Cho $A=\{1;5\};B=\{1;3;5\}$. Chọn kết quả đúng trong các kết quả sau
+\choice
+{$A \cup B = \{1;3;5\}$}
+{$A \cap B = \{1\}$}
+{\True $A \subset B$}
+{$B \subset A$}
+\loigiai{
+Ta có $A=\{1;5\}$ và $B=\{1;3;5\}$.
+Kiểm tra các phương án:
+$A \cup B = \{1;3;5\}$ (Sai)
+$A \cap B = \{1;5\}$ (Sai)
+$A \subset B$ vì mọi phần tử của $A$ đều thuộc $B$ (Đúng)
+$B \subset A$ (Sai)
+Vậy phương án $C$ là đúng.
+}
+\end{ex}
+
+% ===== Câu 43 =====
+% ID: T10C1B2-25-TN
+% Mức: TH
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-25-TN
+% Mức: TH
+Tập hợp nào sau đây khi biểu diễn trên trục số sẽ tương ứng với phần còn trống trên hình vẽ bên?
+\choice
+{$[-3;5]$}
+{$(-3;5)$}
+{$[-3;5)$}
+{\True $(-3;5]$}
+\loigiai{
+Dựa vào hình vẽ, phần còn trống trên trục số tương ứng với khoảng $(-3;5]$, tức là tập hợp các số thực $x$ thỏa mãn $-3 \lt  x \leq 5$. Điểm $-3$ không thuộc tập hợp (dấu ngoặc tròn, vòng tròn rỗng trên trục số) và điểm $5$ thuộc tập hợp (dấu ngoặc vuông, vòng tròn đặc trên trục số). Vậy đáp án là $(-3;5]$.
+}
+\end{ex}
+
+% ===== Câu 44 =====
+% ID: T10C1B2-26-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-26-TN
+% Mức: VD
+Có bao nhiêu tập $A$ để $\left\{ m;n \right\}\subset A\subset \left\{ m;n;x;y \right\}$ ?
+\choice
+{$2$}
+{\True $4$}
+{$1$}
+{$3$}
+\loigiai{
+Vì $\{ m;n \} \subset A \subset \{ m;n;x;y \}$ nên $A$ có thể là một trong bốn tập hợp sau
+ $\{ m;n \};~\{m;n;x\};~\{ m;n;y \};~\{ m;n;x;y\}.$
+}
+\end{ex}
+
+% ===== Câu 45 =====
+% ID: T10C1B2-27-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-27-TN
+% Mức: VD
+Tập $A=\{0;1;2\}$ có bao nhiêu tập con có đúng $2$ phần tử?
+\choice
+{$6$}
+{$7$}
+{\True $3$}
+{$4$}
+\loigiai{
+Có $3$ tập con có đúng $2$ phần tử của tập $A=\left\{ 0;1;2 \right\}$ là $\left\{ 0;1 \right\}$, $\left\{ 0;2 \right\}$, $\left\{ 1;2 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 46 =====
+% ID: T10C1B2-28-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-28-TN
+% Mức: VD
+Cho tập hợp $B=\left\{ x\in\mathbb{Z}\mid x^4-11x^2+18=0\right\}$. Khi đó số phần tử của tập hợp $B$ là
+\choice
+{$1$}
+{\True $2$}
+{$3$}
+{$4$}
+\loigiai{
+Ta có phương trình $x^4-11x^2+18=0$.
+Đặt $t=x^2$, với $t \ge 0$. Phương trình trở thành $t^2-11t+18=0$.
+Phương trình này có hai nghiệm là $t=2$ và $t=9$.
+Trường hợp 1: $x^2=2$. Suy ra $x=\sqrt{2}$ hoặc $x=-\sqrt{2}$. Cả hai giá trị này đều không thuộc tập số nguyên $\mathbb{Z}$.
+Trường hợp 2: $x^2=9$. Suy ra $x=3$ hoặc $x=-3$. Cả hai giá trị này đều thuộc tập số nguyên $\mathbb{Z}$.
+Vậy tập hợp $B$ gồm các phần tử nguyên là $B=\{-3; 3\}$.
+Số phần tử của tập hợp $B$ là 2.
+}
+\end{ex}
+
+% ===== Câu 47 =====
+% ID: T10C1B2-29-TN
+% Mức: VD
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-29-TN
+% Mức: VD
+Cho tập $M=\{x \in \mathbb{R} \mid (x+3)(x-1) \geqslant 0\}$. Khi đó
+\choice
+{$M=(-\infty ;-1] \cup[3 ;+\infty)$}
+{\True $M=(-\infty ;-3] \cup[1 ;+\infty)$}
+{$M=[1 ;+\infty)$}
+{$M=(-\infty ;-3]$}
+\loigiai{
+Ta có $(x+3)(x-1) \geqslant 0 \Leftrightarrow x \leqslant -3$ hoặc $x \geqslant 1$.
+Vậy $M = (-\infty; -3] \cup [1; +\infty)$.
+}
+\end{ex}
+
+% ===== Câu 48 =====
+% ID: T10C1B2-30-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-30-TN
+% Mức: VD
+Trong các tập hợp sau, tập nào là tập rỗng?
+\choice
+{$A= \{ x \in \mathbb{R} |~ x^2+5x-6=0 \}$}
+{$B=\{ x \in \mathbb{Q} |~ 3x^2-5x+2=0 \}$}
+{\True $C=\{ x\in \mathbb{Z} |~ x^2+x-1=0 \}$}
+{$D=\{ x \in \mathbb{R} |~ x^2+5x-1=0 \}$}
+\loigiai{
+Ta có
+$x^2+5x-6=0
+ \Leftrightarrow hoặc{&x=1 \in \mathbb{R}\\&x=-6 \in \mathbb{R}}$. Vậy$A=\{ -6;1 \} \neq \varnothing$.
+$3x^2-5x+2=0
+ \Leftrightarrow hoặc{&x=1 \in \mathbb{Q}\\&x=\dfrac{2}{3} \in \mathbb{Q}}$. Vậy$B=\left\{ 1;\dfrac{2}{3} \right\} \neq \varnothing$.
+$x^2+x-1=0
+ \Leftrightarrow hoặc{&x=\dfrac{-1+\sqrt{5}}{2} \notin \mathbb{Z}\\&x=\dfrac{-1-\sqrt{5}}{2} \notin \mathbb{Z}}$. Vì$x \in \mathbb{Z}$nên$C=\varnothing$.
+$x^2+5x-1=0
+ \Leftrightarrow hoặc{&x=\dfrac{-5+\sqrt{29}}{2} \in \mathbb{R}\\&x=\dfrac{-5-\sqrt{29}}{2} \in \mathbb{R}}$. Vậy$D=\left\{ \dfrac{-5+\sqrt{29}}{2};\dfrac{-5-\sqrt{29}}{2} \right\} \neq \varnothing$.
+}
+\end{ex}
+
+% ===== Câu 49 =====
+% ID: T10C1B2-31-TN
+% Mức: VD
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-31-TN
+% Mức: VD
+Trong các tập hợp sau, tập hợp nào là tập hợp rỗng?
+\choice
+{$A=\{x \in \mathbb{Z}|~ x<1\}$}
+{$B=\left\{x \in \mathbb{Z} \mid 6 x^2-7 x+1=0\right\}$}
+{\True $C=\left\{x \in \mathbb{Q} \mid x^2-4 x+2=0\right\}$}
+{$D=\left\{x \in \mathbb{R} \mid x^2-4 x+3=0\right\}$}
+\loigiai{
+Xét tập hợp $C = \{x \in \mathbb{Q} \mid x^2 - 4x + 2 = 0\}$. Phương trình $x^2 - 4x + 2 = 0$ có hai nghiệm là $x = 2 + \sqrt{2}$ và $x = 2 - \sqrt{2}$. Cả hai nghiệm này đều không thuộc tập số hữu tỉ $\mathbb{Q}$. Do đó, tập hợp $C$ không chứa phần tử nào, tức là $C = \varnothing$.
+Xét tập hợp $A = \{x \in \mathbb{Z} \mid x \lt  1\}$. Tập hợp này chứa các số nguyên nhỏ hơn 1, ví dụ như $0, -1, -2, \dots$. Do đó, $A \neq \varnothing$.
+Xét tập hợp $B = \{x \in \mathbb{Z} \mid 6x^2 - 7x + 1 = 0\}$. Phương trình $6x^2 - 7x + 1 = 0$ có hai nghiệm là $x = 1$ và $x = \frac{1}{6}$. Trong hai nghiệm này, chỉ có $x = 1$ thuộc tập số nguyên $\mathbb{Z}$. Do đó, $B = \{1\}$, suy ra $B \neq \varnothing$.
+Xét tập hợp $D = \{x \in \mathbb{R} \mid x^2 - 4x + 3 = 0\}$. Phương trình $x^2 - 4x + 3 = 0$ có hai nghiệm là $x = 1$ và $x = 3$. Cả hai nghiệm này đều thuộc tập số thực $\mathbb{R}$. Do đó, $D = \{1; 3\}$, suy ra $D \neq \varnothing$.
+Vậy, tập hợp rỗng là tập hợp $C$.
+}
+\end{ex}
+
+% ===== Câu 50 =====
+% ID: T10C1B2-32-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-32-TN
+% Mức: VD
+Trong các tập sau đây, tập hợp nào có đúng hai tập hợp con?
+\choice
+{$\{x, y\}$}
+{\True $\{x\}$}
+{$\{0, x\}$}
+{$\{0; x, y\}$}
+\loigiai{
+$\{x, y\}$ có $2^2=4$ tập con.
+$\{x\}$ có $2^1=2$ tập con là $\{x\}$ và $\varnothing$.
+$\{0, x\}$ có $2^2=4$ tập con.
+$\{0; x, y\}$ có $z^3=8$ tập con.
+}
+\end{ex}
+
+% ===== Câu 51 =====
+% ID: T10C1B2-33-TN
+% Mức: VD
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-33-TN
+% Mức: VD
+Cho tập $A=\{ x\in \mathbb{N}|~(2-x)(x^2-3x-4)=0 \}$. Hỏi tập $A$ có bao nhiêu tập con ?
+\choice
+{$2$}
+{\True $4$}
+{$7$}
+{$8$}
+\loigiai{
+Ta có $(2-x)(x^2-3x-4)=0 \Leftrightarrow hoặc{
+ & x=2 \in \mathbb{N} \\
+ & x=-1 \notin \mathbb{N} \\
+ & x=4 \in \mathbb{N}.}$
+Vậy $A=\{ 2;4 \}$ nên $A$ có các tập con là $\{ 2\}$; $\{ 4\}$; $\{ 2;4\}$; $\varnothing$.
+}
+\end{ex}
+
+% ===== Câu 52 =====
+% ID: T10C1B2-34-TN
+% Mức: VD
+\dangbt{Xác định đường biên và miền nghiệm}
+\begin{ex}
+% ID: T10C1B2-34-TN
+% Mức: VD
+Cho tập $X=\{ x \in \mathbb{N} |~ (x^2-4)(x-1)=0\}$. Tính số phần tử của $X$.
+\choice
+{$1$}
+{$3$}
+{\True $2$}
+{$4$}
+\loigiai{
+Ta có
+  $(x^2-4)(x-1)=0\Leftrightarrow$ hoặc{&x^2-4=0
+&x-1=0}
+ $\Leftrightarrow$ hoặc{&x=2
+&x=-2 $\notin\mathbb{N}$
+&x=1.} 
+ Do $x\in \mathbb{N} \Rightarrow x \in \{ 2;1\}$. Vậy $X$ có $2$ phần tử.
+}
+\end{ex}
+
+% ===== Câu 53 =====
+% ID: T10C1B2-35-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-35-TN
+% Mức: VD
+Viết tập hợp $A=\{ x \in \mathbb{N} |~ (2x+1)(x^2-5x+6)=0\}$ bằng cách liệt kê.
+\choice
+{$\{ -1;2;3 \}$}
+{\True $\{ 2;3 \}$}
+{$\left\{ -\dfrac{1}{2};2;3 \right\}$}
+{$\{ -1;2 \}$}
+\loigiai{
+Ta có
+  (2x+1)$(x^2-5x+6)$=0 $\Leftrightarrow$
+ hoặc{&2x+1=0
+&x^2-5x+6=0} $\Leftrightarrow$
+ hoặc{&x=-$\dfrac{1}{2}$
+&x=2
+&x=3.} 
+ Do $x \in \mathbb{N} \Rightarrow A=\left\{ 2;3 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 54 =====
+% ID: T10C1B2-36-TN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-36-TN
+% Mức: VDC
+Cho hai tập hợp $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\},\,B=\{x\in \mathbb{Z}|3x+10\gt 1\}$. Khẳng định nào sau đây là đúng?
+\choice
+{$\mathrm{C}_B A=\{2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{-3;-2;-1;2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{0;1;2;3;4;\ldots\}$}
+{\True $\mathrm{C}_B A=\{-2;-1;2;3;4;\ldots\}$}
+\loigiai{
+Ta có $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\}$.
+$-5\le 2x-\dfrac{1}{3}\le 3-5+\dfrac{1}{3}\le 2x\le 3+\dfrac{1}{3}-\dfrac{14}{3}\le 2x\le \dfrac{10}{3}-\dfrac{7}{3}\le x\le \dfrac{5}{3}$
+Vì $x\in\mathbb{N}$ nên $x\in\{0; 1\}$. Vậy $A=\{0; 1\}$.
+
+Ta có $B=\{x\in \mathbb{Z}|3x+10\gt 1\}$.
+$3x\gt 1-103x\gt -9x\gt -3$
+Vì $x\in\mathbb{Z}$ nên $x\in\{-2; -1; 0; 1; 2; 3; \ldots\}$. Vậy $B=\{-2; -1; 0; 1; 2; 3; \ldots\}$.
+
+Ta cần tìm khẳng định đúng.
+Xét tập hợp $B \setminus A = \{x \mid x \in B \text{ và } x \notin A\}$.
+$B \setminus A = \{-2; -1; 0; 1; 2; 3; \ldots\} \setminus \{0; 1\} = \{-2; -1; 2; 3; \ldots\}$.
+Khẳng định $D$ là $B \setminus A = \{-2; -1; 2; 3; \ldots\}$.
+}
+\end{ex}
+
+% ===== Câu 55 =====
+% ID: T10C1B2-37-TN
+% Mức: VDC
+\dangbt{Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn}
+\begin{ex}
+% ID: T10C1B2-37-TN
+% Mức: VDC
+Cho hai tập hợp $A=\{x\in \mathbb{N}| 2x-9\le 0 .\}$, $B=\{x\in \mathbb{Z}| 2x^2-3x+1=0 .\}$. Xác định $B\setminus A$.
+\choice
+{$\mathbb{Z}$}
+{$B=\{1\}$}
+{\True $\varnothing$}
+{$A=\{0;1;2;3;4\}$}
+\loigiai{
+Ta có $2x-9\le 0\Leftrightarrow x\le \dfrac{9}{2}$, do $x\in \mathbb{N}$ nên $A=\{0;1;2;3;4\}$.
+Lại có $2x^2-3x+1=0\Leftrightarrow (2x-1)(x-1)=0\Leftrightarrow x=\dfrac{1}{2}\notin \mathbb{Z}$ hoặc $x=1\in \mathbb{Z}$ nên $B=\{1\}$.
+Do đó $B\setminus A=\{1\}\setminus \{0;1;2;3;4\}=\varnothing$.
+}
+\end{ex}
+
+% ===== Câu 56 =====
+% ID: T10C1B2-38-TN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-38-TN
+% Mức: VDC
+Liệt kê các phần tử của tập hợp $A=\{ x \in \mathbb{Z}|~ (6x^2-7x+1)(x^2-4)=0\}$ ta được
+\choice
+{$A=\left\{\dfrac{1}{6};\dfrac{1}{2};2 \right\}$}
+{\True $A=\{-2;1;2\}$}
+{$A=\left\{-2;\dfrac{1}{6};1;2 \right\}$}
+{$A=\{1;2\}$}
+\loigiai{
+Xét phương trình
+  $(6x^2-7x+1)(x^2-4)=0\Leftrightarrow
+ hoặc{&6x^2-7x+1=0
+&x^2-4=0} \Leftrightarrowhoặc{&x=1$\in\mathbb{Z}$&x=$\dfrac{1}{6}\notin\mathbb{Z}$&x = 2$\in\mathbb{Z}$& x=-2$\in\mathbb{Z}$.} 
+ Vậy$ A=\{-2;1;2\}.
+}
+\end{ex}

@@ -1,0 +1,163 @@
+% Môn: Toán
+% Lớp: 12
+% Chương: Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số
+% Bài: OTC1-De2
+% Số câu: 8
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% OTC1-De2
+
+% ===== Câu 1 =====
+% ID: T12C1BX-01-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1BX-01-DS
+% Mức: TH
+Cho hàm số $y=f(x)$ xác định trên $\mathbb R$ và có đồ thị của hàm số $y=f'(x)$ là đường cong ở hình vẽ dưới.
+\choiceTF
+{Hàm số $f(x)$ đạt cực đại tại $x=0$}
+{Hàm số $f(x)$ nghịch biến trong khoảng $(0;2)$}
+{\True Hàm số $f(x)$ có $2$ khoảng đồng biến và $2$ khoảng nghịch biến}
+{\True Hàm số $f(x)$ có $3$ điểm cực trị}
+\loigiai{
+\begin{itemchoice}
+\item (Sai) Hàm số $f(x)$ đạt cực đại tại $x=0$. (Vì): Tại $x=0$, hàm $f'(x)$ đạt cực đại nhưng $f(x)$ không đạt cực đại
+\item (Sai) Hàm số $f(x)$ nghịch biến trong khoảng $(0;2)$. (Vì): Trong khoảng $(0;2)$, đạo hàm có khoảng dương và âm nên $f(x)$ không đồng biến
+\item (Đúng) Hàm số $f(x)$ có $2$ khoảng đồng biến và $2$ khoảng nghịch biến. (Vì): Hàm số $f'(x)$ có $2$ khoảng âm và $2$ khoảng dương nên hàm số $f(x)$ có $2$ khoảng đồng biến và $2$ khoảng nghịch biến
+\item (Đúng) Hàm số $f(x)$ có $3$ điểm cực trị. (Vì): Ta thấy $f'(x)$ đổi dấu $3$ lần nên đồ thị hàm số $y=f(x)$ có ba cực trị
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T12C1BX-01-TN
+% Mức: VD
+\begin{ex}
+% ID: T12C1BX-01-TN
+% Mức: VD
+Cho hàm số $y=\dfrac{1}{3}x^3-\dfrac{1}{2}x^2-12x-1$. Mệnh đề nào sau đây đúng?
+\choice
+{Hàm số nghịch biến trên khoảng $(-3;+\infty)$}
+{Hàm số đồng biến trên khoảng $(-\infty;4)$}
+{Hàm số đồng biến trên khoảng $(-3;4)$}
+{\True Hàm số đồng biến trên khoảng $(4;+\infty)$}
+\loigiai{
+Để xác định khoảng đồng biến và nghịch biến của hàm số $y = \frac{1}{3}x^3 - \frac{1}{2}x^2 - 12x - 1$, ta cần tính đạo hàm của hàm số. Đạo hàm là $y' = x^2 - x - 12$. Để tìm các điểm tới hạn, ta giải phương trình $y' = 0$, tức là $x^2 - x - 12 = 0$. Phương trình này có nghiệm $x = -3$ và $x = 4$. Ta lập bảng xét dấu của $y'$ để xác định khoảng đồng biến và nghịch biến của hàm số. Xét dấu của $y'$ trên các khoảng $(-\infty, -3)$, $(-3, 4)$ và $(4, +\infty)$, ta thấy:
+ 
+ - Trên khoảng $(-\infty, -3)$, $y' \gt  0$ nên hàm số đồng biến.
+ - Trên khoảng $(-3, 4)$, $y' \lt  0$ nên hàm số nghịch biến.
+ - Trên khoảng $(4, +\infty)$, $y' \gt  0$ nên hàm số đồng biến.
+ 
+ A. Hàm số nghịch biến trên khoảng $(-3;+\infty)$: Sai. Trên khoảng $(-3, 4)$ hàm số nghịch biến, nhưng trên khoảng $(4, +\infty)$ hàm số đồng biến.
+ 
+ B. Hàm số đồng biến trên khoảng $(-\infty;4)$: Sai. Trên khoảng $(-\infty, -3)$ hàm số đồng biến, nhưng trên khoảng $(-3, 4)$ hàm số nghịch biến.
+ 
+ C. Hàm số đồng biến trên khoảng $(-3;4)$: Sai. Trên khoảng $(-3, 4)$ hàm số nghịch biến.
+ 
+ D. Hàm số đồng biến trên khoảng $(4;+\infty)$: Đúng. Trên khoảng này, $y' \gt  0$ nên hàm số đồng biến.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: T12C1BX-02-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1BX-02-DS
+% Mức: TH
+Cho hàm số $y=f(x)$ xác định trên $\mathbb{R}$ và có bảng biến thiên như hình vẽ. Xét tính đúng, sai của các mệnh đề sau.
+\choiceTF
+{\True Hàm số có $2$ cực trị}
+{\True Hàm số nghịch biến trên khoảng $(-1;1)$}
+{Hàm số đồng biến trên khoảng $(1;+\infty)$}
+{\True Hàm số $f(1-x)$ đồng biến trên khoảng $(-1;1)$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Hàm số có $2$ cực trị. (Vì): Hàm số đạt cực đại tại $x=-1$ và đạt cực tiểu tại $x=1$
+\item (Đúng) Hàm số nghịch biến trên khoảng $(-1;1)$.
+\item (Sai) Hàm số đồng biến trên khoảng $(1;+\infty)$. (Vì): Hàm số đồng biến trên mỗi khoảng $(-\infty;-1)$, $(1;+\infty)$
+\item (Đúng) Hàm số $f(1-x)$ đồng biến trên khoảng $(-1;1)$. (Vì): ựa vào bảng biến thiên của hàm số $y=f(x)$ ta có:
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: T12C1BX-02-TLN
+% Mức: VD
+\begin{ex}
+% ID: T12C1BX-02-TLN
+% Mức: VD
+Tìm giá trị của tham số $m$ để hàm số $f(x)=(m^2-3)x-2m\ln{x}$ đạt cực tiểu tại điểm $x_0=1$.
+\shortans{$3$}
+\loigiai{
+Ta có $f'(x)=m^2-3-2m \cdot \dfrac{1}{x}$ và $f''(x)=2m \cdot \dfrac{1}{x^2}$. Nhận thấy hàm số có đạo hàm tại $x_0=1$. Do đó, hàm số đạt cực trị tại $x_0=1$ khi và chỉ khi $f'(1)=0\Leftrightarrow m^2-3-2m=0\Leftrightarrow hoặc{ &m=-1 &m=3.}$ Khi $m=-1$ ta thấy $f''(1) \lt  0$, do đó hàm số đạt cực đại tại $x_0=1$, loại. Khi $m=3$ ta thấy $f''(1) \gt  0$, do đó hàm số đạt cực tiểu tại $x_0=1$, nhận.
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: T12C1BX-02-TN
+% Mức: VD
+\begin{ex}
+% ID: T12C1BX-02-TN
+% Mức: VD
+Các khoảng đồng biến của hàm số $y=x^4-8x^2-4$ là
+\choice
+{$(-\infty;-2)$ và $(2;+\infty)$}
+{$(-2;0)$ và $(0;+\infty)$}
+{$(-\infty;-2)$ và $(0;2)$}
+{\True $(-2;0)$ và $(2;+\infty)$}
+\loigiai{
+Ta có tập xác định của hàm số là $\mathscr{D}=\mathbb{R}$ và $y'=4x^3-16x$ nên $y'=0\Leftrightarrow hoặc{&x=0 &x=-2 &x=2.}$ Khi đó $y'\ge 0\Leftrightarrow 4x^3-16x\ge 0\Leftrightarrow hoặc{&x\ge 0 &-2\le x\le 0.}$ Vậy hàm số đồng biến trên các khoảng $(-2;0)$ và $(2;+\infty)$.
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: T12C1BX-03-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1BX-03-DS
+% Mức: TH
+Đạo hàm $f'(x)$ của hàm số $y=f(x)$ có đồ thị như hình bên dưới. Xét tính đúng sai của các mệnh đề sau
+\choiceTF
+{Hàm số đạt cực tiểu tại $x=-1$}
+{\True Hàm số đồng biến trên $(-1;2)$ và $(4;5)$}
+{Hàm số nghịch biến trên $(2;4)$}
+{\True Hàm số $f(x+2)$ đạt cực đại tại $x=0$}
+\loigiai{
+\begin{itemchoice}
+\item (Sai) Hàm số đạt cực tiểu tại $x=-1$. (Vì): Hàm số đạt cực tiểu tại $x=-1$, $x=4$
+\item (Đúng) Hàm số đồng biến trên $(-1;2)$ và $(4;5)$.
+\item (Sai) Hàm số nghịch biến trên $(2;4)$. (Vì): Hàm số nghịch biến trên $(-2;-1)$ và $(2;4)$
+\item (Đúng) Hàm số $f(x+2)$ đạt cực đại tại $x=0$. (Vì): Hàm số $f(x)$ đạt cực đại tại $x=2$. Suy ra hàm số $f(x+2)$ đạt cực đại tại $x=0$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: T12C1BX-03-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T12C1BX-03-TLN
+% Mức: VDC
+Có bao nhiêu giá trị nguyên của tham số $m$ để hàm số $y=\dfrac 1{3} x ^ 3-(m-1) x ^ 2-(m-3) x+2024m$ đồng biến trên các khoảng $(-3;-1)$ và $(0;3)$?
+\shortans{$4$}
+\loigiai{
+Ta có $y'=x^2-2(m-1)x-(m-3)$ với biệt thức $\Delta'=(m-1)^2+m-3=m^2-m-2$. Nếu hàm số đã cho đồng biến trên các khoảng $(-3;-1)$ và $(0;3)$ thì $y'\geq 0\;\; \forall x\in (-3;-1)\cup (0;3)$. Do tính liên tục của $y'$ ta suy ra $\left\{ \begin{aligned} y'(-1)\geq 0 & y'(-3)\geq 0 & y'(0)\geq 0 & y'(3)\geq 0 \end{aligned} \right.\Leftrightarrow \left\{ \begin{aligned} m+2\geq 0 & 5m+6\geq 0 & 3-m\geq 0 & 18-7m\geq 0 \end{aligned} \right.\Leftrightarrow-\dfrac{6}{5} \leq m\leq \dfrac{18}{7}.$ Vì $m$ là số nguyên nên $-1\leq m\leq 2$, khi đó $\Delta'=m^2-m-2\leq 0$ suy ra $y'\geq 0\quad \forall x\in \mathbb{R}$. Vậy có $4$ giá trị nguyên của $m$ thỏa mãn đề bài.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: T12C1BX-03-TN
+% Mức: VDC
+\begin{ex}
+% ID: T12C1BX-03-TN
+% Mức: VDC
+Tất cả các giá trị của tham số $m$ sao cho hàm số $y=-x^3-3mx^2+4m-1$ đồng biến trên khoảng $(0;4)$ là
+\choice
+{$-2\leqslant m \lt  0$}
+{$m\leqslant-4$}
+{\True $m\leqslant-2$}
+{$m \gt  0$}
+\loigiai{
+Ta có $y'=-3x^2-6mx$. Cho $y'=0\Leftrightarrow \left[\begin{aligned} &x=0 &x=-2m. \end{aligned}\right.$ Nếu $m=0$ thì hàm số nghịch biến trên $\mathbb{R}$ (không thỏa mãn yêu cầu bài toán). Từ đó $m\neq 0$. Giả sử $\{x_1;x_2\}=\{0;-2m\}$, với $m<0$ và $x_1\lt  x_2$. Ta có bảng biến thiên của hàm số Như vậy hàm số nghịch biến trên khoảng $(0;4)$. $\Leftrightarrow x_1\leqslant 0\lt  4\leqslant x_2\Leftrightarrow \left\{\begin{aligned} & x_1=0 &x_2=-2m \geqslant 4\end{aligned}\right. \Leftrightarrow m \leqslant-2.$
+}
+\end{ex}

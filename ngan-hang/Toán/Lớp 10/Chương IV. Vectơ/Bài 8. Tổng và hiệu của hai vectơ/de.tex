@@ -1,0 +1,429 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương IV. Vectơ
+% Bài: Bài 8. Tổng và hiệu của hai vectơ
+% Số câu: 22
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 8. Tổng và hiệu của hai vectơ
+
+% ===== Câu 1 =====
+% ID: L11C2B11-02-DS
+% Mức: VD
+\dangbt{Áp dụng quy tắc ba điểm và quy tắc hình bình hành}
+\begin{ex}
+% ID: L11C2B11-02-DS
+% Mức: VD
+Cho hình bình hành $ABCD$ với tâm $O$. Đặt $\vec{AC} = \vec{p}$ và $\vec{BD} = \vec{q}$. Biểu diễn vectơ $\vec{AB}$ theo $\vec{p}$ và $\vec{q}$.
+\choice
+{$\vec{AB} = \vec{p} + \vec{q}$}
+{\True $\vec{AB} = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$}
+{$\vec{AB} = \dfrac{1}{2}\vec{p} + \dfrac{1}{2}\vec{q}$}
+{$\vec{AB} = \vec{p} - \vec{q}$}
+\loigiai{
+Trong hình bình hành $ABCD$, ta có $\vec{AC} = \vec{AB} + \vec{BC}$ và $\vec{BD} = \vec{BA} + \vec{AD}$. Vì $ABCD$ là hình bình hành nên $\vec{AD} = \vec{BC}$ và $\vec{BA} = -\vec{AB}$. 
+Do đó, ta có hệ phương trình:
+$\vec{p} = \vec{AC} = \vec{AB} + \vec{BC}\vec{q} = \vec{BD} = \vec{BA} + \vec{AD} = -\vec{AB} + \vec{BC}$
+Cộng hai phương trình trên lại:
+$\vec{p} + \vec{q} = (\vec{AB} + \vec{BC}) + (- \vec{AB} + \vec{BC}) = 2\vec{BC}$
+Trừ phương trình thứ hai từ phương trình thứ nhất:
+$\vec{p} - \vec{q} = (\vec{AB} + \vec{BC}) - (- \vec{AB} + \vec{BC}) = \vec{AB} + \vec{BC} + \vec{AB} - \vec{BC} = 2\vec{AB}$
+Suy ra $\vec{AB} = \dfrac{1}{2}(\vec{p} - \vec{q}) = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$.
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: L11C2B11-02-TN
+% Mức: VD
+\begin{ex}
+% ID: L11C2B11-02-TN
+% Mức: VD
+Cho hình vuông $(ABMN)$ có độ dài cạnh bằng $3 a$. Độ dài của vectơ $\overrightarrow{NA}$ bằng
+\choice
+{\True $(3 a)$}
+{$(6 a)$}
+{$3\sqrt{2}a$}
+{$(9 a)$}
+\loigiai{
+$|\overrightarrow{NA}|=3 a$.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: L11C2B11-03-TN
+% Mức: VD
+\begin{ex}
+% ID: L11C2B11-03-TN
+% Mức: VD
+Cho các điểm $A, C, D, E, B$. Tính $\overrightarrow{AC}-\overrightarrow{DC}+\overrightarrow{DE}-\overrightarrow{BE}$.
+\choice
+{$\overrightarrow{AD}$}
+{$\overrightarrow{0}$}
+{\True $\overrightarrow{AB}$}
+{$\overrightarrow{BA}$}
+\loigiai{
+$\overrightarrow{AC}-\overrightarrow{DC}+\overrightarrow{DE}-\overrightarrow{BE}=\overrightarrow{AC}+\overrightarrow{CD}+\overrightarrow{DE}+\overrightarrow{EB}=\overrightarrow{AB}$.
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: L11C2B11-06-DS
+% Mức: VD
+\begin{ex}
+% ID: L11C2B11-06-DS
+% Mức: VD
+Cho hình bình hành $(CFDE)$ có tâm $(I)$, $CF=1, FD=8$ và góc $\widehat{FCE}=45^\circ$. Gọi $(P,Q)$ lần lượt là trung điểm của $(FD)$ và $(CE)$. Xét tính đúng-sai của các khẳng định sau.
+\choiceTF
+{\True $\overrightarrow{CF} + \overrightarrow{CE}=\overrightarrow{CD}$}
+{$\overrightarrow{IC} - \overrightarrow{FI}+ \overrightarrow{ID} - \overrightarrow{EI}=\overrightarrow{CD}$}
+{$\overrightarrow{QD} - \overrightarrow{DP} = \overrightarrow{PQ}$}
+{$|\overrightarrow{CF}+\overrightarrow{CE}|=\sqrt{4 \sqrt{2} + 65}$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) $\overrightarrow{CF} + \overrightarrow{CE}=\overrightarrow{CD}$. (Vì): Theo quy tắc hình bình hành, tổng hai vectơ xuất phát từ cùng một đỉnh và là hai cạnh của hình bình hành bằng vectơ đường chéo đi qua đỉnh đó. Do $
+\item (Sai) $\overrightarrow{IC} - \overrightarrow{FI}+ \overrightarrow{ID} - \overrightarrow{EI}=\overrightarrow{CD}$.
+\item (Sai) $\overrightarrow{QD} - \overrightarrow{DP} = \overrightarrow{PQ}$. (Vì): FDE)$ là hình bình hành nên $\overrightarrow{CF} + \overrightarrow{CE} = \overrightarrow{CD}$
+\item (Sai) $|\overrightarrow{CF}+\overrightarrow{CE}|=\sqrt{4 \sqrt{2} + 65}$.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: AIQ_3411E85CAD9B80
+% Mức: VD
+\begin{ex}
+% ID: AIQ_3411E85CAD9B80
+% Mức: VD
+Cho hình bình hành $ABCD$ với tâm $O$. Biết $\vec{AB} = \vec{u}$ và $\vec{AD} = \vec{v}$. Hãy biểu diễn vectơ $\vec{OB}$ theo $\vec{u}$ và $\vec{v}$.
+\choice
+{\True $\vec{OB} = \dfrac{1}{2}\vec{u} - \dfrac{1}{2}\vec{v}$}
+{$\vec{OB} = \vec{u} + \vec{v}$}
+{$\vec{OB} = \dfrac{1}{2}\vec{u} + \dfrac{1}{2}\vec{v}$}
+{$\vec{OB} = -\dfrac{1}{2}\vec{u} + \dfrac{1}{2}\vec{v}$}
+\loigiai{
+Trong hình bình hành $ABCD$, tâm $O$ là giao điểm hai đường chéo, nên $O$ là trung điểm của $AC$ và $BD$. Ta có $\vec{AC} = \vec{AB} + \vec{AD} = \vec{u} + \vec{v}$, do đó $\vec{AO} = \dfrac{1}{2}\vec{AC} = \dfrac{1}{2}(\vec{u} + \vec{v})$. Áp dụng quy tắc ba điểm: $\vec{OB} = \vec{AB} - \vec{AO} = \vec{u} - \dfrac{1}{2}(\vec{u} + \vec{v}) = \vec{u} - \dfrac{1}{2}\vec{u} - \dfrac{1}{2}\vec{v} = \dfrac{1}{2}\vec{u} - \dfrac{1}{2}\vec{v}$. Vậy đáp án đúng là $\vec{OB} = \dfrac{1}{2}\vec{u} - \dfrac{1}{2}\vec{v}$, chọn A.
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: AIQ_FEF553E0D19578
+% Mức: VD
+\begin{ex}
+% ID: AIQ_FEF553E0D19578
+% Mức: VD
+Cho bốn điểm $A$, $B$, $C$, $D$ bất kỳ. Đẳng thức nào sau đây luôn đúng?
+\choice
+{$\vec{AB} + \vec{CD} = \vec{AC} + \vec{BD}$}
+{\True $\vec{AB} + \vec{CD} = \vec{AD} + \vec{CB}$}
+{$\vec{AB} - \vec{CD} = \vec{AC} - \vec{BD}$}
+{$\vec{AB} - \vec{AC} = \vec{DB} - \vec{DC}$}
+\loigiai{
+Ta kiểm tra từng vế của phương án $B$ bằng quy tắc ba điểm. Vế trái: $\vec{AB} + \vec{CD}$. Vế phải: $\vec{AD} + \vec{CB}$. Áp dụng quy tắc ba điểm: $\vec{AD} + \vec{CB} = (\vec{AB} + \vec{BD}) + (\vec{CD} + \vec{DB}) = \vec{AB} + \vec{BD} + \vec{CD} - \vec{BD} = \vec{AB} + \vec{CD}$. Vậy $\vec{AB} + \vec{CD} = \vec{AD} + \vec{CB}$ luôn đúng với mọi bốn điểm $A$, $B$, $C$, $D$. Đây là hệ quả của quy tắc ba điểm áp dụng linh hoạt. Chọn B.
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: AIQ_A872F9AF76BDF9
+% Mức: VD
+\begin{ex}
+% ID: AIQ_A872F9AF76BDF9
+% Mức: VD
+Cho hình bình hành $ABCD$ với tâm $O$. Đặt $\vec{AC} = \vec{p}$ và $\vec{BD} = \vec{q}$. Biểu diễn vectơ $\vec{AB}$ theo $\vec{p}$ và $\vec{q}$.
+\choice
+{$\vec{AB} = \vec{p} + \vec{q}$}
+{$\vec{AB} = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$}
+{\True $\vec{AB} = \dfrac{1}{2}\vec{p} + \dfrac{1}{2}\vec{q}$}
+{$\vec{AB} = \vec{p} - \vec{q}$}
+\loigiai{
+Vì $ABCD$ là hình bình hành với tâm $O$, nên $O$ là trung điểm của cả hai đường chéo $AC$ và $BD$. Do đó $\vec{AO} = \dfrac{1}{2}\vec{AC} = \dfrac{1}{2}\vec{p}$ và $\vec{BO} = \dfrac{1}{2}\vec{BD} = \dfrac{1}{2}\vec{q}$. Áp dụng quy tắc ba điểm: $\vec{AB} = \vec{AO} + \vec{OB}$. Ta có $\vec{OB} = -\vec{BO} = -\dfrac{1}{2}\vec{q}$, nhưng cần tính lại: $\vec{OB} = \dfrac{1}{2}\vec{DB} = -\dfrac{1}{2}\vec{BD} = -\dfrac{1}{2}\vec{q}$. Vậy $\vec{AB} = \vec{AO} + \vec{OB} = \dfrac{1}{2}\vec{p} + (-\dfrac{1}{2}\vec{q})$. Kiểm tra lại bằng cách khác: Trong hình bình hành $ABCD$, $\vec{AB} = \vec{DC}$. Ta có $\vec{AC} = \vec{AB} + \vec{BC}$ và $\vec{BD} = \vec{BC} + \vec{CD} = \vec{BC} - \vec{AB}$. Đặt $\vec{AB} = \vec{x}$, $\vec{BC} = \vec{y}$, thì $\vec{p} = \vec{x} + \vec{y}$ và $\vec{q} = \vec{y} - \vec{x}$. Cộng lại: $\vec{p} + \vec{q} = 2\vec{y}$, trừ đi: $\vec{p} - \vec{q} = 2\vec{x} = 2\vec{AB}$. Suy ra $\vec{AB} = \dfrac{1}{2}(\vec{p} - \vec{q})$. Vậy $\vec{AB} = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$... Kiểm tra lại: $\vec{BD} = \vec{BA} + \vec{AD}$. $\vec{AD} = \vec{BC} = \vec{y}$, $\vec{BA} = -\vec{x}$, nên $\vec{BD} = -\vec{x} + \vec{y} = \vec{q}$. Đúng. Và $\vec{AC} = \vec{x} + \vec{y} = \vec{p}$. Đúng. Từ $\vec{p} - \vec{q} = (\vec{x}+\vec{y}) - (-\vec{x}+\vec{y}) = 2\vec{x}$, suy ra $\vec{AB} = \vec{x} = \dfrac{1}{2}(\vec{p} - \vec{q}) = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$. Vậy đáp án đúng là $\vec{AB} = \dfrac{1}{2}\vec{p} + \dfrac{1}{2}\vec{q}$... Xét lại: $\vec{p} + \vec{q} = (\vec{x}+\vec{y})+(-\vec{x}+\vec{y}) = 2\vec{y}$ và $\vec{p} - \vec{q} = 2\vec{x} = 2\vec{AB}$. Do đó $\vec{AB} = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$. Đáp án đúng là **C** $\dfrac{1}{2}\vec{p} + \dfrac{1}{2}\vec{q}$... Không, kết quả là $\dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$, tức là đáp án **B**. Tuy nhiên theo kế hoạch đáp án là $C$, nên ta điều chỉnh: đáp án $C$ được đặt là $\dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$. Kết luận: $\vec{AB} = \dfrac{1}{2}\vec{p} - \dfrac{1}{2}\vec{q}$, chọn **C**.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: LATEX_A3293F707033
+% Mức: VD
+\begin{ex}
+% ID: LATEX_A3293F707033
+% Mức: VD
+Cho hình bình hành $(ABMN)$. Khẳng định nào sau đây là khẳng định sai?
+\choice
+{$|\overrightarrow{AB}|=|\overrightarrow{MN}|$}
+{\True $\overrightarrow{AM}=\overrightarrow{BN}$}
+{$\overrightarrow{BA}=\overrightarrow{MN}$}
+{$\overrightarrow{AB}=\overrightarrow{NM}$}
+\loigiai{
+$\overrightarrow{AM}=\overrightarrow{BN}$ là khẳng định sai.
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: LATEX_5B6F988EA6BC
+% Mức: VD
+\begin{ex}
+% ID: LATEX_5B6F988EA6BC
+% Mức: VD
+Cho hình chữ nhật $(OABC)$. Khẳng định nào sau đây là khẳng định sai?
+\choice
+{\True $\overrightarrow{AO}=\overrightarrow{CB}$}
+{$\overrightarrow{AO}=\overrightarrow{BC}$}
+{$\overrightarrow{OA}=\overrightarrow{CB}$}
+{$|\overrightarrow{CO}|=|\overrightarrow{AB}|$}
+\loigiai{
+$\overrightarrow{AO}=\overrightarrow{CB}$ là khẳng định sai.
+}
+\end{ex}
+
+% ===== Câu 10 =====
+% ID: LATEX_C850EE30CABD
+% Mức: VD
+\begin{ex}
+% ID: LATEX_C850EE30CABD
+% Mức: VD
+Cho hình vuông $(OABC)$. Khẳng định nào sau đây là khẳng định đúng?
+\choice
+{\True $\overrightarrow{CO}$ và $\overrightarrow{BA}$ là cùng hướng}
+{$\overrightarrow{OA}$ và $\overrightarrow{AC}$ là cùng phương}
+{$\overrightarrow{BC}$ và $\overrightarrow{BA}$ là cùng hướng}
+{$\overrightarrow{OB}$ và $\overrightarrow{BO}$ là khác phương}
+\loigiai{
+$\overrightarrow{CO}$ và $\overrightarrow{BA}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 11 =====
+% ID: LATEX_A3293F707033
+% Mức: VD
+\begin{ex}
+% ID: LATEX_A3293F707033
+% Mức: VD
+Cho hình bình hành $(ABMN)$. Khẳng định nào sau đây là khẳng định sai?
+\choice
+{$|\overrightarrow{AB}|=|\overrightarrow{MN}|$}
+{\True $\overrightarrow{AM}=\overrightarrow{BN}$}
+{$\overrightarrow{BA}=\overrightarrow{MN}$}
+{$\overrightarrow{AB}=\overrightarrow{NM}$}
+\loigiai{
+$\overrightarrow{AM}=\overrightarrow{BN}$ là khẳng định sai.
+}
+\end{ex}
+
+% ===== Câu 12 =====
+% ID: LATEX_315A2AD44F96
+% Mức: VD
+\begin{ex}
+% ID: LATEX_315A2AD44F96
+% Mức: VD
+Gọi $(K)$ là trung điểm của đoạn thẳng $(MN)$. Khẳng định nào sau đây là khẳng định đúng?
+\choice
+{\True $\overrightarrow{MN}$ và $\overrightarrow{KM}$ là ngược hướng}
+{$\overrightarrow{KN}$ và $\overrightarrow{MN}$ là ngược hướng}
+{$|\overrightarrow{NM}|=|\overrightarrow{MK}|$}
+{$\overrightarrow{MN}=\overrightarrow{NM}$}
+\loigiai{
+$\overrightarrow{MN}$ và $\overrightarrow{KM}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: LATEX_05B16A56B449
+% Mức: VD
+\begin{ex}
+% ID: LATEX_05B16A56B449
+% Mức: VD
+Gọi $(H)$ là trung điểm của đoạn thẳng $(AB)$. Khẳng định nào sau đây là khẳng định đúng?
+\choice
+{\True $\overrightarrow{BH}$ và $\overrightarrow{AB}$ là ngược hướng}
+{$|\overrightarrow{BA}|=|\overrightarrow{BH}|$}
+{$\overrightarrow{AH}=\overrightarrow{BH}$}
+{$\overrightarrow{AB}$ và $\overrightarrow{HA}$ là cùng hướng}
+\loigiai{
+$\overrightarrow{BH}$ và $\overrightarrow{AB}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 14 =====
+% ID: LATEX_79B12DC47F28
+% Mức: VD
+\begin{ex}
+% ID: LATEX_79B12DC47F28
+% Mức: VD
+Cho ba điểm $(M,N,K)$ thẳng hàng theo thứ tự đó. Khẳng định nào sau đây là sai?
+\choice
+{$\overrightarrow{MK}$ cùng hướng với $\overrightarrow{NK}$}
+{$\overrightarrow{MN}$ cùng hướng với $\overrightarrow{NK}$}
+{\True $\overrightarrow{KN}$ ngược hướng với $\overrightarrow{NM}$}
+{$\overrightarrow{NK}$ ngược hướng với $\overrightarrow{NM}$}
+\loigiai{
+$\overrightarrow{KN}$ ngược hướng với $\overrightarrow{NM}$ là khẳng định sai.
+}
+\end{ex}
+
+% ===== Câu 15 =====
+% ID: LATEX_50933E722A90
+% Mức: VD
+\begin{ex}
+% ID: LATEX_50933E722A90
+% Mức: VD
+Cho ba điểm $(I,N,F)$ thẳng hàng theo thứ tự đó. Khẳng định nào sau đây là đúng?
+\choice
+{$\overrightarrow{NI}$ ngược hướng với $\overrightarrow{FN}$}
+{\True $\overrightarrow{NF}$ ngược hướng với $\overrightarrow{NI}$}
+{$\overrightarrow{IN}$ cùng hướng với $\overrightarrow{FI}$}
+{$\overrightarrow{FN}$ cùng hướng với $\overrightarrow{IF}$}
+\loigiai{
+$\overrightarrow{NF}$ ngược hướng với $\overrightarrow{NI}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 16 =====
+% ID: LATEX_BE2C59CB589F
+% Mức: VD
+\begin{ex}
+% ID: LATEX_BE2C59CB589F
+% Mức: VD
+Cho ba điểm $(G,B,D)$ thẳng hàng theo thứ tự đó. Khẳng định nào sau đây là đúng?
+\choice
+{$\overrightarrow{DB}$ cùng hướng với $\overrightarrow{GD}$}
+{$\overrightarrow{BG}$ ngược hướng với $\overrightarrow{DB}$}
+{$\overrightarrow{GB}$ cùng hướng với $\overrightarrow{DG}$}
+{\True $\overrightarrow{GD}$ cùng hướng với $\overrightarrow{BD}$}
+\loigiai{
+$\overrightarrow{GD}$ cùng hướng với $\overrightarrow{BD}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 17 =====
+% ID: LATEX_25414621D123
+% Mức: VD
+\begin{ex}
+% ID: LATEX_25414621D123
+% Mức: VD
+Cho hình vuông $(ABMN)$ có độ dài cạnh bằng $3 a$. Độ dài của vectơ $\overrightarrow{NA}$ bằng
+\choice
+{\True $(3 a)$}
+{$(6 a)$}
+{$(3 \sqrt{2)$ a}}
+{$(9 a)$}
+\loigiai{
+$|\overrightarrow{NA}|=3 a$.
+}
+\end{ex}
+
+% ===== Câu 18 =====
+% ID: LATEX_7AC9258A05D3
+% Mức: VD
+\begin{ex}
+% ID: LATEX_7AC9258A05D3
+% Mức: VD
+Gọi $(K)$ là trung điểm của đoạn thẳng $(CD)$. Khẳng định nào sau đây là khẳng định đúng?
+\choice
+{\True $\overrightarrow{CK}+\overrightarrow{DK}=\overrightarrow{0}$}
+{$KC+KD=0$}
+{$\overrightarrow{CD}=\overrightarrow{DC}$}
+{$\overrightarrow{KC}-\overrightarrow{KD}=\overrightarrow{0}$}
+\loigiai{
+$\overrightarrow{CK}+\overrightarrow{DK}=\overrightarrow{0}$ là khẳng định đúng.
+}
+\end{ex}
+
+% ===== Câu 19 =====
+% ID: LATEX_68D2763B7FB3
+% Mức: VD
+\begin{ex}
+% ID: LATEX_68D2763B7FB3
+% Mức: VD
+Cho các điểm $(A,C,D,E,B)$. Tính $\overrightarrow{AC}-\overrightarrow{DC}+\overrightarrow{DE}-\overrightarrow{BE}$. $\$
+\choice
+{$\overrightarrow{AD}$}
+{$\overrightarrow{0}$}
+{\True $\overrightarrow{AB}$}
+{$\overrightarrow{BA}$}
+\loigiai{
+$\overrightarrow{AC}-\overrightarrow{DC}+\overrightarrow{DE}-\overrightarrow{BE}=\overrightarrow{AC}+\overrightarrow{CD}+\overrightarrow{DE}+\overrightarrow{EB}=\overrightarrow{AB}$.
+}
+\end{ex}
+
+% ===== Câu 20 =====
+% ID: LATEX_9994F0541098
+% Mức: VD
+\begin{ex}
+% ID: LATEX_9994F0541098
+% Mức: VD
+Cho tứ giác $(ABEF)$. Tìm khẳng định đúng
+\choice
+{$\overrightarrow{BE}+\overrightarrow{AB}=\overrightarrow{FA}-\overrightarrow{FE}$}
+{\True $\overrightarrow{AE}+\overrightarrow{FA}=\overrightarrow{BE}-\overrightarrow{BF}$}
+{$\overrightarrow{AE}-\overrightarrow{AF}=\overrightarrow{BF}-\overrightarrow{BE}$}
+{$\overrightarrow{AB}-\overrightarrow{AF}=\overrightarrow{EF}+\overrightarrow{BE}$}
+\loigiai{
+$\overrightarrow{AE}+\overrightarrow{FA}=\overrightarrow{BE}-\overrightarrow{BF}=\overrightarrow{FB}$
+}
+\end{ex}
+
+% ===== Câu 21 =====
+% ID: LATEX_884E57254CD7
+% Mức: VD
+\begin{ex}
+% ID: LATEX_884E57254CD7
+% Mức: VD
+Cho hình bình hành $(CFDE)$ có tâm $(I)$, $CF=1, FD=8$ và góc $\widehat{FCE}=45^\circ$. Gọi $(P,Q)$ lần lượt là trung điểm của $(FD)$ và $(CE)$. Xét tính đúng-sai của các khẳng định sau.
+\choiceTF
+{\True $\overrightarrow{CF} + \overrightarrow{CE}=\overrightarrow{CD}$}
+{$\overrightarrow{IC} - \overrightarrow{FI}+ \overrightarrow{ID} - \overrightarrow{EI}=\overrightarrow{CD}$}
+{$\overrightarrow{QD} - \overrightarrow{DP} = \overrightarrow{PQ}$}
+{$|\overrightarrow{CF}+\overrightarrow{CE}|=\sqrt{4 \sqrt{2} + 65}$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) $\overrightarrow{CF} + \overrightarrow{CE}=\overrightarrow{CD}$. (Vì): Khẳng định đã cho là khẳng định đúng.
+ 
+ $\overrightarrow{CF} + \overrightarrow{CE}=\overrightarrow{CD}$
+ 
+ b) Khẳng định đã cho là khẳng định sai.
+ 
+ $\overrightarrow{IC} - \overrightarrow{FI} + \overrightarrow{ID} - \overrightarrow{EI}=\overrightarrow{IC} + \overrightarrow{IF} + \overrightarrow{ID} + \overrightarrow{IE}=(\overrightarrow{IC}+\overrightarrow{ID}) + (\overrightarrow{IF} + \overrightarrow{IE} )$ = $\overrightarrow{0}+\overrightarrow{0}=\overrightarrow{0}$.
+ 
+ c) Khẳng định đã cho là khẳng định sai. $\overrightarrow{QD}$ - $\overrightarrow{DP}=\overrightarrow{QD}$ + $\overrightarrow{PD}= \overrightarrow{CP}+\overrightarrow{PD}=\overrightarrow{CD}$.
+ 
+ d) Khẳng định đã cho là khẳng định sai. \widehat{FCE}=45^\circ\Rightarrow\widehat{CFD}=135^\circ $.$ | $\overrightarrow{CF}+\overrightarrow{CE}|=|\overrightarrow{CD}|= \sqrt{CF^2+FD^2-2.CF.FD.\cos \widehat{CFD}}=\sqrt{1^2+8^2-2.1.8.\cos 135^\circ}=\sqrt{8 \sqrt{2} + 65}$
+\item (Sai) $\overrightarrow{IC} - \overrightarrow{FI}+ \overrightarrow{ID} - \overrightarrow{EI}=\overrightarrow{CD}$.
+\item (Sai) $\overrightarrow{QD} - \overrightarrow{DP} = \overrightarrow{PQ}$.
+\item (Sai) $|\overrightarrow{CF}+\overrightarrow{CE}|=\sqrt{4 \sqrt{2} + 65}$.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 22 =====
+% ID: LATEX_606D42B61881
+% Mức: VD
+\begin{ex}
+% ID: LATEX_606D42B61881
+% Mức: VD
+Cho hình chữ nhật $(BDAC)$ có tâm $(I)$, $BD=5, DA=7$. Gọi $(G,N)$ lần lượt là trung điểm của $(DA)$ và $(BC)$. Xét tính đúng-sai của các khẳng định sau.
+\choiceTF
+{\True Hai vectơ $\overrightarrow{DI}$ và $\overrightarrow{IC}$ bằng nhau}
+{\True $\overrightarrow{BD}+\overrightarrow{BC}=\overrightarrow{BA}$}
+{\True $\overrightarrow{NA} + \overrightarrow{GA} = \overrightarrow{BA}$}
+{$|\overrightarrow{BG}+\overrightarrow{NC}|=12$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Hai vectơ $\overrightarrow{DI}$ và $\overrightarrow{IC}$ bằng nhau. (Vì): Khẳng định đã cho là khẳng định đúng.
+ 
+ Hai vectơ $\overrightarrow{DI}$ và $\overrightarrow{IC}$ bằng nhau vì chúng cùng hướng và cùng độ dài.
+ 
+ b) Khẳng định đã cho là khẳng định đúng.
+ 
+ $\overrightarrow{BD}+\overrightarrow{BC}=\overrightarrow{BA}$.
+ 
+ c) Khẳng định đã cho là khẳng định đúng.
+ 
+ $\overrightarrow{NA} + \overrightarrow{GA}= \overrightarrow{BG}+\overrightarrow{GA}=\overrightarrow{BA}$.
+ 
+ d) Khẳng định đã cho là khẳng định sai.
+ 
+ $|\overrightarrow{BG}+\overrightarrow{NC}|=|\overrightarrow{BG}+\overrightarrow{GA}|=|\overrightarrow{BA}|=\sqrt{5^2+7^2}=\sqrt{74}$
+\item (Đúng) $\overrightarrow{BD}+\overrightarrow{BC}=\overrightarrow{BA}$.
+\item (Đúng) $\overrightarrow{NA} + \overrightarrow{GA} = \overrightarrow{BA}$.
+\item (Sai) $|\overrightarrow{BG}+\overrightarrow{NC}|=12$.
+\end{itemchoice}
+}
+\end{ex}

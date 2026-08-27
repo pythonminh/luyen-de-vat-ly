@@ -1,0 +1,473 @@
+% Môn: Toán
+% Lớp: 11
+% Chương: Chương I. Hàm số lượng giác và phương trình lượng giác
+% Bài: Bài 4. Phương trình lượng giác cơ bản
+% Số câu: 23
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 4. Phương trình lượng giác cơ bản
+
+% ===== Câu 1 =====
+% ID: T11C1B4-01-DS
+% Mức: TH
+\begin{ex}
+% ID: T11C1B4-01-DS
+% Mức: TH
+Cho hàm số $f(x)=\tan 2x-1$. Khi đó:
+\choiceTF
+
+\loigiai{
+A. Đúng — Ta có $f\left(\dfrac{\pi}{8} \right)=\tan \left(2\cdot \dfrac{\pi}{8} \right)-1=\tan \left(\dfrac{\pi}{4} \right)-1=1-1=0$.
+B. Đúng — Ta có $f\left(\dfrac{\pi}{3} \right)=\tan \left(2\cdot \dfrac{\pi}{3} \right)-1=\tan \left(\dfrac{2\pi}{3} \right)-1=-\sqrt{3}-1$.
+C. Sai — Ta có $f(x)=-2 \Leftrightarrow \tan 2x-1=-2 \Leftrightarrow \tan 2x=-1$. Phương trình $\tan 2x=-1$ có nghiệm $2x=-\dfrac{\pi}{4}+k\pi$ với $k\in \mathbb{Z}$, suy ra $x=-\dfrac{\pi}{8}+k\dfrac{\pi}{2}$ với $k\in \mathbb{Z}$. Với $x\in [0;\pi]$, ta có $0 \le -\dfrac{\pi}{8}+k\dfrac{\pi}{2} \le \pi \Leftrightarrow \dfrac{\pi}{8} \le k\dfrac{\pi}{2} \le \pi+\dfrac{\pi}{8} \Leftrightarrow \dfrac{1}{4} \le k \le \dfrac{9}{4}$. Do $k\in \mathbb{Z}$, nên $k$ có thể nhận các giá trị $1, 2$. Khi $k=1$, $x=-\dfrac{\pi}{8}+\dfrac{\pi}{2}=\dfrac{3\pi}{8}$. Khi $k=2$, $x=-\dfrac{\pi}{8}+\pi=\dfrac{7\pi}{8}$. Vậy có hai giá trị $x$ thuộc $[0;\pi]$ khi hàm số đạt giá trị bằng $-2$.
+D. Đúng — Hàm số $y=\tan u$ có chu kỳ là $\pi$. Do đó, hàm số $f(x)=\tan 2x-1$ có chu kỳ là $T=\dfrac{\pi}{2}$. Vậy hàm số đã cho là hàm tuần hoàn.
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T11C1B4-01-TN
+% Mức: TH
+\begin{ex}
+% ID: T11C1B4-01-TN
+% Mức: TH
+Tập xác định của hàm số $y=\dfrac{2\sin x+1}{1-\cos x}$ là
+\choice
+{\True $\mathscr{D} = \mathbb{R}\backslash\{k2\pi, k\in \mathbb{Z}\}$}
+{$\mathscr{D} = \mathbb{R}\backslash\{ k\pi, k\in \mathbb{Z} \}$}
+{$\mathscr{D} = \mathbb{R}\backslash\left\{ \dfrac{\pi }{2}+k\pi, k\in \mathbb{Z} \right\}$}
+{$\mathscr{D} = \mathbb{R}\backslash\left\{ \dfrac{\pi }{2}+k2\pi, k\in \mathbb{Z} \right\}$}
+\loigiai{
+Hàm số xác định khi $1-\cos x\ne 0\Leftrightarrow x\ne k2\pi, k\in \mathbb{Z}$.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: T11C1B4-02-DS
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-02-DS
+% Mức: VD
+Cho phương trình lượng giác $\cot 3x=-\dfrac{1}{\sqrt{3}}(*)$. Khi đó
+\choiceTF
+
+\loigiai{
+A. Sai — Ta có $\cot 3x=-\dfrac{1}{\sqrt{3}}$. Giá trị $-\dfrac{1}{\sqrt{3}}$ tương ứng với $\cot \left(-\dfrac{\pi}{6}\right)$ hoặc $\cot \left(\dfrac{5\pi}{6}\right)$, v.v. Do đó, phương trình $(*)$ tương đương $\cot 3x=\cot \left(-\dfrac{\pi}{6}\right)$ là sai.
+B. Sai — Từ $\cot 3x=-\dfrac{1}{\sqrt{3}}$, ta có $\cot 3x=\cot \left(-\dfrac{\pi}{6}\right)$. Suy ra $3x = -\dfrac{\pi}{6} + k\pi$ với $k \in \mathbb{Z}$. Chia cả hai vế cho 3, ta được $x = -\dfrac{\pi}{18} + k\dfrac{\pi}{3}$ với $k \in \mathbb{Z}$. Mệnh đề $B$ đưa ra nghiệm sai.
+C. Đúng — ộng $\pi$ vào cả ba vế, ta được $-8\pi \lt  6k\pi \lt  \pi$.
+D. Đúng — Đúng.
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: T11C1B4-02-TN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-02-TN
+% Mức: VD
+Phương trình $\cot \left( x+45^\circ \right)=\dfrac{\sqrt{3}}{3}$ có nghiệm là (với $k\in \mathbb{Z}$)
+\choice
+{\True $15^\circ +k180{}^\circ$}
+{$30^\circ +k180{}^\circ$}
+{$45^\circ +k180^\circ$}
+{$60^\circ +k180^\circ$}
+\loigiai{
+Phương trình $\cot \left( x+45^\circ \right)=\dfrac{\sqrt{3}}{3}\Leftrightarrow \cot \left( x+45^\circ \right)=\cot 60{}^\circ\Leftrightarrow x+45{}^\circ =60^\circ +k180^\circ\Leftrightarrow x=15{}^\circ +k180^\circ$ ( với $k\in \mathbb{Z}$).
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: T11C1B4-03-DS
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-03-DS
+% Mức: VD
+Cho phương trình lượng giác $\sin \left(3x + \dfrac{\pi}{3}\right) = -\dfrac{\sqrt{3}}{2}$.
+\choiceTF
+
+\loigiai{
+A. Sai — Nghiệm tổng quát của phương trình là $x=-\dfrac{2\pi}{9}+k\dfrac{2\pi}{3}$ hoặc $x=\dfrac{\pi}{3}+k\dfrac{2\pi}{3}$ với $k \in \mathbb{Z}$. Mệnh đề $A$ đưa ra một tập nghiệm khác.
+B. Đúng — Với $k=-1$, ta có $x=-\dfrac{2\pi}{9}-\dfrac{2\pi}{3} = -\dfrac{8\pi}{9}$. Với $k=0$, ta có $x=-\dfrac{2\pi}{9}$. Với $k=-1$ cho nghiệm âm thứ nhất, $k=0$ cho nghiệm âm lớn nhất là $-\dfrac{2\pi}{9}$.
+C. Sai — Xét nghiệm) $x=-\dfrac{2\pi}{9}+k\dfrac{2\pi}{3}$. Với $k=1$, $x=-\dfrac{2\pi}{9}+\dfrac{2\pi}{3}=\dfrac{4\pi}{9}$. Với $k=2$, $x=-\dfrac{2\pi}{9}+\dfrac{4\pi}{3}=\dfrac{10\pi}{9}$. Xét nghiệm $x=\dfrac{\pi}{3}+k\dfrac{2\pi}{3}$. Với $k=0$, $x=\dfrac{\pi}{3}$. Phương trình có hai nghiệm trong khoảng $\left(0;\dfrac{\pi}{2}\right)$ là $\dfrac{4\pi}{9}$ và $\dfrac{\pi}{3}$.
+D. Đúng — Các nghiệm của phương trình trong khoảng) $\left(0;\dfrac{\pi}{2}\right)$ là $x=\dfrac{\pi}{3}$ và $x=\dfrac{4\pi}{9}$. Tổng hai nghiệm này là $\dfrac{\pi}{3}+\dfrac{4\pi}{9}=\dfrac{3\pi+4\pi}{9}=\dfrac{7\pi}{9}$.
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: T11C1B4-04-DS
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-04-DS
+% Mức: VD
+Tìm được tập giá trị các hàm số sau trên tập xác định của chúng:
+\choiceTF
+{\True Hàm số $y=3\sin x$ có tập giá trị là $T=[-3;3]$}
+{\True Hàm số $y=2\cos x-1$ có tập giá trị là $T=[-3;1]$}
+{\True Hàm số $y=2030-4\cos x$ có tập giá trị là $T=[2026;2034]$}
+{Hàm số $y=\sin^2 x+4\sin x-1$ có tập giá trị là $T=[-3;3]$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Hàm số $y=3\sin x$ có tập giá trị là $T=[-3;3]$. (Vì): Với mọi $x\in \mathbb{R}$, ta có $-1\le \sin x\le 1$. Nhân cả hai vế với 3, ta được $-3\le 3\sin x\le 3$. Vậy tập giá trị của hàm số $y=3\sin x$ là $T=[-3;3]$
+\item (Đúng) Hàm số $y=2\cos x-1$ có tập giá trị là $T=[-3;1]$. (Vì): Với mọi $x\in \mathbb{R}$, ta có $-1\le \cos x\le 1$. Nhân cả hai vế với 2, ta được $-2\le 2\cos x\le 2$. Trừ 1 cho cả hai vế, ta được $-2-1\le 2\cos x-1\le 2-1$, suy ra $-3\le y\le 1$. Vậy tập giá trị của hàm số $y=2\cos x-1$ là $T=[-3;1]$
+\item (Đúng) Hàm số $y=2030-4\cos x$ có tập giá trị là $T=[2026;2034]$. (Vì): Với mọi $x\in \mathbb{R}$, ta có $-1\le \cos x\le 1$. Nhân cả hai vế với -4 và đổi chiều bất đẳng thức, ta được $4\ge -4\cos x\ge -4$. Cộng 2030 vào cả ba vế, ta được $4+2030\ge -4\cos x+2030\ge -4+2030$, suy ra $2034\ge y\ge 2026$. Vậy tập giá trị của hàm số $y=2030-4\cos x$ là $T=[2026;2034]$
+\item (Sai) Hàm số $y=\sin^2 x+4\sin x-1$ có tập giá trị là $T=[-3;3]$. (Vì): Đặt $t=\sin x$. Vì $-1\le \sin x\le 1$ nên $-1\le t\le 1$. Hàm số trở thành $y=t^2+4t-1$. Xét hàm số bậc hai $f(t)=t^2+4t-1$ trên đoạn $[-1;1]$. Đỉnh của parabol $t=-\frac{4}{2}=-2$, không thuộc đoạn $[-1;1]$. Do đó, hàm số $f(t)$ đồng biến trên đoạn $[-1;1]$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: T11C1B4-04-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-04-TLN
+% Mức: VD
+Chiều cao $h$ (m) của một cabin trên vòng quay vào thời điểm $t$ giây sau khi bắt đầu chuyển động được cho bởi công thức $h(t)=30 + 20\sin \left(\dfrac{\pi}{25}t + \dfrac{\pi}{3}\right)$. Sau bao nhiêu giây thì cabin đạt độ cao $40$ m lần đầu tiên?
+\shortans{$12{,}5$}
+\loigiai{
+Để cabin đạt độ cao $40\,\mathrm{m}$, ta có
+  \begin{aligned}
+ h(t)=40
+ &\Leftrightarrow
+ 30+20\sin\left(\dfrac{\pi}{25}t+\dfrac{\pi}{3}\right)=40
+&\Leftrightarrow
+ \sin\left(\dfrac{\pi}{25}t+\dfrac{\pi}{3}\right)=\dfrac{1}{2}.
+ \end{aligned} 
+ 
+ Suy ra
+  \left[
+ \begin{aligned}
+ \dfrac{\pi}{25}t+\dfrac{\pi}{3}
+ &=\dfrac{\pi}{6}+2k\pi,
+\dfrac{\pi}{25}t+\dfrac{\pi}{3}
+ &=\dfrac{5\pi}{6}+2k\pi,
+ \end{aligned}
+ \right.
+ \qquad k\in\mathbb{Z}. 
+ 
+ Do đó
+  \left[
+ \begin{aligned}
+ t&=-\dfrac{25}{6}+50k,
+t&=\dfrac{25}{2}+50k,
+ \end{aligned}
+ \right.
+ \qquad k\in\mathbb{Z}. 
+ 
+ Giá trị $t>0$ nhỏ nhất thỏa mãn là
+ $t=\dfrac{25}{2}=12,5 \mathrm{s}.$ \textbf{Đáp số:}$$12,5\,\mathrm{s}$.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: T11C1B4-05-DS
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-05-DS
+% Mức: VD
+Tìm tập xác định của các hàm số sau. Khi đó:
+\choiceTF
+
+\loigiai{
+A. Đúng — Hàm số $y=\tan u$ xác định khi $\cos u \ne 0$. Với $u = x - \dfrac{\pi}{2}$, hàm số $y=\tan\left(x-\dfrac{\pi}{2}\right)$ xác định khi $\cos\left(x-\dfrac{\pi}{2}\right)\ne 0$.
+B. Đúng — Hàm số $y=\dfrac{1+\cos x}{\sin x}$ xác định khi $\sin x \ne 0$, tức là $x \ne k\pi$ với $k \in \mathbb{Z}$. Vậy tập xác định là $\mathscr{D}=\mathbb{R}\setminus\left\{k\pi\mid k\in\mathbb{Z}\right\}$.
+C. Đúng — Hàm số $y=\cot u$ xác định khi $\sin u \ne 0$. Với $u = 3x - \dfrac{\pi}{4}$, hàm số $y=\cot\left(3x-\dfrac{\pi}{4}\right)$ xác định khi $\sin\left(3x-\dfrac{\pi}{4}\right) \ne 0$, tức là $3x - \dfrac{\pi}{4} \ne k\pi$ với $k \in \mathbb{Z}$. Suy ra $3x \ne \dfrac{\pi}{4} + k\pi$, hay $x \ne \dfrac{\pi}{12} + \dfrac{k\pi}{3}$, với $k\in\mathbb{Z}$.
+D. Sai — Hàm số $y=\dfrac{\cot x}{\sqrt{3}\tan x-3}$ xác định khi $\cot x$ xác định và $\sqrt{3}\tan x-3 \ne 0$. Điều kiện để $\cot x$ xác định là $\sin x \ne 0$. Điều kiện để $\tan x$ xác định là $\cos x \ne 0$. Ngoài ra, $\sqrt{3}\tan x-3 \ne 0 \Leftrightarrow \tan x \ne \sqrt{3} \Leftrightarrow x \ne \dfrac{\pi}{3} + n\pi$ với $n \in \mathbb{Z}$. Do đó, điều kiện xác định là $\sin x \ne 0$, $\cos x \ne 0$ và $x \ne \dfrac{\pi}{3} + n\pi$. Mệnh đề chỉ nêu hai điều kiện đầu.
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: T11C1B4-06-DS
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-06-DS
+% Mức: VDC
+Cho các hàm số
+ $f(x)=2\cos 3x-1$ và
+ $g(x)=|2\sin x+2|+|2\sin x-2|$. Khi đó:
+\choiceTF
+
+\loigiai{
+A. Đúng — Hàm số $f(x)=2\cos 3x-1$ có $\cos 3x$ xác định với mọi $x\in\mathbb{R}$, do đó tập xác định của hàm số $f(x)$ là $\mathscr{D}_f=\mathbb{R}$.
+B. Đúng — Với mọi $x\in\mathbb{R}$, ta có $f(-x)=2\cos(-3x)-1=2\cos 3x-1=f(x)$. Do $f(-x)=f(x)$ với mọi $x\in\mathbb{R}$, hàm số $f(x)$ là hàm số chẵn.
+C. Đúng — Hàm số $g(x)=|2\sin x+2|+|2\sin x-2|$ có $\sin x$ xác định với mọi $x\in\mathbb{R}$, do đó tập xác định của hàm số $g(x)$ là $\mathscr{D}_g=\mathbb{R}$.
+D. Sai — Ta có $g(-x)=|2\sin(-x)+2|+|2\sin(-x)-2|=|{-2\sin x}+2|+|{-2\sin x}-2|=|2-2\sin x|+|{-2\sin x-2}|$. Vì $|.$
+}
+\end{ex}
+
+% ===== Câu 10 =====
+% ID: T11C1B4-07-DS
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-07-DS
+% Mức: VDC
+Cho hàm số $f(x)=2\cos x+1$ và $g(x)=\sin x+\tan x$. Khi đó:
+\choiceTF
+
+\loigiai{
+A. Đúng — Hàm số $f(x)=2\cos x+1$ có $\cos x$ xác định với mọi $x \in \mathbb{R}$, do đó tập xác định của $f(x)$ là $\mathscr{D}=\mathbb{R}$.
+B. Đúng — Hàm số $f(x)=2\cos x+1$ là hàm tuần hoàn vì với mọi $x \in \mathbb{R}$, ta có $x \pm 2\pi \in \mathbb{R}$ và $f(x+2\pi) = 2\cos(x+2\pi)+1 = 2\cos x+1 = f(x)$.
+C. Sai — Hàm số $g(x)=\sin x+\tan x$ có $\sin x$ xác định với mọi $x \in \mathbb{R}$, nhưng $\tan x = \frac{\sin x}{\cos x}$ chỉ xác định khi $\cos x \neq 0$, tức là $x \neq \frac{\pi}{2}+k\pi$ với $k \in \mathbb{Z}$. Do đó, tập xác định của $g(x)$ là $\mathscr{D}=\mathbb{R}\setminus \left\{\dfrac{\pi}{2}+k\pi \left|k\in \mathbb{Z}\right. \right\}$.
+D. Sai — Hàm số $g(x)=\sin x+\tan x$ là hàm tuần hoàn. Chu kỳ của $\sin x$ là $2\pi$ và chu kỳ của $\tan x$ là $\pi$. Do đó, chu kỳ của $g(x)$ là bội chung nhỏ nhất của $2\pi$ và $\pi$, tức là $2\pi$. Với mọi $x \in \mathscr{D}$, ta có $x \pm 2\pi \in \mathscr{D}$ và $g(x+2\pi) = \sin(x+2\pi)+\tan(x+2\pi) = \sin x+\tan x = g(x)$.
+}
+\end{ex}
+
+% ===== Câu 11 =====
+% ID: T11C1B4-08-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-08-TLN
+% Mức: VD
+Phương trình $\sin \left( x+\dfrac{\pi }{4} \right)+\cos x=0$ có tập nghiệm được biểu diễn bởi bao nhiêu điểm trên đường tròn lượng giác?
+\shortans{$2$}
+\loigiai{
+Ta có 
+  \begin{eqnarray*}
+  & & $\sin($ x+ $\dfrac{\pi }{4})+\cos$ x=0
+&\Leftrightarrow & $\sin($ x+ $\dfrac{\pi }{4}\right)=\sin\left($ x- $\dfrac{\pi }{2})$ &\Leftrightarrow & x+ $\dfrac{\pi }{4}=\pi$ -x+ $\dfrac{\pi }{2}+ k2\pi$ &\Leftrightarrow & 2x= $\dfrac{5\pi }{4}+k2\pi$ &\Leftrightarrow & x= $\dfrac{5\pi }{8}+k\pi$.
+  \end{eqnarray*}
+  Ta có $0\leq x<2\pi \Leftrightarrow 0\leq \dfrac{5\pi }{8}+k\pi<2\pi\Leftrightarrow -\dfrac{5}{8}\leq k \dfrac{11}{8}$ mà $k\in \mathbb{Z}\Rightarrow k\in\{0;1\}$.
+Vậy phương trình đã cho có tập nghiệm biểu diễn được hai điểm trên đường tròn lương giác.
+}
+\end{ex}
+
+% ===== Câu 12 =====
+% ID: T11C1B4-09-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-09-TLN
+% Mức: VD
+Có tất cả bao nhiêu giá trị nguyên của $m$ để phương trình $\sqrt{3}\cos x+m-1=0$ có nghiệm?
+\shortans{3}
+\loigiai{
+Ta có $\sqrt{3}\cos x+m-1=0\Leftrightarrow \cos x=\dfrac{1-m}{\sqrt{3}}$.
+Mặt khác $-1\le \cos x\le 1\Rightarrow -1\le \dfrac{1-m}{\sqrt{3}}\le 1\Leftrightarrow -\sqrt{3}\le 1-m\le \sqrt{3}\Leftrightarrow 1-\sqrt{3}\le m\le 1+\sqrt{3}$.
+Mà $m\in \mathbb{Z}$ nên $m\in \left\{ 1;2;3 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: T11C1B4-10-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-10-TLN
+% Mức: VD
+Tìm tổng bình phương giá trị lớn nhất và giá trị nhỏ nhất của hàm số
+ $y=\sin x+\cos x$.
+\shortans{$4$}
+\loigiai{
+$y=\sin x+\cos x = \sqrt{2}\sin\left(x+\dfrac{\pi}{4}\right)-1 \le \sin\left(x+\dfrac{\pi}{4}\right) \le 1-\sqrt{2} \le \sqrt{2}\sin\left(x+\dfrac{\pi}{4}\right) \le \sqrt{2}y_{\min}=-\sqrt{2}$, $y_{\max}=\sqrt{2}y_{\min}^2+y_{\max}^2 = (-\sqrt{2})^2+(\sqrt{2})^2 = 2+2=4$
+ 4
+}
+\end{ex}
+
+% ===== Câu 14 =====
+% ID: T11C1B4-11-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-11-TLN
+% Mức: VD
+Có bao nhiêu số nguyên $m$ để phương trình $3\cos \left( x+\dfrac{\pi }{6} \right)-m+5=0$ có nghiệm?
+\shortans{$7$}
+\loigiai{
+Ta có $3\cos \left( x+\dfrac{\pi }{6} \right)-m+5=0\Leftrightarrow \cos \left( x+\dfrac{\pi }{6} \right)=\dfrac{m-5}{3}$.
+Điều kiện để phương trình có nghiệm: $-1\le \dfrac{m-5}{3}\le 1\Leftrightarrow 2\le m\le 8$.
+Do $m$ nguyên nên $m=\left\{ 2;3;4;5;6;7;8 \right\}$. Vậy có $7$ số nguyên $m$.
+}
+\end{ex}
+
+% ===== Câu 15 =====
+% ID: T11C1B4-12-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-12-TLN
+% Mức: VD
+Số nghiệm của phương trình $\sin 2x=0$ thỏa mãn $0\lt x<2\pi$.
+\shortans{$3$}
+\loigiai{
+Ta có $\sin 2x = 0 \Leftrightarrow 2x = k\pi \Leftrightarrow x = k\dfrac{\pi}{2} \,\, (k \in \mathbb{Z})$.
+Ta có $0 \lt  x \lt  2\pi \Leftrightarrow 0 \lt  k\dfrac{\pi}{2} \lt  2\pi \Leftrightarrow 0 \lt  k \lt  4$.
+Mà $k$ nguyên nên $k \in \{1, 2, 3\} \Rightarrow$ có $3$ giá trị của $k$ thỏa mãn.
+Vậy phương trình đã cho có $3$ nghiệm thuộc $(0; 2\pi)$.
+}
+\end{ex}
+
+% ===== Câu 16 =====
+% ID: T11C1B4-13-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-13-TLN
+% Mức: VD
+Gọi $n$ là số nghiệm của phương trình $\sin \left( 2x+30^\circ \right)=\dfrac{\sqrt{3}}{2}$ trên khoảng $\left( -180^\circ ;180^\circ\right)$. Tìm $n$.
+\shortans{$4$}
+\loigiai{
+Ta có $\sin \left( 2x+30^\circ \right)=\dfrac{\sqrt{3}}{2}\Leftrightarrow \left[ \begin{aligned}
+  & 2x+30^\circ=60^\circ+k360^\circ \ 
+  & 2x+30^\circ=120^\circ+k360^\circ \ 
+  \end{aligned} \right.\Leftrightarrow \left[ \begin{aligned}
+  & x=15^\circ+k180^\circ \ 
+  & x=45^\circ+k180^\circ \ 
+  \end{aligned} \right.\quad (k\in \mathbb{Z}).$
+Do $x\in \left( -180^\circ;180^\circ\right)$ nên $x\in \left\{ 15^\circ;-165^\circ;\,45^\circ;-135^\circ \right\}$. Vậy $n=4$.
+}
+\end{ex}
+
+% ===== Câu 17 =====
+% ID: T11C1B4-14-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-14-TLN
+% Mức: VD
+Tìm giá trị nhỏ nhất của hàm số
+ $y=\sqrt{1+\sin x}-3$.
+\shortans{$-3$}
+\loigiai{
+Ta có
+  $y=\sqrt{1+\sin x}-3.$
+  Vì
+  $-1\leq\sin x\leq 1$
+  nên
+  $0\leq\sqrt{1+\sin x}\leq\sqrt{2}.$
+  Suy ra
+  $y\geq -3.$
+  Dấu bằng xảy ra khi $\sin x=-1$.
+ 
+  Vậy giá trị nhỏ nhất của hàm số là $-3$.
+}
+\end{ex}
+
+% ===== Câu 18 =====
+% ID: T11C1B4-15-TLN
+% Mức: VD
+\begin{ex}
+% ID: T11C1B4-15-TLN
+% Mức: VD
+Tìm số nghiệm của phương trình $\tan x=\tan \dfrac{3\pi }{8}$ trên $\left( \dfrac{\pi }{4};2\pi \right)$.
+\shortans{$2$}
+\loigiai{
+Ta có $\tan x = \tan \dfrac{3\pi}{8} \Leftrightarrow x = \dfrac{3\pi}{8} + k\pi$, $k \in \mathbb{Z}$.
+Với $x \in \left( \dfrac{\pi}{4}; 2\pi \right)$, ta có $\dfrac{\pi}{4} \lt  \dfrac{3\pi}{8} + k\pi \lt  2\pi \Leftrightarrow -\dfrac{1}{8} \lt  k \lt  \dfrac{13}{8}$ suy ra $k \in \left\{ 0, 1 \right\}$.
+Vậy trên khoảng $\left( \dfrac{\pi}{4}; 2\pi \right)$, phương trình đã cho có hai nghiệm.
+}
+\end{ex}
+
+% ===== Câu 19 =====
+% ID: T11C1B4-16-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-16-TLN
+% Mức: VDC
+Tìm số các giá trị nguyên của tham số $m$ để hàm số
+ $y=\sqrt{\dfrac{m-1}{m}-2\cos 4x}$ ( xác định trên) $\mathbb{R}$.
+\shortans{$1$}
+\loigiai{
+Điều kiện trước hết là $m\ne 0$.
+ 
+  Để hàm số xác định trên $\mathbb{R}$, cần có
+   \dfrac{m-1}{m}-2\cos 4x\geq 0,
+  \qquad \forall x\in\mathbb{R}. 
+  Vì giá trị lớn nhất của $\cos 4x$ bằng $1$, điều kiện trên tương đương với
+  $\dfrac{m-1}{m}-2\geq 0.$
+  Suy ra
+   -\dfrac{m+1}{m}\geq 0
+  \Leftrightarrow
+  \dfrac{m+1}{m}\leq 0
+  \Leftrightarrow
+  -1\leq m<0. 
+  Vì $m$ là số nguyên nên
+  $m=-1.$
+  Vậy có đúng $1$ giá trị nguyên của $m$.
+}
+\end{ex}
+
+% ===== Câu 20 =====
+% ID: T11C1B4-17-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-17-TLN
+% Mức: VDC
+Số giờ có ánh sáng của thành phố $T$ ở vĩ độ $40^{^\circ}$ bắc trong ngày thứ $t$ của một năm không nhuận được cho bởi hàm số $d(t)=3\cdot \sin \left[\dfrac{\pi}{182} (t-80)\right]+12$ với $t\in \mathbb{Z}$ và $0\lt  t\le 365$. Bạn An muốn đi tham quan thành phố $T$ nhưng lại không thích ánh sáng mặt trời, vậy bạn An nên chọn đi vào ngày nào trong năm để thành phố $T$ có ít giờ có ánh sáng mặt trời nhất?
+\shortans{$353$}
+\loigiai{
+Do 
+  
+ \begin{aligned}
+ $\sin$ [ $\dfrac{\pi}{182}$ (t-80)$$]$\ge-1$&\Rightarrow 3$\cdot\sin$[$\dfrac{\pi}{182}$(t-80)$$]$\ge-3$&\Rightarrow 3$\cdot\sin$[$\dfrac{\pi}{182}$(t-80)$$]+12\ge 9\Rightarrow d(t)\ge 9.
+ \end{aligned}
+   
+ Vậy thành phố $T$ có ít giờ có ánh sáng mặt trời nhất khi và chỉ khi:
+ $\sin \left[\dfrac{\pi}{182} (t-80)\right]=-1\Leftrightarrow \dfrac{\pi}{182} (t-80)=-\dfrac{\pi}{2}+k2\pi$\Leftrightarrow t-80=182\left(-\dfrac{1}{2}+2k\right)\Leftrightarrow t=364k-11,k\in \mathbb{Z}.$
+ Mặt khác $0\le 364k-11\le 365\Leftrightarrow \dfrac{11}{364} \le k\le \dfrac{376}{364} \Leftrightarrow k=1($ do $k\in \mathbb{Z})$. Nên
+ $t=364-11=353$
+ Vậy thành phố $T$ có ít giờ ánh sáng Mặt Trời nhất là $9$ giờ khi $t=353$, tức là vào ngày thứ $353$ trong năm.$
+}
+\end{ex}
+
+% ===== Câu 21 =====
+% ID: T11C1B4-18-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-18-TLN
+% Mức: VDC
+Tìm $x\in[\pi;2\pi]$ để hàm số
+ $y=1-3\sqrt{1-\cos^2x}$
+ đạt giá trị nhỏ nhất. Kết quả làm tròn đến hàng phần mười.
+\shortans{$4,7$}
+\loigiai{
+Ta có
+  $\sqrt{1-\cos^2x}=|\sin x|.$
+  Do đó
+  $y=1-3|\sin x|.$
+  Vì
+  $0\leq|\sin x|\leq 1$
+  nên
+  $y\geq 1-3=-2.$
+  Dấu bằng xảy ra khi
+   |\sin x|=1
+  \Leftrightarrow
+  x=\dfrac{\pi}{2}+k\pi,
+  \quad k\in\mathbb{Z}. 
+  Với $x\in[\pi;2\pi]$, ta được
+  $x=\dfrac{3\pi}{2}\approx 4,7.$
+}
+\end{ex}
+
+% ===== Câu 22 =====
+% ID: T11C1B4-19-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-19-TLN
+% Mức: VDC
+Tìm tổng giá trị lớn nhất và giá trị nhỏ nhất của hàm số $y=\dfrac{2\sin x+3\cos x+1}{\sin x-\cos x+2}$.
+\shortans{$3$}
+\loigiai{
+Ta có $y=\dfrac{2\sin x+3\cos x+1}{\sin x-\cos x+2} \Leftrightarrow (y-2)\sin x-(y+3)\cos x=1-2y$.
+Điều kiện để tồn tại cặp số $(x;y)$ là 
+ $(y-2)^2+(y+3)^2 \ge (1-2y)^2\Leftrightarrow-2y^2+6y+12\ge 0\Leftrightarrow \dfrac{3-\sqrt{33}}{2} \le y\le \dfrac{3+\sqrt{33}}{2}.$
+ Tổng giá trị lớn nhất và giá trị nhỏ nhất của hàm số: $\dfrac{3-\sqrt{33}}{2}+\dfrac{3+\sqrt{33}}{2}=3$.
+}
+\end{ex}
+
+% ===== Câu 23 =====
+% ID: T11C1B4-20-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T11C1B4-20-TLN
+% Mức: VDC
+Nghiệm dương nhỏ nhất của phương trình $\sin 5x+2{{\cos }^{2}x=1$ có dạng $\dfrac{\pi a}{b}$ với $a$, $b$ là các số nguyên và nguyên tố cùng nhau. Tính tổng $S=a+b$.
+\shortans{$17$}
+\loigiai{
+Ta có $\sin 5x+2{{\cos }^{2}x=1\Leftrightarrow \sin 5x=1-2{{\cos }^{2}x\Leftrightarrow \sin 5x=-\cos 2x\Leftrightarrow \sin 5x=\sin \left( 2x-\dfrac{\pi }{2} \right)$ \Leftrightarrow \left[ \begin{aligned}
+  & 5x=2x-\dfrac{\pi }{2}+k2\pi \ 
+  & 5x=\pi -\left( 2x-\dfrac{\pi }{2} \right)+k2\pi \ 
+  \end{aligned} \right.\Leftrightarrow \left[ \begin{aligned}
+  & 3x=-\dfrac{\pi }{2}+k2\pi \ 
+  & 7x=\dfrac{3\pi }{2}+k2\pi \ 
+  \end{aligned} \right.\Leftrightarrow \left[ \begin{aligned}
+  & x=-\dfrac{\pi }{6}+\dfrac{k2\pi }{3} \ 
+  & x=\dfrac{3\pi }{14}+\dfrac{k2\pi }{7} \ 
+  \end{aligned} \right.\left( k\in \mathbb{Z} \right) $.
+Vì$x>0$nên ta xét 2 trường hợp:
+Với$x=-\dfrac{\pi }{6}+\dfrac{k2\pi }{3}$ta có$-\dfrac{\pi }{6}+\dfrac{k2\pi }{3}>0\Leftrightarrow 4k>1\Leftrightarrow k>\dfrac{1}{4}$do$k\in \mathbb{Z}$suy ra$k=1$nên nghiệm dương nhỏ nhất trong trường hợp này là$x=\dfrac{\pi }{2}$.
+Với$x=\dfrac{3\pi }{14}+\dfrac{k2\pi }{7}$ta có$\dfrac{3\pi }{14}+\dfrac{k2\pi }{7}>0\Leftrightarrow4k>-3\Leftrightarrowk>-$\dfrac{3}{4}$do$k$\in\mathbb{Z}$suy ra$k=0$nên nghiệm dương nhỏ nhất trong trường hợp này là$x=$\dfrac{3\pi }{14}$.\
+  Vậy nghiệm dương nhỏ nhất của phương trình là $x=$ \dfrac{3\pi }{14} $suy ra$ a=3 $,$ b=14\Rightarrow S=17.
+}
+\end{ex}

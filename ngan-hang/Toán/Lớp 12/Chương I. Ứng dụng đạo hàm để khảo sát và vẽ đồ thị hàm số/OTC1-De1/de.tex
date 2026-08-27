@@ -1,0 +1,68 @@
+% Môn: Toán
+% Lớp: 12
+% Chương: Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số
+% Bài: OTC1-De1
+% Số câu: 4
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% OTC1-De1
+
+% ===== Câu 1 =====
+% ID: T12C1BX-01-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1BX-01-DS
+% Mức: TH
+Cho hàm số $y=f(x)=\dfrac{ax^2+bx+c}{x+b'}$ (với $a$, $b$, $c$, $b'$ là các số thực) có đồ thị như hình bên. Xét tính đúng hay sai của các khẳng định sau
+\choiceTF
+
+\loigiai{
+A. Vì $x=0$ là một đường tiệm cận đứng của đồ thị hàm số.
+B. Vì hàm số đã cho có hai điểm cực trị.
+C. Vì $y=x$ là một đường tiệm cận xiên của đồ thị hàm số.
+D. Vì từ đồ thị hàm số $y=f(x)$ ta suy ra $f(x)=x+\dfrac{c}{x}$. Do đó, tiệm cận đứng $x=0$ suy ra $b'=0$. Từ đó suy ra $f(x)=x+b+\dfrac{c}{x}$ nên $b=0$ và $a=1\gt 0$. Do đồ thị hàm số có $2$ cực trị nên phương trình $f'(x)=0$ có $2$ nghiệm phân biệt. Hay phương trình $\dfrac{x^2-c}{x^2}=0$ có $2$ nghiệm phân biệt, suy ra $c>0$. Vậy, có hai hệ số dương.
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T12C1BX-01-TLN
+% Mức: VD
+\begin{ex}
+% ID: T12C1BX-01-TLN
+% Mức: VD
+Cho hàm số $y = \dfrac{mx - 2m - 3}{x - m}$ với $m$ là tham số. Gọi $S$ là tập hợp tất cả các giá trị nguyên của $m$ để hàm số đồng biến trên các khoảng xác định. Tìm số phần tử của $S$.
+\shortans{$3$}
+\loigiai{
+Xét hàm số $y = \dfrac{mx - 2m - 3}{x - m}$. Ta có $y' = \dfrac{- m^2 + 2m + 3}{\left(x - m\right)^2}$ hàm số đồng biến trên các khoảng xác định $\Leftrightarrow y' \gt  0 \Leftrightarrow - m^2 + 2m + 3 \gt  0 \Leftrightarrow m \in \left(-1;3\right)\,(m \in \mathbb{Z}) \Rightarrow m \in \left\lbrace 0;1;2\right\rbrace.$ Vậy tập $S$ có $3$ phần tử nguyên.
+}
+\end{ex}
+
+% ===== Câu 3 =====
+% ID: T12C1BX-02-DS
+% Mức: TH
+\begin{ex}
+% ID: T12C1BX-02-DS
+% Mức: TH
+Cho hàm số $y = \dfrac{{{x^2} + 2x - 2}}{{x - 1}}$. Các phát biểu sau đây đúng hay sai?
+\choiceTF
+
+\loigiai{
+A. Vì tập xác định của hàm số là $\mathscr{D} = \mathbb{R} \setminus \left\{ 1 \right\}$.
+B. Vì đạo hàm $y' = \dfrac{{{x^2} - 2x}}{{{$ (x - 1) $^2}}}$. Suy ra $y' = 0 \Leftrightarrow x = 0$ hoặc $x = 2$.
+C. Vì $a = \mathop {{\rm{lim}}}\limits_{x \to + \infty } \dfrac{{{x^2} + 2x - 2}}{x(x -1)} = 1$ và $b = \mathop {{\rm{lim}}}\limits_{x \to + \infty } \left( {\dfrac{{{x^2} + 2x - 2}}{{x - 1}} - x} \right) = \mathop {{\rm{lim}}}\limits_{x \to + \infty } \dfrac{{3x - 2}}{{x - 1}} = 3$. Suy ra đường thẳng $y = x + 3$ là tiệm cận xiên của đồ thị hàm số.
+D. Vì hàm số $y=\left| f(x)\right|$ có bảng biên thiên là Dựa vào bảng biến thiên, ta suy ra phương trình đã cho có $4$ nghiệm nhỏ hơn $1$ khi $0\lt m<2$. Vì $m$ là số nguyên nên $m=1$.
+}
+\end{ex}
+
+% ===== Câu 4 =====
+% ID: T12C1BX-03-TLN
+% Mức: VD
+\begin{ex}
+% ID: T12C1BX-03-TLN
+% Mức: VD
+Hàm số $y=\dfrac{x^2+2x+3}{x+1}$ có tâm đối xứng là $I(a;b)$. Giá trị $2a+b$ bằng bao nhiêu?
+\shortans{$-2$}
+\loigiai{
+Ta có $y=\dfrac{x^2+2x+3}{x+1}=x+1+\dfrac{2}{x+1}$ nên đồ thị hàm số có phương trình đường tiệm cận xiên và tiệm cận đứng lần lượt là $y=x+1$ và $x=-1$. Tâm đối xứng của đồ thị là giao điểm của hai đường tiệm cận nên thỏa hệ $\left\{ \begin{aligned} y &=x+1 \\ x &=-1 \end{aligned} \right. \Leftrightarrow \left\{ \begin{aligned} x &=-1 \\ y &=0. \end{aligned} \right.$ Suy ra $I(-1;0)$ hay $2a+b=-2.$
+}
+\end{ex}

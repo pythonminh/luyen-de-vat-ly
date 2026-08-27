@@ -1,0 +1,120 @@
+# Ngân hàng LaTeX — Môn / Lớp / Chương / Bài
+
+App đọc thẳng file `de.tex` trong thư mục này (`QUESTION_SOURCE=GITHUB`).
+Sửa trên GitHub (bút Edit → Commit), rồi trong app bấm **Đồng bộ GitHub .tex**.
+
+Hiện có **85 bài** (~11630 câu).
+
+## Mục lục
+
+### Toán
+- **Lớp 10**
+  - Chương I. Mệnh đề và tập hợp
+    - [Bài 1. Mệnh đề](Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex)
+    - [Bài 2. Tập hợp và các phép toán trên tập hợp](Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex)
+  - Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn
+    - [Bài 3. Bất phương trình bậc nhất hai ẩn](Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex)
+  - Chương IV. Vectơ
+    - [Bài 7. Các khái niệm mở đầu](Toán/Lớp 10/Chương IV. Vectơ/Bài 7. Các khái niệm mở đầu/de.tex)
+    - [Bài 8. Tổng và hiệu của hai vectơ](Toán/Lớp 10/Chương IV. Vectơ/Bài 8. Tổng và hiệu của hai vectơ/de.tex)
+    - [Bài 9. Tích của một vectơ với một số](Toán/Lớp 10/Chương IV. Vectơ/Bài 9. Tích của một vectơ với một số/de.tex)
+- **Lớp 11**
+  - Chương I. Hàm số lượng giác và phương trình lượng giác
+    - [Bài 1. Giá trị lượng giác của góc lượng giác](Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 1. Giá trị lượng giác của góc lượng giác/de.tex)
+    - [Bài 2. Công thức lượng giác](Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 2. Công thức lượng giác/de.tex)
+    - [Bài 3. Hàm số lượng giác](Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 3. Hàm số lượng giác/de.tex)
+    - [Bài 4. Phương trình lượng giác cơ bản](Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 4. Phương trình lượng giác cơ bản/de.tex)
+- **Lớp 12**
+  - Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số
+    - [Bài 1. Tính đơn điệu và cực trị của hàm số](Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/Bài 1. Tính đơn điệu và cực trị của hàm số/de.tex)
+    - [OTC1-De1](Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/OTC1-De1/de.tex)
+    - [OTC1-De2](Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/OTC1-De2/de.tex)
+### Vật lý
+- **Lớp 10**
+  - Chương I. Mở đầu
+    - [L10C1 Bài 1. Làm quen với Vật lí](Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 1. Làm quen với Vật lí/de.tex)
+    - [L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí](Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/de.tex)
+    - [L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo](Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo/de.tex)
+  - Chương II. Động học
+    - [L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được](Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được/de.tex)
+    - [L10C2 Bài 5. Tốc độ và vận tốc](Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 5. Tốc độ và vận tốc/de.tex)
+    - [L10C2 Bài 8. Chuyển động biến đổi. Gia tốc](Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 8. Chuyển động biến đổi. Gia tốc/de.tex)
+  - Chương III. Động lực học
+    - [L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực/de.tex)
+    - [L10C3 Bài 14. Định luật 1 Newton](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 14. Định luật 1 Newton/de.tex)
+    - [L10C3 Bài 15. Định luật 2 Newton](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 15. Định luật 2 Newton/de.tex)
+    - [L10C3 Bài 16. Định luật 3 Newton](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 16. Định luật 3 Newton/de.tex)
+    - [L10C3 Bài 17. Trọng lực và lực căng](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 17. Trọng lực và lực căng/de.tex)
+    - [L10C3 Bài 18. Lực ma sát](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 18. Lực ma sát/de.tex)
+    - [L10C3 Bài 19. Lực cản và lực nâng](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 19. Lực cản và lực nâng/de.tex)
+    - [L10C3 Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học/de.tex)
+    - [L10C3 Bài 21. Mômen lực. Cân bằng của vật rắn](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 21. Mômen lực. Cân bằng của vật rắn/de.tex)
+    - [L10C3 Bài 22. Thực hành: Tổng hợp lực](Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 22. Thực hành- Tổng hợp lực/de.tex)
+  - Chương V. Động lượng
+    - [L10C5 Bài 28. Động lượng](Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 28. Động lượng/de.tex)
+    - [L10C5 Bài 29. Định luật bảo toàn động lượng](Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 29. Định luật bảo toàn động lượng/de.tex)
+    - [L10C5 Bài 30. Thực hành: Xác định động lượng của vật trước và sau va chạm](Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 30. Thực hành- Xác định động lượng của vật trước và sau va chạm/de.tex)
+  - Chương VI. Chuyển động tròn
+    - [L10C6 Bài 31. Động học của chuyển động tròn đều](Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 31. Động học của chuyển động tròn đều/de.tex)
+    - [L10C6 Bài 32. Lực hướng tâm và gia tốc hướng tâm](Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 32. Lực hướng tâm và gia tốc hướng tâm/de.tex)
+  - Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng
+    - [L10C7 Bài 33. Biến dạng của vật rắn](Vật lý/Lớp 10/Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng/L10C7 Bài 33. Biến dạng của vật rắn/de.tex)
+- **Lớp 11**
+  - Chương I. Dao động
+    - [L11C1 Bài 1. Dao động điều hòa](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex)
+    - [L11C1 Bài 2. Mô tả dao động điều hòa](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex)
+    - [L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex)
+    - [L11C1 Bài 4. Bài tập về dao động điều hòa](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex)
+    - [L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/de.tex)
+    - [L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng/de.tex)
+    - [L11C1 Ôn Tập chương dao động](Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/de.tex)
+  - Chương II. Sóng
+    - [L11C2 Bài 8. Mô tả sóng](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 8. Mô tả sóng/de.tex)
+    - [L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ/de.tex)
+    - [L11C2 Bài 10. Thực hành: Đo tần số của sóng âm](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 10. Thực hành- Đo tần số của sóng âm/de.tex)
+    - [L11C2 Bài 11. Sóng điện từ](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 11. Sóng điện từ/de.tex)
+    - [L11C2 Bài 12. Giao thoa sóng](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 12. Giao thoa sóng/de.tex)
+    - [L11C2 Bài 13. Sóng dừng](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 13. Sóng dừng/de.tex)
+    - [L11C2 Bài 14. Bài tập về sóng](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 14. Bài tập về sóng/de.tex)
+    - [L11C2 Bài 15. Thực hành: Đo tốc độ truyền âm](Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 15. Thực hành- Đo tốc độ truyền âm/de.tex)
+  - Chương III. Điện trường
+    - [L11C3  Bài 16. Lực tương tác giữa hai điện tích](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 16. Lực tương tác giữa hai điện tích/de.tex)
+    - [L11C3  Bài 17. Khái niệm điện trường](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 17. Khái niệm điện trường/de.tex)
+    - [L11C3  Bài 18. Điện trường đều](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 18. Điện trường đều/de.tex)
+    - [L11C3  Bài 19. Thế năng điện](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 19. Thế năng điện/de.tex)
+    - [L11C3  Bài 20. Điện thế](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 20. Điện thế/de.tex)
+    - [L11C3  Bài 21. Tụ điện](Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 21. Tụ điện/de.tex)
+  - Chương IV. Dòng điện. Mạch điện
+    - [L11C4  Bài 22. Cường độ dòng điện](Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 22. Cường độ dòng điện/de.tex)
+    - [L11C4  Bài 23. Điện trở. Định luật Ohm](Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 23. Điện trở. Định luật Ohm/de.tex)
+    - [L11C4  Bài 24. Nguồn điện](Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 24. Nguồn điện/de.tex)
+    - [L11C4  Bài 25. Năng lượng điện và công suất điện](Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 25. Năng lượng điện và công suất điện/de.tex)
+- **Lớp 12**
+  - Chương I. Vật lí nhiệt
+    - [L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex)
+    - [L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex)
+    - [L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/de.tex)
+    - [L12C1 Bài 4. Nhiệt dung riêng](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/de.tex)
+    - [L12C1 Bài 5. Nhiệt nóng chảy riêng](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex)
+    - [L12C1 Bài 6. Nhiệt hóa hơi riêng](Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex)
+  - Chương II. Khí lí tưởng
+    - [L12C2 Bài 8. Mô hình động học phân tử chất khí](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/de.tex)
+    - [L12C2 Bài 9. Định luật Boyle](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/de.tex)
+    - [L12C2 Bài 10. Định luật Charles](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/de.tex)
+    - [L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng/de.tex)
+    - [L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/de.tex)
+    - [L12C2 Bài 13. Bài tập về khí lí tưởng](Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/de.tex)
+  - Chương III. Từ trường
+    - [L12C3 Bài 14. Từ trường](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 14. Từ trường/de.tex)
+    - [L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ/de.tex)
+    - [L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ/de.tex)
+    - [L12C3 Bài 17. Máy phát điện xoay chiều](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 17. Máy phát điện xoay chiều/de.tex)
+    - [L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ/de.tex)
+    - [L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ/de.tex)
+    - [L12C3 Bài 20. Bài tập về từ trường](Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 20. Bài tập về từ trường/de.tex)
+  - Chương IV. Vật lí hạt nhân
+    - [L12C4 Bài 21. Cấu trúc hạt nhân](Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 21. Cấu trúc hạt nhân/de.tex)
+    - [L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết](Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/de.tex)
+    - [L12C4 Bài 23. Hiện tượng phóng xạ](Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 23. Hiện tượng phóng xạ/de.tex)
+    - [L12C4 Bài 24. Công nghiệp hạt nhân](Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 24. Công nghiệp hạt nhân/de.tex)
+    - [L12C4 Bài 25. Bài tập về vật lí hạt nhân](Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 25. Bài tập về vật lí hạt nhân/de.tex)
