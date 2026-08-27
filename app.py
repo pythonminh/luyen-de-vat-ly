@@ -138,27 +138,33 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V482_GITHUB_LOAD"
+APP_VERSION = "V485_BT_PARSE"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
     from ldvl.github_tex import (
         copy_cache_into_local,
+        count_tex_question_blocks,
         defaults_from_rel_path,
         download_github_tex,
         github_tex_config,
         lesson_rel_path,
         list_local_tex_files,
+        load_muc_luc_lessons,
+        read_or_fetch_tex,
         read_tex_file,
         write_tex_file,
     )
 except Exception:  # pragma: no cover
     copy_cache_into_local = None  # type: ignore[assignment]
+    count_tex_question_blocks = None  # type: ignore[assignment]
     defaults_from_rel_path = None  # type: ignore[assignment]
     download_github_tex = None  # type: ignore[assignment]
     github_tex_config = None  # type: ignore[assignment]
     lesson_rel_path = None  # type: ignore[assignment]
     list_local_tex_files = None  # type: ignore[assignment]
+    load_muc_luc_lessons = None  # type: ignore[assignment]
+    read_or_fetch_tex = None  # type: ignore[assignment]
     read_tex_file = None  # type: ignore[assignment]
     write_tex_file = None  # type: ignore[assignment]
 
@@ -3797,6 +3803,11 @@ _CATALOG_CACHE_LOCK = threading.Lock()
 
 
 def _questions_disk_cache_enabled() -> bool:
+    # GITHUB lazy: không ghi/đọc cache 11k câu — cache cũ từ Sheet sẽ làm Render khởi động rất chậm.
+    src = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "").upper()
+    src = src.replace(" ", "").replace("-", "_")
+    if src in ("GITHUB", "TEX", "GITHUB_TEX", "LOCAL_TEX", "NGAN_HANG", "NGANHANG"):
+        return False
     raw = clean(os.environ.get("QUESTIONS_DISK_CACHE", "1")).lower()
     return raw not in {"0", "false", "off", "no"}
 
@@ -5980,6 +5991,9 @@ class SheetStore:
         self._cache_save_gen = 0
         self.load_lock = threading.Lock()
         self.add_question_lock = threading.Lock()
+        self._github_lesson_lock = threading.Lock()
+        self._github_tex_rel_by_made: Dict[str, str] = {}
+        self._github_tex_hash_by_made: Dict[str, str] = {}
         self.duplicate_report: Dict[str, Any] = {}
 
     def connect(self):
@@ -6240,7 +6254,16 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def ensure_questions_loaded(self, force: bool = False):
-        """Nạp Cau_Hoi + catalog khi thật sự cần. Cache đĩa trước, Sheet chạy nền."""
+        """Nạp catalog khi thật sự cần. GITHUB: chỉ đọc muc_luc.json. Sheet: cache đĩa rồi Cau_Hoi."""
+        if _json_question_source_mode() == "GITHUB":
+            if self.questions_loaded and self.catalog and not force:
+                return
+            with self.load_lock:
+                if self.questions_loaded and self.catalog and not force:
+                    return
+                self.questions_error = ""
+                self.load()
+            return
         if self.questions_loaded and self.questions and not force:
             self.apply_deleted_question_tombstones()
             return
@@ -6266,13 +6289,16 @@ class SheetStore:
                 ) from None
 
     def start_questions_background(self, force: bool = False) -> None:
-        """Nạp cache đĩa + Sheet trên luồng nền — không chặn /api/meta."""
-        if self.questions_loaded and self.questions and not force and not self.questions_from_cache:
+        """Nạp catalog trên luồng nền — không chặn /api/meta (trừ GITHUB: muc_luc rất nhẹ)."""
+        github = _json_question_source_mode() == "GITHUB"
+        ready = bool(self.catalog) if github else bool(self.questions)
+        if self.questions_loaded and ready and not force and not self.questions_from_cache:
             return
         with self.load_lock:
             if self.questions_loading:
                 return
-            if self.questions_loaded and self.questions and not force and not self.questions_from_cache:
+            ready = bool(self.catalog) if github else bool(self.questions)
+            if self.questions_loaded and ready and not force and not self.questions_from_cache:
                 return
             self.questions_loading = True
             self.questions_error = ""
@@ -6280,16 +6306,19 @@ class SheetStore:
 
         def worker():
             try:
-                if not self.questions_loaded:
-                    try:
-                        self.try_apply_questions_cache()
-                    except Exception:
-                        log_swallow("start_questions_background:cache")
-                self.ensure_questions_loaded(force=True)
-                self.questions_from_cache = False
+                if github:
+                    self.ensure_questions_loaded(force=force)
+                else:
+                    if not self.questions_loaded:
+                        try:
+                            self.try_apply_questions_cache()
+                        except Exception:
+                            log_swallow("start_questions_background:cache")
+                    self.ensure_questions_loaded(force=True)
+                    self.questions_from_cache = False
             except Exception as e:
-                if self.questions_loaded and self.questions:
-                    self.questions_error = "Đang dùng cache đĩa. Sheet: " + str(e)
+                if self.questions_loaded and (self.catalog or self.questions):
+                    self.questions_error = "Đang dùng bản đã nạp. " + str(e)
                 else:
                     self.questions_error = str(e)
             finally:
@@ -6299,7 +6328,13 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
-        """Trả mục lục ngay (file catalog nhỏ). Cache 14MB / Sheet chạy nền."""
+        """Trả mục lục ngay. GITHUB: đọc muc_luc.json ngay trong request (nhẹ). Sheet: cache / nền."""
+        if _json_question_source_mode() == "GITHUB" and not (self.questions_loaded and self.catalog):
+            try:
+                self.ensure_questions_loaded(force=False)
+            except Exception as e:
+                self.questions_error = str(e)
+                log.warning("GITHUB muc_luc: %s", e)
         if not self.questions_loaded:
             self.start_questions_background(force=False)
             cached = self._meta_from_catalog_cache_file()
@@ -6313,12 +6348,12 @@ class SheetStore:
                 "questions_from_cache": False,
                 "question_source": _json_question_source_mode(),
                 "loading_message": (
-                    "Đang nạp đề từ GitHub / thư mục ngan-hang (file .tex). Không chờ Google Sheet Cau_Hoi."
+                    "Đang nạp mục lục từ GitHub / ngan-hang (muc_luc.json). Không đọc sheet Cau_Hoi."
                     if _json_question_source_mode() == "GITHUB"
                     else "Đang nạp mục lục đề… vài giây. Không cần bấm lại."
                 ),
                 "load_error": self.questions_error,
-                "count_questions": len(self.questions),
+                "count_questions": self._public_question_count(),
                 "count_catalog": len(self.catalog),
                 "user": current_user_public(),
                 "filters": {"Mon": [], "Lop": [], "Chuong": [], "BaiHoc": [], "DangBaiTap": [], "BoDe": []},
@@ -6430,37 +6465,191 @@ class SheetStore:
         log.info("GitHub .tex: tải %s file → %s", dl.get("count_files"), cfg.get("local_dir"))
 
     def _load_github_bank(self) -> None:
-        """Nạp câu hỏi từ ngan-hang/*.tex (và GitHub) — không chờ sheet Cau_Hoi."""
+        """Mục lục nhanh từ muc_luc.json — không parse hết 11k câu. Mỗi bài parse khi mở đề."""
         self.question_source_mode = "GITHUB"
         self.ws_questions = None
-        try:
-            self._github_tex_ensure_files()
-        except Exception as e:
-            log.warning("GitHub .tex: không tải được remote (%s) — dùng file local nếu có.", e)
-        self.load_questions_from_github_tex(replace=True)
+        self.question_headers = list(QUESTION_FIELDS)
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        self.questions = []
+        self.by_made = {}
+        self.by_group = {}
+        self.by_id = {}
+        self._github_tex_rel_by_made = {}
+        self._github_tex_hash_by_made = {}
+        lessons: List[Dict[str, Any]] = []
+        err = ""
+        if load_muc_luc_lessons and github_tex_config:
+            try:
+                lessons = load_muc_luc_lessons(github_tex_config(APP_DIR))
+            except Exception as e:
+                err = str(e)
+                log.warning("GitHub muc_luc: %s", e)
+        catalog: List[Dict[str, Any]] = []
+        total = 0
+        for les in lessons:
+            qmeta = {
+                "Mon": clean(les.get("Mon", "")),
+                "Lop": clean(les.get("Lop", "")),
+                "Chuong": clean(les.get("Chuong", "")),
+                "BaiHoc": clean(les.get("BaiHoc", "")),
+            }
+            gk = catalog_group_key(qmeta)
+            try:
+                n = int(les.get("count_questions") or 0)
+            except Exception:
+                n = 0
+            rel = clean(les.get("path") or "")
+            if rel and github_tex_config and count_tex_question_blocks:
+                try:
+                    cfg = github_tex_config(APP_DIR)
+                    for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
+                        if not root:
+                            continue
+                        p = os.path.join(root, rel.replace("/", os.sep))
+                        if os.path.isfile(p):
+                            with open(p, "r", encoding="utf-8", errors="replace") as fh:
+                                n_file = count_tex_question_blocks(fh.read())
+                            if n_file:
+                                n = n_file
+                            break
+                except Exception:
+                    log_swallow("_load_github_bank:count_tex")
+            total += n
+            if gk and rel:
+                self._github_tex_rel_by_made[gk] = rel
+            catalog.append({
+                "MaDe": gk,
+                "GroupKey": gk,
+                "Lop": qmeta["Lop"],
+                "Mon": qmeta["Mon"],
+                "Chuong": qmeta["Chuong"],
+                "BaiHoc": qmeta["BaiHoc"],
+                "De": qmeta["BaiHoc"],
+                "DangBaiTap": "",
+                "BoDe": "",
+                "SoCau": n,
+                "QuyenTruyCap": "VIP",
+                "IsFree": False,
+                "_tex_rel": rel,
+                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+            })
+        catalog.sort(key=catalog_sort_key)
+        self.catalog = catalog
+        self.github_tex_info = {
+            "lazy": True,
+            "count_lessons": len(catalog),
+            "count_questions": total,
+            "error": err,
+            "repo": (github_tex_config(APP_DIR) or {}).get("repo", "") if github_tex_config else "",
+        }
         self.questions_loaded = True
         self.questions_from_cache = False
         self.loaded_at = now_str()
         try:
-            self._save_questions_cache()
             self._save_catalog_cache()
         except Exception:
-            log_swallow("_load_github_bank:cache")
-        try:
-            self.connect()
-            self.ws_users = self.worksheet_or_none("HOC_VIEN")
-            self.ws_results = self.ensure_ws("Ket_Qua", [
-                "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
-            ])
-            self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
-            self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
-            if not self.users_loaded:
-                self.load_users()
-                self.users_loaded = True
-            self.load_learning()
-            self.load_lesson_catalog()
-        except Exception as e:
-            log.warning("GITHUB: Sheet học viên/học liệu: %s", e)
+            log_swallow("_load_github_bank:catalog")
+
+    def _drop_github_lesson_questions(self, made: str) -> None:
+        made = clean(made)
+        old = list(self.by_made.get(made) or []) + list(self.by_group.get(made) or [])
+        if not old:
+            return
+        drop_ids = {id(q) for q in old}
+        self.questions = [q for q in (self.questions or []) if id(q) not in drop_ids]
+        self.by_made[made] = []
+        self.by_group[made] = []
+        for q in old:
+            qid = clean(q.get("ID", ""))
+            if not qid:
+                continue
+            remain = [x for x in (self.by_id.get(qid) or []) if id(x) not in drop_ids]
+            if remain:
+                self.by_id[qid] = remain
+            else:
+                self.by_id.pop(qid, None)
+
+    def _ensure_github_tex_lesson(self, made: str) -> None:
+        """Parse đúng 1 file .tex khi mở bài. Đọc lại nếu file đã thêm câu mới."""
+        if self.question_source_mode != "GITHUB" and _json_question_source_mode() != "GITHUB":
+            return
+        made = clean(made)
+        if not made:
+            return
+        rel = clean((self._github_tex_rel_by_made or {}).get(made, ""))
+        if not rel:
+            for item in self.catalog or []:
+                if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
+                    rel = clean(item.get("_tex_rel", ""))
+                    made = clean(item.get("GroupKey") or item.get("MaDe") or made)
+                    break
+        if not rel or not github_tex_config or not read_or_fetch_tex:
+            return
+        with self._github_lesson_lock:
+            cfg = github_tex_config(APP_DIR)
+            local_peek = ""
+            local_dir = (cfg or {}).get("local_dir") or ""
+            if local_dir:
+                lp = os.path.join(local_dir, rel.replace("/", os.sep))
+                if os.path.isfile(lp):
+                    with open(lp, "r", encoding="utf-8", errors="replace") as fh:
+                        local_peek = fh.read()
+            peek_hash = hashlib.md5(local_peek.encode("utf-8", errors="replace")).hexdigest() if local_peek else ""
+            if (
+                local_peek
+                and (self.by_group.get(made) or self.by_made.get(made))
+                and (self._github_tex_hash_by_made or {}).get(made) == peek_hash
+            ):
+                return
+            tex = read_or_fetch_tex(cfg, rel)
+            tex_hash = hashlib.md5((tex or "").encode("utf-8", errors="replace")).hexdigest()
+            if (
+                (self.by_group.get(made) or self.by_made.get(made))
+                and (self._github_tex_hash_by_made or {}).get(made) == tex_hash
+            ):
+                return
+            defaults = defaults_from_rel_path(rel) if defaults_from_rel_path else {}
+            parsed = parse_latex_questions_2026(tex, defaults)
+            qs = parsed.get("questions") if isinstance(parsed, dict) else []
+            self._drop_github_lesson_questions(made)
+            added: List[Dict[str, Any]] = []
+            base_row = 800000 + len(self.questions)
+            for i, q in enumerate(qs or [], start=1):
+                q = dict(q or {})
+                try:
+                    q = canonical_question(q)
+                except Exception:
+                    q = {f: clean(q.get(f, "")) for f in QUESTION_FIELDS}
+                    q["Dang"] = effective_dang(q)
+                if not clean(q.get("CauHoi")):
+                    continue
+                for k, v in (defaults or {}).items():
+                    if v and not clean(q.get(k, "")):
+                        q[k] = v
+                q["MaDe"] = made
+                q["_source"] = "GITHUB"
+                q["_tex_rel"] = rel
+                q["_row"] = base_row + i
+                self.questions.append(q)
+                added.append(q)
+            if added:
+                for q in added:
+                    q["Dang"] = effective_dang(q)
+                    self.by_made.setdefault(made, []).append(q)
+                    self.by_group.setdefault(made, []).append(q)
+                    qid = clean(q.get("ID", ""))
+                    if qid:
+                        self.by_id.setdefault(qid, []).append(q)
+            n = len(added)
+            self._github_tex_hash_by_made[made] = tex_hash
+            for item in self.catalog or []:
+                if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
+                    item["SoCau"] = n
+                    break
+            info = dict(self.github_tex_info or {})
+            info["count_questions"] = sum(int(c.get("SoCau") or 0) for c in (self.catalog or []))
+            self.github_tex_info = info
+            log.info("GitHub .tex lazy: %s → %s câu (%s)", rel, n, made)
 
     def load(self):
         self.question_source_mode = _json_question_source_mode()
@@ -7950,7 +8139,7 @@ class SheetStore:
         return {
             "version": APP_VERSION,
             "loaded_at": self.loaded_at,
-            "count_questions": len(self.questions),
+            "count_questions": self._public_question_count(),
             "count_catalog": len(self.catalog),
             "question_source": self.question_source_mode,
             "json_source": self.json_source_info if is_admin() else {},
@@ -8237,6 +8426,20 @@ class SheetStore:
             hits.append(self._lookup_match_item(q))
         return {"keyword": keyword, "count": len(hits), "matches": hits[: max(0, limit)]}
 
+    def _public_question_count(self) -> int:
+        info_n = int((self.github_tex_info or {}).get("count_questions") or 0)
+        if info_n:
+            return info_n
+        catalog_n = 0
+        for c in self.catalog or []:
+            try:
+                catalog_n += int(c.get("SoCau") or 0)
+            except Exception:
+                pass
+        if catalog_n:
+            return catalog_n
+        return len(self.questions or [])
+
     def resolve_quiz_base_raw(self, made: str) -> List[Dict[str, Any]]:
         """Pool thô theo đề/thẻ bài — KHÔNG gộp trùng nội dung (dùng để xóa trùng Sheet)."""
         made = clean(made)
@@ -8247,6 +8450,7 @@ class SheetStore:
                 merged.extend(self.resolve_quiz_base_raw(part))
             return dedupe_questions_by_row(merged)
         self.apply_deleted_question_tombstones()
+        self._ensure_github_tex_lesson(made)
         if made.startswith("GRP_"):
             qs = list(self.by_group.get(made, []))
             if qs:
@@ -8271,6 +8475,7 @@ class SheetStore:
                 merged.extend(self.resolve_quiz_base(part))
             return dedupe_questions_by_content(dedupe_questions_by_row(merged))
         self.apply_deleted_question_tombstones()
+        self._ensure_github_tex_lesson(made)
         if made.startswith("GRP_"):
             qs = list(self.by_group.get(made, []))
             if qs:
@@ -27859,7 +28064,7 @@ async function init(){
     let errHint=META.load_error?(' · '+META.load_error):'';
     if(info)info.textContent='Đang nạp đề… '+waited+'s'+errHint;
     resetHomeFilterPlaceholders(true);
-    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp đề từ GitHub / ngan-hang...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu nạp file .tex có thể chờ <b>10–90 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
+    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp mục lục đề…')}</p><div class="loadWarn"><b>Lưu ý:</b> Render Free ngủ sau ~15 phút không ai vào. Lần mở đầu tiên chỉ chờ máy thức dậy (khoảng <b>30–90 giây</b>), không nạp hết 11 nghìn câu.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
     if(cnt)cnt.textContent='';
     if(INIT_POLL_COUNT>=INIT_POLL_MAX){
       if(info)info.textContent='Không nạp được Sheet sau '+waited+'s';
@@ -37237,7 +37442,10 @@ window.__LDVL_MAIN_JS_LOADED=true;
 # NHẬP LATEX TRỰC TIẾP VÀO GOOGLE SHEET
 # ============================================================
 
-_LATEX_EX_RE = re.compile(r"\\begin\s*\{\s*ex\s*\}([\s\S]*?)\\end\s*\{\s*ex\s*\}", re.I)
+_LATEX_EX_RE = re.compile(
+    r"\\begin\s*\{\s*(ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*\1\s*\}",
+    re.I,
+)
 _LATEX_INCLUDE_RE = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{\s*([^{}]+?)\s*\}", re.I)
 
 
@@ -37818,6 +38026,9 @@ def _latex_meta_id(ex_body: str, idx: int) -> str:
     m = re.search(r"%\s*ID\s*:\s*(\S+)", str(ex_body or ""), re.I)
     if m:
         return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
+    m = re.search(r"%\s*\[([0-9A-Za-z._\-]+)\]", str(ex_body or ""))
+    if m:
+        return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
     m = re.search(r"\[Mã\s*câu\s*:\s*([^\]]+)\]", ex_body, re.I)
     if not m:
         m = re.search(r"\[Ma\s*cau\s*:\s*([^\]]+)\]", strip_accents(ex_body), re.I)
@@ -38237,7 +38448,7 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
     skipped: List[Dict[str, Any]] = []
 
     for idx, m in enumerate(blocks, start=1):
-        raw_block = m.group(1)
+        raw_block = m.group(2)
         try:
             work = raw_block
 
@@ -41917,7 +42128,7 @@ def api_github_tex_status():
         "question_source": _json_question_source_mode(),
         "config": {k: cfg.get(k, "") for k in ("repo", "branch", "rel_dir", "local_dir", "blob_base") if cfg},
         "github_tex": getattr(st, "github_tex_info", {}) or {},
-        "count_questions": len(getattr(st, "questions", []) or []),
+        "count_questions": st._public_question_count() if hasattr(st, "_public_question_count") else len(getattr(st, "questions", []) or []),
     })
 
 
