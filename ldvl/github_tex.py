@@ -150,11 +150,29 @@ def _local_file_bytes(cfg: Dict[str, str], rel: str) -> bytes:
 
 
 _TEX_Q_ENV_RE = re.compile(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", re.I)
+_TEX_DANGBT_RE = re.compile(r"\\dangbt\s*\{([^{}]*)\}", re.I)
+
+
+def count_tex_question_stats(text: str) -> Tuple[int, Dict[str, int]]:
+    """Đếm câu + bucket \\dangbt gần nhất trước mỗi \\begin{ex}/\\begin{bt}."""
+    text = text or ""
+    qpos = [m.start() for m in _TEX_Q_ENV_RE.finditer(text)]
+    markers = [(m.start(), (m.group(1) or "").strip()) for m in _TEX_DANGBT_RE.finditer(text)]
+    counts: Dict[str, int] = {}
+    mi = 0
+    current = ""
+    for pos in qpos:
+        while mi < len(markers) and markers[mi][0] < pos:
+            current = markers[mi][1]
+            mi += 1
+        name = (current or "").strip()
+        counts[name] = counts.get(name, 0) + 1
+    return len(qpos), counts
 
 
 def count_tex_question_blocks(text: str) -> int:
     """Đếm \\begin{ex} và \\begin{bt} — không tin dòng % Số câu: ở đầu file."""
-    return len(_TEX_Q_ENV_RE.findall(text or ""))
+    return count_tex_question_stats(text)[0]
 
 
 _TEX_HEADER_RE = re.compile(r"%\s*(Môn|Lớp|Chương|Bài)\s*:\s*(.+)", re.I)
@@ -188,6 +206,8 @@ def list_github_tex_blobs(cfg: Dict[str, str]) -> Dict[str, Any]:
     token = cfg.get("token") or ""
     url = f"https://api.github.com/repos/{repo}/git/trees/{urllib.parse.quote(branch)}?recursive=1"
     data = json.loads(http_get_text(url, token=token, timeout=45))
+    if data.get("message") and not data.get("tree"):
+        raise RuntimeError(str(data.get("message") or "GitHub API lỗi")[:220])
     files: Dict[str, str] = {}
     for item in data.get("tree") or []:
         if item.get("type") != "blob":
@@ -211,6 +231,13 @@ def sync_github_tex_if_changed(cfg: Dict[str, str], max_workers: int = 8) -> Dic
         return {"ok": False, "changed": 0, "error": str(e)[:220], "rels": []}
     files = listing.get("files") or {}
     tree_sha = listing.get("tree_sha") or ""
+    if not files:
+        return {
+            "ok": False,
+            "changed": 0,
+            "error": "GitHub không trả file .tex (rate limit hoặc repo trống)",
+            "rels": [],
+        }
     sha_path = _blob_sha_path(cfg)
     old: Dict[str, Any] = {}
     if os.path.isfile(sha_path):

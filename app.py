@@ -139,7 +139,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V505_GH_ALWAYS_SHOW"
+APP_VERSION = "V508_RENDER_MUCLUC"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -159,7 +159,8 @@ try:
         sync_github_tex_if_changed,
         write_tex_file,
     )
-except Exception:  # pragma: no cover
+except Exception as _github_tex_import_err:  # pragma: no cover
+    logging.getLogger("ldvl").exception("Không import được ldvl.github_tex: %s", _github_tex_import_err)
     copy_cache_into_local = None  # type: ignore[assignment]
     count_tex_question_blocks = None  # type: ignore[assignment]
     count_tex_question_stats = None  # type: ignore[assignment]
@@ -3989,12 +3990,18 @@ _CATALOG_CACHE_LOCK = threading.Lock()
 
 
 def _questions_disk_cache_enabled() -> bool:
-    # GITHUB lazy: không ghi/đọc cache 11k câu — cache cũ từ Sheet sẽ làm Render khởi động rất chậm.
+    # GITHUB lazy: không đọc cache 11k câu Sheet (Render khởi động chậm). Mục lục vẫn cache riêng.
     src = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "").upper()
     src = src.replace(" ", "").replace("-", "_")
     if src in ("GITHUB", "TEX", "GITHUB_TEX", "LOCAL_TEX", "NGAN_HANG", "NGANHANG"):
         return False
     raw = clean(os.environ.get("QUESTIONS_DISK_CACHE", "1")).lower()
+    return raw not in {"0", "false", "off", "no"}
+
+
+def _catalog_disk_cache_enabled() -> bool:
+    """Mục lục nhỏ (~vài trăm KB) — luôn dùng được cả khi nguồn đề là GitHub .tex."""
+    raw = clean(os.environ.get("CATALOG_DISK_CACHE", "1")).lower()
     return raw not in {"0", "false", "off", "no"}
 
 
@@ -6370,7 +6377,7 @@ class SheetStore:
 
     def _save_catalog_cache(self) -> None:
         """File nhỏ (~mục lục đề) để trang chủ mở ngay, không đợi JSON 14MB."""
-        if not _questions_disk_cache_enabled() or not self.catalog:
+        if not _catalog_disk_cache_enabled() or not self.catalog:
             return
         catalog = []
         for item in self.catalog:
@@ -6384,7 +6391,11 @@ class SheetStore:
         payload = {
             "schema": CATALOG_CACHE_SCHEMA,
             "saved_at": self.loaded_at or now_str(),
-            "count_questions": len(self.questions or []),
+            "count_questions": (
+                self._public_question_count()
+                if hasattr(self, "_public_question_count")
+                else len(self.questions or [])
+            ),
             "count_catalog": len(catalog),
             "catalog": catalog,
             "filters": self._filters_from_catalog_items(catalog),
@@ -6402,7 +6413,7 @@ class SheetStore:
             log_swallow("_save_catalog_cache")
 
     def _meta_from_catalog_cache_file(self) -> Optional[Dict[str, Any]]:
-        if not _questions_disk_cache_enabled() or not os.path.isfile(CATALOG_CACHE_FILE):
+        if not _catalog_disk_cache_enabled() or not os.path.isfile(CATALOG_CACHE_FILE):
             return None
         try:
             with _CATALOG_CACHE_LOCK:
@@ -6411,7 +6422,8 @@ class SheetStore:
         except Exception:
             log_swallow("_meta_from_catalog_cache_file")
             return None
-        if not isinstance(raw, dict) or int(raw.get("schema") or 0) != CATALOG_CACHE_SCHEMA:
+        schema = int(raw.get("schema") or 0) if isinstance(raw, dict) else 0
+        if not isinstance(raw, dict) or schema < 1:
             return None
         catalog = raw.get("catalog") or []
         if not isinstance(catalog, list) or len(catalog) < 1:
@@ -6554,13 +6566,12 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
-        """Trả mục lục ngay. GITHUB: tự kéo file .tex mới trên GitHub rồi đếm câu."""
+        """Trả mục lục ngay. GITHUB: đọc ngan-hang local trước, GitHub sync nền."""
         if _json_question_source_mode() == "GITHUB":
             try:
-                if self.questions_loaded and self.catalog:
-                    self.refresh_github_tex_catalog()
-                else:
+                if not (self.questions_loaded and self.catalog):
                     self.ensure_questions_loaded(force=False)
+                self._schedule_github_tex_sync()
             except Exception as e:
                 self.questions_error = str(e)
                 log.warning("GITHUB muc_luc: %s", e)
@@ -6589,6 +6600,12 @@ class SheetStore:
                 "dangbaitap_suggestions": [],
                 "catalog": [],
             }
+        if _json_question_source_mode() == "GITHUB" and not self.catalog:
+            cached = self._meta_from_catalog_cache_file()
+            if cached:
+                cached["load_error"] = self.questions_error or cached.get("load_error") or ""
+                cached["questions_refreshing"] = True
+                return cached
         if self.questions_from_cache:
             self.start_questions_background(force=False)
         m = self.meta()
@@ -6693,24 +6710,58 @@ class SheetStore:
             copy_cache_into_local(cfg.get("cache_dir") or "", cfg.get("local_dir") or "")
         log.info("GitHub .tex: tải %s file → %s", dl.get("count_files"), cfg.get("local_dir"))
 
-    def _sync_github_tex_bank(self) -> Dict[str, Any]:
-        if not (github_tex_config and sync_github_tex_if_changed):
-            return {}
-        now = time.time()
+    def _github_sync_min_sec(self) -> float:
         try:
             min_sec = float(os.environ.get("GITHUB_TEX_SYNC_MIN_SEC") or "90")
         except Exception:
             min_sec = 90.0
-        if min_sec < 12:
-            min_sec = 12.0
+        return min_sec if min_sec >= 12 else 12.0
+
+    def _sync_github_tex_bank(self) -> Dict[str, Any]:
+        if not (github_tex_config and sync_github_tex_if_changed):
+            return {}
+        now = time.time()
+        min_sec = self._github_sync_min_sec()
         if now - float(getattr(self, "_github_sync_at", 0) or 0) < min_sec:
-            return {"throttled": True, "skipped": True}
+            if self.catalog:
+                return {"throttled": True, "skipped": True}
         self._github_sync_at = now
         try:
             return sync_github_tex_if_changed(github_tex_config(APP_DIR)) or {}
         except Exception as e:
             log.warning("sync GitHub .tex: %s", e)
             return {"ok": False, "error": str(e)}
+
+    def _schedule_github_tex_sync(self) -> None:
+        """Kéo GitHub trên luồng nền — không chặn /api/meta."""
+        if getattr(self, "_github_sync_running", False):
+            return
+        if not (github_tex_config and sync_github_tex_if_changed):
+            return
+        now = time.time()
+        if self.catalog and now - float(getattr(self, "_github_sync_at", 0) or 0) < self._github_sync_min_sec():
+            return
+        self._github_sync_running = True
+
+        def worker():
+            try:
+                info = self._sync_github_tex_bank()
+                if info.get("throttled"):
+                    return
+                changed_rels = {str(r).replace("\\", "/") for r in (info.get("rels") or [])}
+                if not (info.get("muc_luc_changed") or changed_rels or not self.catalog):
+                    return
+                self._rebuild_github_catalog_from_files()
+                for made, rel in list((self._github_tex_rel_by_made or {}).items()):
+                    if str(rel).replace("\\", "/") in changed_rels:
+                        self._drop_github_lesson_questions(made)
+                        (self._github_tex_hash_by_made or {}).pop(made, None)
+            except Exception as e:
+                log.warning("GitHub .tex sync nền: %s", e)
+            finally:
+                self._github_sync_running = False
+
+        threading.Thread(target=worker, daemon=True, name="github-tex-sync").start()
 
     def _read_tex_on_disk(self, rel: str) -> str:
         if not rel or not github_tex_config:
@@ -6764,7 +6815,10 @@ class SheetStore:
         dbt: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         dbt = dict(dbt or {})
-        dbt, aliases = _cluster_dangbaitap_counts(dbt, max_types=max(1, len(dbt)))
+        try:
+            dbt, aliases = _cluster_dangbaitap_counts(dbt, max_types=max(1, len(dbt)))
+        except Exception:
+            aliases = {}
         named = [k for k in dbt.keys() if k != DBT_FILTER_UNCLASSIFIED]
         gk = catalog_group_key(qmeta)
         return {
@@ -6790,6 +6844,28 @@ class SheetStore:
                 "dbt_aliases": aliases,
             },
         }
+
+    def _github_fill_qmeta(self, qmeta: Dict[str, Any], rel: str) -> Dict[str, str]:
+        """Đảm bảo bài học có tên — kể cả file .tex thiếu BaiHoc trong muc_luc."""
+        out = {
+            "Mon": clean((qmeta or {}).get("Mon", "")),
+            "Lop": clean((qmeta or {}).get("Lop", "")),
+            "Chuong": clean((qmeta or {}).get("Chuong", "")),
+            "BaiHoc": clean((qmeta or {}).get("BaiHoc", "")),
+        }
+        rel_n = str(rel or "").replace("\\", "/")
+        if rel_n and defaults_from_rel_path:
+            filled = defaults_from_rel_path(rel_n) or {}
+            for k in ("Mon", "Lop", "Chuong", "BaiHoc"):
+                if filled.get(k) and not out.get(k):
+                    out[k] = clean(filled.get(k, ""))
+        if not out["BaiHoc"]:
+            parts = [p for p in rel_n.split("/") if p and p.lower() not in ("de.tex",)]
+            stem = parts[-1] if parts else rel_n
+            if stem.lower().endswith(".tex"):
+                stem = stem[:-4]
+            out["BaiHoc"] = clean(out.get("Chuong") or out.get("Mon") or stem) or "Bài"
+        return out
 
     def _github_qmeta_for_lesson(self, les: Dict[str, Any]) -> Tuple[Dict[str, str], str]:
         qmeta = {
@@ -6821,13 +6897,17 @@ class SheetStore:
                 except Exception:
                     log_swallow("_github_qmeta_for_lesson:header")
                 break
+        qmeta = self._github_fill_qmeta(qmeta, rel)
         return qmeta, rel
 
     def _rebuild_github_catalog_from_files(self) -> None:
         """Tên bài từ thư mục/muc_luc; số câu + dạng BT từ \\begin{ex}/\\dangbt trong file."""
         lessons: List[Dict[str, Any]] = []
         err = ""
-        if load_muc_luc_lessons and github_tex_config:
+        if not github_tex_config:
+            err = "Thiếu module ldvl.github_tex — không đọc được ngan-hang."
+            log.warning(err)
+        elif load_muc_luc_lessons:
             try:
                 lessons = load_muc_luc_lessons(github_tex_config(APP_DIR))
             except Exception as e:
@@ -6838,38 +6918,67 @@ class SheetStore:
         seen_rel = set()
         self._github_tex_rel_by_made = {}
         for les in lessons:
-            qmeta, rel = self._github_qmeta_for_lesson(les)
-            gk = catalog_group_key(qmeta)
-            n, dbt = self._tex_stats_on_disk(rel)
-            if not n:
-                try:
-                    n = int(les.get("count_questions") or 0)
-                except Exception:
-                    n = 0
-            total += n
-            if gk and rel:
-                self._github_tex_rel_by_made[gk] = rel
-                seen_rel.add(rel.replace("\\", "/"))
-            catalog.append(self._github_catalog_item(qmeta, rel, n, dbt))
+            try:
+                qmeta, rel = self._github_qmeta_for_lesson(les)
+                gk = catalog_group_key(qmeta)
+                n, dbt = self._tex_stats_on_disk(rel)
+                if not n:
+                    try:
+                        n = int(les.get("count_questions") or 0)
+                    except Exception:
+                        n = 0
+                total += n
+                if gk and rel:
+                    self._github_tex_rel_by_made[gk] = rel
+                    seen_rel.add(rel.replace("\\", "/"))
+                catalog.append(self._github_catalog_item(qmeta, rel, n, dbt))
+            except Exception as e:
+                log.warning("GitHub catalog lesson: %s", e)
         if list_local_tex_files and github_tex_config:
             cfg = github_tex_config(APP_DIR)
             extra = list_local_tex_files(cfg.get("local_dir") or "", cfg.get("cache_dir") or "")
             for rel, abs_path in extra:
-                rel_n = str(rel).replace("\\", "/")
-                if rel_n in seen_rel or not rel_n.lower().endswith(".tex"):
-                    continue
-                qmeta = defaults_from_rel_path(rel_n) if defaults_from_rel_path else {}
-                if not clean(qmeta.get("BaiHoc", "")):
-                    continue
-                gk = catalog_group_key(qmeta)
-                n, dbt = self._tex_stats_on_disk(rel_n)
-                total += n
-                if gk:
-                    self._github_tex_rel_by_made[gk] = rel_n
-                catalog.append(self._github_catalog_item(qmeta, rel_n, n, dbt))
-                seen_rel.add(rel_n)
+                try:
+                    rel_n = str(rel).replace("\\", "/")
+                    if rel_n in seen_rel or not rel_n.lower().endswith(".tex"):
+                        continue
+                    qmeta = defaults_from_rel_path(rel_n) if defaults_from_rel_path else {}
+                    qmeta = self._github_fill_qmeta(qmeta, rel_n)
+                    gk = catalog_group_key(qmeta)
+                    n, dbt = self._tex_stats_on_disk(rel_n)
+                    total += n
+                    if gk:
+                        self._github_tex_rel_by_made[gk] = rel_n
+                    catalog.append(self._github_catalog_item(qmeta, rel_n, n, dbt))
+                    seen_rel.add(rel_n)
+                except Exception as e:
+                    log.warning("GitHub catalog extra %s: %s", rel, e)
         catalog.sort(key=catalog_sort_key)
         self.catalog = catalog
+        if not catalog:
+            cfg = github_tex_config(APP_DIR) if github_tex_config else {}
+            local_dir = (cfg or {}).get("local_dir") or ""
+            n_tex = 0
+            try:
+                n_tex = len(list_local_tex_files(local_dir, "") or []) if list_local_tex_files else 0
+            except Exception:
+                n_tex = -1
+            log.warning(
+                "GitHub catalog rỗng (muc_luc=%s tex=%s dir=%s exists=%s err=%s)",
+                len(lessons),
+                n_tex,
+                local_dir,
+                os.path.isdir(local_dir) if local_dir else False,
+                err,
+            )
+            if not err:
+                err = (
+                    f"Không thấy bài trong {local_dir or 'ngan-hang'} "
+                    f"(muc_luc={len(lessons)} bài, file .tex={n_tex})."
+                )
+            self.questions_error = err
+        else:
+            self.questions_error = ""
         info = dict(self.github_tex_info or {})
         info.update({
             "lazy": True,
@@ -6885,21 +6994,15 @@ class SheetStore:
             log_swallow("_rebuild_github_catalog_from_files")
 
     def refresh_github_tex_catalog(self) -> None:
-        info = self._sync_github_tex_bank()
-        if info.get("throttled"):
-            return
-        changed_rels = {str(r).replace("\\", "/") for r in (info.get("rels") or [])}
-        if not (info.get("muc_luc_changed") or changed_rels or not self.catalog):
-            if self.catalog:
-                return
-        self._rebuild_github_catalog_from_files()
-        for made, rel in list((self._github_tex_rel_by_made or {}).items()):
-            if str(rel).replace("\\", "/") in changed_rels:
-                self._drop_github_lesson_questions(made)
-                (self._github_tex_hash_by_made or {}).pop(made, None)
+        if not self.catalog:
+            try:
+                self._rebuild_github_catalog_from_files()
+            except Exception as e:
+                log.warning("rebuild github catalog: %s", e)
+        self._schedule_github_tex_sync()
 
     def _load_github_bank(self) -> None:
-        """Mục lục nhanh — số câu đếm từ file .tex. Mỗi bài parse khi mở đề."""
+        """Mục lục nhanh từ ngan-hang local. Render: nếu đĩa trống thì lấy muc_luc.json raw, không chờ GitHub API."""
         self.question_source_mode = "GITHUB"
         self.ws_questions = None
         self.question_headers = list(QUESTION_FIELDS)
@@ -6910,11 +7013,24 @@ class SheetStore:
         self.by_id = {}
         self._github_tex_rel_by_made = {}
         self._github_tex_hash_by_made = {}
-        self._sync_github_tex_bank()
         self._rebuild_github_catalog_from_files()
-        self.questions_loaded = True
+        if not self.catalog and load_muc_luc_lessons and github_tex_config:
+            try:
+                load_muc_luc_lessons(github_tex_config(APP_DIR), prefer_remote=True)
+            except Exception as e:
+                log.warning("muc_luc remote Render: %s", e)
+            self._rebuild_github_catalog_from_files()
         self.questions_from_cache = False
         self.loaded_at = now_str()
+        if self.catalog:
+            self.questions_loaded = True
+            self.questions_error = ""
+        else:
+            # Catalog trống → /api/meta vẫn loading, client poll; không khóa 0/0.
+            self.questions_loaded = False
+            if not self.questions_error:
+                self.questions_error = "Đang lấy mục lục từ GitHub ngan-hang (Render chưa có file local)."
+        self._schedule_github_tex_sync()
 
     def _apply_github_lesson_catalog(self, made: str, qs: List[Dict[str, Any]]) -> None:
         """Số câu + dạng BT trên thẻ = đúng pool khi mở đề (sau bỏ trùng nội dung)."""
@@ -6940,7 +7056,10 @@ class SheetStore:
             bump_count(detail["dang"], ed)
             for lv in question_mucdo_parts(q):
                 bump_count(detail["level"], lv)
-        dbt_counts, aliases = _cluster_dangbaitap_counts(dbt_counts, max_types=max(1, len(dbt_counts)))
+        try:
+            dbt_counts, aliases = _cluster_dangbaitap_counts(dbt_counts, max_types=max(1, len(dbt_counts)))
+        except Exception:
+            aliases = {}
         for item in self.catalog or []:
             if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
                 item["SoCau"] = len(qs)
@@ -35502,7 +35621,8 @@ function renderCatalog(){
   let list=(CATALOG||[]).filter(v246ItemMatchesFilter).sort(compareCatalog);let c=document.getElementById('countCat');if(c)c.textContent=`(${list.length} mục)`;let target=document.getElementById('catalog');if(!target)return;
   target.className='';
   target.style.marginTop='10px';
-  target.innerHTML=v246IntroHtml(list)+(list.length?v246BookHtml(list):'<div class="card loadWarn" style="margin-top:10px"><h3>Chưa có mục lục đề</h3><p>Đang nạp ngân hàng LaTeX (GitHub <code>ngan-hang</code>) hoặc bộ lọc đang trống.</p><p class="muted">Đợi vài giây, bấm <b>Ctrl+F5</b>, hoặc đổi môn Toán / Vật lý trên thanh trên.</p></div>');
+  let emptyMsg='<div class="card loadWarn" style="margin-top:10px"><h3>Chưa có mục lục đề</h3><p>Đang nạp ngân hàng LaTeX từ thư mục <code>ngan-hang</code> rồi mới kéo GitHub nền. Nếu máy đã có file .tex mà vẫn trống, bấm <b>Ctrl+F5</b>.</p>'+(META&&META.load_error?('<p class="muted">Lỗi: '+esc(String(META.load_error))+'</p>'):'')+'<p class="muted">Đổi môn Toán / Vật lý trên thanh trên, hoặc menu <b>Đồng bộ</b> → tải GitHub .tex.</p></div>';
+  target.innerHTML=v246IntroHtml(list)+(list.length?v246BookHtml(list):emptyMsg);
 }
 
 
