@@ -72,6 +72,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from flask import (
     Flask,
     copy_current_request_context,
+    has_request_context,
     jsonify,
     make_response,
     redirect,
@@ -138,7 +139,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V500_LG_GITHUB_TOAST"
+APP_VERSION = "V501_SOURCE_PICK"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -6447,7 +6448,19 @@ class SheetStore:
 
     def ensure_questions_loaded(self, force: bool = False):
         """Nạp catalog khi thật sự cần. GITHUB: chỉ đọc muc_luc.json. Sheet: cache đĩa rồi Cau_Hoi."""
-        if _json_question_source_mode() == "GITHUB":
+        want = _json_question_source_mode()
+        if self.questions_loaded and not force:
+            have = self.question_source_mode
+            mismatch = (want == "GITHUB" and have != "GITHUB") or (
+                want != "GITHUB" and have == "GITHUB"
+            )
+            if mismatch:
+                force = True
+                self.questions_loaded = False
+                self.questions = []
+                self.catalog = []
+                self.questions_from_cache = False
+        if want == "GITHUB":
             if self.questions_loaded and self.catalog and not force:
                 return
             with self.load_lock:
@@ -7891,7 +7904,7 @@ class SheetStore:
         save_github_field_map(mp)
 
     def _github_question_mode(self) -> bool:
-        return self.question_source_mode == "GITHUB" or _json_question_source_mode() == "GITHUB"
+        return _json_question_source_mode() == "GITHUB"
 
     def _update_github_field_bulk(self, updates: List[Dict[str, Any]], field: str) -> Dict[str, Any]:
         """ADMIN gán Dạng BT / mức độ / NLVL hàng loạt trên GitHub — JSON overlay, không đụng Sheet/.tex."""
@@ -8905,11 +8918,7 @@ class SheetStore:
             "loaded_at": self.loaded_at,
             "count_questions": self._public_question_count(),
             "count_catalog": len(self.catalog),
-            "question_source": (
-                _json_question_source_mode()
-                if _json_question_source_mode() == "GITHUB"
-                else self.question_source_mode
-            ),
+            "question_source": _json_question_source_mode(),
             "json_source": self.json_source_info if is_admin() else {},
             "github_tex": self.github_tex_info if is_admin() else {},
             "user": current_user_public(),
@@ -11142,11 +11151,24 @@ class SheetStore:
                     "Không tìm thấy câu trong ngân hàng GitHub (.tex). Mở lại bài rồi lưu — không ghi Google Sheet."
                 )
             return self._update_question_github_tex(q_ram, updates)
-        if q_ram and (
+        if _json_question_source_mode() == "GITHUB" and q_ram and (
             clean(q_ram.get("_source")) == "GITHUB"
             or clean(q_ram.get("_tex_rel"))
         ):
             return self._update_question_github_tex(q_ram, updates)
+
+        if q_ram and (
+            clean(q_ram.get("_source")) == "GITHUB" or clean(q_ram.get("_tex_rel"))
+        ):
+            try:
+                fake_row = int(q_ram.get("_row") or 0) >= 800000
+            except Exception:
+                fake_row = True
+            if fake_row:
+                raise RuntimeError(
+                    "Đang chọn nguồn Google Sheet, nhưng câu này thuộc file .tex. "
+                    "Chọn Nguồn đề → GitHub LaTeX rồi lưu, hoặc thêm câu vào Sheet."
+                )
 
         self.connect()
         if self.ws_questions is None:
@@ -11962,7 +11984,7 @@ class SheetStore:
                         break
                 except Exception:
                     continue
-        if self._github_question_mode() or (q_ram and (clean(q_ram.get("_source")) == "GITHUB" or clean(q_ram.get("_tex_rel")))):
+        if self._github_question_mode():
             if not q_ram:
                 raise RuntimeError("Không tìm thấy câu GitHub để xóa. Mở lại bài rồi thử lại.")
             rel = clean(q_ram.get("_tex_rel", ""))
@@ -11971,6 +11993,11 @@ class SheetStore:
                 self._rewrite_github_lesson_tex(rel)
             self.rebuild_indexes_after_admin_change()
             return {"ok": True, "deleted": True, "source": "GITHUB", "id": question_id or clean(q_ram.get("ID", "")), "tex": rel}
+        if q_ram and (clean(q_ram.get("_source")) == "GITHUB" or clean(q_ram.get("_tex_rel"))):
+            raise RuntimeError(
+                "Đang chọn nguồn Google Sheet, không xóa file .tex. "
+                "Chọn Nguồn đề → GitHub LaTeX rồi xóa câu này."
+            )
         if row_number < 2:
             raise RuntimeError("Dòng Google Sheet không hợp lệ")
 
@@ -25855,9 +25882,11 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 .hdrSrcMenu{position:absolute;top:calc(100% + 6px);left:0;z-index:1200;min-width:190px;
   display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:10px;
   background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #00000026}
-.hdrSrcMenu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
-  color:var(--text);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap}
-.hdrSrcMenu a:hover{background:var(--opt-hover,#f1f3f4)}
+.hdrSrcMenu a,.hdrSrcMenu button.hdrSrcItem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+  color:var(--text);text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;width:100%;
+  background:transparent;border:0;cursor:pointer;text-align:left;font-family:inherit}
+.hdrSrcMenu a:hover,.hdrSrcMenu button.hdrSrcItem:hover{background:var(--opt-hover,#f1f3f4)}
+.hdrSrcMenu .on{background:#dbeafe!important;color:#1e40af!important;font-weight:800}
 @media(max-width:600px){.hdrSrcDrop summary span:not(.hdrSrcCaret){display:none}.hdrSrcDrop summary{padding:4px 6px;min-width:28px;justify-content:center}}
 
 /* adminBar — P4: thu nhỏ + scroll; dưới 600px chỉ giữ icon */
@@ -26573,9 +26602,9 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <details class="hdrSrcDrop" id="hdrSrcDrop">
       <summary class="hbtn" title="Chọn nguồn đề"><i class="ti ti-database"></i><span>Nguồn đề</span><i class="ti ti-chevron-down hdrSrcCaret"></i></summary>
       <div class="hdrSrcMenu" aria-label="Chọn nguồn đề">
-        <a href="/" title="Làm đề từ GitHub .tex / Sheet tùy QUESTION_SOURCE"><i class="ti ti-brand-github"></i> GitHub LaTeX</a>
+        <button type="button" class="hdrSrcItem" data-qsrc="GITHUB" onclick="ldvlSelectQuestionSource('GITHUB')"><i class="ti ti-brand-github"></i> GitHub LaTeX</button>
+        <button type="button" class="hdrSrcItem" data-qsrc="SHEET" onclick="ldvlSelectQuestionSource('SHEET')"><i class="ti ti-cloud"></i> Sheet Online</button>
         <a href="https://github.com/pythonminh/luyen-de-vat-ly/tree/main/ngan-hang" target="_blank" rel="noopener" title="Mở thư mục ngan-hang trên GitHub"><i class="ti ti-external-link"></i> Mở repo ngan-hang</a>
-        <a href="/" title="Làm đề online từ Google Sheet"><i class="ti ti-cloud"></i> Sheet Online</a>
         <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy"><i class="ti ti-package"></i> JSON Offline</a>
         <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON"><i class="ti ti-code"></i> Tạo JSON</a>
       </div>
@@ -28896,7 +28925,7 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q);AI_LG_BY_Q=shiftInsert(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=shiftInsert(ADMIN_LG_DRAFT_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);AI_LG_BY_Q=remap(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=remap(ADMIN_LG_DRAFT_BY_Q);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);try{ldvlSyncSourceMenu()}catch(e){}if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
 if(!window.__LDVL_GITHUB_CATALOG_POLL){window.__LDVL_GITHUB_CATALOG_POLL=1;setInterval(function(){if(!(META&&META.question_source==='GITHUB'))return;let home=document.getElementById('home');if(home&&home.classList.contains('hide'))return;refreshCatalogFromMeta();},25000);}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
@@ -30059,7 +30088,10 @@ function toggleFsNav(){
 }
 async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion();setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(3,120)},180);return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion()}
 function isAdminViewer(){return !!(USER.is_admin||String(USER.role||'').toUpperCase()==='ADMIN')} /* dùng cho nút Sửa câu, xem ĐA/LG ngay */
-function isGithubBank(){let src=String((META&&META.question_source)||'').toUpperCase().replace(/-/g,'_');if(['GITHUB','TEX','GITHUB_TEX','LOCAL_TEX','NGAN_HANG','NGANHANG'].indexOf(src)>=0)return true;let q=(QUESTIONS&&QUESTIONS[CUR])||{};return !!(String(q._source||'').toUpperCase()==='GITHUB'||String(q._tex_rel||'').trim())}
+function isGithubBank(){return ldvlActiveQuestionSource()==='GITHUB'}
+function ldvlActiveQuestionSource(){let src=String((META&&META.question_source)||'').toUpperCase().replace(/-/g,'_');if(['GITHUB','TEX','GITHUB_TEX','LOCAL_TEX','NGAN_HANG','NGANHANG'].indexOf(src)>=0)return 'GITHUB';if(src==='JSON_ONLY'||src==='JSONONLY')return 'JSON';return src==='SHEET_JSON'||src==='SHEET_GITHUB'?src:'SHEET'}
+function ldvlSyncSourceMenu(){let cur=ldvlActiveQuestionSource();document.querySelectorAll('[data-qsrc]').forEach(function(el){el.classList.toggle('on',String(el.getAttribute('data-qsrc')||'').toUpperCase()===cur)});let sum=document.querySelector('#hdrSrcDrop summary span:not(.hdrSrcCaret)');if(sum)sum.textContent=cur==='GITHUB'?'GitHub .tex':(cur==='SHEET'?'Sheet Online':'Nguồn đề')}
+async function ldvlSelectQuestionSource(kind){kind=String(kind||'').toUpperCase();if(!(USER&&USER.is_admin)){alert('Chỉ ADMIN đổi nguồn đề (GitHub / Sheet).');return}if(kind==='TEX'||kind==='GITHUB_TEX')kind='GITHUB';if(kind==='ONLINE'||kind==='GOOGLE')kind='SHEET';try{localStorage.setItem('LDVL_QSRC',kind)}catch(e){}document.cookie='ldvl_qsrc='+encodeURIComponent(kind)+';path=/;max-age=31536000;samesite=lax';let drop=document.getElementById('hdrSrcDrop');if(drop)drop.removeAttribute('open');try{let j=await api('/api/question-source',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:kind}),timeoutMs:180000});META=META||{};META.question_source=j.question_source||kind;ldvlSyncSourceMenu();alert(kind==='GITHUB'?'Đã chuyển sang GitHub .tex.\nLưu / xóa câu sẽ ghi file .tex, không ghi Google Sheet.':'Đã chuyển sang Google Sheet.\nLưu / xóa câu sẽ ghi sheet Cau_Hoi.');location.reload()}catch(e){alert('Không đổi nguồn: '+(e.message||e))}}
 function adminSavedToGithub(j){if(j&&String(j.source||'').toUpperCase()==='GITHUB')return true;return isGithubBank()}
 function adminGithubCommitHint(){return 'Đã ghi file .tex trên máy/server. Commit file đó lên GitHub (pythonminh/luyen-de-vat-ly) để giữ vĩnh viễn. Đừng bấm Đồng bộ GitHub trước khi Commit.'}
 function canViewSolutionLive(){if(EXAM_MODE&&!SUBMITTED)return false;return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
@@ -40220,23 +40252,12 @@ def _json_export_dir() -> str:
     os.makedirs(JSON_EXPORT_DIR, exist_ok=True)
     return JSON_EXPORT_DIR
 
-def _json_question_source_mode() -> str:
-    """Nguồn câu hỏi khi app chạy.
+_QUESTION_SOURCE_OVERRIDE = ""
+_QUESTION_SOURCE_OVERRIDE_LOCK = threading.Lock()
 
-    GITHUB     : mặc định — đọc ngan-hang/*.tex (local và/hoặc GitHub), không đọc Cau_Hoi.
-    SHEET      : đọc câu hỏi từ Google Sheet Cau_Hoi (chậm trên Render).
-    JSON_ONLY  : chỉ đọc các file JSON đề.
-    SHEET_JSON : đọc Sheet rồi cộng thêm JSON.
-    SHEET_GITHUB : đọc Sheet rồi cộng thêm .tex (bỏ trùng ID).
 
-    Đăng nhập luôn đọc sheet HOC_VIEN, không phụ thuộc QUESTION_SOURCE.
-
-    Trên Render nên đặt:
-      QUESTION_SOURCE=GITHUB
-      GITHUB_LATEX_REPO=pythonminh/luyen-de-vat-ly
-    """
-    raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "GITHUB")
-    raw = raw.upper().replace(" ", "").replace("-", "_")
+def _normalize_question_source(raw: Any) -> str:
+    raw = clean(raw).upper().replace(" ", "").replace("-", "_")
     if raw in ("JSON", "JSONONLY", "ONLY_JSON"):
         return "JSON_ONLY"
     if raw in ("SHEETJSON", "SHEET_PLUS_JSON", "SHEET+JSON", "BOTH", "MIX", "MIXED"):
@@ -40245,7 +40266,45 @@ def _json_question_source_mode() -> str:
         return "GITHUB"
     if raw in ("SHEET_GITHUB", "SHEETGITHUB", "SHEET_TEX", "SHEET+GITHUB", "SHEETPLUSGITHUB"):
         return "SHEET_GITHUB"
-    return "SHEET"
+    if raw in ("SHEET", "ONLINE", "GOOGLE", "GOOGLE_SHEET", "CAU_HOI"):
+        return "SHEET"
+    return ""
+
+
+def _set_question_source_override(raw: Any) -> str:
+    global _QUESTION_SOURCE_OVERRIDE
+    mode = _normalize_question_source(raw) or "GITHUB"
+    with _QUESTION_SOURCE_OVERRIDE_LOCK:
+        _QUESTION_SOURCE_OVERRIDE = mode
+    return mode
+
+
+def _json_question_source_mode() -> str:
+    """Nguồn câu hỏi khi app chạy.
+
+    Ưu tiên: Nguồn đề đã chọn trên app (session/cookie/override) → biến môi trường → GITHUB.
+    GITHUB     : đọc ngan-hang/*.tex, lưu vào file .tex.
+    SHEET      : đọc/ghi Google Sheet Cau_Hoi.
+    JSON_ONLY  : chỉ đọc các file JSON đề.
+    SHEET_JSON : đọc Sheet rồi cộng thêm JSON.
+    SHEET_GITHUB : đọc Sheet rồi cộng thêm .tex (bỏ trùng ID).
+
+    Đăng nhập luôn đọc sheet HOC_VIEN, không phụ thuộc QUESTION_SOURCE.
+    """
+    raw = ""
+    try:
+        if has_request_context():
+            raw = clean(session.get("ldvl_question_source") or "") or clean(
+                request.cookies.get("ldvl_qsrc") or ""
+            )
+    except Exception:
+        raw = ""
+    if not raw:
+        with _QUESTION_SOURCE_OVERRIDE_LOCK:
+            raw = _QUESTION_SOURCE_OVERRIDE
+    if not raw:
+        raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "GITHUB")
+    return _normalize_question_source(raw) or "SHEET"
 
 
 def _json_runtime_dirs() -> List[str]:
@@ -43146,6 +43205,57 @@ def api_github_tex_status():
         "github_tex": getattr(st, "github_tex_info", {}) or {},
         "count_questions": st._public_question_count() if hasattr(st, "_public_question_count") else len(getattr(st, "questions", []) or []),
     })
+
+
+@app.route("/api/question-source", methods=["GET", "POST"])
+def api_question_source():
+    """ADMIN chọn GitHub .tex hoặc Google Sheet — đọc/lưu theo đúng nguồn đó."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if request.method == "GET":
+        return jsonify({
+            "ok": True,
+            "question_source": _json_question_source_mode(),
+            "env_default": _normalize_question_source(
+                os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "GITHUB"
+            )
+            or "GITHUB",
+        })
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được đổi nguồn đề."}), 403
+    body = request.get_json(silent=True) or {}
+    raw = body.get("source") or body.get("question_source") or request.args.get("source") or ""
+    mode = _set_question_source_override(raw)
+    try:
+        session["ldvl_question_source"] = mode
+    except Exception:
+        log_swallow("api_question_source:session")
+    st = get_store()
+    with st.load_lock:
+        st.questions_loaded = False
+        st.questions_from_cache = False
+        st.questions = []
+        st.catalog = []
+        st.by_made = {}
+        st.by_group = {}
+        st.by_id = {}
+        st.questions_error = ""
+        st.load()
+    resp = jsonify({
+        "ok": True,
+        "question_source": mode,
+        "count_questions": st._public_question_count() if hasattr(st, "_public_question_count") else len(st.questions or []),
+        "count_catalog": len(st.catalog or []),
+        "loaded_at": st.loaded_at,
+        "message": (
+            "Đã chuyển sang GitHub .tex — lưu câu ghi file .tex."
+            if mode == "GITHUB"
+            else "Đã chuyển sang Google Sheet Cau_Hoi — lưu câu ghi Sheet."
+        ),
+    })
+    resp.set_cookie("ldvl_qsrc", mode, max_age=365 * 24 * 3600, samesite="Lax", path="/")
+    return resp
 
 
 @app.route("/api/sync", methods=["POST"])
