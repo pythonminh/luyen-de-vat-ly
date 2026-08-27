@@ -139,13 +139,14 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V501_SOURCE_PICK"
+APP_VERSION = "V505_GH_ALWAYS_SHOW"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
     from ldvl.github_tex import (
         copy_cache_into_local,
         count_tex_question_blocks,
+        count_tex_question_stats,
         defaults_from_rel_path,
         download_github_tex,
         github_tex_config,
@@ -161,6 +162,7 @@ try:
 except Exception:  # pragma: no cover
     copy_cache_into_local = None  # type: ignore[assignment]
     count_tex_question_blocks = None  # type: ignore[assignment]
+    count_tex_question_stats = None  # type: ignore[assignment]
     defaults_from_rel_path = None  # type: ignore[assignment]
     download_github_tex = None  # type: ignore[assignment]
     github_tex_config = None  # type: ignore[assignment]
@@ -2856,7 +2858,7 @@ def dangbaitap_is_unclassified(q: Dict[str, Any]) -> bool:
     return _is_bad_dangbaitap_value(q.get("DangBaiTap", ""))
 
 
-def dangbaitap_matches(q: Dict[str, Any], dbt_filter: str) -> bool:
+def dangbaitap_matches(q: Dict[str, Any], dbt_filter: str, extra_names: Any = None) -> bool:
     if not clean(dbt_filter):
         return True
     fn = clean(dbt_filter)
@@ -2867,12 +2869,24 @@ def dangbaitap_matches(q: Dict[str, Any], dbt_filter: str) -> bool:
         key_norm("chưa gán"),
     }:
         return dangbaitap_is_unclassified(q)
+    names = [fn]
+    extra = extra_names if extra_names is not None else (q.get("_DbtFilterAliases") if isinstance(q, dict) else None)
+    if extra:
+        names.extend(extra if isinstance(extra, (list, tuple)) else [extra])
     qv = one_line(q.get("DangBaiTap", ""))
     if not qv:
         return False
     qn = key_norm(qv)
-    fn = key_norm(one_line(fn))
-    return qn == fn or fn in qn or qn in fn
+    for raw in names:
+        one = clean(raw)
+        if not one or one == DBT_FILTER_UNCLASSIFIED:
+            continue
+        kn = key_norm(one_line(one))
+        if not kn:
+            continue
+        if qn == kn or kn in qn or qn in kn:
+            return True
+    return False
 
 
 def dang_metadata_raw(q: Dict[str, Any]) -> str:
@@ -2998,12 +3012,26 @@ def question_review_status(q: Dict[str, Any]) -> str:
     return "legacy" if not strict_question_review() else "pending"
 
 
+def question_is_github_source(q: Dict[str, Any]) -> bool:
+    """Câu lấy từ ngân hàng GitHub / ngan-hang .tex — luôn hiện, không chờ duyệt."""
+    if not isinstance(q, dict):
+        return False
+    if clean(q.get("_tex_rel", "")):
+        return True
+    src = clean(q.get("_source", "")).upper().replace("-", "_").replace(" ", "")
+    return src in {"GITHUB", "TEX", "GITHUB_TEX", "LOCAL_TEX", "NGAN_HANG", "NGANHANG"}
+
+
 def question_is_reviewed(q: Dict[str, Any]) -> bool:
+    if question_is_github_source(q):
+        return True
     return question_review_status(q) == "approved"
 
 
 def question_is_reviewed_sheet(q: Dict[str, Any]) -> bool:
     """Chỉ coi đã duyệt khi Sheet ghi rõ — dùng cho giao diện ADMIN."""
+    if question_is_github_source(q):
+        return True
     st = key_norm(q.get("TrangThai", ""))
     if not st:
         return False
@@ -3016,6 +3044,8 @@ def question_is_reviewed_sheet(q: Dict[str, Any]) -> bool:
 
 def question_is_student_visible(q: Dict[str, Any]) -> bool:
     if is_admin():
+        return True
+    if question_is_github_source(q):
         return True
     return question_is_reviewed(q)
 
@@ -3830,19 +3860,10 @@ def save_github_review_map(mp: Dict[str, str]) -> None:
 
 
 def apply_github_review_status(q: Dict[str, Any]) -> None:
-    """Gắn ĐÃ DUYỆT / CHƯA DUYỆT đã lưu cho câu GitHub .tex."""
+    """Câu GitHub .tex luôn ĐÃ DUYỆT — học sinh thấy hết, dạng BT dùng được ngay."""
     if not isinstance(q, dict):
         return
-    key = github_review_item_key(q)
-    if not key:
-        if not clean(q.get("TrangThai", "")):
-            q["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
-        return
-    val = clean((load_github_review_map() or {}).get(key, ""))
-    if val:
-        q["TrangThai"] = val
-    elif not clean(q.get("TrangThai", "")):
-        q["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
+    q["TrangThai"] = QUESTION_REVIEW_APPROVED_LABEL
 
 
 def load_github_field_map(force: bool = False) -> Dict[str, Dict[str, str]]:
@@ -3963,7 +3984,7 @@ QUESTIONS_CACHE_FILE = os.path.join(APP_DIR, "data", "questions_cache.json")
 QUESTIONS_CACHE_SCHEMA = 1
 _QUESTIONS_CACHE_LOCK = threading.Lock()
 CATALOG_CACHE_FILE = os.path.join(APP_DIR, "data", "catalog_cache.json")
-CATALOG_CACHE_SCHEMA = 1
+CATALOG_CACHE_SCHEMA = 3
 _CATALOG_CACHE_LOCK = threading.Lock()
 
 
@@ -6691,9 +6712,9 @@ class SheetStore:
             log.warning("sync GitHub .tex: %s", e)
             return {"ok": False, "error": str(e)}
 
-    def _count_tex_on_disk(self, rel: str) -> int:
-        if not rel or not github_tex_config or not count_tex_question_blocks:
-            return 0
+    def _read_tex_on_disk(self, rel: str) -> str:
+        if not rel or not github_tex_config:
+            return ""
         cfg = github_tex_config(APP_DIR)
         for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
             if not root:
@@ -6703,10 +6724,72 @@ class SheetStore:
                 continue
             try:
                 with open(p, "r", encoding="utf-8", errors="replace") as fh:
-                    return count_tex_question_blocks(fh.read())
+                    return fh.read()
             except Exception:
-                log_swallow("_count_tex_on_disk")
-        return 0
+                log_swallow("_read_tex_on_disk")
+        return ""
+
+    def _tex_stats_from_text(self, text: str) -> Tuple[int, Dict[str, int]]:
+        if count_tex_question_stats:
+            n, raw = count_tex_question_stats(text or "")
+        elif count_tex_question_blocks:
+            n, raw = count_tex_question_blocks(text or ""), {}
+        else:
+            return 0, {}
+        dbt: Dict[str, int] = {}
+        for name, cnt in (raw or {}).items():
+            label = one_line(name)
+            if (not label) or _is_bad_dangbaitap_value(label):
+                key = DBT_FILTER_UNCLASSIFIED
+            else:
+                key = label
+            dbt[key] = int(dbt.get(key, 0)) + int(cnt or 0)
+        return int(n or 0), dbt
+
+    def _tex_stats_on_disk(self, rel: str) -> Tuple[int, Dict[str, int]]:
+        text = self._read_tex_on_disk(rel)
+        if not text:
+            return 0, {}
+        return self._tex_stats_from_text(text)
+
+    def _count_tex_on_disk(self, rel: str) -> int:
+        n, _dbt = self._tex_stats_on_disk(rel)
+        return n
+
+    def _github_catalog_item(
+        self,
+        qmeta: Dict[str, Any],
+        rel: str,
+        n: int,
+        dbt: Optional[Dict[str, int]] = None,
+    ) -> Dict[str, Any]:
+        dbt = dict(dbt or {})
+        dbt, aliases = _cluster_dangbaitap_counts(dbt, max_types=max(1, len(dbt)))
+        named = [k for k in dbt.keys() if k != DBT_FILTER_UNCLASSIFIED]
+        gk = catalog_group_key(qmeta)
+        return {
+            "MaDe": gk,
+            "GroupKey": gk,
+            "Lop": qmeta.get("Lop", ""),
+            "Mon": qmeta.get("Mon", ""),
+            "Chuong": qmeta.get("Chuong", ""),
+            "BaiHoc": qmeta.get("BaiHoc", ""),
+            "De": qmeta.get("BaiHoc", ""),
+            "DangBaiTap": ", ".join(named),
+            "BoDe": "",
+            "SoCau": n,
+            "QuyenTruyCap": "VIP",
+            "IsFree": False,
+            "_tex_rel": rel,
+            "DbtOrder": ordered_dbt_names(gk, dbt),
+            "FilterCounts": {
+                "dang": {},
+                "level": {},
+                "combo": {},
+                "dangbaitap": dbt,
+                "dbt_aliases": aliases,
+            },
+        }
 
     def _github_qmeta_for_lesson(self, les: Dict[str, Any]) -> Tuple[Dict[str, str], str]:
         qmeta = {
@@ -6741,7 +6824,7 @@ class SheetStore:
         return qmeta, rel
 
     def _rebuild_github_catalog_from_files(self) -> None:
-        """Tên bài từ thư mục/muc_luc; số câu đếm \\begin{ex}/\\begin{bt} trong file."""
+        """Tên bài từ thư mục/muc_luc; số câu + dạng BT từ \\begin{ex}/\\dangbt trong file."""
         lessons: List[Dict[str, Any]] = []
         err = ""
         if load_muc_luc_lessons and github_tex_config:
@@ -6757,7 +6840,7 @@ class SheetStore:
         for les in lessons:
             qmeta, rel = self._github_qmeta_for_lesson(les)
             gk = catalog_group_key(qmeta)
-            n = self._count_tex_on_disk(rel)
+            n, dbt = self._tex_stats_on_disk(rel)
             if not n:
                 try:
                     n = int(les.get("count_questions") or 0)
@@ -6767,22 +6850,7 @@ class SheetStore:
             if gk and rel:
                 self._github_tex_rel_by_made[gk] = rel
                 seen_rel.add(rel.replace("\\", "/"))
-            catalog.append({
-                "MaDe": gk,
-                "GroupKey": gk,
-                "Lop": qmeta["Lop"],
-                "Mon": qmeta["Mon"],
-                "Chuong": qmeta["Chuong"],
-                "BaiHoc": qmeta["BaiHoc"],
-                "De": qmeta["BaiHoc"],
-                "DangBaiTap": "",
-                "BoDe": "",
-                "SoCau": n,
-                "QuyenTruyCap": "VIP",
-                "IsFree": False,
-                "_tex_rel": rel,
-                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
-            })
+            catalog.append(self._github_catalog_item(qmeta, rel, n, dbt))
         if list_local_tex_files and github_tex_config:
             cfg = github_tex_config(APP_DIR)
             extra = list_local_tex_files(cfg.get("local_dir") or "", cfg.get("cache_dir") or "")
@@ -6794,26 +6862,11 @@ class SheetStore:
                 if not clean(qmeta.get("BaiHoc", "")):
                     continue
                 gk = catalog_group_key(qmeta)
-                n = self._count_tex_on_disk(rel_n)
+                n, dbt = self._tex_stats_on_disk(rel_n)
                 total += n
                 if gk:
                     self._github_tex_rel_by_made[gk] = rel_n
-                catalog.append({
-                    "MaDe": gk,
-                    "GroupKey": gk,
-                    "Lop": qmeta.get("Lop", ""),
-                    "Mon": qmeta.get("Mon", ""),
-                    "Chuong": qmeta.get("Chuong", ""),
-                    "BaiHoc": qmeta.get("BaiHoc", ""),
-                    "De": qmeta.get("BaiHoc", ""),
-                    "DangBaiTap": "",
-                    "BoDe": "",
-                    "SoCau": n,
-                    "QuyenTruyCap": "VIP",
-                    "IsFree": False,
-                    "_tex_rel": rel_n,
-                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
-                })
+                catalog.append(self._github_catalog_item(qmeta, rel_n, n, dbt))
                 seen_rel.add(rel_n)
         catalog.sort(key=catalog_sort_key)
         self.catalog = catalog
@@ -6887,6 +6940,7 @@ class SheetStore:
             bump_count(detail["dang"], ed)
             for lv in question_mucdo_parts(q):
                 bump_count(detail["level"], lv)
+        dbt_counts, aliases = _cluster_dangbaitap_counts(dbt_counts, max_types=max(1, len(dbt_counts)))
         for item in self.catalog or []:
             if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
                 item["SoCau"] = len(qs)
@@ -6896,10 +6950,12 @@ class SheetStore:
                     "combo": combo,
                     "dangbaitap": dbt_counts,
                     "dbt_detail": dbt_detail,
+                    "dbt_aliases": aliases,
                 }
                 named = [k for k in dbt_counts.keys() if k != DBT_FILTER_UNCLASSIFIED]
                 if named:
                     item["DangBaiTap"] = ", ".join(named)
+                item["DbtOrder"] = ordered_dbt_names(made, dbt_counts) or item.get("DbtOrder") or named
                 break
         info = dict(self.github_tex_info or {})
         info["count_questions"] = sum(int(c.get("SoCau") or 0) for c in (self.catalog or []))
@@ -7761,7 +7817,7 @@ class SheetStore:
             q["_source"] = "GITHUB"
             q["_tex_rel"] = clean(data.get("_tex_rel", ""))
             q["MaDe"] = catalog_group_key(q)
-            q["TrangThai"] = q.get("TrangThai") or QUESTION_REVIEW_PENDING_LABEL
+            q["TrangThai"] = q.get("TrangThai") or QUESTION_REVIEW_APPROVED_LABEL
             apply_github_review_status(q)
             apply_github_field_overlays(q)
             new_questions.append(q)
@@ -7991,7 +8047,7 @@ class SheetStore:
         if not key:
             return
         mp = load_github_review_map(force=True)
-        mp[key] = clean(q_ram.get("TrangThai", "")) or QUESTION_REVIEW_PENDING_LABEL
+        mp[key] = clean(q_ram.get("TrangThai", "")) or QUESTION_REVIEW_APPROVED_LABEL
         save_github_review_map(mp)
 
     def _find_github_review_question(self, raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -9270,6 +9326,33 @@ class SheetStore:
                 return dedupe_questions_by_content(dedupe_questions_by_row(list(self.by_made.get(gk, []))))
         return []
 
+    def _dbt_filter_alias_names(self, made: str, dbt_filter: str) -> List[str]:
+        """Tên gốc đã gom vào nút dạng đang chọn — để luyện bài khớp cả biến thể \\dangbt."""
+        fn = clean(dbt_filter)
+        if not fn or fn == DBT_FILTER_UNCLASSIFIED:
+            return []
+        item = next(
+            (x for x in (self.catalog or []) if clean(x.get("MaDe")) == made or clean(x.get("GroupKey")) == made),
+            None,
+        )
+        aliases = ((item or {}).get("FilterCounts") or {}).get("dbt_aliases") or {}
+        if not isinstance(aliases, dict):
+            return []
+        fn_n = key_norm(fn)
+        out: List[str] = []
+        seen = {fn_n}
+        for canon, alts in aliases.items():
+            pool = [clean(canon)] + [clean(x) for x in (alts or []) if clean(x)]
+            if not any(key_norm(x) == fn_n or fn_n in key_norm(x) or key_norm(x) in fn_n for x in pool if x):
+                continue
+            for x in pool:
+                kn = key_norm(x)
+                if not kn or kn in seen:
+                    continue
+                seen.add(kn)
+                out.append(x)
+        return out
+
     def catalog_filter_count(self, made: str, level_filter: str = "", dang_filter: str = "") -> Optional[int]:
         item = next((x for x in self.catalog if x.get("MaDe") == made or x.get("GroupKey") == made), None)
         if not item:
@@ -9534,7 +9617,16 @@ class SheetStore:
         else:
             show_pending = False
         if not show_pending:
-            visible = [q for q in qs_source if question_is_reviewed(q)]
+            github_bank = getattr(self, "question_source_mode", "") == "GITHUB"
+            if not github_bank:
+                try:
+                    github_bank = _json_question_source_mode() == "GITHUB"
+                except Exception:
+                    github_bank = False
+            if github_bank:
+                visible = list(qs_source)
+            else:
+                visible = [q for q in qs_source if question_is_reviewed(q)]
             review_skipped = len(qs_source) - len(visible)
             qs_source = visible
             if not qs_source:
@@ -9571,9 +9663,10 @@ class SheetStore:
                 )
         dbt_filter = clean(dangbaitap_filter)
         if dbt_filter:
-            qs_source = [q for q in qs_source if dangbaitap_matches(q, dbt_filter)]
+            extra = self._dbt_filter_alias_names(made, dbt_filter)
+            qs_source = [q for q in qs_source if dangbaitap_matches(q, dbt_filter, extra)]
             if not qs_source:
-                n_dbt_all = sum(1 for q in base_qs if dangbaitap_matches(q, dbt_filter))
+                n_dbt_all = sum(1 for q in base_qs if dangbaitap_matches(q, dbt_filter, extra))
                 cat_n = self.catalog_dangbaitap_count(made, dbt_filter)
                 hint = f" Mục lục báo {cat_n} câu dạng này — bấm Đồng bộ Sheet, Ctrl+F5." if cat_n else ""
                 dbt_lbl = "chưa phân loại" if dbt_filter == DBT_FILTER_UNCLASSIFIED else f"«{dbt_filter}»"
@@ -9667,8 +9760,14 @@ class SheetStore:
                 sol_full_only=sol_full_only,
             )
         ]
-        # Học sinh/VIP chỉ lấy câu ĐÃ DUYỆT — trước đây start_random bỏ qua lọc duyệt.
-        if not is_admin():
+        # GitHub .tex: học sinh làm mọi câu. Sheet: chỉ câu ĐÃ DUYỆT.
+        github_bank = getattr(self, "question_source_mode", "") == "GITHUB"
+        if not github_bank:
+            try:
+                github_bank = _json_question_source_mode() == "GITHUB"
+            except Exception:
+                github_bank = False
+        if not is_admin() and not github_bank:
             pool = [q for q in pool if question_is_reviewed(q)]
         if not pool:
             ch_hint = f" ({len(ch_list)} chương đã chọn)" if ch_list else " (tất cả chương)"
@@ -26221,7 +26320,8 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
 #mh-fs-scr{display:none;position:fixed;inset:0;z-index:10045;background:#0f172a;flex-direction:column;width:100%;height:100%;height:100dvh;max-height:-webkit-fill-available}
 #mh-fs-scr.on{display:flex!important}
 #mh-fs-body{flex:1;min-height:0;display:flex;flex-direction:column;background:#0b1220;overflow:hidden}
-#mh-fs-frame{flex:1;border:none;width:100%;background:#fff;min-height:0}
+#mh-fs-frame{flex:1;border:none;width:100%;height:100%;display:block;background:#fff;min-height:0}
+#mh-fs-frame.hide{display:none!important}
 #mh-fs-py{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 #mh-fs-code{width:100%;min-height:120px;max-height:28vh;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.4;border-radius:8px;border:1px solid #334155;background:#111827;color:#e2e8f0;padding:10px;box-sizing:border-box;resize:vertical}
 #mh-fs-out{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.45;color:#bbf7d0;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;min-height:64px}
@@ -26251,6 +26351,7 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
   .ldvlQnavBtn[data-ldvl-nav="model"] span{display:inline!important}
   #mh-fs-scr .pdf-fs-bar{flex-wrap:wrap;height:auto;min-height:48px;padding:8px;gap:6px}
   #mh-fs-scr .pdf-fs-bar #mh-fs-run{display:none}
+  #mh-fs-scr.mh-kind-html .pdf-fs-bar #mh-fs-run{display:flex!important;align-items:center}
   #mh-fs-dock{display:flex}
   #mh-fs-py{padding:8px 8px 0;gap:8px}
   #mh-fs-params{gap:7px;padding:8px;position:sticky;top:0;z-index:2}
@@ -27114,8 +27215,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <label>Tên ứng dụng<input id="mh-m-name" placeholder="VD: Đồ thị hàm sin" autocomplete="off"></label>
           <label>Mô tả ngắn<input id="mh-m-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
           <label>Công thức (LaTeX)<input id="mh-m-formula" placeholder="VD: $y=a\sin(bx+c)$" autocomplete="off"></label>
-          <label>Loại<select id="mh-m-kind" onchange="ldvlMhKindUi('math')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
-          <label id="mh-m-code-wrap"><span id="mh-m-code-label">Mã Python</span><textarea id="mh-m-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label>Loại <span class="muted" style="font-weight:600">(dán HTML thì tự chuyển HTML/Canvas)</span><select id="mh-m-kind" onchange="ldvlMhKindUi('math')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-m-code-wrap"><span id="mh-m-code-label">Mã Python</span><textarea id="mh-m-code" spellcheck="false" oninput="ldvlMhOnCodeInput('math')" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
           <label id="mh-m-url-wrap" class="hide">Link nhúng<input id="mh-m-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-m-lop" style="min-width:110px"></select><select id="mh-m-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-m-add-btn" onclick="ldvlMhAdd('math')">💾 Lưu mô hình</button><button type="button" class="btn2 hide" id="mh-m-cancel-btn" onclick="ldvlMhCancelEdit('math')">Hủy sửa</button></div>
@@ -27134,8 +27235,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <label>Tên ứng dụng<input id="mh-p-name" placeholder="VD: Ném xiên" autocomplete="off"></label>
           <label>Mô tả ngắn<input id="mh-p-desc" placeholder="Học sinh thấy gì khi chạy?" autocomplete="off"></label>
           <label>Công thức (LaTeX)<input id="mh-p-formula" placeholder="VD: $x=v_0\cos\\alpha\\,t$" autocomplete="off"></label>
-          <label>Loại<select id="mh-p-kind" onchange="ldvlMhKindUi('phys')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
-          <label id="mh-p-code-wrap"><span id="mh-p-code-label">Mã Python</span><textarea id="mh-p-code" spellcheck="false" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
+          <label>Loại <span class="muted" style="font-weight:600">(dán HTML thì tự chuyển HTML/Canvas)</span><select id="mh-p-kind" onchange="ldvlMhKindUi('phys')"><option value="python">Python trong app (Pyodide)</option><option value="html">HTML / Canvas (mô phỏng tương tác)</option><option value="embed">Link nhúng (iframe)</option></select></label>
+          <label id="mh-p-code-wrap"><span id="mh-p-code-label">Mã Python</span><textarea id="mh-p-code" spellcheck="false" oninput="ldvlMhOnCodeInput('phys')" placeholder="import numpy as np&#10;import matplotlib.pyplot as plt&#10;..."></textarea></label>
           <label id="mh-p-url-wrap" class="hide">Link nhúng<input id="mh-p-url" type="url" inputmode="url" placeholder="https://..." autocomplete="off"></label>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><label class="muted" style="font-size:12px;font-weight:800">Lớp</label><select id="mh-p-lop" style="min-width:110px"></select><select id="mh-p-quyen"><option>FREE</option><option>VIP</option><option>SVIP</option></select><button type="button" class="btn" id="mh-p-add-btn" onclick="ldvlMhAdd('phys')">💾 Lưu mô hình</button><button type="button" class="btn2 hide" id="mh-p-cancel-btn" onclick="ldvlMhCancelEdit('phys')">Hủy sửa</button></div>
@@ -29121,7 +29222,7 @@ function catalogDbtCounts(item){
   item=item||{};
   let fc=(item.FilterCounts||{}).dangbaitap||{};
   let pairs;
-  if(fc&&typeof fc==='object'&&!Array.isArray(fc)){
+  if(fc&&typeof fc==='object'&&!Array.isArray(fc)&&Object.keys(fc).length){
     let mp={};
     Object.entries(fc).forEach(([k,v])=>{
       let name=oneLineText(k);
@@ -30164,8 +30265,9 @@ function bindNavNumClicks(){let nav=document.getElementById('navNums');if(!nav)r
 function scrollNavActiveIntoView(smooth){let nav=document.getElementById('navNums');if(!nav)return;let btn=nav.querySelector('button.num.active');if(btn&&btn.scrollIntoView)btn.scrollIntoView({block:'nearest',inline:'nearest',behavior:smooth?'smooth':'auto'})}
 function syncNavButtons(){let af=CUR<=0,al=CUR>=QUESTIONS.length-1;let p=document.getElementById('btnMobilePrev');if(p)p.disabled=af;let n=document.getElementById('btnMobileNext');if(n)n.disabled=al;document.querySelectorAll('.quizNavRowBelow button[onclick*="prevQ"]').forEach(b=>{b.disabled=af});document.querySelectorAll('.quizNavRowBelow button[onclick*="nextQ"]').forEach(b=>{b.disabled=al})}
 function strictQuestionReviewEnabled(){return !!(META&&META.strict_question_review)}
-function questionIsReviewedForAdmin(q){q=q||{};let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;if(typeof q.reviewed_sheet==='boolean')return q.reviewed_sheet;return false}
-function questionIsReviewed(q){if(isAdminViewer())return questionIsReviewedForAdmin(q);if(typeof q.reviewed==='boolean')return q.reviewed;let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;return !strictQuestionReviewEnabled()}
+function questionIsGithubSource(q){q=q||{};if(String(q._tex_rel||'').trim())return true;let src=String(q._source||'').toUpperCase().replace(/-/g,'_').replace(/\s+/g,'');if(['GITHUB','TEX','GITHUB_TEX','LOCAL_TEX','NGAN_HANG','NGANHANG'].indexOf(src)>=0)return true;try{if(typeof ldvlActiveQuestionSource==='function'&&ldvlActiveQuestionSource()==='GITHUB')return true}catch(e){}return false}
+function questionIsReviewedForAdmin(q){if(questionIsGithubSource(q))return true;q=q||{};let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;if(typeof q.reviewed_sheet==='boolean')return q.reviewed_sheet;return false}
+function questionIsReviewed(q){if(questionIsGithubSource(q))return true;if(isAdminViewer())return questionIsReviewedForAdmin(q);if(typeof q.reviewed==='boolean')return q.reviewed;let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;return !strictQuestionReviewEnabled()}
 function navReviewMarkHtml(q){if(!isAdminViewer())return '';return questionIsReviewedForAdmin(q)?'<span class="navReviewMark ok" title="Đã duyệt — HS được làm">✓</span>':'<span class="navReviewMark no" title="⚠ CHƯA DUYỆT — học sinh không thấy">!</span>'}
 function syncNavReviewMarks(){if(!isAdminViewer())return;let nav=document.getElementById('navNums');if(!nav)return;nav.querySelectorAll('button.num[data-nav-idx]').forEach(btn=>{let i=parseInt(btn.getAttribute('data-nav-idx'),10);if(!Number.isFinite(i))return;let q=QUESTIONS[i]||{};let wantOk=questionIsReviewedForAdmin(q);let mark=btn.querySelector('.navReviewMark');if(!mark){btn.insertAdjacentHTML('afterbegin',navReviewMarkHtml(q));return}mark.classList.toggle('ok',wantOk);mark.classList.toggle('no',!wantOk);mark.textContent=wantOk?'✓':'!';mark.title=wantOk?'Đã duyệt — HS được làm':'⚠ CHƯA DUYỆT — học sinh không thấy';btn.classList.toggle('q-reviewed',wantOk);btn.classList.toggle('q-unreviewed',!wantOk)})}
 function syncPendingBannerForCurrent(){if(!isAdminViewer())return;let q=QUESTIONS[CUR]||{};let qtext=document.getElementById('qtext');if(!qtext)return;let old=qtext.querySelector('.qPendingBanner');let html=questionPendingBannerHtml(q);if(!html){if(old)old.remove();return}if(old)return;let head=qtext.querySelector('.quizSectionHead');if(head)head.insertAdjacentHTML('afterend',html);else qtext.insertAdjacentHTML('afterbegin',html)}
@@ -36950,6 +37052,36 @@ function ldvlMhSanitizeHtml(code){
   s=s.replace(/^```(?:html|htm|javascript|js)?\s*\n?/i,'').replace(/\n?```\s*$/,'');
   return s.trim();
 }
+function ldvlMhOnCodeInput(sub){
+  let pfx=sub==='phys'?'mh-p':'mh-m';
+  let ta=document.getElementById(pfx+'-code');
+  let kindEl=document.getElementById(pfx+'-kind');
+  if(!ta||!kindEl||kindEl.value==='embed')return;
+  if(ldvlMhLooksLikeHtml(ta.value)){
+    if(kindEl.value!=='html'){
+      kindEl.value='html';
+      ldvlMhKindUi(sub);
+    }
+  }
+}
+function ldvlMhPrepHtmlForFrame(html){
+  html=ldvlMhSanitizeHtml(html);
+  if(!html)return '';
+  html=html.replace(/['"]var\(--pollen\)['"]/g,"'#fbbf24'");
+  html=html.replace(/['"]var\(--water\)['"]/g,"'#38bdf8'");
+  html=html.replace(/fillStyle\s*=\s*['"]var\(--[a-z0-9-]+\)['"]/gi,function(m){
+    if(/pollen/i.test(m))return "fillStyle='#fbbf24'";
+    if(/water/i.test(m))return "fillStyle='#38bdf8'";
+    return m;
+  });
+  if(!/<meta[^>]*viewport/i.test(html)){
+    html=html.replace(/<head([^>]*)>/i,'<head$1><meta name="viewport" content="width=device-width,initial-scale=1">');
+  }
+  let fit='<style id="ldvl-mh-fit">html,body{margin:0;min-height:100%}canvas{max-width:100%;height:auto}</style>';
+  if(/<\/head>/i.test(html))html=html.replace(/<\/head>/i,fit+'</head>');
+  else html=fit+html;
+  return html;
+}
 function ldvlMhKindLabel(kind){
   if(kind==='embed')return 'Link nhúng';
   if(kind==='html')return 'HTML';
@@ -36963,13 +37095,18 @@ function ldvlMhHasContent(x){
 function ldvlMhSetFrameHtml(html){
   let fr=document.getElementById('mh-fs-frame');
   if(!fr)return;
-  html=ldvlMhSanitizeHtml(html);
-  fr.classList.remove('hide');
+  html=ldvlMhPrepHtmlForFrame(html)||'<p style="padding:16px;font-family:sans-serif">Chưa có mã HTML.</p>';
   try{if(fr._blobUrl){URL.revokeObjectURL(fr._blobUrl);fr._blobUrl='';}}catch(e){}
-  fr.setAttribute('sandbox','allow-scripts allow-forms allow-modals');
-  fr.removeAttribute('src');
-  fr.srcdoc='';
-  fr.srcdoc=html||'<p style="padding:16px;font-family:sans-serif">Chưa có mã HTML.</p>';
+  let next=fr.cloneNode(false);
+  next.id='mh-fs-frame';
+  next.className='';
+  next.removeAttribute('src');
+  next.removeAttribute('srcdoc');
+  next.setAttribute('sandbox','allow-scripts allow-forms allow-modals');
+  next.setAttribute('allowfullscreen','');
+  if(fr.parentNode)fr.parentNode.replaceChild(next,fr);
+  else return;
+  next.srcdoc=html;
 }
 function ldvlMhNormItem(it){
   it=it||{};
@@ -37013,7 +37150,16 @@ function ldvlMhSyncFromMeta(force){
       if(USER&&USER.is_admin){
         if(window.LDVL_MH_EDIT_ID&&window.LDVL_MH_EDIT_SUB===sub)return;
         let local=ldvlMhLoad(sub);
-        if(Array.isArray(local)&&local.length)return;
+        if(Array.isArray(local)&&local.length){
+          let seen={};
+          local.forEach(function(x){if(x&&x.id!=null)seen[String(x.id)]=1;});
+          let added=0;
+          rows.forEach(function(x){
+            if(x&&x.id!=null&&!seen[String(x.id)]){local.push(x);added++;}
+          });
+          if(added)localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(local));
+          return;
+        }
       }
       localStorage.setItem(ldvlMhStorageKey(sub),JSON.stringify(rows));
     });
@@ -37310,7 +37456,7 @@ function closeMhFs(){
     fr.removeAttribute('srcdoc');
     fr.src='about:blank';
   }
-  if(scr)scr.classList.remove('on');
+  if(scr){scr.classList.remove('on');scr.classList.remove('mh-kind-html');}
   document.body.style.overflow='';
   document.documentElement.style.overflow='';
   window.LDVL_MH_CUR=null;
@@ -37713,6 +37859,7 @@ function openMhFs(it,sub){
     else{fmlEl.classList.add('hide');fmlEl.innerHTML='';}
   }
   if(it.kind==='embed'){
+    if(scr)scr.classList.remove('mh-kind-html');
     if(py)py.classList.add('hide');
     if(fr){fr.classList.remove('hide');fr.removeAttribute('sandbox');fr.removeAttribute('srcdoc');fr.src=it.url||'about:blank';}
     if(run)run.classList.add('hide');
@@ -37720,11 +37867,13 @@ function openMhFs(it,sub){
   }else if(it.kind==='html'||ldvlMhLooksLikeHtml(it.code)){
     it.kind='html';
     window.LDVL_MH_CUR=it;
+    if(scr)scr.classList.add('mh-kind-html');
     if(py)py.classList.add('hide');
-    if(fr)ldvlMhSetFrameHtml(it.code||'');
+    if(fr)fr.classList.remove('hide');
     if(run)run.classList.remove('hide');
     if(newt)newt.classList.add('hide');
   }else{
+    if(scr)scr.classList.remove('mh-kind-html');
     if(fr){fr.classList.add('hide');fr.removeAttribute('sandbox');fr.removeAttribute('srcdoc');fr.src='about:blank';}
     if(py)py.classList.remove('hide');
     let isAdmin=!!(USER&&USER.is_admin);
@@ -37757,7 +37906,10 @@ function openMhFs(it,sub){
   }
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
-  if(it.kind==='python'){
+  if(it.kind==='html'){
+    /* Nạp sau khi overlay hiện — srcdoc lúc display:none không chạy canvas/script */
+    setTimeout(function(){ldvlMhSetFrameHtml(it.code||'');}, mobile?80:40);
+  }else if(it.kind==='python'){
     /* Mobile: chờ chút để UI hiện rồi mới tải Python (tránh đơ cảm giác “không mở”) */
     setTimeout(function(){ldvlMhRunCurrent();}, mobile?220:80);
   }
@@ -37776,6 +37928,7 @@ window.ldvlMhAdminPanelSync=ldvlMhAdminPanelSync;
 window.ldvlMhAiGenerate=ldvlMhAiGenerate;
 window.ldvlMhSaveCurrentCode=ldvlMhSaveCurrentCode;
 window.ldvlMhAdd=ldvlMhAdd;
+window.ldvlMhOnCodeInput=ldvlMhOnCodeInput;
 if(!window.__LDVL_MH_CLICK_BOUND){
   window.__LDVL_MH_CLICK_BOUND=1;
   window.__LDVL_MH_TOUCH={x:0,y:0,moved:0};
@@ -42072,7 +42225,9 @@ def _is_bad_dangbaitap_value(v: Any) -> bool:
     t = key_norm(v)
     if not t:
         return True
-    if t in {"chua", "chua gan", "chua phan loai", "chua co", "none", "null", "khong ro", "khac"}:
+    if t in {"chua", "chua gan", "chua phan loai", "chua co", "chua co dang", "none", "null", "khong ro", "khac"}:
+        return True
+    if t.startswith("chua co dang"):
         return True
     if t in {"trac nghiem", "dung sai", "tra loi ngan", "tu luan", "tn", "ds", "tln", "tl"}:
         return True
@@ -42508,7 +42663,7 @@ def ordered_dbt_names(
             seen.add(kn)
     rest = sorted(
         [canon[kn] for kn in canon if kn not in seen],
-        key=lambda nm: (-(counts.get(nm, 0) or 0), key_norm(nm)),
+        key=lambda nm: (_dbt_pedagogy_rank(nm), -(counts.get(nm, 0) or 0), key_norm(nm)),
     )
     out.extend(rest)
     return out
@@ -42562,6 +42717,26 @@ def _lesson_scope_key(q: Dict[str, Any]) -> str:
     ])
 
 
+def _dbt_pedagogy_rank(name: str) -> int:
+    """Thứ tự sư phạm mặc định khi ADMIN chưa lưu DBT_ThuTu."""
+    k = key_norm(name)
+    rules = [
+        (0, ("don vi", "dai luong trong")),
+        (1, ("viet phuong trinh",)),
+        (2, ("do thi", "khai thac", "thong so")),
+        (3, ("phuong trinh li do", "dai luong dac trung")),
+        (4, ("chu ki", "tan so", "bien do", "quy dao")),
+        (5, ("van toc", "gia toc")),
+        (6, ("pha ban dau", "trang thai")),
+        (7, ("lech pha",)),
+        (8, ("tron deu", "dem so")),
+    ]
+    for rank, hints in rules:
+        if any(h in k for h in hints):
+            return rank
+    return 40
+
+
 def _dbt_similarity_py(a: str, b: str) -> float:
     a, b = key_norm(a), key_norm(b)
     if not a or not b:
@@ -42586,6 +42761,244 @@ def _nearest_dbt_canonical(name: str, canonicals: List[str]) -> str:
             best_sc = sc
             best = c
     return best if best_sc >= 0.35 else canonicals[0]
+
+
+def _cluster_dangbaitap_counts(
+    counts: Optional[Dict[str, int]],
+    max_types: int = DBT_MAX_TYPES_PER_LESSON,
+) -> Tuple[Dict[str, int], Dict[str, List[str]]]:
+    """Gộp tên gần giống rồi gom về tối đa max_types dạng/bài.
+
+    Trả (counts_canonical, aliases {canonical: [tên gốc]}).
+    """
+    src = dict(counts or {})
+    uncls = int(src.pop(DBT_FILTER_UNCLASSIFIED, 0) or 0)
+    items: List[Dict[str, Any]] = []
+    for k, v in src.items():
+        name = one_line(k)
+        n = int(v or 0)
+        if not name or _is_bad_dangbaitap_value(name):
+            uncls += n
+            continue
+        items.append({"name": name, "n": n})
+    if not items:
+        out: Dict[str, int] = {}
+        if uncls:
+            out[DBT_FILTER_UNCLASSIFIED] = uncls
+        return out, {}
+
+    parent = list(range(len(items)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        a, b = find(i), find(j)
+        if a != b:
+            parent[b] = a
+
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            if _dbt_similarity_py(items[i]["name"], items[j]["name"]) >= 0.68:
+                union(i, j)
+
+    groups: Dict[int, List[int]] = {}
+    for i in range(len(items)):
+        groups.setdefault(find(i), []).append(i)
+
+    clusters: List[Dict[str, Any]] = []
+    for idxs in groups.values():
+        by_name: Dict[str, int] = {}
+        for i in idxs:
+            nm = items[i]["name"]
+            by_name[nm] = by_name.get(nm, 0) + int(items[i]["n"] or 0)
+        canon = max(by_name.keys(), key=lambda nm: (by_name[nm], len(nm)))
+        clusters.append({
+            "canon": canon,
+            "n": sum(by_name.values()),
+            "aliases": list(by_name.keys()),
+        })
+
+    cap = max(1, int(max_types or DBT_MAX_TYPES_PER_LESSON))
+    while len(clusters) > cap:
+        clusters.sort(key=lambda c: (int(c["n"] or 0), len(str(c["canon"] or ""))))
+        victim = clusters.pop(0)
+        others = [str(c["canon"]) for c in clusters]
+        target_name = _nearest_dbt_canonical(str(victim["canon"]), others)
+        merged = False
+        for c in clusters:
+            if key_norm(c["canon"]) == key_norm(target_name):
+                c["n"] = int(c["n"] or 0) + int(victim["n"] or 0)
+                for a in victim.get("aliases") or []:
+                    if a not in c["aliases"]:
+                        c["aliases"].append(a)
+                merged = True
+                break
+        if not merged:
+            clusters.append(victim)
+            break
+
+    out_counts: Dict[str, int] = {}
+    aliases: Dict[str, List[str]] = {}
+    for c in clusters:
+        canon = one_line(c.get("canon") or "")
+        if not canon:
+            continue
+        out_counts[canon] = int(c.get("n") or 0)
+        aliases[canon] = [one_line(x) for x in (c.get("aliases") or []) if one_line(x)]
+    if uncls:
+        out_counts[DBT_FILTER_UNCLASSIFIED] = uncls
+    return out_counts, aliases
+
+
+def admin_ai_organize_lesson_dbt(
+    store: "SheetStore",
+    made: str,
+    *,
+    force_provider: str = "",
+    allow_gpt_fallback: bool = False,
+    extra_anthropic_key: str = "",
+) -> Dict[str, Any]:
+    """ADMIN: gom tên dạng rời rạc của một bài thành tối đa 6 dạng + thứ tự sư phạm."""
+    made = clean(made)
+    if not made:
+        raise RuntimeError("Chưa xác định bài / mã đề.")
+    store.ensure_questions_loaded()
+    if hasattr(store, "_ensure_github_tex_lesson"):
+        store._ensure_github_tex_lesson(made)
+    qs = store.resolve_quiz_base(made) or []
+    if not qs:
+        raise RuntimeError("Không tìm thấy câu trong bài này. Mở bài một lần rồi thử lại.")
+    buckets: Dict[str, Dict[str, Any]] = {}
+    uncls = 0
+    for q in qs:
+        v = one_line(q.get("DangBaiTap", ""))
+        if not v or _is_bad_dangbaitap_value(v):
+            uncls += 1
+            continue
+        kn = key_norm(v)
+        rec = buckets.setdefault(kn, {"name": v, "n": 0})
+        rec["n"] = int(rec["n"] or 0) + 1
+        if len(v) > len(rec["name"]):
+            rec["name"] = v
+    names = [{"name": b["name"], "count": int(b["n"] or 0)} for b in buckets.values()]
+    raw_counts = {b["name"]: int(b["n"] or 0) for b in buckets.values()}
+    item = next(
+        (x for x in (store.catalog or []) if clean(x.get("MaDe")) == made or clean(x.get("GroupKey")) == made),
+        {},
+    )
+    scope = " · ".join(
+        [clean(item.get("Mon") or qs[0].get("Mon", "")),
+         clean(item.get("Lop") or qs[0].get("Lop", "")),
+         clean(item.get("Chuong") or qs[0].get("Chuong", "")),
+         clean(item.get("BaiHoc") or qs[0].get("BaiHoc", ""))]
+    )
+    groups_in: List[Dict[str, Any]] = []
+    order: List[str] = []
+    provider = ""
+    model = ""
+    used_ai = False
+    warning = ""
+    if len(names) >= 2:
+        sys_prompt = (
+            "Bạn là giáo viên THPT Việt Nam. Chỉ trả JSON hợp lệ, không markdown."
+        )
+        user_prompt = (
+            f"Gom các Dạng bài tập rời rạc của MỘT bài thành tối đa {DBT_MAX_TYPES_PER_LESSON} dạng chuẩn.\n"
+            f"Phạm vi: {scope}\n"
+            f"Danh sách hiện có: {json.dumps(names, ensure_ascii=False)}\n"
+            f"Câu chưa phân loại: {uncls}.\n\n"
+            "Quy tắc:\n"
+            f"- Tối đa {DBT_MAX_TYPES_PER_LESSON} dạng; gộp tên gần giống hoặc dạng chỉ vài câu vào dạng cùng kỹ năng.\n"
+            "- Giữ tách nếu kỹ năng khác nhau (đồ thị vs viết phương trình; vận tốc vs pha; chuyển động tròn vs đại lượng từ PT).\n"
+            "- Tên tiếng Việt, một dòng, không đánh số «Dạng 1».\n"
+            "- order: thứ tự sư phạm (cơ bản → vận dụng).\n"
+            "- groups: mỗi phần tử {canonical, from} — from gồm mọi tên cũ thuộc nhóm.\n\n"
+            'JSON: {"order":["..."],"groups":[{"canonical":"...","from":["..."]}]}'
+        )
+        try:
+            txt, provider, model, _ki = admin_ai_call_text(
+                sys_prompt,
+                user_prompt,
+                max_tokens=1800,
+                temp=0.1,
+                timeout=50,
+                force_provider=force_provider,
+                allow_gpt_fallback=allow_gpt_fallback,
+                extra_anthropic_key=extra_anthropic_key,
+            )
+            obj = _extract_ai_json_object(txt)
+            raw_groups = obj.get("groups") if isinstance(obj, dict) else None
+            raw_order = obj.get("order") if isinstance(obj, dict) else None
+            if isinstance(raw_groups, list):
+                groups_in = [g for g in raw_groups if isinstance(g, dict)]
+            if isinstance(raw_order, list):
+                order = [clean(x) for x in raw_order if clean(x) and not _is_bad_dangbaitap_value(x)]
+            used_ai = bool(groups_in or order)
+        except AdminGeminiQuotaError:
+            raise
+        except Exception as e:
+            warning = clean(str(e)) or "AI không gom được — dùng gộp gần giống."
+    if not groups_in:
+        clustered, aliases = _cluster_dangbaitap_counts(raw_counts)
+        for canon, alts in (aliases or {}).items():
+            alts = [one_line(x) for x in (alts or []) if one_line(x)]
+            if not alts:
+                continue
+            groups_in.append({"canonical": canon, "from": alts})
+        if not order:
+            order = ordered_dbt_names(made, clustered)
+        if not used_ai and not warning:
+            warning = "Đã gom theo tên gần giống (không gọi AI)."
+
+    updated = 0
+    applied: List[Dict[str, Any]] = []
+    for g in groups_in:
+        canonical = one_line(g.get("canonical") or g.get("new_name") or "")
+        from_names = [one_line(x) for x in (g.get("from") or g.get("old_names") or []) if one_line(x)]
+        if not canonical or _is_bad_dangbaitap_value(canonical):
+            continue
+        if not from_names:
+            from_names = [canonical]
+        if len(from_names) == 1 and key_norm(from_names[0]) == key_norm(canonical):
+            if canonical not in order:
+                order.append(canonical)
+            continue
+        try:
+            result = store.merge_dangbaitap_names(made, from_names, canonical)
+        except Exception as e:
+            applied.append({"canonical": canonical, "from": from_names, "error": str(e)})
+            continue
+        updated += int(result.get("updated") or 0)
+        applied.append({
+            "canonical": result.get("new_name") or canonical,
+            "from": result.get("old_names") or from_names,
+            "updated": int(result.get("updated") or 0),
+        })
+        if canonical not in order:
+            order.append(canonical)
+    if order:
+        save_dbt_order_one(made, order)
+    return {
+        "ok": True,
+        "made": made,
+        "updated": updated,
+        "order": order,
+        "groups": applied,
+        "unclassified": uncls,
+        "used_ai": used_ai,
+        "provider": provider,
+        "ai_model": model,
+        "warning": warning,
+        "message": (
+            f"Đã gom {len(applied)} nhóm, cập nhật {updated} câu"
+            + (f" · {len(order)} dạng" if order else "")
+            + "."
+        ),
+    }
 
 
 def _consolidate_dangbaitap_per_lesson(
@@ -46495,6 +46908,37 @@ def api_admin_merge_dangbaitap():
         st.ensure_questions_loaded()
         result = st.merge_dangbaitap_names(made, old_names, new_name)
         return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/admin/dbt-ai-organize", methods=["POST"])
+def api_admin_dbt_ai_organize():
+    """ADMIN: AI gom tên dạng rời rạc của một bài thành tối đa 6 dạng + thứ tự sư phạm."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được gom dạng bài tập bằng AI."}), 403
+    body = request.get_json(silent=True) or {}
+    made = clean(body.get("made") or body.get("MaDe") or "")
+    if not made:
+        return jsonify({"error": "Chưa xác định bài / mã đề."}), 400
+    try:
+        st = get_store()
+        st.ensure_questions_loaded()
+        force, allow = admin_ai_body_params(body)
+        extra_ant_key = clean(body.get("anthropic_key", ""))
+        result = admin_ai_organize_lesson_dbt(
+            st,
+            made,
+            force_provider=force,
+            allow_gpt_fallback=allow if allow else True,
+            extra_anthropic_key=extra_ant_key,
+        )
+        return jsonify(result)
+    except AdminGeminiQuotaError as e:
+        return admin_ai_quota_json(e)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
