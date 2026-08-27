@@ -139,7 +139,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V508_RENDER_MUCLUC"
+APP_VERSION = "V510_GH_META_FAST"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -147,6 +147,7 @@ try:
         copy_cache_into_local,
         count_tex_question_blocks,
         count_tex_question_stats,
+        count_tex_catalog_detail,
         defaults_from_rel_path,
         download_github_tex,
         github_tex_config,
@@ -164,6 +165,7 @@ except Exception as _github_tex_import_err:  # pragma: no cover
     copy_cache_into_local = None  # type: ignore[assignment]
     count_tex_question_blocks = None  # type: ignore[assignment]
     count_tex_question_stats = None  # type: ignore[assignment]
+    count_tex_catalog_detail = None  # type: ignore[assignment]
     defaults_from_rel_path = None  # type: ignore[assignment]
     download_github_tex = None  # type: ignore[assignment]
     github_tex_config = None  # type: ignore[assignment]
@@ -3985,7 +3987,7 @@ QUESTIONS_CACHE_FILE = os.path.join(APP_DIR, "data", "questions_cache.json")
 QUESTIONS_CACHE_SCHEMA = 1
 _QUESTIONS_CACHE_LOCK = threading.Lock()
 CATALOG_CACHE_FILE = os.path.join(APP_DIR, "data", "catalog_cache.json")
-CATALOG_CACHE_SCHEMA = 3
+CATALOG_CACHE_SCHEMA = 4
 _CATALOG_CACHE_LOCK = threading.Lock()
 
 
@@ -6423,7 +6425,7 @@ class SheetStore:
             log_swallow("_meta_from_catalog_cache_file")
             return None
         schema = int(raw.get("schema") or 0) if isinstance(raw, dict) else 0
-        if not isinstance(raw, dict) or schema < 1:
+        if not isinstance(raw, dict) or schema < 3:
             return None
         catalog = raw.get("catalog") or []
         if not isinstance(catalog, list) or len(catalog) < 1:
@@ -6463,7 +6465,43 @@ class SheetStore:
             "strict_question_review": strict_question_review(),
             "question_review_approved_label": QUESTION_REVIEW_APPROVED_LABEL,
             "student_progress": {},
+            "question_source": _json_question_source_mode(),
         }
+
+    def try_apply_catalog_cache(self) -> bool:
+        """Gắn mục lục đĩa vào store — /api/meta trả ngay, không chờ quét .tex."""
+        cached = self._meta_from_catalog_cache_file()
+        if not cached:
+            return False
+        catalog = cached.get("catalog") or []
+        if not isinstance(catalog, list) or not catalog:
+            return False
+        self.catalog = catalog
+        self.questions_loaded = True
+        self.questions_from_cache = True
+        self.loaded_at = clean(cached.get("loaded_at", "")) or now_str()
+        rels: Dict[str, str] = {}
+        for item in catalog:
+            if not isinstance(item, dict):
+                continue
+            gk = clean(item.get("MaDe") or item.get("GroupKey"))
+            rel = clean(item.get("_tex_rel") or "")
+            if gk and rel:
+                rels[gk] = rel
+        if rels:
+            self._github_tex_rel_by_made = rels
+        return True
+
+    def _github_catalog_missing_dang_detail(self) -> bool:
+        items = [x for x in (self.catalog or []) if isinstance(x, dict)]
+        if not items:
+            return True
+        hit = 0
+        for x in items[:16]:
+            det = ((x.get("FilterCounts") or {}).get("dbt_detail") or {})
+            if any((v or {}).get("dang") for v in det.values() if isinstance(v, dict)):
+                hit += 1
+        return hit < 1
 
     def schedule_questions_cache_save(self) -> None:
         if not _questions_disk_cache_enabled() or not self.questions:
@@ -6566,12 +6604,17 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
-        """Trả mục lục ngay. GITHUB: đọc ngan-hang local trước, GitHub sync nền."""
+        """Trả mục lục ngay. GITHUB: không chặn /api/meta để quét hết .tex."""
         if _json_question_source_mode() == "GITHUB":
             try:
                 if not (self.questions_loaded and self.catalog):
-                    self.ensure_questions_loaded(force=False)
-                self._schedule_github_tex_sync()
+                    self.try_apply_catalog_cache()
+                if not (self.questions_loaded and self.catalog):
+                    self.start_questions_background(force=False)
+                elif self._github_catalog_missing_dang_detail():
+                    self.start_questions_background(force=True)
+                else:
+                    self._schedule_github_tex_sync()
             except Exception as e:
                 self.questions_error = str(e)
                 log.warning("GITHUB muc_luc: %s", e)
@@ -6780,28 +6823,57 @@ class SheetStore:
                 log_swallow("_read_tex_on_disk")
         return ""
 
-    def _tex_stats_from_text(self, text: str) -> Tuple[int, Dict[str, int]]:
-        if count_tex_question_stats:
-            n, raw = count_tex_question_stats(text or "")
+    def _tex_catalog_stats_from_text(self, text: str) -> Dict[str, Any]:
+        empty: Dict[str, Any] = {
+            "n": 0, "dbt": {}, "dang": {}, "level": {}, "combo": {}, "dbt_detail": {},
+        }
+        if not text:
+            return empty
+        if count_tex_catalog_detail:
+            raw = count_tex_catalog_detail(text) or {}
+            dbt_raw = raw.get("dangbaitap") or {}
+        elif count_tex_question_stats:
+            n, dbt_raw = count_tex_question_stats(text)
+            raw = {"n": n, "dang": {}, "level": {}, "combo": {}, "dbt_detail": {}}
         elif count_tex_question_blocks:
-            n, raw = count_tex_question_blocks(text or ""), {}
+            return {"n": int(count_tex_question_blocks(text) or 0), "dbt": {}, "dang": {}, "level": {}, "combo": {}, "dbt_detail": {}}
         else:
-            return 0, {}
+            return empty
         dbt: Dict[str, int] = {}
-        for name, cnt in (raw or {}).items():
+        dbt_detail: Dict[str, Any] = {}
+        raw_detail = raw.get("dbt_detail") or {}
+        for name, cnt in (dbt_raw or {}).items():
             label = one_line(name)
             if (not label) or _is_bad_dangbaitap_value(label):
                 key = DBT_FILTER_UNCLASSIFIED
             else:
                 key = label
             dbt[key] = int(dbt.get(key, 0)) + int(cnt or 0)
-        return int(n or 0), dbt
+            src = raw_detail.get(name) or {}
+            acc = dbt_detail.setdefault(key, {"dang": {}, "level": {}, "updated": ""})
+            for d, nv in (src.get("dang") or {}).items():
+                acc["dang"][d] = int(acc["dang"].get(d, 0)) + int(nv or 0)
+            for lv, nv in (src.get("level") or {}).items():
+                acc["level"][lv] = int(acc["level"].get(lv, 0)) + int(nv or 0)
+        return {
+            "n": int(raw.get("n") or 0),
+            "dbt": dbt,
+            "dang": dict(raw.get("dang") or {}),
+            "level": dict(raw.get("level") or {}),
+            "combo": dict(raw.get("combo") or {}),
+            "dbt_detail": dbt_detail,
+        }
+
+    def _tex_stats_from_text(self, text: str) -> Tuple[int, Dict[str, int]]:
+        info = self._tex_catalog_stats_from_text(text)
+        return int(info.get("n") or 0), dict(info.get("dbt") or {})
+
+    def _tex_catalog_stats_on_disk(self, rel: str) -> Dict[str, Any]:
+        return self._tex_catalog_stats_from_text(self._read_tex_on_disk(rel))
 
     def _tex_stats_on_disk(self, rel: str) -> Tuple[int, Dict[str, int]]:
-        text = self._read_tex_on_disk(rel)
-        if not text:
-            return 0, {}
-        return self._tex_stats_from_text(text)
+        info = self._tex_catalog_stats_on_disk(rel)
+        return int(info.get("n") or 0), dict(info.get("dbt") or {})
 
     def _count_tex_on_disk(self, rel: str) -> int:
         n, _dbt = self._tex_stats_on_disk(rel)
@@ -6813,12 +6885,30 @@ class SheetStore:
         rel: str,
         n: int,
         dbt: Optional[Dict[str, int]] = None,
+        extra: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        extra = extra or {}
         dbt = dict(dbt or {})
+        detail_in = dict(extra.get("dbt_detail") or {})
         try:
             dbt, aliases = _cluster_dangbaitap_counts(dbt, max_types=max(1, len(dbt)))
         except Exception:
             aliases = {}
+        orig_to_canon: Dict[str, str] = {}
+        for canon, names in (aliases or {}).items():
+            orig_to_canon[str(canon)] = str(canon)
+            for nm in names or []:
+                orig_to_canon[str(nm)] = str(canon)
+        dbt_detail: Dict[str, Any] = {}
+        for key, block in detail_in.items():
+            dest = orig_to_canon.get(str(key), str(key))
+            if dest not in dbt and dest != DBT_FILTER_UNCLASSIFIED:
+                dest = str(key)
+            acc = dbt_detail.setdefault(dest, {"dang": {}, "level": {}, "updated": ""})
+            for d, nv in ((block or {}).get("dang") or {}).items():
+                acc["dang"][d] = int(acc["dang"].get(d, 0)) + int(nv or 0)
+            for lv, nv in ((block or {}).get("level") or {}).items():
+                acc["level"][lv] = int(acc["level"].get(lv, 0)) + int(nv or 0)
         named = [k for k in dbt.keys() if k != DBT_FILTER_UNCLASSIFIED]
         gk = catalog_group_key(qmeta)
         return {
@@ -6837,11 +6927,12 @@ class SheetStore:
             "_tex_rel": rel,
             "DbtOrder": ordered_dbt_names(gk, dbt),
             "FilterCounts": {
-                "dang": {},
-                "level": {},
-                "combo": {},
+                "dang": dict(extra.get("dang") or {}),
+                "level": dict(extra.get("level") or {}),
+                "combo": dict(extra.get("combo") or {}),
                 "dangbaitap": dbt,
                 "dbt_aliases": aliases,
+                "dbt_detail": dbt_detail,
             },
         }
 
@@ -6921,7 +7012,8 @@ class SheetStore:
             try:
                 qmeta, rel = self._github_qmeta_for_lesson(les)
                 gk = catalog_group_key(qmeta)
-                n, dbt = self._tex_stats_on_disk(rel)
+                info = self._tex_catalog_stats_on_disk(rel)
+                n, dbt = int(info.get("n") or 0), dict(info.get("dbt") or {})
                 if not n:
                     try:
                         n = int(les.get("count_questions") or 0)
@@ -6931,7 +7023,7 @@ class SheetStore:
                 if gk and rel:
                     self._github_tex_rel_by_made[gk] = rel
                     seen_rel.add(rel.replace("\\", "/"))
-                catalog.append(self._github_catalog_item(qmeta, rel, n, dbt))
+                catalog.append(self._github_catalog_item(qmeta, rel, n, dbt, extra=info))
             except Exception as e:
                 log.warning("GitHub catalog lesson: %s", e)
         if list_local_tex_files and github_tex_config:
@@ -6945,11 +7037,12 @@ class SheetStore:
                     qmeta = defaults_from_rel_path(rel_n) if defaults_from_rel_path else {}
                     qmeta = self._github_fill_qmeta(qmeta, rel_n)
                     gk = catalog_group_key(qmeta)
-                    n, dbt = self._tex_stats_on_disk(rel_n)
+                    info = self._tex_catalog_stats_on_disk(rel_n)
+                    n, dbt = int(info.get("n") or 0), dict(info.get("dbt") or {})
                     total += n
                     if gk:
                         self._github_tex_rel_by_made[gk] = rel_n
-                    catalog.append(self._github_catalog_item(qmeta, rel_n, n, dbt))
+                    catalog.append(self._github_catalog_item(qmeta, rel_n, n, dbt, extra=info))
                     seen_rel.add(rel_n)
                 except Exception as e:
                     log.warning("GitHub catalog extra %s: %s", rel, e)
@@ -7060,6 +7153,22 @@ class SheetStore:
             dbt_counts, aliases = _cluster_dangbaitap_counts(dbt_counts, max_types=max(1, len(dbt_counts)))
         except Exception:
             aliases = {}
+        orig_to_canon: Dict[str, str] = {}
+        for canon, names in (aliases or {}).items():
+            orig_to_canon[str(canon)] = str(canon)
+            for nm in names or []:
+                orig_to_canon[str(nm)] = str(canon)
+        remapped_detail: Dict[str, Any] = {}
+        for key, block in (dbt_detail or {}).items():
+            dest = orig_to_canon.get(str(key), str(key))
+            if dest not in dbt_counts and dest != DBT_FILTER_UNCLASSIFIED:
+                dest = str(key)
+            acc = remapped_detail.setdefault(dest, {"dang": {}, "level": {}, "updated": ""})
+            for d, nv in ((block or {}).get("dang") or {}).items():
+                acc["dang"][d] = int(acc["dang"].get(d, 0)) + int(nv or 0)
+            for lv, nv in ((block or {}).get("level") or {}).items():
+                acc["level"][lv] = int(acc["level"].get(lv, 0)) + int(nv or 0)
+        dbt_detail = remapped_detail
         for item in self.catalog or []:
             if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
                 item["SoCau"] = len(qs)
@@ -29145,8 +29254,35 @@ function reindexQuizMaps(removedIdx){function shift(obj){let out={};for(let k in
 function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let k in obj){let i=parseInt(k,10);if(isNaN(i))continue;if(i<insertIdx)out[i]=obj[k];else out[i+1]=obj[k]}return out}ANSWERS=shiftInsert(ANSWERS);RESULTS=shiftInsert(RESULTS);CHECKED=shiftInsert(CHECKED);LOCKED_Q=shiftInsert(LOCKED_Q);HINT_BY_Q=shiftInsert(HINT_BY_Q);SIMILAR_BY_Q=shiftInsert(SIMILAR_BY_Q);AI_LG_BY_Q=shiftInsert(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=shiftInsert(ADMIN_LG_DRAFT_BY_Q)}
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);AI_LG_BY_Q=remap(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=remap(ADMIN_LG_DRAFT_BY_Q);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
-async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);try{ldvlSyncSourceMenu()}catch(e){}if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
-if(!window.__LDVL_GITHUB_CATALOG_POLL){window.__LDVL_GITHUB_CATALOG_POLL=1;setInterval(function(){if(!(META&&META.question_source==='GITHUB'))return;let home=document.getElementById('home');if(home&&home.classList.contains('hide'))return;refreshCatalogFromMeta();},25000);}
+function catalogFingerprint(cat){
+  try{
+    return (cat||[]).map(function(x){
+      let fc=x&&x.FilterCounts||{};
+      let dbt=fc.dangbaitap||{};
+      let det=fc.dbt_detail||{};
+      let dbtPart=Object.keys(dbt).sort().map(function(k){return k+':'+(dbt[k]||0)}).join(',');
+      let mini=Object.keys(det).sort().map(function(k){let d=(det[k]&&det[k].dang)||{};return k+':'+(d['Trắc nghiệm']||0)+','+(d['Đúng sai']||0)+','+(d['Trả lời ngắn']||0)+','+(d['Tự luận']||0)}).join('/');
+      return [x.MaDe||'',x.SoCau||0,dbtPart,mini].join('|');
+    }).join(';');
+  }catch(e){return String((cat||[]).length)}
+}
+function ldvlCatalogScrollSnapshot(){
+  let main=document.querySelector('.ldvlMain')||document.scrollingElement||document.documentElement;
+  let rows={};
+  document.querySelectorAll('.bookDbtRow[id]').forEach(function(el){rows[el.id]=el.scrollTop||0});
+  return {main:main?main.scrollTop:0,rows:rows};
+}
+function ldvlCatalogScrollRestore(sc){
+  if(!sc)return;
+  try{
+    let main=document.querySelector('.ldvlMain')||document.scrollingElement||document.documentElement;
+    if(main&&sc.main)main.scrollTop=sc.main;
+    let rows=sc.rows||{};
+    Object.keys(rows).forEach(function(id){let el=document.getElementById(id);if(el)el.scrollTop=rows[id]||0});
+  }catch(e){}
+}
+async function refreshCatalogFromMeta(opts){opts=opts||{};try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);try{ldvlSyncSourceMenu()}catch(e){}if(m.user){USER=m.user;renderUserAiProfile(USER)}let next=m.catalog||[];let fp=catalogFingerprint(next);let same=fp===window.__LDVL_CATALOG_FP;CATALOG=next;window.__LDVL_CATALOG_FP=fp;try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){if(!same||opts.force){let sc=ldvlCatalogScrollSnapshot();refreshFilterOptions();renderCatalog();ldvlCatalogScrollRestore(sc)}if(!opts.quiet){initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+if(!window.__LDVL_GITHUB_CATALOG_POLL){window.__LDVL_GITHUB_CATALOG_POLL=1;window.__LDVL_GITHUB_CATALOG_AT=0;setInterval(function(){if(!(META&&META.question_source==='GITHUB'))return;let home=document.getElementById('home');if(home&&home.classList.contains('hide'))return;let empty=!(CATALOG&&CATALOG.length);let now=Date.now();if(!empty&&now-(window.__LDVL_GITHUB_CATALOG_AT||0)<90000)return;window.__LDVL_GITHUB_CATALOG_AT=now;refreshCatalogFromMeta({quiet:true});},8000);}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
 let INIT_CONNECT_FAILS=0;
@@ -29167,9 +29303,11 @@ async function init(){
   let info=document.getElementById('info');
   let cat=document.getElementById('catalog');
   let cnt=document.getElementById('countCat');
-  if(info)info.textContent='Đang nạp đề (GitHub / ngan-hang)…';
-  if(cat&&!cat.innerHTML.trim())cat.innerHTML='<div class="muted">Đang tải mục lục đề...</div>';
-  resetHomeFilterPlaceholders(true);
+  if(!(CATALOG&&CATALOG.length)){
+    if(info)info.textContent='Đang nạp đề (GitHub / ngan-hang)…';
+    if(cat&&!cat.innerHTML.trim())cat.innerHTML='<div class="muted">Đang tải mục lục đề...</div>';
+    resetHomeFilterPlaceholders(true);
+  }
   try{
     // V265: /api/meta là dữ liệu chính. Render Free vừa thức dậy có thể >30s — tăng timeout + retry.
     META=await api('/api/meta',{timeoutMs:60000},4);
@@ -29197,7 +29335,7 @@ async function init(){
   try{initAdminReviewMode()}catch(e){console.error('initAdminReviewMode',e)}
   try{initAdminChosenAiProvider()}catch(e){console.error('initAdminChosenAiProvider',e)}
   updateAdminChrome();
-  if(META.loading){
+  if(META.loading && !((META.catalog||[]).length)){
     let waited=INIT_POLL_COUNT*1;
     let errHint=META.load_error?(' · '+META.load_error):'';
     if(info)info.textContent='Đang nạp đề… '+waited+'s'+errHint;
@@ -35414,7 +35552,7 @@ function v246EnsureBookCss(){
   .bookShelfV246{display:block}.bookSubjectBlock{margin:12px 0 16px}.bookSubjectTitle{padding:11px 12px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;box-shadow:0 2px 8px #1d4ed833;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookSubjectTitle small{font-size:12px;opacity:.95;font-weight:800}
   .bookGradeBlock{margin:10px 0 12px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 4px #0f172a0f}.bookGradeHead{padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookGradeHead .bookMini{font-size:12px;color:#64748b;font-weight:800}
   .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;position:relative;z-index:2}.bookChapterHead .bookChapterDbtBtn{flex-shrink:0;cursor:pointer;position:relative;z-index:3}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
-  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookTag.bookTagDone{background:#fef9c3;border-color:#facc15;color:#854d0e}.bookTag.bookTagComplete{background:#dcfce7;border-color:#22c55e;color:#166534}.bookLessonProg,.bookChapterProg{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle}.bookLessonCard.lessonDone{border-color:#fde68a;background:#fffbeb}.bookLessonCard.lessonComplete{border-color:#86efac;background:#f0fdf4}.bookChapterBlock.isChapterComplete .bookChapterHead{background:#dcfce7;border-color:#86efac}.bookDbtBtn.isPracticeDone{border-color:#fde68a;background:#fffbeb}.bookDbtBtn.isPracticeComplete{border-color:#86efac;background:#f0fdf4}.bookDbtProg{font-size:10px;font-weight:950;margin-right:3px}.bookDbtProgDone{color:#ca8a04}.bookDbtProgComplete{color:#16a34a}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
+  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px;overflow-anchor:none}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookTag.bookTagDone{background:#fef9c3;border-color:#facc15;color:#854d0e}.bookTag.bookTagComplete{background:#dcfce7;border-color:#22c55e;color:#166534}.bookLessonProg,.bookChapterProg{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle}.bookLessonCard.lessonDone{border-color:#fde68a;background:#fffbeb}.bookLessonCard.lessonComplete{border-color:#86efac;background:#f0fdf4}.bookChapterBlock.isChapterComplete .bookChapterHead{background:#dcfce7;border-color:#86efac}.bookDbtBtn.isPracticeDone{border-color:#fde68a;background:#fffbeb}.bookDbtBtn.isPracticeComplete{border-color:#86efac;background:#f0fdf4}.bookDbtProg{font-size:10px;font-weight:950;margin-right:3px}.bookDbtProgDone{color:#ca8a04}.bookDbtProgComplete{color:#16a34a}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:280px;overflow:auto;overflow-anchor:none;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
   .bookLessonCard.selectedLesson{outline:2px solid #1d4ed8;background:#f8fbff}.bookLessonCard.shareTarget{outline:3px solid #60a5fa;box-shadow:0 0 0 4px #dbeafe}.bookLessonCard.catalogFlash{outline:3px solid #22c55e!important;box-shadow:0 0 0 4px #bbf7d088!important;animation:catalogFlashPulse .85s ease-in-out 2}@keyframes catalogFlashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.bookLessonCard .shareRow{margin-top:6px;flex-wrap:wrap}.bookLessonCard .shareBtns{flex-wrap:wrap}.bookEmpty{padding:14px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc}
   html[data-theme='dark'] .bookIntroV246{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}html[data-theme='dark'] .bookIntroTitle{color:#bfdbfe}html[data-theme='dark'] .bookStat{background:#0f172a;border-color:#334155;color:#bfdbfe}html[data-theme='dark'] .bookGradeBlock,html[data-theme='dark'] .bookLessonCard{background:#111827;border-color:#334155}html[data-theme='dark'] .bookGradeHead{background:#1e293b;color:#e5e7eb}html[data-theme='dark'] .bookChapterBlock{background:#0f172a;border-color:#1d4ed8}html[data-theme='dark'] .bookChapterHead{background:#1e3a5f;color:#bfdbfe}html[data-theme='dark'] .bookLessonTitle{color:#e5e7eb}html[data-theme='dark'] .bookTag{background:#1e293b;border-color:#475569;color:#cbd5e1}html[data-theme='dark'] .bookTag.bookTagDang{background:#0f172a;border-color:#475569;color:#94a3b8}
   .bookLessonTags.bookLessonTagsCompact{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:1px}.bookLessonTags.bookLessonTagsCompact::-webkit-scrollbar{display:none}.bookTag.bookTagDang{color:#475569;border-color:#cbd5e1;background:#f1f5f9;letter-spacing:-.02em}
@@ -35992,7 +36130,7 @@ function syncTheoryViewportHeight(){
 }
 syncTheoryViewportHeight();
 window.addEventListener('resize',syncTheoryViewportHeight);
-if(window.visualViewport){window.visualViewport.addEventListener('resize',syncTheoryViewportHeight);window.visualViewport.addEventListener('scroll',syncTheoryViewportHeight)}
+if(window.visualViewport){window.visualViewport.addEventListener('resize',syncTheoryViewportHeight)}
 
 function normalizeTheoryLatexSourceClient(src){
   let t=String(src||'').replace(/\r\n?/g,'\n');
@@ -49164,17 +49302,14 @@ def handle_error(e):
     return jsonify({"error": str(e)}), 500
 
 def _schedule_store_warmup() -> None:
-    """Nạp Google Sheet ngay khi worker Gunicorn khởi động — giảm chờ lần đầu user vào app."""
-    if not os.environ.get("GOOGLE_SHEET_ID", "").strip():
-        return
+    """Nạp mục lục nền khi worker khởi động — GitHub .tex hoặc Google Sheet."""
 
     def _run():
         time.sleep(0.3)
         try:
             get_store().start_questions_background(force=False)
         except Exception:
-            log_swallow("_schedule_store_warmup:34649")
-            pass
+            log_swallow("_schedule_store_warmup")
 
     threading.Thread(target=_run, daemon=True).start()
 

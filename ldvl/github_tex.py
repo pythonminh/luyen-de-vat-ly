@@ -151,23 +151,84 @@ def _local_file_bytes(cfg: Dict[str, str], rel: str) -> bytes:
 
 _TEX_Q_ENV_RE = re.compile(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", re.I)
 _TEX_DANGBT_RE = re.compile(r"\\dangbt\s*\{([^{}]*)\}", re.I)
+_TEX_CHOICE_TF_RE = re.compile(r"\\choiceTF\b", re.I)
+_TEX_SHORTANS_RE = re.compile(r"\\shortans\b", re.I)
+_TEX_CHOICE_RE = re.compile(r"\\choice\b", re.I)
+_TEX_MUCDO_TAG_RE = re.compile(r"\[0D1([NHVD])\d", re.I)
+_TEX_MUCDO_LINE_RE = re.compile(r"%\s*M(?:ứ|u)c(?:\s*độ|\s*do)?\s*:\s*(NB|TH|VD|VDC)\b", re.I)
+
+
+def _tex_block_dang(body: str) -> str:
+    if _TEX_CHOICE_TF_RE.search(body or ""):
+        return "Đúng sai"
+    if _TEX_SHORTANS_RE.search(body or ""):
+        return "Trả lời ngắn"
+    if _TEX_CHOICE_RE.search(body or ""):
+        return "Trắc nghiệm"
+    return "Tự luận"
+
+
+def _tex_block_level(body: str) -> str:
+    m = _TEX_MUCDO_LINE_RE.search(body or "")
+    if m:
+        return (m.group(1) or "").upper()
+    m = _TEX_MUCDO_TAG_RE.search(body or "")
+    if not m:
+        return ""
+    return {"N": "NB", "H": "TH", "V": "VD", "D": "VDC"}.get((m.group(1) or "").upper(), "")
+
+
+def _bump(dst: Dict[str, int], key: str, n: int = 1) -> None:
+    key = (key or "").strip()
+    if not key:
+        return
+    dst[key] = int(dst.get(key, 0)) + int(n or 0)
+
+
+def count_tex_catalog_detail(text: str) -> Dict[str, Any]:
+    """Đếm câu, \\dangbt, loại TN/ĐS/TLN/TL và mức NB/TH/VD/VDC — để thẻ mục lục hiện số từng loại."""
+    text = text or ""
+    qpos = [m.start() for m in _TEX_Q_ENV_RE.finditer(text)]
+    markers = [(m.start(), (m.group(1) or "").strip()) for m in _TEX_DANGBT_RE.finditer(text)]
+    dbt_counts: Dict[str, int] = {}
+    dang: Dict[str, int] = {}
+    level: Dict[str, int] = {}
+    combo: Dict[str, int] = {}
+    dbt_detail: Dict[str, Any] = {}
+    mi = 0
+    current = ""
+    for i, pos in enumerate(qpos):
+        while mi < len(markers) and markers[mi][0] < pos:
+            current = markers[mi][1]
+            mi += 1
+        end = qpos[i + 1] if i + 1 < len(qpos) else len(text)
+        body = text[pos:end]
+        name = (current or "").strip()
+        dbt_counts[name] = dbt_counts.get(name, 0) + 1
+        ed = _tex_block_dang(body)
+        _bump(dang, ed)
+        lv = _tex_block_level(body)
+        if lv:
+            _bump(level, lv)
+            _bump(combo, f"{lv}|{ed}")
+        detail = dbt_detail.setdefault(name, {"dang": {}, "level": {}, "updated": ""})
+        _bump(detail["dang"], ed)
+        if lv:
+            _bump(detail["level"], lv)
+    return {
+        "n": len(qpos),
+        "dangbaitap": dbt_counts,
+        "dang": dang,
+        "level": level,
+        "combo": combo,
+        "dbt_detail": dbt_detail,
+    }
 
 
 def count_tex_question_stats(text: str) -> Tuple[int, Dict[str, int]]:
     """Đếm câu + bucket \\dangbt gần nhất trước mỗi \\begin{ex}/\\begin{bt}."""
-    text = text or ""
-    qpos = [m.start() for m in _TEX_Q_ENV_RE.finditer(text)]
-    markers = [(m.start(), (m.group(1) or "").strip()) for m in _TEX_DANGBT_RE.finditer(text)]
-    counts: Dict[str, int] = {}
-    mi = 0
-    current = ""
-    for pos in qpos:
-        while mi < len(markers) and markers[mi][0] < pos:
-            current = markers[mi][1]
-            mi += 1
-        name = (current or "").strip()
-        counts[name] = counts.get(name, 0) + 1
-    return len(qpos), counts
+    info = count_tex_catalog_detail(text)
+    return int(info.get("n") or 0), dict(info.get("dangbaitap") or {})
 
 
 def count_tex_question_blocks(text: str) -> int:
