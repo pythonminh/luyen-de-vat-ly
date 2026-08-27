@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V497_GITHUB_SAVE_TEX"
+APP_VERSION = "V498_TOP_SUBJECT_STUB"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -21802,6 +21802,14 @@ APP_HTML = r"""
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="private, max-age=0, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><title>Luyện đề</title><script>window.LDVL_OFFLINE=false;</script><script src="/offline-shim.js?v=__LDVL_APP_VERSION__"></script><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1d4ed8"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luyện đề AI"><link rel="apple-touch-icon" href="/pwa-icon-192.png">
 <script>(function(){try{var t=localStorage.getItem('LDVL_THEME')||'light';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();</script>
+<script>
+window.v253SelectSubject=function(kind){
+  try{localStorage.setItem('LDVL_PENDING_SUBJECT_V255',kind||'')}catch(e){}
+  if(typeof window.v255SelectTopSubject==='function')return window.v255SelectTopSubject(kind);
+  return false;
+};
+window.v254ApplySubject=window.v253SelectSubject;
+</script>
 <script>window.MathJax={loader:{load:['[tex]/ams']},startup:{typeset:false},tex:{packages:{'[+]':['ams']},inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true},svg:{fontCache:"global"},options:{renderActions:{addMenu:[0,0,'']}}};</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="LDVL_MATHJAX_CDN" crossorigin="anonymous"></script>
@@ -26536,8 +26544,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
       <div class="logo-txt">Luyện đề AI · Thầy Minh <small id="ldvlHdrSub">Toán &amp; Vật lý</small></div>
     </div>
     <div id="topSubjectTabsV253" class="topSubjectTabsV253 hsp" aria-label="Chọn môn nhanh" style="justify-content:center">
-      <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="v253SelectSubject('math')">📐 Toán</button>
-      <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="v253SelectSubject('physics')">🔭 Vật lý</button>
+      <button type="button" id="topSubjectMathV253" class="topSubjectBtnV253 math" onclick="try{v253SelectSubject('math')}catch(e){}">📐 Toán</button>
+      <button type="button" id="topSubjectPhysicsV253" class="topSubjectBtnV253 physics" onclick="try{v253SelectSubject('physics')}catch(e){}">🔭 Vật lý</button>
     </div>
     <div class="hchip hide" id="ldvlUserChip"><div class="hav" id="ldvlUserIni">?</div><span id="ldvlUserName">...</span><span class="rpill" id="ldvlUserRole">VIP</span></div>
     <span id="info" style="font-size:11px;color:rgba(255,255,255,.85);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -35356,7 +35364,7 @@ function renderCatalog(){
   let list=(CATALOG||[]).filter(v246ItemMatchesFilter).sort(compareCatalog);let c=document.getElementById('countCat');if(c)c.textContent=`(${list.length} mục)`;let target=document.getElementById('catalog');if(!target)return;
   target.className='';
   target.style.marginTop='10px';
-  target.innerHTML=v246IntroHtml(list)+v246BookHtml(list);
+  target.innerHTML=v246IntroHtml(list)+(list.length?v246BookHtml(list):'<div class="card loadWarn" style="margin-top:10px"><h3>Chưa có mục lục đề</h3><p>Đang nạp ngân hàng LaTeX (GitHub <code>ngan-hang</code>) hoặc bộ lọc đang trống.</p><p class="muted">Đợi vài giây, bấm <b>Ctrl+F5</b>, hoặc đổi môn Toán / Vật lý trên thanh trên.</p></div>');
 }
 
 
