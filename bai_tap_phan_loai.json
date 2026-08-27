@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "description": "Schema phân loại dạng bài tập cho ngân hàng câu hỏi Vật lý.",
+  "exercise_types": [
+    {
+      "code": "multiple_choice",
+      "name": "Dạng trắc nghiệm",
+      "dimension": "response_format",
+      "description": "Câu hỏi yêu cầu chọn đáp án, đúng/sai hoặc nhận biết nhanh theo phương án cho sẵn.",
+      "keywords": [
+        "trắc nghiệm",
+        "đúng sai",
+        "chọn đáp án",
+        "phương án đúng"
+      ],
+      "patterns": [
+        "\\\\choiceTF",
+        "\\\\choice\\b",
+        "-DS",
+        "-TN"
+      ]
+    },
+    {
+      "code": "short_answer_essay",
+      "name": "Dạng tự luận",
+      "dimension": "response_format",
+      "description": "Câu hỏi yêu cầu trình bày, giải thích hoặc trả lời ngắn bằng lời hay đáp số ngắn.",
+      "keywords": [
+        "tự luận",
+        "trình bày",
+        "giải thích",
+        "nêu",
+        "viết"
+      ],
+      "patterns": [
+        "\\\\shortans",
+        "\\\\begin\\{bt\\}",
+        "-TL",
+        "-TLN"
+      ]
+    },
+    {
+      "code": "calculation",
+      "name": "Dạng tính toán",
+      "dimension": "problem_solving",
+      "description": "Bài tập yêu cầu tính, xác định hoặc suy ra giá trị đại lượng vật lí từ dữ kiện số.",
+      "keywords": [
+        "xác định",
+        "bao nhiêu",
+        "tìm",
+        "suy ra",
+        "giá trị",
+        "đại lượng",
+        "số liệu"
+      ],
+      "patterns": [
+        "\\btính\\b(?!\\s+đúng\\s+sai)(?!\\s+chất)",
+        "\\bbài toán\\b",
+        "\\bphương trình\\b",
+        "công suất",
+        "gia tốc",
+        "vận tốc",
+        "động lượng",
+        "tần số",
+        "điện trở"
+      ]
+    },
+    {
+      "code": "practical",
+      "name": "Dạng thực hành",
+      "dimension": "learning_activity",
+      "description": "Bài tập gắn với thí nghiệm, phép đo, dụng cụ hoặc xử lí kết quả thực hành.",
+      "keywords": [
+        "thực hành",
+        "thí nghiệm",
+        "đo",
+        "dụng cụ",
+        "sai số",
+        "bố trí"
+      ],
+      "patterns": [
+        "dao động kí",
+        "phép đo",
+        "báo cáo kết quả"
+      ]
+    },
+    {
+      "code": "application",
+      "name": "Dạng vận dụng",
+      "dimension": "cognitive_skill",
+      "description": "Bài tập yêu cầu áp dụng kiến thức vào tình huống mới, thực tế hoặc tổng hợp.",
+      "keywords": [
+        "vận dụng",
+        "ứng dụng",
+        "thực tế",
+        "liên hệ",
+        "tổng hợp"
+      ],
+      "patterns": [
+        "VD",
+        "VDC"
+      ]
+    },
+    {
+      "code": "comparison",
+      "name": "Dạng so sánh",
+      "dimension": "cognitive_skill",
+      "description": "Bài tập yêu cầu so sánh, phân biệt hoặc đối chiếu các đại lượng, hiện tượng hay mô hình.",
+      "keywords": [
+        "so sánh",
+        "phân biệt",
+        "khác nhau",
+        "giống nhau",
+        "đối chiếu"
+      ],
+      "patterns": [
+        "hơn kém",
+        "lớn hơn",
+        "nhỏ hơn"
+      ]
+    },
+    {
+      "code": "analysis",
+      "name": "Dạng phân tích",
+      "dimension": "cognitive_skill",
+      "description": "Bài tập yêu cầu phân tích, nhận xét, suy luận hoặc giải thích nguyên nhân.",
+      "keywords": [
+        "phân tích",
+        "nhận xét",
+        "giải thích",
+        "đánh giá",
+        "suy luận",
+        "kết luận"
+      ],
+      "patterns": [
+        "vì sao",
+        "nguyên nhân",
+        "hệ quả"
+      ]
+    },
+    {
+      "code": "graph_diagram",
+      "name": "Dạng đồ thị/biểu đồ",
+      "dimension": "representation",
+      "description": "Bài tập khai thác đồ thị, biểu đồ, hình vẽ hoặc mô tả hình học của hiện tượng vật lí.",
+      "keywords": [
+        "đồ thị",
+        "biểu đồ",
+        "hình vẽ",
+        "đường cong",
+        "trục tọa độ"
+      ],
+      "patterns": [
+        "\\\\immini",
+        "hình bên",
+        "hình dưới",
+        "đồ thị dao động"
+      ]
+    }
+  ]
+}
