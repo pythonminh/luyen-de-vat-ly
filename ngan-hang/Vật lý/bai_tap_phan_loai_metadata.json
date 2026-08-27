@@ -1,0 +1,708 @@
+{
+  "exercise_type_definitions": [
+    {
+      "code": "TN",
+      "name": "Trắc nghiệm",
+      "order": 1
+    },
+    {
+      "code": "DS",
+      "name": "Đúng sai",
+      "order": 2
+    },
+    {
+      "code": "TLN",
+      "name": "Trả lời ngắn",
+      "order": 3
+    },
+    {
+      "code": "TL",
+      "name": "Tự luận",
+      "order": 4
+    }
+  ],
+  "lessons": [
+    {
+      "path": "Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 1. Làm quen với Vật lí/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 1. Làm quen với Vật lí/de.tex",
+      "counts_by_type": {
+        "DS": 56,
+        "TL": 38,
+        "TLN": 41,
+        "TN": 146
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/de.tex",
+      "counts_by_type": {
+        "DS": 39,
+        "TL": 32,
+        "TLN": 6,
+        "TN": 108
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo/de.tex",
+      "counts_by_type": {
+        "TL": 36,
+        "TLN": 108,
+        "TN": 103,
+        "DS": 58
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được/de.tex",
+      "counts_by_type": {
+        "DS": 27,
+        "TLN": 20,
+        "TN": 47
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 5. Tốc độ và vận tốc/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 5. Tốc độ và vận tốc/de.tex",
+      "counts_by_type": {
+        "DS": 27,
+        "TL": 12,
+        "TLN": 5,
+        "TN": 13
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 8. Chuyển động biến đổi. Gia tốc/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 8. Chuyển động biến đổi. Gia tốc/de.tex",
+      "counts_by_type": {
+        "DS": 27,
+        "TN": 24
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực/de.tex",
+      "counts_by_type": {
+        "TN": 52,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 14. Định luật 1 Newton/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 14. Định luật 1 Newton/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 15. Định luật 2 Newton/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 15. Định luật 2 Newton/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 16. Định luật 3 Newton/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 16. Định luật 3 Newton/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 17. Trọng lực và lực căng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 17. Trọng lực và lực căng/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 18. Lực ma sát/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 18. Lực ma sát/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 19. Lực cản và lực nâng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 19. Lực cản và lực nâng/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 21. Mômen lực. Cân bằng của vật rắn/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 21. Mômen lực. Cân bằng của vật rắn/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 22. Thực hành- Tổng hợp lực/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 22. Thực hành- Tổng hợp lực/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 42,
+        "TLN": 36,
+        "TL": 24
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 28. Động lượng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 28. Động lượng/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 29. Định luật bảo toàn động lượng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 29. Định luật bảo toàn động lượng/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 30. Thực hành- Xác định động lượng của vật trước và sau va chạm/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 30. Thực hành- Xác định động lượng của vật trước và sau va chạm/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 31. Động học của chuyển động tròn đều/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 31. Động học của chuyển động tròn đều/de.tex",
+      "counts_by_type": {
+        "TN": 62,
+        "DS": 42,
+        "TLN": 36,
+        "TL": 24
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 32. Lực hướng tâm và gia tốc hướng tâm/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 32. Lực hướng tâm và gia tốc hướng tâm/de.tex",
+      "counts_by_type": {
+        "TN": 60,
+        "DS": 30,
+        "TLN": 36,
+        "TL": 36
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 10/Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng/L10C7 Bài 33. Biến dạng của vật rắn/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 10/Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng/L10C7 Bài 33. Biến dạng của vật rắn/de.tex",
+      "counts_by_type": {
+        "DS": 5,
+        "TN": 2
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+      "counts_by_type": {
+        "DS": 50,
+        "TLN": 32,
+        "TN": 61
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
+      "counts_by_type": {
+        "DS": 90,
+        "TLN": 21,
+        "TN": 110,
+        "TL": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+      "counts_by_type": {
+        "DS": 56,
+        "TLN": 35,
+        "TN": 87
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
+      "counts_by_type": {
+        "DS": 20,
+        "TLN": 20,
+        "TN": 32,
+        "TL": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/de.tex",
+      "counts_by_type": {
+        "DS": 112,
+        "TL": 29,
+        "TLN": 75,
+        "TN": 104
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng/de.tex",
+      "counts_by_type": {
+        "DS": 3,
+        "TN": 5,
+        "TL": 1
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/de.tex",
+      "counts_by_type": {
+        "DS": 30,
+        "TLN": 15,
+        "TN": 89,
+        "TL": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 10. Thực hành- Đo tần số của sóng âm/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 10. Thực hành- Đo tần số của sóng âm/de.tex",
+      "counts_by_type": {
+        "DS": 66,
+        "TLN": 36,
+        "TN": 60
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 11. Sóng điện từ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 11. Sóng điện từ/de.tex",
+      "counts_by_type": {
+        "DS": 65,
+        "TLN": 36,
+        "TN": 65,
+        "TL": 2
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 12. Giao thoa sóng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 12. Giao thoa sóng/de.tex",
+      "counts_by_type": {
+        "DS": 67,
+        "TLN": 36,
+        "TN": 66
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 13. Sóng dừng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 13. Sóng dừng/de.tex",
+      "counts_by_type": {
+        "DS": 69,
+        "TLN": 36,
+        "TN": 66
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 14. Bài tập về sóng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 14. Bài tập về sóng/de.tex",
+      "counts_by_type": {
+        "DS": 59,
+        "TL": 12,
+        "TLN": 36,
+        "TN": 67
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 15. Thực hành- Đo tốc độ truyền âm/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 15. Thực hành- Đo tốc độ truyền âm/de.tex",
+      "counts_by_type": {
+        "DS": 66,
+        "TLN": 36,
+        "TN": 60
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 8. Mô tả sóng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 8. Mô tả sóng/de.tex",
+      "counts_by_type": {
+        "DS": 71,
+        "TLN": 36,
+        "TN": 63
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ/de.tex",
+      "counts_by_type": {
+        "DS": 66,
+        "TLN": 36,
+        "TN": 65,
+        "TL": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 16. Lực tương tác giữa hai điện tích/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 16. Lực tương tác giữa hai điện tích/de.tex",
+      "counts_by_type": {
+        "DS": 2,
+        "TN": 5,
+        "TL": 2
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 17. Khái niệm điện trường/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 17. Khái niệm điện trường/de.tex",
+      "counts_by_type": {
+        "DS": 12,
+        "TN": 7,
+        "TL": 1
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 18. Điện trường đều/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 18. Điện trường đều/de.tex",
+      "counts_by_type": {
+        "DS": 5,
+        "TN": 6
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 19. Thế năng điện/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 19. Thế năng điện/de.tex",
+      "counts_by_type": {
+        "TL": 1,
+        "TN": 5,
+        "DS": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 20. Điện thế/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 20. Điện thế/de.tex",
+      "counts_by_type": {
+        "DS": 3,
+        "TN": 5,
+        "TL": 1
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 21. Tụ điện/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 21. Tụ điện/de.tex",
+      "counts_by_type": {
+        "TL": 1,
+        "TN": 8,
+        "DS": 1
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 22. Cường độ dòng điện/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 22. Cường độ dòng điện/de.tex",
+      "counts_by_type": {
+        "DS": 7,
+        "TN": 17
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 23. Điện trở. Định luật Ohm/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 23. Điện trở. Định luật Ohm/de.tex",
+      "counts_by_type": {
+        "DS": 1,
+        "TN": 15
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 24. Nguồn điện/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 24. Nguồn điện/de.tex",
+      "counts_by_type": {
+        "DS": 3,
+        "TN": 18,
+        "TL": 4
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 25. Năng lượng điện và công suất điện/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 25. Năng lượng điện và công suất điện/de.tex",
+      "counts_by_type": {
+        "DS": 10,
+        "TN": 11,
+        "TL": 3
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex",
+      "counts_by_type": {
+        "DS": 32,
+        "TL": 36,
+        "TLN": 36,
+        "TN": 90
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex",
+      "counts_by_type": {
+        "DS": 30,
+        "TL": 33,
+        "TLN": 33,
+        "TN": 32
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/de.tex",
+      "counts_by_type": {
+        "DS": 17,
+        "TN": 54,
+        "TL": 17,
+        "TLN": 19
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/de.tex",
+      "counts_by_type": {
+        "DS": 35,
+        "TL": 36,
+        "TLN": 42,
+        "TN": 72
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex",
+      "counts_by_type": {
+        "DS": 38,
+        "TL": 36,
+        "TLN": 93,
+        "TN": 116
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
+      "counts_by_type": {
+        "DS": 30,
+        "TL": 36,
+        "TLN": 36,
+        "TN": 61
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/de.tex",
+      "counts_by_type": {
+        "DS": 50,
+        "TLN": 38,
+        "TN": 64,
+        "TL": 18
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng/de.tex",
+      "counts_by_type": {
+        "DS": 78,
+        "TLN": 61,
+        "TN": 86,
+        "TL": 18
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/de.tex",
+      "counts_by_type": {
+        "DS": 46,
+        "TLN": 36,
+        "TN": 60,
+        "TL": 4
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/de.tex",
+      "counts_by_type": {
+        "DS": 36,
+        "TLN": 36,
+        "TN": 60
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/de.tex",
+      "counts_by_type": {
+        "DS": 67,
+        "TLN": 35,
+        "TN": 60
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/de.tex",
+      "counts_by_type": {
+        "DS": 52,
+        "TL": 15,
+        "TLN": 36,
+        "TN": 57
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 14. Từ trường/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 14. Từ trường/de.tex",
+      "counts_by_type": {
+        "TN": 110,
+        "DS": 50,
+        "TL": 62,
+        "TLN": 62
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ/de.tex",
+      "counts_by_type": {
+        "DS": 62,
+        "TL": 72,
+        "TLN": 73,
+        "TN": 121
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ/de.tex",
+      "counts_by_type": {
+        "DS": 60,
+        "TL": 72,
+        "TLN": 72,
+        "TN": 120
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 17. Máy phát điện xoay chiều/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 17. Máy phát điện xoay chiều/de.tex",
+      "counts_by_type": {
+        "DS": 60,
+        "TL": 72,
+        "TLN": 72,
+        "TN": 120
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ/de.tex",
+      "counts_by_type": {
+        "DS": 60,
+        "TL": 72,
+        "TLN": 72,
+        "TN": 120
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ/de.tex",
+      "counts_by_type": {
+        "DS": 60,
+        "TL": 72,
+        "TLN": 72,
+        "TN": 120
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 20. Bài tập về từ trường/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 20. Bài tập về từ trường/de.tex",
+      "counts_by_type": {
+        "DS": 60,
+        "TL": 72,
+        "TLN": 72,
+        "TN": 120
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 21. Cấu trúc hạt nhân/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 21. Cấu trúc hạt nhân/de.tex",
+      "counts_by_type": {
+        "DS": 35,
+        "TL": 42,
+        "TLN": 42,
+        "TN": 70
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/de.tex",
+      "counts_by_type": {
+        "DS": 39,
+        "TL": 42,
+        "TLN": 42,
+        "TN": 81
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 23. Hiện tượng phóng xạ/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 23. Hiện tượng phóng xạ/de.tex",
+      "counts_by_type": {
+        "DS": 30,
+        "TL": 36,
+        "TLN": 36,
+        "TN": 60
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 24. Công nghiệp hạt nhân/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 24. Công nghiệp hạt nhân/de.tex",
+      "counts_by_type": {
+        "DS": 35,
+        "TL": 42,
+        "TLN": 42,
+        "TN": 70
+      }
+    },
+    {
+      "path": "Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 25. Bài tập về vật lí hạt nhân/de.tex",
+      "github": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 25. Bài tập về vật lí hạt nhân/de.tex",
+      "counts_by_type": {
+        "DS": 35,
+        "TL": 42,
+        "TLN": 42,
+        "TN": 70
+      }
+    }
+  ]
+}

@@ -4258,6 +4258,51 @@ def lesson_catalog_key(item: Dict[str, Any]) -> str:
     return "|".join(key_norm(clean(item.get(f, ""))) for f in ("Lop", "Mon", "Chuong", "BaiHoc"))
 
 
+# Tên hiển thị dạng bài theo code
+_EXERCISE_TYPE_ORDER = ["Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận"]
+
+_physics_exercise_metadata_map: Optional[Dict[str, Dict[str, int]]] = None
+_physics_exercise_metadata_loaded = False
+
+
+def load_physics_exercise_metadata_map() -> Dict[str, Dict[str, int]]:
+    """
+    Đọc ngan-hang/Vật lý/bai_tap_phan_loai_metadata.json và trả về dict:
+      { rel_path -> {type_name: count, ...} }
+    rel_path ví dụ: "Vật lý/Lớp 10/Chương I.../L10C1 Bài 1.../de.tex"
+    Kết quả được cache trong bộ nhớ (chỉ đọc file một lần).
+    """
+    global _physics_exercise_metadata_map, _physics_exercise_metadata_loaded
+    if _physics_exercise_metadata_loaded:
+        return _physics_exercise_metadata_map or {}
+    _physics_exercise_metadata_loaded = True
+    metadata_file = os.path.join(APP_DIR, "ngan-hang", "Vật lý", "bai_tap_phan_loai_metadata.json")
+    if not os.path.isfile(metadata_file):
+        _physics_exercise_metadata_map = {}
+        return {}
+    try:
+        with open(metadata_file, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception:
+        _physics_exercise_metadata_map = {}
+        return {}
+    _CODE_TO_NAME = {"TN": "Trắc nghiệm", "DS": "Đúng sai", "TLN": "Trả lời ngắn", "TL": "Tự luận"}
+    result: Dict[str, Dict[str, int]] = {}
+    for lesson in data.get("lessons", []):
+        rel = lesson.get("path", "")
+        if not rel:
+            continue
+        counts_by_code: Dict[str, int] = lesson.get("counts_by_type", {})
+        counts_by_name: Dict[str, int] = {}
+        for code, cnt in counts_by_code.items():
+            name = _CODE_TO_NAME.get(str(code), str(code))
+            counts_by_name[name] = int(cnt or 0)
+        if counts_by_name:
+            result[rel] = counts_by_name
+    _physics_exercise_metadata_map = result
+    return result
+
+
 STUDENT_PROGRESS_COMPLETE_PCT = 70.0
 
 
@@ -6754,6 +6799,7 @@ class SheetStore:
         total = 0
         seen_rel = set()
         self._github_tex_rel_by_made = {}
+        exercise_meta_map = load_physics_exercise_metadata_map()
         for les in lessons:
             qmeta, rel = self._github_qmeta_for_lesson(les)
             gk = catalog_group_key(qmeta)
@@ -6767,6 +6813,9 @@ class SheetStore:
             if gk and rel:
                 self._github_tex_rel_by_made[gk] = rel
                 seen_rel.add(rel.replace("\\", "/"))
+            rel_norm = rel.replace("\\", "/")
+            dbt_counts = dict(exercise_meta_map.get(rel_norm, {}))
+            dbt_order = [t for t in _EXERCISE_TYPE_ORDER if dbt_counts.get(t)]
             catalog.append({
                 "MaDe": gk,
                 "GroupKey": gk,
@@ -6775,13 +6824,14 @@ class SheetStore:
                 "Chuong": qmeta["Chuong"],
                 "BaiHoc": qmeta["BaiHoc"],
                 "De": qmeta["BaiHoc"],
-                "DangBaiTap": "",
+                "DangBaiTap": ", ".join(dbt_order),
                 "BoDe": "",
                 "SoCau": n,
                 "QuyenTruyCap": "VIP",
                 "IsFree": False,
                 "_tex_rel": rel,
-                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": dbt_counts},
+                "DbtOrder": dbt_order,
             })
         if list_local_tex_files and github_tex_config:
             cfg = github_tex_config(APP_DIR)
@@ -6798,6 +6848,8 @@ class SheetStore:
                 total += n
                 if gk:
                     self._github_tex_rel_by_made[gk] = rel_n
+                dbt_counts = dict(exercise_meta_map.get(rel_n, {}))
+                dbt_order = [t for t in _EXERCISE_TYPE_ORDER if dbt_counts.get(t)]
                 catalog.append({
                     "MaDe": gk,
                     "GroupKey": gk,
@@ -6806,13 +6858,14 @@ class SheetStore:
                     "Chuong": qmeta.get("Chuong", ""),
                     "BaiHoc": qmeta.get("BaiHoc", ""),
                     "De": qmeta.get("BaiHoc", ""),
-                    "DangBaiTap": "",
+                    "DangBaiTap": ", ".join(dbt_order),
                     "BoDe": "",
                     "SoCau": n,
                     "QuyenTruyCap": "VIP",
                     "IsFree": False,
                     "_tex_rel": rel_n,
-                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": dbt_counts},
+                    "DbtOrder": dbt_order,
                 })
                 seen_rel.add(rel_n)
         catalog.sort(key=catalog_sort_key)
