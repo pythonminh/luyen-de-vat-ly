@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V485_BT_PARSE"
+APP_VERSION = "V493_GITHUB_INSERT"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -151,8 +151,10 @@ try:
         lesson_rel_path,
         list_local_tex_files,
         load_muc_luc_lessons,
+        meta_from_tex_header,
         read_or_fetch_tex,
         read_tex_file,
+        sync_github_tex_if_changed,
         write_tex_file,
     )
 except Exception:  # pragma: no cover
@@ -164,8 +166,10 @@ except Exception:  # pragma: no cover
     lesson_rel_path = None  # type: ignore[assignment]
     list_local_tex_files = None  # type: ignore[assignment]
     load_muc_luc_lessons = None  # type: ignore[assignment]
+    meta_from_tex_header = None  # type: ignore[assignment]
     read_or_fetch_tex = None  # type: ignore[assignment]
     read_tex_file = None  # type: ignore[assignment]
+    sync_github_tex_if_changed = None  # type: ignore[assignment]
     write_tex_file = None  # type: ignore[assignment]
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
@@ -3726,6 +3730,13 @@ def extract_model_code_from_ai_obj(raw: Dict[str, Any]) -> str:
 DELETED_QIDS_FILE = os.path.join(APP_DIR, "data", "deleted_question_ids.json")
 _DELETED_QIDS_LOCK = threading.Lock()
 _DELETED_QIDS_CACHE: Optional[set] = None
+GITHUB_REVIEW_FILE = os.path.join(APP_DIR, "data", "github_tex_review.json")
+_GITHUB_REVIEW_LOCK = threading.Lock()
+_GITHUB_REVIEW_CACHE: Optional[Dict[str, str]] = None
+GITHUB_FIELDS_FILE = os.path.join(APP_DIR, "data", "github_tex_fields.json")
+_GITHUB_FIELDS_LOCK = threading.Lock()
+_GITHUB_FIELDS_CACHE: Optional[Dict[str, Dict[str, str]]] = None
+GITHUB_OVERLAY_FIELDS = frozenset({"TrangThai", "NgayCapNhat", "DangBaiTap", "MucDo", "NangLucVatLy"})
 
 
 def _ensure_deleted_qids_dir() -> None:
@@ -3767,6 +3778,159 @@ def save_deleted_question_ids(ids) -> None:
             json.dump({"ids": cleaned, "updated_at": now_str()}, f, ensure_ascii=False, indent=2)
         os.replace(tmp, DELETED_QIDS_FILE)
         _DELETED_QIDS_CACHE = set(cleaned)
+
+
+def github_review_item_key(q: Dict[str, Any]) -> str:
+    qid = clean(q.get("ID", ""))
+    rel = clean(q.get("_tex_rel", "")).replace("\\", "/")
+    if qid and rel:
+        return f"{rel}::{qid}"
+    if qid:
+        return qid
+    if rel:
+        return f"{rel}::row::{clean(q.get('_row', ''))}"
+    return ""
+
+
+def load_github_review_map(force: bool = False) -> Dict[str, str]:
+    global _GITHUB_REVIEW_CACHE
+    with _GITHUB_REVIEW_LOCK:
+        if _GITHUB_REVIEW_CACHE is not None and not force:
+            return dict(_GITHUB_REVIEW_CACHE)
+        mp: Dict[str, str] = {}
+        try:
+            if os.path.isfile(GITHUB_REVIEW_FILE):
+                with open(GITHUB_REVIEW_FILE, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                if isinstance(raw, dict):
+                    items = raw.get("items") if isinstance(raw.get("items"), dict) else raw
+                    for k, v in (items or {}).items():
+                        kk = clean(k)
+                        vv = clean(v)
+                        if kk and vv:
+                            mp[kk] = vv
+        except Exception:
+            log_swallow("load_github_review_map")
+            mp = {}
+        _GITHUB_REVIEW_CACHE = dict(mp)
+        return dict(_GITHUB_REVIEW_CACHE)
+
+
+def save_github_review_map(mp: Dict[str, str]) -> None:
+    global _GITHUB_REVIEW_CACHE
+    cleaned = {clean(k): clean(v) for k, v in (mp or {}).items() if clean(k) and clean(v)}
+    with _GITHUB_REVIEW_LOCK:
+        os.makedirs(os.path.dirname(GITHUB_REVIEW_FILE), exist_ok=True)
+        tmp = GITHUB_REVIEW_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"items": cleaned, "updated_at": now_str()}, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, GITHUB_REVIEW_FILE)
+        _GITHUB_REVIEW_CACHE = dict(cleaned)
+
+
+def apply_github_review_status(q: Dict[str, Any]) -> None:
+    """Gắn ĐÃ DUYỆT / CHƯA DUYỆT đã lưu cho câu GitHub .tex."""
+    if not isinstance(q, dict):
+        return
+    key = github_review_item_key(q)
+    if not key:
+        if not clean(q.get("TrangThai", "")):
+            q["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
+        return
+    val = clean((load_github_review_map() or {}).get(key, ""))
+    if val:
+        q["TrangThai"] = val
+    elif not clean(q.get("TrangThai", "")):
+        q["TrangThai"] = QUESTION_REVIEW_PENDING_LABEL
+
+
+def load_github_field_map(force: bool = False) -> Dict[str, Dict[str, str]]:
+    """Overlay Dạng BT / mức độ / NLVL đã gán trên ngân hàng GitHub .tex (không ghi Sheet)."""
+    global _GITHUB_FIELDS_CACHE
+    with _GITHUB_FIELDS_LOCK:
+        if _GITHUB_FIELDS_CACHE is not None and not force:
+            return {k: dict(v) for k, v in _GITHUB_FIELDS_CACHE.items()}
+        mp: Dict[str, Dict[str, str]] = {}
+        try:
+            if os.path.isfile(GITHUB_FIELDS_FILE):
+                with open(GITHUB_FIELDS_FILE, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                if isinstance(raw, dict):
+                    items = raw.get("items") if isinstance(raw.get("items"), dict) else raw
+                    for k, v in (items or {}).items():
+                        kk = clean(k)
+                        if not kk:
+                            continue
+                        rec: Dict[str, str] = {}
+                        if isinstance(v, dict):
+                            for fk in ("DangBaiTap", "MucDo", "NangLucVatLy"):
+                                vv = clean(v.get(fk, ""))
+                                if vv:
+                                    rec[fk] = vv
+                        elif clean(v):
+                            rec["DangBaiTap"] = one_line(clean(v))
+                        if rec:
+                            mp[kk] = rec
+        except Exception:
+            log_swallow("load_github_field_map")
+            mp = {}
+        _GITHUB_FIELDS_CACHE = {k: dict(v) for k, v in mp.items()}
+        return {k: dict(v) for k, v in _GITHUB_FIELDS_CACHE.items()}
+
+
+def save_github_field_map(mp: Dict[str, Dict[str, str]]) -> None:
+    global _GITHUB_FIELDS_CACHE
+    cleaned: Dict[str, Dict[str, str]] = {}
+    for k, rec in (mp or {}).items():
+        kk = clean(k)
+        if not kk or not isinstance(rec, dict):
+            continue
+        out: Dict[str, str] = {}
+        for fk in ("DangBaiTap", "MucDo", "NangLucVatLy"):
+            vv = clean(rec.get(fk, ""))
+            if vv:
+                out[fk] = one_line(vv) if fk == "DangBaiTap" else vv
+        if out:
+            cleaned[kk] = out
+    with _GITHUB_FIELDS_LOCK:
+        os.makedirs(os.path.dirname(GITHUB_FIELDS_FILE), exist_ok=True)
+        tmp = GITHUB_FIELDS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"items": cleaned, "updated_at": now_str()}, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, GITHUB_FIELDS_FILE)
+        _GITHUB_FIELDS_CACHE = {k: dict(v) for k, v in cleaned.items()}
+
+
+def apply_github_field_overlays(q: Dict[str, Any]) -> None:
+    """Gắn Dạng BT / mức độ đã lưu (JSON) lên câu GitHub — overlay thắng \\dangbt trong .tex."""
+    if not isinstance(q, dict):
+        return
+    key = github_review_item_key(q)
+    if not key:
+        return
+    rec = (load_github_field_map() or {}).get(key) or {}
+    dbt = one_line(rec.get("DangBaiTap", ""))
+    if dbt and not _is_bad_dangbaitap_value(dbt):
+        q["DangBaiTap"] = dbt
+    md = clean(rec.get("MucDo", ""))
+    if md:
+        q["MucDo"] = md
+    nl = clean(rec.get("NangLucVatLy", ""))
+    if nl:
+        q["NangLucVatLy"] = nl
+
+
+def _normalize_github_overlay_value(field: str, raw: Any) -> str:
+    if field == "DangBaiTap":
+        v = one_line(clean(raw or ""))
+        if not v or _is_bad_dangbaitap_value(v):
+            return ""
+        return v
+    if field == "MucDo":
+        return _norm_mucdo_4(raw) or ""
+    if field == "NangLucVatLy":
+        return norm_nang_luc_vat_ly(raw) or ""
+    return clean(raw or "")
 
 
 def mark_question_ids_deleted(ids) -> None:
@@ -5994,6 +6158,7 @@ class SheetStore:
         self._github_lesson_lock = threading.Lock()
         self._github_tex_rel_by_made: Dict[str, str] = {}
         self._github_tex_hash_by_made: Dict[str, str] = {}
+        self._github_sync_at = 0.0
         self.duplicate_report: Dict[str, Any] = {}
 
     def connect(self):
@@ -6328,10 +6493,13 @@ class SheetStore:
         threading.Thread(target=worker, daemon=True).start()
 
     def meta_light(self) -> Dict[str, Any]:
-        """Trả mục lục ngay. GITHUB: đọc muc_luc.json ngay trong request (nhẹ). Sheet: cache / nền."""
-        if _json_question_source_mode() == "GITHUB" and not (self.questions_loaded and self.catalog):
+        """Trả mục lục ngay. GITHUB: tự kéo file .tex mới trên GitHub rồi đếm câu."""
+        if _json_question_source_mode() == "GITHUB":
             try:
-                self.ensure_questions_loaded(force=False)
+                if self.questions_loaded and self.catalog:
+                    self.refresh_github_tex_catalog()
+                else:
+                    self.ensure_questions_loaded(force=False)
             except Exception as e:
                 self.questions_error = str(e)
                 log.warning("GITHUB muc_luc: %s", e)
@@ -6464,18 +6632,70 @@ class SheetStore:
             copy_cache_into_local(cfg.get("cache_dir") or "", cfg.get("local_dir") or "")
         log.info("GitHub .tex: tải %s file → %s", dl.get("count_files"), cfg.get("local_dir"))
 
-    def _load_github_bank(self) -> None:
-        """Mục lục nhanh từ muc_luc.json — không parse hết 11k câu. Mỗi bài parse khi mở đề."""
-        self.question_source_mode = "GITHUB"
-        self.ws_questions = None
-        self.question_headers = list(QUESTION_FIELDS)
-        self.question_col_index = resolve_question_col_index(self.question_headers)
-        self.questions = []
-        self.by_made = {}
-        self.by_group = {}
-        self.by_id = {}
-        self._github_tex_rel_by_made = {}
-        self._github_tex_hash_by_made = {}
+    def _sync_github_tex_bank(self) -> Dict[str, Any]:
+        if not (github_tex_config and sync_github_tex_if_changed):
+            return {}
+        now = time.time()
+        if now - float(getattr(self, "_github_sync_at", 0) or 0) < 12:
+            return {"throttled": True, "skipped": True}
+        self._github_sync_at = now
+        try:
+            return sync_github_tex_if_changed(github_tex_config(APP_DIR)) or {}
+        except Exception as e:
+            log.warning("sync GitHub .tex: %s", e)
+            return {"ok": False, "error": str(e)}
+
+    def _count_tex_on_disk(self, rel: str) -> int:
+        if not rel or not github_tex_config or not count_tex_question_blocks:
+            return 0
+        cfg = github_tex_config(APP_DIR)
+        for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
+            if not root:
+                continue
+            p = os.path.join(root, rel.replace("/", os.sep))
+            if not os.path.isfile(p):
+                continue
+            try:
+                with open(p, "r", encoding="utf-8", errors="replace") as fh:
+                    return count_tex_question_blocks(fh.read())
+            except Exception:
+                log_swallow("_count_tex_on_disk")
+        return 0
+
+    def _github_qmeta_for_lesson(self, les: Dict[str, Any]) -> Tuple[Dict[str, str], str]:
+        qmeta = {
+            "Mon": clean(les.get("Mon", "")),
+            "Lop": clean(les.get("Lop", "")),
+            "Chuong": clean(les.get("Chuong", "")),
+            "BaiHoc": clean(les.get("BaiHoc", "")),
+        }
+        rel = clean(les.get("path") or "")
+        if rel and defaults_from_rel_path:
+            filled = defaults_from_rel_path(rel)
+            for k in ("Mon", "Lop", "Chuong", "BaiHoc"):
+                if filled.get(k) and not qmeta.get(k):
+                    qmeta[k] = clean(filled.get(k, ""))
+        if (not rel) and qmeta["BaiHoc"] and lesson_rel_path:
+            rel = lesson_rel_path(qmeta["Mon"], qmeta["Lop"], qmeta["Chuong"], qmeta["BaiHoc"])
+        if rel and (not qmeta["BaiHoc"]) and meta_from_tex_header and github_tex_config:
+            cfg = github_tex_config(APP_DIR)
+            for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
+                p = os.path.join(root or "", rel.replace("/", os.sep))
+                if not os.path.isfile(p):
+                    continue
+                try:
+                    with open(p, "r", encoding="utf-8", errors="replace") as fh:
+                        hdr = meta_from_tex_header(fh.read(4000))
+                    for k in ("Mon", "Lop", "Chuong", "BaiHoc"):
+                        if hdr.get(k) and not qmeta.get(k):
+                            qmeta[k] = clean(hdr.get(k, ""))
+                except Exception:
+                    log_swallow("_github_qmeta_for_lesson:header")
+                break
+        return qmeta, rel
+
+    def _rebuild_github_catalog_from_files(self) -> None:
+        """Tên bài từ thư mục/muc_luc; số câu đếm \\begin{ex}/\\begin{bt} trong file."""
         lessons: List[Dict[str, Any]] = []
         err = ""
         if load_muc_luc_lessons and github_tex_config:
@@ -6486,37 +6706,21 @@ class SheetStore:
                 log.warning("GitHub muc_luc: %s", e)
         catalog: List[Dict[str, Any]] = []
         total = 0
+        seen_rel = set()
+        self._github_tex_rel_by_made = {}
         for les in lessons:
-            qmeta = {
-                "Mon": clean(les.get("Mon", "")),
-                "Lop": clean(les.get("Lop", "")),
-                "Chuong": clean(les.get("Chuong", "")),
-                "BaiHoc": clean(les.get("BaiHoc", "")),
-            }
+            qmeta, rel = self._github_qmeta_for_lesson(les)
             gk = catalog_group_key(qmeta)
-            try:
-                n = int(les.get("count_questions") or 0)
-            except Exception:
-                n = 0
-            rel = clean(les.get("path") or "")
-            if rel and github_tex_config and count_tex_question_blocks:
+            n = self._count_tex_on_disk(rel)
+            if not n:
                 try:
-                    cfg = github_tex_config(APP_DIR)
-                    for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
-                        if not root:
-                            continue
-                        p = os.path.join(root, rel.replace("/", os.sep))
-                        if os.path.isfile(p):
-                            with open(p, "r", encoding="utf-8", errors="replace") as fh:
-                                n_file = count_tex_question_blocks(fh.read())
-                            if n_file:
-                                n = n_file
-                            break
+                    n = int(les.get("count_questions") or 0)
                 except Exception:
-                    log_swallow("_load_github_bank:count_tex")
+                    n = 0
             total += n
             if gk and rel:
                 self._github_tex_rel_by_made[gk] = rel
+                seen_rel.add(rel.replace("\\", "/"))
             catalog.append({
                 "MaDe": gk,
                 "GroupKey": gk,
@@ -6533,22 +6737,127 @@ class SheetStore:
                 "_tex_rel": rel,
                 "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
             })
+        if list_local_tex_files and github_tex_config:
+            cfg = github_tex_config(APP_DIR)
+            extra = list_local_tex_files(cfg.get("local_dir") or "", cfg.get("cache_dir") or "")
+            for rel, abs_path in extra:
+                rel_n = str(rel).replace("\\", "/")
+                if rel_n in seen_rel or not rel_n.lower().endswith(".tex"):
+                    continue
+                qmeta = defaults_from_rel_path(rel_n) if defaults_from_rel_path else {}
+                if not clean(qmeta.get("BaiHoc", "")):
+                    continue
+                gk = catalog_group_key(qmeta)
+                n = self._count_tex_on_disk(rel_n)
+                total += n
+                if gk:
+                    self._github_tex_rel_by_made[gk] = rel_n
+                catalog.append({
+                    "MaDe": gk,
+                    "GroupKey": gk,
+                    "Lop": qmeta.get("Lop", ""),
+                    "Mon": qmeta.get("Mon", ""),
+                    "Chuong": qmeta.get("Chuong", ""),
+                    "BaiHoc": qmeta.get("BaiHoc", ""),
+                    "De": qmeta.get("BaiHoc", ""),
+                    "DangBaiTap": "",
+                    "BoDe": "",
+                    "SoCau": n,
+                    "QuyenTruyCap": "VIP",
+                    "IsFree": False,
+                    "_tex_rel": rel_n,
+                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                })
+                seen_rel.add(rel_n)
         catalog.sort(key=catalog_sort_key)
         self.catalog = catalog
-        self.github_tex_info = {
+        info = dict(self.github_tex_info or {})
+        info.update({
             "lazy": True,
             "count_lessons": len(catalog),
             "count_questions": total,
             "error": err,
             "repo": (github_tex_config(APP_DIR) or {}).get("repo", "") if github_tex_config else "",
-        }
-        self.questions_loaded = True
-        self.questions_from_cache = False
-        self.loaded_at = now_str()
+        })
+        self.github_tex_info = info
         try:
             self._save_catalog_cache()
         except Exception:
-            log_swallow("_load_github_bank:catalog")
+            log_swallow("_rebuild_github_catalog_from_files")
+
+    def refresh_github_tex_catalog(self) -> None:
+        info = self._sync_github_tex_bank()
+        if info.get("throttled"):
+            return
+        changed_rels = {str(r).replace("\\", "/") for r in (info.get("rels") or [])}
+        if not (info.get("muc_luc_changed") or changed_rels or not self.catalog):
+            if self.catalog:
+                return
+        self._rebuild_github_catalog_from_files()
+        for made, rel in list((self._github_tex_rel_by_made or {}).items()):
+            if str(rel).replace("\\", "/") in changed_rels:
+                self._drop_github_lesson_questions(made)
+                (self._github_tex_hash_by_made or {}).pop(made, None)
+
+    def _load_github_bank(self) -> None:
+        """Mục lục nhanh — số câu đếm từ file .tex. Mỗi bài parse khi mở đề."""
+        self.question_source_mode = "GITHUB"
+        self.ws_questions = None
+        self.question_headers = list(QUESTION_FIELDS)
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        self.questions = []
+        self.by_made = {}
+        self.by_group = {}
+        self.by_id = {}
+        self._github_tex_rel_by_made = {}
+        self._github_tex_hash_by_made = {}
+        self._sync_github_tex_bank()
+        self._rebuild_github_catalog_from_files()
+        self.questions_loaded = True
+        self.questions_from_cache = False
+        self.loaded_at = now_str()
+
+    def _apply_github_lesson_catalog(self, made: str, qs: List[Dict[str, Any]]) -> None:
+        """Số câu + dạng BT trên thẻ = đúng pool khi mở đề (sau bỏ trùng nội dung)."""
+        qs = dedupe_questions_by_content(list(qs or []))
+        dang: Dict[str, int] = {}
+        level: Dict[str, int] = {}
+        combo: Dict[str, int] = {}
+        dbt_counts: Dict[str, int] = {}
+        dbt_detail: Dict[str, Any] = {}
+        for q in qs:
+            ed = question_dang(q)
+            bump_count(dang, ed)
+            for lv in question_mucdo_parts(q):
+                bump_count(level, lv)
+                bump_count(combo, f"{lv}|{ed}")
+            dbt_name = one_line(q.get("DangBaiTap", ""))
+            if dbt_name and not _is_bad_dangbaitap_value(dbt_name):
+                dbt_key = dbt_name
+            else:
+                dbt_key = DBT_FILTER_UNCLASSIFIED
+            bump_count(dbt_counts, dbt_key)
+            detail = dbt_detail.setdefault(dbt_key, {"dang": {}, "level": {}, "updated": ""})
+            bump_count(detail["dang"], ed)
+            for lv in question_mucdo_parts(q):
+                bump_count(detail["level"], lv)
+        for item in self.catalog or []:
+            if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
+                item["SoCau"] = len(qs)
+                item["FilterCounts"] = {
+                    "dang": dang,
+                    "level": level,
+                    "combo": combo,
+                    "dangbaitap": dbt_counts,
+                    "dbt_detail": dbt_detail,
+                }
+                named = [k for k in dbt_counts.keys() if k != DBT_FILTER_UNCLASSIFIED]
+                if named:
+                    item["DangBaiTap"] = ", ".join(named)
+                break
+        info = dict(self.github_tex_info or {})
+        info["count_questions"] = sum(int(c.get("SoCau") or 0) for c in (self.catalog or []))
+        self.github_tex_info = info
 
     def _drop_github_lesson_questions(self, made: str) -> None:
         made = clean(made)
@@ -6600,6 +6909,7 @@ class SheetStore:
                 and (self.by_group.get(made) or self.by_made.get(made))
                 and (self._github_tex_hash_by_made or {}).get(made) == peek_hash
             ):
+                self._apply_github_lesson_catalog(made, self.by_group.get(made) or self.by_made.get(made) or [])
                 return
             tex = read_or_fetch_tex(cfg, rel)
             tex_hash = hashlib.md5((tex or "").encode("utf-8", errors="replace")).hexdigest()
@@ -6607,6 +6917,7 @@ class SheetStore:
                 (self.by_group.get(made) or self.by_made.get(made))
                 and (self._github_tex_hash_by_made or {}).get(made) == tex_hash
             ):
+                self._apply_github_lesson_catalog(made, self.by_group.get(made) or self.by_made.get(made) or [])
                 return
             defaults = defaults_from_rel_path(rel) if defaults_from_rel_path else {}
             parsed = parse_latex_questions_2026(tex, defaults)
@@ -6630,6 +6941,8 @@ class SheetStore:
                 q["_source"] = "GITHUB"
                 q["_tex_rel"] = rel
                 q["_row"] = base_row + i
+                apply_github_review_status(q)
+                apply_github_field_overlays(q)
                 self.questions.append(q)
                 added.append(q)
             if added:
@@ -6642,13 +6955,7 @@ class SheetStore:
                         self.by_id.setdefault(qid, []).append(q)
             n = len(added)
             self._github_tex_hash_by_made[made] = tex_hash
-            for item in self.catalog or []:
-                if clean(item.get("MaDe")) == made or clean(item.get("GroupKey")) == made:
-                    item["SoCau"] = n
-                    break
-            info = dict(self.github_tex_info or {})
-            info["count_questions"] = sum(int(c.get("SoCau") or 0) for c in (self.catalog or []))
-            self.github_tex_info = info
+            self._apply_github_lesson_catalog(made, added)
             log.info("GitHub .tex lazy: %s → %s câu (%s)", rel, n, made)
 
     def load(self):
@@ -7205,6 +7512,8 @@ class SheetStore:
                 q["_source"] = "GITHUB"
                 q["_tex_rel"] = rel
                 q["_tex_path"] = abs_path
+                apply_github_review_status(q)
+                apply_github_field_overlays(q)
                 key = clean(q.get("ID")) or stable_hash(key_norm(q.get("CauHoi", "")), 16)
                 if not replace and key in existing_keys:
                     continue
@@ -7246,6 +7555,242 @@ class SheetStore:
                 f.write(tex)
         return abs_path
 
+    def _github_next_fake_row(self) -> int:
+        n = 800000
+        for q in self.questions or []:
+            try:
+                n = max(n, int(q.get("_row") or 0))
+            except Exception:
+                continue
+        return n + 1
+
+    def _github_rel_for_question(self, q: Dict[str, Any]) -> str:
+        rel = clean((q or {}).get("_tex_rel", "")).replace("\\", "/")
+        if rel:
+            return rel
+        mon = clean((q or {}).get("Mon", ""))
+        lop = clean((q or {}).get("Lop", ""))
+        chuong = clean((q or {}).get("Chuong", ""))
+        bai = clean((q or {}).get("BaiHoc", "") or (q or {}).get("De", ""))
+        if not (mon and lop and chuong and bai):
+            raise RuntimeError("Thiếu Môn / Lớp / Chương / Bài học trên form nhập LaTeX.")
+        if lesson_rel_path:
+            return lesson_rel_path(mon, lop, chuong, bai)
+        return "/".join([mon, f"Lớp {lop}", chuong, bai, "de.tex"])
+
+    def _append_github_lesson_tex(self, tex_rel: str, extra_tex: str) -> str:
+        """Nối block câu mới vào de.tex hiện có — không ghi đè bài cũ."""
+        rel = clean(tex_rel).replace("\\", "/")
+        extra = (extra_tex or "").strip()
+        if not rel or not extra:
+            return ""
+        abs_path = self._github_tex_abs_path(rel)
+        existing = ""
+        if os.path.isfile(abs_path):
+            if read_tex_file:
+                existing = read_tex_file(abs_path) or ""
+            else:
+                with open(abs_path, "r", encoding="utf-8", errors="replace") as f:
+                    existing = f.read()
+        if existing and not existing.endswith("\n"):
+            existing += "\n"
+        body = existing + ("\n" if existing.strip() else "") + extra + "\n"
+        if write_tex_file:
+            write_tex_file(abs_path, body)
+        else:
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            with open(abs_path, "w", encoding="utf-8") as f:
+                f.write(body)
+        return abs_path
+
+    def _add_questions_github_tex(
+        self,
+        items: List[Dict[str, Any]],
+        allow_duplicates: bool = False,
+        skip_content_dup: bool = True,
+        insert_all: bool = False,
+        index_base: int = 0,
+    ) -> Dict[str, Any]:
+        """Chèn câu đã parse vào de.tex local (ngân hàng GitHub), không ghi Sheet."""
+        existing_fp, existing_ids, fp_meta, id_row = build_question_dup_index(self.questions)
+        prepared: List[Dict[str, Any]] = []
+        prepared_idx: List[int] = []
+        skipped: List[Dict[str, Any]] = []
+        pending_dups: List[Optional[Dict[str, Any]]] = []
+        img_warns: List[str] = []
+        for idx, raw in enumerate(items, start=1):
+            report_idx = int(index_base or 0) + idx
+            data = {k: clean(v) for k, v in (raw or {}).items()}
+            if not clean(data.get("CauHoi")):
+                skipped.append({"index": report_idx, "reason": "Thiếu CauHoi"})
+                continue
+            hz = clean(data.pop("_hinhanh_warning", ""))
+            tikz_extra = clean(data.pop("Tikz", "") or "")
+            img_link, tz_in = _parse_hinhanh_cell(data.get("HinhAnh", ""))
+            img_clean = img_link if img_link and not str(img_link).lower().startswith("tikzraw:") else ""
+            tz = tikz_extra or tz_in or _extract_tikz_block(data.get("HinhAnh", ""))
+            if img_clean or tz:
+                data["HinhAnh"] = _build_hinhanh_cell(img_clean, tz)
+            if hz and not tz and not _is_sa_storage_quota_error(hz):
+                img_warns.append(f"Câu {idx}: {hz}")
+            seed = {f: data.get(f, "") for f in QUESTION_FIELDS}
+            cq = canonical_question(seed)
+            if not clean(data.get("ID")):
+                data["ID"] = cq.get("ID") or ("LATEX_" + stable_hash(f"{time.time()}|{idx}|{random.random()}", 10))
+            if not clean(data.get("MaDe")):
+                data["MaDe"] = cq.get("MaDe", "") or catalog_group_key(cq)
+            fp = question_content_fingerprint(canonical_question({f: data.get(f, "") for f in QUESTION_FIELDS}))
+            qid_now = clean(data.get("ID", ""))
+            dup_hit: Optional[Dict[str, Any]] = None
+            if qid_now and qid_now in existing_ids:
+                dup_hit = {
+                    "index": report_idx,
+                    "kind": "id",
+                    "existing_id": qid_now,
+                    "existing_row": id_row.get(qid_now),
+                    "cau": clean(data.get("CauHoi", ""))[:90],
+                }
+                if insert_all or allow_duplicates:
+                    data["ID"] = "LATEX_" + stable_hash(f"dup|{time.time()}|{idx}|{random.random()}", 12)
+                    qid_now = data["ID"]
+                else:
+                    skipped.append({
+                        **dup_hit,
+                        "id": dup_hit.get("existing_id", ""),
+                        "reason": "Trùng ID đã có",
+                    })
+                    continue
+            elif fp in existing_fp:
+                old_id, old_row = fp_meta.get(fp, ("", ""))
+                dup_hit = {
+                    "index": report_idx,
+                    "kind": "content",
+                    "existing_id": old_id,
+                    "existing_row": old_row,
+                    "cau": clean(data.get("CauHoi", ""))[:90],
+                }
+                if not insert_all and skip_content_dup and not allow_duplicates:
+                    skipped.append({
+                        **dup_hit,
+                        "id": data.get("ID", ""),
+                        "reason": "Trùng nội dung đã có",
+                    })
+                    continue
+            existing_fp.add(fp)
+            if qid_now:
+                existing_ids.add(qid_now)
+                id_row.setdefault(qid_now, None)
+            if fp not in fp_meta:
+                fp_meta[fp] = (qid_now, None)
+            prepared.append(data)
+            prepared_idx.append(report_idx)
+            pending_dups.append(dup_hit)
+        if not prepared:
+            return {
+                "ok": True,
+                "created": 0,
+                "skipped": skipped,
+                "dup_hits": [],
+                "inserted": [],
+                "message": "Không có câu mới để nhập vào file .tex.",
+                "source": "GITHUB",
+            }
+        by_rel: Dict[str, List[Dict[str, Any]]] = {}
+        for data in prepared:
+            rel = self._github_rel_for_question(data)
+            data["_tex_rel"] = rel
+            by_rel.setdefault(rel, []).append(data)
+        tex_paths: List[str] = []
+        for rel, group in by_rel.items():
+            extra = questions_to_latex_tex(group, title="")
+            path = self._append_github_lesson_tex(rel, extra)
+            if path:
+                tex_paths.append(path)
+        next_row = self._github_next_fake_row()
+        new_questions: List[Dict[str, Any]] = []
+        for off, data in enumerate(prepared):
+            q = self._question_from_prepared_data(next_row + off, data)
+            if not q:
+                continue
+            q["_source"] = "GITHUB"
+            q["_tex_rel"] = clean(data.get("_tex_rel", ""))
+            q["MaDe"] = catalog_group_key(q)
+            q["TrangThai"] = q.get("TrangThai") or QUESTION_REVIEW_PENDING_LABEL
+            apply_github_review_status(q)
+            apply_github_field_overlays(q)
+            new_questions.append(q)
+        self.questions.extend(new_questions)
+        self._index_new_questions_fast(new_questions)
+        made_seen: set = set()
+        for q in new_questions:
+            made = clean(q.get("MaDe") or catalog_group_key(q))
+            rel = clean(q.get("_tex_rel", "")).replace("\\", "/")
+            if made and rel:
+                self._github_tex_rel_by_made = dict(self._github_tex_rel_by_made or {})
+                self._github_tex_rel_by_made[made] = rel
+            if made and made not in made_seen:
+                made_seen.add(made)
+                if not any(
+                    clean(it.get("MaDe")) == made or clean(it.get("GroupKey")) == made
+                    for it in (self.catalog or [])
+                ):
+                    self.catalog.append({
+                        "MaDe": made,
+                        "GroupKey": made,
+                        "Lop": q.get("Lop", ""),
+                        "Mon": q.get("Mon", ""),
+                        "Chuong": q.get("Chuong", ""),
+                        "BaiHoc": q.get("BaiHoc", ""),
+                        "De": q.get("BaiHoc", "") or q.get("De", ""),
+                        "DangBaiTap": q.get("DangBaiTap", ""),
+                        "BoDe": q.get("BoDe", ""),
+                        "SoCau": 0,
+                        "QuyenTruyCap": "VIP",
+                        "IsFree": False,
+                        "_tex_rel": rel,
+                        "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                    })
+                self._apply_github_lesson_catalog(
+                    made, self.by_group.get(made) or self.by_made.get(made) or []
+                )
+        self.loaded_at = now_str()
+        dup_hits: List[Dict[str, Any]] = []
+        for i, hit in enumerate(pending_dups):
+            if not hit:
+                continue
+            qn = new_questions[i] if i < len(new_questions) else None
+            if qn:
+                hit["new_id"] = clean(qn.get("ID", ""))
+                hit["new_row"] = qn.get("_row")
+            dup_hits.append(hit)
+        inserted_out: List[Dict[str, Any]] = []
+        for i, data in enumerate(prepared):
+            qn = new_questions[i] if i < len(new_questions) else None
+            inserted_out.append({
+                "index": prepared_idx[i] if i < len(prepared_idx) else (int(index_base or 0) + i + 1),
+                "id": clean((qn or data).get("ID", "")),
+                "row": (qn.get("_row") if qn else None) or (next_row + i),
+            })
+        start_row = int(new_questions[0].get("_row") or next_row) if new_questions else None
+        end_row = int(new_questions[-1].get("_row") or 0) if new_questions else None
+        return {
+            "ok": True,
+            "created": len(new_questions),
+            "skipped": skipped,
+            "dup_hits": dup_hits,
+            "inserted": inserted_out,
+            "hinhanh_warnings": img_warns,
+            "start_row": start_row,
+            "end_row": end_row,
+            "ids": [q.get("ID", "") for q in new_questions],
+            "source": "GITHUB",
+            "tex": tex_paths[0] if tex_paths else "",
+            "message": (
+                f"Đã chèn {len(new_questions)} câu vào file .tex trên máy. "
+                "Commit file đó lên GitHub nếu muốn máy khác thấy — đừng bấm Đồng bộ GitHub trước khi Commit (sẽ ghi đè bản local)."
+            ),
+        }
+
     def _update_question_github_tex(self, q_ram: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
         """ADMIN sửa câu — ghi vào file .tex của bài, không ghi Google Sheet."""
         for k, v in (updates or {}).items():
@@ -7260,9 +7805,186 @@ class SheetStore:
             ) if lesson_rel_path else ""
             q_ram["_tex_rel"] = rel
         q_ram["_source"] = "GITHUB"
+        overlay_keys = set((updates or {}).keys())
+        overlay_only = bool(overlay_keys) and overlay_keys <= GITHUB_OVERLAY_FIELDS
+        if overlay_only:
+            if "TrangThai" in overlay_keys:
+                self._persist_github_review_status(q_ram)
+            for fld in ("DangBaiTap", "MucDo", "NangLucVatLy"):
+                if fld in overlay_keys:
+                    self._persist_github_overlay_field(q_ram, fld, q_ram.get(fld, ""))
+            if overlay_keys & {"DangBaiTap", "MucDo", "NangLucVatLy"}:
+                made = clean(q_ram.get("MaDe") or catalog_group_key(q_ram))
+                if made:
+                    self._apply_github_lesson_catalog(
+                        made, self.by_group.get(made) or self.by_made.get(made) or []
+                    )
+                self.loaded_at = now_str()
+            return {
+                "ok": True,
+                "id": q_ram.get("ID", ""),
+                "source": "GITHUB",
+                "tex": rel,
+                "row": int(q_ram.get("_row") or 0),
+            }
         path = self._rewrite_github_lesson_tex(rel)
         self.rebuild_indexes_after_admin_change(rebuild_catalog=not is_lightweight_question_update(updates or {}))
         return {"ok": True, "id": q_ram.get("ID", ""), "source": "GITHUB", "tex": path, "row": int(q_ram.get("_row") or 0)}
+
+    def _persist_github_overlay_field(self, q_ram: Dict[str, Any], field: str, value: Any) -> None:
+        key = github_review_item_key(q_ram)
+        if not key or field not in ("DangBaiTap", "MucDo", "NangLucVatLy"):
+            return
+        val = _normalize_github_overlay_value(field, value)
+        mp = load_github_field_map(force=True)
+        rec = dict(mp.get(key) or {})
+        if val:
+            rec[field] = val
+        else:
+            rec.pop(field, None)
+        if rec:
+            mp[key] = rec
+        else:
+            mp.pop(key, None)
+        save_github_field_map(mp)
+
+    def _github_question_mode(self) -> bool:
+        return self.question_source_mode == "GITHUB" or _json_question_source_mode() == "GITHUB"
+
+    def _update_github_field_bulk(self, updates: List[Dict[str, Any]], field: str) -> Dict[str, Any]:
+        """ADMIN gán Dạng BT / mức độ / NLVL hàng loạt trên GitHub — JSON overlay, không đụng Sheet/.tex."""
+        if field not in ("DangBaiTap", "MucDo", "NangLucVatLy"):
+            raise RuntimeError("Trường GitHub không hỗ trợ cập nhật hàng loạt.")
+        mp = load_github_field_map(force=True)
+        out_items: List[Dict[str, Any]] = []
+        seen: set = set()
+        stamp = stamp_ngay_cap_nhat()
+        for up in updates or []:
+            if not isinstance(up, dict):
+                continue
+            q = self._find_github_review_question(up)
+            if not q:
+                continue
+            if field == "DangBaiTap":
+                raw = up.get("DangBaiTap") or up.get("dangbaitap") or ""
+            elif field == "MucDo":
+                raw = up.get("MucDo") or up.get("mucdo") or up.get("level")
+            else:
+                raw = up.get("NangLucVatLy") or up.get("ma_nang_luc") or up.get("nlvl") or ""
+            val = _normalize_github_overlay_value(field, raw)
+            if not val:
+                continue
+            key = github_review_item_key(q)
+            dup = key or f"row::{clean(q.get('_row', ''))}::{clean(q.get('ID', ''))}"
+            if dup in seen:
+                continue
+            seen.add(dup)
+            if field == "DangBaiTap":
+                q["DangBaiTap"] = one_line(val)
+            else:
+                q[field] = val
+            q["NgayCapNhat"] = stamp
+            if key:
+                rec = dict(mp.get(key) or {})
+                rec[field] = val
+                mp[key] = rec
+            try:
+                row = int(q.get("_row") or 0)
+            except Exception:
+                row = 0
+            item = {
+                "index": up.get("index"),
+                "row": row,
+                "ID": clean(q.get("ID", "")),
+                field: val,
+            }
+            out_items.append(item)
+        if not out_items:
+            raise RuntimeError("Không có câu GitHub hợp lệ để cập nhật. Mở lại đề rồi thử lưu.")
+        save_github_field_map(mp)
+        if field == "DangBaiTap":
+            try:
+                for it in out_items:
+                    q = self._find_github_review_question(it)
+                    if q:
+                        touch_dbt_updated(catalog_group_key(q), clean(it.get("DangBaiTap", "")), stamp)
+            except Exception:
+                log_swallow("_update_github_field_bulk:touch_dbt")
+        self._refresh_github_catalog_for_items(out_items)
+        if field == "DangBaiTap":
+            self._register_dbt_names_after_bulk(out_items)
+        return {"ok": True, "updated": len(out_items), "items": out_items, "source": "GITHUB"}
+
+    def _refresh_github_catalog_for_items(self, items: List[Dict[str, Any]]) -> None:
+        """Cập nhật FilterCounts bài đang sửa — không rebuild catalog cả ngân hàng (lazy GitHub)."""
+        seen: set = set()
+        for it in items or []:
+            q = self._find_github_review_question(it) if isinstance(it, dict) else None
+            if not q:
+                continue
+            made = clean(q.get("MaDe") or catalog_group_key(q))
+            if not made or made in seen:
+                continue
+            seen.add(made)
+            self._apply_github_lesson_catalog(
+                made, self.by_group.get(made) or self.by_made.get(made) or []
+            )
+        self.loaded_at = now_str()
+
+    def _persist_github_review_status(self, q_ram: Dict[str, Any]) -> None:
+        key = github_review_item_key(q_ram)
+        if not key:
+            return
+        mp = load_github_review_map(force=True)
+        mp[key] = clean(q_ram.get("TrangThai", "")) or QUESTION_REVIEW_PENDING_LABEL
+        save_github_review_map(mp)
+
+    def _find_github_review_question(self, raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        expected_id = clean(raw.get("id") or raw.get("ID") or "")
+        if expected_id:
+            for q in (self.by_id or {}).get(expected_id) or []:
+                if clean(q.get("_source")) == "GITHUB" or clean(q.get("_tex_rel")):
+                    return q
+            for q in self.questions or []:
+                if clean(q.get("ID", "")) == expected_id:
+                    return q
+        try:
+            row_number = int(raw.get("row") or raw.get("_row") or 0)
+        except Exception:
+            row_number = 0
+        if row_number:
+            for q in self.questions or []:
+                try:
+                    if int(q.get("_row") or 0) == row_number:
+                        return q
+                except Exception:
+                    continue
+        return None
+
+    def _update_github_review_bulk(self, items: List[Dict[str, Any]], reviewed: bool) -> Dict[str, Any]:
+        val = QUESTION_REVIEW_APPROVED_LABEL if reviewed else QUESTION_REVIEW_PENDING_LABEL
+        mp = load_github_review_map(force=True)
+        updated = 0
+        rows: List[int] = []
+        for raw in items or []:
+            if not isinstance(raw, dict):
+                continue
+            q = self._find_github_review_question(raw)
+            if not q:
+                continue
+            q["TrangThai"] = val
+            key = github_review_item_key(q)
+            if key:
+                mp[key] = val
+            updated += 1
+            try:
+                rows.append(int(q.get("_row") or 0))
+            except Exception:
+                pass
+        if not updated:
+            raise RuntimeError("Không có câu GitHub hợp lệ để duyệt. Mở lại đề rồi bấm Duyệt cả đề.")
+        save_github_review_map(mp)
+        return {"ok": True, "updated": updated, "rows": sorted(set(r for r in rows if r)), "TrangThai": val, "source": "GITHUB"}
 
     def load_learning(self) -> None:
         """Nạp Ly_Thuyet + Phuong_Phap vào RAM."""
@@ -10628,6 +11350,9 @@ class SheetStore:
         """ADMIN đánh dấu duyệt/chưa duyệt hàng loạt — cột TrangThai trên Cau_Hoi."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được đánh dấu duyệt câu hỏi")
+        github_mode = self.question_source_mode == "GITHUB" or _json_question_source_mode() == "GITHUB"
+        if github_mode or self.ws_questions is None:
+            return self._update_github_review_bulk(items, reviewed)
         val = QUESTION_REVIEW_APPROVED_LABEL if reviewed else QUESTION_REVIEW_PENDING_LABEL
         self.question_headers = list(
             gsheet_call_retry("row_values Cau_Hoi review header", self.ws_questions.row_values, 1) or []
@@ -10686,6 +11411,8 @@ class SheetStore:
         """
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được cập nhật mức độ hàng loạt")
+        if self._github_question_mode() or self.ws_questions is None:
+            return self._update_github_field_bulk(updates, "MucDo")
         if not self._ensure_question_headers():
             raise RuntimeError("Không đọc được tiêu đề sheet Cau_Hoi.")
         mucdo_col = self._question_field_col_1("MucDo")
@@ -10774,6 +11501,8 @@ class SheetStore:
         """ADMIN duyệt hàng loạt Dạng bài tập: ghi nhanh cột H (DangBaiTap) cho nhiều câu."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được cập nhật Dạng bài tập hàng loạt")
+        if self._github_question_mode() or self.ws_questions is None:
+            return self._update_github_field_bulk(updates, "DangBaiTap")
         self.question_headers = list(
             gsheet_call_retry("row_values Cau_Hoi DangBaiTap header", self.ws_questions.row_values, 1) or []
         )
@@ -10884,6 +11613,8 @@ class SheetStore:
         """ADMIN duyệt hàng loạt Năng lực vật lí: ghi mã NLVL01–NLVL06 vào cột NangLucVatLy."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được cập nhật năng lực vật lí hàng loạt")
+        if self._github_question_mode() or self.ws_questions is None:
+            return self._update_github_field_bulk(updates, "NangLucVatLy")
         self.ensure_question_competency_header()
         self.question_headers = list(gsheet_call_retry("row_values Cau_Hoi competency header", self.ws_questions.row_values, 1) or [])
         self.question_col_index = resolve_question_col_index(self.question_headers)
@@ -10943,6 +11674,58 @@ class SheetStore:
         self.rebuild_indexes_after_admin_change()
         return {"ok": True, "updated": len(batch), "items": out_items}
 
+    def _merge_github_dangbaitap_names(
+        self,
+        made: str,
+        old_canon: Dict[str, str],
+        new_name: str,
+    ) -> Dict[str, Any]:
+        mp = load_github_field_map(force=True)
+        out_items: List[Dict[str, Any]] = []
+        merged_from: Dict[str, int] = {}
+        seen: set = set()
+        for q in self.resolve_quiz_base(made) or []:
+            cur = clean(q.get("DangBaiTap", ""))
+            kn = key_norm(cur)
+            if kn not in old_canon:
+                continue
+            key = github_review_item_key(q)
+            dup = key or f"row::{clean(q.get('_row', ''))}::{clean(q.get('ID', ''))}"
+            if dup in seen:
+                continue
+            seen.add(dup)
+            q["DangBaiTap"] = one_line(new_name)
+            if key:
+                rec = dict(mp.get(key) or {})
+                rec["DangBaiTap"] = one_line(new_name)
+                mp[key] = rec
+            src = old_canon[kn]
+            merged_from[src] = merged_from.get(src, 0) + 1
+            try:
+                row = int(q.get("_row") or 0)
+            except Exception:
+                row = 0
+            out_items.append({
+                "row": row,
+                "ID": clean(q.get("ID", "")),
+                "from": src,
+                "DangBaiTap": new_name,
+            })
+        if not out_items:
+            raise RuntimeError("Không có câu nào mang các tên đã chọn trong chuyên đề này")
+        save_github_field_map(mp)
+        self._refresh_github_catalog_for_items(out_items)
+        patch_dbt_order_after_merge(made, list(old_canon.values()), new_name)
+        return {
+            "ok": True,
+            "updated": len(out_items),
+            "new_name": new_name,
+            "merged_from": merged_from,
+            "old_names": list(old_canon.values()),
+            "items": out_items[:80],
+            "source": "GITHUB",
+        }
+
     def merge_dangbaitap_names(self, made: str, old_names: List[str], new_name: str) -> Dict[str, Any]:
         """ADMIN gộp nhiều tên DangBaiTap (cột H) thành một tên mới trong phạm vi chuyên đề."""
         if not is_admin():
@@ -10968,6 +11751,8 @@ class SheetStore:
         base_qs = self.resolve_quiz_base(made)
         if not base_qs:
             raise RuntimeError("Không tìm thấy câu trong chuyên đề này")
+        if self._github_question_mode() or self.ws_questions is None:
+            return self._merge_github_dangbaitap_names(made, old_canon, new_name)
         base_rows = {int(q.get("_row") or 0) for q in base_qs if int(q.get("_row") or 0) >= 2}
         self.question_headers = list(
             gsheet_call_retry("row_values Cau_Hoi merge DangBaiTap header", self.ws_questions.row_values, 1) or []
@@ -11931,6 +12716,15 @@ class SheetStore:
             raise RuntimeError("Chỉ ADMIN được nhập câu hỏi")
         if not isinstance(items, list) or not items:
             raise RuntimeError("Không có câu hỏi để nhập.")
+        if self._github_question_mode():
+            with self.add_question_lock:
+                return self._add_questions_github_tex(
+                    items,
+                    allow_duplicates=allow_duplicates,
+                    skip_content_dup=skip_content_dup,
+                    insert_all=insert_all,
+                    index_base=index_base,
+                )
 
         with self.add_question_lock:
             if not self.question_headers:
@@ -26622,7 +27416,7 @@ Chứng minh mệnh đề phủ định"></textarea>
   <button type="button" class="btn2" onclick="closeChapterDbtBoard()">Đóng</button>
   <button type="button" class="btn" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);border:none" onclick="chapterDbtSaveAllOrders()">💾 Lưu thứ tự cả chương</button>
 </div>
-</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Ảnh câu hỏi</h3><p id="infographicModalDesc" class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><div id="infographicStylePicker" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px"><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid #1d4ed8;border-radius:10px;cursor:pointer;font-weight:800;font-size:13px;background:#eff6ff;color:#1e3a8a"><input type="radio" name="infographicStyle" value="poster" checked onchange="onInfographicStyleChange()">📊 Poster infographic</label><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:800;font-size:13px"><input type="radio" name="infographicStyle" value="notebook" onchange="onInfographicStyleChange()">📓 Trang vở ghi bài</label></div><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3>📥 Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí" oninput="latexImportRefreshDbtList()"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10" oninput="latexImportRefreshDbtList()"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể" oninput="latexImportRefreshDbtList()"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..." oninput="latexImportRefreshDbtList()"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><select id="latexDefDangBaiTap_pick" class="adminDbtSelect" style="width:100%;margin:0 0 4px" onchange="latexImportDbtPickChange()"><option value="">— Chọn hoặc gõ mới —</option></select><input id="latexDefDangBaiTap" placeholder="Dạng bài tập (cột H trên Sheet)" oninput="latexImportDbtInputChange()" /><span id="latexDefDangBaiTap_scope" class="muted" style="display:block;font-size:11px;margin-top:3px"></span></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
+</div></div><div id="infographicModal" class="modal hide"><div class="modalBox" style="max-width:760px"><h3 id="infographicModalTitle">📊 Prompt Gemini — Ảnh câu hỏi</h3><p id="infographicModalDesc" class="muted" style="margin:6px 0 10px;line-height:1.45">Gemini vẽ <b>poster hiện đại đầy màu</b> — 4 card gradient (Đề → Phương án → Hình → Lời giải). Có ảnh cột T → AI đọc ảnh gốc rồi vẽ lại đẹp hơn. VIP/SVIP: mở khóa sau khi <b>trả lời đúng</b>.</p><div id="infographicStylePicker" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px"><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid #1d4ed8;border-radius:10px;cursor:pointer;font-weight:800;font-size:13px;background:#eff6ff;color:#1e3a8a"><input type="radio" name="infographicStyle" value="poster" checked onchange="onInfographicStyleChange()">📊 Poster infographic</label><label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:800;font-size:13px"><input type="radio" name="infographicStyle" value="notebook" onchange="onInfographicStyleChange()">📓 Trang vở ghi bài</label></div><textarea id="infographicPromptText" class="infographicPromptBox" readonly placeholder="Đang tạo prompt…"></textarea><div id="infographicImageWrap" class="hide" style="margin-top:10px"><img id="infographicGeneratedImg" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Poster Gemini"></div><p id="infographicGenStatus" class="muted hide" style="margin-top:8px;font-size:12px"></p><div class="row" style="justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px"><a id="infographicGeminiLink" class="btn2" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Mở Gemini</a><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeInfographicModal()">Đóng</button><button type="button" class="btnGreen" id="btnGenerateInfographic" onclick="generateInfographicImage()">🎨 Vẽ poster (Gemini)</button><button type="button" class="btn" onclick="copyInfographicPrompt()">📋 Chép prompt</button></div></div></div></div><div id="latexImportModal" class="modal hide"><div class="modalBox" style="max-width:860px"><h3 id="latexImportTitle">Nhập đề LaTeX vào Google Sheet</h3><p class="muted" style="margin:6px 0 10px;line-height:1.45">Dán nội dung <b>.tex</b> hoặc chọn file. App sẽ đọc <code>\begin{ex}</code>, <code>\choice</code>, <code>\choiceTF</code>, <code>\shortans</code>, <code>\loigiai</code> rồi chèn vào sheet <b>Cau_Hoi</b>. Ảnh <code>\includegraphics</code> có thể lấy từ file ZIP kèm theo; <code>tikzpicture</code> sẽ được biên dịch ra PNG nếu Render có <b>pdflatex</b> + <b>pdftoppm</b>.</p><div class="editGrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label><b>Môn</b><input id="latexDefMon" placeholder="Vật lí" oninput="latexImportRefreshDbtList()"></label><label><b>Lớp</b><input id="latexDefLop" placeholder="10" oninput="latexImportRefreshDbtList()"></label><label><b>Chương</b><input id="latexDefChuong" placeholder="Sự chuyển thể" oninput="latexImportRefreshDbtList()"></label><label><b>Bài học</b><input id="latexDefBaiHoc" placeholder="Bài 5..." oninput="latexImportRefreshDbtList()"></label><label style="grid-column:1/-1"><b>Dạng bài tập</b><select id="latexDefDangBaiTap_pick" class="adminDbtSelect" style="width:100%;margin:0 0 4px" onchange="latexImportDbtPickChange()"><option value="">— Chọn hoặc gõ mới —</option></select><input id="latexDefDangBaiTap" placeholder="Dạng bài tập (cột H trên Sheet)" oninput="latexImportDbtInputChange()" /><span id="latexDefDangBaiTap_scope" class="muted" style="display:block;font-size:11px;margin-top:3px"></span></label><label><b>Bộ đề</b><input id="latexDefBoDe" placeholder="THPT"></label><label><b>Tên đề</b><input id="latexDefDe" placeholder="Đề 100"></label><label><b>Mức độ</b><select id="latexDefMucDo"><option value="" selected>Theo file / để trống</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></label><label><b>Quyền</b><select id="latexDefQuyen"><option>VIP</option><option>FREE</option></select></label></div><div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label><b>File .tex</b><br><input type="file" id="latexFileInput" accept=".tex,.txt" onchange="readLatexImportFile(this)"></label><label><b>ZIP ảnh/TikZ phụ trợ</b><br><input type="file" id="latexAssetZipInput" accept=".zip"><span class="muted" style="display:block;font-size:11px;margin-top:3px">Nén chung các ảnh: images/*.png, fig/*.pdf... rồi chọn ZIP này.</span></label></div><textarea id="latexImportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Consolas,monospace" placeholder="Dán nội dung LaTeX tại đây..."></textarea><div id="latexImportStatus" class="muted" style="margin-top:8px;white-space:pre-wrap"></div><div id="latexImportPreview" class="hide" style="margin-top:10px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:10px"></div><div class="row" style="justify-content:space-between;margin-top:12px;gap:8px;flex-wrap:wrap"><button type="button" onclick="closeLatexImportModal()">Hủy</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="previewLatexImport()">👁️ Đọc thử</button><button type="button" class="btn" id="latexImportCommitBtn" onclick="commitLatexImport()">✅ Chèn vào Google Sheet</button></div></div></div></div>
 <div id="dangTheoryEditor" class="theoryEditorOverlay hide" aria-hidden="true">
   <div class="theoryEditorHeader">
     <button type="button" class="theoryEditorClose" onclick="closeDangTheoryEditor()">← Đóng</button>
@@ -28009,6 +28803,7 @@ function insertQuizMaps(insertIdx){function shiftInsert(obj){let out={};for(let 
 function remapQuizMapsByPerm(perm){function remap(obj){let out={};for(let ni=0;ni<perm.length;ni++){let oi=perm[ni];if(obj[oi]!==undefined)out[ni]=obj[oi];else if(obj[String(oi)]!==undefined)out[ni]=obj[String(oi)]}return out}ANSWERS=remap(ANSWERS);RESULTS=remap(RESULTS);CHECKED=remap(CHECKED);LOCKED_Q=remap(LOCKED_Q);HINT_BY_Q=remap(HINT_BY_Q);SIMILAR_BY_Q=remap(SIMILAR_BY_Q);VIP_Q_SHOW_ANS=remap(VIP_Q_SHOW_ANS);VIP_Q_SHOW_EXP=remap(VIP_Q_SHOW_EXP);AI_LG_BY_Q=remap(AI_LG_BY_Q);ADMIN_LG_DRAFT_BY_Q=remap(ADMIN_LG_DRAFT_BY_Q);ADMIN_HINT_SAVED=remap(ADMIN_HINT_SAVED)}
 function regroupQuestionsByDang(anchorRow){if(!GROUP_BY_DANG||!QUESTIONS.length)return CUR;let tagged=QUESTIONS.map((q,i)=>({q:applyResolvedDang(Object.assign({},q)),oi:i}));let buckets={};for(let d of DANG_GROUP_ORDER_CLIENT)buckets[d]=[];let other=[];for(let t of tagged){let d=t.q.Dang||'Trắc nghiệm';if(buckets[d])buckets[d].push(t);else other.push(t)}let merged=[];for(let d of DANG_GROUP_ORDER_CLIENT)merged=merged.concat(buckets[d]);merged=merged.concat(other);let perm=merged.map(t=>t.oi);QUESTIONS=merged.map(t=>QUESTIONS[t.oi]);remapQuizMapsByPerm(perm);if(anchorRow){let ni=QUESTIONS.findIndex(q=>q._row===anchorRow);if(ni>=0)return ni}let ni=perm.indexOf(CUR);return ni>=0?ni:0}
 async function refreshCatalogFromMeta(){try{let m=await api('/api/meta',{timeoutMs:60000},3);if(m.loading)return false;META=META||{};Object.assign(META,m);if(m.user){USER=m.user;renderUserAiProfile(USER)}CATALOG=m.catalog||[];try{mergeStudentProgressFromLocal()}catch(e){}ldvlPdfSyncFromMeta();if(typeof ldvlYtSyncFromMeta==='function')ldvlYtSyncFromMeta();if(typeof ldvlMhSyncFromMeta==='function')ldvlMhSyncFromMeta();if(typeof ldvlStudentPdfRender==='function')ldvlStudentPdfRender();if(typeof ldvlStudentYtRender==='function')ldvlStudentYtRender();if(typeof ldvlStudentMhRender==='function')ldvlStudentMhRender();if(USER&&USER.is_admin&&typeof ldvlPdfMaybeMigrateLocal==='function'&&!window.__LDVL_PDF_MIGRATE_QUEUED){window.__LDVL_PDF_MIGRATE_QUEUED=1;setTimeout(function(){ldvlPdfMaybeMigrateLocal()},800)}let info=document.getElementById('info');if(info)info.textContent=`${m.count_questions} câu hỏi | ${m.count_catalog} đề/thẻ đề | Nạp: ${m.loaded_at}`;let homeEl=document.getElementById('home');if(homeEl&&!homeEl.classList.contains('hide')){refreshFilterOptions();renderCatalog();initRpPracticePanel();initAdminComposePanel();initAdminAiGenerator()}if(typeof ldvlRefreshAdminDashboard==='function')ldvlRefreshAdminDashboard();showAdminDuplicateSheetNotice();return true}catch(e){return false}}
+if(!window.__LDVL_GITHUB_CATALOG_POLL){window.__LDVL_GITHUB_CATALOG_POLL=1;setInterval(function(){if(!(META&&META.question_source==='GITHUB'))return;let home=document.getElementById('home');if(home&&home.classList.contains('hide'))return;refreshCatalogFromMeta();},25000);}
 let INIT_POLL_COUNT=0;
 const INIT_POLL_MAX=60;
 let INIT_CONNECT_FAILS=0;
@@ -28261,8 +29056,8 @@ function patchCatalogDbtOrderLocal(made,order){
   META.dbt_orders[made]=order.slice();
   return scope;
 }
-function catalogUnclassifiedCount(item){item=item||{};let fc=(item.FilterCounts||{}).dangbaitap||{};let n=parseInt((fc&&fc[DBT_UNCLASSIFIED])||0,10)||0;if(n)return n;let total=parseInt(item.SoCau,10)||0;let classified=catalogDbtCounts(item).reduce((a,x)=>a+(x[1]||0),0);return Math.max(0,total-classified)}
-function v246MergeDbtCounts(entries){let mp={};let uncls=0;for(let x of entries||[]){let fc=(x.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object')uncls+=parseInt(fc[DBT_UNCLASSIFIED],10)||0;for(let [k,v] of catalogDbtCounts(x)){mp[k]=(mp[k]||0)+(parseInt(v,10)||0)}}if(!uncls){let total=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);uncls=Math.max(0,total-Object.values(mp).reduce((a,n)=>a+n,0))}let primary=entries[0]||{};let lessonOrd=getLessonDbtOrderList(entries);let sortItem=lessonOrd.length?Object.assign({},primary,{DbtOrder:lessonOrd}):primary;return {pairs:sortDbtPairs(Object.entries(mp).filter(x=>x[0]),primary.MaDe||'',sortItem),unclassified:uncls}}
+function catalogUnclassifiedCount(item){item=item||{};let fc=(item.FilterCounts||{}).dangbaitap||{};let keys=fc&&typeof fc==='object'?Object.keys(fc):[];if(!keys.length)return 0;return parseInt(fc[DBT_UNCLASSIFIED],10)||0}
+function v246MergeDbtCounts(entries){let mp={};let uncls=0;for(let x of entries||[]){let fc=(x.FilterCounts||{}).dangbaitap||{};if(fc&&typeof fc==='object'&&Object.keys(fc).length)uncls+=parseInt(fc[DBT_UNCLASSIFIED],10)||0;for(let [k,v] of catalogDbtCounts(x)){mp[k]=(mp[k]||0)+(parseInt(v,10)||0)}}let primary=entries[0]||{};let lessonOrd=getLessonDbtOrderList(entries);let sortItem=lessonOrd.length?Object.assign({},primary,{DbtOrder:lessonOrd}):primary;return {pairs:sortDbtPairs(Object.entries(mp).filter(x=>x[0]),primary.MaDe||'',sortItem),unclassified:uncls}}
 function catalogLessonMadeForPractice(entries){entries=entries||[];let ids=entries.map(x=>String(x.MaDe||x.GroupKey||'').trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);if(!ids.length)return '';return ids.length===1?ids[0]:ids.join('|')}
 function getStartModalDangBaiTap(){let el=document.querySelector('input[name="startDbtPick"]:checked');return el?String(el.value||''):''}
 function renderStartDangBaiTapPicker(made,preselect){
@@ -29170,6 +29965,7 @@ function toggleFsNav(){
 }
 async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion();setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(3,120)},180);return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion()}
 function isAdminViewer(){return !!(USER.is_admin||String(USER.role||'').toUpperCase()==='ADMIN')} /* dùng cho nút Sửa câu, xem ĐA/LG ngay */
+function isGithubBank(){return !!(META&&String(META.question_source||'')==='GITHUB')}
 function canViewSolutionLive(){if(EXAM_MODE&&!SUBMITTED)return false;return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
 function hasAttemptedQuestion(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;if(LOCKED_Q[qIdx]||CHECKED[qIdx]||RESULTS[qIdx])return true;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return false;if(q.Dang==='Tự luận')return isQuestionDone(qIdx);return isQuestionChecked(qIdx)}
 function canShowSolutionNow(){if(!canViewSolutionLive())return false;if(isAdminViewer())return true;return hasAttemptedQuestion(CUR)}
@@ -29240,26 +30036,28 @@ function bindNavNumClicks(){let nav=document.getElementById('navNums');if(!nav)r
 function scrollNavActiveIntoView(smooth){let nav=document.getElementById('navNums');if(!nav)return;let btn=nav.querySelector('button.num.active');if(btn&&btn.scrollIntoView)btn.scrollIntoView({block:'nearest',inline:'nearest',behavior:smooth?'smooth':'auto'})}
 function syncNavButtons(){let af=CUR<=0,al=CUR>=QUESTIONS.length-1;let p=document.getElementById('btnMobilePrev');if(p)p.disabled=af;let n=document.getElementById('btnMobileNext');if(n)n.disabled=al;document.querySelectorAll('.quizNavRowBelow button[onclick*="prevQ"]').forEach(b=>{b.disabled=af});document.querySelectorAll('.quizNavRowBelow button[onclick*="nextQ"]').forEach(b=>{b.disabled=al})}
 function strictQuestionReviewEnabled(){return !!(META&&META.strict_question_review)}
-function questionIsReviewedForAdmin(q){q=q||{};if(typeof q.reviewed_sheet==='boolean')return q.reviewed_sheet;let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;return false}
+function questionIsReviewedForAdmin(q){q=q||{};let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;if(typeof q.reviewed_sheet==='boolean')return q.reviewed_sheet;return false}
 function questionIsReviewed(q){if(isAdminViewer())return questionIsReviewedForAdmin(q);if(typeof q.reviewed==='boolean')return q.reviewed;let st=normText(q.TrangThai||'');if(/da duyet|approved|^ok$|^1$|yes|true|xong|done/.test(st))return true;if(/chua duyet|pending|^no$|^0$|false|can duyet/.test(st))return false;return !strictQuestionReviewEnabled()}
 function navReviewMarkHtml(q){if(!isAdminViewer())return '';return questionIsReviewedForAdmin(q)?'<span class="navReviewMark ok" title="Đã duyệt — HS được làm">✓</span>':'<span class="navReviewMark no" title="⚠ CHƯA DUYỆT — học sinh không thấy">!</span>'}
+function syncNavReviewMarks(){if(!isAdminViewer())return;let nav=document.getElementById('navNums');if(!nav)return;nav.querySelectorAll('button.num[data-nav-idx]').forEach(btn=>{let i=parseInt(btn.getAttribute('data-nav-idx'),10);if(!Number.isFinite(i))return;let q=QUESTIONS[i]||{};let wantOk=questionIsReviewedForAdmin(q);let mark=btn.querySelector('.navReviewMark');if(!mark){btn.insertAdjacentHTML('afterbegin',navReviewMarkHtml(q));return}mark.classList.toggle('ok',wantOk);mark.classList.toggle('no',!wantOk);mark.textContent=wantOk?'✓':'!';mark.title=wantOk?'Đã duyệt — HS được làm':'⚠ CHƯA DUYỆT — học sinh không thấy';btn.classList.toggle('q-reviewed',wantOk);btn.classList.toggle('q-unreviewed',!wantOk)})}
+function syncPendingBannerForCurrent(){if(!isAdminViewer())return;let q=QUESTIONS[CUR]||{};let qtext=document.getElementById('qtext');if(!qtext)return;let old=qtext.querySelector('.qPendingBanner');let html=questionPendingBannerHtml(q);if(!html){if(old)old.remove();return}if(old)return;let head=qtext.querySelector('.quizSectionHead');if(head)head.insertAdjacentHTML('afterend',html);else qtext.insertAdjacentHTML('afterbegin',html)}
 function questionReviewBadgeHtml(q){if(!isAdminViewer())return '';return questionIsReviewedForAdmin(q)?'<span class="qReviewBadge ok" title="Học sinh được làm">✓ Đã duyệt</span>':'<span class="qReviewBadge pending" title="Chưa duyệt — bấm «✅ Duyệt câu»">⚠ CHƯA DUYỆT</span>'}
 function questionPendingBannerHtml(q){if(!isAdminViewer()||questionIsReviewedForAdmin(q))return '';return '<div class="qPendingBanner" role="status">⚠ <span>Câu này <b>CHƯA DUYỆT</b> — học sinh không làm được (STRICT). Soát xong bấm <b>✅ Duyệt câu</b>.</span></div>'}
 function adminIncludePendingDefault(){return !!(USER&&USER.is_admin)}
 function quizReviewCounts(){let ok=0,all=QUESTIONS.length;for(let i=0;i<all;i++)if(questionIsReviewedForAdmin(QUESTIONS[i]))ok++;return {ok,all,pending:all-ok}}
 function syncNavReviewSummary(){if(!isAdminViewer())return;let c=quizReviewCounts();let el=document.getElementById('navReviewSummary');if(!el){let t=document.querySelector('.fsNavTitle');if(!t)return;el=document.createElement('div');el.id='navReviewSummary';el.className='navReviewSummary';t.insertAdjacentElement('afterend',el)}el.classList.toggle('hasPending',c.pending>0);el.textContent='Duyệt: ✓ '+c.ok+' / '+c.all+(c.pending?(' · ⚠ '+c.pending+' CHƯA DUYỆT'):' · đủ cả đề')}
-function syncQuestionReviewToolbar(){if(!isAdminViewer())return;let q=QUESTIONS[CUR]||{};let btn=document.getElementById('btnQuestionReview');if(btn){let on=questionIsReviewedForAdmin(q);btn.textContent=on?'↩ Bỏ duyệt':'✅ Duyệt câu';btn.classList.toggle('btnReviewOn',on);btn.classList.toggle('btnReviewOff',!on);btn.title=on?'Bấm để đổi thành CHƯA DUYỆT trên Sheet':'Ghi cột TrangThai = ĐÃ DUYỆT'}let stat=document.getElementById('quizReviewStat');if(stat){let c=quizReviewCounts();stat.classList.remove('hide');stat.textContent='Duyệt: '+c.ok+'/'+c.all+(c.pending?(' · ⚠ '+c.pending+' CHƯA DUYỆT'):' · OK')+(strictQuestionReviewEnabled()?' · STRICT':'')}syncNavReviewSummary();let qidEl=document.getElementById('qid');if(qidEl){let old=qidEl.querySelector('.qReviewBadge');if(old)old.remove();qidEl.insertAdjacentHTML('beforeend',questionReviewBadgeHtml(q))}let qPanel=document.querySelector('.quizQuestionPanel');if(qPanel)qPanel.classList.toggle('qPendingReview',!questionIsReviewedForAdmin(q));let editTr=document.getElementById('edit_TrangThai');if(editTr&&!document.getElementById('modal').classList.contains('hide')){editTr.value=normReviewFormVal(q.TrangThai||'');syncAdminChipGroup('TrangThai')}}
-async function toggleQuestionReviewAtIndex(idx){if(!isAdminViewer())return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!q._row){alert('Không xác định dòng Sheet.');return}let next=!questionIsReviewedForAdmin(q);try{let j=await api('/api/question/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||'',reviewed:next?1:0})});q.TrangThai=j.TrangThai||'';q.reviewed=!!j.reviewed;q.reviewed_sheet=!!j.reviewed;renderNav();syncQuestionReviewToolbar()}catch(e){alert('Không cập nhật duyệt: '+e.message)}}
+function syncQuestionReviewToolbar(){if(!isAdminViewer())return;let q=QUESTIONS[CUR]||{};let btn=document.getElementById('btnQuestionReview');if(btn){let on=questionIsReviewedForAdmin(q);btn.textContent=on?'↩ Bỏ duyệt':'✅ Duyệt câu';btn.classList.toggle('btnReviewOn',on);btn.classList.toggle('btnReviewOff',!on);btn.title=on?'Bấm để đổi thành CHƯA DUYỆT trên Sheet':'Ghi cột TrangThai = ĐÃ DUYỆT'}let stat=document.getElementById('quizReviewStat');if(stat){let c=quizReviewCounts();stat.classList.remove('hide');stat.textContent='Duyệt: '+c.ok+'/'+c.all+(c.pending?(' · ⚠ '+c.pending+' CHƯA DUYỆT'):' · OK')+(strictQuestionReviewEnabled()?' · STRICT':'')}syncNavReviewSummary();syncNavReviewMarks();syncPendingBannerForCurrent();let qidEl=document.getElementById('qid');if(qidEl){let old=qidEl.querySelector('.qReviewBadge');if(old)old.remove();qidEl.insertAdjacentHTML('beforeend',questionReviewBadgeHtml(q))}let qPanel=document.querySelector('.quizQuestionPanel');if(qPanel)qPanel.classList.toggle('qPendingReview',!questionIsReviewedForAdmin(q));let editTr=document.getElementById('edit_TrangThai');if(editTr&&!document.getElementById('modal').classList.contains('hide')){editTr.value=normReviewFormVal(q.TrangThai||'');syncAdminChipGroup('TrangThai')}}
+async function toggleQuestionReviewAtIndex(idx){if(!isAdminViewer())return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!(q._row||q.ID)){alert('Không xác định câu để duyệt.');return}let next=!questionIsReviewedForAdmin(q);try{let j=await api('/api/question/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',reviewed:next?1:0})});q.TrangThai=j.TrangThai||'';q.reviewed=!!j.reviewed;q.reviewed_sheet=!!j.reviewed;renderNav();syncQuestionReviewToolbar()}catch(e){alert('Không cập nhật duyệt: '+e.message)}}
 async function toggleQuestionReview(){if(!isAdminViewer())return;let btn=document.getElementById('btnQuestionReview');if(btn){btn.disabled=true;btn.textContent='⏳…'}try{await toggleQuestionReviewAtIndex(CUR)}catch(e){}finally{if(btn){btn.disabled=false;syncQuestionReviewToolbar()}}}
-async function approveAllQuestionsInQuiz(){if(!isAdminViewer())return;if(!QUESTIONS.length)return;let c=quizReviewCounts();if(!c.pending){alert('Tất cả '+c.all+' câu đã duyệt.');return}if(!confirm('Đánh dấu ĐÃ DUYỆT cho '+c.pending+' câu còn lại?\n\nGhi cột TrangThai trên Google Sheet.'))return;let btn=document.getElementById('btnQuestionReviewAll');if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let items=QUESTIONS.filter(q=>q._row&&!questionIsReviewedForAdmin(q)).map(q=>({row:q._row,ID:q.ID||''}));let j=await api('/api/question/review-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,reviewed:1})});let val=j.TrangThai||'ĐÃ DUYỆT';for(let q of QUESTIONS){q.TrangThai=val;q.reviewed=true;q.reviewed_sheet=true}renderNav();syncQuestionReviewToolbar();alert('Đã duyệt '+j.updated+' câu.')}catch(e){alert('Không duyệt hàng loạt: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent='✅ Duyệt cả đề'}}}
-async function unapproveAllQuestionsInQuiz(){if(!isAdminViewer())return;if(!QUESTIONS.length)return;let c=quizReviewCounts();if(!c.ok){alert('Không có câu nào đang ở trạng thái đã duyệt.');return}if(!confirm('Đổi TẤT CẢ '+c.ok+' câu đã duyệt thành CHƯA DUYỆT?\n\nHọc sinh sẽ không làm được (khi bật STRICT).'))return;let btn=document.getElementById('btnQuestionUnreviewAll');if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let items=QUESTIONS.filter(q=>q._row&&questionIsReviewedForAdmin(q)).map(q=>({row:q._row,ID:q.ID||''}));let j=await api('/api/question/review-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,reviewed:0})});let val=j.TrangThai||'CHƯA DUYỆT';for(let q of QUESTIONS){if(questionIsReviewedForAdmin(q)){q.TrangThai=val;q.reviewed=false;q.reviewed_sheet=false}}renderNav();syncQuestionReviewToolbar();alert('Đã bỏ duyệt '+j.updated+' câu.')}catch(e){alert('Không cập nhật: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent='↩ Bỏ cả đề'}}}
+async function approveAllQuestionsInQuiz(){if(!isAdminViewer())return;if(!QUESTIONS.length)return;let c=quizReviewCounts();if(!c.pending){alert('Tất cả '+c.all+' câu đã duyệt.');return}if(!confirm('Đánh dấu ĐÃ DUYỆT cho '+c.pending+' câu còn lại?\n\n'+(META&&META.question_source==='GITHUB'?'Lưu trên máy (ngân hàng .tex), không ghi Google Sheet.':'Ghi cột TrangThai trên Google Sheet.')))return;let btn=document.getElementById('btnQuestionReviewAll');if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let items=QUESTIONS.filter(q=>(q._row||q.ID)&&!questionIsReviewedForAdmin(q)).map(q=>({row:q._row||0,ID:q.ID||''}));let j=await api('/api/question/review-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,reviewed:1,made:CURRENT_MADE||''})});let val=j.TrangThai||'ĐÃ DUYỆT';for(let q of QUESTIONS){q.TrangThai=val;q.reviewed=true;q.reviewed_sheet=true}renderNav();syncQuestionReviewToolbar();alert('Đã duyệt '+j.updated+' câu.')}catch(e){alert('Không duyệt hàng loạt: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent='✅ Duyệt cả đề'}}}
+async function unapproveAllQuestionsInQuiz(){if(!isAdminViewer())return;if(!QUESTIONS.length)return;let c=quizReviewCounts();if(!c.ok){alert('Không có câu nào đang ở trạng thái đã duyệt.');return}if(!confirm('Đổi TẤT CẢ '+c.ok+' câu đã duyệt thành CHƯA DUYỆT?\n\nHọc sinh sẽ không làm được (khi bật STRICT).'))return;let btn=document.getElementById('btnQuestionUnreviewAll');if(btn){btn.disabled=true;btn.textContent='⏳…'}try{let items=QUESTIONS.filter(q=>(q._row||q.ID)&&questionIsReviewedForAdmin(q)).map(q=>({row:q._row||0,ID:q.ID||''}));let j=await api('/api/question/review-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,reviewed:0,made:CURRENT_MADE||''})});let val=j.TrangThai||'CHƯA DUYỆT';for(let q of QUESTIONS){if(questionIsReviewedForAdmin(q)){q.TrangThai=val;q.reviewed=false;q.reviewed_sheet=false}}renderNav();syncQuestionReviewToolbar();alert('Đã bỏ duyệt '+j.updated+' câu.')}catch(e){alert('Không cập nhật: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent='↩ Bỏ cả đề'}}}
 function ensureFlaggedLoaded(){if(typeof SID==='undefined')return;if(FLAGGED_SID===SID)return;FLAGGED_SID=SID;try{let raw=localStorage.getItem('LDVL_FLAGGED_'+(SID||''));FLAGGED=raw?JSON.parse(raw):{}}catch(e){FLAGGED={}}}
 function saveFlagged(){try{localStorage.setItem('LDVL_FLAGGED_'+(SID||''),JSON.stringify(FLAGGED))}catch(e){}}
 function toggleFlagCurrent(){ensureFlaggedLoaded();FLAGGED[CUR]=!FLAGGED[CUR];saveFlagged();syncFlagBtn();renderNav()}
 function syncFlagBtn(){ensureFlaggedLoaded();let on=!!FLAGGED[CUR];for(let id of ['btnFlagReview','btnFsFlagReview']){let b=document.getElementById(id);if(!b)continue;b.classList.toggle('flagOn',on);b.setAttribute('aria-pressed',on?'true':'false');b.title=on?'Bỏ đánh dấu xem lại':'Đánh dấu câu này để xem lại sau'}}
 let QDESC_PINNED=false;
 function toggleQuestionPin(){QDESC_PINNED=!QDESC_PINNED;let qt=document.getElementById('qtext');if(qt)qt.classList.toggle('qtextPinned',QDESC_PINNED);let b=document.getElementById('btnPinQuestion');if(b){b.classList.toggle('pinOn',QDESC_PINNED);b.setAttribute('aria-pressed',QDESC_PINNED?'true':'false');b.title=QDESC_PINNED?'Bỏ ghim đề':'Ghim đề (thu gọn phần đề khi cuộn)'}}
-function renderNav(){ensureFlaggedLoaded();let navFast=document.getElementById('navNums');if(navFast){let btns=navFast.querySelectorAll('button.num[data-nav-idx]');if(btns.length===QUESTIONS.length&&navFast.getAttribute('data-nav-len')===String(QUESTIONS.length)){for(let i=0;i<QUESTIONS.length;i++){let btn=btns[i];if(!btn)continue;let q=QUESTIONS[i]||{};let cls='num '+navMucDoClass(q.MucDo);if(isAdminViewer())cls+=questionIsReviewedForAdmin(q)?' q-reviewed':' q-unreviewed';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';if(FLAGGED[i])cls+=' flagged';if(btn.className!==cls)btn.className=cls;btn.setAttribute('aria-current',i==CUR?'true':'false')}if(FULLDE_ON){syncFulldeNavChrome()}scrollNavActiveIntoView(!!FULLDE_ON);syncNavButtons();if(isAdminViewer())syncQuestionReviewToolbar();return}}let html='';for(let i=0;i<QUESTIONS.length;i++){let q=QUESTIONS[i]||{};let sec=quizSectionLabel(i);if(sec&&!isMobileQuizUI()){let secCls='navSectionLbl';let sc=navSectionClass(sec);if(sc)secCls+=' '+sc;html+=`<div class="${secCls}">${esc(sec)}</div>`}let cls='num '+navMucDoClass(q.MucDo);if(isAdminViewer())cls+=questionIsReviewedForAdmin(q)?' q-reviewed':' q-unreviewed';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';if(FLAGGED[i])cls+=' flagged';let lv=mucdoPrimary(q.MucDo);let lvTip=lv?(mucdoIcon(lv)+' '+lv+' · '+mucdoLabel(lv)):'';let revTip=isAdminViewer()?(questionIsReviewedForAdmin(q)?' · Đã duyệt':' · Chưa duyệt · nhấp phải = menu'):'';let tip=(lvTip?(lvTip+' · '):'')+shortText(q.CauHoi||'',100)+revTip;html+=`<button type="button" class="${cls.trim()}" title="${escAttr(tip)}" data-nav-idx="${i}" aria-current="${i==CUR?'true':'false'}" onclick="goQ(${i});return false;">${navLvBadgeHtml(q.MucDo)}${navReviewMarkHtml(q)}<span class="navNumText">${i+1}</span></button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(nav)nav.setAttribute('data-nav-len',String(QUESTIONS.length));ensureNavLegend();bindNavNumClicks();if(isAdminViewer()){syncQuestionReviewToolbar();bindAdminNavContextMenu()}if(typeof normalizeNavSectionsByDangOnlyV264==='function')normalizeNavSectionsByDangOnlyV264();if(FULLDE_ON){syncFulldeNavChrome()}scrollNavActiveIntoView(!!FULLDE_ON);syncNavButtons()}
+function renderNav(){ensureFlaggedLoaded();let navFast=document.getElementById('navNums');if(navFast){let btns=navFast.querySelectorAll('button.num[data-nav-idx]');if(btns.length===QUESTIONS.length&&navFast.getAttribute('data-nav-len')===String(QUESTIONS.length)){for(let i=0;i<QUESTIONS.length;i++){let btn=btns[i];if(!btn)continue;let q=QUESTIONS[i]||{};let cls='num '+navMucDoClass(q.MucDo);if(isAdminViewer())cls+=questionIsReviewedForAdmin(q)?' q-reviewed':' q-unreviewed';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';if(FLAGGED[i])cls+=' flagged';if(btn.className!==cls)btn.className=cls;btn.setAttribute('aria-current',i==CUR?'true':'false')}syncNavReviewMarks();if(FULLDE_ON){syncFulldeNavChrome()}scrollNavActiveIntoView(!!FULLDE_ON);syncNavButtons();if(isAdminViewer())syncQuestionReviewToolbar();return}}let html='';for(let i=0;i<QUESTIONS.length;i++){let q=QUESTIONS[i]||{};let sec=quizSectionLabel(i);if(sec&&!isMobileQuizUI()){let secCls='navSectionLbl';let sc=navSectionClass(sec);if(sc)secCls+=' '+sc;html+=`<div class="${secCls}">${esc(sec)}</div>`}let cls='num '+navMucDoClass(q.MucDo);if(isAdminViewer())cls+=questionIsReviewedForAdmin(q)?' q-reviewed':' q-unreviewed';if(i==CUR)cls+=' active';if(ANSWERS[i]!=null&&String(ANSWERS[i]).length)cls+=' answered';if((SUBMITTED||CHECKED[i])&&RESULTS[i])cls+=RESULTS[i].ok?' ok':' bad';if(FLAGGED[i])cls+=' flagged';let lv=mucdoPrimary(q.MucDo);let lvTip=lv?(mucdoIcon(lv)+' '+lv+' · '+mucdoLabel(lv)):'';let revTip=isAdminViewer()?(questionIsReviewedForAdmin(q)?' · Đã duyệt':' · Chưa duyệt · nhấp phải = menu'):'';let tip=(lvTip?(lvTip+' · '):'')+shortText(q.CauHoi||'',100)+revTip;html+=`<button type="button" class="${cls.trim()}" title="${escAttr(tip)}" data-nav-idx="${i}" aria-current="${i==CUR?'true':'false'}" onclick="goQ(${i});return false;">${navLvBadgeHtml(q.MucDo)}${navReviewMarkHtml(q)}<span class="navNumText">${i+1}</span></button>`}let nav=document.getElementById('navNums');nav.innerHTML=html;if(nav)nav.setAttribute('data-nav-len',String(QUESTIONS.length));ensureNavLegend();bindNavNumClicks();if(isAdminViewer()){syncQuestionReviewToolbar();bindAdminNavContextMenu()}if(typeof normalizeNavSectionsByDangOnlyV264==='function')normalizeNavSectionsByDangOnlyV264();if(FULLDE_ON){syncFulldeNavChrome()}scrollNavActiveIntoView(!!FULLDE_ON);syncNavButtons()}
 let ADMIN_NAV_CTX_IDX=-1;
 function hideAdminNavCtxMenu(){let m=document.getElementById('adminNavCtxMenu');if(m)m.classList.add('hide');ADMIN_NAV_CTX_IDX=-1}
 function ensureAdminNavCtxMenu(){let m=document.getElementById('adminNavCtxMenu');if(m)return m;m=document.createElement('div');m.id='adminNavCtxMenu';m.className='adminNavCtxMenu hide';m.innerHTML='<div id="adminNavCtxHead" class="adminNavCtxHead">Câu —</div><button type="button" class="adminNavCtxItem" id="adminNavCtxOpen" onclick="adminNavCtxGo()">📂 Mở câu</button><button type="button" class="adminNavCtxItem" id="adminNavCtxReview" onclick="adminNavCtxReview()">✅ Duyệt câu</button><button type="button" class="adminNavCtxItem" onclick="adminNavCtxEdit()">✏️ Sửa câu</button><button type="button" class="adminNavCtxItem danger" onclick="adminNavCtxDelete()">🗑 Xóa câu</button>';document.body.appendChild(m);if(!window.__ADMIN_NAV_CTX_BOUND){window.__ADMIN_NAV_CTX_BOUND=1;document.addEventListener('click',function(e){let m2=document.getElementById('adminNavCtxMenu');if(m2&&!m2.contains(e.target))hideAdminNavCtxMenu()});document.addEventListener('keydown',function(e){if(e.key==='Escape')hideAdminNavCtxMenu()});document.addEventListener('scroll',hideAdminNavCtxMenu,true)}return m}
@@ -30313,7 +31111,7 @@ function renderBulkDbtList(){
     }else{
       ok='<span class="muted">AI chưa gợi ý</span>';
     }
-    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ Đã lưu Sheet</span>`:'';
+    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ ${isGithubBank()?'Đã lưu':'Đã lưu Sheet'}</span>`:'';
     let dupBox='';
     if(BULK_DBT_DUP_READY&&it.dup_type){
       dupBox=it.dup_keep?` <span class="tag" style="background:#fef3c7;color:#92400e">⚠️ Trùng (giữ · dòng ${esc(it.row||'?')})</span>`:` <span class="tag" style="background:#fee2e2;color:#991b1b">🔁 Trùng câu ${it.dup_mates.join(', ')}</span>`;
@@ -30642,11 +31440,15 @@ async function bulkDbtApplySelected(){
   if(!selected.length){alert('Chưa tick câu nào có Dạng bài tập.\n\nTick ô «Chấp nhận» hoặc bấm «✅ Tick tất cả gợi ý» sau khi GPT xong.');return}
   let noRow=selected.filter(it=>(!it.row||parseInt(it.row,10)<2)&&!String(it.ID||'').trim());
   if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet lẫn ID. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
-  if(!confirm('Ghi Dạng bài tập cho '+selected.length+' câu vào cột H Google Sheet?'))return;
+  if(!confirm(isGithubBank()
+    ? ('Ghi Dạng bài tập cho '+selected.length+' câu vào ngân hàng GitHub (lưu trên máy, không ghi Google Sheet)?')
+    : ('Ghi Dạng bài tập cho '+selected.length+' câu vào cột H Google Sheet?')))return;
   let updates=selected.map(it=>({index:it.index,row:parseInt(it.row,10),ID:it.ID,DangBaiTap:bulkDbtChosen(it)}));
   let st=document.getElementById('bulkDbtStatus');
   try{
-    if(st)st.textContent='⏳ Đang ghi '+updates.length+' Dạng bài tập vào Google Sheet...';
+    if(st)st.textContent=isGithubBank()
+      ? ('⏳ Đang ghi '+updates.length+' Dạng bài tập vào ngân hàng GitHub...')
+      : ('⏳ Đang ghi '+updates.length+' Dạng bài tập vào Google Sheet...');
     let j=await api('/api/ai/apply-dangbaitap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
     for(let up of updates){
       let q=QUESTIONS[up.index];
@@ -30662,7 +31464,9 @@ async function bulkDbtApplySelected(){
     await refreshCatalogFromMeta();
     flashCatalogLesson(scope||patchCatalogScopeFromQuestions());
     syncAdminLearningBoard();
-    if(st)st.textContent='✅ Đã cập nhật '+(j.updated||updates.length)+' câu (cột H). Các dòng có viền xanh «✅ Đã lưu Sheet» — đóng modal để xem câu đang mở.';
+    if(st)st.textContent=isGithubBank()
+      ? ('✅ Đã cập nhật '+(j.updated||updates.length)+' câu. Các dòng có viền xanh «✅ Đã lưu» — đóng modal để xem câu đang mở.')
+      : ('✅ Đã cập nhật '+(j.updated||updates.length)+' câu (cột H). Các dòng có viền xanh «✅ Đã lưu Sheet» — đóng modal để xem câu đang mở.');
   }catch(e){if(st)st.textContent='❌ Không ghi được: '+(e.message||e);alert('Không ghi Dạng bài tập được: '+(e.message||e))}
 }
 
@@ -30701,7 +31505,7 @@ function renderBulkLevelList(){
     let cur=normMucDoFormVal(it.current_md||'');
     let checked=it.selected?'checked':'';
     let aiBadge=ai?`<span class="mucdoBadge ${mucdoBadgeClass(ai)}">AI: ${esc(ai)}</span>`:'<span class="muted">AI chưa gợi ý</span>';
-    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ Đã lưu Sheet</span>`:'';
+    let saved=it.saved?` <span class="tag" style="background:#bbf7d0;color:#14532d">✅ ${isGithubBank()?'Đã lưu':'Đã lưu Sheet'}</span>`:'';
     let border=it.saved?'border:2px solid #86efac;background:#f0fdf4':(it.selected?'border:2px solid #93c5fd;background:#eff6ff':'border:1px solid var(--border);background:var(--bg)');
     return `<div class="latexQCard" style="margin:0 0 10px;padding:10px;${border};border-radius:10px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
@@ -30840,11 +31644,15 @@ async function bulkLevelApplySelected(){
   if(!selected.length){alert('Chưa tick câu nào có mức độ.\n\nTick ô «Chấp nhận» hoặc bấm «✅ Tick tất cả gợi ý» sau khi GPT xong.');return}
   let noRow=selected.filter(it=>(!it.row||parseInt(it.row,10)<2)&&!String(it.ID||'').trim());
   if(noRow.length){alert('Có '+noRow.length+' câu chưa có dòng Sheet lẫn ID. Bấm 🔄 Đồng bộ Sheet rồi thử lại.');return}
-  if(!confirm('Ghi mức độ cho '+selected.length+' câu vào cột I Google Sheet?'))return;
+  if(!confirm(isGithubBank()
+    ? ('Ghi mức độ cho '+selected.length+' câu vào ngân hàng GitHub (lưu trên máy, không ghi Google Sheet)?')
+    : ('Ghi mức độ cho '+selected.length+' câu vào cột I Google Sheet?')))return;
   let updates=selected.map(it=>({index:it.index,row:parseInt(it.row,10),ID:it.ID,MucDo:bulkLevelChosen(it)}));
   let st=document.getElementById('bulkLevelStatus');
   try{
-    if(st)st.textContent='⏳ Đang ghi '+updates.length+' mức độ vào Google Sheet...';
+    if(st)st.textContent=isGithubBank()
+      ? ('⏳ Đang ghi '+updates.length+' mức độ vào ngân hàng GitHub...')
+      : ('⏳ Đang ghi '+updates.length+' mức độ vào Google Sheet...');
     let j=await api('/api/ai/apply-levels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
     for(let up of updates){
       let q=QUESTIONS[up.index];
@@ -30853,7 +31661,9 @@ async function bulkLevelApplySelected(){
       if(it){it.current_md=up.MucDo;it.ai_md=up.MucDo;it.saved=true;it.selected=false}
     }
     renderBulkLevelList();renderNav();renderQuestion();
-    if(st)st.textContent='✅ Đã cập nhật '+(j.updated||updates.length)+' câu (cột I). Các dòng có viền xanh «✅ Đã lưu Sheet» — đóng modal để xem nav màu mức độ.';
+    if(st)st.textContent=isGithubBank()
+      ? ('✅ Đã cập nhật '+(j.updated||updates.length)+' câu. Các dòng có viền xanh «✅ Đã lưu» — đóng modal để xem nav màu mức độ.')
+      : ('✅ Đã cập nhật '+(j.updated||updates.length)+' câu (cột I). Các dòng có viền xanh «✅ Đã lưu Sheet» — đóng modal để xem nav màu mức độ.');
   }catch(e){
     if(st)st.textContent='❌ Không ghi được: '+(e.message||e);
     alert('Không ghi mức độ được: '+(e.message||e));
@@ -32409,9 +33219,17 @@ function openLatexImportModal(){
   latexImportRefreshDbtList();
   let mq=document.getElementById('latexDefMucDo');if(mq&&!mq.value)mq.value='';
   let qu=document.getElementById('latexDefQuyen');if(qu&&!qu.value)qu.value=q.QuyenTruyCap||'VIP';
-  setLatexImportStatus('Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
+  syncLatexImportGithubUi();
+  setLatexImportStatus(isGithubBank()?'Dán .tex rồi Đọc thử. Chèn sẽ ghi vào de.tex của bài (trên máy), không ghi Google Sheet.':'Dán file .tex hoặc bấm chọn file. Nên bấm “Đọc thử” trước khi chèn.');
   m.classList.remove('hide');
   closeAdminMoreMenu();
+}
+function syncLatexImportGithubUi(){
+  let gh=typeof isGithubBank==='function'&&isGithubBank();
+  let t=document.getElementById('latexImportTitle');
+  if(t)t.textContent=gh?'Nhập đề LaTeX vào bài .tex':'Nhập đề LaTeX vào Google Sheet';
+  let b=document.getElementById('latexImportCommitBtn');
+  if(b)b.textContent=gh?'✅ Chèn vào bài .tex':'✅ Chèn vào Google Sheet';
 }
 function closeLatexImportModal(){
   let m=document.getElementById('latexImportModal');if(m)m.classList.add('hide');
@@ -32433,7 +33251,7 @@ async function latexImportCall(commit,levelOverrides,extra){
   if(extra.skip_questions)zipFile=null;
   let aiLevel=!extra.skip_questions&&(val('latexDefMucDo')==='AI');
   levelOverrides=Array.isArray(levelOverrides)?levelOverrides:[];
-  setLatexImportStatus(commit?(extra.skip_questions?'⏳ Đang lưu khung lý thuyết…':'⏳ Đang chèn vào Google Sheet...'):'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
+  setLatexImportStatus(commit?(extra.skip_questions?'⏳ Đang lưu khung lý thuyết…':(isGithubBank()?'⏳ Đang chèn vào bài .tex...':'⏳ Đang chèn vào Google Sheet...')):'⏳ Đang parse LaTeX'+(aiLevel?' + GPT ADMIN nhận diện mức độ...':'...'));
   let j;
   if(zipFile){
     let buildFd=useGpt=>{
@@ -32660,7 +33478,7 @@ async function commitLatexImport(){
     let items=latexQuestionsFromPreview(pre);
     let theoryN=((pre.theory_groups||[]).length)+((pre.theory_lessons||[]).length);
     if(!items.length&&!theoryN){alert('Chưa có câu hoặc học liệu để chèn.');return}
-    let msg=latexImportSummary(pre)+'\n\nChèn HẾT '+items.length+' câu (câu trùng vẫn chèn). Sau đó ADMIN chọn: giữ cả hai hoặc xóa bản mới trùng.\n\nApp chèn từng nhóm 8 câu.';
+    let msg=latexImportSummary(pre)+'\n\nChèn HẾT '+items.length+' câu'+(isGithubBank()?' vào file de.tex của bài (trên máy, không ghi Google Sheet).':' (câu trùng vẫn chèn). Sau đó ADMIN chọn: giữ cả hai hoặc xóa bản mới trùng.')+'\n\nApp chèn từng nhóm 8 câu.';
     if(!confirm(msg)) {setLatexImportStatus(latexImportSummary(pre));return}
     async function pushLatexChunks(){
       let out={created:0,skipped:[],warns:[],startRow:0,endRow:0,inserted:[],dupHits:[]};
@@ -32668,7 +33486,7 @@ async function commitLatexImport(){
       for(let i=0;i<items.length;i+=CHUNK){
         let chunk=items.slice(i,i+CHUNK);
         let a=i+1,b=i+chunk.length;
-        setLatexImportStatus('⏳ Đang chèn câu '+a+'–'+b+'/'+items.length+' lên Google Sheet…');
+        setLatexImportStatus('⏳ Đang chèn câu '+a+'–'+b+'/'+items.length+(isGithubBank()?' vào bài .tex…':' lên Google Sheet…'));
         let payload={questions:chunk,defaults:currentLatexDefaults(),index_base:i,allow_duplicates:true};
         let j=await api('/api/latex/save-questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),timeoutMs:45000},0);
         out.created+=parseInt(j.created,10)||0;
@@ -32701,7 +33519,7 @@ async function commitLatexImport(){
     created=pack.created;
     let skipped=pack.skipped,warns=pack.warns,startRow=pack.startRow,endRow=pack.endRow,inserted=pack.inserted,dupHits=pack.dupHits||[];
     let dupKept=0,dupDropped=0,dupDeleteFailed='';
-    if(dupHits.length){
+    if(dupHits.length && !isGithubBank()){
       let lines=dupHits.slice(0,14).map(d=>{
         let n='#'+(d.index||'?');
         let old=(d.existing_id?('ID '+d.existing_id):'')+(d.existing_row?(' dòng '+d.existing_row):'');
@@ -38026,14 +38844,12 @@ def _latex_meta_id(ex_body: str, idx: int) -> str:
     m = re.search(r"%\s*ID\s*:\s*(\S+)", str(ex_body or ""), re.I)
     if m:
         return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
-    m = re.search(r"%\s*\[([0-9A-Za-z._\-]+)\]", str(ex_body or ""))
-    if m:
-        return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
     m = re.search(r"\[Mã\s*câu\s*:\s*([^\]]+)\]", ex_body, re.I)
     if not m:
         m = re.search(r"\[Ma\s*cau\s*:\s*([^\]]+)\]", strip_accents(ex_body), re.I)
     if m:
         return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
+    # %[0D1N1-1] chỉ là mức độ (NB/TH/VD), không phải mã câu — nhiều câu trùng tag này.
     return "LATEX_" + stable_hash(ex_body + str(idx), 12)
 
 
@@ -44729,7 +45545,11 @@ def api_question_review_bulk():
             made = clean(body.get("made") or body.get("MaDe") or "")
             if made:
                 qs = st.resolve_quiz_base(made)
-                items = [{"row": q.get("_row"), "ID": q.get("ID", "")} for q in qs if int(q.get("_row") or 0) >= 2]
+                items = [
+                    {"row": q.get("_row"), "ID": q.get("ID", "")}
+                    for q in qs
+                    if clean(q.get("ID")) or int(q.get("_row") or 0) >= 2
+                ]
             else:
                 return jsonify({"error": "Chưa có danh sách câu hoặc mã đề."}), 400
         out = st.update_question_review_bulk(items, reviewed=reviewed)
@@ -45770,7 +46590,7 @@ def api_latex_import():
     if bad:
         return bad
     if not is_admin():
-        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
+        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX"}), 403
 
     asset_zip = None
     level_overrides: Any = []
@@ -46037,7 +46857,7 @@ def api_latex_save_questions():
     if bad:
         return bad
     if not is_admin():
-        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX vào Google Sheet"}), 403
+        return jsonify({"error": "Chỉ ADMIN được nhập LaTeX"}), 403
     body = request.get_json(silent=True) or {}
     items = body.get("questions") or body.get("items") or []
     if not isinstance(items, list) or not items:
@@ -46079,7 +46899,7 @@ def api_latex_save_questions():
         result["source"] = "LATEX_IMPORT"
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e) or "Không chèn được câu lên Google Sheet."}), 400
+        return jsonify({"error": str(e) or "Không chèn được câu."}), 400
 
 
 @app.route("/api/img/drive/<path:file_ref>")
