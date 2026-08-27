@@ -66,7 +66,7 @@ import uuid
 from datetime import datetime, timedelta
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from flask import (
@@ -247,6 +247,8 @@ SHEET_LOAD_TIMEOUT_SEC = max(30, min(int(os.environ.get("SHEET_LOAD_TIMEOUT_SEC"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 LATEX_ASSET_DIR = os.path.join(STATIC_DIR, "latex_assets")
+_EXERCISE_TYPE_ORDER = ["Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận"]
+_PHYSICS_EXERCISE_METADATA_REL = os.path.join("Vật lý", "bai_tap_phan_loai_metadata.json")
 DEFAULT_GEMINI_HINT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GEMINI_ADMIN_MODEL = "gemini-2.5-flash"
 DEFAULT_GEMINI_VISION_MODEL = "gemini-2.5-flash"
@@ -504,6 +506,96 @@ def log_swallow(where: str) -> None:
 def log_exc(where: str, exc: BaseException) -> None:
     """Ghi log lỗi đã bị bắt mà vẫn cho luồng chạy tiếp (không đổi hành vi app)."""
     log.warning("[%s] %s: %s", where, type(exc).__name__, exc, exc_info=log.isEnabledFor(logging.DEBUG))
+
+
+def _exercise_metadata_candidate_paths(metadata_path: str = "") -> List[str]:
+    out: List[str] = []
+    if metadata_path:
+        out.append(os.path.abspath(metadata_path))
+    else:
+        if github_tex_config:
+            try:
+                cfg = github_tex_config(APP_DIR)
+                for root in (cfg.get("local_dir") or "", cfg.get("cache_dir") or ""):
+                    if root:
+                        out.append(os.path.join(root, _PHYSICS_EXERCISE_METADATA_REL))
+            except Exception:
+                log_swallow("exercise_metadata_candidate_paths:github_tex_config")
+        out.append(os.path.join(APP_DIR, "ngan-hang", _PHYSICS_EXERCISE_METADATA_REL))
+    seen = set()
+    deduped: List[str] = []
+    for path in out:
+        path_n = os.path.abspath(path)
+        if path_n in seen:
+            continue
+        seen.add(path_n)
+        deduped.append(path_n)
+    return deduped
+
+
+def _normalize_exercise_metadata_counts(raw: Any) -> Dict[str, int]:
+    out: Dict[str, int] = {}
+    if not isinstance(raw, dict):
+        return out
+    for key, value in raw.items():
+        name = clean(key)
+        if not name:
+            continue
+        try:
+            n = int(value or 0)
+        except Exception:
+            continue
+        if n > 0:
+            out[name] = n
+    return out
+
+
+def _ordered_exercise_types_for_counts(counts: Dict[str, int]) -> List[str]:
+    preferred = [name for name in _EXERCISE_TYPE_ORDER if int(counts.get(name) or 0) > 0]
+    extras = sorted(
+        [name for name, value in (counts or {}).items() if name not in preferred and int(value or 0) > 0],
+        key=key_norm,
+    )
+    return preferred + extras
+
+
+@lru_cache(maxsize=4)
+def load_physics_exercise_metadata_map(metadata_path: str = "") -> Dict[str, Dict[str, int]]:
+    """Đọc metadata số câu theo dạng BT cho từng file .tex Vật lí."""
+    for path in _exercise_metadata_candidate_paths(metadata_path):
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                payload = json.load(fh)
+        except Exception:
+            log_swallow("load_physics_exercise_metadata_map:read")
+            continue
+        rows: List[Dict[str, Any]] = []
+        if isinstance(payload, dict) and isinstance(payload.get("lessons"), list):
+            rows = [x for x in payload.get("lessons") or [] if isinstance(x, dict)]
+        elif isinstance(payload, dict):
+            rows = [{"path": rel, "counts_by_type": counts} for rel, counts in payload.items() if isinstance(counts, dict)]
+        elif isinstance(payload, list):
+            rows = [x for x in payload if isinstance(x, dict)]
+        out: Dict[str, Dict[str, int]] = {}
+        for row in rows:
+            rel = clean(row.get("path") or row.get("rel") or row.get("lesson_path") or row.get("github") or "")
+            if not rel:
+                continue
+            counts = _normalize_exercise_metadata_counts(
+                row.get("counts_by_type")
+                or row.get("dangbaitap")
+                or ((row.get("FilterCounts") or {}).get("dangbaitap") if isinstance(row.get("FilterCounts"), dict) else {})
+            )
+            if not counts:
+                continue
+            rel_n = rel.replace("\\", "/")
+            out[rel_n] = counts
+            if rel_n.endswith("/de.tex"):
+                out.setdefault(rel_n[: -len("/de.tex")], counts)
+        return out
+    return {}
 
 
 # ------------------------------------------------------------------
@@ -6744,6 +6836,7 @@ class SheetStore:
         """Tên bài từ thư mục/muc_luc; số câu đếm \\begin{ex}/\\begin{bt} trong file."""
         lessons: List[Dict[str, Any]] = []
         err = ""
+        exercise_meta_map = load_physics_exercise_metadata_map()
         if load_muc_luc_lessons and github_tex_config:
             try:
                 lessons = load_muc_luc_lessons(github_tex_config(APP_DIR))
@@ -6767,6 +6860,9 @@ class SheetStore:
             if gk and rel:
                 self._github_tex_rel_by_made[gk] = rel
                 seen_rel.add(rel.replace("\\", "/"))
+            rel_norm = rel.replace("\\", "/")
+            dbt_counts = dict(exercise_meta_map.get(rel_norm, {}) or {})
+            dbt_order = _ordered_exercise_types_for_counts(dbt_counts)
             catalog.append({
                 "MaDe": gk,
                 "GroupKey": gk,
@@ -6775,13 +6871,14 @@ class SheetStore:
                 "Chuong": qmeta["Chuong"],
                 "BaiHoc": qmeta["BaiHoc"],
                 "De": qmeta["BaiHoc"],
-                "DangBaiTap": "",
+                "DangBaiTap": ", ".join(dbt_order),
                 "BoDe": "",
                 "SoCau": n,
                 "QuyenTruyCap": "VIP",
                 "IsFree": False,
                 "_tex_rel": rel,
-                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": dbt_counts},
+                "DbtOrder": dbt_order,
             })
         if list_local_tex_files and github_tex_config:
             cfg = github_tex_config(APP_DIR)
@@ -6798,6 +6895,8 @@ class SheetStore:
                 total += n
                 if gk:
                     self._github_tex_rel_by_made[gk] = rel_n
+                dbt_counts = dict(exercise_meta_map.get(rel_n, {}) or {})
+                dbt_order = _ordered_exercise_types_for_counts(dbt_counts)
                 catalog.append({
                     "MaDe": gk,
                     "GroupKey": gk,
@@ -6806,13 +6905,14 @@ class SheetStore:
                     "Chuong": qmeta.get("Chuong", ""),
                     "BaiHoc": qmeta.get("BaiHoc", ""),
                     "De": qmeta.get("BaiHoc", ""),
-                    "DangBaiTap": "",
+                    "DangBaiTap": ", ".join(dbt_order),
                     "BoDe": "",
                     "SoCau": n,
                     "QuyenTruyCap": "VIP",
                     "IsFree": False,
                     "_tex_rel": rel_n,
-                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                    "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": dbt_counts},
+                    "DbtOrder": dbt_order,
                 })
                 seen_rel.add(rel_n)
         catalog.sort(key=catalog_sort_key)
@@ -35193,7 +35293,7 @@ function v246EnsureBookCss(){
   .bookShelfV246{display:block}.bookSubjectBlock{margin:12px 0 16px}.bookSubjectTitle{padding:11px 12px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;box-shadow:0 2px 8px #1d4ed833;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookSubjectTitle small{font-size:12px;opacity:.95;font-weight:800}
   .bookGradeBlock{margin:10px 0 12px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 4px #0f172a0f}.bookGradeHead{padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.bookGradeHead .bookMini{font-size:12px;color:#64748b;font-weight:800}
   .bookChapterBlock{margin:10px;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#f8fbff}.bookChapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;position:relative;z-index:2}.bookChapterHead .bookChapterDbtBtn{flex-shrink:0;cursor:pointer;position:relative;z-index:3}.bookChapterHead small{font-size:12px;font-weight:800;color:#475569}.bookLessonList{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}
-  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookTag.bookTagDone{background:#fef9c3;border-color:#facc15;color:#854d0e}.bookTag.bookTagComplete{background:#dcfce7;border-color:#22c55e;color:#166534}.bookLessonProg,.bookChapterProg{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle}.bookLessonCard.lessonDone{border-color:#fde68a;background:#fffbeb}.bookLessonCard.lessonComplete{border-color:#86efac;background:#f0fdf4}.bookChapterBlock.isChapterComplete .bookChapterHead{background:#dcfce7;border-color:#86efac}.bookDbtBtn.isPracticeDone{border-color:#fde68a;background:#fffbeb}.bookDbtBtn.isPracticeComplete{border-color:#86efac;background:#f0fdf4}.bookDbtProg{font-size:10px;font-weight:950;margin-right:3px}.bookDbtProgDone{color:#ca8a04}.bookDbtProgComplete{color:#16a34a}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:#9a3412;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
+  .bookLessonCard{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:10px;box-shadow:0 1px 3px #0f172a0d;display:flex;flex-direction:column;gap:7px}.bookLessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.bookLessonSub{font-size:12px;color:#64748b;line-height:1.35}.bookLessonTags{display:flex;flex-wrap:wrap;gap:5px}.bookTag{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;color:#334155}.bookTag.nb{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.th{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.bookTag.vd{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.vdc{background:#fef2f2;border-color:#fca5a5;color:#991b1b}.bookTag.dang-tn{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookTag.dang-ds{background:#f0fdf4;border-color:#86efac;color:#166534}.bookTag.dang-tln{background:#faf5ff;border-color:#d8b4fe;color:#7e22ce}.bookTag.dang-tl{background:#fff7ed;border-color:#fdba74;color:#c2410c}.bookTag.dang-other{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.bookTag.bookTagDone{background:#fef9c3;border-color:#facc15;color:#854d0e}.bookTag.bookTagComplete{background:#dcfce7;border-color:#22c55e;color:#166534}.bookLessonProg,.bookChapterProg{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:middle}.bookLessonCard.lessonDone{border-color:#fde68a;background:#fffbeb}.bookLessonCard.lessonComplete{border-color:#86efac;background:#f0fdf4}.bookChapterBlock.isChapterComplete .bookChapterHead{background:#dcfce7;border-color:#86efac}.bookDbtBtn.isPracticeDone{border-color:#fde68a;background:#fffbeb}.bookDbtBtn.isPracticeComplete{border-color:#86efac;background:#f0fdf4}.bookDbtBtn.bookDbtType-tn{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}.bookDbtBtn.bookDbtType-ds{border-color:#86efac;background:#f0fdf4;color:#166534}.bookDbtBtn.bookDbtType-tln{border-color:#d8b4fe;background:#faf5ff;color:#7e22ce}.bookDbtBtn.bookDbtType-tl{border-color:#fdba74;background:#fff7ed;color:#c2410c}.bookDbtBtn.bookDbtType-tn .bookDbtNum{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}.bookDbtBtn.bookDbtType-ds .bookDbtNum{background:#dcfce7;border-color:#86efac;color:#166534}.bookDbtBtn.bookDbtType-tln .bookDbtNum{background:#f3e8ff;border-color:#d8b4fe;color:#7e22ce}.bookDbtBtn.bookDbtType-tl .bookDbtNum{background:#ffedd5;border-color:#fdba74;color:#c2410c}.bookDbtProg{font-size:10px;font-weight:950;margin-right:3px}.bookDbtProgDone{color:#ca8a04}.bookDbtProgComplete{color:#16a34a}.bookExamRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}.bookExamBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:9px;padding:5px 8px;font-size:12px;font-weight:900;cursor:pointer}.dbtOrderList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin-top:8px}.dbtOrderRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}.dbtOrderNum{font-weight:900;color:#64748b;min-width:1.5em}.dbtOrderName{flex:1;line-height:1.35}.dbtOrderBtns{display:flex;gap:4px}.bookDbtRow{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:min(52vh,420px);overflow:auto;padding:6px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb66}.bookDbtMoreHint{margin-top:4px;font-size:11px;font-weight:800;color:#92400e;text-align:center;opacity:.95}.bookDbtRow.isExpanded{max-height:none}.bookDbtBtn{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:flex-start;gap:5px;width:100%;border:1px solid #fde68a;background:#fffdf5;color:#92400e;border-radius:8px;padding:5px 7px;font-size:10.5px;font-weight:850;cursor:pointer;line-height:1.25;text-align:left}.bookDbtBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}.bookDbtNum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:10px;font-weight:950;margin-top:1px}.bookDbtBody{min-width:0;display:flex;flex-direction:column;gap:2px}.bookDbtText{min-width:0;overflow:visible;text-overflow:unset;white-space:normal;word-break:break-word;line-height:1.35}.bookDbtMiniRow{display:flex;flex-wrap:wrap;gap:3px}.bookDbtMini{font-size:8.5px;font-weight:850;padding:1px 4px;border-radius:999px;border:1px solid #cbd5e1;line-height:1.2;white-space:nowrap}.bookDbtMini-tn{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.bookDbtMini-ds{background:#f0fdf4;color:#166534;border-color:#86efac}.bookDbtMini-tln{background:#faf5ff;color:#7e22ce;border-color:#d8b4fe}.bookDbtMini-tl{background:#fff7ed;color:#c2410c;border-color:#fdba74}.bookDbtCount{font-size:10px;font-weight:950;color:inherit;white-space:nowrap;margin-top:1px}.bookDbtItem{display:flex;align-items:stretch;gap:4px;width:100%}.bookDbtItem .bookDbtBtn{flex:1;min-width:0}.bookDbtAiBtn{flex:0 0 auto;align-self:stretch;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.bookDbtAiBtn:hover{filter:brightness(.97);background:#ede9fe}.cdbtAiGenBtn{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#5b21b6!important}.aiGenProvLbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin:0}.aiGenProvLbl select{font-size:12px;padding:5px 8px;border-radius:8px}.startDbtList{display:flex;flex-direction:column;gap:6px}.startDbtOpt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}.startDbtOpt:hover{background:var(--bg)}.startDbtOpt.startDbtUncls{border-color:#fdba74;background:#fff7ed}.bookDbtUncls{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}.dbtMergeList{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.dbtMergeSuggestRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.dbtMergeGroupBtn{font-size:11px!important;padding:4px 8px!important}.dbtMergePickRow{margin:0!important}.chapterDbtModalBox{max-width:980px!important}.chapterDbtBody{max-height:min(72vh,680px);overflow:auto;display:flex;flex-direction:column;gap:10px;margin-top:8px;padding-right:4px}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:visible}.chapterDbtRows{max-height:none;overflow:visible}.chapterDbtLesson{border:1px solid #93c5fd;border-radius:12px;background:var(--surface);overflow:hidden}.chapterDbtLessonHead{padding:10px 12px;background:#eff6ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-weight:900;color:#1e3a8a}.chapterDbtLessonHead small{font-weight:800;color:#64748b;font-size:12px}.chapterDbtLessonTools{display:flex;flex-wrap:wrap;gap:6px}.chapterDbtRows{padding:8px 10px;display:flex;flex-direction:column;gap:6px}.chapterDbtRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);flex-wrap:wrap}.chapterDbtRowTools{display:flex;align-items:center;gap:4px;flex-shrink:0}.chapterDbtMoveSel{font-size:11px;font-weight:800;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1d4ed8;max-width:132px;cursor:pointer}.chapterDbtRowNum{color:#64748b;font-weight:900;min-width:1.4em}.chapterDbtRowName{flex:1;min-width:140px;line-height:1.35}.chapterDbtMergeBar{padding:8px 10px 10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.chapterDbtMergeBar input{flex:1;min-width:160px;padding:7px 9px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb}.chapterDbtSuggest{padding:8px 10px;border:1px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;line-height:1.45;margin-bottom:4px}.bookExamBtnAll{font-weight:950}.bookExamBtn:hover{filter:brightness(1.03);transform:translateY(-1px)}
   .bookLessonCard.selectedLesson{outline:2px solid #1d4ed8;background:#f8fbff}.bookLessonCard.shareTarget{outline:3px solid #60a5fa;box-shadow:0 0 0 4px #dbeafe}.bookLessonCard.catalogFlash{outline:3px solid #22c55e!important;box-shadow:0 0 0 4px #bbf7d088!important;animation:catalogFlashPulse .85s ease-in-out 2}@keyframes catalogFlashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.bookLessonCard .shareRow{margin-top:6px;flex-wrap:wrap}.bookLessonCard .shareBtns{flex-wrap:wrap}.bookEmpty{padding:14px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#f8fafc}
   html[data-theme='dark'] .bookIntroV246{background:linear-gradient(180deg,#172554,#0f172a);border-color:#1d4ed8}html[data-theme='dark'] .bookIntroTitle{color:#bfdbfe}html[data-theme='dark'] .bookStat{background:#0f172a;border-color:#334155;color:#bfdbfe}html[data-theme='dark'] .bookGradeBlock,html[data-theme='dark'] .bookLessonCard{background:#111827;border-color:#334155}html[data-theme='dark'] .bookGradeHead{background:#1e293b;color:#e5e7eb}html[data-theme='dark'] .bookChapterBlock{background:#0f172a;border-color:#1d4ed8}html[data-theme='dark'] .bookChapterHead{background:#1e3a5f;color:#bfdbfe}html[data-theme='dark'] .bookLessonTitle{color:#e5e7eb}html[data-theme='dark'] .bookTag{background:#1e293b;border-color:#475569;color:#cbd5e1}html[data-theme='dark'] .bookTag.bookTagDang{background:#0f172a;border-color:#475569;color:#94a3b8}
   .bookLessonTags.bookLessonTagsCompact{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:4px;padding-bottom:1px}.bookLessonTags.bookLessonTagsCompact::-webkit-scrollbar{display:none}.bookTag.bookTagDang{color:#475569;border-color:#cbd5e1;background:#f1f5f9;letter-spacing:-.02em}
@@ -35326,7 +35426,7 @@ window.ldvlStudentProgressLoad=ldvlStudentProgressLoad;
 window.ldvlStudentProgressSyncNav=ldvlStudentProgressSyncNav;
 (function(){let sh=document.getElementById('ldvlStudentHome');if(!sh)return;let obs=new MutationObserver(function(){window.__LDVL_PROGRESS_TAB_OPEN=sh.classList.contains('homeTab-progress')});obs.observe(sh,{attributes:true,attributeFilter:['class']})})();
 function v246LessonCard(mon,khoi,chuong,bai,entries){
-  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let lessonMade=catalogLessonMadeForPractice(entries);let made=String(lessonMade||primary.MaDe||'').replace(/'/g,"\\'");let lessonProg=lessonProgressForCard(mon,khoi,chuong,bai,entries);let progTags=progressStatusTags(lessonProg);let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let dd=String(it.d||'').replace(/'/g,"\\'");let cls=it.uncls?' bookDbtUncls':'';let pp=practiceProgressForSession(lessonMade||primary.MaDe||'',it.d||'');if(pp&&pp.complete)cls+=' isPracticeComplete';else if(pp&&pp.done)cls+=' isPracticeDone';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;if(pp&&pp.complete)title+=' · Hoàn thành '+Math.round(pp.best_pct||0)+'%';else if(pp&&pp.done)title+=' · Đã làm';let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let progMini=(pp&&pp.complete)?'<span class="bookDbtProg bookDbtProgComplete">✓</span>':((pp&&pp.done)?'<span class="bookDbtProg bookDbtProgDone">✓</span>':'');let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" data-made="${escAttr(lessonMade||primary.MaDe||'')}" data-dbt="${escAttr(oneLineText(it.d||''))}" onclick="openStartModal(this.dataset.made,this.dataset.dbt)" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(oneLineText(it.label))}</span>${mini}</span><span class="bookDbtMeta">${progMini}${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
+  entries=entries||[];let qs=entries.reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);let dbtMerge=v246MergeDbtCounts(entries);let dbtPairs=dbtMerge.pairs||[];let uncls=dbtMerge.unclassified||0;let primary=entries[0]||{};let lessonMade=catalogLessonMadeForPractice(entries);let made=String(lessonMade||primary.MaDe||'').replace(/'/g,"\\'");let lessonProg=lessonProgressForCard(mon,khoi,chuong,bai,entries);let progTags=progressStatusTags(lessonProg);let dbtItems=[];if(uncls>0)dbtItems.push({d:DBT_UNCLASSIFIED,n:uncls,label:'Chưa phân loại',uncls:true});dbtPairs.forEach(([d,n])=>dbtItems.push({d,n,label:d,uncls:false}));let monAi=String(mon||primary.Mon||'');let lopAi=String(primary.Lop||khoi||'');let chuongAi=String(chuong||primary.Chuong||'');let baiAi=String(bai||primary.BaiHoc||'');let dbtBtns=dbtItems.map((it,i)=>{let cls=it.uncls?' bookDbtUncls':'';let tone=v246DangCssClass(oneLineText(it.label||it.d||''));if(tone&&tone!=='dang-other')cls+=' bookDbtType-'+tone.replace('dang-','');let pp=practiceProgressForSession(lessonMade||primary.MaDe||'',it.d||'');if(pp&&pp.complete)cls+=' isPracticeComplete';else if(pp&&pp.done)cls+=' isPracticeDone';let tipBase=it.uncls?'Câu chưa có Dạng BT — ADMIN dùng AI phân loại':('Luyện: '+it.label);let tipDang=v246DbtDangTipText(it.d,entries);let title=tipDang?(tipBase+' — '+tipDang):tipBase;if(pp&&pp.complete)title+=' · Hoàn thành '+Math.round(pp.best_pct||0)+'%';else if(pp&&pp.done)title+=' · Đã làm';let mini=v246DbtDangMiniHtml(it.d,entries);let updNote=v246DbtUpdatedNote(it.d,entries);let progMini=(pp&&pp.complete)?'<span class="bookDbtProg bookDbtProgComplete">✓</span>':((pp&&pp.done)?'<span class="bookDbtProg bookDbtProgDone">✓</span>':'');let practiceBtn=`<button type="button" class="bookDbtBtn${cls}" data-made="${escAttr(lessonMade||primary.MaDe||'')}" data-dbt="${escAttr(oneLineText(it.d||''))}" onclick="openStartModal(this.dataset.made,this.dataset.dbt)" title="${escAttr(title)}"><span class="bookDbtNum">${i+1}</span><span class="bookDbtBody"><span class="bookDbtText">${esc(oneLineText(it.label))}</span>${mini}</span><span class="bookDbtMeta">${progMini}${it.n?`<b class="bookDbtCount">${it.n}</b>`:''}${updNote}</span></button>`;let aiBtn=(USER&&USER.is_admin&&!it.uncls)?`<button type="button" class="bookDbtAiBtn" data-mon="${escAttr(monAi)}" data-lop="${escAttr(lopAi)}" data-chuong="${escAttr(chuongAi)}" data-bai="${escAttr(baiAi)}" data-dbt="${escAttr(it.d||'')}" onclick="event.stopPropagation();openAdminAiGenFromEl(this)" title="ADMIN: Tạo thêm câu bằng Gemini/Claude cho dạng này">🤖 AI</button>`:'';return `<div class="bookDbtItem">${practiceBtn}${aiBtn}</div>`}).join('');let allBtn=made?`<button type="button" class="bookExamBtn bookExamBtnAll" onclick="openStartModal('${made}','')">📂 Chuyên đề · ${qs} câu</button>`:'';let selected=(val('fBaiHoc')&&entries.some(x=>x.BaiHoc===val('fBaiHoc')))?' selectedLesson':'';
   let orderBtn=(USER&&USER.is_admin&&made&&dbtPairs.length)?`<button type="button" class="bookExamBtn" onclick="openDbtOrderModal('${made}')" title="ADMIN: sắp xếp thứ tự dạng BT">↕ Thứ tự dạng</button>`:'';
   let madeRaw=String(primary.MaDe||'');let shareTools=madeRaw?v246ShareToolsHtml(primary,made):'';
   let cardCompleteCls=(lessonProg&&lessonProg.complete)?' lessonComplete':'';
@@ -48977,4 +49077,3 @@ function copyData(){navigator.clipboard.writeText(out.value||"");}
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
-
