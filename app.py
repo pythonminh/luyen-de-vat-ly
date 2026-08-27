@@ -138,8 +138,29 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V480_MH_HTML"
+APP_VERSION = "V481_GITHUB_TEX"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
+
+try:
+    from ldvl.github_tex import (
+        copy_cache_into_local,
+        defaults_from_rel_path,
+        download_github_tex,
+        github_tex_config,
+        lesson_rel_path,
+        list_local_tex_files,
+        read_tex_file,
+        write_tex_file,
+    )
+except Exception:  # pragma: no cover
+    copy_cache_into_local = None  # type: ignore[assignment]
+    defaults_from_rel_path = None  # type: ignore[assignment]
+    download_github_tex = None  # type: ignore[assignment]
+    github_tex_config = None  # type: ignore[assignment]
+    lesson_rel_path = None  # type: ignore[assignment]
+    list_local_tex_files = None  # type: ignore[assignment]
+    read_tex_file = None  # type: ignore[assignment]
+    write_tex_file = None  # type: ignore[assignment]
 
 GAS_DRIVE_UPLOAD_SCRIPT = r"""function doPost(e) {
   try {
@@ -5943,6 +5964,7 @@ class SheetStore:
         self.question_col_index: Dict[str, int] = {}
         self.question_source_mode = "SHEET"
         self.json_source_info: Dict[str, Any] = {}
+        self.github_tex_info: Dict[str, Any] = {}
         # V8 FAST LOGIN:
         # Không nạp toàn bộ sheet Cau_Hoi ngay khi mở trang/login.
         # Login chỉ đọc nhanh sheet HOC_VIEN; dữ liệu đề chỉ nạp khi vào app hoặc ADMIN bấm đồng bộ.
@@ -6005,6 +6027,8 @@ class SheetStore:
 
     def try_apply_questions_cache(self) -> bool:
         """Nạp catalog từ file đĩa — tránh chờ Google Sheet 1–2 phút lúc app ngủ dậy."""
+        if _json_question_source_mode() == "GITHUB":
+            return False
         if not _questions_disk_cache_enabled():
             return False
         if self.questions_loaded and self.questions:
@@ -6381,10 +6405,12 @@ class SheetStore:
         self.question_source_mode = _json_question_source_mode()
 
         # QUESTION_SOURCE:
-        #   SHEET      : đọc câu hỏi từ Google Sheet Cau_Hoi như cũ.
-        #   JSON_ONLY  : chỉ đọc câu hỏi từ file JSON trong data/json_questions hoặc data/json_exports.
-        #   SHEET_JSON : đọc Sheet trước, rồi cộng thêm câu hỏi từ JSON.
-        if self.question_source_mode != "JSON_ONLY":
+        #   SHEET         : đọc câu hỏi từ Google Sheet Cau_Hoi như cũ.
+        #   JSON_ONLY     : chỉ đọc câu hỏi từ file JSON trong data/json_questions hoặc data/json_exports.
+        #   SHEET_JSON    : đọc Sheet trước, rồi cộng thêm câu hỏi từ JSON.
+        #   GITHUB        : đọc file .tex trong ngan-hang/ (local + GitHub), không đọc Cau_Hoi.
+        #   SHEET_GITHUB  : đọc Sheet rồi cộng thêm câu từ .tex (bỏ trùng ID).
+        if self.question_source_mode not in ("JSON_ONLY", "GITHUB"):
             self.ws_questions = self.worksheet_or_none("Cau_Hoi")
             if self.ws_questions is None:
                 raise RuntimeError("Không thấy sheet Cau_Hoi")
@@ -6401,12 +6427,22 @@ class SheetStore:
 
         if self.question_source_mode == "JSON_ONLY":
             self.load_questions_from_json_runtime(replace=True)
+        elif self.question_source_mode == "GITHUB":
+            self.load_questions_from_github_tex(replace=True)
+            if not self.questions:
+                self.ws_questions = self.worksheet_or_none("Cau_Hoi")
+                if self.ws_questions is not None:
+                    self.ensure_question_competency_header()
+                    self.ensure_question_ngaycapnhat_header()
+                    self.load_questions()
         else:
             self.ensure_question_competency_header()
             self.ensure_question_ngaycapnhat_header()
             self.load_questions()
             if self.question_source_mode in ("SHEET_JSON", "SHEET+JSON", "BOTH", "MIX", "MIXED"):
                 self.load_questions_from_json_runtime(replace=False)
+            if self.question_source_mode == "SHEET_GITHUB":
+                self.load_questions_from_github_tex(replace=False)
 
         self.load_learning()
         self.load_lesson_catalog()
@@ -6856,6 +6892,130 @@ class SheetStore:
         self.json_source_info["added_to_app"] = added
         self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_question_indexes()
+
+    def load_questions_from_github_tex(self, replace: bool = False) -> None:
+        """Nạp đề từ ngan-hang/*.tex (máy local, cache, hoặc GitHub). Không ghi Google Sheet."""
+        info: Dict[str, Any] = {"files": [], "count_files": 0, "count_questions": 0, "added_to_app": 0}
+        if list_local_tex_files is None or github_tex_config is None:
+            info["error"] = "Thiếu module ldvl.github_tex"
+            self.github_tex_info = info
+            return
+        cfg = github_tex_config(APP_DIR)
+        info["repo"] = cfg.get("repo", "")
+        info["branch"] = cfg.get("branch", "")
+        info["local_dir"] = cfg.get("local_dir", "")
+        files = list_local_tex_files(cfg["local_dir"], cfg["cache_dir"])
+        if not files:
+            info["hint"] = (
+                "Chưa có file .tex. Đặt đề vào thư mục ngan-hang/ hoặc bấm Đồng bộ GitHub."
+            )
+        if replace:
+            self.questions = []
+            self.question_headers = list(QUESTION_FIELDS)
+            self.question_col_index = resolve_question_col_index(self.question_headers)
+
+        existing_keys = set()
+        for old_q in self.questions:
+            key = clean(old_q.get("ID")) or stable_hash(key_norm(old_q.get("CauHoi", "")), 16)
+            existing_keys.add(key)
+
+        added = 0
+        base_row = 800000
+        used_files = 0
+        for rel, abs_path in files:
+            try:
+                tex = read_tex_file(abs_path)
+            except Exception as e:
+                info.setdefault("errors", []).append(f"{rel}: {e}")
+                continue
+            if not re.search(r"(?m)^\\begin\s*\{\s*(?:ex|bt)\s*\}", tex):
+                continue
+            defaults = defaults_from_rel_path(rel) if defaults_from_rel_path else {}
+            try:
+                parsed = parse_latex_questions_2026(tex, defaults)
+            except Exception as e:
+                info.setdefault("errors", []).append(f"{rel}: parse {e}")
+                continue
+            qs = parsed.get("questions") if isinstance(parsed, dict) else []
+            if not qs:
+                continue
+            used_files += 1
+            info["files"].append(rel)
+            for q in qs:
+                q = dict(q or {})
+                try:
+                    q = canonical_question(q)
+                except Exception:
+                    log_swallow("load_questions_from_github_tex:canonical")
+                    q = {f: clean(q.get(f, "")) for f in QUESTION_FIELDS}
+                    q["Dang"] = effective_dang(q)
+                if not clean(q.get("CauHoi")):
+                    continue
+                for k, v in (defaults or {}).items():
+                    if v and not clean(q.get(k, "")):
+                        q[k] = v
+                q["MaDe"] = catalog_group_key(q)
+                q["_source"] = "GITHUB"
+                q["_tex_rel"] = rel
+                q["_tex_path"] = abs_path
+                key = clean(q.get("ID")) or stable_hash(key_norm(q.get("CauHoi", "")), 16)
+                if not replace and key in existing_keys:
+                    continue
+                existing_keys.add(key)
+                added += 1
+                q["_row"] = base_row + added
+                self.questions.append(q)
+        info["count_files"] = used_files
+        info["count_listed"] = len(files)
+        info["count_questions"] = added
+        info["added_to_app"] = added
+        info["blob_base"] = cfg.get("blob_base", "")
+        self.github_tex_info = info
+        if replace or added:
+            self.duplicate_report = analyze_question_duplicates(self.questions)
+            self.rebuild_question_indexes()
+
+    def _github_tex_abs_path(self, rel: str) -> str:
+        cfg = github_tex_config(APP_DIR) if github_tex_config else {}
+        local = cfg.get("local_dir") or os.path.join(APP_DIR, "ngan-hang")
+        return os.path.join(local, str(rel or "").replace("/", os.sep))
+
+    def _rewrite_github_lesson_tex(self, tex_rel: str) -> str:
+        """Ghi lại de.tex của một bài từ các câu đang có trong RAM."""
+        rel = clean(tex_rel).replace("\\", "/")
+        if not rel:
+            raise RuntimeError("Thiếu đường dẫn file .tex của bài.")
+        qs = [q for q in self.questions if clean(q.get("_tex_rel", "")).replace("\\", "/") == rel]
+        title = ""
+        if qs:
+            title = clean(qs[0].get("BaiHoc") or qs[0].get("De") or "")
+        tex = questions_to_latex_tex(qs, title=title)
+        abs_path = self._github_tex_abs_path(rel)
+        if write_tex_file:
+            write_tex_file(abs_path, tex)
+        else:
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            with open(abs_path, "w", encoding="utf-8") as f:
+                f.write(tex)
+        return abs_path
+
+    def _update_question_github_tex(self, q_ram: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
+        """ADMIN sửa câu — ghi vào file .tex của bài, không ghi Google Sheet."""
+        for k, v in (updates or {}).items():
+            if k in EDITABLE_FIELDS or k == "NgayCapNhat":
+                q_ram[k] = clean(v)
+        q_ram["Dang"] = effective_dang(q_ram)
+        q_ram["MaDe"] = catalog_group_key(q_ram)
+        rel = clean(q_ram.get("_tex_rel", ""))
+        if not rel:
+            rel = lesson_rel_path(
+                q_ram.get("Mon", ""), q_ram.get("Lop", ""), q_ram.get("Chuong", ""), q_ram.get("BaiHoc", "")
+            ) if lesson_rel_path else ""
+            q_ram["_tex_rel"] = rel
+        q_ram["_source"] = "GITHUB"
+        path = self._rewrite_github_lesson_tex(rel)
+        self.rebuild_indexes_after_admin_change(rebuild_catalog=not is_lightweight_question_update(updates or {}))
+        return {"ok": True, "id": q_ram.get("ID", ""), "source": "GITHUB", "tex": path, "row": int(q_ram.get("_row") or 0)}
 
     def load_learning(self) -> None:
         """Nạp Ly_Thuyet + Phuong_Phap vào RAM."""
@@ -7736,6 +7896,7 @@ class SheetStore:
             "count_catalog": len(self.catalog),
             "question_source": self.question_source_mode,
             "json_source": self.json_source_info if is_admin() else {},
+            "github_tex": self.github_tex_info if is_admin() else {},
             "user": current_user_public(),
             "filters": {
                 "Mon": merge_unique_field_values("Mon", opts("Mon"), lc_vals["Mon"]),
@@ -9928,6 +10089,26 @@ class SheetStore:
         """ADMIN sửa câu hỏi — ghi đúng cột theo tiêu đề Sheet Cau_Hoi (không đoán cột K/L…)."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được sửa câu hỏi")
+        expected_id = clean(expected_id)
+        q_ram = None
+        if expected_id:
+            lst = (self.by_id or {}).get(expected_id) or []
+            if lst:
+                q_ram = lst[0]
+        if q_ram is None and int(row_number or 0) >= 2:
+            for qq in self.questions:
+                try:
+                    if int(qq.get("_row") or 0) == int(row_number):
+                        q_ram = qq
+                        break
+                except Exception:
+                    log_swallow("update_question:find_ram_row")
+        if q_ram and (
+            clean(q_ram.get("_source")) == "GITHUB"
+            or (self.question_source_mode == "GITHUB" and clean(q_ram.get("_tex_rel")))
+        ):
+            return self._update_question_github_tex(q_ram, updates)
+
         self.connect()
         if self.ws_questions is None:
             self.ws_questions = self.worksheet_or_none("Cau_Hoi")
@@ -10665,6 +10846,19 @@ class SheetStore:
         """ADMIN xóa nguyên dòng câu hỏi khỏi sheet Cau_Hoi — cập nhật RAM, không đọc lại cả Sheet."""
         if not is_admin():
             raise RuntimeError("Chỉ ADMIN được xóa câu hỏi")
+        question_id = clean(question_id)
+        q_ram = None
+        if question_id:
+            lst = (self.by_id or {}).get(question_id) or []
+            if lst:
+                q_ram = lst[0]
+        if q_ram and clean(q_ram.get("_source")) == "GITHUB":
+            rel = clean(q_ram.get("_tex_rel", ""))
+            self.questions = [q for q in self.questions if q is not q_ram]
+            if rel:
+                self._rewrite_github_lesson_tex(rel)
+            self.rebuild_indexes_after_admin_change()
+            return {"ok": True, "deleted": True, "source": "GITHUB", "id": question_id, "tex": rel}
         if row_number < 2:
             raise RuntimeError("Dòng Google Sheet không hợp lệ")
 
@@ -11362,6 +11556,26 @@ class SheetStore:
         if not clean(data.get("CauHoi")):
             raise RuntimeError("Phải nhập nội dung câu hỏi (CauHoi).")
         data = _maybe_extract_tikz_into_hinhanh(data)
+        if self.question_source_mode == "GITHUB" or (
+            self.ws_questions is None and (self.question_source_mode in ("GITHUB", "SHEET_GITHUB"))
+        ):
+            seed = {f: data.get(f, "") for f in QUESTION_FIELDS}
+            cq = canonical_question(seed)
+            for f in QUESTION_FIELDS:
+                if not clean(data.get(f, "")):
+                    data[f] = cq.get(f, "")
+            data["MaDe"] = catalog_group_key(data)
+            rel = lesson_rel_path(
+                data.get("Mon", ""), data.get("Lop", ""), data.get("Chuong", ""), data.get("BaiHoc", "")
+            ) if lesson_rel_path else ""
+            data["_source"] = "GITHUB"
+            data["_tex_rel"] = rel
+            data["_row"] = 800000 + len(self.questions) + 1
+            self.questions.append(data)
+            if rel:
+                self._rewrite_github_lesson_tex(rel)
+            self.rebuild_indexes_after_admin_change()
+            return {"ok": True, "id": data.get("ID", ""), "source": "GITHUB", "tex": rel, "row": data["_row"]}
 
         with self.add_question_lock:
             self.ensure_question_competency_header()
@@ -25478,7 +25692,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   </div>
   <div id="ap-users" style="display:none" class="panel"><b>👥 Học viên</b><p class="muted" style="margin:8px 0;line-height:1.5">Quản lý tài khoản qua sheet đăng ký / đăng nhập app. Mục này sẽ mở rộng thống kê học viên trong bản sau.</p></div>
   <div id="ap-stats" style="display:none" class="panel"><b>📊 Thống kê điểm</b><p class="muted" style="margin:8px 0;line-height:1.5">Xem kết quả làm bài trong phiên luyện đề và sheet lịch sử (nếu có). Dùng mục lục đề để mở đề và xem báo cáo sau nộp bài.</p></div>
-  <div id="ap-sync" style="display:none" class="panel"><b>🔄 Đồng bộ Sheet</b><p class="muted" style="margin:8px 0 10px">Nạp lại dữ liệu từ Google Sheet (Cau_Hoi, mục lục đề…). PDF xem qua menu <b>📄 PDF</b>.</p><button type="button" class="btn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ ngay</button><div id="ldvlSyncStatus" class="muted" style="margin-top:10px;font-size:12px"></div></div>
+  <div id="ap-sync" style="display:none" class="panel"><b>🔄 Đồng bộ Sheet</b><p class="muted" style="margin:8px 0 10px">Nạp lại dữ liệu từ Google Sheet (Cau_Hoi, mục lục đề…). PDF xem qua menu <b>📄 PDF</b>.</p><button type="button" class="btn" onclick="syncData()"><i class="ti ti-refresh"></i> Đồng bộ ngay</button><div id="ldvlSyncStatus" class="muted" style="margin-top:10px;font-size:12px"></div><hr style="margin:14px 0;border:none;border-top:1px solid var(--border)"><b>📂 Ngân hàng LaTeX GitHub</b><p class="muted" style="margin:8px 0 10px">Đọc file <code>.tex</code> theo Môn / Lớp / Chương / Bài trong thư mục <code>ngan-hang/</code>. Bấm nút dưới để tải bản mới từ GitHub rồi nạp vào app — không dán vào Sheet.</p><button type="button" class="btn2" onclick="syncGithubTex()"><i class="ti ti-brand-github"></i> Đồng bộ GitHub .tex</button><div id="ldvlGithubTexStatus" class="muted" style="margin-top:10px;font-size:12px"></div></div>
   <div id="ap-tools" style="display:none" class="panel"><b>🛠 Công cụ &amp; AI Keys</b><p class="muted" style="margin:8px 0 10px">LaTeX, Dạng BT, xóa trùng, test key AI.</p><div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn2" onclick="openLatexImportModal()">📥 Nhập LaTeX</button><button type="button" class="btn2" onclick="openBulkDbtReview()">🏷️ Dạng BT</button><button type="button" class="btn2" onclick="openBulkLevelReview()">🎯 Mức độ</button><button type="button" class="btn2" onclick="dedupeSheetDuplicates()">🧹 Xóa trùng</button><button type="button" class="btn2" onclick="openAiKeyPanelAndCheck()">🔑 Key AI</button></div></div>
   <div id="ap-pdf-math" style="display:none" class="panel"><b style="color:var(--pdf)"><i class="ti ti-file-type-pdf"></i> PDF Toán</b><p class="muted" style="margin:8px 0 10px">Chèn/sửa PDF ở tab <b>PDF</b> trên thanh menu (giao diện luyện đề).</p><button type="button" class="btn" onclick="ldvlAdminNav(null,'ap-pdf-math')">→ Mở tab PDF · Toán</button></div>
   <div id="ap-pdf-phys" style="display:none" class="panel"><b style="color:var(--pdf)"><i class="ti ti-file-type-pdf"></i> PDF Vật lý</b><p class="muted" style="margin:8px 0 10px">Chèn/sửa PDF ở tab <b>PDF</b> trên thanh menu.</p><button type="button" class="btn" onclick="ldvlAdminNav(null,'ap-pdf-phys')">→ Mở tab PDF · Vật lý</button></div>
@@ -27620,6 +27834,7 @@ function dangCountLookup(fc,dang){if(!fc||!fc.dang)return 0;let nd=normDangClien
 function comboCountLookup(fc,lv,dang){if(!fc||!fc.combo)return 0;lv=(lv||'').trim().toUpperCase();let nd=normDangClient(dang);let k1=lv+'|'+nd,k2=lv+'|'+dang;if(fc.combo[k1]!=null)return fc.combo[k1];if(fc.combo[k2]!=null)return fc.combo[k2];let n=0;for(let k in fc.combo){let p=k.split('|');if(p[0]===lv&&normDangClient(p[1]||'')===nd)n+=fc.combo[k]||0}return n}
 function filterMatchCount(x,lv,dang){let fc=x&&x.FilterCounts;if(!fc)return null;lv=(lv||'').trim().toUpperCase();dang=(dang||'').trim();if(lv&&dang)return comboCountLookup(fc,lv,dang);if(dang)return dangCountLookup(fc,dang);if(lv)return fc.level[lv]||0;return null}
 async function syncData(){if(!confirm('Đồng bộ lại dữ liệu từ Google Sheet?\n\n• Chuẩn hóa Lop/Môn/Chương/Bài học từ DANH_MUC_BAI_HOC → Cau_Hoi\n• Cài dropdown trên Cau_Hoi tham chiếu DANH_MUC_BAI_HOC'))return;let j=await api('/api/sync',{method:'POST'});alert(j.message||'Đã bắt đầu đồng bộ.');await init();if(USER.is_admin){try{let lj=await api('/api/admin/sync-lesson-catalog',{method:'POST',timeoutMs:120000});let msg=[];if(lj.message)msg.push(lj.message);if(lj.dropdowns&&lj.dropdowns.message)msg.push(lj.dropdowns.message);if(lj.dropdown_error)msg.push('⚠ Dropdown: '+lj.dropdown_error);if(msg.length)alert(msg.join('\n\n'));if((lj.updated||0)>0||(lj.cells||0)>0)await refreshCatalogFromMeta()}catch(e){console.warn('sync lesson catalog',e)}}if(USER.is_admin&&META&&META.duplicate_report)alertDuplicateSheetReport(META.duplicate_report)}
+async function syncGithubTex(){if(!confirm('Tải file .tex từ GitHub (pythonminh/luyen-de-vat-ly → ngan-hang) rồi nạp vào app?\n\nFile local cùng đường dẫn sẽ bị ghi đè. Không ghi vào Google Sheet.'))return;let st=document.getElementById('ldvlGithubTexStatus');if(st)st.textContent='⏳ Đang tải .tex từ GitHub…';try{let j=await api('/api/github-tex/sync',{method:'POST',timeoutMs:180000});if(st)st.textContent=j.message||('Đã nạp '+(j.count_questions||0)+' câu từ GitHub.');alert(j.message||'Đã đồng bộ GitHub .tex.');await init();if(typeof refreshCatalogFromMeta==='function')await refreshCatalogFromMeta()}catch(e){let msg=e.message||e;if(st)st.textContent='⚠ '+msg;alert('Đồng bộ GitHub thất bại: '+msg)}}
 async function dedupeSheetDuplicates(made){
   // Chỉ ADMIN — server /api/question/dedupe cũng chặn 403 nếu không phải ADMIN.
   if(!USER||!USER.is_admin){alert('Chức năng Xóa trùng chỉ dành cho ADMIN.');return}
@@ -37540,6 +37755,9 @@ def _latex_option_clean(opt: str) -> Tuple[str, bool]:
 
 
 def _latex_meta_id(ex_body: str, idx: int) -> str:
+    m = re.search(r"%\s*ID\s*:\s*(\S+)", str(ex_body or ""), re.I)
+    if m:
+        return re.sub(r"\s+", "_", clean(m.group(1)))[:80]
     m = re.search(r"\[Mã\s*câu\s*:\s*([^\]]+)\]", ex_body, re.I)
     if not m:
         m = re.search(r"\[Ma\s*cau\s*:\s*([^\]]+)\]", strip_accents(ex_body), re.I)
@@ -37557,6 +37775,9 @@ def _latex_ex_mucdo(raw_block: str, defaults: Optional[Dict[str, Any]] = None) -
     preset = clean(defaults.get("MucDo", "")).upper()
     if preset in ("NB", "TH", "VD", "VDC"):
         return preset
+    m = re.search(r"%\s*M(?:ứ|u)c(?:\s*độ|\s*do)?\s*:\s*(NB|TH|VD|VDC)\b", str(raw_block or ""), re.I)
+    if m:
+        return m.group(1).upper()
     m = _LATEX_EX_TAG_MUCDO_RE.search(str(raw_block or ""))
     if not m:
         return ""
@@ -38729,11 +38950,16 @@ def _json_question_source_mode() -> str:
     SHEET      : mặc định, đọc Cau_Hoi Google Sheet.
     JSON_ONLY  : chỉ đọc các file JSON đề.
     SHEET_JSON : đọc Sheet rồi cộng thêm JSON.
+    GITHUB     : đọc ngan-hang/*.tex (local và/hoặc GitHub), không đọc Cau_Hoi.
+    SHEET_GITHUB : đọc Sheet rồi cộng thêm .tex (bỏ trùng ID).
 
     Trên Render đặt Environment Variable:
       QUESTION_SOURCE=JSON_ONLY
     hoặc:
       QUESTION_SOURCE=SHEET_JSON
+    hoặc:
+      QUESTION_SOURCE=GITHUB
+      GITHUB_LATEX_REPO=pythonminh/luyen-de-vat-ly
     """
     raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "SHEET")
     raw = raw.upper().replace(" ", "").replace("-", "_")
@@ -38741,6 +38967,10 @@ def _json_question_source_mode() -> str:
         return "JSON_ONLY"
     if raw in ("SHEETJSON", "SHEET_PLUS_JSON", "SHEET+JSON", "BOTH", "MIX", "MIXED"):
         return "SHEET_JSON"
+    if raw in ("GITHUB", "TEX", "GITHUB_TEX", "LOCAL_TEX", "NGAN_HANG", "NGANHANG"):
+        return "GITHUB"
+    if raw in ("SHEET_GITHUB", "SHEETGITHUB", "SHEET_TEX", "SHEET+GITHUB", "SHEETPLUSGITHUB"):
+        return "SHEET_GITHUB"
     return "SHEET"
 
 
@@ -39370,6 +39600,19 @@ def questions_to_latex_tex(questions: List[Dict[str, Any]], title: str = "") -> 
             meta.append(f"% ID: {qid}")
         if muc:
             meta.append(f"% Mức: {muc}")
+        extra_in = []
+        if qid:
+            extra_in.append(f"% ID: {qid}")
+        if muc:
+            extra_in.append(f"% Mức: {muc}")
+        if extra_in:
+            inject = "\n".join(extra_in)
+            content = re.sub(
+                r"\\begin\{(ex|bt)\}",
+                lambda mm, inj=inject: mm.group(0) + "\n" + inj,
+                content,
+                count=1,
+            )
         header = f"% ===== Câu {i} ====="
         body_parts = [header] + meta
         if dbt and dbt != prev_dbt:
@@ -41558,6 +41801,64 @@ def _dang_stats_report(questions: Any) -> Dict[str, Any]:
         "unknown_count": len(warnings),
         "total":         len(qs_list),
     }
+
+
+@app.route("/api/github-tex/sync", methods=["POST"])
+def api_github_tex_sync():
+    """ADMIN: tải .tex từ GitHub vào ngan-hang/ rồi nạp lại ngân hàng."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được đồng bộ GitHub LaTeX."}), 403
+    if download_github_tex is None or github_tex_config is None:
+        return jsonify({"error": "Thiếu module ldvl.github_tex"}), 500
+    try:
+        cfg = github_tex_config(APP_DIR)
+        dl = download_github_tex(cfg, cfg["cache_dir"])
+        copied = 0
+        if copy_cache_into_local:
+            copied = copy_cache_into_local(cfg["cache_dir"], cfg["local_dir"])
+        st = get_store()
+        st.questions_loaded = False
+        st.load_questions_from_github_tex(replace=True)
+        st.questions_loaded = True
+        st.loaded_at = now_str()
+        try:
+            st._save_questions_cache()
+        except Exception:
+            log_swallow("api_github_tex_sync:cache")
+        return jsonify({
+            "ok": True,
+            "message": (
+                f"Đã tải {dl.get('count_files', 0)} file .tex từ GitHub "
+                f"({cfg.get('repo')}) và nạp {len(st.questions)} câu vào app."
+            ),
+            "download": dl,
+            "copied_to_local": copied,
+            "count_questions": len(st.questions),
+            "github_tex": st.github_tex_info,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/github-tex/status", methods=["GET"])
+def api_github_tex_status():
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN."}), 403
+    cfg = github_tex_config(APP_DIR) if github_tex_config else {}
+    st = get_store()
+    return jsonify({
+        "ok": True,
+        "question_source": _json_question_source_mode(),
+        "config": {k: cfg.get(k, "") for k in ("repo", "branch", "rel_dir", "local_dir", "blob_base") if cfg},
+        "github_tex": getattr(st, "github_tex_info", {}) or {},
+        "count_questions": len(getattr(st, "questions", []) or []),
+    })
 
 
 @app.route("/api/sync", methods=["POST"])
