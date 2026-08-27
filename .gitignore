@@ -14,4 +14,5 @@ app_backup*.py
 app_loi_backup.py
 data/questions_cache.json
 data/questions_cache.json.tmp
+data/catalog_cache.json
 data/github_tex_cache/
