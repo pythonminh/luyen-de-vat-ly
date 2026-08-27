@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V481_GITHUB_TEX"
+APP_VERSION = "V482_GITHUB_LOAD"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -6027,8 +6027,6 @@ class SheetStore:
 
     def try_apply_questions_cache(self) -> bool:
         """Nạp catalog từ file đĩa — tránh chờ Google Sheet 1–2 phút lúc app ngủ dậy."""
-        if _json_question_source_mode() == "GITHUB":
-            return False
         if not _questions_disk_cache_enabled():
             return False
         if self.questions_loaded and self.questions:
@@ -6313,7 +6311,12 @@ class SheetStore:
                 "loading": True,
                 "questions_loading": self.questions_loading,
                 "questions_from_cache": False,
-                "loading_message": "Đang nạp mục lục đề… vài giây. Không cần bấm lại.",
+                "question_source": _json_question_source_mode(),
+                "loading_message": (
+                    "Đang nạp đề từ GitHub / thư mục ngan-hang (file .tex). Không chờ Google Sheet Cau_Hoi."
+                    if _json_question_source_mode() == "GITHUB"
+                    else "Đang nạp mục lục đề… vài giây. Không cần bấm lại."
+                ),
                 "load_error": self.questions_error,
                 "count_questions": len(self.questions),
                 "count_catalog": len(self.catalog),
@@ -6400,8 +6403,66 @@ class SheetStore:
                 return clean(values.get(canonical, ""))
         return ""
 
+    def _github_tex_ensure_files(self) -> None:
+        """Nếu thư mục local chưa có đề thật thì tải .tex từ GitHub."""
+        if not github_tex_config or not list_local_tex_files:
+            return
+        cfg = github_tex_config(APP_DIR)
+        files = list_local_tex_files(cfg.get("local_dir", ""), cfg.get("cache_dir", ""))
+        force = clean(os.environ.get("GITHUB_LATEX_SYNC_ON_LOAD", "")).lower() in ("1", "true", "yes", "on")
+        has_ex = False
+        if not force:
+            for _rel, abs_path in files[:12]:
+                try:
+                    tex = read_tex_file(abs_path) if read_tex_file else ""
+                except Exception:
+                    continue
+                if re.search(r"(?m)^\\begin\s*\{\s*(?:ex|bt)\s*\}", tex or ""):
+                    has_ex = True
+                    break
+        if has_ex:
+            return
+        if not download_github_tex:
+            return
+        dl = download_github_tex(cfg, cfg.get("cache_dir") or "")
+        if copy_cache_into_local:
+            copy_cache_into_local(cfg.get("cache_dir") or "", cfg.get("local_dir") or "")
+        log.info("GitHub .tex: tải %s file → %s", dl.get("count_files"), cfg.get("local_dir"))
+
+    def _load_github_bank(self) -> None:
+        """Nạp câu hỏi từ ngan-hang/*.tex (và GitHub) — không chờ sheet Cau_Hoi."""
+        self.question_source_mode = "GITHUB"
+        self.ws_questions = None
+        try:
+            self._github_tex_ensure_files()
+        except Exception as e:
+            log.warning("GitHub .tex: không tải được remote (%s) — dùng file local nếu có.", e)
+        self.load_questions_from_github_tex(replace=True)
+        self.questions_loaded = True
+        self.questions_from_cache = False
+        self.loaded_at = now_str()
+        try:
+            self._save_questions_cache()
+            self._save_catalog_cache()
+        except Exception:
+            log_swallow("_load_github_bank:cache")
+        try:
+            self.connect()
+            self.ws_users = self.worksheet_or_none("HOC_VIEN")
+            self.ws_results = self.ensure_ws("Ket_Qua", [
+                "ThoiGian", "MaHS", "HoTen", "Lop", "LoaiTaiKhoan", "MaDe", "TenDe", "Diem", "SoDung", "TongCau", "ChiTiet"
+            ])
+            self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
+            self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
+            if not self.users_loaded:
+                self.load_users()
+                self.users_loaded = True
+            self.load_learning()
+            self.load_lesson_catalog()
+        except Exception as e:
+            log.warning("GITHUB: Sheet học viên/học liệu: %s", e)
+
     def load(self):
-        self.connect()
         self.question_source_mode = _json_question_source_mode()
 
         # QUESTION_SOURCE:
@@ -6410,7 +6471,12 @@ class SheetStore:
         #   SHEET_JSON    : đọc Sheet trước, rồi cộng thêm câu hỏi từ JSON.
         #   GITHUB        : đọc file .tex trong ngan-hang/ (local + GitHub), không đọc Cau_Hoi.
         #   SHEET_GITHUB  : đọc Sheet rồi cộng thêm câu từ .tex (bỏ trùng ID).
-        if self.question_source_mode not in ("JSON_ONLY", "GITHUB"):
+        if self.question_source_mode == "GITHUB":
+            self._load_github_bank()
+            return
+
+        self.connect()
+        if self.question_source_mode != "JSON_ONLY":
             self.ws_questions = self.worksheet_or_none("Cau_Hoi")
             if self.ws_questions is None:
                 raise RuntimeError("Không thấy sheet Cau_Hoi")
@@ -6427,14 +6493,6 @@ class SheetStore:
 
         if self.question_source_mode == "JSON_ONLY":
             self.load_questions_from_json_runtime(replace=True)
-        elif self.question_source_mode == "GITHUB":
-            self.load_questions_from_github_tex(replace=True)
-            if not self.questions:
-                self.ws_questions = self.worksheet_or_none("Cau_Hoi")
-                if self.ws_questions is not None:
-                    self.ensure_question_competency_header()
-                    self.ensure_question_ngaycapnhat_header()
-                    self.load_questions()
         else:
             self.ensure_question_competency_header()
             self.ensure_question_ngaycapnhat_header()
@@ -25422,6 +25480,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <details class="hdrSrcDrop" id="hdrSrcDrop">
       <summary class="hbtn" title="Chọn nguồn đề"><i class="ti ti-database"></i><span>Nguồn đề</span><i class="ti ti-chevron-down hdrSrcCaret"></i></summary>
       <div class="hdrSrcMenu" aria-label="Chọn nguồn đề">
+        <a href="/" title="Làm đề từ GitHub .tex / Sheet tùy QUESTION_SOURCE"><i class="ti ti-brand-github"></i> GitHub LaTeX</a>
+        <a href="https://github.com/pythonminh/luyen-de-vat-ly/tree/main/ngan-hang" target="_blank" rel="noopener" title="Mở thư mục ngan-hang trên GitHub"><i class="ti ti-external-link"></i> Mở repo ngan-hang</a>
         <a href="/" title="Làm đề online từ Google Sheet"><i class="ti ti-cloud"></i> Sheet Online</a>
         <a href="/json-local" title="Học sinh tự nhập, lưu, mở đề JSON trên máy"><i class="ti ti-package"></i> JSON Offline</a>
         <a href="/admin/json" title="ADMIN tạo, đọc thử, xuất JSON"><i class="ti ti-code"></i> Tạo JSON</a>
@@ -25649,7 +25709,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
       </div>
     </div>
     <div class="panel">
-      <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Thứ tự đồng bộ Sheet</h3></div>
+      <div class="ph"><h3><i class="ti ti-sort-ascending"></i> Môn · Lớp · Chương · Bài</h3></div>
       <div class="pb">
         <div class="ldvlSyncRow" id="ldvlSyncRow">
           <div class="ldvlSyncColBox ldvlSyncColMon">
@@ -27764,7 +27824,7 @@ async function init(){
   let info=document.getElementById('info');
   let cat=document.getElementById('catalog');
   let cnt=document.getElementById('countCat');
-  if(info)info.textContent='Đang tải dữ liệu Sheet...';
+  if(info)info.textContent='Đang nạp đề (GitHub / ngan-hang)…';
   if(cat&&!cat.innerHTML.trim())cat.innerHTML='<div class="muted">Đang tải mục lục đề...</div>';
   resetHomeFilterPlaceholders(true);
   try{
@@ -27797,9 +27857,9 @@ async function init(){
   if(META.loading){
     let waited=INIT_POLL_COUNT*1;
     let errHint=META.load_error?(' · '+META.load_error):'';
-    if(info)info.textContent='Đang nạp Sheet… '+waited+'s'+errHint;
+    if(info)info.textContent='Đang nạp đề… '+waited+'s'+errHint;
     resetHomeFilterPlaceholders(true);
-    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp dữ liệu từ Google Sheet...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu Render Free vừa “thức dậy” và vừa nạp Google Sheet thì có thể chờ khoảng <b>10–90 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
+    if(cat)cat.innerHTML=`<div class="card loadCard"><h3>⏳ Hệ thống đang khởi động</h3><p><b>Vui lòng chờ, không cần bấm lại nhiều lần.</b></p><p>${esc(META.loading_message||'Đang nạp đề từ GitHub / ngan-hang...')}</p><div class="loadWarn"><b>Lưu ý:</b> lần đầu nạp file .tex có thể chờ <b>10–90 giây</b>.</div>${META.load_error?'<p class="loadErr"><b>Lỗi:</b> '+esc(META.load_error)+'</p>':''}<p class="muted">Đã chờ ${waited}s — tự thử lại sau 3 giây.</p></div>`;
     if(cnt)cnt.textContent='';
     if(INIT_POLL_COUNT>=INIT_POLL_MAX){
       if(info)info.textContent='Không nạp được Sheet sau '+waited+'s';
@@ -36915,7 +36975,7 @@ function ldvlRenderDashSyncPanel(){
   }
   let monCol=document.getElementById('ldvlSyncMonCol');
   if(monCol){
-    if(!mons.length)monCol.innerHTML='<div class="muted" style="font-size:12px">Chưa có dữ liệu Sheet</div>';
+    if(!mons.length)monCol.innerHTML='<div class="muted" style="font-size:12px">Đang nạp đề từ GitHub / ngan-hang…</div>';
     else monCol.innerHTML=mons.map(function(m){
       let k=ldvlMonKind(m);
       let cls='ldvlSyncMonBtn tag '+(k==='phys'?'tp':'tm')+(st.mon===m?' on':'');
