@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V493_GITHUB_INSERT"
+APP_VERSION = "V495_GITHUB_LOGIN_SHEET"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -6636,7 +6636,13 @@ class SheetStore:
         if not (github_tex_config and sync_github_tex_if_changed):
             return {}
         now = time.time()
-        if now - float(getattr(self, "_github_sync_at", 0) or 0) < 12:
+        try:
+            min_sec = float(os.environ.get("GITHUB_TEX_SYNC_MIN_SEC") or "90")
+        except Exception:
+            min_sec = 90.0
+        if min_sec < 12:
+            min_sec = 12.0
+        if now - float(getattr(self, "_github_sync_at", 0) or 0) < min_sec:
             return {"throttled": True, "skipped": True}
         self._github_sync_at = now
         try:
@@ -40034,21 +40040,19 @@ def _json_export_dir() -> str:
 def _json_question_source_mode() -> str:
     """Nguồn câu hỏi khi app chạy.
 
-    SHEET      : mặc định, đọc Cau_Hoi Google Sheet.
+    GITHUB     : mặc định — đọc ngan-hang/*.tex (local và/hoặc GitHub), không đọc Cau_Hoi.
+    SHEET      : đọc câu hỏi từ Google Sheet Cau_Hoi (chậm trên Render).
     JSON_ONLY  : chỉ đọc các file JSON đề.
     SHEET_JSON : đọc Sheet rồi cộng thêm JSON.
-    GITHUB     : đọc ngan-hang/*.tex (local và/hoặc GitHub), không đọc Cau_Hoi.
     SHEET_GITHUB : đọc Sheet rồi cộng thêm .tex (bỏ trùng ID).
 
-    Trên Render đặt Environment Variable:
-      QUESTION_SOURCE=JSON_ONLY
-    hoặc:
-      QUESTION_SOURCE=SHEET_JSON
-    hoặc:
+    Đăng nhập luôn đọc sheet HOC_VIEN, không phụ thuộc QUESTION_SOURCE.
+
+    Trên Render nên đặt:
       QUESTION_SOURCE=GITHUB
       GITHUB_LATEX_REPO=pythonminh/luyen-de-vat-ly
     """
-    raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "SHEET")
+    raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "GITHUB")
     raw = raw.upper().replace(" ", "").replace("-", "_")
     if raw in ("JSON", "JSONONLY", "ONLY_JSON"):
         return "JSON_ONLY"
