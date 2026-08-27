@@ -138,7 +138,7 @@ except Exception:
     normalize_latex_with_gemini = None  # type: ignore[assignment,misc]
     suggest_answer_with_gemini = None  # type: ignore[assignment,misc]
 
-APP_VERSION = "V495_GITHUB_LOGIN_SHEET"
+APP_VERSION = "V497_GITHUB_SAVE_TEX"
 LDVL_APP_VERSION_TOKEN = "__LDVL_APP_VERSION__"
 
 try:
@@ -5269,6 +5269,24 @@ def extract_drive_file_id(value: Any) -> str:
     return ""
 
 
+def _is_local_tikz_cache_url(src: str) -> bool:
+    s = clean(src).replace("\\", "/").lower()
+    return "/static/latex_assets/_tikz_cache/" in s or s.startswith("static/latex_assets/_tikz_cache/")
+
+
+def _local_static_file_ok(src: str) -> bool:
+    s = clean(src).replace("\\", "/")
+    if s.lower().startswith("static/"):
+        s = "/" + s
+    if not s.startswith("/static/"):
+        return True
+    abs_path = os.path.join(APP_DIR, s.lstrip("/").replace("/", os.sep))
+    try:
+        return os.path.isfile(abs_path) and os.path.getsize(abs_path) > 80
+    except Exception:
+        return False
+
+
 def normalize_image_src(value: Any) -> str:
     """Chuẩn hóa cột hình ảnh để <img> hiện được ngay.
     - Link Drive dạng xem -> thumbnail public.
@@ -5281,10 +5299,14 @@ def normalize_image_src(value: Any) -> str:
     if not s:
         return ""
     if "\n" in s or "\r" in s:
-        img, _tz = _parse_hinhanh_cell(s)
+        img, tz = _parse_hinhanh_cell(s)
         if img and not img.lower().startswith("tikzraw:"):
-            return normalize_image_src(img)
-        if img:
+            resolved = normalize_image_src(img)
+            if resolved:
+                return resolved
+        if tz:
+            return _encode_tikzraw(tz)
+        if img and img.lower().startswith("tikzraw:"):
             return img
         return ""
     m = re.search(r'=\s*IMAGE\s*\(\s*["\']([^"\']+)["\']', s, flags=re.I)
@@ -5299,6 +5321,8 @@ def normalize_image_src(value: Any) -> str:
         return s
     # Hỗ trợ ảnh local nếu thầy upload vào GitHub: static/Images/tenfile.png
     if s.startswith('/static/'):
+        if _is_local_tikz_cache_url(s) and not _local_static_file_ok(s):
+            return ""
         return s
     if s.lower().startswith('static/'):
         return '/' + s
@@ -5805,19 +5829,22 @@ def _finalize_hinhanh_for_sheet(value: Any) -> Tuple[str, str]:
             _remember_drive_folder_from_url(img_clean)
             img_clean = ""
         elif low.startswith("/static/latex_assets/") or low.startswith("static/latex_assets/"):
-            uploaded, err = "", ""
-            if not _drive_sa_quota_blocked():
-                uploaded, err = _upload_static_latex_image_to_drive(img_clean)
-            if uploaded:
-                img_clean = uploaded
+            if _is_local_tikz_cache_url(img_clean) and not _local_static_file_ok(img_clean):
+                img_clean = ""
             else:
-                img_clean = normalize_image_src(img_clean)
-                if tz:
-                    warn = ""
-                elif err and not _is_sa_storage_quota_error(err):
-                    warn = err
-                elif err:
-                    warn = ""
+                uploaded, err = "", ""
+                if not _drive_sa_quota_blocked():
+                    uploaded, err = _upload_static_latex_image_to_drive(img_clean)
+                if uploaded:
+                    img_clean = uploaded
+                else:
+                    img_clean = normalize_image_src(img_clean)
+                    if tz:
+                        warn = ""
+                    elif err and not _is_sa_storage_quota_error(err):
+                        warn = err
+                    elif err:
+                        warn = ""
         else:
             img_clean = normalize_image_src(img_clean)
 
@@ -7813,6 +7840,7 @@ class SheetStore:
         q_ram["_source"] = "GITHUB"
         overlay_keys = set((updates or {}).keys())
         overlay_only = bool(overlay_keys) and overlay_keys <= GITHUB_OVERLAY_FIELDS
+        fields = [k for k in (updates or {}) if k in EDITABLE_FIELDS or k == "NgayCapNhat"]
         if overlay_only:
             if "TrangThai" in overlay_keys:
                 self._persist_github_review_status(q_ram)
@@ -7832,10 +7860,18 @@ class SheetStore:
                 "source": "GITHUB",
                 "tex": rel,
                 "row": int(q_ram.get("_row") or 0),
+                "fields": fields,
             }
         path = self._rewrite_github_lesson_tex(rel)
         self.rebuild_indexes_after_admin_change(rebuild_catalog=not is_lightweight_question_update(updates or {}))
-        return {"ok": True, "id": q_ram.get("ID", ""), "source": "GITHUB", "tex": path, "row": int(q_ram.get("_row") or 0)}
+        return {
+            "ok": True,
+            "id": q_ram.get("ID", ""),
+            "source": "GITHUB",
+            "tex": path,
+            "row": int(q_ram.get("_row") or 0),
+            "fields": fields,
+        }
 
     def _persist_github_overlay_field(self, q_ram: Dict[str, Any], field: str, value: Any) -> None:
         key = github_review_item_key(q_ram)
@@ -8907,7 +8943,7 @@ class SheetStore:
         public_fields = [     "ID", "MaDe", "BoDe", "De",     "Mon", "Lop", "Chuong", "BaiHoc", "DangBaiTap", "NangLucVatLy",     "Dang", "MucDo",     "CauHoi", "A", "B", "C", "D",     "HinhAnh", "QuyenTruyCap", ] 
         d = {k: q.get(k, "") for k in public_fields}
         d["Dang"] = question_dang(q)
-        d["HinhAnh"] = normalize_image_src(d.get("HinhAnh"))
+        d["HinhAnh"] = _sanitize_hinhanh_cell(q.get("HinhAnh"))
         d["index"] = index
         d["sol_status"] = question_solution_status(q)
         d["has_full_solution"] = d["sol_status"] == "full"
@@ -8919,6 +8955,8 @@ class SheetStore:
             d["TrangThai"] = clean(q.get("TrangThai", ""))
             d["reviewed_sheet"] = question_is_reviewed_sheet(q)
             d["_row"] = int(q.get("_row") or 0)
+            d["_source"] = clean(q.get("_source", ""))
+            d["_tex_rel"] = clean(q.get("_tex_rel", ""))
         return d
 
     def _lookup_match_item(self, q: Dict[str, Any]) -> Dict[str, Any]:
@@ -11094,9 +11132,15 @@ class SheetStore:
                         break
                 except Exception:
                     log_swallow("update_question:find_ram_row")
+        if self._github_question_mode():
+            if not q_ram:
+                raise RuntimeError(
+                    "Không tìm thấy câu trong ngân hàng GitHub (.tex). Mở lại bài rồi lưu — không ghi Google Sheet."
+                )
+            return self._update_question_github_tex(q_ram, updates)
         if q_ram and (
             clean(q_ram.get("_source")) == "GITHUB"
-            or (self.question_source_mode == "GITHUB" and clean(q_ram.get("_tex_rel")))
+            or clean(q_ram.get("_tex_rel"))
         ):
             return self._update_question_github_tex(q_ram, updates)
 
@@ -11340,7 +11384,7 @@ class SheetStore:
                     log_swallow("update_question:touch_dbt_updated")
                 break
         self.rebuild_indexes_after_admin_change(rebuild_catalog=not skip_catalog_rebuild)
-        out = {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields, "fast": bool(skip_catalog_rebuild)}
+        out = {"ok": True, "updated": len(batch), "row": row_number, "fields": updated_fields, "fast": bool(skip_catalog_rebuild), "source": "SHEET"}
         if hinhanh_warn:
             out["hinhanh_warning"] = hinhanh_warn
         if "HinhAnh" in updates:
@@ -11906,13 +11950,23 @@ class SheetStore:
             lst = (self.by_id or {}).get(question_id) or []
             if lst:
                 q_ram = lst[0]
-        if q_ram and clean(q_ram.get("_source")) == "GITHUB":
+        if q_ram is None and int(row_number or 0) >= 2:
+            for qq in self.questions:
+                try:
+                    if int(qq.get("_row") or 0) == int(row_number):
+                        q_ram = qq
+                        break
+                except Exception:
+                    continue
+        if self._github_question_mode() or (q_ram and (clean(q_ram.get("_source")) == "GITHUB" or clean(q_ram.get("_tex_rel")))):
+            if not q_ram:
+                raise RuntimeError("Không tìm thấy câu GitHub để xóa. Mở lại bài rồi thử lại.")
             rel = clean(q_ram.get("_tex_rel", ""))
             self.questions = [q for q in self.questions if q is not q_ram]
             if rel:
                 self._rewrite_github_lesson_tex(rel)
             self.rebuild_indexes_after_admin_change()
-            return {"ok": True, "deleted": True, "source": "GITHUB", "id": question_id, "tex": rel}
+            return {"ok": True, "deleted": True, "source": "GITHUB", "id": question_id or clean(q_ram.get("ID", "")), "tex": rel}
         if row_number < 2:
             raise RuntimeError("Dòng Google Sheet không hợp lệ")
 
@@ -12610,9 +12664,7 @@ class SheetStore:
         if not clean(data.get("CauHoi")):
             raise RuntimeError("Phải nhập nội dung câu hỏi (CauHoi).")
         data = _maybe_extract_tikz_into_hinhanh(data)
-        if self.question_source_mode == "GITHUB" or (
-            self.ws_questions is None and (self.question_source_mode in ("GITHUB", "SHEET_GITHUB"))
-        ):
+        if self._github_question_mode():
             seed = {f: data.get(f, "") for f in QUESTION_FIELDS}
             cq = canonical_question(seed)
             for f in QUESTION_FIELDS:
@@ -17969,13 +18021,37 @@ def _build_hinhanh_cell(image_link: str, tikz_code: str) -> str:
     img = clean(image_link)
     tz = clean(tikz_code)
     if img and not img.lower().startswith("tikzraw:"):
-        norm = normalize_image_src(img)
-        parts.append(norm or img)
+        if _is_local_tikz_cache_url(img) and not _local_static_file_ok(img):
+            img = ""
+        else:
+            norm = normalize_image_src(img)
+            if norm:
+                parts.append(norm)
+            elif not _is_local_tikz_cache_url(img):
+                parts.append(img)
     if tz:
         tr = _encode_tikzraw(tz)
         if tr:
             parts.append(tr)
     return "\n".join(parts)
+
+
+def _sanitize_hinhanh_cell(value: Any) -> str:
+    """Giữ mã TikZ; bỏ URL cache PNG đã mất file (máy khác / Render)."""
+    s = clean(value)
+    if not s:
+        return ""
+    img, tz = _parse_hinhanh_cell(s)
+    if not tz:
+        tz = _extract_tikz_block(s)
+    if img and _is_local_tikz_cache_url(img) and not _local_static_file_ok(img):
+        img = ""
+    built = _build_hinhanh_cell(img, tz)
+    if built:
+        return built
+    if _is_local_tikz_cache_url(s) and not _local_static_file_ok(s):
+        return ""
+    return s
 
 
 def _maybe_extract_tikz_into_hinhanh(
@@ -28117,7 +28193,7 @@ function driveThumbUrl(fid){return 'https://drive.google.com/thumbnail?id='+Stri
 function driveProxyUrl(fid){fid=String(fid||'').trim();return fid?('/api/img/drive/'+encodeURIComponent(fid)):''}
 function extractDriveFidClient(s){s=String(s||'').trim();if(!s||isDriveFolderUrl(s))return '';let m=s.match(/=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);if(m)s=m[1].trim();let dm=s.match(/thumbnail\?id=([^&]+)/i)||s.match(/drive\.google\.com\/file\/d\/([^/]+)/i)||s.match(/googleusercontent\.com\/d\/([^=/?]+)/i)||s.match(/\/api\/img\/drive\/([^/?]+)/i)||s.match(/[?&]id=([^&]+)/i)||s.match(/\/d\/([^/]+)/i);return dm?dm[1].trim():''}
 function normalizeImageSrcClient(v){let s=String(v||'').trim();if(!s)return '';if(/[\r\n]/.test(s)){let parsed=parseHinhanhCellClient(s);if(parsed.tikz)return encodeTikzRawClient(parsed.tikz);if(parsed.img&&!/^tikzraw:/i.test(parsed.img))return normalizeImageSrcClient(parsed.img);return ''}if(/^tikzraw:/i.test(s))return s;if(isDriveFolderUrl(s))return '';let fid=extractDriveFidClient(s);if(fid)return driveProxyUrl(fid);if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/static/'))return s;if(/^static\//i.test(s))return '/'+s;if(/^images\//i.test(s))return '/static/'+s;return s}
-function qimgHandleError(el){if(!el)return;let fid=extractDriveFidClient(el.src)||extractDriveFidClient(el.getAttribute('data-drive')||'');let step=parseInt(el.dataset.fbk||'0',10)||0;if(step<1&&fid&&el.src.indexOf('/api/img/drive/')<0){el.dataset.fbk='1';el.src=driveProxyUrl(fid);return}if(step<2&&fid){el.dataset.fbk='2';el.src=driveThumbUrl(fid);return}let tz=el.getAttribute('data-tikzraw')||'';if(tz&&!el.dataset.tztry){el.dataset.tztry='1';let wrap=el.closest('.qimgWrap')||el.parentElement;if(wrap){wrap.id=wrap.id||('tikz_fb_'+Date.now().toString(36));wrap.className=(wrap.className||'')+' tikzRawWrap';wrap.innerHTML='<div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ lại hình từ mã TikZ…</div>';if(typeof renderTikzRawToImg==='function')renderTikzRawToImg(tz,wrap.id);return}}let box=el.parentElement;if(box)box.outerHTML='<div class="qimgErr">Không tải được hình. Mở Sửa câu → ô TikZ (hoặc để trống cột T rồi Lưu lại để vẽ từ LaTeX).</div>'}
+function qimgHandleError(el){if(!el)return;let fid=extractDriveFidClient(el.src)||extractDriveFidClient(el.getAttribute('data-drive')||'');let step=parseInt(el.dataset.fbk||'0',10)||0;if(step<1&&fid&&el.src.indexOf('/api/img/drive/')<0){el.dataset.fbk='1';el.src=driveProxyUrl(fid);return}if(step<2&&fid){el.dataset.fbk='2';el.src=driveThumbUrl(fid);return}let tz=el.getAttribute('data-tikzraw')||'';if(tz&&!el.dataset.tztry){el.dataset.tztry='1';let wrap=el.closest('.qimgWrap')||el.parentElement;if(wrap){wrap.id=wrap.id||('tikz_fb_'+Date.now().toString(36));wrap.className=(wrap.className||'')+' tikzRawWrap';wrap.innerHTML='<div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ lại hình từ mã TikZ…</div>';if(typeof renderTikzRawToImg==='function')renderTikzRawToImg(tz,wrap.id);return}}let box=el.parentElement;if(box)box.outerHTML='<div class="qimgErr">Không tải được hình — file cache PNG không còn trên máy này. Dán mã TikZ vào ô TikZ rồi Lưu, hoặc mở lại bài sau khi đã có hình trong file .tex.</div>'}
 function qimgOnErrorAttr(){return ' onerror="try{qimgHandleError(this)}catch(e){}"'}
 function buildQimgHtml(src){let raw=String(src||'').trim();if(isDriveFolderUrl(raw))return '<div class="qimgErr" style="background:#f0fdf4;border-color:#86efac;color:#166534;padding:10px;border-radius:8px;font-size:13px">Đây là <b>link thư mục</b> Drive — sửa câu, <b>để trống cột T</b>, bấm Lưu (TikZ tự điền link ảnh).</div>';let parsed=parseHinhanhCellClient(raw);let tikzEnc=parsed.tikz?encodeTikzRawClient(parsed.tikz):(/^tikzraw:/i.test(raw)?raw:'');if(tikzEnc){let cached=tikzImgFromCacheClient(tikzEnc);if(cached)return tikzImgHtmlFromUrl(cached);let boxId='tikz_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);setTimeout(()=>renderTikzRawToImg(tikzEnc,boxId),0);return `<div class="qimgWrap tikzRawWrap" id="${boxId}"><div class="muted" style="font-size:12px;padding:12px;text-align:center">⏳ Đang vẽ hình TikZ từ LaTeX…</div></div>`}src=normalizeImageSrcClient(raw);if(!src)return '';return tikzImgHtmlFromUrl(src,'Hình minh họa')}
 function questionStemNeedsFigure(q){if(!q)return false;let scan=String(q.CauHoi||'');for(let L of ['A','B','C','D'])scan+='\n'+String(q[L]||'');if(/(?:hình\s*(?:vẽ|bên|sau|minh\s*họa)|xét\s+hình|trong\s+hình|như\s+hình|theo\s+hình|minh\s+họa)/i.test(scan))return true;return /\\begin\s*\{\s*tikzpicture|\\includegraphics|\\immini|\[IMG\]|<img\b|tikzraw:/i.test(scan)}
@@ -29971,7 +30047,9 @@ function toggleFsNav(){
 }
 async function toggleQuizFullscreen(){let btn=document.getElementById('btnPresent');if(!FULLDE_ON){ensureFullModeOverrides();FULLDE_ON=true;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.add('fullde-mode');ensureFsNavBtn();syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='⤢ Thoát full đề';try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion();setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(3,120)},180);return}FULLDE_ON=false;FS_ANS_FORCE=null;FS_EXP_FORCE=null;FS_NAV_HIDDEN=false;MOBILE_QUIZ_TOOLS_OPEN=false;MOBILE_NAV_OPEN=false;document.body.classList.remove('fsnav-hidden');document.body.classList.remove('fullde-mode');syncFsNavBtn();updateAdminChrome();if(btn)btn.textContent='📽 Full màn hình';try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen()}catch(e){}syncMobileQuizChrome();renderQuestion()}
 function isAdminViewer(){return !!(USER.is_admin||String(USER.role||'').toUpperCase()==='ADMIN')} /* dùng cho nút Sửa câu, xem ĐA/LG ngay */
-function isGithubBank(){return !!(META&&String(META.question_source||'')==='GITHUB')}
+function isGithubBank(){return !!(META&&['GITHUB','TEX','GITHUB_TEX','LOCAL_TEX','NGAN_HANG','NGANHANG'].indexOf(String(META.question_source||'').toUpperCase().replace(/-/g,'_'))>=0)}
+function adminSavedToGithub(j){if(j&&String(j.source||'').toUpperCase()==='GITHUB')return true;return isGithubBank()}
+function adminGithubCommitHint(){return 'Đã ghi file .tex trên máy/server. Commit file đó lên GitHub (pythonminh/luyen-de-vat-ly) để giữ vĩnh viễn. Đừng bấm Đồng bộ GitHub trước khi Commit.'}
 function canViewSolutionLive(){if(EXAM_MODE&&!SUBMITTED)return false;return !!(isAdminViewer()||USER.can_view_solution_live===true||['ADMIN','VIP','S.VIP'].includes(String(USER.role||'').toUpperCase()))}
 function hasAttemptedQuestion(qIdx){qIdx=(qIdx==null||qIdx===undefined)?CUR:qIdx;if(LOCKED_Q[qIdx]||CHECKED[qIdx]||RESULTS[qIdx])return true;let q=applyResolvedDang(QUESTIONS[qIdx]);if(!q)return false;if(q.Dang==='Tự luận')return isQuestionDone(qIdx);return isQuestionChecked(qIdx)}
 function canShowSolutionNow(){if(!canViewSolutionLive())return false;if(isAdminViewer())return true;return hasAttemptedQuestion(CUR)}
@@ -33126,7 +33204,7 @@ async function fetchDbtSuggestForEditHint(qIdx){
     if(CUR===qIdx)renderEditHintResult(j);
   }
 }
-function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del)del.classList.toggle('hide',isAdd);let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?'➕ Thêm vào Google Sheet':'✅ Lưu vào Google Sheet (sau khi kiểm tra)';let soat=document.getElementById('editAdminSoatBar');if(soat)soat.classList.toggle('hide',isAdd||!isAdminViewer());syncAdminReviewModeUI();syncEditHintButtonLabel();if(typeof syncEditDsRewriteButton==='function')syncEditDsRewriteButton();if(isAdd&&ADMIN_SIMILAR_EDIT_TIPS){let er=document.getElementById('editHintResult');if(er){er.classList.remove('hide');er.innerHTML=(typeof buildAdminVariantTipsHtml==='function'?buildAdminVariantTipsHtml(ADMIN_SIMILAR_EDIT_TIPS):'')+'<div class="muted" style="margin-top:8px;font-size:12px">Đã điền câu tương tự vào form <b>Thêm mới</b>. Kiểm tra rồi bấm <b>➕ Thêm vào Google Sheet</b>.</div>'}}else if(!isAdd&&isAdminViewer())renderEditHintResult(HINT_BY_Q[CUR]);let note=document.getElementById('editModalNote');if(note){if(isAdd&&ADMIN_SIMILAR_EDIT_TIPS)note.innerHTML='📝 Câu tương tự AI đã điền sẵn. Kiểm tra đáp án/lời giải → bấm <b>➕ Thêm vào Google Sheet</b>.';else if(isAdd)note.textContent='Dán cả câu (Ctrl+V) ở khung trên → Tách vào form → chọn TN/Đ/S/TLN → xem trước + ảnh → Lưu Sheet.';else if(adminHintNeedsSave())note.textContent='Soát đề ở trên → kiểm tra P/R → bấm → P / → R hoặc 📋 Điền P/R → Lưu Sheet.';else note.textContent='Soát đề AI nằm ngay trên form. Xóa liên tiếp được — chỉ Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
+function syncQuestionModalChrome(){let isAdd=QUESTION_MODAL_MODE==='add';let t=document.getElementById('editModalTitle');if(t)t.textContent=isAdd?'ADMIN: Thêm câu hỏi mới':'ADMIN: Sửa câu hỏi';let del=document.getElementById('btnDeleteQuestion');if(del){del.classList.toggle('hide',isAdd);del.textContent=isGithubBank()?'🗑 Xóa câu này khỏi file .tex':'🗑 Xóa câu này khỏi Google Sheet'}let save=document.getElementById('btnSaveQuestion');if(save)save.textContent=isAdd?(isGithubBank()?'➕ Thêm vào file .tex':'➕ Thêm vào Google Sheet'):(isGithubBank()?'✅ Lưu vào file .tex (ngân hàng GitHub)':'✅ Lưu vào Google Sheet (sau khi kiểm tra)');let soat=document.getElementById('editAdminSoatBar');if(soat)soat.classList.toggle('hide',isAdd||!isAdminViewer());syncAdminReviewModeUI();syncEditHintButtonLabel();if(typeof syncEditDsRewriteButton==='function')syncEditDsRewriteButton();if(isAdd&&ADMIN_SIMILAR_EDIT_TIPS){let er=document.getElementById('editHintResult');if(er){er.classList.remove('hide');er.innerHTML=(typeof buildAdminVariantTipsHtml==='function'?buildAdminVariantTipsHtml(ADMIN_SIMILAR_EDIT_TIPS):'')+'<div class="muted" style="margin-top:8px;font-size:12px">Đã điền câu tương tự vào form <b>Thêm mới</b>. Kiểm tra rồi bấm <b>➕ Thêm vào Google Sheet</b>.</div>'}}else if(!isAdd&&isAdminViewer())renderEditHintResult(HINT_BY_Q[CUR]);let note=document.getElementById('editModalNote');if(note){if(isAdd&&ADMIN_SIMILAR_EDIT_TIPS)note.innerHTML='📝 Câu tương tự AI đã điền sẵn. Kiểm tra đáp án/lời giải → bấm <b>➕ Thêm vào Google Sheet</b>.';else if(isAdd)note.textContent='Dán cả câu (Ctrl+V) ở khung trên → Tách vào form → chọn TN/Đ/S/TLN → xem trước + ảnh → Lưu Sheet.';else if(adminHintNeedsSave())note.textContent='Soát đề ở trên → kiểm tra P/R → bấm → P / → R hoặc 📋 Điền P/R → Lưu Sheet.';else note.textContent='Soát đề AI nằm ngay trên form. Xóa liên tiếp được — chỉ Đồng bộ khi sửa trực tiếp trên Google Sheet.'}}
 
 /* ==========================================================================
  * [JS-ADMIN-EDIT] Sửa / thêm câu hỏi → Google Sheet Cau_Hoi
@@ -35010,9 +35088,9 @@ function copyInfographicPrompt(){let ta=document.getElementById('infographicProm
 async function generateInfographicImage(){if(INFOGRAPHIC_GEN_BUSY)return;if(!canUseInfographicRole()){alert('Infographic chỉ dành VIP / SVIP / ADMIN.');return}if(!canUnlockInfographic(CUR)){alert('Phải trả lời đúng câu này mới mở khóa infographic.');return}if(!SID||!QUESTIONS.length){alert('Hãy mở một đề và chọn câu trước.');return}saveCurrent();let btn=document.getElementById('btnGenerateInfographic');let status=document.getElementById('infographicGenStatus');let wrap=document.getElementById('infographicImageWrap');let img=document.getElementById('infographicGeneratedImg');let notebook=currentInfographicStyle()==='notebook';INFOGRAPHIC_GEN_BUSY=true;if(btn){btn.disabled=true;btn.textContent='⏳ Đang vẽ…'}if(status){status.classList.remove('hide');status.textContent=notebook?'Đang gọi Gemini vẽ trang vở — thường 30–60 giây…':'Đang gọi Gemini vẽ poster — thường 30–60 giây…'}try{let j=await api('/api/infographic-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(infographicStyleApiBody())});if(img&&j.image_data_url){img.src=j.image_data_url;if(wrap)wrap.classList.remove('hide')}let doneStyle=(j.style==='notebook'||notebook)?'trang vở':'poster';if(status)status.textContent='✅ Đã vẽ '+doneStyle+(j.model?' · '+j.model:'')+(j.has_reference_image?' · có ảnh tham chiếu cột T':'')}catch(e){if(status)status.textContent='❌ '+esc(e.message||e);alert('Không vẽ được ảnh: '+(e.message||e)+'\n\nVẫn có thể «Chép prompt» và dán Gemini thủ công.')}finally{INFOGRAPHIC_GEN_BUSY=false;if(btn){btn.disabled=false;btn.textContent=currentInfographicStyle()==='notebook'?'📓 Vẽ trang vở (Gemini)':'🎨 Vẽ poster (Gemini)'}}}
 let QUESTION_SAVE_BUSY=false;
 async function saveQuestionModal(){if(QUESTION_SAVE_BUSY)return;if(QUESTION_MODAL_MODE==='add')return saveAddQuestion();return saveEdit()}
-async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let saveBtn=document.getElementById('btnSaveQuestion');try{let q=QUESTIONS[CUR];if(!q){alert('Không có câu hiện tại.');return}if(!q._row&&!String(q.ID||'').trim()){alert('Không xác định dòng Sheet. Hãy bấm Đồng bộ Sheet rồi mở lại câu.');return}let form=readQuestionFormData();let updates={};for(let f of QUESTION_EDIT_SAVE_FIELDS)updates[f]=form[f]!=null?form[f]:(q[f]||'');updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\nVẫn lưu Sheet?'))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\nVẫn lưu Sheet?'))return;QUESTION_SAVE_BUSY=true;if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;if(j.hinhanh){updates.HinhAnh=j.hinhanh}Object.assign(q,updates);q.reviewed_sheet=questionIsReviewedForAdmin(q);q.reviewed=q.reviewed_sheet;applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(j.hinhanh_warning?('\n\n⚠ '+j.hinhanh_warning):'')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.'))}catch(e){alert('Không lưu được: '+(e.message||e))}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();if(saveBtn)saveBtn.disabled=false}}
-async function saveAddQuestion(){if(QUESTION_SAVE_BUSY)return;let data=readQuestionFormData();if(!String(data.CauHoi||'').trim()){alert('Phải nhập nội dung câu hỏi.');return}QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang thêm…'}try{let j=await api('/api/question/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});let nq=applyResolvedDang(j.question||{});if(!nq._row)nq._row=j.row;let insertAt=Math.min(CUR+1,QUESTIONS.length);QUESTIONS.splice(insertAt,0,nq);insertQuizMaps(insertAt);CUR=regroupQuestionsByDang(nq._row);closeEdit();renderNav();renderQuestion();refreshCatalogFromMeta();alert('Đã thêm câu mới vào Google Sheet dòng '+j.row+(j.id?('\nID: '+j.id):''))}catch(e){alert('Không thêm được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
-async function deleteQuestionAtIndex(idx){if(!USER.is_admin)return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!q._row){alert('Không xác định được dòng Google Sheet của câu này.');return}let msg='Xóa vĩnh viễn câu '+(idx+1)+' khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nApp tự cập nhật — không cần bấm Đồng bộ Sheet sau mỗi lần xóa.';if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});clearOfflineDecksContainingIds([q.ID||j.id||'']);clearOfflineDeckForMade(CURRENT_MADE);let deletedRow=parseInt(j.row,10)||0;let removedIdx=idx;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);refreshCatalogFromMeta();if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nMục lục đã tự cập nhật — không cần Đồng bộ Sheet.');return}if(CUR===removedIdx){if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1}else if(CUR>removedIdx)CUR--;closeEdit();renderNav();renderQuestion();syncQuestionReviewToolbar();document.getElementById('resultBox').textContent='Đã xóa câu '+(removedIdx+1)+' (dòng '+deletedRow+') — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
+async function saveEdit(){if(QUESTION_SAVE_BUSY)return;let saveBtn=document.getElementById('btnSaveQuestion');try{let q=QUESTIONS[CUR];if(!q){alert('Không có câu hiện tại.');return}if(!q._row&&!String(q.ID||'').trim()){alert(isGithubBank()?'Không xác định câu GitHub. Hãy mở lại bài rồi sửa.':'Không xác định dòng Sheet. Hãy bấm Đồng bộ Sheet rồi mở lại câu.');return}let form=readQuestionFormData();let updates={};for(let f of QUESTION_EDIT_SAVE_FIELDS)updates[f]=form[f]!=null?form[f]:(q[f]||'');updates=autoSyncDsLoigiaiAbcd(updates,q);let miss=adminLoigiaiMissingLetters(updates.LoiGiai,Object.assign({},q,updates));if(miss.length&&!confirm('Lời giải thiếu ý '+miss.join(', ')+'.\n\n'+(isGithubBank()?'Vẫn lưu vào file .tex?':'Vẫn lưu Sheet?')))return;if(!String(updates.DapAn||'').trim()&&!confirm('Đáp án (P) đang trống.\n\n'+(isGithubBank()?'Vẫn lưu vào file .tex?':'Vẫn lưu Sheet?')))return;QUESTION_SAVE_BUSY=true;if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang lưu…'}let j=await api('/api/question/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row||0,id:q.ID||'',updates})});let savedRow=parseInt(j.row,10)||q._row;q._row=savedRow;if(j.hinhanh){updates.HinhAnh=j.hinhanh}Object.assign(q,updates);q.reviewed_sheet=questionIsReviewedForAdmin(q);q.reviewed=q.reviewed_sheet;applyResolvedDang(q);if(HINT_BY_Q[CUR]&&HINT_BY_Q[CUR].admin_review){markAdminHintSaved(CUR);HINT_BY_Q[CUR].sheet_dapan=updates.DapAn||'';HINT_BY_Q[CUR].sheet_loigiai=updates.LoiGiai||''}if(CHECKED[CUR]){delete CHECKED[CUR].LoiGiai;delete CHECKED[CUR].DapAn;if(updates.DapAn)delete CHECKED[CUR].rows}if(RESULTS[CUR]){delete RESULTS[CUR].LoiGiai;delete RESULTS[CUR].DapAn;if(updates.DapAn)delete RESULTS[CUR].rows}CUR=regroupQuestionsByDang(savedRow);closeEdit();renderQuestion();if(HINT_BY_Q[CUR]&&!document.getElementById('hintBox').classList.contains('hide'))renderHintBox(HINT_BY_Q[CUR]);alert(adminSavedToGithub(j)?('Đã lưu vào ngân hàng LaTeX (file .tex)'+(j.tex?('\nFile: '+j.tex):'')+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(j.hinhanh_warning?('\n\n⚠ '+j.hinhanh_warning):'')+'\n\n'+adminGithubCommitHint()):('Đã lưu vào Google Sheet dòng '+j.row+'\nĐã cập nhật: '+(j.fields||[]).join(', ')+(j.hinhanh_warning?('\n\n⚠ '+j.hinhanh_warning):'')+(adminHintNeedsSave(CUR)?'':'\\n\\n✅ Có thể so khớp ĐA/LG với AI ở trên.')))}catch(e){alert('Không lưu được: '+(e.message||e))}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();if(saveBtn)saveBtn.disabled=false}}
+async function saveAddQuestion(){if(QUESTION_SAVE_BUSY)return;let data=readQuestionFormData();if(!String(data.CauHoi||'').trim()){alert('Phải nhập nội dung câu hỏi.');return}QUESTION_SAVE_BUSY=true;let saveBtn=document.getElementById('btnSaveQuestion');if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang thêm…'}try{let j=await api('/api/question/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});let nq=applyResolvedDang(j.question||{});if(!nq._row)nq._row=j.row;let insertAt=Math.min(CUR+1,QUESTIONS.length);QUESTIONS.splice(insertAt,0,nq);insertQuizMaps(insertAt);CUR=regroupQuestionsByDang(nq._row);closeEdit();renderNav();renderQuestion();refreshCatalogFromMeta();alert(adminSavedToGithub(j)?('Đã thêm câu vào file .tex'+(j.tex?('\nFile: '+j.tex):'')+(j.id?('\nID: '+j.id):'')+'\n\n'+adminGithubCommitHint()):('Đã thêm câu mới vào Google Sheet dòng '+j.row+(j.id?('\nID: '+j.id):''))}catch(e){alert('Không thêm được: '+e.message)}finally{QUESTION_SAVE_BUSY=false;syncQuestionModalChrome();let sb=document.getElementById('btnSaveQuestion');if(sb)sb.disabled=false}}
+async function deleteQuestionAtIndex(idx){if(!USER.is_admin)return;idx=parseInt(idx,10);if(!Number.isFinite(idx)||idx<0||idx>=QUESTIONS.length)return;let q=QUESTIONS[idx];if(!q||!(q._row||q.ID)){alert(isGithubBank()?'Không xác định được câu GitHub.':'Không xác định được dòng Google Sheet của câu này.');return}let msg=isGithubBank()?('Xóa vĩnh viễn câu '+(idx+1)+' khỏi file .tex?\n\nID: '+(q.ID||'')+'\nFile: '+(q._tex_rel||'')+'\n\n'+adminGithubCommitHint()):('Xóa vĩnh viễn câu '+(idx+1)+' khỏi Google Sheet?\n\nID: '+(q.ID||'')+'\nDòng: '+q._row+'\n\nApp tự cập nhật — không cần bấm Đồng bộ Sheet sau mỗi lần xóa.');if(!confirm(msg))return;if(!confirm('Xác nhận lần 2: chắc chắn xóa câu này?'))return;try{let j=await api('/api/question/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({row:q._row,id:q.ID||''})});clearOfflineDecksContainingIds([q.ID||j.id||'']);clearOfflineDeckForMade(CURRENT_MADE);let deletedRow=parseInt(j.row,10)||0;let removedIdx=idx;QUESTIONS.splice(removedIdx,1);for(let qq of QUESTIONS){let r=parseInt(qq._row,10)||0;if(r>deletedRow)qq._row=r-1}reindexQuizMaps(removedIdx);refreshCatalogFromMeta();if(QUESTIONS.length===0){closeEdit();backHome();alert('Đã xóa câu cuối trong phiên này.\nMục lục đã tự cập nhật — không cần Đồng bộ Sheet.');return}if(CUR===removedIdx){if(CUR>=QUESTIONS.length)CUR=QUESTIONS.length-1}else if(CUR>removedIdx)CUR--;closeEdit();renderNav();renderQuestion();syncQuestionReviewToolbar();document.getElementById('resultBox').textContent='Đã xóa câu '+(removedIdx+1)+' (dòng '+deletedRow+') — còn '+QUESTIONS.length+' câu';document.getElementById('resultBox').style.color='#166534'}catch(e){alert('Không xóa được: '+e.message)}}
 async function deleteQuestion(){return deleteQuestionAtIndex(CUR)}
 setInterval(updateExamStrip,1000);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&FULLDE_ON){document.body.classList.add('fullde-mode')}if(!document.fullscreenElement){FS_ANS_FORCE=null;FS_EXP_FORCE=null;renderQuestion()}else if(FULLDE_ON){setTimeout(()=>{syncFulldeNavChrome();typesetQuizMathWithRetry(2,100)},120)}});
@@ -38665,6 +38743,87 @@ def _compile_tikz_to_png(tikz_code: str, ctx: Optional[Dict[str, Any]], idx: int
     return ""
 
 
+_LATEX_IMMINI_CMD_RE = re.compile(r"(?:\$\s*)?\\immini\b(?:\s*\$)?", re.I)
+
+
+def _latex_arg_has_figure(arg: str) -> bool:
+    t = arg or ""
+    return bool(_LATEX_TIKZ_RE.search(t) or _LATEX_INCLUDE_RE.search(t))
+
+
+def _latex_find_immini(s: str, start: int = 0) -> Optional[Tuple[int, int, List[str]]]:
+    m = _LATEX_IMMINI_CMD_RE.search(s or "", start)
+    if not m:
+        return None
+    pos = _latex_skip_ws(s, m.end())
+    if pos >= len(s) or s[pos] != "{":
+        return None
+    args: List[str] = []
+    end = pos
+    try:
+        for _ in range(2):
+            pos = _latex_skip_ws(s, pos)
+            if pos >= len(s) or s[pos] != "{":
+                break
+            val, pos = _latex_read_braced(s, pos)
+            args.append(val)
+            end = pos
+    except ValueError:
+        return None
+    if not args:
+        return None
+    return m.start(), end, args
+
+
+def _latex_merge_hinhanh(a: str, b: str) -> str:
+    if not a:
+        return b or ""
+    if not b:
+        return a
+    ia, ta = _parse_hinhanh_cell(a)
+    ib, tb = _parse_hinhanh_cell(b)
+    tz = "\n\n".join(x for x in (ta, tb) if x)
+    return _build_hinhanh_cell(ia or ib, tz)
+
+
+def _latex_unwrap_immini(src: str, ctx: Optional[Dict[str, Any]], idx: int) -> Tuple[str, str]:
+    """Tách \\immini{đề}{hình} — đưa TikZ/ảnh sang cột T, giữ phần chữ làm đề."""
+    s = src or ""
+    hinhs: List[str] = []
+    start_from = 0
+    for _ in range(8):
+        found = _latex_find_immini(s, start_from)
+        if not found:
+            m = _LATEX_IMMINI_CMD_RE.search(s, start_from)
+            if not m:
+                break
+            start_from = m.end()
+            continue
+        start, end, args = found
+        text_arg = ""
+        fig_arg = ""
+        if len(args) >= 2:
+            a, b = args[0], args[1]
+            if _latex_arg_has_figure(a) and not _latex_arg_has_figure(b):
+                fig_arg, text_arg = a, b
+            else:
+                fig_arg, text_arg = b, a
+        elif _latex_arg_has_figure(args[0]):
+            fig_arg = args[0]
+        else:
+            text_arg = args[0]
+        if clean(fig_arg):
+            _cleaned, hinh = _latex_safe_extract_media(fig_arg, ctx, idx)
+            if hinh:
+                hinhs.append(hinh)
+        s = s[:start] + (text_arg or "") + s[end:]
+        start_from = start + len(text_arg or "")
+    merged = ""
+    for h in hinhs:
+        merged = _latex_merge_hinhanh(merged, h)
+    return s, merged
+
+
 def _latex_extract_media(text: str, ctx: Optional[Dict[str, Any]], idx: int) -> Tuple[str, str]:
     """Gỡ includegraphics/TikZ khỏi câu hỏi; cột T = URL ảnh + tikzraw (sửa được)."""
     refs: List[str] = []
@@ -39280,6 +39439,8 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 work = work[: lg_cmd[0]] + "\n" + work[lg_cmd[1] :]
                 lg = _latex_clean_body(lg_cmd[2])
 
+            work, immini_hinh = _latex_unwrap_immini(work, asset_ctx, idx)
+
             # Ưu tiên Trả lời ngắn, rồi Đúng/Sai, rồi Trắc nghiệm.
             short_cmd = _latex_find_command_with_brace(work, "shortans")
             tf_cmd = _latex_read_command_args(work, "choiceTF", 4)
@@ -39323,6 +39484,8 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 q["A"] = q["B"] = q["C"] = q["D"] = ""
                 if imgs and not q.get("HinhAnh"):
                     q["HinhAnh"] = imgs
+                if immini_hinh:
+                    q["HinhAnh"] = _latex_merge_hinhanh(q.get("HinhAnh", ""), immini_hinh)
 
             elif tf_cmd:
                 q_text = work[: tf_cmd[0]]
@@ -39339,6 +39502,8 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 q["DapAn"] = ",".join(v for v in vals[:4] if v)
                 if imgs and not q.get("HinhAnh"):
                     q["HinhAnh"] = imgs
+                if immini_hinh:
+                    q["HinhAnh"] = _latex_merge_hinhanh(q.get("HinhAnh", ""), immini_hinh)
 
             elif choice_cmd:
                 q_text = work[: choice_cmd[0]]
@@ -39354,6 +39519,8 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 q["DapAn"] = true_letter
                 if imgs and not q.get("HinhAnh"):
                     q["HinhAnh"] = imgs
+                if immini_hinh:
+                    q["HinhAnh"] = _latex_merge_hinhanh(q.get("HinhAnh", ""), immini_hinh)
 
             else:
                 # Không có lệnh đáp án: vẫn nhập như tự luận để ADMIN sửa tiếp.
@@ -39362,8 +39529,12 @@ def parse_latex_questions_2026(tex: str, defaults: Optional[Dict[str, Any]] = No
                 q["Dang"] = "Tự luận"
                 if imgs and not q.get("HinhAnh"):
                     q["HinhAnh"] = imgs
+                if immini_hinh:
+                    q["HinhAnh"] = _latex_merge_hinhanh(q.get("HinhAnh", ""), immini_hinh)
 
             q["Dang"] = effective_dang(q)
+            if q.get("HinhAnh"):
+                q["HinhAnh"] = _sanitize_hinhanh_cell(q.get("HinhAnh"))
             if q["Dang"] == "Trắc nghiệm" and not is_mcq_letter_answer(q.get("DapAn")):
                 errors.append({"index": idx, "id": q.get("ID", ""), "warning": "Trắc nghiệm chưa tìm thấy \\True."})
             if q["Dang"] == "Đúng sai" and not looks_like_dungsai_answer(q.get("DapAn")):
@@ -40618,10 +40789,23 @@ def _latex_export_loigiai(q: Dict[str, Any]) -> str:
     return raw
 
 
+def _latex_export_stem_with_figure(q: Dict[str, Any], cau: str) -> str:
+    """Khi xuất .tex, nhét TikZ cột T vào \\immini{đề}{hình} để không mất hình."""
+    cau = cau or ""
+    if re.search(r"\\immini\b", cau, flags=re.I) or _LATEX_TIKZ_RE.search(cau):
+        return cau
+    _img, tz = _parse_hinhanh_cell(q.get("HinhAnh", ""))
+    if not tz:
+        tz = _extract_tikz_block(q.get("HinhAnh", ""))
+    if not tz:
+        return cau
+    return "\\immini{\n" + cau + "\n}{\n" + tz + "\n}"
+
+
 def _json_question_content_block(q: Dict[str, Any]) -> Tuple[str, str, str]:
     """Trả về (type, content, body) cho package JSON dễ đọc."""
     dang = effective_dang(q)
-    cau = _json_latex_escape_block(q.get("CauHoi", ""))
+    cau = _latex_export_stem_with_figure(q, _json_latex_escape_block(q.get("CauHoi", "")))
     lg = _latex_export_loigiai(q)
     if dang == "Trắc nghiệm":
         ans = norm_letter(q.get("DapAn", ""))
