@@ -3902,6 +3902,30 @@ def save_github_field_map(mp: Dict[str, Dict[str, str]]) -> None:
         _GITHUB_FIELDS_CACHE = {k: dict(v) for k, v in cleaned.items()}
 
 
+_PHYSICS_EXERCISE_METADATA_LOCK = threading.Lock()
+_PHYSICS_EXERCISE_METADATA_CACHE: Optional[Dict[str, Any]] = None
+
+
+def load_physics_exercise_metadata_map(force: bool = False) -> Dict[str, Any]:
+    """Nạp bai_tap_phan_loai_metadata.json — map github_path → {DbtOrder, FilterCounts, DangBaiTap}."""
+    global _PHYSICS_EXERCISE_METADATA_CACHE
+    with _PHYSICS_EXERCISE_METADATA_LOCK:
+        if _PHYSICS_EXERCISE_METADATA_CACHE is not None and not force:
+            return dict(_PHYSICS_EXERCISE_METADATA_CACHE)
+        meta_file = os.path.join(APP_DIR, "ngan-hang", "Vật lý", "bai_tap_phan_loai_metadata.json")
+        try:
+            if os.path.isfile(meta_file):
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    _PHYSICS_EXERCISE_METADATA_CACHE = data
+                    return dict(data)
+        except Exception:
+            log_swallow("load_physics_exercise_metadata_map")
+        _PHYSICS_EXERCISE_METADATA_CACHE = {}
+        return {}
+
+
 def apply_github_field_overlays(q: Dict[str, Any]) -> None:
     """Gắn Dạng BT / mức độ đã lưu (JSON) lên câu GitHub — overlay thắng \\dangbt trong .tex."""
     if not isinstance(q, dict):
@@ -6754,6 +6778,7 @@ class SheetStore:
         total = 0
         seen_rel = set()
         self._github_tex_rel_by_made = {}
+        physics_meta = load_physics_exercise_metadata_map()
         for les in lessons:
             qmeta, rel = self._github_qmeta_for_lesson(les)
             gk = catalog_group_key(qmeta)
@@ -6767,6 +6792,10 @@ class SheetStore:
             if gk and rel:
                 self._github_tex_rel_by_made[gk] = rel
                 seen_rel.add(rel.replace("\\", "/"))
+            pm = physics_meta.get(clean(les.get("github", ""))) or {}
+            pm_dbt = pm.get("DangBaiTap") or ""
+            pm_order = pm.get("DbtOrder") or []
+            pm_fc = pm.get("FilterCounts") or {}
             catalog.append({
                 "MaDe": gk,
                 "GroupKey": gk,
@@ -6775,13 +6804,14 @@ class SheetStore:
                 "Chuong": qmeta["Chuong"],
                 "BaiHoc": qmeta["BaiHoc"],
                 "De": qmeta["BaiHoc"],
-                "DangBaiTap": "",
+                "DangBaiTap": pm_dbt,
+                "DbtOrder": pm_order,
                 "BoDe": "",
                 "SoCau": n,
                 "QuyenTruyCap": "VIP",
                 "IsFree": False,
                 "_tex_rel": rel,
-                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": {}},
+                "FilterCounts": {"dang": {}, "level": {}, "combo": {}, "dangbaitap": pm_fc.get("dangbaitap") or {}},
             })
         if list_local_tex_files and github_tex_config:
             cfg = github_tex_config(APP_DIR)

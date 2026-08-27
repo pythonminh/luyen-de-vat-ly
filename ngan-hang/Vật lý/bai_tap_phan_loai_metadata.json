@@ -1,0 +1,911 @@
+{
+  "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 1. Làm quen với Vật lí/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 54,
+        "Tự luận": 37,
+        "Trả lời ngắn": 39,
+        "Trắc nghiệm": 143
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 39,
+        "Tự luận": 32,
+        "Trả lời ngắn": 6,
+        "Trắc nghiệm": 108
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 36,
+        "Trả lời ngắn": 108,
+        "Trắc nghiệm": 103,
+        "Đúng sai": 58
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 24,
+        "Trả lời ngắn": 20,
+        "Trắc nghiệm": 47
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 5. Tốc độ và vận tốc/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 27,
+        "Tự luận": 12,
+        "Trả lời ngắn": 5,
+        "Trắc nghiệm": 13
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 8. Chuyển động biến đổi. Gia tốc/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 27,
+        "Trắc nghiệm": 24
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 31. Động học của chuyển động tròn đều/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Trắc nghiệm": 2
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm"
+    ],
+    "DangBaiTap": "Trắc nghiệm"
+  },
+  "ngan-hang/Vật lý/Lớp 10/Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng/L10C7 Bài 33. Biến dạng của vật rắn/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 5,
+        "Trắc nghiệm": 2
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 39,
+        "Tự luận": 8,
+        "Trả lời ngắn": 26,
+        "Trắc nghiệm": 61
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 69,
+        "Tự luận": 24,
+        "Trả lời ngắn": 21,
+        "Trắc nghiệm": 110
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 33,
+        "Tự luận": 23,
+        "Trả lời ngắn": 35,
+        "Trắc nghiệm": 86
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 12,
+        "Tự luận": 11,
+        "Trả lời ngắn": 20,
+        "Trắc nghiệm": 32
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 94,
+        "Tự luận": 47,
+        "Trả lời ngắn": 75,
+        "Trắc nghiệm": 104
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 4,
+        "Trắc nghiệm": 5
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 15,
+        "Tự luận": 18,
+        "Trả lời ngắn": 15,
+        "Trắc nghiệm": 89
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 10. Thực hành- Đo tần số của sóng âm/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 11. Sóng điện từ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 28,
+        "Tự luận": 39,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 65
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 12. Giao thoa sóng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 37,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 66
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 13. Sóng dừng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 39,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 66
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 14. Bài tập về sóng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 41,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 67
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 15. Thực hành- Đo tốc độ truyền âm/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 8. Mô tả sóng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 41,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 63
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 39,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 65
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 16. Lực tương tác giữa hai điện tích/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 4,
+        "Trắc nghiệm": 5
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 17. Khái niệm điện trường/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 13,
+        "Trắc nghiệm": 7
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 18. Điện trường đều/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 5,
+        "Trắc nghiệm": 6
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 19. Thế năng điện/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 4,
+        "Trắc nghiệm": 5
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 20. Điện thế/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 4,
+        "Trắc nghiệm": 5
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 21. Tụ điện/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 2,
+        "Trắc nghiệm": 8
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 22. Cường độ dòng điện/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 7,
+        "Trắc nghiệm": 17
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 23. Điện trở. Định luật Ohm/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 1,
+        "Trắc nghiệm": 15
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 24. Nguồn điện/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 7,
+        "Trắc nghiệm": 18
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 25. Năng lượng điện và công suất điện/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Tự luận": 13,
+        "Trắc nghiệm": 11
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 32,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 90
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 31,
+        "Tự luận": 33,
+        "Trả lời ngắn": 32,
+        "Trắc nghiệm": 32
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 17,
+        "Trắc nghiệm": 54,
+        "Tự luận": 17,
+        "Trả lời ngắn": 19
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 35,
+        "Tự luận": 36,
+        "Trả lời ngắn": 42,
+        "Trắc nghiệm": 72
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 36,
+        "Tự luận": 36,
+        "Trả lời ngắn": 108,
+        "Trắc nghiệm": 103
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 61
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 32,
+        "Tự luận": 36,
+        "Trả lời ngắn": 38,
+        "Trắc nghiệm": 64
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 36,
+        "Trả lời ngắn": 61,
+        "Trắc nghiệm": 86
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 27,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60,
+        "Tự luận": 23
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60,
+        "Tự luận": 6
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 33,
+        "Tự luận": 34,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 57
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 14. Từ trường/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Trắc nghiệm": 110,
+        "Đúng sai": 50,
+        "Tự luận": 62,
+        "Trả lời ngắn": 62
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 62,
+        "Tự luận": 72,
+        "Trả lời ngắn": 73,
+        "Trắc nghiệm": 121
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 72,
+        "Trả lời ngắn": 72,
+        "Trắc nghiệm": 120
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 17. Máy phát điện xoay chiều/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 72,
+        "Trả lời ngắn": 72,
+        "Trắc nghiệm": 120
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 72,
+        "Trả lời ngắn": 72,
+        "Trắc nghiệm": 120
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 72,
+        "Trả lời ngắn": 72,
+        "Trắc nghiệm": 120
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 20. Bài tập về từ trường/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 60,
+        "Tự luận": 72,
+        "Trả lời ngắn": 72,
+        "Trắc nghiệm": 120
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 21. Cấu trúc hạt nhân/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 35,
+        "Tự luận": 42,
+        "Trả lời ngắn": 42,
+        "Trắc nghiệm": 70
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 39,
+        "Tự luận": 42,
+        "Trả lời ngắn": 42,
+        "Trắc nghiệm": 81
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 23. Hiện tượng phóng xạ/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 30,
+        "Tự luận": 36,
+        "Trả lời ngắn": 36,
+        "Trắc nghiệm": 60
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 24. Công nghiệp hạt nhân/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 35,
+        "Tự luận": 42,
+        "Trả lời ngắn": 42,
+        "Trắc nghiệm": 70
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  },
+  "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 25. Bài tập về vật lí hạt nhân/de.tex": {
+    "FilterCounts": {
+      "dangbaitap": {
+        "Đúng sai": 35,
+        "Tự luận": 42,
+        "Trả lời ngắn": 42,
+        "Trắc nghiệm": 70
+      }
+    },
+    "DbtOrder": [
+      "Trắc nghiệm",
+      "Đúng sai",
+      "Trả lời ngắn",
+      "Tự luận"
+    ],
+    "DangBaiTap": "Trắc nghiệm, Đúng sai, Trả lời ngắn, Tự luận"
+  }
+}
