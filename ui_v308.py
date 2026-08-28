@@ -1,8 +1,7 @@
-"""
-V308 UI wrapper for the existing Flask application.
+"""V308 visual layer for the existing Flask application.
 
-The backend remains in app.py. This module imports the same Flask app and
-adds the V308 visual layer to HTML responses from the existing root page.
+The backend/routes remain in app.py. This module only injects the V308
+CSS/JS into HTML responses so the existing application keeps its behavior.
 """
 
 from __future__ import annotations
@@ -12,13 +11,14 @@ from flask import make_response
 from app import app as app
 
 _V308_HEAD = """
-<link rel="stylesheet" href="/static/v308.css?v=308">
-<script defer src="/static/v308.js?v=308"></script>
+<link rel="stylesheet" href="/static/v308.css?v=309">
+<script defer src="/static/v308.js?v=309"></script>
 """
 
 
+@app.after_request
 def _inject_v308(response):
-    """Add V308 assets to HTML only; never modify JSON/API responses."""
+    """Add V308 assets to every HTML response; never touch JSON/API data."""
     try:
         resp = make_response(response)
         content_type = (resp.headers.get("Content-Type") or "").lower()
@@ -26,7 +26,7 @@ def _inject_v308(response):
             return resp
 
         body = resp.get_data(as_text=True)
-        if "v308.css" in body:
+        if "v308.css?v=309" in body:
             return resp
 
         lower = body.lower()
@@ -44,24 +44,6 @@ def _inject_v308(response):
         return response
 
 
-# Wrap the existing root view without changing the Flask route or endpoint.
-for _rule in list(app.url_map.iter_rules()):
-    if _rule.rule == "/":
-        _endpoint = _rule.endpoint
-        _original = app.view_functions.get(_endpoint)
-        if _original is not None and not getattr(_original, "_v308_wrapped", False):
-
-            def _make_wrapper(view):
-                def _wrapped(*args, **kwargs):
-                    return _inject_v308(view(*args, **kwargs))
-
-                _wrapped._v308_wrapped = True
-                _wrapped.__name__ = getattr(view, "__name__", "v308_root")
-                return _wrapped
-
-            app.view_functions[_endpoint] = _make_wrapper(_original)
-
-
 @app.route("/ui-v308-preview")
 def ui_v308_preview():
     """Standalone visual preview; safe to remove after UI approval."""
@@ -71,8 +53,8 @@ def ui_v308_preview():
 <meta charset='utf-8'>
 <meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>Luyện Đề Vật Lý — V308 Preview</title>
-<link rel='stylesheet' href='/static/v308.css?v=308'>
-<script defer src='/static/v308.js?v=308'></script>
+<link rel='stylesheet' href='/static/v308.css?v=309'>
+<script defer src='/static/v308.js?v=309'></script>
 </head>
 <body class='v308-preview'>
 <main class='v308-preview-shell'>
@@ -81,7 +63,7 @@ def ui_v308_preview():
     <div>
       <p class='v308-eyebrow'>LỚP HỌC THẦY MINH</p>
       <h1>LUYỆN ĐỀ VẬT LÝ</h1>
-      <p class='v308-subtitle'>Giao diện V308 — hiện đại, rõ ràng, tối ưu cho học sinh và giáo viên.</p>
+      <p class='v308-subtitle'>Giao diện V309 — hiện đại, rõ ràng, tối ưu cho học sinh và giáo viên.</p>
     </div>
   </section>
   <section class='v308-grid'>
