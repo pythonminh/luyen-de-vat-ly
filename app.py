@@ -15909,162 +15909,82 @@ function renderCatalog(){
 
 
 
-/* ===== V248 FIXLOAD: 2 trang riêng Toán / Vật lí, giữ lõi V246 ổn định ===== */
-function v248EnsureSubjectPageCss(){
-  if(document.getElementById('LDVL_TWO_SUBJECT_PAGES_V248'))return;
-  let st=document.createElement('style');st.id='LDVL_TWO_SUBJECT_PAGES_V248';
-  st.textContent=`
-  .subjectPagesV248{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 10px}
-  .subjectPageBtnV248{border:2px solid #bfdbfe;background:#fff;color:#1e40af;border-radius:16px;padding:10px 12px;font-weight:950;font-size:16px;cursor:pointer;box-shadow:0 1px 4px #1d4ed811;text-align:center;min-height:56px}
-  .subjectPageBtnV248.active{background:linear-gradient(90deg,#1d4ed8,#2563eb);color:#fff;border-color:#1d4ed8;box-shadow:0 4px 12px #1d4ed833;transform:translateY(-1px)}
-  .subjectPageBtnV248.math.active{background:linear-gradient(90deg,#7c3aed,#2563eb);border-color:#7c3aed}
-  .subjectPageBtnV248.physics.active{background:linear-gradient(90deg,#0f766e,#2563eb);border-color:#0f766e}
-  .subjectPageSubV248{font-size:11px;opacity:.9;font-weight:800;margin-top:2px}.subjectPageTitleV248{font-weight:950;color:#1e3a8a;margin-bottom:8px}.catalogScopeBox.subjectV248{border:1px solid #bfdbfe!important;background:linear-gradient(180deg,#eff6ff,#fff)!important;border-radius:18px!important;padding:12px!important}
-  @media(max-width:760px){.subjectPagesV248{gap:6px}.subjectPageBtnV248{font-size:14px;padding:8px 6px;border-radius:13px;min-height:50px}.catalogScopeBox.subjectV248{padding:9px!important}.subjectPageTitleV248{font-size:13px}.catalogScopeRow{gap:5px}.catalogChip{font-size:11px;padding:5px 7px}}
-  html[data-theme='dark'] .subjectPageBtnV248{background:#111827;color:#bfdbfe;border-color:#334155}html[data-theme='dark'] .subjectPageTitleV248{color:#bfdbfe}html[data-theme='dark'] .catalogScopeBox.subjectV248{background:linear-gradient(180deg,#172554,#0f172a)!important;border-color:#1d4ed8!important}
-  `;
-  document.head.appendChild(st);
+/* ===== V308 SUBJECT SWITCH: một logic duy nhất cho Toán / Vật lí ===== */
+function subjectNorm(s){
+  try{
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
+  }catch(e){ return String(s || '').toLowerCase().trim(); }
 }
-function v248SubjectKind(mon){let k=normText(mon||''); if(k.includes('toan')||k.includes('math'))return 'math'; if(k.includes('vat li')||k.includes('vat ly')||k.includes('physics')||k==='ly')return 'physics'; return 'other'}
-function v248SubjectLabel(mon){let kind=v248SubjectKind(mon); if(kind==='math')return '📐 Toán'; if(kind==='physics')return '⚛️ Vật lí'; return '📘 '+(mon||'Môn khác')}
-function v248Subjects(){let arr=uniqField(CATALOG||[],'Mon').filter(Boolean);arr.sort((a,b)=>{let ka=v248SubjectKind(a),kb=v248SubjectKind(b);let pa=ka==='math'?0:ka==='physics'?1:2;let pb=kb==='math'?0:kb==='physics'?1:2;if(pa!==pb)return pa-pb;return normText(a).localeCompare(normText(b),'vi')});return arr}
-function v248DefaultSubject(){let s=v248Subjects();let saved='';try{saved=localStorage.getItem('LDVL_SUBJECT_PAGE_V248')||localStorage.getItem('LDVL_SUBJECT_PAGE_V247')||''}catch(e){};if(saved&&s.includes(saved))return saved;let math=s.find(x=>v248SubjectKind(x)==='math');if(math)return math;let phys=s.find(x=>v248SubjectKind(x)==='physics');if(phys)return phys;return s[0]||''}
-function v248EnsureSubject(){let subjects=v248Subjects();let cur=val('fMon')||'';if(!cur||!subjects.includes(cur)){let d=v248DefaultSubject();if(d)setVal('fMon',d)}try{if(val('fMon'))localStorage.setItem('LDVL_SUBJECT_PAGE_V248',val('fMon'))}catch(e){};return val('fMon')||''}
-function v248ClearSubjectFilters(){window.CATALOG_SELECTED_KHOI='';setVal('fLop','');setVal('fChuong','');setVal('fBaiHoc','');setVal('fDangBaiTap','');setVal('fBoDe','');setVal('fMucDo','');setVal('fDang','');setVal('fSearch','')}
-function v248SelectSubject(mon){
-  // V249: đổi Trang Toán/Vật lí thật sự, không bị refreshFilterOptions kéo về Trang Toán.
-  mon=String(mon||'').trim();
-  try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon)}catch(e){}
-  // Xóa bộ lọc con trước, rồi mới đặt lại fMon để tránh reset nhầm.
-  window.CATALOG_SELECTED_KHOI='';
-  setVal('fLop','');
-  setVal('fChuong','');
-  setVal('fBaiHoc','');
-  setVal('fDangBaiTap','');
-  setVal('fBoDe','');
-  setVal('fMucDo','');
-  setVal('fDang','');
-  setVal('fSearch','');
-  setVal('fMon',mon);
-  refreshFilterOptions();
-  setVal('fMon',mon); // khóa lại môn sau khi dropdown được nạp lại
-  try{localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon)}catch(e){}
-  renderCatalog();
-  try{syncRpFromMainFilters&&syncRpFromMainFilters()}catch(e){}
-}
-var V248_ORIG_REFRESH_FILTER_OPTIONS = refreshFilterOptions;
-refreshFilterOptions = function(){v248EnsureSubject();V248_ORIG_REFRESH_FILTER_OPTIONS();v248EnsureSubject();v245RenderCatalogScopeTabs();};
-v245SelectMon = function(v){v248SelectSubject(v)};
-var V248_ORIG_RENDER_CATALOG = renderCatalog;
-renderCatalog = function(){v248EnsureSubject();V248_ORIG_RENDER_CATALOG();};
-// V249: bắt click bằng delegation phòng trường hợp inline onclick bị PWA/cache chặn.
-document.addEventListener('click',function(ev){
-  let btn=ev.target&&ev.target.closest?ev.target.closest('[data-subject-v249]'):null;
-  if(!btn)return;
-  ev.preventDefault();
-  v248SelectSubject(btn.getAttribute('data-subject-v249')||'');
-});
-
-
-
-/* ===== V250: chỉ giữ 2 tab môn lớn; bỏ dải Khối/Chương/Bài phía trên vì đã có bộ lọc bên dưới ===== */
-function v250RenderSubjectOnlyTabs(){
-  v248EnsureSubjectPageCss();
-  v245EnsureCatalogScopeBox();
-  let box=document.getElementById('catalogScopeBox'); if(!box)return;
-  box.classList.add('subjectV248');
-  let curMon=v248EnsureSubject();
-  let subjects=v248Subjects();
-  let tabs=subjects.map(m=>{
-    let kind=v248SubjectKind(m);
-    let active=m===curMon?' active':'';
-    let count=(CATALOG||[]).filter(x=>x.Mon===m).length;
-    let qs=(CATALOG||[]).filter(x=>x.Mon===m).reduce((a,x)=>a+(parseInt(x.SoCau,10)||0),0);
-    return `<button type="button" class="subjectPageBtnV248 ${kind}${active}" data-subject-v249="${escAttr(m)}" onclick="v248SelectSubject(${JSON.stringify(m)})"><div>${esc(v248SubjectLabel(m))}</div><div class="subjectPageSubV248">${count} mục · ${qs} câu</div></button>`;
-  }).join('');
-  box.innerHTML=`<div class="subjectPagesV248">${tabs}</div><div class="catalogAdvancedHint">Chọn <b>Trang Toán</b> hoặc <b>Trang Vật lí</b>. Lọc chi tiết bằng các ô bên dưới: Lớp, Chương, Bài học, Mức độ, Loại câu hỏi, Dạng bài tập, Bộ đề, Tìm nhanh.</div>`;
-}
-v245RenderCatalogScopeTabs = v250RenderSubjectOnlyTabs;
-
-
-
-/* ===== V255: ép nút Toán/Vật lí trên thanh xanh đổi đúng Môn =====
-   Lỗi cũ: V248 giữ localStorage LDVL_SUBJECT_PAGE_V248 nên nút trên thanh xanh bị kéo lại môn cũ.
-   Cách sửa: nút trên thanh xanh gọi thẳng v248SelectSubject(mon) và cập nhật cả fMon + rpMon. */
-function v255SubjectNorm(s){
-  try{return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}catch(e){return String(s||'').toLowerCase().trim()}
-}
-function v255KindOfSubject(s){
-  let n=v255SubjectNorm(s);
-  if(n.includes('toan')||n.includes('math'))return 'math';
-  if(n.includes('vat li')||n.includes('vat ly')||n.includes('vatli')||n.includes('vatly')||n==='ly'||n.includes('physics'))return 'physics';
+function subjectKind(s){
+  let n=subjectNorm(s);
+  if(n.includes('toan')||n.includes('math')) return 'math';
+  if(n.includes('vat li')||n.includes('vat ly')||n.includes('vatli')||n.includes('vatly')||n.includes('physics')||n==='ly') return 'physics';
   return '';
 }
-function v255FindSubjectByKind(kind){
-  let arr=[];
-  try{let sel=document.getElementById('fMon'); if(sel){for(let o of sel.options){let v=String(o.value||'').trim(); if(v)arr.push(v);}}}catch(e){}
-  try{for(let x of (CATALOG||[])){let v=String((x&&x.Mon)||'').trim(); if(v&&!arr.some(a=>v255SubjectNorm(a)===v255SubjectNorm(v)))arr.push(v);}}catch(e){}
-  for(let v of arr){ if(v255KindOfSubject(v)===kind)return v; }
+function findSubject(kind){
+  let subjects=[];
+  try{
+    for(let x of (CATALOG||[])){
+      let m=String(x.Mon||'').trim();
+      if(m&&!subjects.some(s=>subjectNorm(s)===subjectNorm(m))) subjects.push(m);
+    }
+  }catch(e){}
+  for(let m of subjects) if(subjectKind(m)===kind) return m;
   return kind==='math'?'Toán':(kind==='physics'?'Vật lí':'');
 }
-function v255SetSelectByText(id, text){
-  let el=document.getElementById(id); if(!el)return false;
-  let target=v255SubjectNorm(text); let found='';
+function clearSubjectFilters(){
+  window.CATALOG_SELECTED_KHOI='';
+  ['fLop','fChuong','fBaiHoc','fDangBaiTap','fBoDe','fMucDo','fDang','fSearch'].forEach(id=>{let el=document.getElementById(id);if(el)el.value='';});
+}
+function setSubjectSelect(id,mon){
+  let el=document.getElementById(id);if(!el)return false;
+  let target=subjectNorm(mon),found='';
   for(let o of el.options){
-    if(v255SubjectNorm(o.value)===target || v255SubjectNorm(o.textContent)===target || v255KindOfSubject(o.value)===v255KindOfSubject(text)) {found=o.value;break;}
+    if(subjectNorm(o.value)===target||subjectNorm(o.textContent)===target||(subjectKind(o.value)&&subjectKind(o.value)===subjectKind(mon))){found=o.value;break;}
   }
-  el.value=found || text || '';
-  try{el.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}
+  el.value=found||mon||'';
   return !!found;
 }
-function v255SelectTopSubject(kind){
-  let mon=v255FindSubjectByKind(kind);
-  if(!mon){try{localStorage.setItem('LDVL_PENDING_SUBJECT_V255',kind)}catch(e){};return false;}
-  try{
-    localStorage.setItem('LDVL_TOP_SUBJECT_V255',kind);
-    localStorage.setItem('LDVL_TOP_SUBJECT_V254',kind);
-    localStorage.setItem('LDVL_TOP_SUBJECT_V253',kind);
-    localStorage.setItem('LDVL_SUBJECT_PAGE_V248',mon); // khóa lõi V248 không kéo lại Toán
-  }catch(e){}
-  function applyNow(){
-    try{window.CATALOG_SELECTED_KHOI=''}catch(e){}
-    ['fLop','fChuong','fBaiHoc','fBoDe','fDangBaiTap','fMucDo','fDang','fSearch'].forEach(id=>{let el=document.getElementById(id); if(el)el.value='';});
-    v255SetSelectByText('fMon',mon);
-    try{ if(typeof v248SelectSubject==='function') v248SelectSubject(mon); else { if(typeof refreshFilterOptions==='function')refreshFilterOptions(); v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog(); } }catch(e){try{v255SetSelectByText('fMon',mon); if(typeof renderCatalog==='function')renderCatalog();}catch(_){}}
-    try{v255SetSelectByText('rpMon',mon); if(typeof onRpScopeChange==='function')onRpScopeChange('mon');}catch(e){}
-    v255SyncTopSubject();
-  }
-  let quiz=document.getElementById('quiz');
-  let inQuiz=quiz&&!quiz.classList.contains('hide');
-  if(inQuiz&&typeof backHome==='function'){backHome();setTimeout(applyNow,160);} else applyNow();
-  return false;
+function syncSubjectButtons(){
+  let mon='';try{let el=document.getElementById('fMon');mon=el?el.value:'';}catch(e){}
+  let kind=subjectKind(mon);
+  let mathBtn=document.getElementById('topSubjectMathV253');
+  let physicsBtn=document.getElementById('topSubjectPhysicsV253');
+  if(mathBtn)mathBtn.classList.toggle('active',kind==='math');
+  if(physicsBtn)physicsBtn.classList.toggle('active',kind==='physics');
 }
-// Ghi đè hàm cũ để inline onclick hiện tại vẫn chạy đúng.
-function v253SelectSubject(kind){return v255SelectTopSubject(kind)}
-function v254ApplySubject(kind){return v255SelectTopSubject(kind)}
-function v255SyncTopSubject(){
-  try{
-    let cur=(document.getElementById('fMon')&&document.getElementById('fMon').value)||'';
-    let kind=v255KindOfSubject(cur);
-    if(!kind){try{kind=localStorage.getItem('LDVL_TOP_SUBJECT_V255')||localStorage.getItem('LDVL_TOP_SUBJECT_V254')||localStorage.getItem('LDVL_TOP_SUBJECT_V253')||''}catch(e){}}
-    let bm=document.getElementById('topSubjectMathV253'),bp=document.getElementById('topSubjectPhysicsV253');
-    if(bm)bm.classList.toggle('active',kind==='math');
-    if(bp)bp.classList.toggle('active',kind==='physics');
-  }catch(e){}
+function selectSubject(mon){
+  mon=String(mon||'').trim();if(!mon)return;
+  clearSubjectFilters();
+  setSubjectSelect('fMon',mon);
+  try{refreshFilterOptions();}catch(e){console.error('refreshFilterOptions:',e);}
+  setSubjectSelect('fMon',mon);
+  try{setSubjectSelect('rpMon',mon);if(typeof onRpScopeChange==='function')onRpScopeChange('mon');}catch(e){}
+  try{renderCatalog();}catch(e){console.error('renderCatalog:',e);}
+  setTimeout(syncSubjectButtons,0);
 }
+function v253SelectSubject(kind){
+  let mon=findSubject(kind);
+  if(!mon){alert(kind==='math'?'Không tìm thấy dữ liệu môn Toán.':'Không tìm thấy dữ liệu môn Vật lí.');return false;}
+  selectSubject(mon);return false;
+}
+function v253ToggleSubjectTabs(){
+  let box=document.getElementById('topSubjectTabsV253');if(!box)return;
+  let show=box.classList.contains('subjectTabsHiddenV253');
+  if(typeof v253SetSubjectTabsVisible==='function')v253SetSubjectTabsVisible(show);
+  else box.classList.toggle('subjectTabsHiddenV253',!show);
+}
+document.addEventListener('change',function(ev){
+  if(!ev.target||ev.target.id!=='fMon')return;
+  setTimeout(syncSubjectButtons,0);
+});
 document.addEventListener('click',function(ev){
   let btn=ev.target&&ev.target.closest?ev.target.closest('#topSubjectMathV253,#topSubjectPhysicsV253'):null;
   if(!btn)return;
-  ev.preventDefault(); ev.stopPropagation();
-  v255SelectTopSubject(btn.id==='topSubjectMathV253'?'math':'physics');
+  ev.preventDefault();ev.stopPropagation();
+  v253SelectSubject(btn.id==='topSubjectMathV253'?'math':'physics');
 },true);
-(function(){
-  let oldRender=window.renderCatalog;
-  if(typeof oldRender==='function')window.renderCatalog=function(){let r=oldRender.apply(this,arguments);setTimeout(v255SyncTopSubject,0);return r};
-  document.addEventListener('DOMContentLoaded',function(){let visible='1';try{visible=localStorage.getItem('LDVL_TOP_SUBJECT_VISIBLE_V253')||'1'}catch(e){};if(typeof v253SetSubjectTabsVisible==='function')v253SetSubjectTabsVisible(visible!=='0');setTimeout(v255SyncTopSubject,300);setTimeout(v255SyncTopSubject,1300)});
-  setTimeout(function(){v255SyncTopSubject();let p='';try{p=localStorage.getItem('LDVL_PENDING_SUBJECT_V255')||''}catch(e){};if(p&&document.getElementById('fMon')){try{localStorage.removeItem('LDVL_PENDING_SUBJECT_V255')}catch(e){};v255SelectTopSubject(p)}},1200);
-})();
-
+document.addEventListener('DOMContentLoaded',function(){setTimeout(syncSubjectButtons,300);});
 /* ===== V233 PWA: cài app lên điện thoại ===== */
 let PWA_DEFERRED_PROMPT=null;
 function isStandalonePwa(){try{return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}catch(e){return false}}
