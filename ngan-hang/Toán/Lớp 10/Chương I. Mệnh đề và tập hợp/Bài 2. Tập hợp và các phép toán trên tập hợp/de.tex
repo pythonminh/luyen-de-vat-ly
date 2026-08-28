@@ -1,0 +1,3719 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương I. Mệnh đề và tập hợp
+% Bài: Bài 2. Tập hợp và các phép toán trên tập hợp
+% Số câu: 56
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 2. Tập hợp và các phép toán trên tập hợp
+
+% ===== Câu 1 =====
+% ID: T10C1B2-01-DS
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-01-DS
+% Mức: VD
+Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên. Khi đó
+\choiceTF
+{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá}
+{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này sai
+\item (Đúng) Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này đúng
+\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá. (Vì): Gọi $L$ là tập hợp học sinh lớp $10C6$, ta có $|L| = 45$. Số học sinh không tham gia câu lạc bộ bóng đá là $|L| - |BĐ| = 45 - 18 = 27$. Mệnh đề này sai
+\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ. (Vì): ố học sinh không tham gia cả hai câu lạc bộ là $|L| - |BĐ \cup BR| = 45 - 23 = 22$. Mệnh đề này sai
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 2 =====
+% ID: T10C1B2-01-TL
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{bt}
+% ID: T10C1B2-01-TL
+% Mức: NB
+Cho hai tập hợp $A=\{n \in \mathbb{Z} \mid -2 \lt  n \leq 4\}$ và $B=\{-1 ; 0;1;5\}$. Hãy xác định tập hợp $A \cup B$, $A \setminus B$.
+\loigiai{
+Ta có $A=\{-1; 0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0;1;5\}$.
+Suy ra $A \cup B=\{-1; 0 ; 1 ; 2 ; 3 ; 4; 5\}$ và $A \setminus B=\{2 ; 3 ; 4\}$.
+}
+\end{bt}
+
+% ===== Câu 3 =====
+% ID: T10C1B2-01-TLN
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-01-TLN
+% Mức: VD
+Cho tập $A=\left\{ x\in \mathbb{N}|~x(2-x)(x^2-3x-4)=0 \right\}$. Hỏi tập $A$ có bao nhiêu tập con ?
+\shortans{8}
+\loigiai{
+$x(2-x)(x^2-3x-4)=0 \Leftrightarrow x=0$ hoặc $2-x=0$ hoặc $x^2-3x-4=0$.
+$x=0 \in \mathbb{N}$.
+$2-x=0 \Leftrightarrow x=2 \in \mathbb{N}$.
+$x^2-3x-4=0 \Leftrightarrow (x-4)(x+1)=0 \Leftrightarrow x=4 \in \mathbb{N}$ hoặc $x=-1 \notin \mathbb{N}$.
+Vậy $A=\{0;2;4\}$.
+Số tập con của tập $A$ là $2^{|A|} = 2^3 = 8$.
+8
+}
+\end{ex}
+
+
+% ===== Câu 4 =====
+% ID: T10C1B2-01-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-01-TN
+% Mức: NB
+Cho $x$ là một phần tử của tập hợp $X$. Mệnh đề nào sau đây là $\textbf{đúng}$?
+\choice
+{\True $x \in X$}
+{$X \in x$}
+{$x \subset X$}
+{$\{x\} \in X$}
+\loigiai{
+Mệnh đề là đúng là $x \in X$. Kí hiệu $x$ là một phần tử của tập hợp $X$.
+}
+\end{ex}
+
+% ===== Câu 5 =====
+% ID: T10C1B2-02-DS
+% Mức: VD
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-02-DS
+% Mức: VD
+Cho các tập hợp $A=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\}$, $B=\{0 ; 1 ; 4 ; 5\}$ và $C=\{-4 ;-3 ; 1 ; 2 ; 5 ; 6\}$.
+\choiceTF
+{$A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$}
+{$A\cap B=\{0\}$}
+{\True $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$}
+{$A\cap B\cap C=\{1\}$}
+\loigiai{
+\begin{itemchoice}
+\item (Sai) $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$. (Vì): \cup B)$ và $C$ là tập hợp chứa các phần tử chung của hai tập hợp này. Ta có $
+\item (Sai) $A\cap B=\{0\}$. (Vì): Giao của hai tập hợp $A$ và $B$ là tập hợp chứa tất cả các phần tử vừa thuộc $A$ vừa thuộc $B$. Ta có $A\cap B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\} \cap \{0 ; 1 ; 4 ; 5\} = \{0 ; 1\}$. Mệnh đề cho là $\{0\}$, nên sai
+\item (Đúng) $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$. (Vì): Hợp của $A$ và $B$ là $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$. Giao của $
+\item (Sai) $A\cap B\cap C=\{1\}$.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 6 =====
+% ID: T10C1B2-02-TL
+% Mức: VD
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-02-TL
+% Mức: VD
+Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+\loigiai{
+Để $A \subset B$, ta cần có:
+[LG-ONLY]
+[HINH]
+$m-1 \ge -2$ và $4 \le 2m+2$.
+$m \ge -1$ và $2m \ge 2$.
+$m \ge -1$ và $m \ge 1$.
+Suy ra $m \ge 1$.
+Vì $m$ là số nguyên dương, nên $m \in \{1, 2, 3, 4\}$.
+Tuy nhiên, đề bài cho $A=(m-1; 4]$ và $B=(-2; 2m+2)$.
+Để $A \subset B$, ta cần:
+$m-1 \ge -2 \implies m \ge -1$.
+$4 \le 2m+2 \implies 2m \ge 2 \implies m \ge 1$.
+Kết hợp hai điều kiện, ta có $m \ge 1$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Kiểm tra lại điều kiện $A$ và $B$ khác rỗng:
+$m-1 \lt  4 \implies m \lt  5$.
+$-2 \lt  2m+2 \implies 2m \gt  -4 \implies m \gt  -2$.
+Vậy điều kiện để $A$ và $B$ khác rỗng là $-2 \lt  m \lt  5$.
+Kết hợp với điều kiện $m \ge 1$, ta có $1 \le m \lt  5$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Có 4 giá trị nguyên dương của $m$ thỏa mãn.
+
+$m \in \{1, 2, 3, 4\}$.
+}
+\end{bt}
+
+% ===== Câu 7 =====
+% ID: T10C1B2-02-TLN
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-02-TLN
+% Mức: VD
+Cho ba tập hợp $A=\{2; 5\}$, $B=\{5 ; x\}$, $C=\{x ; y ; 5\}$, biết $A=B=C$. Biết $x \neq y$, khi đó giá trị $x + y$ bằng
+\shortans{7}
+\loigiai{
+Vì $A=B$ nên $x=2$. Lại có $B=C$ nên $y=5$.
+Vậy $x+y=2+5=7$.
+}
+\end{ex}
+
+% ===== Câu 8 =====
+% ID: T10C1B2-02-TN
+% Mức: NB
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-02-TN
+% Mức: NB
+Cách viết nào sau đây là $\textbf{sai}$?
+\choice
+{$(0 ;+\infty)=\{x \in \mathbb{R}| x>0\}$}
+{$[0 ; 5]=\{x \in \mathbb{R}| 0 \leqslant x \leqslant 5\}$}
+{$(0 ; 5)=\{x \in \mathbb{R}| 0\lt x<5\}$}
+{\True $[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$}
+\loigiai{
+Vì $[-1 ; 5)=\{x \in \mathbb{R} \mid -1 \leqslant x<5\}$ nên cách viết sau là sai: «$[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$».
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: T10C1B2-03-DS
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-03-DS
+% Mức: VD
+Cho hai tập hợp $A=\{x\in \mathbb{R}|~(x-1)(x-2)(x-3)=0\}$, $B=\{5;3;1\}$.
+\choiceTF
+{\True Tập hợp $A$ có $3$ phần tử}
+{Tập hợp $A\cup B$ có $6$ phần tử}
+{Tập hợp $A \subset B$}
+{Tập hợp $B \subset A$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có $3$ phần tử. (Vì): Phương trình $(x-1)(x-2)(x-3)=0$ có ba nghiệm phân biệt là $x=1$, $x=2$, $x=3$. Do đó, tập hợp $A=\{1;2;3\}$ có đúng $3$ phần tử
+\item (Sai) Tập hợp $A\cup B$ có $6$ phần tử. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Hợp của hai tập hợp $A\cup B$ bao gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ hoặc thuộc cả hai. Ta có $A\cup B = \{1;2;3;5\}$. Tập hợp này có $4$ phần tử, không phải $6$ phần tử
+\item (Sai) Tập hợp $A \subset B$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $A$ là tập con của $B$ ($A \subset B$), mọi phần tử của $A$ phải thuộc $B$. Tuy nhiên, phần tử $2$ thuộc $A$ nhưng không thuộc $B$. Do đó, $A$ không phải là tập con của $B$
+\item (Sai) Tập hợp $B \subset A$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $B$ là tập con của $A$ ($B \subset A$), mọi phần tử của $B$ phải thuộc $A$. Tuy nhiên, phần tử $5$ thuộc $B$ nhưng không thuộc $A$. Do đó, $B$ không phải là tập con của $A$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 10 =====
+% ID: T10C1B2-03-TL
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{bt}
+% ID: T10C1B2-03-TL
+% Mức: VD
+Lớp 10 $A$ có $45$ học sinh trong đó có $25$ em học giỏi môn Toán, $23$ em học giỏi môn Lý, $20$ em học giỏi môn Hóa, $11$ em học giỏi cả môn Toán và môn Lý, $8$ em học giỏi cả môn Lý và môn Hóa, $9$ em học giỏi cả môn Toán và môn Hóa. Hỏi lớp $10A$ có bao nhiêu bạn học giỏi cả ba môn Toán, Lý, Hóa? (biết rằng mỗi học sinh trong lớp học giỏi ít nhất một trong ba môn Toán, Lý, Hóa).
+\loigiai{
+Gọi $T$, $L$, $H$ lần lượt là tập hợp học sinh giỏi môn Toán, Lý, Hóa.
+Ta có công thức $|T \cup L \cup H| = |T| + |L| + |H| - |T \cap L| - |L \cap H| - |H \cap T| + |T \cap L \cap H|$.
+Thay số: $45 = 25 + 23 + 20 - 11 - 8 - 9 + |T \cap L \cap H|$.
+$\Leftrightarrow |T \cap L \cap H| = 45 - (25 + 23 + 20) + (11 + 8 + 9)$.
+$\Leftrightarrow |T \cap L \cap H| = 45 - 68 + 28$.
+$\Leftrightarrow |T \cap L \cap H| = 5$.
+Vậy có 5 học sinh giỏi cả ba môn Toán, Lý, Hóa.
+5
+}
+\end{bt}
+
+% ===== Câu 11 =====
+% ID: T10C1B2-03-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-03-TLN
+% Mức: VD
+Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
+\shortans{20}
+\loigiai{
+Gọi $A$ là tập hợp các học sinh chơi bóng đá, $B$ là tập hợp các học sinh chơi bóng bàn, $C$ là tập hợp các học sinh không chơi môn thể thao nào.
+Ta có
+ $|A|$ là số học sinh chơi bóng đá;
+$|B|$ là số học sinh chơi bóng bàn;
+$|C|$ là số học sinh không chơi môn thể thao nào.
+Khi đó số học sinh chỉ chơi một môn thể thao là:
+ $|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14=20$.
+}
+\end{ex}
+
+% ===== Câu 12 =====
+% ID: T10C1B2-03-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-03-TN
+% Mức: NB
+Cho tập hợp $A=\{x \in \mathbb{R} \mid 2 \leqslant x<5\}$. Phần bù của tập hợp $A$ trong $\mathbb{R}$ là tập nào sau đây?
+\choice
+{$[5 ;+\infty)$}
+{$(-\infty ; 2)$}
+{$(-\infty ; 2] \cup(5 ;+\infty)$}
+{\True $(-\infty ; 2) \cup[5 ;+\infty)$}
+\loigiai{
+Ta có $A = \{x \in \mathbb{R} \mid 2 \leqslant x<5\}
+ = [2;5)$.
+Khi đó phần bù của tập hợp $A$ trong $\mathbb{R}$ là
+ $\mathrm{C_{\mathbb{R}}A}
+ = \mathbb{R} \setminus A = (-\infty ; 2) \cup[5 ;+\infty)$.
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: T10C1B2-04-DS
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-04-DS
+% Mức: VD
+Cho hai tập hợp $A=\{n \in \mathbb{N}\mid (n^2-2n-3)(n^2-1)=0\}$ và $B=\{x \in \mathbb{R}\mid 2x^2-x+3=0\}$. Khi đó
+\choiceTF
+{\True Tập hợp $A$ có 2 phần tử.}
+{\True Tập hợp $A$ có 4 tập hợp con.}
+{\True Tập hợp $B$ là tập hợp rỗng.}
+{\True Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4.}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có 2 phần tử. (Vì): Tập hợp $A$ được xác định bởi phương trình $(n^2-2n-3)(n^2-1)=0$. Ta có $n^2-2n-3=0 \Leftrightarrow (n-3)(n+1)=0 \Leftrightarrow n=3$ hoặc $n=-1$. Ta có $n^2-1=0 \Leftrightarrow (n-1)(n+1)=0 \Leftrightarrow n=1$ hoặc $n=-1$. Vì $n \in \mathbb{N}$ (tập số tự nhiên), nên các giá trị của $n$ thỏa mãn là $n=1$ và $n=3$. Do đó, tập hợp $A = \{1; 3\}$. Tập hợp $A$ có 2 phần tử
+\item (Đúng) Tập hợp $A$ có 4 tập hợp con. (Vì): Số tập hợp con của một tập hợp có $k$ phần tử là $2^k$. Tập hợp $A$ có 2 phần tử, nên số tập hợp con của tập hợp $A$ là $2^2 = 4$
+\item (Đúng) Tập hợp $B$ là tập hợp rỗng. (Vì): Tập hợp $B$ được xác định bởi phương trình $2x^2-x+3=0$. Ta xét biệt thức $\Delta = b^2 - 4ac = (-1)^2 - 4(2)(3) = 1 - 24 = -23$. Vì $\Delta < 0$, phương trình $2x^2-x+3=0$ vô nghiệm. Do đó, tập hợp $B$ là tập hợp rỗng, ký hiệu là $B = \emptyset$
+\item (Đúng) Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4. (Vì): Tổng các phần tử của tập hợp $A$ là $1+3=4$. Tập hợp $B$ là tập hợp rỗng nên không có phần tử nào để tính tổng. Tổng các phần tử của tập hợp $A$ và tập hợp $B$ là $4+0=4$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 14 =====
+% ID: T10C1B2-04-TL
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-04-TL
+% Mức: VDC
+Cho $A=\left[m-3 ; \dfrac{m+2}{4}\right)$, $B=(-\infty ;-1) \cup [2 ;+\infty)$. Xác định $m$ để $(A \cap B=\varnothing)$.
+\loigiai{
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \leq 4m-12 \\,\text{m} \geq 2 \text{ và } m+2 \leq 8 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} 14 \leq 3m \\,\text{m} \geq 2 \text{ và } m \leq 6 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \geq \dfrac{14}{3} \\ 2 \leq m \leq 6 \end{array} \right.\Leftrightarrow m \in \left[2; 6\right] \cup \left[\dfrac{14}{3}; +\infty\right)$.
+
+Kiểm tra lại đề bài: $A \cap B = \varnothing$.
+Điều kiện để $A \cap B = \varnothing$ là khoảng $A$ nằm hoàn toàn bên trái hoặc hoàn toàn bên phải khoảng $B$.
+Trường hợp 1: Khoảng $A$ nằm hoàn toàn bên trái khoảng $B$.
+Điều này xảy ra khi phần tử cuối của $A$ nhỏ hơn phần tử đầu của phần bên trái của $B$.
+$\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+Trường hợp 2: Khoảng $A$ nằm hoàn toàn bên phải khoảng $B$.
+Điều này xảy ra khi phần tử đầu của $A$ lớn hơn hoặc bằng phần tử cuối của phần bên phải của $B$.
+$m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc có vẻ đã hiểu sai điều kiện giao rỗng.
+Ta có $A \cap B = \varnothing$ khi:
+1. Khoảng $A$ nằm hoàn toàn bên trái của $(-\infty; -1)$.
+   $\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+2. Khoảng $A$ nằm hoàn toàn bên phải của $[2; +\infty)$.
+   $m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc:
+$A\cap B=\varnothing \Leftrightarrow \left\{ \begin{aligned} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{aligned} \right.$
+Điều kiện này là để $A$ nằm trong $B$, không phải giao rỗng.
+
+Chỉnh lại theo đúng yêu cầu:
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \lt  -1 \\,\text{m}-3 \geq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \lt  -4 \\,\text{m} \geq 5 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \lt  -6 \\,\text{m} \geq 5 \end{array} \right.m \in (-\infty; -6) \cup [5; +\infty)$.
+}
+\end{bt}
+
+% ===== Câu 15 =====
+% ID: T10C1B2-04-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-04-TLN
+% Mức: VD
+Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \subset B$?
+\shortans{1}
+\loigiai{
+Để $A \subset B$, ta cần $m+1 \gt  0$ và $2m-1 \lt  6$.
+$m+1 \gt  0 \Leftrightarrow m \gt  -1$.
+$2m-1 \lt  6 \Leftrightarrow 2m \lt  7 \Leftrightarrow m \lt  \frac{7}{2}$.
+Kết hợp hai điều kiện, ta có $-1 \lt  m \lt  \frac{7}{2}$.
+Vì $m$ là số nguyên, các giá trị nguyên của $m$ thỏa mãn là $0, 1, 2, 3$.
+Tuy nhiên, đề bài cho tập hợp $A=[m+1;2m-1]$. Để tập hợp này có nghĩa, ta cần $m+1 \le 2m-1$, suy ra $m \ge 2$.
+Kết hợp điều kiện $m \ge 2$ với $-1 \lt  m \lt  \frac{7}{2}$, ta được $2 \le m \lt  \frac{7}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $2, 3$.
+Có 2 giá trị nguyên của $m$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 16 =====
+% ID: T10C1B2-04-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-04-TN
+% Mức: NB
+Cho tập hợp $A=\{2;4;7;8;9;12\}$. Đâu là một tập hợp con của $A$?
+\choice
+{$\mathscr{D}=\{5\}$}
+{$C=\{2;6;9\}$}
+{$B=\{3;4;7\}$}
+{\True $X=\{2;12\}$}
+\loigiai{
+tập hợp con của tập hợp $A$ là $X=\{2;12\}$.
+}
+\end{ex}
+
+% ===== Câu 17 =====
+% ID: T10C1B2-05-DS
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-05-DS
+% Mức: VD
+Lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa, $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi cả Lý và Hóa, $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa.
+\choiceTF
+{\True Số học sinh chỉ giỏi môn Toán là $1$ học sinh}
+{\True Số học sinh chỉ giỏi môn Lý là $1$ học sinh}
+{Số học sinh chỉ giỏi môn Hóa là $2$ học sinh}
+{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Số học sinh chỉ giỏi môn Toán là $1$ học sinh.
+\item (Đúng) Số học sinh chỉ giỏi môn Lý là $1$ học sinh.
+\item (Sai) Số học sinh chỉ giỏi môn Hóa là $2$ học sinh. (Vì): ố học sinh chỉ giỏi môn Hóa là $1$ học sinh, đề bài cho là $2$ học sinh
+\item (Đúng) Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh.
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 18 =====
+% ID: T10C1B2-05-TL
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-05-TL
+% Mức: VDC
+Cho tập hợp $A=(0 ;+\infty)$ và $B=\left\{x \in \mathbb{R} \mid m x^2-6 x+m-8=0\right\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \subset A$.
+\loigiai{
+Tập $B$ có đúng hai tập con $\Leftrightarrow B$ có đúng một phần tử.
+Do đó, phương trình $m x^2-6 x+m-8=0$ có duy nhất một nghiệm.
+
+Trường hợp 1: $m=0$.
+Phương trình trở thành $-6x-8=0 \Leftrightarrow x=-\dfrac{4}{3}$.
+Khi đó $B=\left\{-\dfrac{4}{3}\right\}$.
+Vì $-\dfrac{4}{3} \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Trường hợp 2: $m \neq 0$.
+Phương trình có nghiệm duy nhất $\Leftrightarrow \Delta'=0$.
+$\Delta' = (-3)^2 - m(m-8) = 9 - m^2 + 8m$.
+$\Delta'=0 \Leftrightarrow -m^2+8m+9=0 \Leftrightarrow m^2-8m-9=0 \Leftrightarrow (m-9)(m+1)=0$.
+$\Leftrightarrow m=9$ hoặc $m=-1$.
+
+Nếu $m=-1$:
+Phương trình là $-x^2-6x-9=0 \Leftrightarrow x^2+6x+9=0 \Leftrightarrow (x+3)^2=0 \Leftrightarrow x=-3$.
+Khi đó $B=\{-3\}$.
+Vì $-3 \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Nếu $m=9$:
+Phương trình là $9x^2-6x+1=0 \Leftrightarrow (3x-1)^2=0 \Leftrightarrow x=\dfrac{1}{3}$.
+Khi đó $B=\left\{\dfrac{1}{3}\right\}$.
+Vì $\dfrac{1}{3} \in A=(0 ;+\infty)$ nên $B \subset A$.
+
+Vậy $m=9$.
+9
+}
+\end{bt}
+
+% ===== Câu 19 =====
+% ID: T10C1B2-05-TLN
+% Mức: VD
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-05-TLN
+% Mức: VD
+Lớp 10 $A$ có $45$ học sinh trong đó có $12$ bạn học sinh giỏi Văn, $9$ bạn học sinh giỏi Địa lí, và $30$ bạn không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu bạn học sinh giỏi cả hai môn Văn và Địa lí?
+\shortans{6}
+\loigiai{
+Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).
+Số học sinh giỏi cả 2 môn Văn và Địa lí là $12+9-15=6(học sinh)$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 20 =====
+% ID: T10C1B2-05-TN
+% Mức: NB
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-05-TN
+% Mức: NB
+Cho tập $A$ có $3$ phần tử, số tập con của tập $A$ bằng
+\choice
+{$6$}
+{$3$}
+{\True $8$}
+{$4$}
+\loigiai{
+Giả sử $A=\left\{ a;b;c \right\}$, các tập con của $A$ là: $\varnothing$, $\left\{ a \right\}$, $\left\{ b \right\}$, $\left\{ c \right\}$, $\left\{ a;b \right\}$, $\left\{ a;c \right\}$, $\left\{ b;c \right\}$, $\left\{ a;b;c \right\}$.
+Vậy có $8$ tập con của $A$.
+}
+\end{ex}
+
+% ===== Câu 21 =====
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \in \mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \subset B$. Có bao nhiêu tập con của $S$?
+\shortans{4}
+\loigiai{
+$A \subset B \Leftrightarrow \begin{cases} 2a-1 \lt  4 \\ 3a+5 \ge 7 \end{cases} \Leftrightarrow \begin{cases} a \lt  \frac{5}{2} \\ a \ge \frac{2}{3} \end{cases} \Leftrightarrow \frac{2}{3} \le a \lt  \frac{5}{2}$.
+$a \in \mathbb{Z} \Rightarrow S = \{1; 2\}$.
+Số tập con của $S$ là $2^{|S|} = 2^2 = 4$.
+4
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 22 =====
+% ID: T10C1B2-06-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-06-TN
+% Mức: NB
+Cho hai tập hợp $A=\{-1;2;3;5;7\}$, $B=\{1;2;3;4;5\}$. Khi đó giao của hai tập hợp là
+\choice
+{\True $\{2;3;5\}$}
+{$\{-1;2;3\}$}
+{$\{1;2;3;4;5\}$}
+{$\{2;3;4;5\}$}
+\loigiai{
+Giao của hai tập hợp $A$ và $B$, ký hiệu là $A\cap B$, là tập hợp gồm các phần tử vừa thuộc $A$ vừa thuộc $B$. 
+Ta có $A=\{-1;2;3;5;7\}$ và $B=\{1;2;3;4;5\}$. 
+Các phần tử chung của $A$ và $B$ là $2, 3, 5$. 
+Vậy $A\cap B = \{2;3;5\}$.
+}
+\end{ex}
+
+% ===== Câu 23 =====
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+Cho số thực $m<0$ và hai tập hợp $A=(-\infty ; 9m)$, $B=\left(\dfrac{4}{m};+\infty\right)$. Biết tất cả các giá trị thực của tham số $m \in (a,b)$ để $A \cap B \neq \varnothing$.
+Khi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).
+\shortans{0{,}67}
+\loigiai{
+Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
+
+ Nên hai tập hợp $A$ và $B$ giao nhau khác rỗng,
+  $\Leftrightarrow9\,\text{m}$ > $\dfrac{4}{m}\Leftrightarrow9\,\text{m}$ ^2<4 $\quad(\text{do }$ m<0)
+ $\Rightarrow$ m^2< $\dfrac{4}{9}\Leftrightarrow$ - $\dfrac{2}{3}$ < m < 0. 
+ Vậy $m \in \left(-\dfrac{2}{3};0\right)$ thỏa $A \cap B \neq \varnothing$. Khi đó $b-a = 0 - \left( -\dfrac{2}{3}\right) \approx 0,67$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 24 =====
+% ID: T10C1B2-07-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-07-TN
+% Mức: NB
+Hãy liệt kê các phần tử của tập hợp $X=\left\{n \in \mathbb{N}^{*} \mid n \leq 3\right\}$.
+\choice
+{$X=\{1 ; 2\}$}
+{\True $X=\{1 ; 2 ; 3\}$}
+{$X=\{0 ; 1 ; 2\}$}
+{$X=\{0 ; 1 ; 2 ; 3\}$}
+\loigiai{
+$X=\{1 ; 2 ; 3\}$.
+}
+\end{ex}
+
+% ===== Câu 25 =====
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{ex}
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
+\shortans{1}
+\loigiai{
+Để $B \neq \varnothing$, ta có $m \lt  4m - 1 \Leftrightarrow m \gt  \dfrac{1}{3}$.
+Để $B \subset A$, ta có $m \geq 1$ và $4m - 1 \leq 5$.
+$4m - 1 \leq 5 \Leftrightarrow 4m \leq 6 \Leftrightarrow m \leq \dfrac{3}{2}$.
+Kết hợp các điều kiện, ta có $1 \leq m \leq \dfrac{3}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $m=1$.
+Có 1 giá trị nguyên của $m$.
+1
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 26 =====
+% ID: T10C1B2-08-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-08-TN
+% Mức: NB
+Cho tập $A=\{0 ; 2 ; 4 ; 6 ; 8\}$; $B=\{3 ; 4 ; 5 ; 6 ; 7\}$. Tập $A \setminus B$ là
+\choice
+{$\{0 ; 6 ; 8\}$}
+{\True $\{0 ; 2 ; 8\}$}
+{$\{3 ; 6 ; 7\}$}
+{$\{0 ; 2\}$}
+\loigiai{
+Vì $A \setminus B$ gồm các phần tử thuộc tập hợp $A$ và không thuộc $B$ nên $A \setminus B=\{0 ; 2 ; 8\}$.
+}
+\end{ex}
+
+% ===== Câu 27 =====
+% ID: T10C1B2-09-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-09-TN
+% Mức: NB
+Cho hai tập hợp $A=\{1;2;3;4;5;6;7\}$, $B=\{5;6;7;8\}$. Tìm tập $C=A\cup B$.
+\choice
+{\True $C=\{1;2;3;4;5;6;7;8\}$}
+{$C=\{1;2;3;4;8\}$}
+{$C=\{5;6;7\}$}
+{$C=\{1;2;3;4\}$}
+\loigiai{
+Hợp của hai tập hợp $A$ và $B$, ký hiệu là $A \cup B$, là tập hợp gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ hoặc thuộc cả hai tập hợp. 
+Ta có $A = \{1; 2; 3; 4; 5; 6; 7\}$ và $B = \{5; 6; 7; 8\}$. 
+Khi đó, $A \cup B = \{1; 2; 3; 4; 5; 6; 7\} \cup \{5; 6; 7; 8\} = \{1; 2; 3; 4; 5; 6; 7; 8\}$. 
+Vậy tập $C = A \cup B = \{1; 2; 3; 4; 5; 6; 7; 8\}$.
+}
+\end{ex}
+
+% ===== Câu 28 =====
+% ID: T10C1B2-10-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-10-TN
+% Mức: NB
+Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 6\}$. Số phần tử của tập hợp $A$ là
+\choice
+{$8$}
+{\True $7$}
+{$5$}
+{$6$}
+\loigiai{
+$A=\{x \mid x \in \mathbb{N}, x \leq 6\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5;6 \}$. Do đó số phần tử của tập hợp $A$ là $7$.
+}
+\end{ex}
+
+% ===== Câu 29 =====
+% ID: T10C1B2-11-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-11-TN
+% Mức: NB
+Số phần tử của tập $C=\{ x \in \mathbb{Z} \mid -1 \leq x \leq 1\}$ là
+\choice
+{\True $3$}
+{$2$}
+{$1$}
+{$6$}
+\loigiai{
+Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+}
+\end{ex}
+
+% ===== Câu 30 =====
+% ID: T10C1B2-12-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-12-TN
+% Mức: NB
+Kí hiệu nào sau đây dùng để viết đúng mệnh đề «~ $\sqrt{2}$ không phải là số hữu tỉ~»?
+\choice
+{$\sqrt{2}\subset \mathbb{Q}$}
+{\True $\sqrt{2}\notin \mathbb{Q}$}
+{$\sqrt{2}\ne \mathbb{Q}$}
+{$\sqrt{2}\in \mathbb{Q}$}
+\loigiai{
+Cách viết đúng là $\sqrt{2} \notin \mathbb{Q}$.
+}
+\end{ex}
+
+% ===== Câu 31 =====
+% ID: T10C1B2-13-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-13-TN
+% Mức: NB
+Cách viết nào sau đây là đúng để mô tả «$x$ là một phần tử của tập hợp $A$»
+\choice
+{\True $x\in A$}
+{$\{x\} \in A$}
+{$x\subset A$}
+{$\{x\} \not \subset A$}
+\loigiai{
+Vì $x$ là phần tử cho nên ta có $x\in A$ là cách viết đúng.
+}
+\end{ex}
+
+% ===== Câu 32 =====
+% ID: T10C1B2-14-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-14-TN
+% Mức: NB
+Cho $A=\{0;1;2\}$, $B=\{-1;0;1\}$. Khi đó $A\cap B$ là
+\choice
+{$\{0\}$}
+{$\{-1;0;1\}$}
+{\True $\{0;1\}$}
+{$\{1\}$}
+\loigiai{
+Phần tử chung của hai tập hợp $A$ và $B$ là 0 và 1. Do đó, $A\cap B = \{0;1\}$.
+}
+\end{ex}
+
+% ===== Câu 33 =====
+% ID: T10C1B2-15-TN
+% Mức: NB
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+% ID: T10C1B2-15-TN
+% Mức: NB
+Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Venn như sau. Khẳng định nào sau đây $\textbf{sai}$?
+\choice
+{$B \subset C_X A$}
+{$A \cap B=\varnothing$}
+{$A \subset C_X B$}
+{\True $A \cup B=X$}
+\loigiai{
+Nhìn biểu đồ, ta thấy $A \cup B \neq X$.
+}
+\end{ex}
+
+% ===== Câu 34 =====
+% ID: T10C1B2-16-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-16-TN
+% Mức: NB
+Cho tập hợp $X=\{0 ; 2 ; 5\}$. Tập hợp nào dưới đây $\textbf{không}$ phải là tập con của tập hợp $X$?
+\choice
+{$\varnothing$}
+{$\{2\}$}
+{$\{0 ; 2 ; 5\}$}
+{\True $\{0 ; 1 ; 2\}$}
+\loigiai{
+Ta có $1 \notin X$, vậy $\{0 ; 1 ; 2\} \not \subset\{0 ; 2 ; 5\}$.
+}
+\end{ex}
+
+% ===== Câu 35 =====
+% ID: T10C1B2-17-TN
+% Mức: NB
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-17-TN
+% Mức: NB
+Cho tập hợp $A=\{a ; b ; c\}$. Số tập con của tập hợp $A$ là
+\choice
+{6}
+{\True 8}
+{9}
+{7}
+\loigiai{
+Do tập hợp $A$ có 3 phần tử nên số tập con của tập hợp $A$ là $2^3=8$.
+}
+\end{ex}
+
+% ===== Câu 36 =====
+% ID: T10C1B2-18-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-18-TN
+% Mức: NB
+Cho tập hợp $A=[3;8)$, $B=(-\infty;4)$. Tìm $A\cap B$
+\choice
+{\True [3;4)}
+{[3;4]}
+{(3;4)}
+{(3;4]}
+\loigiai{
+Tập hợp $A$ bao gồm các số thực lớn hơn hoặc bằng 3 và nhỏ hơn 8. Tập hợp $B$ bao gồm các số thực nhỏ hơn 4. Giao của hai tập hợp $A$ và $B$ là tập hợp các phần tử thuộc cả $A$ và $B$. Do đó, $A\cap B$ bao gồm các số thực lớn hơn hoặc bằng 3 và nhỏ hơn 4. Vậy $A\cap B=[3;4)$.
+}
+\end{ex}
+
+% ===== Câu 37 =====
+% ID: T10C1B2-19-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-19-TN
+% Mức: NB
+Tập hợp $X=(-\infty;2]\cap (-6;+\infty)$ là
+\choice
+{$(-6;2)$}
+{\True $(-6;2]$}
+{$[-\infty;2]$}
+{$(-6;+\infty)$}
+\loigiai{
+Ta có $X=(-\infty;2]\cap (-6;+\infty)$. Giao của hai tập hợp này là tập hợp các phần tử thuộc cả hai tập hợp. Do đó, $X=(-6;2]$.
+}
+\end{ex}
+
+% ===== Câu 38 =====
+% ID: T10C1B2-20-TN
+% Mức: NB
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-20-TN
+% Mức: NB
+Cho tập hợp $A=[1;5]$, phát biểu nào sau đây đúng?
+\choice
+{$A=\{x \in \mathbb{R} \mid 1 \lt  x \lt  5\}$}
+{\True $A=\{x \in \mathbb{R} \mid 1 \leq x \leq 5\}$}
+{$A=\{x \in \mathbb{R} \mid 1 \leq x \lt  5\}$}
+{$A=\{x \in \mathbb{R} \mid 1 \lt  x \leq 5\}$}
+\loigiai{
+Ta có $A=[1;5]=\{x \in \mathbb{R} \mid 1 \leq x \leq 5\}$. Đoạn $[1;5]$ bao gồm cả hai đầu mút $1$ và $5$, tức là $x$ thỏa mãn $1 \leq x \leq 5$. Vậy phát biểu đúng là phương án B.
+}
+\end{ex}
+
+% ===== Câu 39 =====
+% ID: T10C1B2-21-TN
+% Mức: NB
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-21-TN
+% Mức: NB
+Cho tập hợp $A=\{ x \in \mathbb{N} |~(x-1)(2x+4)=0 \}$. Tập $A$ được viết theo kiểu liệt kê là
+\choice
+{$\{ -1;4 \}$}
+{\True $\{ 1 \}$}
+{$\{ 1;-2 \}$}
+{$\{ -1;-2 \}$}
+\loigiai{
+Ta có
+  (x-1)(2x+4)=0
+ $\Leftrightarrow$ hoặc{&x-1=0
+&2x+4=0}
+ $\Leftrightarrow$ hoặc{&x=1
+&x=-2 $\notin\mathbb{N}$.} 
+ Vậy $A=\{ x \in \mathbb{N} |~ (x-1)(2x+4)=0 \} = \{ 1 \}$.
+}
+\end{ex}
+
+% ===== Câu 40 =====
+% ID: T10C1B2-22-TN
+% Mức: NB
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-22-TN
+% Mức: NB
+Cho $A=[-1 ; 3]$; $B=(2 ; 5)$. Tìm mệnh đề $\textbf{sai}$.
+\choice
+{$B \setminus A=(3 ; 5)$}
+{$A \cap B=(2 ; 3]$}
+{$A \setminus B=[-1 ; 2]$}
+{\True $A \cup B=[-1 ; 5]$}
+\loigiai{
+Ta có $A \cup B=[-1 ; 5)$.
+}
+\end{ex}
+
+% ===== Câu 41 =====
+% ID: T10C1B2-23-TN
+% Mức: TH
+\begin{ex}
+% ID: T10C1B2-23-TN
+% Mức: TH
+Cho $A\subset B$. Khẳng định nào sau đây là đúng?
+\choice
+{$A \cup B = A$}
+{\True $A \cap B = A$}
+{$A \setminus B = \emptyset$}
+{$B \setminus A = B$}
+\loigiai{
+Vì $A\subset B$ nên mọi phần tử của $A$ đều thuộc $B$. Do đó, tập hợp các phần tử thuộc cả $A$ và $B$ chính là tập $A$. Vậy $A \cap B = A$.
+}
+\end{ex}
+
+% ===== Câu 42 =====
+% ID: T10C1B2-24-TN
+% Mức: TH
+\dangbt{Các tập số, khoảng, đoạn và nửa khoảng}
+\begin{ex}
+% ID: T10C1B2-24-TN
+% Mức: TH
+Cho $A=\{1;5\};B=\{1;3;5\}$. Chọn kết quả đúng trong các kết quả sau
+\choice
+{$A \cup B = \{1;3;5\}$}
+{$A \cap B = \{1\}$}
+{\True $A \subset B$}
+{$B \subset A$}
+\loigiai{
+Ta có $A=\{1;5\}$ và $B=\{1;3;5\}$.
+Kiểm tra các phương án:
+$A \cup B = \{1;3;5\}$ (Sai)
+$A \cap B = \{1;5\}$ (Sai)
+$A \subset B$ vì mọi phần tử của $A$ đều thuộc $B$ (Đúng)
+$B \subset A$ (Sai)
+Vậy phương án $C$ là đúng.
+}
+\end{ex}
+
+% ===== Câu 43 =====
+% ID: T10C1B2-25-TN
+% Mức: TH
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-25-TN
+% Mức: TH
+Tập hợp nào sau đây khi biểu diễn trên trục số sẽ tương ứng với phần còn trống trên hình vẽ bên?
+\choice
+{$[-3;5]$}
+{$(-3;5)$}
+{$[-3;5)$}
+{\True $(-3;5]$}
+\loigiai{
+Dựa vào hình vẽ, phần còn trống trên trục số tương ứng với khoảng $(-3;5]$, tức là tập hợp các số thực $x$ thỏa mãn $-3 \lt  x \leq 5$. Điểm $-3$ không thuộc tập hợp (dấu ngoặc tròn, vòng tròn rỗng trên trục số) và điểm $5$ thuộc tập hợp (dấu ngoặc vuông, vòng tròn đặc trên trục số). Vậy đáp án là $(-3;5]$.
+}
+\end{ex}
+
+% ===== Câu 44 =====
+% ID: T10C1B2-26-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-26-TN
+% Mức: VD
+Có bao nhiêu tập $A$ để $\left\{ m;n \right\}\subset A\subset \left\{ m;n;x;y \right\}$ ?
+\choice
+{$2$}
+{\True $4$}
+{$1$}
+{$3$}
+\loigiai{
+Vì $\{ m;n \} \subset A \subset \{ m;n;x;y \}$ nên $A$ có thể là một trong bốn tập hợp sau
+ $\{ m;n \};~\{m;n;x\};~\{ m;n;y \};~\{ m;n;x;y\}.$
+}
+\end{ex}
+
+% ===== Câu 45 =====
+% ID: T10C1B2-27-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-27-TN
+% Mức: VD
+Tập $A=\{0;1;2\}$ có bao nhiêu tập con có đúng $2$ phần tử?
+\choice
+{$6$}
+{$7$}
+{\True $3$}
+{$4$}
+\loigiai{
+Có $3$ tập con có đúng $2$ phần tử của tập $A=\left\{ 0;1;2 \right\}$ là $\left\{ 0;1 \right\}$, $\left\{ 0;2 \right\}$, $\left\{ 1;2 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 46 =====
+% ID: T10C1B2-28-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-28-TN
+% Mức: VD
+Cho tập hợp $B=\left\{ x\in\mathbb{Z}\mid x^4-11x^2+18=0\right\}$. Khi đó số phần tử của tập hợp $B$ là
+\choice
+{$1$}
+{\True $2$}
+{$3$}
+{$4$}
+\loigiai{
+Ta có phương trình $x^4-11x^2+18=0$.
+Đặt $t=x^2$, với $t \ge 0$. Phương trình trở thành $t^2-11t+18=0$.
+Phương trình này có hai nghiệm là $t=2$ và $t=9$.
+Trường hợp 1: $x^2=2$. Suy ra $x=\sqrt{2}$ hoặc $x=-\sqrt{2}$. Cả hai giá trị này đều không thuộc tập số nguyên $\mathbb{Z}$.
+Trường hợp 2: $x^2=9$. Suy ra $x=3$ hoặc $x=-3$. Cả hai giá trị này đều thuộc tập số nguyên $\mathbb{Z}$.
+Vậy tập hợp $B$ gồm các phần tử nguyên là $B=\{-3; 3\}$.
+Số phần tử của tập hợp $B$ là 2.
+}
+\end{ex}
+
+% ===== Câu 47 =====
+% ID: T10C1B2-29-TN
+% Mức: VD
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-29-TN
+% Mức: VD
+Cho tập $M=\{x \in \mathbb{R} \mid (x+3)(x-1) \geqslant 0\}$. Khi đó
+\choice
+{$M=(-\infty ;-1] \cup[3 ;+\infty)$}
+{\True $M=(-\infty ;-3] \cup[1 ;+\infty)$}
+{$M=[1 ;+\infty)$}
+{$M=(-\infty ;-3]$}
+\loigiai{
+Ta có $(x+3)(x-1) \geqslant 0 \Leftrightarrow x \leqslant -3$ hoặc $x \geqslant 1$.
+Vậy $M = (-\infty; -3] \cup [1; +\infty)$.
+}
+\end{ex}
+
+% ===== Câu 48 =====
+% ID: T10C1B2-30-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-30-TN
+% Mức: VD
+Trong các tập hợp sau, tập nào là tập rỗng?
+\choice
+{$A= \{ x \in \mathbb{R} |~ x^2+5x-6=0 \}$}
+{$B=\{ x \in \mathbb{Q} |~ 3x^2-5x+2=0 \}$}
+{\True $C=\{ x\in \mathbb{Z} |~ x^2+x-1=0 \}$}
+{$D=\{ x \in \mathbb{R} |~ x^2+5x-1=0 \}$}
+\loigiai{
+Ta có
+$x^2+5x-6=0
+ \Leftrightarrow hoặc{&x=1 \in \mathbb{R}\\&x=-6 \in \mathbb{R}}$. Vậy$A=\{ -6;1 \} \neq \varnothing$.
+$3x^2-5x+2=0
+ \Leftrightarrow hoặc{&x=1 \in \mathbb{Q}\\&x=\dfrac{2}{3} \in \mathbb{Q}}$. Vậy$B=\left\{ 1;\dfrac{2}{3} \right\} \neq \varnothing$.
+$x^2+x-1=0
+ \Leftrightarrow hoặc{&x=\dfrac{-1+\sqrt{5}}{2} \notin \mathbb{Z}\\&x=\dfrac{-1-\sqrt{5}}{2} \notin \mathbb{Z}}$. Vì$x \in \mathbb{Z}$nên$C=\varnothing$.
+$x^2+5x-1=0
+ \Leftrightarrow hoặc{&x=\dfrac{-5+\sqrt{29}}{2} \in \mathbb{R}\\&x=\dfrac{-5-\sqrt{29}}{2} \in \mathbb{R}}$. Vậy$D=\left\{ \dfrac{-5+\sqrt{29}}{2};\dfrac{-5-\sqrt{29}}{2} \right\} \neq \varnothing$.
+}
+\end{ex}
+
+% ===== Câu 49 =====
+% ID: T10C1B2-31-TN
+% Mức: VD
+\dangbt{Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\begin{ex}
+% ID: T10C1B2-31-TN
+% Mức: VD
+Trong các tập hợp sau, tập hợp nào là tập hợp rỗng?
+\choice
+{$A=\{x \in \mathbb{Z}|~ x<1\}$}
+{$B=\left\{x \in \mathbb{Z} \mid 6 x^2-7 x+1=0\right\}$}
+{\True $C=\left\{x \in \mathbb{Q} \mid x^2-4 x+2=0\right\}$}
+{$D=\left\{x \in \mathbb{R} \mid x^2-4 x+3=0\right\}$}
+\loigiai{
+Xét tập hợp $C = \{x \in \mathbb{Q} \mid x^2 - 4x + 2 = 0\}$. Phương trình $x^2 - 4x + 2 = 0$ có hai nghiệm là $x = 2 + \sqrt{2}$ và $x = 2 - \sqrt{2}$. Cả hai nghiệm này đều không thuộc tập số hữu tỉ $\mathbb{Q}$. Do đó, tập hợp $C$ không chứa phần tử nào, tức là $C = \varnothing$.
+Xét tập hợp $A = \{x \in \mathbb{Z} \mid x \lt  1\}$. Tập hợp này chứa các số nguyên nhỏ hơn 1, ví dụ như $0, -1, -2, \dots$. Do đó, $A \neq \varnothing$.
+Xét tập hợp $B = \{x \in \mathbb{Z} \mid 6x^2 - 7x + 1 = 0\}$. Phương trình $6x^2 - 7x + 1 = 0$ có hai nghiệm là $x = 1$ và $x = \frac{1}{6}$. Trong hai nghiệm này, chỉ có $x = 1$ thuộc tập số nguyên $\mathbb{Z}$. Do đó, $B = \{1\}$, suy ra $B \neq \varnothing$.
+Xét tập hợp $D = \{x \in \mathbb{R} \mid x^2 - 4x + 3 = 0\}$. Phương trình $x^2 - 4x + 3 = 0$ có hai nghiệm là $x = 1$ và $x = 3$. Cả hai nghiệm này đều thuộc tập số thực $\mathbb{R}$. Do đó, $D = \{1; 3\}$, suy ra $D \neq \varnothing$.
+Vậy, tập hợp rỗng là tập hợp $C$.
+}
+\end{ex}
+
+% ===== Câu 50 =====
+% ID: T10C1B2-32-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-32-TN
+% Mức: VD
+Trong các tập sau đây, tập hợp nào có đúng hai tập hợp con?
+\choice
+{$\{x, y\}$}
+{\True $\{x\}$}
+{$\{0, x\}$}
+{$\{0; x, y\}$}
+\loigiai{
+$\{x, y\}$ có $2^2=4$ tập con.
+$\{x\}$ có $2^1=2$ tập con là $\{x\}$ và $\varnothing$.
+$\{0, x\}$ có $2^2=4$ tập con.
+$\{0; x, y\}$ có $z^3=8$ tập con.
+}
+\end{ex}
+
+% ===== Câu 51 =====
+% ID: T10C1B2-33-TN
+% Mức: VD
+\dangbt{Xác định tập hợp, phần tử và tập con}
+\begin{ex}
+% ID: T10C1B2-33-TN
+% Mức: VD
+Cho tập $A=\{ x\in \mathbb{N}|~(2-x)(x^2-3x-4)=0 \}$. Hỏi tập $A$ có bao nhiêu tập con ?
+\choice
+{$2$}
+{\True $4$}
+{$7$}
+{$8$}
+\loigiai{
+Ta có $(2-x)(x^2-3x-4)=0 \Leftrightarrow hoặc{
+ & x=2 \in \mathbb{N} \\
+ & x=-1 \notin \mathbb{N} \\
+ & x=4 \in \mathbb{N}.}$
+Vậy $A=\{ 2;4 \}$ nên $A$ có các tập con là $\{ 2\}$; $\{ 4\}$; $\{ 2;4\}$; $\varnothing$.
+}
+\end{ex}
+
+% ===== Câu 52 =====
+% ID: T10C1B2-34-TN
+% Mức: VD
+\dangbt{Xác định đường biên và miền nghiệm}
+\begin{ex}
+% ID: T10C1B2-34-TN
+% Mức: VD
+Cho tập $X=\{ x \in \mathbb{N} |~ (x^2-4)(x-1)=0\}$. Tính số phần tử của $X$.
+\choice
+{$1$}
+{$3$}
+{\True $2$}
+{$4$}
+\loigiai{
+Ta có
+  $(x^2-4)(x-1)=0\Leftrightarrow$ hoặc{&x^2-4=0
+&x-1=0}
+ $\Leftrightarrow$ hoặc{&x=2
+&x=-2 $\notin\mathbb{N}$
+&x=1.} 
+ Do $x\in \mathbb{N} \Rightarrow x \in \{ 2;1\}$. Vậy $X$ có $2$ phần tử.
+}
+\end{ex}
+
+% ===== Câu 53 =====
+% ID: T10C1B2-35-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-35-TN
+% Mức: VD
+Viết tập hợp $A=\{ x \in \mathbb{N} |~ (2x+1)(x^2-5x+6)=0\}$ bằng cách liệt kê.
+\choice
+{$\{ -1;2;3 \}$}
+{\True $\{ 2;3 \}$}
+{$\left\{ -\dfrac{1}{2};2;3 \right\}$}
+{$\{ -1;2 \}$}
+\loigiai{
+Ta có
+  (2x+1)$(x^2-5x+6)$=0 $\Leftrightarrow$
+ hoặc{&2x+1=0
+&x^2-5x+6=0} $\Leftrightarrow$
+ hoặc{&x=-$\dfrac{1}{2}$
+&x=2
+&x=3.} 
+ Do $x \in \mathbb{N} \Rightarrow A=\left\{ 2;3 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 54 =====
+% ID: T10C1B2-36-TN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-36-TN
+% Mức: VDC
+Cho hai tập hợp $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\},\,B=\{x\in \mathbb{Z}|3x+10\gt 1\}$. Khẳng định nào sau đây là đúng?
+\choice
+{$\mathrm{C}_B A=\{2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{-3;-2;-1;2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{0;1;2;3;4;\ldots\}$}
+{\True $\mathrm{C}_B A=\{-2;-1;2;3;4;\ldots\}$}
+\loigiai{
+Ta có $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\}$.
+$-5\le 2x-\dfrac{1}{3}\le 3-5+\dfrac{1}{3}\le 2x\le 3+\dfrac{1}{3}-\dfrac{14}{3}\le 2x\le \dfrac{10}{3}-\dfrac{7}{3}\le x\le \dfrac{5}{3}$
+Vì $x\in\mathbb{N}$ nên $x\in\{0; 1\}$. Vậy $A=\{0; 1\}$.
+
+Ta có $B=\{x\in \mathbb{Z}|3x+10\gt 1\}$.
+$3x\gt 1-103x\gt -9x\gt -3$
+Vì $x\in\mathbb{Z}$ nên $x\in\{-2; -1; 0; 1; 2; 3; \ldots\}$. Vậy $B=\{-2; -1; 0; 1; 2; 3; \ldots\}$.
+
+Ta cần tìm khẳng định đúng.
+Xét tập hợp $B \setminus A = \{x \mid x \in B \text{ và } x \notin A\}$.
+$B \setminus A = \{-2; -1; 0; 1; 2; 3; \ldots\} \setminus \{0; 1\} = \{-2; -1; 2; 3; \ldots\}$.
+Khẳng định $D$ là $B \setminus A = \{-2; -1; 2; 3; \ldots\}$.
+}
+\end{ex}
+
+% ===== Câu 55 =====
+% ID: T10C1B2-37-TN
+% Mức: VDC
+\dangbt{Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn}
+\begin{ex}
+% ID: T10C1B2-37-TN
+% Mức: VDC
+Cho hai tập hợp $A=\{x\in \mathbb{N}| 2x-9\le 0 .\}$, $B=\{x\in \mathbb{Z}| 2x^2-3x+1=0 .\}$. Xác định $B\setminus A$.
+\choice
+{$\mathbb{Z}$}
+{$B=\{1\}$}
+{\True $\varnothing$}
+{$A=\{0;1;2;3;4\}$}
+\loigiai{
+Ta có $2x-9\le 0\Leftrightarrow x\le \dfrac{9}{2}$, do $x\in \mathbb{N}$ nên $A=\{0;1;2;3;4\}$.
+Lại có $2x^2-3x+1=0\Leftrightarrow (2x-1)(x-1)=0\Leftrightarrow x=\dfrac{1}{2}\notin \mathbb{Z}$ hoặc $x=1\in \mathbb{Z}$ nên $B=\{1\}$.
+Do đó $B\setminus A=\{1\}\setminus \{0;1;2;3;4\}=\varnothing$.
+}
+\end{ex}
+
+% ===== Câu 56 =====
+% ID: T10C1B2-38-TN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-38-TN
+% Mức: VDC
+Liệt kê các phần tử của tập hợp $A=\{ x \in \mathbb{Z}|~ (6x^2-7x+1)(x^2-4)=0\}$ ta được
+\choice
+{$A=\left\{\dfrac{1}{6};\dfrac{1}{2};2 \right\}$}
+{\True $A=\{-2;1;2\}$}
+{$A=\left\{-2;\dfrac{1}{6};1;2 \right\}$}
+{$A=\{1;2\}$}
+\loigiai{
+Xét phương trình
+  $(6x^2-7x+1)(x^2-4)=0\Leftrightarrow
+ hoặc{&6x^2-7x+1=0
+&x^2-4=0} \Leftrightarrowhoặc{&x=1$\in\mathbb{Z}$&x=$\dfrac{1}{6}\notin\mathbb{Z}$&x = 2$\in\mathbb{Z}$& x=-2$\in\mathbb{Z}$.} 
+ Vậy$ A=\{-2;1;2\}.
+}
+\end{ex}
+%=== Câu 1 (ID: 0D1N1-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N1-2]
+	Cho $x$ là một phần tử của tập hợp $X$. Mệnh đề nào sau đây là $\textbf{đúng}$?
+	\choice
+	{\True $x \in X$}
+	{$X \in x$}
+	{$x \subset X$}
+	{$\{x\} \in X$}
+	\loigiai{
+		Mệnh đề là đúng là $x \in X$. Kí hiệu $x$ là một phần tử của tập hợp $X$.
+	}
+\end{ex}
+
+%=== Câu 2 (ID: 0D1N2-1) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-1]
+	Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 6\}$. Số phần tử của tập hợp $A$ là
+	\choice
+	{$8$}
+	{\True $7$}
+	{$5$}
+	{$6$}
+	\loigiai{
+		$A=\{x \mid x \in \mathbb{N}, x \leq 6\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5;6 \}$. Do đó số phần tử của tập hợp $A$ là $7$.
+	}
+\end{ex}
+
+%=== Câu 3 (ID: 0D1N2-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-1]
+	Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 5\}$. Số phần tử của tập hợp $A$ là
+	\choice
+	{$8$}
+	{$7$}
+	{$5$}
+	{\True $6$}
+	\loigiai{
+		$A=\{x \mid x \in \mathbb{N}, x \leq 5\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5\}$. Do đó số phần tử của tập hợp $A$ là $6$.
+	}
+\end{ex}
+
+%=== Câu 4 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-2]
+	Số phần tử của tập $C=\{ x \in \mathbb{Z} \mid -1 \leq x \leq 1\}$ là
+	\choice
+	{\True $3$}
+	{$2$}
+	{$1$}
+	{$6$}
+	\loigiai{
+		Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 5 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-2]
+	Cho tập hợp $X=\{0 ; 2 ; 5\}$. Tập hợp nào dưới đây $\textbf{không}$ phải là tập con của tập hợp $X$?
+	\choice
+	{$\varnothing$}
+	{$\{2\}$}
+	{$\{0 ; 2 ; 5\}$}
+	{\True  $\{0 ; 1 ; 2\}$}
+	\loigiai{
+		Ta có $1 \notin X$,  vậy $\{0 ; 1 ; 2\} \not \subset\{0 ; 2 ; 5\}$.
+	}
+\end{ex}
+
+%=== Câu 6 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-2]
+	Số phần tử của tập $C=\{x \in \mathbb{Z} \mid-1 \leqslant x \leqslant 1\}$ là
+	\choice
+	{\True $3$}
+	{$2$}
+	{$1$}
+	{$6$}
+	\loigiai{
+		Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 7 (ID: 0D1N2-2) ===%
+\begin{bt}%[0D1N2-2]
+	Cho ba tập hợp $A=\{2; 5\}$, $B=\{5 ; x\}$, $C=\{x ; y ; 5\}$, biết $A=B=C$. Biết $x \neq y$, khi đó giá trị $x + y$ bằng
+	\shortans{7}
+	\loigiai{
+		Vì $A=B$ nên $x=2$. Lại có $B=C$ nên $y=5$.\\
+		Vậy $x+y=2+5=7$.
+	}
+\end{bt}
+
+%=== Câu 8 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập hợp $A=\{ x \in \mathbb{N} |~(x-1)(2x+4)=0 \}$. Tập $A$ được viết theo kiểu liệt kê là
+	\choice
+	{$\{ -1;4 \}$}
+	{\True $\{ 1 \}$}
+	{$\{ 1;-2 \}$}
+	{$\{ -1;-2 \}$}
+	\loigiai{
+		Ta có
+		\[
+		(x-1)(2x+4)=0
+		\Leftrightarrow \hoac{&x-1=0\\&2x+4=0}
+		\Leftrightarrow \hoac{&x=1\\&x=-2 \notin \mathbb{N}.}
+		\]
+		Vậy $A=\{ x \in \mathbb{N} |~ (x-1)(2x+4)=0 \} = \{ 1 \}$.
+	}
+\end{ex}
+
+%=== Câu 9 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $X=\{ x \in \mathbb{N} |~ (x^2-4)(x-1)=0\}$. Tính số phần tử của $X$.
+	\choice
+	{$1$}
+	{$3$}
+	{\True $2$}
+	{$4$}
+	\loigiai{
+		Ta có
+		\[
+		(x^2-4)(x-1)=0
+		\Leftrightarrow \hoac{&x^2-4=0\\&x-1=0}
+		\Leftrightarrow \hoac{&x=2\\&x=-2 \notin \mathbb{N}\\&x=1.}
+		\]
+		Do $x\in \mathbb{N} \Rightarrow x \in \{ 2;1\}$. Vậy $X$ có $2$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 10 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Kí hiệu nào sau đây dùng để viết đúng mệnh đề \lq\lq~$\sqrt{2}$ không phải là số hữu tỉ~\rq\rq?
+	\choice
+	{$\sqrt{2}\subset \mathbb{Q}$}
+	{\True $\sqrt{2}\notin \mathbb{Q}$}
+	{$\sqrt{2}\ne \mathbb{Q}$}
+	{$\sqrt{2}\in \mathbb{Q}$}
+	\loigiai{
+		Cách viết đúng là $\sqrt{2} \notin \mathbb{Q}$.}
+\end{ex}
+
+%=== Câu 11 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Trong các tập hợp sau, tập nào là tập rỗng?
+	\choice
+	{$A= \{ x \in \mathbb{R} |~ x^2+5x-6=0 \}$}
+	{$B=\{ x \in \mathbb{Q} |~ 3x^2-5x+2=0 \}$}
+	{\True $C=\{ x\in \mathbb{Z} |~ x^2+x-1=0 \}$}
+	{$D=\{ x \in \mathbb{R} |~ x^2+5x-1=0 \}$}
+	\loigiai{
+		Ta có\\
+		$x^2+5x-6=0
+		\Leftrightarrow \hoac{&x=1 \in \mathbb{R}\\&x=-6 \in \mathbb{R}}$. Vậy $A=\{ -6;1 \} \neq \varnothing$.\\
+		$3x^2-5x+2=0
+		\Leftrightarrow \hoac{&x=1 \in \mathbb{Q}\\&x=\dfrac{2}{3} \in \mathbb{Q}}$. Vậy $B=\left\{ 1;\dfrac{2}{3} \right\} \neq \varnothing$.\\
+		$x^2+x-1=0
+		\Leftrightarrow \hoac{&x=\dfrac{-1+\sqrt{5}}{2} \notin \mathbb{Z}\\&x=\dfrac{-1-\sqrt{5}}{2} \notin \mathbb{Z}}$. Vì $x \in \mathbb{Z}$ nên $C=\varnothing$.\\
+		$x^2+5x-1=0
+		\Leftrightarrow \hoac{&x=\dfrac{-5+\sqrt{29}}{2} \in \mathbb{R}\\&x=\dfrac{-5-\sqrt{29}}{2} \in \mathbb{R}}$. Vậy $D=\left\{ \dfrac{-5+\sqrt{29}}{2};\dfrac{-5-\sqrt{29}}{2} \right\} \neq \varnothing$.
+	}
+\end{ex}
+
+%=== Câu 12 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Viết tập hợp $A=\{ x \in \mathbb{N} |~ (2x+1)(x^2-5x+6)=0\}$ bằng cách liệt kê.
+	\choice
+	{$\{ -1;2;3 \}$}
+	{\True $\{ 2;3 \}$}
+	{$\left\{ -\dfrac{1}{2};2;3 \right\}$}
+	{$\{ -1;2 \}$}
+	\loigiai{
+		Ta có
+		\[
+		(2x+1)(x^2-5x+6)=0 \Leftrightarrow
+		\hoac{&2x+1=0\\&x^2-5x+6=0} \Leftrightarrow
+		\hoac{&x=-\dfrac{1}{2}\\&x=2\\&x=3.}
+		\]
+		Do $x \in \mathbb{N} \Rightarrow A=\left\{ 2;3 \right\}$.
+	}
+\end{ex}
+
+%=== Câu 13 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $A$ có $3$ phần tử, số tập con của tập $A$ bằng
+	\choice
+	{$6$}
+	{$3$}
+	{\True $8$}
+	{$4$}
+	\loigiai{
+		Giả sử $A=\left\{ a;b;c \right\}$, các tập con của $A$ là: $\varnothing$, $\left\{ a \right\}$, $\left\{ b \right\}$, $\left\{ c \right\}$, $\left\{ a;b \right\}$, $\left\{ a;c \right\}$, $\left\{ b;c \right\}$, $\left\{ a;b;c \right\}$.\\
+		Vậy có $8$ tập con của $A$.}
+\end{ex}
+
+%=== Câu 14 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $A=\{ x\in \mathbb{N}|~(2-x)(x^2-3x-4)=0 \}$. Hỏi tập $A$ có bao nhiêu tập con ?
+	\choice
+	{$2$}
+	{\True $4$}
+	{$7$}
+	{$8$}
+	\loigiai{
+		Ta có $(2-x)(x^2-3x-4)=0 \Leftrightarrow \hoac{
+			& x=2 \in \mathbb{N} \\
+			& x=-1 \notin \mathbb{N} \\
+			& x=4 \in \mathbb{N}.}$\\
+		Vậy $A=\{ 2;4 \}$ nên $A$ có các tập con là $\{ 2\}$; $\{ 4\}$; $\{ 2;4\}$; $\varnothing$.
+	}
+\end{ex}
+
+%=== Câu 15 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Có bao nhiêu tập $A$ để $\left\{ m;n \right\}\subset A\subset \left\{ m;n;x;y \right\}$ ?
+	\choice
+	{$2$}
+	{\True $4$}
+	{$1$}
+	{$3$}
+	\loigiai{
+		Vì $\{ m;n \} \subset A \subset \{ m;n;x;y \}$nên $A$ có thể là một trong bốn tập hợp sau
+		\[
+		\{ m;n \};~\{m;n;x\};~\{ m;n;y \};~\{ m;n;x;y\}.
+		\]
+	}
+\end{ex}
+
+%=== Câu 16 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Tập $A=\{0;1;2\}$ có bao nhiêu tập con có đúng $2$ phần tử?
+	\choice
+	{$6$}
+	{$7$}
+	{\True $3$}
+	{$4$}
+	\loigiai{
+		Có $3$ tập con có đúng $2$ phần tử của tập $A=\left\{ 0;1;2 \right\}$ là $\left\{ 0;1 \right\}$, $\left\{ 0;2 \right\}$, $\left\{ 1;2 \right\}$.
+	}
+\end{ex}
+
+%=== Câu 17 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho hai tập hợp $A=\{x\in \mathbb{R}|~(x-1)(x-2)(x-3)=0\}$, $B=\{5;3;1\}$.
+	\choiceTF
+	{\True Tập hợp $A$ có $3$ phần tử}
+	{Tập hợp $A\cup B$ có $6$ phần tử}
+	{Tập hợp $A \subset B$}
+	{Tập hợp $B \subset A$}
+	\loigiai{
+		\begin{itemchoice}
+			\item
+			Ta có $(x-1)(x-2)(x-3)=0 \Leftrightarrow
+			\hoac{&x-1=0\\&x-2=0\\&x-3=0} \Leftrightarrow
+			\hoac{&x=1\\&x=2\\&x=3.}$\\
+			Do vậy $A=\{2 ; 3 ; 1\}$.
+			\item
+			Ta có $A\cup B =\{ 1;2;3;5\}$. Vậy $A\cup B$ có $4$ phần tử.
+			\item
+			Ta có $2 \in A$ nhưng $2 \notin B$ nên $A$ không là tập con của $B$.
+			\item
+			Ta có $5 \in B$ nhưng $5 \notin A$ nên $B$ không là tập con của $A$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 18 (ID: 0D1N2-3) ===%
+\begin{bt}%[0D1N2-3]
+	Cho tập $A=\left\{ x\in \mathbb{N}|~x(2-x)(x^2-3x-4)=0 \right\}$. Hỏi tập $A$ có bao nhiêu tập con ?
+	\shortans{8}
+	\loigiai{
+		Ta có $x(2-x)(x^2-3x-4)=0 \Leftrightarrow \hoac{
+			& x=0 \in \mathbb{N} \\
+			& x=2 \in \mathbb{N} \\
+			& x=-1 \notin \mathbb{N} \\
+			& x=4 \in \mathbb{N}.}$\\
+		Vậy $A=\{0;2;4 \}$ nên $A$ có $8$ tập con là $\{0\}$; $\{2\}$; $\{ 4\}$; $\{2;4\}$; $\{0;4\}$; $\{0;2\}$; $\{0;2;4\}$; $\varnothing$.
+	}
+\end{bt}
+
+%=== Câu 19 (ID: 0D1N3-3) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N3-3]
+	Cho tập $M=\{x \in \mathbb{R} \mid (x+3)(x-1) \geqslant 0\}$. Khi đó
+	\choice
+	{$M=(-\infty ;-1] \cup[3 ;+\infty)$}
+	{\True  $M=(-\infty ;-3] \cup[1 ;+\infty)$}
+	{$M=[1 ;+\infty)$}
+	{$M=(-\infty ;-3]$}
+	\loigiai{
+		Ta có $(x+3)(x-1) \geqslant 0 \Leftrightarrow \hoac{& x \leqslant-3  \\&  x \geqslant 1} $
+		$\Rightarrow M=(-\infty ;-3] \cup [1 ;+\infty)$.
+	}
+\end{ex}
+
+%=== Câu 20 (ID: 0D1N3-4) ===%
+\begin{bt}%[0D1N3-4]
+	Cho hai tập hợp $A=\{n \in \mathbb{N} \mid-2<n \leqslant 4\}$ và $B=\{-1 ; 0\}$. Hãy xác định tập hợp $A \cap B$, $A \setminus B$.
+	\loigiai{
+		Ta có $A=\{0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0\}$.\\
+		Suy ra $A \cap B=\{0\}$ và $A \setminus B=\{1 ; 2 ; 3 ; 4\}$.
+	}
+\end{bt}
+
+%=== Câu 21 (ID: 0D1N3-4) ===%
+\begin{bt}%[0D1N3-4]
+	Cho hai tập hợp $A=\{n \in \mathbb{Z} \mid -2 < n \leq 4\}$ và $B=\{-1 ; 0;1;5\}$. Hãy xác định tập hợp $A \cup B$, $A \setminus B$.
+	\loigiai{
+		Ta có $A=\{-1; 0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0;1;5\}$.\\
+		Suy ra $A \cup B=\{-1; 0 ; 1 ; 2 ; 3 ; 4; 5\}$ và $A \setminus B=\{2 ; 3 ; 4\}$.
+	}
+\end{bt}
+
+%=== Câu 22 (ID: 0D1H2-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-1]
+	Trong các tập hợp sau, tập hợp nào là tập hợp rỗng?
+	\choice
+	{$A=\{x \in \mathbb{Z}|~ x<1\}$}
+	{$B=\left\{x \in \mathbb{Z} \mid 6 x^2-7 x+1=0\right\}$}
+	{\True $C=\left\{x \in \mathbb{Q} \mid x^2-4 x+2=0\right\}$}
+	{$D=\left\{x \in \mathbb{R} \mid x^2-4 x+3=0\right\}$}
+	\loigiai{
+		\begin{itemize}
+			\item Ta có $x^2-4 x+2=0 \Leftrightarrow \hoac{& x=2+\sqrt{2} \notin \mathbb{Q}  \\&  x=2-\sqrt{2} \notin \mathbb{Q}} \Rightarrow C=\varnothing$.
+			\item $A=\{x \in \mathbb{Z}|~ x<1\} = \{ \cdots;-3;-2;-1;0 \} \neq \varnothing$.
+			\item $6x^2-7x+1=0 \Leftrightarrow \hoac{&x=1 \in \mathbb{Z}\\&x=\dfrac{1}{6} \notin \mathbb{Z}} \Rightarrow B = \{ 1 \}$.
+			\item $x^2-4x+3=0 \Leftrightarrow \hoac{&x=3 \in \mathbb{R} \\&x=1 \in \mathbb{R}} \Rightarrow D = \{ 1;3 \}$.
+		\end{itemize}
+	}
+\end{ex}
+
+%=== Câu 23 (ID: 0D1H2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-2]
+	Cho tập hợp $B=\left\{ x\in\mathbb{Z}\mid x^4-11x^2+18=0\right\}$. Khi đó số phần tử của tập hợp $B$ là
+	\choice
+	{$1$}
+	{\True $2$}
+	{$3$}
+	{$4$}
+	\loigiai{
+		Ta có
+		\[
+		x^4-11 x^2+18=0
+		\Leftrightarrow \hoac{&x^2=2\\& x^2=9}
+		\Leftrightarrow \hoac{&x=\sqrt{2}\notin\mathbb{Z}\\& x=-\sqrt{2}\notin\mathbb{Z}\\& x=3\in\mathbb{Z}\\& x=-3 \in \mathbb{Z}.}
+		\]
+		Vậy $B=\{-3 ; 3\}$ nên $B$ gồm $2$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 24 (ID: 0D1H2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-2]
+	Cho các tập hợp $A=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\}$, $B=\{0 ; 1 ; 4 ; 5\}$ và $C=\{-4 ;-3 ; 1 ; 2 ; 5 ; 6\}$.
+	\choiceTF
+	{\True $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$}
+	{$A\cap B=\{0\}$}
+	{\True $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$}
+	{\True $A\cap B\cap C=\{1\}$}
+	\loigiai{
+		\begin{itemchoice}
+			\item Vì $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$.
+			\item Vì $A\cap B=\{0 ; 1\}$.
+			\item Vì $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$.
+			\item Vì $A\cap B\cap C=\{1\}$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 25 (ID: 0D1H2-2) ===%
+\begin{bt}%[0D1H2-2]
+	Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \subset B$?
+	\shortans{1}
+	\loigiai{
+		Vẽ trục số biểu diễn $A \subset B$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$0$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$6$};
+				\path (1.7,0) node{$[$} (1.8,-0.1)node[below]{$m+1$};
+				\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$2m-1$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Điều kiện: $m+1<2m-1 \Leftrightarrow m>2$.\\
+		Để $A \subset B$ thì
+		$\heva{&m+1>0\\&2m-1<6}
+		\Leftrightarrow \heva{& m>-1\\&m < \dfrac{7}{2}}
+		\Leftrightarrow -1 < m < \dfrac{7}{2}$.\\
+		Kết hợp với điều kiện ta được: $2 < m < \dfrac{7}{2}$. Vì $m$ nguyên nên $m=3$. Vậy có $1$ giá trị $m$.
+	}
+\end{bt}
+
+%=== Câu 26 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1H2-3]
+	Liệt kê các phần tử của tập hợp $A=\{ x \in \mathbb{Z}|~ (6x^2-7x+1)(x^2-4)=0\}$ ta được
+	\choice
+	{$A=\left\{\dfrac{1}{6};\dfrac{1}{2};2 \right\}$}
+	{\True $A=\{-2;1;2\}$}
+	{$A=\left\{-2;\dfrac{1}{6};1;2 \right\}$}
+	{$A=\{1;2\}$}
+	\loigiai{
+		Xét phương trình
+		\[
+		(6x^2-7x+1)(x^2-4)=0 \Leftrightarrow
+		\hoac{&6x^2-7x+1=0\\&x^2-4=0} \Leftrightarrow
+		\hoac{&x=1 \in \mathbb{Z}\\&x=\dfrac{1}{6} \notin \mathbb{Z}\\&x = 2 \in \mathbb{Z}\\& x=-2 \in \mathbb{Z}.}
+		\]
+		Vậy $A=\{-2;1;2\}.$}
+\end{ex}
+
+%=== Câu 27 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-3]
+	Cho $A=[-1 ; 3]$; $B=(2 ; 5)$. Tìm mệnh đề \textbf{sai}.
+	\choice
+	{$B \setminus A=(3 ; 5)$}
+	{$A \cap B=(2 ; 3]$}
+	{$A \setminus B=[-1 ; 2]$}
+	{\True  $A \cup B=[-1 ; 5]$}
+	\loigiai{
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(6,0);
+				\path (1,0) node{$[$} (1,-0.1)node[below]{$-1$} (-.5,0)node[left]{$[-1 ;5)$};
+				\path (3.5,0) node{$)$} (3.5,-0.1)node[below]{$5$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{3.6,3.7,...,5.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Ta có $A \cup B=[-1 ; 5)$.
+	}
+\end{ex}
+
+%=== Câu 28 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1H2-3]
+	Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên. Khi đó
+	\choiceTF
+	{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+	{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+	{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá}
+	{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ}
+	\loigiai{
+		Gọi $A$, $B$, $E$ lần lượt là tập hợp các học sinh của lớp tham gia câu lạc bộ bóng đá, câu lạc bộ bóng rổ và học sinh lớp $10C6$.\\
+		Khi đó $A \cap B$ là tập hợp học sinh tham gia cả hai câu lạc bộ và $|A \cap B|=10$. Số phần tử của $A$ là $|A|=18$, số phần tử của $B$ là $|B|=15$.
+		\begin{itemchoice}
+			\item Tập hợp các học sinh tham gia câu lạc bộ bóng đá và không tham gia câu lạc bộ bóng rổ là tập hợp  $A\setminus B$. Số phần tử của $A\setminus B$ chính là số phần tử của $A$ trừ đi số phần tử của $A \cap B$.\\
+			Vậy số học sinh tham gia câu lạc bộ bóng đá và không tham gia câu lạc bộ bóng rổ là $18-10=8$ (học sinh).
+			\item Tập hợp các học sinh tham gia ít nhất một trong hai câu lạc bộ trên chính là tập hợp $A \cup B$. Do khi đếm số học sinh tham gia câu lạc bộ bóng đá là $18$, số học sinh tham gia câu lạc bộ bóng rổ là $15$ thì số học sinh tham gia cả hai câu lạc bộ là $10$ được tính hai lần.\\
+			Vậy số học sinh tham gia ít nhất một trong hai câu lạc bộ trên là $18+15-10=23$ (học sinh).
+			\item Số phần tử của $E$ là $45$. Tập hợp các học sinh không tham gia câu lạc bộ bóng đá là phần bù của $A$ trong $E$.\\
+			Vậy số học sinh không tham gia câu lạc bộ bóng đá là $45-18=27$ (học sinh).
+			\item Tập hợp các học sinh không tham gia cả hai câu lạc bộ là phần bù của $A \cup B$ trong $E$.\\
+			Vậy số học sinh không tham gia cả hai câu lạc bộ là $45-23=22$ (học sinh).
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 29 (ID: 0D1H3-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-1]
+	Cho tập $A=\{0 ; 2 ; 4 ; 6 ; 8\}$; $B=\{3 ; 4 ; 5 ; 6 ; 7\}$. Tập $A \setminus B$ là
+	\choice
+	{$\{0 ; 6 ; 8\}$}
+	{\True $\{0 ; 2 ; 8\}$}
+	{$\{3 ; 6 ; 7\}$}
+	{$\{0 ; 2\}$}
+	\loigiai{
+		Vì $A \setminus B$ gồm các phần tử thuộc tập hợp $A$ và không thuộc $B$ nên $A \setminus B=\{0 ; 2 ; 8\}$.
+	}
+\end{ex}
+
+%=== Câu 30 (ID: 0D1H3-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-1]
+	Cách viết nào sau đây là \textbf{sai}?
+	\choice
+	{$(0 ;+\infty)=\{x \in \mathbb{R}| x>0\}$}
+	{$[0 ; 5]=\{x \in \mathbb{R}| 0 \leqslant x \leqslant 5\}$}
+	{$(0 ; 5)=\{x \in \mathbb{R}| 0<x<5\}$}
+	{\True $[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$}
+	\loigiai{
+		Vì $[-1 ; 5)=\{x \in \mathbb{R} \mid -1 \leqslant x<5\}$ nên cách viết sau là sai: \lq\lq$[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$\rq\rq.
+	}
+\end{ex}
+
+%=== Câu 31 (ID: 0D1H3-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-2]
+	\immini{ Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Ven như sau. Khẳng định nào sau đây \textbf{sai}?
+		\choice
+		{$B \subset C_X A$}
+		{$A \cap B=\varnothing$}
+		{$A \subset C_X B$}
+		{\True $A \cup B=X$}
+	}{
+		\begin{tikzpicture}[scale=0.5,thick,rotate=-90]
+			\colorlet{MauNet}{black}
+			\def\ElipA{(0,0) ellipse (0.8cm and 1.3cm)}
+			\def\ElipB{(2,3) ellipse (0.8cm and 1.4cm)}
+			\def\ElipC{(1,2) ellipse (3cm and 5cm)}
+			\draw[MauNet] \ElipA node[black] {$A$};
+			\draw[MauNet] \ElipB node[black] {$B$};
+			\draw[MauNet] \ElipC node[black,above right=1cm] {$X$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Nhìn biểu đồ,  ta thấy $A \cup B \neq X$.
+	}
+\end{ex}
+
+%=== Câu 32 (ID: 0D1H3-4) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-4]
+	Cho tập hợp $A=\{x \in \mathbb{R} \mid 2 \leqslant x<5\}$. Phần bù của tập hợp $A$ trong $\mathbb{R}$ là tập nào sau đây?
+	\choice
+	{$[5 ;+\infty)$}
+	{$(-\infty ; 2)$}
+	{$(-\infty ; 2] \cup(5 ;+\infty)$}
+	{\True $(-\infty ; 2) \cup[5 ;+\infty)$}
+	\loigiai{
+		Ta có $A = \{x \in \mathbb{R} \mid 2 \leqslant x<5\}
+		= [2;5)$.\\
+		Khi đó phần bù của tập hợp $A$ trong $\mathbb{R}$ là
+		$\mathrm{C_{\mathbb{R}}A}
+		= \mathbb{R} \setminus A = (-\infty ; 2) \cup[5 ;+\infty)$.
+	}
+\end{ex}
+
+%=== Câu 33 (ID: 0D1H3-5) ===%
+\begin{bt}%[0D1H3-5]
+	Lớp 10A có $45$ học sinh trong đó có $12$ bạn học sinh giỏi Văn, $ 9$ bạn học sinh giỏi Địa lí, và $30$ bạn không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu bạn học sinh giỏi cả hai môn Văn và Địa lí?
+	\shortans{6}
+	\loigiai{
+		\immini{Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).\\
+			Số học sinh giỏi cả 2 môn Văn và Địa lí là $12+9-15=6$ (học sinh).}
+		{\begin{tikzpicture}
+				\draw (-3,-1.5) rectangle (3,3);
+				\draw (-1,1) circle(1.41) (1,1)circle (1);
+				\draw (0,-1)node[below]{$\tiny{\text{30 học sinh không giỏi Văn và Địa} }$} ;
+				\draw (-1,1.5)node[below]{$\tiny{\text{12 HS giỏi Văn}}$ } ;
+				\draw (1.15,1)node[below]{$\tiny{\text{9 HS giỏi Địa}}$ } ;
+				\draw (0,3.5)node[below]{$\tiny{\text{Lớp 10A có 45 học sinh}}$ } ;
+		\end{tikzpicture}}
+	}
+\end{bt}
+
+
+%=== Câu 34 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \in \mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \subset B$. Có bao nhiêu tập con của $S$?
+	\shortans{4}
+	\loigiai{
+		\begin{itemize}
+			\item Vẽ trục số thể hiện $A \subset B$.
+			\begin{center}
+				\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+					\draw [-stealth] (0,0)--(7,0);
+					\path (1,0) node{$($} (1,-0.1)node[below]{$2a-1$} (-.5,0)node[left]{$A \subset B$};
+					\path (5,0) node{$)$} (5,-0.1)node[below]{$3a+5$};
+					\path (1.7,0) node{$[$} (1.8,-0.1)node[below]{$4$};
+					\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$7$};
+					\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+					\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\end{tikzpicture}
+			\end{center}
+			\item Điều kiện tập $B$ khác tập rỗng: $2 a-1<3 a+5 \Leftrightarrow a>-6$\, \hfill{(1)}
+			\item $A \subset B \Rightarrow \heva{& 2a-1<4 \\& 3a+5 \geqslant 7 } \Leftrightarrow \heva{& a<\dfrac{5}{2} \\& a \geqslant \dfrac{2}{3}} \Leftrightarrow \dfrac{2}{3} \leqslant a<\dfrac{5}{2}.$ \, \hfill{(2)}
+			\item Kết hợp $(1)$ và $(2)$, ta được $\dfrac{2}{3} \leqslant a<\dfrac{5}{2}$.
+			\item Xét các giá trị $a \in \mathbb{Z} \Rightarrow S=\{1 ; 2\}$.
+			\item Có $4$ tập con của $S$ là $\varnothing $; $\{1\} $; $\{2\}$ và $S=\{1 ; 2\}$.
+		\end{itemize}
+	}
+\end{bt}
+
+%=== Câu 35 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
+	\shortans{1}
+	\loigiai{
+		Vẽ trục số thể hiện $B \subset A$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$1$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$5$};
+				\path (1.7,0) node{$($} (1.8,-0.1)node[below]{$m$};
+				\path (3.7,0) node{$)$} (3.8,-0.1)node[below]{$4m-1$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Để $B \neq \varnothing $ thì $m<4 m-1 \Leftrightarrow m>\dfrac{1}{3}.~\hfill{(1)}$\\
+		Và
+		$B\subset A
+		\Rightarrow \heva{&m \geq 1\\&4m-1\leq 5}
+		\Leftrightarrow 1 \leq m \leq \dfrac{3}{2}.~\hfill{(2)}$\\
+		Từ $(1)$, $(2)$ suy ra $1 \leq m \leq \dfrac{3}{2}$.\\
+		Vậy có $1$ giá trị nguyên của $m$ thì $B \subset A$.
+	}
+\end{bt}
+
+%=== Câu 36 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+	\loigiai{
+		Vẽ trục số thể hiện $A \subset B$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$-2$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$2m+2$};
+				\path (1.7,0) node{$($} (1.8,-0.1)node[below]{$m-1$};
+				\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$4$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Với $2$ tập khác rỗng $A$, $B$ ta có điều kiện $ \heva{&m-1<4 \\&2m+2>-2}
+		\Leftrightarrow \heva{&m<5\\&m>-2}
+		\Leftrightarrow-2<m<5$.\\
+		Để $A \subset B
+		\Leftrightarrow \heva{& m-1 \geqslant-2 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& m>1}
+		\Leftrightarrow m>1$.\\
+		So với điều kiện $\Rightarrow 1<m<5$. Do đó có $3$ giá trị nguyên của $m$ thỏa mãn $A \subset B$.
+	}
+\end{bt}
+
+%=== Câu 37 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho $A=\left[m-3 ; \dfrac{m+2}{4}\right)$, $B=(-\infty ;-1) \cup [2 ;+\infty)$. Xác định $m$ để ${A \cap B=\varnothing}$.
+	\loigiai{ Ta có
+		\[
+		A \cap B = \varnothing
+		\Leftrightarrow \heva{&m-3 < \dfrac{m+2}{4}\\&m-3 \geq -1\\&\dfrac{m+2}{4} \leq 2}
+		\Leftrightarrow \heva{&m<\dfrac{14}{3}\\&m \geq 2\\&m \leq 6}
+		\Leftrightarrow 2 \leq m < \dfrac{14}{3}.
+		\]
+	}
+\end{bt}
+
+%=== Câu 38 (ID: 0D1V2-3) ===%
+\begin{bt}%[0D1V2-3]
+	Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
+	\shortans{20}
+	\loigiai{
+		Gọi $A$ là tập hợp các học sinh chơi bóng đá, $B$ là tập hợp các học sinh chơi bóng bàn, $C$ là tập hợp các học sinh không chơi môn thể thao nào.\\
+		Ta có
+		$|A|$ là số học sinh chơi bóng đá;\\
+		$|B|$ là số học sinh chơi bóng bàn;\\
+		$|C|$ là số học sinh không chơi môn thể thao nào.\\
+		Khi đó số học sinh chỉ chơi một môn thể thao là:
+		$|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14=20$.
+	}
+\end{bt}
+
+%=== Câu 39 (ID: 0D1V2-3) ===%
+\begin{bt}%[0D1V2-3]
+	Cho số thực $m<0$ và hai tập hợp $A=(-\infty ; 9m)$, $B=\left(\dfrac{4}{m};+\infty\right)$. Biết tất cả các giá trị thực của tham số $m \in (a,b)$ để $A \cap B \neq \varnothing$.\\
+	Khi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).
+	\shortans{0{,}67}
+	\loigiai{
+		Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (-.5,0)node[left]{$A \cap B$};
+				\path (2,0) node{$)$} (2,-0.1)node[below]{$9m$};
+				\path (4,0) node{$($} (4,-0.1)node[below]{$\dfrac{4}{m}$};
+				\foreach \x in{2.1,2.2,...,3.9} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Nên hai tập hợp $A$ và $B$ giao nhau khác rỗng,
+		\[
+		\Leftrightarrow 9 m>\dfrac{4}{m}
+		\Leftrightarrow 9 m^2<4 \quad(\text{do } m<0)
+		\Rightarrow m^2<\dfrac{4}{9}
+		\Leftrightarrow -\dfrac{2}{3} < m < 0.
+		\]
+		Vậy $m \in \left(-\dfrac{2}{3};0\right)$ thỏa $A \cap B \neq \varnothing$. Khi đó $b-a = 0 - \left( -\dfrac{2}{3}\right) \approx 0{,}67$.
+	}
+\end{bt}
+
+%=== Câu 40 (ID: 0D1V3-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1V3-2]
+	Lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa, $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi cả Lý và Hóa, $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa.
+	\choiceTF
+	{\True Số học sinh chỉ giỏi môn Toán là $1$ học sinh}
+	{\True Số học sinh chỉ giỏi môn Lý là $1$ học sinh}
+	{Số học sinh chỉ giỏi môn Hóa là $2$ học sinh}
+	{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh}
+	\loigiai{
+		Gọi $T$, $L$, $H$ lần lượt là tập hợp các học sinh của lớp giỏi Toán, Lý, Hóa.\\
+		Theo đề bài ta có: $|T|=7$; $|L|=5$; $|H|=6$; $|T \cap L|=3$; $|T \cap H|=4$; $|L \cap H|=2$; $|T \cap L \cap H|=3$.
+		\begin{itemchoice}
+			\item Số học sinh chỉ giỏi môn Toán $7-3-1-2=1$.
+			\item Số học sinh chỉ giỏi môn Lý $5-1-1-2=1$.
+			\item Số học sinh chỉ giỏi môn Hóa $6-3-1-1=1$.
+			\item Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là: $1+2+1+1+1+3+1=10$.
+	\end{itemchoice}}
+\end{ex}
+
+%=== Câu 41 (ID: 0D1V3-2) ===%
+\begin{bt}%[0D1V3-2]
+	Lớp 10A có $45$ học sinh trong đó có $25$ em học giỏi môn Toán, $23$ em học giỏi môn Lý, $20$ em học giỏi môn Hóa, $11$ em học giỏi cả môn Toán và môn Lý, $8$ em học giỏi cả môn Lý và môn Hóa, $9$ em học giỏi cả môn Toán và môn Hóa. Hỏi lớp $10A$ có bao nhiêu bạn học giỏi cả ba môn Toán, Lý, Hóa? (biết rằng mỗi học sinh trong lớp học giỏi ít nhất một trong ba môn Toán, Lý, Hóa).
+	\loigiai{
+		Gọi ${T, L, H}$ lần lượt là tập hợp các học sinh giỏi môn Toán, Lý, Hóa.\\
+		Ta có
+		\begin{eqnarray*}
+			&|T \cup L \cup H| &=|T|+|L|+|H|-|T \cap L|-|L \cap H|-|H \cap T|+|T \cap L \cap H|\\
+			&45 &=25+23+20-11-8-9+|T \cap L \cap H|\\
+			& \Leftrightarrow|T \cap L \cap H|& =5.
+		\end{eqnarray*}
+		Vậy có $5$ học sinh giỏi cả $3$ môn.}
+\end{bt}
+
+%=== Câu 42 (ID: 0D1V3-3) ===%
+\begin{bt}%[0D1V3-3]
+	Cho tập hợp $A=(0 ;+\infty)$ và $B=\left\{x \in \mathbb{R} \mid m x^2-6 x+m-8=0\right\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \subset A$.
+	\loigiai{
+		Vì tập $B$ có đúng hai tập con nên $B$ có đúng $1$ phần tử. Do đó phương trình $m x^2-6x+m-8=0$ có duy nhất một nghiệm.
+		\begin{enumerate}[TH1.]
+			\item $m=0$ thì $x=-\dfrac{4}{3}
+			\Rightarrow B=\left\{-\dfrac{4}{3}\right\} \not\subset A$.
+			\item $m \neq 0$ thì phương trình có nghiệm duy nhất\\
+			$\Leftrightarrow \Delta'=0$
+			$\Leftrightarrow 9-m(m-8)=0$
+			$\Leftrightarrow-m^2+8 m+9=0$
+			$\Leftrightarrow \hoac{& m=-1 \\& m=9.}$
+			\begin{itemize}
+				\item Với $m=-1 \Rightarrow B=\{-3\} \not\subset A$.
+				\item Với $m=9 \Rightarrow B=\left\{\dfrac{1}{3}\right\} \subset A$.
+			\end{itemize}
+			Kết hợp với điều kiện $B \subset A$ ta có $m=9$.
+		\end{enumerate}
+	}
+\end{bt}
+%=== Câu 1 (ID: 0D1N1-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N1-2]
+	Cho $x$ là một phần tử của tập hợp $X$. Mệnh đề nào sau đây là $\textbf{đúng}$?
+	\choice
+	{\True $x \in X$}
+	{$X \in x$}
+	{$x \subset X$}
+	{$\{x\} \in X$}
+	\loigiai{
+		Mệnh đề là đúng là $x \in X$. Kí hiệu $x$ là một phần tử của tập hợp $X$.
+	}
+\end{ex}
+
+%=== Câu 2 (ID: 0D1N2-1) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-1]
+	Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 6\}$. Số phần tử của tập hợp $A$ là
+	\choice
+	{$8$}
+	{\True $7$}
+	{$5$}
+	{$6$}
+	\loigiai{
+		$A=\{x \mid x \in \mathbb{N}, x \leq 6\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5;6 \}$. Do đó số phần tử của tập hợp $A$ là $7$.
+	}
+\end{ex}
+
+%=== Câu 3 (ID: 0D1N2-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-1]
+	Cho tập hợp $A=\{x \mid x \in \mathbb{N}, x \leq 5\}$. Số phần tử của tập hợp $A$ là
+	\choice
+	{$8$}
+	{$7$}
+	{$5$}
+	{\True $6$}
+	\loigiai{
+		$A=\{x \mid x \in \mathbb{N}, x \leq 5\} \Leftrightarrow A=\{0; 1 ; 2 ; 3 ; 4 ; 5\}$. Do đó số phần tử của tập hợp $A$ là $6$.
+	}
+\end{ex}
+
+%=== Câu 4 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-2]
+	Số phần tử của tập $C=\{ x \in \mathbb{Z} \mid -1 \leq x \leq 1\}$ là
+	\choice
+	{\True $3$}
+	{$2$}
+	{$1$}
+	{$6$}
+	\loigiai{
+		Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 5 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-2]
+	Cho tập hợp $X=\{0 ; 2 ; 5\}$. Tập hợp nào dưới đây $\textbf{không}$ phải là tập con của tập hợp $X$?
+	\choice
+	{$\varnothing$}
+	{$\{2\}$}
+	{$\{0 ; 2 ; 5\}$}
+	{\True  $\{0 ; 1 ; 2\}$}
+	\loigiai{
+		Ta có $1 \notin X$,  vậy $\{0 ; 1 ; 2\} \not \subset\{0 ; 2 ; 5\}$.
+	}
+\end{ex}
+
+%=== Câu 6 (ID: 0D1N2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N2-2]
+	Số phần tử của tập $C=\{x \in \mathbb{Z} \mid-1 \leqslant x \leqslant 1\}$ là
+	\choice
+	{\True $3$}
+	{$2$}
+	{$1$}
+	{$6$}
+	\loigiai{
+		Ta có $C=\{-1 ; 0 ; 1\}$ nên $C$ có $3$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 7 (ID: 0D1N2-2) ===%
+\begin{bt}%[0D1N2-2]
+	Cho ba tập hợp $A=\{2; 5\}$, $B=\{5 ; x\}$, $C=\{x ; y ; 5\}$, biết $A=B=C$. Biết $x \neq y$, khi đó giá trị $x + y$ bằng
+	\shortans{7}
+	\loigiai{
+		Vì $A=B$ nên $x=2$. Lại có $B=C$ nên $y=5$.\\
+		Vậy $x+y=2+5=7$.
+	}
+\end{bt}
+
+%=== Câu 8 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập hợp $A=\{ x \in \mathbb{N} |~(x-1)(2x+4)=0 \}$. Tập $A$ được viết theo kiểu liệt kê là
+	\choice
+	{$\{ -1;4 \}$}
+	{\True $\{ 1 \}$}
+	{$\{ 1;-2 \}$}
+	{$\{ -1;-2 \}$}
+	\loigiai{
+		Ta có
+		\[
+		(x-1)(2x+4)=0
+		\Leftrightarrow \hoac{&x-1=0\\&2x+4=0}
+		\Leftrightarrow \hoac{&x=1\\&x=-2 \notin \mathbb{N}.}
+		\]
+		Vậy $A=\{ x \in \mathbb{N} |~ (x-1)(2x+4)=0 \} = \{ 1 \}$.
+	}
+\end{ex}
+
+%=== Câu 9 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $X=\{ x \in \mathbb{N} |~ (x^2-4)(x-1)=0\}$. Tính số phần tử của $X$.
+	\choice
+	{$1$}
+	{$3$}
+	{\True $2$}
+	{$4$}
+	\loigiai{
+		Ta có
+		\[
+		(x^2-4)(x-1)=0
+		\Leftrightarrow \hoac{&x^2-4=0\\&x-1=0}
+		\Leftrightarrow \hoac{&x=2\\&x=-2 \notin \mathbb{N}\\&x=1.}
+		\]
+		Do $x\in \mathbb{N} \Rightarrow x \in \{ 2;1\}$. Vậy $X$ có $2$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 10 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Kí hiệu nào sau đây dùng để viết đúng mệnh đề \lq\lq~$\sqrt{2}$ không phải là số hữu tỉ~\rq\rq?
+	\choice
+	{$\sqrt{2}\subset \mathbb{Q}$}
+	{\True $\sqrt{2}\notin \mathbb{Q}$}
+	{$\sqrt{2}\ne \mathbb{Q}$}
+	{$\sqrt{2}\in \mathbb{Q}$}
+	\loigiai{
+		Cách viết đúng là $\sqrt{2} \notin \mathbb{Q}$.}
+\end{ex}
+
+%=== Câu 11 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Trong các tập hợp sau, tập nào là tập rỗng?
+	\choice
+	{$A= \{ x \in \mathbb{R} |~ x^2+5x-6=0 \}$}
+	{$B=\{ x \in \mathbb{Q} |~ 3x^2-5x+2=0 \}$}
+	{\True $C=\{ x\in \mathbb{Z} |~ x^2+x-1=0 \}$}
+	{$D=\{ x \in \mathbb{R} |~ x^2+5x-1=0 \}$}
+	\loigiai{
+		Ta có\\
+		$x^2+5x-6=0
+		\Leftrightarrow \hoac{&x=1 \in \mathbb{R}\\&x=-6 \in \mathbb{R}}$. Vậy $A=\{ -6;1 \} \neq \varnothing$.\\
+		$3x^2-5x+2=0
+		\Leftrightarrow \hoac{&x=1 \in \mathbb{Q}\\&x=\dfrac{2}{3} \in \mathbb{Q}}$. Vậy $B=\left\{ 1;\dfrac{2}{3} \right\} \neq \varnothing$.\\
+		$x^2+x-1=0
+		\Leftrightarrow \hoac{&x=\dfrac{-1+\sqrt{5}}{2} \notin \mathbb{Z}\\&x=\dfrac{-1-\sqrt{5}}{2} \notin \mathbb{Z}}$. Vì $x \in \mathbb{Z}$ nên $C=\varnothing$.\\
+		$x^2+5x-1=0
+		\Leftrightarrow \hoac{&x=\dfrac{-5+\sqrt{29}}{2} \in \mathbb{R}\\&x=\dfrac{-5-\sqrt{29}}{2} \in \mathbb{R}}$. Vậy $D=\left\{ \dfrac{-5+\sqrt{29}}{2};\dfrac{-5-\sqrt{29}}{2} \right\} \neq \varnothing$.
+	}
+\end{ex}
+
+%=== Câu 12 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Viết tập hợp $A=\{ x \in \mathbb{N} |~ (2x+1)(x^2-5x+6)=0\}$ bằng cách liệt kê.
+	\choice
+	{$\{ -1;2;3 \}$}
+	{\True $\{ 2;3 \}$}
+	{$\left\{ -\dfrac{1}{2};2;3 \right\}$}
+	{$\{ -1;2 \}$}
+	\loigiai{
+		Ta có
+		\[
+		(2x+1)(x^2-5x+6)=0 \Leftrightarrow
+		\hoac{&2x+1=0\\&x^2-5x+6=0} \Leftrightarrow
+		\hoac{&x=-\dfrac{1}{2}\\&x=2\\&x=3.}
+		\]
+		Do $x \in \mathbb{N} \Rightarrow A=\left\{ 2;3 \right\}$.
+	}
+\end{ex}
+
+%=== Câu 13 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $A$ có $3$ phần tử, số tập con của tập $A$ bằng
+	\choice
+	{$6$}
+	{$3$}
+	{\True $8$}
+	{$4$}
+	\loigiai{
+		Giả sử $A=\left\{ a;b;c \right\}$, các tập con của $A$ là: $\varnothing$, $\left\{ a \right\}$, $\left\{ b \right\}$, $\left\{ c \right\}$, $\left\{ a;b \right\}$, $\left\{ a;c \right\}$, $\left\{ b;c \right\}$, $\left\{ a;b;c \right\}$.\\
+		Vậy có $8$ tập con của $A$.}
+\end{ex}
+
+%=== Câu 14 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho tập $A=\{ x\in \mathbb{N}|~(2-x)(x^2-3x-4)=0 \}$. Hỏi tập $A$ có bao nhiêu tập con ?
+	\choice
+	{$2$}
+	{\True $4$}
+	{$7$}
+	{$8$}
+	\loigiai{
+		Ta có $(2-x)(x^2-3x-4)=0 \Leftrightarrow \hoac{
+			& x=2 \in \mathbb{N} \\
+			& x=-1 \notin \mathbb{N} \\
+			& x=4 \in \mathbb{N}.}$\\
+		Vậy $A=\{ 2;4 \}$ nên $A$ có các tập con là $\{ 2\}$; $\{ 4\}$; $\{ 2;4\}$; $\varnothing$.
+	}
+\end{ex}
+
+%=== Câu 15 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Có bao nhiêu tập $A$ để $\left\{ m;n \right\}\subset A\subset \left\{ m;n;x;y \right\}$ ?
+	\choice
+	{$2$}
+	{\True $4$}
+	{$1$}
+	{$3$}
+	\loigiai{
+		Vì $\{ m;n \} \subset A \subset \{ m;n;x;y \}$nên $A$ có thể là một trong bốn tập hợp sau
+		\[
+		\{ m;n \};~\{m;n;x\};~\{ m;n;y \};~\{ m;n;x;y\}.
+		\]
+	}
+\end{ex}
+
+%=== Câu 16 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Tập $A=\{0;1;2\}$ có bao nhiêu tập con có đúng $2$ phần tử?
+	\choice
+	{$6$}
+	{$7$}
+	{\True $3$}
+	{$4$}
+	\loigiai{
+		Có $3$ tập con có đúng $2$ phần tử của tập $A=\left\{ 0;1;2 \right\}$ là $\left\{ 0;1 \right\}$, $\left\{ 0;2 \right\}$, $\left\{ 1;2 \right\}$.
+	}
+\end{ex}
+
+%=== Câu 17 (ID: 0D1N2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1N2-3]
+	Cho hai tập hợp $A=\{x\in \mathbb{R}|~(x-1)(x-2)(x-3)=0\}$, $B=\{5;3;1\}$.
+	\choiceTF
+	{\True Tập hợp $A$ có $3$ phần tử}
+	{Tập hợp $A\cup B$ có $6$ phần tử}
+	{Tập hợp $A \subset B$}
+	{Tập hợp $B \subset A$}
+	\loigiai{
+		\begin{itemchoice}
+			\item
+			Ta có $(x-1)(x-2)(x-3)=0 \Leftrightarrow
+			\hoac{&x-1=0\\&x-2=0\\&x-3=0} \Leftrightarrow
+			\hoac{&x=1\\&x=2\\&x=3.}$\\
+			Do vậy $A=\{2 ; 3 ; 1\}$.
+			\item
+			Ta có $A\cup B =\{ 1;2;3;5\}$. Vậy $A\cup B$ có $4$ phần tử.
+			\item
+			Ta có $2 \in A$ nhưng $2 \notin B$ nên $A$ không là tập con của $B$.
+			\item
+			Ta có $5 \in B$ nhưng $5 \notin A$ nên $B$ không là tập con của $A$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 18 (ID: 0D1N2-3) ===%
+\begin{bt}%[0D1N2-3]
+	Cho tập $A=\left\{ x\in \mathbb{N}|~x(2-x)(x^2-3x-4)=0 \right\}$. Hỏi tập $A$ có bao nhiêu tập con ?
+	\shortans{8}
+	\loigiai{
+		Ta có $x(2-x)(x^2-3x-4)=0 \Leftrightarrow \hoac{
+			& x=0 \in \mathbb{N} \\
+			& x=2 \in \mathbb{N} \\
+			& x=-1 \notin \mathbb{N} \\
+			& x=4 \in \mathbb{N}.}$\\
+		Vậy $A=\{0;2;4 \}$ nên $A$ có $8$ tập con là $\{0\}$; $\{2\}$; $\{ 4\}$; $\{2;4\}$; $\{0;4\}$; $\{0;2\}$; $\{0;2;4\}$; $\varnothing$.
+	}
+\end{bt}
+
+%=== Câu 19 (ID: 0D1N3-3) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1N3-3]
+	Cho tập $M=\{x \in \mathbb{R} \mid (x+3)(x-1) \geqslant 0\}$. Khi đó
+	\choice
+	{$M=(-\infty ;-1] \cup[3 ;+\infty)$}
+	{\True  $M=(-\infty ;-3] \cup[1 ;+\infty)$}
+	{$M=[1 ;+\infty)$}
+	{$M=(-\infty ;-3]$}
+	\loigiai{
+		Ta có $(x+3)(x-1) \geqslant 0 \Leftrightarrow \hoac{& x \leqslant-3  \\&  x \geqslant 1} $
+		$\Rightarrow M=(-\infty ;-3] \cup [1 ;+\infty)$.
+	}
+\end{ex}
+
+%=== Câu 20 (ID: 0D1N3-4) ===%
+\begin{bt}%[0D1N3-4]
+	Cho hai tập hợp $A=\{n \in \mathbb{N} \mid-2<n \leqslant 4\}$ và $B=\{-1 ; 0\}$. Hãy xác định tập hợp $A \cap B$, $A \setminus B$.
+	\loigiai{
+		Ta có $A=\{0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0\}$.\\
+		Suy ra $A \cap B=\{0\}$ và $A \setminus B=\{1 ; 2 ; 3 ; 4\}$.
+	}
+\end{bt}
+
+%=== Câu 21 (ID: 0D1N3-4) ===%
+\begin{bt}%[0D1N3-4]
+	Cho hai tập hợp $A=\{n \in \mathbb{Z} \mid -2 < n \leq 4\}$ và $B=\{-1 ; 0;1;5\}$. Hãy xác định tập hợp $A \cup B$, $A \setminus B$.
+	\loigiai{
+		Ta có $A=\{-1; 0 ; 1 ; 2 ; 3 ; 4\}$, $B=\{-1 ; 0;1;5\}$.\\
+		Suy ra $A \cup B=\{-1; 0 ; 1 ; 2 ; 3 ; 4; 5\}$ và $A \setminus B=\{2 ; 3 ; 4\}$.
+	}
+\end{bt}
+
+%=== Câu 22 (ID: 0D1H2-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-1]
+	Trong các tập hợp sau, tập hợp nào là tập hợp rỗng?
+	\choice
+	{$A=\{x \in \mathbb{Z}|~ x<1\}$}
+	{$B=\left\{x \in \mathbb{Z} \mid 6 x^2-7 x+1=0\right\}$}
+	{\True $C=\left\{x \in \mathbb{Q} \mid x^2-4 x+2=0\right\}$}
+	{$D=\left\{x \in \mathbb{R} \mid x^2-4 x+3=0\right\}$}
+	\loigiai{
+		\begin{itemize}
+			\item Ta có $x^2-4 x+2=0 \Leftrightarrow \hoac{& x=2+\sqrt{2} \notin \mathbb{Q}  \\&  x=2-\sqrt{2} \notin \mathbb{Q}} \Rightarrow C=\varnothing$.
+			\item $A=\{x \in \mathbb{Z}|~ x<1\} = \{ \cdots;-3;-2;-1;0 \} \neq \varnothing$.
+			\item $6x^2-7x+1=0 \Leftrightarrow \hoac{&x=1 \in \mathbb{Z}\\&x=\dfrac{1}{6} \notin \mathbb{Z}} \Rightarrow B = \{ 1 \}$.
+			\item $x^2-4x+3=0 \Leftrightarrow \hoac{&x=3 \in \mathbb{R} \\&x=1 \in \mathbb{R}} \Rightarrow D = \{ 1;3 \}$.
+		\end{itemize}
+	}
+\end{ex}
+
+%=== Câu 23 (ID: 0D1H2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-2]
+	Cho tập hợp $B=\left\{ x\in\mathbb{Z}\mid x^4-11x^2+18=0\right\}$. Khi đó số phần tử của tập hợp $B$ là
+	\choice
+	{$1$}
+	{\True $2$}
+	{$3$}
+	{$4$}
+	\loigiai{
+		Ta có
+		\[
+		x^4-11 x^2+18=0
+		\Leftrightarrow \hoac{&x^2=2\\& x^2=9}
+		\Leftrightarrow \hoac{&x=\sqrt{2}\notin\mathbb{Z}\\& x=-\sqrt{2}\notin\mathbb{Z}\\& x=3\in\mathbb{Z}\\& x=-3 \in \mathbb{Z}.}
+		\]
+		Vậy $B=\{-3 ; 3\}$ nên $B$ gồm $2$ phần tử.
+	}
+\end{ex}
+
+%=== Câu 24 (ID: 0D1H2-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-2]
+	Cho các tập hợp $A=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3\}$, $B=\{0 ; 1 ; 4 ; 5\}$ và $C=\{-4 ;-3 ; 1 ; 2 ; 5 ; 6\}$.
+	\choiceTF
+	{\True $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$}
+	{$A\cap B=\{0\}$}
+	{\True $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$}
+	{\True $A\cap B\cap C=\{1\}$}
+	\loigiai{
+		\begin{itemchoice}
+			\item Vì $A\cup B=\{-3 ;-2 ;-1 ; 0 ; 1 ; 2 ; 3 ; 4 ; 5\}$.
+			\item Vì $A\cap B=\{0 ; 1\}$.
+			\item Vì $(A\cup B)\cap C=\{-3 ; 1 ; 2 ; 5\}$.
+			\item Vì $A\cap B\cap C=\{1\}$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 25 (ID: 0D1H2-2) ===%
+\begin{bt}%[0D1H2-2]
+	Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \subset B$?
+	\shortans{1}
+	\loigiai{
+		Vẽ trục số biểu diễn $A \subset B$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$0$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$6$};
+				\path (1.7,0) node{$[$} (1.8,-0.1)node[below]{$m+1$};
+				\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$2m-1$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Điều kiện: $m+1<2m-1 \Leftrightarrow m>2$.\\
+		Để $A \subset B$ thì
+		$\heva{&m+1>0\\&2m-1<6}
+		\Leftrightarrow \heva{& m>-1\\&m < \dfrac{7}{2}}
+		\Leftrightarrow -1 < m < \dfrac{7}{2}$.\\
+		Kết hợp với điều kiện ta được: $2 < m < \dfrac{7}{2}$. Vì $m$ nguyên nên $m=3$. Vậy có $1$ giá trị $m$.
+	}
+\end{bt}
+
+%=== Câu 26 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1H2-3]
+	Liệt kê các phần tử của tập hợp $A=\{ x \in \mathbb{Z}|~ (6x^2-7x+1)(x^2-4)=0\}$ ta được
+	\choice
+	{$A=\left\{\dfrac{1}{6};\dfrac{1}{2};2 \right\}$}
+	{\True $A=\{-2;1;2\}$}
+	{$A=\left\{-2;\dfrac{1}{6};1;2 \right\}$}
+	{$A=\{1;2\}$}
+	\loigiai{
+		Xét phương trình
+		\[
+		(6x^2-7x+1)(x^2-4)=0 \Leftrightarrow
+		\hoac{&6x^2-7x+1=0\\&x^2-4=0} \Leftrightarrow
+		\hoac{&x=1 \in \mathbb{Z}\\&x=\dfrac{1}{6} \notin \mathbb{Z}\\&x = 2 \in \mathbb{Z}\\& x=-2 \in \mathbb{Z}.}
+		\]
+		Vậy $A=\{-2;1;2\}.$}
+\end{ex}
+
+%=== Câu 27 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H2-3]
+	Cho $A=[-1 ; 3]$; $B=(2 ; 5)$. Tìm mệnh đề \textbf{sai}.
+	\choice
+	{$B \setminus A=(3 ; 5)$}
+	{$A \cap B=(2 ; 3]$}
+	{$A \setminus B=[-1 ; 2]$}
+	{\True  $A \cup B=[-1 ; 5]$}
+	\loigiai{
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(6,0);
+				\path (1,0) node{$[$} (1,-0.1)node[below]{$-1$} (-.5,0)node[left]{$[-1 ;5)$};
+				\path (3.5,0) node{$)$} (3.5,-0.1)node[below]{$5$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{3.6,3.7,...,5.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Ta có $A \cup B=[-1 ; 5)$.
+	}
+\end{ex}
+
+%=== Câu 28 (ID: 0D1H2-3) ===%
+\begin{ex}%[Bùi Lợi- Dự án bộ đề 4 phần]%[0D1H2-3]
+	Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên. Khi đó
+	\choiceTF
+	{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+	{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
+	{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá}
+	{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ}
+	\loigiai{
+		Gọi $A$, $B$, $E$ lần lượt là tập hợp các học sinh của lớp tham gia câu lạc bộ bóng đá, câu lạc bộ bóng rổ và học sinh lớp $10C6$.\\
+		Khi đó $A \cap B$ là tập hợp học sinh tham gia cả hai câu lạc bộ và $|A \cap B|=10$. Số phần tử của $A$ là $|A|=18$, số phần tử của $B$ là $|B|=15$.
+		\begin{itemchoice}
+			\item Tập hợp các học sinh tham gia câu lạc bộ bóng đá và không tham gia câu lạc bộ bóng rổ là tập hợp  $A\setminus B$. Số phần tử của $A\setminus B$ chính là số phần tử của $A$ trừ đi số phần tử của $A \cap B$.\\
+			Vậy số học sinh tham gia câu lạc bộ bóng đá và không tham gia câu lạc bộ bóng rổ là $18-10=8$ (học sinh).
+			\item Tập hợp các học sinh tham gia ít nhất một trong hai câu lạc bộ trên chính là tập hợp $A \cup B$. Do khi đếm số học sinh tham gia câu lạc bộ bóng đá là $18$, số học sinh tham gia câu lạc bộ bóng rổ là $15$ thì số học sinh tham gia cả hai câu lạc bộ là $10$ được tính hai lần.\\
+			Vậy số học sinh tham gia ít nhất một trong hai câu lạc bộ trên là $18+15-10=23$ (học sinh).
+			\item Số phần tử của $E$ là $45$. Tập hợp các học sinh không tham gia câu lạc bộ bóng đá là phần bù của $A$ trong $E$.\\
+			Vậy số học sinh không tham gia câu lạc bộ bóng đá là $45-18=27$ (học sinh).
+			\item Tập hợp các học sinh không tham gia cả hai câu lạc bộ là phần bù của $A \cup B$ trong $E$.\\
+			Vậy số học sinh không tham gia cả hai câu lạc bộ là $45-23=22$ (học sinh).
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 29 (ID: 0D1H3-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-1]
+	Cho tập $A=\{0 ; 2 ; 4 ; 6 ; 8\}$; $B=\{3 ; 4 ; 5 ; 6 ; 7\}$. Tập $A \setminus B$ là
+	\choice
+	{$\{0 ; 6 ; 8\}$}
+	{\True $\{0 ; 2 ; 8\}$}
+	{$\{3 ; 6 ; 7\}$}
+	{$\{0 ; 2\}$}
+	\loigiai{
+		Vì $A \setminus B$ gồm các phần tử thuộc tập hợp $A$ và không thuộc $B$ nên $A \setminus B=\{0 ; 2 ; 8\}$.
+	}
+\end{ex}
+
+%=== Câu 30 (ID: 0D1H3-1) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-1]
+	Cách viết nào sau đây là \textbf{sai}?
+	\choice
+	{$(0 ;+\infty)=\{x \in \mathbb{R}| x>0\}$}
+	{$[0 ; 5]=\{x \in \mathbb{R}| 0 \leqslant x \leqslant 5\}$}
+	{$(0 ; 5)=\{x \in \mathbb{R}| 0<x<5\}$}
+	{\True $[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$}
+	\loigiai{
+		Vì $[-1 ; 5)=\{x \in \mathbb{R} \mid -1 \leqslant x<5\}$ nên cách viết sau là sai: \lq\lq$[-1 ; 5)=\{-1 ; 0 ; 1 ; 2 ; 3 ; 4\}$\rq\rq.
+	}
+\end{ex}
+
+%=== Câu 31 (ID: 0D1H3-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-2]
+	\immini{ Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Ven như sau. Khẳng định nào sau đây \textbf{sai}?
+		\choice
+		{$B \subset C_X A$}
+		{$A \cap B=\varnothing$}
+		{$A \subset C_X B$}
+		{\True $A \cup B=X$}
+	}{
+		\begin{tikzpicture}[scale=0.5,thick,rotate=-90]
+			\colorlet{MauNet}{black}
+			\def\ElipA{(0,0) ellipse (0.8cm and 1.3cm)}
+			\def\ElipB{(2,3) ellipse (0.8cm and 1.4cm)}
+			\def\ElipC{(1,2) ellipse (3cm and 5cm)}
+			\draw[MauNet] \ElipA node[black] {$A$};
+			\draw[MauNet] \ElipB node[black] {$B$};
+			\draw[MauNet] \ElipC node[black,above right=1cm] {$X$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Nhìn biểu đồ,  ta thấy $A \cup B \neq X$.
+	}
+\end{ex}
+
+%=== Câu 32 (ID: 0D1H3-4) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1H3-4]
+	Cho tập hợp $A=\{x \in \mathbb{R} \mid 2 \leqslant x<5\}$. Phần bù của tập hợp $A$ trong $\mathbb{R}$ là tập nào sau đây?
+	\choice
+	{$[5 ;+\infty)$}
+	{$(-\infty ; 2)$}
+	{$(-\infty ; 2] \cup(5 ;+\infty)$}
+	{\True $(-\infty ; 2) \cup[5 ;+\infty)$}
+	\loigiai{
+		Ta có $A = \{x \in \mathbb{R} \mid 2 \leqslant x<5\}
+		= [2;5)$.\\
+		Khi đó phần bù của tập hợp $A$ trong $\mathbb{R}$ là
+		$\mathrm{C_{\mathbb{R}}A}
+		= \mathbb{R} \setminus A = (-\infty ; 2) \cup[5 ;+\infty)$.
+	}
+\end{ex}
+
+%=== Câu 33 (ID: 0D1H3-5) ===%
+\begin{bt}%[0D1H3-5]
+	Lớp 10A có $45$ học sinh trong đó có $12$ bạn học sinh giỏi Văn, $ 9$ bạn học sinh giỏi Địa lí, và $30$ bạn không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu bạn học sinh giỏi cả hai môn Văn và Địa lí?
+	\shortans{6}
+	\loigiai{
+		\immini{Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).\\
+			Số học sinh giỏi cả 2 môn Văn và Địa lí là $12+9-15=6$ (học sinh).}
+		{\begin{tikzpicture}
+				\draw (-3,-1.5) rectangle (3,3);
+				\draw (-1,1) circle(1.41) (1,1)circle (1);
+				\draw (0,-1)node[below]{$\tiny{\text{30 học sinh không giỏi Văn và Địa} }$} ;
+				\draw (-1,1.5)node[below]{$\tiny{\text{12 HS giỏi Văn}}$ } ;
+				\draw (1.15,1)node[below]{$\tiny{\text{9 HS giỏi Địa}}$ } ;
+				\draw (0,3.5)node[below]{$\tiny{\text{Lớp 10A có 45 học sinh}}$ } ;
+		\end{tikzpicture}}
+	}
+\end{bt}
+
+%=== Câu 34 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \in \mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \subset B$. Có bao nhiêu tập con của $S$?
+	\shortans{4}
+	\loigiai{
+		\begin{itemize}
+			\item Vẽ trục số thể hiện $A \subset B$.
+			\begin{center}
+				\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+					\draw [-stealth] (0,0)--(7,0);
+					\path (1,0) node{$($} (1,-0.1)node[below]{$2a-1$} (-.5,0)node[left]{$A \subset B$};
+					\path (5,0) node{$)$} (5,-0.1)node[below]{$3a+5$};
+					\path (1.7,0) node{$[$} (1.8,-0.1)node[below]{$4$};
+					\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$7$};
+					\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+					\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\end{tikzpicture}
+			\end{center}
+			\item Điều kiện tập $B$ khác tập rỗng: $2 a-1<3 a+5 \Leftrightarrow a>-6$\, \hfill{(1)}
+			\item $A \subset B \Rightarrow \heva{& 2a-1<4 \\& 3a+5 \geqslant 7 } \Leftrightarrow \heva{& a<\dfrac{5}{2} \\& a \geqslant \dfrac{2}{3}} \Leftrightarrow \dfrac{2}{3} \leqslant a<\dfrac{5}{2}.$ \, \hfill{(2)}
+			\item Kết hợp $(1)$ và $(2)$, ta được $\dfrac{2}{3} \leqslant a<\dfrac{5}{2}$.
+			\item Xét các giá trị $a \in \mathbb{Z} \Rightarrow S=\{1 ; 2\}$.
+			\item Có $4$ tập con của $S$ là $\varnothing $; $\{1\} $; $\{2\}$ và $S=\{1 ; 2\}$.
+		\end{itemize}
+	}
+\end{bt}
+
+%=== Câu 35 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
+	\shortans{1}
+	\loigiai{
+		Vẽ trục số thể hiện $B \subset A$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$1$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$5$};
+				\path (1.7,0) node{$($} (1.8,-0.1)node[below]{$m$};
+				\path (3.7,0) node{$)$} (3.8,-0.1)node[below]{$4m-1$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Để $B \neq \varnothing $ thì $m<4 m-1 \Leftrightarrow m>\dfrac{1}{3}.~\hfill{(1)}$\\
+		Và
+		$B\subset A
+		\Rightarrow \heva{&m \geq 1\\&4m-1\leq 5}
+		\Leftrightarrow 1 \leq m \leq \dfrac{3}{2}.~\hfill{(2)}$\\
+		Từ $(1)$, $(2)$ suy ra $1 \leq m \leq \dfrac{3}{2}$.\\
+		Vậy có $1$ giá trị nguyên của $m$ thì $B \subset A$.
+	}
+\end{bt}
+
+%=== Câu 36 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+	\loigiai{
+		Vẽ trục số thể hiện $A \subset B$.
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (1,0) node{$($} (1,-0.1)node[below]{$-2$} (-.5,0)node[left]{$A \subset B$};
+				\path (5,0) node{$)$} (5,-0.1)node[below]{$2m+2$};
+				\path (1.7,0) node{$($} (1.8,-0.1)node[below]{$m-1$};
+				\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$4$};
+				\foreach \x in{0,0.1,...,1} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Với $2$ tập khác rỗng $A$, $B$ ta có điều kiện $ \heva{&m-1<4 \\&2m+2>-2}
+		\Leftrightarrow \heva{&m<5\\&m>-2}
+		\Leftrightarrow-2<m<5$.\\
+		Để $A \subset B
+		\Leftrightarrow \heva{& m-1 \geqslant-2 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& m>1}
+		\Leftrightarrow m>1$.\\
+		So với điều kiện $\Rightarrow 1<m<5$. Do đó có $3$ giá trị nguyên của $m$ thỏa mãn $A \subset B$.
+	}
+\end{bt}
+
+%=== Câu 37 (ID: 0D1V2-2) ===%
+\begin{bt}%[0D1V2-2]
+	Cho $A=\left[m-3 ; \dfrac{m+2}{4}\right)$, $B=(-\infty ;-1) \cup [2 ;+\infty)$. Xác định $m$ để ${A \cap B=\varnothing}$.
+	\loigiai{ Ta có
+		\[
+		A \cap B = \varnothing
+		\Leftrightarrow \heva{&m-3 < \dfrac{m+2}{4}\\&m-3 \geq -1\\&\dfrac{m+2}{4} \leq 2}
+		\Leftrightarrow \heva{&m<\dfrac{14}{3}\\&m \geq 2\\&m \leq 6}
+		\Leftrightarrow 2 \leq m < \dfrac{14}{3}.
+		\]
+	}
+\end{bt}
+
+%=== Câu 38 (ID: 0D1V2-3) ===%
+\begin{bt}%[0D1V2-3]
+	Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
+	\shortans{20}
+	\loigiai{
+		Gọi $A$ là tập hợp các học sinh chơi bóng đá, $B$ là tập hợp các học sinh chơi bóng bàn, $C$ là tập hợp các học sinh không chơi môn thể thao nào.\\
+		Ta có
+		$|A|$ là số học sinh chơi bóng đá;\\
+		$|B|$ là số học sinh chơi bóng bàn;\\
+		$|C|$ là số học sinh không chơi môn thể thao nào.\\
+		Khi đó số học sinh chỉ chơi một môn thể thao là:
+		$|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14=20$.
+	}
+\end{bt}
+
+%=== Câu 39 (ID: 0D1V2-3) ===%
+\begin{bt}%[0D1V2-3]
+	Cho số thực $m<0$ và hai tập hợp $A=(-\infty ; 9m)$, $B=\left(\dfrac{4}{m};+\infty\right)$. Biết tất cả các giá trị thực của tham số $m \in (a,b)$ để $A \cap B \neq \varnothing$.\\
+	Khi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).
+	\shortans{0{,}67}
+	\loigiai{
+		Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\draw [-stealth] (0,0)--(7,0);
+				\path (-.5,0)node[left]{$A \cap B$};
+				\path (2,0) node{$)$} (2,-0.1)node[below]{$9m$};
+				\path (4,0) node{$($} (4,-0.1)node[below]{$\dfrac{4}{m}$};
+				\foreach \x in{2.1,2.2,...,3.9} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
+			\end{tikzpicture}
+		\end{center}
+		Nên hai tập hợp $A$ và $B$ giao nhau khác rỗng,
+		\[
+		\Leftrightarrow 9 m>\dfrac{4}{m}
+		\Leftrightarrow 9 m^2<4 \quad(\text{do } m<0)
+		\Rightarrow m^2<\dfrac{4}{9}
+		\Leftrightarrow -\dfrac{2}{3} < m < 0.
+		\]
+		Vậy $m \in \left(-\dfrac{2}{3};0\right)$ thỏa $A \cap B \neq \varnothing$. Khi đó $b-a = 0 - \left( -\dfrac{2}{3}\right) \approx 0{,}67$.
+	}
+\end{bt}
+
+%=== Câu 40 (ID: 0D1V3-2) ===%
+\begin{ex}%[Bùi Lợi-Dự án bộ đề 4 phần]%[0D1V3-2]
+	Lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa, $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi cả Lý và Hóa, $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa.
+	\choiceTF
+	{\True Số học sinh chỉ giỏi môn Toán là $1$ học sinh}
+	{\True Số học sinh chỉ giỏi môn Lý là $1$ học sinh}
+	{Số học sinh chỉ giỏi môn Hóa là $2$ học sinh}
+	{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh}
+	\loigiai{
+		Gọi $T$, $L$, $H$ lần lượt là tập hợp các học sinh của lớp giỏi Toán, Lý, Hóa.\\
+		Theo đề bài ta có: $|T|=7$; $|L|=5$; $|H|=6$; $|T \cap L|=3$; $|T \cap H|=4$; $|L \cap H|=2$; $|T \cap L \cap H|=3$.
+		\begin{itemchoice}
+			\item Số học sinh chỉ giỏi môn Toán $7-3-1-2=1$.
+			\item Số học sinh chỉ giỏi môn Lý $5-1-1-2=1$.
+			\item Số học sinh chỉ giỏi môn Hóa $6-3-1-1=1$.
+			\item Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là: $1+2+1+1+1+3+1=10$.
+	\end{itemchoice}}
+\end{ex}
+
+%=== Câu 41 (ID: 0D1V3-2) ===%
+\begin{bt}%[0D1V3-2]
+	Lớp 10A có $45$ học sinh trong đó có $25$ em học giỏi môn Toán, $23$ em học giỏi môn Lý, $20$ em học giỏi môn Hóa, $11$ em học giỏi cả môn Toán và môn Lý, $8$ em học giỏi cả môn Lý và môn Hóa, $9$ em học giỏi cả môn Toán và môn Hóa. Hỏi lớp $10A$ có bao nhiêu bạn học giỏi cả ba môn Toán, Lý, Hóa? (biết rằng mỗi học sinh trong lớp học giỏi ít nhất một trong ba môn Toán, Lý, Hóa).
+	\loigiai{
+		Gọi ${T, L, H}$ lần lượt là tập hợp các học sinh giỏi môn Toán, Lý, Hóa.\\
+		Ta có
+		\begin{eqnarray*}
+			&|T \cup L \cup H| &=|T|+|L|+|H|-|T \cap L|-|L \cap H|-|H \cap T|+|T \cap L \cap H|\\
+			&45 &=25+23+20-11-8-9+|T \cap L \cap H|\\
+			& \Leftrightarrow|T \cap L \cap H|& =5.
+		\end{eqnarray*}
+		Vậy có $5$ học sinh giỏi cả $3$ môn.}
+\end{bt}
+
+%=== Câu 42 (ID: 0D1V3-3) ===%
+\begin{bt}%[0D1V3-3]
+	Cho tập hợp $A=(0 ;+\infty)$ và $B=\left\{x \in \mathbb{R} \mid m x^2-6 x+m-8=0\right\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \subset A$.
+	\loigiai{
+		Vì tập $B$ có đúng hai tập con nên $B$ có đúng $1$ phần tử. Do đó phương trình $m x^2-6x+m-8=0$ có duy nhất một nghiệm.
+		\begin{enumerate}[TH1.]
+			\item $m=0$ thì $x=-\dfrac{4}{3}
+			\Rightarrow B=\left\{-\dfrac{4}{3}\right\} \not\subset A$.
+			\item $m \neq 0$ thì phương trình có nghiệm duy nhất\\
+			$\Leftrightarrow \Delta'=0$
+			$\Leftrightarrow 9-m(m-8)=0$
+			$\Leftrightarrow-m^2+8 m+9=0$
+			$\Leftrightarrow \hoac{& m=-1 \\& m=9.}$
+			\begin{itemize}
+				\item Với $m=-1 \Rightarrow B=\{-3\} \not\subset A$.
+				\item Với $m=9 \Rightarrow B=\left\{\dfrac{1}{3}\right\} \subset A$.
+			\end{itemize}
+			Kết hợp với điều kiện $B \subset A$ ta có $m=9$.
+		\end{enumerate}
+	}
+\end{bt}
+%=== Câu 1 (ID: 0D2N1-1) ===%
+\begin{ex}%[0D2N1-1]
+	Trong các bất phương trình sau, bất phương trình nào là bất phương trình bậc nhất hai ẩn?
+	\choice
+	{$2x^2+3y>4$}
+	{$xy+x<5$}
+	{\True $3^2x+4^3y\ge 6$}
+	{$x+y^3\le 3$}
+	\loigiai{
+		Bất phương trình bậc nhất hai ẩn có một trong các dạng $ax + y <c$; $ax + y >c$; $ax + y \le c$ ; $ax + y \ge c$, trong đó $a$, $b$, $c$ là những số cho trước, $a$ và $b$ không đồng thời bằng $0$, $x$ và $y$ là các ẩn.\\
+		Do đó $3^2x+4^3y\ge 6\Leftrightarrow 9x+64y\ge 6$.
+	}
+\end{ex}
+
+%=== Câu 2 (ID: 0D2N1-1) ===%
+\begin{ex}%[0D2N1-1]
+	Trong các bất phương trình sau, bất phương trình nào \textbf{không} phải là bất phương trình bậc nhất hai ẩn?
+	\choice
+	{$2x-3y-2022\le 0$}
+	{$5x+y-2022\ge 2x+11$}
+	{$x+2025>0$}
+	{\True $\dfrac{x}{y}+1>0$}
+	\loigiai{
+		Bất phương trình bậc nhất hai ẩn có một trong các dạng $ax + y <c$; $ax + y >c$; $ax + y \le c$ ; $ax + y \ge c$, trong đó $a$, $b$, $c$ là những số cho trước, $a$ và $b$ không đồng thời bằng $0$, $x$ và $y$ là các ẩn.\\
+		Do đó $\dfrac{x}{y}+1>0$ không phải là bất phương trình bậc nhất hai ẩn.
+	}
+\end{ex}
+
+%=== Câu 3 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Miền nghiệm của bất phương trình $3(x-1)+4(y-2)<5x-3$ là nửa mặt phẳng chứa điểm nào sau đây?
+	\choice
+	{$Q(-5;3)$}
+	{\True $O(0;0)$}
+	{$N(-4;2)$}
+	{$P(-2;2)$}
+	\loigiai{
+		Ta có $3(x-1)+4(y-2)<5x-3\Leftrightarrow -x+2y-4<0$.
+		\begin{itemize}
+			\item Xét điểm $Q(-5;3)$, ta có $-(-5)+2\cdot3-4=7>0$. Do đó miền nghiệm của bất phương trình đã cho là nửa mặt phẳng không chứa điểm $Q(-5;3)$.
+			\item Xét điểm $O(0;0)$, ta có $-0+2\cdot0-4=-4<0$ . Do đó miền nghiệm của bất phương trình đã cho là nửa mặt phẳng chứa điểm $O(0;0)$.
+			\item Xét điểm $N(-4;2)$, ta có $-(-4)+2\cdot2-4=4>0$. Do đó miền nghiệm của bất phương trình đã cho là nửa mặt phẳng không chứa điểm $N(-4;2)$.
+			\item Xét điểm $P(-2;2)$, ta có $-(-2)+2\cdot2-4=2>0$. Do đó miền nghiệm của bất phương trình đã cho là nửa mặt phẳng không chứa điểm $P(-2;2)$.
+		\end{itemize}
+		Vậy miền nghiệm của bất phương trình đã cho là nửa mặt phẳng chứa điểm $O(0;0)$.
+	}
+\end{ex}
+
+%=== Câu 4 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Cặp số nào dưới đây là nghiệm của bất phương trình $2x-y>3$?
+	\choice
+	{\True $(3;1)$}
+	{$(-2;1)$}
+	{$(1;1)$}
+	{$(2;1)$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(3;1)$, ta có $2\cdot 3 -1 = 5 >3\Rightarrow (3;1)$ là nghiệm của bất phương trình $2x-y>3$.
+			\item Xét cặp số $(-2;1)$, ta có $2\cdot (-2) -1 =-5<3\Rightarrow (-2;1)$ không là nghiệm của bất phương trình $2x-y>3$.
+			\item Xét cặp số $(1 ; 1)$, ta có $2\cdot 1 -1 =1<3\Rightarrow (1 ; 1)$ không là nghiệm của bất phương trình $2x-y>3$.
+			\item Xét cặp số $(2 ;1)$, ta có $2\cdot 2 -1 =3\Rightarrow (2 ;1)$ không là một nghiệm của bất phương trình $2x-y>3$.
+		\end{itemize}
+		Vậy cặp số $(3 ; 1)$ là nghiệm của bất phương trình $2 x- y <3$.
+	}
+\end{ex}
+
+%=== Câu 5 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Cặp số nào sau đây \textbf{không} là nghiệm của bất phương trình $x-2y\ge 5$?
+	\choice
+	{$(3;-1)$}
+	{\True $(-1;4)$}
+	{$(2;-3)$}
+	{$(1;-2)$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(3;-1)$, ta có $3 -2\cdot(-1) = 5\Rightarrow (3;-1)$ là nghiệm của bất phương trình $x-2y\ge 5$.
+			\item Xét cặp số $(-1;4)$, ta có $-1 -2\cdot4 =-9<5\Rightarrow (-1;4)$ không là nghiệm của bất phương trình $x-2y\ge 5$.
+			\item Xét cặp số $(2; -3)$, ta có $2 -2\cdot(-3) =8>5\Rightarrow (2; -3)$ là nghiệm của bất phương trình $x-2y\ge 5$.
+			\item Xét cặp số $(1; -2)$, ta có $1 -2\cdot(-2) =5\Rightarrow (1; -2)$ là một nghiệm của bất phương trình $x-2y\ge 5$.
+		\end{itemize}
+		Vậy cặp số $(-1; 4)$ là không nghiệm của bất phương trình $x-2y\ge 5$.
+	}
+\end{ex}
+
+%=== Câu 6 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Miền nghiệm của bất phương trình $5(x+2)-9<2x-2y+7$ \textbf{không} chứa điểm nào trong các điểm sau?
+	\choice
+	{\True $(2;3)$}
+	{$(-2;1)$}
+	{$(2;-1)$}
+	{$(0;0)$}
+	\loigiai{
+		Ta có $5(x+2)-9<2x-2y+7\Leftrightarrow 5x+10-9<2x-2y+7\Leftrightarrow 3x+2y<6$.
+		\begin{itemize}
+			\item Xét điểm $(2;3)$, ta có $3\cdot2 +2\cdot3=12>6$. Do đó miển nghiệm của bất phương trình đã cho không chứa điểm $(2; 3)$.
+			\item Xét điểm $(-2;1)$, ta có $3\cdot(-2) +2\cdot1=-4<6$. Do đó miển nghiệm của bất phương trình đã cho chứa điểm $(-2;1)$.
+			\item Xét điểm $(2;-1)$, ta có $3\cdot2 +2\cdot(-1)=4>6$. Do đó miển nghiệm của bất phương trình đã cho chứa điểm $(2;-1)$.
+			\item Xét điểm $(0;0)$, ta có $3\cdot0 +2\cdot0=0<6$. Do đó miển nghiệm của bất phương trình đã cho chứa điểm $(0;0)$.
+		\end{itemize}
+		Vậy miền nghiệm của bất phương trình $5(x+2)-9<2x-2y+7$ không chứa điểm $(2; 3)$.
+	}
+\end{ex}
+
+%=== Câu 7 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Điểm $A(1;-3)$ là điểm thuộc miền nghiệm của bất phương trình nào sau đây?
+	\choice
+	{$-3x+2y-3>0$}
+	{$3x-y\le 0$}
+	{\True $3x-y>0$}
+	{$y-2x>-4$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét bất phương trình $-3x+2y-3>0$, ta có $-3\cdot1 + 2\cdot (-3)-3=-12<0$. Do đó điểm $A(1; -3)$ không thuộc miền nghiệm của bất phương trình $-3x+2y-3>0$.
+			\item Xét bất phương trình $3x-y\le 0$, ta có $3\cdot1 -(-3)=6>0$. Do đó điểm $A(1; -3)$ không thuộc miền nghiệm của bất phương trình $3x-y\le 0$.
+			\item Xét bất phương trình $3x-y>0$, ta có $3\cdot1 -(-3)=6>0$. Do đó điểm $A(1; -3)$ thuộc miền nghiệm của bất phương trình $3x-y>0$.
+			\item Xét bất phương trình $y-2x>-4$, ta có $-3 - 2\cdot 1=-5<-4$. Do đó điểm $A(1; -3)$ không thuộc miền nghiệm của bất phương trình $y-2x>-4$.
+		\end{itemize}
+		Vậy điểm $A(1; -3)$ thuộc miền nghiệm của bất phương trình $3x-y>0$.
+	}
+\end{ex}
+
+%=== Câu 8 (ID: 0D2N1-2) ===%
+\begin{ex}%[0D2N1-2]
+	Cho bất phương trình $4x-3y\le 5\quad (*)$. Khi đó
+	\choiceTF
+	{$(1;-1)$ là nghiệm của bất phương trình $(*)$}
+	{\True $(0;0)$ là nghiệm của bất phương trình $(*)$}
+	{\True $(2;1)$ là nghiệm của bất phương trình $(*)$}
+	{$(3;-1)$ là nghiệm của bất phương trình $(*)$}
+	\loigiai{
+		\begin{itemchoice}
+			\item Thay $(-1;1)$ vào bất phương trình $(*)$$\Leftrightarrow 4\cdot 1-3\cdot (-1)\le 5 \Leftrightarrow 7\le 5$.
+			\item Thay $(0;0)$ vào bất phương trình $(*)$$\Leftrightarrow 4\cdot 0-3\cdot 0\le 5 \Leftrightarrow 0\le 5$.
+			\item Thay $(2;1)$ vào bất phương trình $(*)$$\Leftrightarrow 4\cdot 2-3\cdot 1\le 5 \Leftrightarrow 3\le 5$.
+			\item Thay $(3;-1)$ vào bất phương trình $(*)$$\Leftrightarrow 4\cdot 3-3\cdot (-1)\le 5 \Leftrightarrow 15\le 5$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 9 (ID: 0D2H1-1) ===%
+\begin{ex}%[0D2H1-1]
+	Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?
+	\choice
+	{$\dfrac{-1}{7}x-\dfrac{y^2}{3} \le 8$ }
+	{$\sqrt{2} x^2-5 \sqrt{y} \ge 8$}
+	{$2 \cdot \dfrac{1}{x}-5\cdot \dfrac{1}{y}>8$}
+	{\True $-\dfrac{2}{5} x-5^2 y \leq-\sqrt{15}$}
+	\loigiai{
+		Bất phương trình bậc nhất hai ẩn có một trong các dạng $ax + y <c$; $ax + y >c$; $ax + y \le c$ ; $ax + y \ge c$, trong đó $a$, $b$, $c$ là những số cho trước, $a$ và $b$ không đồng thời bằng $0$, $x$ và $y$ là các ẩn.\\
+		Do đó bất phương trình $-\dfrac{2}{5} x-5^2 y \leq-\sqrt{15}$ là bất phương trình bậc nhất hai ẩn $x$, $y$.
+	}
+\end{ex}
+
+%=== Câu 10 (ID: 0D2H1-1) ===%
+\begin{ex}%[0D2H1-1]
+	Một trò chơi chọn ô chữ đơn giản mà kết quả gồm một trong hai khả năng: Nếu người chơi chọn được chữ $A$ thì người ấy được cộng $3$ điểm, nếu người chơi chọn được chữ $B$ thì người ấy bị trừ $1$ điểm. Người chơi chỉ chiến thắng khi đạt được số điểm tối thiểu là $20$. Gọi $x$, $y$ theo thứ tự là số lần người chơi chọn được chữ $A$ và chữ $B$. Khi đó:
+	\choiceTF
+	{\True Tổng số điểm người chơi đạt được khi chọn chữ $A$ là $3x$, tổng số điểm người chơi bị trừ khi chọn chữ $B$ là $y$}
+	{Bất phương trình bậc nhất hai ẩn trong tình huống người chơi chiến thắng là $3x - y \geq 18$}
+	{\True Người chơi chọn được chữ $A$ $7$ lần và chọn được chữ $B$ $1$ lần thì người đó vừa đủ điểm dành chiến thắng trò chơi}
+	{\True Người chơi chọn được chữ $A$ $8$ lần và chọn được chữ $B$ $3$ lần thì người đó vừa đủ điểm dành chiến thắng trò chơi}
+	\loigiai{
+		\begin{itemchoice}
+			\item Tổng điểm đạt được là $3x$, bị trừ là $y$ nên tổng điểm còn lại là $3x - y$.
+			\item Điều kiện là $3x - y \geq 20$ mới đủ điểm chiến thắng.
+			\item Với $x = 7$, $y = 1$ thì $3x - y = 21 - 1 = 20 \geq 20$ (đúng).
+			\item Với $x = 8$, $y = 4$ thì $3x - y = 24 - 4 = 20 \geq 20$ (đúng).
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 11 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình bậc nhất hai ẩn $2 x-5 y \leq 8$. Khẳng định nào dưới đây là khẳng định \textbf{sai}?
+	\choice
+	{$(3 ;-4)$ không là một nghiệm của bất phương trình}
+	{\True $(-2 ; 2)$ không là một nghiệm của bất phương trình}
+	{$(-3 ;-1)$ là một nghiệm của bất phương trình}
+	{$(5 ; 0)$ không là một nghiệm của bất phương trình}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(3 ;-4)$, ta có $2\cdot3 -5\cdot (-4) = 26 >8\Rightarrow (3 ;-4)$ không là một nghiệm của bất phương trình $2 x-5 y \leq 8$.
+			\item Xét cặp số $(-2 ; 2)$, ta có $2\cdot(-2) -5\cdot 2 = -14 \le 8\Rightarrow (-2 ;2)$ là một nghiệm của bất phương trình $2 x-5 y \leq 8$.
+			\item Xét cặp số $(-3 ;-1)$, ta có $2\cdot(-3) -5\cdot (-1) =-1 \le 8\Rightarrow (-3 ;-1)$ là một nghiệm của bất phương trình $2 x-5 y \leq 8$.
+			\item Xét cặp số $(5 ; 0)$, ta có $2\cdot5 -5\cdot 0 = 10 >8\Rightarrow (5 ; 0)$ không là một nghiệm của bất phương trình $2 x-5 y \leq 8$.
+		\end{itemize}
+		Vậy khẳng định $(-2 ; 2)$ không là một nghiệm của bất phương trình $2 x-5 y \leq 8$ là khẳng định sai.
+	}
+\end{ex}
+
+%=== Câu 12 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình $-2 x+3 y>3$. Khẳng định nào dưới đây \textbf{sai}?
+	\choice
+	{$(0 ; 0)$ không là một nghiệm bất phương trình}
+	{\True $(-1 ; 1)$ không là một nghiệm bất phương trình}
+	{$(0 ; 1)$ không là một nghiệm bất phương trình}
+	{$(1 ; 3)$ là một nghiệm bất phương trình}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(0 ; 0)$, ta có $-2\cdot0 +3\cdot 0 = 0 <3\Rightarrow (0 ; 0)$ không là một nghiệm của bất phương trình $-2 x+3 y>3$.
+			\item Xét cặp số $(-1 ; 1)$, ta có $-2\cdot(-1) +3\cdot 1 = 5 >3\Rightarrow (-1 ; 1)$ là một nghiệm của bất phương trình $-2 x+3 y>3$.
+			\item Xét cặp số $(0 ; 1)$, ta có $-2\cdot0 +3\cdot 1 = 3 \Rightarrow (0 ; 1)$ không là một nghiệm của bất phương trình $-2 x+3 y>3$.
+			\item Xét cặp số $(1 ; 3)$, ta có $-2\cdot1 +3\cdot 3 = 7 >3\Rightarrow (1 ; 3)$ là một nghiệm của bất phương trình $-2 x+3 y>3$.
+		\end{itemize}
+		Vậy khẳng định $(-1 ; 1)$ không là một nghiệm bất phương trình $-2 x+3 y>3$ là khẳng định sai.
+	}
+\end{ex}
+
+%=== Câu 13 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Điểm $O(0 ; 0)$ thuộc miền nghiệm của bất phương trình nào dưới đây?
+	\choice
+	{$x+3 y+2 \le 0$}
+	{$x+y+2 \le 0$}
+	{\True $2 x+5 y-2<0$}
+	{$2 x+y<0$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét bất phương trình $x+3 y+2 \le 0$, ta có $0 + 3\cdot 0 + 2 = 2>0$. Do đó điểm $O(0 ; 0)$ không thuộc miền nghiệm của bất phương trình $x+3 y+2 \le 0$.
+			\item Xét bất phương trình $x+y+2 \le 0$, ta có $0 + 0 + 2 = 2>0$. Do đó điểm $O(0 ; 0)$ không thuộc miền nghiệm của bất phương trình $x+3 y+2 \le 0$.
+			\item Xét bất phương trình $2 x+5 y-2<0$, ta có $2\cdot0 + 5\cdot 0 -2=-2 < 0$. Do đó điểm $O(0 ; 0)$ thuộc miền nghiệm của bất phương trình $2 x+5 y-2<0$.
+			\item Xét bất phương trình $2 x+y<0$, ta có $2\cdot0 + 0 = 0$. Do đó điểm $O(0 ; 0)$ không thuộc miền nghiệm của bất phương trình $2 x+y<0$.
+		\end{itemize}
+		Vậy điểm $O(0 ; 0)$ thuộc miền nghiệm của bất phương trình $2 x+5 y-2<0$.
+	}
+\end{ex}
+
+%=== Câu 14 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Khẳng định nào dưới đây là khẳng định \textbf{đúng}?
+	\choice
+	{Bất phương trình $3x-2 y>0$ có miền nghiệm là nửa mặt phẳng không kể bờ là đường thẳng $3x-2 y=0$ chứa điểm $O$}
+	{Bất phương trình $2 x+y>1$ có miền nghiệm là nửa mặt phẳng không kể bờ là đường thẳng $2x+ y =1$ chứa điểm $O$}
+	{Bất phương trình $-2 x+y+1 \le 0$ có miền nghiệm là nửa mặt phẳng kể cả bờ là đường thẳng $-2 x+y+1=0$ chứa điểm $O$}
+	{\True Bất phương trình $2 x-3 y+5 \ge 0$ có miền nghiệm là nửa mặt phẳng kể cả bờ là đường thẳng $2 x-3 y+5=0$ chứa điểm $O$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét bất phương trình $3x-2 y>0$, ta có $3\cdot0 -2\cdot 0 = 0$. Do đó miền nghiệm của bất phương trình $3x-2 y>0$ không chứa điểm $O(0;0)$.
+			\item Xét bất phương trình $2 x+y>1$, ta có $2\cdot0 +0= 0<1$. Do đó miền nghiệm của bất phương trình $2 x+y>1$ không chứa điểm $O(0;0)$.
+			\item Xét bất phương trình $-2 x+y+1 \le 0$, ta có $-2\cdot0 +0+1= 1>0$. Do đó miền nghiệm của bất phương trình $-2 x+y+1 \le 0$ không chứa điểm $O(0;0)$.
+			\item Xét bất phương trình $2 x-3 y+5 \ge 0$, ta có $2\cdot0 -3\cdot0+5= 5>0$. Do đó miền nghiệm của bất phương trình $2 x-3 y+5 \ge 0$ chứa điểm $O(0;0)$.
+		\end{itemize}
+		Vậy bất phương trình $-2 x+y+1 \le 0$ có miền nghiệm là nửa mặt phẳng kể cả bờ là đường thẳng $2 x-3 y+5=0$ chứa điểm $O$.
+	}
+\end{ex}
+
+%=== Câu 15 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình bậc nhất hai ẩn $x-2 y+2 \le 0$. Chọn khẳng định đúng trong các khẳng định dưới đây?
+	\choice
+	{\True $(0;0)$ không là một nghiệm của bất phương trình}
+	{$(1;4)$ không là một nghiệm của bất phương trình}
+	{$(0 ; 3)$ không là một nghiệm của bất phương trình}
+	{$(2 ; 2)$ không là một nghiệm cùa bất phương trình}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(0 ; 0)$, ta có $0 -2\cdot 0 +2 = 2 >0\Rightarrow (0 ; 0)$ không là một nghiệm của bất phương trình $x-2 y+2 \le 0$.
+			\item Xét cặp số $(1;4)$, ta có $1 -2\cdot 4 +2 = -5 <0\Rightarrow (1;4)$ là một nghiệm của bất phương trình $x-2 y+2 \le 0$.
+			\item Xét cặp số $(0 ; 3)$, ta có $0 -2\cdot 3 +2 = -4 <0\Rightarrow (0 ; 3)$ là một nghiệm của bất phương trình $x-2 y+2 \le 0$.
+			\item Xét cặp số $(2 ; 2)$, ta có $2 -2\cdot 2 +2 = 0\Rightarrow (2 ; 2)$ là một nghiệm của bất phương trình $x-2 y+2 \le 0$.
+		\end{itemize}
+		Vậy khẳng định $(0;0)$ không là nghiệm của bất phương trình $x-2 y+2 \le 0$ là khẳng định đúng.
+	}
+\end{ex}
+
+%=== Câu 16 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình $4 x-3 y \le 5$. Khẳng định nào dưới đây đúng?
+	\choice
+	{$(1;-1)$ là một nghiệm của bất phương trình}
+	{$(0 ; 0)$ không là một nghiệm của bất phương trình}
+	{\True $(2 ; 1)$ là một nghiệm của bất phương trình}
+	{$(3 ;-1)$ là một nghiệm của bất phương trình}
+	\loigiai{
+		\begin{itemize}
+			\item Xét cặp số $(1;-1)$, ta có $4\cdot 1 -3\cdot(-1) = 7 >5\Rightarrow (1;-1)$ không là một nghiệm của bất phương trình $4 x-3 y \le 5$.
+			\item Xét cặp số $(0 ; 0)$, ta có $4\cdot 0 -3\cdot0 = 0 <5\Rightarrow (0 ; 0)$ là một nghiệm của bất phương trình $4 x-3 y \le 5$.
+			\item Xét cặp số $(2 ; 1)$, ta có $4\cdot2 -3\cdot1=5\Rightarrow (2 ; 1)$ là một nghiệm của bất phương trình $4 x-3 y \le 5$.
+			\item Xét cặp số $(3 ;-1)$, ta có $4\cdot3-3\cdot(-1)=15>5\Rightarrow (3 ;-1)$ không là một nghiệm của bất phương trình $4 x-3 y \le 5$.
+		\end{itemize}
+		Vậy khẳng định $(2 ; 1)$ là một nghiệm của bất phương trình $4 x-3 y \le 5$ là khẳng định đúng.
+	}
+\end{ex}
+
+%=== Câu 17 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Đường thẳng $d\colon 2x-y=2$ chia mặt phẳng tọa độ thành hai miền I, II có bờ là đường thẳng $d$. Xác định miền nghiệm của bất phương trình $2x-y\ge 2$.
+	\begin{center}
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth]
+			\tikzset{every node/.style={scale=0.9}}
+			\draw[->] (-1.1,0)--(3.1,0) node[below left] {$x$};
+			\draw[->] (0,-2.5)--(0,3.1) node[below left] {$y$};
+			\draw (0,0) node [below left] {$O$};
+			\foreach \x/\nx in {1/1,2/2}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\nx$};
+			\foreach \y/\ny in {-2/-2,-1/-1,1/1,2/2}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\ny$};
+			\begin{scope}
+				\clip (-1,-2.5) rectangle (3,3);
+				\draw[samples=200,domain=-1:3,smooth,variable=\x] plot (\x,{2*(\x)+-2});
+			\end{scope}
+			\node [right,rotate=65] at (1,.5){$2x-y=2$};
+			\path (0.5,1.5)node [above]{II};
+			\path (2,0.5)node [above]{I};
+		\end{tikzpicture}
+	\end{center}
+	\choice
+	{Nửa mặt phẳng I không kể đường thẳng $d$}
+	{\True Nửa mặt phẳng I kể cả đường thẳng $d$}
+	{Nửa mặt phẳng II kể cả đường thẳng $d$}
+	{Nửa mặt phẳng II không kể đường thẳng $d$}
+	\loigiai{
+		Thay tọa độ điểm $O(0;0)$ vào bất phương trình đã cho $2x-y\ge 2$, ta có $2\cdot0 -0\ge 2$ là mệnh đề sai. Do vậy miền nghiệm của bất phương trình đã cho là miền I không chứa điểm $O$, kể cả bờ $d$.
+	}
+\end{ex}
+
+%=== Câu 18 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	\immini{Nửa mặt phẳng phần không gạch sọc được cho bởi hình bên là miền nghiệm của bất phương trình nào dưới đây?
+		\choice
+		{$2x+y-6>0$}
+		{\True $2x+y-6<0$}
+		{$x+2y-6<0$}
+		{$x+2y-6>0$}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,scale=.7]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-1) rectangle (5,7);
+				\fill[pattern=north east lines] (-3,12)--(6,12)--(6,-6)--cycle;
+				\draw[samples=200,smooth,variable=\x] plot (\x,{-2*(\x)+6});
+			\end{scope}
+			\draw[->] (-2,0)--(5.2,0) node[below]{$x$};
+			\draw[->] (0,-1)--(0,7.2) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {6}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Gọi đường thẳng $d\colon y=ax+b$ đi qua hai điểm $(3;0)$ và $(0;6)$.\\
+		Suy ra $\heva{&3a+b=0\\&b=6}\Rightarrow\heva{&a=-2\\&b=6}\Rightarrow d\colon y=-2x+6\Leftrightarrow 2x+y-6=0.$\\
+		Xét điểm $O(0;0)\notin d$, ta có $2\cdot0 +0-6=-6<0$.\\
+		Ta thấy điểm $O(0; 0)$ thuộc miền nghiệm (phần phông gạch sọc).\\
+		Do đó $O(0;0)$ thuộc miền nghiệm của bất phương trình $2x+y-6<0$.\\
+		Vậy nửa mặt phẳng phần không gạch sọc (chứa điểm $O$) là miền nghiệm của bất phương trình $2x+y-6<0$.
+	}
+\end{ex}
+
+%=== Câu 19 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Biểu diễn miền nghiệm của bất phương trình $2x-3y-6\le 0$ trên mặt phẳng tọa độ $Oxy$ là phần không gạch sọc trong hình nào sau đây?
+	\choice[2]
+	{\True
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-3) rectangle (4,1.5);
+				\fill[pattern=north west lines] (-3,-4)--(6,-4)--(6,2)--cycle;
+				\draw (5.25,1.5)--(-1.5,-3) ;
+			\end{scope}
+			\draw[->] (-2,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-3)--(0,1.5) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {-1,1,2,3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {-2,-1,1}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-1.5) rectangle (4,3);
+				\fill[pattern=north east lines] (-3,4)--(6,4)--(6,-2)--cycle;
+				\draw (-1.5,3)--(5.25,-1.5);
+			\end{scope}
+			\draw[->] (-2,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-1.5)--(0,3) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {-2,-1,1,2,3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {-1,1,2}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-3) rectangle (4,1.5);
+				\fill[pattern=north west lines] (-3,-4)--(-3,2)--(6,2)--cycle;
+				\draw (5.25,1.5)--(-1.5,-3);
+			\end{scope}
+			\draw[->] (-2,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-3)--(0,1.5) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {-1,1,2,3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {-2,-1,1}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-1.5) rectangle (4,3);
+				\fill[pattern=north east lines] (-3,4)--(-3,-2)--(6,-2)--cycle;
+				\draw (-1.5,3)--(5.25,-1.5);
+			\end{scope}
+			\draw[->] (-2,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-1.5)--(0,3) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {-1,1,2,3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {-1,1,2}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Đường thẳng $d\colon 2x-3y-6=0$ đi qua hai điểm $(0;-2)$, $(3;0)$.\\
+		Xét điểm $O(0;0)\notin d$, ta có $2\cdot0 -3\cdot0-6=-6<0$.\\
+		Do đó $O(0;0)$ thuộc miền nghiệm của bất phương trình $2x-3y-6\le 0$.\\
+		Vậy phần không gạch sọc (chứa điểm $O$) trong hình dưới đây là miền nghiệm của bất phương trình $2x-3y-6\le 0$.
+		\begin{center}
+			\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+				\tikzset{every node/.style={scale=0.9}}
+				\begin{scope}
+					\clip (-2,-3) rectangle (4,1.5);
+					\fill[pattern=north west lines] (-3,-4)--(6,-4)--(6,2)--cycle;
+					\draw (5.25,1.5)--(-1.5,-3) ;
+				\end{scope}
+				\draw[->] (-2,0)--(4,0) node[below]{$x$};
+				\draw[->] (0,-3)--(0,1.5) node[left]{$y$};
+				\draw (0,0) node[below left]{$O$};
+				\foreach \x in {-1,1,2,3}
+				\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+				\foreach \y in {-2,-1,1}
+				\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+			\end{tikzpicture}
+		\end{center}
+	}
+\end{ex}
+
+%=== Câu 20 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Miền nghiệm của bất phương trình $2x-3y>5$ là nửa mặt phẳng (không kể đường thẳng $d:2x-3y=5$) \textbf{không} chứa điểm có tọa độ nào sau đây?
+	\choice
+	{\True $(0;0)$}
+	{$(3;0)$}
+	{$(1;-2)$}
+	{$(-3;-4)$}
+	\loigiai{
+		\begin{itemize}
+			\item Xét điểm $(0;0)$, ta có $2\cdot0 -3\cdot0=0<5$. Do đó miền nghiệm của bất phương trình đã cho không chứa điểm $(0; 0)$.
+			\item Xét điểm $(3;0 )$, ta có $2\cdot3 -3\cdot0=6>5$. Do đó miền nghiệm của bất phương trình đã cho chứa điểm $(3;0)$.
+			\item Xét điểm $(1;-2)$, ta có $2\cdot1 -3\cdot(-2)=8>5$. Do đó miền nghiệm của bất phương trình đã cho chứa điểm $(1;-2)$.
+			\item Xét điểm $(-3;-4)$, ta có $2\cdot(-3) -3\cdot(-4)=6>5$. Do đó miền nghiệm của bất phương trình đã cho chứa điểm $(-3;-4)$.
+		\end{itemize}
+		Vậy miền nghiệm của bất phương trình $2x-3y>5$ không chứa điểm $(0; 0)$.
+	}
+\end{ex}
+
+%=== Câu 21 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Biểu diễn miền nghiệm của bất phương trình $x-y<3$ trên mặt phẳng tọa độ $Oxy$ là phần không gạch sọc trong hình nào sau đây?
+	\choice
+	{\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick,scale=0.8]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-1,-1) rectangle (4,4);
+				\fill[pattern=north east lines] (-2,5)--(-2,-2)--(5,-2)--cycle;
+				\draw (-1,4)--(4,-1) ;
+			\end{scope}
+			\draw[->] (-1,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-1)--(0,4) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+			\foreach \y in {3}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [right] {$\y$};
+		\end{tikzpicture}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick,scale=0.8]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-1,-1) rectangle (4,4);
+				\fill[pattern=north east lines] (-2,5)--(5,5)--(5,-2)--cycle;
+				\draw (-1,4)--(4,-1);
+			\end{scope}
+			\draw[->] (-1,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-1)--(0,4) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {3}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	{
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick,scale=0.8]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-1,-4) rectangle (4,1);
+				\fill[pattern=north west lines] (-2,-5)--(-2,2)--(5,2)--cycle;
+				\draw (4,1)--(-1,-4);
+			\end{scope}
+			\draw[->] (-1,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-4)--(0,1) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+			\foreach \y in {-3}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [right] {$\y$};
+		\end{tikzpicture}
+	}
+	{\True
+		\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick,scale=0.8]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-1,-4) rectangle (4,1);
+				\fill[pattern=north west lines] (-2,-5)--(5,-5)--(5,2)--cycle;
+				\draw (4,1)--(-1,-4) ;
+			\end{scope}
+			\draw[->] (-1,0)--(4,0) node[below]{$x$};
+			\draw[->] (0,-4)--(0,1) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+			\foreach \y in {-3}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Đường thẳng $d\colon x-y=3$ đi qua hai điểm $(0;-3)$, $(3;0)$.\\
+		Xét điểm $O(0;0)\notin d$, ta có $0-0=0<3$.\\
+		Do đó $O(0;0)$ thuộc miền nghiệm của bất phương trình $x-y<3$.\\
+		Vậy phần không gạch sọc (chứa điểm $O$) trong hình dưới đây là miền nghiệm của bất phương trình $x-y<3$.
+		\begin{center}
+			\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick,scale=0.8]
+				\tikzset{every node/.style={scale=0.9}}
+				\begin{scope}
+					\clip (-1,-4) rectangle (4,1);
+					\fill[pattern=north west lines] (-2,-5)--(5,-5)--(5,2)--cycle;
+					\draw (4,1)--(-1,-4) ;
+				\end{scope}
+				\draw[->] (-1,0)--(4,0) node[below]{$x$};
+				\draw[->] (0,-4)--(0,1) node[left]{$y$};
+				\draw (0,0) node[below left]{$O$};
+				\foreach \x in {3}
+				\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+				\foreach \y in {-3}
+				\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+			\end{tikzpicture}
+		\end{center}
+	}
+\end{ex}
+
+%=== Câu 22 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	\immini{Nửa mặt phẳng không bị gạch (không kể bờ $d$) ở hình bên là miền nghiệm của bất phương trình nào đây?
+		\choice
+		{$3x+y<3$}
+		{\True $3x+y>3$}
+		{$x+3y<3$}
+		{$x+3y>3$}}
+	{ \begin{tikzpicture}[scale=1,line join=round, line cap=round,>=stealth,thick]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-2,-1) rectangle (3,4);
+				\fill[pattern=north east lines] (-2,9)--(-2,-6)--(3,-6)--cycle;
+				\draw (-0.33,4)--(1.33,-1)node [pos=0.45, above, sloped] {$d$} ;
+			\end{scope}
+			\draw[->] (-2,0)--(3,0) node[below]{$x$};
+			\draw[->] (0,-1)--(0,4) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {1}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+			\foreach \y in {3}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [right] {$\y$};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Gọi đường thẳng $d\colon y=ax+b$ đi qua hai điểm $(1;0)$ và $(0;3)$.\\
+		Suy ra $\heva{&a+b=0\\&b=3}\Rightarrow\heva{&a=-3\\&b=3}\Rightarrow d\colon y=-3x+3\Leftrightarrow 3x+y=3$. \\
+		Xét điểm $O(0;0)\notin d$, ta có $3\cdot0 +0=0<3$.\\
+		Ta thấy điểm $(0;0)$ không thuộc miền nghiệm (phần không bị gạch).\\
+		Do đó $O(0;0)$ không thuộc miền nghiệm của bất phương trình $3x+y>3$.\\
+		Vậy nửa mặt phẳng phần không gạch sọc (không chứa điểm $O(0; 0)$) là miền nghiệm của bất phương trình $3x+y>3$.
+	}
+\end{ex}
+
+%=== Câu 23 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình $x+2y\le 3$. Khẳng định nào sau đây là đúng?
+	\choice
+	{\True Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d:x+2y=3$ chứa gốc tọa độ}
+	{Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d:x+2y=3$ không chứa gốc tọa độ}
+	{Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d:x+2y=-3$ chứa gốc tọa độ}
+	{Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d:x+2y=-3$ không chứa gốc tọa độ}
+	\loigiai{
+		Thay $(0;0)$ vào bất phương trình $x+2y\le 3\Rightarrow 0 +2\cdot 0\le 3\Leftrightarrow 0 \le 3$ (đúng).\\
+		Vậy miền nghiệm chứa điểm $(0;0)$.
+	}
+\end{ex}
+
+%=== Câu 24 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho hai bất phương trình $2x+y<3\quad (1)$ và $-x+3y>5\quad (2)$ và điểm $M(0;1)$. Kết luận nào sau đây \textbf{đúng}?
+	\choice
+	{Điểm $M$ thuộc miền nghiệm của bất phương trình $(1)$ và $(2)$}
+	{\True Điểm $M$ thuộc miền nghiệm của bất phương trình $(1)$ nhưng không thuộc miền nghiệm của bất phương trình $(2)$}
+	{Điểm $M$ không thuộc miền nghiệm của bất phương trình $(1)$ nhưng thuộc miền nghiệm của bất phương trình $(2)$}
+	{Điểm $M$ không thuộc miền nghiệm của cả hai bất phương trình $(1)$ và $(2)$}
+	\loigiai{
+		Thay điểm $M(0;1)$ vào bất phương trình $(1)$ ta được $2\cdot 0+1<3\Leftrightarrow 1<3$ (đúng).\\
+		Thay điểm $M(0;1)$ vào bất phương trình $(2)$ ta được $ 0+3\cdot 1>5\Leftrightarrow 3>5$ (vô lý).
+	}
+\end{ex}
+
+%=== Câu 25 (ID: 0D2H1-2) ===%
+\begin{ex}%[0D2H1-2]
+	Cho bất phương trình $3 x-5 y\le-15$. Khi đó
+	\choiceTF
+	{Điểm $O(0;0)$ thuộc miền nghiệm của bất phương trình đã cho}
+	{\True Đường thẳng $d\colon 3x -5y =-15$ đi qua hai điểm $A(-5; 0)$ và $B(0; 3)$}
+	{Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d\colon 3x -5y =-15$ (kể cả đường thẳng $d$) chứa điểm $(O)$}
+	{\True Có vô số cặp số $(x; y)$ sao cho $x<0$, $y>0$, $x$, $y\in \mathbb{Z}$ là nghiệm của bất phương trình đã cho}
+	\loigiai{
+		\begin{itemchoice}
+			\item Vì $3\cdot0-5\cdot0=0>-15$.\\
+			Do đó điểm $O(0;0)$ không thuộc miền nghiệm của bất phương trình $3 x-5 y\le-15$.
+			\item Vì $3\cdot (-5)-5\cdot0=-15 \Rightarrow A(-5; 0)\in d$ và $3\cdot 0-5\cdot3=-15 \Rightarrow B(0; 3)\in d$.\\
+			Vậy đường thẳng $d\colon 3x -5y =-15$ đi qua hai điểm $A(-5; 0)$ và $B(0; 3)$.
+			\item Vì $O\notin d$ và $3\cdot0-5\cdot0=0>-15$.\\
+			Do đó miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d\colon 3x -5y =-15$ (kể cả đường thẳng $d$) không chứa điểm $(O)$.
+			\item Ta có $3 x-5 y\le-15\Leftrightarrow 3x\le 5y -15\Leftrightarrow x\le \dfrac{5}{3}y-3$.\\
+			Vì $x<0$, $y>0$, $x$ $y\in \mathbb{Z}$ nên $y\in\{3; 6; 9; \ldots\}$.\\
+			Vậy có vô số cặp số $(x; y)$ sao cho $x<0$, $y>0$, $x$, $y\in \mathbb{Z}$ là nghiệm của bất phương trình đã cho.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 26 (ID: 0D2H1-2) ===%
+\begin{bt}%[0D2H1-2]
+	\immini{Nửa mặt phẳng không bị gạch (không kể $d$) ở hình bên là miền nghiệm của bất phương trình có dạng $ax+by-2>0$. Giá trị của $a+b$ bằng bao nhiêu?}
+	{
+		\begin{tikzpicture}[scale=1,line join=round, line cap=round,>=stealth]
+			\tikzset{every node/.style={scale=0.9}}
+			\begin{scope}
+				\clip (-1,-2.5) rectangle (3.5,1.5);
+				\fill[pattern=north west lines] (-2,-4)--(-2,2.5)--(4.5,2.5)--cycle;
+				\draw (3.5,1.5)--(-0.5,-2.5);
+			\end{scope}
+			\draw[->] (-1,0)--(3.5,0) node[below]{$x$};
+			\draw[->] (0,-2.5)--(0,1.7) node[left]{$y$};
+			\draw (0,0) node[below left]{$O$};
+			\foreach \x in {2,3}
+			\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+			\foreach \y in {-2,-1}
+			\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+		\end{tikzpicture}
+	}
+	\shortans{$0$}
+	\loigiai{
+		Dựa vào hình ta thấy đường thẳng $d$ có hệ số góc khác $0$ nên gọi $(d)\colon y=ax+b$ .\\
+		Ta có : $(2;0)\in (d)\Rightarrow 2a+b=0$ và $(0;-2)\in (d)\Rightarrow b=-2$,\\
+		Vậy $(d)\colon y=x-2$ hay $x-y-2=0$.\\
+		Mà $(0;0)$ không thuộc miền nghiệm $\Rightarrow x-y-2>0$.\\
+		Do đó $a=1; b=-1 \Rightarrow a+b=0$.
+	}
+\end{bt}
+
+%=== Câu 27 (ID: 0D2H1-2) ===%
+\begin{bt}%[0D2H1-2]
+	Biểu diễn miền nghiệm của mỗi bất phương trình $\dfrac{x+y}{2}>\dfrac{2x-y+1}{3}$ trên mặt phẳng tọa độ $Oxy$.
+	\loigiai{
+		Ta có $\dfrac{x+y}{2}>\dfrac{2x-y+1}{3}\Leftrightarrow 3x+3y >4x-2y+2\Leftrightarrow x-5y+2<0$.
+		\begin{itemize}
+			\item Vẽ đường thẳng $\Delta\colon x-5y+2=0$ đi qua hai điểm $\left(-2;0\right)$ và $\left(0;\dfrac{2}{5}\right)$.
+			\item Xét điểm $O(0; 0)\notin \Delta$. Ta có $0-5\cdot0+2=2>0$.
+			\item Do đó, miền nghiệm của bất phương trình $x-5y+2<0$ là nửa mặt phẳng bờ $\Delta$ không chứa điểm $O$ không kể đường thẳng $\Delta$.
+		\end{itemize}
+		\begin{center}
+			\begin{tikzpicture}[scale=.9,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\def\a{1/5} \def\b{2/5}
+				\def\xmin{-3.5} \def\xmax{4}
+				\def\ymin{-2.5} \def\ymax{2}
+				\draw[->] (\xmin,0)--(\xmax+.2,0) node [below]{$x$};
+				\draw[->] (0,\ymin)--(0,\ymax+.2) node [left]{$y$};
+				\node at (0,0) [below left]{$O$};
+				\clip (\xmin,\ymin) rectangle (\xmax,\ymax);
+				\fill[pattern=north east lines] plot(\x,{\a*(\x)+\b})--(\xmax,\ymin)--(\xmin,\ymin) --cycle;
+				\draw[smooth,samples=300] plot(\x,{\a*(\x)+\b});
+				\node[rotate=12,right] at (.5,.7) {$\Delta\colon x -5y +2= 0$};
+				\draw[fill=black] (0,.4)circle (1pt) node[above left]{$\dfrac{2}{5}$};
+				\draw[fill=black] (-2,0)circle (1pt) node[above]{$-2$};
+			\end{tikzpicture}
+		\end{center}
+	}
+\end{bt}
+
+%=== Câu 28 (ID: 0D2H1-2) ===%
+\begin{bt}%[0D2H1-2]
+	Biểu diễn miền nghiệm của bất phương trình $\dfrac{5x+y-1}{2}\ge x+y+1$ trêm mặt phẳng tọa độ $Oxy$.
+	\loigiai{
+		Ta có $\dfrac{5x+y-1}{2}>x+y+1\Leftrightarrow 5x+y-1 >2x+2y+2\Leftrightarrow 3x-y-3\ge 0$.
+		\begin{itemize}
+			\item Vẽ đường thẳng $\Delta\colon 3x-y-3=0$ đi qua hai điểm $\left(1;0\right)$ và $\left(0;-3\right)$.
+			\item Xét điểm $O(0; 0)\notin \Delta$. Ta có $3\cdot0-0-3=-3<0$.
+			\item Do đó, miền nghiệm của bất phương trình $3x-y-3\ge 0$ là nửa mặt phẳng bờ $\Delta$ chứa điểm $O$ kể cả đường thẳng $\Delta$.
+		\end{itemize}
+		\begin{center}
+			\begin{tikzpicture}[scale=.9,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\def\a{3} \def\b{-3}
+				\def\xmin{-3} \def\xmax{3}
+				\def\ymin{-4} \def\ymax{2}
+				\draw[->] (\xmin,0)--(\xmax+.2,0) node [below]{$x$};
+				\draw[->] (0,\ymin)--(0,\ymax+.2) node [left]{$y$};
+				\node at (0,0) [below left]{$O$};
+				\clip (\xmin,\ymin) rectangle (\xmax,\ymax);
+				\fill[pattern=north east lines] (\xmin,\ymin)--plot(\x,{\a*(\x)+\b})--(\xmin,\ymax) --cycle;
+				\draw[smooth,samples=300] plot(\x,{\a*(\x)+\b});
+				\node[rotate=70,right] at (.5,-3.2) {$\Delta\colon 3x -y -3= 0$};
+				\draw[fill=black] (0,-3)circle (1pt) node[ below right]{$-3$};
+				\draw[fill=black] (1,0)circle (1pt) node[above right]{$1$};
+			\end{tikzpicture}
+		\end{center}
+	}
+\end{bt}
+
+%=== Câu 29 (ID: 0D2H1-3) ===%
+\begin{ex}%[0D2H1-3]
+	Bạn Danh để dành được $900$ nghìn đồng. Trong một đợt ủng hộ trẻ em mồ côi, Danh đã lấy ra $x$ tờ tiền loại $50$ nghìn đồng, $y$ tờ tiền loại $100$ nghìn đồng để trao tặng. Một bất phương trình mô tả điều kiện ràng buộc đối với $x,y$ là
+	\choice
+	{\True $50x+100y\le 900$}
+	{$50x+100y\ge 900$}
+	{$100x+50y\le 900$}
+	{$x+y=900$}
+	\loigiai{
+		Số tiền loại $50$ nghìn đồng là $50x$ nghìn đồng.\\
+		Số tiền loại $100$ nghìn đồng là $100y$ nghìn đồng.\\
+		Tổng số tiền bạn Danh đã lấy để trao tặng là $50x+100y$ nghìn đồng.\\
+		Mà Danh để dành được $900$ nghìn đồng nên $50x+100y\le 900$.
+	}
+\end{ex}
+
+%=== Câu 30 (ID: 0D2H1-3) ===%
+\begin{ex}%[0D2H1-3]
+	Một cửa hàng dành tối đa $10$ triệu để mua $x$ tạ gạo và $y$ tạ mì. Biết mỗi tạ gạo mua giá $1{,}5$ triệu, mỗi tạ mì mua giá $1{,}2$ triệu. Khi đó
+	\choiceTF
+	{\True Số tiền để mua $x$ tạ gạo và $y$ tạ mì là $1{,}5 x+1{,}2 y$ triệu đồng}
+	{Bất phương trình biểu thị mối liên hệ giữa $x$ và $y$ là $1{,}5 x+1{,}2 y \geq 10$}
+	{Cửa hàng có thể mua được $5$ tạ gạo và $5$ tạ mì}
+	{\True Bất phương trình biểu thị số tiền cửa hàng mua gạo và mì là $1{,}5 x+1{,}2 y \leq 10$ với $x$, $y\ge 0$}
+	\loigiai{
+		\begin{itemchoice}
+			\item Số tiền cửa hàng mua $x$ tạ gạo là $1{,}5x$ triệu đồng.\\
+			Số tiền cửa hàng mua $y$ tạ gạo là $1{,}2y$ triệu đồng.\\
+			Số tiền để mua $x$ tạ gạo và $y$ tạ mì là $1{,}5 x+1{,}2 y$ triệu đồng.
+			\item Vì cửa hàng dành tối đa $10$ triệu để mua $x$ tạ gạo và $y$ tạ mì nên bất phương trình biểu thị mối liên hệ giữa $x$ và $y$ là $1{,}5 x+1{,}2 y \leq 10$.
+			\item Vì số tiền cửa hàng có thể mua $5$ tạ gạo và $5$ tạ mì là $1{,}5 \cdot 5+1{,}2\cdot5=13{,}5>10$.\\
+			Do đó cửa hàng không thể mua được $5$ tạ gạo và $5$ tạ mì.
+			\item Vì cửa hàng dành tối đa $10$ triệu để mua $x$ tạ gạo và $y$ tạ mì nên bất phương trình biểu thị số tiền cửa hàng mua gạo và mì là $1{,}5 x+1{,}2 y \leq 10$ với $x$, $y\ge 0$.
+		\end{itemchoice}
+	}
+\end{ex}
+
+%=== Câu 31 (ID: 0D2H1-3) ===%
+\begin{bt}%[0D2H1-3]
+	Ông An muốn thuê một chiếc ô tô (có lái xe) trong một tuần. Giá thuê xe được cho như bảng sau:
+	\begin{center}
+		\begin{tabular}{|c|c|c|}
+			\hline
+			& Phí cố định (nghìn đồng/ngày) &
+			\begin{tabular}{c}
+				Phí tính theo quãng đường di\\
+				chuyển (nghìn đồng/km) \\
+			\end{tabular} \\
+			\hline
+			Từ thứ $2$ đến thứ $6$  & $900$ & $8$\\
+			\hline
+			Thứ $7$ và Chủ nhật & $1\,500$ & $10$\\
+			\hline
+		\end{tabular}
+	\end{center}
+	\begin{enumerate}
+		\item Biết các ngày từ thứ Hai đến thứ Sáu mỗi ngày ông An di chuyển $12$ km và ngày Chủ nhật ông An di chuyển $60$ km. Tính số tiền ông An phải trả.
+		\item Gọi $x$ và $y$ lần lượt là số kilômét ông An đi trong các ngày từ thứ Hai đến thứ Sáu và trong hai ngày cuối tuần. Viết bất phương trình biểu thị mối liên hệ giữa $x$ và $y$ sao cho tổng số tiền ông An phải trả không quá $14$ triệu đồng.
+	\end{enumerate}
+	\loigiai{
+		\begin{enumerate}
+			\item Số tiền ông An đi $12$ km trong các ngày từ thứ Hai đến thứ Sáu là $900\cdot5 +8\cdot12=4\,596$ (nghìn đồng).\\
+			Số tiền ông An đi $60$ km trong Chủ nhật là $1\,500\cdot1 + 10\cdot60=2\,100$ (nghìn đồng).\\
+			Tổng số tiền là $4\,596 + 2\,100=6\,696$ ngàn đồng.
+			\item  Ta có $14$ triệu đồng $=$ $1\,400$ nghìn đồng.\\
+			Số tiền ông An đi $x$ km trong các ngày từ thứ Hai đến thứ Sáu là $900\cdot5 +8x$ (nghìn đồng).\\
+			Số tiền ông An đi $y$ km trong $2$ ngày thứ Bảy và Chủ nhật là $1\,500\cdot2 + 10y$ (nghìn đồng).\\
+			Do đó số tiền ông An đi trong một tuần là $8x + 10 y +7\,500$ (nghìn đồng).\\
+			Vì số tiền không quá $14$ triệu đồng nên ta có
+			\[8x + 10 y +7\,500\le 1\,400 \Leftrightarrow 4x+ 5y \le 3\,250.\]
+			Vậy bất phương trình cần tìm là $4x+ 5y \le 3\,250$.
+		\end{enumerate}
+	}
+\end{bt}
+
+%=== Câu 32 (ID: 0D2H1-3) ===%
+\begin{bt}%[0D2H1-3]
+	Một công ty sản xuất hai loại sản phẩm gồm sản phẩm $X$ và sản phẩm $Y$. Chi phí sản xuất một sản phẩm $X$ là $2$ triệu đồng, sản xuất một sản phẩm $Y$ là $3$ triệu đồng. Chi phí thuê mặt bằng kho chứa là $100$ triệu đồng.
+	\begin{enumerate}
+		\item Tính tổng chi phí công ty sản xuất $200$ sản phẩm loại $X$ và $150$ sản phẩm loại $Y$.
+		\item Gọi $x$ và $y$ lần lượt là số sản phẩm $X$ và sản phẩm $Y$ công ty sản xuất. Biết vốn sản xuất của công ty là $1$ tỉ đồng. Viết bất phương trình biểu thị mối liên hệ giữa $x$ và $y$.
+	\end{enumerate}
+	\loigiai{
+		\begin{enumerate}
+			\item Tổng chi phí công ty sản xuất $200$ sản phẩm loại $X$ và $150$ sản phẩm loại $Y$ là
+			$$200\cdot2+150\cdot3+100=950 \, \text{triệu đồng.}$$
+			\item Chi phí sản xuất $x$ sản phẩm $X$ là $2x$ triệu đồng.\\
+			Chi phí sản xuất $y$ sản phẩm $Y$ là $3x$ triệu đồng.\\
+			Chi phí thuê mặt bằng kho chứa là $100$ triệu đồng.\\
+			Tổng chi phí là $2x+3y+100$ triệu đồng.\\
+			Vì vốn sản xuất của công ty là $1$ tỉ đồng $=$ $1\,000$ triệu đồng.\\
+			Do đó bất phương trình biểu thị mối liên hệ giữa $x$ và $y$ là
+			$$2x+ 3y +100\le 1\,000\Leftrightarrow 2x+3y\le 900.$$
+			Vậy bất phương trình cần tìm là $2x+3y\le 900$.
+		\end{enumerate}
+	}
+\end{bt}
+
+%=== Câu 33 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Có bao nhiêu nghiệm $(x,y)$ của bất phương trình $\dfrac{x}{2}+\dfrac{y}{3}-1\le 0$ thỏa mãn $x,y$ là các số nguyên dương?
+	\shortans{$1$}
+	\loigiai{
+		Ta có $\dfrac{x}{2}+\dfrac{y}{3}-1\le 0 \Leftrightarrow
+		\heva{&\dfrac{x}{2}\le 1-\dfrac{y}{3}\\&\dfrac{y}{3}\le 1- \dfrac{x}{2}. }$\\
+		Vì $x$, $y$ nguyên dương nên ta có $\heva{&\dfrac{y}{3}<1\\&\dfrac{x}{2}<1}
+		\Leftrightarrow \heva{&x<2\\&y<3}$.
+		Suy ra $x\in\{1\}$, $y\in\{1;2\}$.\\
+		Với $x=1\Rightarrow \dfrac{1}{2}+\dfrac{y}{3}\le 1\Leftrightarrow \dfrac{y}{3}\le \dfrac{1}{2}\Leftrightarrow y\le \dfrac{3}{2}\Rightarrow y=1$.\\
+		Vậy bất phương trình $\dfrac{x}{2}+\dfrac{y}{3}-1\le 0$ có nghiệm nguyên dương là $(1;1)$.
+	}
+\end{bt}
+
+%=== Câu 34 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Tìm các giá trị nguyên của tham số $m\in [-10;10]$ sao cho $(1; -1)$ là nghiệm của bất phương trình $m\cdot\dfrac{x}{2}-(m+1) y+2\ge 0$.
+	\shortans{$13$}
+	\loigiai{
+		Ta có $(1; -1)$ là nghiệm của bất phương trình $m\cdot\dfrac{x}{2}-(m+1) y+2\ge 0$.\\
+		Suy ra $m\cdot\dfrac{1}{2}-(m+1)\cdot (-1)+2\ge 0\Leftrightarrow \dfrac{3}{2}m+3\ge 0\Leftrightarrow m\ge -2$.\\
+		Do $m\in\mathbb{Z}$ và $m\in [-10;10]$ nên $m\in\left\lbrace -2;-1;0;1;\ldots ;10 \right\rbrace $.\\
+		Vậy có $13$ số nguyên $m$ thỏa mãn đề bài.
+	}
+\end{bt}
+
+%=== Câu 35 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Cho bất phương trình $x+2y\ge -4$. Miền nghiệm có chứa bao nhiêu điểm $(x;y)$ với $x,y$ là các số nguyên âm?
+	\shortans{$2$}
+	\loigiai{
+		\immini{Biểu diễn miền nghiệm của bất phương trình $x+2y\ge -4$ ta được hình bên.\\
+			Dựa vào miền nghiệm trên hình ta thấy chỉ có $2$ điểm có hoành độ và tung độ đều nguyên âm là $(-1;-1)$ và $(-2;-1)$.
+		}
+		{
+			\begin{tikzpicture}[scale=1,line join=round, line cap=round,>=stealth]
+				\draw[ultra thin,color=gray!50] (-5,-3) grid (2,2);
+				\tikzset{every node/.style={scale=0.9}}
+				\begin{scope}
+					\clip (-5,-3) rectangle (2,2);
+					\fill[pattern=north east lines] (-9,2.5)--(-9,-3.5)--(3,-3.5)--cycle;
+					\draw (-8,2)--(2,-3) node [pos=0.65, above, sloped] {$x+2y+4=0$};
+				\end{scope}
+				\draw[->] (-5,0)--(2,0) node[above]{$x$};
+				\draw[->] (0,-3)--(0,2) node[right]{$y$};
+				\draw (0,0) node[below left]{$O$};
+				\foreach \x in {-1,-2,-3,-4}
+				\draw[thin] (\x,1pt)--(\x,-1pt) node [above] {$\x$};
+				\foreach \y in {-1,-2}
+				\draw[thin] (1pt,\y)--(-1pt,\y) node [right] {$\y$};
+			\end{tikzpicture}
+		}
+	}
+\end{bt}
+
+%=== Câu 36 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Cho bất phương trình $2x-(m+2)y+m\le 0$. Có bao nhiêu giá trị nguyên âm của tham số $m$ để bất phương trình có một nghiệm là $(1;3)$?
+	\shortans{$2$}
+	\loigiai{
+		Thay $(1;3)$ vào bất phương trình ta được $2\cdot 1-(m+2)\cdot 3+m\le 0\Leftrightarrow m\ge -2$.\\
+		Mà $m$ nguyên âm $\Rightarrow m=\left\lbrace -2;-1\right\rbrace$.\\
+		Vậy có $2$ giá trị nguyên âm của tham số $m$ thỏa mãn bất phương trình đã cho.
+	}
+\end{bt}
+
+%=== Câu 37 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Miền nghiệm của bất phương trình $x+y\le 4$ cùng với hai trục tọa độ $Ox$, $Oy$ tạo thành một tam giác. Diện tích của tam giác đó bằng bao nhiêu?
+	\shortans{$8$}
+	\loigiai{
+		\immini{
+			Vẽ đường thẳng $d\colon x+y=4$ đi qua hai điểm $(4;0)$ và $(0;4)$.\\
+			Xét điểm $O(0;0)\notin d$, ta có $0 + 0 <4$.\\
+			Do đó điểm $O$ thuộc miển nghiệm của bất phương trình $x+y\le 4$.\\
+			Biểu diễn miền nghiệm của bất phương trình $x+y\le 4$ ta được hình bên.\\
+			Diện tích tam giác $S=\dfrac{1}{2}\cdot 4\cdot 4=8$.
+		}
+		{
+			\begin{tikzpicture}[scale=1,line join=round, line cap=round,>=stealth,scale=.8]
+				\tikzset{every node/.style={scale=0.8}}
+				\begin{scope}
+					\clip (-1,-1) rectangle (5,5);
+					\fill[pattern=north east lines] (-2,6)--(6,6)--(6,-2)--cycle;
+					\draw (-1,5)--(5,-1) node [pos=0.45,below, sloped] {$d\colon x+y-4=0$};
+				\end{scope}
+				\draw[->] (-1.5,0)--(5.5,0) node[below]{$x$};
+				\draw[->] (0,-1)--(0,5.2) node[left]{$y$};
+				\draw (0,0) node[below left]{$O$};
+				\foreach \x in {1,2,3,4}
+				\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+				\foreach \y in {1,2,3,4}
+				\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+			\end{tikzpicture}
+		}
+	}
+\end{bt}
+
+%=== Câu 38 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Cho tam giác $ABC$ có $A\left(1;2\right)$, $B\left(-3;-1\right)$ và $C\left(3;-4\right)$. Tìm điều kiện của tham số $m$ để điểm $M\left(m;\dfrac{m-5}{3}\right)$ nằm bên trong tam giác $ABC$.
+	\loigiai{
+		\begin{center}
+			\begin{tikzpicture}[scale=.8,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\path
+				(1,2)coordinate (A) (-3,-1)coordinate (B) (3,-4)coordinate (C) (1,-1)coordinate (M)
+				;
+				\draw[fill=cyan!50](A)--(B)--(C)--cycle;
+				\draw[->] (-4,0)--(4,0) node[below]{$x$};
+				\draw[->] (0,-5)--(0,3) node[left]{$y$};
+				\node at (0,0) [below left]{$O$};
+				\foreach \x/\g in {A/90,B/180,C/-45,M/0}
+				\fill[black]  (\x) circle (1pt)
+				($(\g:3mm)+(\x)$) node {$\x$};
+			\end{tikzpicture}
+		\end{center}
+		Phương trình đường thẳng $AB\colon\dfrac{x-1}{-3-1}=\dfrac{y-2}{-1-2}\Leftrightarrow 3x-4y+5=0$.\\
+		Phương trình đường thẳng $BC\colon\dfrac{x+3}{3+3}=\dfrac{y+1}{-4+1}\Leftrightarrow x+2y+5=0$.\\
+		Phương trình đường thẳng $AC\colon\dfrac{x-1}{3-1}=\dfrac{y-2}{-4-2}\Leftrightarrow 3x+y-5=0$.\\
+		Điều kiện cần và đủ để điểm $M$ nằm bên trong tam giác $ABC$ là điểm $M$ cùng với mỗi đỉnh $A$, $B$, $C$ lần lượt cùng phía với nhau đối với cạnh $BC$, $CA$, $AB$.
+		\begin{itemize}
+			\item $M$ và $A$ nằm cùng phí đối với $BC$ $\Leftrightarrow\left(1+4+5\right)\left(m+2\dfrac{m-5}{3}+5\right)>0\Leftrightarrow m>-1$.
+			\item $M$ và $B$ nằm cùng phí đối với $AC$ $\Leftrightarrow \left(-9-1-5\right)\left(3m+\dfrac{m-5}{3}-5\right)>0\Leftrightarrow m<2$.
+			\item $M$ và $C$ nằm cùng phí đối với $AB$ $\Leftrightarrow \left(9+16+5\right)\left(3m-4\dfrac{m-5}{3}+5\right)>0\Leftrightarrow m>-7$.
+		\end{itemize}
+		Suy ra $-1<m<2$ thỏa mãn điểm $M\left(m;\dfrac{m-5}{3}\right)$ nằm bên trong tam giác $ABC$.
+	}
+\end{bt}
+
+%=== Câu 39 (ID: 0D2V1-2) ===%
+\begin{bt}%[0D2V1-2]
+	Cho tam giác $ABC$ có $A(0;3), B(-1;2), C(2;1)$. Tìm điều kiện của tham số $m$ để điểm $M\left(m;\dfrac{2m-1}{2} \right)$ nằm bên trong tam giác $ABC$.
+	\loigiai{
+		\begin{center}
+			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
+				\path
+				(0,3)coordinate (A) (-1,2)coordinate (B) (2,1)coordinate (C) (0,2)coordinate (M)
+				;
+				\draw[fill=cyan!50](A)--(B)--(C)--cycle;
+				\draw[->] (-2,0)--(3,0) node[below]{$x$};
+				\draw[->] (0,-1)--(0,4) node[left]{$y$};
+				\node at (0,0) [below left]{$O$};
+				\foreach \x/\g in {A/30,B/180,C/-45,M/0}
+				\fill[black]  (\x) circle (1pt)
+				($(\g:3mm)+(\x)$) node {$\x$};
+			\end{tikzpicture}
+		\end{center}
+		Đường thẳng $AB\colon \dfrac{x-0}{-1-0}=\dfrac{y-3}{2-3}\Leftrightarrow x-y+3=0$.\\
+		Đường thẳng $BC\colon \dfrac{x+1}{2+1}=\dfrac{y-2}{1-2}\Leftrightarrow x+3y-5=0$.\\
+		Đường thẳng $AC\colon \dfrac{x-0}{2-0}=\dfrac{y-3}{1-3}\Leftrightarrow x+y-3=0$.\\
+		Điều kiện cần và đủ để điểm $M$ nằm bên trong tam giác $ABC$ là điểm $M$ cùng với mỗi đỉnh $A$, $B$, $C$ lần lượt cùng phía với nhau đối với cạnh $AB$, $AC$, $BC$.
+		\begin{itemize}
+			\item $M$ và $A$ nằm cùng phí đối với $BC$
+			$\Leftrightarrow\left(0+3\cdot 3-5\right)
+			\left(m+3\cdot \dfrac{2m-1}{2}-5\right)>0
+			\Leftrightarrow m>\dfrac{13}{8}$.
+			\item $M$ và $B$ nằm cùng phí đối với $AC$
+			$\Leftrightarrow \left(-1+2-3\right)
+			\left( m+\dfrac{2m-1}{2}-3\right)>0
+			\Leftrightarrow m<\dfrac{7}{4}$.
+			\item $M$ và $C$ nằm cùng phí đối với $AB$
+			$\Leftrightarrow \left(2-1+3\right)
+			\left(m-\dfrac{2m-1}{2}+3\right)>0
+			\Leftrightarrow 14>0$.
+		\end{itemize}
+		Suy ra $\dfrac{13}{8}<m<\dfrac{7}{4}$ thỏa mãn điểm $M\left(m;\dfrac{2m-1}{2} \right)$ nằm bên trong tam giác $ABC$.
+	}
+\end{bt}
+
+%=== Câu 40 (ID: 0D2V1-3) ===%
+\begin{ex}%[0D2V1-3]
+	Một công ty viễn thông tính phí $1$ nghìn đồng mỗi phút gọi nội mạng và $2$ nghìn đồng mỗi phút gọi ngoại mạng. Gọi $x$ và $y$ lần lượt là số phút gọi nội mạng, ngoại mạng của Bình trong một tháng và Bình muốn số tiền phải trả cho tổng đài luôn thấp hơn $100$ nghìn đồng. Chọn khẳng định \textbf{sai}?
+	\choice
+	{ Số tiền phải trả cho cuộc gọi nội mạng mỗi tháng là $x$ nghìn đồng, số tiền phải trả cho cuộc gọi ngoại mạng mỗi tháng là $2 y$ nghìn đồng. Điều kiện $x \in \mathbb{N}$, $y \in \mathbb{N}$}
+	{Số tiền Bình phải trả cho tổng đài trong một tháng là bất phương trình $x+2 y<100$ với hai ẩn $x \in \mathbb{N}$, $y \in \mathbb{N}$}
+	{Cặp số $(50; 20)$ là một nghiệm của bất phương trình $x+2 y<100$}
+	{\True Miền nghiệm của bất phương trình biểu diễn số tiền Bình phải trả cho tổng đài trong một tháng là một hình vuông}
+	\loigiai{
+		\begin{itemize}
+			\item Số tiền Bình trả phí cho $x$ phút gọi nội mạng là $x$ nghìn đồng.\\
+			Số tiền Bình trả phí cho $y$ phút gọi nội mạng là $2y$ nghìn đồng.
+			\item  Vì trong một tháng và Bình muốn số tiền phải trả cho tổng đài luôn thấp hơn $100$ nghìn đồng nên ta có bất phương trình $x+2y<100\,\, (\ast)$ với $x \in \mathbb{N}$, $y \in \mathbb{N}$.
+			\item Ta có $50+2\cdot20=90<100$ nên cặp số $(50; 20)$ là nghiệm của bất phương trình $x+2 y<100$.
+			\item
+			Biểu diễn miền nghiệm của $(\ast)$ trên hệ trục tọa độ. \\
+			Ta thấy điểm $O(0 ; 0)$ thuộc miền nghiệm của $(\ast)$ do thay tọa độ $O$ vào $(\ast)$ ta được $0<100$ (đúng).\\
+			Vậy miền nghiệm của bất phương trình $(\ast)$ là nửa mặt phẳng (không kể $d$) có chứa điểm $O$ (phần không gạch chéo trên hình).
+			\begin{center}
+				\begin{tikzpicture}[line join=round, line cap=round,>=stealth,thick]
+					\tikzset{every node/.style={scale=0.9}}
+					\begin{scope}
+						\clip (-1,-1) rectangle (5,3);
+						\fill[pattern=north east lines] (-3,3.5)--(7,3.5)--(7,-1.5)--cycle;
+						\draw (-2,3)--(6,-1) ;
+					\end{scope}
+					\draw[->] (-1,0)--(5,0) node[below]{$x$};
+					\draw[->] (0,-1)--(0,3) node[left]{$y$};
+					\draw (0,0) node[below left]{$O$};
+					\foreach \x in {}
+					\draw[thin] (\x,1pt)--(\x,-1pt) node [below] {$\x$};
+					\foreach \y in {}
+					\draw[thin] (1pt,\y)--(-1pt,\y) node [left] {$\y$};
+					\draw (4,0) node [below] {$100$} node[above] {$B$} (0,2) node [below left] {$50$} node[above right] {$A$};
+				\end{tikzpicture}
+			\end{center}
+			Vì $x \in \mathbb{N}$, $y \in \mathbb{N}$ nên ta chỉ xét miền nghiệm bất phương trình ứng với miền tam giác $O A B$.
+		\end{itemize}
+	}
+\end{ex}
+
+%=== Câu 41 (ID: 0D2V1-3) ===%
+\begin{bt}%[0D2V1-3]
+	Bạn Nam tiết kiệm được $450$ nghìn đồng. Trong đợt ủng hộ các bạn học sinh đồng bào miền Trung bị lũ lụt vừa qua, bạn Nam đã ủng hộ $x$ tờ tiền loại $20$ nghìn đồng, $y$ tờ tiền loại $10$ nghìn đồng. Khi đó bất phương trình biểu diễn tổng số tiền mà bạn Nam đã ủng hộ có dạng $mx+y\le n$. Tính giá trị của biểu thức $P=m+n$.
+	\shortans{$47$}
+	\loigiai{
+		Tổng số tiền bạn Nam đã ủng hộ là $20x + 10y$.\\
+		Vì bạn Nam chỉ có tất cả $450$ nghìn đồng nên tổng số tiền bạn Nam đã ủng hộ không thể vượt quá $450$ nghìn đồng.\\
+		Vậy ta có bất phương trình $20 x+10 y \leq 450\Leftrightarrow 2x+y\le 45$.\\
+		Do đó $m=2$, $n=45$. Suy ra $P=m+n=47$.
+	}
+\end{bt}
+
+%=== Câu 42 (ID: 0D2V1-3) ===%
+\begin{bt}%[0D2V1-3]
+	Một đội sản xuất cần $3$ giờ để làm xong sản phẩm loại I và $2$ giờ để làm xong sản phẩm loại II. Biết thời gian tối đa cho việc sản xuất hai sản phẩm trên là $18$ giờ. Gọi $x$, $y$ lần lượt là số sản phẩm loại I, loại II mà đội làm được trong thời gian cho phép. Khi đó bất phương trình biểu diễn tổng thời gian làm xong hai loại sản phẩm trên có dạng $3x+by+c\le 0$. Tính giá trị của biểu thức $P=b+c$.
+	\shortans{$-16$}
+	\loigiai{
+		Tổng thời gian làm xong hai loại sản phẩm là $3x+ 2y$ giờ.\\
+		Vì thời gian tối đa cho việc sản xuất hai sản phẩm trên là $18$ giờ,
+		Vậy ta có bất phương trình $3x+2y \le 18\Leftrightarrow 3x+2y -18\le 0$.\\
+		Do đó $b=2$, $c= -18$. Suy ra $P=b+c=-16$.
+	}
+\end{bt}
+
+
+
