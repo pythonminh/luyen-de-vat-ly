@@ -11,8 +11,7 @@
 
   function findSelectByLabel(words) {
     var selects = document.querySelectorAll("select");
-    var i;
-    var j;
+    var i, j;
     for (i = 0; i < selects.length; i += 1) {
       var el = selects[i];
       var meta = ((el.id || "") + " " + (el.name || "") + " " + (el.getAttribute("aria-label") || "")).toLowerCase();
@@ -132,6 +131,9 @@
     setTimeout(markLayout, 1200);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, false);
-  else init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, false);
+  } else {
+    init();
+  }
 }());
