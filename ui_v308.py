@@ -11,8 +11,8 @@ from flask import make_response
 from app import app as app
 
 _V308_HEAD = """
-<link rel="stylesheet" href="/static/v308.css?v=310">
-<script defer src="/static/v308.js?v=310"></script>
+<link rel="stylesheet" href="/static/v308.css?v=311">
+<script defer src="/static/v308.js?v=311"></script>
 """
 
 
@@ -26,7 +26,7 @@ def _inject_v308(response):
             return resp
 
         body = resp.get_data(as_text=True)
-        if "v308.css?v=310" in body:
+        if "v308.css?v=311" in body:
             return resp
 
         lower = body.lower()
@@ -40,7 +40,6 @@ def _inject_v308(response):
         resp.set_data(body)
         return resp
     except Exception:
-        # The redesign must never take down the existing application.
         return response
 
 
@@ -52,25 +51,25 @@ def ui_v308_preview():
 <head>
 <meta charset='utf-8'>
 <meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>Luyện Đề Vật Lý — V310 Preview</title>
-<link rel='stylesheet' href='/static/v308.css?v=310'>
-<script defer src='/static/v308.js?v=310'></script>
+<title>Luyen De Vat Ly - V311 Preview</title>
+<link rel='stylesheet' href='/static/v308.css?v=311'>
+<script defer src='/static/v308.js?v=311'></script>
 </head>
 <body class='v308-preview'>
 <main class='v308-preview-shell'>
   <section class='v308-hero'>
-    <div class='v308-brand-mark'>⚛</div>
+    <div class='v308-brand-mark'>V</div>
     <div>
-      <p class='v308-eyebrow'>LỚP HỌC THẦY MINH</p>
-      <h1>LUYỆN ĐỀ VẬT LÝ</h1>
-      <p class='v308-subtitle'>Giao diện V310 — hiện đại, rõ ràng, tối ưu cho học sinh và giáo viên.</p>
+      <p class='v308-eyebrow'>LOP HOC THAY MINH</p>
+      <h1>LUYEN DE VAT LY</h1>
+      <p class='v308-subtitle'>Giao dien V311 - hien dai, ro rang, toi uu cho hoc sinh va giao vien.</p>
     </div>
   </section>
   <section class='v308-grid'>
-    <article class='v308-card v308-card-accent'><span>📚</span><strong>Kho đề</strong><small>Đề luyện tập theo lớp, chương và mức độ.</small><button type='button'>Xem kho đề</button></article>
-    <article class='v308-card'><span>⚡</span><strong>Luyện đề</strong><small>Giao diện làm bài tập trung, đồng hồ và bảng câu hỏi.</small><button type='button'>Bắt đầu</button></article>
-    <article class='v308-card'><span>📊</span><strong>Kết quả</strong><small>Theo dõi điểm số, tiến độ và các chủ đề cần ôn.</small><button type='button'>Xem kết quả</button></article>
-    <article class='v308-card'><span>🤖</span><strong>Trợ lý AI</strong><small>Gợi ý phương pháp và hỗ trợ giải bài.</small><button type='button'>Mở AI</button></article>
+    <article class='v308-card v308-card-accent'><span>01</span><strong>Kho de</strong><small>De luyen tap theo lop, chuong va muc do.</small><button type='button'>Xem kho de</button></article>
+    <article class='v308-card'><span>02</span><strong>Luyen de</strong><small>Giao dien lam bai tap trung, dong ho va bang cau hoi.</small><button type='button'>Bat dau</button></article>
+    <article class='v308-card'><span>03</span><strong>Ket qua</strong><small>Theo doi diem so, tien do va cac chu de can on.</small><button type='button'>Xem ket qua</button></article>
+    <article class='v308-card'><span>04</span><strong>Tro ly AI</strong><small>Goi y phuong phap va ho tro giai bai.</small><button type='button'>Mo AI</button></article>
   </section>
 </main>
 </body>
