@@ -1,0 +1,50 @@
+name: AUTO FIX app.py syntax
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix malformed URL in app.py
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app.py')
+          s = p.read_text(encoding='utf-8')
+          old = s
+          lines = s.splitlines(keepends=True)
+          out = []
+          changed = False
+          for line in lines:
+              if 'Test lần lượt từng key' in line and 'https://youtube.com/' in line:
+                  line = line.replace('https://youtube.com/', '')
+                  changed = True
+              out.append(line)
+          s = ''.join(out)
+          if not changed:
+              raise SystemExit('Target malformed line was not found; no automatic change made.')
+          p.write_text(s, encoding='utf-8')
+          print('Fixed app.py malformed URL.')
+          PY
+
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/auto-fix-app-syntax.yml
+          git add app.py .github/workflows/auto-fix-app-syntax.yml
+          git commit -m 'fix: remove malformed URL from app.py'
+          git push origin HEAD:main
