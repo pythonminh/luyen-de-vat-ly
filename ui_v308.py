@@ -11,8 +11,8 @@ from flask import make_response
 from app import app as app
 
 _V308_HEAD = """
-<link rel="stylesheet" href="/static/v308.css?v=309">
-<script defer src="/static/v308.js?v=309"></script>
+<link rel="stylesheet" href="/static/v308.css?v=310">
+<script defer src="/static/v308.js?v=310"></script>
 """
 
 
@@ -26,7 +26,7 @@ def _inject_v308(response):
             return resp
 
         body = resp.get_data(as_text=True)
-        if "v308.css?v=309" in body:
+        if "v308.css?v=310" in body:
             return resp
 
         lower = body.lower()
@@ -52,9 +52,9 @@ def ui_v308_preview():
 <head>
 <meta charset='utf-8'>
 <meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>Luyện Đề Vật Lý — V308 Preview</title>
-<link rel='stylesheet' href='/static/v308.css?v=309'>
-<script defer src='/static/v308.js?v=309'></script>
+<title>Luyện Đề Vật Lý — V310 Preview</title>
+<link rel='stylesheet' href='/static/v308.css?v=310'>
+<script defer src='/static/v308.js?v=310'></script>
 </head>
 <body class='v308-preview'>
 <main class='v308-preview-shell'>
@@ -63,7 +63,7 @@ def ui_v308_preview():
     <div>
       <p class='v308-eyebrow'>LỚP HỌC THẦY MINH</p>
       <h1>LUYỆN ĐỀ VẬT LÝ</h1>
-      <p class='v308-subtitle'>Giao diện V309 — hiện đại, rõ ràng, tối ưu cho học sinh và giáo viên.</p>
+      <p class='v308-subtitle'>Giao diện V310 — hiện đại, rõ ràng, tối ưu cho học sinh và giáo viên.</p>
     </div>
   </section>
   <section class='v308-grid'>
