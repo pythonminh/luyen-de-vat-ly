@@ -44,7 +44,7 @@ CSS = r"""
 HOME_TPL = CSS + r'''
 <div class="wrap">
 <div class="top"><h1>📝 RA ĐỀ TỪ NGÂN HÀNG GITHUB</h1><p>Chọn <b>Môn → Khối → Chương → Bài</b>, sau đó chọn số câu cho <b>A/B/C/D</b>. Dữ liệu câu hỏi lấy trực tiếp từ GitHub và được cache.</p></div>
-<div class="nav"><a href="/">🏠 Trang chủ</a><a class="btn {% if subject=='Vật lý' %}blue{% endif %}" href="/ra-de?subject=Vật%20lý">⚛ Vật lý</a><a class="btn {% if subject=='Toán' %}blue{% endif %}" href="/ra-de?subject=Toán">📐 Toán</a><a href="/github">🐙 GitHub</a></div>
+<div class="nav"><a href="/">🏠 Trang chủ</a><a class="btn {% if subject=='Vật lý' %}blue{% endif %}" href="/ra-de?subject=Vật%20lý">⚛ Vật lý</a><a class="btn {% if subject=='Toán' %}blue{% endif %}" href="/ra-de?subject=Toán">📐 Toán</a><a href="https://github.com/pythonminh/luyen-de-vat-ly">🐙 GitHub</a></div>
 {% if error %}<div class="notice">⚠️ {{error}}</div>{% endif %}
 <div class="card"><h3 style="margin-top:0">1. Chọn môn</h3><div class="subjects"><a class="btn subject {% if subject=='Vật lý' %}active{% endif %}" href="/ra-de?subject=Vật%20lý">⚛ VẬT LÝ</a><a class="btn subject {% if subject=='Toán' %}active{% endif %}" href="/ra-de?subject=Toán">📐 TOÁN</a></div></div>
 {% if subject %}<div class="card"><h3 style="margin-top:0">2. Chọn khối</h3><div class="grid">{% for x in grades %}<a class="folder" href="/ra-de?subject={{subject|urlencode}}&lop={{x}}"><b>📘 Lớp {{x}}</b><span class="muted">{{grade_counts.get(x,0)}} bài trong mục lục</span></a>{% endfor %}</div></div>{% endif %}
@@ -74,7 +74,6 @@ EXAM_TPL = CSS + r'''
 <div class="nav no-print"><a class="btn gray" href="/ra-de?subject={{subject|urlencode}}&lop={{lop}}&chuong={{chuong|urlencode}}&path={{path|urlencode}}">← Cấu hình lại</a><button class="btn gray" onclick="window.print()">🖨 In đề</button></div>
 <div class="card no-print"><div class="stats"><span class="pill">Tổng {{total}} câu</span><span class="pill orange">{{time}} phút</span><span class="pill green">GitHub + Cache</span><span class="pill">A: {{counts.A}}</span><span class="pill orange">B: {{counts.B}}</span><span class="pill green">C: {{counts.C}}</span><span class="pill red">D: {{counts.D}}</span></div></div>
 <form method="post" action="/ra-de/submit"><input type="hidden" name="exam_id" value="{{exam_id}}">
-{% set offset=0 %}
 {% if sections.A %}<div class="section"><h2>PHẦN A. TRẮC NGHIỆM NHIỀU LỰA CHỌN</h2>{% for q in sections.A %}<div class="q"><div class="qhead"><span class="qnum">Câu {{loop.index}}</span><span class="tag dbt">{{q.dbt or 'Chưa phân loại'}}</span><span class="tag lv">{{q.muc or '—'}}</span></div><div class="qtext">{{q.text}}</div><div class="opts">{% for o in q.options %}<label class="opt"><input type="radio" name="q_{{q.uid}}" value="{{loop.index0}}"> <b>{{letters[loop.index0]}}.</b> {{o.text}}</label>{% endfor %}</div></div>{% endfor %}</div>{% endif %}
 {% if sections.B %}<div class="section"><h2>PHẦN B. TRẮC NGHIỆM ĐÚNG / SAI</h2>{% for q in sections.B %}<div class="q"><div class="qhead"><span class="qnum">Câu {{loop.index}}</span><span class="tag dbt">{{q.dbt or 'Chưa phân loại'}}</span><span class="tag lv">{{q.muc or '—'}}</span></div><div class="qtext">{{q.text}}</div>{% for o in q.options %}<div class="tfrow"><span class="letter">{{letters[loop.index0]}}.</span>{{o.text}}<label class="tfbtn"><input type="radio" name="q_{{q.uid}}_{{loop.index0}}" value="D"> Đúng</label><label class="tfbtn"><input type="radio" name="q_{{q.uid}}_{{loop.index0}}" value="S"> Sai</label></div>{% endfor %}</div>{% endfor %}</div>{% endif %}
 {% if sections.C %}<div class="section"><h2>PHẦN C. TRẮC NGHIỆM TRẢ LỜI NGẮN</h2>{% for q in sections.C %}<div class="q"><div class="qhead"><span class="qnum">Câu {{loop.index}}</span><span class="tag dbt">{{q.dbt or 'Chưa phân loại'}}</span><span class="tag lv">{{q.muc or '—'}}</span></div><div class="qtext">{{q.text}}</div><div class="answer"><input name="q_{{q.uid}}" placeholder="Nhập đáp án ngắn"></div></div>{% endfor %}</div>{% endif %}
@@ -93,14 +92,7 @@ def _clean(s: Any) -> str:
     return str(s or "").strip()
 
 def _gate():
-    if not session.get("mahs"):
-        return redirect(url_for("login", next=request.full_path.rstrip("?")))
-    try:
-        from app import is_admin
-        if not is_admin():
-            return ("<h3>403 — Chỉ ADMIN được dùng chức năng Ra đề.</h3>", 403)
-    except Exception:
-        pass
+    # Trang Ra đề GitHub chạy độc lập, không chờ Google Sheet và không yêu cầu login của app cũ.
     return None
 
 def _require_gh():
@@ -135,8 +127,7 @@ def _balanced(text: str, pos: int):
         i += 1
     return None,pos
 
-def _arg(text: str, pos: int):
-    return _balanced(text,pos)
+def _arg(text: str, pos: int): return _balanced(text,pos)
 
 def _strip_meta(s: str) -> str:
     s=re.sub(r'(?m)^\s*%.*$', '', s)
@@ -166,39 +157,27 @@ def _parse_tex(text: str, path: str) -> List[Dict[str,Any]]:
     out=[]; uid=0
     for block in blocks:
         uid+=1
-        mid=re.search(r'%\s*ID:\s*([^\n\r]+)',block)
-        mmu=re.search(r'%\s*Mức:\s*([^\n\r]+)',block)
-        mdb=re.search(r'\\dangbt\{',block)
-        dbt=''
+        mid=re.search(r'%\s*ID:\s*([^\n\r]+)',block); mmu=re.search(r'%\s*Mức:\s*([^\n\r]+)',block)
+        mdb=re.search(r'\\dangbt\{',block); dbt=''
         if mdb:
             a,_=_arg(block,mdb.end()-1); dbt=_strip_meta(a or '')
         kind='D'; label='Tự luận'; options=[]; answer=''
-        cmd_tf=re.search(r'\\choiceTF\b',block)
-        cmd_mc=re.search(r'\\choice\b',block)
-        cmd_sa=re.search(r'\\shortans\s*\{',block)
+        cmd_tf=re.search(r'\\choiceTF\b',block); cmd_mc=re.search(r'\\choice\b',block); cmd_sa=re.search(r'\\shortans\s*\{',block)
         if cmd_tf:
             kind='B'; label='Đúng / Sai'; vals=_extract_options(block,'\\choiceTF')
             for v in vals[:4]:
-                true='\\True' in v
-                v=re.sub(r'\\True\s*','',v).strip()
-                options.append({'text':_strip_meta(v),'answer':'D' if true else 'S'})
-            end=cmd_tf.end()
+                true='\\True' in v; v=re.sub(r'\\True\s*','',v).strip(); options.append({'text':_strip_meta(v),'answer':'D' if true else 'S'})
             text_part=block[:cmd_tf.start()]
         elif cmd_mc:
             kind='A'; label='Trắc nghiệm'; vals=_extract_options(block,'\\choice')
             for v in vals[:4]:
-                true='\\True' in v
-                v=re.sub(r'\\True\s*','',v).strip()
-                options.append({'text':_strip_meta(v),'answer':len(options) if not true else len(options)})
+                true='\\True' in v; v=re.sub(r'\\True\s*','',v).strip(); options.append({'text':_strip_meta(v),'answer':len(options)})
                 if true: answer=len(options)-1
-            end=cmd_mc.end(); text_part=block[:cmd_mc.start()]
+            text_part=block[:cmd_mc.start()]
         elif cmd_sa:
-            kind='C'; label='Trả lời ngắn'; a,_=_arg(block,cmd_sa.end()-1); answer=_strip_meta(a or '')
-            text_part=block[:cmd_sa.start()]
-        else:
-            text_part=block
-        text_part=re.sub(r'\\loigiai\s*\{.*', '', text_part, flags=re.S)
-        text_part=re.sub(r'\\dangbt\{.*?\}', '', text_part, flags=re.S)
+            kind='C'; label='Trả lời ngắn'; a,_=_arg(block,cmd_sa.end()-1); answer=_strip_meta(a or ''); text_part=block[:cmd_sa.start()]
+        else: text_part=block
+        text_part=re.sub(r'\\loigiai\s*\{.*', '', text_part, flags=re.S); text_part=re.sub(r'\\dangbt\{.*?\}', '', text_part, flags=re.S)
         q={'uid':f'q{uid}','id':_clean(mid.group(1)) if mid else '', 'muc':_clean(mmu.group(1)) if mmu else '', 'dbt':dbt, 'kind':kind, 'kind_label':label, 'text':_strip_meta(text_part), 'options':options, 'answer':answer, 'path':path}
         if kind=='A':
             for i,o in enumerate(options): o['answer']=i
@@ -207,20 +186,12 @@ def _parse_tex(text: str, path: str) -> List[Dict[str,Any]]:
 
 @lru_cache(maxsize=256)
 def _load_lesson(path: str) -> List[Dict[str,Any]]:
-    d=_gh('ngan-hang/'+path if not path.startswith('ngan-hang/') else path)
-    return _parse_tex(_decode_file(d),path)
+    d=_gh('ngan-hang/'+path if not path.startswith('ngan-hang/') else path); return _parse_tex(_decode_file(d),path)
 
-def _clear_cache():
-    _index.cache_clear(); _load_lesson.cache_clear()
-
-def _filter(qs,dbt='',muc=''):
-    return [q for q in qs if (not dbt or q['dbt']==dbt) and (not muc or q['muc']==muc)]
-
-def _counts(qs):
-    return {'total':len(qs),'A':sum(q['kind']=='A' for q in qs),'B':sum(q['kind']=='B' for q in qs),'C':sum(q['kind']=='C' for q in qs),'D':sum(q['kind']=='D' for q in qs)}
-
-def _render_home(**kw):
-    return render_template_string(HOME_TPL,repo=REPO,**kw)
+def _clear_cache(): _index.cache_clear(); _load_lesson.cache_clear()
+def _filter(qs,dbt='',muc=''): return [q for q in qs if (not dbt or q['dbt']==dbt) and (not muc or q['muc']==muc)]
+def _counts(qs): return {'total':len(qs),'A':sum(q['kind']=='A' for q in qs),'B':sum(q['kind']=='B' for q in qs),'C':sum(q['kind']=='C' for q in qs),'D':sum(q['kind']=='D' for q in qs)}
+def _render_home(**kw): return render_template_string(HOME_TPL,repo=REPO,**kw)
 
 @bp.route('/ra-de',methods=['GET'])
 def home():
@@ -234,21 +205,17 @@ def home():
     except Exception as e: return _render_home(subject=subject,grades=[],grade_counts={},chapters=[],lessons=[],lesson=None,counts=_counts([]),preview=[],dbt_options=[],path=path,lop=lop,chuong=chuong,error=str(e))
     grades=sorted({str(x.get('Lop','')) for x in rows if x.get('Lop')},key=lambda x:int(x) if x.isdigit() else 999)
     grade_counts={g:sum(1 for x in rows if str(x.get('Lop'))==g) for g in grades}
-    r2=[x for x in rows if str(x.get('Lop'))==lop] if lop else []
-    chapters=[]
-    if lop: chapters=sorted({x.get('Chuong','') for x in r2})
-    r3=[x for x in r2 if x.get('Chuong')==chuong] if chuong else []
-    lessons=sorted(r3,key=lambda x:x.get('BaiHoc','')) if chuong else []
+    r2=[x for x in rows if str(x.get('Lop'))==lop] if lop else []; chapters=sorted({x.get('Chuong','') for x in r2}) if lop else []
+    r3=[x for x in r2 if x.get('Chuong')==chuong] if chuong else []; lessons=sorted(r3,key=lambda x:x.get('BaiHoc','')) if chuong else []
     lesson=None; qs=[]; counts=_counts([]); preview=[]; dbt_options=[]
     if path:
         lesson=next((x for x in rows if x.get('path')==path),None)
         if lesson:
-            qs=_load_lesson(path); counts=_counts(qs); preview=qs[:24]
-            dc={}
+            qs=_load_lesson(path); counts=_counts(qs); preview=qs[:24]; dc={}
             for q in qs:
                 if q['dbt']: dc[q['dbt']]=dc.get(q['dbt'],0)+1
             dbt_options=sorted(dc.items())
-    crumbs=[subject];
+    crumbs=[subject]
     if lop: crumbs.append('Lớp '+lop)
     if chuong: crumbs.append(chuong)
     if lesson: crumbs.append(lesson.get('BaiHoc',''))
@@ -260,23 +227,16 @@ def generate():
     if g:return g
     path=_clean(request.form.get('path')); subject=_clean(request.form.get('subject')) or 'Vật lý'; lop=_clean(request.form.get('lop')); chuong=_clean(request.form.get('chuong'))
     try:
-        qs=_load_lesson(path)
-        dbt=_clean(request.form.get('dbt')); muc=_clean(request.form.get('muc'))
-        qs=_filter(qs,dbt,muc)
-        nums={k:max(0,int(request.form.get(k,0) or 0)) for k in ('nA','nB','nC','nD')}
-        pools={k:[q for q in qs if q['kind']==k] for k in 'ABCD'}
-        selected={}
+        qs=_load_lesson(path); dbt=_clean(request.form.get('dbt')); muc=_clean(request.form.get('muc')); qs=_filter(qs,dbt,muc)
+        nums={k:max(0,int(request.form.get(k,0) or 0)) for k in ('nA','nB','nC','nD')}; pools={k:[q for q in qs if q['kind']==k] for k in 'ABCD'}; selected={}
         for k in 'ABCD':
             n=nums[k]
             if n>len(pools[k]): raise RuntimeError(f'Phần {k} cần {n} câu nhưng chỉ có {len(pools[k])} câu phù hợp bộ lọc.')
             selected[k]=random.sample(pools[k],n) if request.form.get('shuffle','1')=='1' else pools[k][:n]
-        exam_id=f"{int(time.time()*1000)}-{random.randint(1000,9999)}"
-        exams=session.setdefault('ra_de_exams',{})
-        exams[exam_id]={'sections':selected,'subject':subject,'lop':lop,'chuong':chuong,'path':path,'lesson_name':next((x.get('BaiHoc','') for x in _index() if x.get('path')==path),path),'time':int(request.form.get('time',45) or 45)}
-        session.modified=True
+        exam_id=f"{int(time.time()*1000)}-{random.randint(1000,9999)}"; exams=session.setdefault('ra_de_exams',{})
+        exams[exam_id]={'sections':selected,'subject':subject,'lop':lop,'chuong':chuong,'path':path,'lesson_name':next((x.get('BaiHoc','') for x in _index() if x.get('path')==path),path),'time':int(request.form.get('time',45) or 45)}; session.modified=True
         return redirect(url_for('ra_de.exam',exam_id=exam_id))
-    except Exception as e:
-        return f'<div style="font:16px Arial;padding:30px"><h3>Không tạo được đề</h3><p>{e}</p><a href="/ra-de">Quay lại</a></div>'
+    except Exception as e: return f'<div style="font:16px Arial;padding:30px"><h3>Không tạo được đề</h3><p>{e}</p><a href="/ra-de">Quay lại</a></div>'
 
 @bp.route('/ra-de/exam/<exam_id>',methods=['GET'])
 def exam(exam_id):
@@ -289,25 +249,22 @@ def exam(exam_id):
 
 def _chosen_display(q,form):
     if q['kind']=='A':
-        v=form.get('q_'+q['uid'],'');
-        try: return LETTERS[int(v)]
-        except: return _clean(v)
-    if q['kind']=='B':
-        return ' · '.join(f"{LETTERS[i]}:{form.get('q_'+q['uid']+'_'+str(i),'—')}" for i in range(min(4,len(q['options']))))
+        v=form.get('q_'+q['uid'],'')
+        try:return LETTERS[int(v)]
+        except:return _clean(v)
+    if q['kind']=='B': return ' · '.join(f"{LETTERS[i]}:{form.get('q_'+q['uid']+'_'+str(i),'—')}" for i in range(min(4,len(q['options']))))
     return _clean(form.get('q_'+q['uid'],''))
 
 def _grade(q,form):
     chosen=_chosen_display(q,form)
     if q['kind']=='A':
         v=form.get('q_'+q['uid'],'')
-        try: ok=int(v)==int(q['answer'])
-        except: ok=False
+        try:ok=int(v)==int(q['answer'])
+        except:ok=False
         return ok,chosen
     if q['kind']=='B':
-        got=[form.get('q_'+q['uid']+'_'+str(i),'') for i in range(len(q['options']))]
-        want=[o['answer'] for o in q['options']]
-        return got==want,chosen
-    if q['kind']=='C': return _normalize(chosen)==_normalize(q['answer']),chosen
+        got=[form.get('q_'+q['uid']+'_'+str(i),'') for i in range(len(q['options']))]; want=[o['answer'] for o in q['options']]; return got==want,chosen
+    if q['kind']=='C':return _normalize(chosen)==_normalize(q['answer']),chosen
     return None,chosen
 
 @bp.route('/ra-de/submit',methods=['POST'])
@@ -321,17 +278,13 @@ def submit():
         result[k]=[]
         for q in sections.get(k,[]):
             ok,chosen=_grade(q,request.form)
-            if k=='A': max_auto+=1
-            elif k=='B': max_auto+=1
-            elif k=='C': max_auto+=1
-            if ok is True: earned+=1; correct+=1
-            if k=='B' and ok is True: pass
-            if k=='D': essay+=1
-            q2=dict(q); q2['ok']=ok; q2['chosen']=chosen
-            if k=='A': q2['answer_display']=LETTERS[q['answer']] if isinstance(q['answer'],int) and q['answer']<4 else str(q['answer'])
-            elif k=='B': q2['answer_display']=' · '.join(f"{LETTERS[i]}:{q['options'][i]['answer']}" for i in range(len(q['options'])))
-            else: q2['answer_display']=q['answer'] if k=='C' else 'Tự luận — giáo viên chấm'
+            if k in 'ABC':max_auto+=1
+            if ok is True:earned+=1;correct+=1
+            if k=='D':essay+=1
+            q2=dict(q);q2['ok']=ok;q2['chosen']=chosen
+            if k=='A':q2['answer_display']=LETTERS[q['answer']] if isinstance(q['answer'],int) and q['answer']<4 else str(q['answer'])
+            elif k=='B':q2['answer_display']=' · '.join(f"{LETTERS[i]}:{q['options'][i]['answer']}" for i in range(len(q['options'])))
+            else:q2['answer_display']=q['answer'] if k=='C' else 'Tự luận — giáo viên chấm'
             result[k].append(q2)
     score=round(earned/max_auto*10,2) if max_auto else 0
     return render_template_string(RESULT_TPL,subject=data['subject'],lesson_name=data['lesson_name'],total=sum(len(v) for v in sections.values()),score=score,correct=correct,essay=essay,sections=[(k,result[k]) for k in 'ABCD'],path=data['path'],lop=data['lop'],chuong=data['chuong'])
-''
