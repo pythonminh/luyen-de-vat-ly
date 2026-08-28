@@ -1,7 +1,7 @@
 from app import app
 try:
-    from github_integration import github_bp
-    app.register_blueprint(github_bp)
+    from github_integration import bp
+    app.register_blueprint(bp)
 except Exception:
     pass
 
