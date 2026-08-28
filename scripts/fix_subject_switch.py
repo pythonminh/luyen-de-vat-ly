@@ -4,10 +4,10 @@ path = Path('app.py')
 text = path.read_text(encoding='utf-8')
 
 start_marker = '/* ===== V248 FIXLOAD: 2 trang riêng Toán / Vật lí, giữ lõi V246 ổn định ===== */'
-end_marker = '/* ===== V233 PWA: cài app lên màn hình chính ===== */'
+end_marker = '/* ===== V233 PWA:'
 
 start = text.find(start_marker)
-end = text.find(end_marker)
+end = text.find(end_marker, start + len(start_marker))
 
 if start < 0:
     raise SystemExit('Không tìm thấy block V248 trong app.py')
