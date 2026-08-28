@@ -8,10 +8,10 @@ except Exception as e:
     github_bp = None
     app.config['GITHUB_IMPORT_ERROR'] = str(e)
 
-# Ra de integration: this is the actual teacher-facing page that reads the
-# question bank directly from GitHub and generates a test.
+# Ra de integration: wrapper patches the question parser before registering
+# the existing Ra de blueprint, so \dangbt{} outside the ex/bt block is read.
 try:
-    from ra_de import bp as ra_de_bp
+    from ra_de_fixed import bp as ra_de_bp
     app.register_blueprint(ra_de_bp)
 except Exception as e:
     ra_de_bp = None
