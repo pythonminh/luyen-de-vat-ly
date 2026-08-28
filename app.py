@@ -20191,7 +20191,7 @@ def test_ai_key_batch(
     key_items: List[Tuple[str, str]],
     model: str = "",
 ) -> Tuple[bool, str, List[Dict[str, Any]]]:
-    """Test lần lượt từng key — báo rõ số thứ tự, mã che và nguồn (Key của bạn / Render ENV)."""
+    """Test lần lượt từng key — báo rõ số thứ tự, mã che và nguồn (Key của bạn / Render ENV)."""https://youtube.com/
     p = clean(provider).upper() or DEFAULT_AI_PROVIDER
     if p == "AUTO":
         p = "GEMINI"
