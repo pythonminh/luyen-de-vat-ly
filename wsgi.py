@@ -1,3 +1,4 @@
+import json
 import os
 from flask import jsonify, send_file
 from app import app
@@ -21,9 +22,18 @@ except Exception as e:
 
 @app.get('/bank_index.json')
 def serve_bank_index():
-    """Serve the GitHub-generated question-bank index with no-cache semantics."""
+    """Serve the GitHub-generated question-bank index locally."""
     path = os.path.join(app.root_path, 'bank_index.json')
-    return send_file(path, mimetype='application/json', max_age=0, conditional=False)
+    return send_file(path, mimetype='application/json', max_age=300, conditional=True)
+
+
+def _load_bank_index():
+    path = os.path.join(app.root_path, 'bank_index.json')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 @app.after_request
@@ -47,13 +57,25 @@ def add_source_links(response):
                 text = text[:i] + widget + text[i:] if i >= 0 else text + widget
                 low = text.lower()
 
-            # GitHub-first catalog. This runs immediately after the HTML is loaded,
-            # so the UI no longer waits for Google Apps Script / Google Sheet.
-            if 'data-ldvl-github-first="1"' not in text:
+            # Put the already-generated index directly into the HTML. This removes
+            # the first-load dependency on Google Apps Script / Google Sheets.
+            if 'data-ldvl-inline-bank-index="1"' not in text:
+                data = _load_bank_index()
+                if data:
+                    payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+                    inline = '<script data-ldvl-inline-bank-index="1">window.__LDVL_BANK_INDEX__=' + payload + ';</script>\n'
+                    i = low.rfind('</body>')
+                    text = text[:i] + inline + text[i:] if i >= 0 else text + inline
+                    low = text.lower()
+
+            # Render the catalog immediately from the local GitHub-generated index.
+            # A MutationObserver keeps an old Google-Sheet loader from overwriting it.
+            if 'data-ldvl-github-first="2"' not in text:
                 fallback = r'''
-<script data-ldvl-github-first="1">
+<script data-ldvl-github-first="2">
 (function(){
   const IDS=['publicCatalogContent','deCatalogContent'];
+  let rendered=false;
   function esc(v){return String(v??'').replace(/[&<>\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));}
   function host(){
     for(const id of IDS){const e=document.getElementById(id); if(e) return e;}
@@ -62,6 +84,7 @@ def add_source_links(response):
     return null;
   }
   function render(h,data){
+    if(!h||!data||rendered)return;
     const lessons=Array.isArray(data.lessons)?data.lessons:[];
     const groups={};
     for(const x of lessons){
@@ -78,22 +101,21 @@ def add_source_links(response):
       }).join('');
       return '<details style="margin:6px 0;padding:8px;border:1px solid #ddd;border-radius:8px"><summary><b>'+esc(mon)+'</b> · Lớp '+esc(lop)+' · '+esc(chuong)+' <small>— '+total+' câu</small></summary><ul>'+lis+'</ul></details>';
     }).join('');
-    h.innerHTML='<div style="padding:10px"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>📚 Mục lục GitHub</b><span>'+Number(data.total_files||lessons.length)+' file · '+Number(data.total_questions||0)+' câu</span><button type="button" id="ldvl-github-refresh">↻ Tải lại</button></div><div style="margin-top:10px">'+(rows||'<i>Chưa có file .tex trong ngan-hang.</i>')+'</div></div>';
-    const b=h.querySelector('#ldvl-github-refresh'); if(b) b.onclick=()=>location.reload();
+    h.innerHTML='<div style="padding:10px"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>📚 Mục lục GitHub</b><span>'+Number(data.total_files||lessons.length)+' file · '+Number(data.total_questions||0)+' câu</span><span style="color:#159447;font-weight:700">✓ Tải từ GitHub index</span></div><div style="margin-top:10px">'+(rows||'<i>Chưa có file .tex trong ngan-hang.</i>')+'</div></div>';
+    rendered=true;
   }
-  async function run(){
-    try{
-      const r=await fetch('/bank_index.json?ts='+Date.now(),{cache:'no-store'});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const data=await r.json();
-      const h=host();
-      if(h) render(h,data);
-    }catch(e){
-      console.warn('GitHub catalog fallback:',e);
-    }
+  function run(){
+    const h=host();
+    const data=window.__LDVL_BANK_INDEX__;
+    if(h&&data)render(h,data);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-  setTimeout(run,1500);
+  function start(){
+    run();
+    const obs=new MutationObserver(()=>{if(!rendered)run();});
+    obs.observe(document.body,{childList:true,subtree:true});
+    setTimeout(run,100); setTimeout(run,500); setTimeout(run,1500);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
 '''
