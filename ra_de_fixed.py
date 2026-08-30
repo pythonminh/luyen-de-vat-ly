@@ -20,7 +20,7 @@ import random
 import re
 from typing import Any, Dict, List, Tuple
 
-from flask import Blueprint, Response, request, render_template_string, send_file
+from flask import Blueprint, Response, jsonify, request, render_template_string, send_file
 
 bp = Blueprint("ra_de", __name__)
 
@@ -42,7 +42,13 @@ def _load_bank_index() -> Dict[str, Any]:
 def _resolve_tex_path(rel_path: str) -> str:
     """rel_path đã ở dạng 'ngan-hang/.../de.tex' (tương đối APP_DIR)."""
     rel = (rel_path or "").replace("\\", "/").lstrip("/")
-    return os.path.join(APP_DIR, rel.replace("/", os.sep))
+    full = os.path.normpath(os.path.join(APP_DIR, rel.replace("/", os.sep)))
+    try:
+        if os.path.commonpath([APP_DIR, full]) != APP_DIR:
+            return ""
+    except ValueError:
+        return ""
+    return full
 
 
 def extract_blocks_by_dang(text: str) -> List[Tuple[str, str]]:
@@ -64,6 +70,8 @@ def extract_blocks_by_dang(text: str) -> List[Tuple[str, str]]:
 
 def blocks_grouped_by_dang(rel_path: str) -> Dict[str, List[str]]:
     path = _resolve_tex_path(rel_path)
+    if not path:
+        return {}
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
@@ -73,6 +81,27 @@ def blocks_grouped_by_dang(rel_path: str) -> Dict[str, List[str]]:
     for name, block in extract_blocks_by_dang(text):
         grouped.setdefault(name, []).append(block)
     return grouped
+
+
+def make_block_preview(block: str, limit: int = 180) -> str:
+    text = block or ""
+    text = re.sub(r"(?is)\\begin\s*\{\s*(?:ex|bt)\s*\}|\\end\s*\{\s*(?:ex|bt)\s*\}", " ", text)
+    text = _DANGBT_RE.sub(" ", text)
+    text = re.sub(r"(?m)^\s*%.*$", " ", text)
+    text = re.split(r"\\loigiai\b", text, maxsplit=1)[0]
+    text = re.sub(r"\\(?:choiceTF|choice|shortans)\b", " ", text)
+    for _ in range(3):
+        text = re.sub(r"\\[a-zA-Z]+\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]*)\}", r" \1 ", text)
+    text = re.sub(r"\\[a-zA-Z]+\*?(?:\[[^\]]*\])?", " ", text)
+    text = text.replace("{", " ").replace("}", " ")
+    text = text.replace("$", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    if not text:
+        return "(Không có nội dung xem trước)"
+    if len(text) > limit:
+        text = text[: limit - 1].rstrip() + "…"
+    return text
 
 
 PAGE_TPL = r"""
@@ -91,6 +120,16 @@ h1{font-size:22px}
 .dang-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-top:1px dashed #e5e7eb}
 .dang-row label{flex:1}
 .dang-row input[type=number]{width:64px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px}
+.dang-picker{border-top:1px dashed #e5e7eb}
+.dang-picker:first-of-type{border-top:none}
+.dang-picker .dang-row{border-top:none}
+.picker-details{padding:0 4px 8px 4px}
+.picker-details summary{cursor:pointer;color:#1976d2;font-size:13px;margin:0 0 6px 0}
+.preview-list{display:flex;flex-direction:column;gap:6px}
+.preview-item{display:flex;align-items:flex-start;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+.preview-item input{margin-top:2px}
+.preview-index{font-weight:700;color:#334155}
+.preview-text{color:#0f172a}
 .muted{color:#64748b;font-size:13px}
 .top-actions{position:sticky;top:0;background:#f6f8fa;padding:10px 0;z-index:5}
 button,.btn{background:#1976d2;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
@@ -103,7 +142,7 @@ button.secondary{background:#64748b}
   <div class="top-actions">
     <h1>📝 Ra đề từ ngân hàng GitHub</h1>
     <p class="muted">Nguồn: <b>{{ total_files }}</b> file · <b>{{ total_questions }}</b> câu hỏi.
-      Chọn số câu theo từng dạng bên dưới rồi bấm <b>Tạo đề</b>.</p>
+      Chọn số câu theo từng dạng hoặc mở danh sách để tick từng câu cụ thể rồi bấm <b>Tạo đề</b>.</p>
   </div>
   <form method="post" action="{{ url_for('ra_de.generate') }}">
     <div class="card">
@@ -117,10 +156,17 @@ button.secondary{background:#64748b}
       <details class="lesson">
         <summary>{{ item.BaiHoc or item.path }} <span class="badge">{{ item.questions }} câu</span></summary>
         {% for dang, n in item.dang.items() %}
-        <div class="dang-row">
-          <label>{{ dang }} <span class="muted">(tối đa {{ n }})</span></label>
-          <input type="number" min="0" max="{{ n }}" value="0"
-                 name="c__{{ item.path }}__{{ dang }}">
+        <div class="dang-picker" data-path="{{ item.path }}" data-dang="{{ dang }}" data-preview-url="{{ url_for('ra_de.preview') }}">
+          <div class="dang-row">
+            <label>{{ dang }} <span class="muted">(tối đa {{ n }})</span></label>
+            <input type="number" min="0" max="{{ n }}" value="0"
+                   name="c__{{ item.path }}__{{ dang }}">
+          </div>
+          <details class="picker-details">
+            <summary>☑️ Chọn câu cụ thể</summary>
+            <div class="muted">Nếu tick câu cụ thể, hệ thống sẽ dùng đúng các câu đã tick và bỏ qua ô số lượng ở dạng này.</div>
+            <div class="preview-list muted">Mở mục này để tải danh sách câu hỏi.</div>
+          </details>
         </div>
         {% endfor %}
       </details>
@@ -141,6 +187,74 @@ function filterLessons(){
     g.style.display = show ? '' : 'none';
   });
 }
+function syncManualSelection(wrapper){
+  var countInput = wrapper.querySelector('input[type="number"]');
+  var checked = wrapper.querySelectorAll('.preview-list input[type="checkbox"]:checked').length;
+  if(!countInput){ return; }
+  countInput.disabled = checked > 0;
+  countInput.title = checked > 0 ? 'Đang ưu tiên các câu đã tick cụ thể.' : '';
+}
+function renderPreviewList(wrapper, items){
+  var list = wrapper.querySelector('.preview-list');
+  list.innerHTML = '';
+  if(!items.length){
+    list.textContent = 'Không có câu hỏi trong dạng này.';
+    list.classList.add('muted');
+    return;
+  }
+  list.classList.remove('muted');
+  items.forEach(function(item){
+    var row = document.createElement('label');
+    row.className = 'preview-item';
+
+    var input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'q__' + wrapper.dataset.path + '__' + wrapper.dataset.dang + '__' + item.index;
+    input.value = '1';
+    input.addEventListener('change', function(){ syncManualSelection(wrapper); });
+
+    var textWrap = document.createElement('span');
+    var idx = document.createElement('span');
+    idx.className = 'preview-index';
+    idx.textContent = 'Câu ' + (item.index + 1) + ': ';
+
+    var text = document.createElement('span');
+    text.className = 'preview-text';
+    text.textContent = item.preview || '(Không có nội dung xem trước)';
+
+    textWrap.appendChild(idx);
+    textWrap.appendChild(text);
+    row.appendChild(input);
+    row.appendChild(textWrap);
+    list.appendChild(row);
+  });
+}
+async function loadDangPreview(detailsEl){
+  if(!detailsEl.open){ return; }
+  var wrapper = detailsEl.closest('.dang-picker');
+  var list = detailsEl.querySelector('.preview-list');
+  if(!wrapper || !list || list.dataset.loaded === '1' || list.dataset.loading === '1'){ return; }
+  list.dataset.loading = '1';
+  list.textContent = 'Đang tải danh sách câu hỏi...';
+  try{
+    var url = new URL(wrapper.dataset.previewUrl, window.location.origin);
+    url.searchParams.set('path', wrapper.dataset.path);
+    url.searchParams.set('dang', wrapper.dataset.dang);
+    var resp = await fetch(url.toString(), {headers:{'Accept':'application/json'}});
+    var data = await resp.json();
+    if(!resp.ok || !data.ok){ throw new Error(data.error || 'Không tải được danh sách câu hỏi.'); }
+    renderPreviewList(wrapper, data.items || []);
+    list.dataset.loaded = '1';
+  }catch(err){
+    list.textContent = (err && err.message) ? err.message : 'Không tải được danh sách câu hỏi.';
+    list.classList.add('muted');
+  }finally{
+    delete list.dataset.loading;
+  }
+}
+document.querySelectorAll('.picker-details').forEach(function(el){
+  el.addEventListener('toggle', function(){ loadDangPreview(el); });
+});
 </script>
 </body></html>
 """
@@ -198,43 +312,85 @@ def home():
     )
 
 
+@bp.route("/ra-de/preview")
+def preview():
+    path = (request.args.get("path") or "").strip()
+    dang = (request.args.get("dang") or "").strip()
+    if not path or not dang:
+        return jsonify({"ok": False, "error": "Thiếu path hoặc dang.", "items": []}), 400
+    grouped = blocks_grouped_by_dang(path)
+    if not grouped:
+        return jsonify({"ok": False, "error": f"Không đọc được: {path}", "items": []}), 404
+    items = [
+        {"index": i, "preview": make_block_preview(block)}
+        for i, block in enumerate(grouped.get(dang) or [])
+    ]
+    return jsonify({"ok": True, "items": items, "total": len(items)})
+
+
 @bp.route("/ra-de/generate", methods=["POST"])
 def generate():
     ten_de = (request.form.get("ten_de") or "Đề ôn tập").strip()
     wanted: Dict[str, Dict[str, int]] = {}
+    selected: Dict[str, Dict[str, List[int]]] = {}
     for key, val in request.form.items():
-        if not key.startswith("c__"):
-            continue
-        try:
-            n = int(val or 0)
-        except Exception:
-            n = 0
-        if n <= 0:
-            continue
-        try:
-            _, path, dang = key.split("__", 2)
-        except ValueError:
-            continue
-        wanted.setdefault(path, {})[dang] = n
+        if key.startswith("c__"):
+            try:
+                n = int(val or 0)
+            except Exception:
+                n = 0
+            if n <= 0:
+                continue
+            try:
+                _, path, dang = key.split("__", 2)
+            except ValueError:
+                continue
+            wanted.setdefault(path, {})[dang] = n
+        elif key.startswith("q__"):
+            try:
+                _, path, dang, index_str = key.split("__", 3)
+                index = int(index_str)
+            except ValueError:
+                continue
+            except Exception:
+                continue
+            if index < 0:
+                continue
+            selected.setdefault(path, {}).setdefault(dang, []).append(index)
 
-    picked_blocks: List[str] = []
+    picked_manual_blocks: List[str] = []
+    picked_random_blocks: List[str] = []
     total = 0
     errors: List[str] = []
-    for path, dang_counts in wanted.items():
+    for path in sorted(set(wanted) | set(selected)):
         grouped = blocks_grouped_by_dang(path)
         if not grouped:
             errors.append(f"Không đọc được: {path}")
             continue
-        for dang, n in dang_counts.items():
+        path_selected = selected.get(path) or {}
+        path_wanted = wanted.get(path) or {}
+        for dang, indexes in path_selected.items():
+            pool = grouped.get(dang) or []
+            if not pool:
+                continue
+            for idx in sorted(set(indexes)):
+                if idx >= len(pool):
+                    continue
+                picked_manual_blocks.append(pool[idx])
+                total += 1
+        for dang, n in path_wanted.items():
+            if path_selected.get(dang):
+                continue
             pool = grouped.get(dang) or []
             if not pool:
                 continue
             k = min(n, len(pool))
             sample = random.sample(pool, k)
-            picked_blocks.extend(sample)
+            picked_random_blocks.extend(sample)
             total += len(sample)
 
-    random.shuffle(picked_blocks)
+    random.shuffle(picked_random_blocks)
+    picked_blocks = picked_manual_blocks + picked_random_blocks
     header = f"% ===== {ten_de} =====\n% Tự động tạo bởi Ra đề — {total} câu\n\n"
     numbered = []
     for i, block in enumerate(picked_blocks, start=1):
