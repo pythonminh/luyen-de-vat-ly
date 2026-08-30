@@ -211,6 +211,7 @@ button.small{padding:5px 9px;font-size:12px;background:#475569;margin-right:4px}
       </div>
 
       {% for dang, counts in item.dang_loai.items() %}
+      {% set dang_idx = loop.index0 %}
       <div class="dang-block">
         <div class="dang-title">
           {{ dang }}
@@ -246,7 +247,7 @@ button.small{padding:5px 9px;font-size:12px;background:#475569;margin-right:4px}
                    min="0" max="{{ n2 }}" value="0"
                    class="count-input"
                    data-type="{{ code }}"
-                   data-key="{{ item._ra_index }}|{{ loop.index0 }}|{{ code }}"
+                   data-key="{{ item._ra_index }}|{{ dang_idx }}|{{ code }}"
                    disabled>
           </label>
           {% endfor %}
