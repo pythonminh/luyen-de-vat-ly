@@ -5691,7 +5691,8 @@ class SheetStore:
         #   SHEET      : đọc câu hỏi từ Google Sheet Cau_Hoi như cũ.
         #   JSON_ONLY  : chỉ đọc câu hỏi từ file JSON trong data/json_questions hoặc data/json_exports.
         #   SHEET_JSON : đọc Sheet trước, rồi cộng thêm câu hỏi từ JSON.
-        if self.question_source_mode != "JSON_ONLY":
+        #   GITHUB_JSON: chỉ đọc từ GitHub raw URL (GITHUB_JSON_URL) — nhanh nhất, không cần Sheets.
+        if self.question_source_mode not in ("JSON_ONLY", "GITHUB_JSON"):
             self.ws_questions = self.worksheet_or_none("Cau_Hoi")
             if self.ws_questions is None:
                 raise RuntimeError("Không thấy sheet Cau_Hoi")
@@ -5706,8 +5707,11 @@ class SheetStore:
         self.ws_theory = self.ensure_ws("Ly_Thuyet", LEARNING_THEORY_FIELDS)
         self.ws_methods = self.ensure_ws("Phuong_Phap", LEARNING_METHOD_FIELDS)
 
-        if self.question_source_mode == "JSON_ONLY":
-            self.load_questions_from_json_runtime(replace=True)
+        if self.question_source_mode in ("JSON_ONLY", "GITHUB_JSON"):
+            if self.question_source_mode == "GITHUB_JSON":
+                self.load_from_github_json()
+            else:
+                self.load_questions_from_json_runtime(replace=True)
         else:
             self.ensure_question_competency_header()
             self.ensure_question_ngaycapnhat_header()
@@ -6157,6 +6161,115 @@ class SheetStore:
         self.json_source_info["added_to_app"] = added
         self.duplicate_report = analyze_question_duplicates(self.questions)
         self.rebuild_question_indexes()
+
+    def load_from_github_json(self) -> None:
+        """Nạp câu hỏi từ GitHub raw URL (QUESTION_SOURCE=GITHUB_JSON).
+
+        Ưu tiên:
+        1. File local data/json_questions/questions_db.json nếu tồn tại (cache).
+        2. Download từ GITHUB_JSON_URL nếu không có local cache.
+
+        Đặt biến môi trường:
+            GITHUB_JSON_URL=https://raw.githubusercontent.com/owner/repo/main/data/json_questions/questions_db.json
+        """
+        local_cache = os.path.join(APP_DIR, "data", "json_questions", "questions_db.json")
+        github_url = clean(os.environ.get("GITHUB_JSON_URL") or "")
+        pkg: Optional[Dict[str, Any]] = None
+
+        # Thử đọc cache local trước (nhanh hơn, không cần network).
+        if os.path.exists(local_cache):
+            try:
+                with open(local_cache, "rb") as f:
+                    pkg = _json_loads_lenient(f.read())
+            except Exception:
+                log_swallow("load_from_github_json:local_cache")
+                pkg = None
+
+        # Nếu không có local cache, download từ GitHub.
+        if pkg is None and github_url:
+            try:
+                req = urllib.request.Request(github_url, headers={"Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = resp.read()
+                pkg = _json_loads_lenient(data)
+                # Lưu cache local để lần sau dùng lại.
+                try:
+                    os.makedirs(os.path.dirname(local_cache), exist_ok=True)
+                    with open(local_cache, "wb") as f:
+                        f.write(data)
+                except Exception:
+                    log_swallow("load_from_github_json:save_cache")
+            except Exception as e:
+                raise RuntimeError(
+                    f"Không tải được JSON từ GitHub ({github_url}): {e}\n"
+                    "Kiểm tra GITHUB_JSON_URL hoặc đặt QUESTION_SOURCE=SHEET."
+                ) from e
+
+        if pkg is None:
+            raise RuntimeError(
+                "QUESTION_SOURCE=GITHUB_JSON nhưng không có file local cache và GITHUB_JSON_URL chưa được đặt.\n"
+                "Đặt biến môi trường GITHUB_JSON_URL=https://raw.githubusercontent.com/.../questions_db.json"
+            )
+
+        self.questions = []
+        self.question_headers = list(JSON_CAU_HOI_HEADERS)
+        self.question_col_index = resolve_question_col_index(self.question_headers)
+        parsed = json_package_to_questions(pkg, {})
+        qs = parsed.get("questions") or []
+        base_row = 900000
+        for i, q in enumerate(qs):
+            q = dict(q or {})
+            try:
+                q = canonical_question(q)
+            except Exception:
+                log_swallow("load_from_github_json:canonical")
+                q = {f: clean(q.get(f, "")) for f in QUESTION_FIELDS}
+                q["Dang"] = effective_dang(q)
+            if not clean(q.get("CauHoi")):
+                continue
+            q["_row"] = base_row + i + 1
+            q["_source"] = "GITHUB_JSON"
+            q["_readonly_json"] = True
+            self.questions.append(q)
+
+        self.json_source_info = {
+            "mode": "GITHUB_JSON",
+            "url": github_url,
+            "local_cache": local_cache,
+            "count_questions": len(self.questions),
+        }
+        self.duplicate_report = analyze_question_duplicates(self.questions)
+        self.rebuild_question_indexes()
+
+    def sync_github_data(self, force_download: bool = True) -> Dict[str, Any]:
+        """Tải lại câu hỏi từ GitHub JSON URL và cập nhật RAM.
+
+        Args:
+            force_download: True = bỏ cache local, tải mới từ GitHub.
+        Returns:
+            Dict với ok, count, message.
+        """
+        github_url = clean(os.environ.get("GITHUB_JSON_URL") or "")
+        if not github_url:
+            return {"ok": False, "error": "Chưa đặt biến môi trường GITHUB_JSON_URL."}
+
+        local_cache = os.path.join(APP_DIR, "data", "json_questions", "questions_db.json")
+        if force_download and os.path.exists(local_cache):
+            try:
+                os.remove(local_cache)
+            except Exception:
+                log_swallow("sync_github_data:remove_cache")
+
+        try:
+            self.load_from_github_json()
+            return {
+                "ok": True,
+                "count": len(self.questions),
+                "message": f"✅ Đã đồng bộ {len(self.questions)} câu từ GitHub JSON.",
+                "url": github_url,
+            }
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def load_learning(self) -> None:
         """Nạp Ly_Thuyet + Phuong_Phap vào RAM."""
@@ -23492,6 +23605,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
           <button type="button" onclick="window.open('/admin/json','_blank');closeAdminMoreMenu()">📦 Đề JSON</button>
           <button type="button" onclick="downloadOfflinePack();closeAdminMoreMenu()">📴 Tải gói offline APK</button>
           <button type="button" onclick="downloadBankJson();closeAdminMoreMenu()">📦 Xuất JSON toàn bộ Sheet</button>
+          <button type="button" onclick="syncGithubData();closeAdminMoreMenu()">🔄 Đồng bộ dữ liệu GitHub</button>
         </div>
       </span>
 
@@ -24691,6 +24805,8 @@ async function saveExamOffline(made){made=String(made||'').trim();if(!made)retur
 async function downloadOfflinePack(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN được tải gói offline APK.');return}if(!confirm('Tải ZIP gói offline (toàn bộ đề + JSON bank)?\n\nNên chạy trên máy mạnh / hoặc python build_offline_pack.py nếu Sheet rất lớn.\nCó thể chờ vài phút.'))return;try{let r=await fetch('/api/admin/offline-pack',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='luyen-de-offline.zip';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải gói offline ZIP.\n\n• www/ → nhét vào APK (Capacitor/Android assets)\n• pack/bank.json = toàn bộ câu JSON\n• Xem README.txt trong ZIP')}catch(e){alert('Tải gói offline thất bại: '+(e.message||e))}}
 async function downloadBankJson(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}if(!confirm('Xuất JSON toàn bộ câu hỏi đang nạp từ Google Sheet?\n\nDùng để nhét APK hoặc đặt QUESTION_SOURCE=JSON_ONLY (đọc mượt, không lag Sheet).'))return;try{let r=await fetch('/api/admin/export-bank-json',{method:'POST'});if(!r.ok){let j={};try{j=await r.json()}catch(e){}throw new Error(j.error||('HTTP '+r.status))}let blob=await r.blob();let fn='bank_full.json';let cd=r.headers.get('Content-Disposition')||'';let m=cd.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)/i);if(m)fn=decodeURIComponent(m[1]||m[2]||fn);let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);alert('✅ Đã tải '+fn+'.\n\nCopy vào data/json_questions/bank_full.json rồi đặt QUESTION_SOURCE=JSON_ONLY nếu muốn server đọc JSON thay Sheet.')}catch(e){alert('Xuất JSON thất bại: '+(e.message||e))}}
 window.downloadBankJson=downloadBankJson;
+async function syncGithubData(){if(!USER||!USER.is_admin){alert('Chỉ ADMIN.');return}if(!confirm('Tải lại dữ liệu câu hỏi từ GitHub JSON?\n\nApp sẽ bỏ cache local và tải lại từ GITHUB_JSON_URL.\nĐảm bảo đã đặt biến môi trường GITHUB_JSON_URL và QUESTION_SOURCE=GITHUB_JSON trên Render.'))return;try{let r=await fetch('/api/admin/sync-github-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})});let j=await r.json();if(!r.ok||!j.ok){alert('❌ Đồng bộ GitHub thất bại:\n'+(j.error||('HTTP '+r.status)));return}alert('✅ '+(j.message||('Đã đồng bộ '+j.count+' câu từ GitHub JSON.')));await init()}catch(e){alert('Đồng bộ GitHub thất bại: '+(e.message||e))}}
+window.syncGithubData=syncGithubData;
 function v246ShareToolsHtml(item,madeEsc){if(!madeEsc||!item)return '';let shareLabel=esc(examDisplayTitle(item));let latexBtn=(USER&&USER.is_admin)?`<button type="button" class="btnShare" onclick="downloadExamLatex('${madeEsc}')" title="Tải file .tex (\\begin{ex}...\\choiceTF...\\loigiai)">📄 Xuất LaTeX</button>`:'';return `<div class="shareRow"><span class="shareUrl" title="${shareLabel}">🔗 ${shareLabel}</span><span class="shareBtns"><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}')">📋 Chép link</button><button type="button" class="btnShare" onclick="copyExamShareLink('${madeEsc}',1)" title="Học viên tự chọn xáo trộn">⚙️ Link xáo</button><button type="button" class="btnShare" onclick="saveExamOffline('${madeEsc}')" title="Lưu vào máy — luyện khi mất mạng">📴 Lưu offline</button>${latexBtn}</span></div>`}
 function latexExportDownloadUrl(params){let p=new URLSearchParams();Object.keys(params||{}).forEach(function(k){let v=params[k];if(v!=null&&String(v).trim()!=='')p.set(k,String(v))});p.set('download','1');return '/api/latex/export?'+p.toString()}
 function downloadExamLatex(made){if(!USER||!USER.is_admin){alert('Chỉ ADMIN xuất LaTeX.');return}made=String(made||'').trim();if(!made){alert('Không có mã đề.');return}let item=CATALOG.find(function(x){return x.MaDe===made||x.GroupKey===made});let name=item?examDisplayTitle(item):made;window.location=latexExportDownloadUrl({made:made,name:name})}
@@ -34963,13 +35079,17 @@ def _json_question_source_mode() -> str:
     """Nguồn câu hỏi khi app chạy.
 
     SHEET      : mặc định, đọc Cau_Hoi Google Sheet.
-    JSON_ONLY  : chỉ đọc các file JSON đề.
+    JSON_ONLY  : chỉ đọc các file JSON đề trong data/json_questions.
     SHEET_JSON : đọc Sheet rồi cộng thêm JSON.
+    GITHUB_JSON: chỉ đọc từ GitHub raw URL (GITHUB_JSON_URL) — nhanh nhất.
 
     Trên Render đặt Environment Variable:
       QUESTION_SOURCE=JSON_ONLY
     hoặc:
       QUESTION_SOURCE=SHEET_JSON
+    hoặc:
+      QUESTION_SOURCE=GITHUB_JSON
+      GITHUB_JSON_URL=https://raw.githubusercontent.com/owner/repo/main/data/json_questions/questions_db.json
     """
     raw = clean(os.environ.get("QUESTION_SOURCE") or os.environ.get("APP_QUESTION_SOURCE") or "SHEET")
     raw = raw.upper().replace(" ", "").replace("-", "_")
@@ -34977,6 +35097,8 @@ def _json_question_source_mode() -> str:
         return "JSON_ONLY"
     if raw in ("SHEETJSON", "SHEET_PLUS_JSON", "SHEET+JSON", "BOTH", "MIX", "MIXED"):
         return "SHEET_JSON"
+    if raw in ("GITHUB", "GITHUB_JSON", "GITHUBJSON"):
+        return "GITHUB_JSON"
     return "SHEET"
 
 
@@ -42190,6 +42312,26 @@ def api_admin_export_bank_json():
             as_attachment=True,
             download_name=fname,
         )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/admin/sync-github-data", methods=["POST"])
+def api_admin_sync_github_data():
+    """ADMIN: tải lại câu hỏi từ GitHub JSON URL và cập nhật RAM ngay lập tức."""
+    bad = require_login_json()
+    if bad:
+        return bad
+    if not is_admin():
+        return jsonify({"error": "Chỉ ADMIN được đồng bộ dữ liệu GitHub."}), 403
+    try:
+        st = get_store()
+        body = request.get_json(silent=True) or {}
+        force = bool(body.get("force", True))
+        result = st.sync_github_data(force_download=force)
+        if not result.get("ok"):
+            return jsonify(result), 400
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
