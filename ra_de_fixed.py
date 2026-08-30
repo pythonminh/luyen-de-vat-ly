@@ -167,7 +167,7 @@ button.secondary{background:#64748b}
         {% for dang, n in item.dang.items() %}
         <div class="dang-block">
           <div class="dang-row">
-            <label><b>{{ dang }}</b> <span class="muted">(tối đa {{ n }} câu — random không phân biệt loại câu)</span></label>
+            <label><b>{{ dang }}</b> <span class="muted">( {{ n }} câu — random không phân biệt loại câu)</span></label>
             <input type="number" min="0" max="{{ n }}" value="0"
                    name="c__{{ item.path }}__{{ dang }}">
           </div>
@@ -175,7 +175,7 @@ button.secondary{background:#64748b}
           {% if loai_map %}
           {% for loai_cau, n2 in loai_map.items() %}
           <div class="loai-row">
-            <label>↳ {{ loai_cau }} <span class="badge loai">tối đa {{ n2 }}</span></label>
+            <label>↳ {{ loai_cau }} <span class="badge loai"> {{ n2 }}</span></label>
             <input type="number" min="0" max="{{ n2 }}" value="0"
                    name="c__{{ item.path }}__{{ dang }}__{{ loai_cau }}">
           </div>
