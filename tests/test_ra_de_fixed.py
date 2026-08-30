@@ -29,14 +29,13 @@ Cho \textbf{biểu thức} $x+1$.
         self.assertNotIn(r"\loigiai", preview)
         self.assertNotIn("Lời giải dài", preview)
 
-    @patch("ra_de_fixed.blocks_grouped_by_dang")
-    def test_preview_endpoint_returns_question_previews(self, grouped_mock):
-        grouped_mock.return_value = {
-            "Dạng A": [
-                r"\begin{ex}Câu thứ nhất.\end{ex}",
-                r"\begin{ex}Câu thứ hai.\end{ex}",
-            ]
-        }
+    @patch("ra_de_fixed._read_tex_text")
+    def test_preview_endpoint_returns_question_previews(self, read_text_mock):
+        read_text_mock.return_value = r"""
+\dangbt{Dạng A}
+\begin{ex}Câu thứ nhất.\end{ex}
+\begin{ex}Câu thứ hai.\end{ex}
+"""
 
         resp = self.client.get("/ra-de/preview?path=ngan-hang/test.tex&dang=D%E1%BA%A1ng%20A")
 
@@ -46,6 +45,12 @@ Cho \textbf{biểu thức} $x+1$.
         self.assertEqual(data["total"], 2)
         self.assertEqual(data["items"][0]["index"], 0)
         self.assertIn("Câu thứ nhất.", data["items"][0]["preview"])
+
+    def test_preview_endpoint_rejects_invalid_path(self):
+        resp = self.client.get("/ra-de/preview?path=../ra_de_fixed.py&dang=D%E1%BA%A1ng%20A")
+        self.assertEqual(resp.status_code, 404)
+        data = resp.get_json()
+        self.assertFalse(data["ok"])
 
     @patch("ra_de_fixed.random.shuffle", side_effect=lambda items: None)
     @patch("ra_de_fixed.random.sample", side_effect=lambda pool, k: pool[:k])

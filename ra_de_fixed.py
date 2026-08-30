@@ -25,10 +25,13 @@ from flask import Blueprint, Response, jsonify, request, render_template_string,
 bp = Blueprint("ra_de", __name__)
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+BANK_DIR = os.path.realpath(os.path.join(APP_DIR, "ngan-hang"))
 BANK_INDEX_PATH = os.path.join(APP_DIR, "bank_index.json")
 
 _BLOCK_RE = re.compile(r"\\begin\s*\{\s*(ex|bt)\s*\}(.*?)\\end\s*\{\s*\1\s*\}", re.S | re.I)
 _DANGBT_RE = re.compile(r"\\dangbt\s*\{([^{}]*)\}", re.I)
+_REL_TEX_PATH_RE = re.compile(r"^ngan-hang(?:/[^/\0]+)+\.tex$")
+_PREVIEW_UNWRAP_PASSES = 3
 
 
 def _load_bank_index() -> Dict[str, Any]:
@@ -42,9 +45,11 @@ def _load_bank_index() -> Dict[str, Any]:
 def _resolve_tex_path(rel_path: str) -> str:
     """rel_path đã ở dạng 'ngan-hang/.../de.tex' (tương đối APP_DIR)."""
     rel = (rel_path or "").replace("\\", "/").lstrip("/")
-    full = os.path.normpath(os.path.join(APP_DIR, rel.replace("/", os.sep)))
+    if not _REL_TEX_PATH_RE.fullmatch(rel):
+        return ""
+    full = os.path.realpath(os.path.join(APP_DIR, rel.replace("/", os.sep)))
     try:
-        if os.path.commonpath([APP_DIR, full]) != APP_DIR:
+        if os.path.commonpath([BANK_DIR, full]) != BANK_DIR:
             return ""
     except ValueError:
         return ""
@@ -69,18 +74,24 @@ def extract_blocks_by_dang(text: str) -> List[Tuple[str, str]]:
 
 
 def blocks_grouped_by_dang(rel_path: str) -> Dict[str, List[str]]:
-    path = _resolve_tex_path(rel_path)
-    if not path:
-        return {}
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
-            text = f.read()
-    except Exception:
+    text = _read_tex_text(rel_path)
+    if text is None:
         return {}
     grouped: Dict[str, List[str]] = {}
     for name, block in extract_blocks_by_dang(text):
         grouped.setdefault(name, []).append(block)
     return grouped
+
+
+def _read_tex_text(rel_path: str) -> str | None:
+    path = _resolve_tex_path(rel_path)
+    if not path:
+        return None
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except Exception:
+        return None
 
 
 def make_block_preview(block: str, limit: int = 180) -> str:
@@ -90,7 +101,7 @@ def make_block_preview(block: str, limit: int = 180) -> str:
     text = re.sub(r"(?m)^\s*%.*$", " ", text)
     text = re.split(r"\\loigiai\b", text, maxsplit=1)[0]
     text = re.sub(r"\\(?:choiceTF|choice|shortans)\b", " ", text)
-    for _ in range(3):
+    for _ in range(_PREVIEW_UNWRAP_PASSES):
         text = re.sub(r"\\[a-zA-Z]+\*?\s*(?:\[[^\]]*\])?\s*\{([^{}]*)\}", r" \1 ", text)
     text = re.sub(r"\\[a-zA-Z]+\*?(?:\[[^\]]*\])?", " ", text)
     text = text.replace("{", " ").replace("}", " ")
@@ -318,13 +329,14 @@ def preview():
     dang = (request.args.get("dang") or "").strip()
     if not path or not dang:
         return jsonify({"ok": False, "error": "Thiếu path hoặc dang.", "items": []}), 400
-    grouped = blocks_grouped_by_dang(path)
-    if not grouped:
+    text = _read_tex_text(path)
+    if text is None:
         return jsonify({"ok": False, "error": f"Không đọc được: {path}", "items": []}), 404
-    items = [
-        {"index": i, "preview": make_block_preview(block)}
-        for i, block in enumerate(grouped.get(dang) or [])
-    ]
+    items = []
+    for name, block in extract_blocks_by_dang(text):
+        if name != dang:
+            continue
+        items.append({"index": len(items), "preview": make_block_preview(block)})
     return jsonify({"ok": True, "items": items, "total": len(items)})
 
 
@@ -350,8 +362,6 @@ def generate():
             try:
                 _, path, dang, index_str = key.split("__", 3)
                 index = int(index_str)
-            except ValueError:
-                continue
             except Exception:
                 continue
             if index < 0:
