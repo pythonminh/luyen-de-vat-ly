@@ -27,6 +27,16 @@ except Exception as e:
     app.config['QUESTION_SAVE_FIX'] = False
     app.config['QUESTION_SAVE_FIX_ERROR'] = str(e)
 
+# Easy per-question LaTeX editor
+try:
+    from github_question_editor import bp as github_question_editor_bp
+    app.register_blueprint(github_question_editor_bp)
+    app.config['GITHUB_QUESTION_EDITOR'] = True
+except Exception as e:
+    github_question_editor_bp = None
+    app.config['GITHUB_QUESTION_EDITOR'] = False
+    app.config['GITHUB_QUESTION_EDITOR_ERROR'] = str(e)
+
 
 @app.get('/bank_index.json')
 def serve_bank_index():
@@ -84,7 +94,7 @@ def add_source_links(response):
 (function(){
   const IDS=['publicCatalogContent','deCatalogContent'];
   let rendered=false;
-  function esc(v){return String(v??'').replace(/[&<>\\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;'}[s]));}
+  function esc(v){return String(v??'').replace(/[&<>\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));}
   function host(){
     for(const id of IDS){const e=document.getElementById(id); if(e) return e;}
     const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
@@ -105,7 +115,7 @@ def add_source_links(response):
       const total=items.reduce((s,x)=>s+Number(x.questions||x.count||0),0);
       const lis=items.map(x=>{
         const p=x.path||x.file||'';
-        return '<li style="margin:5px 0"><a href="/github/file?branch=main&path='+encodeURIComponent(p)+'" target="_blank" rel="noopener">'+esc(x.BaiHoc||x.De||p)+'</a> <small>('+Number(x.questions||x.count||0)+' câu)</small></li>';
+        return '<li style="margin:5px 0"><a href="/github/questions?branch=main&path='+encodeURIComponent(p)+'" target="_blank" rel="noopener">'+esc(x.BaiHoc||x.De||p)+'</a> <small>('+Number(x.questions||x.count||0)+' câu)</small></li>';
       }).join('');
       return '<details style="margin:6px 0;padding:8px;border:1px solid #ddd;border-radius:8px"><summary><b>'+esc(mon)+'</b> · Lớp '+esc(lop)+' · '+esc(chuong)+' <small>— '+total+' câu</small></summary><ul>'+lis+'</ul></details>';
     }).join('');
