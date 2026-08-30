@@ -38,7 +38,7 @@ _CHOICE_RE = re.compile(r"\\choice\b", re.I)
 
 LOAI_CAU_LIST = ["Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận"]
 
-
+ 
 def _loai_cau_of_block(body: str) -> str:
     """Xác định loại câu: Trắc nghiệm / Đúng sai / Trả lời ngắn / Tự luận."""
     body = body or ""
