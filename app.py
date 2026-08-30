@@ -22733,6 +22733,10 @@ html[data-theme="dark"] .topSubjectBtnV253.active,html[data-theme="dark"] .topSu
   cursor:pointer;display:flex;align-items:center;gap:4px;transition:background .15s;
   white-space:nowrap;flex-shrink:0;height:28px}
 .hbtn:hover{background:rgba(255,255,255,.26)}
+.hbtnAdminCompose{background:#2563eb;border-color:#1d4ed8;color:#fff;font-weight:700}
+.hbtnAdminCompose:hover{background:#1d4ed8}
+.hbtnGithub{background:#111827;border-color:#000;color:#fff;font-weight:700;text-decoration:none}
+.hbtnGithub:hover{background:#000}
 .thbtn{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
   color:#fff;border-radius:8px;cursor:pointer;font-size:14px;
   transition:background .15s;flex-shrink:0;display:flex;align-items:center;
@@ -23449,6 +23453,8 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     <span id="topUserChip" class="topUserChip hide"></span>
     <span id="aiProfileBadge" class="aiProfileBadge hide"></span>
     <button type="button" id="pwaInstallBtn" class="hbtn hide" onclick="installPwaApp()" title="Cài app"><i class="ti ti-download"></i></button>
+    <button type="button" id="topComposeExamBtn" class="hbtn hbtnAdminCompose hide" onclick="return window.ldvlOpenAdminComposeFromTopBar&&(ldvlOpenAdminComposeFromTopBar(),!1)" title="ADMIN: mở bảng ra đề">📄 Ra đề</button>
+    <a href="https://github.com/pythonminh/luyen-de-vat-ly" class="hbtn hbtnGithub" target="_blank" rel="noopener noreferrer" title="Mở GitHub repository">🐙 GitHub</a>
     <button type="button" id="btnTheme" class="thbtn" onclick="toggleTheme()" title="Giao diện tối"><i class="ti ti-moon"></i></button>
     <a href="/logout" class="hbtn" style="text-decoration:none"><i class="ti ti-logout"></i> Ra</a>
   </div>
@@ -23582,6 +23588,23 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
     if(!t)return;
     showStudentHome(function(){applyHomeTab(t);});
   }
+  function openAdminComposeFromTopBar(){
+    if(!(window.USER&&window.USER.is_admin))return false;
+    navGo('filter');
+    setTimeout(function(){
+      var panel=document.getElementById('adminComposePanel');
+      if(panel){
+        panel.classList.remove('hide');
+        panel.classList.remove('acCollapsed');
+      }
+      try{setAdminComposeOpen(true)}catch(e){}
+      try{refreshAdminComposeMatrix()}catch(e){}
+      if(panel){
+        try{panel.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}
+      }
+    },120);
+    return false;
+  }
   function syncNav(){
     var nav=document.getElementById('ldvlQuickNav');
     if(!nav)return;
@@ -23604,6 +23627,7 @@ body.ldvlAndroidScroll.quiz-scroll-lock{overscroll-behavior-y:auto!important}
   window.ldvlStickyTopOffset=hdrH;
   window.ldvlQuickNavSetActive=setActive;
   window.ldvlQuickNavGo=navGo;
+  window.ldvlOpenAdminComposeFromTopBar=openAdminComposeFromTopBar;
   window.ldvlQnavClick=navGo;
   window.ldvlQuickNavSyncVisibility=syncNav;
   window.ldvlUpdateStickyTopVar=function(){
@@ -25607,6 +25631,7 @@ function updateAdminChrome(){
   // Thanh trên cùng (home vs quiz)
   toggleQuizElHide('quizTopBar',!inQuiz);
   toggleQuizElHide('adminBar',!adm);
+  toggleQuizElHide('topComposeExamBtn',!adm);
   toggleQuizElHide('adminComposePanel',!adm);
   toggleQuizElHide('adminAiGeneratePanel',!adm);
   // Full màn hình
@@ -43353,4 +43378,3 @@ function copyData(){navigator.clipboard.writeText(out.value||"");}
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
-
