@@ -19,6 +19,14 @@ except Exception as e:
     ra_de_bp = None
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
+# Robust ADMIN add-question save
+try:
+    import question_save_fix  # noqa: F401 — registers API route + browser save interceptor
+    app.config['QUESTION_SAVE_FIX'] = True
+except Exception as e:
+    app.config['QUESTION_SAVE_FIX'] = False
+    app.config['QUESTION_SAVE_FIX_ERROR'] = str(e)
+
 
 @app.get('/bank_index.json')
 def serve_bank_index():
@@ -76,7 +84,7 @@ def add_source_links(response):
 (function(){
   const IDS=['publicCatalogContent','deCatalogContent'];
   let rendered=false;
-  function esc(v){return String(v??'').replace(/[&<>\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));}
+  function esc(v){return String(v??'').replace(/[&<>\\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;'}[s]));}
   function host(){
     for(const id of IDS){const e=document.getElementById(id); if(e) return e;}
     const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
