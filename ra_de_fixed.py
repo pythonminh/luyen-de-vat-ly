@@ -237,6 +237,7 @@ button.small{padding:5px 9px;font-size:12px;background:#475569;margin-right:4px}
                    class="type-check"
                    data-type="{{ code }}"
                    data-max="{{ n2 }}"
+                   data-key="{{ item._ra_index }}|{{ dang_idx }}|{{ code }}"
                    {% if n2 <= 0 %}disabled{% endif %}
                    onchange="toggleCount(this)">
 
@@ -247,7 +248,6 @@ button.small{padding:5px 9px;font-size:12px;background:#475569;margin-right:4px}
                    min="0" max="{{ n2 }}" value="0"
                    class="count-input"
                    data-type="{{ code }}"
-                   data-key="{{ item._ra_index }}|{{ dang_idx }}|{{ code }}"
                    disabled>
           </label>
           {% endfor %}
