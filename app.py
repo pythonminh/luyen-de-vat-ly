@@ -71,6 +71,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from flask import (
     Flask,
     copy_current_request_context,
+    g,
     jsonify,
     make_response,
     redirect,
@@ -3086,8 +3087,24 @@ def norm_role(s: Any) -> str:
     return clean(s).upper() or "FREE"
 
 
+def _invalidate_role_cache() -> None:
+    """Xóa cache role trong g để lần gọi kế tiếp refresh lại từ store (gọi sau khi set session['role'] thủ công)."""
+    try:
+        g._role_refreshed = False
+    except RuntimeError:
+        pass  # Ngoài request context — bỏ qua
+
+
 def refresh_session_role_from_store() -> None:
-    """Cập nhật role từ sheet HOC_VIEN (tránh session cũ ghi FREE trong khi sheet đã VIP)."""
+    """Cập nhật role từ sheet HOC_VIEN (tránh session cũ ghi FREE trong khi sheet đã VIP).
+    [PERF] Cache theo g._role_refreshed — chỉ chạy thực sự 1 lần/request để tránh gọi Sheet nhiều lần.
+    """
+    # [PERF] Đã refresh trong request này rồi thì bỏ qua
+    try:
+        if getattr(g, "_role_refreshed", False):
+            return
+    except RuntimeError:
+        pass  # Ngoài request context — tiếp tục bình thường
     mahs = clean(session.get("mahs", ""))
     if not mahs:
         return
@@ -3105,6 +3122,11 @@ def refresh_session_role_from_store() -> None:
     except Exception:
         log_swallow("refresh_session_role_from_store:2990")
         pass
+    # Đánh dấu đã refresh trong request này
+    try:
+        g._role_refreshed = True
+    except RuntimeError:
+        pass  # Ngoài request context
 
 
 def is_admin() -> bool:
@@ -9520,7 +9542,8 @@ class SheetStore:
         if not batch:
             raise RuntimeError("Không có dòng hợp lệ để cập nhật trạng thái duyệt.")
         gsheet_call_retry("batch_update Cau_Hoi TrangThai", self.ws_questions.batch_update, batch, value_input_option="RAW")
-        self.rebuild_indexes_after_admin_change()
+        # [PERF] TrangThai không ảnh hưởng catalog — bỏ rebuild_catalog
+        self.rebuild_indexes_after_admin_change(rebuild_catalog=False)
         return {"ok": True, "updated": len(batch), "rows": sorted(set(updated_rows)), "TrangThai": val}
 
 
@@ -9760,7 +9783,8 @@ class SheetStore:
             batch,
             value_input_option="RAW",
         )
-        self.rebuild_indexes_after_admin_change()
+        # [PERF] NangLucVatLy không nằm trong catalog group key — bỏ rebuild_catalog
+        self.rebuild_indexes_after_admin_change(rebuild_catalog=False)
         return {"ok": True, "updated": len(batch), "items": out_items}
 
     def merge_dangbaitap_names(self, made: str, old_names: List[str], new_name: str) -> Dict[str, Any]:
@@ -11694,6 +11718,12 @@ def resolve_ai_provider(
 
 
 def ai_runtime_config() -> Dict[str, Any]:
+    # [PERF] Cache kết quả trong g — chỉ tính 1 lần/request để tránh gọi lại env/sheet nhiều lần
+    try:
+        if hasattr(g, "_ai_runtime_config_cache"):
+            return g._ai_runtime_config_cache
+    except RuntimeError:
+        pass  # Ngoài request context — tính bình thường
     env_provider = _normalize_ai_provider(os.environ.get("AI_PROVIDER", DEFAULT_AI_PROVIDER))
     ov = get_user_ai_overrides() if current_mahs() not in ("", "_guest") else {}
     user_provider = clean(ov.get("provider", "")).upper()
@@ -11749,7 +11779,7 @@ def ai_runtime_config() -> Dict[str, Any]:
                 out.append(f"{v[:6]}...{v[-4:]}")
         return out
 
-    return {
+    result = {
         "provider": provider,
         "admin_provider": admin_provider,
         "svip_provider": svip_provider,
@@ -11769,6 +11799,12 @@ def ai_runtime_config() -> Dict[str, Any]:
         "has_server_keys": bool(server_g or server_o),
         "can_save_own_key": can_save_own_ai_key(),
     }
+    # [PERF] Lưu vào g để tái dùng trong cùng request
+    try:
+        g._ai_runtime_config_cache = result
+    except RuntimeError:
+        pass
+    return result
 
 
 def classify_user_ai_profile(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
