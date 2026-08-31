@@ -37,6 +37,14 @@ except Exception as e:
     app.config['GITHUB_QUESTION_EDITOR'] = False
     app.config['GITHUB_QUESTION_EDITOR_ERROR'] = str(e)
 
+# GitHub-only content source: Mục lục / Ra đề / GitHub editor do GitHub cung cấp.
+try:
+    import github_source_mode  # noqa: F401 — blocks accidental Google Sheet calls on content pages
+    app.config['GITHUB_SOURCE_ONLY'] = True
+except Exception as e:
+    app.config['GITHUB_SOURCE_ONLY'] = False
+    app.config['GITHUB_SOURCE_ONLY_ERROR'] = str(e)
+
 
 @app.get('/bank_index.json')
 def serve_bank_index():
