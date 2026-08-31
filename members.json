@@ -3,24 +3,176 @@
   "note": "Danh sach chuyen tu danh sach thanh vien cu. Khong luu mat khau thô; mat khau tam thoi duoc dat lai va nen thay doi sau khi dang nhap.",
   "temporary_password_policy": "123456",
   "members": [
-    {"username":"Duong0811","name":"Lê Thái Dương","class":"11","account_type":"VIP","status":"ON","phone":"902164938","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Khang1234","name":"Nguyễn Trần Bảo Khang","class":"11","account_type":"VIP","status":"ON","phone":"925644609","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Hung1234","name":"Mai Thái Hùng","class":"11","account_type":"VIP","status":"ON","phone":"975319610","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Phat1234","name":"Phat1703","class":"11","account_type":"VIP","status":"ON","phone":"387740218","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Lam123456","name":"Huỳnh Hữu Hải Lam","class":"11","account_type":"VIP","status":"ON","phone":"973395095","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Thinh123456","name":"Nguyễn Đức An Thịnh","class":"11","account_type":"VIP","status":"ON","phone":"707644644","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Nhan12345","name":"Nguyễn Thiên Nhân","class":"11","account_type":"VIP","status":"ON","phone":"38928110","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Huy123","name":"Nguyễn Đức Anh Huy","class":"11","account_type":"VIP","status":"ON","phone":"937085302","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"GHung123","name":"Nguyễn Gia Hưng","class":"11","account_type":"VIP","status":"ON","phone":"903475376","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"HNam1110","name":"Trần Hải Nam","class":"12","account_type":"VIP","status":"ON","phone":"988648537","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"TLam1406","name":"Hồ Thiên Lam","class":"12","account_type":"VIP","status":"ON","phone":"909368387","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"TKhang2004","name":"","class":"12","account_type":"VIP","status":"ON","phone":"","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"PKhang2008","name":"","class":"12","account_type":"VIP","status":"ON","phone":"","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Tin123456","name":"Huỳnh Trọng Tín","class":"12","account_type":"VIP","status":"ON","phone":"385661251","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Anh1224","name":"Nguyễn Văn Phúc Anh","class":"12","account_type":"VIP","status":"ON","phone":"765888706","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"HBinh1234","name":"Nguyễn Hải Bình","class":"10d12","account_type":"VIP","status":"ON","phone":"815308856","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"Long1234","name":"Nguyễn Trọng Minh Long","class":"11","account_type":"PAID","status":"ON","phone":"949801503","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"ThayHieu","name":"Thầy Hiếu","class":"","account_type":"VIP","status":"ON","phone":"","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"},
-    {"username":"MinhBao","name":"Lê Minh Bảo","class":"","account_type":"VIP","status":"ON","phone":"","password_sha256":"8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"}
+    {
+      "username": "Duong0811",
+      "name": "Lê Thái Dương",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "902164938",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Khang1234",
+      "name": "Nguyễn Trần Bảo Khang",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "925644609",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Hung1234",
+      "name": "Mai Thái Hùng",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "975319610",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Phat1234",
+      "name": "Phat1703",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "387740218",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Lam123456",
+      "name": "Huỳnh Hữu Hải Lam",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "973395095",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Thinh123456",
+      "name": "Nguyễn Đức An Thịnh",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "707644644",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Nhan12345",
+      "name": "Nguyễn Thiên Nhân",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "38928110",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Huy123",
+      "name": "Nguyễn Đức Anh Huy",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "937085302",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "GHung123",
+      "name": "Nguyễn Gia Hưng",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "903475376",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "HNam1110",
+      "name": "Trần Hải Nam",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "988648537",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "TLam1406",
+      "name": "Hồ Thiên Lam",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "909368387",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "TKhang2004",
+      "name": "",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "PKhang2008",
+      "name": "",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Tin123456",
+      "name": "Huỳnh Trọng Tín",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "385661251",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Anh1224",
+      "name": "Nguyễn Văn Phúc Anh",
+      "class": "12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "765888706",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "HBinh1234",
+      "name": "Nguyễn Hải Bình",
+      "class": "10d12",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "815308856",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "Long1234",
+      "name": "Nguyễn Trọng Minh Long",
+      "class": "11",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "949801503",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "ThayHieu",
+      "name": "Thầy Hiếu",
+      "class": "",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    },
+    {
+      "username": "MinhBao",
+      "name": "Lê Minh Bảo",
+      "class": "",
+      "account_type": "VIP",
+      "status": "ON",
+      "phone": "",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+    }
   ]
 }
