@@ -24,26 +24,22 @@ except Exception as e:
 
 @app.after_request
 def add_github_repo_link(response):
-    """Hiện nút mở repository GitHub ngay trên giao diện ngân hàng."""
+    """Hiện nút GitHub trên giao diện chính và giao diện ngân hàng."""
     try:
-        if request.path.startswith('/github/quan-ly') and response.content_type == 'text/html; charset=utf-8':
+        if response.content_type == 'text/html; charset=utf-8':
             body = response.get_data(as_text=True)
-            if 'id="ldvl-github-repo-link"' not in body:
-                top_link = (
-                    '<a id="ldvl-github-repo-link" href="/github/repo" target="_blank" rel="noopener" '
-                    'style="display:inline-block;margin-left:auto;padding:8px 12px;border-radius:10px;'
-                    'background:#24292f;color:#fff;text-decoration:none;font-weight:900;white-space:nowrap;">'
-                    '🐙 GitHub</a>'
+            if 'id="ldvl-github-main-link"' not in body and '</body>' in body:
+                link = (
+                    '<div id="ldvl-github-main-link" '
+                    'style="position:fixed;right:16px;top:86px;z-index:99999;">'
+                    '<a href="/github/quan-ly" '
+                    'style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;'
+                    'border-radius:10px;background:#24292f;color:#fff;text-decoration:none;'
+                    'font-weight:900;font-size:12px;box-shadow:0 3px 12px #0003;">'
+                    '🐙 Ngân hàng GitHub</a></div>'
                 )
-                if '</body>' in body:
-                    # Put the button in the visible top area as well as a floating shortcut.
-                    body = body.replace('</body>', top_link + '<div id="ldvl-github-repo-float" '
-                        'style="position:fixed;right:16px;bottom:16px;z-index:99999;">'
-                        '<a href="/github/repo" target="_blank" rel="noopener" '
-                        'style="display:inline-block;padding:10px 14px;border-radius:10px;'
-                        'background:#24292f;color:#fff;text-decoration:none;font-weight:800;'
-                        'box-shadow:0 4px 14px #0003">🐙 Mở GitHub</a></div></body>')
-                    response.set_data(body)
+                body = body.replace('</body>', link + '</body>')
+                response.set_data(body)
     except Exception:
         pass
     return response
