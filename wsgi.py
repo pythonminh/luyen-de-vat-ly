@@ -22,23 +22,27 @@ except Exception as e:
     app.config['GITHUB_BANK_FORCE'] = False
     app.config['GITHUB_BANK_FORCE_ERROR'] = str(e)
 
+# DEPLOY MARKER: 2026-08-31 — Render must reload wsgi.py from this commit.
+# IMPORTANT: Procfile runs `gunicorn wsgi:app -c gunicorn.conf.py`, so this file
+# is the actual production entrypoint for the GitHub bank UI.
+
 @app.after_request
 def add_github_repo_link(response):
     """Hiện nút GitHub trên giao diện chính và giao diện ngân hàng."""
     try:
         if response.content_type == 'text/html; charset=utf-8':
             body = response.get_data(as_text=True)
-            if 'id="ldvl-github-main-link"' not in body and '</body>' in body:
-                link = (
+            if 'id="ldvl-github-main-link"' not in body:
+                top_link = (
                     '<div id="ldvl-github-main-link" '
-                    'style="position:fixed;right:16px;top:86px;z-index:99999;">'
+                    'style="position:fixed;right:16px;top:78px;z-index:2147483647;">'
                     '<a href="/github/quan-ly" '
                     'style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;'
                     'border-radius:10px;background:#24292f;color:#fff;text-decoration:none;'
                     'font-weight:900;font-size:12px;box-shadow:0 3px 12px #0003;">'
                     '🐙 Ngân hàng GitHub</a></div>'
                 )
-                body = body.replace('</body>', link + '</body>')
+                body = body.replace('</body>', top_link + '</body>')
                 response.set_data(body)
     except Exception:
         pass
