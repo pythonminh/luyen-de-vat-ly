@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""UI for entering a student's own Gemini API key in the browser."""
+"""Student-owned Gemini API key UI.
+
+The key is stored only in this browser's localStorage and is sent to the
+student-only Gemini endpoint for a review request. It is never written to
+members.json, Google Sheet, or GitHub.
+"""
 from flask import request
 from app import app
 
@@ -10,68 +15,118 @@ def student_gemini_ui(response):
         return response
     try:
         body = response.get_data(as_text=True)
-        patch = r'''<script>
+        patch = r'''
+<div id="studentGeminiPanel" class="sgm-panel">
+  <button type="button" class="btn" onclick="openStudentGeminiKey()">🔑 Nạp key Gemini</button>
+  <span id="sgmStatus" class="sgm-status">Chưa nạp key</span>
+</div>
+<div id="studentKeyModal" class="sgm-backdrop" style="display:none">
+  <div class="sgm-box">
+    <div class="sgm-title">🔑 Nạp Gemini API key</div>
+    <div class="sgm-note">
+      Học sinh tự nhập Gemini API key của mình. Key chỉ được lưu trong trình duyệt này,
+      không lưu vào Google Sheet hay GitHub.
+    </div>
+    <input id="studentGeminiKey" type="password" autocomplete="off"
+           placeholder="Dán Gemini API key vào đây">
+    <div class="sgm-actions">
+      <button class="btn" type="button" onclick="closeStudentGeminiKey()">Hủy</button>
+      <button class="btn red" type="button" onclick="clearStudentGeminiKey()">🗑 Xóa key</button>
+      <button class="btn primary" type="button" onclick="saveStudentGeminiKey()">💾 Lưu key</button>
+    </div>
+    <div id="sgmMessage" class="sgm-message"></div>
+  </div>
+</div>
+<script>
 (function(){
-  function key(){return localStorage.getItem('student_gemini_api_key')||'';}
-  function saveKey(){
-    var x=document.getElementById('studentGeminiKey');
-    if(!x)return;
-    var v=x.value.trim();
-    if(!v){alert('Hãy nhập Gemini API key.');return;}
-    localStorage.setItem('student_gemini_api_key',v);
-    closeKey();
-    toastKey('✅ Đã lưu key trên thiết bị này');
+  const KEY_NAME='student_gemini_api_key';
+  const keyValue=()=>localStorage.getItem(KEY_NAME)||'';
+  const status=()=>document.getElementById('sgmStatus');
+  function refreshStatus(){
+    const ok=!!keyValue();
+    if(status()) status.textContent=ok?'✅ Đã nạp key':'Chưa nạp key';
   }
   function openKey(){
-    var old=key();
-    var box=document.getElementById('studentKeyModal');
-    if(!box){
-      box=document.createElement('div');box.id='studentKeyModal';box.className='sgm-backdrop';
-      box.innerHTML='<div class="sgm-box"><div class="sgm-title">🔑 Gemini API key của học sinh</div><div class="sgm-note">Key chỉ lưu trong trình duyệt của học sinh và chỉ gửi cùng lúc bấm phản biện. Không lưu vào Google Sheet hoặc GitHub.</div><input id="studentGeminiKey" type="password" placeholder="Dán Gemini API key vào đây"><div class="sgm-actions"><button class="btn" type="button" onclick="closeStudentGeminiKey()">Hủy</button><button class="btn red" type="button" onclick="clearStudentGeminiKey()">Xóa key</button><button class="btn primary" type="button" onclick="saveStudentGeminiKey()">💾 Lưu trên máy này</button></div></div>';
-      document.body.appendChild(box);
-    }
-    document.getElementById('studentGeminiKey').value=old;box.style.display='flex';
+    const box=document.getElementById('studentKeyModal');
+    const input=document.getElementById('studentGeminiKey');
+    const msg=document.getElementById('sgmMessage');
+    if(!box||!input)return;
+    input.value=keyValue();
+    if(msg)msg.textContent='';
+    box.style.display='flex';
+    setTimeout(()=>input.focus(),30);
   }
-  function closeKey(){var b=document.getElementById('studentKeyModal');if(b)b.style.display='none';}
-  function clearKey(){localStorage.removeItem('student_gemini_api_key');var x=document.getElementById('studentGeminiKey');if(x)x.value='';toastKey('🗑️ Đã xóa key');}
-  function toastKey(msg){var d=document.createElement('div');d.className='sgm-toast';d.textContent=msg;document.body.appendChild(d);setTimeout(function(){d.remove();},2200);}
-  window.openStudentGeminiKey=openKey;window.closeStudentGeminiKey=closeKey;window.saveStudentGeminiKey=saveKey;window.clearStudentGeminiKey=clearKey;
-
-  window.askGemini=function(){
-    var k=key();
-    if(!k){openKey();return;}
-    var q=(typeof Q!=='undefined')?Q:{};
-    var out=document.getElementById('geminiOut');if(!out)return;
+  function closeKey(){
+    const box=document.getElementById('studentKeyModal');
+    if(box)box.style.display='none';
+  }
+  function saveKey(){
+    const input=document.getElementById('studentGeminiKey');
+    const msg=document.getElementById('sgmMessage');
+    const value=(input?.value||'').trim();
+    if(!value){if(msg)msg.textContent='❌ Hãy dán Gemini API key.';return;}
+    if(value.length<20){if(msg)msg.textContent='❌ Key có vẻ quá ngắn.';return;}
+    localStorage.setItem(KEY_NAME,value);
+    refreshStatus();
+    if(msg)msg.textContent='✅ Đã lưu key trên trình duyệt này.';
+    setTimeout(closeKey,500);
+  }
+  function clearKey(){
+    localStorage.removeItem(KEY_NAME);
+    const input=document.getElementById('studentGeminiKey');
+    const msg=document.getElementById('sgmMessage');
+    if(input)input.value='';
+    refreshStatus();
+    if(msg)msg.textContent='🗑 Đã xóa key.';
+  }
+  function askWithStudentKey(){
+    const key=keyValue();
+    if(!key){openKey();return;}
+    const q=(typeof Q!=='undefined')?Q:{};
+    const out=document.getElementById('geminiOut');
+    if(!out){alert('Chưa có vùng phản biện.');return;}
+    let student='';
+    if(typeof studentAnswer==='function') student=studentAnswer();
     out.textContent='⏳ Gemini đang phản biện...';
-    fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      api_key:k,text:q.text||'',student:(typeof studentAnswer==='function'?studentAnswer():''),solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''
-    })}).then(function(r){return r.json();}).then(function(d){
+    fetch('/api/gemini/review_student',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({api_key:key,text:q.text||'',student:student,
+        solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''})
+    }).then(r=>r.json()).then(d=>{
       if(!d.ok){out.textContent='❌ '+(d.error||'Không gọi được Gemini');return;}
       out.textContent=d.text||'';
-      var b=document.getElementById('speakReview');if(b)b.style.display='inline-block';
-      if(window.MathJax)MathJax.typesetPromise([out]);
-    }).catch(function(e){out.textContent='❌ '+e;});
-  };
-
-  function install(){
-    var tools=document.getElementById('practiceTools');
-    if(!tools || document.getElementById('studentGeminiKeyBtn'))return;
-    var b=document.createElement('button');b.type='button';b.id='studentGeminiKeyBtn';b.className='btn';b.textContent='🔑 Gemini key';b.onclick=openKey;
-    tools.insertBefore(b,tools.firstChild);
+      const speak=document.getElementById('speakReview');
+      if(speak)speak.style.display='inline-block';
+      if(window.MathJax) MathJax.typesetPromise([out]);
+    }).catch(e=>{out.textContent='❌ '+e;});
   }
+  window.openStudentGeminiKey=openKey;
+  window.closeStudentGeminiKey=closeKey;
+  window.saveStudentGeminiKey=saveKey;
+  window.clearStudentGeminiKey=clearKey;
+  window.askStudentGemini=askWithStudentKey;
   document.addEventListener('DOMContentLoaded',function(){
-    install();
-    var obs=new MutationObserver(install);obs.observe(document.body,{childList:true,subtree:true});
-    document.addEventListener('click',function(e){if(e.target&&e.target.id==='studentKeyModal' )closeKey();});
+    refreshStatus();
+    const old=document.getElementById('studentKeyModal');
+    if(old)old.addEventListener('click',e=>{if(e.target===old)closeKey();});
   });
+  if(document.readyState!=='loading') refreshStatus();
 })();
 </script>
 <style>
-.sgm-backdrop{position:fixed;inset:0;background:rgba(20,35,55,.48);display:none;align-items:center;justify-content:center;z-index:99999;padding:16px}
+.sgm-panel{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 10px 0;padding:9px 11px;border:1px solid #cbd8e6;border-radius:9px;background:#f8fbff}
+.sgm-status{font-size:12px;font-weight:800;color:#6b7b8d}
+.sgm-backdrop{position:fixed;inset:0;background:rgba(20,35,55,.48);align-items:center;justify-content:center;z-index:99999;padding:16px}
 .sgm-box{width:min(560px,96vw);background:#fff;border:1px solid #cbd8e6;border-radius:12px;box-shadow:0 16px 45px rgba(0,0,0,.22);padding:18px}
-.sgm-title{font-size:18px;font-weight:900;margin-bottom:8px}.sgm-note{font-size:13px;color:#5d7084;line-height:1.55;margin-bottom:12px}.sgm-box input{width:100%;padding:11px;border:1px solid #cbd8e6;border-radius:8px;font:14px Segoe UI,Arial}.sgm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}.sgm-toast{position:fixed;right:18px;bottom:18px;z-index:100000;background:#17324f;color:#fff;border-radius:9px;padding:10px 13px;box-shadow:0 5px 20px rgba(0,0,0,.2);font-weight:800}
-</style>'''
-        response.set_data(body.replace('</body>',patch+'</body>'))
+.sgm-title{font-size:19px;font-weight:900;margin-bottom:8px}.sgm-note{font-size:13px;color:#5d7084;line-height:1.55;margin-bottom:12px}
+.sgm-box input{width:100%;padding:11px;border:1px solid #cbd8e6;border-radius:8px;font:14px Segoe UI,Arial}
+.sgm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}.sgm-message{margin-top:9px;font-weight:800;color:#176bd3}
+</style>
+'''
+        marker='</body>'
+        if 'id="studentGeminiPanel"' not in body:
+            body=body.replace(marker, patch+marker)
+        response.set_data(body)
     except Exception:
         pass
     return response
