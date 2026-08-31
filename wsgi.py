@@ -30,6 +30,16 @@ except Exception as e:
     app.config['GITHUB_QUESTION_EDITOR'] = False
     app.config['GITHUB_QUESTION_EDITOR_ERROR'] = str(e)
 
+# Compatibility endpoint: old templates may still call
+# github_source.save_from_question_editor. The real view lives in the
+# github_question_editor blueprint, so expose the legacy endpoint name too.
+try:
+    import github_endpoint_alias  # noqa: F401 — registers compatibility endpoint
+    app.config['GITHUB_ENDPOINT_ALIAS'] = True
+except Exception as e:
+    app.config['GITHUB_ENDPOINT_ALIAS'] = False
+    app.config['GITHUB_ENDPOINT_ALIAS_ERROR'] = str(e)
+
 try:
     import github_source_mode  # noqa: F401
     app.config['GITHUB_SOURCE_ONLY'] = True
@@ -81,9 +91,6 @@ def add_source_links(response):
             low = text.lower()
 
         if 'data-ldvl-github-catalog="4"' not in text and data:
-            # Standalone GitHub catalog. It does not depend on the old catalog's
-            # element IDs or its Google-Sheet renderer, so it remains visible even
-            # when the legacy Mục lục code renders "0 môn / 0 câu".
             script = r'''<script data-ldvl-github-catalog="4">
 (function(){
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -119,7 +126,7 @@ def add_source_links(response):
       if(t==='Mục lục kiểu sách'){anchor=all[i];break;}
     }
     if(anchor && anchor.parentNode){anchor.parentNode.parentNode ? anchor.parentNode.parentNode.appendChild(box) : anchor.parentNode.appendChild(box);}
-    else if(document.body.firstElementChild) document.body.appendChild(box); else document.body.appendChild(box);
+    else document.body.appendChild(box);
   }
   function start(){render();setTimeout(render,100);setTimeout(render,500);setTimeout(render,1500);setTimeout(render,3000);}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
