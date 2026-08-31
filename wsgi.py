@@ -1,7 +1,7 @@
-from flask import send_file, request
+from flask import send_file
 from app import app
 
-# Existing non-bank routes.
+# Existing non-bank routes (kept for the main application).
 try:
     from github_integration import bp as github_bp
     app.register_blueprint(github_bp)
@@ -14,50 +14,13 @@ try:
 except Exception as e:
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
-# GitHub bank UI.
+# GitHub bank UI: this module owns /github/quan-ly and its API routes.
 try:
     import github_bank_force  # noqa: F401
     app.config['GITHUB_BANK_FORCE'] = True
 except Exception as e:
     app.config['GITHUB_BANK_FORCE'] = False
     app.config['GITHUB_BANK_FORCE_ERROR'] = str(e)
-
-# DEPLOY MARKER: 2026-08-31 — GitHub-only bank UI.
-# Procfile runs gunicorn wsgi:app, so this is the production entrypoint.
-
-@app.after_request
-def add_github_repo_link(response):
-    """Hiện nút GitHub trên giao diện chính và giao diện ngân hàng."""
-    try:
-        if response.content_type == 'text/html; charset=utf-8':
-            body = response.get_data(as_text=True)
-            if 'id="ldvl-github-main-link"' not in body:
-                top_link = (
-                    '<div id="ldvl-github-main-link" '
-                    'style="position:fixed;right:16px;top:78px;z-index:2147483647;">'
-                    '<a href="/github/quan-ly" '
-                    'style="display:inline-flex;align-items:center;gap:6px;padding:8px 13px;'
-                    'border-radius:10px;background:#24292f;color:#fff;text-decoration:none;'
-                    'font-weight:900;font-size:12px;box-shadow:0 3px 12px #0003;">'
-                    '🐙 Ngân hàng GitHub</a></div>'
-                )
-                # The current GitHub UI asks for /github/force-catalog, while the
-                # stable catalog endpoint already exists in github_bank_book.
-                # Redirect it client-side to avoid a second catalog implementation.
-                shim = (
-                    '<script>window.__LDVL_GH_CATALOG_SHIM__=1;(function(){'
-                    'var f=window.fetch.bind(window);window.fetch=function(input,init){'
-                    'var u=typeof input==="string"?input:(input&&input.url)||"";'
-                    'if(u.indexOf("/github/force-catalog")>=0)'
-                    'return f("/github/api/catalog-book",init);'
-                    'return f(input,init);};})();</script>'
-                )
-                if '</body>' in body:
-                    body = body.replace('</body>', top_link + shim + '</body>')
-                    response.set_data(body)
-    except Exception:
-        pass
-    return response
 
 @app.get('/github/repo')
 def github_repo_redirect():
