@@ -506,7 +506,22 @@ def admin_access():
         if not path.startswith("ngan-hang/"): continue
         level=str(acc.get("lessons",{}).get(path,acc.get("default","FREE"))).upper()
         title=str(item.get("BaiHoc") or item.get("De") or Path(path).parent.name)
-        rows.append("<div class='card'><b>"+html.escape(title)+"</b><div class='small'>"+html.escape(path)+"</div><form method='post' action='/admin/access/save'><input type='hidden' name='path' value='"+html.escape(path,quote=True)+"'><select name='level'><option {'selected' if level=='FREE' else ''}>FREE</option><option {'selected' if level=='VIP' else ''}>VIP</option></select><button class='btn'>Lưu quyền</button><span class='tag '+('vip' if level=='VIP' else 'free')+'>'+level+'</span></form></div>")
+        
+        # Đã sửa lỗi chuỗi kết hợp (f-string fix) ở đây
+        rows.append(
+            f"<div class='card'>"
+            f"<b>{html.escape(title)}</b><div class='small'>{html.escape(path)}</div>"
+            f"<form method='post' action='/admin/access/save'>"
+            f"<input type='hidden' name='path' value='{html.escape(path, quote=True)}'>"
+            f"<select name='level'>"
+            f"<option {'selected' if level == 'FREE' else ''}>FREE</option>"
+            f"<option {'selected' if level == 'VIP' else ''}>VIP</option>"
+            f"</select>"
+            f"<button class='btn'>Lưu quyền</button>"
+            f"<span class='tag {'vip' if level == 'VIP' else 'free'}'>{level}</span>"
+            f"</form></div>"
+        )
+        
     body=("<div class='wrap'><div class='panel'><div class='mh'><span>🔐 Quyền bài học FREE / VIP</span><a class='btn' href='/admin'>← ADMIN</a></div>"
           "<div class='hero'><div class='small'>FREE: tất cả thành viên · VIP: chỉ VIP</div></div><div class='cards'>"+"".join(rows)+"</div></div></div>")
     return page("Quyền bài học", body)
