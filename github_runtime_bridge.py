@@ -5,8 +5,9 @@ Nguồn chính:
   - bank_index.json
   - ngan-hang/**/*.tex
 
-Không đọc Google Sheet cho Mục lục/ngân hàng. Google Sheet chỉ là backup ở
-những luồng khác khi được gọi có chủ đích.
+Mục lục dùng GitHub làm nguồn chính. Dạng bài tập được đọc trực tiếp từ
+\\dangbt{...} trong từng file .tex để không phụ thuộc việc bank_index.json
+đã được tạo đúng hay chưa.
 """
 from __future__ import annotations
 
@@ -50,10 +51,10 @@ def _question_level(block):
 
 
 def _split_blocks(text):
-    return re.findall(
+    return list(re.finditer(
         r"\\begin\s*\{\s*ex\s*\}[\s\S]*?\\end\s*\{\s*ex\s*\}",
         text or "", re.I,
-    )
+    ))
 
 
 def _read_local_tex(path):
@@ -67,6 +68,28 @@ def _read_local_tex(path):
         return ""
 
 
+def _normalize_dbt_name(name):
+    """Đưa placeholder về nhóm Chưa phân loại."""
+    t = _clean(name)
+    if not t:
+        return DBT_UNCLASSIFIED
+    k = re.sub(r"\s+", " ", t).strip().casefold()
+    if k in {
+        "chưa có dạng",
+        "chua co dang",
+        "chưa phân dạng",
+        "chua phan dang",
+        "chưa có dạng bài tập",
+        "chua co dang bai tap",
+        "chưa phân loại",
+        "chua phan loai",
+        "chưa có dạng bài",
+        "chua co dang bai",
+    }:
+        return DBT_UNCLASSIFIED
+    return t
+
+
 @lru_cache(maxsize=256)
 def _tex_counts(path):
     """Đọc .tex thật để đếm loại câu + mức độ + tổ hợp."""
@@ -74,7 +97,12 @@ def _tex_counts(path):
     type_counts = {"Trắc nghiệm": 0, "Đúng sai": 0, "Trả lời ngắn": 0, "Tự luận": 0}
     level_counts = {"NB": 0, "TH": 0, "VD": 0, "VDC": 0}
     combo_counts = {}
-    for block in _split_blocks(text):
+    dbt_counts = {}
+
+    blocks = _split_blocks(text)
+    prev_end = 0
+    for m in blocks:
+        block = m.group(0)
         typ = _question_kind(block)
         lv = _question_level(block)
         type_counts[typ] = type_counts.get(typ, 0) + 1
@@ -84,10 +112,33 @@ def _tex_counts(path):
                     level_counts[one] += 1
                     combo_key = f"{one}|{typ}"
                     combo_counts[combo_key] = combo_counts.get(combo_key, 0) + 1
-    return {"dang": type_counts, "level": {k: v for k, v in level_counts.items() if v}, "combo": combo_counts}
+
+        # \\dangbt{...} thường nằm ngay trước \\begin{ex}.
+        # Lấy lệnh cuối cùng kể từ cuối block trước để gắn đúng dạng cho câu này.
+        prefix = text[prev_end:m.start()]
+        found = list(re.finditer(r"\\dangbt\s*\{([^{}]*)\}", prefix, re.I))
+        if found:
+            dbt_name = _normalize_dbt_name(found[-1].group(1))
+        else:
+            dbt_name = DBT_UNCLASSIFIED
+        dbt_counts[dbt_name] = dbt_counts.get(dbt_name, 0) + 1
+        prev_end = m.end()
+
+    return {
+        "dang": type_counts,
+        "level": {k: v for k, v in level_counts.items() if v},
+        "combo": combo_counts,
+        "dangbaitap": dbt_counts,
+        "question_count": len(blocks),
+    }
 
 
 def _dbt_counts(index_item, tex_count):
+    """Ưu tiên\\dangbt trong .tex; chỉ dùng bank_index khi .tex chưa đọc được."""
+    tex_map = (tex_count or {}).get("dangbaitap") or {}
+    if tex_map:
+        return {k: int(v or 0) for k, v in tex_map.items() if int(v or 0) > 0}
+
     raw = index_item.get("dang") or {}
     out = {}
     if isinstance(raw, dict):
@@ -97,11 +148,13 @@ def _dbt_counts(index_item, tex_count):
             except Exception:
                 n = 0
             if n > 0:
-                out[_clean(k) or "Chưa phân dạng"] = n
+                name = _normalize_dbt_name(k)
+                out[name] = out.get(name, 0) + n
+
     total = int(index_item.get("questions") or index_item.get("count") or 0)
-    classified = sum(out.values())
-    if total > classified:
-        out[DBT_UNCLASSIFIED] = total - classified
+    classified = sum(v for k, v in out.items() if k != DBT_UNCLASSIFIED)
+    if total > classified + out.get(DBT_UNCLASSIFIED, 0):
+        out[DBT_UNCLASSIFIED] = max(0, total - classified - out.get(DBT_UNCLASSIFIED, 0))
     return out
 
 
@@ -112,23 +165,22 @@ def load_catalog():
         path = _clean(item.get("path") or item.get("file"))
         if not path:
             continue
+
         tex_counts = _tex_counts(path)
         dbt = _dbt_counts(item, tex_counts)
         dbt_names = [k for k in dbt if k != DBT_UNCLASSIFIED]
-        if not dbt_names and int(item.get("questions") or item.get("count") or 0):
-            dbt_names = ["Chưa phân dạng"]
 
-        qn = int(item.get("questions") or item.get("count") or 0)
-        # Ưu tiên số liệu phân loại thật từ .tex; nếu file local chưa có thì
-        # vẫn giữ metadata từ bank_index để mục lục không bị trống.
-        if not any(tex_counts["dang"].values()):
+        qn_index = int(item.get("questions") or item.get("count") or 0)
+        qn_tex = int(tex_counts.get("question_count") or 0)
+        qn = qn_tex or qn_index
+
+        type_counts = tex_counts.get("dang") or {}
+        level_counts = tex_counts.get("level") or {}
+        combo_counts = tex_counts.get("combo") or {}
+
+        # Nếu file .tex không đọc được, giữ metadata trong bank_index.
+        if not any(type_counts.values()):
             type_counts = {"Trắc nghiệm": 0, "Đúng sai": 0, "Trả lời ngắn": 0, "Tự luận": 0}
-            level_counts = {}
-            combo_counts = {}
-        else:
-            type_counts = tex_counts["dang"]
-            level_counts = tex_counts["level"]
-            combo_counts = tex_counts["combo"]
 
         rows.append({
             "Mon": _clean(item.get("Mon")),
@@ -142,8 +194,8 @@ def load_catalog():
             "File": path,
             "GitHubPath": path,
             "SoCau": qn,
-            "MucDo": ", ".join(k for k in ("NB", "TH", "VD", "VDC") if k in level_counts),
-            "Dang": ", ".join(k for k in ("Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận") if type_counts.get(k, 0)),
+            "MucDo": ", ".join(k for k in ("NB", "TH", "VD", "VDC") if level_counts.get(k)),
+            "Dang": ", ".join(k for k in ("Trắc nghiệm", "Đúng sai", "Trả lời ngắn", "Tự luận") if type_counts.get(k)),
             "DangBaiTap": ", ".join(dbt_names),
             "FilterCounts": {
                 "dang": type_counts,
@@ -195,7 +247,10 @@ def _github_meta():
         "dbt_orders": {x["MaDe"]: list(x.get("DbtOrder") or []) for x in rows},
         "duplicate_report": None,
         "user": {},
-        "filters": {"Mon": [], "Lop": [], "Chuong": [], "BaiHoc": [], "DangBaiTap": [], "BoDe": []},
+        "filters": {
+            "Mon": [], "Lop": [], "Chuong": [], "BaiHoc": [],
+            "DangBaiTap": [], "BoDe": [],
+        },
     })
 
 
