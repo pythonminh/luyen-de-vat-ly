@@ -14,17 +14,21 @@ try:
 except Exception as e:
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
-# NGÂN HÀNG: chỉ dùng một module mới, đơn giản và nhanh.
-# Đọc bank_index.json + ngan-hang/*.tex; lưu trực tiếp GitHub.
+# NGÂN HÀNG GITHUB — chỉ một giao diện, không gọi Google Sheet.
 try:
-    from github_bank_fast import bp as github_bank_bp
-    app.register_blueprint(github_bank_bp)
-    app.config['GITHUB_BANK_FAST'] = True
+    from github_bank_simple import bp as github_bank_bp
+    # github_bank_simple tự register blueprint ở module; không đăng ký lần hai.
+    app.config['GITHUB_BANK_SIMPLE'] = True
 except Exception as e:
-    app.config['GITHUB_BANK_FAST'] = False
-    app.config['GITHUB_BANK_FAST_ERROR'] = str(e)
+    app.config['GITHUB_BANK_SIMPLE'] = False
+    app.config['GITHUB_BANK_SIMPLE_ERROR'] = str(e)
 
 @app.get('/bank_index.json')
 def serve_bank_index():
     import os
-    return send_file(os.path.join(app.root_path, 'bank_index.json'), mimetype='application/json', max_age=120, conditional=True)
+    return send_file(
+        os.path.join(app.root_path, 'bank_index.json'),
+        mimetype='application/json',
+        max_age=120,
+        conditional=True,
+    )
