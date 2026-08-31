@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from flask import request, redirect, session
 from app import app
 import dang_routes  # registers /member/dang and makes catalog types clickable
@@ -18,7 +17,7 @@ def practice_jump(pos):
 
 @app.after_request
 def practice_ui_patch(response):
-    """Enhance only the practice HTML: clickable palette + hide TEX control metadata."""
+    """Enhance only the practice HTML: clickable palette + clean student-facing DS layout."""
     if request.path != '/member/practice' or not response.content_type or 'text/html' not in response.content_type:
         return response
     try:
@@ -42,13 +41,11 @@ def practice_ui_patch(response):
 function jumpPractice(pos){window.location.href='/practice/jump/'+pos;}
 function cleanPracticeLatex(){
   document.querySelectorAll('.qtext,.opt,.tf,.solution').forEach(function(el){
-    // Remove TeX environment/control metadata that must never be shown to students.
     let s=el.innerHTML;
     s=s.replace(/\\begin\s*\{ex\}/gi,'');
     s=s.replace(/%\s*ID\s*:\s*[^%<\n]*?/gi,'');
     s=s.replace(/%\s*Mức\s*:\s*[^%<\n]*?/gi,'');
     s=s.replace(/%\s*Muc(?: do)?\s*:\s*[^%<\n]*?/gi,'');
-    s=s.replace(/%\s*ID\s*:\s*/gi,'');
     el.innerHTML=s.replace(/\s{2,}/g,' ').trim();
   });
   if(window.MathJax){MathJax.typesetPromise(document.querySelectorAll('.qtext,.opt,.tf,.solution'));}
@@ -59,10 +56,15 @@ document.addEventListener('DOMContentLoaded',function(){cleanPracticeLatex();});
 button.pitem{font:inherit;cursor:pointer}
 button.pitem:hover{border-color:#145bb0;box-shadow:0 1px 4px #b9cce2}
 .qtext{user-select:text}
+/* Đúng/Sai: đưa nút Đúng/Sai lên cùng hàng với nội dung ý và phóng to để dễ bấm */
+.tf{display:flex!important;align-items:center;gap:18px;flex-wrap:wrap;font-size:20px!important;line-height:1.5!important;padding:16px!important;min-height:78px}
+.tf br{display:none!important}
+.tf > label{display:inline-flex!important;align-items:center;gap:8px;margin-left:6px;font-size:20px!important;line-height:1.5!important;white-space:nowrap;cursor:pointer}
+.tf input[type='radio']{width:22px!important;height:22px!important;accent-color:#176bd3;cursor:pointer}
+.tf > b{font-size:21px!important;min-width:28px}
 </style>
 """
-        if text2 != text or "cleanPracticeLatex" not in text2:
-            response.set_data(text2.replace('</body>', patch + '</body>'))
+        response.set_data(text2.replace('</body>', patch + '</body>'))
     except Exception:
         pass
     return response
