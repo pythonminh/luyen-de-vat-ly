@@ -23,7 +23,7 @@ def practice_ui_patch(response):
     try:
         text = response.get_data(as_text=True)
         import re
-        pat = re.compile(r"<span class='pitem([^']*)'>(\d+) · ([^<]+)</span>")
+        pat = re.compile(r"<span class='pitem([^']*)'>(\\d+) · ([^<]+)</span>")
 
         def repl(m):
             classes = m.group(1).strip()
@@ -123,6 +123,75 @@ button.pitem:hover{border-color:#145bb0;box-shadow:0 1px 4px #b9cce2}
 </style>
 """
         response.set_data(text2.replace('</body>', patch + '</body>'))
+    except Exception:
+        pass
+    return response
+
+
+@app.after_request
+def catalog_two_rows(response):
+    """Make each exercise type a clean two-row block: name, then aligned counts."""
+    if request.path != '/member' or 'text/html' not in response.headers.get('Content-Type',''):
+        return response
+    try:
+        body = response.get_data(as_text=True)
+        style = r"""
+<style>
+/* Mỗi dạng bài: hàng 1 là tên; hàng 2 là 4 loại + tổng + nút mở */
+.dangrow{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  row-gap:5px!important;
+  padding:7px 4px!important;
+  min-height:58px!important;
+}
+.dangrow .dangname{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  line-height:1.35!important;
+  font-size:13px!important;
+  white-space:normal!important;
+}
+.dangrow .kind,
+.dangrow .ktotal,
+.dangrow .arrow{
+  grid-row:2!important;
+}
+.dangrow .kind:first-of-type{margin-left:0!important}
+.dangrow .kind{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:44px!important;
+  height:24px!important;
+  padding:2px 6px!important;
+  font-size:10px!important;
+}
+.dangrow .ktotal{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:44px!important;
+  height:24px!important;
+  border:1px solid #d3dfeb!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  font-size:10px!important;
+}
+.dangrow .arrow{justify-self:end!important;font-size:16px!important}
+/* Các phần tử hàng 2 nằm trên cùng một dòng */
+.dangrow{grid-template-columns:44px 44px 44px 44px 52px 18px!important;column-gap:5px!important}
+.dangrow .dangname{grid-column:1 / -1!important}
+@media(max-width:700px){
+  .dangrow{grid-template-columns:42px 42px 42px 42px 48px 14px!important;column-gap:3px!important}
+  .dangrow .kind,.dangrow .ktotal{min-width:0!important;font-size:9px!important}
+  .dangrow .dangname{font-size:12px!important}
+}
+</style>"""
+        response.set_data(body.replace('</body>', style + '</body>'))
     except Exception:
         pass
     return response
