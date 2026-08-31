@@ -1,7 +1,7 @@
 from flask import send_file
 from app import app
 
-# Giữ các route khác của ứng dụng.
+# Existing non-bank routes.
 try:
     from github_integration import bp as github_bp
     app.register_blueprint(github_bp)
@@ -14,8 +14,7 @@ try:
 except Exception as e:
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
-# NGÂN HÀNG GITHUB — giao diện kiểu sách, một module duy nhất.
-# Không gọi Google Sheet trong luồng ngân hàng.
+# Optional old bank module: kept only for its helper APIs if it imports cleanly.
 try:
     from github_bank_book import bp as github_bank_bp
     app.register_blueprint(github_bank_bp)
@@ -24,7 +23,20 @@ except Exception as e:
     app.config['GITHUB_BANK_BOOK'] = False
     app.config['GITHUB_BANK_BOOK_ERROR'] = str(e)
 
+# FORCE the new lightweight GitHub bank UI after all legacy routes are loaded.
+try:
+    import github_bank_force  # noqa: F401
+    app.config['GITHUB_BANK_FORCE'] = True
+except Exception as e:
+    app.config['GITHUB_BANK_FORCE'] = False
+    app.config['GITHUB_BANK_FORCE_ERROR'] = str(e)
+
 @app.get('/bank_index.json')
 def serve_bank_index():
     import os
-    return send_file(os.path.join(app.root_path, 'bank_index.json'), mimetype='application/json', max_age=120, conditional=True)
+    return send_file(
+        os.path.join(app.root_path, 'bank_index.json'),
+        mimetype='application/json',
+        max_age=120,
+        conditional=True,
+    )
