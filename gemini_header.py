@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, session
 from app import app
 
 @app.after_request
@@ -7,6 +7,11 @@ def gemini_header_button(response):
         return response
     try:
         body=response.get_data(as_text=True)
+        # GitHub is an ADMIN-only control. Remove the public GitHub link
+        # from the header for members/guests before adding the Gemini key button.
+        if session.get('role') != 'admin':
+            import re
+            body=re.sub(r"<a[^>]*href=['\"]https://github\.com/[^'\"]+['\"][^>]*>.*?</a>", '', body, flags=re.I|re.S)
         patch=r'''<style>
 .gkh-btn{border:1px solid #ffffff66;background:#ffffff18;color:#fff;border-radius:8px;padding:7px 11px;font-weight:900;cursor:pointer}
 .gkh-btn:hover{background:#ffffff2b}
@@ -21,7 +26,7 @@ function renderStatus(){var s=document.getElementById('gkhStatus');if(s)s.textCo
 function openGeminiKey(){var m=document.getElementById('gkhModal');if(!m)return;document.getElementById('gkhKey').value=key();m.style.display='flex';}
 function closeGeminiKey(){var m=document.getElementById('gkhModal');if(m)m.style.display='none';}
 function saveGeminiKey(){var v=document.getElementById('gkhKey').value.trim();if(!v){alert('Hãy dán Gemini API key.');return;}localStorage.setItem('student_gemini_api_key',v);closeGeminiKey();renderStatus();alert('✅ Đã lưu key trên trình duyệt này.');}
-function clearGeminiKey(){localStorage.removeItem('student_gemini_api_key');document.getElementById('gkhKey').value='';renderStatus();}
+function clearGeminiKey(){localStorage.removeItem('student_gemini_api_key');var x=document.getElementById('gkhKey');if(x)x.value='';renderStatus();}
 function install(){if(document.getElementById('gkhBtn'))return;var nav=document.querySelector('.nav');if(!nav)return;var b=document.createElement('button');b.id='gkhBtn';b.className='gkh-btn';b.type='button';b.textContent='🔑 Nạp key Gemini';b.onclick=openGeminiKey;nav.insertBefore(b,nav.firstChild);var m=document.createElement('div');m.id='gkhModal';m.className='gkh-modal';m.innerHTML='<div class="gkh-box"><h3>🔑 Nạp Gemini API key</h3><div class="gkh-note">Key của học sinh chỉ lưu trong trình duyệt này và dùng để gọi Gemini phản biện. Không lưu vào Google Sheet hoặc GitHub.</div><input id="gkhKey" type="password" placeholder="Dán Gemini API key vào đây"><div class="gkh-actions"><button type="button" class="btn" onclick="closeGeminiKey()">Hủy</button><button type="button" class="btn red" onclick="clearGeminiKey()">Xóa key</button><button type="button" class="btn primary" onclick="saveGeminiKey()">💾 Lưu key</button></div></div>';document.body.appendChild(m);renderStatus();}
 window.openGeminiKey=openGeminiKey;window.closeGeminiKey=closeGeminiKey;window.saveGeminiKey=saveGeminiKey;window.clearGeminiKey=clearGeminiKey;
 document.addEventListener('DOMContentLoaded',install);setTimeout(install,300);
