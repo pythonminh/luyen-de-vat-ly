@@ -4,5 +4,6 @@ import wsgi
 import student_gemini_ui
 import gemini_ui_fix
 import member_auth_fix
+import gemini_header
 
 app = wsgi.app
