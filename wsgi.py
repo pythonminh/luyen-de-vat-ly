@@ -1,3 +1,2 @@
 # -*- coding: utf-8 -*-
-"""Production entrypoint for the final GitHub-only member/admin portal."""
-from github_portal_final import app
+from github_portal_v2 import app
