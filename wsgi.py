@@ -22,13 +22,14 @@ except Exception as e:
     app.config['GITHUB_BANK_UI'] = False
     app.config['GITHUB_BANK_UI_ERROR'] = str(e)
 
-# GitHub-only: render mục lục nhanh từ bank_index.json, không chờ Google Sheet.
+# Keep the original student interface.  Only the catalog data source is changed
+# to GitHub bank_index.json + ngan-hang/*.tex by github_catalog_backend.
 try:
-    import github_fast_catalog  # noqa: F401
-    app.config['GITHUB_FAST_CATALOG'] = True
+    import github_catalog_backend  # noqa: F401
+    app.config['GITHUB_CATALOG_ONLY'] = True
 except Exception as e:
-    app.config['GITHUB_FAST_CATALOG'] = False
-    app.config['GITHUB_FAST_CATALOG_ERROR'] = str(e)
+    app.config['GITHUB_CATALOG_ONLY'] = False
+    app.config['GITHUB_CATALOG_ONLY_ERROR'] = str(e)
 
 try:
     import github_ui_restyle  # noqa: F401
