@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Restyle lớp giao diện GitHub để đồng bộ với giao diện luyện đề chính.
-Không thay đổi nguồn dữ liệu: vẫn GitHub bank_index.json + ngan-hang/*.tex.
+Chỉ tác động /github/quan-ly, không đụng giao diện học sinh.
+Nguồn dữ liệu vẫn là GitHub bank_index.json + ngan-hang/*.tex.
 """
+from flask import request
 from app import app
 
 STYLE = r'''
@@ -34,13 +36,17 @@ body{background:var(--ld-bg)!important;color:var(--ld-ink)!important;font-family
 
 def inject(response):
     try:
-        if response.content_type and "text/html" in response.content_type and response.request if False else True:
-            text=response.get_data(as_text=True)
-            if "LDVL_GITHUB_RESTYLE_V1" in text:return response
-            low=text.lower(); i=low.rfind("</head>")
-            if i>=0:
-                text=text[:i]+STYLE+text[i:]
-                response.set_data(text)
+        if not request.path.startswith('/github/quan-ly'):
+            return response
+        if not (response.content_type and 'text/html' in response.content_type):
+            return response
+        text=response.get_data(as_text=True)
+        if 'LDVL_GITHUB_RESTYLE_V1' in text:
+            return response
+        low=text.lower(); i=low.rfind('</head>')
+        if i>=0:
+            text=text[:i]+STYLE+text[i:]
+            response.set_data(text)
     except Exception:
         pass
     return response
