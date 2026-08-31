@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from github_portal_v6 import app
+from github_portal_v7 import app
