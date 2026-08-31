@@ -29,6 +29,13 @@ except Exception as e:
     app.config['GITHUB_UI_RESTYLE'] = False
     app.config['GITHUB_UI_RESTYLE_ERROR'] = str(e)
 
+try:
+    import ai_review_ui_fix  # noqa: F401
+    app.config['LDVL_AI_REVIEW_UI_FIX'] = True
+except Exception as e:
+    app.config['LDVL_AI_REVIEW_UI_FIX'] = False
+    app.config['LDVL_AI_REVIEW_UI_FIX_ERROR'] = str(e)
+
 @app.get('/bank_index.json')
 def serve_bank_index():
     path = os.path.join(app.root_path, 'bank_index.json')
