@@ -22,6 +22,14 @@ except Exception as e:
     app.config['GITHUB_BANK_UI'] = False
     app.config['GITHUB_BANK_UI_ERROR'] = str(e)
 
+# GitHub-only: render mục lục nhanh từ bank_index.json, không chờ Google Sheet.
+try:
+    import github_fast_catalog  # noqa: F401
+    app.config['GITHUB_FAST_CATALOG'] = True
+except Exception as e:
+    app.config['GITHUB_FAST_CATALOG'] = False
+    app.config['GITHUB_FAST_CATALOG_ERROR'] = str(e)
+
 try:
     import github_ui_restyle  # noqa: F401
     app.config['GITHUB_UI_RESTYLE'] = True
