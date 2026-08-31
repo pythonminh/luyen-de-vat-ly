@@ -22,14 +22,22 @@ except Exception as e:
     app.config['GITHUB_BANK_UI'] = False
     app.config['GITHUB_BANK_UI_ERROR'] = str(e)
 
-# Keep the original student interface.  Only the catalog data source is changed
-# to GitHub bank_index.json + ngan-hang/*.tex by github_catalog_backend.
+# Keep the original student interface.  Catalog data comes from GitHub
+# bank_index.json + ngan-hang/*.tex; no Google Sheet is used for the bank catalog.
 try:
     import github_catalog_backend  # noqa: F401
     app.config['GITHUB_CATALOG_ONLY'] = True
 except Exception as e:
     app.config['GITHUB_CATALOG_ONLY'] = False
     app.config['GITHUB_CATALOG_ONLY_ERROR'] = str(e)
+
+# GitHub bank cards: render full Dạng bài tập chips from bank_index.json.
+try:
+    import github_manager_dang_fix  # noqa: F401
+    app.config['GITHUB_MANAGER_DANG_FIX'] = True
+except Exception as e:
+    app.config['GITHUB_MANAGER_DANG_FIX'] = False
+    app.config['GITHUB_MANAGER_DANG_FIX_ERROR'] = str(e)
 
 try:
     import github_ui_restyle  # noqa: F401
