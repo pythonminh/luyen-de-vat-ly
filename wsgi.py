@@ -1,7 +1,7 @@
 from flask import send_file
 from app import app
 
-# Các route khác của ứng dụng vẫn giữ nguyên.
+# Giữ các route khác của ứng dụng.
 try:
     from github_integration import bp as github_bp
     app.register_blueprint(github_bp)
@@ -14,21 +14,17 @@ try:
 except Exception as e:
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
-# NGÂN HÀNG GITHUB — chỉ một giao diện, không gọi Google Sheet.
+# NGÂN HÀNG GITHUB — giao diện kiểu sách, một module duy nhất.
+# Không gọi Google Sheet trong luồng ngân hàng.
 try:
-    from github_bank_simple import bp as github_bank_bp
-    # github_bank_simple tự register blueprint ở module; không đăng ký lần hai.
-    app.config['GITHUB_BANK_SIMPLE'] = True
+    from github_bank_book import bp as github_bank_bp
+    app.register_blueprint(github_bank_bp)
+    app.config['GITHUB_BANK_BOOK'] = True
 except Exception as e:
-    app.config['GITHUB_BANK_SIMPLE'] = False
-    app.config['GITHUB_BANK_SIMPLE_ERROR'] = str(e)
+    app.config['GITHUB_BANK_BOOK'] = False
+    app.config['GITHUB_BANK_BOOK_ERROR'] = str(e)
 
 @app.get('/bank_index.json')
 def serve_bank_index():
     import os
-    return send_file(
-        os.path.join(app.root_path, 'bank_index.json'),
-        mimetype='application/json',
-        max_age=120,
-        conditional=True,
-    )
+    return send_file(os.path.join(app.root_path, 'bank_index.json'), mimetype='application/json', max_age=120, conditional=True)
