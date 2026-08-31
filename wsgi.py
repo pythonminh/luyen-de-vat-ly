@@ -40,14 +40,24 @@ except Exception as e:
     app.config['GITHUB_ENDPOINT_ALIAS'] = False
     app.config['GITHUB_ENDPOINT_ALIAS_ERROR'] = str(e)
 
-# New easy GitHub bank manager: Môn -> Lớp -> Chương -> Bài -> Dạng.
+# Easy GitHub bank manager: Môn -> Lớp -> Chương -> Bài -> Dạng.
 try:
-    from github_manager import bp as github_manager_bp
-    app.register_blueprint(github_manager_bp)
-    app.config['GITHUB_MANAGER'] = True
+    from github_manager_ui import bp as github_manager_ui_bp
+    app.register_blueprint(github_manager_ui_bp)
+    app.config['GITHUB_MANAGER_UI'] = True
 except Exception as e:
-    app.config['GITHUB_MANAGER'] = False
-    app.config['GITHUB_MANAGER_ERROR'] = str(e)
+    app.config['GITHUB_MANAGER_UI'] = False
+    app.config['GITHUB_MANAGER_UI_ERROR'] = str(e)
+
+# Stable open route used by the catalog so a click always reaches the
+# per-question editor, independently of legacy endpoint aliases.
+try:
+    from github_open import bp as github_open_bp
+    app.register_blueprint(github_open_bp)
+    app.config['GITHUB_OPEN'] = True
+except Exception as e:
+    app.config['GITHUB_OPEN'] = False
+    app.config['GITHUB_OPEN_ERROR'] = str(e)
 
 try:
     import github_source_mode  # noqa: F401
@@ -121,7 +131,7 @@ def add_source_links(response):
         var n=Number(x.questions||x.count||0); total+=n;
         var p=x.path||x.file||'';
         var title=x.BaiHoc||x.De||p;
-        lis+='<li style="margin:6px 0"><a href="/github/questions?branch=main&path='+encodeURIComponent(p)+'" target="_blank" rel="noopener" style="color:#1769aa;font-weight:600;text-decoration:none">'+esc(title)+'</a> <span style="color:#666">('+n+' câu)</span></li>';
+        lis+='<li style="margin:6px 0"><a href="/github/open?branch=main&path='+encodeURIComponent(p)+'" style="color:#1769aa;font-weight:600;text-decoration:none">'+esc(title)+'</a> <span style="color:#666">('+n+' câu)</span></li>';
       });
       html+='<details style="margin:7px 0;border:1px solid #d5e4f5;border-radius:10px;background:#fff;padding:9px 12px"><summary style="cursor:pointer"><b>'+esc(a[0])+'</b> · Lớp '+esc(a[1])+' · '+esc(a[2])+' <span style="color:#666">— '+total+' câu</span></summary><ul style="margin:7px 0 0 18px">'+lis+'</ul></details>';
     });
