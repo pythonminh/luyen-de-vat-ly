@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Giao diện duy nhất cho ngân hàng câu hỏi GitHub.
+"""Ngân hàng GitHub — giao diện quản lý thống nhất.
 
-Nguồn duy nhất: bank_index.json + ngan-hang/*.tex trên GitHub.
-Không gọi Google Sheet cho ngân hàng câu hỏi.
+Nguồn dữ liệu duy nhất cho ngân hàng câu hỏi:
+    GitHub / ngan-hang/*.tex
+    GitHub / bank_index.json (chỉ mục nhanh)
+
+Không dùng Google Sheet cho ngân hàng câu hỏi.
 """
 from __future__ import annotations
 
@@ -14,14 +17,25 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import Counter
+from collections import defaultdict
 
-from flask import Blueprint, Response, request, redirect, url_for, session
+from flask import Blueprint, Response, jsonify, redirect, request, session, url_for
 from app import app
 
 bp = Blueprint("github_manager_ui", __name__)
+
 API = "https://api.github.com"
+RAW = "https://raw.githubusercontent.com"
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
+BRANCH = "main"
+
+
+def clean(s):
+    return str(s or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
+def esc(s):
+    return html.escape(str(s or ""), quote=True)
 
 
 def admin_ok():
@@ -38,14 +52,20 @@ def guard():
     if not session.get("mahs"):
         return redirect(url_for("login", next=request.full_path.rstrip("?")))
     if not admin_ok():
-        return Response("<h3>403 — Chỉ ADMIN được dùng quản lý ngân hàng GitHub.</h3>", status=403, mimetype="text/html")
+        return Response("<h3>403 — Chỉ ADMIN được quản lý ngân hàng GitHub.</h3>", 403, mimetype="text/html")
     return None
 
 
-def gh(path: str, method: str = "GET", payload=None):
+def repo_parts():
+    if "/" not in REPO:
+        raise RuntimeError("GITHUB_REPO phải có dạng owner/repository")
+    return REPO.split("/", 1)
+
+
+def github_json(path, method="GET", payload=None):
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
-        raise RuntimeError("Thiếu GITHUB_TOKEN trên Render.")
+        raise RuntimeError("Render chưa có GITHUB_TOKEN.")
     data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         API + path,
@@ -60,55 +80,57 @@ def gh(path: str, method: str = "GET", payload=None):
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=25) as r:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:
-            msg = json.loads(e.read().decode("utf-8")).get("message", str(e))
+            info = json.loads(e.read().decode("utf-8"))
+            msg = info.get("message", str(e))
         except Exception:
             msg = str(e)
         raise RuntimeError(f"GitHub API {e.code}: {msg}")
 
 
-def repo_parts():
-    if "/" not in REPO:
-        raise RuntimeError("GITHUB_REPO phải có dạng owner/repository.")
-    return REPO.split("/", 1)
-
-
 def load_index():
-    p = os.path.join(app.root_path, "bank_index.json")
-    with open(p, "r", encoding="utf-8") as f:
-        return json.load(f)
+    owner, repo = repo_parts()
+    url = f"{RAW}/{owner}/{repo}/{BRANCH}/bank_index.json"
+    req = urllib.request.Request(url, headers={"User-Agent": "luyen-de-vat-ly"})
+    try:
+        with urllib.request.urlopen(req, timeout=12) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception:
+        # Chỉ là fallback khi GitHub Raw tạm thời chậm; file vẫn phải là bản GitHub đã deploy.
+        local = os.path.join(app.root_path, "bank_index.json")
+        with open(local, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 
-def valid_path(path: str) -> bool:
-    p = (path or "").strip("/")
+def valid_path(path):
+    p = clean(path).strip("/")
     return p.startswith("ngan-hang/") and p.lower().endswith(".tex") and ".." not in p
 
 
-def fetch_tex(path: str):
+def fetch_tex(path):
     owner, repo = repo_parts()
-    api = f"/repos/{owner}/{repo}/contents/{urllib.parse.quote(path, safe='/')}?ref=main"
-    d = gh(api)
+    api = f"/repos/{owner}/{repo}/contents/{urllib.parse.quote(path, safe='/')}?ref={urllib.parse.quote(BRANCH)}"
+    d = github_json(api)
     raw = base64.b64decode((d.get("content") or "").replace("\n", "")).decode("utf-8", "replace")
     return d.get("sha", ""), raw
 
 
-def save_tex(path: str, content: str, sha: str | None, message: str):
+def save_tex(path, content, sha, message):
     owner, repo = repo_parts()
     api = f"/repos/{owner}/{repo}/contents/{urllib.parse.quote(path, safe='/')}"
     body = {
         "message": message,
         "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-        "branch": "main",
+        "branch": BRANCH,
+        "sha": sha,
     }
-    if sha:
-        body["sha"] = sha
-    return gh(api, "PUT", body)
+    return github_json(api, "PUT", body)
 
 
-def split_questions(text: str):
+def split_tex(text):
     pat = re.compile(r"\\begin\s*\{\s*ex\s*\}[\s\S]*?\\end\s*\{\s*ex\s*\}", re.I)
     ms = list(pat.finditer(text or ""))
     if not ms:
@@ -116,29 +138,26 @@ def split_questions(text: str):
     return text[:ms[0].start()], [m.group(0) for m in ms], text[ms[-1].end():]
 
 
-def question_meta(block: str, number: int):
-    def one(pattern: str):
+def detect_kind(block):
+    if re.search(r"\\choiceTF\b", block or "", re.I):
+        return "B", "Đúng / Sai"
+    if re.search(r"\\shortans\b", block or "", re.I):
+        return "C", "Trả lời ngắn"
+    if re.search(r"\\choice\b", block or "", re.I):
+        return "A", "Trắc nghiệm"
+    return "D", "Tự luận"
+
+
+def qmeta(block, n):
+    def one(pattern):
         m = re.search(pattern, block or "", re.I)
         return m.group(1).strip() if m else ""
 
-    if re.search(r"\\choiceTF\b", block or "", re.I):
-        kind = "B"
-        label = "Đúng / Sai"
-    elif re.search(r"\\shortans\b", block or "", re.I):
-        kind = "C"
-        label = "Trả lời ngắn"
-    elif re.search(r"\\choice\b", block or "", re.I):
-        kind = "A"
-        label = "Trắc nghiệm"
-    else:
-        kind = "D"
-        label = "Tự luận"
-
+    kind, label = detect_kind(block)
     title = ""
     m = re.search(
         r"\\begin\s*\{\s*ex\s*\}(.*?)(?=\\(?:choiceTF|choice|shortans)\b|\\loigiai\b|\\end\s*\{\s*ex\s*\})",
-        block or "",
-        re.S | re.I,
+        block or "", re.S | re.I,
     )
     if m:
         title = re.sub(r"%[^\r\n]*", "", m.group(1))
@@ -146,17 +165,18 @@ def question_meta(block: str, number: int):
         title = re.sub(r"\s+", " ", title).strip()
 
     return {
-        "n": number,
+        "n": n,
         "id": one(r"%\s*ID\s*:\s*([^\r\n]+)"),
         "level": one(r"%\s*Mức\s*:\s*([^\r\n]+)"),
         "dang": one(r"\\dangbt\s*\{([^{}]*)\}"),
         "kind": kind,
         "label": label,
-        "title": title[:220] or "(Chưa có tiêu đề)",
+        "title": title[:260] or "(Chưa đọc được nội dung câu)",
+        "has_tikz": bool(re.search(r"\\begin\s*\{\s*tikzpicture\s*\}|\\includegraphics", block or "", re.I)),
     }
 
 
-def rebuild_meta(block: str, qid: str, level: str, dang: str):
+def rebuild_block(block, qid, level, dang):
     b = re.sub(r"%\s*ID\s*:[^\r\n]*\r?\n?", "", block, count=1, flags=re.I)
     b = re.sub(r"%\s*Mức\s*:[^\r\n]*\r?\n?", "", b, count=1, flags=re.I)
     b = re.sub(r"\\dangbt\s*\{[^{}]*\}\s*", "", b, count=1, flags=re.I)
@@ -168,38 +188,41 @@ def rebuild_meta(block: str, qid: str, level: str, dang: str):
         lines.append("% ID: " + qid)
     if level:
         lines.append("% Mức: " + level)
-    insert = "\n" + "\n".join(lines) + "\n" if lines else "\n"
-    b = b[:m.end()] + insert + b[m.end():]
+    meta_text = ("\n" + "\n".join(lines) + "\n") if lines else "\n"
+    b = b[:m.end()] + meta_text + b[m.end():]
     if dang:
         b = b[:m.start()] + "\\dangbt{" + dang + "}\n" + b[m.start():]
     return b
 
 
-def h(s):
-    return html.escape(str(s or ""), quote=True)
+def classify_counts(blocks):
+    c = {k: 0 for k in "ABCD"}
+    levels = {k: 0 for k in ("NB", "TH", "VD", "VDC")}
+    for b in blocks:
+        k, _ = detect_kind(b)
+        c[k] += 1
+        m = re.search(r"%\s*Mức\s*:\s*(NB|TH|VD|VDC)\b", b or "", re.I)
+        if m:
+            levels[m.group(1).upper()] += 1
+    return c, levels
 
 
 CSS = r"""
 <style>
-:root{--blue:#1769d2;--blue2:#edf5ff;--ink:#18324d;--muted:#64748b;--line:#d9e3ee;--bg:#f4f7fb;--ok:#16813d;--violet:#6d4bd8;--orange:#e86b18}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}.page{max-width:1500px;margin:18px auto;padding:0 16px 48px}
-.header{background:linear-gradient(135deg,#1565c0,#2588df);color:white;border-radius:18px;padding:18px 20px;box-shadow:0 10px 30px #135ca822}.header-row{display:flex;justify-content:space-between;align-items:center;gap:15px}.brand{font-size:23px;font-weight:800}.sub{margin-top:4px;font-size:12px;opacity:.9}.status{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#ffffff1b;border:1px solid #ffffff35;font-weight:700;font-size:12px}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.btn{border:1px solid #c8d5e3;background:#fff;color:#174a84;border-radius:9px;padding:9px 12px;font-weight:750;font-size:12px;text-decoration:none;cursor:pointer}.btn:hover{background:#f8fbff}.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.green{background:var(--ok);color:#fff;border-color:var(--ok)}.red{color:#b42318;background:#fff5f5;border-color:#efb3b3}
-.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 18px #15345c0a}.filters{padding:14px;display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:9px}.field label{display:block;font-size:11px;font-weight:800;color:#526174;margin-bottom:4px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd6e2;border-radius:9px;background:white;color:var(--ink)}
-.layout{display:grid;grid-template-columns:330px 1fr;gap:12px}.panel-title{padding:13px 15px;border-bottom:1px solid #e8edf3;font-weight:800}.tree{padding:10px;max-height:calc(100vh - 270px);overflow:auto}.node{border:1px solid #e2e8ef;border-radius:10px;margin:6px 0;overflow:hidden}.node summary{cursor:pointer;padding:9px;background:#fbfdff;font-size:13px}.child{padding:4px 8px 8px 18px}.lesson{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border-radius:8px;color:#21486c;cursor:pointer}.lesson:hover,.lesson.active{background:var(--blue2)}.count{font-size:11px;color:#64748b;white-space:nowrap}
-.content{padding:16px}.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.hero h2{margin:0 0 5px;font-size:22px}.crumb{color:var(--muted);font-size:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.stat{border:1px solid #e1e7ee;border-radius:10px;padding:11px}.stat b{font-size:19px;display:block}.stat span{font-size:11px;color:var(--muted)}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{font-size:10px;padding:5px 8px;border-radius:999px;background:#f1f5f9;color:#475569;border:1px solid #e0e6ed}.chip-a{background:#edf4ff;color:#1557a6}.chip-b{background:#f4efff;color:#6542c2}.chip-c{background:#ebfbf4;color:#16804f}.chip-d{background:#fff4ec;color:#b85a0a}
-.qrow{border:1px solid #e2e8ef;border-radius:11px;padding:11px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}.qmain{min-width:0}.qtop{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.qtitle{font-weight:800}.qdesc{margin-top:4px;font-size:12px;color:#53657a;line-height:1.45}.qactions{display:flex;gap:6px;flex-wrap:wrap}.empty{padding:50px 20px;text-align:center;color:#738096}
-.editor-card{padding:16px}.editor-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.editor-head h2{margin:0;font-size:21px}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:13px 0}.code{width:100%;min-height:560px;padding:13px;border:1px solid #bfcddd;border-radius:11px;background:#fcfdff;font:13px/1.55 Consolas,Monaco,monospace;resize:vertical}.hint{margin-top:8px;padding:10px 12px;border:1px dashed #c3d1df;border-radius:9px;background:#f8fbff;color:#607083;font-size:11px;line-height:1.5}.kind{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:800}.ka{background:#eaf2ff;color:#1558a3}.kb{background:#f2edff;color:#6544c5}.kc{background:#e9fbf3;color:#13814d}.kd{background:#fff1e7;color:#ae5a0b}
-@media(max-width:1050px){.layout{grid-template-columns:1fr}.tree{max-height:360px}.filters{grid-template-columns:1fr 1fr}.filters .wide{grid-column:1/-1}.stats{grid-template-columns:1fr 1fr}}
+:root{--blue:#1769d2;--blue2:#edf5ff;--ink:#18324d;--muted:#64748b;--line:#d9e3ee;--bg:#f4f7fb;--ok:#16813d;--violet:#6d4bd8;--orange:#e86b18;--surface:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}.page{max-width:1480px;margin:0 auto;padding:0 12px 50px}
+.top{position:sticky;top:0;z-index:50;background:#1769d2;color:#fff;box-shadow:0 2px 12px #0f4fa844}.topRow{min-height:64px;display:flex;align-items:center;gap:14px;padding:10px 14px}.brand{font-size:21px;font-weight:900;letter-spacing:.2px}.brandSub{font-size:11px;opacity:.9;margin-top:2px}.subjectTabs{display:flex;gap:6px}.subjectBtn{border:1px solid #ffffff55;background:#ffffff14;color:#fff;border-radius:13px;padding:8px 15px;font-weight:900;cursor:pointer}.subjectBtn.active{background:#fff;color:#1558a6}.topRight{margin-left:auto;display:flex;align-items:center;gap:7px}.topBtn{border:1px solid #ffffff45;background:#ffffff12;color:#fff;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer;text-decoration:none;font-size:12px}
+.examStrip{margin-top:0;padding:8px 15px;background:#e9f3ff;border-bottom:1px solid #c8dff7;color:#174a84;font-size:12px}.nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 0}.btn{border:1px solid #cbd7e4;background:var(--surface);color:#174a84;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer}.btn:hover{background:#f8fbff}.btnPrimary{background:var(--blue);border-color:var(--blue);color:#fff}.btnGreen{background:var(--ok);border-color:var(--ok);color:#fff}.btnRed{background:#fff5f5;border-color:#efb2b2;color:#b42318}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 14px #17324d0a}.filters{padding:13px;display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:8px}.field label{display:block;font-size:11px;font-weight:900;color:#526174;margin-bottom:4px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd6e2;border-radius:9px;background:#fff;color:var(--ink)}
+.catalogIntro{margin-top:12px;padding:12px 14px;background:linear-gradient(180deg,#eff6ff,#fff);border:1px solid #c9ddfa;border-radius:16px}.introTitle{font-size:16px;font-weight:950;color:#1e3a8a;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #dbe3ea;font-size:11px;font-weight:850;color:#475569}.stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.statPill{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900}.shelf{margin-top:12px}.subjectBlock{margin:12px 0 16px}.subjectHead{padding:11px 13px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.gradeBlock{margin:10px 0;border:1px solid #cbd7e4;border-radius:15px;overflow:hidden}.gradeHead{padding:10px 12px;background:#f1f5f9;display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:950}.chapterBlock{margin:9px;border:1px solid #bfdbfe;border-radius:13px;overflow:hidden;background:#f8fbff}.chapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.lessonGrid{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:9px}.lessonCard{border:1px solid #e1e8ef;border-radius:13px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 3px #0f172a0d}.lessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.lessonSub{font-size:12px;color:#64748b;line-height:1.35}.chips{display:flex;flex-wrap:wrap;gap:5px}.chip{border:1px solid #d7dee7;background:#f8fafc;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:850;color:#475569}.a{background:#edf4ff;border-color:#bfdbfe;color:#1557a6}.b{background:#f5efff;border-color:#d8b4fe;color:#6542c2}.c{background:#ecfbf3;border-color:#a7f3d0;color:#16804f}.d{background:#fff5eb;border-color:#fed7aa;color:#ae5a0b}.lessonActions{display:flex;gap:6px;flex-wrap:wrap}.miniBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:900;cursor:pointer}.miniBtn.green{background:#eaf8ef;color:#166534;border-color:#86efac}
+.split{display:grid;grid-template-columns:340px 1fr;gap:12px}.sidebar{max-height:calc(100vh - 120px);overflow:auto}.panelTitle{padding:12px 14px;border-bottom:1px solid #e7edf3;font-weight:950}.qList{padding:9px}.qitem{border:1px solid #e0e7ef;border-radius:10px;padding:9px;margin:6px 0;cursor:pointer;background:#fff}.qitem:hover,.qitem.active{background:#edf5ff;border-color:#8bb9ed}.qtop{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.qnum{font-weight:950;color:#145bb0}.qtitle{margin-top:4px;font-size:12px;font-weight:750;line-height:1.4;color:#243b53}.qmeta{margin-top:4px;font-size:10px;color:#64748b;line-height:1.4}.editor{padding:15px}.editorHead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}.editorTitle{font-size:20px;font-weight:950}.metaGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.code{width:100%;min-height:540px;padding:12px;border:1px solid #bfcddd;border-radius:10px;background:#fcfdff;font:13px/1.55 Consolas,Monaco,monospace;resize:vertical}.hint{margin-top:8px;padding:9px 11px;border:1px dashed #bfd0e1;border-radius:9px;background:#f8fbff;color:#607083;font-size:11px;line-height:1.5}.hidden{display:none!important}.message{margin:10px 0;padding:10px 12px;border-radius:9px;font-size:12px}.ok{background:#eaf8ef;border:1px solid #a7d8b6;color:#166534}.error{background:#fff0f0;border:1px solid #efb1b1;color:#b42318}
+@media(max-width:1050px){.filters{grid-template-columns:1fr 1fr}.filters .searchWide{grid-column:1/-1}.split{grid-template-columns:1fr}.sidebar{max-height:360px}.stats{grid-template-columns:1fr 1fr}.lessonGrid{grid-template-columns:1fr}}@media(max-width:640px){.topRow{gap:7px}.brand{font-size:17px}.brandSub{display:none}.subjectBtn{padding:7px 9px;font-size:11px}.topBtn{display:none}.filters{grid-template-columns:1fr}.metaGrid{grid-template-columns:1fr}.lessonGrid{grid-template-columns:1fr}.page{padding:0 6px 30px}}
 </style>
 """
 
 
-def page_shell(title: str, body: str):
-    nav = '<div class="toolbar"><a class="btn" href="/">← Ứng dụng</a><a class="btn" href="/github/quan-ly">📚 Ngân hàng GitHub</a><a class="btn primary" href="/ra-de">📝 Ra đề</a></div>'
-    return CSS + f'''<div class="page">
-<div class="header"><div class="header-row"><div><div class="brand">🐙 NGÂN HÀNG GITHUB</div><div class="sub">Nguồn chính: GitHub / ngan-hang/*.tex → bank_index.json · Không dùng Google Sheet</div></div><div class="status">✓ GitHub sẵn sàng</div></div></div>
-{nav}{body}</div>'''
+def page(html_body):
+    return CSS + f'''<div class="top"><div class="topRow"><div><div class="brand">📚 LUYENDEVATLY · NGÂN HÀNG GITHUB</div><div class="brandSub">GitHub / ngan-hang/*.tex · bank_index.json · không dùng Google Sheet</div></div><div class="subjectTabs"><button class="subjectBtn" id="tabMath" onclick="pickSubject('Toán')">📐 Toán</button><button class="subjectBtn" id="tabPhys" onclick="pickSubject('Vật lý')">⚛️ Vật lí</button></div><div class="topRight"><span class="topBtn">✓ GitHub</span><a class="topBtn" href="/">⌂ Ứng dụng</a><a class="topBtn" href="/ra-de">📝 Ra đề</a></div></div></div><div class="examStrip">🗂️ Quản lý ngân hàng · Dữ liệu đọc trực tiếp từ file <b>.tex</b> trên GitHub. Chọn Môn → Khối/Lớp → Chương → Bài → Dạng → Câu.</div><div class="page">{html_body}</div>'''
 
 
 @bp.get("/github/quan-ly")
@@ -209,90 +232,86 @@ def manager():
         return g
     try:
         data = load_index()
-        lessons = data.get("lessons", []) if isinstance(data, dict) else []
     except Exception as e:
-        return page_shell("Lỗi", f'<div class="card" style="padding:20px;color:#b42318"><b>Không đọc được bank_index.json:</b> {h(e)}</div>')
-
+        return page(f'<div class="message error"><b>Không đọc được bank_index.json từ GitHub:</b> {esc(e)}</div>')
+    lessons = data.get("lessons", []) if isinstance(data, dict) else []
     payload = json.dumps(lessons, ensure_ascii=False).replace("</", "<\\/")
-    body = r'''<div class="card"><div class="filters">
-<div class="field wide"><label>🔎 Tìm kiếm</label><input id="q" placeholder="Tìm bài, dạng bài, tên file..." oninput="render()"></div>
-<div class="field"><label>Môn</label><select id="mon" onchange="render()"></select></div>
-<div class="field"><label>Lớp</label><select id="lop" onchange="render()"></select></div>
-<div class="field"><label>Chương</label><select id="chuong" onchange="render()"></select></div>
-<div class="field"><label>Bài</label><select id="bai" onchange="render()"></select></div>
-<div class="field"><label>Dạng bài</label><select id="dang" onchange="render()"></select></div>
-</div></div>
-<div class="layout" style="margin-top:12px">
-<div class="card"><div class="panel-title">📚 MỤC LỤC ĐỀ</div><div id="tree" class="tree"></div></div>
-<div class="card"><div id="content" class="content"><div class="empty">Chọn một Bài trong mục lục.</div></div></div>
-</div>
+    body = f'''<div class="nav"><a class="btn" href="/">← Trang chính</a><a class="btn btnPrimary" href="/github/quan-ly">📚 Ngân hàng</a></div>
+<div class="card"><div class="filters"><div class="field searchWide"><label>🔎 Tìm nhanh</label><input id="fSearch" placeholder="Tên bài, dạng bài, tên file..." oninput="renderCatalog()"></div><div class="field"><label>Môn</label><select id="fMon" onchange="onFilter('mon')"></select></div><div class="field"><label>Khối</label><select id="fKhoi" onchange="onFilter('khoi')"></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilter('lop')"></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilter('chuong')"></select></div><div class="field"><label>Bài học</label><select id="fBai" onchange="onFilter('bai')"></select></div><div class="field"><label>Dạng câu</label><select id="fKind" onchange="renderCatalog"><option value="">Tất cả</option><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div></div></div>
+<div id="catalogIntro" class="catalogIntro"></div><div id="catalog" class="shelf"></div>
+<div id="questionView" class="hidden"><div class="nav"><button class="btn" onclick="backCatalog()">← Mục lục</button><button class="btn" onclick="prevQuestion()">← Câu trước</button><button class="btn" onclick="nextQuestion()">Câu sau →</button><button class="btn btnGreen" onclick="saveCurrent()">💾 Lưu GitHub</button><button class="btn btnRed" onclick="deleteQuestion()">🗑 Xóa câu</button><button class="btn" onclick="duplicateQuestion()">⧉ Nhân bản</button></div><div class="split"><div class="card sidebar"><div class="panelTitle">📝 Danh sách câu</div><div class="qList" id="qList"></div></div><div class="card editor"><div class="editorHead"><div><div class="editorTitle" id="eTitle">Câu</div><div id="ePath" class="hint"></div></div><div id="eKind" class="tag"></div></div><div class="metaGrid"><div class="field"><label>Loại câu</label><select id="eKindSel"><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div><div class="field"><label>Mức độ</label><select id="eLevel"><option value="">—</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></div><div class="field"><label>ID</label><input id="eId"></div><div class="field"><label>Dạng bài tập</label><input id="eDang"></div></div><div class="hint">🖼 Nếu câu có <b>TikZ</b> hoặc <b>includegraphics</b>, mã hình vẫn được giữ nguyên trong file .tex.</div><textarea id="eCode" class="code" spellcheck="false"></textarea></div></div></div>
 <script>
-const LESSONS=__LESSONS__;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let S={mon:'',lop:'',chuong:'',bai:'',dang:''};
-function uniq(a){return [...new Set(a.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'vi'))}
-function fill(id,values,value,label){const e=document.getElementById(id);e.innerHTML='<option value="">'+label+'</option>'+uniq(values).map(v=>'<option value="'+esc(v)+'" '+(v===value?'selected':'')+'>'+esc(v)+'</option>').join('')}
-function filtered(){const t=(document.getElementById('q').value||'').toLowerCase();return LESSONS.filter(x=>{const ok=(!S.mon||x.Mon===S.mon)&&(!S.lop||x.Lop===S.lop)&&(!S.chuong||x.Chuong===S.chuong)&&(!S.bai||x.BaiHoc===S.bai)&&(!S.dang||Object.keys(x.dang||{}).includes(S.dang));const text=(x.Mon+' '+x.Lop+' '+x.Chuong+' '+x.BaiHoc+' '+x.De+' '+x.file+' '+Object.keys(x.dang||{}).join(' ')).toLowerCase();return ok&&(!t||text.includes(t))})}
-function render(){
- let m=LESSONS.filter(x=>!S.mon||x.Mon===S.mon);fill('mon',LESSONS.map(x=>x.Mon),S.mon,'Tất cả');fill('lop',m.map(x=>x.Lop),S.lop,'Tất cả');let c=m.filter(x=>!S.lop||x.Lop===S.lop);fill('chuong',c.map(x=>x.Chuong),S.chuong,'Tất cả');let b=c.filter(x=>!S.chuong||x.Chuong===S.chuong);fill('bai',b.map(x=>x.BaiHoc),S.bai,'Tất cả');let d=b.filter(x=>!S.bai||x.BaiHoc===S.bai),ds=[];d.forEach(x=>Object.keys(x.dang||{}).forEach(k=>ds.push(k)));fill('dang',ds,S.dang,'Tất cả');
- const list=filtered();renderTree(list);renderDetail(list)
-}
-function renderTree(list){let g={};list.forEach(x=>{const m=x.Mon||'Khác',l=x.Lop||'?',c=x.Chuong||'Chưa phân chương';g[m]??={};g[m][l]??={};g[m][l][c]??=[];g[m][l][c].push(x)});let h='';Object.keys(g).sort().forEach(m=>{h+='<details class="node" open><summary><b>'+esc(m)+'</b></summary><div class="child">';Object.keys(g[m]).sort().forEach(l=>{h+='<details class="node" open><summary>Lớp '+esc(l)+'</summary><div class="child">';Object.keys(g[m][l]).sort().forEach(c=>{h+='<details class="node" open><summary>'+esc(c)+'</summary><div class="child">';g[m][l][c].sort((a,b)=>(a.BaiHoc||'').localeCompare(b.BaiHoc||'','vi')).forEach(x=>{const p=x.path||x.file||'';h+='<div class="lesson" onclick="openLesson('+JSON.stringify(p)+')"><span>'+esc(x.BaiHoc||x.De||x.file)+'</span><span class="count">'+Number(x.questions||x.count||0)+' câu</span></div>'});h+='</div></details>'});h+='</div></details>'});h+='</div></details>'});document.getElementById('tree').innerHTML=h||'<div class="empty">Không có dữ liệu.</div>'}
-function openLesson(path){window.location.href='/github/questions?path='+encodeURIComponent(path)+'&n=1'}
-function renderDetail(list){const total=list.reduce((s,x)=>s+Number(x.questions||x.count||0),0);let h='<div class="hero"><div><h2>Ngân hàng câu hỏi</h2><div class="crumb">GitHub · '+list.length+' file · '+total+' câu</div></div></div>';h+='<div class="stats"><div class="stat"><b>'+list.length+'</b><span>file</span></div><div class="stat"><b>'+total+'</b><span>câu hỏi</span></div><div class="stat"><b>'+new Set(list.map(x=>x.Chuong)).size+'</b><span>chương</span></div><div class="stat"><b>GitHub</b><span>nguồn chính</span></div></div>';list.forEach(x=>{const p=x.path||x.file||'',d=Object.entries(x.dang||{});h+='<div class="qrow"><div class="qmain"><div class="qtop"><div class="qtitle">'+esc(x.BaiHoc||x.De||x.file)+'</div><span class="chip">'+Number(x.questions||x.count||0)+' câu</span></div><div class="qdesc">'+esc(p)+'</div><div class="chips">'+d.slice(0,6).map(([k,v])=>'<span class="chip">'+esc(k)+' · '+v+'</span>').join('')+(d.length>6?'<span class="chip">+'+(d.length-6)+' dạng</span>':'')+'</div></div><div class="qactions"><a class="btn primary" href="/github/questions?path='+encodeURIComponent(p)+'&n=1">✏️ Mở bài</a></div></div>'});document.getElementById('content').innerHTML=h}
-render();
-</script>'''.replace("__LESSONS__", payload)
-    return page_shell("Ngân hàng GitHub", body)
+const LESSONS={payload};
+let state={{mon:'',khoi:'',lop:'',chuong:'',bai:'',kind:''}}, current={{path:'',sha:'',head:'',tail:'',blocks:[],qs:[],idx:0}};
+function esc(s){{return String(s==null?'':s).replace(/[&<>\"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[c]))}}
+function norm(s){{try{{return String(s||'').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d').trim()}}catch(e){{return String(s||'').toLowerCase().trim()}}}}
+function kindOfLesson(x){{let ds=x.dang||{{}};return Object.keys(ds)}}
+function deriveKhoi(lop){{let m=String(lop||'').match(/(10|11|12)/);return m?m[1]:String(lop||'').trim()}}
+function uniq(a){{return [...new Set(a.filter(x=>String(x||'').trim()))]}}
+function setSel(id, vals, value, label){{let e=document.getElementById(id);let arr=uniq(vals).sort((a,b)=>String(a).localeCompare(String(b),'vi'));e.innerHTML='<option value="">'+label+'</option>'+arr.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');e.value=value||''}}
+function filteredLessons(){{let q=norm(document.getElementById('fSearch').value);return LESSONS.filter(x=>{{let ok=(!state.mon||x.Mon===state.mon)&&(!state.khoi||deriveKhoi(x.Lop)===state.khoi)&&(!state.lop||x.Lop===state.lop)&&(!state.chuong||x.Chuong===state.chuong)&&(!state.bai||(x.BaiHoc||x.De)===state.bai);let text=norm([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.De,Object.keys(x.dang||{{}}).join(' ')].join(' '));return ok&&(!q||text.includes(q))}})}}
+function refreshFilters(){{let all=LESSONS;let a=all.filter(x=>!state.mon||x.Mon===state.mon);setSel('fMon',all.map(x=>x.Mon),state.mon,'Tất cả môn');let b=a.filter(x=>!state.khoi||deriveKhoi(x.Lop)===state.khoi);setSel('fKhoi',a.map(x=>deriveKhoi(x.Lop)),state.khoi,'Tất cả khối');let c=b.filter(x=>!state.lop||x.Lop===state.lop);setSel('fLop',b.map(x=>x.Lop),state.lop,'Tất cả lớp');let d=c.filter(x=>!state.chuong||x.Chuong===state.chuong);setSel('fChuong',c.map(x=>x.Chuong),state.chuong,'Tất cả chương');let e=d.filter(x=>!state.bai||(x.BaiHoc||x.De)===state.bai);setSel('fBai',d.map(x=>x.BaiHoc||x.De),state.bai,'Tất cả bài')}}
+function onFilter(k){{if(k==='mon'){{state.mon=document.getElementById('fMon').value;state.khoi='';state.lop='';state.chuong='';state.bai=''}}else if(k==='khoi'){{state.khoi=document.getElementById('fKhoi').value;state.lop='';state.chuong='';state.bai=''}}else if(k==='lop'){{state.lop=document.getElementById('fLop').value;state.chuong='';state.bai=''}}else if(k==='chuong'){{state.chuong=document.getElementById('fChuong').value;state.bai=''}}else if(k==='bai'){{state.bai=document.getElementById('fBai').value}}refreshFilters();renderCatalog();syncSubject()}}
+function subjectName(mon){{return norm(mon).includes('toan')?'Toán':(norm(mon).includes('vat')?'Vật lý':mon)}}
+function pickSubject(mon){{state.mon=mon;state.khoi='';state.lop='';state.chuong='';state.bai='';refreshFilters();document.getElementById('fMon').value=LESSONS.some(x=>x.Mon===mon)?mon:'';renderCatalog();syncSubject()}}
+function syncSubject(){{let m=state.mon;document.getElementById('tabMath').classList.toggle('active',subjectName(m)==='Toán');document.getElementById('tabPhys').classList.toggle('active',subjectName(m)==='Vật lý')}}
+function renderCatalog(){{let list=filteredLessons();let kind=document.getElementById('fKind').value||'';if(kind)list=list.filter(x=>Object.keys(x.dang||{{}}).some(d=>Number(x.dang[d]||0)>0)&&x._kind!==kind); // kind lọc sâu ở bước mở file; không làm mất bài
+let qTotal=list.reduce((a,x)=>a+(Number(x.questions||x.count||0)),0);let mons=uniq(list.map(x=>x.Mon)).length, kh=uniq(list.map(x=>deriveKhoi(x.Lop))).length,ch=uniq(list.map(x=>x.Chuong)).length,ba=uniq(list.map(x=>x.BaiHoc||x.De)).length,dg=uniq(list.flatMap(x=>Object.keys(x.dang||{{}}))).length;document.getElementById('catalogIntro').innerHTML='<div class="introTitle">📚 Mục lục kiểu sách <span class="tag">GitHub</span></div><div style="margin-top:5px;color:#5f6f82;font-size:12px;line-height:1.45">Trong từng trang, ngân hàng được gom theo <b>Môn → Khối/Lớp → Chương → Bài</b>. Khi mở một bài, hệ thống đọc trực tiếp file <b>.tex</b> để lấy từng câu và phân loại A/B/C/D, mức độ, dạng bài.</div><div class="stats"><span class="statPill">'+mons+' môn</span><span class="statPill">'+kh+' khối</span><span class="statPill">'+ch+' chương</span><span class="statPill">'+ba+' bài</span><span class="statPill">'+dg+' dạng BT</span><span class="statPill">'+qTotal+' câu</span></div>';
+if(!list.length){{document.getElementById('catalog').innerHTML='<div class="card" style="padding:35px;text-align:center;color:#738096">Không có đề phù hợp.</div>';return}}let html='<div>';let byM=new Map();list.forEach(x=>{{let k=x.Mon||'Khác';if(!byM.has(k))byM.set(k,[]);byM.get(k).push(x)}});for(let [m,ml] of byM){{let mq=ml.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<section class="subjectBlock"><div class="subjectHead"><span>'+esc(m)+'</span><small>'+ml.length+' bài · '+mq+' câu</small></div>';let byK=new Map();ml.forEach(x=>{{let k=deriveKhoi(x.Lop)||'?';if(!byK.has(k))byK.set(k,[]);byK.get(k).push(x)}});for(let [k,kl] of byK){{let kq=kl.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<div class="gradeBlock"><div class="gradeHead"><span>Khối '+esc(k)+'</span><span style="font-size:11px;color:#64748b">'+kl.length+' bài · '+kq+' câu</span></div>';let byC=new Map();kl.forEach(x=>{{let c=x.Chuong||'Chưa phân chương';if(!byC.has(c))byC.set(c,[]);byC.get(c).push(x)}});for(let [c,cl] of byC){{let cq=cl.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<div class="chapterBlock"><div class="chapterHead"><span>'+esc(c)+'</span><span style="font-size:11px">'+cl.length+' bài · '+cq+' câu</span></div><div class="lessonGrid">';cl.forEach(x=>{{let p=x.path||x.file||'';let title=x.BaiHoc||x.De||p;let ds=Object.keys(x.dang||{}).slice(0,4);html+='<div class="lessonCard"><div class="lessonTitle">'+esc(title)+'</div><div class="lessonSub">'+esc(x.Mon||'')+' · Lớp '+esc(x.Lop||'')+' · '+esc(c)+'</div><div class="chips"><span class="chip"><b>'+Number(x.questions||x.count||0)+'</b> câu</span>'+ds.map(d=>'<span class="chip">'+esc(d)+' · '+Number(x.dang[d]||0)+'</span>').join('')+'</div><div class="lessonActions"><button class="miniBtn" onclick="openLesson('+JSON.stringify(p)+')">📖 Mở bài</button><button class="miniBtn green" onclick="openLesson('+JSON.stringify(p)+')">✏️ Sửa câu</button></div></div>'}});html+='</div></div>'}}html+='</div>'}}html+='</div></section>'}}document.getElementById('catalog').innerHTML=html}}
+async function openLesson(path){{if(!path)return;document.getElementById('catalog').classList.add('hidden');document.getElementById('catalogIntro').classList.add('hidden');document.querySelector('.filters').classList.add('hidden');document.getElementById('questionView').classList.remove('hidden');document.getElementById('qList').innerHTML='<div class="message">⏳ Đang đọc file .tex từ GitHub...</div>';try{{let r=await fetch('/github/api/file?path='+encodeURIComponent(path),{{credentials:'same-origin'}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không đọc được file');current={{path:path,sha:j.sha,head:j.head,tail:j.tail,blocks:j.blocks,qs:j.questions,idx:0}};renderQuestionList();showQuestion(0)}}catch(e){{document.getElementById('qList').innerHTML='<div class="message error">❌ '+esc(e.message||e)+'</div>'}}}}
+function renderQuestionList(){{let arr=current.qs||[];document.getElementById('qList').innerHTML=arr.map((q,i)=>'<div class="qitem" id="qitem'+i+'" onclick="showQuestion('+i+')"><div class="qtop"><span class="qnum">Câu '+(i+1)+'</span><span class="kind '+String(q.kind).toLowerCase()+'">'+esc(q.kind)+' · '+esc(q.label)+'</span>'+(q.level?'<span class="tag">'+esc(q.level)+'</span>':'')+(q.has_tikz?'<span class="tag">🖼 hình</span>':'')+'</div><div class="qtitle">'+esc(q.title)+'</div><div class="qmeta">'+(q.id?'ID: '+esc(q.id):'ID: —')+(q.dang?' · '+esc(q.dang):'')+'</div></div>').join('')||'<div class="empty">File không có câu.</div>'}}
+function showQuestion(i){{if(!current.qs.length)return;current.idx=Math.max(0,Math.min(i,current.qs.length-1));let q=current.qs[current.idx];document.querySelectorAll('.qitem').forEach(e=>e.classList.remove('active'));let el=document.getElementById('qitem'+current.idx);if(el)el.classList.add('active');document.getElementById('eTitle').textContent='Câu '+(current.idx+1)+' · '+(q.label||'');document.getElementById('ePath').textContent=current.path;document.getElementById('eKind').textContent=q.has_tikz?'🖼 Có hình/TikZ':'';document.getElementById('eKindSel').value=q.kind;document.getElementById('eLevel').value=q.level||'';document.getElementById('eId').value=q.id||'';document.getElementById('eDang').value=q.dang||'';document.getElementById('eCode').value=current.blocks[current.idx]||'';document.getElementById('questionView').scrollIntoView({{behavior:'smooth',block:'start'}})}}
+function currentBlock(){{return current.blocks[current.idx]||''}}
+function setKindInBlock(block,want){{let b=block||'',m=b.match(/\\choiceTF\\b|\\choice\\b|\\shortans\\b/i),map={{A:'\\\\choice',B:'\\\\choiceTF',C:'\\\\shortans',D:''}};if(m&&want)b=b.slice(0,m.index)+map[want]+b.slice(m.index+m[0].length);else if(m&&!want)b=b.slice(0,m.index)+b.slice(m.index+m[0].length);return b}}
+async function saveCurrent(){{if(!current.blocks.length)return;let b=document.getElementById('eCode').value||'';b=setKindInBlock(b,document.getElementById('eKindSel').value);b=rebuildMetaClient(b,document.getElementById('eId').value,document.getElementById('eLevel').value,document.getElementById('eDang').value);current.blocks[current.idx]=b;let content=current.head+current.blocks.join('\\n\\n')+current.tail;try{{let r=await fetch('/github/api/save',{{method:'POST',headers:{{'Content-Type':'application/json'}},credentials:'same-origin',body:JSON.stringify({{path:current.path,sha:current.sha,content:content,message:'ADMIN cập nhật Câu '+(current.idx+1)+' · '+current.path}})}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không lưu được');current.sha=j.sha||current.sha;document.getElementById('eCode').value=b;alert('✅ Đã lưu Câu '+(current.idx+1)+' lên GitHub.');await openLesson(current.path)}}catch(e){{alert('❌ '+(e.message||e))}}}}
+function rebuildMetaClient(b,qid,level,dang){{b=b.replace(/%\\s*ID\\s*:[^\\r\\n]*\\r?\\n?/i,'').replace(/%\\s*Mức\\s*:[^\\r\\n]*\\r?\\n?/i,'').replace(/\\\\dangbt\\s*\\{{[^{{}}]*\\}}\\s*/ig,'');let m=b.match(/\\\\begin\\s*\\{{\\s*ex\\s*\\}}/i);if(!m)return b;let lines='';if(qid)lines+='% ID: '+qid+'\\n';if(level)lines+='% Mức: '+level+'\\n';if(lines)b=b.slice(0,m.index+m[0].length)+'\\n'+lines+b.slice(m.index+m[0].length);if(dang)b=b.slice(0,m.index)+'\\\\dangbt{{'+dang+'}}\\n'+b.slice(m.index);return b}}
+async function duplicateQuestion(){{let b=currentBlock();if(!b)return;let n=b.replace(/%\\s*ID\\s*:[^\\r\\n]*\\r?\\n?/i,'');n=n.replace(/(%\\s*Mức\\s*:[^\\r\\n]+\\n)/i,'$1% ID: COPY_'+Date.now()+'\\n');current.blocks.splice(current.idx+1,0,n);await saveAllBlocks('ADMIN nhân bản Câu '+(current.idx+1));current.idx+=1;renderQuestionList();showQuestion(current.idx)}}
+async function deleteQuestion(){{if(current.blocks.length<=1){{alert('Không xóa câu cuối cùng trong file.');return}}if(!confirm('Xóa Câu '+(current.idx+1)+' khỏi file .tex trên GitHub?'))return;current.blocks.splice(current.idx,1);current.idx=Math.max(0,Math.min(current.idx,current.blocks.length-1));await saveAllBlocks('ADMIN xóa câu khỏi '+current.path);renderQuestionList();showQuestion(current.idx)}}
+async function saveAllBlocks(message){{let content=current.head+current.blocks.join('\\n\\n')+current.tail;let r=await fetch('/github/api/save',{{method:'POST',headers:{{'Content-Type':'application/json'}},credentials:'same-origin',body:JSON.stringify({{path:current.path,sha:current.sha,content:content,message:message}})}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không lưu được');current.sha=j.sha||current.sha}}
+function prevQuestion(){{showQuestion(current.idx-1)}}
+function nextQuestion(){{showQuestion(current.idx+1)}}
+function backCatalog(){{document.getElementById('questionView').classList.add('hidden');document.getElementById('catalog').classList.remove('hidden');document.getElementById('catalogIntro').classList.remove('hidden');document.querySelector('.filters').classList.remove('hidden');renderCatalog()}}
+refreshFilters();syncSubject();renderCatalog();
+</script>'''
+    return page(body)
 
 
-@bp.route("/github/questions", methods=["GET", "POST"])
-def questions():
+@bp.get("/github/api/file")
+def api_file():
     g = guard()
     if g:
         return g
-    path = (request.values.get("path") or "").strip("/")
+    path = request.args.get("path", "")
     if not valid_path(path):
-        return page_shell("Lỗi", '<div class="card" style="padding:20px;color:#b42318"><b>Đường dẫn file ngân hàng không hợp lệ.</b></div>')
-
+        return jsonify({"error": "Đường dẫn file .tex không hợp lệ."}), 400
     try:
-        sha, full = fetch_tex(path)
-        head, blocks, tail = split_questions(full)
-        if not blocks:
-            return page_shell("Lỗi", '<div class="card" style="padding:20px;color:#b42318"><b>File không có block \\begin{ex}...\\end{ex}.</b></div>')
-        n = max(1, min(int(request.values.get("n", "1")), len(blocks)))
-
-        if request.method == "POST":
-            idx = n - 1
-            edited = request.form.get("content", blocks[idx])
-            edited = rebuild_meta(edited, request.form.get("qid", "").strip(), request.form.get("level", "").strip(), request.form.get("dang", "").strip())
-            blocks[idx] = edited
-            content = head + "\n\n".join(blocks) + tail
-            old_sha = sha
-            if request.form.get("sha") and request.form.get("sha") != old_sha:
-                return redirect(url_for("github_manager_ui.questions", path=path, n=n, error="File trên GitHub đã thay đổi. Hãy tải lại trước khi lưu."))
-            result = save_tex(path, content, old_sha, f"Sửa Câu {n}: {path}")
-            commit = (result.get("commit") or {}).get("sha", "")[:10]
-            return redirect(url_for("github_manager_ui.questions", path=path, n=n, msg=f"Đã lưu Câu {n} lên GitHub · {commit}"))
-
-        qs = [question_meta(b, i+1) for i,b in enumerate(blocks)]
-        curm = qs[n-1]
-        sidebar=''.join(f'<a class="qrow" style="display:block;text-decoration:none;color:inherit" href="{url_for("github_manager_ui.questions",path=path,n=q["n"])}"><div class="qtop"><span class="kind {("ka" if q["kind"]=="A" else "kb" if q["kind"]=="B" else "kc" if q["kind"]=="C" else "kd")}">{q["kind"]} · {h(q["label"])}</span><b>Câu {q["n"]}</b></div><div class="qdesc">{h(q["title"])}</div></a>' for q in qs)
-        level_options=''.join(f'<option value="{x}" {"selected" if curm["level"]==x else ""}>{x}</option>' for x in ["NB","TH","VD","VDC"])
-        body=f'''<div class="layout"><div class="card"><div class="panel-title">📋 Câu hỏi <span style="color:#64748b;font-size:11px">({len(qs)} câu)</span></div><div class="tree">{sidebar}</div></div><div class="card editor-card"><div class="editor-head"><div><h2>Câu {n}</h2><div class="crumb">{h(path)}</div></div><div class="chips"><span class="kind {('ka' if curm['kind']=='A' else 'kb' if curm['kind']=='B' else 'kc' if curm['kind']=='C' else 'kd')}">{curm['kind']} · {h(curm['label'])}</span></div></div>'''
-        if request.args.get("msg"):
-            body += f'<div class="hint" style="background:#ecfdf3;border-color:#b7dec5;color:#166534">✅ {h(request.args.get("msg"))}</div>'
-        if request.args.get("error"):
-            body += f'<div class="hint" style="background:#fff3f3;border-color:#efb1b1;color:#b42318">⚠️ {h(request.args.get("error"))}</div>'
-        body += f'''<form method="post"><input type="hidden" name="sha" value="{h(sha)}"><div class="meta-grid"><div class="field"><label>Loại câu</label><input value="{curm['kind']} — {h(curm['label'])}" disabled></div><div class="field"><label>Mức độ</label><select name="level"><option value="">— Chưa chọn —</option>{level_options}</select></div><div class="field"><label>ID câu</label><input name="qid" value="{h(curm['id'])}" placeholder="T10C1..." ></div><div class="field"><label>Dạng bài</label><input name="dang" value="{h(curm['dang'])}" placeholder="Nhập tên dạng bài"></div></div><div class="field"><label>Mã LaTeX của Câu {n}</label><textarea class="code" name="content" spellcheck="false">{h(blocks[n-1])}</textarea></div><div class="hint">🖼 Hình/TikZ nằm trong chính mã LaTeX của câu sẽ được giữ nguyên khi lưu. Có thể sửa trực tiếp rồi bấm <b>Lưu GitHub</b>.</div><div class="toolbar"><button class="btn green" type="submit">💾 Lưu GitHub</button><a class="btn" href="{url_for('github_manager_ui.questions',path=path,n=max(1,n-1))}">← Câu trước</a><a class="btn" href="{url_for('github_manager_ui.questions',path=path,n=min(len(qs),n+1))}">Câu sau →</a><a class="btn" href="{url_for('github_manager_ui.manager')}">📚 Mục lục</a></div></form></div></div>'''
-        return page_shell("Sửa câu", body)
+        sha, text = fetch_tex(path)
+        head, blocks, tail = split_tex(text)
+        qs = [qmeta(b, i + 1) for i, b in enumerate(blocks)]
+        return jsonify({"ok": True, "path": path, "sha": sha, "head": head, "tail": tail, "blocks": blocks, "questions": qs})
     except Exception as e:
-        return page_shell("Lỗi", f'<div class="card" style="padding:20px;color:#b42318"><b>Không mở được file:</b><pre style="white-space:pre-wrap">{h(e)}</pre></div>')
+        return jsonify({"error": str(e)}), 500
 
 
-# Backward-compatible route name used by a few old links.
-@bp.get("/github/open")
-def open_file():
-    return redirect(url_for("github_manager_ui.questions", path=request.args.get("path", ""), n=request.args.get("n", "1")))
+@bp.post("/github/api/save")
+def api_save():
+    g = guard()
+    if g:
+        return g
+    body = request.get_json(silent=True) or {}
+    path = body.get("path", "")
+    content = body.get("content", "")
+    sha = body.get("sha", "")
+    message = body.get("message", "ADMIN cập nhật ngân hàng GitHub")
+    if not valid_path(path):
+        return jsonify({"error": "Đường dẫn file .tex không hợp lệ."}), 400
+    if not isinstance(content, str):
+        return jsonify({"error": "Nội dung file phải là chuỗi UTF-8."}), 400
+    try:
+        result = save_tex(path, content, sha, message)
+        return jsonify({"ok": True, "sha": result.get("content", {}).get("sha") or sha, "commit": result.get("commit", {}).get("sha", "")})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# wsgi.py registers this blueprint once.
+app.register_blueprint(bp)
