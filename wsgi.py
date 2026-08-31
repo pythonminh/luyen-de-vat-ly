@@ -1,2 +1,3 @@
 # -*- coding: utf-8 -*-
-from github_portal import app
+"""Production entrypoint for the GitHub-only learning/admin portal."""
+from github_portal_v5 import app
