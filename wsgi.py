@@ -2,6 +2,7 @@ import os
 from flask import send_file
 from app import app
 
+# Existing integration routes used elsewhere in the application.
 try:
     from github_integration import bp as github_bp
     app.register_blueprint(github_bp)
@@ -14,6 +15,8 @@ try:
 except Exception as e:
     app.config['RA_DE_IMPORT_ERROR'] = str(e)
 
+# ONLY ONE GitHub bank-management UI.
+# It reads bank_index.json and ngan-hang/*.tex directly from GitHub.
 try:
     from github_manager_ui import bp as github_bank_bp
     app.register_blueprint(github_bank_bp)
@@ -21,37 +24,6 @@ try:
 except Exception as e:
     app.config['GITHUB_BANK_UI'] = False
     app.config['GITHUB_BANK_UI_ERROR'] = str(e)
-
-# Keep the original student interface.  Catalog data comes from GitHub
-# bank_index.json + ngan-hang/*.tex; no Google Sheet is used for the bank catalog.
-try:
-    import github_catalog_backend  # noqa: F401
-    app.config['GITHUB_CATALOG_ONLY'] = True
-except Exception as e:
-    app.config['GITHUB_CATALOG_ONLY'] = False
-    app.config['GITHUB_CATALOG_ONLY_ERROR'] = str(e)
-
-# GitHub bank cards: render full Dạng bài tập chips from bank_index.json.
-try:
-    import github_manager_dang_fix  # noqa: F401
-    app.config['GITHUB_MANAGER_DANG_FIX'] = True
-except Exception as e:
-    app.config['GITHUB_MANAGER_DANG_FIX'] = False
-    app.config['GITHUB_MANAGER_DANG_FIX_ERROR'] = str(e)
-
-try:
-    import github_ui_restyle  # noqa: F401
-    app.config['GITHUB_UI_RESTYLE'] = True
-except Exception as e:
-    app.config['GITHUB_UI_RESTYLE'] = False
-    app.config['GITHUB_UI_RESTYLE_ERROR'] = str(e)
-
-try:
-    import ai_review_ui_fix  # noqa: F401
-    app.config['LDVL_AI_REVIEW_UI_FIX'] = True
-except Exception as e:
-    app.config['LDVL_AI_REVIEW_UI_FIX'] = False
-    app.config['LDVL_AI_REVIEW_UI_FIX_ERROR'] = str(e)
 
 @app.get('/bank_index.json')
 def serve_bank_index():
