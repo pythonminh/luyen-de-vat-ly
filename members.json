@@ -181,6 +181,14 @@
       "account_type": "VIP",
       "status": "ON",
       "password_sha256": "000000"
+    },
+    {
+      "username": "0946111107",
+      "name": "Huynh minh",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "d9873e896c49a674f82d6643d2c54c5dcd9b657a23f0de40b0a15228084f6a86"
     }
   ]
 }
