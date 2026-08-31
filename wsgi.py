@@ -1,6 +1,7 @@
 from flask import request, redirect, session
 from app import app, member_current
 import dang_routes
+import student_gemini
 
 @app.get('/practice/jump/<int:pos>')
 def practice_jump(pos):
