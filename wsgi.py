@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
-"""Production entrypoint for the lightweight GitHub bank."""
-from github_admin_simple import app
+"""Production entrypoint: member portal + ADMIN + GitHub question bank."""
+from github_portal import app
