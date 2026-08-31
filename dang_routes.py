@@ -1,31 +1,64 @@
 # -*- coding: utf-8 -*-
-"""Small add-on routes for opening one exercise type at a time.
-Loaded by wsgi.py so the stable app.py remains untouched.
-"""
+"""Routes for opening one exercise type at a time and catalog summaries."""
 from __future__ import annotations
 
 import html
+import time
 import urllib.parse
 
-from flask import request
+from flask import request, jsonify, redirect
 
 from app import app, can_access, member_current, page, parse_questions, read_tex
+
+_STATS_CACHE = {}
+_STATS_TTL = 300
 
 
 def _esc_attr(s: str) -> str:
     return html.escape(str(s), quote=True)
 
 
+def _stats_for(path: str):
+    now = time.time()
+    hit = _STATS_CACHE.get(path)
+    if hit and now - hit[0] < _STATS_TTL:
+        return hit[1]
+    _, tex = read_tex(path)
+    qs = parse_questions(tex)
+    stats = {}
+    for q in qs:
+        dang = q.get('dang') or 'Chưa phân dạng'
+        kind = q.get('kind') or 'TL'
+        stats.setdefault(dang, {'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0})
+        stats[dang][kind] = stats[dang].get(kind, 0) + 1
+    _STATS_CACHE[path] = (now, stats)
+    return stats
+
+
+@app.get('/member/dang-stats')
+def member_dang_stats():
+    m = member_current()
+    if not m:
+        return jsonify(ok=False, error='Chưa đăng nhập'), 401
+    path = request.args.get('path', '')
+    if not path or not can_access(m, path):
+        return jsonify(ok=False, error='Không có quyền truy cập'), 403
+    try:
+        return jsonify(ok=True, stats=_stats_for(path))
+    except Exception as exc:
+        return jsonify(ok=False, error=str(exc)), 500
+
+
 @app.get('/member/dang')
 def member_dang():
     m = member_current()
     if not m:
-        return __import__('flask').redirect('/member/login')
+        return redirect('/member/login')
 
     path = request.args.get('path', '')
     dang = request.args.get('dang', '').strip()
     if not path or not dang:
-        return __import__('flask').redirect('/member')
+        return redirect('/member')
     if not can_access(m, path):
         return page('Bài VIP', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
 
@@ -39,7 +72,6 @@ def member_dang():
     if not selected:
         return page('Dạng bài', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không tìm thấy dạng bài này trong TEX.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
 
-    # Keep the original question-index used by /member/start.
     dang_names = []
     seen = set()
     for q in qs:
@@ -88,10 +120,10 @@ def member_dang():
 
 
 @app.after_request
-def make_dang_rows_clickable(response):
-    # Only enhance the member catalog HTML. The existing backend remains unchanged.
+def make_catalog_rows_enhanced(response):
+    """Make catalog type rows clickable and add aligned TN/DS/TLN/TL totals."""
     content_type = response.headers.get('Content-Type', '')
-    if '/member' not in request.path or 'text/html' not in content_type:
+    if request.path != '/member' or 'text/html' not in content_type:
         return response
     try:
         body = response.get_data(as_text=True)
@@ -108,18 +140,44 @@ document.addEventListener('DOMContentLoaded', function(){
       const nameEl = row.querySelector('span');
       if(!nameEl) return;
       const name = nameEl.textContent.trim();
-      const a = document.createElement('a');
-      a.className = 'dangrow danglink';
-      a.href = '/member/dang?path=' + encodeURIComponent(path) + '&dang=' + encodeURIComponent(name);
-      a.innerHTML = row.innerHTML;
-      row.replaceWith(a);
+      const link = document.createElement('a');
+      link.className = 'dangrow danglink';
+      link.href = '/member/dang?path=' + encodeURIComponent(path) + '&dang=' + encodeURIComponent(name);
+      link.innerHTML = row.innerHTML;
+      row.replaceWith(link);
     });
+    fetch('/member/dang-stats?path=' + encodeURIComponent(path), {credentials:'same-origin'})
+      .then(r => r.json()).then(data => {
+        if(!data.ok) return;
+        card.querySelectorAll('.danglink').forEach(function(row){
+          const nameEl = row.querySelector('span');
+          if(!nameEl) return;
+          const name = nameEl.textContent.trim();
+          const s = data.stats[name] || {TN:0,DS:0,TLN:0,TL:0};
+          row.innerHTML = '<span class="dangname">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>'
+            + '<span class="kind ktn">TN <b>'+s.TN+'</b></span>'
+            + '<span class="kind kds">ĐS <b>'+s.DS+'</b></span>'
+            + '<span class="kind ktln">TLN <b>'+s.TLN+'</b></span>'
+            + '<span class="kind ktl">TL <b>'+s.TL+'</b></span>'
+            + '<span class="kind ktotal">'+(s.TN+s.DS+s.TLN+s.TL)+'</span>'
+            + '<span class="arrow">›</span>';
+        });
+      }).catch(()=>{});
   });
-  const st = document.createElement('style');
-  st.textContent = '.danglink{color:inherit;text-decoration:none!important;cursor:pointer}.danglink:hover{background:#eef7ff}.danglink:after{content:"  ›";color:#176bd3;font-weight:900}';
-  document.head.appendChild(st);
 });
-</script>'''
+</script>
+<style>
+.dang{padding:5px!important}
+.danghead,.danglink{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 52px 52px 52px 54px 16px;align-items:center;column-gap:5px}
+.danghead{font-size:11px;color:#65778b;font-weight:900;padding:4px 2px;border-bottom:1px solid #dce7f1}
+.danglink{color:inherit;text-decoration:none!important;cursor:pointer;min-height:34px;border-bottom:1px solid #edf2f7!important}
+.danglink:hover{background:#eef7ff;border-radius:6px}
+.dangname{min-width:0;line-height:1.35}
+.kind{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d3dfeb;border-radius:999px;padding:3px 2px;font-size:10px;white-space:nowrap;background:#fff}
+.kind b{margin-left:2px}
+.ktn{color:#145bb0}.kds{color:#8a4d00}.ktln{color:#176f45}.ktl{color:#7a3fa0}.ktotal{justify-self:center;font-weight:900;font-size:11px}.arrow{color:#176bd3;font-weight:900}
+@media(max-width:700px){.danghead,.danglink{grid-template-columns:minmax(0,1fr) 43px 43px 43px 43px 42px 12px;column-gap:3px}.kind{font-size:9px}.dangname{font-size:12px}}
+</style>'''
         response.set_data(body.replace('</body>', script + '</body>'))
     except Exception:
         pass
