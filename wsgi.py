@@ -22,9 +22,8 @@ except Exception as e:
     app.config['GITHUB_BANK_FORCE'] = False
     app.config['GITHUB_BANK_FORCE_ERROR'] = str(e)
 
-# DEPLOY MARKER: 2026-08-31 — Render must reload wsgi.py from this commit.
-# IMPORTANT: Procfile runs `gunicorn wsgi:app -c gunicorn.conf.py`, so this file
-# is the actual production entrypoint for the GitHub bank UI.
+# DEPLOY MARKER: 2026-08-31 — GitHub-only bank UI.
+# Procfile runs gunicorn wsgi:app, so this is the production entrypoint.
 
 @app.after_request
 def add_github_repo_link(response):
@@ -42,8 +41,20 @@ def add_github_repo_link(response):
                     'font-weight:900;font-size:12px;box-shadow:0 3px 12px #0003;">'
                     '🐙 Ngân hàng GitHub</a></div>'
                 )
-                body = body.replace('</body>', top_link + '</body>')
-                response.set_data(body)
+                # The current GitHub UI asks for /github/force-catalog, while the
+                # stable catalog endpoint already exists in github_bank_book.
+                # Redirect it client-side to avoid a second catalog implementation.
+                shim = (
+                    '<script>window.__LDVL_GH_CATALOG_SHIM__=1;(function(){'
+                    'var f=window.fetch.bind(window);window.fetch=function(input,init){'
+                    'var u=typeof input==="string"?input:(input&&input.url)||"";'
+                    'if(u.indexOf("/github/force-catalog")>=0)'
+                    'return f("/github/api/catalog-book",init);'
+                    'return f(input,init);};})();</script>'
+                )
+                if '</body>' in body:
+                    body = body.replace('</body>', top_link + shim + '</body>')
+                    response.set_data(body)
     except Exception:
         pass
     return response
