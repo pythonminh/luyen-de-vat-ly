@@ -95,26 +95,18 @@ def add_source_links(response):
                     low = text.lower()
 
             # Render the catalog immediately from the local GitHub-generated index.
-            # A MutationObserver keeps an old Google-Sheet loader from overwriting it.
             if 'data-ldvl-github-first="2"' not in text:
                 fallback = r'''
 <script data-ldvl-github-first="2">
 (function(){
-  const IDS=['publicCatalogContent','deCatalogContent'];
-  let rendered=false;
-  function esc(v){return String(v??'').replace(/[&<>\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));}
-  function host(){
-    for(const id of IDS){const e=document.getElementById(id); if(e) return e;}
-    const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-    let n; while(n=w.nextNode()) if((n.nodeValue||'').includes('Đang tải mục lục đề')) return n.parentElement;
-    return null;
-  }
-  function render(h,data){
-    if(!h||!data||rendered)return;
-    const lessons=Array.isArray(data.lessons)?data.lessons:[];
+  let catalogVersion='3';
+  function esc(v){return String(v??'').replace(/[&<>\\"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;'}[s]));}
+  function data(){return window.__LDVL_BANK_INDEX__ || null;}
+  function build(d){
+    const lessons=Array.isArray(d.lessons)?d.lessons:[];
     const groups={};
     for(const x of lessons){
-      const mon=x.Mon||'Khác', lop=x.Lop||'', chuong=x.Chuong||'';
+      const mon=x.Mon||'Khác', lop=x.Lop||'', chuong=x.Chuong||'Chưa phân chương';
       const key=mon+'|'+lop+'|'+chuong;
       (groups[key]??=[]).push(x);
     }
@@ -123,23 +115,44 @@ def add_source_links(response):
       const total=items.reduce((s,x)=>s+Number(x.questions||x.count||0),0);
       const lis=items.map(x=>{
         const p=x.path||x.file||'';
-        return '<li style="margin:5px 0"><a href="/github/questions?branch=main&path='+encodeURIComponent(p)+'" target="_blank" rel="noopener">'+esc(x.BaiHoc||x.De||p)+'</a> <small>('+Number(x.questions||x.count||0)+' câu)</small></li>';
+        const title=x.BaiHoc||x.De||p;
+        return '<li style="margin:6px 0"><a href="/github/questions?branch=main&path='+encodeURIComponent(p)+'" target="_blank" rel="noopener" style="color:#1967d2;text-decoration:none;font-weight:600">'+esc(title)+'</a> <small style="color:#666">('+Number(x.questions||x.count||0)+' câu)</small></li>';
       }).join('');
-      return '<details style="margin:6px 0;padding:8px;border:1px solid #ddd;border-radius:8px"><summary><b>'+esc(mon)+'</b> · Lớp '+esc(lop)+' · '+esc(chuong)+' <small>— '+total+' câu</small></summary><ul>'+lis+'</ul></details>';
+      return '<details open style="margin:7px 0;padding:9px 12px;border:1px solid #d7e3f4;border-radius:10px;background:#fff"><summary style="cursor:pointer"><b>'+esc(mon)+'</b> · Lớp '+esc(lop)+' · '+esc(chuong)+' <small style="color:#666">— '+total+' câu</small></summary><ul style="margin:7px 0 0 18px">'+lis+'</ul></details>';
     }).join('');
-    h.innerHTML='<div style="padding:10px"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>📚 Mục lục GitHub</b><span>'+Number(data.total_files||lessons.length)+' file · '+Number(data.total_questions||0)+' câu</span><span style="color:#159447;font-weight:700">✓ Tải từ GitHub index</span></div><div style="margin-top:10px">'+(rows||'<i>Chưa có file .tex trong ngan-hang.</i>')+'</div></div>';
-    rendered=true;
+    return '<div data-ldvl-catalog="'+catalogVersion+'" style="margin-top:10px;border:1px solid #cfe0f5;border-radius:12px;background:#f8fbff;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:16px">📚 Mục lục đề GitHub</b><span style="padding:4px 8px;border-radius:999px;background:#e8f1ff;color:#1769aa;font-weight:700">'+Number(d.total_files||lessons.length)+' file</span><span style="padding:4px 8px;border-radius:999px;background:#eaf7ef;color:#16833b;font-weight:700">'+Number(d.total_questions||0)+' câu</span><span style="color:#16833b;font-weight:700">✓ Dữ liệu GitHub</span></div>'+(rows||'<i>Không tìm thấy file .tex trong ngân hàng.</i>')+'</div>';
   }
-  function run(){
-    const h=host();
-    const data=window.__LDVL_BANK_INDEX__;
-    if(h&&data)render(h,data);
+  function findShell(){
+    const all=[...document.querySelectorAll('body *')];
+    for(const el of all){
+      const t=(el.textContent||'').trim();
+      if(t.includes('Mục lục kiểu sách')) return el;
+    }
+    return null;
+  }
+  function mount(){
+    const d=data(); if(!d) return false;
+    let host=document.getElementById('publicCatalogContent')||document.getElementById('deCatalogContent');
+    if(host){host.innerHTML=build(d); host.dataset.ldvlMounted=catalogVersion; return true;}
+    const shell=findShell();
+    if(!shell) return false;
+    if(shell.dataset.ldvlMounted===catalogVersion && shell.nextElementSibling?.querySelector?.('[data-ldvl-catalog="3"]')) return true;
+    let block=shell.nextElementSibling;
+    if(block && block.querySelector && block.querySelector('[data-ldvl-catalog="3"]')) return true;
+    const wrap=document.createElement('div');
+    wrap.innerHTML=build(d);
+    const node=wrap.firstElementChild;
+    shell.parentNode.insertBefore(node,shell.nextSibling);
+    shell.dataset.ldvlMounted=catalogVersion;
+    return true;
   }
   function start(){
-    run();
-    const obs=new MutationObserver(()=>{if(!rendered)run();});
+    mount();
+    let tries=0;
+    const timer=setInterval(()=>{mount(); if(++tries>40) clearInterval(timer);},250);
+    const obs=new MutationObserver(()=>mount());
     obs.observe(document.body,{childList:true,subtree:true});
-    setTimeout(run,100); setTimeout(run,500); setTimeout(run,1500);
+    setTimeout(()=>obs.disconnect(),15000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
