@@ -17,7 +17,7 @@ def practice_jump(pos):
 
 @app.after_request
 def practice_ui_patch(response):
-    """Enhance only the practice HTML: clickable palette + clean student-facing DS layout."""
+    """Enhance only the practice HTML: clickable palette + clean student-facing layout."""
     if request.path != '/member/practice' or not response.content_type or 'text/html' not in response.content_type:
         return response
     try:
@@ -48,20 +48,78 @@ function cleanPracticeLatex(){
     s=s.replace(/%\s*Muc(?: do)?\s*:\s*[^%<\n]*?/gi,'');
     el.innerHTML=s.replace(/\s{2,}/g,' ').trim();
   });
-  if(window.MathJax){MathJax.typesetPromise(document.querySelectorAll('.qtext,.opt,.tf,.solution'));}
 }
-document.addEventListener('DOMContentLoaded',function(){cleanPracticeLatex();});
+function alignTF(){
+  document.querySelectorAll('.tf').forEach(function(row){
+    if(row.dataset.aligned==='1') return;
+    const b=row.querySelector('b');
+    const labels=[...row.querySelectorAll('label')];
+    const textNodes=[...row.childNodes].filter(function(n){return n.nodeType===3 && n.textContent.trim();});
+    if(!b || labels.length<2 || textNodes.length<1) return;
+    const text=textNodes.map(function(n){return n.textContent;}).join(' ').replace(/\s+/g,' ').trim();
+    row.innerHTML='';
+    const num=document.createElement('div');num.className='tf-num';num.textContent=b.textContent.trim();
+    const content=document.createElement('div');content.className='tf-text';content.textContent=text;
+    const yes=labels[0].cloneNode(true);yes.className='tf-choice';
+    const no=labels[1].cloneNode(true);no.className='tf-choice';
+    row.append(num,content,yes,no);
+    row.dataset.aligned='1';
+  });
+}
+document.addEventListener('DOMContentLoaded',function(){
+  cleanPracticeLatex();
+  alignTF();
+  if(window.MathJax) MathJax.typesetPromise();
+});
 </script>
 <style>
 button.pitem{font:inherit;cursor:pointer}
 button.pitem:hover{border-color:#145bb0;box-shadow:0 1px 4px #b9cce2}
 .qtext{user-select:text}
-/* Đúng/Sai: đưa nút Đúng/Sai lên cùng hàng với nội dung ý và phóng to để dễ bấm */
-.tf{display:flex!important;align-items:center;gap:18px;flex-wrap:wrap;font-size:20px!important;line-height:1.5!important;padding:16px!important;min-height:78px}
+/* Đúng/Sai: bố cục 4 cột thẳng hàng */
+.tf{
+  display:grid!important;
+  grid-template-columns:56px minmax(320px,1fr) 120px 120px!important;
+  align-items:center!important;
+  gap:14px!important;
+  font-size:20px!important;
+  line-height:1.45!important;
+  padding:16px 18px!important;
+  min-height:78px;
+}
 .tf br{display:none!important}
-.tf > label{display:inline-flex!important;align-items:center;gap:8px;margin-left:6px;font-size:20px!important;line-height:1.5!important;white-space:nowrap;cursor:pointer}
-.tf input[type='radio']{width:22px!important;height:22px!important;accent-color:#176bd3;cursor:pointer}
-.tf > b{font-size:21px!important;min-width:28px}
+.tf > b,.tf-num{
+  font-size:21px!important;
+  font-weight:800!important;
+  text-align:center!important;
+}
+.tf-text{
+  min-width:0;
+  font-size:20px!important;
+}
+.tf-choice{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  margin:0!important;
+  font-size:20px!important;
+  line-height:1.4!important;
+  white-space:nowrap!important;
+  cursor:pointer;
+}
+.tf-choice input[type='radio']{
+  width:24px!important;
+  height:24px!important;
+  margin:0!important;
+  accent-color:#176bd3;
+  cursor:pointer;
+}
+@media(max-width:800px){
+  .tf{grid-template-columns:44px minmax(180px,1fr) 100px 100px!important;gap:8px!important;padding:13px!important}
+  .tf-text,.tf-choice{font-size:17px!important}
+  .tf-choice input[type='radio']{width:22px!important;height:22px!important}
+}
 </style>
 """
         response.set_data(text2.replace('</body>', patch + '</body>'))
