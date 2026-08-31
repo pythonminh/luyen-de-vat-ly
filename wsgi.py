@@ -17,8 +17,8 @@ def practice_jump(pos):
 
 
 @app.after_request
-def practice_palette_clickable(response):
-    """The old practice page renders palette items as spans; make them clickable."""
+def practice_ui_patch(response):
+    """Enhance only the practice HTML: clickable palette + hide TEX control metadata."""
     if request.path != '/member/practice' or not response.content_type or 'text/html' not in response.content_type:
         return response
     try:
@@ -36,20 +36,33 @@ def practice_palette_clickable(response):
                 f"onclick='jumpPractice({n-1})'>{n} · {label}</button>"
             )
 
-        new_text = pat.sub(repl, text)
-        patch = """
+        text2 = pat.sub(repl, text)
+        patch = r"""
 <script>
-function jumpPractice(pos){
-  window.location.href='/practice/jump/'+pos;
+function jumpPractice(pos){window.location.href='/practice/jump/'+pos;}
+function cleanPracticeLatex(){
+  document.querySelectorAll('.qtext,.opt,.tf,.solution').forEach(function(el){
+    // Remove TeX environment/control metadata that must never be shown to students.
+    let s=el.innerHTML;
+    s=s.replace(/\\begin\s*\{ex\}/gi,'');
+    s=s.replace(/%\s*ID\s*:\s*[^%<\n]*?/gi,'');
+    s=s.replace(/%\s*Mức\s*:\s*[^%<\n]*?/gi,'');
+    s=s.replace(/%\s*Muc(?: do)?\s*:\s*[^%<\n]*?/gi,'');
+    s=s.replace(/%\s*ID\s*:\s*/gi,'');
+    el.innerHTML=s.replace(/\s{2,}/g,' ').trim();
+  });
+  if(window.MathJax){MathJax.typesetPromise(document.querySelectorAll('.qtext,.opt,.tf,.solution'));}
 }
+document.addEventListener('DOMContentLoaded',function(){cleanPracticeLatex();});
 </script>
 <style>
 button.pitem{font:inherit;cursor:pointer}
 button.pitem:hover{border-color:#145bb0;box-shadow:0 1px 4px #b9cce2}
+.qtext{user-select:text}
 </style>
 """
-        if new_text != text:
-            response.set_data(new_text.replace('</body>', patch + '</body>'))
+        if text2 != text or "cleanPracticeLatex" not in text2:
+            response.set_data(text2.replace('</body>', patch + '</body>'))
     except Exception:
         pass
     return response
