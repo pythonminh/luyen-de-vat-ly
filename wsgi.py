@@ -34,11 +34,20 @@ except Exception as e:
 # github_source.save_from_question_editor. The real view lives in the
 # github_question_editor blueprint, so expose the legacy endpoint name too.
 try:
-    import github_endpoint_alias  # noqa: F401 — registers compatibility endpoint
+    import github_endpoint_alias  # noqa: F401
     app.config['GITHUB_ENDPOINT_ALIAS'] = True
 except Exception as e:
     app.config['GITHUB_ENDPOINT_ALIAS'] = False
     app.config['GITHUB_ENDPOINT_ALIAS_ERROR'] = str(e)
+
+# New easy GitHub bank manager: Môn -> Lớp -> Chương -> Bài -> Dạng.
+try:
+    from github_manager import bp as github_manager_bp
+    app.register_blueprint(github_manager_bp)
+    app.config['GITHUB_MANAGER'] = True
+except Exception as e:
+    app.config['GITHUB_MANAGER'] = False
+    app.config['GITHUB_MANAGER_ERROR'] = str(e)
 
 try:
     import github_source_mode  # noqa: F401
@@ -77,6 +86,7 @@ def add_source_links(response):
 <div data-ldvl-tools="1" style="position:fixed;right:14px;bottom:14px;z-index:99999;display:flex;gap:8px">
 <a href="/ra-de" style="display:inline-block;padding:10px 15px;border-radius:10px;background:#1976d2;color:#fff;text-decoration:none;font:700 14px Arial,sans-serif">📝 Ra đề</a>
 <a href="/github" style="display:inline-block;padding:10px 15px;border-radius:10px;background:#24292f;color:#fff;text-decoration:none;font:600 14px Arial,sans-serif">🐙 GitHub</a>
+<a href="/github/quan-ly" style="display:inline-block;padding:10px 15px;border-radius:10px;background:#6f42c1;color:#fff;text-decoration:none;font:700 14px Arial,sans-serif">📚 Quản lý ngân hàng</a>
 </div>'''
             i = low.rfind('</body>')
             text = text[:i] + widget + text[i:] if i >= 0 else text + widget
