@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Ngân hàng GitHub — giao diện quản lý thống nhất.
-
-Nguồn dữ liệu duy nhất cho ngân hàng câu hỏi:
-    GitHub / ngan-hang/*.tex
-    GitHub / bank_index.json (chỉ mục nhanh)
-
-Không dùng Google Sheet cho ngân hàng câu hỏi.
+"""Ngân hàng GitHub — giao diện quản lý duy nhất.
+Nguồn: GitHub / ngan-hang/*.tex và bank_index.json.
+Không dùng Google Sheet trong màn quản lý.
 """
 from __future__ import annotations
 
@@ -17,21 +13,14 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import defaultdict
-
 from flask import Blueprint, Response, jsonify, redirect, request, session, url_for
 from app import app
 
 bp = Blueprint("github_manager_ui", __name__)
-
 API = "https://api.github.com"
 RAW = "https://raw.githubusercontent.com"
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
 BRANCH = "main"
-
-
-def clean(s):
-    return str(s or "").replace("\r\n", "\n").replace("\r", "\n").strip()
 
 
 def esc(s):
@@ -81,7 +70,8 @@ def github_json(path, method="GET", payload=None):
     )
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
-            return json.loads(r.read().decode("utf-8"))
+            raw = r.read().decode("utf-8")
+            return json.loads(raw)
     except urllib.error.HTTPError as e:
         try:
             info = json.loads(e.read().decode("utf-8"))
@@ -95,34 +85,25 @@ def load_index():
     owner, repo = repo_parts()
     url = f"{RAW}/{owner}/{repo}/{BRANCH}/bank_index.json"
     req = urllib.request.Request(url, headers={"User-Agent": "luyen-de-vat-ly"})
-    try:
-        with urllib.request.urlopen(req, timeout=12) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except Exception:
-        # Chỉ là fallback khi GitHub Raw tạm thời chậm; file vẫn phải là bản GitHub đã deploy.
-        local = os.path.join(app.root_path, "bank_index.json")
-        with open(local, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-
-def valid_path(path):
-    p = clean(path).strip("/")
-    return p.startswith("ngan-hang/") and p.lower().endswith(".tex") and ".." not in p
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read().decode("utf-8"))
 
 
 def fetch_tex(path):
+    if not path.startswith("ngan-hang/") or not path.lower().endswith(".tex") or ".." in path:
+        raise RuntimeError("Đường dẫn .tex không hợp lệ")
     owner, repo = repo_parts()
     api = f"/repos/{owner}/{repo}/contents/{urllib.parse.quote(path, safe='/')}?ref={urllib.parse.quote(BRANCH)}"
     d = github_json(api)
-    raw = base64.b64decode((d.get("content") or "").replace("\n", "")).decode("utf-8", "replace")
-    return d.get("sha", ""), raw
+    content = (d.get("content") or "").replace("\n", "")
+    return d.get("sha", ""), base64.b64decode(content).decode("utf-8", "replace")
 
 
 def save_tex(path, content, sha, message):
     owner, repo = repo_parts()
     api = f"/repos/{owner}/{repo}/contents/{urllib.parse.quote(path, safe='/')}"
     body = {
-        "message": message,
+        "message": message or "Cập nhật file .tex từ Ngân hàng GitHub",
         "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
         "branch": BRANCH,
         "sha": sha,
@@ -130,7 +111,7 @@ def save_tex(path, content, sha, message):
     return github_json(api, "PUT", body)
 
 
-def split_tex(text):
+def split_blocks(text):
     pat = re.compile(r"\\begin\s*\{\s*ex\s*\}[\s\S]*?\\end\s*\{\s*ex\s*\}", re.I)
     ms = list(pat.finditer(text or ""))
     if not ms:
@@ -138,91 +119,57 @@ def split_tex(text):
     return text[:ms[0].start()], [m.group(0) for m in ms], text[ms[-1].end():]
 
 
-def detect_kind(block):
-    if re.search(r"\\choiceTF\b", block or "", re.I):
+def question_kind(block):
+    if re.search(r"\\choiceTF\b", block, re.I):
         return "B", "Đúng / Sai"
-    if re.search(r"\\shortans\b", block or "", re.I):
+    if re.search(r"\\shortans\b", block, re.I):
         return "C", "Trả lời ngắn"
-    if re.search(r"\\choice\b", block or "", re.I):
+    if re.search(r"\\choice\b", block, re.I):
         return "A", "Trắc nghiệm"
     return "D", "Tự luận"
 
 
-def qmeta(block, n):
-    def one(pattern):
-        m = re.search(pattern, block or "", re.I)
-        return m.group(1).strip() if m else ""
+def one(pattern, block):
+    m = re.search(pattern, block or "", re.I)
+    return m.group(1).strip() if m else ""
 
-    kind, label = detect_kind(block)
+
+def question_meta(block, n):
+    kind, label = question_kind(block)
     title = ""
     m = re.search(
         r"\\begin\s*\{\s*ex\s*\}(.*?)(?=\\(?:choiceTF|choice|shortans)\b|\\loigiai\b|\\end\s*\{\s*ex\s*\})",
-        block or "", re.S | re.I,
+        block or "", re.I | re.S,
     )
     if m:
         title = re.sub(r"%[^\r\n]*", "", m.group(1))
         title = re.sub(r"\\dangbt\s*\{[^{}]*\}", "", title, flags=re.I)
         title = re.sub(r"\s+", " ", title).strip()
-
     return {
         "n": n,
-        "id": one(r"%\s*ID\s*:\s*([^\r\n]+)"),
-        "level": one(r"%\s*Mức\s*:\s*([^\r\n]+)"),
-        "dang": one(r"\\dangbt\s*\{([^{}]*)\}"),
+        "id": one(r"%\s*ID\s*:\s*([^\r\n]+)", block),
+        "level": one(r"%\s*Mức\s*:\s*([^\r\n]+)", block),
+        "dang": one(r"\\dangbt\s*\{([^{}]*)\}", block) or "Chưa phân dạng",
         "kind": kind,
         "label": label,
-        "title": title[:260] or "(Chưa đọc được nội dung câu)",
-        "has_tikz": bool(re.search(r"\\begin\s*\{\s*tikzpicture\s*\}|\\includegraphics", block or "", re.I)),
+        "title": title[:300] or "(Chưa đọc được nội dung câu)",
+        "has_image": bool(re.search(r"\\begin\s*\{\s*tikzpicture\s*\}|\\includegraphics", block or "", re.I)),
     }
 
 
-def rebuild_block(block, qid, level, dang):
-    b = re.sub(r"%\s*ID\s*:[^\r\n]*\r?\n?", "", block, count=1, flags=re.I)
-    b = re.sub(r"%\s*Mức\s*:[^\r\n]*\r?\n?", "", b, count=1, flags=re.I)
-    b = re.sub(r"\\dangbt\s*\{[^{}]*\}\s*", "", b, count=1, flags=re.I)
-    m = re.search(r"(\\begin\s*\{\s*ex\s*\})", b, re.I)
-    if not m:
-        return b
-    lines = []
-    if qid:
-        lines.append("% ID: " + qid)
-    if level:
-        lines.append("% Mức: " + level)
-    meta_text = ("\n" + "\n".join(lines) + "\n") if lines else "\n"
-    b = b[:m.end()] + meta_text + b[m.end():]
-    if dang:
-        b = b[:m.start()] + "\\dangbt{" + dang + "}\n" + b[m.start():]
-    return b
-
-
-def classify_counts(blocks):
-    c = {k: 0 for k in "ABCD"}
-    levels = {k: 0 for k in ("NB", "TH", "VD", "VDC")}
+def type_counts(blocks):
+    out = {k: 0 for k in "ABCD"}
     for b in blocks:
-        k, _ = detect_kind(b)
-        c[k] += 1
-        m = re.search(r"%\s*Mức\s*:\s*(NB|TH|VD|VDC)\b", b or "", re.I)
-        if m:
-            levels[m.group(1).upper()] += 1
-    return c, levels
+        out[question_kind(b)[0]] += 1
+    return out
 
 
-CSS = r"""
+def page(body):
+    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ngân hàng GitHub</title>
 <style>
-:root{--blue:#1769d2;--blue2:#edf5ff;--ink:#18324d;--muted:#64748b;--line:#d9e3ee;--bg:#f4f7fb;--ok:#16813d;--violet:#6d4bd8;--orange:#e86b18;--surface:#fff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}.page{max-width:1480px;margin:0 auto;padding:0 12px 50px}
-.top{position:sticky;top:0;z-index:50;background:#1769d2;color:#fff;box-shadow:0 2px 12px #0f4fa844}.topRow{min-height:64px;display:flex;align-items:center;gap:14px;padding:10px 14px}.brand{font-size:21px;font-weight:900;letter-spacing:.2px}.brandSub{font-size:11px;opacity:.9;margin-top:2px}.subjectTabs{display:flex;gap:6px}.subjectBtn{border:1px solid #ffffff55;background:#ffffff14;color:#fff;border-radius:13px;padding:8px 15px;font-weight:900;cursor:pointer}.subjectBtn.active{background:#fff;color:#1558a6}.topRight{margin-left:auto;display:flex;align-items:center;gap:7px}.topBtn{border:1px solid #ffffff45;background:#ffffff12;color:#fff;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer;text-decoration:none;font-size:12px}
-.examStrip{margin-top:0;padding:8px 15px;background:#e9f3ff;border-bottom:1px solid #c8dff7;color:#174a84;font-size:12px}.nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 0}.btn{border:1px solid #cbd7e4;background:var(--surface);color:#174a84;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer}.btn:hover{background:#f8fbff}.btnPrimary{background:var(--blue);border-color:var(--blue);color:#fff}.btnGreen{background:var(--ok);border-color:var(--ok);color:#fff}.btnRed{background:#fff5f5;border-color:#efb2b2;color:#b42318}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 14px #17324d0a}.filters{padding:13px;display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:8px}.field label{display:block;font-size:11px;font-weight:900;color:#526174;margin-bottom:4px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd6e2;border-radius:9px;background:#fff;color:var(--ink)}
-.catalogIntro{margin-top:12px;padding:12px 14px;background:linear-gradient(180deg,#eff6ff,#fff);border:1px solid #c9ddfa;border-radius:16px}.introTitle{font-size:16px;font-weight:950;color:#1e3a8a;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #dbe3ea;font-size:11px;font-weight:850;color:#475569}.stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.statPill{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900}.shelf{margin-top:12px}.subjectBlock{margin:12px 0 16px}.subjectHead{padding:11px 13px;border-radius:14px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-weight:950;font-size:17px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.gradeBlock{margin:10px 0;border:1px solid #cbd7e4;border-radius:15px;overflow:hidden}.gradeHead{padding:10px 12px;background:#f1f5f9;display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:950}.chapterBlock{margin:9px;border:1px solid #bfdbfe;border-radius:13px;overflow:hidden;background:#f8fbff}.chapterHead{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.lessonGrid{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:9px}.lessonCard{border:1px solid #e1e8ef;border-radius:13px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:7px;box-shadow:0 1px 3px #0f172a0d}.lessonTitle{font-weight:950;color:#0f172a;line-height:1.3}.lessonSub{font-size:12px;color:#64748b;line-height:1.35}.chips{display:flex;flex-wrap:wrap;gap:5px}.chip{border:1px solid #d7dee7;background:#f8fafc;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:850;color:#475569}.a{background:#edf4ff;border-color:#bfdbfe;color:#1557a6}.b{background:#f5efff;border-color:#d8b4fe;color:#6542c2}.c{background:#ecfbf3;border-color:#a7f3d0;color:#16804f}.d{background:#fff5eb;border-color:#fed7aa;color:#ae5a0b}.lessonActions{display:flex;gap:6px;flex-wrap:wrap}.miniBtn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:900;cursor:pointer}.miniBtn.green{background:#eaf8ef;color:#166534;border-color:#86efac}
-.split{display:grid;grid-template-columns:340px 1fr;gap:12px}.sidebar{max-height:calc(100vh - 120px);overflow:auto}.panelTitle{padding:12px 14px;border-bottom:1px solid #e7edf3;font-weight:950}.qList{padding:9px}.qitem{border:1px solid #e0e7ef;border-radius:10px;padding:9px;margin:6px 0;cursor:pointer;background:#fff}.qitem:hover,.qitem.active{background:#edf5ff;border-color:#8bb9ed}.qtop{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.qnum{font-weight:950;color:#145bb0}.qtitle{margin-top:4px;font-size:12px;font-weight:750;line-height:1.4;color:#243b53}.qmeta{margin-top:4px;font-size:10px;color:#64748b;line-height:1.4}.editor{padding:15px}.editorHead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}.editorTitle{font-size:20px;font-weight:950}.metaGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.code{width:100%;min-height:540px;padding:12px;border:1px solid #bfcddd;border-radius:10px;background:#fcfdff;font:13px/1.55 Consolas,Monaco,monospace;resize:vertical}.hint{margin-top:8px;padding:9px 11px;border:1px dashed #bfd0e1;border-radius:9px;background:#f8fbff;color:#607083;font-size:11px;line-height:1.5}.hidden{display:none!important}.message{margin:10px 0;padding:10px 12px;border-radius:9px;font-size:12px}.ok{background:#eaf8ef;border:1px solid #a7d8b6;color:#166534}.error{background:#fff0f0;border:1px solid #efb1b1;color:#b42318}
-@media(max-width:1050px){.filters{grid-template-columns:1fr 1fr}.filters .searchWide{grid-column:1/-1}.split{grid-template-columns:1fr}.sidebar{max-height:360px}.stats{grid-template-columns:1fr 1fr}.lessonGrid{grid-template-columns:1fr}}@media(max-width:640px){.topRow{gap:7px}.brand{font-size:17px}.brandSub{display:none}.subjectBtn{padding:7px 9px;font-size:11px}.topBtn{display:none}.filters{grid-template-columns:1fr}.metaGrid{grid-template-columns:1fr}.lessonGrid{grid-template-columns:1fr}.page{padding:0 6px 30px}}
-</style>
-"""
-
-
-def page(html_body):
-    return CSS + f'''<div class="top"><div class="topRow"><div><div class="brand">📚 LUYENDEVATLY · NGÂN HÀNG GITHUB</div><div class="brandSub">GitHub / ngan-hang/*.tex · bank_index.json · không dùng Google Sheet</div></div><div class="subjectTabs"><button class="subjectBtn" id="tabMath" onclick="pickSubject('Toán')">📐 Toán</button><button class="subjectBtn" id="tabPhys" onclick="pickSubject('Vật lý')">⚛️ Vật lí</button></div><div class="topRight"><span class="topBtn">✓ GitHub</span><a class="topBtn" href="/">⌂ Ứng dụng</a><a class="topBtn" href="/ra-de">📝 Ra đề</a></div></div></div><div class="examStrip">🗂️ Quản lý ngân hàng · Dữ liệu đọc trực tiếp từ file <b>.tex</b> trên GitHub. Chọn Môn → Khối/Lớp → Chương → Bài → Dạng → Câu.</div><div class="page">{html_body}</div>'''
+:root{{--blue:#1769d2;--blue2:#edf5ff;--ink:#17324d;--muted:#64748b;--line:#d8e2ec;--bg:#f4f7fb;--surface:#fff;--green:#15803d;--violet:#6d28d9;--orange:#c2410c}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font-family:Segoe UI,Arial,sans-serif}}a{{color:inherit}}button,input,select,textarea{{font:inherit}}.top{{background:#1769d2;color:#fff;position:sticky;top:0;z-index:30;box-shadow:0 2px 12px #0f4fa833}}.toprow{{min-height:66px;display:flex;align-items:center;gap:12px;padding:10px 16px}}.brand{{font-size:20px;font-weight:900}}.sub{{font-size:11px;opacity:.9;margin-top:2px}}.tabs{{display:flex;gap:6px;margin-left:8px}}.tab{{border:1px solid #ffffff55;background:#ffffff12;color:#fff;border-radius:12px;padding:8px 14px;font-weight:900;cursor:pointer}}.tab.active{{background:#fff;color:#1558a6}}.toplinks{{margin-left:auto;display:flex;gap:6px}}.toplinks a{{border:1px solid #ffffff44;background:#ffffff12;color:#fff;text-decoration:none;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:800}}.bar{{padding:8px 16px;background:#e8f3ff;border-bottom:1px solid #cfe0f5;color:#194b83;font-size:12px}}.wrap{{max-width:1520px;margin:0 auto;padding:12px}}.toolbar{{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}}.btn{{border:1px solid #cbd7e4;background:#fff;color:#174a84;border-radius:9px;padding:8px 11px;font-weight:800;cursor:pointer;text-decoration:none;font-size:12px}}.btn.primary{{background:#1769d2;color:#fff;border-color:#1769d2}}.btn.green{{background:#eaf8ef;color:#166534;border-color:#86efac}}.btn.red{{background:#fff3f3;color:#b42318;border-color:#efb0b0}}.card{{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:0 2px 9px #17324d0a}}.filters{{display:grid;grid-template-columns:1.5fr repeat(5,1fr);gap:8px;padding:11px}}.field label{{display:block;font-size:11px;font-weight:900;color:#526174;margin-bottom:4px}}.field input,.field select{{width:100%;border:1px solid #cad6e2;border-radius:8px;background:#fff;padding:8px;color:var(--ink)}}.intro{{margin-top:10px;padding:11px 13px;border:1px solid #cbe0f9;background:linear-gradient(180deg,#eff6ff,#fff);border-radius:15px}}.introTitle{{font-weight:950;color:#1e3a8a;font-size:16px}}.pills{{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}}.pill{{border:1px solid #bfdbfe;background:#fff;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;color:#1d4ed8}}.shelf{{margin-top:10px}}.subject{{margin-bottom:14px}}.subjectHead{{padding:10px 13px;border-radius:13px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);color:#fff;font-size:16px;font-weight:950;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}}.grade{{margin-top:9px;border:1px solid #cfd9e4;border-radius:14px;overflow:hidden;background:#fff}}.gradeHead{{padding:9px 12px;background:#f1f5f9;font-weight:950;display:flex;justify-content:space-between}}.chapter{{margin:9px;border:1px solid #bdd8f6;border-radius:13px;overflow:hidden;background:#f8fbff}}.chapterHead{{padding:9px 11px;background:#dbeafe;color:#1e3a8a;font-weight:950;display:flex;justify-content:space-between}}.grid{{padding:9px;display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:9px}}.lesson{{border:1px solid #dfe7ef;border-radius:13px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:7px}}.lessonTitle{{font-weight:950;line-height:1.3}}.lessonSub{{font-size:11px;color:#64748b}}.chips{{display:flex;gap:5px;flex-wrap:wrap}}.chip{{border:1px solid #d5dee8;background:#f8fafc;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:850}}.chipA{{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}}.chipB{{background:#f5f3ff;color:#6d28d9;border-color:#c4b5fd}}.chipC{{background:#ecfdf5;color:#15803d;border-color:#86efac}}.chipD{{background:#fff7ed;color:#c2410c;border-color:#fdba74}}.dangbox{{border:1px solid #b9d6f6;background:#f8fbff;border-radius:10px;padding:7px}}.dangtitle{{font-size:11px;font-weight:950;color:#1e3a8a;margin-bottom:5px}}.dangrow{{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;border:1px solid #dbeafe;background:#fff;border-radius:8px;padding:6px 7px;margin:4px 0;cursor:pointer}}.dangrow:hover{{background:#eff6ff;border-color:#60a5fa}}.dangname{{font-size:10.5px;font-weight:850;line-height:1.3}}.dangmeta{{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end}}.tiny{{border-radius:999px;padding:3px 5px;font-size:9px;font-weight:900;border:1px solid #d7dee7;background:#f8fafc;color:#475569}}.tinyA{{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}}.tinyB{{background:#f5f3ff;color:#6d28d9;border-color:#c4b5fd}}.tinyC{{background:#ecfdf5;color:#15803d;border-color:#86efac}}.tinyD{{background:#fff7ed;color:#c2410c;border-color:#fdba74}}.tinyT{{background:#eaf2ff;color:#1e3a8a;border-color:#bfdbfe}}.actions{{display:flex;gap:5px;flex-wrap:wrap}}.mini{{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:5px 8px;font-size:10.5px;font-weight:900;cursor:pointer}}.empty{{padding:30px;text-align:center;color:#64748b}}.hidden{{display:none!important}}.editorGrid{{display:grid;grid-template-columns:330px 1fr;gap:10px}}.qlist{{max-height:calc(100vh - 175px);overflow:auto;padding:8px}}.qitem{{border:1px solid #e0e7ef;border-radius:9px;padding:8px;margin:5px 0;background:#fff;cursor:pointer}}.qitem.active,.qitem:hover{{background:#edf5ff;border-color:#8bb9ed}}.qtop{{display:flex;gap:4px;flex-wrap:wrap;align-items:center}}.qnum{{font-weight:950;color:#145bb0;font-size:11px}}.qtitle{{font-size:11px;font-weight:750;line-height:1.35;margin-top:3px}}.qmeta{{font-size:9.5px;color:#64748b;margin-top:3px}}.editor{{padding:12px}}.editorHead{{display:flex;justify-content:space-between;gap:7px;align-items:flex-start}}.editorTitle{{font-size:18px;font-weight:950}}.metaGrid{{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0}}.code{{width:100%;min-height:560px;border:1px solid #becddd;border-radius:9px;padding:11px;background:#fcfdff;font:13px/1.55 Consolas,monospace;resize:vertical}}.status{{margin:8px 0;padding:8px 10px;border-radius:8px;font-size:11px}}.ok{{background:#eaf8ef;border:1px solid #a7d8b6;color:#166534}}.err{{background:#fff0f0;border:1px solid #efb1b1;color:#b42318}}@media(max-width:1000px){{.filters{{grid-template-columns:1fr 1fr}}.grid{{grid-template-columns:1fr}}.editorGrid{{grid-template-columns:1fr}}.qlist{{max-height:330px}}}}@media(max-width:650px){{.toplinks{{display:none}}.filters{{grid-template-columns:1fr}}.metaGrid{{grid-template-columns:1fr}}.wrap{{padding:7px}}}}
+</style></head><body>{body}</body></html>'''
 
 
 @bp.get("/github/quan-ly")
@@ -233,46 +180,51 @@ def manager():
     try:
         data = load_index()
     except Exception as e:
-        return page(f'<div class="message error"><b>Không đọc được bank_index.json từ GitHub:</b> {esc(e)}</div>')
-    lessons = data.get("lessons", []) if isinstance(data, dict) else []
+        return page(f'<div class="wrap"><div class="status err">❌ Không đọc được bank_index.json từ GitHub: {esc(e)}</div></div>')
+    lessons = data.get("lessons") or []
     payload = json.dumps(lessons, ensure_ascii=False).replace("</", "<\\/")
-    body = f'''<div class="nav"><a class="btn" href="/">← Trang chính</a><a class="btn btnPrimary" href="/github/quan-ly">📚 Ngân hàng</a></div>
-<div class="card"><div class="filters"><div class="field searchWide"><label>🔎 Tìm nhanh</label><input id="fSearch" placeholder="Tên bài, dạng bài, tên file..." oninput="renderCatalog()"></div><div class="field"><label>Môn</label><select id="fMon" onchange="onFilter('mon')"></select></div><div class="field"><label>Khối</label><select id="fKhoi" onchange="onFilter('khoi')"></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilter('lop')"></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilter('chuong')"></select></div><div class="field"><label>Bài học</label><select id="fBai" onchange="onFilter('bai')"></select></div><div class="field"><label>Dạng câu</label><select id="fKind" onchange="renderCatalog"><option value="">Tất cả</option><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div></div></div>
-<div id="catalogIntro" class="catalogIntro"></div><div id="catalog" class="shelf"></div>
-<div id="questionView" class="hidden"><div class="nav"><button class="btn" onclick="backCatalog()">← Mục lục</button><button class="btn" onclick="prevQuestion()">← Câu trước</button><button class="btn" onclick="nextQuestion()">Câu sau →</button><button class="btn btnGreen" onclick="saveCurrent()">💾 Lưu GitHub</button><button class="btn btnRed" onclick="deleteQuestion()">🗑 Xóa câu</button><button class="btn" onclick="duplicateQuestion()">⧉ Nhân bản</button></div><div class="split"><div class="card sidebar"><div class="panelTitle">📝 Danh sách câu</div><div class="qList" id="qList"></div></div><div class="card editor"><div class="editorHead"><div><div class="editorTitle" id="eTitle">Câu</div><div id="ePath" class="hint"></div></div><div id="eKind" class="tag"></div></div><div class="metaGrid"><div class="field"><label>Loại câu</label><select id="eKindSel"><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div><div class="field"><label>Mức độ</label><select id="eLevel"><option value="">—</option><option>NB</option><option>TH</option><option>VD</option><option>VDC</option></select></div><div class="field"><label>ID</label><input id="eId"></div><div class="field"><label>Dạng bài tập</label><input id="eDang"></div></div><div class="hint">🖼 Nếu câu có <b>TikZ</b> hoặc <b>includegraphics</b>, mã hình vẫn được giữ nguyên trong file .tex.</div><textarea id="eCode" class="code" spellcheck="false"></textarea></div></div></div>
+    requested_path = request.args.get("path", "")
+    requested_dang = request.args.get("dang", "")
+    boot = json.dumps({"path": requested_path, "dang": requested_dang}, ensure_ascii=False).replace("</", "<\\/")
+    body = f'''<div class="top"><div class="toprow"><div><div class="brand">📚 LUYỆN ĐỀ AI · NGÂN HÀNG GITHUB</div><div class="sub">Đọc trực tiếp GitHub / ngan-hang/*.tex · bank_index.json · không dùng Google Sheet</div></div><div class="tabs"><button class="tab active" id="tabMath" onclick="pickSubject('Toán')">📐 Toán</button><button class="tab" id="tabPhys" onclick="pickSubject('Vật lý')">⚛️ Vật lí</button></div><div class="toplinks"><a href="/">⌂ Ứng dụng</a><a href="/ra-de">📝 Ra đề</a></div></div><div class="bar">🗂️ Mục lục → Bài → <b>Dạng bài tập</b> → chọn đúng loại → xem/sửa từng câu. Dữ liệu câu hỏi lấy từ file <b>.tex</b> trên GitHub.</div></div>
+<div class="wrap"><div class="toolbar"><a class="btn" href="/">← Trang chính</a><a class="btn primary" href="/github/quan-ly">📚 Mục lục GitHub</a><button class="btn" onclick="openCurrentPath()">✏️ Mở bài đang chọn</button></div>
+<div class="card"><div class="filters"><div class="field"><label>🔎 Tìm nhanh</label><input id="fSearch" placeholder="Tên bài, dạng bài, file .tex..." oninput="renderCatalog()"></div><div class="field"><label>Môn</label><select id="fMon" onchange="onFilter('mon')"></select></div><div class="field"><label>Khối</label><select id="fKhoi" onchange="onFilter('khoi')"></select></div><div class="field"><label>Lớp</label><select id="fLop" onchange="onFilter('lop')"></select></div><div class="field"><label>Chương</label><select id="fChuong" onchange="onFilter('chuong')"></select></div><div class="field"><label>Bài</label><select id="fBai" onchange="onFilter('bai')"></select></div><div class="field"><label>Loại câu</label><select id="fKind" onchange="renderCatalog()"><option value="">Tất cả</option><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div></div></div>
+<div id="catalogIntro" class="intro"></div><div id="catalog" class="shelf"></div>
+<div id="editorView" class="hidden"><div class="toolbar"><button class="btn" onclick="backCatalog()">← Quay lại mục lục</button><button class="btn" onclick="prevQuestion()">← Câu trước</button><button class="btn" onclick="nextQuestion()">Câu sau →</button><button class="btn green" onclick="saveQuestion()">💾 Lưu GitHub</button><button class="btn" onclick="newQuestion()">➕ Thêm câu</button><button class="btn" onclick="duplicateQuestion()">⧉ Nhân bản</button></div><div class="editorGrid"><div class="card"><div class="panelTitle" style="padding:12px 13px;font-weight:950;border-bottom:1px solid #e7edf3">📝 Câu hỏi trong file</div><div id="qList" class="qlist"></div></div><div class="card editor"><div class="editorHead"><div><div id="eTitle" class="editorTitle">Câu</div><div id="ePath" class="qmeta"></div></div><div id="eBadge" class="pill"></div></div><div class="metaGrid"><div class="field"><label>Loại câu</label><select id="eKind"><option value="A">A · Trắc nghiệm</option><option value="B">B · Đúng / Sai</option><option value="C">C · Trả lời ngắn</option><option value="D">D · Tự luận</option></select></div><div class="field"><label>Mức độ</label><input id="eLevel" placeholder="NB / TH / VD / VDC"></div><div class="field"><label>ID</label><input id="eId"></div><div class="field"><label>Dạng bài tập</label><input id="eDang"></div></div><div class="status">🖼 TikZ / includegraphics được giữ nguyên trong block .tex. Sửa xong bấm <b>Lưu GitHub</b>.</div><textarea id="eCode" class="code" spellcheck="false"></textarea><div id="saveStatus"></div></div></div></div>
 <script>
 const LESSONS={payload};
-let state={{mon:'',khoi:'',lop:'',chuong:'',bai:'',kind:''}}, current={{path:'',sha:'',head:'',tail:'',blocks:[],qs:[],idx:0}};
-function esc(s){{return String(s==null?'':s).replace(/[&<>\"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[c]))}}
-function norm(s){{try{{return String(s||'').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d').trim()}}catch(e){{return String(s||'').toLowerCase().trim()}}}}
-function kindOfLesson(x){{let ds=x.dang||{{}};return Object.keys(ds)}}
+const BOOT={boot};
+let state={{mon:'',khoi:'',lop:'',chuong:'',bai:'',kind:''}};
+let current={{path:'',sha:'',head:'',tail:'',blocks:[],qs:[],idx:0}};
+const esc=s=>String(s==null?'':s).replace(/[&<>\"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[c]));
+const escAttr=esc;
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d').trim();
+const uniq=a=>[...new Set(a.filter(x=>String(x||'').trim()))];
 function deriveKhoi(lop){{let m=String(lop||'').match(/(10|11|12)/);return m?m[1]:String(lop||'').trim()}}
-function uniq(a){{return [...new Set(a.filter(x=>String(x||'').trim()))]}}
-function setSel(id, vals, value, label){{let e=document.getElementById(id);let arr=uniq(vals).sort((a,b)=>String(a).localeCompare(String(b),'vi'));e.innerHTML='<option value="">'+label+'</option>'+arr.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');e.value=value||''}}
-function filteredLessons(){{let q=norm(document.getElementById('fSearch').value);return LESSONS.filter(x=>{{let ok=(!state.mon||x.Mon===state.mon)&&(!state.khoi||deriveKhoi(x.Lop)===state.khoi)&&(!state.lop||x.Lop===state.lop)&&(!state.chuong||x.Chuong===state.chuong)&&(!state.bai||(x.BaiHoc||x.De)===state.bai);let text=norm([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.De,Object.keys(x.dang||{{}}).join(' ')].join(' '));return ok&&(!q||text.includes(q))}})}}
-function refreshFilters(){{let all=LESSONS;let a=all.filter(x=>!state.mon||x.Mon===state.mon);setSel('fMon',all.map(x=>x.Mon),state.mon,'Tất cả môn');let b=a.filter(x=>!state.khoi||deriveKhoi(x.Lop)===state.khoi);setSel('fKhoi',a.map(x=>deriveKhoi(x.Lop)),state.khoi,'Tất cả khối');let c=b.filter(x=>!state.lop||x.Lop===state.lop);setSel('fLop',b.map(x=>x.Lop),state.lop,'Tất cả lớp');let d=c.filter(x=>!state.chuong||x.Chuong===state.chuong);setSel('fChuong',c.map(x=>x.Chuong),state.chuong,'Tất cả chương');let e=d.filter(x=>!state.bai||(x.BaiHoc||x.De)===state.bai);setSel('fBai',d.map(x=>x.BaiHoc||x.De),state.bai,'Tất cả bài')}}
-function onFilter(k){{if(k==='mon'){{state.mon=document.getElementById('fMon').value;state.khoi='';state.lop='';state.chuong='';state.bai=''}}else if(k==='khoi'){{state.khoi=document.getElementById('fKhoi').value;state.lop='';state.chuong='';state.bai=''}}else if(k==='lop'){{state.lop=document.getElementById('fLop').value;state.chuong='';state.bai=''}}else if(k==='chuong'){{state.chuong=document.getElementById('fChuong').value;state.bai=''}}else if(k==='bai'){{state.bai=document.getElementById('fBai').value}}refreshFilters();renderCatalog();syncSubject()}}
-function subjectName(mon){{return norm(mon).includes('toan')?'Toán':(norm(mon).includes('vat')?'Vật lý':mon)}}
-function pickSubject(mon){{state.mon=mon;state.khoi='';state.lop='';state.chuong='';state.bai='';refreshFilters();document.getElementById('fMon').value=LESSONS.some(x=>x.Mon===mon)?mon:'';renderCatalog();syncSubject()}}
-function syncSubject(){{let m=state.mon;document.getElementById('tabMath').classList.toggle('active',subjectName(m)==='Toán');document.getElementById('tabPhys').classList.toggle('active',subjectName(m)==='Vật lý')}}
-function renderCatalog(){{let list=filteredLessons();let kind=document.getElementById('fKind').value||'';if(kind)list=list.filter(x=>Object.keys(x.dang||{{}}).some(d=>Number(x.dang[d]||0)>0)&&x._kind!==kind); // kind lọc sâu ở bước mở file; không làm mất bài
-let qTotal=list.reduce((a,x)=>a+(Number(x.questions||x.count||0)),0);let mons=uniq(list.map(x=>x.Mon)).length, kh=uniq(list.map(x=>deriveKhoi(x.Lop))).length,ch=uniq(list.map(x=>x.Chuong)).length,ba=uniq(list.map(x=>x.BaiHoc||x.De)).length,dg=uniq(list.flatMap(x=>Object.keys(x.dang||{{}}))).length;document.getElementById('catalogIntro').innerHTML='<div class="introTitle">📚 Mục lục kiểu sách <span class="tag">GitHub</span></div><div style="margin-top:5px;color:#5f6f82;font-size:12px;line-height:1.45">Trong từng trang, ngân hàng được gom theo <b>Môn → Khối/Lớp → Chương → Bài</b>. Khi mở một bài, hệ thống đọc trực tiếp file <b>.tex</b> để lấy từng câu và phân loại A/B/C/D, mức độ, dạng bài.</div><div class="stats"><span class="statPill">'+mons+' môn</span><span class="statPill">'+kh+' khối</span><span class="statPill">'+ch+' chương</span><span class="statPill">'+ba+' bài</span><span class="statPill">'+dg+' dạng BT</span><span class="statPill">'+qTotal+' câu</span></div>';
-if(!list.length){{document.getElementById('catalog').innerHTML='<div class="card" style="padding:35px;text-align:center;color:#738096">Không có đề phù hợp.</div>';return}}let html='<div>';let byM=new Map();list.forEach(x=>{{let k=x.Mon||'Khác';if(!byM.has(k))byM.set(k,[]);byM.get(k).push(x)}});for(let [m,ml] of byM){{let mq=ml.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<section class="subjectBlock"><div class="subjectHead"><span>'+esc(m)+'</span><small>'+ml.length+' bài · '+mq+' câu</small></div>';let byK=new Map();ml.forEach(x=>{{let k=deriveKhoi(x.Lop)||'?';if(!byK.has(k))byK.set(k,[]);byK.get(k).push(x)}});for(let [k,kl] of byK){{let kq=kl.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<div class="gradeBlock"><div class="gradeHead"><span>Khối '+esc(k)+'</span><span style="font-size:11px;color:#64748b">'+kl.length+' bài · '+kq+' câu</span></div>';let byC=new Map();kl.forEach(x=>{{let c=x.Chuong||'Chưa phân chương';if(!byC.has(c))byC.set(c,[]);byC.get(c).push(x)}});for(let [c,cl] of byC){{let cq=cl.reduce((a,x)=>a+Number(x.questions||x.count||0),0);html+='<div class="chapterBlock"><div class="chapterHead"><span>'+esc(c)+'</span><span style="font-size:11px">'+cl.length+' bài · '+cq+' câu</span></div><div class="lessonGrid">';cl.forEach(x=>{{let p=x.path||x.file||'';let title=x.BaiHoc||x.De||p;let ds=Object.keys(x.dang||{}).slice(0,4);html+='<div class="lessonCard"><div class="lessonTitle">'+esc(title)+'</div><div class="lessonSub">'+esc(x.Mon||'')+' · Lớp '+esc(x.Lop||'')+' · '+esc(c)+'</div><div class="chips"><span class="chip"><b>'+Number(x.questions||x.count||0)+'</b> câu</span>'+ds.map(d=>'<span class="chip">'+esc(d)+' · '+Number(x.dang[d]||0)+'</span>').join('')+'</div><div class="lessonActions"><button class="miniBtn" onclick="openLesson('+JSON.stringify(p)+')">📖 Mở bài</button><button class="miniBtn green" onclick="openLesson('+JSON.stringify(p)+')">✏️ Sửa câu</button></div></div>'}});html+='</div></div>'}}html+='</div>'}}html+='</div></section>'}}document.getElementById('catalog').innerHTML=html}}
-async function openLesson(path){{if(!path)return;document.getElementById('catalog').classList.add('hidden');document.getElementById('catalogIntro').classList.add('hidden');document.querySelector('.filters').classList.add('hidden');document.getElementById('questionView').classList.remove('hidden');document.getElementById('qList').innerHTML='<div class="message">⏳ Đang đọc file .tex từ GitHub...</div>';try{{let r=await fetch('/github/api/file?path='+encodeURIComponent(path),{{credentials:'same-origin'}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không đọc được file');current={{path:path,sha:j.sha,head:j.head,tail:j.tail,blocks:j.blocks,qs:j.questions,idx:0}};renderQuestionList();showQuestion(0)}}catch(e){{document.getElementById('qList').innerHTML='<div class="message error">❌ '+esc(e.message||e)+'</div>'}}}}
-function renderQuestionList(){{let arr=current.qs||[];document.getElementById('qList').innerHTML=arr.map((q,i)=>'<div class="qitem" id="qitem'+i+'" onclick="showQuestion('+i+')"><div class="qtop"><span class="qnum">Câu '+(i+1)+'</span><span class="kind '+String(q.kind).toLowerCase()+'">'+esc(q.kind)+' · '+esc(q.label)+'</span>'+(q.level?'<span class="tag">'+esc(q.level)+'</span>':'')+(q.has_tikz?'<span class="tag">🖼 hình</span>':'')+'</div><div class="qtitle">'+esc(q.title)+'</div><div class="qmeta">'+(q.id?'ID: '+esc(q.id):'ID: —')+(q.dang?' · '+esc(q.dang):'')+'</div></div>').join('')||'<div class="empty">File không có câu.</div>'}}
-function showQuestion(i){{if(!current.qs.length)return;current.idx=Math.max(0,Math.min(i,current.qs.length-1));let q=current.qs[current.idx];document.querySelectorAll('.qitem').forEach(e=>e.classList.remove('active'));let el=document.getElementById('qitem'+current.idx);if(el)el.classList.add('active');document.getElementById('eTitle').textContent='Câu '+(current.idx+1)+' · '+(q.label||'');document.getElementById('ePath').textContent=current.path;document.getElementById('eKind').textContent=q.has_tikz?'🖼 Có hình/TikZ':'';document.getElementById('eKindSel').value=q.kind;document.getElementById('eLevel').value=q.level||'';document.getElementById('eId').value=q.id||'';document.getElementById('eDang').value=q.dang||'';document.getElementById('eCode').value=current.blocks[current.idx]||'';document.getElementById('questionView').scrollIntoView({{behavior:'smooth',block:'start'}})}}
-function currentBlock(){{return current.blocks[current.idx]||''}}
-function setKindInBlock(block,want){{let b=block||'',m=b.match(/\\choiceTF\\b|\\choice\\b|\\shortans\\b/i),map={{A:'\\\\choice',B:'\\\\choiceTF',C:'\\\\shortans',D:''}};if(m&&want)b=b.slice(0,m.index)+map[want]+b.slice(m.index+m[0].length);else if(m&&!want)b=b.slice(0,m.index)+b.slice(m.index+m[0].length);return b}}
-async function saveCurrent(){{if(!current.blocks.length)return;let b=document.getElementById('eCode').value||'';b=setKindInBlock(b,document.getElementById('eKindSel').value);b=rebuildMetaClient(b,document.getElementById('eId').value,document.getElementById('eLevel').value,document.getElementById('eDang').value);current.blocks[current.idx]=b;let content=current.head+current.blocks.join('\\n\\n')+current.tail;try{{let r=await fetch('/github/api/save',{{method:'POST',headers:{{'Content-Type':'application/json'}},credentials:'same-origin',body:JSON.stringify({{path:current.path,sha:current.sha,content:content,message:'ADMIN cập nhật Câu '+(current.idx+1)+' · '+current.path}})}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không lưu được');current.sha=j.sha||current.sha;document.getElementById('eCode').value=b;alert('✅ Đã lưu Câu '+(current.idx+1)+' lên GitHub.');await openLesson(current.path)}}catch(e){{alert('❌ '+(e.message||e))}}}}
-function rebuildMetaClient(b,qid,level,dang){{b=b.replace(/%\\s*ID\\s*:[^\\r\\n]*\\r?\\n?/i,'').replace(/%\\s*Mức\\s*:[^\\r\\n]*\\r?\\n?/i,'').replace(/\\\\dangbt\\s*\\{{[^{{}}]*\\}}\\s*/ig,'');let m=b.match(/\\\\begin\\s*\\{{\\s*ex\\s*\\}}/i);if(!m)return b;let lines='';if(qid)lines+='% ID: '+qid+'\\n';if(level)lines+='% Mức: '+level+'\\n';if(lines)b=b.slice(0,m.index+m[0].length)+'\\n'+lines+b.slice(m.index+m[0].length);if(dang)b=b.slice(0,m.index)+'\\\\dangbt{{'+dang+'}}\\n'+b.slice(m.index);return b}}
-async function duplicateQuestion(){{let b=currentBlock();if(!b)return;let n=b.replace(/%\\s*ID\\s*:[^\\r\\n]*\\r?\\n?/i,'');n=n.replace(/(%\\s*Mức\\s*:[^\\r\\n]+\\n)/i,'$1% ID: COPY_'+Date.now()+'\\n');current.blocks.splice(current.idx+1,0,n);await saveAllBlocks('ADMIN nhân bản Câu '+(current.idx+1));current.idx+=1;renderQuestionList();showQuestion(current.idx)}}
-async function deleteQuestion(){{if(current.blocks.length<=1){{alert('Không xóa câu cuối cùng trong file.');return}}if(!confirm('Xóa Câu '+(current.idx+1)+' khỏi file .tex trên GitHub?'))return;current.blocks.splice(current.idx,1);current.idx=Math.max(0,Math.min(current.idx,current.blocks.length-1));await saveAllBlocks('ADMIN xóa câu khỏi '+current.path);renderQuestionList();showQuestion(current.idx)}}
-async function saveAllBlocks(message){{let content=current.head+current.blocks.join('\\n\\n')+current.tail;let r=await fetch('/github/api/save',{{method:'POST',headers:{{'Content-Type':'application/json'}},credentials:'same-origin',body:JSON.stringify({{path:current.path,sha:current.sha,content:content,message:message}})}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không lưu được');current.sha=j.sha||current.sha}}
-function prevQuestion(){{showQuestion(current.idx-1)}}
-function nextQuestion(){{showQuestion(current.idx+1)}}
-function backCatalog(){{document.getElementById('questionView').classList.add('hidden');document.getElementById('catalog').classList.remove('hidden');document.getElementById('catalogIntro').classList.remove('hidden');document.querySelector('.filters').classList.remove('hidden');renderCatalog()}}
-refreshFilters();syncSubject();renderCatalog();
-</script>'''
+function subjectName(m){{let n=norm(m);return n.includes('toan')?'Toán':(n.includes('vat')?'Vật lý':m)}}
+function setSel(id,vals,value,label){{let el=document.getElementById(id),arr=uniq(vals).sort((a,b)=>String(a).localeCompare(String(b),'vi'));el.innerHTML='<option value="">'+label+'</option>'+arr.map(v=>'<option value="'+escAttr(v)+'">'+esc(v)+'</option>').join('');el.value=value||''}}
+function filteredLessons(){{let q=norm(document.getElementById('fSearch').value);return LESSONS.filter(x=>{{let ok=(!state.mon||x.Mon===state.mon)&&(!state.khoi||deriveKhoi(x.Lop)===state.khoi)&&(!state.lop||x.Lop===state.lop)&&(!state.chuong||x.Chuong===state.chuong)&&(!state.bai||(x.BaiHoc||x.De)===state.bai);let text=norm([x.Mon,x.Lop,x.Chuong,x.BaiHoc,x.De,x.path,Object.keys(x.dang||{{}}).join(' ')].join(' '));return ok&&(!q||text.includes(q))}})}}
+function refreshFilters(){{let a=LESSONS.filter(x=>!state.mon||x.Mon===state.mon);setSel('fMon',LESSONS.map(x=>x.Mon),state.mon,'Tất cả môn');let b=a.filter(x=>!state.khoi||deriveKhoi(x.Lop)===state.khoi);setSel('fKhoi',a.map(x=>deriveKhoi(x.Lop)),state.khoi,'Tất cả khối');let c=b.filter(x=>!state.lop||x.Lop===state.lop);setSel('fLop',b.map(x=>x.Lop),state.lop,'Tất cả lớp');let d=c.filter(x=>!state.chuong||x.Chuong===state.chuong);setSel('fChuong',c.map(x=>x.Chuong),state.chuong,'Tất cả chương');let e=d.filter(x=>!state.bai||(x.BaiHoc||x.De)===state.bai);setSel('fBai',d.map(x=>x.BaiHoc||x.De),state.bai,'Tất cả bài')}}
+function onFilter(k){{if(k==='mon'){{state.mon=document.getElementById('fMon').value;state.khoi=state.lop=state.chuong=state.bai=''}}else if(k==='khoi'){{state.khoi=document.getElementById('fKhoi').value;state.lop=state.chuong=state.bai=''}}else if(k==='lop'){{state.lop=document.getElementById('fLop').value;state.chuong=state.bai=''}}else if(k==='chuong'){{state.chuong=document.getElementById('fChuong').value;state.bai=''}}else if(k==='bai')state.bai=document.getElementById('fBai').value;refreshFilters();renderCatalog();syncTabs()}}
+function pickSubject(mon){{state.mon=LESSONS.some(x=>x.Mon===mon)?mon:'';state.khoi=state.lop=state.chuong=state.bai='';refreshFilters();renderCatalog();syncTabs()}}
+function syncTabs(){{let m=subjectName(state.mon);document.getElementById('tabMath').classList.toggle('active',m==='Toán');document.getElementById('tabPhys').classList.toggle('active',m==='Vật lý')}}
+function kindCountForLesson(x){{let out={{A:0,B:0,C:0,D:0}};Object.keys(x.dang||{{}}).forEach(d=>{{}});return out}}
+function renderDangButtons(x){{let rows=Object.entries(x.dang||{{}}).filter(([d,n])=>Number(n||0)>0);if(!rows.length)return '<div class="dangbox"><div class="dangtitle">🏷️ Dạng bài tập</div><div style="font-size:10px;color:#9a3412">Chưa có dữ liệu dạng trong index</div></div>';return '<div class="dangbox"><div class="dangtitle">🏷️ DẠNG BÀI TẬP — bấm một dạng để chọn</div>'+rows.map(([d,n])=>'<div class="dangrow" data-path="'+escAttr(x.path||x.file||'')+'" data-dang="'+escAttr(d)+'"><div class="dangname">'+esc(d)+'</div><div class="dangmeta"><span class="tiny tinyT">Tổng '+Number(n||0)+'</span></div></div>').join('')+'</div>'}}
+function renderCatalog(){{let list=filteredLessons();let kind=document.getElementById('fKind').value||'';if(kind){{list=list.filter(x=>Object.entries(x.dang||{{}}).some(([d,n])=>Number(n)>0))}}let qt=list.reduce((a,x)=>a+Number(x.questions||x.count||0),0);let ds=uniq(list.flatMap(x=>Object.keys(x.dang||{{}})));document.getElementById('catalogIntro').innerHTML='<div class="introTitle">📚 Mục lục kiểu sách <span class="pill">GitHub</span></div><div style="margin-top:4px;font-size:12px;color:#607083">Chọn <b>Môn → Khối → Chương → Bài</b>. Trong từng bài, từng <b>Dạng bài tập</b> là một vùng chọn riêng. Khi bấm dạng, hệ thống mở đúng file <b>.tex</b> và lọc đúng các câu thuộc dạng đó.</div><div class="pills"><span class="pill">'+uniq(list.map(x=>x.Mon)).length+' môn</span><span class="pill">'+uniq(list.map(x=>deriveKhoi(x.Lop))).length+' khối</span><span class="pill">'+uniq(list.map(x=>x.Chuong)).length+' chương</span><span class="pill">'+uniq(list.map(x=>x.BaiHoc||x.De)).length+' bài</span><span class="pill">'+ds.length+' dạng BT</span><span class="pill">'+qt+' câu</span></div>';
+if(!list.length){{document.getElementById('catalog').innerHTML='<div class="card empty">Không có dữ liệu phù hợp.</div>';return}}
+let out='';let mons=new Map();list.forEach(x=>{{let k=x.Mon||'Khác';if(!mons.has(k))mons.set(k,[]);mons.get(k).push(x)}});for(let [m,ml] of mons){{out+='<section class="subject"><div class="subjectHead"><span>'+esc(m)+'</span><span style="font-size:11px">'+ml.length+' bài · '+ml.reduce((a,x)=>a+Number(x.questions||x.count||0),0)+' câu</span></div>';let grades=new Map();ml.forEach(x=>{{let k=deriveKhoi(x.Lop)||'?';if(!grades.has(k))grades.set(k,[]);grades.get(k).push(x)}});for(let [g,gl] of grades){{out+='<div class="grade"><div class="gradeHead"><span>Khối '+esc(g)+'</span><span style="font-size:11px;color:#64748b">'+gl.length+' bài</span></div>';let chs=new Map();gl.forEach(x=>{{let k=x.Chuong||'Chưa phân chương';if(!chs.has(k))chs.set(k,[]);chs.get(k).push(x)}});for(let [c,cl] of chs){{out+='<div class="chapter"><div class="chapterHead"><span>'+esc(c)+'</span><span style="font-size:11px">'+cl.length+' bài · '+cl.reduce((a,x)=>a+Number(x.questions||x.count||0),0)+' câu</span></div><div class="grid">';for(let x of cl){{let p=x.path||x.file||'';let title=x.BaiHoc||x.De||p;out+='<div class="lesson"><div class="lessonTitle">'+esc(title)+'</div><div class="lessonSub">'+esc(x.Mon||'')+' · Lớp '+esc(x.Lop||'')+' · '+esc(c)+'</div><div class="chips"><span class="chip">'+Number(x.questions||x.count||0)+' câu</span>'+Object.entries(x.dang||{{}}).slice(0,4).map(([d,n])=>'<span class="chip">'+esc(d)+' · '+Number(n||0)+'</span>').join('')+'</div>'+renderDangButtons(x)+'<div class="actions"><button class="mini" onclick="openLesson('+JSON.stringify(p)+')">📖 Mở bài</button><button class="mini" onclick="openLesson('+JSON.stringify(p)+')">✏️ Sửa câu</button></div></div>'}}out+='</div></div>'}}out+='</div>'}}out+='</section>'}}document.getElementById('catalog').innerHTML=out}}
+async function openLesson(path,dang){{if(!path)return;document.getElementById('catalog').classList.add('hidden');document.getElementById('catalogIntro').classList.add('hidden');document.querySelector('.filters').classList.add('hidden');document.querySelector('.toolbar').classList.add('hidden');document.getElementById('editorView').classList.remove('hidden');document.getElementById('qList').innerHTML='<div class="status">⏳ Đang đọc file .tex từ GitHub...</div>';try{{let u='/github/api/file?path='+encodeURIComponent(path);let r=await fetch(u,{{credentials:'same-origin'}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Không đọc được file');current={{path:path,sha:j.sha,head:j.head,tail:j.tail,blocks:j.blocks,qs:j.questions,idx:0}};if(dang){{let i=(current.qs||[]).findIndex(q=>norm(q.dang)===norm(dang));if(i>=0)current.idx=i}}renderQuestions();showQuestion(current.idx)}}catch(e){{document.getElementById('qList').innerHTML='<div class="status err">❌ '+esc(e.message||e)+'</div>'}}}}
+function renderQuestions(){{let arr=current.qs||[];document.getElementById('qList').innerHTML=arr.map((q,i)=>'<div class="qitem" id="q'+i+'" onclick="showQuestion('+i+')"><div class="qtop"><span class="qnum">Câu '+(i+1)+'</span><span class="pill">'+esc(q.kind)+' · '+esc(q.label)+'</span>'+(q.level?'<span class="pill">'+esc(q.level)+'</span>':'')+(q.has_image?'<span class="pill">🖼</span>':'')+'</div><div class="qtitle">'+esc(q.title)+'</div><div class="qmeta">'+esc(q.dang)+' · '+esc(q.id||'Chưa có ID')+'</div></div>').join('')||'<div class="status err">File không có block \\begin{{ex}}...\\end{{ex}}.</div>'}}
+function showQuestion(i){{if(!current.qs||!current.qs.length)return;i=Math.max(0,Math.min(i,current.qs.length-1));current.idx=i;let q=current.qs[i];document.querySelectorAll('.qitem').forEach(e=>e.classList.remove('active'));let row=document.getElementById('q'+i);if(row){{row.classList.add('active');row.scrollIntoView({{block:'nearest'}})}}document.getElementById('eTitle').textContent='Câu '+(i+1)+' — '+(q.label||'');document.getElementById('ePath').textContent=current.path;document.getElementById('eBadge').textContent=q.dang||'Chưa phân dạng';document.getElementById('eKind').value=q.kind||'D';document.getElementById('eLevel').value=q.level||'';document.getElementById('eId').value=q.id||'';document.getElementById('eDang').value=q.dang||'Chưa phân dạng';document.getElementById('eCode').value=current.blocks[i]||'';document.getElementById('saveStatus').innerHTML=''}}
+function prevQuestion(){{showQuestion(current.idx-1)}}function nextQuestion(){{showQuestion(current.idx+1)}}
+function backCatalog(){{history.replaceState(null,'','/github/quan-ly');location.reload()}}
+function openCurrentPath(){{if(current.path)openLesson(current.path);else alert('Chưa mở bài nào.')}}
+async function saveQuestion(){{let block=current.blocks[current.idx]||document.getElementById('eCode').value||'';let code=document.getElementById('eCode').value||'';let qid=document.getElementById('eId').value.trim();let level=document.getElementById('eLevel').value.trim();let dang=document.getElementById('eDang').value.trim();let clean=code.replace(/%\\s*ID\\s*:[^\\r\\n]*\\r?\\n?/ig,'').replace(/%\\s*Mức\\s*:[^\\r\\n]*\\r?\\n?/ig,'').replace(/\\\\dangbt\\s*\\{{1}[^\\{{}]*\\}}\\s*/ig,'');let m=clean.match(/\\\\begin\\s*\\{{1}\\s*ex\\s*\\}}/i);if(!m){{alert('Không tìm thấy \\begin{{ex}} trong câu.');return}}let meta='';if(qid)meta+='% ID: '+qid+'\\n';if(level)meta+='% Mức: '+level+'\\n';if(dang)meta+='\\\\dangbt{'+dang+'}\\n';clean=clean.slice(0,m.index+m[0].length)+'\\n'+meta+clean.slice(m.index+m[0].length);current.blocks[current.idx]=clean;let full=current.head+current.blocks.join('\\n\\n')+current.tail;try{{let r=await fetch('/github/api/save',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{path:current.path,sha:current.sha,content:full,message:'Sửa câu '+(current.idx+1)+' trong '+current.path}}),credentials:'same-origin'}});let j=await r.json();if(!r.ok)throw new Error(j.error||'Lưu thất bại');current.sha=j.sha;current.blocks[current.idx]=clean;showQuestion(current.idx);document.getElementById('saveStatus').innerHTML='<div class="status ok">✅ Đã lưu trực tiếp vào GitHub.</div>'}}catch(e){{document.getElementById('saveStatus').innerHTML='<div class="status err">❌ '+esc(e.message||e)+'</div>'}}}}
+function newQuestion(){{alert('Chọn một câu gần giống → Nhân bản. Chức năng thêm block mới sẽ được bổ sung sau khi luồng sửa đã ổn định.')}}function duplicateQuestion(){{if(!current.blocks.length)return;let b=current.blocks[current.idx]||'';let nid=(document.getElementById('eId').value||'').replace(/[^A-Za-z0-9_-]/g,'')+'_COPY';let cp=b.replace(/%\\s*ID\\s*:[^\\r\\n]*/i,'% ID: '+nid);current.blocks.splice(current.idx+1,0,cp);current.qs.splice(current.idx+1,0,{{...current.qs[current.idx],id:nid,n:current.idx+2,title:current.qs[current.idx].title+' (bản sao)'}});renderQuestions();showQuestion(current.idx+1)}}
+function boot(){{refreshFilters();let first=LESSONS.find(x=>subjectName(x.Mon)==='Toán');state.mon=first?first.Mon:'';refreshFilters();renderCatalog();syncTabs();if(BOOT.path)setTimeout(()=>openLesson(BOOT.path,BOOT.dang),120)}}
+document.addEventListener('click',e=>{{let r=e.target.closest('.dangrow');if(r){{e.preventDefault();e.stopPropagation();openLesson(r.getAttribute('data-path')||'',r.getAttribute('data-dang')||'')}}}});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+</script></div>'''
     return page(body)
 
 
@@ -282,15 +234,16 @@ def api_file():
     if g:
         return g
     path = request.args.get("path", "")
-    if not valid_path(path):
-        return jsonify({"error": "Đường dẫn file .tex không hợp lệ."}), 400
     try:
         sha, text = fetch_tex(path)
-        head, blocks, tail = split_tex(text)
-        qs = [qmeta(b, i + 1) for i, b in enumerate(blocks)]
+        head, blocks, tail = split_blocks(text)
+        qs = [question_meta(b, i + 1) for i, b in enumerate(blocks)]
+        dang = request.args.get("dang", "")
+        if dang:
+            qs = [q for q in qs if str(q.get("dang", "")).strip().lower() == dang.strip().lower()]
         return jsonify({"ok": True, "path": path, "sha": sha, "head": head, "tail": tail, "blocks": blocks, "questions": qs})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 400
 
 
 @bp.post("/github/api/save")
@@ -298,20 +251,14 @@ def api_save():
     g = guard()
     if g:
         return g
-    body = request.get_json(silent=True) or {}
-    path = body.get("path", "")
-    content = body.get("content", "")
-    sha = body.get("sha", "")
-    message = body.get("message", "ADMIN cập nhật ngân hàng GitHub")
-    if not valid_path(path):
-        return jsonify({"error": "Đường dẫn file .tex không hợp lệ."}), 400
-    if not isinstance(content, str):
-        return jsonify({"error": "Nội dung file phải là chuỗi UTF-8."}), 400
     try:
-        result = save_tex(path, content, sha, message)
-        return jsonify({"ok": True, "sha": result.get("content", {}).get("sha") or sha, "commit": result.get("commit", {}).get("sha", "")})
+        body = request.get_json(silent=True) or {}
+        path = str(body.get("path") or "")
+        sha = str(body.get("sha") or "")
+        content = str(body.get("content") or "")
+        if not sha:
+            return jsonify({"ok": False, "error": "Thiếu SHA hiện tại của file GitHub."}), 400
+        r = save_tex(path, content, sha, str(body.get("message") or "Cập nhật ngân hàng GitHub"))
+        return jsonify({"ok": True, "sha": r.get("content", {}).get("sha", "") or r.get("commit", {}).get("sha", "")})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-app.register_blueprint(bp)
+        return jsonify({"ok": False, "error": str(e)}), 400
