@@ -3060,12 +3060,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 87,
-      "count": 87,
+      "questions": 23,
+      "count": 23,
       "dang": {
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 23,
-        "Nhận biết và phân tích các quá trình chuyển thể": 33,
-        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 23
       },
       "dang_kinds": {
         "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
@@ -3073,18 +3071,6 @@
           "DS": 5,
           "TLN": 3,
           "TL": 3
-        },
-        "Nhận biết và phân tích các quá trình chuyển thể": {
-          "TN": 24,
-          "DS": 6,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Đọc và phân tích đồ thị quá trình chuyển thể": {
-          "TN": 15,
-          "DS": 11,
-          "TLN": 3,
-          "TL": 2
         }
       }
     },
@@ -4793,9 +4779,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 31,
+      "count": 31,
+      "dang": {
+        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
+      },
+      "dang_kinds": {
+        "Đọc và phân tích đồ thị quá trình chuyển thể": {
+          "TN": 15,
+          "DS": 11,
+          "TLN": 3,
+          "TL": 2
+        }
+      }
     }
   ]
 }
