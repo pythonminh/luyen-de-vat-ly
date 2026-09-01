@@ -42,7 +42,10 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "975319610",
-      "password_sha256": "3de59c5be18b41226d6aeddd11bab5412e683e29d6374e86b77fe0318d025e04"
+      "password_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "grade": "11",
+      "password_enc": "v1:uDbAEw==",
+      "updated_at": "2026-09-01 14:15:58"
     },
     {
       "username": "Phat1234",
