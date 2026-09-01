@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 105,
+  "total_files": 102,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3224,12 +3224,16 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng",
-      "questions": 96,
-      "count": 96,
+      "questions": 186,
+      "count": 186,
       "dang": {
         "Bài toán cân bằng nhiệt": 27,
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": 14,
+        "Bài toán công suất, hiệu suất và thời gian đun": 27,
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 27,
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 27,
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": 9,
+        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": 27,
         "Xác định nhiệt dung riêng của một chất": 28
       },
       "dang_kinds": {
@@ -3245,7 +3249,31 @@
           "TLN": 6,
           "TL": 0
         },
+        "Bài toán công suất, hiệu suất và thời gian đun": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": {
+          "TN": 9,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": {
           "TN": 10,
           "DS": 5,
           "TLN": 6,
@@ -4838,96 +4866,17 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-do-thi-qua-trinh-nhiet.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-do-thi-qua-trinh-nhiet.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-do-thi-qua-trinh-nhiet.tex",
       "Mon": "Vật lý",
       "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-khai-niem-don-vi-va-y-nghia-vat-li-cua.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-khai-niem-don-vi-va-y-nghia-vat-li-cua.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-khai-niem-don-vi-va-y-nghia-vat-li-cua.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 27
-      },
-      "dang_kinds": {
-        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
-      "questions": 9,
-      "count": 9,
-      "dang": {
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": 9
-      },
-      "dang_kinds": {
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": {
-          "TN": 9,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương IV. Vật lí hạt nhân",
-      "BaiHoc": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
-      "De": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": 27
-      },
-      "dang_kinds": {
-        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 13. Bài tập về khí lí tưởng · Đồ thị quá trình nhiệt",
+      "De": "L12C2 Bài 13. Bài tập về khí lí tưởng · Đồ thị quá trình nhiệt",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
