@@ -37,6 +37,18 @@ ADMIN_PASS = (os.getenv("ADMIN_PASSWORD") or "").strip()
 GEMINI_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = (os.getenv("GEMINI_REVIEW_MODEL") or "gemini-2.5-flash").strip()
 
+def github_folder_url(path='ngan-hang'):
+    p = str(path or 'ngan-hang').replace('\\', '/').strip('/')
+    return f"https://github.com/{REPO}/tree/{urllib.parse.quote(BRANCH, safe='')}/{urllib.parse.quote(p, safe='/')}"
+
+def github_blob_url(path):
+    p = str(path or '').replace('\\', '/').strip('/')
+    return f"https://github.com/{REPO}/blob/{urllib.parse.quote(BRANCH, safe='')}/{urllib.parse.quote(p, safe='/')}"
+
+def github_web_edit_url(path):
+    p = str(path or '').replace('\\', '/').strip('/')
+    return f"https://github.com/{REPO}/edit/{urllib.parse.quote(BRANCH, safe='')}/{urllib.parse.quote(p, safe='/')}"
+
 ROOT = Path(__file__).resolve().parent
 INDEX_FILE = ROOT / "bank_index.json"
 MEMBERS_FILE = ROOT / "members.json"
@@ -120,7 +132,12 @@ def page(title: str, body: str) -> Response:
         nav.append("<a href='/member/logout'>🚪 Thoát</a>")
     elif role == "admin":
         who = "<span class='who'>🔐 ADMIN</span>"
-        nav += ["<a href='/admin'>🔐 ADMIN</a>", "<a href='/admin/logout'>🚪 Thoát</a>"]
+        nav += [
+            "<a href='/admin'>📂 ngan-hang</a>",
+            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
+            "<a href='/admin/members'>👥 Thành viên</a>",
+            "<a href='/admin/logout'>🚪 Thoát</a>",
+        ]
     else:
         nav += ["<a href='/member/login'>🔑 Đăng nhập</a>", "<a href='/member/register'>📝 Đăng ký</a>", "<a href='/admin/login'>🔐 ADMIN</a>"]
     top = (
@@ -350,6 +367,8 @@ def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRA
 def home():return redirect('/member')
 @app.get('/github/repo')
 def repo_redirect():return redirect(f'https://github.com/{REPO}')
+@app.get('/github/ngan-hang')
+def ngan_hang_redirect():return redirect(github_folder_url('ngan-hang'))
 
 @app.route('/member/login',methods=['GET','POST'])
 def member_login():
@@ -551,12 +570,56 @@ def admin_login():
         msg='Sai tài khoản hoặc mật khẩu ADMIN.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>🔐 ADMIN</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' value='{html.escape(ADMIN_USER)}' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('ADMIN',body)
 
+def list_bank_tex():
+    items=[];seen=set()
+    for x in index_data().get('lessons',[]) or []:
+        if not isinstance(x,dict):continue
+        p=str(x.get('path') or '').replace('\\','/')
+        if not p.startswith('ngan-hang/') or not p.lower().endswith('.tex') or p in seen:continue
+        seen.add(p);items.append(x)
+    bank=ROOT/'ngan-hang'
+    if bank.is_dir():
+        for f in sorted(bank.rglob('*.tex')):
+            rel=str(f.relative_to(ROOT)).replace('\\','/')
+            if rel in seen:continue
+            seen.add(rel);items.append({'path':rel,'Mon':'','Lop':'','Chuong':'','BaiHoc':f.parent.name,'De':f.name})
+    items.sort(key=lambda z:str(z.get('path') or ''))
+    return items
+
 @app.get('/admin')
 def admin_home():
     if not admin_current():return redirect('/admin/login')
-    md=members_data().get('members',[]);rows=''.join(f"<tr><td>{html.escape(str(m.get('username','')))}</td><td>{html.escape(str(m.get('name','')))}</td><td>{html.escape(str(m.get('class','')))}</td><td>{html.escape(str(m.get('account_type','FREE')))}</td><td>{html.escape(str(m.get('status','ON')))}</td></tr>" for m in md)
-    lessons=[x for x in index_data().get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')];lrows=''.join(f"<tr><td>{html.escape(str(x.get('Mon','')))}</td><td>{html.escape(str(x.get('Lop','')))}</td><td>{html.escape(str(x.get('Chuong','')))}</td><td>{html.escape(str(x.get('BaiHoc') or x.get('De') or ''))}</td><td><a class='btn' href='/admin/edit?path={urllib.parse.quote(str(x.get('path')),safe='')}'>✏️ Sửa TEX</a></td></tr>" for x in lessons)
-    body=f"<div class='wrap'><div class='panel'><div class='head'>🔐 ADMIN <span class='tag'>GitHub trực tiếp</span></div><div class='body'><div class='notice'>ADMIN có quyền đọc/sửa file <code>.tex</code> và commit trực tiếp vào GitHub.</div><h3>👥 Thành viên</h3><table class='selectgrid'><tr><th>Tài khoản</th><th>Họ tên</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th></tr>{rows}</table><h3>📚 Bài / TEX</h3><div style='max-height:55vh;overflow:auto'><table class='selectgrid'>{lrows}</table></div><p><a class='btn' href='/admin/logout'>Đăng xuất ADMIN</a> <a class='btn' href='/member'>Mục lục</a></p></div></div></div>";return page('ADMIN',body)
+    gh=github_folder_url('ngan-hang')
+    tok='✅ Có GITHUB_TOKEN — có thể commit TEX từ trang này.' if TOKEN else '⚠️ Chưa có GITHUB_TOKEN trên Render. Vẫn mở/sửa được trên GitHub.com; commit từ web sẽ lỗi cho đến khi gắn token.'
+    lrows=[]
+    for x in list_bank_tex():
+        p=str(x.get('path') or '')
+        qp=urllib.parse.quote(p,safe='')
+        title=str(x.get('BaiHoc') or x.get('De') or Path(p).name)
+        lrows.append(
+            "<tr><td>"+html.escape(str(x.get('Mon') or ''))+"</td><td>"+html.escape(str(x.get('Lop') or ''))+"</td>"
+            "<td>"+html.escape(str(x.get('Chuong') or ''))+"</td><td>"+html.escape(title)+"</td>"
+            "<td><code>"+html.escape(p)+"</code></td><td style='white-space:nowrap'>"
+            "<a class='btn primary' href='/admin/edit?path="+qp+"'>✏️ Sửa trên web</a> "
+            "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên GitHub</a> "
+            "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem</a>"
+            "</td></tr>"
+        )
+    body=(
+        "<div class='wrap'><div class='panel'><div class='head'>📂 ADMIN · Ngân hàng <code>ngan-hang</code></div><div class='body'>"
+        "<div class='notice'><b>Sửa trực tiếp file .tex trên GitHub.</b><br>"+html.escape(tok)+"</div>"
+        "<p style='margin:12px 0;display:flex;gap:8px;flex-wrap:wrap'>"
+        "<a class='btn primary' href='"+html.escape(gh,quote=True)+"' target='_blank' rel='noopener'>🐙 Mở thư mục ngan-hang trên GitHub</a>"
+        "<a class='btn' href='https://github.com/"+html.escape(REPO)+"' target='_blank' rel='noopener'>📦 Repo</a>"
+        "<a class='btn' href='/admin/members'>👥 Thành viên</a>"
+        "<a class='btn' href='/member'>📚 Mục lục học viên</a>"
+        "</p>"
+        "<h3>📚 File TEX trong ngan-hang ("+str(len(lrows))+")</h3>"
+        "<div style='max-height:62vh;overflow:auto'><table class='selectgrid'><tr><th>Môn</th><th>Lớp</th><th>Chương</th><th>Bài</th><th>Đường dẫn</th><th>Sửa</th></tr>"
+        +(''.join(lrows) or "<tr><td colspan='6' class='muted'>Chưa thấy file .tex trong ngan-hang.</td></tr>")
+        +"</table></div></div></div></div>"
+    )
+    return page('ADMIN · ngan-hang',body)
 
 @app.get('/admin/logout')
 def admin_logout():session.clear();return redirect('/admin/login')
@@ -583,7 +646,20 @@ def admin_edit():
     try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     saved=request.args.get('saved')=='1';notice="<div class='success'>✅ Đã commit lên GitHub.</div>" if saved else ''
-    body=("<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX</div><div class='body'><div class='meta'>"+html.escape(p)+"</div>"+notice+"<form method='post'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'><input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'><textarea name='content' class='code'>"+html.escape(txt)+"</textarea><div style='margin-top:8px'><input name='message' value='ADMIN cập nhật TEX' style='width:70%;padding:9px;border:1px solid #cbd8e6;border-radius:7px'><button class='btn green'>💾 Commit GitHub</button> <a class='btn' href='/admin'>← ADMIN</a></div></form></div></div></div>")
+    body=(
+        "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX trên GitHub</div><div class='body'>"
+        "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice
+        +"<p style='display:flex;gap:8px;flex-wrap:wrap'>"
+        "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem trên GitHub</a>"
+        "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên github.com</a>"
+        "<a class='btn' href='"+html.escape(github_folder_url(),quote=True)+"' target='_blank' rel='noopener'>📂 Thư mục ngan-hang</a>"
+        "</p>"
+        "<form method='post'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+        "<input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'>"
+        "<textarea name='content' class='code'>"+html.escape(txt)+"</textarea>"
+        "<div style='margin-top:8px'><input name='message' value='ADMIN cập nhật TEX' style='width:70%;padding:9px;border:1px solid #cbd8e6;border-radius:7px'>"
+        "<button class='btn green'>💾 Commit GitHub</button> <a class='btn' href='/admin'>← Danh sách ngan-hang</a></div></form></div></div></div>"
+    )
     return page('Sửa TEX',body)
 
 @app.errorhandler(Exception)

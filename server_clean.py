@@ -50,8 +50,9 @@ def _nav() -> str:
     role = session.get("role")
     if role == "admin":
         links += [
-            "<a href='/admin'>🔐 ADMIN</a>",
-            "<a href='https://github.com/pythonminh/luyen-de-vat-ly' target='_blank' rel='noopener'>🐙 GitHub</a>",
+            "<a href='/admin'>📂 ngan-hang</a>",
+            f"<a href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
+            "<a href='/admin/members'>👥 Thành viên</a>",
             "<a href='/admin/logout'>🚪 Thoát</a>",
         ]
     elif role == "member":

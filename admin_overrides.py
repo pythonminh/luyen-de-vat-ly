@@ -140,7 +140,7 @@ def _member_manager():
 .toolbar,.bulk{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0;display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.mini,.pass{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{width:100%}
 .membertable{{overflow:auto;background:#fff;border:1px solid #d7e2ee;border-radius:10px}}table{{width:100%;min-width:1250px;border-collapse:collapse}}th,td{{border:1px solid #dfe7ef;padding:7px}}th{{background:#e9f2ff;position:sticky;top:0;z-index:2}}td small{{display:block;color:#718196}}.mini{{width:82px}}.pass{{width:135px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:4px}}.badge.free{{background:#eefbf2;color:#14743a}}.badge.vip{{background:#fff0f7;color:#a2175f}}.badge.svip{{background:#fff7dc;color:#855a00}}.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff}}.btn.small{{padding:5px 7px;font-size:11px}}.note{{background:#fffdf3;border:1px solid #ecd68c;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}@media(max-width:1000px){{.stats{{grid-template-columns:repeat(3,1fr)}}}}
 </style>
-<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Sửa lớp · quyền · ON/OFF · mật khẩu · xem chính xác bài được phép học</div></div><div><a class='btn' href='/admin'>🔐 ADMIN</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
+<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Sửa lớp · quyền · ON/OFF · mật khẩu · xem chính xác bài được phép học</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
 <div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div><div class='stat'><b>{counts['free']}</b><span>FREE</span></div><div class='stat'><b>{counts['vip']}</b><span>VIP</span></div><div class='stat'><b>{counts['svip']}</b><span>SVIP · tất cả</span></div><div class='stat'><b>10:{counts['10']} · 11:{counts['11']} · 12:{counts['12']}</b><span>Phân bố lớp</span></div></div>
 <div class='note'>📌 <b>Quy tắc:</b> SVIP xem toàn bộ 10/11/12. FREE chỉ xem bài FREE đúng khối được cấp. VIP chỉ xem bài trong đúng khối được cấp và các bài có quyền VIP. Tài khoản chưa cấp lớp không xem bài.</div>
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>QUYỀN</label><select name='type'><option value=''>Tất cả</option><option value='FREE' {'selected' if typ=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if typ=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if typ=='SVIP' else ''}>SVIP</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>ON</option><option value='OFF' {'selected' if status=='OFF' else ''}>OFF</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
@@ -251,7 +251,7 @@ def _admin_login():
         d = _members(); a = _admin_record(d)
         if a and u.casefold() == "admin" and str(a.get("status", "ON")).upper() == "ON" and hashlib.sha256(p.encode()).hexdigest() == str(a.get("password_sha256", "")):
             session.clear(); session.update(role="admin", username="ADMIN", name="ADMIN"); session.permanent = request.form.get("remember") == "on"
-            return redirect("/admin/members")
+            return redirect("/admin")
         return _admin_login_page("Sai tài khoản hoặc mật khẩu ADMIN.")
     return _admin_login_page("")
 
@@ -264,8 +264,6 @@ def _admin_login_page(msg):
 
 @app.before_request
 def _authoritative_admin_routes():
-    if request.path.rstrip("/") == "/admin" and _is_admin_session():
-        return redirect("/admin/members")
     if not _is_admin_session():
         return None
     p = request.path.rstrip("/") or "/"
