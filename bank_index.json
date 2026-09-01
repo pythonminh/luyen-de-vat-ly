@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 94,
+  "total_files": 95,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4787,6 +4787,19 @@
           "TL": 2
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
+      "De": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
