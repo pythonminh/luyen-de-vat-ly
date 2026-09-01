@@ -9,7 +9,7 @@ Architecture:
 - wsgi: practice, testing, Gemini review and GitHub editing UI
 - question_preview: visible per-question selection UI
 
-Authentication is intentionally single-source: members.json.  No legacy
+Authentication is intentionally single-source: members.json. No legacy
 password layer is loaded here.
 """
 import access_control as _access_control
