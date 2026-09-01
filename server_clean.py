@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Authoritative Render entry point.
+"""Single authoritative Render entry point.
 
-Only this module is used by Gunicorn. It provides one final branding/navigation
-layer and one ADMIN login/logout implementation while reusing the existing
-question, member, practice and Gemini routes from app/wsgi.
+The application itself remains in app.py/wsgi.py.  This module is the only
+Gunicorn entry point and applies one final, deterministic header/navigation
+and authentication policy so old GitHub UI fragments cannot leak back in.
 """
 from __future__ import annotations
 
@@ -14,8 +14,9 @@ import re
 
 from flask import redirect, request, session
 
+import app as base
 import wsgi
-import admin_manager  # registers ADMIN member/result management routes
+import admin_manager  # noqa: F401 - registers ADMIN routes
 
 app = wsgi.app
 
@@ -36,7 +37,7 @@ def _admin_password_ok(raw: str) -> bool:
 
 def _display_name() -> str:
     try:
-        m = wsgi.member_current()
+        m = base.member_current()
         if m:
             return str(m.get("name") or m.get("username") or "Học viên")
     except Exception:
@@ -46,13 +47,14 @@ def _display_name() -> str:
 
 def _nav() -> str:
     links = ["<a href='/member'>📚 Mục lục</a>"]
-    if session.get("role") == "admin":
+    role = session.get("role")
+    if role == "admin":
         links += [
             "<a href='/admin'>🔐 ADMIN</a>",
             "<a href='https://github.com/pythonminh/luyen-de-vat-ly' target='_blank' rel='noopener'>🐙 GitHub</a>",
             "<a href='/admin/logout'>🚪 Thoát</a>",
         ]
-    elif session.get("role") == "member":
+    elif role == "member":
         links += [
             f"<span class='user-pill'>👤 {html.escape(_display_name())}</span>",
             "<a href='/member/logout'>🚪 Thoát</a>",
@@ -66,7 +68,45 @@ def _nav() -> str:
     return "<div class='nav'>" + "".join(links) + "</div>"
 
 
-def _clean_header(body: str) -> str:
+def _replace_top(body: str) -> str:
+    """Replace the complete old header, regardless of nested div structure."""
+    header = (
+        "<div class='top'><div class='topin'>"
+        "<div><div class='brand'>" + BRAND + "</div>"
+        "<div class='sub'>" + CONTACT + "</div></div>"
+        + _nav()
+        + "</div></div>"
+    )
+    body = re.sub(
+        r"<div\s+class=['\"]top['\"]>.*?</div>\s*(?=<div\s+class=['\"]wrap['\"]>)",
+        header,
+        body,
+        count=1,
+        flags=re.I | re.S,
+    )
+    if "class='top'" not in body and 'class="top"' not in body:
+        # Fallback for templates that do not use the standard .top wrapper.
+        body = re.sub(r"<body[^>]*>", lambda m: m.group(0) + header, body, count=1, flags=re.I)
+    return body
+
+
+def _clean_html(body: str) -> str:
+    body = _replace_top(body)
+
+    # Remove any second/legacy navigation/header that survived a custom page.
+    body = re.sub(r"<div\s+class=['\"]nav['\"]>.*?</div>", _nav(), body, count=1, flags=re.I | re.S)
+
+    # Never expose GitHub to non-ADMIN sessions.
+    if session.get("role") != "admin":
+        body = re.sub(
+            r"<a\b[^>]*href=['\"][^'\"]*(?:github\.com|/github(?:/|['\"]))[^'\"]*['\"][^>]*>.*?</a>",
+            "",
+            body,
+            flags=re.I | re.S,
+        )
+        body = re.sub(r"<button\b[^>]*>\s*(?:🐙\s*)?GitHub\s*</button>", "", body, flags=re.I | re.S)
+
+    # Clean old branding wherever it occurs in custom pages.
     for old in (
         "📚 Ngân hàng câu hỏi GitHub",
         "Ngân hàng câu hỏi GitHub",
@@ -76,43 +116,13 @@ def _clean_header(body: str) -> str:
         "Luyện đề AI · Thầy Minh",
     ):
         body = body.replace(old, BRAND)
-
-    body = re.sub(
-        r"<div\s+class=['\"]sub['\"]>.*?</div>",
-        f"<div class='sub'>{CONTACT}</div>",
-        body,
-        count=1,
-        flags=re.I | re.S,
-    )
-    body = re.sub(
-        r"<div\s+class=['\"]nav['\"]>.*?</div>",
-        _nav(),
-        body,
-        count=1,
-        flags=re.I | re.S,
-    )
-
-    if session.get("role") != "admin":
-        body = re.sub(
-            r"<a\b[^>]*href=['\"][^'\"]*(?:github\.com|/github(?:/|['\"]))[^'\"]*['\"][^>]*>.*?</a>",
-            "",
-            body,
-            flags=re.I | re.S,
-        )
-        body = re.sub(
-            r"<button\b[^>]*>\s*(?:🐙\s*)?GitHub\s*</button>",
-            "",
-            body,
-            flags=re.I | re.S,
-        )
-
+    body = re.sub(r"MỤC LỤC\s*[·•|]\s*GitHub", "MỤC LỤC", body, flags=re.I)
     body = re.sub(
         r"Nguồn đề:\s*bank_index\.json\s*\+\s*ngan-hang/\\?\*\.tex\s*(?:·|•|\|)\s*Google Sheet không dùng cho đề",
         CONTACT,
         body,
         flags=re.I,
     )
-    body = re.sub(r"MỤC LỤC\s*[·•|]\s*GitHub", "MỤC LỤC", body, flags=re.I)
 
     if request.path.startswith("/member") or request.path == "/":
         body = re.sub(r"\\begin\s*\{\s*ex\s*\}", "", body, flags=re.I)
@@ -122,33 +132,41 @@ def _clean_header(body: str) -> str:
     return body
 
 
-@app.after_request
-def authoritative_ui(response):
-    if "text/html" not in response.headers.get("Content-Type", ""):
-        return response
-    try:
-        body = _clean_header(response.get_data(as_text=True))
-        css = """
-<style>
-.user-pill{display:inline-flex;align-items:center;color:#fff;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.10);padding:7px 10px;border-radius:8px;font-weight:800;white-space:nowrap}
-.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}
-@media(max-width:900px){.topin{padding:8px 10px;align-items:flex-start}.brand{font-size:18px;line-height:1.2}.sub{font-size:10px}.nav{gap:4px}.nav a,.user-pill{padding:6px 8px;font-size:12px}}
-@media(max-width:560px){.topin{display:flex;flex-direction:column;gap:6px}.nav{width:100%;margin-left:0}.nav a,.user-pill{font-size:11px;padding:5px 7px}.brand{font-size:16px}}
-</style>
-"""
-        body = body.replace("</head>", css + "</head>", 1)
-        body = body.replace(
-            "</body>",
-            "<script>window.addEventListener('load',function(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(function(){});});</script></body>",
-            1,
-        )
-        response.set_data(body)
-        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-        response.headers["Pragma"] = "no-cache"
-        response.headers.pop("ETag", None)
-    except Exception:
-        pass
+# Patch the single page factory used by app.py.  This prevents old branding
+# from being generated in the first place; after_request below is the safety net.
+_original_page = base.page
+
+
+def authoritative_page(title: str, body: str):
+    response = _original_page(title, body)
+    if "text/html" in response.headers.get("Content-Type", ""):
+        response.set_data(_clean_html(response.get_data(as_text=True)))
     return response
+
+
+base.page = authoritative_page
+
+# admin_manager imported page directly, so replace its local alias as well.
+try:
+    admin_manager.page = authoritative_page
+except Exception:
+    pass
+
+
+# Allow ADMIN credentials from the normal member-login screen too.  This keeps
+# one login entry point for users while still sending ADMIN to /admin.
+_original_member_login = app.view_functions.get("member_login")
+if _original_member_login:
+    def unified_member_login(*args, **kwargs):
+        if request.method == "POST":
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
+            if username == ADMIN_USERNAME and _admin_password_ok(password):
+                session.clear()
+                session.update(role="admin", username=ADMIN_USERNAME, name="ADMIN")
+                return redirect("/admin")
+        return _original_member_login(*args, **kwargs)
+    app.view_functions["member_login"] = unified_member_login
 
 
 def clean_admin_login():
@@ -161,7 +179,7 @@ def clean_admin_login():
             session.update(role="admin", username=ADMIN_USERNAME, name="ADMIN")
             return redirect("/admin")
         msg = (
-            "ADMIN chưa được cấu hình mật khẩu trên Render (ADMIN_PASSWORD hoặc ADMIN_PASSWORD_SHA256)."
+            "ADMIN chưa được cấu hình mật khẩu trên Render. Hãy đặt ADMIN_PASSWORD hoặc ADMIN_PASSWORD_SHA256 trong Environment Variables."
             if not ADMIN_PASSWORD and not ADMIN_PASSWORD_SHA256
             else "Sai tài khoản hoặc mật khẩu ADMIN."
         )
@@ -176,10 +194,9 @@ def clean_admin_login():
         "<button class='btn primary' type='submit'>Đăng nhập</button>"
         f"{error}</form></div></div></div>"
     )
-    return wsgi.page("ADMIN", body)
+    return authoritative_page("ADMIN", body)
 
 
-# Replace the existing endpoint without adding a second /admin/login route.
 app.view_functions["admin_login"] = clean_admin_login
 
 
@@ -188,7 +205,18 @@ def clean_admin_logout():
     return redirect("/member")
 
 
-if "admin_logout" in app.view_functions:
-    app.view_functions["admin_logout"] = clean_admin_logout
-else:
-    app.add_url_rule("/admin/logout", endpoint="admin_logout", view_func=clean_admin_logout, methods=["GET"])
+app.view_functions["admin_logout"] = clean_admin_logout
+
+
+@app.after_request
+def final_authoritative_ui(response):
+    if "text/html" not in response.headers.get("Content-Type", ""):
+        return response
+    try:
+        response.set_data(_clean_html(response.get_data(as_text=True)))
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers.pop("ETag", None)
+    except Exception:
+        pass
+    return response
