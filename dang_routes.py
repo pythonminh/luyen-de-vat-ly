@@ -39,16 +39,16 @@ def _question_card(q, n):
     options=''
     if kind=='TN':
         letters='ABCD'
-        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {html.escape(str(o.get('text','')))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
+        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {str(o.get('text',''))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
     elif kind=='DS':
         st=q.get('statements') or []
-        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {html.escape(str(o.get('text','')))}</div>" for i,o in enumerate(st))+'</div>'
+        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {str(o.get('text','') if isinstance(o,dict) else o)}</div>" for i,o in enumerate(st))+'</div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
     else:
         options="<div class='answerline'>✎ Câu tự luận</div>"
     return (f"<article class='qcard'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Chọn câu {n+1}</span></label><span class='badge'>{html.escape(badge)}</span><span class='level'>{html.escape(level)}</span></div>"
-            f"<div class='qtext'>{html.escape(str(text))}</div>{options}</article>")
+            f"<div class='qtext'>{str(text)}</div>{options}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -68,14 +68,14 @@ def member_dang():
     cards=''.join(_question_card(q,q.get('idx',i)) for i,q in enumerate(selected))
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
           f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{len(selected)} câu</b></div>"
-          "<form method='post' action='/member/start' id='questionForm'>"
-          f"<input type='hidden' name='path' value='{_esc(path)}'>"
+          "<form method='post' action='/member/start-selected' id='questionForm'>"
+          f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button><span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
           f"<div class='questions'>{cards}</div>"
           "<div class='toolbar bottom'><button class='btn primary' type='submit'>▶ Làm các câu đã chọn</button><a class='btn' href='/member'>← Mục lục</a></div>"
           "</form></div></div></div>"
           "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
-          "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));upd()</script>")
+          "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd()</script>")
     return page('Chọn câu',body)
 
 @app.after_request
