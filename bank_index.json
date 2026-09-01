@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 92,
+  "total_files": 93,
   "total_questions": 11536,
   "lessons": [
     {
@@ -4792,6 +4792,19 @@
           "TL": 2
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
