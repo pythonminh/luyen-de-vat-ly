@@ -68,9 +68,10 @@ a{text-decoration:none;color:#145bb0}.top{background:var(--blue);color:#fff}.top
 .wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}
-.selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
+.selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
+.bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
 .quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
-@media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -216,6 +217,46 @@ def github_file_sha(path):
     p,_=_safe_repo_file(path)
     d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
     return d.get('sha','')
+
+def github_put_text(path, text, message, sha=None):
+    p,_=_safe_repo_file(path)
+    payload={'message':message,'content':base64.b64encode(str(text).encode('utf-8')).decode(),'branch':BRANCH}
+    if sha: payload['sha']=sha
+    return gh_api(f'contents/{urllib.parse.quote(p,safe="/")}','PUT',payload)
+
+def github_delete_path(path, message):
+    p,_=_safe_repo_file(path)
+    sha=github_file_sha(p)
+    return gh_api(f'contents/{urllib.parse.quote(p,safe="/")}','DELETE',{'message':message,'sha':sha,'branch':BRANCH})
+
+def _bank_seg(s):
+    s=re.sub(r'[\\/:*?"<>|]+',' ',str(s or '')).strip()
+    s=re.sub(r'\s+',' ',s)
+    if not s or '..' in s: raise ValueError('Tên môn/chương/bài không hợp lệ.')
+    return s[:140]
+
+def bank_new_tex_path(mon,lop,chuong,bai):
+    mon=_bank_seg(mon); chuong=_bank_seg(chuong); bai=_bank_seg(bai)
+    lop=str(lop or '').strip()
+    if lop not in ('10','11','12'): raise ValueError('Lớp phải là 10, 11 hoặc 12.')
+    return f'ngan-hang/{mon}/Lớp {lop}/{chuong}/{bai}/de.tex'
+
+def index_upsert_lesson(path, mon, lop, chuong, bai):
+    d=index_data(); lessons=d.setdefault('lessons',[])
+    rec={'id':path,'file':path,'path':path,'Mon':mon,'Lop':str(lop),'Chuong':chuong,'BaiHoc':bai,'De':bai,'questions':0,'count':0,'dang':{}}
+    for x in lessons:
+        if str(x.get('path') or x.get('file') or '')==path:
+            x.update(rec); break
+    else:
+        lessons.append(rec)
+    d['total_files']=len(lessons)
+    save_json_github(INDEX_FILE,d,'bank_index.json','ADMIN cập nhật mục lục ngan-hang')
+
+def index_remove_lesson(path):
+    d=index_data()
+    d['lessons']=[x for x in d.get('lessons',[]) if str(x.get('path') or x.get('file') or '')!=path]
+    d['total_files']=len(d['lessons'])
+    save_json_github(INDEX_FILE,d,'bank_index.json','ADMIN xóa bài khỏi mục lục')
 
 def _on_render():
     return os.getenv('RENDER') in ('true', '1') or os.getenv('FORCE_GITHUB_TEX') == '1'
@@ -626,6 +667,8 @@ def admin_home():
     if not admin_current():return redirect('/admin/login')
     gh=github_folder_url('ngan-hang')
     tok='✅ Có GITHUB_TOKEN — có thể commit TEX từ trang này.' if TOKEN else '⚠️ Chưa có GITHUB_TOKEN trên Render. Vẫn mở/sửa được trên GitHub.com; commit từ web sẽ lỗi cho đến khi gắn token.'
+    flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
+    notice_extra=("<div class='success'>"+html.escape(flash)+"</div>" if flash else "")+("<div class='err'>"+html.escape(err)+"</div>" if err else "")
     lrows=[]
     for x in list_bank_tex():
         p=str(x.get('path') or '')
@@ -637,7 +680,10 @@ def admin_home():
             "<td><code>"+html.escape(p)+"</code></td><td style='white-space:nowrap'>"
             "<a class='btn primary' href='/admin/edit?path="+qp+"'>✏️ Sửa trên web</a> "
             "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên GitHub</a> "
-            "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem</a>"
+            "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem</a> "
+            "<form method='post' action='/admin/bank/delete' style='display:inline' onsubmit=\"return confirm('Xóa vĩnh viễn file này trên GitHub?')\">"
+            "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+            "<button class='btn red' type='submit'>🗑 Xóa</button></form>"
             "</td></tr>"
         )
     body=(
@@ -645,18 +691,67 @@ def admin_home():
         "<div class='notice'><b>Sửa TEX trên GitHub:</b> mở file → tab Edit → sửa → bấm nút xanh <b>Commit changes...</b> → Confirm. "
         "Phải đăng nhập GitHub đúng tài khoản <b>pythonminh</b> (chủ repo). Chỉ mở Edit mà không Commit thì chưa lưu.<br>"
         +html.escape(tok)+" Sau khi Commit, app trên Render đọc bản GitHub ngay (Ctrl+F5), không cần đợi deploy.</div>"
+        +notice_extra+
         "<p style='margin:12px 0;display:flex;gap:8px;flex-wrap:wrap'>"
         "<a class='btn primary' href='"+html.escape(gh,quote=True)+"' target='_blank' rel='noopener'>🐙 Mở thư mục ngan-hang trên GitHub</a>"
         "<a class='btn' href='https://github.com/"+html.escape(REPO)+"' target='_blank' rel='noopener'>📦 Repo</a>"
         "<a class='btn' href='/admin/members'>👥 Thành viên</a>"
         "<a class='btn' href='/member'>📚 Mục lục học viên</a>"
         "</p>"
+        "<h3>➕ Thêm bài (tạo file de.tex mới)</h3>"
+        "<form method='post' action='/admin/bank/add' class='addbank'>"
+        "<div class='field'><label>Môn</label><input name='mon' required placeholder='Toán hoặc Vật lý'></div>"
+        "<div class='field'><label>Lớp</label><select name='lop'><option>10</option><option>11</option><option>12</option></select></div>"
+        "<div class='field'><label>Chương</label><input name='chuong' required placeholder='Chương I. ...'></div>"
+        "<div class='field'><label>Bài</label><input name='bai' required placeholder='Bài 1. ...'></div>"
+        "<button class='btn green' type='submit'>➕ Thêm hàng</button></form>"
         "<h3>📚 File TEX trong ngan-hang ("+str(len(lrows))+")</h3>"
-        "<div style='max-height:62vh;overflow:auto'><table class='selectgrid'><tr><th>Môn</th><th>Lớp</th><th>Chương</th><th>Bài</th><th>Đường dẫn</th><th>Sửa</th></tr>"
+        "<div class='bankwrap'><table class='selectgrid'><thead><tr><th>Môn</th><th>Lớp</th><th>Chương</th><th>Bài</th><th>Đường dẫn</th><th>Sửa</th></tr></thead><tbody>"
         +(''.join(lrows) or "<tr><td colspan='6' class='muted'>Chưa thấy file .tex trong ngan-hang.</td></tr>")
-        +"</table></div></div></div></div>"
+        +"</tbody></table></div></div></div></div>"
     )
     return page('ADMIN · ngan-hang',body)
+
+@app.post('/admin/bank/add')
+def admin_bank_add():
+    if not admin_current():return redirect('/admin/login')
+    try:
+        mon=request.form.get('mon',''); lop=request.form.get('lop',''); chuong=request.form.get('chuong',''); bai=request.form.get('bai','')
+        p=bank_new_tex_path(mon,lop,chuong,bai)
+        text=(
+            f"% Môn: {mon.strip()}\n% Lớp: {str(lop).strip()}\n% Chương: {chuong.strip()}\n% Bài: {bai.strip()}\n% Số câu: 0\n"
+            "% App đọc file này trực tiếp — sửa rồi Commit trên GitHub\n\n"
+        )
+        _, local=_safe_repo_file(p)
+        if local.is_file() or any(str(x.get('path'))==p for x in list_bank_tex()):
+            raise ValueError('Bài này đã có: '+p)
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text(text, encoding='utf-8')
+        if TOKEN:
+            github_put_text(p, text, 'ADMIN thêm bài '+p)
+        index_upsert_lesson(p, _bank_seg(mon), str(lop).strip(), _bank_seg(chuong), _bank_seg(bai))
+        return redirect('/admin?ok='+urllib.parse.quote('Đã thêm '+p))
+    except Exception as e:
+        return redirect('/admin?err='+urllib.parse.quote(str(e)))
+
+@app.post('/admin/bank/delete')
+def admin_bank_delete():
+    if not admin_current():return redirect('/admin/login')
+    try:
+        p=str(request.form.get('path') or '').replace('\\','/')
+        _, local=_safe_repo_file(p)
+        if TOKEN:
+            try: github_delete_path(p, 'ADMIN xóa bài '+p)
+            except Exception:
+                pass
+        try:
+            if local.is_file(): local.unlink()
+        except Exception:
+            pass
+        index_remove_lesson(p)
+        return redirect('/admin?ok='+urllib.parse.quote('Đã xóa '+p))
+    except Exception as e:
+        return redirect('/admin?err='+urllib.parse.quote(str(e)))
 
 @app.get('/admin/logout')
 def admin_logout():session.clear();return redirect('/admin/login')
