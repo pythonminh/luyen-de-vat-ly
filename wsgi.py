@@ -1,7 +1,115 @@
-from flask import request, redirect, session
+import json
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from flask import request, redirect, session, jsonify
 from app import app, member_current
 import dang_routes
 import student_gemini
+
+
+def _gemini_model_name(s):
+    s = (s or 'gemini-2.5-flash').strip()
+    s = re.sub(r'^models/', '', s)
+    return s or 'gemini-2.5-flash'
+
+
+def _valid_gemini_key(s):
+    return bool(re.fullmatch(r'[A-Za-z0-9._-]{20,}', s or ''))
+
+
+def _valid_model_name(s):
+    return bool(re.fullmatch(r'[A-Za-z0-9._-]{1,64}', s or ''))
+
+
+def _gemini_review_prompt(data):
+    return f"""Bạn là trợ giảng Vật lý/Toán trung học phổ thông. Hãy phản biện bài làm của học sinh dựa đúng vào dữ liệu được cung cấp.
+
+Dạng bài: {data.get('dang','')}
+Loại câu: {data.get('kind','')}
+Mức độ: {data.get('level','')}
+
+CÂU HỎI:
+{data.get('text','')}
+
+TRẢ LỜI CỦA HỌC SINH:
+{data.get('student','')}
+
+LỜI GIẢI GỐC TRONG TEX:
+{data.get('solution','')}
+
+Yêu cầu phản biện:
+1. Kết luận học sinh đúng hay sai hoặc phần nào đúng/sai.
+2. Chỉ ra chính xác chỗ sai nếu có.
+3. Giải thích ngắn gọn, dễ hiểu.
+4. Nêu cách làm đúng.
+5. Không tự thay đổi nội dung câu hỏi.
+Trả lời bằng tiếng Việt, trình bày rõ ràng."""
+
+
+def gemini_review():
+    if not member_current():
+        return jsonify(ok=False, error='Chưa đăng nhập'), 401
+    data = request.get_json(silent=True) or {}
+    api_key = str(data.get('api_key') or '').strip()
+    if not api_key:
+        return jsonify(ok=False, error='Chưa nhập Gemini API key.'), 400
+    if not _valid_gemini_key(api_key):
+        return jsonify(ok=False, error='Gemini API key có vẻ không hợp lệ.'), 400
+    model = _gemini_model_name(str(data.get('model') or 'gemini-2.5-flash'))
+    if not _valid_model_name(model):
+        return jsonify(ok=False, error='Tên model Gemini không hợp lệ.'), 400
+    url = 'https://generativelanguage.googleapis.com/v1beta/models/' + urllib.parse.quote(model, safe='-_.') + ':generateContent'
+    payload = {
+        'contents': [{'parts': [{'text': _gemini_review_prompt(data)}]}],
+        'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 1200},
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+        method='POST',
+        headers={
+            'Content-Type': 'application/json',
+            'User-Agent': 'luyen-de-vat-ly-student-gemini',
+            'x-goog-api-key': api_key,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=35) as r:
+            obj = json.loads(r.read().decode('utf-8'))
+        text = ''.join(p.get('text', '') for c in obj.get('candidates', []) for p in c.get('content', {}).get('parts', []) if isinstance(p, dict)).strip()
+        if not text:
+            return jsonify(ok=False, error='Gemini không trả về nội dung phản biện.'), 502
+        return jsonify(ok=True, text=text)
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode('utf-8', 'replace')
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                err = parsed.get('error', {})
+                msg = err.get('message', '') if isinstance(err, dict) else ''
+            else:
+                msg = ''
+        except Exception:
+            msg = ''
+        safe_msg = str(msg).splitlines()[0].strip()[:200] if msg else 'Gemini API tạm thời lỗi.'
+        if e.code == 400:
+            return jsonify(ok=False, error=f'Gemini 400: {safe_msg}'), 400
+        if e.code in (401, 403):
+            return jsonify(ok=False, error='Gemini từ chối API key hoặc request không hợp lệ.'), 400
+        return jsonify(ok=False, error=f'Gemini {e.code}: {safe_msg}'), 502
+    except urllib.error.URLError:
+        return jsonify(ok=False, error='Không kết nối được Gemini API.'), 502
+    except Exception:
+        return jsonify(ok=False, error='Lỗi khi gọi Gemini API.'), 502
+
+
+if 'gemini_review' in app.view_functions:
+    app.view_functions['gemini_review'] = gemini_review
+else:
+    app.add_url_rule('/api/gemini/review', endpoint='gemini_review', view_func=gemini_review, methods=['POST'])
 
 @app.get('/practice/jump/<int:pos>')
 def practice_jump(pos):
@@ -30,7 +138,6 @@ def practice_ui_patch(response):
         return response
     try:
         body=response.get_data(as_text=True)
-        import re
         pat=re.compile(r"<span class='pitem([^']*)'>(\\d+) · ([^<]+)</span>")
         def repl(m):
             c=m.group(1).strip();n=int(m.group(2));label=m.group(3);extra=(' '+c) if c else ''
@@ -41,7 +148,7 @@ function jumpPractice(pos){location.href='/practice/jump/'+pos;}
 function retryCurrent(){var x=document.querySelector('.pcur');if(x&&x.dataset.pos!==undefined)location.href='/practice/redo/'+x.dataset.pos;}
 function currentQ(){return (typeof Q!=='undefined')?Q:{};}
 function studentAnswer(){var q=currentQ();if(q.kind==='TN'){var z=document.querySelector('input[name=a]:checked');return z?String.fromCharCode(65+(+z.value)):'';}if(q.kind==='DS'){var a=[];(q.statements||[]).forEach(function(s,i){var z=document.querySelector('input[name=t'+i+']:checked');a.push(z?(z.value==='1'?'Đ':'S'):'?');});return a.join('');}var x=document.getElementById('ans');return x?x.value.trim():'';}
-function askGemini(){var q=currentQ(),out=document.getElementById('geminiOut');if(!out)return;out.textContent='⏳ Gemini đang phản biện...';fetch('/api/gemini/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:q.text||'',student:studentAnswer(),solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''})}).then(function(r){return r.json();}).then(function(d){if(!d.ok){out.textContent='❌ '+(d.error||'Không gọi được Gemini');return;}out.textContent=d.text||'';var b=document.getElementById('speakReview');if(b)b.style.display='inline-block';if(window.MathJax)MathJax.typesetPromise([out]);}).catch(function(e){out.textContent='❌ '+e;});}
+function askGemini(){var q=currentQ(),out=document.getElementById('geminiOut');if(!out)return;var key=(sessionStorage.getItem('gemini_student_key')||'').trim();if(!key){key=(prompt('Nhập Gemini API key của bạn (chỉ dùng cho lần gọi này):',key)||'').trim();}else{key=(prompt('Nhập Gemini API key của bạn:',key)||'').trim();}if(!key){out.textContent='❌ Bạn chưa nhập Gemini API key.';return;}if(key.length<20){out.textContent='❌ Gemini API key có vẻ không hợp lệ.';return;}sessionStorage.setItem('gemini_student_key',key);out.textContent='⏳ Gemini đang phản biện...';fetch('/api/gemini/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_key:key,model:'gemini-2.5-flash',text:q.text||'',student:studentAnswer(),solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''})}).then(function(r){return r.json();}).then(function(d){if(!d.ok){out.textContent='❌ '+(d.error||'Không gọi được Gemini');return;}out.textContent=d.text||'';var b=document.getElementById('speakReview');if(b)b.style.display='inline-block';if(window.MathJax)MathJax.typesetPromise([out]);}).catch(function(e){out.textContent='❌ '+e;});}
 function speakReview(){var o=document.getElementById('geminiOut');if(!o||!o.textContent.trim())return;if(!('speechSynthesis' in window)){alert('Trình duyệt không hỗ trợ đọc giọng nói.');return;}speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(o.textContent);u.lang='vi-VN';u.rate=.95;speechSynthesis.speak(u);}
 function installTools(){var q=document.getElementById('q');if(!q||document.getElementById('practiceTools'))return;var bar=document.createElement('div');bar.id='practiceTools';bar.innerHTML='<button type="button" class="btn redo" onclick="retryCurrent()">🔁 Đánh dấu làm lại</button><button type="button" class="btn gem" onclick="askGemini()">🤖 Gemini phản biện</button><button type="button" id="speakReview" class="btn speak" style="display:none" onclick="speakReview()">🔊 Nghe phản biện</button><div id="geminiOut" class="gemOut"></div>';q.appendChild(bar);}
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.pitem').forEach(function(b,i){b.dataset.pos=String(i);});installTools();var q=document.getElementById('q');if(q)new MutationObserver(installTools).observe(q,{childList:true,subtree:true});});
