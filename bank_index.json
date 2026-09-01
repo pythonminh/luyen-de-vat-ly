@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 96,
+  "total_files": 101,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3194,16 +3194,11 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
-      "questions": 16,
-      "count": 16,
+      "questions": 5,
+      "count": 5,
       "dang": {
         "Khái niệm nhiệt độ": 2,
-        "Nội năng và truyền nhiệt": 4,
-        "Quá trình chuyển pha": 2,
-        "Đồ thị quá trình nhiệt": 3,
-        "Thang nhiệt độ và nhiệt kế": 3,
-        "Tính tốc độ tăng nhiệt độ": 1,
-        "Tính thời gian làm nóng vật": 1
+        "Thang nhiệt độ và nhiệt kế": 3
       },
       "dang_kinds": {
         "Khái niệm nhiệt độ": {
@@ -3212,40 +3207,10 @@
           "TLN": 0,
           "TL": 0
         },
-        "Nội năng và truyền nhiệt": {
-          "TN": 3,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Quá trình chuyển pha": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị quá trình nhiệt": {
-          "TN": 1,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        },
         "Thang nhiệt độ và nhiệt kế": {
           "TN": 3,
           "DS": 0,
           "TLN": 0,
-          "TL": 0
-        },
-        "Tính tốc độ tăng nhiệt độ": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Tính thời gian làm nóng vật": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
           "TL": 0
         }
       }
@@ -4740,22 +4705,137 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
       "Mon": "Vật lý",
       "Lop": "12",
       "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
-      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
-      "questions": 19,
-      "count": 19,
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Đồ thị quá trình nhiệt",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Đồ thị quá trình nhiệt",
+      "questions": 3,
+      "count": 3,
       "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 19
+        "Đồ thị quá trình nhiệt": 3
       },
       "dang_kinds": {
-        "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 11,
+        "Đồ thị quá trình nhiệt": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-qua-trinh-chuyen-pha.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-qua-trinh-chuyen-pha.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-qua-trinh-chuyen-pha.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
+      "questions": 2,
+      "count": 2,
+      "dang": {
+        "Quá trình chuyển pha": 2
+      },
+      "dang_kinds": {
+        "Quá trình chuyển pha": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
+      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
+      "questions": 4,
+      "count": 4,
+      "dang": {
+        "Nội năng và truyền nhiệt": 4
+      },
+      "dang_kinds": {
+        "Nội năng và truyền nhiệt": {
+          "TN": 3,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính tốc độ tăng nhiệt độ": 1
+      },
+      "dang_kinds": {
+        "Tính tốc độ tăng nhiệt độ": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-thoi-gian-lam-nong-vat.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-thoi-gian-lam-nong-vat.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-thoi-gian-lam-nong-vat.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính thời gian làm nóng vật": 1
+      },
+      "dang_kinds": {
+        "Tính thời gian làm nóng vật": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
+      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
+      "questions": 20,
+      "count": 20,
+      "dang": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20
+      },
+      "dang_kinds": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
+          "TN": 12,
           "DS": 5,
           "TLN": 1,
           "TL": 2
@@ -4763,27 +4843,17 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
       "Mon": "Vật lý",
       "Lop": "12",
       "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": 3
-      },
-      "dang_kinds": {
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
+      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
+      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
