@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 85,
-  "total_questions": 11519,
+  "total_files": 86,
+  "total_questions": 11535,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3257,6 +3257,29 @@
           "DS": 5,
           "TLN": 1,
           "TL": 2
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/update.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/update.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/update.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
+      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Chưa phân dạng": 16
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 11,
+          "DS": 3,
+          "TLN": 2,
+          "TL": 0
         }
       }
     },
