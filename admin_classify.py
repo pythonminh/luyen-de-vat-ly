@@ -361,10 +361,118 @@ def _prompt(meta, existing, locked, items):
         f"Dạng đã có trong file (ưu tiên dùng đúng tên, không đổi chữ nếu khớp): {exist}\n"
         f"Dạng đang giữ nguyên (không tạo tên mới trùng nghĩa, có thể gán câu mới vào đây nếu hợp): {lock}\n"
         "Mức độ chỉ một trong: NB (nhận biết), TH (thông hiểu), VD (vận dụng), VDC (vận dụng cao).\n"
-        "Câu «Chưa phân dạng» phải được gán một dạng: dùng dạng đã có nếu đúng, hoặc đặt tên dạng mới ngắn gọn tiếng Việt.\n"
+        "Câu «Chưa phân dạng» phải được gán một dạng.\n"
+        "GOM DẠNG: không tạo tên mới nếu đã có dạng cùng kỹ năng. Các dạng chỉ khác chi tiết "
+        "(ví dụ đổi C↔K, C↔F, hay cả ba thang C/K/F) phải dùng CÙNG một tên ngắn, "
+        "ví dụ «Chuyển đổi giữa các thang nhiệt độ». "
+        "Chỉ tách khi kỹ năng khác hẳn (lý thuyết ≠ bài tập; thang tự chế ≠ thang C/K/F thông dụng).\n"
         "Không giải bài. Không thêm câu. Trả về DUY NHẤT một mảng JSON:\n"
         '[{"idx":0,"dang":"tên dạng","muc":"NB"}]\n'
         "Đủ mọi idx đã cho.\n\nCâu hỏi:\n" + "\n".join(rows)
+    )
+
+
+def _gemini_once(keys, prompt, max_tokens=6000):
+    last_err = "Gemini không trả lời."
+    for i, key in enumerate(keys, 1):
+        try:
+            raw = _gemini_generate(key, prompt, max_tokens, 0.1)
+            if raw:
+                return raw, ""
+            last_err = f"Key {i}: trống."
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode("utf-8", "replace")
+            if e.code in (429, 503):
+                last_err = (
+                    "Gemini đang quá tải. Hệ thống đã thử lại và đổi model. "
+                    "Đợi khoảng 1 phút rồi bấm lại, hoặc thêm Key 2 / Key 3."
+                )
+            else:
+                last_err = f"Key {i}: Gemini {e.code}: {msg[:240]}"
+        except Exception as e:
+            last_err = f"Key {i}: {e}"
+    return "", last_err
+
+
+def _heuristic_merges(names, counts):
+    names = [n for n in names if n and n != "Chưa phân dạng"]
+    parent = {n: n for n in names}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i, a in enumerate(names):
+        for b in names[i + 1 :]:
+            if _sim(a, b) >= 0.55:
+                union(a, b)
+    groups = {}
+    for n in names:
+        groups.setdefault(find(n), []).append(n)
+    out = []
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        to = max(members, key=lambda x: (int((counts or {}).get(x) or 0), -len(x)))
+        for m in members:
+            if m != to:
+                out.append({"from": m, "to": to, "why": "Tên gần giống — gợi ý máy, ADMIN kiểm tra lại."})
+    return out
+
+
+def _parse_merge_json(text):
+    s = str(text or "").strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.I)
+    if m:
+        s = m.group(1).strip()
+    a = s.find("[")
+    b = s.rfind("]")
+    if a < 0 or b <= a:
+        return []
+    data = json.loads(s[a : b + 1])
+    if not isinstance(data, list):
+        return []
+    out = []
+    seen = set()
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        src = _norm_dang(item.get("from") or item.get("dang") or item.get("old"))
+        dst = _norm_dang(item.get("to") or item.get("into") or item.get("moi"))
+        if src in {"", "Chưa phân dạng"} or dst in {"", "Chưa phân dạng"} or src == dst:
+            continue
+        if src in seen:
+            continue
+        seen.add(src)
+        out.append({"from": src, "to": dst, "why": str(item.get("why") or "").strip()[:200]})
+    return out
+
+
+def _merge_prompt(meta, rows):
+    lines = []
+    for r in rows:
+        lines.append(f"- dạng={r['dang']} | {r['n']} câu | ví dụ: {r.get('sample') or '—'}")
+    return (
+        "Bạn là giáo viên Toán/Vật lý THPT. Hãy GOM các DẠNG BÀI gần giống thành một tên.\n"
+        f"Bài học: {meta}\n"
+        "Danh sách dạng hiện có:\n"
+        + "\n".join(lines)
+        + "\n\nQuy tắc:\n"
+        "- Gom khi cùng một kỹ năng, chỉ khác chi tiết số liệu hoặc cặp thang "
+        "(C↔K, C↔F, C↔K↔F, «ba thang», «các thang thông dụng» là CÙNG dạng).\n"
+        "- Đặt tên gộp ngắn, rõ, tiếng Việt (không dài hơn 1 câu).\n"
+        "- KHÔNG gom lý thuyết với bài tập. KHÔNG gom thang tự chế/thang mới với chuyển đổi C/K/F thông dụng.\n"
+        "- Không bịa dạng. Chỉ trả các dòng from khác to.\n"
+        "Trả về DUY NHẤT JSON:\n"
+        '[{"from":"tên cũ","to":"tên gộp","why":"lý do ngắn"}]\n'
+        "Nếu không có dạng nào nên gom, trả []."
     )
 
 
@@ -721,14 +829,15 @@ def select_admin_panel(path, qs, dang_names):
         "Dạng <span class='tag miss'>Chưa có</span> cần xếp. Dạng <span class='tag had'>Đã có</span> mặc định giữ nguyên — tick ô dưới nếu muốn xếp lại.</p>"
         "<p class='muted'>ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
         "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
-        "<p class='muted'>Nếu dạng thuộc <b>bài khác</b> (trùng tên dạng hoặc khớp tên bài), hệ thống gợi ý chuyển — chỉ chuyển khi ADMIN bấm <b>Đồng ý</b>.</p>"
+        "<p class='muted'>Dạng gần giống (cùng kỹ năng, khác chi tiết) thì bấm <b>Gom dạng gần giống</b> — AI gợi ý, ADMIN tick rồi đồng ý mới gộp.</p>"
         "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
         + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
         + "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
         "<button type='button' class='btn green' id='aiSave' disabled>💾 Ghi vào TEX + GitHub</button>"
         "<button type='button' class='btn' id='aiIds'>🔢 Gán ID còn thiếu</button>"
         "<button type='button' class='btn' id='aiSplit'>📂 Tách mỗi dạng ra file .tex</button>"
-        "<button type='button' class='btn' id='aiHome'>🚚 Gợi ý chuyển sang bài đúng</button></div>"
+        "<button type='button' class='btn' id='aiHome'>🚚 Gợi ý chuyển sang bài đúng</button>"
+        "<button type='button' class='btn' id='aiMerge'>📎 Gom dạng gần giống</button></div>"
         "<div id='aiOut' class='reviewout'></div></div>"
         "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
         ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
@@ -744,6 +853,7 @@ def _admin_js(path):
 const PATH=__PATH__;
 let LAST=null;
 let MOVES=[];
+let MERGES=[];
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 function out(h){const el=document.getElementById('aiOut');if(el)el.innerHTML=h;}
 function resorts(){return [...document.querySelectorAll('.resort:checked')].map(x=>x.value);}
@@ -859,6 +969,35 @@ document.getElementById('aiHome').addEventListener('click',async function(){
   try{
     await loadMoves([]);
     renderMoves();
+  }catch(e){out('<div class="err">'+e+'</div>');}
+});
+document.getElementById('aiMerge').addEventListener('click',async function(){
+  const k=keys();
+  if(!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
+  out('⏳ Đang gợi ý gom dạng gần giống...');
+  try{
+    const r=await fetch('/api/admin/merge-dang',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:PATH,api_keys:k,resort:resorts()})});
+    const d=await r.json();
+    if(!d.ok){out('<div class="err">'+(d.error||'Lỗi gom dạng')+'</div>');return;}
+    MERGES=d.merges||[];
+    if(!MERGES.length){out('<div class="muted">AI không thấy dạng nào cần gom (hoặc chỉ tick ít dạng quá khác nhau).</div>');return;}
+    const rows=MERGES.map((m,i)=>'<tr><td><input type="checkbox" class="mg" data-i="'+i+'" checked></td><td>'+esc(m.from)+'<div class="muted">'+esc(m.n||0)+' câu</div></td><td><b>'+esc(m.to)+'</b><div class="muted">'+esc(m.why||'')+'</div></td></tr>').join('');
+    out('<div class="success">Gợi ý gom <b>'+MERGES.length+'</b> tên dạng. Bỏ tick nếu muốn giữ riêng. Chưa ghi file cho đến khi Đồng ý.</div>'
+      +'<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng hiện tại</th><th>Gom thành</th></tr>'+rows+'</table></div>'
+      +'<p><button type="button" class="btn green" id="aiMergeGo">✅ Đồng ý gom các dòng đã tick</button></p>');
+    document.getElementById('aiMergeGo').addEventListener('click',async function(){
+      const picked=[...document.querySelectorAll('.mg:checked')].map(x=>MERGES[+x.getAttribute('data-i')]).filter(Boolean);
+      if(!picked.length){alert('Chưa tick dòng nào.');return;}
+      if(!confirm('Gom '+picked.length+' tên dạng trong file TEX + GitHub?'))return;
+      out('⏳ Đang ghi gom dạng...');
+      const s=await fetch('/api/admin/merge-dang-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:PATH,merges:picked})});
+      const sd=await s.json();
+      if(!sd.ok){out('<div class="err">'+(sd.error||'Không gom được')+'</div>');return;}
+      out('<div class="success">✅ Đã gom '+ (sd.changed||picked.length) +' câu. Đang tải lại...</div>');
+      location.reload();
+    });
   }catch(e){out('<div class="err">'+e+'</div>');}
 });
 })();</script>""".replace("__PATH__", p)
@@ -1001,6 +1140,106 @@ def api_ai_classify_save():
         pass
     _clear_caches()
     return jsonify(ok=True, changed=changed or len(rows), ids=n_id)
+
+
+@base.app.post("/api/admin/merge-dang")
+def api_merge_dang():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới gom dạng."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").strip()
+    keys = _keys_from_payload(data)
+    if not path:
+        return jsonify(ok=False, error="Thiếu path."), 400
+    if not keys:
+        return jsonify(ok=False, error="Chưa có Gemini API key."), 400
+    try:
+        _, tex = base.read_tex(path)
+        qs = base.parse_questions(tex)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
+    counts = {}
+    samples = {}
+    for q in qs:
+        d = _norm_dang(q.get("dang"))
+        if d in {"", "Chưa phân dạng"}:
+            continue
+        if resort and d not in resort:
+            continue
+        counts[d] = counts.get(d, 0) + 1
+        if d not in samples:
+            samples[d] = _plain(q.get("text") or "", 220)
+    names = list(counts.keys())
+    if len(names) < 2:
+        return jsonify(ok=True, merges=[], message="Cần ít nhất 2 dạng (tick «Sắp xếp lại» hoặc để trống để xét cả file).")
+    rows = [{"dang": n, "n": counts[n], "sample": samples.get(n) or ""} for n in names]
+    meta = path.replace("ngan-hang/", "").replace("/de.tex", "")
+    raw, err = _gemini_once(keys, _merge_prompt(meta, rows), 5000)
+    merges = []
+    if raw:
+        try:
+            merges = _parse_merge_json(raw)
+        except Exception:
+            merges = []
+    if not merges:
+        merges = _heuristic_merges(names, counts)
+    valid = set(names)
+    out = []
+    seen = set()
+    for m in merges:
+        src, dst = m["from"], m["to"]
+        if src not in valid or src in seen:
+            continue
+        seen.add(src)
+        out.append({"from": src, "to": dst, "n": counts.get(src, 0), "why": m.get("why") or ""})
+    return jsonify(ok=True, merges=out, used_ai=bool(raw))
+
+
+@base.app.post("/api/admin/merge-dang-save")
+def api_merge_dang_save():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới ghi gom dạng."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").strip()
+    rows = data.get("merges") or []
+    if not path or not isinstance(rows, list) or not rows:
+        return jsonify(ok=False, error="Thiếu danh sách gom."), 400
+    mapping = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        src = _norm_dang(row.get("from"))
+        dst = _norm_dang(row.get("to"))
+        if src in {"", "Chưa phân dạng"} or dst in {"", "Chưa phân dạng"} or src == dst:
+            continue
+        mapping[src] = dst
+    if not mapping:
+        return jsonify(ok=False, error="Không có cặp gom hợp lệ."), 400
+    try:
+        sha, tex = base.read_tex(path, need_sha=True)
+        qs = base.parse_questions(tex)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    by_idx = _map_from_questions(qs)
+    changed = 0
+    for q in qs:
+        i = int(q.get("idx"))
+        cur = _norm_dang(by_idx[i]["dang"])
+        if cur in mapping:
+            by_idx[i]["dang"] = mapping[cur]
+            changed += 1
+    if not changed:
+        return jsonify(ok=True, changed=0, message="Không có câu nào thuộc các dạng đã chọn.")
+    new = apply_taxonomy(tex, by_idx)
+    new, n_id, _ = stamp_missing_ids(new, path, by_idx)
+    try:
+        _write_tex(path, new, "ADMIN gom dạng gần giống " + path, sha)
+        _refresh_index(path, base.parse_questions(new))
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    _clear_caches()
+    return jsonify(ok=True, changed=changed, ids=n_id)
 
 
 @base.app.post("/api/admin/stamp-ids")
