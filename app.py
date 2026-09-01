@@ -58,11 +58,21 @@ a{text-decoration:none;color:#145bb0}.top{background:var(--blue);color:#fff}.top
 """
 
 def page(title: str, body: str) -> Response:
+    nav=["<a href='/member'>📚 Mục lục</a>"]
+    if admin_current():
+        nav.append("<a href='/admin'>🛠 ADMIN</a>")
+        nav.append("<a href='/admin/logout'>↩ Đăng xuất</a>")
+        nav.append(f"<a href='https://github.com/{html.escape(REPO)}' target='_blank'>🐙 GitHub</a>")
+    elif member_current():
+        nav.append("<a href='/member/logout'>↩ Đăng xuất</a>")
+        nav.append("<a href='/admin/login'>🔐 ADMIN</a>")
+    else:
+        nav.append("<a href='/member/login'>🔐 Đăng nhập</a>")
+        nav.append("<a href='/admin/login'>🔐 ADMIN</a>")
     top = (
         "<div class='top'><div class='topin'><div><div class='brand'>📚 Ngân hàng câu hỏi GitHub</div>"
         "<div class='sub'>Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề</div></div>"
-        "<div class='nav'><a href='/member'>📚 Mục lục</a><a href='/admin/login'>🔐 ADMIN</a>"
-        f"<a href='https://github.com/{html.escape(REPO)}' target='_blank'>🐙 GitHub</a></div></div></div>"
+        "<div class='nav'>"+"".join(nav)+"</div></div></div>"
     )
     mj = "<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre']}};</script><script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
     return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}</body></html>", mimetype='text/html')
@@ -76,15 +86,33 @@ def members_data():return load_json(MEMBERS_FILE, {"members": []})
 def access_data():
     d=load_json(ACCESS_FILE, {"default":"FREE","lessons":{}}); d.setdefault('default','FREE'); d.setdefault('lessons',{}); return d
 
+def member_record(username):
+    return next((m for m in members_data().get('members',[]) if m.get('username')==username),None)
+
 def member_current():
     if session.get('role')!='member':return None
     u=session.get('username')
-    return next((m for m in members_data().get('members',[]) if m.get('username')==u and m.get('status','ON')=='ON'),None)
+    m=member_record(u)
+    return m if m and str(m.get('status','ON')).upper()=='ON' else None
 def admin_current():return session.get('role')=='admin'
+def practice_current():
+    if admin_current():return {'username':session.get('username') or ADMIN_USER,'name':'ADMIN','class':'','account_type':'ADMIN','status':'ON'}
+    return member_current()
 def is_vip(m):return str(m.get('account_type','FREE')).upper() in {'VIP','S.VIP','ADMIN'}
 def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
 def can_access(m,path):return lesson_level(path)=='FREE' or is_vip(m)
+
+def login_page(msg=''):
+    body=(
+        "<div class='wrap'><div class='panel' style='max-width:460px;margin:60px auto'><div class='head'>🔐 Đăng nhập</div><div class='body'>"
+        "<div class='notice'>Dùng chung một form cho thành viên và ADMIN. Hệ thống sẽ tự nhận diện tài khoản đúng theo thông tin đăng nhập.</div>"
+        "<form method='post' style='margin-top:10px'><div class='field'><label>Tài khoản</label><input name='username' required></div>"
+        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div>"
+        "<button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký thành viên</a>"
+        "<div class='err' style='margin-top:10px'>"+html.escape(msg)+"</div></form></div></div></div>"
+    )
+    return page('Đăng nhập',body)
 
 def gh_api(api_path,method='GET',payload=None):
     if not TOKEN:raise RuntimeError('Thiếu GITHUB_TOKEN trên Render.')
@@ -180,18 +208,27 @@ def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRA
 @app.get('/')
 def home():return redirect('/member')
 @app.get('/github/repo')
-def repo_redirect():return redirect(f'https://github.com/{REPO}')
+def repo_redirect():
+    if not admin_current():return redirect('/member')
+    return redirect(f'https://github.com/{REPO}')
 
+@app.route('/login',methods=['GET','POST'])
 @app.route('/member/login',methods=['GET','POST'])
+@app.route('/admin/login',methods=['GET','POST'])
 def member_login():
-    msg=''
+    msg=request.args.get('msg','').strip()
     if request.method=='POST':
         u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()
-        for m in members_data().get('members',[]):
-            if m.get('username')==u and m.get('status','ON')=='ON' and m.get('password_sha256')==h:
-                session.clear();session.update(role='member',username=u);return redirect('/member')
-        msg='Sai tài khoản hoặc mật khẩu.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
+        if u==ADMIN_USER and ADMIN_PASS and p==ADMIN_PASS:
+            session.clear();session.update(role='admin',username=ADMIN_USER);return redirect('/admin')
+        m=member_record(u)
+        if m and str(m.get('status','ON')).upper()!='ON':msg='Tài khoản của bạn hiện đang bị tắt. Vui lòng liên hệ ADMIN.'
+        elif m and m.get('password_sha256')==h:
+            session.clear();session.update(role='member',username=u);return redirect('/member')
+        elif u==ADMIN_USER and not ADMIN_PASS:msg='Tài khoản ADMIN chưa được cấu hình mật khẩu trên server.'
+        elif m:msg='Sai mật khẩu.'
+        else:msg='Sai tài khoản hoặc mật khẩu.'
+    return login_page(msg)
 
 @app.route('/member/register',methods=['GET','POST'])
 def member_register():
@@ -206,7 +243,7 @@ def member_logout():session.clear();return redirect('/member/login')
 
 @app.get('/member')
 def member_index():
-    m=member_current()
+    m=practice_current()
     if not m:return redirect('/member/login')
     idx=index_data();items=[x for x in idx.get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')]
     subjects=sorted({str(x.get('Mon') or '') for x in items if x.get('Mon')});classes=sorted({str(x.get('Lop') or '') for x in items if x.get('Lop')});q=request.args.get('q','').strip().lower();sm=request.args.get('mon','');cl=request.args.get('lop','')
@@ -227,7 +264,7 @@ def member_index():
 
 @app.get('/member/select')
 def select_page():
-    m=member_current();
+    m=practice_current();
     if not m:return redirect('/member/login')
     p=request.args.get('path','')
     if not can_access(m,p):return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
@@ -246,7 +283,7 @@ def select_page():
 
 @app.post('/member/start')
 def start_practice():
-    m=member_current();
+    m=practice_current();
     if not m:return redirect('/member/login')
     p=request.form.get('path','')
     if not can_access(m,p):return redirect('/member')
@@ -271,14 +308,14 @@ def start_practice():
 
 @app.get('/member/practice')
 def practice():
-    m=member_current();
+    m=practice_current();
     if not m:return redirect('/member/login')
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
     if not p or not ids:return redirect('/member')
     try:_,tex=read_tex(p);allq={q['idx']:q for q in parse_questions(tex)}
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
-        score=right/len(ids)*10 if ids else 0;opts=''.join(f"<option value='{i}'>Câu {i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done));body=f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span></div><div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div><div class='review'><b>🤖 Gemini phản biện 1 câu</b><div style='margin-top:7px'><select id='pick'>{opts}</select> <button class='btn' onclick='rv()'>Phản biện</button></div><div id='out' class='reviewout'></div></div><a class='btn' href='/member'>← Mục lục</a></div></div></div><script>const D={json.dumps(done,ensure_ascii=False)};async function rv(){{let x=D[+document.getElementById('pick').value];let o=document.getElementById('out');o.textContent='⏳ Gemini đang phân tích...';let r=await fetch('/api/gemini/review',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(x)}});let d=await r.json();o.innerHTML=d.ok?d.text:'<span class=err>'+String(d.error||'Lỗi Gemini')+'</span>';if(window.MathJax)MathJax.typesetPromise()}}</script>";return page('Kết quả',body)
+        score=right/len(ids)*10 if ids else 0;opts=''.join(f"<option value='{i}'>Câu {i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done));body=f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span></div><div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div><div class='review'><b>🔑 Gemini API key cá nhân</b><div class='meta'>Chỉ lưu trong trình duyệt này. Nếu để trống, hệ thống sẽ thử dùng key trên server.</div><div class='field' style='margin-top:7px'><input id='geminiKey' type='password' placeholder='AIza...'></div></div><div class='review'><b>🤖 Gemini phản biện 1 câu</b><div style='margin-top:7px'><select id='pick'>{opts}</select> <button class='btn' onclick='rv()'>Phản biện</button></div><div id='out' class='reviewout'></div></div><a class='btn' href='/member'>← Mục lục</a></div></div></div><script>const D={json.dumps(done,ensure_ascii=False)};function loadGeminiKey(){{try{{return localStorage.getItem('gemini_api_key')||''}}catch(e){{return''}}}}function currentGeminiKey(){{let x=document.getElementById('geminiKey');return ((x&&x.value)||'').trim()}}document.addEventListener('DOMContentLoaded',()=>{{let x=document.getElementById('geminiKey');if(x){{x.value=loadGeminiKey();x.addEventListener('input',()=>{{try{{localStorage.setItem('gemini_api_key',x.value||'')}}catch(e){{}}}})}}}});async function rv(){{let x=Object.assign({{}},D[+document.getElementById('pick').value]||{{}}),o=document.getElementById('out'),k=currentGeminiKey();if(k)x.api_key=k;o.textContent='⏳ Gemini đang phân tích...';let r=await fetch('/api/gemini/review',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(x)}});let d=await r.json();o.innerHTML=d.ok?d.text:'<span class=err>'+String(d.error||'Lỗi Gemini')+'</span>';if(window.MathJax)MathJax.typesetPromise()}}</script>";return page('Kết quả',body)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<span class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</span>" for j,qid in enumerate(ids))
@@ -286,10 +323,12 @@ def practice():
     if q['kind']=='TN':payload['options']=q['options']
     elif q['kind']=='DS':payload['statements']=q['statements']
     elif q['kind']=='TLN':payload['answer']=q.get('answer','')
-    body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div><div id='q' class='qbox'></div></div></div></div>"
+    body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div class='review'><b>🔑 Gemini API key cá nhân</b><div class='meta'>Chỉ lưu trong trình duyệt này để dùng cho phần phản biện AI sau khi làm bài.</div><div class='field' style='margin-top:7px'><input id='geminiKey' type='password' placeholder='AIza...'></div></div><div id='praise'></div><div id='q' class='qbox'></div></div></div></div>"
     js=r'''<script>
 const Q=__DATA__;let checked=false;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function loadGeminiKey(){try{return localStorage.getItem('gemini_api_key')||''}catch(e){return''}}
+document.addEventListener('DOMContentLoaded',()=>{let x=document.getElementById('geminiKey');if(x){x.value=loadGeminiKey();x.addEventListener('input',()=>{try{localStorage.setItem('gemini_api_key',x.value||'')}catch(e){}})}})
 function draw(){let q=Q,h='<div class="qtext"><b>Câu __POS__. </b>'+q.text+'</div>';
 if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><input type="radio" name="a" value="'+i+'"> <b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</label>');
 else if(q.kind==='DS')q.statements.forEach((s,i)=>h+='<div class="tf" id="t'+i+'"><b>'+(i+1)+'.</b> '+s.text+'<br><label><input type="radio" name="t'+i+'" value="1"> Đúng</label> <label><input type="radio" name="t'+i+'" value="0"> Sai</label></div>');
@@ -307,7 +346,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 
 @app.post('/member/answer')
 def answer():
-    m=member_current();
+    m=practice_current();
     if not m:return jsonify(ok=False),401
     d=request.get_json(silent=True) or {};ok=bool(d.get('ok'));st=int(session.get('practice_streak') or 0);st=st+1 if ok else 0;best=max(int(session.get('practice_best') or 0),st);right=int(session.get('practice_right') or 0)+(1 if ok else 0);pos=int(session.get('practice_pos') or 0);done=list(session.get('practice_done') or []);praise=''
     if ok:
@@ -318,23 +357,16 @@ def answer():
 
 @app.post('/api/gemini/review')
 def gemini_review():
-    if not member_current():return jsonify(ok=False,error='Chưa đăng nhập'),401
-    if not GEMINI_KEY:return jsonify(ok=False,error='Thiếu GEMINI_API_KEY trên Render'),400
-    d=request.get_json(silent=True) or {};prompt=("Bạn là giáo viên Toán/Vật lý THPT. Phản biện đúng MỘT câu học sinh vừa làm. Trình bày bằng tiếng Việt: câu hỏi, học sinh trả lời gì, đúng/sai, lỗi cụ thể, lời giải đúng từng bước, và kết luận ngắn. Giữ nguyên công thức LaTeX trong $...$.\n\n"+json.dumps(d,ensure_ascii=False))
-    url='https://generativelanguage.googleapis.com/v1beta/models/'+urllib.parse.quote(GEMINI_MODEL,safe='')+':generateContent?key='+urllib.parse.quote(GEMINI_KEY,safe='')
+    if not practice_current():return jsonify(ok=False,error='Chưa đăng nhập'),401
+    d=request.get_json(silent=True) or {};api_key=str(d.pop('api_key','') or '').strip() or GEMINI_KEY
+    if not api_key:return jsonify(ok=False,error='Thiếu Gemini API key. Hãy nhập key của bạn hoặc cấu hình GEMINI_API_KEY trên server.'),400
+    prompt=("Bạn là giáo viên Toán/Vật lý THPT. Phản biện đúng MỘT câu học sinh vừa làm. Trình bày bằng tiếng Việt: câu hỏi, học sinh trả lời gì, đúng/sai, lỗi cụ thể, lời giải đúng từng bước, và kết luận ngắn. Giữ nguyên công thức LaTeX trong $...$.\n\n"+json.dumps(d,ensure_ascii=False))
+    url='https://generativelanguage.googleapis.com/v1beta/models/'+urllib.parse.quote(GEMINI_MODEL,safe='')+':generateContent?key='+urllib.parse.quote(api_key,safe='')
     try:
         req=urllib.request.Request(url,data=json.dumps({'contents':[{'parts':[{'text':prompt}]}]}).encode(),headers={'Content-Type':'application/json'})
         with urllib.request.urlopen(req,timeout=40) as r:x=json.loads(r.read().decode())
         return jsonify(ok=True,text=x['candidates'][0]['content']['parts'][0]['text'])
     except Exception as e:return jsonify(ok=False,error=str(e)),500
-
-@app.route('/admin/login',methods=['GET','POST'])
-def admin_login():
-    msg=''
-    if request.method=='POST':
-        if request.form.get('username','').strip()==ADMIN_USER and ADMIN_PASS and request.form.get('password','')==ADMIN_PASS:session.clear();session['role']='admin';return redirect('/admin')
-        msg='Sai tài khoản hoặc mật khẩu ADMIN.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>🔐 ADMIN</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' value='{html.escape(ADMIN_USER)}' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('ADMIN',body)
 
 @app.get('/admin')
 def admin_home():
