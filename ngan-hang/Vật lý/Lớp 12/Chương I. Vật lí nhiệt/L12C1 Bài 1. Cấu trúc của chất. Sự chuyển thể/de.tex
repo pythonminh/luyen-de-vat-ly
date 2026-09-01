@@ -7,6 +7,77 @@
 
 % L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể
 
+%%----------Câu 41----------%%
+\begin{ex}%[L12C1B1-TN-22]
+	{\color{red}\footnotesize\ttfamily [L12C1B1-TN-22]}\par %HienID
+	Trộn $100\ \mathrm{g}$ nước đá ở $0^{\circ}\ \mathrm{C}$ với $100\ \mathrm{g}$ nước sôi ở $100^{\circ}\ \mathrm{C}$.  Hình nào sau đây mô tả quá trình thay đổi nhiệt độ theo thời gian của hệ trên?\\
+	\begin{center}
+		\resizebox{\textwidth}{!}{
+			\begin{tabular}{cccc}
+				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
+					\draw[->](0,0)--(3,0) node[below]{Thời gian};
+					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
+					\filldraw (0,0) circle(1pt);
+					\node[left] at (0,0) {$O$};
+					\draw[red] (0,0)--(1,1);
+					\draw[red] (0,2) node[left,black]{100} -- (1,1);
+					\draw[red] (1,1)--(2,1);
+					\node at (1.5,-1){Hình 1};
+				\end{tikzpicture}
+				&
+				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
+					\draw[->](0,0)--(3,0) node[below]{Thời gian};
+					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
+					\filldraw (0,0) circle(1pt);
+					\node[left] at (0,0) {$O$};
+					\draw[red] (1,0)--(1.5,0.5);
+					\draw[red] (0,2) node[left,black]{100} -- (1.5,0.5);
+					\draw[red] (1.5,0.5)--(2.3,0.5);
+					\node at (1.5,-1){Hình 2};
+				\end{tikzpicture}
+				&
+				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
+					\draw[->](0,0)--(3,0) node[below]{Thời gian};
+					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
+					\filldraw (0,0) circle(1pt);
+					\node[left] at (0,0) {$O$};
+					\draw[red] (0,0)--(2.5,2);
+					\draw[red] (0,2) node[left,black]{100} -- (2.5,0);
+					\node at (1.5,-1){Hình 3};
+				\end{tikzpicture}
+				&
+				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
+					\draw[->](0,0)--(3,0) node[below]{Thời gian};
+					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
+					\filldraw (0,0) circle(1pt);
+					\node[left] at (0,0) {$O$};
+					\draw[red] (0,0)--(0.5,0.5);
+					\draw[red] (0,2) node[left,black]{100} -- (1,2);
+					\draw[red] (1,2)--(2,0.5);
+					\draw[red] (0.5,0.5)--(2.5,0.5);
+					\node at (1.5,-1){Hình 4};
+				\end{tikzpicture}
+			\end{tabular}
+		}
+	\end{center}
+	\choice
+	{Hình 1}
+	{\True Hình 2}
+	{Hình 3}
+	{Hình 4}
+	\loigiai{
+		\begin{itemchoice}
+			\item Hình 1 sai vì nhiệt độ của nước đá tăng ngay lập tức từ $0^{\circ}\ \mathrm{C}$. Trong thực tế, nước đá ở $0^{\circ}\ \mathrm{C}$ cần thu nhiệt để nóng chảy hoàn toàn trước khi nhiệt độ của nước sau khi tan có thể tăng lên.
+			\item Hình 2 đúng vì:
+			- Áp dụng đặc điểm của quá trình nóng chảy: Nước đá ở $0^{\circ}\ \mathrm{C}$ thu nhiệt để tan thành nước, trong suốt quá trình này nhiệt độ không thay đổi và duy trì ở $0^{\circ}\ \mathrm{C}$ (đoạn nằm ngang trên trục thời gian).
+			- Áp dụng công thức tính nhiệt lượng tỏa ra: $Q_{\text{tỏa}} = m c \Delta t$, nước sôi ở $100^{\circ}\ \mathrm{C}$ tỏa nhiệt nên nhiệt độ giảm dần theo thời gian (đường đi xuống).
+			- Sau khi đá tan hết, phần nước ở $0^{\circ}\ \mathrm{C}$ tiếp tục thu nhiệt để tăng nhiệt độ đến khi đạt trạng thái cân bằng nhiệt.
+			\item Hình 3 sai vì đồ thị biểu diễn nhiệt độ của hai chất thay đổi tuyến tính mà không có giai đoạn chuyển thể (nóng chảy) của nước đá.
+			\item Hình 4 sai vì diễn biến thay đổi nhiệt độ của các thành phần không đúng với quy luật truyền nhiệt trong hệ (nhiệt độ nước sôi không thể tăng thêm rồi mới giảm, và quá trình cân bằng không phù hợp).
+		\end{itemchoice}
+	}
+\end{ex}
+
 % ===== Câu 1 =====
 % ID: L12C1B1-01-DS
 % Mức: NB
