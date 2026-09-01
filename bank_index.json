@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 86,
+  "total_files": 87,
   "total_questions": 11536,
   "lessons": [
     {
@@ -4675,6 +4675,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
+      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
