@@ -1,19 +1,19 @@
 from flask import request, redirect, session
-from app import app, member_current
+from app import app, practice_current
 import dang_routes
 import student_gemini
 
 @app.get('/practice/jump/<int:pos>')
 def practice_jump(pos):
     ids=list(session.get('practice_ids') or [])
-    if session.get('role')!='member' or not ids:return redirect('/member/login')
+    if not practice_current() or not ids:return redirect('/login')
     pos=max(0,min(pos,len(ids)-1));session['practice_pos']=pos
     return redirect('/member/practice')
 
 @app.get('/practice/redo/<int:pos>')
 def practice_redo(pos):
-    m=member_current()
-    if not m:return redirect('/member/login')
+    m=practice_current()
+    if not m:return redirect('/login')
     ids=list(session.get('practice_ids') or [])
     if pos<0 or pos>=len(ids):return redirect('/member/practice')
     qnum=pos+1;done=list(session.get('practice_done') or [])

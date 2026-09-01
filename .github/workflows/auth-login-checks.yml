@@ -1,0 +1,59 @@
+name: Auth and login checks
+
+on:
+  pull_request:
+    paths:
+      - 'app.py'
+      - 'wsgi.py'
+      - 'wsgi_bootstrap.py'
+      - 'member_auth_fix.py'
+      - 'gemini_header.py'
+      - 'student_gemini.py'
+      - 'dang_routes.py'
+      - 'admin_manager.py'
+      - 'requirements.txt'
+      - 'tests/test_app_auth_and_gemini.py'
+      - 'tests/test_wsgi_bootstrap_login.py'
+      - '.github/workflows/auth-login-checks.yml'
+      - 'render.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'app.py'
+      - 'wsgi.py'
+      - 'wsgi_bootstrap.py'
+      - 'member_auth_fix.py'
+      - 'gemini_header.py'
+      - 'student_gemini.py'
+      - 'dang_routes.py'
+      - 'admin_manager.py'
+      - 'requirements.txt'
+      - 'tests/test_app_auth_and_gemini.py'
+      - 'tests/test_wsgi_bootstrap_login.py'
+      - '.github/workflows/auth-login-checks.yml'
+      - 'render.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth-login-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run app auth tests
+        run: python -m unittest discover -s tests -p 'test_app_auth_and_gemini.py'
+
+      - name: Run bootstrap login tests
+        run: python -m unittest discover -s tests -p 'test_wsgi_bootstrap_login.py'

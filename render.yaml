@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: luyen-de-vat-ly
+    runtime: python
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi_bootstrap:app -c gunicorn.conf.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: GITHUB_REPO
+        value: pythonminh/luyen-de-vat-ly
+      - key: GITHUB_BRANCH
+        value: main
+      - key: SECRET_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

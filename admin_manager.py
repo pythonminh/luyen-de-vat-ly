@@ -48,7 +48,7 @@ def _admin_guard():
 
 def admin_members():
     if not _admin_guard():
-        return redirect("/admin/login")
+        return redirect("/login")
     rows = []
     for i, m in enumerate(members_data().get("members", [])):
         u = str(m.get("username", "")); name = str(m.get("name", "")); cls = str(m.get("class", ""))
@@ -88,7 +88,7 @@ def _admin_members_route():
 @app.post('/admin/members/save')
 def _admin_members_save():
     if not _admin_guard():
-        return redirect('/admin/login')
+        return redirect('/login')
     username = (request.form.get('save_user') or '').strip()
     if not username:
         return redirect('/admin/members')
@@ -109,7 +109,7 @@ def _admin_members_save():
 
 def admin_results():
     if not _admin_guard():
-        return redirect('/admin/login')
+        return redirect('/login')
     rows = _load_results()
     rows = list(reversed(rows))
     filt = (request.args.get('username') or '').strip()

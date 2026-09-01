@@ -7,7 +7,7 @@ import time
 import urllib.parse
 
 from flask import request, jsonify, redirect
-from app import app, can_access, member_current, page, parse_questions, read_tex
+from app import app, can_access, practice_current, page, parse_questions, read_tex
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -32,7 +32,7 @@ def _stats_for(path: str):
 
 @app.get('/member/dang-stats')
 def member_dang_stats():
-    m = member_current()
+    m = practice_current()
     if not m:
         return jsonify(ok=False, error='Chưa đăng nhập'), 401
     path = request.args.get('path', '')
@@ -46,9 +46,9 @@ def member_dang_stats():
 
 @app.get('/member/dang')
 def member_dang():
-    m = member_current()
+    m = practice_current()
     if not m:
-        return redirect('/member/login')
+        return redirect('/login')
 
     path = request.args.get('path', '').strip()
     dang = request.args.get('dang', '').strip()
