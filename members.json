@@ -30,10 +30,7 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "925644609",
-      "password_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "grade": "11",
-      "password_enc": "v1:uDbAEw==",
-      "updated_at": "2026-09-01 14:15:43"
+      "password_sha256": "a237b5bfa24c61969a2e37e64881077f6b9ddc17494781b8d420f83f425af49e"
     },
     {
       "username": "Hung1234",
@@ -42,10 +39,7 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "975319610",
-      "password_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "grade": "11",
-      "password_enc": "v1:uDbAEw==",
-      "updated_at": "2026-09-01 14:15:58"
+      "password_sha256": "3de59c5be18b41226d6aeddd11bab5412e683e29d6374e86b77fe0318d025e04"
     },
     {
       "username": "Phat1234",
@@ -196,10 +190,12 @@
     {
       "username": "VIP",
       "name": "Huỳnh Công Minh",
-      "class": "12",
+      "class": "",
       "account_type": "VIP",
       "status": "ON",
-      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+      "grade": "",
+      "updated_at": "2026-09-01 14:16:32"
     },
     {
       "username": "0946111107",
