@@ -73,7 +73,19 @@ def page(title: str, body: str) -> Response:
         "<div class='sub'>Zalo thầy Minh 0946111107</div></div>"
         "<div class='nav'>" + "".join(nav) + "</div></div></div>"
     )
-    mj = "<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre']}};</script><script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
+    mj = (
+        "<script>"
+        "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']}},"
+        "options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},"
+        "startup:{typeset:true}};"
+        "window.ldvlTypeset=function(el){el=el||document.body;function go(n){"
+        "if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}"
+        "return MathJax.typesetPromise([el]).catch(function(){});}"
+        "if((n||0)<100)setTimeout(function(){go((n||0)+1);},40);}"
+        "go(0);};"
+        "</script>"
+        "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
+    )
     return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}</body></html>", mimetype='text/html')
 
 def load_json(path: Path, default):
@@ -188,7 +200,16 @@ def clean_latex_web(s):
     s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,',' ',s);return s.strip()
 
 def html_question(s):
-    return html.escape(clean_latex_web(s or '')).replace('\n','<br>\n')
+    return html.escape(prepare_math(s or '')).replace('\n','<br>\n')
+
+def prepare_math(s):
+    """Make LaTeX visible to MathJax: keep $...$ and wrap bare \\overrightarrow{ }."""
+    s = clean_latex_web(s or '')
+    s = re.sub(r'(?<![\\$])overrightarrow\s*\{([^{}]*)\}', r'\\overrightarrow{\1}', s)
+    s = re.sub(r'(?<!\$)\\overrightarrow\s*\{([^{}]*)\}', r'$\\overrightarrow{\1}$', s)
+    s = re.sub(r'(?<!\$)\\vec\s*\{([^{}]*)\}', r'$\\vec{\1}$', s)
+    s = re.sub(r'\$\$+', '$$', s)
+    return s.strip()
 
 def dang_for_pos(tex,pos):
     ms=list(DANG_RE.finditer(tex[:pos]));return ms[-1].group(1).strip() if ms else 'Chưa phân dạng'
@@ -359,25 +380,26 @@ def practice():
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
-    payload={'kind':q['kind'],'text':q['text'],'solution':q['solution'],'dang':q['dang'],'level':q['level']}
-    if q['kind']=='TN':payload['options']=q['options']
-    elif q['kind']=='DS':payload['statements']=q['statements']
+    payload={'kind':q['kind'],'text':prepare_math(q['text']),'solution':prepare_math(q['solution']),'dang':q['dang'],'level':q['level']}
+    if q['kind']=='TN':payload['options']=[{'text':prepare_math(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
+    elif q['kind']=='DS':payload['statements']=[{'text':prepare_math(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':payload['answer']=q.get('answer','')
     body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div><div id='q' class='qbox'></div></div></div></div>"
     js=r'''<script>
 const Q=__DATA__;let checked=false;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 function draw(){let q=Q,h='<div class="qtext"><b>Câu __POS__. </b>'+q.text+'</div>';
 if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><input type="radio" name="a" value="'+i+'"> <b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</label>');
 else if(q.kind==='DS')q.statements.forEach((s,i)=>h+='<div class="tf" id="t'+i+'"><b>'+(i+1)+'.</b> '+s.text+'<br><label><input type="radio" name="t'+i+'" value="1"> Đúng</label> <label><input type="radio" name="t'+i+'" value="0"> Sai</label></div>');
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
-h+='<div style="margin-top:10px"><button class="btn primary" onclick="check()">✅ Kiểm tra</button><button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="r"></div>';document.getElementById('q').innerHTML=h;if(window.MathJax)MathJax.typesetPromise()}
+h+='<div style="margin-top:10px"><button class="btn primary" onclick="check()">✅ Kiểm tra</button><button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="r"></div>';document.getElementById('q').innerHTML=h;typeset(document.getElementById('q'))}
 function check(){if(checked)return;let q=Q,ok=false,student='';
 if(q.kind==='TN'){let z=document.querySelector('input[name=a]:checked');if(!z)return alert('Hãy chọn đáp án.');let i=+z.value;student=String.fromCharCode(65+i);q.options.forEach((o,j)=>{if(o.correct)document.getElementById('o'+j).classList.add('correct');if(j===i&&!o.correct)document.getElementById('o'+j).classList.add('wrong')});ok=!!q.options[i].correct}
 else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){let z=document.querySelector('input[name=t'+i+']:checked');if(!z)return alert('Chọn đủ Đúng/Sai.');let v=z.value==='1';a.push(v?'Đ':'S');document.getElementById('t'+i).classList.add(v===q.statements[i].correct?'correct':'wrong');if(v!==q.statements[i].correct)ok=false}student=a.join('')}
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
-let note=q.kind==='TL'?'📝 Đã nộp bài tự luận — chờ chấm.':(ok?'✅ ĐÚNG':'❌ SAI');let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div><div class="solution"><b>📖 Lời giải</b><div>'+sol+'</div></div>';if(window.MathJax)MathJax.typesetPromise();checked=true;document.getElementById('next').style.display='inline-block';fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
+let note=q.kind==='TL'?'📝 Đã nộp bài tự luận — chờ chấm.':(ok?'✅ ĐÚNG':'❌ SAI');let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div><div class="solution"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;document.getElementById('next').style.display='inline-block';fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
 draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1))
     return page('Làm bài',body+js)
