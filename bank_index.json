@@ -3063,62 +3063,55 @@
       "questions": 211,
       "count": 211,
       "dang": {
-        "Chưa phân dạng": 74,
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": 29,
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 18,
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 18,
-        "Nhận biết và phân tích các quá trình chuyển thể": 18,
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 18,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 18,
-        "Đọc và phân tích đồ thị quá trình chuyển thể": 18
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 29,
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26,
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 23,
+        "Nhận biết và phân tích các quá trình chuyển thể": 33,
+        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 29,
+        "Bài toán hiệu suất và hao phí của động cơ nhiệt": 40,
+        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
       },
       "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 45,
-          "DS": 13,
-          "TLN": 11,
-          "TL": 5
-        },
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": {
-          "TN": 27,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
         "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Nhận biết và phân tích các quá trình chuyển thể": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
+          "TN": 16,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
         },
         "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
-          "TN": 10,
+          "TN": 13,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
+          "TN": 12,
           "DS": 5,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Nhận biết và phân tích các quá trình chuyển thể": {
+          "TN": 24,
+          "DS": 6,
           "TLN": 1,
+          "TL": 2
+        },
+        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
+          "TN": 20,
+          "DS": 6,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Bài toán hiệu suất và hao phí của động cơ nhiệt": {
+          "TN": 32,
+          "DS": 3,
+          "TLN": 3,
           "TL": 2
         },
         "Đọc và phân tích đồ thị quá trình chuyển thể": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
+          "TN": 15,
+          "DS": 11,
+          "TLN": 3,
           "TL": 2
         }
       }
