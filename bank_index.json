@@ -4770,9 +4770,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Nhận biết và phân tích các quá trình chuyển thể": 33
+      },
+      "dang_kinds": {
+        "Nhận biết và phân tích các quá trình chuyển thể": {
+          "TN": 24,
+          "DS": 6,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
     }
   ]
 }
