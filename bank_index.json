@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11619,
+  "total_questions": 11616,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -103,10 +103,10 @@
       "Chuong": "Chương IV. Vectơ",
       "BaiHoc": "Bài 8. Tổng và hiệu của hai vectơ",
       "De": "Bài 8. Tổng và hiệu của hai vectơ",
-      "questions": 22,
-      "count": 22,
+      "questions": 19,
+      "count": 19,
       "dang": {
-        "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": 22
+        "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": 19
       }
     },
     {
