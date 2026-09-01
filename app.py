@@ -65,10 +65,8 @@ def page(title: str, body: str) -> Response:
         nav.append(f"<a href='https://github.com/{html.escape(REPO)}' target='_blank'>🐙 GitHub</a>")
     elif member_current():
         nav.append("<a href='/member/logout'>↩ Đăng xuất</a>")
-        nav.append("<a href='/admin/login'>🔐 ADMIN</a>")
     else:
-        nav.append("<a href='/member/login'>🔐 Đăng nhập</a>")
-        nav.append("<a href='/admin/login'>🔐 ADMIN</a>")
+        nav.append("<a href='/login'>🔐 Đăng nhập</a>")
     top = (
         "<div class='top'><div class='topin'><div><div class='brand'>📚 Ngân hàng câu hỏi GitHub</div>"
         "<div class='sub'>Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề</div></div>"
@@ -215,8 +213,8 @@ def repo_redirect():
 @app.route('/login',methods=['GET','POST'])
 @app.route('/member/login',methods=['GET','POST'])
 @app.route('/admin/login',methods=['GET','POST'])
-def member_login():
-    msg=request.args.get('msg','').strip()
+def shared_login():
+    msg=''
     if request.method=='POST':
         u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()
         if u==ADMIN_USER and ADMIN_PASS and p==ADMIN_PASS:
@@ -225,7 +223,7 @@ def member_login():
         if m and str(m.get('status','ON')).upper()!='ON':msg='Tài khoản của bạn hiện đang bị tắt. Vui lòng liên hệ ADMIN.'
         elif m and m.get('password_sha256')==h:
             session.clear();session.update(role='member',username=u);return redirect('/member')
-        elif u==ADMIN_USER and not ADMIN_PASS:msg='Tài khoản ADMIN chưa được cấu hình mật khẩu trên server.'
+        elif u==ADMIN_USER and not ADMIN_PASS:msg='Sai tài khoản hoặc mật khẩu.'
         elif m:msg='Sai mật khẩu.'
         else:msg='Sai tài khoản hoặc mật khẩu.'
     return login_page(msg)
@@ -358,8 +356,11 @@ def answer():
 @app.post('/api/gemini/review')
 def gemini_review():
     if not practice_current():return jsonify(ok=False,error='Chưa đăng nhập'),401
-    d=request.get_json(silent=True) or {};api_key=str(d.pop('api_key','') or '').strip() or GEMINI_KEY
+    d=request.get_json(silent=True) or {}
+    client_api_key=str(d.pop('api_key','') or '').strip()
+    api_key=client_api_key or GEMINI_KEY
     if not api_key:return jsonify(ok=False,error='Thiếu Gemini API key. Hãy nhập key của bạn hoặc cấu hình GEMINI_API_KEY trên server.'),400
+    if client_api_key and not re.fullmatch(r'AIza[0-9A-Za-z\-_]{35}',client_api_key):return jsonify(ok=False,error='Gemini API key không hợp lệ.'),400
     prompt=("Bạn là giáo viên Toán/Vật lý THPT. Phản biện đúng MỘT câu học sinh vừa làm. Trình bày bằng tiếng Việt: câu hỏi, học sinh trả lời gì, đúng/sai, lỗi cụ thể, lời giải đúng từng bước, và kết luận ngắn. Giữ nguyên công thức LaTeX trong $...$.\n\n"+json.dumps(d,ensure_ascii=False))
     url='https://generativelanguage.googleapis.com/v1beta/models/'+urllib.parse.quote(GEMINI_MODEL,safe='')+':generateContent?key='+urllib.parse.quote(api_key,safe='')
     try:

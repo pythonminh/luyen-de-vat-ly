@@ -138,7 +138,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
             data={"username": "hocvien", "password": "sai"},
         )
         locked = self.client.post(
-            "/admin/login",
+            "/member/login",
             data={"username": "khoa", "password": "matkhau"},
         )
         self.assertIn("Sai mật khẩu.", wrong.get_data(as_text=True))
@@ -187,6 +187,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
     def test_gemini_review_prefers_client_api_key(self):
         self.login_as("admin", "ADMIN")
         captured = {}
+        api_key = "AIza" + ("a" * 35)
 
         def fake_urlopen(req, timeout=0):
             captured["url"] = req.full_url
@@ -196,11 +197,11 @@ class AppAuthAndGeminiTests(unittest.TestCase):
         with patch("urllib.request.urlopen", side_effect=fake_urlopen):
             res = self.client.post(
                 "/api/gemini/review",
-                json={"text": "Câu hỏi", "student": "Đáp án", "api_key": "user-key-123"},
+                json={"text": "Câu hỏi", "student": "Đáp án", "api_key": api_key},
             )
 
         self.assertEqual(res.status_code, 200)
-        self.assertIn("key=user-key-123", captured["url"])
+        self.assertIn(f"key={api_key}", captured["url"])
         self.assertNotIn("api_key", captured["body"])
         self.assertTrue(res.get_json()["ok"])
 
