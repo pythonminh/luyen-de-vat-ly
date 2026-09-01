@@ -4797,9 +4797,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
       "De": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Bài toán về quá trình đẳng nhiệt": 1
+      },
+      "dang_kinds": {
+        "Bài toán về quá trình đẳng nhiệt": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
     }
   ]
 }
