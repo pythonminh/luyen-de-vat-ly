@@ -4851,9 +4851,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 18
+      },
+      "dang_kinds": {
+        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
+          "TN": 5,
+          "DS": 4,
+          "TLN": 6,
+          "TL": 3
+        }
+      }
     }
   ]
 }
