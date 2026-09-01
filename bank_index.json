@@ -3153,45 +3153,23 @@
       "questions": 82,
       "count": 82,
       "dang": {
-        "Bài toán chuyển đổi giữa ba thang Celsius, Kelvin và Fahrenheit": 1,
-        "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit": 12,
-        "Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin": 15,
-        "Bài toán chuyển đổi nhiệt độ qua lại giữa các thang đo thông dụng": 1,
-        "Bài toán thiết lập và chuyển đổi với một thang nhiệt độ mới hoặc tự chế bất kì (ví dụ thang nhiệt độ Z).": 3,
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng (Celsius, Kelvin, Fahrenheit)": 29,
+        "Thiết lập và chuyển đổi thang nhiệt độ mới": 21,
         "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": 14,
-        "Nguyên lí hoạt động và sử dụng nhiệt kế": 18,
-        "Thiết lập và chuyển đổi thang nhiệt độ mới": 18
+        "Nguyên lí hoạt động và sử dụng nhiệt kế": 18
       },
       "dang_kinds": {
-        "Bài toán chuyển đổi giữa ba thang Celsius, Kelvin và Fahrenheit": {
-          "TN": 0,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit": {
-          "TN": 10,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin": {
-          "TN": 10,
-          "DS": 3,
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng (Celsius, Kelvin, Fahrenheit)": {
+          "TN": 21,
+          "DS": 6,
           "TLN": 1,
           "TL": 1
         },
-        "Bài toán chuyển đổi nhiệt độ qua lại giữa các thang đo thông dụng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán thiết lập và chuyển đổi với một thang nhiệt độ mới hoặc tự chế bất kì (ví dụ thang nhiệt độ Z).": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+        "Thiết lập và chuyển đổi thang nhiệt độ mới": {
+          "TN": 13,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
         },
         "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": {
           "TN": 10,
@@ -3200,12 +3178,6 @@
           "TL": 2
         },
         "Nguyên lí hoạt động và sử dụng nhiệt kế": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Thiết lập và chuyển đổi thang nhiệt độ mới": {
           "TN": 10,
           "DS": 5,
           "TLN": 1,
