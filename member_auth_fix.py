@@ -9,7 +9,7 @@ import json
 import urllib.parse
 
 from flask import request, redirect, session
-from app import app, members_data, page, gh_api, BRANCH
+from app import app, members_data, page, gh_api, BRANCH, shared_login
 
 
 def _save_members(data, message='Update members.json'):
@@ -25,27 +25,7 @@ def _save_members(data, message='Update members.json'):
 
 
 def member_login_fixed():
-    msg = ''
-    if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
-        wanted = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        member = next((m for m in members_data().get('members', []) if str(m.get('username','')).strip().lower() == username.lower()), None)
-        if member and str(member.get('password_sha256','')) == wanted and str(member.get('status','ON')).upper() == 'ON':
-            session.clear(); session.update(role='member', username=str(member.get('username')), name=member.get('name') or username, account_type=str(member.get('account_type') or 'FREE').upper())
-            return redirect('/member')
-        msg = 'Sai tài khoản, mật khẩu hoặc tài khoản đã bị khóa.'
-    body = """
-<div class='wrap'><div class='panel login' style='max-width:480px;margin:40px auto'>
-<div class='head'>👤 Đăng nhập học viên</div><div class='body'>
-<div class='notice' style='margin-bottom:10px'>Tài khoản <b>FREE</b>: xem và làm bài FREE. Tài khoản <b>VIP</b>: dùng cả FREE + VIP.</div>
-<form method='post'>
-<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div>
-<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div>
-<button class='btn primary' type='submit'>🔐 Đăng nhập</button>
-<a class='btn' href='/member/register'>📝 Tạo tài khoản FREE</a>
-""" + (f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else '') + "</form></div></div></div>"
-    return page('Đăng nhập học viên', body)
+    return shared_login()
 
 
 def member_register_fixed():
@@ -66,11 +46,11 @@ def member_register_fixed():
     body = """
 <div class='wrap'><div class='panel login' style='max-width:480px;margin:40px auto'>
 <div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'>
-<div class='notice' style='margin-bottom:10px'>Tài khoản mới mặc định là <b>FREE</b>. ADMIN có thể nâng lên VIP.</div>
+<div class='notice' style='margin-bottom:10px'>Tài khoản mới mặc định là <b>FREE</b>. Sau khi tạo xong, bạn dùng chung trang <b>/login</b> để đăng nhập.</div>
 <form method='post'><div class='field'><label>Họ tên</label><input name='name'></div>
 <div class='field'><label>Tài khoản</label><input name='username' required></div>
 <div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div>
-<button class='btn primary'>✅ Tạo tài khoản</button> <a class='btn' href='/member/login'>← Đăng nhập</a>
+<button class='btn primary'>✅ Tạo tài khoản</button> <a class='btn' href='/login'>← Đăng nhập chung</a>
 """ + (f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else '') + "</form></div></div></div>"
     return page('Đăng ký FREE', body)
 

@@ -7,10 +7,11 @@ def gemini_header_button(response):
         return response
     try:
         body=response.get_data(as_text=True)
-        # GitHub is visible only after ADMIN login.
+        # GitHub/ADMIN links are visible only after ADMIN login.
         if session.get('role') != 'admin':
             import re
-            body=re.sub(r"\s*<a[^>]*href=['\"]https://github\\.com/[^'\"]+['\"][^>]*>.*?</a>", '', body, flags=re.I|re.S)
+            body=re.sub(r"\s*<a[^>]*href=['\"](?:https://github\\.com/[^'\"]+|/github/repo)['\"][^>]*>.*?</a>", '', body, flags=re.I|re.S)
+            body=re.sub(r"\s*<a[^>]*href=['\"](?:/admin|/admin/login)['\"][^>]*>.*?</a>", '', body, flags=re.I|re.S)
 
         # Insert the Gemini key button directly into the header on every HTML page.
         if 'id="gkhBtn"' not in body and 'id=\'gkhBtn\'' not in body:

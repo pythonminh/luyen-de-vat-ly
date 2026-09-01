@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 
 from flask import request, jsonify
-from app import app, member_current
+from app import app, practice_current
 
 
 def _model_name(s: str) -> str:
@@ -47,7 +47,7 @@ Trả lời bằng tiếng Việt, trình bày rõ ràng."""
 
 @app.post('/api/gemini/review_student')
 def gemini_review_student():
-    m = member_current()
+    m = practice_current()
     if not m:
         return jsonify(ok=False, error='Chưa đăng nhập'), 401
 
