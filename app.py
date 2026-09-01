@@ -504,6 +504,124 @@ def read_tex(path, need_sha=False):
             sha=''
     return sha, text
 
+def lesson_folder(path):
+    p = str(path or "").replace("\\", "/").rstrip("/")
+    if p.lower().endswith(".tex"):
+        return p.rsplit("/", 1)[0]
+    return p
+
+
+def _tex_name_key(path):
+    name = str(path or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    if name == "de.tex":
+        return (0, name)
+    if name == "update.tex":
+        return (1, name)
+    return (2, name)
+
+
+def lesson_tex_paths(path):
+    """Mọi file .tex cùng thư mục bài (de / update / dang-...)."""
+    folder = lesson_folder(path)
+    found = []
+    for x in index_data().get("lessons") or []:
+        p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
+        if p.lower().endswith(".tex") and lesson_folder(p) == folder:
+            found.append(p)
+    p0 = str(path or "").replace("\\", "/")
+    if p0.lower().endswith(".tex") and p0 not in found:
+        found.append(p0)
+    try:
+        dummy = folder + "/de.tex"
+        _, local = _safe_repo_file(dummy)
+        parent = local.parent
+        if parent.is_dir():
+            for f in sorted(parent.glob("*.tex")):
+                rel = str(f.relative_to(ROOT)).replace("\\", "/")
+                if rel not in found:
+                    found.append(rel)
+    except Exception:
+        pass
+    return sorted(set(found), key=_tex_name_key)
+
+
+def lesson_card_title(folder, arr):
+    name = str(folder or "").replace("\\", "/").rsplit("/", 1)[-1]
+    for x in arr or []:
+        p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
+        if p.endswith("/de.tex"):
+            t = str(x.get("BaiHoc") or x.get("De") or "").strip()
+            if t:
+                return t.split(" · ")[0].strip() or name
+    for x in arr or []:
+        t = str(x.get("BaiHoc") or x.get("De") or "").strip()
+        if t:
+            return t.split(" · ")[0].strip() or name
+    return name
+
+
+def merge_catalog_lessons(items):
+    """Gộp mọi .tex cùng thư mục thành một thẻ bài."""
+    buckets = {}
+    for x in items or []:
+        if not isinstance(x, dict):
+            continue
+        p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
+        if not p:
+            continue
+        buckets.setdefault(lesson_folder(p), []).append(x)
+    out = []
+    for folder, arr in buckets.items():
+        arr = sorted(arr, key=lambda z: _tex_name_key(str(z.get("path") or z.get("file") or "")))
+        canon = dict(arr[0])
+        path = str(canon.get("path") or canon.get("file") or "")
+        dang, kinds, n = {}, {}, 0
+        for x in arr:
+            n += int(x.get("questions") or x.get("count") or 0)
+            for k, v in (x.get("dang") or {}).items():
+                name = str(k)
+                dang[name] = dang.get(name, 0) + int(v or 0)
+            for dname, bucket in (x.get("dang_kinds") or {}).items():
+                dst = kinds.setdefault(str(dname), {"TN": 0, "DS": 0, "TLN": 0, "TL": 0})
+                if isinstance(bucket, dict):
+                    for kk, vv in bucket.items():
+                        dst[kk] = dst.get(kk, 0) + int(vv or 0)
+        canon["path"] = path
+        canon["file"] = path
+        canon["id"] = path
+        title = lesson_card_title(folder, arr)
+        canon["BaiHoc"] = title
+        canon["De"] = title
+        canon["questions"] = n
+        canon["count"] = n
+        canon["dang"] = dang
+        canon["dang_kinds"] = kinds
+        out.append(canon)
+    return out
+
+
+def parse_lesson_questions(path):
+    """Mọi câu trong các .tex cùng bài; idx không trùng giữa file."""
+    out = []
+    n = 0
+    for fp in lesson_tex_paths(path):
+        try:
+            _, tex = read_tex(fp)
+        except Exception:
+            continue
+        for q in parse_questions(tex):
+            q = dict(q)
+            q["src"] = fp
+            try:
+                q["file_idx"] = int(q.get("idx") or 0)
+            except (TypeError, ValueError):
+                q["file_idx"] = 0
+            q["idx"] = n
+            n += 1
+            out.append(q)
+    return out
+
+
 def get_braced(text,pos):
     while pos<len(text) and text[pos].isspace():pos+=1
     if pos>=len(text) or text[pos]!='{':return None,pos
@@ -1331,13 +1449,18 @@ def member_index():
         id_block=_dang.qid_results_html(q,m)
     def keep(x):
         t=' '.join(str(x.get(k) or '') for k in ('Mon','Lop','Chuong','BaiHoc','De')).lower();return (not q or q in t) and (not sm or str(x.get('Mon'))==sm) and (not cl or str(x.get('Lop'))==cl)
-    items=[x for x in items if keep(x)];groups={}
+    items=[x for x in items if keep(x)]
+    items=merge_catalog_lessons(items)
+    groups={}
     for x in items:groups.setdefault((str(x.get('Mon') or 'Khác'),str(x.get('Lop') or ''),str(x.get('Chuong') or 'Chưa xác định')),[]).append(x)
     sections=[]
     for (mon,lop,chuong),arr in sorted(groups.items()):
         cards=[]
         for x in sorted(arr,key=lambda z:str(z.get('BaiHoc') or z.get('De') or '')):
-            path=str(x.get('path'));title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name);lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};kinds=x.get('dang_kinds') or {};href=urllib.parse.quote(path,safe='');dh=''.join(dang_link_html(path,k,v,kinds.get(str(k)), n=i) for i,(k,v) in enumerate(dangs.items(),1));lc='vip' if lvl=='VIP' else 'free'
+            path=str(x.get('path') or x.get('file') or '')
+            title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name)
+            lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};kinds=x.get('dang_kinds') or {};href=urllib.parse.quote(path,safe='')
+            dh=''.join(dang_link_html(path,k,v,kinds.get(str(k)), n=i) for i,(k,v) in enumerate(((k,v) for k,v in dangs.items()),1));lc='vip' if lvl=='VIP' else 'free'
             cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
@@ -1355,7 +1478,10 @@ def select_page():
     if not can_view(m,p):
         if not m: return redirect(login_url(request.full_path if request.query_string else '/member/select?path='+urllib.parse.quote(p,safe='')))
         return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-    try:_,tex=read_tex(p);qs=parse_questions(tex)
+    try:
+        qs=parse_lesson_questions(p)
+        if not qs:
+            _,tex=read_tex(p); qs=parse_questions(tex)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     dang_names=[];seen=set()
     for q in qs:
@@ -1376,13 +1502,29 @@ def select_page():
     admin_box=''
     if can_manage_bank():
         import admin_classify as _ac
-        admin_box=_ac.select_admin_panel(p, qs, dang_names)
+        try:
+            _,tex_one=read_tex(p); qs_one=parse_questions(tex_one)
+        except Exception:
+            qs_one=qs
+        names_one=[];seen_one=set()
+        for q in qs_one:
+            if q['dang'] not in seen_one:seen_one.add(q['dang']);names_one.append(q['dang'])
+        files=lesson_tex_paths(p)
+        nav=''
+        if len(files)>1:
+            bits=[]
+            cur=p.replace('\\','/')
+            for fp in files:
+                cls=' primary' if fp.replace('\\','/')==cur else ''
+                bits.append(f"<a class='btn{cls}' href='/member/select?path={urllib.parse.quote(fp,safe='')}'>{html.escape(fp.rsplit('/',1)[-1])}</a>")
+            nav="<p class='muted'>ADMIN · AI / gán ID / tách file theo <b>từng file</b>: "+" ".join(bits)+"</p>"
+        admin_box=nav+_ac.select_admin_panel(p, qs_one, names_one)
     if guest:
         acts=f"<div class='notice'>👁 Bạn đang xem đề. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập để làm bài</a></div>"
     else:
         acts=("<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
               "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div>")
-    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 Chọn dạng bài và số câu <span class='tag'>{len(qs)} câu thực tế trong TEX</span></div><div class='body'>{admin_box}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 Chọn dạng bài và số câu <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{admin_box}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
     return page('Chọn câu',body)
 
 @app.post('/member/start')
@@ -1394,7 +1536,10 @@ def start_practice():
         return _dang.start_selected_questions()
     p=request.form.get('path','')
     if not can_access(m,p):return redirect('/member')
-    try:_,tex=read_tex(p);qs=parse_questions(tex)
+    try:
+        qs=parse_lesson_questions(p)
+        if not qs:
+            _,tex=read_tex(p); qs=parse_questions(tex)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     picks={}
     for k,v in request.form.items():
@@ -1436,7 +1581,10 @@ def practice():
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
     ai=bool(session.get('practice_ai'))
     if not p or not ids:return redirect('/member')
-    try:_,tex=read_tex(p);allq={q['idx']:q for q in parse_questions(tex)}
+    try:
+        allq={q['idx']:q for q in parse_lesson_questions(p)}
+        if not allq:
+            _,tex=read_tex(p); allq={q['idx']:q for q in parse_questions(tex)}
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0

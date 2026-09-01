@@ -29,11 +29,20 @@ def _member_index():
     if q:
         import dang_routes as dr
         id_block = dr.qid_results_html(q, m)
-        items = [x for x in items if q in ' '.join(str(x.get(k) or '') for k in ('Mon','Lop','Chuong','BaiHoc','De','dang','path')).lower()]
     if sm:
         items = [x for x in items if str(x.get('Mon') or '') == sm]
     if cl:
         items = [x for x in items if _grade(x.get('Lop') or x.get('lop')) == _grade(cl)]
+    items = base.merge_catalog_lessons(items)
+    if q:
+        def _hit(x):
+            dang = x.get('dang') or {}
+            blob = ' '.join(
+                [str(x.get(k) or '') for k in ('Mon', 'Lop', 'Chuong', 'BaiHoc', 'De', 'path')]
+                + [str(k) for k in dang]
+            ).lower()
+            return q in blob
+        items = [x for x in items if _hit(x)]
 
     subjects = sorted({str(x.get('Mon') or '') for x in items if x.get('Mon')})
     classes = sorted({_grade(x.get('Lop') or x.get('lop')) for x in items if _grade(x.get('Lop') or x.get('lop'))})

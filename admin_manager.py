@@ -371,12 +371,14 @@ def _strict_member_index():
     items = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path', '')).startswith('ngan-hang/')]
     if not svip:
         items = [x for x in items if _member_class({'class': str(x.get('Lop', ''))}) == allowed_grade]
-    if q:
-        items = [x for x in items if q in ' '.join(str(x.get(k, '')) for k in ('Mon','Lop','Chuong','BaiHoc','De','path')).lower()]
     if sm:
         items = [x for x in items if str(x.get('Mon','')) == sm]
     if cl:
         items = [x for x in items if str(x.get('Lop','')) == cl]
+    if _base_app:
+        items = _base_app.merge_catalog_lessons(items)
+    if q:
+        items = [x for x in items if q in ' '.join(str(x.get(k, '')) for k in ('Mon','Lop','Chuong','BaiHoc','De','path')).lower() or q in ' '.join(str(k) for k in (x.get('dang') or {})).lower()]
 
     groups = {}
     for x in items:

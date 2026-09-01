@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, login_url, member_current, nguon_html, page, parse_questions, read_tex, sort_ids_by_kind
+from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -188,7 +188,10 @@ def member_dang():
         if not m:
             return redirect(login_url('/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')))
         return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-    try: _,tex=read_tex(path); qs=parse_questions(tex)
+    try:
+        qs = parse_lesson_questions(path)
+        if not qs:
+            _, tex = read_tex(path); qs = parse_questions(tex)
     except Exception as exc:
         return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div></div></div></div>")
     selected=[q for q in qs if _same_dang(q.get('dang'), dang)]
@@ -200,7 +203,8 @@ def member_dang():
         notice_extra=f"<div class='notice'>Không khớp đúng tên dạng «{_esc(dang)}» — đang hiện {len(selected)} câu trong file.</div>"
     if not selected:
         return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>File TEX này chưa có câu hỏi \\begin{ex}...\\end{ex}.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-    title=str(path.rsplit('/',1)[-2] if '/' in path else path)
+    folder=path.replace('\\','/').rsplit('/',1)[0] if '/' in path.replace('\\','/') else path
+    title=folder.rsplit('/',1)[-1] if '/' in folder else folder
     total=len(selected)
     kc={'TN':0,'DS':0,'TLN':0,'TL':0}
     for q in selected:
@@ -219,14 +223,15 @@ def member_dang():
     cung_n=sum(1 for g in groups if g['type']=='cungde')
     admin_view=can_manage_bank()
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
-    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=admin_view,highlight_id=highlight_id) for i,q in enumerate(selected))
+    cards=''.join(_question_card(q,i+1,total,q.get('src') or path,dmap.get(q.get('idx')),show_solution=admin_view,highlight_id=highlight_id) for i,q in enumerate(selected))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
                   "Bấm <b>Chỉ trùng</b> để lọc.</div>")
     next_url='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
     dup_form=''
-    if can_manage_bank() and dao_n:
+    srcs={str(q.get('src') or path) for q in selected}
+    if can_manage_bank() and dao_n and len(srcs)==1:
         dup_form=(
             f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản trùng đã tick trên thẻ đỏ? Bản đầu mỗi nhóm được giữ lại.')\">"
             f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
@@ -308,7 +313,9 @@ def start_selected_questions():
     if not path or not can_access(m,path):
         return redirect('/member')
     try:
-        _,tex=read_tex(path); qs=parse_questions(tex)
+        qs=parse_lesson_questions(path)
+        if not qs:
+            _,tex=read_tex(path); qs=parse_questions(tex)
     except Exception:
         return redirect('/member')
     valid={
