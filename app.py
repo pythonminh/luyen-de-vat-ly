@@ -1076,6 +1076,21 @@ def start_practice():
     wanted=sort_ids_by_kind(qs, wanted, shuffle_within=True)
     session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[]);return redirect('/member/practice')
 
+def question_payload(q):
+    """Toàn bộ dữ liệu một câu cho trang làm bài và cho AI phản biện."""
+    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level']}
+    if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
+    elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
+    elif q['kind']=='TLN':p['answer']=q.get('answer','')
+    return p
+
+def review_payload(q,entry):
+    """Ghép câu gốc trong ngân hàng với bài làm đã lưu để AI có đủ dữ kiện."""
+    entry=entry or {}
+    p=question_payload(q) if q else {'kind':str(entry.get('kind') or ''),'dang':str(entry.get('dang') or ''),'text':str(entry.get('text') or ''),'solution':str(entry.get('solution') or '')}
+    p.update(question=entry.get('question'),student=str(entry.get('student') or ''),ok=bool(entry.get('ok')))
+    return p
+
 @app.get('/member/practice')
 def practice():
     m=member_current();
@@ -1086,23 +1101,21 @@ def practice():
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
-        opts=''.join(f"<option value='{i}'>Câu {i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done))
+        opts=''.join(f"<option value='{i}'>Câu {d.get('question') or i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done))
+        review=[review_payload(allq.get(ids[int(d.get('question') or 0)-1]) if 0<int(d.get('question') or 0)<=len(ids) else None,d) for d in done]
         body=(
             f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
             + gemini_panel_html()
             + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
             f"<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
-            f"<script>const D={json.dumps(done,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>"
+            f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>"
         )
         return page('Kết quả',body)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}' title='{html.escape(str(allq.get(qid,{}).get('id') or ''), quote=True)}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
-    payload={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level']}
-    if q['kind']=='TN':payload['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
-    elif q['kind']=='DS':payload['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
-    elif q['kind']=='TLN':payload['answer']=q.get('answer','')
+    payload=question_payload(q)
     body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>ID {html.escape(str(q.get('id') or '—'))}</span> · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div><div id='q' class='qbox'></div><div id='aibox'></div></div></div></div>"
     js=r'''<script>
 const Q=__DATA__;let checked=false;
@@ -1145,7 +1158,7 @@ def answer():
         if st==3:praise='🎉 Đúng 3 câu liên tiếp! Rất tốt!'
         elif st==5:praise='👏 Đúng 5 câu liên tiếp! Tuyệt vời!'
         elif st==10:praise='🏆 Đúng 10 câu liên tiếp! Xuất sắc!'
-    done.append({'question':pos+1,'ok':ok,'student':str(d.get('student') or ''),'text':str(d.get('text') or ''),'solution':str(d.get('solution') or ''),'kind':str(d.get('kind') or ''),'dang':str(d.get('dang') or '')});session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=pos+1,practice_done=done);return jsonify(ok=True,praise=praise,streak=st,right=right)
+    done.append({'question':pos+1,'ok':ok,'student':str(d.get('student') or ''),'kind':str(d.get('kind') or ''),'dang':str(d.get('dang') or '')});session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=pos+1,practice_done=done);return jsonify(ok=True,praise=praise,streak=st,right=right)
 
 @app.post('/api/gemini/review')
 def gemini_review():
