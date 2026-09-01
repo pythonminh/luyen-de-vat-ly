@@ -62,6 +62,11 @@ class WsgiBootstrapLoginTests(unittest.TestCase):
         self.assertEqual(res.status_code, 302)
         self.assertTrue(res.headers["Location"].endswith("/member/practice"))
 
+    def test_bootstrap_practice_jump_redirects_guest_to_login(self):
+        res = self.client.get("/practice/jump/0", follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers["Location"].endswith("/login"))
+
 
 if __name__ == "__main__":
     unittest.main()
