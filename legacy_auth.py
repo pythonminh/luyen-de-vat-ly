@@ -2,20 +2,16 @@
 """Legacy password compatibility layer.
 
 Keeps the passwords from the old member sheet working after migration to
-members.json/SHA-256.  Passwords are stored here only as SHA-256 hashes.
+members.json/SHA-256. Passwords are stored here only as SHA-256 hashes.
 The normal members.json password remains valid too.
 """
 from __future__ import annotations
 
 import hashlib
-
 from flask import redirect, request, session
-
 import app as base
 import admin_overrides as admin
 
-
-# Old passwords from the previous member sheet, stored as SHA-256 only.
 LEGACY = {
     "Duong0811": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
     "Khang1234": "a237b5bfa24c61969a2e37e64881077f6b9ddc17494781b8d420f83f425af49e",
@@ -24,7 +20,7 @@ LEGACY = {
     "Lam123456": "cd81af781cb481783ff8769aeb5f94d3fcecc896024f3ca9dfb208f0b0d065aa",
     "Thinh123456": "250a76d1160fa84706671395fae8a0daa973d24a1d8c6ec5632806e8c514eedf",
     "Nhan12345": "9296e47940ad245bd7f0e385fd87d564bad674677f83a818329f5d4d487841bf",
-    "Huy123": "f6f1bf7196a6d50dc890315517465f2e703101a0215e0b8d0ff4344ecc77a2",
+    "Huy123": "f6f1bf7196a6d50dc890315517465f2e703101a0215e0b8b0d8ff4344ecc77a2",
     "GHung123": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
     "HNam1110": "e4fbbff8510dbe02d4f1edfb987d858bfbfae5dd2b364369dc543d050c631435",
     "TLam1406": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
@@ -55,8 +51,6 @@ def _legacy_member(username: str, password: str):
     return None
 
 
-# Preserve the existing login (including registration and the temporary 123456
-# password) and add the old password as a compatibility fallback.
 _original_member_login = base.app.view_functions.get("member_login")
 
 
@@ -77,8 +71,6 @@ if _original_member_login:
     base.app.view_functions["member_login"] = _member_login_legacy
 
 
-# If the migration did not yet create an ADMIN row, create an in-memory row
-# from the old admin password. It is persisted only when ADMIN changes password.
 _original_admin_record = admin._admin_record
 
 
@@ -87,19 +79,16 @@ def _admin_record_legacy(d=None):
     if found:
         return found
     d = d or admin._members()
-    for key in ("admin", "ADMIN0", "ADMIN1"):
-        if key in LEGACY:
-            row = {
-                "username": "admin",
-                "name": "Quản trị viên",
-                "class": "",
-                "account_type": "ADMIN",
-                "status": "ON",
-                "password_sha256": LEGACY[key],
-            }
-            d.setdefault("members", []).append(row)
-            return row
-    return None
+    row = {
+        "username": "admin",
+        "name": "Quản trị viên",
+        "class": "",
+        "account_type": "ADMIN",
+        "status": "ON",
+        "password_sha256": LEGACY["admin"],
+    }
+    d.setdefault("members", []).append(row)
+    return row
 
 
 admin._admin_record = _admin_record_legacy
@@ -112,14 +101,15 @@ def _admin_login_legacy():
         h = _hash(password)
         d = admin._members()
         a = _original_admin_record(d)
-        # Normal ADMIN password remains valid.
         if a and str(a.get("status", "ON")).upper() == "ON" and h == str(a.get("password_sha256", "")) and username.casefold() in {"admin", "admin0", "admin1"}:
-            session.clear(); session.update(role="admin", username="ADMIN", name="ADMIN")
+            session.clear()
+            session.update(role="admin", username="ADMIN", name="ADMIN")
             session.permanent = request.form.get("remember") == "on"
             return redirect("/admin/members")
-        # Old ADMIN0 / ADMIN1 / admin passwords remain valid.
-        if username in {"ADMIN0", "ADMIN1", "admin", "ADMIN"} and LEGACY.get(username if username != "ADMIN" else "admin") == h:
-            session.clear(); session.update(role="admin", username="ADMIN", name="ADMIN")
+        key = username if username in {"ADMIN0", "ADMIN1", "admin"} else ("admin" if username == "ADMIN" else "")
+        if key and LEGACY.get(key) == h:
+            session.clear()
+            session.update(role="admin", username="ADMIN", name="ADMIN")
             session.permanent = request.form.get("remember") == "on"
             return redirect("/admin/members")
         return admin._admin_login_page("Sai tài khoản hoặc mật khẩu ADMIN.")
