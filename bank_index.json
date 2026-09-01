@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11509,
+  "total_questions": 11563,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -16,7 +16,8 @@
       "De": "",
       "questions": 0,
       "count": 0,
-      "dang": {}
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
@@ -35,6 +36,38 @@
         "Xác định tính đúng sai của mệnh đề": 45,
         "Mệnh đề chứa kí hiệu ∀, ∃ và phủ định mệnh đề có lượng từ": 1,
         "Mệnh đề kéo theo, mệnh đề đảo và điều kiện cần - đủ": 2
+      },
+      "dang_kinds": {
+        "Nhận biết mệnh đề và mệnh đề chứa biến": {
+          "TN": 3,
+          "DS": 1,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Lập và phủ định mệnh đề": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định tính đúng sai của mệnh đề": {
+          "TN": 26,
+          "DS": 5,
+          "TLN": 8,
+          "TL": 6
+        },
+        "Mệnh đề chứa kí hiệu ∀, ∃ và phủ định mệnh đề có lượng từ": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mệnh đề kéo theo, mệnh đề đảo và điều kiện cần - đủ": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -57,6 +90,56 @@
         "Các tập số, khoảng, đoạn và nửa khoảng": 3,
         "Xác định đường biên và miền nghiệm": 3,
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 128
+      },
+      "dang_kinds": {
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 2,
+          "TL": 1
+        },
+        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
+          "TN": 11,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tập hợp bằng nhau, tập rỗng và số tập con": {
+          "TN": 6,
+          "DS": 2,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Xác định tập hợp, phần tử và tập con": {
+          "TN": 12,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán tham số về tập hợp và khoảng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 4,
+          "TL": 3
+        },
+        "Các tập số, khoảng, đoạn và nửa khoảng": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định đường biên và miền nghiệm": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
+          "TN": 74,
+          "DS": 12,
+          "TLN": 24,
+          "TL": 18
+        }
       }
     },
     {
@@ -76,6 +159,38 @@
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 1,
         "Xác định đường biên và miền nghiệm": 3,
         "Xác định bất phương trình từ miền nghiệm": 1
+      },
+      "dang_kinds": {
+        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": {
+          "TN": 1,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Kiểm tra một cặp số là nghiệm của bất phương trình": {
+          "TN": 6,
+          "DS": 1,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định đường biên và miền nghiệm": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Xác định bất phương trình từ miền nghiệm": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -92,6 +207,20 @@
       "dang": {
         "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": 1,
         "Đề 2": 6
+      },
+      "dang_kinds": {
+        "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đề 2": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -107,6 +236,14 @@
       "count": 19,
       "dang": {
         "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": 19
+      },
+      "dang_kinds": {
+        "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": {
+          "TN": 17,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -122,6 +259,14 @@
       "count": 1,
       "dang": {
         "Nhận biết tích của một vectơ với một số": 1
+      },
+      "dang_kinds": {
+        "Nhận biết tích của một vectơ với một số": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -140,6 +285,32 @@
         "Xác định góc có cùng điểm biểu diễn trên đường tròn": 3,
         "Xác định góc phần tư của góc lượng giác": 2,
         "Tính độ dài cung tròn khi biết bán kính và số đo góc": 1
+      },
+      "dang_kinds": {
+        "Chuyển đổi số đo góc giữa độ và radian": {
+          "TN": 0,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định góc có cùng điểm biểu diễn trên đường tròn": {
+          "TN": 0,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định góc phần tư của góc lượng giác": {
+          "TN": 0,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính độ dài cung tròn khi biết bán kính và số đo góc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -160,6 +331,44 @@
         "Xác định tính đúng sai của các hệ thức lượng giác từ tổng sin cos": 8,
         "Tính tổng các bình phương của sin với các góc cách đều": 1,
         "Xác định giá trị sin, cos từ cot đã cho và khoảng góc": 4
+      },
+      "dang_kinds": {
+        "Xác định tính khả nghiệm của phương trình lượng giác": {
+          "TN": 2,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tìm giá trị lớn nhất của biểu thức lượng giác": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Tính giá trị cot từ giá trị tan đã cho": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Xác định tính đúng sai của các hệ thức lượng giác từ tổng sin cos": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 8,
+          "TL": 0
+        },
+        "Tính tổng các bình phương của sin với các góc cách đều": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định giá trị sin, cos từ cot đã cho và khoảng góc": {
+          "TN": 4,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -178,6 +387,32 @@
         "Sử dụng công thức lượng giác trong tam giác": 8,
         "Tìm giá trị lớn nhất của biểu thức lượng giác": 3,
         "Tính toán giá trị của tang tổng hai góc": 3
+      },
+      "dang_kinds": {
+        "Sử dụng công thức cộng và trừ của tang": {
+          "TN": 0,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Sử dụng công thức lượng giác trong tam giác": {
+          "TN": 4,
+          "DS": 1,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Tìm giá trị lớn nhất của biểu thức lượng giác": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Tính toán giá trị của tang tổng hai góc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        }
       }
     },
     {
@@ -193,6 +428,14 @@
       "count": 23,
       "dang": {
         "Chưa phân dạng": 23
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 2,
+          "DS": 7,
+          "TLN": 14,
+          "TL": 0
+        }
       }
     },
     {
@@ -208,6 +451,14 @@
       "count": 16,
       "dang": {
         "Chưa phân dạng": 16
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 8,
+          "DS": 2,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -223,6 +474,14 @@
       "count": 4,
       "dang": {
         "Chưa phân dạng": 4
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 0,
+          "DS": 2,
+          "TLN": 2,
+          "TL": 0
+        }
       }
     },
     {
@@ -238,6 +497,14 @@
       "count": 8,
       "dang": {
         "Chưa phân dạng": 8
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 2,
+          "TL": 0
+        }
       }
     },
     {
@@ -249,20 +516,88 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 1. Làm quen với Vật lí",
       "De": "L10C1 Bài 1. Làm quen với Vật lí",
-      "questions": 227,
-      "count": 227,
+      "questions": 281,
+      "count": 281,
       "dang": {
         "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": 29,
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 8,
         "Phân tích vai trò và ảnh hưởng hai mặt của Vật lí đối với đời sống, khoa học và công nghệ": 19,
-        "Phương pháp mô hình trong nghiên cứu Vật lí": 18,
-        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": 20,
+        "Phương pháp mô hình trong nghiên cứu Vật lí": 27,
+        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": 29,
         "Vận dụng tiến trình của phương pháp mô hình": 39,
-        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 18,
+        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 27,
         "Xác định đối tượng nghiên cứu và mục tiêu của môn Vật lí": 22,
-        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 18,
-        "Quá trình phát triển của Vật lí": 18,
-        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 18
+        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 27,
+        "Quá trình phát triển của Vật lí": 27,
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 27
+      },
+      "dang_kinds": {
+        "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": {
+          "TN": 20,
+          "DS": 7,
+          "TLN": 1,
+          "TL": 1
+        },
+        "Phân biệt các loại mô hình trong nghiên cứu Vật lí": {
+          "TN": 4,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 1
+        },
+        "Phân tích vai trò và ảnh hưởng hai mặt của Vật lí đối với đời sống, khoa học và công nghệ": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Phương pháp mô hình trong nghiên cứu Vật lí": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": {
+          "TN": 11,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng tiến trình của phương pháp mô hình": {
+          "TN": 33,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định đối tượng nghiên cứu và mục tiêu của môn Vật lí": {
+          "TN": 18,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Quá trình phát triển của Vật lí": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -290,6 +625,86 @@
         "Phân tích mối nguy và đánh giá mức độ rủi ro": 15,
         "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 3,
         "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": 9
+      },
+      "dang_kinds": {
+        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        },
+        "An toàn khi sử dụng thiết bị điện": {
+          "TN": 9,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 4
+        },
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
+          "TN": 17,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": {
+          "TN": 16,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
+        },
+        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 6
+        },
+        "Xây dựng quy trình thực hành an toàn": {
+          "TN": 8,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        },
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": {
+          "TN": 10,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết nội quy và quy tắc an toàn": {
+          "TN": 7,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 4
+        },
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 4
+        },
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 4
+        },
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -310,6 +725,44 @@
         "Thứ nguyên": 50,
         "Tính giá trị trung bình của đại lượng đo": 40,
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40
+      },
+      "dang_kinds": {
+        "Phép đo trực tiếp và phép đo gián tiếp": {
+          "TN": 15,
+          "DS": 24,
+          "TLN": 18,
+          "TL": 6
+        },
+        "Sai số": {
+          "TN": 29,
+          "DS": 14,
+          "TLN": 18,
+          "TL": 6
+        },
+        "Xác định chữ số có nghĩa trong giá trị đo": {
+          "TN": 16,
+          "DS": 5,
+          "TLN": 18,
+          "TL": 6
+        },
+        "Thứ nguyên": {
+          "TN": 21,
+          "DS": 5,
+          "TLN": 18,
+          "TL": 6
+        },
+        "Tính giá trị trung bình của đại lượng đo": {
+          "TN": 11,
+          "DS": 5,
+          "TLN": 18,
+          "TL": 6
+        },
+        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": {
+          "TN": 11,
+          "DS": 5,
+          "TLN": 18,
+          "TL": 6
+        }
       }
     },
     {
@@ -331,6 +784,50 @@
         "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 6,
         "Thành phần và cấu trúc của hệ quy chiếu": 3,
         "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 3
+      },
+      "dang_kinds": {
+        "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": {
+          "TN": 11,
+          "DS": 20,
+          "TLN": 20,
+          "TL": 0
+        },
+        "Khái niệm và đặc điểm của chất điểm": {
+          "TN": 7,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết chuyển động cơ học và vật mốc": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính tương đối của chuyển động và hệ quy chiếu": {
+          "TN": 15,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Thành phần và cấu trúc của hệ quy chiếu": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -349,6 +846,32 @@
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 20,
         "Phân biệt tốc độ trung bình và vận tốc trung bình trong chuyển động đổi chiều": 4,
         "Tính vận tốc tương đối giữa hai vật": 12
+      },
+      "dang_kinds": {
+        "Cộng vận tốc cho các chuyển động cùng phương": {
+          "TN": 4,
+          "DS": 12,
+          "TLN": 0,
+          "TL": 5
+        },
+        "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": {
+          "TN": 3,
+          "DS": 7,
+          "TLN": 5,
+          "TL": 5
+        },
+        "Phân biệt tốc độ trung bình và vận tốc trung bình trong chuyển động đổi chiều": {
+          "TN": 0,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 2
+        },
+        "Tính vận tốc tương đối giữa hai vật": {
+          "TN": 6,
+          "DS": 6,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -367,6 +890,32 @@
         "Khái niệm gia tốc và tính chất của chuyển động thẳng biến đổi đều": 13,
         "Nhận dạng chuyển động qua đồ thị": 17,
         "Sử dụng các phương trình của chuyển động thẳng biến đổi đều": 18
+      },
+      "dang_kinds": {
+        "Câu đúng--sai tổng hợp về chuyển động thẳng biến đổi đều": {
+          "TN": 0,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Khái niệm gia tốc và tính chất của chuyển động thẳng biến đổi đều": {
+          "TN": 13,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận dạng chuyển động qua đồ thị": {
+          "TN": 5,
+          "DS": 12,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Sử dụng các phương trình của chuyển động thẳng biến đổi đều": {
+          "TN": 6,
+          "DS": 12,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -387,6 +936,44 @@
         "Xác định hợp lực của nhiều lực đồng quy": 27,
         "Điều kiện cân bằng của chất điểm": 27,
         "Bài toán tổng hợp và phân tích lực gắn với thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Nhận biết lực, biểu diễn vectơ lực và các đặc trưng của lực": {
+          "TN": 2,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp hai lực đồng quy bằng quy tắc hình bình hành": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Phân tích một lực thành hai lực thành phần": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định hợp lực của nhiều lực đồng quy": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Điều kiện cân bằng của chất điểm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp và phân tích lực gắn với thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -407,6 +994,44 @@
         "Xác định lực cân bằng từ định luật I Newton": 27,
         "Khai thác đồ thị chuyển động khi hợp lực bằng không": 27,
         "Bài toán tổng hợp về quán tính và cân bằng lực": 27
+      },
+      "dang_kinds": {
+        "Nhận biết quán tính và nội dung định luật I Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Phân tích trạng thái đứng yên hoặc chuyển động thẳng đều": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Giải thích hiện tượng quán tính trong thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định lực cân bằng từ định luật I Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Khai thác đồ thị chuyển động khi hợp lực bằng không": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp về quán tính và cân bằng lực": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -427,6 +1052,44 @@
         "Vận dụng định luật II Newton cho chuyển động trên mặt phẳng nghiêng": 27,
         "Bài toán hệ vật và lực liên kết": 27,
         "Khai thác đồ thị và bài toán thực tiễn về định luật II Newton": 27
+      },
+      "dang_kinds": {
+        "Nhận biết nội dung và biểu thức định luật II Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính gia tốc, lực hoặc khối lượng từ F = ma": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng định luật II Newton cho chuyển động ngang": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng định luật II Newton cho chuyển động trên mặt phẳng nghiêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán hệ vật và lực liên kết": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Khai thác đồ thị và bài toán thực tiễn về định luật II Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -447,6 +1110,44 @@
         "Vận dụng định luật III Newton trong va chạm và tương tác": 27,
         "Giải thích chuyển động bằng lực và phản lực": 27,
         "Bài toán tổng hợp nhiều vật tương tác": 27
+      },
+      "dang_kinds": {
+        "Nhận biết lực và phản lực theo định luật III Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Phân biệt cặp lực trực đối với hai lực cân bằng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định phương, chiều và độ lớn của lực tương tác": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng định luật III Newton trong va chạm và tương tác": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Giải thích chuyển động bằng lực và phản lực": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp nhiều vật tương tác": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -467,6 +1168,44 @@
         "Bài toán vật chuyển động có lực căng dây": 27,
         "Hệ vật nối với nhau bằng dây nhẹ": 27,
         "Bài toán tổng hợp trọng lực và lực căng trong thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Nhận biết trọng lực, trọng lượng và lực căng dây": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính trọng lực và gia tốc rơi tự do": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định lực căng của dây treo vật cân bằng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán vật chuyển động có lực căng dây": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Hệ vật nối với nhau bằng dây nhẹ": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp trọng lực và lực căng trong thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -487,6 +1226,44 @@
         "Chuyển động trên mặt phẳng ngang có ma sát": 27,
         "Chuyển động trên mặt phẳng nghiêng có ma sát": 27,
         "Bài toán tổng hợp và ứng dụng thực tiễn của lực ma sát": 27
+      },
+      "dang_kinds": {
+        "Nhận biết các loại lực ma sát và điều kiện xuất hiện": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính lực ma sát trượt và hệ số ma sát": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định lực ma sát nghỉ và điều kiện trượt": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động trên mặt phẳng ngang có ma sát": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động trên mặt phẳng nghiêng có ma sát": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp và ứng dụng thực tiễn của lực ma sát": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -507,6 +1284,44 @@
         "Nhận biết và giải thích lực nâng của chất lưu": 27,
         "Tính lực nâng do chênh lệch áp suất": 27,
         "Vận dụng lực cản và lực nâng trong thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Nhận biết đặc điểm, phương và chiều của lực cản chất lưu": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính lực cản của chất lưu theo tốc độ chuyển động": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Phân tích chuyển động rơi có lực cản và vận tốc giới hạn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết và giải thích lực nâng của chất lưu": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính lực nâng do chênh lệch áp suất": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng lực cản và lực nâng trong thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -527,6 +1342,44 @@
         "Hệ hai vật nối với nhau bằng dây không dãn": 27,
         "Chuyển động của vật chịu lực kéo xiên": 27,
         "Bài toán động lực học tổng hợp và ứng dụng thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Phân tích lực và lập phương trình định luật II Newton": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động của vật trên mặt phẳng ngang có ma sát": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động của vật trên mặt phẳng nghiêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Hệ hai vật nối với nhau bằng dây không dãn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động của vật chịu lực kéo xiên": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán động lực học tổng hợp và ứng dụng thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -547,6 +1400,44 @@
         "Quy tắc mômen lực và bài toán đòn bẩy": 27,
         "Cân bằng của thanh đồng chất chịu nhiều lực": 27,
         "Vận dụng mômen lực trong dụng cụ và đời sống": 27
+      },
+      "dang_kinds": {
+        "Nhận biết mômen lực và cánh tay đòn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính mômen của lực đối với trục quay": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Điều kiện cân bằng của vật có trục quay cố định": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Quy tắc mômen lực và bài toán đòn bẩy": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Cân bằng của thanh đồng chất chịu nhiều lực": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng mômen lực trong dụng cụ và đời sống": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -567,6 +1458,44 @@
         "Kiểm chứng quy tắc hình bình hành": 27,
         "Đánh giá sai số và nguyên nhân sai lệch của thí nghiệm": 27,
         "Thiết kế, cải tiến và báo cáo thí nghiệm tổng hợp lực": 27
+      },
+      "dang_kinds": {
+        "Nhận biết dụng cụ và bố trí thí nghiệm tổng hợp lực": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Đọc và xử lí số liệu đo lực": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Biểu diễn và tổng hợp các vectơ lực từ số liệu": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Kiểm chứng quy tắc hình bình hành": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Đánh giá sai số và nguyên nhân sai lệch của thí nghiệm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Thiết kế, cải tiến và báo cáo thí nghiệm tổng hợp lực": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -587,6 +1516,44 @@
         "Liên hệ độ biến thiên động lượng với xung lượng của lực": 27,
         "Khai thác đồ thị lực – thời gian": 27,
         "Bài toán động lượng và xung lượng gắn với thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Nhận biết động lượng và các đặc trưng của vectơ động lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính động lượng của một vật": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp động lượng của hệ nhiều vật": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Liên hệ độ biến thiên động lượng với xung lượng của lực": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Khai thác đồ thị lực – thời gian": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán động lượng và xung lượng gắn với thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -607,6 +1574,44 @@
         "Bảo toàn động lượng trong chuyển động phản lực và nổ": 27,
         "Bài toán động lượng hai chiều": 27,
         "Bài toán tổng hợp bảo toàn động lượng và năng lượng": 27
+      },
+      "dang_kinds": {
+        "Nhận biết hệ kín và điều kiện bảo toàn động lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bảo toàn động lượng trong va chạm thẳng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bảo toàn động lượng trong va chạm mềm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bảo toàn động lượng trong chuyển động phản lực và nổ": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán động lượng hai chiều": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp bảo toàn động lượng và năng lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -627,6 +1632,44 @@
         "Kiểm chứng định luật bảo toàn động lượng": 27,
         "Đánh giá sai số và nguyên nhân sai lệch": 27,
         "Thiết kế, cải tiến và báo cáo thí nghiệm va chạm": 27
+      },
+      "dang_kinds": {
+        "Nhận biết dụng cụ và bố trí thí nghiệm va chạm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Đo khối lượng, vận tốc và tính động lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xử lí số liệu động lượng trước và sau va chạm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Kiểm chứng định luật bảo toàn động lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Đánh giá sai số và nguyên nhân sai lệch": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Thiết kế, cải tiến và báo cáo thí nghiệm va chạm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -649,6 +1692,56 @@
         "Xác định góc quét, số vòng và thời gian chuyển động": 27,
         "Bài toán truyền chuyển động tròn": 27,
         "Khai thác đồ thị và tình huống thực tiễn về chuyển động tròn đều": 27
+      },
+      "dang_kinds": {
+        "Khái niệm cơ bản về chuyển động tròn đều": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính chất chu kì trong chuyển động tròn đều": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết chuyển động tròn và chuyển động tròn đều": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính tốc độ góc, chu kì và tần số": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Liên hệ tốc độ dài với tốc độ góc": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định góc quét, số vòng và thời gian chuyển động": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán truyền chuyển động tròn": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Khai thác đồ thị và tình huống thực tiễn về chuyển động tròn đều": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -669,6 +1762,44 @@
         "Chuyển động của vật trên mặt phẳng ngang và đường cong": 27,
         "Chuyển động tròn trong mặt phẳng thẳng đứng": 27,
         "Bài toán tổng hợp lực hướng tâm gắn với thực tiễn": 27
+      },
+      "dang_kinds": {
+        "Nhận biết gia tốc hướng tâm và lực hướng tâm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính gia tốc hướng tâm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính lực hướng tâm trong chuyển động tròn đều": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động của vật trên mặt phẳng ngang và đường cong": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Chuyển động tròn trong mặt phẳng thẳng đứng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tổng hợp lực hướng tâm gắn với thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -684,6 +1815,14 @@
       "count": 7,
       "dang": {
         "Chưa phân dạng": 7
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 2,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -710,6 +1849,80 @@
         "Xác định trạng thái của vật tại một thời điểm xác định": 20,
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 11,
         "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 13
+      },
+      "dang_kinds": {
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 4,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
+          "TN": 5,
+          "DS": 4,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": {
+          "TN": 10,
+          "DS": 4,
+          "TLN": 8,
+          "TL": 0
+        },
+        "Đơn vị và đại lượng trong dao động điều hòa": {
+          "TN": 3,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng từ phương trình li độ": {
+          "TN": 8,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": {
+          "TN": 5,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 3,
+          "DS": 10,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định trạng thái của vật tại một thời điểm xác định": {
+          "TN": 9,
+          "DS": 7,
+          "TLN": 4,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 5,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 0
+        }
       }
     },
     {
@@ -732,6 +1945,56 @@
         "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 33,
         "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": 39,
         "Xác định li độ và pha của dao động tại một thời điểm xác định": 33
+      },
+      "dang_kinds": {
+        "Chu kỳ,tần số,tần số góc, pha dao động": {
+          "TN": 3,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định biểu thức cơ năng trong dao động điều hòa": {
+          "TN": 18,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
+          "TN": 18,
+          "DS": 15,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 12,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 18,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": {
+          "TN": 18,
+          "DS": 18,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 18,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 0
+        }
       }
     },
     {
@@ -754,6 +2017,56 @@
         "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 41,
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 12,
         "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 16
+      },
+      "dang_kinds": {
+        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
+          "TN": 7,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Liên hệ li độ - gia tốc": {
+          "TN": 20,
+          "DS": 9,
+          "TLN": 5,
+          "TL": 0
+        },
+        "Liên hệ li độ - vận tốc": {
+          "TN": 20,
+          "DS": 9,
+          "TLN": 9,
+          "TL": 0
+        },
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
+          "TN": 5,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+          "TN": 20,
+          "DS": 12,
+          "TLN": 9,
+          "TL": 0
+        },
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 3,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": {
+          "TN": 7,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
       }
     },
     {
@@ -772,6 +2085,32 @@
         "Viết phương trình dao động điều hòa.": 12,
         "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11,
         "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": 24
+      },
+      "dang_kinds": {
+        "Bài toán xác định thời điểm và quãng đường.": {
+          "TN": 14,
+          "DS": 6,
+          "TLN": 8,
+          "TL": 0
+        },
+        "Viết phương trình dao động điều hòa.": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": {
+          "TN": 3,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": {
+          "TN": 12,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -801,6 +2140,98 @@
         "Xác định vị trí dựa vào tỉ số động năng và thế năng": 30,
         "Xác định độ cứng lò xo từ chu kì biến thiên năng lượng": 14,
         "Xác định độ cứng lò xo từ cơ năng và thông số dao động": 15
+      },
+      "dang_kinds": {
+        "Chu kì biến thiên của động năng, thế năng": {
+          "TN": 15,
+          "DS": 15,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 6,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận diện phát biểu về năng lượng dao động": {
+          "TN": 5,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Năng lượng của con lắc đơn dao động điều hòa": {
+          "TN": 5,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Xác định độ cứng lò xo từ năng lượng ban đầu": {
+          "TN": 5,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân tích đồ thị năng lượng": {
+          "TN": 9,
+          "DS": 9,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Sự chuyển hóa năng lượng trong dao động điều hòa": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 3,
+          "TL": 2
+        },
+        "Tính cơ năng của con lắc lò xo từ biên độ dao động": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Tính cơ năng của con lắc đơn": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Tính động năng, thế năng và cơ năng tại một li độ hoặc thời điểm xác định": {
+          "TN": 20,
+          "DS": 20,
+          "TLN": 20,
+          "TL": 3
+        },
+        "Xác định biểu thức cơ năng trong dao động điều hòa": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 3,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định vị trí dựa vào tỉ số động năng và thế năng": {
+          "TN": 15,
+          "DS": 9,
+          "TLN": 3,
+          "TL": 3
+        },
+        "Xác định độ cứng lò xo từ chu kì biến thiên năng lượng": {
+          "TN": 4,
+          "DS": 6,
+          "TLN": 4,
+          "TL": 0
+        },
+        "Xác định độ cứng lò xo từ cơ năng và thông số dao động": {
+          "TN": 3,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -816,6 +2247,14 @@
       "count": 9,
       "dang": {
         "Chưa có dạng": 9
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 1
+        }
       }
     },
     {
@@ -836,6 +2275,44 @@
         "Viết phương trình dao động điều hòa.": 20,
         "vận tốc trung bình và tốc độ trung bình": 29,
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 29
+      },
+      "dang_kinds": {
+        "quãng đường": {
+          "TN": 18,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Thời điểm vật qua x1": {
+          "TN": 14,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Viết phương trình dao động điều hòa.": {
+          "TN": 11,
+          "DS": 3,
+          "TLN": 3,
+          "TL": 3
+        },
+        "vận tốc trung bình và tốc độ trung bình": {
+          "TN": 20,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 20,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
       }
     },
     {
@@ -856,6 +2333,44 @@
         "Xử lí số liệu nhiều lần đo và báo cáo kết quả tần số": 27,
         "Xử lí đồ thị dao động âm để xác định chu kì và tần số": 27,
         "Đánh giá kết quả và sai số phép đo tần số âm": 27
+      },
+      "dang_kinds": {
+        "Nhận biết dụng cụ và bố trí thí nghiệm đo tần số âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân tích tín hiệu âm bằng dao động kí và phần mềm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Thiết kế phương án thí nghiệm đo tần số của nguồn âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xử lí số liệu nhiều lần đo và báo cáo kết quả tần số": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xử lí đồ thị dao động âm để xác định chu kì và tần số": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Đánh giá kết quả và sai số phép đo tần số âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -877,6 +2392,50 @@
         "Phân loại thang sóng điện từ và ứng dụng": 27,
         "Tính bước sóng, tần số và tốc độ của sóng điện từ": 27,
         "Vận dụng tính chất sóng điện từ trong truyền thông": 27
+      },
+      "dang_kinds": {
+        "Bài toán truyền sóng điện từ qua các môi trường": {
+          "TN": 8,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận biết bản chất và tính chất của sóng điện từ": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 1
+        },
+        "Chưa có dạng": {
+          "TN": 7,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết bức xạ điện từ theo nguồn phát và công dụng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân loại thang sóng điện từ và ứng dụng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Tính bước sóng, tần số và tốc độ của sóng điện từ": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Vận dụng tính chất sóng điện từ trong truyền thông": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        }
       }
     },
     {
@@ -898,6 +2457,50 @@
         "Vận dụng giao thoa sóng trong thực tế": 27,
         "Xác định cực đại, cực tiểu giao thoa": 27,
         "Xác định khoảng cách giữa các vân giao thoa": 27
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về giao thoa hai nguồn": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận biết hiện tượng và điều kiện giao thoa sóng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 6,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính hiệu đường đi và bậc giao thoa": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Vận dụng giao thoa sóng trong thực tế": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xác định cực đại, cực tiểu giao thoa": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xác định khoảng cách giữa các vân giao thoa": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -919,6 +2522,50 @@
         "Xác định số nút, số bụng và chiều dài dây": 27,
         "Điều kiện có sóng dừng trên dây hai đầu cố định": 27,
         "Điều kiện có sóng dừng với một đầu tự do": 27
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về sóng dừng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận biết sóng dừng, nút sóng và bụng sóng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tần số riêng, họa âm và hiện tượng cộng hưởng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xác định số nút, số bụng và chiều dài dây": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Điều kiện có sóng dừng trên dây hai đầu cố định": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Điều kiện có sóng dừng với một đầu tự do": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -940,6 +2587,50 @@
         "Chưa có dạng": 12,
         "Tổng hợp các đại lượng đặc trưng của sóng": 27,
         "Vận dụng tổng hợp kiến thức sóng trong thực tế": 27
+      },
+      "dang_kinds": {
+        "Bài toán giao thoa sóng": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Bài toán sóng dừng": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Bài toán âm, tần số và cường độ âm": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Phương trình sóng và độ lệch pha": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Chưa có dạng": {
+          "TN": 7,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tổng hợp các đại lượng đặc trưng của sóng": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Vận dụng tổng hợp kiến thức sóng trong thực tế": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        }
       }
     },
     {
@@ -960,6 +2651,44 @@
         "Xác định các vị trí cộng hưởng liên tiếp": 27,
         "Xử lí số liệu và đánh giá sai số phép đo": 27,
         "Đề xuất cải tiến và vận dụng thí nghiệm đo tốc độ truyền âm": 27
+      },
+      "dang_kinds": {
+        "Lắp đặt và sử dụng ống cộng hưởng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận biết mục đích và dụng cụ thí nghiệm đo tốc độ truyền âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Tính tốc độ truyền âm từ số liệu thí nghiệm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xác định các vị trí cộng hưởng liên tiếp": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xử lí số liệu và đánh giá sai số phép đo": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Đề xuất cải tiến và vận dụng thí nghiệm đo tốc độ truyền âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -981,6 +2710,50 @@
         "Phân tích trạng thái và chiều truyền sóng từ dữ kiện quan sát": 27,
         "Vận dụng khái niệm sóng cơ trong các hiện tượng thực tế": 27,
         "Xác định bước sóng, chu kì, tần số và tốc độ truyền sóng": 27
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về các đại lượng đặc trưng của sóng": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Khai thác đồ thị sóng và quan hệ pha giữa các điểm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 3,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết bản chất và sự truyền sóng cơ": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân tích trạng thái và chiều truyền sóng từ dữ kiện quan sát": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Vận dụng khái niệm sóng cơ trong các hiện tượng thực tế": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Xác định bước sóng, chu kì, tần số và tốc độ truyền sóng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -1002,6 +2775,50 @@
         "Phân biệt sóng ngang, sóng dọc và môi trường truyền sóng": 27,
         "Phân tích sự truyền năng lượng của sóng cơ": 27,
         "So sánh năng lượng và mức độ dao động của sóng": 27
+      },
+      "dang_kinds": {
+        "Bài toán thực tế về âm, độ cao, độ to và môi trường truyền âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận biết và vận dụng các đặc trưng của sóng âm": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Nhận dạng loại sóng trong các môi trường và thiết bị thực tế": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân biệt sóng ngang, sóng dọc và môi trường truyền sóng": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Phân tích sự truyền năng lượng của sóng cơ": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        },
+        "So sánh năng lượng và mức độ dao động của sóng": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        }
       }
     },
     {
@@ -1017,6 +2834,14 @@
       "count": 9,
       "dang": {
         "Chưa có dạng": 9
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 2
+        }
       }
     },
     {
@@ -1032,6 +2857,14 @@
       "count": 20,
       "dang": {
         "Chưa có dạng": 20
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 7,
+          "DS": 12,
+          "TLN": 0,
+          "TL": 1
+        }
       }
     },
     {
@@ -1047,6 +2880,14 @@
       "count": 11,
       "dang": {
         "Chưa có dạng": 11
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 6,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -1062,6 +2903,14 @@
       "count": 9,
       "dang": {
         "Chưa có dạng": 9
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 1
+        }
       }
     },
     {
@@ -1077,6 +2926,14 @@
       "count": 9,
       "dang": {
         "Chưa có dạng": 9
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 1
+        }
       }
     },
     {
@@ -1092,6 +2949,14 @@
       "count": 10,
       "dang": {
         "Chưa có dạng": 10
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 8,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 1
+        }
       }
     },
     {
@@ -1107,6 +2972,14 @@
       "count": 24,
       "dang": {
         "Chưa có dạng": 24
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 17,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -1122,6 +2995,14 @@
       "count": 16,
       "dang": {
         "Chưa có dạng": 16
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 15,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -1137,6 +3018,14 @@
       "count": 25,
       "dang": {
         "Chưa có dạng": 25
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 18,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 4
+        }
       }
     },
     {
@@ -1152,6 +3041,14 @@
       "count": 24,
       "dang": {
         "Chưa có dạng": 24
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 11,
+          "DS": 10,
+          "TLN": 0,
+          "TL": 3
+        }
       }
     },
     {
@@ -1174,6 +3071,56 @@
         "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 18,
         "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 18,
         "Đọc và phân tích đồ thị quá trình chuyển thể": 18
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 45,
+          "DS": 13,
+          "TLN": 11,
+          "TL": 5
+        },
+        "Bài toán hiệu suất và hao phí của động cơ nhiệt": {
+          "TN": 27,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Nhận biết và phân tích các quá trình chuyển thể": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Đọc và phân tích đồ thị quá trình chuyển thể": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        }
       }
     },
     {
@@ -1195,6 +3142,50 @@
         "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 10,
         "Vận dụng định luật I giải thích hiện tượng và thiết bị": 9,
         "Định luật I của nhiệt động lực học và quy ước dấu": 9
+      },
+      "dang_kinds": {
+        "Các cách làm biến đổi nội năng của một vật": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Bài toán biến đổi nội năng trong công nghệ khí nén": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
+          "TN": 2,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
+          "TN": 0,
+          "DS": 5,
+          "TLN": 2,
+          "TL": 2
+        },
+        "Định luật I của nhiệt động lực học và quy ước dấu": {
+          "TN": 0,
+          "DS": 5,
+          "TLN": 2,
+          "TL": 2
+        }
       }
     },
     {
@@ -1217,6 +3208,56 @@
         "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": 14,
         "Nguyên lí hoạt động và sử dụng nhiệt kế": 18,
         "Thiết lập và chuyển đổi thang nhiệt độ mới": 18
+      },
+      "dang_kinds": {
+        "Bài toán chuyển đổi giữa ba thang Celsius, Kelvin và Fahrenheit": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit": {
+          "TN": 10,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin": {
+          "TN": 10,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 1
+        },
+        "Bài toán chuyển đổi nhiệt độ qua lại giữa các thang đo thông dụng": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán thiết lập và chuyển đổi với một thang nhiệt độ mới hoặc tự chế bất kì (ví dụ thang nhiệt độ Z).": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": {
+          "TN": 10,
+          "DS": 1,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Nguyên lí hoạt động và sử dụng nhiệt kế": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Thiết lập và chuyển đổi thang nhiệt độ mới": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        }
       }
     },
     {
@@ -1239,6 +3280,56 @@
         "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": 9,
         "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": 27,
         "Xác định nhiệt dung riêng của một chất": 27
+      },
+      "dang_kinds": {
+        "Bài toán cân bằng nhiệt": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": {
+          "TN": 3,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Bài toán công suất, hiệu suất và thời gian đun": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": {
+          "TN": 9,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định nhiệt dung riêng của một chất": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1267,6 +3358,92 @@
         "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": 8,
         "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian, công suất và tính toán sai số).": 7,
         "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": 5
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "__CHUA_PHAN_LOAI__": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 10,
+          "TL": 0
+        },
+        "Bài toán nóng chảy một phần và đông đặc": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính nhiệt lượng nhiều giai đoạn có nóng chảy": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính nhiệt lượng nóng chảy hoàn toàn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức Q = lambda * m).": {
+          "TN": 10,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi hóa hơi hoàn toàn.": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t và Q = lambda * m).": {
+          "TN": 10,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": {
+          "TN": 14,
+          "DS": 6,
+          "TLN": 44,
+          "TL": 0
+        },
+        "Lí thuyết về nhiệt nóng chảy riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian, công suất và tính toán sai số).": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -1288,6 +3465,50 @@
         "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": 27,
         "Thực nghiệm xác định nhiệt hóa hơi riêng": 27,
         "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 27
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1310,6 +3531,56 @@
         "Tính thể tích và nhiệt độ trong quá trình đẳng áp": 27,
         "Đồ thị đẳng áp trên các hệ tọa độ": 27,
         "Ứng dụng định luật Charles trong thực tế": 27
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán tổng hợp về quá trình đẳng áp": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Khối lượng riêng của chất khí trong quá trình đẳng áp": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Cột khí bị giam bởi giọt chất lỏng trong ống tiết diện đều": {
+          "TN": 4,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Nhận biết quá trình đẳng áp và định luật Charles": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Tính thể tích và nhiệt độ trong quá trình đẳng áp": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Đồ thị đẳng áp trên các hệ tọa độ": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Ứng dụng định luật Charles trong thực tế": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        }
       }
     },
     {
@@ -1332,6 +3603,56 @@
         "Xác định sự biến thiên khối lượng riêng của chất khí": 80,
         "Áp dụng phương trình Clapeyron pV = nRT": 27,
         "Đồ thị và các quá trình biến đổi trạng thái liên tiếp": 27
+      },
+      "dang_kinds": {
+        "Bài toán thực tế dùng phương trình trạng thái": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Biến đổi trạng thái của một lượng khí xác định": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết phương trình trạng thái của khí lí tưởng": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Tính các thông số trạng thái p, V, T": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Xác định số mol, khối lượng và khối lượng riêng của khí": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Xác định sự biến thiên khối lượng riêng của chất khí": {
+          "TN": 25,
+          "DS": 30,
+          "TLN": 25,
+          "TL": 0
+        },
+        "Áp dụng phương trình Clapeyron pV = nRT": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        },
+        "Đồ thị và các quá trình biến đổi trạng thái liên tiếp": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 3
+        }
       }
     },
     {
@@ -1352,6 +3673,44 @@
         "Nguồn gốc áp suất khí và va chạm phân tử": 23,
         "So sánh chuyển động nhiệt của các loại khí": 21,
         "Tính tốc độ căn quân phương của phân tử khí": 27
+      },
+      "dang_kinds": {
+        "Bài toán thực tế về áp suất khí theo mô hình động học phân tử": {
+          "TN": 10,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Công thức áp suất theo khối lượng riêng và tốc độ phân tử": {
+          "TN": 10,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Liên hệ áp suất với động năng tịnh tiến trung bình": {
+          "TN": 10,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 2
+        },
+        "Nguồn gốc áp suất khí và va chạm phân tử": {
+          "TN": 10,
+          "DS": 7,
+          "TLN": 6,
+          "TL": 0
+        },
+        "So sánh chuyển động nhiệt của các loại khí": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Tính tốc độ căn quân phương của phân tử khí": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -1372,6 +3731,44 @@
         "Bài toán quá trình đẳng áp": 21,
         "Bài toán tổng hợp, đồ thị và thực tiễn về khí lí tưởng": 21,
         "Nhận diện và lựa chọn định luật khí phù hợp": 27
+      },
+      "dang_kinds": {
+        "Bài toán phương trình trạng thái và Clapeyron": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Bài toán quá trình đẳng nhiệt": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Bài toán quá trình đẳng tích": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Bài toán quá trình đẳng áp": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Bài toán tổng hợp, đồ thị và thực tiễn về khí lí tưởng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Nhận diện và lựa chọn định luật khí phù hợp": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        }
       }
     },
     {
@@ -1392,6 +3789,44 @@
         "Giải thích áp suất khí bằng va chạm phân tử": 26,
         "Vận dụng mô hình động học phân tử vào thực tế": 27,
         "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": 25
+      },
+      "dang_kinds": {
+        "Chuyển động Brown và bằng chứng về chuyển động phân tử": {
+          "TN": 11,
+          "DS": 13,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Các luận điểm cơ bản của mô hình động học phân tử chất khí": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Các thông số trạng thái của một lượng khí": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Giải thích áp suất khí bằng va chạm phân tử": {
+          "TN": 9,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Vận dụng mô hình động học phân tử vào thực tế": {
+          "TN": 10,
+          "DS": 11,
+          "TLN": 6,
+          "TL": 0
+        },
+        "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 5,
+          "TL": 0
+        }
       }
     },
     {
@@ -1415,6 +3850,62 @@
         "Đồ thị đẳng nhiệt trên các hệ tọa độ": 27,
         "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": 20,
         "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": 1
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về quá trình đẳng nhiệt": {
+          "TN": 11,
+          "DS": 8,
+          "TLN": 6,
+          "TL": 4
+        },
+        "Khối khí chịu áp suất của cột chất lỏng": {
+          "TN": 10,
+          "DS": 7,
+          "TLN": 6,
+          "TL": 4
+        },
+        "Nhận biết quá trình đẳng nhiệt và định luật Boyle": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        },
+        "Chưa gán dạng bài tập": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        },
+        "Tính áp suất và thể tích trong quá trình đẳng nhiệt": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
+          "TN": 10,
+          "DS": 10,
+          "TLN": 6,
+          "TL": 1
+        },
+        "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": {
+          "TN": 4,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 4
+        },
+        "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
       }
     },
     {
@@ -1435,6 +3926,44 @@
         "Mô tả đường sức từ và xác định chiều đường sức từ": 42,
         "Giải thích hiện tượng và ứng dụng của từ trường trong thực tiễn": 27,
         "Xác định chiều từ trường bằng kim nam châm và quy tắc nắm tay phải": 55
+      },
+      "dang_kinds": {
+        "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": {
+          "TN": 18,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "So sánh, tổng hợp và biểu diễn các từ trường đơn giản": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Mô tả đường sức từ và xác định chiều đường sức từ": {
+          "TN": 21,
+          "DS": 5,
+          "TLN": 8,
+          "TL": 8
+        },
+        "Giải thích hiện tượng và ứng dụng của từ trường trong thực tiễn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Xác định chiều từ trường bằng kim nam châm và quy tắc nắm tay phải": {
+          "TN": 21,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1455,6 +3984,44 @@
         "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ": 55,
         "Tính lực từ tác dụng lên đoạn dây dẫn mang dòng điện": 54,
         "Xác định phương, chiều lực từ bằng quy tắc bàn tay trái": 54
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp lực từ gắn với đồ thị, thí nghiệm và thực tiễn": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Cân bằng và chuyển động của dây dẫn mang dòng điện trong từ trường": {
+          "TN": 20,
+          "DS": 11,
+          "TLN": 13,
+          "TL": 12
+        },
+        "Xác định cảm ứng từ từ phép đo lực từ": {
+          "TN": 21,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết lực từ và đặc trưng của vectơ cảm ứng từ": {
+          "TN": 20,
+          "DS": 11,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tính lực từ tác dụng lên đoạn dây dẫn mang dòng điện": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Xác định phương, chiều lực từ bằng quy tắc bàn tay trái": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1475,6 +4042,44 @@
         "Tính suất điện động cảm ứng theo định luật Faraday": 54,
         "Nhận biết từ thông và tính từ thông qua một diện tích": 54,
         "Phân tích sự biến thiên từ thông qua khung dây": 54
+      },
+      "dang_kinds": {
+        "Khai thác đồ thị từ thông – thời gian và bài toán cảm ứng điện từ tổng hợp": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết hiện tượng cảm ứng điện từ và điều kiện xuất hiện dòng điện cảm ứng": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Xác định chiều dòng điện cảm ứng bằng định luật Lenz": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tính suất điện động cảm ứng theo định luật Faraday": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết từ thông và tính từ thông qua một diện tích": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Phân tích sự biến thiên từ thông qua khung dây": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1495,6 +4100,44 @@
         "Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều": 54,
         "Thiết lập biểu thức suất điện động xoay chiều do máy phát tạo ra": 54,
         "Tính từ thông qua khung dây quay trong từ trường": 54
+      },
+      "dang_kinds": {
+        "Bài toán thực tiễn về vận hành và hiệu suất máy phát điện xoay chiều": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Khai thác đồ thị từ thông và suất điện động theo thời gian": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Xác định biên độ, tần số, chu kì và pha của suất điện động xoay chiều": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết cấu tạo và nguyên lí của máy phát điện xoay chiều": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Thiết lập biểu thức suất điện động xoay chiều do máy phát tạo ra": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tính từ thông qua khung dây quay trong từ trường": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1515,6 +4158,44 @@
         "Truyền tải điện năng đi xa và giảm hao phí trên đường dây": 54,
         "Nhận biết cấu tạo, nguyên lí hoạt động của máy biến áp": 54,
         "Nhận biết dòng điện Foucault và các ứng dụng của cảm ứng điện từ": 54
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về máy biến áp, truyền tải điện và an toàn điện": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Giải thích nguyên lí bếp từ, phanh điện từ và gia nhiệt cảm ứng": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tính điện áp, số vòng dây và cường độ dòng điện của máy biến áp lí tưởng": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Truyền tải điện năng đi xa và giảm hao phí trên đường dây": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết cấu tạo, nguyên lí hoạt động của máy biến áp": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết dòng điện Foucault và các ứng dụng của cảm ứng điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1535,6 +4216,44 @@
         "Phân loại phổ sóng điện từ và nêu ứng dụng": 54,
         "Nhận biết các tính chất cơ bản của sóng điện từ": 54,
         "Nhận biết điện trường biến thiên, từ trường biến thiên và điện từ trường": 54
+      },
+      "dang_kinds": {
+        "Giải thích truyền thông tin bằng sóng điện từ và các tình huống thực tiễn": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Mô tả sự hình thành và lan truyền của sóng điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tính bước sóng, tần số và tốc độ truyền sóng điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Phân loại phổ sóng điện từ và nêu ứng dụng": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết các tính chất cơ bản của sóng điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết điện trường biến thiên, từ trường biến thiên và điện từ trường": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1555,6 +4274,44 @@
         "Tổng hợp máy biến áp, truyền tải điện năng và ứng dụng cảm ứng điện từ": 54,
         "Tổng hợp từ thông, định luật Lenz và suất điện động cảm ứng": 54,
         "Tổng hợp đường sức từ và xác định chiều từ trường": 54
+      },
+      "dang_kinds": {
+        "Bài toán vận dụng cao kết hợp nhiều nội dung của Chương III": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp lực từ tác dụng lên dây dẫn mang dòng điện": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp máy phát điện xoay chiều và đồ thị điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp máy biến áp, truyền tải điện năng và ứng dụng cảm ứng điện từ": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp từ thông, định luật Lenz và suất điện động cảm ứng": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp đường sức từ và xác định chiều từ trường": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        }
       }
     },
     {
@@ -1575,6 +4332,44 @@
         "Nhận biết đồng vị và tính nguyên tử khối trung bình": 27,
         "Tính kích thước, bán kính và khối lượng riêng của hạt nhân": 27,
         "Vận dụng hệ thức khối lượng – năng lượng và độ hụt khối": 27
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về cấu trúc và đặc trưng của hạt nhân": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết cấu tạo hạt nhân, nuclon, số khối và điện tích hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Viết kí hiệu hạt nhân và xác định số proton, neutron, electron": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết đồng vị và tính nguyên tử khối trung bình": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính kích thước, bán kính và khối lượng riêng của hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng hệ thức khối lượng – năng lượng và độ hụt khối": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1596,6 +4391,50 @@
         "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ": 1,
         "So sánh độ bền vững của các hạt nhân": 27,
         "Tính năng lượng tỏa ra hoặc thu vào trong phản ứng hạt nhân": 27
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về phản ứng hạt nhân, phân hạch và nhiệt hạch": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Hoàn thành phương trình phản ứng hạt nhân": {
+          "TN": 20,
+          "DS": 9,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết phản ứng hạt nhân và các định luật bảo toàn": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính độ hụt khối, năng lượng liên kết và năng lượng liên kết riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết từ trường, nguồn gây ra từ trường và tương tác từ": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "So sánh độ bền vững của các hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính năng lượng tỏa ra hoặc thu vào trong phản ứng hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1616,6 +4455,44 @@
         "Tính chu kì bán rã, hằng số phóng xạ và tuổi mẫu vật": 27,
         "Tính độ phóng xạ và khai thác đồ thị phóng xạ": 27,
         "Ứng dụng, ảnh hưởng và an toàn phóng xạ": 27
+      },
+      "dang_kinds": {
+        "Nhận biết hiện tượng phóng xạ và các tia phóng xạ": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Viết phương trình phóng xạ và xác định hạt nhân con": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Vận dụng định luật phóng xạ theo số hạt và khối lượng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính chu kì bán rã, hằng số phóng xạ và tuổi mẫu vật": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính độ phóng xạ và khai thác đồ thị phóng xạ": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Ứng dụng, ảnh hưởng và an toàn phóng xạ": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1636,6 +4513,44 @@
         "Tính năng lượng trong phân hạch và nhiệt hạch": 27,
         "Điện hạt nhân, nhiên liệu hạt nhân và xử lí chất thải": 27,
         "Ứng dụng công nghệ hạt nhân, an toàn và phát triển bền vững": 27
+      },
+      "dang_kinds": {
+        "Cấu tạo và nguyên lí hoạt động của lò phản ứng hạt nhân": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Nhận biết phản ứng phân hạch và phản ứng dây chuyền": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Nhận biết phản ứng nhiệt hạch và điều kiện xảy ra": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tính năng lượng trong phân hạch và nhiệt hạch": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Điện hạt nhân, nhiên liệu hạt nhân và xử lí chất thải": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Ứng dụng công nghệ hạt nhân, an toàn và phát triển bền vững": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     },
     {
@@ -1656,6 +4571,44 @@
         "Tổng hợp phương trình và năng lượng phản ứng hạt nhân": 27,
         "Tổng hợp định luật phóng xạ, độ phóng xạ và đồ thị": 27,
         "Tổng hợp phân hạch, nhiệt hạch và công nghiệp hạt nhân": 27
+      },
+      "dang_kinds": {
+        "Bài toán vận dụng cao kết hợp nhiều nội dung của Chương IV": {
+          "TN": 20,
+          "DS": 10,
+          "TLN": 12,
+          "TL": 12
+        },
+        "Tổng hợp cấu trúc hạt nhân và đồng vị": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp độ hụt khối, năng lượng liên kết và độ bền vững": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp phương trình và năng lượng phản ứng hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp định luật phóng xạ, độ phóng xạ và đồ thị": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        },
+        "Tổng hợp phân hạch, nhiệt hạch và công nghiệp hạt nhân": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
       }
     }
   ]

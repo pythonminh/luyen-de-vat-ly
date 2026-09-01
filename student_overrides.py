@@ -43,11 +43,12 @@ def _member_index():
             title = str(x.get('BaiHoc') or x.get('De') or path.rsplit('/', 1)[-1])
             level = str(base.lesson_level(path)).upper()
             cnt = int(x.get('questions') or x.get('count') or 0)
-            dangs = x.get('dang') or {}
             href = quote(path, safe='')
+            dangs = x.get('dang') or {}
+            kinds = x.get('dang_kinds') or {}
             dh = ''.join(
-                f"<a class='dangrow danglink' href='/member/dang?path={href}&dang={quote(str(k))}'><span>{html.escape(str(k))}</span><span class='tag'>{int(v)} câu</span></a>"
-                for k,v in dangs.items() if str(v).isdigit()
+                base.dang_link_html(path, k, v, kinds.get(str(k)))
+                for k,v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))
             )
             cards.append(f"<div class='card'><b>{html.escape(title)}</b><div class='meta'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div><span class='tag {'vip' if level=='VIP' else 'free'}'>{html.escape(level)}</span><span class='tag'>{cnt} câu</span></div><div class='dang'><b>📌 Dạng bài</b>{dh or '<div class=muted>Xem trực tiếp từ TEX khi mở bài</div>'}</div><a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div>")
         sections.append(f"<section style='margin-top:10px'><div class='titlebar'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div class='cards' style='margin-top:8px'>{''.join(cards)}</div></section>")
