@@ -914,7 +914,13 @@ def api_ai_classify():
             last_err = f"Key {i}: trống."
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "replace")
-            last_err = f"Key {i}: Gemini {e.code}: {msg[:240]}"
+            if e.code in (429, 503):
+                last_err = (
+                    "Gemini đang quá tải. Hệ thống đã thử lại và đổi model. "
+                    "Đợi khoảng 1 phút rồi bấm lại, hoặc thêm Key 2 / Key 3."
+                )
+            else:
+                last_err = f"Key {i}: Gemini {e.code}: {msg[:240]}"
         except Exception as e:
             last_err = f"Key {i}: {e}"
     if not raw:

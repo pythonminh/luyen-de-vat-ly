@@ -7,12 +7,21 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
 from flask import request, jsonify
 from app import app, member_current
+
+
+GEMINI_MODELS = (
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-flash-latest",
+)
 
 
 def _model_name(s: str) -> str:
@@ -180,46 +189,71 @@ def _keys_from_payload(data: dict) -> list[str]:
     return keys
 
 
-def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool):
-    model = _model_name('gemini-2.5-flash')
-    url = 'https://generativelanguage.googleapis.com/v1beta/models/' + urllib.parse.quote(model, safe='-_.') + ':generateContent?key=' + urllib.parse.quote(api_key, safe='')
-    cfg = {'temperature': temperature, 'maxOutputTokens': max_tokens}
+def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool, model: str | None = None):
+    model = _model_name(model or "gemini-2.5-flash")
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + urllib.parse.quote(model, safe="-_.") + ":generateContent?key=" + urllib.parse.quote(api_key, safe="")
+    cfg = {"temperature": temperature, "maxOutputTokens": max_tokens}
     if no_thinking:
         # Token suy nghĩ của 2.5-flash tính chung vào maxOutputTokens nên dễ ăn hết phần trả lời.
-        cfg['thinkingConfig'] = {'thinkingBudget': 0}
+        cfg["thinkingConfig"] = {"thinkingBudget": 0}
     req = urllib.request.Request(
         url,
-        data=json.dumps({'contents': [{'parts': [{'text': prompt}]}], 'generationConfig': cfg}, ensure_ascii=False).encode('utf-8'),
-        method='POST',
-        headers={'Content-Type': 'application/json', 'User-Agent': 'luyen-de-vat-ly-student-gemini'},
+        data=json.dumps({"contents": [{"parts": [{"text": prompt}]}], "generationConfig": cfg}, ensure_ascii=False).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json", "User-Agent": "luyen-de-vat-ly-student-gemini"},
     )
     with urllib.request.urlopen(req, timeout=90) as r:
-        obj = json.loads(r.read().decode('utf-8'))
-    cands = obj.get('candidates') or []
-    text = ''.join(
-        p.get('text', '')
-        for c in cands for p in (c.get('content', {}) or {}).get('parts', []) or []
+        obj = json.loads(r.read().decode("utf-8"))
+    cands = obj.get("candidates") or []
+    text = "".join(
+        p.get("text", "")
+        for c in cands
+        for p in (c.get("content", {}) or {}).get("parts", []) or []
         if isinstance(p, dict)
     ).strip()
-    finish = str((cands[0].get('finishReason') if cands else '') or '')
+    finish = str((cands[0].get("finishReason") if cands else "") or "")
     return text, finish
 
 
+def _http_busy(exc: urllib.error.HTTPError) -> bool:
+    return exc.code in (429, 503)
+
+
 def _gemini_generate(api_key: str, prompt: str, max_tokens: int = 6000, temperature: float = 0.15) -> str:
-    try:
-        text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, True)
-    except urllib.error.HTTPError as e:
-        if e.code != 400:
-            raise
-        # Model cũ không nhận thinkingConfig thì gọi lại theo cách thường.
-        text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, False)
-    if finish == 'MAX_TOKENS':
-        longer, finish2 = _gemini_call(api_key, prompt, max_tokens * 2, temperature, True)
-        if len(longer) > len(text):
-            text, finish = longer, finish2
-        if finish == 'MAX_TOKENS' and text:
-            text += '\n\n(⚠️ Phần phản biện bị cắt vì quá dài — hãy bấm Phản biện lại để xem tiếp.)'
-    return text
+    last = None
+    for model in GEMINI_MODELS:
+        for attempt in range(3):
+            try:
+                try:
+                    text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, True, model)
+                except urllib.error.HTTPError as e:
+                    if e.code == 400:
+                        text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, False, model)
+                    elif _http_busy(e):
+                        last = e
+                        time.sleep(1.4 * (attempt + 1))
+                        continue
+                    else:
+                        raise
+                if finish == "MAX_TOKENS":
+                    longer, finish2 = _gemini_call(api_key, prompt, max_tokens * 2, temperature, True, model)
+                    if len(longer) > len(text):
+                        text, finish = longer, finish2
+                    if finish == "MAX_TOKENS" and text:
+                        text += "\n\n(⚠️ Phần phản biện bị cắt vì quá dài — hãy bấm Phản biện lại để xem tiếp.)"
+                return text
+            except urllib.error.HTTPError as e:
+                last = e
+                if e.code in (404,):
+                    break
+                if _http_busy(e):
+                    time.sleep(1.4 * (attempt + 1))
+                    continue
+                raise
+        # model quá tải hoặc không có → thử model kế
+    if last:
+        raise last
+    return ""
 
 
 @app.post('/api/gemini/review_student')
@@ -248,7 +282,9 @@ def gemini_review_student():
             except Exception:
                 msg = raw
             last_err = f'Key {i}: Gemini {e.code}: {msg}'
-            if e.code not in (400, 401, 403, 429) and i == len(keys):
+            if e.code in (429, 503):
+                last_err = 'Gemini đang quá tải. Đợi khoảng 1 phút rồi thử lại, hoặc thêm Key 2 / Key 3.'
+            if e.code not in (400, 401, 403, 429, 503) and i == len(keys):
                 return jsonify(ok=False, error=last_err), 502
         except Exception as e:
             last_err = f'Key {i}: {e}'
