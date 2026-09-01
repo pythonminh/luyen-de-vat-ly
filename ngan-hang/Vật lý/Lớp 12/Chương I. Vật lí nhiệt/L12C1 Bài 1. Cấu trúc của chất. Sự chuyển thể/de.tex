@@ -7,75 +7,92 @@
 
 % L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể
 
-%%----------Câu 41----------%%
-\begin{ex}%[L12C1B1-TN-22]
-	Trộn $100\ \mathrm{g}$ nước đá ở $0^{\circ}\ \mathrm{C}$ với $100\ \mathrm{g}$ nước sôi ở $100^{\circ}\ \mathrm{C}$.  Hình nào sau đây mô tả quá trình thay đổi nhiệt độ theo thời gian của hệ trên?\\
-
-		\resizebox{\textwidth}{!}{
-			\begin{tabular}{cccc}
-				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
-					\draw[->](0,0)--(3,0) node[below]{Thời gian};
-					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
-					\filldraw (0,0) circle(1pt);
-					\node[left] at (0,0) {$O$};
-					\draw[red] (0,0)--(1,1);
-					\draw[red] (0,2) node[left,black]{100} -- (1,1);
-					\draw[red] (1,1)--(2,1);
-					\node at (1.5,-1){Hình 1};
-				\end{tikzpicture}
-				&
-				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
-					\draw[->](0,0)--(3,0) node[below]{Thời gian};
-					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
-					\filldraw (0,0) circle(1pt);
-					\node[left] at (0,0) {$O$};
-					\draw[red] (1,0)--(1.5,0.5);
-					\draw[red] (0,2) node[left,black]{100} -- (1.5,0.5);
-					\draw[red] (1.5,0.5)--(2.3,0.5);
-					\node at (1.5,-1){Hình 2};
-				\end{tikzpicture}
-				&
-				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
-					\draw[->](0,0)--(3,0) node[below]{Thời gian};
-					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
-					\filldraw (0,0) circle(1pt);
-					\node[left] at (0,0) {$O$};
-					\draw[red] (0,0)--(2.5,2);
-					\draw[red] (0,2) node[left,black]{100} -- (2.5,0);
-					\node at (1.5,-1){Hình 3};
-				\end{tikzpicture}
-				&
-				\begin{tikzpicture}[very thick,>=stealth', scale=0.7,font=\footnotesize]
-					\draw[->](0,0)--(3,0) node[below]{Thời gian};
-					\draw[->](0,0)--(0,3) node[above]{Nhiệt độ ($^\circ \mathrm{C}$)};
-					\filldraw (0,0) circle(1pt);
-					\node[left] at (0,0) {$O$};
-					\draw[red] (0,0)--(0.5,0.5);
-					\draw[red] (0,2) node[left,black]{100} -- (1,2);
-					\draw[red] (1,2)--(2,0.5);
-					\draw[red] (0.5,0.5)--(2.5,0.5);
-					\node at (1.5,-1){Hình 4};
-				\end{tikzpicture}
-			\end{tabular}
+%%----------Câu 7----------%%
+\begin{ex}%[L12C1B1-DS-2]
+	{\color{red}\footnotesize\ttfamily [L12C1B1-DS-2]}\par %HienID
+	Đồ thị biểu diễn sự thay đổi nhiệt độ của một lượng nước được đun sôi đến khi chuyển thể hoàn toàn thành hơi theo thời gian như hình vẽ.
+	\begin{center}
+		\resizebox{0.62\textwidth}{!}{
+			\begin{tikzpicture}[
+				line join=round,
+				line cap=round,
+				>=stealth,
+				font=\footnotesize
+				]
+				
+				% Khung nền
+				\fill[gray!3, rounded corners=4pt] (-0.8,-0.8) rectangle (10.2,8.8);
+				\draw[gray!60, rounded corners=4pt] (-0.8,-0.8) rectangle (10.2,8.8);
+				
+				% Lưới
+				\draw[step=1, gray!25, very thin] (0,0) grid (9,8);
+				
+				% Trục tọa độ
+				\draw[->, thick] (0,0)--(0,8.5) node[above left] {Nhiệt độ $\left(^{\circ}\mathrm{C}\right)$};
+				\draw[->, thick] (0,0)--(9.8,0) node[below right] {Thời gian (phút)};
+				
+				% Gốc tọa độ
+				\fill (0,0) circle (1.5pt);
+				\node[below left] at (0,0) {$O$};
+				
+				% Nhãn trục Ox
+				\foreach \x/\t in {0/0,1/2,2/4,3/6,4/8,5/10,6/12,7/14,8/16,9/18}
+				{
+					\node[below] at (\x,0) {\t};
+				}
+				
+				% Nhãn trục Oy
+				\foreach \y/\t in {1/20,2/40,3/60,4/80,5/100,6/120,7/140}
+				{
+					\node[left] at (0,\y) {\t};
+				}
+				
+				% Các điểm
+				\coordinate (A) at (0,1);
+				\coordinate (B) at (2,5);
+				\coordinate (C) at (7,5);
+				\coordinate (D) at (8,7);
+				
+				% Đồ thị màu đỏ
+				\draw[red!80!black, very thick] (A)--(B)--(C)--(D);
+				
+				% Đánh dấu điểm
+				\fill[red!80!black] (A) circle (2pt);
+				\fill[red!80!black] (B) circle (2pt);
+				\fill[red!80!black] (C) circle (2pt);
+				\fill[red!80!black] (D) circle (2pt);
+				
+				% Tên điểm
+				\node[below right] at (A) {\large A};
+				\node[above left] at (B) {\large B};
+				\node[below] at (C) {\large C};
+				\node[above right] at (D) {\large D};
+				
+				% Đường gạch phụ
+				\draw[dashed, gray!70] (0,5)--(B);
+				\draw[dashed, gray!70] (0,7)--(D);
+				\draw[dashed, gray!70] (2,0)--(B);
+				\draw[dashed, gray!70] (7,0)--(C);
+				\draw[dashed, gray!70] (8,0)--(D);
+				
+			\end{tikzpicture}
 		}
-
-	\choice
-	{Hình 1}
-	{\True Hình 2}
-	{Hình 3}
-	{Hình 4}
+	\end{center}
+	\choiceTF
+	{\True Tại thời điểm ban đầu, nhiệt độ của nước là $20^{\circ}\ \mathrm{C}$}
+	{Tốc độ chuyển động nhiệt của các phân tử nước sau $10\text{ phút}$ đun nước lớn hơn tốc độ chuyển động nhiệt của các phân tử nước sau $4\text{ phút}$ đun nước}
+	{Sự sôi là sự hóa hơi xảy ra chỉ ở mặt thoáng của chất lỏng}
+	{\True Đoạn $BC$ biểu diễn quá trình nước đang sôi. Trong giai đoạn này toàn bộ nhiệt lượng cung cấp cho nước dùng để hóa hơi nước}
 	\loigiai{
 		\begin{itemchoice}
-			\item Hình 1 sai vì nhiệt độ của nước đá tăng ngay lập tức từ $0^{\circ}\ \mathrm{C}$. Trong thực tế, nước đá ở $0^{\circ}\ \mathrm{C}$ cần thu nhiệt để nóng chảy hoàn toàn trước khi nhiệt độ của nước sau khi tan có thể tăng lên.
-			\item Hình 2 đúng vì:
-			- Áp dụng đặc điểm của quá trình nóng chảy: Nước đá ở $0^{\circ}\ \mathrm{C}$ thu nhiệt để tan thành nước, trong suốt quá trình này nhiệt độ không thay đổi và duy trì ở $0^{\circ}\ \mathrm{C}$ (đoạn nằm ngang trên trục thời gian).
-			- Áp dụng công thức tính nhiệt lượng tỏa ra: $Q_{\text{tỏa}} = m c \Delta t$, nước sôi ở $100^{\circ}\ \mathrm{C}$ tỏa nhiệt nên nhiệt độ giảm dần theo thời gian (đường đi xuống).
-			- Sau khi đá tan hết, phần nước ở $0^{\circ}\ \mathrm{C}$ tiếp tục thu nhiệt để tăng nhiệt độ đến khi đạt trạng thái cân bằng nhiệt.
-			\item Hình 3 sai vì đồ thị biểu diễn nhiệt độ của hai chất thay đổi tuyến tính mà không có giai đoạn chuyển thể (nóng chảy) của nước đá.
-			\item Hình 4 sai vì diễn biến thay đổi nhiệt độ của các thành phần không đúng với quy luật truyền nhiệt trong hệ (nhiệt độ nước sôi không thể tăng thêm rồi mới giảm, và quá trình cân bằng không phù hợp).
+			\item Dựa vào đồ thị, tại thời điểm bắt đầu khảo sát ($t = 0\text{ phút}$), đồ thị bắt đầu từ điểm $A$ có tung độ ứng với giá trị nhiệt độ là $20^{\circ}\ \mathrm{C}$.
+			\item Tại thời điểm $4\text{ phút}$ và $10\text{ phút}$, nước đều ở trạng thái sôi với nhiệt độ không đổi là $100^{\circ}\ \mathrm{C}$. Vì tốc độ chuyển động nhiệt của các phân tử tỉ lệ thuận với nhiệt độ tuyệt đối của vật, nên tại hai thời điểm này tốc độ chuyển động nhiệt của các phân tử nước là như nhau.
+			\item Theo đặc điểm của sự chuyển thể, sự sôi là quá trình hóa hơi diễn ra đồng thời ở mặt thoáng và cả trong lòng chất lỏng.
+			\item Đoạn $BC$ trên đồ thị nằm ngang, tương ứng với nhiệt độ không đổi $100^{\circ}\ \mathrm{C}$, đây chính là quá trình sôi của nước. Trong suốt thời gian này, nhiệt lượng cung cấp cho nước không dùng để tăng nhiệt độ mà dùng để phá vỡ các liên kết giữa các phân tử nước nhằm thực hiện quá trình hóa hơi.
 		\end{itemchoice}
 	}
 \end{ex}
+
 
 % ===== Câu 1 =====
 % ID: L12C1B1-01-DS
