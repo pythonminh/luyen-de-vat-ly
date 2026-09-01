@@ -3200,9 +3200,8 @@
         "Khái niệm nhiệt độ": 2,
         "Nội năng và truyền nhiệt": 4,
         "Quá trình chuyển pha": 2,
-        "Đồ thị nhiệt độ theo thời gian": 2,
+        "Đồ thị quá trình nhiệt": 3,
         "Thang nhiệt độ và nhiệt kế": 3,
-        "Đồ thị sự thay đổi thể tích theo nhiệt độ": 1,
         "Tính tốc độ tăng nhiệt độ": 1,
         "Tính thời gian làm nóng vật": 1
       },
@@ -3225,21 +3224,15 @@
           "TLN": 0,
           "TL": 0
         },
-        "Đồ thị nhiệt độ theo thời gian": {
+        "Đồ thị quá trình nhiệt": {
           "TN": 1,
-          "DS": 1,
+          "DS": 2,
           "TLN": 0,
           "TL": 0
         },
         "Thang nhiệt độ và nhiệt kế": {
           "TN": 3,
           "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị sự thay đổi thể tích theo nhiệt độ": {
-          "TN": 0,
-          "DS": 1,
           "TLN": 0,
           "TL": 0
         },
