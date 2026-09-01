@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 96,
+  "total_files": 97,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4812,6 +4812,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-noi-nang-va-truyen-nhiet.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
+      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
