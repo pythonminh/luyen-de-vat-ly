@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11518,
+  "total_questions": 11493,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1206,17 +1206,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
-      "questions": 107,
-      "count": 107,
+      "questions": 82,
+      "count": 82,
       "dang": {
         "Bài toán chuyển đổi giữa ba thang Celsius, Kelvin và Fahrenheit": 1,
         "Chuyển đổi nhiệt độ giữa thang Celsius và Fahrenheit": 12,
         "Chuyển đổi nhiệt độ giữa thang Celsius và Kelvin": 15,
         "Bài toán chuyển đổi nhiệt độ qua lại giữa các thang đo thông dụng": 1,
         "Bài toán thiết lập và chuyển đổi với một thang nhiệt độ mới hoặc tự chế bất kì (ví dụ thang nhiệt độ Z).": 3,
-        "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": 21,
-        "Nguyên lí hoạt động và sử dụng nhiệt kế": 27,
-        "Thiết lập và chuyển đổi thang nhiệt độ mới": 27
+        "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": 14,
+        "Nguyên lí hoạt động và sử dụng nhiệt kế": 18,
+        "Thiết lập và chuyển đổi thang nhiệt độ mới": 18
       }
     },
     {
