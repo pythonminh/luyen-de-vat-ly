@@ -9,6 +9,7 @@ import gemini_header
 import admin_manager
 
 app = wsgi.app
+_original_wsgi = app.wsgi_app
 
 
 def _filter_final_response(environ, start_response):
@@ -21,7 +22,7 @@ def _filter_final_response(environ, start_response):
         captured['exc_info'] = exc_info
         return lambda data: None
 
-    iterable = app.wsgi_app(environ, capture_start)
+    iterable = _original_wsgi(environ, capture_start)
     try:
         body = b''.join(iterable)
     finally:
@@ -48,13 +49,10 @@ def _filter_final_response(environ, start_response):
         ) or path.startswith('/github/')
 
         if not can_show_github:
-            # Remove links whose href points to github.com, regardless of emoji,
-            # spacing, target attribute, or the exact button text.
             text = re.sub(
                 r'<a\b[^>]*href=["\'][^"\']*github\.com[^"\']*["\'][^>]*>.*?</a>',
                 '', text, flags=re.I | re.S
             )
-            # Also remove any residual button/link explicitly labelled GitHub.
             text = re.sub(
                 r'<a\b[^>]*>\s*(?:[^<]{0,20})GitHub(?:\s*[^<]{0,20})?</a>',
                 '', text, flags=re.I | re.S
@@ -64,17 +62,12 @@ def _filter_final_response(environ, start_response):
         headers = [(k, v) for k, v in headers if k.lower() != 'content-length']
         headers.append(('Content-Length', str(len(body))))
 
-    start_response(
-        captured.get('status', '200 OK'),
-        headers,
-        captured.get('exc_info')
-    )
+    start_response(captured.get('status', '200 OK'), headers, captured.get('exc_info'))
     return [body]
 
 
-# Keep the original Flask callable and put the final filter around it.
-_original_wsgi = app.wsgi_app
-app.wsgi_app = lambda environ, start_response: _filter_final_response(environ, start_response)
+# Put the final filter around the original Flask callable.
+app.wsgi_app = _filter_final_response
 
 
 @app.after_request
