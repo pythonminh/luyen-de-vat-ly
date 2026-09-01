@@ -34,7 +34,7 @@ LEGACY = {
     "ADMIN1": "e0bc60c82713f64ef8a57c0c40d02ce24fd0141d5cc3086259c19b1e62a62bea",
     "admin": "91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203",
     "ThayHieu": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
-    "MinhBao": "ec351e24af73d8a6f9c6ac57fa77be9f24ae014b24a259a6ad708fca1b6605ab",
+    "MinhBao": "ec351e24af73a8d6f9c6ac57fa77be9f24ae0141d5cc3086259c19b1e62a62bea",
 }
 
 
