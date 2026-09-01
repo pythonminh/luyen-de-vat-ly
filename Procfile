@@ -1,1 +1,1 @@
-web: gunicorn wsgi_bootstrap:app -c gunicorn.conf.py
+web: gunicorn server_clean:app -c gunicorn.conf.py
