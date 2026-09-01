@@ -3,28 +3,20 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11797,
+  "total_questions": 11619,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
       "file": "ngan-hang/_Chua_phan_loai/de.tex",
       "path": "ngan-hang/_Chua_phan_loai/de.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "% Bài:",
+      "Mon": "_Chua_phan_loai",
+      "Lop": "de.tex",
+      "Chuong": "",
       "BaiHoc": "",
       "De": "",
-      "questions": 178,
-      "count": 178,
-      "dang": {
-        "Chưa phân dạng": 1,
-        "AI tạo tự động": 2,
-        "Áp dụng quy tắc ba điểm và quy tắc hình bình hành": 35,
-        "Rút gọn biểu thức và chứng minh đẳng thức vectơ": 35,
-        "Tính độ dài của tổng và hiệu hai vectơ": 35,
-        "Xác định điểm thỏa mãn đẳng thức vectơ": 35,
-        "Tính chất trung điểm và trọng tâm trong tổng vectơ": 35
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
