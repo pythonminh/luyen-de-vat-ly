@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11617,
+  "total_questions": 11563,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1163,17 +1163,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 195,
-      "count": 195,
+      "questions": 141,
+      "count": 141,
       "dang": {
         "Chưa phân dạng": 2,
         "Bài toán hiệu suất và hao phí của động cơ nhiệt": 31,
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 27,
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 27,
-        "Nhận biết và phân tích các quá trình chuyển thể": 27,
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 27,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 27,
-        "Đọc và phân tích đồ thị quá trình chuyển thể": 27
+        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 18,
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 18,
+        "Nhận biết và phân tích các quá trình chuyển thể": 18,
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 18,
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 18,
+        "Đọc và phân tích đồ thị quá trình chuyển thể": 18
       }
     },
     {
