@@ -4828,9 +4828,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 20,
+      "count": 20,
+      "dang": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20
+      },
+      "dang_kinds": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
+          "TN": 12,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
     }
   ]
 }
