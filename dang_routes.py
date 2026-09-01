@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import app, can_access, index_data, member_current, page, parse_questions, read_tex
+from app import app, can_access, html_question, index_data, member_current, page, parse_questions, read_tex
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -59,16 +59,16 @@ def _question_card(q, n):
     options=''
     if kind=='TN':
         letters='ABCD'
-        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {str(o.get('text',''))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
+        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {html_question(o.get('text',''))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
     elif kind=='DS':
         st=q.get('statements') or []
-        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {str(o.get('text','') if isinstance(o,dict) else o)}</div>" for i,o in enumerate(st))+'</div>'
+        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {html_question(o.get('text','') if isinstance(o,dict) else o)}</div>" for i,o in enumerate(st))+'</div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
     else:
         options="<div class='answerline'>✎ Câu tự luận</div>"
     return (f"<article class='qcard'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Chọn câu {n+1}</span></label><span class='badge'>{html.escape(badge)}</span><span class='level'>{html.escape(level)}</span></div>"
-            f"<div class='qtext'>{str(text)}</div>{options}</article>")
+            f"<div class='qtext'>{html_question(text)}</div>{options}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -84,12 +84,16 @@ def member_dang():
     selected=[q for q in qs if _same_dang(q.get('dang'), dang)]
     if not selected and dang == 'Chưa phân dạng':
         selected=[q for q in qs if not str(q.get('dang') or '').strip() or _same_dang(q.get('dang'), dang)]
+    notice_extra=''
+    if not selected and qs:
+        selected=list(qs)
+        notice_extra=f"<div class='notice'>Không khớp đúng tên dạng «{_esc(dang)}» — đang hiện {len(selected)} câu trong file.</div>"
     if not selected:
-        return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không tìm thấy dạng bài này trong TEX.</div></div></div></div>")
+        return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>File TEX này chưa có câu hỏi \\begin{ex}...\\end{ex}.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     title=str(path.rsplit('/',1)[-2] if '/' in path else path)
     cards=''.join(_question_card(q,q.get('idx',i)) for i,q in enumerate(selected))
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
-          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{len(selected)} câu</b></div>"
+          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{len(selected)} câu</b></div>{notice_extra}"
           "<form method='post' action='/member/start-selected' id='questionForm'>"
           f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button><span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"

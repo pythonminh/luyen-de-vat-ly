@@ -58,15 +58,18 @@ def _lesson_grade(item):
 def _can_member_see(m, item):
     if not m or str(m.get("status", "ON")).upper() != "ON":
         return False
-    if _is_svip(m):
+    if _is_svip(m) or _norm_type(m.get("account_type")) in {"VIP", "ADMIN", "SVIP"}:
+        sg = _grade(m.get("class") or m.get("grade"))
+        lg = _lesson_grade(item)
+        if sg and lg:
+            return sg == lg
         return True
     sg = _grade(m.get("class") or m.get("grade"))
     lg = _lesson_grade(item)
-    if not sg or not lg or sg != lg:
+    if sg and lg and sg != lg:
         return False
     level = str(base.lesson_level(str(item.get("path") or item.get("file") or ""))).upper()
-    typ = _norm_type(m.get("account_type"))
-    return level == "FREE" or typ == "VIP"
+    return level == "FREE"
 
 
 def _allowed_items(m):
@@ -223,7 +226,21 @@ def _admin_password_page():
             session.clear(); session.update(role="admin", username="ADMIN", name="ADMIN")
             return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body success'>✅ Đã đổi mật khẩu ADMIN và lưu vào members.json.</div><a class='btn primary' href='/admin/members'>Tiếp tục quản lý</a></div></div>")
     e = f"<div class='err'>{_safe(msg)}</div>" if msg else ""
-    body = f"<div class='wrap'><div class='panel' style='max-width:520px;margin:30px auto'><div class='head'>🔑 Đổi mật khẩu ADMIN</div><div class='body'><div class='note'>Mật khẩu ADMIN được lưu dưới dạng SHA-256 trong <b>members.json</b>, không lưu mật khẩu thô.</div><form method='post'><div class='field'><label>Mật khẩu hiện tại</label><div class='passrow'><input id='a1' name='current_password' type='password' autocomplete='current-password' required><button type='button' class='eye' onclick='tp("a1",this)'>👁</button></div></div><div class='field'><label>Mật khẩu mới</label><div class='passrow'><input id='a2' name='new_password' type='password' autocomplete='new-password' required><button type='button' class='eye' onclick='tp("a2",this)'>👁</button></div></div><div class='field'><label>Nhập lại mật khẩu mới</label><div class='passrow'><input id='a3' name='new_password2' type='password' autocomplete='new-password' required><button type='button' class='eye' onclick='tp("a3",this)'>👁</button></div></div><button class='btn primary'>💾 Lưu mật khẩu mới</button> <a class='btn' href='/admin/members'>Hủy</a>{e}</form></div></div></div><script>function tp(id,b){{let x=document.getElementById(id);x.type=x.type==='password'?'text':'password';b.textContent=x.type==='password'?'👁':'🙈'}}</script>"
+    body = (
+        "<div class='wrap'><div class='panel' style='max-width:520px;margin:30px auto'><div class='head'>🔑 Đổi mật khẩu ADMIN</div><div class='body'>"
+        "<div class='note'>Mật khẩu ADMIN được lưu dưới dạng SHA-256 trong <b>members.json</b>, không lưu mật khẩu thô.</div>"
+        "<form method='post'><div class='field'><label>Mật khẩu hiện tại</label><div class='passrow'>"
+        "<input id='a1' name='current_password' type='password' autocomplete='current-password' required>"
+        "<button type='button' class='eye' onclick=\"tp('a1',this)\">👁</button></div></div>"
+        "<div class='field'><label>Mật khẩu mới</label><div class='passrow'>"
+        "<input id='a2' name='new_password' type='password' autocomplete='new-password' required>"
+        "<button type='button' class='eye' onclick=\"tp('a2',this)\">👁</button></div></div>"
+        "<div class='field'><label>Nhập lại mật khẩu mới</label><div class='passrow'>"
+        "<input id='a3' name='new_password2' type='password' autocomplete='new-password' required>"
+        "<button type='button' class='eye' onclick=\"tp('a3',this)\">👁</button></div></div>"
+        f"<button class='btn primary'>💾 Lưu mật khẩu mới</button> <a class='btn' href='/admin/members'>Hủy</a>{e}</form></div></div></div>"
+        "<script>function tp(id,b){let x=document.getElementById(id);x.type=x.type==='password'?'text':'password';b.textContent=x.type==='password'?'👁':'🙈'}</script>"
+    )
     return base.page("ADMIN · Mật khẩu", body)
 
 

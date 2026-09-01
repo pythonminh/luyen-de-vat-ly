@@ -61,7 +61,7 @@ def _member_index():
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
 <div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · Quyền <b>{html.escape(typ)}</b> · {html.escape(note)}</div>
 <form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='{html.escape(request.args.get('q',''))}'><select name='mon'><option value=''>Tất cả môn</option>{subjopts}</select><select name='lop'><option value=''>Tất cả lớp</option>{classopts}</select><button class='btn'>Tìm</button></form>
-</div></div>{''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài phù hợp với quyền hiện tại.</div></div>"}</div>
+</div></div>{''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài phù hợp. Tài khoản FREE xem bài Free; VIP xem theo lớp (nếu chưa ghi lớp thì xem hết).</div></div>"}</div>
 """
     return base.page('Mục lục', body)
 

@@ -15,6 +15,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import timedelta
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, redirect, request, session
@@ -25,6 +26,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=(os.getenv("RENDER") == "true" or os.getenv("RENDER") == "1"),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
@@ -58,11 +60,18 @@ a{text-decoration:none;color:#145bb0}.top{background:var(--blue);color:#fff}.top
 """
 
 def page(title: str, body: str) -> Response:
+    role = session.get("role")
+    nav = ["<a href='/member'>📚 Mục lục</a>"]
+    if role == "member":
+        nav.append("<a href='/member/logout'>🚪 Thoát</a>")
+    elif role == "admin":
+        nav += ["<a href='/admin'>🔐 ADMIN</a>", "<a href='/admin/logout'>🚪 Thoát</a>"]
+    else:
+        nav += ["<a href='/member/login'>🔑 Đăng nhập</a>", "<a href='/member/register'>📝 Đăng ký</a>", "<a href='/admin/login'>🔐 ADMIN</a>"]
     top = (
-        "<div class='top'><div class='topin'><div><div class='brand'>📚 Ngân hàng câu hỏi GitHub</div>"
-        "<div class='sub'>Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề</div></div>"
-        "<div class='nav'><a href='/member'>📚 Mục lục</a><a href='/admin/login'>🔐 ADMIN</a>"
-        f"<a href='https://github.com/{html.escape(REPO)}' target='_blank'>🐙 GitHub</a></div></div></div>"
+        "<div class='top'><div class='topin'><div><div class='brand'>📚 Luyện Đề Toán Lý</div>"
+        "<div class='sub'>Zalo thầy Minh 0946111107</div></div>"
+        "<div class='nav'>" + "".join(nav) + "</div></div></div>"
     )
     mj = "<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre']}};</script><script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
     return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}</body></html>", mimetype='text/html')
@@ -78,13 +87,20 @@ def access_data():
 
 def member_current():
     if session.get('role')!='member':return None
-    u=session.get('username')
-    return next((m for m in members_data().get('members',[]) if m.get('username')==u and m.get('status','ON')=='ON'),None)
+    u=str(session.get('username') or '').strip().casefold()
+    return next((m for m in members_data().get('members',[]) if str(m.get('username') or '').strip().casefold()==u and str(m.get('status','ON')).upper()=='ON'),None)
 def admin_current():return session.get('role')=='admin'
-def is_vip(m):return str(m.get('account_type','FREE')).upper() in {'VIP','S.VIP','ADMIN'}
+def account_type_of(m):
+    s=str((m or {}).get('account_type','FREE')).strip().upper().replace('.','').replace('-','')
+    return {'SVIP':'SVIP','VIP':'VIP','ADMIN':'ADMIN'}.get(s,'FREE')
+def is_vip(m):return account_type_of(m) in {'VIP','SVIP','ADMIN'}
 def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
-def can_access(m,path):return lesson_level(path)=='FREE' or is_vip(m)
+def can_access(m,path):
+    if not m:return False
+    typ=account_type_of(m)
+    if typ in {'SVIP','ADMIN','VIP'}:return True
+    return lesson_level(path)=='FREE'
 
 def _safe_repo_file(path):
     p=str(path or '').replace('\\','/').lstrip('/')
@@ -164,8 +180,15 @@ def solution_of(block):
     v,_=get_braced(block,m.end()-1);return v or ''
 
 def clean_latex_web(s):
+    s=re.sub(r'\\begin\s*\{\s*(ex|bt)\s*\}','',s or '',flags=re.I)
+    s=re.sub(r'\\end\s*\{\s*(ex|bt)\s*\}','',s,flags=re.I)
+    s=re.sub(r'%\s*ID\s*:[^\n]*','',s,flags=re.I)
+    s=re.sub(r'%\s*Mức\s*:[^\n]*','',s,flags=re.I)
     s=re.sub(r'\\lq\s*\\lq','«',s,flags=re.I);s=re.sub(r'\\rq\s*\\rq','»',s,flags=re.I)
     s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,',' ',s);return s.strip()
+
+def html_question(s):
+    return html.escape(clean_latex_web(s or '')).replace('\n','<br>\n')
 
 def dang_for_pos(tex,pos):
     ms=list(DANG_RE.finditer(tex[:pos]));return ms[-1].group(1).strip() if ms else 'Chưa phân dạng'
@@ -204,7 +227,15 @@ def answer_equal(a,b):
     except Exception:return False
 
 def save_json_github(path,data,repo_path,message):
-    raw=(json.dumps(data,ensure_ascii=False,indent=2)+'\n').encode();cur=gh_api(f'contents/{repo_path}?ref={urllib.parse.quote(BRANCH)}');gh_api(f'contents/{repo_path}','PUT',{'message':message,'content':base64.b64encode(raw).decode(),'branch':BRANCH,'sha':cur.get('sha')});path.write_bytes(raw)
+    raw=(json.dumps(data,ensure_ascii=False,indent=2)+'\n').encode()
+    path.write_bytes(raw)
+    if not TOKEN:
+        return
+    try:
+        cur=gh_api(f'contents/{repo_path}?ref={urllib.parse.quote(BRANCH)}')
+        gh_api(f'contents/{repo_path}','PUT',{'message':message,'content':base64.b64encode(raw).decode(),'branch':BRANCH,'sha':cur.get('sha')})
+    except Exception:
+        pass
 
 @app.get('/health')
 def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRANCH)
@@ -218,19 +249,31 @@ def member_login():
     msg=''
     if request.method=='POST':
         u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()
+        found=None
         for m in members_data().get('members',[]):
-            if m.get('username')==u and m.get('status','ON')=='ON' and m.get('password_sha256')==h:
-                session.clear();session.update(role='member',username=u);return redirect('/member')
+            if str(m.get('username') or '').strip().casefold()==u.casefold() and str(m.get('status','ON')).upper()=='ON' and m.get('password_sha256')==h:
+                found=m;break
+        if found:
+            session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect('/member')
         msg='Sai tài khoản hoặc mật khẩu.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
+    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
 
 @app.route('/member/register',methods=['GET','POST'])
 def member_register():
+    msg=''
     if request.method=='POST':
         u=request.form.get('username','').strip();n=request.form.get('name','').strip();p=request.form.get('password','');d=members_data()
-        if not u or not p or any(x.get('username')==u for x in d.get('members',[])):return redirect('/member/register')
-        d.setdefault('members',[]).append({'username':u,'name':n or u,'class':'','account_type':'FREE','status':'ON','password_sha256':hashlib.sha256(p.encode()).hexdigest()});save_json_github(MEMBERS_FILE,d,'members.json','Add member');session.clear();session.update(role='member',username=u);return redirect('/member')
-    body="<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post'><div class='field'><label>Họ tên</label><input name='name'></div><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Tạo tài khoản</button></form></div></div></div>";return page('Đăng ký',body)
+        if not u or not p:msg='Nhập tài khoản và mật khẩu.'
+        elif len(u)<3:msg='Tài khoản phải từ 3 ký tự.'
+        elif len(p)<4:msg='Mật khẩu phải từ 4 ký tự.'
+        elif any(str(x.get('username') or '').casefold()==u.casefold() for x in d.get('members',[])):msg='Tài khoản đã tồn tại. Hãy đăng nhập.'
+        else:
+            d.setdefault('members',[]).append({'username':u,'name':n or u,'class':'','account_type':'FREE','status':'ON','password_sha256':hashlib.sha256(p.encode()).hexdigest()})
+            try:save_json_github(MEMBERS_FILE,d,'members.json','Add member')
+            except Exception as e:msg='Không ghi được tài khoản: '+str(e)
+            else:
+                session.clear();session.permanent=True;session.update(role='member',username=u,name=n or u);return redirect('/member')
+    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post' action='/member/register'><div class='field'><label>Họ tên</label><input name='name' autocomplete='name'></div><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='new-password' required></div><button class='btn primary' type='submit'>Tạo tài khoản</button> <a class='btn' href='/member/login'>Đã có tài khoản</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng ký',body)
 
 @app.get('/member/logout')
 def member_logout():session.clear();return redirect('/member/login')

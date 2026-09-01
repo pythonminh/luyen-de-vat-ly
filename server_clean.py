@@ -165,8 +165,9 @@ _original_member_register = app.view_functions.get("member_register")
 
 def _member_lookup(username: str, password: str):
     h = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    want = str(username or "").strip().casefold()
     for m in base.members_data().get("members", []):
-        if m.get("username") == username and m.get("status", "ON") == "ON" and m.get("password_sha256") == h:
+        if str(m.get("username") or "").strip().casefold() == want and str(m.get("status", "ON")).upper() == "ON" and m.get("password_sha256") == h:
             return m
     return None
 
@@ -272,11 +273,11 @@ def unified_member_auth(*args, **kwargs):
             session.permanent = remember
             return redirect("/member")
 
-        member = _member_lookup(username, password)
-        if member:
+        found = _member_lookup(username, password)
+        if found:
             session.clear()
-            session.update(role="member", username=username, name=str(member.get("name") or username))
             session.permanent = remember
+            session.update(role="member", username=found.get("username"), name=str(found.get("name") or username))
             return redirect("/member")
         return _auth_page("Sai tài khoản hoặc mật khẩu.", "login", request.form)
 
