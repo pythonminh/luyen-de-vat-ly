@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 91,
+  "total_files": 92,
   "total_questions": 11536,
   "lessons": [
     {
@@ -4783,6 +4783,19 @@
           "TL": 2
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
