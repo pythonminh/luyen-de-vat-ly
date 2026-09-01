@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 98,
+  "total_files": 93,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4776,121 +4776,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
-      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
-      "questions": 19,
-      "count": 19,
-      "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 19
-      },
-      "dang_kinds": {
-        "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 11,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle/dang-bai-toan-ve-qua-trinh-dang-nhiet.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương II. Khí lí tưởng",
-      "BaiHoc": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
-      "De": "L12C2 Bài 9. Định luật Boyle · Bài toán về quá trình đẳng nhiệt",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Bài toán về quá trình đẳng nhiệt": 1
-      },
-      "dang_kinds": {
-        "Bài toán về quá trình đẳng nhiệt": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "questions": 20,
-      "count": 20,
-      "dang": {
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20
-      },
-      "dang_kinds": {
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
-          "TN": 12,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
-      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
-      "questions": 18,
-      "count": 18,
-      "dang": {
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 18
-      },
-      "dang_kinds": {
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
-          "TN": 5,
-          "DS": 4,
-          "TLN": 6,
-          "TL": 3
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-ly-thuyet-ve-noi-nang-va-cac-cach-bien-doi-noi-n.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": 3
-      },
-      "dang_kinds": {
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
         }
       }
     }
