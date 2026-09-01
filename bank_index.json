@@ -4980,9 +4980,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 17,
+      "count": 17,
+      "dang": {
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": 17
+      },
+      "dang_kinds": {
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": {
+          "TN": 15,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        }
+      }
     }
   ]
 }
