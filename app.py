@@ -1372,7 +1372,7 @@ def admin_dups():
         if request.form.get('confirm')!='yes':
             return _dup_after(p, nxt, 'err', 'Phải xác nhận trước khi xóa trùng.')
         drop=[]
-        extra_ok={i for g in groups if g['type']=='dao' for i in g['extras']}
+        extra_ok={i for g in groups for i in g['extras']}
         for raw in request.form.getlist('drop'):
             try: i=int(raw)
             except Exception: continue
@@ -1397,15 +1397,16 @@ def admin_dups():
             return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
     blocks=[]
-    extra_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
+    extra_n=sum(len(g['extras']) for g in groups)
     for gi,g in enumerate(groups,1):
         rows=[]
         for q in g['members']:
             keep=q['idx']==g['keep']
-            chk='' if g['type']!='dao' else (
-                "<span class='tag'>GIỮ</span>" if keep else
-                f"<label><input type='checkbox' name='drop' value='{q['idx']}' checked> Xóa bản này</label>"
-            )
+            if keep:
+                chk="<span class='tag'>GIỮ</span>"
+            else:
+                auto=' checked' if g['type']=='dao' else ''
+                chk=f"<label><input type='checkbox' name='drop' value='{q['idx']}'{auto}> Xóa bản này</label>"
             rows.append(
                 "<tr><td>"+chk+"</td><td>"+str(q.get('stt'))+"</td><td><code>"+html.escape(str(q.get('id') or '—'))+"</code></td>"
                 "<td>"+html.escape(str(q.get('kind')))+"</td><td>dòng "+str(q.get('line') or '')+"</td>"
@@ -1416,20 +1417,23 @@ def admin_dups():
             "<table class='selectgrid' style='margin-top:8px'><tr><th></th><th>STT</th><th>ID</th><th>Loại</th><th>Vị trí</th><th>Mở đầu câu</th></tr>"
             +''.join(rows)+"</table></div>"
         )
-    form_open="<form method='post' action='/admin/dups' onsubmit=\"return confirm('Xóa các câu trùng đã tick? Bản GIỮ sẽ không bị xóa.')\">" if extra_n else "<div>"
-    form_close=(
-        "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
-        "<p><label><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản trùng đã chọn (giữ câu đầu mỗi nhóm).</label></p>"
-        "<button class='btn red' type='submit'>🗑 Xóa trùng đã chọn</button></form>"
-        if extra_n else "</div>"
-    )
+    if extra_n:
+        form_open="<form method='post' action='/admin/dups' onsubmit=\"return confirm('Xóa các câu đã tick? Bản GIỮ không bị xóa.')\">"
+        form_close=(
+            "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+            +(f"<input type='hidden' name='next' value='{html.escape(nxt,quote=True)}'>" if nxt else "")
+            +"<p><label><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick (giữ câu đầu mỗi nhóm).</label></p>"
+            +"<button class='btn red' type='submit'>🗑 Xóa trùng đã chọn</button></form>"
+        )
+    else:
+        form_open="<div>"
+        form_close="</div>"
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>🔎 Câu trùng · <code>"+html.escape(p)+"</code></div><div class='body'>"
         +(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")
         +(f"<div class='err'>{html.escape(err)}</div>" if err else "")
-        +"<div class='notice'>App coi là trùng khi <b>cùng đề</b> và <b>cùng tập đáp án/mệnh đề</b>, dù thứ tự A–D hoặc Đúng/Sai bị đảo. "
-        "Hai câu cùng đề nhưng đáp án khác thì chỉ báo, không tự xóa.</div>"
-        +("<p class='muted'>Không thấy nhóm trùng mạnh.</p>" if extra_n==0 and not any(g['type']=='cungde' for g in groups) else "")
+        +"<div class='notice'>Trùng <b>đảo đáp án</b>: ô xóa mặc định đã tick. Cùng đề nhưng <b>đáp án khác</b>: ô xóa mặc định trống — xem kỹ rồi mới tick. Bản <b>GIỮ</b> là câu đầu mỗi nhóm, không xóa được từ đây.</div>"
+        +("<p class='muted'>Không thấy nhóm trùng.</p>" if extra_n==0 else "")
         +form_open+''.join(blocks or ["<p class='success'>Không có câu trùng.</p>"])+form_close
         +"<p><a class='btn' href='/admin'>← ngan-hang</a> <a class='btn' href='/admin/edit?path="+urllib.parse.quote(p,safe='')+"'>✏️ Sửa TEX</a></p>"
         "</div></div></div>"
