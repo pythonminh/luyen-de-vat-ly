@@ -3120,17 +3120,31 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 98,
-      "count": 98,
+      "questions": 37,
+      "count": 37,
       "dang": {
-        "Chưa phân dạng": 98
+        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 18,
+        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 10,
+        "Định luật I của nhiệt động lực học và quy ước dấu": 9
       },
       "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 42,
-          "DS": 30,
-          "TLN": 13,
-          "TL": 13
+        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        },
+        "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
+          "TN": 0,
+          "DS": 6,
+          "TLN": 2,
+          "TL": 2
+        },
+        "Định luật I của nhiệt động lực học và quy ước dấu": {
+          "TN": 1,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
         }
       }
     },
