@@ -4868,9 +4868,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính thời gian làm nóng vật": 1
+      },
+      "dang_kinds": {
+        "Tính thời gian làm nóng vật": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
     }
   ]
 }
