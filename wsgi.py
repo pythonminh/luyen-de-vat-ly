@@ -76,20 +76,17 @@ def final_student_ui(response):
     try:
         body=response.get_data(as_text=True)
         import re
-        # Final branding: never expose the old GitHub product name to students.
         body=body.replace('📚 Ngân hàng câu hỏi GitHub','📚 Luyện Đề Toán Lý')
+        body=body.replace('Ngân hàng câu hỏi GitHub','Luyện Đề Toán Lý')
         body=body.replace('MỤC LỤC · GitHub','MỤC LỤC')
-        body=body.replace('Nguồn đề: bank_index.json + ngan-hàng/*.tex · Google Sheet không dùng cho đề','Zalo thầy Minh 0946111107')
-        body=body.replace('Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề','Zalo thầy Minh 0946111107')
-        # Remove GitHub navigation/link from student pages, regardless of its href.
-        body=re.sub(r'<a\b[^>]*>\s*🐙\s*GitHub\s*</a>','',body,flags=re.I|re.S)
-        body=re.sub(r'<a\b[^>]*href=["\'][^"\']*github\.com[^"\']*["\'][^>]*>.*?</a>','',body,flags=re.I|re.S)
-        # Clean leaked LaTeX environment/header from question text.
+        body=body.replace('MỤC LỤC • GitHub','MỤC LỤC')
+        body=re.sub(r'Nguồn đề:\s*bank_index\.json\s*\+\s*ngan-hang/\\*\.tex\s*·\s*Google Sheet không dùng cho đề', 'Zalo thầy Minh 0946111107', body, flags=re.I)
+        body=re.sub(r'<a\b[^>]*>\s*(?:🐙\s*)?GitHub\s*</a>','',body,flags=re.I|re.S)
+        body=re.sub(r'<a\b[^>]*href=["\'][^"\']*(?:github\.com|/github(?:/|["\']))[^"\']*["\'][^>]*>.*?</a>','',body,flags=re.I|re.S)
         body=re.sub(r'\\begin\s*\{ex\}', '', body, flags=re.I)
         body=re.sub(r'\\end\s*\{ex\}', '', body, flags=re.I)
         body=re.sub(r'%\s*ID\s*:\s*[^%<\r\n]+', '', body, flags=re.I)
         body=re.sub(r'%\s*Mức\s*:\s*[^%<\r\n]+', '', body, flags=re.I)
-        # Keep LaTeX intact for MathJax; add a typeset pass after the cleanup.
         body=body.replace('</body>', "<script>window.addEventListener('load',function(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(function(){});});</script></body>")
         response.set_data(body)
     except Exception:
