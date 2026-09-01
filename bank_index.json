@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 95,
+  "total_files": 96,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4810,6 +4810,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-khai-niem-noi-nang-va-cac-yeu-to-anh-huong-den-n.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
+      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
