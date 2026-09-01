@@ -4943,9 +4943,19 @@
       "Chuong": "Chương IV. Vật lí hạt nhân",
       "BaiHoc": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
       "De": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": 27
+      },
+      "dang_kinds": {
+        "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
