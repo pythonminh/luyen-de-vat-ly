@@ -4771,9 +4771,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Lý thuyết về nội năng và các cách biến đổi nội năng": 3
+      },
+      "dang_kinds": {
+        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
