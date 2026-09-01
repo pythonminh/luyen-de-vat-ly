@@ -65,6 +65,7 @@ def _nav() -> str:
             "<a href='/member/login'>🔑 Đăng nhập / Đăng ký</a>",
             "<a href='/admin/login'>🔐 ADMIN</a>",
         ]
+    links.append("<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲 Cài app</button>")
     return "<div class='nav'>" + "".join(links) + "</div>"
 
 

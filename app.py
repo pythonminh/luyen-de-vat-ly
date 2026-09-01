@@ -68,7 +68,7 @@ CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 CSS = r"""
 :root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px}
 *{box-sizing:border-box}html{height:100%;scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}body{margin:0;min-height:100dvh;background:var(--bg);color:#19324d;font:14px/1.45 Segoe UI,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}
-a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.fsbtn{white-space:nowrap}@media(max-width:700px){.brand{font-size:17px}.clock{font-size:11px;min-width:0;padding:5px 7px}.nav a,.nav button,.who{padding:6px 8px;font-size:13px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
+a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.fsbtn{white-space:nowrap}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:700px){.brand{font-size:17px}.clock{font-size:11px;min-width:0;padding:5px 7px}.nav a,.nav button,.who{padding:6px 8px;font-size:13px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
 .wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
@@ -162,6 +162,7 @@ def page(title: str, body: str) -> Response:
         "<div class='sub'>Zalo thầy Minh 0946111107</div></div>"
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         "<div class='nav'>" + who + "".join(nav)
+        + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲 Cài app</button>"
         + "<button type='button' class='fsbtn' id='ldvlFs' onclick='ldvlToggleFs()' title='Toàn màn hình'>⛶ Toàn màn hình</button>"
         + "</div></div></div>"
     )
@@ -189,12 +190,40 @@ def page(title: str, body: str) -> Response:
         "if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d);}"
         "else if(el.requestFullscreen)el.requestFullscreen().catch(function(){});"
         "else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();};"
-        "document.addEventListener('DOMContentLoaded',function(){ldvlTickClock();setInterval(ldvlTickClock,1000)});"
+        "window.ldvlPwaStandalone=function(){return window.matchMedia('(display-mode: standalone)').matches||!!window.navigator.standalone};"
+        "window.ldvlDeferredPrompt=null;"
+        "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.ldvlDeferredPrompt=e;var b=document.getElementById('ldvlInstall');if(b)b.style.display='';});"
+        "window.ldvlInstallApp=function(){"
+        "if(ldvlPwaStandalone())return;"
+        "var ev=window.ldvlDeferredPrompt,tip=document.getElementById('ldvlPwaTip');"
+        "if(ev){ev.prompt();ev.userChoice.finally(function(){window.ldvlDeferredPrompt=null;});return;}"
+        "if(tip)tip.hidden=!tip.hidden;"
+        "};"
+        "document.addEventListener('DOMContentLoaded',function(){ldvlTickClock();setInterval(ldvlTickClock,1000);"
+        "if(ldvlPwaStandalone()){var b=document.getElementById('ldvlInstall');if(b)b.style.display='none';}"
+        "if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});}"
+        "});"
         "document.addEventListener('fullscreenchange',function(){var b=document.getElementById('ldvlFs');if(b)b.textContent=document.fullscreenElement?'⛶ Thu nhỏ':'⛶ Toàn màn hình'});"
         "</script>"
         "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
     )
-    return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'><meta name='theme-color' content='#176bd3'><meta name='mobile-web-app-capable' content='yes'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}{GEMINI_CLIENT_JS}</body></html>", mimetype='text/html')
+    pwa_tip = (
+        "<div id='ldvlPwaTip' class='pwatip' hidden>"
+        "<b>📲 Lưu ra màn hình chính</b>"
+        "<p><b>Android / máy tính (Chrome):</b> bấm <b>Cài app</b> trên thanh trên, hoặc menu <b>⋮</b> → <b>Cài đặt ứng dụng</b>.</p>"
+        "<p><b>iPhone / iPad:</b> bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên) → <b>Thêm vào Màn hình chính</b>.</p>"
+        "<button type='button' class='btn primary' onclick=\"document.getElementById('ldvlPwaTip').hidden=true\">Đã hiểu</button>"
+        "</div>"
+    )
+    head = (
+        "<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>"
+        "<meta name='theme-color' content='#176bd3'><meta name='mobile-web-app-capable' content='yes'>"
+        "<meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>"
+        "<meta name='apple-mobile-web-app-title' content='Luyện Đề'><meta name='application-name' content='Luyện Đề'>"
+        "<link rel='manifest' href='/manifest.webmanifest'><link rel='apple-touch-icon' href='/static/pwa/apple-touch-icon.png'>"
+        f"<title>{html.escape(title)}</title><style>{CSS}</style>{mj}"
+    )
+    return Response(f"<!doctype html><html lang='vi'><head>{head}</head><body>{top}{body}{pwa_tip}{GEMINI_CLIENT_JS}</body></html>", mimetype='text/html')
 
 def load_json(path: Path, default):
     try:return json.loads(path.read_text(encoding='utf-8'))
@@ -1096,6 +1125,55 @@ def save_json_github(path,data,repo_path,message):
 
 @app.get('/health')
 def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRANCH,tikz=bool(pdflatex_bin()))
+
+@app.get('/manifest.webmanifest')
+def pwa_manifest():
+    data = {
+        "id": "/",
+        "name": "Luyện Đề Toán Lý",
+        "short_name": "Luyện Đề",
+        "description": "Luyện đề Toán · Lý — Zalo thầy Minh 0946111107",
+        "start_url": "/member",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "any",
+        "background_color": "#176bd3",
+        "theme_color": "#176bd3",
+        "lang": "vi",
+        "icons": [
+            {"src": "/static/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    return Response(json.dumps(data, ensure_ascii=False), mimetype="application/manifest+json")
+
+@app.get('/sw.js')
+def pwa_sw():
+    js = (
+        "const C='ldvl-pwa-v1';"
+        "self.addEventListener('install',e=>{self.skipWaiting()});"
+        "self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});"
+        "self.addEventListener('fetch',e=>{"
+        "const u=new URL(e.request.url);"
+        "if(e.request.method!=='GET'||u.origin!==location.origin||!u.pathname.startsWith('/static/pwa/'))return;"
+        "e.respondWith(caches.open(C).then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res.ok)c.put(e.request,res.clone());return res}))));"
+        "});"
+    )
+    resp = Response(js, mimetype="application/javascript")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+@app.get('/static/pwa/<name>')
+def pwa_icon(name):
+    allowed = {"icon-192.png", "icon-512.png", "apple-touch-icon.png"}
+    if name not in allowed:
+        abort(404)
+    p = ROOT / "static" / "pwa" / name
+    if not p.is_file():
+        abort(404)
+    return send_file(p, mimetype="image/png")
 @app.get('/tikz/<hid>.svg')
 def tikz_cached(hid):
     if not re.fullmatch(r'[a-f0-9]{40}', hid or ''):
