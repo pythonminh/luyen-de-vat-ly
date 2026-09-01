@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11563,
+  "total_questions": 11518,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1185,16 +1185,16 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 128,
-      "count": 128,
+      "questions": 83,
+      "count": 83,
       "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 27,
+        "Các cách làm biến đổi nội năng của một vật": 18,
         "Bài toán biến đổi nội năng trong công nghệ khí nén": 1,
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 27,
-        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 27,
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 19,
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 17,
-        "Định luật I của nhiệt động lực học và quy ước dấu": 10
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 18,
+        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 18,
+        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 10,
+        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 9,
+        "Định luật I của nhiệt động lực học và quy ước dấu": 9
       }
     },
     {
