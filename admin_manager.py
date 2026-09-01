@@ -120,7 +120,6 @@ def _admin_members_html():
         typ = _norm_type(m.get("account_type"))
         status = str(m.get("status", "ON")).upper()
         updated = str(m.get("updated_at", "")).strip() or "Chưa ghi nhận"
-        checked = "checked" if status == "ON" else ""
         type_badge = "<span class='badge svip'>⭐ SVIP</span>" if typ == "SVIP" else ("<span class='badge vip'>🔑 VIP</span>" if typ == "VIP" else "<span class='badge free'>FREE</span>")
         status_badge = "<span class='badge on'>● Đang dùng</span>" if status == "ON" else "<span class='badge off'>● Khóa</span>"
         rows.append(
@@ -305,3 +304,91 @@ if _original_answer:
             pass
         return resp
     app.view_functions['answer'] = answer_with_admin_log
+
+
+# ===== PHÂN QUYỀN HỌC VIÊN: lớp được cấp hoặc SVIP toàn bộ =====
+# server_clean.py nạp module này sau các route chính, vì vậy có thể thay
+# chính sách quyền tại một chỗ mà không phải sửa hàng loạt route cũ.
+try:
+    import app as _base_app
+except Exception:
+    _base_app = None
+
+
+def _strict_member_access(m, path):
+    if not m or not path or not str(path).startswith('ngan-hang/'):
+        return False
+    typ = _norm_type(m.get('account_type'))
+    if typ == 'SVIP' or str(m.get('role', '')).lower() == 'admin':
+        return True
+    if typ not in {'FREE', 'VIP'}:
+        return False
+    wanted = _member_class(m)
+    if not wanted:
+        return False
+    # Chỉ cho phép đúng khối lớp của tài khoản; bài VIP/FREE vẫn giữ chính sách
+    # phí cũ ở can_access của app, nhưng không được vượt qua khối lớp.
+    return f'/Lớp {wanted}/' in ('/' + str(path)) or f'/Lop {wanted}/' in ('/' + str(path))
+
+
+if _base_app is not None:
+    _base_app.can_access = _strict_member_access
+    # dang_routes đã import can_access bằng tên cục bộ; cập nhật cả tên đó.
+    try:
+        import dang_routes as _dang_routes
+        _dang_routes.can_access = _strict_member_access
+    except Exception:
+        pass
+
+
+def _strict_member_index():
+    """Mục lục chỉ dựng các bài đúng khối lớp; SVIP thấy tất cả."""
+    m = member_current()
+    if not m:
+        return redirect('/member/login')
+    idx = _base_app.index_data() if _base_app is not None else {'lessons': []}
+    typ = _norm_type(m.get('account_type'))
+    allowed_grade = _member_class(m)
+    svip = typ == 'SVIP'
+    q = (request.args.get('q') or '').strip().lower()
+    sm = (request.args.get('mon') or '').strip()
+    cl = (request.args.get('lop') or '').strip()
+    items = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path', '')).startswith('ngan-hang/')]
+    if not svip:
+        items = [x for x in items if _member_class({'class': str(x.get('Lop', ''))}) == allowed_grade]
+    if q:
+        items = [x for x in items if q in ' '.join(str(x.get(k, '')) for k in ('Mon','Lop','Chuong','BaiHoc','De','path')).lower()]
+    if sm:
+        items = [x for x in items if str(x.get('Mon','')) == sm]
+    if cl:
+        items = [x for x in items if str(x.get('Lop','')) == cl]
+
+    groups = {}
+    for x in items:
+        key = (str(x.get('Mon','')), str(x.get('Lop','')), str(x.get('Chuong','')))
+        groups.setdefault(key, []).append(x)
+    sections = []
+    for (mon, lop, chuong), arr in sorted(groups.items()):
+        cards = []
+        for x in sorted(arr, key=lambda z: str(z.get('BaiHoc') or z.get('De') or '')):
+            path = str(x.get('path')); title = str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name)
+            lvl = str(_base_app.lesson_level(path) if _base_app else 'FREE').upper()
+            cnt = int(x.get('questions') or x.get('count') or 0)
+            dangs = x.get('dang') or {}
+            dh = ''.join("<div class='dangrow'><span>" + html.escape(str(k)) + "</span><span class='tag'>" + str(int(v)) + " câu</span></div>" for k,v in dangs.items())
+            lc = 'vip' if lvl == 'VIP' else 'free'; href = urllib.parse.quote(path, safe='')
+            cards.append("<div class='card'><b>" + html.escape(title) + "</b><div class='meta'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div><span class='tag " + lc + "'>" + html.escape(lvl) + "</span><span class='tag'>" + str(cnt) + " câu</span></div><div class='dang'><b>📌 Dạng bài</b>" + (dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>") + "</div><a class='btn primary' href='/member/select?path=" + href + "'>Mở bài</a></div>")
+        sections.append("<section style='margin-top:10px'><div class='titlebar'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div class='cards' style='margin-top:8px'>" + ''.join(cards) + "</div></section>")
+
+    subjects = sorted({str(x.get('Mon','')) for x in items if x.get('Mon')})
+    classes = sorted({str(x.get('Lop','')) for x in items if x.get('Lop')})
+    subjopts = ''.join("<option value='" + html.escape(s, quote=True) + "'" + (" selected" if sm == s else "") + ">" + html.escape(s) + "</option>" for s in subjects)
+    classopts = ''.join("<option value='" + html.escape(c, quote=True) + "'" + (" selected" if cl == c else "") + ">" + html.escape(c) + "</option>" for c in classes)
+    display_class = 'Tất cả khối lớp' if svip else ('Lớp ' + allowed_grade if allowed_grade else 'Chưa được cấp lớp')
+    body = "<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>" + str(idx.get('total_files',0)) + " file</span><span class='tag'>" + str(idx.get('total_questions',0)) + " câu</span></div><div class='body'><div class='notice'>👤 <b>" + html.escape(str(m.get('name') or m.get('username'))) + "</b> · Tài khoản <b>" + html.escape(str(m.get('username'))) + "</b> · 🎓 <b>" + html.escape(display_class) + "</b> · Quyền <b>" + html.escape(typ) + "</b></div><form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='" + html.escape(q) + "'><select name='mon'><option value=''>Tất cả môn</option>" + subjopts + "</select><select name='lop'><option value=''>Tất cả lớp</option>" + classopts + "</select><button class='btn'>Tìm</button></form></div></div>" + (''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp với quyền/lớp hiện tại.</div></div>") + "</div>"
+    return page('Mục lục', body)
+
+
+# Thay route cũ bằng mục lục có lọc khối lớp.
+if 'member_index' in app.view_functions:
+    app.view_functions['member_index'] = _strict_member_index
