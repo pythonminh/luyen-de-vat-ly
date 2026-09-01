@@ -4776,9 +4776,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Đồ thị quá trình nhiệt",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Đồ thị quá trình nhiệt",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Đồ thị quá trình nhiệt": 3
+      },
+      "dang_kinds": {
+        "Đồ thị quá trình nhiệt": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
