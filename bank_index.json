@@ -3198,13 +3198,10 @@
       "count": 16,
       "dang": {
         "Khái niệm nhiệt độ": 2,
-        "Truyền nhiệt": 2,
+        "Nội năng và truyền nhiệt": 4,
         "Quá trình chuyển pha": 2,
-        "Nội năng": 1,
-        "Khái niệm nhiệt lượng": 1,
         "Đồ thị nhiệt độ theo thời gian": 2,
-        "Đổi thang nhiệt độ và đọc nhiệt kế": 1,
-        "Đổi thang nhiệt độ": 2,
+        "Thang nhiệt độ và nhiệt kế": 3,
         "Đồ thị sự thay đổi thể tích theo nhiệt độ": 1,
         "Tính tốc độ tăng nhiệt độ": 1,
         "Tính thời gian làm nóng vật": 1
@@ -3216,8 +3213,8 @@
           "TLN": 0,
           "TL": 0
         },
-        "Truyền nhiệt": {
-          "TN": 1,
+        "Nội năng và truyền nhiệt": {
+          "TN": 3,
           "DS": 1,
           "TLN": 0,
           "TL": 0
@@ -3228,32 +3225,14 @@
           "TLN": 0,
           "TL": 0
         },
-        "Nội năng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Khái niệm nhiệt lượng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
         "Đồ thị nhiệt độ theo thời gian": {
           "TN": 1,
           "DS": 1,
           "TLN": 0,
           "TL": 0
         },
-        "Đổi thang nhiệt độ và đọc nhiệt kế": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đổi thang nhiệt độ": {
-          "TN": 2,
+        "Thang nhiệt độ và nhiệt kế": {
+          "TN": 3,
           "DS": 0,
           "TLN": 0,
           "TL": 0
