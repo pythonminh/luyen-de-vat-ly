@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 86,
+  "total_files": 87,
   "total_questions": 11536,
   "lessons": [
     {
@@ -4696,6 +4696,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
+      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
