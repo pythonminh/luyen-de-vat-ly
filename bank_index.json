@@ -3296,31 +3296,20 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
-      "questions": 283,
-      "count": 283,
+      "questions": 152,
+      "count": 152,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 27,
         "__CHUA_PHAN_LOAI__": 10,
         "Bài toán nóng chảy một phần và đông đặc": 27,
         "Tính nhiệt lượng nhiều giai đoạn có nóng chảy": 27,
         "Tính nhiệt lượng nóng chảy hoàn toàn": 27,
-        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức Q = lambda * m).": 11,
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi hóa hơi hoàn toàn.": 5,
-        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t và Q = lambda * m).": 11,
-        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": 64,
+        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức": 11,
+        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t": 11,
         "Lí thuyết về nhiệt nóng chảy riêng": 27,
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27,
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": 8,
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian, công suất và tính toán sai số).": 7,
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": 5
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7,
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 5
       },
       "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
         "__CHUA_PHAN_LOAI__": {
           "TN": 0,
           "DS": 0,
@@ -3345,28 +3334,16 @@
           "TLN": 6,
           "TL": 6
         },
-        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức Q = lambda * m).": {
+        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức": {
           "TN": 10,
           "DS": 1,
           "TLN": 0,
           "TL": 0
         },
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi hóa hơi hoàn toàn.": {
-          "TN": 5,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t và Q = lambda * m).": {
+        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t": {
           "TN": 10,
           "DS": 1,
           "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": {
-          "TN": 14,
-          "DS": 6,
-          "TLN": 44,
           "TL": 0
         },
         "Lí thuyết về nhiệt nóng chảy riêng": {
@@ -3375,25 +3352,13 @@
           "TLN": 6,
           "TL": 6
         },
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": {
-          "TN": 6,
-          "DS": 0,
-          "TLN": 2,
-          "TL": 0
-        },
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian, công suất và tính toán sai số).": {
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
           "TN": 6,
           "DS": 0,
           "TLN": 1,
           "TL": 0
         },
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": {
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
           "TN": 5,
           "DS": 0,
           "TLN": 0,
