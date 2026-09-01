@@ -33,7 +33,7 @@ LEGACY = {
     "ADMIN0": "4f9f10b304cfe9b2b11fcb1387f694e18f08ea358c7e9f567434d3ad6cbd7fc4",
     "ADMIN1": "e0bc60c82713f64ef8a57c0c40d02ce24fd0141d5cc3086259c19b1e62a62bea",
     "admin": "91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203",
-    "ThayHieu": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "ThayHieu": "5994471abb01112afcc18159f6cc74b4f511b9989982a734458604190b7c0a2f8",
     "MinhBao": "ec351e24af73a8d6f9c6ac57fa77be9f24ae014b24a259a6ad708fca1b6605ab",
 }
 
@@ -102,17 +102,28 @@ def _admin_login_legacy():
         d = admin._members()
         a = _original_admin_record(d)
         normalized = username.casefold()
-        if a and str(a.get("status", "ON")).upper() == "ON" and h == str(a.get("password_sha256", "")) and normalized in {"admin", "admin0", "admin1"}:
+
+        # Authoritative ADMIN account: only the real ADMIN username may use
+        # the password stored on the ADMIN member record.
+        if (
+            a
+            and str(a.get("status", "ON")).upper() == "ON"
+            and normalized == "admin"
+            and h == str(a.get("password_sha256", ""))
+        ):
             session.clear()
             session.update(role="admin", username="ADMIN", name="ADMIN")
             session.permanent = request.form.get("remember") == "on"
             return redirect("/admin/members")
-        key = username if username in {"ADMIN0", "ADMIN1", "admin"} else ("admin" if normalized == "admin" else "")
-        if key and LEGACY.get(key) == h:
+
+        # Old aliases remain valid, but only with their own old password.
+        legacy_key = username if username in {"ADMIN0", "ADMIN1", "admin"} else ""
+        if legacy_key and LEGACY.get(legacy_key) == h:
             session.clear()
             session.update(role="admin", username="ADMIN", name="ADMIN")
             session.permanent = request.form.get("remember") == "on"
             return redirect("/admin/members")
+
         return admin._admin_login_page("Sai tài khoản hoặc mật khẩu ADMIN.")
     return admin._admin_login_page("")
 
