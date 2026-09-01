@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 93,
+  "total_files": 94,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4778,6 +4778,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-nhan-dien-qua-trinh-nhiet-dong-tu-do-thi-va-du-k.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-nhan-dien-qua-trinh-nhiet-dong-tu-do-thi-va-du-k.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng/dang-nhan-dien-qua-trinh-nhiet-dong-tu-do-thi-va-du-k.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 13. Bài tập về khí lí tưởng · Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện",
+      "De": "L12C2 Bài 13. Bài tập về khí lí tưởng · Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
