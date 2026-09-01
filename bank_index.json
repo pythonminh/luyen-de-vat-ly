@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 86,
-  "total_questions": 11535,
+  "total_questions": 11536,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3292,8 +3292,8 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng",
-      "questions": 185,
-      "count": 185,
+      "questions": 186,
+      "count": 186,
       "dang": {
         "Bài toán cân bằng nhiệt": 27,
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": 14,
@@ -3302,7 +3302,7 @@
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 27,
         "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt khối lượng trên cân điện tử, kèm theo các câu hỏi phân tích sai số hệ thống trong phòng thực hành.": 9,
         "Tính toán nhiệt lượng vật thu vào hoặc tỏa ra": 27,
-        "Xác định nhiệt dung riêng của một chất": 27
+        "Xác định nhiệt dung riêng của một chất": 28
       },
       "dang_kinds": {
         "Bài toán cân bằng nhiệt": {
@@ -3350,7 +3350,7 @@
         "Xác định nhiệt dung riêng của một chất": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
+          "TLN": 7,
           "TL": 6
         }
       }
