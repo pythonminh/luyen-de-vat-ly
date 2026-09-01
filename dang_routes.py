@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect
-from app import app, can_access, member_current, page, parse_questions, read_tex
+from app import app, can_access, index_data, member_current, page, parse_questions, read_tex
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -13,12 +13,15 @@ _STATS_TTL = 300
 def _esc(s):
     return html.escape(str(s), quote=True)
 
+def _same_dang(a, b):
+    return str(a or '').strip() == str(b or '').strip()
+
 def _stats_for(path):
     now = time.time(); hit = _STATS_CACHE.get(path)
     if hit and now-hit[0] < _STATS_TTL: return hit[1]
     _, tex = read_tex(path); qs = parse_questions(tex); stats = {}
     for q in qs:
-        d=q.get('dang') or 'Chưa phân dạng'; k=q.get('kind') or 'TL'
+        d=(q.get('dang') or 'Chưa phân dạng').strip() or 'Chưa phân dạng'; k=q.get('kind') or 'TL'
         stats.setdefault(d, {'TN':0,'DS':0,'TLN':0,'TL':0})
         stats[d][k]=stats[d].get(k,0)+1
     _STATS_CACHE[path]=(now,stats); return stats
@@ -31,6 +34,23 @@ def member_dang_stats():
     if not path or not can_access(m,path):return jsonify(ok=False,error='Không có quyền truy cập'),403
     try:return jsonify(ok=True,stats=_stats_for(path))
     except Exception as exc:return jsonify(ok=False,error=str(exc)),500
+
+@app.get('/member/dang-stats-all')
+def member_dang_stats_all():
+    m=member_current()
+    if not m:return jsonify(ok=False,error='Chưa đăng nhập'),401
+    out={}
+    for x in (index_data().get('lessons') or []):
+        if not isinstance(x, dict):
+            continue
+        path=str(x.get('path') or x.get('file') or '').strip()
+        if not path.startswith('ngan-hang/') or not can_access(m, path):
+            continue
+        try:
+            out[path]=_stats_for(path)
+        except Exception:
+            continue
+    return jsonify(ok=True, stats=out)
 
 
 def _question_card(q, n):
@@ -61,7 +81,9 @@ def member_dang():
     try: _,tex=read_tex(path); qs=parse_questions(tex)
     except Exception as exc:
         return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div></div></div></div>")
-    selected=[q for q in qs if (q.get('dang') or '')==dang]
+    selected=[q for q in qs if _same_dang(q.get('dang'), dang)]
+    if not selected and dang == 'Chưa phân dạng':
+        selected=[q for q in qs if not str(q.get('dang') or '').strip() or _same_dang(q.get('dang'), dang)]
     if not selected:
         return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không tìm thấy dạng bài này trong TEX.</div></div></div></div>")
     title=str(path.rsplit('/',1)[-2] if '/' in path else path)
@@ -84,7 +106,7 @@ def make_catalog_rows_enhanced(response):
     try:
         body=response.get_data(as_text=True)
         if "class='dangrow'" not in body or '/member/select?path=' not in body:return response
-        script=r'''<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.card').forEach(function(card){const open=card.querySelector("a[href^='/member/select?path=']");if(!open)return;const u=new URL(open.href,location.origin),path=u.searchParams.get('path')||'';fetch('/member/dang-stats?path='+encodeURIComponent(path),{credentials:'same-origin'}).then(r=>r.json()).then(data=>{if(!data.ok)return;card.querySelectorAll('.dangrow').forEach(function(row){const e=row.querySelector('span');if(!e)return;const name=e.textContent.trim(),s=data.stats[name]||{TN:0,DS:0,TLN:0,TL:0};const a=document.createElement('a');a.className='dangrow danglink';a.href='/member/dang?path='+encodeURIComponent(path)+'&dang='+encodeURIComponent(name);a.innerHTML='<span class="dangname">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span><span class="kind">TN <b>'+s.TN+'</b></span><span class="kind">ĐS <b>'+s.DS+'</b></span><span class="kind">TLN <b>'+s.TLN+'</b></span><span class="kind">TL <b>'+s.TL+'</b></span><span class="kind ktotal">'+(s.TN+s.DS+s.TLN+s.TL)+'</span><span>›</span>';row.replaceWith(a)})}).catch(()=>{})})});</script><style>.dangrow{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 52px 52px 52px 50px 15px;align-items:center;gap:5px}.danglink{color:inherit;text-decoration:none!important}.kind{border:1px solid #d3dfeb;border-radius:999px;padding:3px 2px;text-align:center;font-size:10px;background:#fff}.ktotal{font-weight:900}</style>'''
+        script=r'''<script>document.addEventListener('DOMContentLoaded',function(){fetch('/member/dang-stats-all',{credentials:'same-origin'}).then(r=>r.json()).then(all=>{if(!all.ok)return;document.querySelectorAll('.card').forEach(function(card){const open=card.querySelector("a[href^='/member/select?path=']");if(!open)return;const u=new URL(open.href,location.origin),path=u.searchParams.get('path')||'',data=all.stats[path]||{};card.querySelectorAll('.dangrow').forEach(function(row){const e=row.querySelector('span');if(!e)return;const name=e.textContent.trim(),s=data[name]||{TN:0,DS:0,TLN:0,TL:0};const a=document.createElement('a');a.className='dangrow danglink';a.href='/member/dang?path='+encodeURIComponent(path)+'&dang='+encodeURIComponent(name);a.innerHTML='<span class="dangname">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span><span class="kind">TN <b>'+s.TN+'</b></span><span class="kind">ĐS <b>'+s.DS+'</b></span><span class="kind">TLN <b>'+s.TLN+'</b></span><span class="kind">TL <b>'+s.TL+'</b></span><span class="kind ktotal">'+(s.TN+s.DS+s.TLN+s.TL)+'</span><span>›</span>';row.replaceWith(a)})})}).catch(()=>{})});</script><style>.dangrow{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 52px 52px 52px 50px 15px;align-items:center;gap:5px}.danglink{color:inherit;text-decoration:none!important}.kind{border:1px solid #d3dfeb;border-radius:999px;padding:3px 2px;text-align:center;font-size:10px;background:#fff}.ktotal{font-weight:900}</style>'''
         response.set_data(body.replace('</body>',script+'</body>'))
     except Exception: pass
     return response

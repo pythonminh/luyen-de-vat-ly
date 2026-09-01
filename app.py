@@ -86,6 +86,11 @@ def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
 def can_access(m,path):return lesson_level(path)=='FREE' or is_vip(m)
 
+def _safe_repo_file(path):
+    p=str(path or '').replace('\\','/').lstrip('/')
+    if not p.startswith('ngan-hang/') or '..' in p.split('/'):raise ValueError('Đường dẫn không hợp lệ.')
+    return p, ROOT.joinpath(*p.split('/'))
+
 def gh_api(api_path,method='GET',payload=None):
     if not TOKEN:raise RuntimeError('Thiếu GITHUB_TOKEN trên Render.')
     owner,repo=REPO.split('/',1); body=None if payload is None else json.dumps(payload,ensure_ascii=False).encode('utf-8')
@@ -98,11 +103,37 @@ def gh_api(api_path,method='GET',payload=None):
         except Exception:msg=s
         raise RuntimeError(f'GitHub API {e.code}: {msg}')
 
-def read_tex(path):
-    if not path.startswith('ngan-hang/') or not path.lower().endswith('.tex') or '..' in path:raise ValueError('Đường dẫn .tex không hợp lệ.')
-    d=gh_api(f'contents/{urllib.parse.quote(path,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
-    raw=base64.b64decode((d.get('content') or '').replace('\n',''))
-    return d.get('sha',''),raw.decode('utf-8','replace')
+def github_file_sha(path):
+    p,_=_safe_repo_file(path)
+    d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
+    return d.get('sha','')
+
+def _fetch_tex_remote(path):
+    p,_=_safe_repo_file(path)
+    raw_url=f'https://raw.githubusercontent.com/{REPO}/{urllib.parse.quote(BRANCH,safe="")}/{urllib.parse.quote(p,safe="/")}'
+    req=urllib.request.Request(raw_url,headers={'User-Agent':'luyen-de-vat-ly-clean'})
+    try:
+        with urllib.request.urlopen(req,timeout=25) as r:
+            return r.read().decode('utf-8','replace')
+    except Exception:
+        d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
+        return base64.b64decode((d.get('content') or '').replace('\n','')).decode('utf-8','replace')
+
+def read_tex(path, need_sha=False):
+    if not str(path or '').lower().endswith('.tex'):raise ValueError('Đường dẫn .tex không hợp lệ.')
+    p, local=_safe_repo_file(path)
+    text=''
+    if local.is_file():
+        text=local.read_text(encoding='utf-8', errors='replace')
+    else:
+        text=_fetch_tex_remote(p)
+        try:
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(text, encoding='utf-8')
+        except Exception:
+            pass
+    sha=github_file_sha(p) if need_sha else ''
+    return sha, text
 
 def get_braced(text,pos):
     while pos<len(text) and text[pos].isspace():pos+=1
@@ -353,12 +384,19 @@ def admin_edit():
     if request.method=='POST':
         p=request.form.get('path','');new=request.form.get('content','');sha=request.form.get('sha','');msg=request.form.get('message','Cập nhật TEX từ ADMIN')
         if not sha:
-            try:sha,_=read_tex(p)
+            try:sha=github_file_sha(p)
             except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
         try:
-            gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}','PUT',{'message':msg,'content':base64.b64encode(new.encode()).decode(),'branch':BRANCH,'sha':sha});return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&saved=1')
+            gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}','PUT',{'message':msg,'content':base64.b64encode(new.encode()).decode(),'branch':BRANCH,'sha':sha})
+            try:
+                _, local=_safe_repo_file(p)
+                local.parent.mkdir(parents=True, exist_ok=True)
+                local.write_text(new, encoding='utf-8')
+            except Exception:
+                pass
+            return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&saved=1')
         except Exception as e:return page('Lỗi commit',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
-    try:sha,txt=read_tex(p)
+    try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     saved=request.args.get('saved')=='1';notice="<div class='success'>✅ Đã commit lên GitHub.</div>" if saved else ''
     body=("<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX</div><div class='body'><div class='meta'>"+html.escape(p)+"</div>"+notice+"<form method='post'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'><input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'><textarea name='content' class='code'>"+html.escape(txt)+"</textarea><div style='margin-top:8px'><input name='message' value='ADMIN cập nhật TEX' style='width:70%;padding:9px;border:1px solid #cbd8e6;border-radius:7px'><button class='btn green'>💾 Commit GitHub</button> <a class='btn' href='/admin'>← ADMIN</a></div></form></div></div></div>")

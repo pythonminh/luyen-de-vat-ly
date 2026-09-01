@@ -30,6 +30,12 @@ def _start_selected():
         for q in qs
         if str(q.get('idx', '')).isdigit() and str(q.get('dang') or '').strip() == dang
     }
+    if not valid and dang == 'Chưa phân dạng':
+        valid = {
+            int(q.get('idx'))
+            for q in qs
+            if str(q.get('idx', '')).isdigit() and not str(q.get('dang') or '').strip()
+        }
 
     ids = []
     for raw in request.form.getlist('qid'):
