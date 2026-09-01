@@ -321,30 +321,43 @@ Xét mệnh đề $\exists n\in\mathbb{N}: n^2=n. \
 \end{ex}
 
 % ===== Câu 17 =====
-% ID: T10C1B1-13-TN
-% Mức: TH
 \begin{ex}
 % ID: T10C1B1-13-TN
 % Mức: TH
-Cho mệnh đề chứa biến $P(x)\colon«x+15 \le x^2,\;x \in \mathbb{R}$». Trong các mệnh đề sau, mệnh đề nào đúng?
+Cho mệnh đề chứa biến $P(x)\colon «x+15 \le x^2,;x \in \mathbb{R}$». Trong các mệnh đề sau, mệnh đề nào đúng?
 \choice
 {Mệnh đề $P(0)$}
 {Mệnh đề $P(4)$}
 {Mệnh đề $\forall x \in \mathbb{R}, P(x)$}
 {\True Mệnh đề $P(-4)$}
 \loigiai{
-Thử trực tiếp các giá trị của biến
-  \begin{listEX}[2]
-  
- A. [ $\bullet$] Với $x=3$ thì $P(3)\colon 3+15 \le 3^2$ (sai).
-  
- B. [ $\bullet$] Với $x=4$ thì $P(4)\colon 4+15 \le 4^2$ (sai).
-  
- C. [ $\bullet$] Với $x=0$ thì $P(0)\colon 0+15 \le 0^2$ (sai).
-  
- D. [ $\bullet$] Với $x=5$ thì $P(5)\colon 5+15 \le 5^2$ (đúng).
-  \end{listEX}
-  Suy ra $P(5)$ đúng.
+Ta lần lượt kiểm tra các mệnh đề:
+
+\begin{itemize}
+\item Với $x=0$:
+\(
+	P(0)\colon 0+15\le0^2\Leftrightarrow15\le0
+	\)
+là mệnh đề sai.
+
+\item Với $x=4$:
+\[
+P(4)\colon 4+15\le4^2\Leftrightarrow19\le16
+\]
+là mệnh đề sai.
+
+\item Mệnh đề $\forall x\in\mathbb{R},P(x)$ là mệnh đề sai vì $P(0)$ sai.
+
+\item Với $x=-4$:
+\[
+P(-4)\colon -4+15\le(-4)^2\Leftrightarrow11\le16
+\]
+là mệnh đề đúng.
+
+
+\end{itemize}
+
+Vậy mệnh đề đúng là \textbf{D. Mệnh đề $P(-4)$}.
 }
 \end{ex}
 
