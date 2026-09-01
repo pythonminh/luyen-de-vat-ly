@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 108,
+  "total_files": 103,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3300,14 +3300,10 @@
       "count": 152,
       "dang": {
         "__CHUA_PHAN_LOAI__": 10,
-        "Bài toán nóng chảy một phần và đông đặc": 27,
-        "Tính nhiệt lượng nhiều giai đoạn có nóng chảy": 27,
-        "Tính nhiệt lượng nóng chảy hoàn toàn": 27,
-        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức": 11,
-        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t": 11,
+        "Bài toán nóng chảy và đông đặc": 27,
+        "Tính nhiệt lượng tổng hợp có chuyển pha": 81,
         "Lí thuyết về nhiệt nóng chảy riêng": 27,
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7,
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 5
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
       },
       "dang_kinds": {
         "__CHUA_PHAN_LOAI__": {
@@ -3316,35 +3312,17 @@
           "TLN": 10,
           "TL": 0
         },
-        "Bài toán nóng chảy một phần và đông đặc": {
+        "Bài toán nóng chảy và đông đặc": {
           "TN": 10,
           "DS": 5,
           "TLN": 6,
           "TL": 6
         },
-        "Tính nhiệt lượng nhiều giai đoạn có nóng chảy": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Tính nhiệt lượng nóng chảy hoàn toàn": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Bài toán tính nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn một khối chất ở nhiệt độ nóng chảy (áp dụng công thức": {
-          "TN": 10,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán tính nhiệt lượng tổng hợp cho quá trình tăng nhiệt độ và nóng chảy hoàn toàn (kết hợp công thức Q = mc Delta t": {
-          "TN": 10,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
+        "Tính nhiệt lượng tổng hợp có chuyển pha": {
+          "TN": 45,
+          "DS": 12,
+          "TLN": 12,
+          "TL": 12
         },
         "Lí thuyết về nhiệt nóng chảy riêng": {
           "TN": 10,
@@ -3356,12 +3334,6 @@
           "TN": 6,
           "DS": 0,
           "TLN": 1,
-          "TL": 0
-        },
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
-          "TN": 5,
-          "DS": 0,
-          "TLN": 0,
           "TL": 0
         }
       }
@@ -4845,142 +4817,17 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
       "Mon": "Vật lý",
       "Lop": "12",
       "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h",
-      "questions": 5,
-      "count": 5,
-      "dang": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 5
-      },
-      "dang_kinds": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": {
-          "TN": 5,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương II. Khí lí tưởng",
-      "BaiHoc": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
-      "De": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
-      "questions": 64,
-      "count": 64,
-      "dang": {
-        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": 64
-      },
-      "dang_kinds": {
-        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": {
-          "TN": 14,
-          "DS": 6,
-          "TLN": 44,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27
-      },
-      "dang_kinds": {
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
-      "questions": 17,
-      "count": 17,
-      "dang": {
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": 17
-      },
-      "dang_kinds": {
-        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": {
-          "TN": 15,
-          "DS": 0,
-          "TLN": 2,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
