@@ -35,8 +35,10 @@ def branding_and_admin_github(response):
     is_member = session.get("role") == "member"
     is_practice = request.path == "/member/practice"
 
-    # GitHub is an administration/editing entry point, not a student feature.
-    if not is_admin:
+    # GitHub is ONLY visible inside the authenticated ADMIN/GitHub area.
+    # Even an admin who returns to the student pages must not see the GitHub button.
+    can_show_github = is_admin and (request.path.startswith("/admin") or request.path.startswith("/github"))
+    if not can_show_github:
         text = re.sub(
             r"<a\s+href=['\"]https://github\.com/[^>]*>\s*🐙\s*GitHub\s*</a>",
             "",
@@ -64,7 +66,6 @@ def branding_and_admin_github(response):
         })();
         </script>
         """
-        # Put controls immediately before the first ADMIN/GitHub link.
         text = text.replace("<a href='/admin/login'>🔐 ADMIN</a>", gemini_top + "<a href='/admin/login'>🔐 ADMIN</a>", 1)
 
     responsive_css = """
