@@ -4874,9 +4874,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 13. Bài tập về khí lí tưởng · Đồ thị quá trình nhiệt",
       "De": "L12C2 Bài 13. Bài tập về khí lí tưởng · Đồ thị quá trình nhiệt",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Đồ thị quá trình nhiệt": 3
+      },
+      "dang_kinds": {
+        "Đồ thị quá trình nhiệt": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
