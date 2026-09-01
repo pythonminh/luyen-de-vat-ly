@@ -4934,9 +4934,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
       "De": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 64,
+      "count": 64,
+      "dang": {
+        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": 64
+      },
+      "dang_kinds": {
+        "Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)": {
+          "TN": 14,
+          "DS": 6,
+          "TLN": 44,
+          "TL": 0
+        }
+      }
     }
   ]
 }
