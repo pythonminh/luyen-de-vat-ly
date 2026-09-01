@@ -4774,9 +4774,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 19,
+      "count": 19,
+      "dang": {
+        "Các cách làm biến đổi nội năng của một vật": 19
+      },
+      "dang_kinds": {
+        "Các cách làm biến đổi nội năng của một vật": {
+          "TN": 11,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
     }
   ]
 }
