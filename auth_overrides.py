@@ -23,14 +23,31 @@ def install(app, portal):
                 session.update(role="admin", username=ADMIN_USERNAME, name="ADMIN")
                 return redirect("/admin")
             msg = "Sai tài khoản hoặc mật khẩu ADMIN."
+        err_html = (f"<div class='mt-3 text-sm text-red-600 font-semibold text-center'>{html.escape(msg)}</div>" if msg else '')
         body = (
-            "<div class='wrap'><div class='panel login'><div class='head'>🔐 Đăng nhập ADMIN</div>"
-            "<div class='body'><form method='post'>"
-            "<div class='field'><label>Tài khoản ADMIN</label>"
-            f"<input name='username' value='{html.escape(ADMIN_USERNAME, quote=True)}' required></div>"
-            "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div>"
-            "<button class='btn'>Đăng nhập</button>"
-            f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+            "<div class='flex justify-center'>"
+            "<div class='w-full max-w-xs'>"
+            "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+            "<div class='bg-gradient-to-r from-gray-800 to-gray-600 px-6 py-5 text-center'>"
+            "<div class='text-4xl mb-2'>🔐</div>"
+            "<h2 class='text-white font-black text-xl'>ADMIN</h2>"
+            "<p class='text-gray-400 text-sm mt-1'>Quản trị viên</p>"
+            "</div>"
+            "<div class='p-6'>"
+            "<form method='post'>"
+            "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+            f"<input name='username' value='{html.escape(ADMIN_USERNAME, quote=True)}' required"
+            " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+            " focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-50'></div>"
+            "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+            "<input name='password' type='password' required autocomplete='current-password'"
+            " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+            " focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-50'></div>"
+            "<button class='w-full py-2.5 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl transition text-sm'>"
+            "Đăng nhập ADMIN</button>"
+            + err_html +
+            "</form>"
+            "</div></div></div></div>"
         )
         return portal.page("Đăng nhập ADMIN", body)
 
@@ -55,13 +72,37 @@ def install(app, portal):
                 )
                 return redirect("/member")
             msg = "Sai tài khoản, mật khẩu hoặc tài khoản đã bị khóa."
+        err_html = (f"<div class='mt-3 text-sm text-red-600 font-semibold text-center'>{html.escape(msg)}</div>" if msg else '')
         body = (
-            "<div class='wrap'><div class='panel login'><div class='head'>👤 Đăng nhập thành viên</div>"
-            "<div class='body'><form method='post'><div class='field'><label>Tài khoản</label>"
-            "<input name='username' required></div><div class='field'><label>Mật khẩu</label>"
-            "<input name='password' type='password' required></div><button class='btn'>Đăng nhập</button>"
-            " <a class='btn' href='/member/register'>Đăng ký</a>"
-            f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+            "<div class='flex justify-center'>"
+            "<div class='w-full max-w-sm'>"
+            "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+            "<div class='bg-gradient-to-r from-blue-700 to-blue-500 px-6 py-5 text-center'>"
+            "<div class='text-4xl mb-2'>👤</div>"
+            "<h2 class='text-white font-black text-xl'>Đăng nhập</h2>"
+            "<p class='text-blue-200 text-sm mt-1'>Học viên / Thành viên</p>"
+            "</div>"
+            "<div class='p-6'>"
+            "<div class='mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700'>"
+            "🎓 <b>FREE</b>: xem bài FREE · <b>VIP</b>: dùng cả FREE + VIP"
+            "</div>"
+            "<form method='post'>"
+            "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+            "<input name='username' required autocomplete='username'"
+            " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+            " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+            "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+            "<input name='password' type='password' required autocomplete='current-password'"
+            " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+            " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+            "<button type='submit' class='w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm'>"
+            "🔐 Đăng nhập</button>"
+            "<div class='mt-3 text-center'>"
+            "<a href='/member/register' class='text-sm text-blue-600 hover:underline font-semibold'>📝 Chưa có tài khoản? Đăng ký FREE</a>"
+            "</div>"
+            + err_html +
+            "</form>"
+            "</div></div></div></div>"
         )
         return portal.page("Đăng nhập thành viên", body)
 
