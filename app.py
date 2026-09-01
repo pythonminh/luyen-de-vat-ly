@@ -225,7 +225,6 @@ def shared_login():
         if m and str(m.get('status','ON')).upper()!='ON':msg='Tài khoản của bạn hiện đang bị tắt. Vui lòng liên hệ ADMIN.'
         elif m and m.get('password_sha256')==h:
             session.clear();session.update(role='member',username=u);return redirect('/member')
-        elif u==ADMIN_USER and not ADMIN_PASS:msg='Sai tài khoản hoặc mật khẩu.'
         elif m:msg='Sai mật khẩu.'
         else:msg='Sai tài khoản hoặc mật khẩu.'
     return login_page(msg)
