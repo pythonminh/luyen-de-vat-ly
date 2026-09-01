@@ -3123,56 +3123,14 @@
       "questions": 98,
       "count": 98,
       "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 18,
-        "Bài toán biến đổi nội năng trong công nghệ khí nén": 1,
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 18,
-        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 18,
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 10,
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 9,
-        "Định luật I của nhiệt động lực học và quy ước dấu": 24
+        "Chưa phân dạng": 98
       },
       "dang_kinds": {
-        "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Bài toán biến đổi nội năng trong công nghệ khí nén": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
-          "TN": 2,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
-          "TN": 0,
-          "DS": 5,
-          "TLN": 2,
-          "TL": 2
-        },
-        "Định luật I của nhiệt động lực học và quy ước dấu": {
-          "TN": 10,
-          "DS": 6,
-          "TLN": 6,
-          "TL": 2
+        "Chưa phân dạng": {
+          "TN": 42,
+          "DS": 30,
+          "TLN": 13,
+          "TL": 13
         }
       }
     },
