@@ -4,7 +4,7 @@ from __future__ import annotations
 import html
 import time
 import urllib.parse
-from flask import request, jsonify, redirect
+from flask import request, jsonify, redirect, session
 from app import app, can_access, index_data, member_current, page, parse_questions, read_tex
 
 _STATS_CACHE = {}
@@ -99,6 +99,58 @@ def member_dang():
           "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd()</script>")
     return page('Chọn câu',body)
+
+def start_selected_questions():
+    """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""
+    m=member_current()
+    if not m:return redirect('/member/login')
+    if request.method!='POST':
+        return redirect('/member')
+    path=request.form.get('path','').strip()
+    dang=request.form.get('dang','').strip()
+    if not path or not can_access(m,path):
+        return redirect('/member')
+    try:
+        _,tex=read_tex(path); qs=parse_questions(tex)
+    except Exception:
+        return redirect('/member')
+    valid={
+        int(q.get('idx'))
+        for q in qs
+        if str(q.get('idx','')).isdigit() and _same_dang(q.get('dang'), dang)
+    }
+    if not valid and dang=='Chưa phân dạng':
+        valid={
+            int(q.get('idx'))
+            for q in qs
+            if str(q.get('idx','')).isdigit() and not str(q.get('dang') or '').strip()
+        }
+    ids=[]
+    for raw in request.form.getlist('qid'):
+        try:i=int(raw)
+        except (TypeError,ValueError):
+            continue
+        if i in valid and i not in ids:
+            ids.append(i)
+    if not ids:
+        url='/member/dang?path='+urllib.parse.quote(path,safe='')
+        if dang:
+            url+='&dang='+urllib.parse.quote(dang,safe='')
+        return redirect(url)
+    session.update(
+        practice_path=path,
+        practice_ids=ids,
+        practice_pos=0,
+        practice_right=0,
+        practice_streak=0,
+        practice_best=0,
+        practice_done=[],
+    )
+    return redirect('/member/practice')
+
+@app.route('/member/start-selected', methods=['GET','POST'])
+def member_start_selected():
+    return start_selected_questions()
 
 @app.after_request
 def make_catalog_rows_enhanced(response):

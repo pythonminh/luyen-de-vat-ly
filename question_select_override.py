@@ -8,6 +8,8 @@ import app as base
 
 
 def _start_selected():
+    if request.method != 'POST':
+        return redirect('/member')
     m = base.member_current()
     if not m:
         return redirect('/member/login')
@@ -66,10 +68,15 @@ def _start_selected():
     return redirect('/member/practice')
 
 
-# A dedicated endpoint is used by the new checkbox UI.  This avoids relying
-# on the old /member/start handler and therefore cannot fall back to the
-# old count-based selector.
-base.app.add_url_rule('/member/start-selected', 'start_selected_questions', _start_selected, methods=['POST'])
+# Route lives in dang_routes.py so gunicorn wsgi:app also has it.
+# Keep a fallback registration if that module was not imported.
+if 'member_start_selected' not in base.app.view_functions:
+    base.app.add_url_rule(
+        '/member/start-selected',
+        'member_start_selected',
+        _start_selected,
+        methods=['GET', 'POST'],
+    )
 
 # Keep /member/start compatible with the existing button elsewhere in the app,
 # but route it through the exact-selection implementation when qid checkboxes

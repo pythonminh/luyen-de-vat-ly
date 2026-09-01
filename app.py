@@ -279,6 +279,12 @@ def select_page():
 def start_practice():
     m=member_current();
     if not m:return redirect('/member/login')
+    if request.form.getlist('qid'):
+        try:
+            import dang_routes as _dang
+            return _dang.start_selected_questions()
+        except Exception:
+            pass
     p=request.form.get('path','')
     if not can_access(m,p):return redirect('/member')
     try:_,tex=read_tex(p);qs=parse_questions(tex)
