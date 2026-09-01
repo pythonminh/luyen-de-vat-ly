@@ -4706,9 +4706,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
       "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 29,
+      "count": 29,
+      "dang": {
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 29
+      },
+      "dang_kinds": {
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
+          "TN": 16,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
+        }
+      }
     }
   ]
 }
