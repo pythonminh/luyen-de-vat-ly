@@ -3052,6 +3052,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "questions": 23,
+      "count": 23,
+      "dang": {
+        "Chưa phân dạng": 23
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 3
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/de.tex",
@@ -3505,6 +3528,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
+      "questions": 31,
+      "count": 31,
+      "dang": {
+        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
+      },
+      "dang_kinds": {
+        "Đọc và phân tích đồ thị quá trình chuyển thể": {
+          "TN": 15,
+          "DS": 11,
+          "TLN": 3,
+          "TL": 2
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
@@ -3521,6 +3567,29 @@
       "dang_kinds": {
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
           "TN": 20,
+          "DS": 6,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Nhận biết và phân tích các quá trình chuyển thể": 33
+      },
+      "dang_kinds": {
+        "Nhận biết và phân tích các quá trình chuyển thể": {
+          "TN": 24,
           "DS": 6,
           "TLN": 1,
           "TL": 2
@@ -4735,75 +4804,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-nhan-biet-va-phan-tich-cac-qua-trinh-chuyen-the.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết và phân tích các quá trình chuyển thể",
-      "questions": 33,
-      "count": 33,
-      "dang": {
-        "Nhận biết và phân tích các quá trình chuyển thể": 33
-      },
-      "dang_kinds": {
-        "Nhận biết và phân tích các quá trình chuyển thể": {
-          "TN": 24,
-          "DS": 6,
-          "TLN": 1,
-          "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-doc-va-phan-tich-do-thi-qua-trinh-chuyen-the.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Đọc và phân tích đồ thị quá trình chuyển thể",
-      "questions": 31,
-      "count": 31,
-      "dang": {
-        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
-      },
-      "dang_kinds": {
-        "Đọc và phân tích đồ thị quá trình chuyển thể": {
-          "TN": 15,
-          "DS": 11,
-          "TLN": 3,
-          "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-phan-biet-chat-ran-ket-tinh-va-chat-ran-vo-dinh-.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
-      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
-      "questions": 23,
-      "count": 23,
-      "dang": {
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 23
-      },
-      "dang_kinds": {
-        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
-          "TN": 12,
-          "DS": 5,
-          "TLN": 3,
-          "TL": 3
         }
       }
     }
