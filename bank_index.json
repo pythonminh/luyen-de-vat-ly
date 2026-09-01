@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 97,
+  "total_files": 98,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4835,6 +4835,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
