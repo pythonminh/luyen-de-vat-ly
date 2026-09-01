@@ -51,12 +51,13 @@ def member_dang_stats_all():
     return jsonify(ok=True, stats=out)
 
 
-def _question_card(q, seq, total, path='', dup=None):
+def _question_card(q, seq, total, path='', dup=None, show_solution=False):
     n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
     qid=str(q.get('id') or '').strip() or '—'
     cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
     badge={'TN':'TN · Trắc nghiệm','DS':'ĐS · Đúng / Sai','TLN':'TLN · Trả lời ngắn','TL':'TL · Tự luận'}.get(kind,kind)
     options=''
+    sol_html=''
     if kind=='TN':
         letters='ABCD'
         options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {html_question(o.get('text',''))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
@@ -66,7 +67,13 @@ def _question_card(q, seq, total, path='', dup=None):
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
     else:
-        options="<div class='answerline'>✎ Câu tự luận</div>"
+        if show_solution:
+            options="<div class='answerline'>✎ Câu tự luận</div>"
+            sol=(q.get('solution') or '').strip()
+            if sol:
+                sol_html=f"<div class='solution'><b>📖 Lời giải</b><div>{html_question(sol)}</div></div>"
+        else:
+            options="<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập để xem lời giải</div>"
     gh=''
     if can_manage_bank() and path and line:
         gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
@@ -80,7 +87,7 @@ def _question_card(q, seq, total, path='', dup=None):
     return (f"<article class='qcard{dcls}' data-find='{find}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
-            f"<div class='qtext'>{html_question(text)}</div>{options}</article>")
+            f"<div class='qtext'>{html_question(text)}</div>{options}{sol_html}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -120,7 +127,7 @@ def member_dang():
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
-    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx'))) for i,q in enumerate(selected))
+    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=bool(m)) for i,q in enumerate(selected))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "

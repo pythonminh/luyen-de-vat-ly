@@ -532,6 +532,19 @@ def solution_of(block):
     if not m:return ''
     v,_=get_braced(block,m.end()-1);return v or ''
 
+def strip_loigiai(s):
+    """Gỡ \\loigiai{...} khỏi đề — lời giải chỉ nằm ở trường solution."""
+    s=s or ''
+    s=re.sub(r'\\begin\s*\{\s*loigiai\s*\}.*?\\end\s*\{\s*loigiai\s*\}','',s,flags=re.I|re.S)
+    while True:
+        m=re.search(r'\\loigiai\s*\{',s,re.I)
+        if not m:break
+        val,end=get_braced(s,m.end()-1)
+        if val is None:
+            s=s[:m.start()];break
+        s=s[:m.start()]+s[end:]
+    return re.sub(r'\\loigiai\b','',s,flags=re.I)
+
 def extract_nguon(s):
     """Tất cả \\nguon{...} trong khối (giữ thứ tự, bỏ trùng)."""
     found=[]; i=0; s=s or ''
@@ -1052,7 +1065,9 @@ def parse_questions(tex):
         cut=max(pre.rfind('\\end{ex}'), pre.rfind('\\end{bt}'))
         if cut>=0: pre=pre[cut:]
         nguon=' · '.join(dict.fromkeys(extract_nguon(pre)+extract_nguon(b)))
-        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'text':clean_latex_web(re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b',b,1,flags=re.I)[0]),'solution':clean_latex_web(solution_of(b)),'raw':b}
+        stem=re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b|\\loigiai\b',b,1,flags=re.I)[0]
+        stem=strip_loigiai(stem)
+        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'text':clean_latex_web(stem),'solution':clean_latex_web(solution_of(b)),'raw':b}
         if kind=='TN':q['options']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choice')[:4]]
         elif kind=='DS':q['statements']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choiceTF')]
         elif kind=='TLN':
