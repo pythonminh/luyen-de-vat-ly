@@ -361,6 +361,13 @@ def _strict_member_index():
     q = (request.args.get('q') or '').strip().lower()
     sm = (request.args.get('mon') or '').strip()
     cl = (request.args.get('lop') or '').strip()
+    id_block = ''
+    if q:
+        try:
+            import dang_routes as _dang
+            id_block = _dang.qid_results_html(q, m)
+        except Exception:
+            id_block = ''
     items = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path', '')).startswith('ngan-hang/')]
     if not svip:
         items = [x for x in items if _member_class({'class': str(x.get('Lop', ''))}) == allowed_grade]
@@ -394,7 +401,7 @@ def _strict_member_index():
     subjopts = ''.join("<option value='" + html.escape(s, quote=True) + "'" + (" selected" if sm == s else "") + ">" + html.escape(s) + "</option>" for s in subjects)
     classopts = ''.join("<option value='" + html.escape(c, quote=True) + "'" + (" selected" if cl == c else "") + ">" + html.escape(c) + "</option>" for c in classes)
     display_class = 'Tất cả khối lớp' if svip else ('Lớp ' + allowed_grade if allowed_grade else 'Chưa được cấp lớp')
-    body = "<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>" + str(idx.get('total_files',0)) + " file</span><span class='tag'>" + str(idx.get('total_questions',0)) + " câu</span></div><div class='body'><div class='notice'>👤 <b>" + html.escape(str(m.get('name') or m.get('username'))) + "</b> · Tài khoản <b>" + html.escape(str(m.get('username'))) + "</b> · 🎓 <b>" + html.escape(display_class) + "</b> · Quyền <b>" + html.escape(typ) + "</b></div><form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='" + html.escape(q) + "'><select name='mon'><option value=''>Tất cả môn</option>" + subjopts + "</select><select name='lop'><option value=''>Tất cả lớp</option>" + classopts + "</select><button class='btn'>Tìm</button></form></div></div>" + (''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp với quyền/lớp hiện tại.</div></div>") + "</div>"
+    body = "<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>" + str(idx.get('total_files',0)) + " file</span><span class='tag'>" + str(idx.get('total_questions',0)) + " câu</span></div><div class='body'><div class='notice'>👤 <b>" + html.escape(str(m.get('name') or m.get('username'))) + "</b> · Tài khoản <b>" + html.escape(str(m.get('username'))) + "</b> · 🎓 <b>" + html.escape(display_class) + "</b> · Quyền <b>" + html.escape(typ) + "</b></div><form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='" + html.escape(q) + "'><select name='mon'><option value=''>Tất cả môn</option>" + subjopts + "</select><select name='lop'><option value=''>Tất cả lớp</option>" + classopts + "</select><button class='btn'>Tìm</button></form></div></div>" + id_block + (''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp với quyền/lớp hiện tại.</div></div>")) + "</div>"
     return page('Mục lục', body)
 
 

@@ -9,6 +9,8 @@ from app import admin_current, app, can_access, can_manage_bank, can_view, dup_i
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
+_QID_CACHE = {}
+_QID_TTL = 300
 
 def _esc(s):
     return html.escape(str(s), quote=True)
@@ -25,6 +27,75 @@ def _stats_for(path):
         stats.setdefault(d, {'TN':0,'DS':0,'TLN':0,'TL':0})
         stats[d][k]=stats[d].get(k,0)+1
     _STATS_CACHE[path]=(now,stats); return stats
+
+def _qid_entries_for(path):
+    now = time.time(); hit = _QID_CACHE.get(path)
+    if hit and now-hit[0] < _QID_TTL: return hit[1]
+    _, tex = read_tex(path); qs = parse_questions(tex); rows = []
+    for q in qs:
+        qid=str(q.get('id') or '').strip()
+        if not qid:
+            continue
+        dang=(q.get('dang') or 'Chưa phân dạng').strip() or 'Chưa phân dạng'
+        try: idx=int(q.get('idx'))
+        except (TypeError, ValueError):
+            continue
+        rows.append({'id':qid,'path':path,'dang':dang,'idx':idx,'kind':str(q.get('kind') or 'TL')})
+    _QID_CACHE[path]=(now,rows); return rows
+
+def find_questions_by_id(needle, member, limit=40):
+    needle=str(needle or '').strip().lower()
+    if len(needle)<2:
+        return []
+    out=[]
+    for x in (index_data().get('lessons') or []):
+        if not isinstance(x, dict):
+            continue
+        path=str(x.get('path') or x.get('file') or '').strip()
+        if not path.startswith('ngan-hang/') or not can_view(member, path):
+            continue
+        try:
+            rows=_qid_entries_for(path)
+        except Exception:
+            continue
+        title=str(x.get('BaiHoc') or x.get('De') or (path.rsplit('/',2)[-2] if '/' in path else path))
+        mon=str(x.get('Mon') or ''); lop=str(x.get('Lop') or '')
+        for row in rows:
+            if needle not in row['id'].lower():
+                continue
+            item=dict(row); item.update(title=title, mon=mon, lop=lop)
+            out.append(item)
+            if len(out)>=limit:
+                return out
+    return out
+
+def qid_results_html(needle, member):
+    hits=find_questions_by_id(needle, member)
+    if not hits:
+        return ''
+    logged=bool(member)
+    cards=[]
+    for h in hits:
+        view=('/member/dang?path='+urllib.parse.quote(h['path'],safe='')
+              +'&dang='+urllib.parse.quote(h['dang'],safe='')
+              +'&id='+urllib.parse.quote(h['id'],safe=''))
+        do=''
+        if logged:
+            do=(f"<form method='post' action='/member/start-selected' style='display:inline'>"
+                f"<input type='hidden' name='path' value='{_esc(h['path'])}'>"
+                f"<input type='hidden' name='dang' value='{_esc(h['dang'])}'>"
+                f"<input type='hidden' name='qid' value='{int(h['idx'])}'>"
+                f"<input type='hidden' name='ai_review' value='0'>"
+                f"<button class='btn primary' type='submit'>▶ Làm câu này</button></form> ")
+        kind=html.escape(h.get('kind') or '?')
+        cards.append(
+            f"<div class='card'><b><span class='qid'>ID {html.escape(h['id'])}</span></b>"
+            f"<div class='meta'>{html.escape(h.get('mon') or '')} · Lớp {html.escape(h.get('lop') or '')} · {html.escape(h.get('title') or '')}</div>"
+            f"<div><span class='tag'>{kind}</span><span class='tag'>{html.escape(h['dang'])}</span></div>"
+            f"<p style='margin:8px 0 0'>{do}<a class='btn' href='{_esc(view)}'>👁 Xem câu</a></p></div>"
+        )
+    return ("<div class='panel' style='margin-top:10px'><div class='head'>🔎 Câu theo ID <span class='tag'>"
+            +str(len(hits))+"</span></div><div class='body'><div class='cards'>"+''.join(cards)+"</div></div></div>")
 
 @app.get('/member/dang-stats')
 def member_dang_stats():
@@ -51,7 +122,12 @@ def member_dang_stats_all():
     return jsonify(ok=True, stats=out)
 
 
-def _question_card(q, seq, total, path='', dup=None, show_solution=False):
+def _sol_block(q):
+    sol=(q.get('solution') or '').strip()
+    inner=html_question(sol) if sol else "<div class='muted'>Chưa có lời giải trong file TEX.</div>"
+    return f"<div class='solution'><b>📖 Lời giải</b><div>{inner}</div></div>"
+
+def _question_card(q, seq, total, path='', dup=None, show_solution=False, highlight_id=''):
     n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
     qid=str(q.get('id') or '').strip() or '—'
     cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
@@ -60,31 +136,45 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False):
     sol_html=''
     if kind=='TN':
         letters='ABCD'
-        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {html_question(o.get('text',''))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
+        bits=[]
+        for i,o in enumerate((q.get('options') or [])[:4]):
+            ok=show_solution and bool(o.get('correct'))
+            mark=" <span class='okmark'>Đáp án đúng</span>" if ok else ''
+            bits.append(f"<div class='opt{' ok' if ok else ''}'><b>{letters[i]}.</b> {html_question(o.get('text',''))}{mark}</div>")
+        options='<div class="opts">'+''.join(bits)+'</div>'
     elif kind=='DS':
         st=q.get('statements') or []
-        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {html_question(o.get('text','') if isinstance(o,dict) else o)}</div>" for i,o in enumerate(st))+'</div>'
+        bits=[]
+        for i,o in enumerate(st):
+            txt=html_question(o.get('text','') if isinstance(o,dict) else o)
+            yes=bool((o or {}).get('correct')) if isinstance(o,dict) else False
+            mark=f" <span class='okmark'>{'Đúng' if yes else 'Sai'}</span>" if show_solution else ''
+            cls=' ok' if show_solution and yes else (' noans' if show_solution else '')
+            bits.append(f"<div class='tf{cls}'><b>{i+1}.</b> {txt}{mark}</div>")
+        options='<div class="tfgrid">'+''.join(bits)+'</div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
-    else:
         if show_solution:
-            options="<div class='answerline'>✎ Câu tự luận</div>"
-            sol=(q.get('solution') or '').strip()
-            if sol:
-                sol_html=f"<div class='solution'><b>📖 Lời giải</b><div>{html_question(sol)}</div></div>"
-        else:
-            options="<div class='answerline'>✎ Câu tự luận</div>" if member_current() else "<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập rồi làm bài mới xem lời giải</div>"
+            ans=str(q.get('answer') or '').strip()
+            options+=f"<div class='answerline'><b>Đáp án:</b> {html_question(ans) if ans else '—'}</div>"
+    else:
+        options="<div class='answerline'>✎ Câu tự luận</div>" if member_current() else "<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập rồi làm bài mới xem lời giải</div>"
+    if show_solution:
+        sol_html=_sol_block(q)
     gh=''
     if can_manage_bank() and path and line:
         gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
     dup=dup or {}
+    hid=str(highlight_id or '').strip().lower()
     dcls=' dupcard' if dup.get('label') else ''
+    if hid and qid.lower()==hid:
+        dcls+=' qhit'
     dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}</span>" if dup.get('label') else ''
     xoa=''
     if can_manage_bank() and dup.get('extra'):
         xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{n}' checked> Xóa bản trùng này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
-    return (f"<article class='qcard{dcls}' data-find='{find}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+    return (f"<article class='qcard{dcls}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
             f"<div class='qtext'>{html_question(text)}</div>{options}{sol_html}</article>")
@@ -127,7 +217,9 @@ def member_dang():
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
-    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=False) for i,q in enumerate(selected))
+    admin_view=can_manage_bank()
+    highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
+    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=admin_view,highlight_id=highlight_id) for i,q in enumerate(selected))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
@@ -148,22 +240,27 @@ def member_dang():
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
     guest = not m
+    find_box=("<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' "
+              f"value='{_esc(highlight_id)}' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>")
+    login_next='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
+    if highlight_id:
+        login_next+='&id='+urllib.parse.quote(highlight_id,safe='')
     if guest:
         guest_note=("<div class='notice'>👁 Bạn đang xem đề — chưa đăng nhập nên không làm bài và không gọi Gemini. "
-                    f"<a class='btn primary' href='{_esc(login_url('/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')))}'>Đăng nhập để làm bài</a></div>")
-        tools=''
+                    f"<a class='btn primary' href='{_esc(login_url(login_next))}'>Đăng nhập để làm bài</a></div>")
+        tools=f"<div class='toolbar'>{find_box}</div>"
         bottom=f"<div class='toolbar bottom'><a class='btn' href='/member'>← Mục lục</a></div>"
         form_open=f"<div class='guestview'>"
         form_close="</div>"
     else:
-        guest_note=''
+        guest_note=("<div class='notice'>🔐 ADMIN · xem đáp án và lời giải ngay trên từng thẻ, không cần làm bài.</div>" if admin_view else '')
         tools=(kindbar+
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyKind(\"\")'>Tất cả loại</button>"+kind_btns+
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
-          + "<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
-          "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
+          + find_box
+          + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
         bottom=("<div class='toolbar bottom modebar'>"
                 "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
                 "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
@@ -171,15 +268,32 @@ def member_dang():
         form_open=("<form method='post' action='/member/start-selected' id='questionForm'>"
                    f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
         form_close="</form>"
+    find_js=(
+        "<script>let DUPONLY=false,KINDFILTER='';"
+        "function vis(c){const box=document.getElementById('findq');const q=(box&&box.value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}"
+        "function filterQ(){document.querySelectorAll('.qcard').forEach(vis);if(typeof upd==='function'&&document.getElementById('sum'))upd()}"
+        "function bootFind(){const box=document.getElementById('findq');if(!box)return;box.addEventListener('input',filterQ);const p=new URLSearchParams(location.search);const id=(p.get('id')||p.get('qid')||'').trim();if(id){if(!box.value)box.value=id;filterQ();const t=id.toLowerCase();const el=document.querySelector('.qcard.qhit')||Array.prototype.find.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return (c.getAttribute('data-qid')||'')===t})||document.querySelector('.qcard:not(.hideq)');if(el){el.classList.add('qhit');el.scrollIntoView({block:'center'})}}else{filterQ()}}"
+    )
+    if not guest:
+        find_js += (
+            "function onlyDup(v){DUPONLY=!!v;filterQ()}function onlyKind(k){KINDFILTER=k||'';filterQ()}"
+            "function kindCount(k){return Array.prototype.filter.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return c.getAttribute('data-kind')===k}).reduce(function(n,c){const i=c.querySelector('input[name=qid]');return n+(i&&i.checked?1:0)},0)}"
+            "function upd(){const sum=document.getElementById('sum');if(!sum)return;const a=Array.prototype.slice.call(document.querySelectorAll('.qcard:not(.hideq) input[name=qid]'));const n=a.filter(function(x){return x.checked}).length;const bits=['TN','DS','TLN','TL'].map(function(k){const c=kindCount(k);const inp=document.querySelector('.kn[data-k=\"'+k+'\"]');if(inp&&document.activeElement!==inp)inp.value=c;return c?((k==='DS'?'ĐS':k)+' '+c):''}).filter(Boolean);sum.textContent='Đã chọn: '+n+' câu'+(bits.length?' · '+bits.join(' · '):'')}"
+            "function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(function(x){x.checked=v});upd()}"
+            "function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(function(inp){const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=Array.prototype.filter.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return c.getAttribute('data-kind')===k});cards.slice(0,want).forEach(function(c){const i=c.querySelector('input[name=qid]');if(i)i.checked=true})});upd()}"
+            "document.querySelectorAll('input[name=qid]').forEach(function(x){x.addEventListener('change',upd)});"
+            "document.querySelectorAll('.kn').forEach(function(x){x.addEventListener('change',applyKinds)});"
+            "const form=document.getElementById('questionForm');if(form)form.addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});"
+        )
+    find_js += "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{dup_form}"
           +form_open+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
-          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
-          + ("" if guest else "<script>let DUPONLY=false,KINDFILTER='';function vis(c){const q=(document.getElementById('findq').value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}function filterQ(){document.querySelectorAll('.qcard').forEach(vis);upd()}function onlyDup(v){DUPONLY=!!v;filterQ()}function onlyKind(k){KINDFILTER=k||'';filterQ()}function kindCount(k){return [...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"] input[name=qid]:checked')].length}function upd(){const a=[...document.querySelectorAll('.qcard:not(.hideq) input[name=qid]')];const n=a.filter(x=>x.checked).length;const bits=['TN','DS','TLN','TL'].map(k=>{const c=kindCount(k);const inp=document.querySelector('.kn[data-k=\"'+k+'\"]');if(inp&&document.activeElement!==inp)inp.value=c;return c?((k==='DS'?'ĐS':k)+' '+c):''}).filter(Boolean);document.getElementById('sum').textContent='Đã chọn: '+n+' câu'+(bits.length?' · '+bits.join(' · '):'')}function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(x=>x.checked=v);upd()}function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(inp=>{const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=[...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"]')];cards.slice(0,want).forEach(c=>{const i=c.querySelector('input[name=qid]');if(i)i.checked=true});});upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.querySelectorAll('.kn').forEach(x=>x.addEventListener('change',applyKinds));document.getElementById('findq').addEventListener('input',filterQ);document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
-          + ("<script>if(window.ldvlTypeset)ldvlTypeset(document.body);</script>" if guest else "")
+          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.opt.ok,.tf.ok{background:#e8f8ee;border-color:#42ae6b}.tf.noans{background:#fff8f0}.okmark{margin-left:6px;font-size:11px;font-weight:800;color:#116a32}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          + find_js
           )
     return page('Chọn câu' if not guest else 'Xem đề',body)
 

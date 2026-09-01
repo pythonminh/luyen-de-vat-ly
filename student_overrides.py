@@ -25,7 +25,10 @@ def _member_index():
     q = str(request.args.get('q') or '').strip().lower()
     sm = str(request.args.get('mon') or '')
     cl = str(request.args.get('lop') or '')
+    id_block = ''
     if q:
+        import dang_routes as dr
+        id_block = dr.qid_results_html(q, m)
         items = [x for x in items if q in ' '.join(str(x.get(k) or '') for k in ('Mon','Lop','Chuong','BaiHoc','De','dang','path')).lower()]
     if sm:
         items = [x for x in items if str(x.get('Mon') or '') == sm]
@@ -78,8 +81,8 @@ def _member_index():
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
 {who}
-<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='{html.escape(request.args.get('q',''))}'><select name='mon'><option value=''>Tất cả môn</option>{subjopts}</select><select name='lop'><option value=''>Tất cả lớp</option>{classopts}</select><button class='btn'>Tìm</button></form>
-</div></div>{''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài phù hợp. Tài khoản FREE xem bài Free; VIP xem theo lớp (nếu chưa ghi lớp thì xem hết).</div></div>"}</div>
+<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='{html.escape(request.args.get('q',''))}'><select name='mon'><option value=''>Tất cả môn</option>{subjopts}</select><select name='lop'><option value=''>Tất cả lớp</option>{classopts}</select><button class='btn'>Tìm</button></form>
+</div></div>{id_block}{''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài phù hợp. Tài khoản FREE xem bài Free; VIP xem theo lớp (nếu chưa ghi lớp thì xem hết).</div></div>")}</div>
 """
     return base.page('Mục lục', body)
 
