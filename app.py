@@ -103,11 +103,12 @@ def can_access(m,path):return lesson_level(path)=='FREE' or is_vip(m)
 
 def login_page(msg=''):
     body=(
-        "<div class='wrap'><div class='panel' style='max-width:460px;margin:60px auto'><div class='head'>🔐 Đăng nhập</div><div class='body'>"
-        "<div class='notice'>Dùng chung một form cho thành viên và ADMIN. Hệ thống sẽ tự nhận diện tài khoản đúng theo thông tin đăng nhập.</div>"
-        "<form method='post' style='margin-top:10px'><div class='field'><label>Tài khoản</label><input name='username' required></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div>"
-        "<button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký thành viên</a>"
+        "<div class='wrap'><div class='panel' style='max-width:500px;margin:60px auto'><div class='head'>🔐 Đăng nhập chung</div><div class='body'>"
+        "<div class='notice'><b>Chỉ có 1 trang đăng nhập duy nhất.</b><br>Thành viên và ADMIN đều dùng cùng form này, hệ thống sẽ tự nhận diện tài khoản phù hợp.</div>"
+        "<div class='meta' style='margin:10px 0 4px 0'>Nhập đúng tài khoản và mật khẩu của bạn để vào khu học tập hoặc quản trị.</div>"
+        "<form method='post' action='/login' style='margin-top:10px'><div class='field'><label>Tài khoản</label><input name='username' placeholder='Ví dụ: hocvien01 hoặc ADMIN' required></div>"
+        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' placeholder='Nhập mật khẩu' required></div>"
+        "<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'><button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Chưa có tài khoản? Đăng ký</a></div>"
         "<div class='err' style='margin-top:10px'>"+html.escape(msg)+"</div></form></div></div></div>"
     )
     return page('Đăng nhập',body)
@@ -214,6 +215,7 @@ def repo_redirect():
 @app.route('/member/login',methods=['GET','POST'])
 @app.route('/admin/login',methods=['GET','POST'])
 def shared_login():
+    if request.method=='GET' and request.path!='/login':return redirect('/login')
     msg=''
     if request.method=='POST':
         u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()

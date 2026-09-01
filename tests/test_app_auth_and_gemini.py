@@ -120,6 +120,19 @@ class AppAuthAndGeminiTests(unittest.TestCase):
             self.assertEqual(sess["role"], "member")
             self.assertEqual(sess["username"], "hocvien")
 
+    def test_legacy_login_routes_redirect_to_single_login_page(self):
+        member_login = self.client.get("/member/login", follow_redirects=False)
+        admin_login = self.client.get("/admin/login", follow_redirects=False)
+        main_login = self.client.get("/login")
+        self.assertEqual(member_login.status_code, 302)
+        self.assertEqual(admin_login.status_code, 302)
+        self.assertTrue(member_login.headers["Location"].endswith("/login"))
+        self.assertTrue(admin_login.headers["Location"].endswith("/login"))
+        text = main_login.get_data(as_text=True)
+        self.assertIn("Chỉ có 1 trang đăng nhập duy nhất.", text)
+        self.assertIn("action='/login'", text)
+        self.assertIn("hocvien01 hoặc ADMIN", text)
+
     def test_shared_login_accepts_admin_from_member_route(self):
         res = self.client.post(
             "/member/login",
@@ -148,7 +161,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
         )
 
     def test_github_link_and_route_are_admin_only(self):
-        guest = self.client.get("/member/login")
+        guest = self.client.get("/login")
         self.assertNotIn("🐙 GitHub", guest.get_data(as_text=True))
 
         self.login_as("member", "hocvien")
