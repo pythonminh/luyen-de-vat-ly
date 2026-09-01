@@ -30,7 +30,10 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "925644609",
-      "password_sha256": "a237b5bfa24c61969a2e37e64881077f6b9ddc17494781b8d420f83f425af49e"
+      "password_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "grade": "11",
+      "password_enc": "v1:uDbAEw==",
+      "updated_at": "2026-09-01 14:15:43"
     },
     {
       "username": "Hung1234",
