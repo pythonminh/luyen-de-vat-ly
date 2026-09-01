@@ -2,4 +2,5 @@
 service-account.json
 __pycache__/
 *.pyc
-data/tikz-cache/
+data/tikz-cache/*.tex
+data/tikz-cache/*.svg

@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -163,34 +164,13 @@ def page(title: str, body: str) -> Response:
         "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']}},"
         "options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},"
         "startup:{typeset:true}};"
-        "window.TikzJaxOptions={workerMode:'auto',renderTimeout:45000,maxRetries:1,restartWorkerOnFail:true};"
-        "window.ldvlMountTikzJax=function(box){var ta=box.querySelector('textarea.tikz-src');if(!ta)return;"
-        "var s=document.createElement('script');s.type='text/tikz';"
-        "s.setAttribute('data-tikz-libraries',box.getAttribute('data-tikz-libraries')||'arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings');"
-        "var pkg=box.getAttribute('data-tex-packages');if(pkg)s.setAttribute('data-tex-packages',pkg);"
-        "s.setAttribute('data-render-timeout','45000');s.textContent=ta.value;"
-        "var w=box.querySelector('.tikz-wait');box.insertBefore(s,w||null);};"
-        "window.ldvlMountTikz=function(root){root=root||document.body;if(!root.querySelectorAll)return;"
-        "root.querySelectorAll('div.tikz-live').forEach(function(box){"
-        "if(box.getAttribute('data-mounted')==='1')return;"
-        "var ta=box.querySelector('textarea.tikz-src');if(!ta)return;"
-        "box.setAttribute('data-mounted','1');"
-        "fetch('/api/tikz/render',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({tikz:ta.value})})"
-        ".then(function(r){return r.json()}).then(function(j){"
-        "if(j&&j.ok&&j.url){box.className='tikzfig';box.innerHTML='<img class=\"tikz-img\" alt=\"Hinh\" src=\"'+j.url+'\">';return}"
-        "if(window.ldvlMountTikzJax)ldvlMountTikzJax(box);"
-        "}).catch(function(){if(window.ldvlMountTikzJax)ldvlMountTikzJax(box)});"
-        "});};"
-        "window.ldvlTypeset=function(el){el=el||document.body;if(window.ldvlMountTikz)ldvlMountTikz(el);function go(n){"
+        "window.ldvlMountTikz=function(){};"
+        "window.ldvlTypeset=function(el){el=el||document.body;function go(n){"
         "if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}"
         "return MathJax.typesetPromise([el]).catch(function(){});}"
         "if((n||0)<100)setTimeout(function(){go((n||0)+1);},40);}"
         "go(0);};"
-        "document.addEventListener('DOMContentLoaded',function(){if(window.ldvlMountTikz)ldvlMountTikz(document.body);});"
-        "window.addEventListener('load',function(){if(window.ldvlMountTikz)ldvlMountTikz(document.body);});"
         "</script>"
-        "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.6.0/dist/fonts.min.css'>"
-        "<script src='https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.6.0/dist/tikzjax.min.js' defer></script>"
         "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
     )
     return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}{GEMINI_CLIENT_JS}</body></html>", mimetype='text/html')
@@ -534,82 +514,89 @@ def compile_tikz_pdf_local(src):
     except Exception:
         return None
 
-def compile_tikz_svg(tikz):
-    """TeX Live local → SVG. Không gọi cloud (tránh chậm cả trang)."""
-    src=(tikz or '').strip()
-    if not src: return None
-    hid=tikz_hash(src)
-    TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
-    cached=TIKZ_CACHE/f'{hid}.svg'
-    if cached.is_file() and cached.stat().st_size>80:
-        return cached.read_text(encoding='utf-8', errors='replace')
-    exe=pdflatex_bin()
-    if not exe: return None
-    dvisvgm=shutil.which('dvisvgm') or str(Path(exe).with_name('dvisvgm.exe' if os.name=='nt' else 'dvisvgm'))
-    cairo=shutil.which('pdftocairo') or str(Path(exe).with_name('pdftocairo.exe' if os.name=='nt' else 'pdftocairo'))
+def pdf_to_png_bytes(pdf):
+    blob=pdf_bytes_to_png(pdf)
+    if blob: return blob
+    cairo=shutil.which('pdftocairo')
+    if not cairo: return None
     try:
         with tempfile.TemporaryDirectory() as td:
             tdir=Path(td)
-            (tdir/'fig.tex').write_text(tikz_standalone_document(src), encoding='utf-8')
-            r=_run_tex([exe,'-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','fig.tex'], tdir)
-            pdf=tdir/'fig.pdf'
-            if r.returncode!=0 or not pdf.is_file():
-                return None
-            svg_path=tdir/'fig.svg'
-            ok=False
-            if Path(dvisvgm).is_file():
-                c=_run_tex([dvisvgm,'--pdf','--no-fonts','-o',str(svg_path),str(pdf)], tdir)
-                ok=c.returncode==0 and svg_path.is_file()
-            if not ok and Path(cairo).is_file():
-                c=_run_tex([cairo,'-svg','-f','1','-l','1',str(pdf),str(tdir/'fig')], tdir)
-                alt=tdir/'fig.svg'
-                ok=c.returncode==0 and alt.is_file()
-                if ok: svg_path=alt
-            if not ok: return None
-            svg=svg_path.read_text(encoding='utf-8', errors='replace')
-            svg=re.sub(r'<\?xml[^>]*>','',svg)
-            svg=re.sub(r'<!DOCTYPE[^>]*>','',svg,flags=re.I)
-            cached.write_text(svg, encoding='utf-8')
-            return svg
+            (tdir/'fig.pdf').write_bytes(pdf)
+            _run_tex([cairo,'-png','-f','1','-l','1','-r','160',str(tdir/'fig.pdf'),str(tdir/'fig')], tdir)
+            for name in ('fig-1.png','fig.png'):
+                alt=tdir/name
+                if alt.is_file(): return alt.read_bytes()
     except Exception:
-        return None
+        pass
+    return None
 
-def compile_tikz_png_url(src, allow_cloud=True):
-    """PNG cache + pdflatex hoặc latex.ytotech.com (như app mobile cũ)."""
+def tikz_png_path(hid): return TIKZ_CACHE/f'{hid}.png'
+def tikz_src_path(hid): return TIKZ_CACHE/f'{hid}.tex'
+
+def tikz_remember(src):
+    """Lưu mã TikZ theo hash để route ảnh vẽ sau — không biên dịch lúc dựng trang."""
     src=(src or '').strip()
-    if not src or 'tikzpicture' not in src.lower():
-        return None, 'Không có mã TikZ hợp lệ.'
     hid=tikz_hash(src)
-    TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
-    png=TIKZ_CACHE/f'{hid}.png'
+    try:
+        TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
+        p=tikz_src_path(hid)
+        if not p.is_file():
+            p.write_text(src, encoding='utf-8')
+    except Exception:
+        pass
+    return hid
+
+_TIKZ_LOCKS={}
+_TIKZ_LOCKS_GUARD=threading.Lock()
+
+def _tikz_lock(hid):
+    with _TIKZ_LOCKS_GUARD:
+        lock=_TIKZ_LOCKS.get(hid)
+        if lock is None:
+            lock=_TIKZ_LOCKS[hid]=threading.Lock()
+        return lock
+
+def tikz_build_png(hid, src='', allow_cloud=True):
+    """Vẽ 1 hình rồi cache. Nhiều request cùng hình chỉ biên dịch một lần."""
+    png=tikz_png_path(hid)
     if png.is_file() and png.stat().st_size>80:
-        return f'/tikz/{hid}.png', ''
-    pdf=compile_tikz_pdf_local(src)
-    err=''
-    if not pdf and allow_cloud:
-        pdf, err=compile_tikz_pdf_via_cloud(tikz_standalone_document(src))
-    if not pdf:
-        return None, err or 'Chưa biên dịch được TikZ.'
-    blob=pdf_bytes_to_png(pdf)
-    if not blob:
-        cairo=shutil.which('pdftocairo')
-        if cairo:
-            try:
-                with tempfile.TemporaryDirectory() as td:
-                    tdir=Path(td)
-                    (tdir/'fig.pdf').write_bytes(pdf)
-                    _run_tex([cairo,'-png','-f','1','-l','1','-r','140',str(tdir/'fig.pdf'),str(tdir/'fig')], tdir)
-                    alt=tdir/'fig-1.png'
-                    if not alt.is_file():
-                        alt=tdir/'fig.png'
-                    if alt.is_file():
-                        blob=alt.read_bytes()
-            except Exception:
-                blob=None
-    if not blob:
-        return None, 'Đã có PDF nhưng chưa chuyển được sang PNG (cần PyMuPDF).'
-    png.write_bytes(blob)
-    return f'/tikz/{hid}.png', ''
+        return png, ''
+    src=(src or '').strip()
+    if not src:
+        p=tikz_src_path(hid)
+        if p.is_file():
+            src=p.read_text(encoding='utf-8', errors='replace').strip()
+    if not src or 'tikzpicture' not in src.lower():
+        return None, 'Không tìm thấy mã TikZ của hình này.'
+    with _tikz_lock(hid):
+        if png.is_file() and png.stat().st_size>80:
+            return png, ''
+        pdf=compile_tikz_pdf_local(src)
+        err=''
+        if not pdf and allow_cloud:
+            pdf, err=compile_tikz_pdf_via_cloud(tikz_standalone_document(src))
+        if not pdf:
+            return None, err or 'Chưa biên dịch được TikZ.'
+        blob=pdf_to_png_bytes(pdf)
+        if not blob:
+            return None, 'Đã có PDF nhưng chưa chuyển được sang PNG (thiếu PyMuPDF).'
+        try:
+            TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
+            png.write_bytes(blob)
+        except Exception as e:
+            return None, f'Không ghi được ảnh: {str(e)[:120]}'
+    return png, ''
+
+def tikz_error_svg(msg):
+    txt=html.escape(str(msg or 'Chưa vẽ được hình')[:110])
+    return (
+        "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='70'>"
+        "<rect width='420' height='70' rx='8' fill='#fff7ed' stroke='#fdba74'/>"
+        f"<text x='210' y='32' font-family='Segoe UI,Arial' font-size='13' fill='#9a3412' text-anchor='middle'>Chưa vẽ được hình TikZ</text>"
+        f"<text x='210' y='52' font-family='Segoe UI,Arial' font-size='11' fill='#c2410c' text-anchor='middle'>{txt}</text>"
+        "</svg>"
+    )
 
 def strip_resizebox(s):
     s=s or ''
@@ -744,42 +731,11 @@ def id_of(block):
     return codes[-1] if codes else ''
 
 def tikz_to_html(block):
-    """Hình TikZ: TeX Live → SVG; cache PNG; còn lại gọi /api/tikz/render (latex.ytotech.com như app cũ)."""
-    block=(block or '').strip()
-    svg=compile_tikz_svg(block)
-    if svg:
-        return f'<div class="tikzfig">{svg}</div>'
-    hid=tikz_hash(block)
-    png=TIKZ_CACHE/f'{hid}.png'
-    if png.is_file() and png.stat().st_size>80:
-        return f'<div class="tikzfig"><img class="tikz-img" alt="Hình" src="/tikz/{hid}.png"></div>'
-    pkgs=[]
-    if re.search(r'\\tkzTab', block, re.I): pkgs.append('tkz-tab')
-    elif re.search(r'\\tkz[A-Z]', block): pkgs.append('tkz-euclide')
-    if re.search(r'\\begin\s*\{\s*axis\s*\}', block, re.I): pkgs.append('pgfplots')
-    libs='arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings'
-    m=re.search(r'\\usetikzlibrary\s*\{([^}]*)\}', block)
-    if m: libs=re.sub(r'\s+','',m.group(1))+','+libs
-    pkg_attr=f" data-tex-packages='{html.escape(','.join(pkgs), quote=True)}'" if pkgs else ''
-    src=html.escape(block, quote=False).replace('</textarea>','&lt;/textarea&gt;')
+    """Chỉ ghi mã TikZ + trả thẻ <img>. Ảnh được vẽ ở route /tikz/<hash>.png nên trang mở ngay."""
+    hid=tikz_remember(block)
     return (
-        f"<div class='tikz-live' data-tikz-libraries='{html.escape(libs, quote=True)}'{pkg_attr}>"
-        f"<textarea class='tikz-src' hidden>{src}</textarea>"
-        f"<div class='tikz-wait muted'>⏳ Đang vẽ TikZ (như TeX Live)…</div></div>"
-    )
-    pkgs=[]
-    if re.search(r'\\tkzTab', block, re.I): pkgs.append('tkz-tab')
-    elif re.search(r'\\tkz[A-Z]', block): pkgs.append('tkz-euclide')
-    if re.search(r'\\begin\s*\{\s*axis\s*\}', block, re.I): pkgs.append('pgfplots')
-    libs='arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings'
-    m=re.search(r'\\usetikzlibrary\s*\{([^}]*)\}', block)
-    if m: libs=re.sub(r'\s+','',m.group(1))+','+libs
-    pkg_attr=f" data-tex-packages='{html.escape(','.join(pkgs), quote=True)}'" if pkgs else ''
-    src=html.escape(block, quote=False).replace('</textarea>','&lt;/textarea&gt;')
-    return (
-        f"<div class='tikz-live' data-tikz-libraries='{html.escape(libs, quote=True)}'{pkg_attr}>"
-        f"<textarea class='tikz-src' hidden>{src}</textarea>"
-        f"<div class='tikz-wait muted'>⏳ Đang biên dịch TikZ…</div></div>"
+        f'<div class="tikzfig"><img class="tikz-img" loading="lazy" decoding="async" '
+        f'alt="Hình TikZ" src="/tikz/{hid}.png"></div>'
     )
 
 def latex_to_web(s):
@@ -1404,27 +1360,16 @@ def admin_logout():session.clear();return redirect('/admin/login')
 
 @app.route('/tikz/<hid>.png')
 def tikz_png(hid):
+    """Ảnh theo hash: có cache thì trả ngay, chưa có thì vẽ rồi cache vĩnh viễn."""
     hid=str(hid or '')
     if not re.fullmatch(r'[a-f0-9]{40}', hid):
         abort(404)
-    p=TIKZ_CACHE/f'{hid}.png'
-    if not p.is_file():
-        abort(404)
-    return send_file(p, mimetype='image/png')
-
-@app.route('/api/tikz/render', methods=['POST'])
-def api_tikz_render():
-    """Giống app cũ: đăng nhập rồi biên dịch TikZ → PNG (pdflatex hoặc latex.ytotech.com)."""
-    if not member_current() and not admin_current():
-        return jsonify({'ok':False,'error':'Chưa đăng nhập.'}), 401
-    body=request.get_json(silent=True) or {}
-    src=str(body.get('tikz') or body.get('src') or '').strip()
-    if len(src)>60000:
-        return jsonify({'ok':False,'error':'Mã TikZ quá dài.'}), 413
-    url, err=compile_tikz_png_url(src, allow_cloud=True)
-    if url:
-        return jsonify({'ok':True,'url':url})
-    return jsonify({'ok':False,'error':err or 'Chưa vẽ được TikZ.'}), 500
+    p, err=tikz_build_png(hid)
+    if p:
+        resp=send_file(p, mimetype='image/png', conditional=True)
+        resp.headers['Cache-Control']='public, max-age=31536000, immutable'
+        return resp
+    return Response(tikz_error_svg(err), mimetype='image/svg+xml', headers={'Cache-Control':'no-store'})
 
 
 def admin_edit():
