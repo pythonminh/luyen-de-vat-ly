@@ -4685,9 +4685,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
       "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 26,
+      "count": 26,
+      "dang": {
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26
+      },
+      "dang_kinds": {
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
+          "TN": 13,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
+        }
+      }
     }
   ]
 }
