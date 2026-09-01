@@ -4897,9 +4897,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 27
+      },
+      "dang_kinds": {
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
