@@ -110,7 +110,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
 
     def test_shared_login_accepts_member_account(self):
         res = self.client.post(
-            "/member/login",
+            "/login",
             data={"username": "hocvien", "password": "matkhau"},
             follow_redirects=False,
         )
@@ -135,7 +135,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
 
     def test_shared_login_accepts_admin_from_member_route(self):
         res = self.client.post(
-            "/member/login",
+            "/login",
             data={"username": "ADMIN", "password": "admin-secret"},
             follow_redirects=False,
         )
@@ -147,11 +147,11 @@ class AppAuthAndGeminiTests(unittest.TestCase):
 
     def test_login_shows_clear_member_errors(self):
         wrong = self.client.post(
-            "/member/login",
+            "/login",
             data={"username": "hocvien", "password": "sai"},
         )
         locked = self.client.post(
-            "/member/login",
+            "/login",
             data={"username": "khoa", "password": "matkhau"},
         )
         self.assertIn("Sai mật khẩu.", wrong.get_data(as_text=True))

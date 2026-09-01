@@ -239,12 +239,12 @@ def member_register():
     body="<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post'><div class='field'><label>Họ tên</label><input name='name'></div><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Tạo tài khoản</button></form></div></div></div>";return page('Đăng ký',body)
 
 @app.get('/member/logout')
-def member_logout():session.clear();return redirect('/member/login')
+def member_logout():session.clear();return redirect('/login')
 
 @app.get('/member')
 def member_index():
     m=practice_current()
-    if not m:return redirect('/member/login')
+    if not m:return redirect('/login')
     idx=index_data();items=[x for x in idx.get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')]
     subjects=sorted({str(x.get('Mon') or '') for x in items if x.get('Mon')});classes=sorted({str(x.get('Lop') or '') for x in items if x.get('Lop')});q=request.args.get('q','').strip().lower();sm=request.args.get('mon','');cl=request.args.get('lop','')
     def keep(x):
@@ -265,7 +265,7 @@ def member_index():
 @app.get('/member/select')
 def select_page():
     m=practice_current();
-    if not m:return redirect('/member/login')
+    if not m:return redirect('/login')
     p=request.args.get('path','')
     if not can_access(m,p):return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     try:_,tex=read_tex(p);qs=parse_questions(tex)
@@ -284,7 +284,7 @@ def select_page():
 @app.post('/member/start')
 def start_practice():
     m=practice_current();
-    if not m:return redirect('/member/login')
+    if not m:return redirect('/login')
     p=request.form.get('path','')
     if not can_access(m,p):return redirect('/member')
     try:_,tex=read_tex(p);qs=parse_questions(tex)
@@ -309,7 +309,7 @@ def start_practice():
 @app.get('/member/practice')
 def practice():
     m=practice_current();
-    if not m:return redirect('/member/login')
+    if not m:return redirect('/login')
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
     if not p or not ids:return redirect('/member')
     try:_,tex=read_tex(p);allq={q['idx']:q for q in parse_questions(tex)}
@@ -373,17 +373,17 @@ def gemini_review():
 
 @app.get('/admin')
 def admin_home():
-    if not admin_current():return redirect('/admin/login')
+    if not admin_current():return redirect('/login')
     md=members_data().get('members',[]);rows=''.join(f"<tr><td>{html.escape(str(m.get('username','')))}</td><td>{html.escape(str(m.get('name','')))}</td><td>{html.escape(str(m.get('class','')))}</td><td>{html.escape(str(m.get('account_type','FREE')))}</td><td>{html.escape(str(m.get('status','ON')))}</td></tr>" for m in md)
     lessons=[x for x in index_data().get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')];lrows=''.join(f"<tr><td>{html.escape(str(x.get('Mon','')))}</td><td>{html.escape(str(x.get('Lop','')))}</td><td>{html.escape(str(x.get('Chuong','')))}</td><td>{html.escape(str(x.get('BaiHoc') or x.get('De') or ''))}</td><td><a class='btn' href='/admin/edit?path={urllib.parse.quote(str(x.get('path')),safe='')}'>✏️ Sửa TEX</a></td></tr>" for x in lessons)
     body=f"<div class='wrap'><div class='panel'><div class='head'>🔐 ADMIN <span class='tag'>GitHub trực tiếp</span></div><div class='body'><div class='notice'>ADMIN có quyền đọc/sửa file <code>.tex</code> và commit trực tiếp vào GitHub.</div><h3>👥 Thành viên</h3><table class='selectgrid'><tr><th>Tài khoản</th><th>Họ tên</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th></tr>{rows}</table><h3>📚 Bài / TEX</h3><div style='max-height:55vh;overflow:auto'><table class='selectgrid'>{lrows}</table></div><p><a class='btn' href='/admin/logout'>Đăng xuất ADMIN</a> <a class='btn' href='/member'>Mục lục</a></p></div></div></div>";return page('ADMIN',body)
 
 @app.get('/admin/logout')
-def admin_logout():session.clear();return redirect('/admin/login')
+def admin_logout():session.clear();return redirect('/login')
 
 @app.route('/admin/edit',methods=['GET','POST'])
 def admin_edit():
-    if not admin_current():return redirect('/admin/login')
+    if not admin_current():return redirect('/login')
     p=request.args.get('path','')
     if request.method=='POST':
         p=request.form.get('path','');new=request.form.get('content','');sha=request.form.get('sha','');msg=request.form.get('message','Cập nhật TEX từ ADMIN')
