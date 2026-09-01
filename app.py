@@ -215,10 +215,16 @@ def github_file_sha(path):
     d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
     return d.get('sha','')
 
+def _on_render():
+    return os.getenv('RENDER') in ('true', '1') or os.getenv('FORCE_GITHUB_TEX') == '1'
+
 def _fetch_tex_remote(path):
     p,_=_safe_repo_file(path)
+    if TOKEN:
+        d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
+        return base64.b64decode((d.get('content') or '').replace('\n','')).decode('utf-8','replace')
     raw_url=f'https://raw.githubusercontent.com/{REPO}/{urllib.parse.quote(BRANCH,safe="")}/{urllib.parse.quote(p,safe="/")}'
-    req=urllib.request.Request(raw_url,headers={'User-Agent':'luyen-de-vat-ly-clean'})
+    req=urllib.request.Request(raw_url,headers={'User-Agent':'luyen-de-vat-ly-clean','Cache-Control':'no-cache','Pragma':'no-cache'})
     try:
         with urllib.request.urlopen(req,timeout=25) as r:
             return r.read().decode('utf-8','replace')
@@ -229,8 +235,22 @@ def _fetch_tex_remote(path):
 def read_tex(path, need_sha=False):
     if not str(path or '').lower().endswith('.tex'):raise ValueError('Đường dẫn .tex không hợp lệ.')
     p, local=_safe_repo_file(path)
+    from_github=_on_render() or need_sha
     text=''
-    if local.is_file():
+    if from_github:
+        try:
+            text=_fetch_tex_remote(p)
+            try:
+                local.parent.mkdir(parents=True, exist_ok=True)
+                local.write_text(text, encoding='utf-8')
+            except Exception:
+                pass
+        except Exception as e:
+            if local.is_file():
+                text=local.read_text(encoding='utf-8', errors='replace')
+            else:
+                raise e
+    elif local.is_file():
         text=local.read_text(encoding='utf-8', errors='replace')
     else:
         text=_fetch_tex_remote(p)
@@ -239,7 +259,11 @@ def read_tex(path, need_sha=False):
             local.write_text(text, encoding='utf-8')
         except Exception:
             pass
-    sha=github_file_sha(p) if need_sha else ''
+    sha=''
+    if need_sha:
+        try:sha=github_file_sha(p)
+        except Exception:
+            sha=''
     return sha, text
 
 def get_braced(text,pos):
@@ -614,7 +638,9 @@ def admin_home():
         )
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>📂 ADMIN · Ngân hàng <code>ngan-hang</code></div><div class='body'>"
-        "<div class='notice'><b>Sửa trực tiếp file .tex trên GitHub.</b><br>"+html.escape(tok)+"</div>"
+        "<div class='notice'><b>Sửa TEX trên GitHub:</b> mở file → tab Edit → sửa → bấm nút xanh <b>Commit changes...</b> → Confirm. "
+        "Phải đăng nhập GitHub đúng tài khoản <b>pythonminh</b> (chủ repo). Chỉ mở Edit mà không Commit thì chưa lưu.<br>"
+        +html.escape(tok)+" Sau khi Commit, app trên Render đọc bản GitHub ngay (Ctrl+F5), không cần đợi deploy.</div>"
         "<p style='margin:12px 0;display:flex;gap:8px;flex-wrap:wrap'>"
         "<a class='btn primary' href='"+html.escape(gh,quote=True)+"' target='_blank' rel='noopener'>🐙 Mở thư mục ngan-hang trên GitHub</a>"
         "<a class='btn' href='https://github.com/"+html.escape(REPO)+"' target='_blank' rel='noopener'>📦 Repo</a>"
