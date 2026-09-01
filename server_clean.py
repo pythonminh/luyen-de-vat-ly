@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """Authoritative Render entry point.
 
-This file intentionally sits between Gunicorn and the existing Flask app so there
-is exactly one active branding/auth-visibility layer. Legacy patch modules are not
-imported here. The question bank, member login/register, practice routes and
-Gemini routes remain provided by the existing app/wsgi modules.
+Only this module is used by Gunicorn. It provides one final branding/navigation
+layer and one ADMIN login/logout implementation while reusing the existing
+question, member, practice and Gemini routes from app/wsgi.
 """
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ import html
 import os
 import re
 
-from flask import Response, redirect, request, session
+from flask import redirect, request, session
 
 import wsgi
 import admin_manager  # registers ADMIN member/result management routes
@@ -68,16 +67,14 @@ def _nav() -> str:
 
 
 def _clean_header(body: str) -> str:
-    # Replace every legacy brand/subtitle, regardless of which old module made it.
-    legacy_brands = (
+    for old in (
         "📚 Ngân hàng câu hỏi GitHub",
         "Ngân hàng câu hỏi GitHub",
         "📚 Ngân hàng GitHub",
         "Ngân hàng GitHub",
         "📚 Luyện đề AI · Thầy Minh",
         "Luyện đề AI · Thầy Minh",
-    )
-    for old in legacy_brands:
+    ):
         body = body.replace(old, BRAND)
 
     body = re.sub(
@@ -87,8 +84,6 @@ def _clean_header(body: str) -> str:
         count=1,
         flags=re.I | re.S,
     )
-
-    # Replace the first real navigation with the single authoritative navigation.
     body = re.sub(
         r"<div\s+class=['\"]nav['\"]>.*?</div>",
         _nav(),
@@ -97,8 +92,6 @@ def _clean_header(body: str) -> str:
         flags=re.I | re.S,
     )
 
-    # If an old page has no .nav wrapper, remove visible GitHub links/buttons for
-    # guests/students and leave the authoritative navigation to the next render.
     if session.get("role") != "admin":
         body = re.sub(
             r"<a\b[^>]*href=['\"][^'\"]*(?:github\.com|/github(?:/|['\"]))[^'\"]*['\"][^>]*>.*?</a>",
@@ -113,8 +106,6 @@ def _clean_header(body: str) -> str:
             flags=re.I | re.S,
         )
 
-    # The question source is internal implementation detail; never expose it to
-    # users. Preserve all actual LaTeX/math content.
     body = re.sub(
         r"Nguồn đề:\s*bank_index\.json\s*\+\s*ngan-hang/\\?\*\.tex\s*(?:·|•|\|)\s*Google Sheet không dùng cho đề",
         CONTACT,
@@ -128,7 +119,6 @@ def _clean_header(body: str) -> str:
         body = re.sub(r"\\end\s*\{\s*ex\s*\}", "", body, flags=re.I)
         body = re.sub(r"%\s*ID\s*:\s*[^%<\r\n]+", "", body, flags=re.I)
         body = re.sub(r"%\s*Mức\s*:\s*[^%<\r\n]+", "", body, flags=re.I)
-
     return body
 
 
@@ -162,6 +152,7 @@ def authoritative_ui(response):
 
 
 def clean_admin_login():
+    msg = ""
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
@@ -169,29 +160,26 @@ def clean_admin_login():
             session.clear()
             session.update(role="admin", username=ADMIN_USERNAME, name="ADMIN")
             return redirect("/admin")
-        if not ADMIN_PASSWORD and not ADMIN_PASSWORD_SHA256:
-            msg = "ADMIN chưa được cấu hình mật khẩu trên Render (ADMIN_PASSWORD hoặc ADMIN_PASSWORD_SHA256)."
-        else:
-            msg = "Sai tài khoản hoặc mật khẩu ADMIN."
-    else:
-        msg = ""
+        msg = (
+            "ADMIN chưa được cấu hình mật khẩu trên Render (ADMIN_PASSWORD hoặc ADMIN_PASSWORD_SHA256)."
+            if not ADMIN_PASSWORD and not ADMIN_PASSWORD_SHA256
+            else "Sai tài khoản hoặc mật khẩu ADMIN."
+        )
+
+    error = f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else ""
     body = (
         "<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'>"
         "<div class='head'>🔐 ADMIN</div><div class='body'>"
         "<form method='post'>"
-        f"<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' value='{html.escape(ADMIN_USERNAME, quote=True)}'></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password'></div>"
+        f"<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' value='{html.escape(ADMIN_USERNAME, quote=True)}' required></div>"
+        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div>"
         "<button class='btn primary' type='submit'>Đăng nhập</button>"
-        f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else
-        "<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' value='ADMIN'></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password'></div>"
-        "<button class='btn primary' type='submit'>Đăng nhập</button>"
-        "</form></div></div></div>"
+        f"{error}</form></div></div></div>"
     )
     return wsgi.page("ADMIN", body)
 
 
-# Replace the existing admin-login view instead of registering a second rule.
+# Replace the existing endpoint without adding a second /admin/login route.
 app.view_functions["admin_login"] = clean_admin_login
 
 
@@ -204,6 +192,3 @@ if "admin_logout" in app.view_functions:
     app.view_functions["admin_logout"] = clean_admin_logout
 else:
     app.add_url_rule("/admin/logout", endpoint="admin_logout", view_func=clean_admin_logout, methods=["GET"])
-
-
-# Gunicorn imports `app` from this module.
