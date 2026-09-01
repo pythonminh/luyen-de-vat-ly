@@ -7,6 +7,41 @@
 
 % L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể
 
+%%----------Câu 12----------%%
+\begin{ex}%[L12C1B1-DS-12]
+	{\color{red}\footnotesize\ttfamily [L12C1B1-DS-12]}\par %HienID
+	\immini {Một học sinh tiến hành đun một lượng nước đá đựng trong nhiệt lượng kế từ $0^\circ \mathrm{C}$ đến khi tan thành nước và hóa hơi ở $100^\circ \mathrm{C}$. Hình bên là đồ thị biểu diễn sự phụ thuộc của nhiệt lượng mà khối nước đá nhận được từ lúc đun đến lúc hóa hơi và sự thay đổi nhiệt độ của nó. Biết nhiệt nóng chảy riêng của nước đá là $3{,}3 \cdot 10^5\ \mathrm{J/kg}$, nhiệt hóa hơi của nước là $2{,}3 \cdot 10^6\ \mathrm{J/kg}$, bỏ qua nhiệt dung của nhiệt lượng kế.
+	}
+	{
+		\begin{tikzpicture}[scale = 0.5, line join=round, line cap=round, >=stealth,line width=1.5]
+			\draw[->, line width = 1.5] (0,0)--(0,7) node[right] {$t\;\left(^\circ \mathrm{C}\right)$};
+			\draw[->, line width = 1.5] (0,0)--(11,0) node[right] {$Q\;\left(kJ\right)$};
+			\draw[dashed,line width=0.2,xstep=2,ystep=1] (0,0) grid (10,6);
+			\draw (0.6,0) -- (4,5) -- (8,5);
+			\draw[fill=black] (0.6,0) circle (2pt) node [below] {$33$} (4,0) circle (2pt) node [below] {$75$} (8,0) circle (2pt) node [below] {$121$};
+			\path (0,0) node [left] {$0$}
+			(0,1) node [left] {$20$}
+			(0,2) node [left] {$40$}
+			(0,3) node [left] {$60$}
+			(0,4) node [left] {$80$}
+			(0,5) node [left] {$100$}
+			(0,6) node [left] {$120$};
+		\end{tikzpicture}
+	}
+	\choiceTF
+	{Nhiệt lượng cung cấp cho quá trình hóa hơi của nước là $121\ \mathrm{kJ}$}
+	{\True Từ khi nước đá nóng chảy hoàn toàn đến khi nước bắt đầu sôi, nước đã nhận nhiệt lượng $42\ \mathrm{kJ}$}
+	{Khối lượng của nước đá ban đầu là $80\ \mathrm{g}$}
+	{\True Đoạn BC cho biết lượng nước đã hóa hơi là $20\ \mathrm{g}$}
+	\loigiai{
+		\begin{itemchoice}
+			\item Dựa vào đồ thị, quá trình hóa hơi xảy ra tại $100^\circ \mathrm{C}$ (đoạn nằm ngang cuối cùng). Nhiệt lượng cung cấp cho quá trình hóa hơi là $Q_{h} = 121 - 75 = 46\ \mathrm{kJ}$. Do đó phát biểu này sai.
+			\item Nước đá nóng chảy hoàn toàn tại giá trị nhiệt lượng $Q_1 = 33\ \mathrm{kJ}$ và bắt đầu sôi tại giá trị nhiệt lượng $Q_2 = 75\ \mathrm{kJ}$. Từ đồ thị, nhiệt lượng nước đã nhận trong giai đoạn này là $\Delta Q = 75 - 33 = 42\ \mathrm{kJ}$. Do đó phát biểu này đúng.
+			\item Áp dụng công thức tính nhiệt lượng nóng chảy: $Q = m \cdot \lambda$. Khối lượng của nước đá ban đầu là $m = \frac{Q}{\lambda} = \frac{33\,000}{3{,}3 \cdot 10^5} = 0{,}1\ \mathrm{kg} = 100\ \mathrm{g}$. Do đó phát biểu này sai.
+			\item Áp dụng công thức tính nhiệt lượng hóa hơi: $Q_h = m' \cdot L$. Lượng nước đã hóa hơi (ứng với đoạn nằm ngang ở $100^\circ \mathrm{C}$) là $m' = \frac{Q_h}{L} = \frac{46\,000}{2{,}3 \cdot 10^6} = 0{,}02\ \mathrm{kg} = 20\ \mathrm{g}$. Do đó phát biểu này đúng.
+		\end{itemchoice}
+	}
+\end{ex}
 %%----------Câu 7----------%%
 \begin{ex}%[L12C1B1-DS-2]
 	{\color{red}\footnotesize\ttfamily [L12C1B1-DS-2]}\par %HienID
