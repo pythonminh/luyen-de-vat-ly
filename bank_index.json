@@ -3416,24 +3416,15 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
-      "questions": 163,
-      "count": 163,
+      "questions": 82,
+      "count": 82,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian hóa hơi": 27,
         "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 27,
         "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 27,
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": 1,
-        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": 27,
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27,
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 1,
         "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 27
       },
       "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
         "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 10,
           "DS": 5,
@@ -3446,23 +3437,11 @@
           "TLN": 6,
           "TL": 6
         },
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q = L * m).": {
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
           "TN": 1,
           "DS": 0,
           "TLN": 0,
           "TL": 0
-        },
-        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
         },
         "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
           "TN": 10,
