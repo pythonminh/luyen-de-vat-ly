@@ -58,7 +58,9 @@ def admin_members():
             f"<td><b>{html.escape(u)}</b><input type='hidden' name='username' value='{html.escape(u, quote=True)}'></td>"
             f"<td>{html.escape(name)}</td><td>{html.escape(cls)}</td>"
             "<td><select name='account_type'>"
-            f"<option {'selected' if typ=='FREE' else ''}>FREE</option><option {'selected' if typ=='VIP' else ''}>VIP</option>"
+            f"<option {'selected' if typ=='FREE' else ''}>FREE</option>"
+            f"<option {'selected' if typ=='VIP' else ''}>VIP</option>"
+            f"<option {'selected' if typ in {'SVIP','S.VIP','S-VIP'} else ''}>SVIP</option>"
             "</select></td>"
             "<td><select name='status'>"
             f"<option {'selected' if status=='ON' else ''}>ON</option><option {'selected' if status=='OFF' else ''}>OFF</option>"
@@ -69,7 +71,7 @@ def admin_members():
         )
     body = (
         "<div class='wrap'><div class='panel'><div class='head'>👥 ADMIN · Quản lý thành viên</div><div class='body'>"
-        "<div class='notice'>ADMIN có thể đổi <b>VIP/FREE</b>, bật/tắt tài khoản và đặt lại mật khẩu.</div>"
+        "<div class='notice'>ADMIN có thể đổi <b>FREE/VIP/SVIP</b>, bật/tắt tài khoản và đặt lại mật khẩu. <b>SVIP</b> được xem toàn bộ khối lớp.</div>"
         "<form method='post' action='/admin/members/save'><div style='overflow:auto;margin-top:10px'><table class='selectgrid'>"
         "<tr><th>Tài khoản</th><th>Họ tên</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Mật khẩu mới</th><th></th></tr>"
         + "".join(rows) +
@@ -96,6 +98,10 @@ def _admin_members_save():
     if not target:
         return page('ADMIN', "<div class='wrap'><div class='panel'><div class='body err'>Không tìm thấy tài khoản.</div></div></div>")
     target['account_type'] = (request.form.get('account_type') or target.get('account_type') or 'FREE').upper()
+    if target['account_type'] in {'S.VIP','S-VIP'}:
+        target['account_type'] = 'SVIP'
+    if target['account_type'] not in {'FREE','VIP','SVIP'}:
+        target['account_type'] = 'FREE'
     target['status'] = (request.form.get('status') or target.get('status') or 'ON').upper()
     new_password = request.form.get('new_password') or ''
     if new_password:
@@ -109,7 +115,7 @@ def _admin_members_save():
 
 def admin_results():
     if not _admin_guard():
-        return redirect('/admin/login')
+        return redirect("/admin/login")
     rows = _load_results()
     rows = list(reversed(rows))
     filt = (request.args.get('username') or '').strip()
