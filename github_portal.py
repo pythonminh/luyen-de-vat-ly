@@ -121,12 +121,6 @@ DANG_RE = re.compile(r"\\dangbt\s*\{([^{}]*)\}", re.I)
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_\-\.]{3,64}$")
 TEX_PATH_RE = re.compile(r"^ngan-hang/.+\.tex$", re.I)
 
-# ---------------------------------------------------------------------------
-# CSS (unchanged from original)
-# ---------------------------------------------------------------------------
-CSS = """
-*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#17324d;font:14px Segoe UI,Arial}.top{background:#1769d2;color:#fff;padding:10px 16px}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-size:20px;font-weight:900}.sub{font-size:11px;opacity:.9}.nav{margin-left:auto}.nav a,.btn{display:inline-block;text-decoration:none;border:1px solid #bdd5f4;border-radius:8px;padding:7px 10px;background:#fff;color:#145bb0;font-weight:800;cursor:pointer;margin:3px}.nav a{background:transparent;color:#fff;border-color:#ffffff66}.wrap{max-width:1450px;margin:auto;padding:12px}.grid{display:grid;grid-template-columns:260px 1fr;gap:10px}.panel{background:#fff;border:1px solid #d6e0ea;border-radius:12px;overflow:hidden}.head{padding:10px;background:#f8fbff;border-bottom:1px solid #dfe7ef;font-weight:900}.body{padding:10px}.field{margin-bottom:8px}.field label{display:block;font-size:10px;font-weight:800;color:#64748b;margin-bottom:3px}.field input,.field select{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:7px}.mh{padding:10px 12px;background:#f8fbff;border-bottom:1px solid #dfe7ef;display:flex;justify-content:space-between;gap:8px;font-weight:900}.hero{padding:14px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px;padding:8px}.card{border:1px solid #dce5ed;border-radius:9px;padding:10px;background:#fff}.small{font-size:11px;color:#64748b}.tag{display:inline-block;padding:3px 7px;border:1px solid #cbd5e1;border-radius:999px;font-size:10px;margin:4px 3px 0 0}.free{border-color:#86efac;background:#f0fdf4;color:#166534}.vip{border-color:#f9a8d4;background:#fdf2f8;color:#9d174d}.lock{opacity:.72}.login{max-width:420px;margin:70px auto}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:7px;border-bottom:1px solid #e5e7eb;text-align:left}.code{width:100%;height:72vh;resize:vertical;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font:12px/1.5 Consolas,monospace}.actions{padding:0 10px 10px}.ok{color:#15803d;font-weight:800}.err{color:#b91c1c;font-weight:800}.qtext{line-height:1.6}.opt{padding:9px;border:1px solid #dbeafe;border-radius:8px;margin:6px 0;cursor:pointer}.opt:hover{background:#f8fbff}.answer{margin-top:12px;padding:10px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff}.score{padding:10px;border:1px solid #86efac;background:#f0fdf4;border-radius:9px;font-weight:900}.section{margin:10px 0;padding:9px;border:1px solid #dbeafe;border-radius:8px;background:#f8fbff}.hide{display:none}@media(max-width:800px){.grid{grid-template-columns:1fr}.login{margin:25px auto}}
-"""
 
 # ---------------------------------------------------------------------------
 # Simple TTL cache
@@ -426,20 +420,90 @@ def require_member(view):  # type: ignore[no-untyped-def]
 
 
 # ---------------------------------------------------------------------------
-# HTML page template
+# HTML page template  (Tailwind CDN)
 # ---------------------------------------------------------------------------
+
+# Common Tailwind UI helpers
+def _btn(label: str, href: str = "", extra_cls: str = "", onclick: str = "") -> str:
+    """Render a small button or anchor styled with Tailwind."""
+    base = "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition cursor-pointer"
+    cls = f"{base} {extra_cls}".strip()
+    if href:
+        return f"<a href='{href}' class='{cls}'>{label}</a>"
+    on = f" onclick='{onclick}'" if onclick else ""
+    return f"<button class='{cls}'{on}>{label}</button>"
+
+
+def _tag(label: str, kind: str = "") -> str:
+    """Inline badge. kind: 'free', 'vip', or empty for neutral."""
+    palettes = {
+        "free": "bg-green-50 text-green-700 border-green-300",
+        "vip":  "bg-pink-50  text-pink-700  border-pink-300",
+        "":     "bg-gray-100 text-gray-600  border-gray-300",
+    }
+    cls = palettes.get(kind, palettes[""])
+    return f"<span class='inline-block text-xs font-semibold px-2 py-0.5 rounded-full border {cls} mr-1'>{label}</span>"
+
+
+def _field(label: str, inp: str) -> str:
+    return (f"<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1'>{label}</label>"
+            f"{inp}</div>")
+
+
+def _input(name: str, typ: str = "text", extra: str = "") -> str:
+    return (f"<input name='{name}' type='{typ}' {extra}"
+            " class='w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            " focus:outline-none focus:ring-2 focus:ring-blue-500'>")
+
+
+def _select(name: str, options: list[tuple[str, bool]]) -> str:
+    opts = "".join(
+        f"<option{' selected' if sel else ''}>{val}</option>"
+        for val, sel in options
+    )
+    return (f"<select name='{name}' class='px-2 py-1 border border-gray-300 rounded-lg text-sm"
+            f" focus:outline-none focus:ring-2 focus:ring-blue-500'>{opts}</select>")
+
+
+def _err(msg: str) -> str:
+    if not msg:
+        return ""
+    return f"<div class='mt-3 text-sm font-semibold text-red-600'>{html.escape(msg)}</div>"
+
+
 def page(title: str, body: str) -> Response:
     return Response(
-        "<!doctype html><html lang='vi'><head><meta charset='utf-8'>"
+        "<!doctype html>"
+        "<html lang='vi'>"
+        "<head>"
+        "<meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>{html.escape(title)}</title><style>{CSS}</style>"
+        f"<title>{html.escape(title)} · Luyện đề Thầy Minh</title>"
+        "<script src='https://cdn.tailwindcss.com'></script>"
         "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
-        "</head><body><div class='top'><div class='row'>"
-        "<div><div class='brand'>📚 Luyện đề AI · Thầy Minh</div>"
-        "<div class='sub'>Nguồn chính: GitHub / ngan-hang/*.tex · Google Sheet không dùng khi chạy</div></div>"
-        "<div class='nav'><a href='/member'>👤 Thành viên</a><a href='/admin'>🔐 ADMIN</a>"
-        "<a href='/github/repo' target='_blank'>🐙 GitHub</a></div></div></div>"
-        + body + "</body></html>",
+        "<style>body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}"
+        ".mathjax-process{display:inline}</style>"
+        "</head>"
+        "<body class='bg-gray-50 min-h-screen text-gray-800'>"
+        # ── Navbar ──────────────────────────────────────────────────────────
+        "<nav class='bg-gradient-to-r from-blue-700 to-blue-600 shadow-lg'>"
+        "<div class='max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap'>"
+        "<div class='flex-1'>"
+        "<div class='text-white font-black text-lg leading-tight'>📚 Luyện đề AI · Thầy Minh</div>"
+        "<div class='text-blue-200 text-xs mt-0.5'>Nguồn: GitHub ngan-hang/*.tex</div>"
+        "</div>"
+        "<div class='flex gap-2 flex-wrap'>"
+        "<a href='/member' class='text-white text-sm font-semibold hover:text-blue-200 transition'>👤 Thành viên</a>"
+        "<a href='/admin'  class='text-white text-sm font-semibold hover:text-blue-200 transition'>🔐 Admin</a>"
+        "<a href='/github/repo' target='_blank' class='text-white text-sm font-semibold hover:text-blue-200 transition'>🐙 GitHub</a>"
+        "</div>"
+        "</div>"
+        "</nav>"
+        # ── Page content ─────────────────────────────────────────────────────
+        "<main class='max-w-screen-xl mx-auto px-4 py-6'>"
+        + body +
+        "</main>"
+        "</body></html>",
         mimetype="text/html",
     )
 
@@ -596,12 +660,23 @@ def member_login() -> Response:
                 msg = "Sai tài khoản, mật khẩu hoặc tài khoản đã bị khóa."
     csrf = _csrf_field()
     body = (
-        "<div class='wrap'><div class='panel login'><div class='head'>👤 Đăng nhập thành viên</div>"
-        "<div class='body'><form method='post'>" + csrf +
-        "<div class='field'><label>Tài khoản</label><input name='username' required autocomplete='username'></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required autocomplete='current-password'></div>"
-        "<button class='btn'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a>"
-        f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-8'>"
+        "<div class='bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4'>"
+        "<h2 class='text-white font-black text-lg'>👤 Đăng nhập thành viên</h2>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>" + csrf +
+        _field("Tài khoản", _input("username", extra="required autocomplete='username'")) +
+        _field("Mật khẩu", _input("password", "password", extra="required autocomplete='current-password'")) +
+        "<div class='flex gap-2 mt-2'>"
+        + _btn("Đăng nhập", extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+        _btn("Đăng ký", href="/member/register") +
+        "</div>"
+        + _err(msg) +
+        "</form>"
+        "</div></div></div></div>"
     )
     return page("Đăng nhập thành viên", body)
 
@@ -652,13 +727,24 @@ def member_register() -> Response:
                         msg = "Lỗi lưu tài khoản. Vui lòng thử lại."
     csrf = _csrf_field()
     body = (
-        "<div class='wrap'><div class='panel login'><div class='head'>📝 Đăng ký thành viên</div>"
-        "<div class='body'><form method='post'>" + csrf +
-        "<div class='field'><label>Họ tên</label><input name='name' maxlength='100'></div>"
-        "<div class='field'><label>Tài khoản</label><input name='username' required pattern='[a-zA-Z0-9_\\-.]{3,64}' title='3-64 ký tự: chữ, số, _, -, .'></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required minlength='6'></div>"
-        "<button class='btn'>Tạo tài khoản FREE</button> <a class='btn' href='/member/login'>Quay lại</a>"
-        f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-8'>"
+        "<div class='bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4'>"
+        "<h2 class='text-white font-black text-lg'>📝 Đăng ký thành viên</h2>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>" + csrf +
+        _field("Họ tên", _input("name", extra="maxlength='100'")) +
+        _field("Tài khoản", _input("username", extra="required pattern='[a-zA-Z0-9_\\-.]{3,64}' title='3-64 ký tự: chữ, số, _, -, .'")) +
+        _field("Mật khẩu", _input("password", "password", extra="required minlength='6'")) +
+        "<div class='flex gap-2 mt-2'>"
+        + _btn("Tạo tài khoản FREE", extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+        _btn("Quay lại", href="/member/login") +
+        "</div>"
+        + _err(msg) +
+        "</form>"
+        "</div></div></div></div>"
     )
     return page("Đăng ký", body)
 
@@ -697,14 +783,18 @@ def member_home() -> Response:
         allowed, level = can_open_lesson(member, path)
         tag = "VIP" if level == "VIP" else "FREE"
         action = (
-            f"<a class='btn' href='/member/lesson?path={urllib.parse.quote(path, safe='')}'>Làm bài</a>"
-            if allowed else "<span class='tag vip'>🔒 Chỉ VIP</span>"
+            _btn("📖 Làm bài", href=f"/member/lesson?path={urllib.parse.quote(path, safe='')}",
+                 extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700 mt-3 w-full justify-center")
+            if allowed else _tag("🔒 Chỉ VIP", "vip")
         )
+        tag_kind = "vip" if tag == "VIP" else "free"
         cards.append(
-            "<div class='card'><b>" + html.escape(title) + "</b>"
-            + f"<div class='small'>{html.escape(str(item.get('Mon') or ''))} · {html.escape(str(item.get('Lop') or ''))}</div>"
-            + f"<span class='tag {('vip' if tag=='VIP' else 'free')}'>{tag}</span>"
-            + f"<span class='tag'>{count} câu</span><div>{action}</div></div>"
+            "<div class='bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-1 hover:shadow-md transition'>"
+            + f"<div class='font-bold text-gray-800 text-sm leading-snug'>{html.escape(title)}</div>"
+            + f"<div class='text-xs text-gray-400'>{html.escape(str(item.get('Mon') or ''))} · {html.escape(str(item.get('Lop') or ''))}</div>"
+            + "<div class='mt-1'>" + _tag(tag, tag_kind) + _tag(f"{count} câu") + "</div>"
+            + f"<div class='mt-auto pt-2'>{action}</div>"
+            + "</div>"
         )
 
     # Pagination controls
@@ -712,20 +802,36 @@ def member_home() -> Response:
     if total_pages > 1:
         parts = []
         for p in range(1, total_pages + 1):
-            active = " style='font-weight:900;text-decoration:underline'" if p == page_num else ""
-            parts.append(f"<a class='btn' href='/member?page={p}'{active}>{p}</a>")
-        pagination = "<div style='padding:8px'>" + "".join(parts) + f" <span class='small'>({total} bài)</span></div>"
+            active_cls = " bg-blue-600 text-white border-blue-600" if p == page_num else " bg-white text-blue-700 hover:bg-blue-50"
+            parts.append(
+                f"<a href='/member?page={p}' class='inline-flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 text-sm font-semibold transition{active_cls}'>{p}</a>"
+            )
+        pagination = (
+            f"<div class='flex items-center gap-2 mt-6 flex-wrap'>{''.join(parts)}"
+            f"<span class='text-xs text-gray-400'>({total} bài)</span></div>"
+        )
 
-    badge = "VIP – được làm FREE + VIP" if vip else "Thành viên thường – chỉ FREE"
+    badge_kind = "vip" if vip else "free"
+    badge_label = "⭐ VIP" if vip else "FREE"
+    uname = html.escape(str(member.get("name") or member.get("username")))
     body = (
-        "<div class='wrap'><div class='panel'><div class='mh'><span>👤 "
-        + html.escape(str(member.get("name") or member.get("username")))
-        + f" · <span class='tag {('vip' if vip else 'free')}'>{badge}</span></span>"
-        + "<a class='btn' href='/member/logout'>Thoát</a></div>"
-        + "<div class='hero'><h2>Chọn bài để học</h2><div class='small'>"
-        + str(int(data.get("total_files") or 0)) + " bài · " + str(int(data.get("total_questions") or 0))
-        + " câu</div></div><div class='cards'>" + "".join(cards) + "</div>"
-        + pagination + "</div></div>"
+        # ── Top bar ──────────────────────────────────────────────────────────
+        "<div class='flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3 mb-5'>"
+        f"<div><span class='font-bold text-gray-800'>👤 {uname}</span> "
+        + _tag(badge_label, badge_kind) +
+        "</div>"
+        + _btn("🚪 Thoát", href="/member/logout", extra_cls="text-red-600 border-red-200 hover:bg-red-50") +
+        "</div>"
+        # ── Stats ─────────────────────────────────────────────────────────────
+        "<div class='text-sm text-gray-500 mb-4'>"
+        + str(int(data.get("total_files") or 0)) + " bài · "
+        + str(int(data.get("total_questions") or 0)) + " câu"
+        "</div>"
+        # ── Cards ─────────────────────────────────────────────────────────────
+        "<div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>"
+        + "".join(cards) +
+        "</div>"
+        + pagination
     )
     return page("Trang thành viên", body)
 
@@ -763,32 +869,44 @@ def member_lesson() -> Response:
         )
     # Sanitize JSON for inline <script> embedding: prevent </script> injection
     payload = json.dumps(qs, ensure_ascii=False).replace("</", "<\\/")
+    Q_CARD = "bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-3"
+    Q_TEXT = "text-sm leading-relaxed text-gray-700 mb-3"
+    OPT_CLS = ("flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-100 text-sm"
+               " cursor-pointer hover:bg-blue-50 mb-2 transition")
+    STMT_CLS = "bg-gray-50 rounded-lg p-3 mb-2 text-sm"
     cards = []
     for i, q in enumerate(qs, 1):
         t = html.escape(q["text"] if isinstance(q, dict) else str(q))
+        num = f"<span class='font-bold text-blue-600 mr-1'>Câu {i}.</span>"
         if q.get("kind") == "choice":
             opts = "".join(
-                f"<label class='opt'><input type='radio' name='q{i}' value='{j}'> {chr(65+j)}. {html.escape(o)}</label>"
+                f"<label class='{OPT_CLS}'><input type='radio' name='q{i}' value='{j}' class='accent-blue-600'>"
+                f" <span class='font-semibold text-blue-500 w-5'>{chr(65+j)}.</span> {html.escape(o)}</label>"
                 for j, o in enumerate(q.get("options", []))
             )
-            cards.append(f"<div class='card' data-i='{i-1}'><div class='qtext'><b>Câu {i}.</b> {t}</div>{opts}</div>")
+            cards.append(f"<div class='{Q_CARD}' data-i='{i-1}'><div class='{Q_TEXT}'>{num}{t}</div>{opts}</div>")
         elif q.get("kind") == "tf":
             stmts = "".join(
-                f"<div class='section'><b>{j+1}.</b> {html.escape(s)}<br>"
-                f"<label><input type='radio' name='q{i}_{j}' value='1'> Đúng</label> &nbsp; "
-                f"<label><input type='radio' name='q{i}_{j}' value='0'> Sai</label></div>"
+                f"<div class='{STMT_CLS}'><p class='mb-2'><b>{j+1}.</b> {html.escape(s)}</p>"
+                f"<div class='flex gap-4'>"
+                f"<label class='flex items-center gap-1 cursor-pointer text-green-700 font-semibold'>"
+                f"<input type='radio' name='q{i}_{j}' value='1' class='accent-green-600'> Đúng</label>"
+                f"<label class='flex items-center gap-1 cursor-pointer text-red-600 font-semibold'>"
+                f"<input type='radio' name='q{i}_{j}' value='0' class='accent-red-500'> Sai</label>"
+                f"</div></div>"
                 for j, s in enumerate(q.get("statements", []))
             )
-            cards.append(f"<div class='card tf' data-i='{i-1}'><div class='qtext'><b>Câu {i}.</b> {t}</div>{stmts}</div>")
+            cards.append(f"<div class='{Q_CARD} tf' data-i='{i-1}'><div class='{Q_TEXT}'>{num}{t}</div>{stmts}</div>")
         elif q.get("kind") == "short":
             cards.append(
-                f"<div class='card' data-i='{i-1}'><div class='qtext'><b>Câu {i}.</b> {t}</div>"
-                f"<input id='short{i}' class='field' placeholder='Nhập đáp án'></div>"
+                f"<div class='{Q_CARD}' data-i='{i-1}'><div class='{Q_TEXT}'>{num}{t}</div>"
+                f"<input id='short{i}' placeholder='Nhập đáp án' class='w-full px-3 py-2 border border-gray-300"
+                f" rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'></div>"
             )
         else:
             cards.append(
-                f"<div class='card'><div class='qtext'><b>Câu {i}.</b> {t}</div>"
-                "<div class='small'>Câu tự luận/không hỗ trợ chấm tự động.</div></div>"
+                f"<div class='{Q_CARD}'><div class='{Q_TEXT}'>{num}{t}</div>"
+                "<div class='text-xs text-gray-400'>Câu tự luận / không chấm tự động</div></div>"
             )
     score_js = (
         "const DATA=%s;"
@@ -806,14 +924,20 @@ def member_lesson() -> Response:
         "document.getElementById('score').innerHTML=`✅ Đúng <b>${right}/${total}</b> · Điểm <b>${pct.toFixed(2)}</b>/10`;"
         "window.scrollTo({top:0,behavior:'smooth'});}"
     ) % payload
+    lvl_kind = "vip" if level == "VIP" else "free"
     body = (
-        "<div class='wrap'><div class='panel'><div class='mh'><span>📖 "
-        + html.escape(Path(path).parent.name)
-        + f" · <span class='tag {('vip' if level=='VIP' else 'free')}'>{level}</span></span>"
-        + "<a class='btn' href='/member'>← Danh sách bài</a></div>"
-        + "<div class='hero'><div id='score' class='score'>Làm xong bấm <b>Chấm điểm</b></div>"
-        + "<button class='btn' onclick='score()'>📝 Chấm điểm</button></div>"
-        + "<div class='cards'>" + "".join(cards) + "</div></div></div>"
+        "<div class='flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3 mb-5'>"
+        f"<div class='flex items-center gap-2'>"
+        + _btn("← Danh sách bài", href="/member") +
+        f"<span class='font-bold text-gray-700'>📖 {html.escape(Path(path).parent.name)}</span>"
+        + _tag(level, lvl_kind) +
+        "</div></div>"
+        "<div id='score' class='bg-green-50 border border-green-200 text-green-800 rounded-xl px-5 py-3 mb-4 font-semibold text-sm'>"
+        "Làm xong bấm <b>Chấm điểm</b>"
+        "</div>"
+        + _btn("📝 Chấm điểm", onclick="score()",
+               extra_cls="mb-6 bg-blue-600 text-white border-blue-600 hover:bg-blue-700 px-6 py-2") +
+        "".join(cards)
         + "<script>" + score_js + "</script>"
     )
     return page("Làm bài", body)
@@ -842,12 +966,19 @@ def admin_login() -> Response:
             msg = "Mật khẩu ADMIN không đúng."
     csrf = _csrf_field()
     body = (
-        "<div class='wrap'><div class='panel login'><div class='head'>🔐 ADMIN</div>"
-        "<div class='body'><form method='post'>" + csrf +
-        "<div class='field'><label>Mật khẩu ADMIN</label>"
-        "<input name='password' type='password' required autocomplete='current-password'></div>"
-        "<button class='btn'>Đăng nhập</button>"
-        f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-xs'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-8'>"
+        "<div class='bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4'>"
+        "<h2 class='text-white font-black text-lg'>🔐 ADMIN</h2>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>" + csrf +
+        _field("Mật khẩu ADMIN", _input("password", "password", extra="required autocomplete='current-password'")) +
+        _btn("Đăng nhập", extra_cls="mt-2 bg-gray-800 text-white border-gray-700 hover:bg-gray-900") +
+        _err(msg) +
+        "</form>"
+        "</div></div></div></div>"
     )
     return page("ADMIN", body)
 
@@ -870,36 +1001,56 @@ def admin_home() -> Response:
     for m in data.get("members", []):
         typ = account_type(m)
         u_esc = html.escape(str(m.get("username") or ""), quote=True)
+        status_cls = "text-green-600" if m.get("status", "ON") == "ON" else "text-red-500"
+        status_label = "✅ ON" if m.get("status", "ON") == "ON" else "⛔ OFF"
+        type_cls = "vip" if typ == "VIP" else "free"
         rows.append(
-            "<tr>"
-            "<td>" + html.escape(str(m.get("username") or "")) + "</td>"
-            "<td>" + html.escape(str(m.get("name") or "")) + "</td>"
-            "<td>" + html.escape(str(m.get("class") or "")) + "</td>"
-            "<td>" + html.escape(typ) + "</td>"
-            "<td>" + html.escape(str(m.get("status") or "ON")) + "</td>"
-            "<td>"
-            f"<form method='post' action='/admin/member/type' style='display:inline'>"
+            "<tr class='hover:bg-gray-50 border-b border-gray-100'>"
+            f"<td class='py-2 px-3 text-sm font-mono'>{html.escape(str(m.get('username') or ''))}</td>"
+            f"<td class='py-2 px-3 text-sm'>{html.escape(str(m.get('name') or ''))}</td>"
+            f"<td class='py-2 px-3 text-xs text-gray-500'>{html.escape(str(m.get('class') or ''))}</td>"
+            f"<td class='py-2 px-3'>" + _tag(typ, type_cls) + "</td>"
+            f"<td class='py-2 px-3 text-xs font-semibold {status_cls}'>{status_label}</td>"
+            "<td class='py-2 px-3 flex items-center gap-2 flex-wrap'>"
+            f"<form method='post' action='/admin/member/type' class='inline-flex items-center gap-1'>"
             f"<input type='hidden' name='csrf_token' value='{html.escape(_csrf_token())}'>"
             f"<input type='hidden' name='username' value='{u_esc}'>"
-            f"<select name='account_type'>"
-            f"<option {'selected' if typ=='FREE' else ''}>FREE</option>"
-            f"<option {'selected' if typ=='VIP' else ''}>VIP</option>"
-            f"</select><button class='btn'>Lưu quyền</button></form>"
-            f"<form method='post' action='/admin/member/toggle' style='display:inline'>"
+            + _select("account_type", [("FREE", typ == "FREE"), ("VIP", typ == "VIP")]) +
+            _btn("Lưu", extra_cls="ml-1") +
+            "</form>"
+            f"<form method='post' action='/admin/member/toggle' class='inline'>"
             f"<input type='hidden' name='csrf_token' value='{html.escape(_csrf_token())}'>"
             f"<input type='hidden' name='username' value='{u_esc}'>"
-            f"<button class='btn'>Bật/Tắt</button></form>"
+            + _btn("Bật/Tắt", extra_cls="text-orange-600 border-orange-200 hover:bg-orange-50") +
+            "</form>"
             "</td></tr>"
         )
+    SIDEBAR_BTN = "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition"
     body = (
-        "<div class='wrap'><div class='grid'><aside class='panel'><div class='head'>⚙️ ADMIN</div><div class='body'>"
-        "<a class='btn' href='/admin'>👥 Thành viên</a><a class='btn' href='/admin/access'>🔐 Quyền FREE/VIP</a>"
-        "<a class='btn' href='/github/quan-ly'>📚 Ngân hàng GitHub</a><a class='btn' href='/admin/logout'>Thoát</a>"
-        "<hr><div class='small'>Nguồn câu hỏi: GitHub .tex<br>Quyền bài: lesson_access.json<br>Thành viên: members.json</div>"
-        "</div></aside>"
-        "<main class='panel'><div class='mh'><span>👥 Thành viên</span><a class='btn' href='/admin/member/add'>+ Thêm</a></div>"
-        "<div class='body'><table class='table'><tr><th>Tài khoản</th><th>Họ tên</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Thao tác</th></tr>"
-        + "".join(rows) + "</table></div></main></div></div>"
+        "<div class='grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-5'>"
+        # sidebar
+        "<aside class='bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit'>"
+        "<div class='font-black text-gray-800 mb-4 text-base'>⚙️ ADMIN</div>"
+        f"<a href='/admin' class='{SIDEBAR_BTN}'>👥 Thành viên</a>"
+        f"<a href='/admin/access' class='{SIDEBAR_BTN}'>🔐 Quyền FREE/VIP</a>"
+        f"<a href='/github/quan-ly' class='{SIDEBAR_BTN}'>📚 Ngân hàng GitHub</a>"
+        "<hr class='my-3 border-gray-100'>"
+        f"<a href='/admin/logout' class='{SIDEBAR_BTN} text-red-600 hover:bg-red-50 hover:text-red-700'>🚪 Thoát</a>"
+        "<p class='text-xs text-gray-400 mt-4 leading-relaxed'>Câu hỏi: GitHub .tex<br>Quyền: lesson_access.json<br>Thành viên: members.json</p>"
+        "</aside>"
+        # main
+        "<main class='bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden'>"
+        "<div class='flex items-center justify-between px-5 py-3 border-b border-gray-100'>"
+        "<span class='font-bold text-gray-800'>👥 Danh sách thành viên</span>"
+        + _btn("+ Thêm", href="/admin/member/add", extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+        "</div>"
+        "<div class='overflow-x-auto'>"
+        "<table class='w-full text-left'>"
+        "<thead class='bg-gray-50 text-xs font-bold text-gray-500 uppercase'>"
+        "<tr><th class='py-2 px-3'>Tài khoản</th><th class='py-2 px-3'>Họ tên</th><th class='py-2 px-3'>Lớp</th>"
+        "<th class='py-2 px-3'>Quyền</th><th class='py-2 px-3'>Trạng thái</th><th class='py-2 px-3'>Thao tác</th></tr>"
+        "</thead><tbody>" + "".join(rows) + "</tbody></table>"
+        "</div></main></div>"
     )
     return page("Quản trị", body)
 
@@ -947,15 +1098,24 @@ def admin_add() -> Response:
                         msg = "Lỗi lưu thành viên. Vui lòng thử lại."
     csrf = _csrf_field()
     body = (
-        "<div class='wrap'><div class='panel login'><div class='head'>➕ Thêm thành viên</div>"
-        "<div class='body'><form method='post'>" + csrf +
-        "<div class='field'><label>Họ tên</label><input name='name' maxlength='100'></div>"
-        "<div class='field'><label>Tài khoản</label><input name='username' required pattern='[a-zA-Z0-9_\\-.]{3,64}'></div>"
-        "<div class='field'><label>Lớp</label><input name='class' maxlength='50'></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required minlength='6'></div>"
-        "<div class='field'><label>Quyền</label><select name='account_type'><option>FREE</option><option>VIP</option></select></div>"
-        "<button class='btn'>Lưu</button> <a class='btn' href='/admin'>Quay lại</a>"
-        f"<div class='err'>{html.escape(msg)}</div></form></div></div></div>"
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-md'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden'>"
+        "<div class='bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4'>"
+        "<h2 class='text-white font-black text-lg'>➕ Thêm thành viên</h2>"
+        "</div>"
+        "<div class='p-6'><form method='post'>" + csrf +
+        _field("Họ tên", _input("name", extra="maxlength='100'")) +
+        _field("Tài khoản", _input("username", extra="required pattern='[a-zA-Z0-9_\\-.]{3,64}'")) +
+        _field("Lớp", _input("class", extra="maxlength='50'")) +
+        _field("Mật khẩu", _input("password", "password", extra="required minlength='6'")) +
+        _field("Quyền", _select("account_type", [("FREE", True), ("VIP", False)])) +
+        "<div class='flex gap-2 mt-2'>"
+        + _btn("💾 Lưu", extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+        _btn("← Quay lại", href="/admin") +
+        "</div>"
+        + _err(msg) +
+        "</form></div></div></div></div>"
     )
     return page("Thêm thành viên", body)
 
@@ -964,7 +1124,7 @@ def admin_add() -> Response:
 @require_admin
 def admin_member_type() -> Response:
     if not _csrf_valid():
-        return page("Lỗi", "<div class='wrap'><div class='err'>Yêu cầu không hợp lệ (CSRF).</div></div>")
+        return page("Lỗi", "<div class='bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 font-bold'>Yêu cầu không hợp lệ (CSRF). Vui lòng tải lại trang.</div>")
     username = request.form.get("username", "")
     typ = "VIP" if (request.form.get("account_type") or "FREE").upper() == "VIP" else "FREE"
     data = load_members()
@@ -982,7 +1142,7 @@ def admin_member_type() -> Response:
 @require_admin
 def admin_toggle() -> Response:
     if not _csrf_valid():
-        return page("Lỗi", "<div class='wrap'><div class='err'>Yêu cầu không hợp lệ (CSRF).</div></div>")
+        return page("Lỗi", "<div class='bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 font-bold'>Yêu cầu không hợp lệ (CSRF). Vui lòng tải lại trang.</div>")
     username = request.form.get("username", "")
     data = load_members()
     new_status = "ON"
@@ -1011,25 +1171,28 @@ def admin_access() -> Response:
             continue
         level = str(acc.get("lessons", {}).get(path, acc.get("default", "FREE"))).upper()
         title = str(item.get("BaiHoc") or item.get("De") or Path(path).parent.name)
+        lvl_kind = "vip" if level == "VIP" else "free"
         rows.append(
-            f"<div class='card'>"
-            f"<b>{html.escape(title)}</b><div class='small'>{html.escape(path)}</div>"
-            f"<form method='post' action='/admin/access/save'>"
+            "<div class='bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition'>"
+            f"<div class='font-bold text-sm text-gray-800'>{html.escape(title)}</div>"
+            f"<div class='text-xs text-gray-400 break-all'>{html.escape(path)}</div>"
+            + _tag(level, lvl_kind) +
+            f"<form method='post' action='/admin/access/save' class='flex items-center gap-2 mt-1'>"
             f"<input type='hidden' name='csrf_token' value='{html.escape(_csrf_token())}'>"
             f"<input type='hidden' name='path' value='{html.escape(path, quote=True)}'>"
-            f"<select name='level'>"
-            f"<option {'selected' if level == 'FREE' else ''}>FREE</option>"
-            f"<option {'selected' if level == 'VIP' else ''}>VIP</option>"
-            f"</select>"
-            f"<button class='btn'>Lưu quyền</button>"
-            f"<span class='tag {'vip' if level == 'VIP' else 'free'}'>{level}</span>"
-            f"</form></div>"
+            + _select("level", [("FREE", level == "FREE"), ("VIP", level == "VIP")]) +
+            _btn("💾 Lưu", extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+            "</form>"
+            "</div>"
         )
     body = (
-        "<div class='wrap'><div class='panel'><div class='mh'>"
-        "<span>🔐 Quyền bài học FREE / VIP</span><a class='btn' href='/admin'>← ADMIN</a></div>"
-        "<div class='hero'><div class='small'>FREE: tất cả thành viên · VIP: chỉ VIP</div></div>"
-        "<div class='cards'>" + "".join(rows) + "</div></div></div>"
+        "<div class='flex items-center justify-between mb-5'>"
+        "<h2 class='font-black text-gray-800 text-lg'>🔐 Quyền bài học FREE / VIP</h2>"
+        + _btn("← ADMIN", href="/admin") +
+        "</div>"
+        "<p class='text-sm text-gray-500 mb-4'>FREE: tất cả thành viên có thể vào · VIP: chỉ thành viên VIP</p>"
+        "<div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>"
+        + "".join(rows) + "</div>"
     )
     return page("Quyền bài học", body)
 
@@ -1038,7 +1201,7 @@ def admin_access() -> Response:
 @require_admin
 def admin_access_save() -> Response:
     if not _csrf_valid():
-        return page("Lỗi", "<div class='wrap'><div class='err'>Yêu cầu không hợp lệ (CSRF).</div></div>")
+        return page("Lỗi", "<div class='bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 font-bold'>Yêu cầu không hợp lệ (CSRF). Vui lòng tải lại trang.</div>")
     path = request.form.get("path", "")
     level = "VIP" if (request.form.get("level") or "FREE").upper() == "VIP" else "FREE"
     data = load_access()
@@ -1064,19 +1227,26 @@ def github_manage() -> Response:
         title = str(item.get("BaiHoc") or item.get("De") or Path(path).parent.name)
         count = int(item.get("questions") or item.get("count") or 0)
         level = str(acc.get("lessons", {}).get(path, acc.get("default", "FREE"))).upper()
+        lvl_kind = "vip" if level == "VIP" else "free"
         cards.append(
-            "<div class='card'><b>" + html.escape(title) + "</b>"
-            "<div class='small'>" + html.escape(path) + "</div>"
-            f"<span class='tag {('vip' if level=='VIP' else 'free')}'>{level}</span>"
-            f"<span class='tag'>{count} câu</span>"
-            "<a class='btn' href='/admin/edit?path=" + urllib.parse.quote(path, safe="") + "'>✏️ Đọc / sửa .tex</a></div>"
+            "<div class='bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-1 hover:shadow-md transition'>"
+            f"<div class='font-bold text-sm text-gray-800'>{html.escape(title)}</div>"
+            f"<div class='text-xs text-gray-400 break-all mb-1'>{html.escape(path)}</div>"
+            + _tag(level, lvl_kind) + _tag(f"{count} câu") +
+            _btn("✏️ Sửa .tex", href=f"/admin/edit?path={urllib.parse.quote(path, safe='')}",
+                 extra_cls="mt-3 w-full justify-center") +
+            "</div>"
         )
     body = (
-        "<div class='wrap'><div class='panel'><div class='mh'>"
-        "<span>📚 Ngân hàng GitHub</span>"
-        "<span>" + str(int(data.get("total_files") or 0)) + " bài · " + str(int(data.get("total_questions") or 0)) + " câu</span></div>"
-        "<div class='hero'><a class='btn' href='/admin/access'>🔐 Phân quyền FREE/VIP</a></div>"
-        "<div class='cards'>" + "".join(cards) + "</div></div></div>"
+        "<div class='flex items-center justify-between mb-5'>"
+        "<div>"
+        "<h2 class='font-black text-gray-800 text-lg'>📚 Ngân hàng GitHub</h2>"
+        f"<p class='text-sm text-gray-500'>{int(data.get('total_files') or 0)} bài · {int(data.get('total_questions') or 0)} câu</p>"
+        "</div>"
+        + _btn("🔐 Phân quyền FREE/VIP", href="/admin/access") +
+        "</div>"
+        "<div class='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>"
+        + "".join(cards) + "</div>"
     )
     return page("Ngân hàng GitHub", body)
 
@@ -1088,19 +1258,27 @@ def admin_edit() -> Response:
     try:
         sha, text = read_tex(path)
     except ValueError:
-        return page("Lỗi", "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Đường dẫn không hợp lệ.</div></div></div></div>")
+        return page("Lỗi", "<div class='bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 font-bold'>Đường dẫn không hợp lệ.</div>")
     except Exception as exc:
         log.error("Admin edit error path=%s: %s", path, exc)
-        return page("Lỗi", "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không thể tải file. Vui lòng thử lại sau.</div></div></div></div>")
+        return page("Lỗi", "<div class='bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 font-bold'>Không thể tải file. Vui lòng thử lại sau.</div>")
     csrf_tok = _csrf_token()
     body = (
-        "<div class='wrap'><div class='panel'>"
-        "<div class='mh'><b>✏️ " + html.escape(path) + "</b><a class='btn' href='/github/quan-ly'>← Mục lục</a></div>"
-        "<textarea id='code' class='code'>" + html.escape(text) + "</textarea>"
-        "<div class='actions'>"
-        "<button class='btn' onclick='saveTex()'>💾 Lưu trực tiếp GitHub</button>"
-        "<a class='btn' href='https://github.com/" + html.escape(cfg.repo) + "/blob/" + urllib.parse.quote(cfg.branch) + "/" + urllib.parse.quote(path, safe="/") + "' target='_blank'>🐙 Mở GitHub</a>"
-        "<span id='msg'></span></div></div></div>"
+        "<div class='bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden'>"
+        "<div class='flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50'>"
+        f"<b class='text-sm font-mono text-gray-700 truncate max-w-xl'>✏️ {html.escape(path)}</b>"
+        + _btn("← Mục lục", href="/github/quan-ly") +
+        "</div>"
+        "<textarea id='code' class='w-full font-mono text-xs p-4 border-0 outline-none resize-y bg-gray-900 text-green-300'"
+        " style='height:72vh;tab-size:4'>" + html.escape(text) + "</textarea>"
+        "<div class='flex items-center gap-3 px-5 py-3 border-t border-gray-100'>"
+        + _btn("💾 Lưu trực tiếp GitHub", onclick="saveTex()",
+               extra_cls="bg-blue-600 text-white border-blue-600 hover:bg-blue-700") +
+        f"<a href='https://github.com/{html.escape(cfg.repo)}/blob/{urllib.parse.quote(cfg.branch)}/{urllib.parse.quote(path, safe='/')}'"
+        " target='_blank' class='inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold"
+        " border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition'>🐙 Mở GitHub</a>"
+        "<span id='msg' class='text-sm font-semibold'></span>"
+        "</div></div>"
         "<script>const path=" + json.dumps(path, ensure_ascii=False) + ","
         "sha=" + json.dumps(sha) + ","
         "csrfToken=" + json.dumps(csrf_tok) + ";"
