@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import html
-from urllib.parse import quote
 
 import app as base
 from flask import redirect, request, session
@@ -52,25 +51,8 @@ def _member_index():
         groups.setdefault(key, []).append(x)
 
     sections = []
-    for (mon, lop, chuong), arr in groups.items():
-        cards = []
-        for x in arr:
-            path = str(x.get('path') or x.get('file') or '')
-            title = str(x.get('BaiHoc') or x.get('De') or path.rsplit('/', 1)[-1])
-            level = str(base.lesson_level(path)).upper()
-            cnt = int(x.get('questions') or x.get('count') or 0)
-            href = quote(path, safe='')
-            dangs = x.get('dang') or {}
-            kinds = x.get('dang_kinds') or {}
-            dh = ''.join(
-                base.dang_link_html(path, k, v, kinds.get(str(k)), n=i)
-                for i, (k, v) in enumerate(
-                    ((k, v) for k, v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))),
-                    1,
-                )
-            )
-            cards.append(f"<div class='card'><b>{html.escape(title)}</b><div class='meta'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div><span class='tag {'vip' if level=='VIP' else 'free'}'>{html.escape(level)}</span><span class='tag'>{cnt} câu</span></div><div class='dang'><b>📌 Dạng bài</b>{dh or '<div class=muted>Xem trực tiếp từ TEX khi mở bài</div>'}</div><a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div>")
-        sections.append(f"<section style='margin-top:10px'><div class='titlebar'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div class='cards' style='margin-top:8px'>{''.join(cards)}</div></section>")
+    for (mon, lop, chuong), arr in sorted(groups.items()):
+        sections.append(base.catalog_chapter_html(mon, lop, chuong, arr))
 
     subjopts = ''.join(f"<option value='{html.escape(s, quote=True)}' {'selected' if sm==s else ''}>{html.escape(s)}</option>" for s in subjects)
     classopts = ''.join(f"<option value='{html.escape(c, quote=True)}' {'selected' if _grade(cl)==c else ''}>{html.escape(c)}</option>" for c in classes)

@@ -386,17 +386,10 @@ def _strict_member_index():
         groups.setdefault(key, []).append(x)
     sections = []
     for (mon, lop, chuong), arr in sorted(groups.items()):
-        cards = []
-        for x in sorted(arr, key=lambda z: str(z.get('BaiHoc') or z.get('De') or '')):
-            path = str(x.get('path')); title = str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name)
-            lvl = str(_base_app.lesson_level(path) if _base_app else 'FREE').upper()
-            cnt = int(x.get('questions') or x.get('count') or 0)
-            dangs = x.get('dang') or {}
-            kinds = x.get('dang_kinds') or {}
-            dh = ''.join(_base_app.dang_link_html(path, k, v, kinds.get(str(k)), n=i) if _base_app else "<div class='dangrow'><span>" + html.escape(str(k)) + "</span><span class='tag'>" + str(int(v)) + " câu</span></div>" for i,(k,v) in enumerate(dangs.items(),1))
-            lc = 'vip' if lvl == 'VIP' else 'free'; href = urllib.parse.quote(path, safe='')
-            cards.append("<div class='card'><b>" + html.escape(title) + "</b><div class='meta'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div><span class='tag " + lc + "'>" + html.escape(lvl) + "</span><span class='tag'>" + str(cnt) + " câu</span></div><div class='dang'><b>📌 Dạng bài</b>" + (dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>") + "</div><a class='btn primary' href='/member/select?path=" + href + "'>Mở bài</a></div>")
-        sections.append("<section style='margin-top:10px'><div class='titlebar'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div class='cards' style='margin-top:8px'>" + ''.join(cards) + "</div></section>")
+        if _base_app:
+            sections.append(_base_app.catalog_chapter_html(mon, lop, chuong, arr))
+        else:
+            sections.append("<section style='margin-top:10px'><div class='titlebar'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div></section>")
 
     subjects = sorted({str(x.get('Mon','')) for x in items if x.get('Mon')})
     classes = sorted({str(x.get('Lop','')) for x in items if x.get('Lop')})

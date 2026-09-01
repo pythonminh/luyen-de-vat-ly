@@ -600,6 +600,111 @@ def merge_catalog_lessons(items):
     return out
 
 
+def chapter_lessons_for(path, items=None):
+    """Các bài đã gộp file, cùng môn/lớp/chương với path."""
+    if items is None:
+        raw = [
+            x
+            for x in (index_data().get("lessons") or [])
+            if isinstance(x, dict) and str(x.get("path") or x.get("file") or "").startswith("ngan-hang/")
+        ]
+        items = merge_catalog_lessons(raw)
+    folder = lesson_folder(path)
+    cur = next((x for x in items if lesson_folder(str(x.get("path") or x.get("file") or "")) == folder), None)
+    if not cur:
+        return [], None
+    key = (str(cur.get("Mon") or ""), str(cur.get("Lop") or ""), str(cur.get("Chuong") or ""))
+    sibs = [
+        x
+        for x in items
+        if (str(x.get("Mon") or ""), str(x.get("Lop") or ""), str(x.get("Chuong") or "")) == key
+    ]
+    sibs.sort(key=lambda z: str(z.get("BaiHoc") or z.get("De") or ""))
+    return sibs, cur
+
+
+def chapter_nav_html(path):
+    sibs, cur = chapter_lessons_for(path)
+    if not sibs:
+        return ""
+    mon = html.escape(str((cur or {}).get("Mon") or ""))
+    lop = html.escape(str((cur or {}).get("Lop") or ""))
+    chuong = html.escape(str((cur or {}).get("Chuong") or ""))
+    cur_folder = lesson_folder(path)
+    tabs = []
+    for x in sibs:
+        p = str(x.get("path") or x.get("file") or "")
+        href = urllib.parse.quote(p, safe="")
+        title = html.escape(str(x.get("BaiHoc") or x.get("De") or ""))
+        n = int(x.get("questions") or x.get("count") or 0)
+        cls = "baitab on" if lesson_folder(p) == cur_folder else "baitab"
+        tabs.append(f"<a class='{cls}' href='/member/select?path={href}'>{title}<span class='tag'>{n}</span></a>")
+    return (
+        f"<div class='chaptree'><div class='titlebar'>{mon} · Lớp {lop} · {chuong}</div>"
+        "<p class='muted' style='margin:8px 0 6px'>Cùng một chương: mỗi bài một lần. Dạng nằm trong bài, không liệt kê từng file .tex.</p>"
+        f"<div class='bairow'>{''.join(tabs)}</div></div>"
+        "<style>.chaptree{margin-bottom:14px}.bairow{display:flex;flex-wrap:wrap;gap:8px}"
+        ".baitab{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:8px 10px;border:1px solid #c9d8e8;border-radius:9px;background:#fff;text-decoration:none;color:#173a5e;font-weight:700;font-size:13px;line-height:1.35}"
+        ".baitab.on{background:#145bb0;color:#fff;border-color:#145bb0}.baitab.on .tag{background:#fff;color:#145bb0}</style>"
+    )
+
+
+def admin_tex_select_html(path):
+    files = lesson_tex_paths(path)
+    if len(files) <= 1:
+        return ""
+    cur = str(path or "").replace("\\", "/")
+    opts = []
+    for fp in files:
+        name = fp.rsplit("/", 1)[-1]
+        sel = " selected" if fp.replace("\\", "/") == cur else ""
+        opts.append(f"<option value='{html.escape(fp, quote=True)}'{sel}>{html.escape(name)}</option>")
+    return (
+        "<div class='notice' style='margin-bottom:10px'><b>ADMIN · file TEX đang sửa</b> "
+        "<span class='muted'>(chỉ khi gán ID / AI / tách / gom — học viên không thấy danh sách file)</span><br>"
+        "<select id='adminTex' style='margin-top:6px;max-width:min(100%,460px);padding:7px 8px'>"
+        + "".join(opts)
+        + "</select></div>"
+        "<script>(function(){var s=document.getElementById('adminTex');if(s)s.addEventListener('change',function(){location.href='/member/select?path='+encodeURIComponent(this.value)})})()</script>"
+    )
+
+
+def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
+    """Một chương: danh sách bài xổ dạng, không tách thẻ theo file."""
+    bits = []
+    for x in sorted(arr, key=lambda z: str(z.get("BaiHoc") or z.get("De") or "")):
+        path = str(x.get("path") or x.get("file") or "")
+        title = str(x.get("BaiHoc") or x.get("De") or path.rsplit("/", 1)[-1])
+        cnt = int(x.get("questions") or x.get("count") or 0)
+        href = urllib.parse.quote(path, safe="")
+        dangs = x.get("dang") or {}
+        kinds = x.get("dang_kinds") or {}
+        dh = ""
+        if dang_link:
+            dh = "".join(
+                dang_link_html(path, k, v, kinds.get(str(k)), n=i)
+                for i, (k, v) in enumerate(
+                    ((k, v) for k, v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))),
+                    1,
+                )
+            )
+        bits.append(
+            "<div class='baiacc'><div class='baiacc-top'>"
+            f"<details><summary><b>{html.escape(title)}</b> <span class='tag'>{cnt} câu</span></summary>"
+            f"<div class='dang'><b>📌 Dạng trong bài này</b>{dh or '<div class=muted>Chưa có dạng</div>'}</div>"
+            "</details>"
+            f"<a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div></div>"
+        )
+    return (
+        f"<section class='chapterbox' style='margin-top:10px'><div class='titlebar'>{html.escape(str(mon))} · Lớp {html.escape(str(lop))} · {html.escape(str(chuong))}</div>"
+        "<div class='chlist' style='display:grid;gap:8px;margin-top:8px;padding:8px;border:1px solid #d8e3ee;border-radius:10px;background:#f7fbff'>"
+        + "".join(bits)
+        + "</div></section>"
+        "<style>.baiacc-top{display:flex;gap:8px;align-items:flex-start}.baiacc-top details{flex:1;min-width:0}"
+        ".baiacc-top summary{cursor:pointer;padding:8px 4px}.baiacc-top .btn{flex:0 0 auto;margin-top:6px}</style>"
+    )
+
+
 def parse_lesson_questions(path):
     """Mọi câu trong các .tex cùng bài; idx không trùng giữa file."""
     out = []
@@ -1455,14 +1560,7 @@ def member_index():
     for x in items:groups.setdefault((str(x.get('Mon') or 'Khác'),str(x.get('Lop') or ''),str(x.get('Chuong') or 'Chưa xác định')),[]).append(x)
     sections=[]
     for (mon,lop,chuong),arr in sorted(groups.items()):
-        cards=[]
-        for x in sorted(arr,key=lambda z:str(z.get('BaiHoc') or z.get('De') or '')):
-            path=str(x.get('path') or x.get('file') or '')
-            title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name)
-            lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};kinds=x.get('dang_kinds') or {};href=urllib.parse.quote(path,safe='')
-            dh=''.join(dang_link_html(path,k,v,kinds.get(str(k)), n=i) for i,(k,v) in enumerate(((k,v) for k,v in dangs.items()),1));lc='vip' if lvl=='VIP' else 'free'
-            cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
-        sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
+        sections.append(catalog_chapter_html(mon,lop,chuong,arr))
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
     if m:
         who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"
@@ -1509,22 +1607,16 @@ def select_page():
         names_one=[];seen_one=set()
         for q in qs_one:
             if q['dang'] not in seen_one:seen_one.add(q['dang']);names_one.append(q['dang'])
-        files=lesson_tex_paths(p)
-        nav=''
-        if len(files)>1:
-            bits=[]
-            cur=p.replace('\\','/')
-            for fp in files:
-                cls=' primary' if fp.replace('\\','/')==cur else ''
-                bits.append(f"<a class='btn{cls}' href='/member/select?path={urllib.parse.quote(fp,safe='')}'>{html.escape(fp.rsplit('/',1)[-1])}</a>")
-            nav="<p class='muted'>ADMIN · AI / gán ID / tách file theo <b>từng file</b>: "+" ".join(bits)+"</p>"
-        admin_box=nav+_ac.select_admin_panel(p, qs_one, names_one)
+        admin_box=admin_tex_select_html(p)+_ac.select_admin_panel(p, qs_one, names_one)
     if guest:
         acts=f"<div class='notice'>👁 Bạn đang xem đề. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập để làm bài</a></div>"
     else:
         acts=("<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
               "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div>")
-    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 Chọn dạng bài và số câu <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{admin_box}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+    chap=chapter_nav_html(p)
+    _, cur_lesson = chapter_lessons_for(p)
+    bai_name=html.escape(str((cur_lesson or {}).get('BaiHoc') or Path(p).parent.name))
+    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{chap}{admin_box}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
     return page('Chọn câu',body)
 
 @app.post('/member/start')
