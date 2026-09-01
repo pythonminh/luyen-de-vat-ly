@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11568,
+  "total_questions": 11567,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1163,10 +1163,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 216,
-      "count": 216,
+      "questions": 215,
+      "count": 215,
       "dang": {
-        "Chưa phân dạng": 77,
+        "Chưa phân dạng": 76,
         "Bài toán hiệu suất và hao phí của động cơ nhiệt": 31,
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 18,
         "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 18,
