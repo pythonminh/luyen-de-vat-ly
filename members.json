@@ -175,11 +175,13 @@
     {
       "username": "MinhBao",
       "name": "Lê Minh Bảo",
-      "class": "",
+      "class": "10",
       "account_type": "VIP",
       "status": "ON",
       "phone": "",
-      "password_sha256": "ec351e24af73a8d6f9c6ac57fa77be9f24ae014b24a259a6ad708fca1b6605ab"
+      "password_sha256": "ec351e24af73a8d6f9c6ac57fa77be9f24ae014b24a259a6ad708fca1b6605ab",
+      "grade": "10",
+      "updated_at": "2026-09-01 09:48:58"
     },
     {
       "username": "VIP",
