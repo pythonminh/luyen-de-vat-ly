@@ -1,178 +1,90 @@
 # -*- coding: utf-8 -*-
-"""Routes for opening one exercise type at a time and catalog summaries."""
+"""Member question browser: show every question before building a test."""
 from __future__ import annotations
-
 import html
 import time
 import urllib.parse
-
 from flask import request, jsonify, redirect
 from app import app, can_access, member_current, page, parse_questions, read_tex
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
 
-
-def _esc_attr(s: str) -> str:
+def _esc(s):
     return html.escape(str(s), quote=True)
 
-
-def _stats_for(path: str):
+def _stats_for(path):
     now = time.time(); hit = _STATS_CACHE.get(path)
-    if hit and now - hit[0] < _STATS_TTL:
-        return hit[1]
+    if hit and now-hit[0] < _STATS_TTL: return hit[1]
     _, tex = read_tex(path); qs = parse_questions(tex); stats = {}
     for q in qs:
-        dang = q.get('dang') or 'Chưa phân dạng'; kind = q.get('kind') or 'TL'
-        stats.setdefault(dang, {'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0})
-        stats[dang][kind] = stats[dang].get(kind, 0) + 1
-    _STATS_CACHE[path] = (now, stats)
-    return stats
-
+        d=q.get('dang') or 'Chưa phân dạng'; k=q.get('kind') or 'TL'
+        stats.setdefault(d, {'TN':0,'DS':0,'TLN':0,'TL':0})
+        stats[d][k]=stats[d].get(k,0)+1
+    _STATS_CACHE[path]=(now,stats); return stats
 
 @app.get('/member/dang-stats')
 def member_dang_stats():
-    m = member_current()
-    if not m:
-        return jsonify(ok=False, error='Chưa đăng nhập'), 401
-    path = request.args.get('path', '')
-    if not path or not can_access(m, path):
-        return jsonify(ok=False, error='Không có quyền truy cập'), 403
-    try:
-        return jsonify(ok=True, stats=_stats_for(path))
-    except Exception as exc:
-        return jsonify(ok=False, error=str(exc)), 500
+    m=member_current()
+    if not m:return jsonify(ok=False,error='Chưa đăng nhập'),401
+    path=request.args.get('path','').strip()
+    if not path or not can_access(m,path):return jsonify(ok=False,error='Không có quyền truy cập'),403
+    try:return jsonify(ok=True,stats=_stats_for(path))
+    except Exception as exc:return jsonify(ok=False,error=str(exc)),500
 
+
+def _question_card(q, n):
+    kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
+    badge={'TN':'TN · Trắc nghiệm','DS':'ĐS · Đúng / Sai','TLN':'TLN · Trả lời ngắn','TL':'TL · Tự luận'}.get(kind,kind)
+    options=''
+    if kind=='TN':
+        letters='ABCD'
+        options='<div class="opts">'+''.join(f"<div class='opt'><b>{letters[i]}.</b> {html.escape(str(o.get('text','')))}</div>" for i,o in enumerate((q.get('options') or [])[:4]))+'</div>'
+    elif kind=='DS':
+        st=q.get('statements') or []
+        options='<div class="tfgrid">'+''.join(f"<div class='tf'><b>{i+1}.</b> {html.escape(str(o.get('text','')))}</div>" for i,o in enumerate(st))+'</div>'
+    elif kind=='TLN':
+        options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
+    else:
+        options="<div class='answerline'>✎ Câu tự luận</div>"
+    return (f"<article class='qcard'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Chọn câu {n+1}</span></label><span class='badge'>{html.escape(badge)}</span><span class='level'>{html.escape(level)}</span></div>"
+            f"<div class='qtext'>{html.escape(str(text))}</div>{options}</article>")
 
 @app.get('/member/dang')
 def member_dang():
-    m = member_current()
-    if not m:
-        return redirect('/member/login')
-
-    path = request.args.get('path', '').strip()
-    dang = request.args.get('dang', '').strip()
-    if not path or not dang:
-        return redirect('/member')
-    if not can_access(m, path):
-        return page('Bài VIP', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-
-    try:
-        _, tex = read_tex(path)
-        qs = parse_questions(tex)
+    m=member_current()
+    if not m:return redirect('/member/login')
+    path=request.args.get('path','').strip(); dang=request.args.get('dang','').strip()
+    if not path or not dang:return redirect('/member')
+    if not can_access(m,path):
+        return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
+    try: _,tex=read_tex(path); qs=parse_questions(tex)
     except Exception as exc:
-        return page('Lỗi', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>" + html.escape(str(exc)) + "</div></div></div></div>")
-
-    selected = [q for q in qs if q.get('dang') == dang]
+        return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div></div></div></div>")
+    selected=[q for q in qs if (q.get('dang') or '')==dang]
     if not selected:
-        return page('Dạng bài', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không tìm thấy dạng bài này trong TEX.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-
-    dang_names = []
-    seen = set()
-    for q in qs:
-        name = q.get('dang') or 'Chưa phân dạng'
-        if name not in seen:
-            seen.add(name)
-            dang_names.append(name)
-    di = dang_names.index(dang)
-
-    types = [('TN', 'Trắc nghiệm'), ('DS', 'Đúng / Sai'), ('TLN', 'Trả lời ngắn'), ('TL', 'Tự luận')]
-
-    # Hàng 1: 4 loại + tổng số câu thật của dạng.
-    type_cards = []
-    # Hàng 2: từng loại có N/H/V/C, đồng thời hiển thị rõ số câu sẵn có.
-    pickboxes = []
-    for kind, label in types:
-        counts = {lev: sum(1 for q in selected if q.get('kind') == kind and q.get('level') == lev) for lev in 'NHVC'}
-        total = sum(counts.values())
-        type_cards.append(
-            f"<div class='typebox'><span class='typecode'>{kind}</span><span class='typename'>{label}</span><span class='typecount'>{total} câu</span></div>"
-        )
-        level_cells = []
-        for lev in 'NHVC':
-            n = counts[lev]
-            hint = f"Có {n} câu · tối đa {n}" if n else 'Không có câu'
-            level_cells.append(
-                f"<label class='lev'><span>{lev}</span><small class='stockhint'>{hint}</small><input class='n' type='number' min='0' max='{n}' value='0' placeholder='0' name='pick:{di}:{kind}:{lev}' title='Có {n} câu {lev}; tối đa chọn {n}'></label>"
-            )
-        pickboxes.append(
-            f"<div class='pickbox'><div class='picktitle'>{kind} · {label} <span class='mini-total'>{total} câu</span></div><div class='pickinputs'>{''.join(level_cells)}</div></div>"
-        )
-
-    title = str(path.rsplit('/', 1)[-2] if '/' in path else path)
-    body = (
-        "<div class='wrap'><div class='panel'>"
-        "<div class='head'>📌 Dạng bài đang chọn</div>"
-        "<div class='body'>"
-        f"<div class='notice'><b>{html.escape(title)}</b> · {html.escape(dang)} · <b>{len(selected)} câu</b></div>"
-        "<form method='post' action='/member/start'>"
-        f"<input type='hidden' name='path' value='{_esc_attr(path)}'>"
-        "<div class='types2'>" + ''.join(type_cards) + "</div>"
-        "<div class='pickgrid'>" + ''.join(pickboxes) + "</div>"
-        "<div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
-        "<button class='btn primary' type='submit'>▶ Làm dạng này</button> <a class='btn' href='/member'>← Mục lục</a>"
-        "</form></div></div></div>"
-        "<script>function upd(){let t=0;document.querySelectorAll('.n').forEach(x=>{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd()</script>"
-    )
-    body = body.replace('</div></div></div><script>', """
-<style>
-.types2{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;margin:12px 0 8px}
-.typebox{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:7px;padding:9px 10px;border:1px solid #d7e3ee;border-radius:8px;background:#fbfdff;min-height:40px}
-.typecode{font-weight:900;font-size:11px;border:1px solid #c8d9e9;border-radius:999px;padding:3px 7px;background:#fff;color:#145bb0}
-.typename{font-weight:700}.typecount{white-space:nowrap;font-weight:900}.pickgrid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px}
-.pickbox{border:1px solid #d7e3ee;border-radius:8px;background:#fff;padding:8px}.picktitle{font-weight:900;margin-bottom:6px}.mini-total{float:right;font-size:11px;color:#176bd3;font-weight:900}
-.pickinputs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.lev{display:grid;grid-template-rows:auto auto auto;gap:3px;text-align:center;font-weight:900;font-size:11px;color:#587087;min-width:0}
-.stockhint{font-size:9px;color:#6d7f91;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lev .n{width:100%;padding:7px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
-.lev:focus-within .stockhint{color:#145bb0;font-weight:900}.n:focus{border-color:#176bd3;box-shadow:0 0 0 2px #d9eaff;outline:none}
-.danglink{color:inherit;text-decoration:none!important;cursor:pointer}.danglink:hover{background:#eef7ff}.danglink:after{content:' ›';color:#176bd3;font-weight:900}
-@media(max-width:900px){.types2,.pickgrid{grid-template-columns:repeat(2,minmax(150px,1fr))}}@media(max-width:560px){.types2,.pickgrid{grid-template-columns:1fr}}
-</style></div></div></div><script>""")
-    return page('Chọn dạng bài', body)
-
+        return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không tìm thấy dạng bài này trong TEX.</div></div></div></div>")
+    title=str(path.rsplit('/',1)[-2] if '/' in path else path)
+    cards=''.join(_question_card(q,q.get('idx',i)) for i,q in enumerate(selected))
+    body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
+          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{len(selected)} câu</b></div>"
+          "<form method='post' action='/member/start' id='questionForm'>"
+          f"<input type='hidden' name='path' value='{_esc(path)}'>"
+          "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button><span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
+          f"<div class='questions'>{cards}</div>"
+          "<div class='toolbar bottom'><button class='btn primary' type='submit'>▶ Làm các câu đã chọn</button><a class='btn' href='/member'>← Mục lục</a></div>"
+          "</form></div></div></div>"
+          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));upd()</script>")
+    return page('Chọn câu',body)
 
 @app.after_request
 def make_catalog_rows_enhanced(response):
-    content_type = response.headers.get('Content-Type', '')
-    if request.path != '/member' or 'text/html' not in content_type:
-        return response
+    if request.path!='/member' or 'text/html' not in response.headers.get('Content-Type',''): return response
     try:
-        body = response.get_data(as_text=True)
-        if "class='dangrow'" not in body or '/member/select?path=' not in body:
-            return response
-        script = r'''<script>
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.card').forEach(function(card){
-    const open = card.querySelector("a[href^='/member/select?path=']");
-    if(!open) return;
-    const u = new URL(open.href, location.origin);
-    const path = u.searchParams.get('path') || '';
-    fetch('/member/dang-stats?path=' + encodeURIComponent(path), {credentials:'same-origin'})
-      .then(r => r.json()).then(data => {
-        if(!data.ok) return;
-        card.querySelectorAll('.dangrow').forEach(function(row){
-          const nameEl = row.querySelector('span');
-          if(!nameEl) return;
-          const name = nameEl.textContent.trim();
-          const s = data.stats[name] || {TN:0,DS:0,TLN:0,TL:0};
-          const a = document.createElement('a');
-          a.className = 'dangrow danglink';
-          a.href = '/member/dang?path=' + encodeURIComponent(path) + '&dang=' + encodeURIComponent(name);
-          a.innerHTML = '<span class="dangname">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>'
-            + '<span class="kind ktn">TN <b>'+s.TN+'</b></span>'
-            + '<span class="kind kds">ĐS <b>'+s.DS+'</b></span>'
-            + '<span class="kind ktln">TLN <b>'+s.TLN+'</b></span>'
-            + '<span class="kind ktl">TL <b>'+s.TL+'</b></span>'
-            + '<span class="kind ktotal">'+(s.TN+s.DS+s.TLN+s.TL)+'</span>'
-            + '<span class="arrow">›</span>';
-          row.replaceWith(a);
-        });
-      }).catch(()=>{});
-  });
-});
-</script>
-<style>
-.dang{padding:5px!important}.dangrow{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 52px 52px 52px 54px 16px;align-items:center;column-gap:5px;min-height:34px;border-bottom:1px solid #edf2f7!important}.dangname{min-width:0;line-height:1.35}.kind{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d3dfeb;border-radius:999px;padding:3px 2px;font-size:10px;white-space:nowrap;background:#fff}.ktn{color:#145bb0}.kds{color:#8a4d00}.ktln{color:#176f45}.ktl{color:#7a3fa0}.ktotal{justify-self:center;font-weight:900;font-size:11px}@media(max-width:700px){.dangrow{grid-template-columns:minmax(0,1fr) 43px 43px 43px 43px 42px 12px;column-gap:3px}.kind{font-size:9px}}</style>'''
-        response.set_data(body.replace('</body>', script + '</body>'))
-    except Exception:
-        pass
+        body=response.get_data(as_text=True)
+        if "class='dangrow'" not in body or '/member/select?path=' not in body:return response
+        script=r'''<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.card').forEach(function(card){const open=card.querySelector("a[href^='/member/select?path=']");if(!open)return;const u=new URL(open.href,location.origin),path=u.searchParams.get('path')||'';fetch('/member/dang-stats?path='+encodeURIComponent(path),{credentials:'same-origin'}).then(r=>r.json()).then(data=>{if(!data.ok)return;card.querySelectorAll('.dangrow').forEach(function(row){const e=row.querySelector('span');if(!e)return;const name=e.textContent.trim(),s=data.stats[name]||{TN:0,DS:0,TLN:0,TL:0};const a=document.createElement('a');a.className='dangrow danglink';a.href='/member/dang?path='+encodeURIComponent(path)+'&dang='+encodeURIComponent(name);a.innerHTML='<span class="dangname">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span><span class="kind">TN <b>'+s.TN+'</b></span><span class="kind">ĐS <b>'+s.DS+'</b></span><span class="kind">TLN <b>'+s.TLN+'</b></span><span class="kind">TL <b>'+s.TL+'</b></span><span class="kind ktotal">'+(s.TN+s.DS+s.TLN+s.TL)+'</span><span>›</span>';row.replaceWith(a)})}).catch(()=>{})})});</script><style>.dangrow{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 52px 52px 52px 50px 15px;align-items:center;gap:5px}.danglink{color:inherit;text-decoration:none!important}.kind{border:1px solid #d3dfeb;border-radius:999px;padding:3px 2px;text-align:center;font-size:10px;background:#fff}.ktotal{font-weight:900}</style>'''
+        response.set_data(body.replace('</body>',script+'</body>'))
+    except Exception: pass
     return response
