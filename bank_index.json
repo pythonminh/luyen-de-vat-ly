@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 103,
+  "total_files": 104,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4910,6 +4910,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rien.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
