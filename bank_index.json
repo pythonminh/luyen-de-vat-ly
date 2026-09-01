@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 85,
-  "total_questions": 11563,
+  "total_questions": 11509,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -249,20 +249,20 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 1. Làm quen với Vật lí",
       "De": "L10C1 Bài 1. Làm quen với Vật lí",
-      "questions": 281,
-      "count": 281,
+      "questions": 227,
+      "count": 227,
       "dang": {
         "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": 29,
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 8,
         "Phân tích vai trò và ảnh hưởng hai mặt của Vật lí đối với đời sống, khoa học và công nghệ": 19,
-        "Phương pháp mô hình trong nghiên cứu Vật lí": 27,
-        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": 29,
+        "Phương pháp mô hình trong nghiên cứu Vật lí": 18,
+        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": 20,
         "Vận dụng tiến trình của phương pháp mô hình": 39,
-        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 27,
+        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 18,
         "Xác định đối tượng nghiên cứu và mục tiêu của môn Vật lí": 22,
-        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 27,
-        "Quá trình phát triển của Vật lí": 27,
-        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 27
+        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 18,
+        "Quá trình phát triển của Vật lí": 18,
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 18
       }
     },
     {
