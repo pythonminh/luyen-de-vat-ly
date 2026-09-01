@@ -73,7 +73,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False):
             if sol:
                 sol_html=f"<div class='solution'><b>📖 Lời giải</b><div>{html_question(sol)}</div></div>"
         else:
-            options="<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập để xem lời giải</div>"
+            options="<div class='answerline'>✎ Câu tự luận</div>" if member_current() else "<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập rồi làm bài mới xem lời giải</div>"
     gh=''
     if can_manage_bank() and path and line:
         gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
@@ -127,7 +127,7 @@ def member_dang():
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
-    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=bool(m)) for i,q in enumerate(selected))
+    cards=''.join(_question_card(q,i+1,total,path,dmap.get(q.get('idx')),show_solution=False) for i,q in enumerate(selected))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "

@@ -994,7 +994,7 @@ def latex_to_web(s):
         else:
             return url
         return f'@@VID{len(vids)-1}@@'
-    s=peel_immini(s or '')
+    s=strip_loigiai(peel_immini(s or ''))
     s=strip_wrapfigure(s)
     s=strip_resizebox(s)
     s=VIDEO_CMD_RE.sub(stash_video, s)
