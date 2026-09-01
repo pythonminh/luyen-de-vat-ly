@@ -12,13 +12,16 @@ import json
 import os
 import random
 import re
+import shutil
+import subprocess
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import timedelta
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, redirect, request, session
+from flask import Flask, Response, abort, jsonify, redirect, request, send_file, session
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or os.getenv("APP_SECRET") or "dev-change-me"
@@ -54,12 +57,12 @@ INDEX_FILE = ROOT / "bank_index.json"
 MEMBERS_FILE = ROOT / "members.json"
 ACCESS_FILE = ROOT / "lesson_access.json"
 
-EX_RE = re.compile(r"\\begin\s*\{\s*ex\s*\}([\s\S]*?)\\end\s*\{\s*ex\s*\}", re.I)
+EX_RE = re.compile(r"\\begin\s*\{\s*(?:ex|bt)\s*\}([\s\S]*?)\\end\s*\{\s*(?:ex|bt)\s*\}", re.I)
 DANG_RE = re.compile(r"\\dang(?:bt)?\s*\{([^{}]*)\}", re.I)
 LEVEL_RE = re.compile(r"%\s*(?:Mức|Muc|Muc do)\s*:\s*([^\r\n%]+)", re.I)
 SHORT_RE = re.compile(r"\\shortans\b", re.I)
 ID_RE = re.compile(r"%\s*ID\s*:\s*(\S+)", re.I)
-CAU_HEAD_RE = re.compile(r"%(?:\s*=+)?\s*Câu\s+(\d+)", re.I)
+CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 
 CSS = r"""
 :root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600}
@@ -70,7 +73,7 @@ a{text-decoration:none;color:#145bb0}.top{background:var(--blue);color:#fff}.top
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}
 .selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
-.quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
+.quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguon{margin:8px 0 10px;padding:7px 11px;border-radius:8px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;font-size:.92rem;font-weight:800}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.tikzfig,.tikz-live{overflow:auto;margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;height:auto;display:block;margin:8px auto}.tikz-live:has(svg) .tikz-wait{display:none}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0 8px 1.3em;padding:0;line-height:1.75}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
 """
 
@@ -160,12 +163,34 @@ def page(title: str, body: str) -> Response:
         "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']}},"
         "options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},"
         "startup:{typeset:true}};"
-        "window.ldvlTypeset=function(el){el=el||document.body;function go(n){"
+        "window.TikzJaxOptions={workerMode:'auto',renderTimeout:45000,maxRetries:1,restartWorkerOnFail:true};"
+        "window.ldvlMountTikzJax=function(box){var ta=box.querySelector('textarea.tikz-src');if(!ta)return;"
+        "var s=document.createElement('script');s.type='text/tikz';"
+        "s.setAttribute('data-tikz-libraries',box.getAttribute('data-tikz-libraries')||'arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings');"
+        "var pkg=box.getAttribute('data-tex-packages');if(pkg)s.setAttribute('data-tex-packages',pkg);"
+        "s.setAttribute('data-render-timeout','45000');s.textContent=ta.value;"
+        "var w=box.querySelector('.tikz-wait');box.insertBefore(s,w||null);};"
+        "window.ldvlMountTikz=function(root){root=root||document.body;if(!root.querySelectorAll)return;"
+        "root.querySelectorAll('div.tikz-live').forEach(function(box){"
+        "if(box.getAttribute('data-mounted')==='1')return;"
+        "var ta=box.querySelector('textarea.tikz-src');if(!ta)return;"
+        "box.setAttribute('data-mounted','1');"
+        "fetch('/api/tikz/render',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({tikz:ta.value})})"
+        ".then(function(r){return r.json()}).then(function(j){"
+        "if(j&&j.ok&&j.url){box.className='tikzfig';box.innerHTML='<img class=\"tikz-img\" alt=\"Hinh\" src=\"'+j.url+'\">';return}"
+        "if(window.ldvlMountTikzJax)ldvlMountTikzJax(box);"
+        "}).catch(function(){if(window.ldvlMountTikzJax)ldvlMountTikzJax(box)});"
+        "});};"
+        "window.ldvlTypeset=function(el){el=el||document.body;if(window.ldvlMountTikz)ldvlMountTikz(el);function go(n){"
         "if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}"
         "return MathJax.typesetPromise([el]).catch(function(){});}"
         "if((n||0)<100)setTimeout(function(){go((n||0)+1);},40);}"
         "go(0);};"
+        "document.addEventListener('DOMContentLoaded',function(){if(window.ldvlMountTikz)ldvlMountTikz(document.body);});"
+        "window.addEventListener('load',function(){if(window.ldvlMountTikz)ldvlMountTikz(document.body);});"
         "</script>"
+        "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.6.0/dist/fonts.min.css'>"
+        "<script src='https://cdn.jsdelivr.net/npm/@rod2ik/tikzjax@1.6.0/dist/tikzjax.min.js' defer></script>"
         "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
     )
     return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}{GEMINI_CLIENT_JS}</body></html>", mimetype='text/html')
@@ -184,6 +209,13 @@ def member_current():
     u=str(session.get('username') or '').strip().casefold()
     return next((m for m in members_data().get('members',[]) if str(m.get('username') or '').strip().casefold()==u and str(m.get('status','ON')).upper()=='ON'),None)
 def admin_current():return session.get('role')=='admin'
+def can_manage_bank():
+    """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
+    if admin_current(): return True
+    m=member_current()
+    if account_type_of(m)=='ADMIN': return True
+    u=str((m or {}).get('username') or '').strip()
+    return bool(u) and u.casefold()==ADMIN_USER.casefold()
 def account_type_of(m):
     s=str((m or {}).get('account_type','FREE')).strip().upper().replace('.','').replace('-','')
     return {'SVIP':'SVIP','VIP':'VIP','ADMIN':'ADMIN'}.get(s,'FREE')
@@ -337,25 +369,466 @@ def solution_of(block):
     if not m:return ''
     v,_=get_braced(block,m.end()-1);return v or ''
 
-def clean_latex_web(s):
-    s=re.sub(r'\\begin\s*\{\s*(ex|bt)\s*\}','',s or '',flags=re.I)
+def extract_nguon(s):
+    """Tất cả \\nguon{...} trong khối (giữ thứ tự, bỏ trùng)."""
+    found=[]; i=0; s=s or ''
+    while True:
+        m=re.search(r'\\nguon\s*\{', s[i:], re.I)
+        if not m: break
+        abs0=i+m.start()
+        val,end=get_braced(s, i+m.end()-1)
+        if val:
+            t=re.sub(r'\s+',' ', val).strip()
+            if t and t not in found:
+                found.append(t)
+        i=(end if end and end>abs0 else abs0+1)
+        if i<=abs0: i=abs0+1
+    return found
+
+def strip_nguon(s):
+    s=s or ''
+    while True:
+        m=re.search(r'\\nguon\s*\{', s, re.I)
+        if not m: break
+        _,end=get_braced(s, m.end()-1)
+        s=s[:m.start()]+s[end:]
+    return re.sub(r'\$\s*\$','',s)
+
+def nguon_html(q):
+    n=str((q or {}).get('nguon') or '').strip()
+    if not n: return ''
+    return f'<div class="nguon">Nguồn: {html.escape(n)}</div>'
+
+def strip_bank_meta(s):
+    """Gỡ ID/HienID/begin{ex}, giữ TikZ và tabular để latex_to_web vẽ."""
+    s=strip_nguon(s or '')
+    s=re.sub(r'\\begin\s*\{\s*(ex|bt)\s*\}','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(ex|bt)\s*\}','',s,flags=re.I)
     s=re.sub(r'%\s*ID\s*:[^\n]*','',s,flags=re.I)
     s=re.sub(r'%\s*Mức\s*:[^\n]*','',s,flags=re.I)
+    s=re.sub(r'%HienID','',s,flags=re.I)
+    s=re.sub(r'%\s*\[[^\]]+\]','',s)
+    s=re.sub(r'\{[^\}]*\\ttfamily\s*\[[^\]]+\]\}','',s)
+    s=re.sub(r'\\color\s*\{\s*red\s*\}','',s,flags=re.I)
+    s=re.sub(r'\\(?:footnotesize|ttfamily|par)\b',' ',s,flags=re.I)
+    s=re.sub(r'\{\s*\[[A-Za-z0-9._-]+\]\s*\}','',s)
+    s=re.sub(r'\[(?=[A-Za-z]{1,4}\d)[A-Za-z0-9._-]{3,}\]','',s)
     s=re.sub(r'\\lq\s*\\lq','«',s,flags=re.I);s=re.sub(r'\\rq\s*\\rq','»',s,flags=re.I)
-    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,',' ',s);return s.strip()
+    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,',' ',s)
+    return s.strip()
+
+def clean_latex_web(s):
+    return strip_bank_meta(s or '')
 
 def html_question(s):
-    return html.escape(prepare_math(s or '')).replace('\n','<br>\n')
+    return latex_to_web(s or '')
 
 def prepare_math(s):
     """Make LaTeX visible to MathJax: keep $...$ and wrap bare \\overrightarrow{ }."""
-    s = clean_latex_web(s or '')
+    s = strip_bank_meta(s or '')
     s = re.sub(r'(?<![\\$])overrightarrow\s*\{([^{}]*)\}', r'\\overrightarrow{\1}', s)
     s = re.sub(r'(?<!\$)\\overrightarrow\s*\{([^{}]*)\}', r'$\\overrightarrow{\1}$', s)
     s = re.sub(r'(?<!\$)\\vec\s*\{([^{}]*)\}', r'$\\vec{\1}$', s)
     s = re.sub(r'\$\$+', '$$', s)
     return s.strip()
+
+TIKZ_RE=re.compile(r'\\begin\s*\{\s*tikzpicture\s*\}.*?\\end\s*\{\s*tikzpicture\s*\}',re.I|re.S)
+TIKZ_CACHE=ROOT/'data'/'tikz-cache'
+
+def tikz_hash(src):
+    return hashlib.sha1((src or '').encode('utf-8')).hexdigest()
+
+def tikz_standalone_document(tikz_code):
+    """Giống app cũ: standalone + pgfplots khi có axis — TeX Live hoặc latex.ytotech.com."""
+    code=(tikz_code or '').strip()
+    uses_axis=bool(re.search(r'\\begin\s*\{\s*axis\s*\}', code, re.I)) or '\\addplot' in code
+    lines=[
+        r'\documentclass[tikz,border=3pt]{standalone}',
+        r'\usepackage[utf8]{inputenc}',
+        r'\usepackage[T5]{fontenc}',
+        r'\usepackage[vietnamese]{babel}',
+        r'\usepackage{amsmath,amssymb,amsfonts}',
+        r'\usepackage{tikz,xcolor}',
+        r'\usetikzlibrary{arrows,arrows.meta,calc,positioning,patterns,intersections,decorations.pathmorphing,decorations.markings,backgrounds,fit,shapes,shapes.geometric,angles,quotes,shadings,shadows}',
+    ]
+    if uses_axis:
+        lines += [r'\usepackage{pgfplots}', r'\pgfplotsset{compat=1.18}']
+    lines += [r'\begin{document}', code, r'\end{document}', '']
+    return '\n'.join(lines)
+
+_PDFLATEX_BIN=False
+
+def pdflatex_bin():
+    global _PDFLATEX_BIN
+    if _PDFLATEX_BIN is not False:
+        return _PDFLATEX_BIN or None
+    found=shutil.which('pdflatex') or ''
+    if not found:
+        home=Path.home()
+        cands=[]
+        for y in range(2026,2018,-1):
+            cands.append(Path(rf'C:\texlive\{y}\bin\windows\pdflatex.exe'))
+            cands.append(Path(f'/usr/local/texlive/{y}/bin/x86_64-linux/pdflatex'))
+        cands += [
+            Path('/usr/bin/pdflatex'),
+            Path(r'C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe'),
+            home/'AppData'/'Local'/'Programs'/'MiKTeX'/'miktex'/'bin'/'x64'/'pdflatex.exe',
+        ]
+        for c in cands:
+            if c.is_file():
+                found=str(c); break
+    _PDFLATEX_BIN=found or ''
+    return _PDFLATEX_BIN or None
+
+def _run_tex(cmd, cwd):
+    kw=dict(cwd=str(cwd), capture_output=True, timeout=45)
+    if os.name=='nt':
+        kw['creationflags']=getattr(subprocess,'CREATE_NO_WINDOW',0)
+    return subprocess.run(cmd, **kw)
+
+def compile_tikz_pdf_via_cloud(tex_doc):
+    """Biên dịch LaTeX → PDF qua latex.ytotech.com (Render không cần TeX Live)."""
+    payload=json.dumps({'compiler':'pdflatex','resources':[{'main':True,'content':tex_doc}]}).encode('utf-8')
+    try:
+        req=urllib.request.Request(
+            'https://latex.ytotech.com/builds/sync',
+            data=payload,
+            headers={'Content-Type':'application/json','User-Agent':'LDVL-TikZ/1'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=75) as resp:
+            data=resp.read()
+        if data[:4]==b'%PDF':
+            return data,''
+        try:
+            err=json.loads(data.decode('utf-8','replace'))
+            return b'', str(err.get('logs') or err.get('message') or err)[:320]
+        except Exception:
+            return b'', 'Dịch vụ LaTeX trả lỗi không xác định.'
+    except Exception as e:
+        return b'', f'Không gọi được dịch vụ biên dịch LaTeX: {str(e)[:200]}'
+
+def pdf_bytes_to_png(pdf_bytes):
+    if not pdf_bytes: return None
+    try:
+        import fitz
+        doc=fitz.open(stream=pdf_bytes, filetype='pdf')
+        if doc.page_count<1: return None
+        pix=doc.load_page(0).get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+        return pix.tobytes('png')
+    except Exception:
+        return None
+
+def compile_tikz_pdf_local(src):
+    exe=pdflatex_bin()
+    if not exe: return None
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            tdir=Path(td)
+            (tdir/'fig.tex').write_text(tikz_standalone_document(src), encoding='utf-8')
+            r=_run_tex([exe,'-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','fig.tex'], tdir)
+            pdf=tdir/'fig.pdf'
+            if r.returncode!=0 or not pdf.is_file():
+                return None
+            return pdf.read_bytes()
+    except Exception:
+        return None
+
+def compile_tikz_svg(tikz):
+    """TeX Live local → SVG. Không gọi cloud (tránh chậm cả trang)."""
+    src=(tikz or '').strip()
+    if not src: return None
+    hid=tikz_hash(src)
+    TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
+    cached=TIKZ_CACHE/f'{hid}.svg'
+    if cached.is_file() and cached.stat().st_size>80:
+        return cached.read_text(encoding='utf-8', errors='replace')
+    exe=pdflatex_bin()
+    if not exe: return None
+    dvisvgm=shutil.which('dvisvgm') or str(Path(exe).with_name('dvisvgm.exe' if os.name=='nt' else 'dvisvgm'))
+    cairo=shutil.which('pdftocairo') or str(Path(exe).with_name('pdftocairo.exe' if os.name=='nt' else 'pdftocairo'))
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            tdir=Path(td)
+            (tdir/'fig.tex').write_text(tikz_standalone_document(src), encoding='utf-8')
+            r=_run_tex([exe,'-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','fig.tex'], tdir)
+            pdf=tdir/'fig.pdf'
+            if r.returncode!=0 or not pdf.is_file():
+                return None
+            svg_path=tdir/'fig.svg'
+            ok=False
+            if Path(dvisvgm).is_file():
+                c=_run_tex([dvisvgm,'--pdf','--no-fonts','-o',str(svg_path),str(pdf)], tdir)
+                ok=c.returncode==0 and svg_path.is_file()
+            if not ok and Path(cairo).is_file():
+                c=_run_tex([cairo,'-svg','-f','1','-l','1',str(pdf),str(tdir/'fig')], tdir)
+                alt=tdir/'fig.svg'
+                ok=c.returncode==0 and alt.is_file()
+                if ok: svg_path=alt
+            if not ok: return None
+            svg=svg_path.read_text(encoding='utf-8', errors='replace')
+            svg=re.sub(r'<\?xml[^>]*>','',svg)
+            svg=re.sub(r'<!DOCTYPE[^>]*>','',svg,flags=re.I)
+            cached.write_text(svg, encoding='utf-8')
+            return svg
+    except Exception:
+        return None
+
+def compile_tikz_png_url(src, allow_cloud=True):
+    """PNG cache + pdflatex hoặc latex.ytotech.com (như app mobile cũ)."""
+    src=(src or '').strip()
+    if not src or 'tikzpicture' not in src.lower():
+        return None, 'Không có mã TikZ hợp lệ.'
+    hid=tikz_hash(src)
+    TIKZ_CACHE.mkdir(parents=True, exist_ok=True)
+    png=TIKZ_CACHE/f'{hid}.png'
+    if png.is_file() and png.stat().st_size>80:
+        return f'/tikz/{hid}.png', ''
+    pdf=compile_tikz_pdf_local(src)
+    err=''
+    if not pdf and allow_cloud:
+        pdf, err=compile_tikz_pdf_via_cloud(tikz_standalone_document(src))
+    if not pdf:
+        return None, err or 'Chưa biên dịch được TikZ.'
+    blob=pdf_bytes_to_png(pdf)
+    if not blob:
+        cairo=shutil.which('pdftocairo')
+        if cairo:
+            try:
+                with tempfile.TemporaryDirectory() as td:
+                    tdir=Path(td)
+                    (tdir/'fig.pdf').write_bytes(pdf)
+                    _run_tex([cairo,'-png','-f','1','-l','1','-r','140',str(tdir/'fig.pdf'),str(tdir/'fig')], tdir)
+                    alt=tdir/'fig-1.png'
+                    if not alt.is_file():
+                        alt=tdir/'fig.png'
+                    if alt.is_file():
+                        blob=alt.read_bytes()
+            except Exception:
+                blob=None
+    if not blob:
+        return None, 'Đã có PDF nhưng chưa chuyển được sang PNG (cần PyMuPDF).'
+    png.write_bytes(blob)
+    return f'/tikz/{hid}.png', ''
+
+def strip_resizebox(s):
+    s=s or ''
+    while True:
+        m=re.search(r'\\resizebox\s*\{', s, re.I)
+        if not m: return s
+        _,p1=get_braced(s, m.end()-1)
+        _,p2=get_braced(s, p1)
+        body,p3=get_braced(s, p2)
+        if body is None: return s[:m.start()]+s[m.end():]
+        s=s[:m.start()]+body+s[p3:]
+
+def skip_braced(s, pos, n=1):
+    p=pos
+    for _ in range(n):
+        q=p
+        while q<len(s) and s[q].isspace(): q+=1
+        if q<len(s) and s[q]=='{':
+            _,p=get_braced(s,q)
+        else:
+            break
+    return p
+
+def strip_wrapfigure(s):
+    s=s or ''
+    while True:
+        m=re.search(r'\\begin\s*\{\s*wrapfigure\s*\}', s, re.I)
+        if not m: return s
+        p=skip_braced(s, m.end(), 2)
+        em=re.search(r'\\end\s*\{\s*wrapfigure\s*\}', s[p:], re.I)
+        if not em:
+            s=s[:m.start()]+s[p:]
+            continue
+        s=s[:m.start()]+s[p:p+em.start()]+s[p+em.end():]
+
+def peel_immini(s):
+    """Đưa hình \\immini ra cạnh đề, không để TikZ rơi sau \\choice."""
+    s=s or ''
+    while True:
+        m=re.search(r'\\immini\s*(?:\[[^\]]*\])?\s*', s, re.I)
+        if not m: return s
+        a,p1=get_braced(s, m.end())
+        if a is None: return s
+        fig,p2=get_braced(s, p1)
+        if fig is None:
+            fig,p2='',p1
+        parts=re.split(r'(\\(?:choiceTF|choice|shortans)\b)', a, 1, flags=re.I)
+        if len(parts)>=3:
+            rebuilt=parts[0]+'\n'+fig+'\n'+parts[1]+parts[2]
+        else:
+            rebuilt=a+'\n'+fig
+        s=s[:m.start()]+rebuilt+s[p2:]
+
+def tabular_to_html(body):
+    body=re.sub(r'\\hline','', body or '')
+    rows=re.split(r'\\\\', body)
+    parts=['<table class="tex-table">']
+    for row in rows:
+        row=row.strip()
+        if not row: continue
+        cells=[c.strip() for c in re.split(r'(?<!\\)&', row)]
+        parts.append('<tr>')
+        for c in cells:
+            c=re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', c)
+            inner=html.escape(prepare_math(c), quote=False)
+            inner=inner.replace('@@B@@','<b>').replace('@@/B@@','</b>')
+            inner=inner.replace(html.escape('@@B@@', quote=False),'<b>').replace(html.escape('@@/B@@', quote=False),'</b>')
+            parts.append(f'<td>{inner}</td>')
+        parts.append('</tr>')
+    parts.append('</table>')
+    return ''.join(parts)
+
+def convert_tabulars(s, tab_stash):
+    s=s or ''
+    while True:
+        m=re.search(r'\\begin\s*\{\s*tabular\s*\}', s, re.I)
+        if not m: return s
+        p=skip_braced(s, m.end(), 1)
+        em=re.search(r'\\end\s*\{\s*tabular\s*\}', s[p:], re.I)
+        if not em:
+            s=s[:m.start()]+s[p:]
+            continue
+        body=s[p:p+em.start()]
+        rest=s[p+em.end():]
+        if re.search(r'@@FIG\d+@@', body):
+            figs=re.findall(r'@@FIG\d+@@', body)
+            repl=' '.join(figs) if figs else re.sub(r'(?<!\\)&',' ',body)
+            s=s[:m.start()]+repl+rest
+        else:
+            tok=f'@@TAB{len(tab_stash)}@@'
+            tab_stash.append(tabular_to_html(body))
+            s=s[:m.start()]+tok+rest
+
+def convert_list_env(s, name, tag, stash):
+    s=s or ''
+    while True:
+        m=re.search(r'\\begin\s*\{\s*'+name+r'\s*\}', s, re.I)
+        if not m: return s
+        em=re.search(r'\\end\s*\{\s*'+name+r'\s*\}', s[m.end():], re.I)
+        if not em:
+            s=s[:m.start()]+s[m.end():]
+            continue
+        body=s[m.end():m.end()+em.start()]
+        items=re.split(r'\\item\b', body)[1:]
+        lis=[]
+        for it in items:
+            it=it.strip()
+            if not it: continue
+            it=re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', it)
+            inner=html.escape(prepare_math(it), quote=False).replace('\n','<br>\n')
+            inner=inner.replace('@@B@@','<b>').replace('@@/B@@','</b>')
+            inner=inner.replace(html.escape('@@B@@', quote=False),'<b>').replace(html.escape('@@/B@@', quote=False),'</b>')
+            lis.append(f'<li>{inner}</li>')
+        tok=f'@@LST{len(stash)}@@'
+        stash.append(f'<{tag} class="tex-list">{"".join(lis)}</{tag}>')
+        s=s[:m.start()]+tok+s[m.end()+em.end():]
+
+def id_of(block):
+    ids=ID_RE.findall(block or '')
+    if ids: return ids[-1].strip()
+    m=re.search(r'\\begin\s*\{\s*(?:ex|bt)\s*\}\s*%+\s*\[([^\]]+)\]', block or '', re.I)
+    if m:
+        t=m.group(1).strip()
+        if t: return t
+    m=re.search(r'%\s*\[([A-Za-z0-9][A-Za-z0-9._-]{3,})\]', block or '')
+    if m: return m.group(1).strip()
+    codes=[]
+    for x in re.findall(r'\[([^\]]+)\]', block or ''):
+        t=x.strip()
+        if re.match(r'^[A-Za-z0-9][A-Za-z0-9._-]{3,}$', t) and re.search(r'\d', t):
+            codes.append(t)
+    return codes[-1] if codes else ''
+
+def tikz_to_html(block):
+    """Hình TikZ: TeX Live → SVG; cache PNG; còn lại gọi /api/tikz/render (latex.ytotech.com như app cũ)."""
+    block=(block or '').strip()
+    svg=compile_tikz_svg(block)
+    if svg:
+        return f'<div class="tikzfig">{svg}</div>'
+    hid=tikz_hash(block)
+    png=TIKZ_CACHE/f'{hid}.png'
+    if png.is_file() and png.stat().st_size>80:
+        return f'<div class="tikzfig"><img class="tikz-img" alt="Hình" src="/tikz/{hid}.png"></div>'
+    pkgs=[]
+    if re.search(r'\\tkzTab', block, re.I): pkgs.append('tkz-tab')
+    elif re.search(r'\\tkz[A-Z]', block): pkgs.append('tkz-euclide')
+    if re.search(r'\\begin\s*\{\s*axis\s*\}', block, re.I): pkgs.append('pgfplots')
+    libs='arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings'
+    m=re.search(r'\\usetikzlibrary\s*\{([^}]*)\}', block)
+    if m: libs=re.sub(r'\s+','',m.group(1))+','+libs
+    pkg_attr=f" data-tex-packages='{html.escape(','.join(pkgs), quote=True)}'" if pkgs else ''
+    src=html.escape(block, quote=False).replace('</textarea>','&lt;/textarea&gt;')
+    return (
+        f"<div class='tikz-live' data-tikz-libraries='{html.escape(libs, quote=True)}'{pkg_attr}>"
+        f"<textarea class='tikz-src' hidden>{src}</textarea>"
+        f"<div class='tikz-wait muted'>⏳ Đang vẽ TikZ (như TeX Live)…</div></div>"
+    )
+    pkgs=[]
+    if re.search(r'\\tkzTab', block, re.I): pkgs.append('tkz-tab')
+    elif re.search(r'\\tkz[A-Z]', block): pkgs.append('tkz-euclide')
+    if re.search(r'\\begin\s*\{\s*axis\s*\}', block, re.I): pkgs.append('pgfplots')
+    libs='arrows.meta,arrows,calc,positioning,patterns,intersections,decorations.pathmorphing,backgrounds,fit,shapes.geometric,angles,quotes,shadings'
+    m=re.search(r'\\usetikzlibrary\s*\{([^}]*)\}', block)
+    if m: libs=re.sub(r'\s+','',m.group(1))+','+libs
+    pkg_attr=f" data-tex-packages='{html.escape(','.join(pkgs), quote=True)}'" if pkgs else ''
+    src=html.escape(block, quote=False).replace('</textarea>','&lt;/textarea&gt;')
+    return (
+        f"<div class='tikz-live' data-tikz-libraries='{html.escape(libs, quote=True)}'{pkg_attr}>"
+        f"<textarea class='tikz-src' hidden>{src}</textarea>"
+        f"<div class='tikz-wait muted'>⏳ Đang biên dịch TikZ…</div></div>"
+    )
+
+def latex_to_web(s):
+    """HTML cho web: TikZ → hình, tabular → bảng, list → HTML, còn lại $...$ cho MathJax."""
+    figs=[]; bolds=[]; tabs=[]; lists=[]
+    def stash_tikz(m):
+        figs.append(tikz_to_html(m.group(0)))
+        return f'@@FIG{len(figs)-1}@@'
+    s=peel_immini(s or '')
+    s=strip_wrapfigure(s)
+    s=strip_resizebox(s)
+    s=TIKZ_RE.sub(stash_tikz, s)
+    s=convert_tabulars(s, tabs)
+    s=convert_list_env(s, 'itemchoice', 'ul', lists)
+    s=convert_list_env(s, 'itemize', 'ul', lists)
+    s=convert_list_env(s, 'enumerate', 'ol', lists)
+    s=re.sub(r'\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]*\}','@@IMG@@',s,flags=re.I)
+    s=re.sub(r'\\begin\s*\{\s*(?:center|minipage|figure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
+    s=re.sub(r'\\end\s*\{\s*(?:center|minipage|figure)\s*\}','',s,flags=re.I)
+    s=re.sub(r'\\vspace\s*\{[^{}]*\}','',s,flags=re.I)
+    s=re.sub(r'\\centering\b','',s,flags=re.I)
+    s=re.sub(r'(@@FIG\d+@@)\s*&\s*', r'\1 ', s)
+    s=re.sub(r'(?<!\\)&',' ',s)
+    s=re.sub(r'((?:@@FIG\d+@@\s*){2,})', lambda m: '@@ROW@@'+m.group(1)+'@@/ROW@@', s)
+    def stash_bf(m):
+        bolds.append(m.group(1))
+        return f'@@BF{len(bolds)-1}@@'
+    s=re.sub(r'\\textbf\s*\{([^{}]*)\}', stash_bf, s)
+    s=re.sub(r'\\item\b','\n• ',s)
+    s=html.escape(prepare_math(s), quote=False).replace('\n','<br>\n')
+    def put(tok, html_val):
+        nonlocal s
+        s=s.replace(html.escape(tok, quote=False), html_val).replace(tok, html_val)
+    for i,t in enumerate(bolds):
+        put(f'@@BF{i}@@', f'<b>{html.escape(t, quote=False)}</b>')
+    for i,fig in enumerate(figs):
+        put(f'@@FIG{i}@@', fig)
+    for i,tb in enumerate(tabs):
+        put(f'@@TAB{i}@@', tb)
+    for i,ls in enumerate(lists):
+        put(f'@@LST{i}@@', ls)
+    put('@@IMG@@', '<span class="muted">[Hình]</span>')
+    s=s.replace('@@ROW@@',"<div class='tikz-row'>").replace('@@/ROW@@','</div>')
+    s=s.replace(html.escape('@@ROW@@', quote=False),"<div class='tikz-row'>").replace(html.escape('@@/ROW@@', quote=False),'</div>')
+    s=re.sub(r'\\begin\s*\{\s*(?:tabular|center|tikzpicture|figure|minipage|itemchoice|itemize|enumerate|wrapfigure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
+    s=re.sub(r'\\end\s*\{\s*(?:tabular|center|tikzpicture|figure|minipage|itemchoice|itemize|enumerate|wrapfigure)\s*\}','',s,flags=re.I)
+    s=re.sub(r'\\(?:immini|resizebox)(?:\s*\[[^\]]*\])?(?:\s*\{[^{}]*\}){0,3}\s*\{?','',s,flags=re.I)
+    s=re.sub(r'%\s*\[[^\]]+\]','',s)
+    return s
 
 def dang_for_pos(tex,pos):
     ms=list(DANG_RE.finditer(tex[:pos]));return ms[-1].group(1).strip() if ms else 'Chưa phân dạng'
@@ -370,19 +843,23 @@ def level_of(block):
 def parse_questions(tex):
     out=[]
     for idx,m in enumerate(EX_RE.finditer(tex)):
-        b=m.group(0)
+        b=peel_immini(m.group(0))
         if re.search(r'\\choiceTF\b',b,re.I):kind='DS'
         elif re.search(r'\\choice\b',b,re.I):kind='TN'
         elif SHORT_RE.search(b):kind='TLN'
         else:kind='TL'
         heads=list(CAU_HEAD_RE.finditer(tex[:m.start()]))
-        qid=(ID_RE.findall(b) or [''])[-1].strip()
-        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'text':clean_latex_web(re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b',b,1,flags=re.I)[0]),'solution':clean_latex_web(solution_of(b)),'raw':b}
+        qid=id_of(b) or id_of(tex[max(0,m.start()-120):m.end()])
+        pre=tex[max(0,m.start()-800):m.start()]
+        cut=max(pre.rfind('\\end{ex}'), pre.rfind('\\end{bt}'))
+        if cut>=0: pre=pre[cut:]
+        nguon=' · '.join(dict.fromkeys(extract_nguon(pre)+extract_nguon(b)))
+        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'text':clean_latex_web(re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b',b,1,flags=re.I)[0]),'solution':clean_latex_web(solution_of(b)),'raw':b}
         if kind=='TN':q['options']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choice')[:4]]
         elif kind=='DS':q['statements']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choiceTF')]
         elif kind=='TLN':
-            sm=re.search(r'\\shortans\s*',b,re.I);ans=''
-            if sm:ans,_=get_braced(b,sm.end()-1)
+            sm=re.search(r'\\shortans\s*(?:\[[^\]]*\])?\s*',b,re.I);ans=''
+            if sm:ans,_=get_braced(b,sm.end())
             q['answer']=(ans or '').strip()
         out.append(q)
     return out
@@ -508,13 +985,27 @@ def save_json_github(path,data,repo_path,message):
         pass
 
 @app.get('/health')
-def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRANCH)
+def health():return jsonify(ok=True,app='github-bank-clean',repo=REPO,branch=BRANCH,tikz=bool(pdflatex_bin()))
+@app.get('/tikz/<hid>.svg')
+def tikz_cached(hid):
+    if not re.fullmatch(r'[a-f0-9]{40}', hid or ''):
+        return ('', 404)
+    p=TIKZ_CACHE/f'{hid}.svg'
+    if not p.is_file():
+        return ('', 404)
+    return Response(p.read_text(encoding='utf-8', errors='replace'), mimetype='image/svg+xml')
 @app.get('/')
 def home():return redirect('/member')
 @app.get('/github/repo')
-def repo_redirect():return redirect(f'https://github.com/{REPO}')
+def repo_redirect():
+    if not admin_current():
+        return redirect('/member')
+    return redirect(f'https://github.com/{REPO}')
 @app.get('/github/ngan-hang')
-def ngan_hang_redirect():return redirect(github_folder_url('ngan-hang'))
+def ngan_hang_redirect():
+    if not admin_current():
+        return redirect('/member')
+    return redirect(github_folder_url('ngan-hang'))
 
 @app.route('/member/login',methods=['GET','POST'])
 def member_login():
@@ -578,7 +1069,7 @@ def member_index():
             cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
-    body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC · GitHub <span class='tag'>"+str(idx.get('total_files',0))+" file</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'><div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"+gemini_panel_html()+"<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+(''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>")+"</div>")
+    body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>"+str(idx.get('total_files',0))+" file</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'><div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"+gemini_panel_html()+"<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+(''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>")+"</div>")
     return page('Mục lục',body)
 
 @app.get('/member/select')
@@ -652,9 +1143,9 @@ def practice():
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}' title='{html.escape(str(allq.get(qid,{}).get('id') or ''), quote=True)}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
-    payload={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','text':prepare_math(q['text']),'solution':prepare_math(q['solution']),'dang':q['dang'],'level':q['level']}
-    if q['kind']=='TN':payload['options']=[{'text':prepare_math(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
-    elif q['kind']=='DS':payload['statements']=[{'text':prepare_math(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
+    payload={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level']}
+    if q['kind']=='TN':payload['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
+    elif q['kind']=='DS':payload['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':payload['answer']=q.get('answer','')
     body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>ID {html.escape(str(q.get('id') or '—'))}</span> · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div><div id='q' class='qbox'></div><div id='aibox'></div></div></div></div>"
     js=r'''<script>
@@ -662,7 +1153,7 @@ const Q=__DATA__;let checked=false;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 function lockInputs(){document.querySelectorAll('#q input,#q textarea').forEach(function(el){el.disabled=true});let b=document.getElementById('chkbtn');if(b)b.style.display='none'}
-function draw(){let q=Q,h='<div class="qtext"><b>Câu __POS__. </b>'+(q.id?'<span class="qid">ID '+E(q.id)+'</span> ':'')+q.text+'</div>';
+function draw(){let q=Q,h=(q.nguon?'<div class="nguon">Nguồn: '+E(q.nguon)+'</div>':'')+'<div class="qtext"><b>Câu __POS__. </b>'+(q.id?'<span class="qid">ID '+E(q.id)+'</span> ':'')+q.text+'</div>';
 if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><input type="radio" name="a" value="'+i+'"> <b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</label>');
 else if(q.kind==='DS')q.statements.forEach((s,i)=>h+='<div class="tf" id="t'+i+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+'</div><div class="tf-picks"><label class="tf-pick yes"><input type="radio" name="t'+i+'" value="1"> Đúng</label><label class="tf-pick no"><input type="radio" name="t'+i+'" value="0"> Sai</label></div></div>');
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi Enter">';
@@ -791,7 +1282,8 @@ def admin_bank_add():
         p=bank_new_tex_path(mon,lop,chuong,bai)
         text=(
             f"% Môn: {mon.strip()}\n% Lớp: {str(lop).strip()}\n% Chương: {chuong.strip()}\n% Bài: {bai.strip()}\n% Số câu: 0\n"
-            "% App đọc file này trực tiếp — sửa rồi Commit trên GitHub\n\n"
+            "% App đọc file này trực tiếp — sửa rồi Commit trên GitHub\n"
+            "% Ghi nguồn từng câu: \\nguon{SGK} hoặc \\nguon{Bài 1.2 SBT VL 12 KNTT} trong \\begin{ex}...\\end{ex}\n\n"
         )
         _, local=_safe_repo_file(p)
         if local.is_file() or any(str(x.get('path'))==p for x in list_bank_tex()):
@@ -824,26 +1316,33 @@ def admin_bank_delete():
     except Exception as e:
         return redirect('/admin?err='+urllib.parse.quote(str(e)))
 
+def _dup_after(p, next_url, key, msg):
+    nxt=str(next_url or '')
+    if nxt.startswith('/member/dang?'):
+        sep='&' if '?' in nxt else '?'
+        return redirect(nxt+sep+key+'='+urllib.parse.quote(msg))
+    return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&'+key+'='+urllib.parse.quote(msg))
+
 @app.route('/admin/dups', methods=['GET','POST'])
 def admin_dups():
-    if not admin_current():return redirect('/admin/login')
+    if not can_manage_bank():return redirect('/admin/login')
     p=str(request.values.get('path') or '').replace('\\','/')
+    nxt=str(request.values.get('next') or '')
     try: sha,tex=read_tex(p, need_sha=True); qs=parse_questions(tex)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     groups=find_duplicate_groups(qs)
     if request.method=='POST':
         if request.form.get('confirm')!='yes':
-            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&err='+urllib.parse.quote('Phải xác nhận trước khi xóa trùng.'))
+            return _dup_after(p, nxt, 'err', 'Phải xác nhận trước khi xóa trùng.')
         drop=[]
-        for g in groups:
-            if g['type']!='dao': continue
-            for raw in request.form.getlist('drop'):
-                try: i=int(raw)
-                except Exception: continue
-                if i in g['extras']: drop.append(i)
+        extra_ok={i for g in groups if g['type']=='dao' for i in g['extras']}
+        for raw in request.form.getlist('drop'):
+            try: i=int(raw)
+            except Exception: continue
+            if i in extra_ok: drop.append(i)
         drop=sorted(set(drop))
         if not drop:
-            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&err='+urllib.parse.quote('Chưa chọn câu trùng để xóa.'))
+            return _dup_after(p, nxt, 'err', 'Chưa chọn câu trùng để xóa.')
         new=tex_without_questions(tex, drop)
         try:
             local=_safe_repo_file(p)[1]
@@ -856,7 +1355,7 @@ def admin_dups():
                 _STATS_CACHE.pop(p, None)
             except Exception:
                 pass
-            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&ok='+urllib.parse.quote('Đã xóa '+str(len(drop))+' câu trùng, giữ bản đầu mỗi nhóm.'))
+            return _dup_after(p, nxt, 'ok', 'Đã xóa '+str(len(drop))+' câu trùng, giữ bản đầu mỗi nhóm.')
         except Exception as e:
             return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
@@ -903,7 +1402,31 @@ def admin_dups():
 @app.get('/admin/logout')
 def admin_logout():session.clear();return redirect('/admin/login')
 
-@app.route('/admin/edit',methods=['GET','POST'])
+@app.route('/tikz/<hid>.png')
+def tikz_png(hid):
+    hid=str(hid or '')
+    if not re.fullmatch(r'[a-f0-9]{40}', hid):
+        abort(404)
+    p=TIKZ_CACHE/f'{hid}.png'
+    if not p.is_file():
+        abort(404)
+    return send_file(p, mimetype='image/png')
+
+@app.route('/api/tikz/render', methods=['POST'])
+def api_tikz_render():
+    """Giống app cũ: đăng nhập rồi biên dịch TikZ → PNG (pdflatex hoặc latex.ytotech.com)."""
+    if not member_current() and not admin_current():
+        return jsonify({'ok':False,'error':'Chưa đăng nhập.'}), 401
+    body=request.get_json(silent=True) or {}
+    src=str(body.get('tikz') or body.get('src') or '').strip()
+    if len(src)>60000:
+        return jsonify({'ok':False,'error':'Mã TikZ quá dài.'}), 413
+    url, err=compile_tikz_png_url(src, allow_cloud=True)
+    if url:
+        return jsonify({'ok':True,'url':url})
+    return jsonify({'ok':False,'error':err or 'Chưa vẽ được TikZ.'}), 500
+
+
 def admin_edit():
     if not admin_current():return redirect('/admin/login')
     p=request.args.get('path','')
@@ -928,6 +1451,7 @@ def admin_edit():
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX trên GitHub</div><div class='body'>"
         "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice
+        +"<div class='notice'>Nguồn từng câu: ghi <code>\\nguon{SGK}</code> (hoặc SBT, tên sách…) trong <code>\\begin{ex}</code>. App hiện dòng <b>Nguồn: …</b> trên mỗi câu.</div>"
         +"<p style='display:flex;gap:8px;flex-wrap:wrap'>"
         "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem trên GitHub</a>"
         "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên github.com</a>"

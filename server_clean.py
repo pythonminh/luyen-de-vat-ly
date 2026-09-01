@@ -112,10 +112,14 @@ def _clean_html(body: str) -> str:
     )
 
     if (request.path.startswith("/member") or request.path == "/") and request.path != "/member/practice":
-        body = re.sub(r"\\begin\s*\{\s*ex\s*\}", "", body, flags=re.I)
-        body = re.sub(r"\\end\s*\{\s*ex\s*\}", "", body, flags=re.I)
+        body = re.sub(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", "", body, flags=re.I)
+        body = re.sub(r"\\end\s*\{\s*(?:ex|bt)\s*\}", "", body, flags=re.I)
         body = re.sub(r"%\s*ID\s*:\s*[^%<\r\n]+", "", body, flags=re.I)
         body = re.sub(r"%\s*Mức\s*:\s*[^%<\r\n]+", "", body, flags=re.I)
+        body = re.sub(r"%\s*\[[A-Za-z0-9._-]{4,80}\]", "", body)
+        body = re.sub(r"\\resizebox\s*\{[^}]*\}\s*\{[^}]*\}\s*\{", "", body, flags=re.I)
+        body = re.sub(r"\\begin\s*\{\s*(?:tabular|itemchoice|itemize|enumerate)\s*\}(?:\{[^}]*\})?", "", body, flags=re.I)
+        body = re.sub(r"\\end\s*\{\s*(?:tabular|itemchoice|itemize|enumerate)\s*\}", "", body, flags=re.I)
     return body
 
 

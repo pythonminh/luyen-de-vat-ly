@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import admin_current, app, can_access, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, member_current, page, parse_questions, read_tex, sort_ids_by_kind
+from app import admin_current, app, can_access, can_manage_bank, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, member_current, nguon_html, page, parse_questions, read_tex, sort_ids_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -70,16 +70,19 @@ def _question_card(q, seq, total, path='', dup=None):
     else:
         options="<div class='answerline'>✎ Câu tự luận</div>"
     gh=''
-    if path and line:
+    if can_manage_bank() and path and line:
         gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
     dup=dup or {}
     dcls=' dupcard' if dup.get('label') else ''
     dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}</span>" if dup.get('label') else ''
-    find=_esc(f"{qid} {cau} {text} {dup.get('label') or ''}".lower())
+    xoa=''
+    if can_manage_bank() and dup.get('extra'):
+        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{n}' checked> Xóa bản trùng này</label>"
+    find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
     return (f"<article class='qcard{dcls}' data-find='{find}' data-dup='{1 if dup.get('label') else 0}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
-            f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}<span class='badge'>{html.escape(badge)}</span>"
+            f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}<span class='level'>{html.escape(level)}</span></div>"
-            f"<div class='qtext'>{html_question(text)}</div>{options}</article>")
+            f"{nguon_html(q)}<div class='qtext'>{html_question(text)}</div>{options}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -111,23 +114,37 @@ def member_dang():
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
-                  "Bấm <b>Chỉ trùng</b> để lọc. ADMIN xóa trùng tại nút dưới.</div>")
-    admin_dup=''
-    if admin_current() and (dao_n or cung_n):
-        admin_dup=f"<a class='btn red' href='/admin/dups?path={_esc(path)}'>🗑 Xóa trùng (xác nhận)</a>"
+                  "Bấm <b>Chỉ trùng</b> để lọc.</div>")
+    next_url='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
+    dup_form=''
+    if can_manage_bank() and dao_n:
+        dup_form=(
+            f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản trùng đã tick trên thẻ đỏ? Bản đầu mỗi nhóm được giữ lại.')\">"
+            f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
+            f"<b>Xóa trùng:</b> thẻ đỏ (bản thừa) có ô <b>Xóa bản trùng này</b> — mặc định đã tick. Còn <b>{dao_n}</b> bản thừa. "
+            "Nhóm «cùng đề khác đáp án» không xóa hàng loạt. "
+            "<label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick</label> "
+            "<button class='btn red' type='submit'>🗑 Xóa các bản trùng đã chọn</button></form>"
+        )
+    elif can_manage_bank() and cung_n:
+        dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
+    flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
+    flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
-          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{total} câu</b> · Số <b>Câu 1/{total}</b> là thứ tự trong dạng này. <b>ID</b> dùng để tìm trong file TEX trên GitHub.</div>{notice_extra}{dup_note}"
+          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{total} câu</b> · Số <b>Câu 1/{total}</b> là thứ tự trong dạng này. "
+          + ("<b>ID</b> dùng để tìm trong file TEX trên GitHub. " if can_manage_bank() else "")
+          + f"Nguồn câu ghi bằng <code>\\nguon{{SGK}}</code> trong TEX.</div>{notice_extra}{dup_note}{flash_html}{dup_form}"
           "<form method='post' action='/member/start-selected' id='questionForm'>"
           f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
-          f"{admin_dup}"
-          "<input id='findq' type='search' placeholder='Tìm ID, ví dụ L12C1B1-01-TN' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+          + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
+          + "<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
           "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
           f"<div class='questions'>{cards}</div>"
           "<div class='toolbar bottom'><button class='btn primary' type='submit'>▶ Làm các câu đã chọn</button><a class='btn' href='/member'>← Mục lục</a></div>"
           "</form></div></div></div>"
-          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.metafile{color:#4a6278}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.nguon{margin:8px 0 4px;padding:7px 11px;border-radius:8px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;font-size:.9rem;font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.tikzfig,.tikz-live{overflow:auto;margin:12px 0}.tikzfig svg,.tikz-live svg{max-width:100%;height:auto;display:block;margin:8px auto}.tikz-live:has(svg) .tikz-wait{display:none}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           "<script>let DUPONLY=false;function vis(c){const q=(document.getElementById('findq').value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);c.classList.toggle('hideq',miss||(DUPONLY&&!dup))}function filterQ(){document.querySelectorAll('.qcard').forEach(vis);upd()}function onlyDup(v){DUPONLY=!!v;filterQ()}function upd(){const a=[...document.querySelectorAll('.qcard:not(.hideq) input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.getElementById('findq').addEventListener('input',filterQ);document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
     return page('Chọn câu',body)
 
