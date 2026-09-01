@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 104,
+  "total_files": 105,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4920,6 +4920,29 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k",
+      "questions": 9,
+      "count": 9,
+      "dang": {
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": 9
+      },
+      "dang_kinds": {
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": {
+          "TN": 9,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết/dang-tinh-toan-nhiet-luong-vat-thu-vao-hoac-toa-ra.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương IV. Vật lí hạt nhân",
+      "BaiHoc": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
+      "De": "L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết · Tính toán nhiệt lượng vật thu vào hoặc tỏa ra",
       "questions": 0,
       "count": 0,
       "dang": {}
