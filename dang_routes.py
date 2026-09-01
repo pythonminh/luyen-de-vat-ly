@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import app, can_access, html_question, index_data, member_current, page, parse_questions, read_tex, sort_ids_by_kind
+from app import app, can_access, github_blob_url, html_question, index_data, member_current, page, parse_questions, read_tex, sort_ids_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -53,8 +53,10 @@ def member_dang_stats_all():
     return jsonify(ok=True, stats=out)
 
 
-def _question_card(q, n):
-    kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
+def _question_card(q, seq, total, path=''):
+    n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
+    qid=str(q.get('id') or '').strip() or '—'
+    cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
     badge={'TN':'TN · Trắc nghiệm','DS':'ĐS · Đúng / Sai','TLN':'TLN · Trả lời ngắn','TL':'TL · Tự luận'}.get(kind,kind)
     options=''
     if kind=='TN':
@@ -67,7 +69,13 @@ def _question_card(q, n):
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
     else:
         options="<div class='answerline'>✎ Câu tự luận</div>"
-    return (f"<article class='qcard'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Chọn câu {n+1}</span></label><span class='badge'>{html.escape(badge)}</span><span class='level'>{html.escape(level)}</span></div>"
+    gh=''
+    if path and line:
+        gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
+    find=_esc(f"{qid} {cau} {text}".lower())
+    return (f"<article class='qcard' data-find='{find}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+            f"<span class='qid'>ID: {html.escape(qid)}</span><span class='badge'>{html.escape(badge)}</span>"
+            f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}<span class='level'>{html.escape(level)}</span></div>"
             f"<div class='qtext'>{html_question(text)}</div>{options}</article>")
 
 @app.get('/member/dang')
@@ -91,17 +99,20 @@ def member_dang():
     if not selected:
         return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>File TEX này chưa có câu hỏi \\begin{ex}...\\end{ex}.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     title=str(path.rsplit('/',1)[-2] if '/' in path else path)
-    cards=''.join(_question_card(q,q.get('idx',i)) for i,q in enumerate(selected))
+    total=len(selected)
+    cards=''.join(_question_card(q,i+1,total,path) for i,q in enumerate(selected))
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
-          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{len(selected)} câu</b></div>{notice_extra}"
+          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{total} câu</b> · Số <b>Câu 1/{total}</b> là thứ tự trong dạng này. <b>ID</b> dùng để tìm trong file TEX trên GitHub.</div>{notice_extra}"
           "<form method='post' action='/member/start-selected' id='questionForm'>"
           f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
-          "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button><span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
+          "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
+          "<input id='findq' type='search' placeholder='Tìm ID, ví dụ L12C1B1-01-TN' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+          "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
           f"<div class='questions'>{cards}</div>"
           "<div class='toolbar bottom'><button class='btn primary' type='submit'>▶ Làm các câu đã chọn</button><a class='btn' href='/member'>← Mục lục</a></div>"
           "</form></div></div></div>"
-          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
-          "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('input[name=qid]').forEach(x=>x.checked=v);upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
+          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.metafile{color:#4a6278}.level{margin-left:auto}.qtext{white-space:pre-wrap;font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<script>function upd(){const a=[...document.querySelectorAll('input[name=qid]')];document.getElementById('sum').textContent='Đã chọn: '+a.filter(x=>x.checked).length+' câu'}function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(x=>x.checked=v);upd()}function filterQ(){const q=(document.getElementById('findq').value||'').trim().toLowerCase();document.querySelectorAll('.qcard').forEach(c=>{c.classList.toggle('hideq',!!q&&!(c.getAttribute('data-find')||'').includes(q))});upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.getElementById('findq').addEventListener('input',filterQ);document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
     return page('Chọn câu',body)
 
 def start_selected_questions():
