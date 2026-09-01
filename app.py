@@ -239,6 +239,37 @@ def parse_questions(tex):
         out.append(q)
     return out
 
+KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
+
+def sort_ids_by_kind(questions, ids, shuffle_within=False):
+    """Làm bài: TN → ĐS → TLN → Tự luận. Giữ thứ tự trong từng loại (hoặc xáo trong loại)."""
+    by = {q.get('idx'): q for q in (questions or [])}
+    buckets = {k: [] for k in KIND_ORDER}
+    other = []
+    seen = set()
+    for i in ids or []:
+        try:
+            i = int(i)
+        except (TypeError, ValueError):
+            continue
+        if i in seen:
+            continue
+        seen.add(i)
+        k = str((by.get(i) or {}).get('kind') or 'TL')
+        if k in buckets:
+            buckets[k].append(i)
+        else:
+            other.append(i)
+    if shuffle_within:
+        for k in buckets:
+            random.shuffle(buckets[k])
+        random.shuffle(other)
+    out = []
+    for k in KIND_ORDER:
+        out.extend(buckets[k])
+    out.extend(other)
+    return out
+
 def norm_answer(s):
     s=clean_latex_web(str(s or ''));s=re.sub(r'\$+','',s).strip().lower();s=s.replace(',','.').replace(' ','');s=re.sub(r'\\text\{([^}]*)\}',r'\1',s);return s
 def answer_equal(a,b):
@@ -365,7 +396,8 @@ def start_practice():
         if 0<=di<len(dang_names):
             pool=[q for q in qs if q['dang']==dang_names[di] and q['kind']==kind and q['level']==lev];wanted.extend(q['idx'] for q in random.sample(pool,min(n,len(pool))))
     if not wanted:return redirect('/member/select?path='+urllib.parse.quote(p,safe=''))
-    random.shuffle(wanted);session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[]);return redirect('/member/practice')
+    wanted=sort_ids_by_kind(qs, wanted, shuffle_within=True)
+    session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[]);return redirect('/member/practice')
 
 @app.get('/member/practice')
 def practice():

@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import app, can_access, html_question, index_data, member_current, page, parse_questions, read_tex
+from app import app, can_access, html_question, index_data, member_current, page, parse_questions, read_tex, sort_ids_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -141,6 +141,7 @@ def start_selected_questions():
         if dang:
             url+='&dang='+urllib.parse.quote(dang,safe='')
         return redirect(url)
+    ids = sort_ids_by_kind(qs, ids, shuffle_within=False)
     session.update(
         practice_path=path,
         practice_ids=ids,
