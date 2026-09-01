@@ -55,10 +55,23 @@ def _lesson_grade(item):
     return _grade(item.get("Lop") or item.get("lop") or item.get("class"))
 
 
+def _is_admin_account(m):
+    if not m:
+        return False
+    if _norm_type(m.get("account_type")) == "ADMIN":
+        return True
+    u = str(m.get("username") or "").strip()
+    return bool(u) and u.casefold() == "admin"
+
+
 def _can_member_see(m, item):
     if not m or str(m.get("status", "ON")).upper() != "ON":
         return False
-    if _is_svip(m) or _norm_type(m.get("account_type")) in {"VIP", "ADMIN", "SVIP"}:
+    if _is_admin_account(m):
+        return True
+    if _is_svip(m) or _norm_type(m.get("account_type")) in {"SVIP"}:
+        return True
+    if _norm_type(m.get("account_type")) == "VIP":
         sg = _grade(m.get("class") or m.get("grade"))
         lg = _lesson_grade(item)
         if sg and lg:
@@ -122,6 +135,9 @@ def _member_manager():
         st = str(m.get("status", "ON")).upper()
         seen = len(_allowed_items(m))
         badge = "⭐ SVIP" if t == "SVIP" else ("🔑 VIP" if t == "VIP" else "FREE")
+        cur_pw = base.member_password_plain(m)
+        cur_val = _safe(cur_pw)
+        cur_ph = "Chưa xem được" if not cur_pw else "Mật khẩu hiện tại"
         rows.append(
             f"<tr><td><input type='checkbox' name='selected' value='{su}' form='bulkForm'></td>"
             f"<td><b>{su}</b><small>{name}</small></td><td>{phone}</td>"
@@ -129,7 +145,8 @@ def _member_manager():
             f"<option value='10' {'selected' if g=='10' else ''}>10</option><option value='11' {'selected' if g=='11' else ''}>11</option><option value='12' {'selected' if g=='12' else ''}>12</option></select></td>"
             f"<td><span class='badge {t.lower()}'>{badge}</span><select class='mini' name='account_type' form='row_{su}'><option value='FREE' {'selected' if t=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if t=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if t=='SVIP' else ''}>SVIP</option></select></td>"
             f"<td><select class='mini' name='status' form='row_{su}'><option value='ON' {'selected' if st=='ON' else ''}>ON</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF</option></select></td>"
-            f"<td><div class='passrow'><input class='pass' name='new_password' form='row_{su}' type='password' placeholder='Mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div></td>"
+            f"<td><div class='passcell'><div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\" title='Hiện/ẩn mật khẩu'>👁</button></div>"
+            f"<div class='passrow'><input class='pass' name='new_password' form='row_{su}' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div></div></td>"
             f"<td><b>{seen}</b> bài <a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem</a> <form id='row_{su}' method='post' action='/admin/members/save' style='display:inline'><input type='hidden' name='save_user' value='{su}'><button class='btn green small'>💾 Lưu</button></form></td></tr>"
         )
 
@@ -138,14 +155,14 @@ def _member_manager():
 .adminmembers{{max-width:1500px;margin:auto;padding:12px}}.hero{{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}}.hero h2{{margin:0}}
 .stats{{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0}}.stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px}}.stat b{{display:block;font-size:20px}}.stat span{{font-size:11px;color:#6c7d90;font-weight:800}}
 .toolbar,.bulk{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0;display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.mini,.pass{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{{width:100%}}
-.membertable{{overflow:auto;background:#fff;border:1px solid #d7e2ee;border-radius:10px}}table{{width:100%;min-width:1250px;border-collapse:collapse}}th,td{{border:1px solid #dfe7ef;padding:7px}}th{{background:#e9f2ff;position:sticky;top:0;z-index:2}}td small{{display:block;color:#718196}}.mini{{width:82px}}.pass{{width:135px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:4px}}.badge.free{{background:#eefbf2;color:#14743a}}.badge.vip{{background:#fff0f7;color:#a2175f}}.badge.svip{{background:#fff7dc;color:#855a00}}.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff}}.btn.small{{padding:5px 7px;font-size:11px}}.note{{background:#fffdf3;border:1px solid #ecd68c;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}@media(max-width:1000px){{.stats{{grid-template-columns:repeat(3,1fr)}}}}
+.membertable{{overflow:auto;background:#fff;border:1px solid #d7e2ee;border-radius:10px}}table{{width:100%;min-width:1250px;border-collapse:collapse}}th,td{{border:1px solid #dfe7ef;padding:7px}}th{{background:#e9f2ff;position:sticky;top:0;z-index:2}}td small{{display:block;color:#718196}}.mini{{width:82px}}.pass{{width:150px}}.passcell{{display:flex;flex-direction:column;gap:4px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:4px}}.badge.free{{background:#eefbf2;color:#14743a}}.badge.vip{{background:#fff0f7;color:#a2175f}}.badge.svip{{background:#fff7dc;color:#855a00}}.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff}}.btn.small{{padding:5px 7px;font-size:11px}}.note{{background:#fffdf3;border:1px solid #ecd68c;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}@media(max-width:1000px){{.stats{{grid-template-columns:repeat(3,1fr)}}}}
 </style>
 <div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Sửa lớp · quyền · ON/OFF · mật khẩu · xem chính xác bài được phép học</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
 <div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div><div class='stat'><b>{counts['free']}</b><span>FREE</span></div><div class='stat'><b>{counts['vip']}</b><span>VIP</span></div><div class='stat'><b>{counts['svip']}</b><span>SVIP · tất cả</span></div><div class='stat'><b>10:{counts['10']} · 11:{counts['11']} · 12:{counts['12']}</b><span>Phân bố lớp</span></div></div>
-<div class='note'>📌 <b>Quy tắc:</b> SVIP xem toàn bộ 10/11/12. FREE chỉ xem bài FREE đúng khối được cấp. VIP chỉ xem bài trong đúng khối được cấp và các bài có quyền VIP. Tài khoản chưa cấp lớp không xem bài.</div>
+<div class='note'>📌 <b>Quy tắc:</b> SVIP xem toàn bộ 10/11/12. FREE chỉ xem bài FREE đúng khối được cấp. VIP chỉ xem bài trong đúng khối được cấp và các bài có quyền VIP. Tài khoản chưa cấp lớp không xem bài.<br>👁 <b>Mật khẩu:</b> bấm mắt để xem mật khẩu hiện tại. Tài khoản cũ chỉ hiện sau khi học sinh đăng nhập lại, hoặc ADMIN đặt mật khẩu mới rồi Lưu.</div>
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>QUYỀN</label><select name='type'><option value=''>Tất cả</option><option value='FREE' {'selected' if typ=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if typ=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if typ=='SVIP' else ''}>SVIP</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>ON</option><option value='OFF' {'selected' if status=='OFF' else ''}>OFF</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
 <form id='bulkForm' method='post' action='/admin/members/bulk'></form><div class='bulk'><b>⚡ Đã chọn:</b><select name='account_type' form='bulkForm'><option value=''>Giữ quyền</option><option value='FREE'>FREE</option><option value='VIP'>VIP</option><option value='SVIP'>SVIP</option></select><select name='class' form='bulkForm'><option value=''>Giữ lớp</option><option value='10'>10</option><option value='11'>11</option><option value='12'>12</option></select><select name='status' form='bulkForm'><option value=''>Giữ trạng thái</option><option value='ON'>Mở</option><option value='OFF'>Khóa</option></select><button class='btn green' form='bulkForm'>💾 Áp dụng</button></div>
-<div class='membertable'><table><tr><th>✓</th><th>Tài khoản / Họ tên</th><th>Điện thoại</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Đổi mật khẩu</th><th>Quyền xem</th></tr>{''.join(rows) or '<tr><td colspan=8 style=text-align:center>Không có thành viên</td></tr>'}</table></div></div>
+<div class='membertable'><table><tr><th>✓</th><th>Tài khoản / Họ tên</th><th>Điện thoại</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Mật khẩu</th><th>Quyền xem</th></tr>{''.join(rows) or '<tr><td colspan=8 style=text-align:center>Không có thành viên</td></tr>'}</table></div></div>
 <script>function togglePass(b){{const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'}}</script>
 """
     return base.page("ADMIN · Thành viên", body)
@@ -185,7 +202,7 @@ def _save_member():
     if pw:
         if len(pw) < 4:
             return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Mật khẩu phải có ít nhất 4 ký tự.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
-        target["password_sha256"] = hashlib.sha256(pw.encode()).hexdigest()
+        base.set_member_password(target, pw)
     target["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     _save_members(d)
     return redirect("/admin/members")
@@ -282,10 +299,14 @@ if "admin_login" in app.view_functions:
 # Make every existing question-opening endpoint enforce the same class/SVIP rule.
 try:
     import access_control
-    base.can_access = lambda member, path: any(
-        str(x.get("path") or x.get("file") or "") == str(path) and _can_member_see(member, x)
-        for x in base.index_data().get("lessons", []) if isinstance(x, dict)
-    )
+    def _admin_aware_can_access(member, path):
+        if getattr(base, "has_full_bank_access", lambda *_: False)(member) or _is_admin_account(member):
+            return True
+        return any(
+            str(x.get("path") or x.get("file") or "") == str(path) and _can_member_see(member, x)
+            for x in base.index_data().get("lessons", []) if isinstance(x, dict)
+        )
+    base.can_access = _admin_aware_can_access
     access_control.student_can_access = base.can_access
 except Exception:
     pass

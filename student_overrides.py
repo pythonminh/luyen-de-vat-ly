@@ -17,7 +17,11 @@ def _member_index():
     if not m:
         return redirect('/member/login')
     idx = base.index_data()
-    items = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path') or x.get('file') or '').startswith('ngan-hang/') and _can_member_see(m, x)]
+    lessons = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path') or x.get('file') or '').startswith('ngan-hang/')]
+    if getattr(base, 'has_full_bank_access', lambda *_: False)(m):
+        items = lessons
+    else:
+        items = [x for x in lessons if _can_member_see(m, x)]
     q = str(request.args.get('q') or '').strip().lower()
     sm = str(request.args.get('mon') or '')
     cl = str(request.args.get('lop') or '')
@@ -47,8 +51,11 @@ def _member_index():
             dangs = x.get('dang') or {}
             kinds = x.get('dang_kinds') or {}
             dh = ''.join(
-                base.dang_link_html(path, k, v, kinds.get(str(k)))
-                for k,v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))
+                base.dang_link_html(path, k, v, kinds.get(str(k)), n=i)
+                for i, (k, v) in enumerate(
+                    ((k, v) for k, v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))),
+                    1,
+                )
             )
             cards.append(f"<div class='card'><b>{html.escape(title)}</b><div class='meta'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div><span class='tag {'vip' if level=='VIP' else 'free'}'>{html.escape(level)}</span><span class='tag'>{cnt} câu</span></div><div class='dang'><b>📌 Dạng bài</b>{dh or '<div class=muted>Xem trực tiếp từ TEX khi mở bài</div>'}</div><a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div>")
         sections.append(f"<section style='margin-top:10px'><div class='titlebar'>{html.escape(mon)} · Lớp {html.escape(lop)} · {html.escape(chuong)}</div><div class='cards' style='margin-top:8px'>{''.join(cards)}</div></section>")
@@ -57,7 +64,12 @@ def _member_index():
     classopts = ''.join(f"<option value='{html.escape(c, quote=True)}' {'selected' if _grade(cl)==c else ''}>{html.escape(c)}</option>" for c in classes)
     grade = _grade(m.get('class')) or 'Chưa cấp'
     typ = _norm_type(m.get('account_type'))
-    note = '⭐ SVIP · được xem toàn bộ khối 10, 11, 12' if typ == 'SVIP' else f'🎓 Lớp {grade} · chỉ hiển thị bài đúng khối được cấp'
+    if getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
+        note = '🔐 ADMIN · được xem toàn bộ bài, mọi khối, VIP lẫn FREE'
+    elif typ == 'SVIP':
+        note = '⭐ SVIP · được xem toàn bộ khối 10, 11, 12'
+    else:
+        note = f'🎓 Lớp {grade} · chỉ hiển thị bài đúng khối được cấp'
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
 <div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · Quyền <b>{html.escape(typ)}</b> · {html.escape(note)}</div>

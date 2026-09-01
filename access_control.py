@@ -45,6 +45,13 @@ def lesson_grade(path: str) -> str:
 
 
 def student_can_access(member: dict | None, path: str) -> bool:
+    if getattr(base, "has_full_bank_access", lambda *_: False)(member):
+        return True
+    try:
+        if base.admin_current():
+            return True
+    except Exception:
+        pass
     if not member:
         return False
     if is_svip(member):
@@ -78,12 +85,18 @@ def _card_blocks(body: str):
 
 
 def _allowed_paths(member: dict) -> set[str]:
-    if is_svip(member):
-        return {
-            str(x.get("path") or x.get("file") or "").strip()
-            for x in base.index_data().get("lessons", [])
-            if isinstance(x, dict) and str(x.get("path") or x.get("file") or "").strip()
-        }
+    all_paths = {
+        str(x.get("path") or x.get("file") or "").strip()
+        for x in base.index_data().get("lessons", [])
+        if isinstance(x, dict) and str(x.get("path") or x.get("file") or "").strip()
+    }
+    if getattr(base, "is_admin_member", lambda *_: False)(member) or is_svip(member):
+        return all_paths
+    try:
+        if base.admin_current():
+            return all_paths
+    except Exception:
+        pass
     sg = _grade(member.get("class"))
     if not sg:
         return set()
@@ -126,6 +139,8 @@ def filter_member_catalog(response):
     try:
         member = base.member_current()
         if not member:
+            return response
+        if getattr(base, "has_full_bank_access", lambda *_: False)(member) or getattr(base, "is_admin_member", lambda *_: False)(member):
             return response
         allowed = _allowed_paths(member)
         body = response.get_data(as_text=True)

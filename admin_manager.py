@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import html
 import json
 import threading
@@ -12,7 +11,7 @@ import urllib.parse
 from pathlib import Path
 
 from flask import redirect, request, session
-from app import app, page, members_data, member_current, admin_current, gh_api, BRANCH
+from app import app, page, members_data, member_current, admin_current, gh_api, BRANCH, set_member_password, member_password_plain
 
 _LOCK = threading.Lock()
 _RESULTS_FILE = Path(__file__).resolve().parent / "attempts_runtime.json"
@@ -48,7 +47,7 @@ def _admin_guard():
 
 def _norm_type(value):
     value = str(value or "FREE").strip().upper().replace(".", "").replace("-", "")
-    return {"SVIP": "SVIP", "VIP": "VIP", "FREE": "FREE"}.get(value, "FREE")
+    return {"SVIP": "SVIP", "VIP": "VIP", "FREE": "FREE", "ADMIN": "ADMIN"}.get(value, "FREE")
 
 
 def _norm_class(value):
@@ -122,6 +121,9 @@ def _admin_members_html():
         updated = str(m.get("updated_at", "")).strip() or "Chưa ghi nhận"
         type_badge = "<span class='badge svip'>⭐ SVIP</span>" if typ == "SVIP" else ("<span class='badge vip'>🔑 VIP</span>" if typ == "VIP" else "<span class='badge free'>FREE</span>")
         status_badge = "<span class='badge on'>● Đang dùng</span>" if status == "ON" else "<span class='badge off'>● Khóa</span>"
+        cur_pw = member_password_plain(m)
+        cur_val = html.escape(cur_pw, quote=True)
+        cur_ph = "Chưa xem được" if not cur_pw else "Mật khẩu hiện tại"
         rows.append(
             "<tr>"
             f"<td class='check'><input type='checkbox' name='selected' value='{su}' form='bulkForm'></td>"
@@ -130,7 +132,8 @@ def _admin_members_html():
             f"<td><select class='mini' name='class_{su}' form='row_{su}'><option value=''>Chưa cấp</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></td>"
             f"<td>{type_badge}<select class='mini' name='account_type' form='row_{su}'><option value='FREE' {'selected' if typ=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if typ=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if typ=='SVIP' else ''}>SVIP</option></select></td>"
             f"<td>{status_badge}<select class='mini' name='status' form='row_{su}'><option value='ON' {'selected' if status=='ON' else ''}>ON</option><option value='OFF' {'selected' if status=='OFF' else ''}>OFF</option></select></td>"
-            f"<td><input class='pass' name='new_password' form='row_{su}' type='password' placeholder='Đổi mật khẩu'></td>"
+            f"<td><div class='passcell'><div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
+            f"<div class='passrow'><input class='pass' name='new_password' form='row_{su}' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div></div></td>"
             f"<td><span class='updated'>{html.escape(updated)}</span><form id='row_{su}' method='post' action='/admin/members/save'><input type='hidden' name='save_user' value='{su}'><button class='btn green small' type='submit'>💾 Lưu</button></form></td>"
             "</tr>"
         )
@@ -146,14 +149,14 @@ def _admin_members_html():
     .stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:10px 11px}}.stat b{{display:block;font-size:20px;color:#164f8d}}.stat span{{font-size:11px;color:#697b8f;font-weight:800}}.stat.on b{{color:#159447}}.stat.free b{{color:#16814a}}.stat.vip b{{color:#a2175f}}.stat.svip b{{color:#825500}}
     .toolbar{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:10px;margin-bottom:10px;display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:145px}}.toolbar .field.search{{flex:1;min-width:240px}}.toolbar label{{display:block;font-size:10px;color:#6c7d90;font-weight:900;margin-bottom:3px}}.toolbar input,.toolbar select{{width:100%;height:36px;border:1px solid #cbd8e6;border-radius:7px;padding:7px;background:#fff}}
     .bulk{{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#f4f9ff;border:1px solid #b9d5ef;border-radius:9px;padding:9px;margin-bottom:10px}}.bulk b{{margin-right:5px}}.bulk select{{height:34px;border:1px solid #bfd0e2;border-radius:7px;padding:5px}}
-    .membertable{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;overflow:auto}}.membertable table{{min-width:1100px}}.membertable th{{position:sticky;top:0;z-index:1}}.membertable td small{{display:block;color:#718196;margin-top:2px}}.membertable .check{{width:35px;text-align:center}}.membertable .mini{{margin-top:4px;width:82px;padding:5px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}}.membertable .pass{{width:140px;padding:6px;border:1px solid #cbd8e6;border-radius:6px}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:5px;white-space:nowrap}}.badge.free{{background:#eefbf2;color:#14743a;border:1px solid #83d39e}}.badge.vip{{background:#fff0f7;color:#a2175f;border:1px solid #eaa3c9}}.badge.svip{{background:#fff7dc;color:#855a00;border:1px solid #e9c56d}}.badge.on{{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}}.badge.off{{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}}.updated{{display:block;color:#78899b;font-size:9px;margin-bottom:3px}}.small{{padding:6px 9px;font-size:11px}}.empty{{text-align:center;padding:30px;color:#75869a}}
+    .membertable{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;overflow:auto}}.membertable table{{min-width:1100px}}.membertable th{{position:sticky;top:0;z-index:1}}.membertable td small{{display:block;color:#718196;margin-top:2px}}.membertable .check{{width:35px;text-align:center}}.membertable .mini{{margin-top:4px;width:82px;padding:5px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}}.membertable .pass{{width:150px;padding:6px;border:1px solid #cbd8e6;border-radius:6px}}.passcell{{display:flex;flex-direction:column;gap:4px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:32px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:5px;white-space:nowrap}}.badge.free{{background:#eefbf2;color:#14743a;border:1px solid #83d39e}}.badge.vip{{background:#fff0f7;color:#a2175f;border:1px solid #eaa3c9}}.badge.svip{{background:#fff7dc;color:#855a00;border:1px solid #e9c56d}}.badge.on{{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}}.badge.off{{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}}.updated{{display:block;color:#78899b;font-size:9px;margin-bottom:3px}}.small{{padding:6px 9px;font-size:11px}}.empty{{text-align:center;padding:30px;color:#75869a}}
     .tip{{background:#fffdf3;border:1px solid #ecd68c;border-radius:9px;padding:9px;margin-bottom:10px;font-size:12px}}.tip strong{{color:#805700}}
     @media(max-width:1000px){{.statgrid{{grid-template-columns:repeat(3,1fr)}}}}@media(max-width:600px){{.statgrid{{grid-template-columns:repeat(2,1fr)}}.adminmembers{{padding:7px}}.hero h2{{font-size:17px}}}}
     </style>
     <div class='adminmembers'>
       <div class='hero'><div><h2>👥 Thành viên</h2><p>ADMIN quản lý tập trung · lớp · quyền · trạng thái · mật khẩu</p></div><div><a class='btn' href='/admin'>← ADMIN</a> <a class='btn' href='/admin/results'>📊 Bài làm</a></div></div>
       {cards}
-      <div class='tip'>💡 <strong>SVIP = xem toàn bộ khối 10, 11, 12.</strong> FREE/VIP chỉ xem đúng khối lớp ADMIN cấp. Mọi thay đổi quyền/lớp đều được ghi thời gian và đồng bộ vào <b>members.json</b>.</div>
+      <div class='tip'>💡 <strong>SVIP = xem toàn bộ khối 10, 11, 12.</strong> FREE/VIP chỉ xem đúng khối lớp ADMIN cấp. Bấm 👁 để xem mật khẩu hiện tại. Tài khoản cũ hiện sau khi học sinh đăng nhập lại, hoặc ADMIN đặt mật khẩu mới rồi Lưu.</div>
       <form class='toolbar' method='get'>
         <div class='field search'><label>TÌM HỌC VIÊN</label><input name='q' value='{query_keep}' placeholder='Tên, tài khoản hoặc số điện thoại...'></div>
         <div class='field'><label>LỚP</label><select name='grade'><option value=''>Tất cả lớp</option><option value='10' {'selected' if grade_filter=='10' else ''}>Lớp 10</option><option value='11' {'selected' if grade_filter=='11' else ''}>Lớp 11</option><option value='12' {'selected' if grade_filter=='12' else ''}>Lớp 12</option></select></div>
@@ -163,8 +166,9 @@ def _admin_members_html():
       </form>
       <form id='bulkForm' method='post' action='/admin/members/bulk'></form>
       <div class='bulk'><b>⚡ Cấp nhanh cho các dòng đã chọn:</b><select name='account_type' form='bulkForm'><option value=''>Giữ quyền</option><option value='FREE'>FREE</option><option value='VIP'>VIP</option><option value='SVIP'>⭐ SVIP</option></select><select name='class' form='bulkForm'><option value=''>Giữ lớp</option><option value='10'>Lớp 10</option><option value='11'>Lớp 11</option><option value='12'>Lớp 12</option></select><select name='status' form='bulkForm'><option value=''>Giữ trạng thái</option><option value='ON'>Mở</option><option value='OFF'>Khóa</option></select><button class='btn green' form='bulkForm' type='submit'>💾 Áp dụng</button><span class='muted'>Chọn ☐ bên trái từng học viên.</span></div>
-      <div class='membertable'><table class='selectgrid'><tr><th>☑</th><th>HỌC VIÊN</th><th>ĐIỆN THOẠI</th><th>LỚP</th><th>QUYỀN</th><th>TRẠNG THÁI</th><th>ĐỔI PASS</th><th>CẬP NHẬT</th></tr>{''.join(rows)}{empty}</table></div>
+      <div class='membertable'><table class='selectgrid'><tr><th>☑</th><th>HỌC VIÊN</th><th>ĐIỆN THOẠI</th><th>LỚP</th><th>QUYỀN</th><th>TRẠNG THÁI</th><th>MẬT KHẨU</th><th>CẬP NHẬT</th></tr>{''.join(rows)}{empty}</table></div>
     </div>
+    <script>function togglePass(b){{const i=b.previousElementSibling;if(!i)return;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'}}</script>
     """
     return body
 
@@ -196,7 +200,7 @@ def _admin_members_save():
     target['grade'] = grade
     new_password = request.form.get('new_password') or ''
     if new_password:
-        target['password_sha256'] = hashlib.sha256(new_password.encode('utf-8')).hexdigest()
+        set_member_password(target, new_password)
     target['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
     try:
         _save_members(data)
@@ -316,6 +320,10 @@ except Exception:
 
 
 def _strict_member_access(m, path):
+    if _base_app is not None and getattr(_base_app, 'has_full_bank_access', lambda *_: False)(m):
+        return True
+    if admin_current() or (m and _norm_type(m.get('account_type')) == 'ADMIN'):
+        return True
     if not m or not path or not str(path).startswith('ngan-hang/'):
         return False
     typ = _norm_type(m.get('account_type'))
@@ -349,7 +357,7 @@ def _strict_member_index():
     idx = _base_app.index_data() if _base_app is not None else {'lessons': []}
     typ = _norm_type(m.get('account_type'))
     allowed_grade = _member_class(m)
-    svip = typ == 'SVIP'
+    svip = typ in {'SVIP', 'ADMIN'} or admin_current()
     q = (request.args.get('q') or '').strip().lower()
     sm = (request.args.get('mon') or '').strip()
     cl = (request.args.get('lop') or '').strip()
@@ -376,7 +384,7 @@ def _strict_member_index():
             cnt = int(x.get('questions') or x.get('count') or 0)
             dangs = x.get('dang') or {}
             kinds = x.get('dang_kinds') or {}
-            dh = ''.join(_base_app.dang_link_html(path, k, v, kinds.get(str(k))) if _base_app else "<div class='dangrow'><span>" + html.escape(str(k)) + "</span><span class='tag'>" + str(int(v)) + " câu</span></div>" for k,v in dangs.items())
+            dh = ''.join(_base_app.dang_link_html(path, k, v, kinds.get(str(k)), n=i) if _base_app else "<div class='dangrow'><span>" + html.escape(str(k)) + "</span><span class='tag'>" + str(int(v)) + " câu</span></div>" for i,(k,v) in enumerate(dangs.items(),1))
             lc = 'vip' if lvl == 'VIP' else 'free'; href = urllib.parse.quote(path, safe='')
             cards.append("<div class='card'><b>" + html.escape(title) + "</b><div class='meta'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div><span class='tag " + lc + "'>" + html.escape(lvl) + "</span><span class='tag'>" + str(cnt) + " câu</span></div><div class='dang'><b>📌 Dạng bài</b>" + (dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>") + "</div><a class='btn primary' href='/member/select?path=" + href + "'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>" + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong) + "</div><div class='cards' style='margin-top:8px'>" + ''.join(cards) + "</div></section>")

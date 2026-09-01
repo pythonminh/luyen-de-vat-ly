@@ -71,7 +71,7 @@ CSS = r"""
 a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.fsbtn{white-space:nowrap}@media(max-width:700px){.brand{font-size:17px}.clock{font-size:11px;min-width:0;padding:5px 7px}.nav a,.nav button,.who{padding:6px 8px;font-size:13px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
 .wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:inherit}.dangname{font-weight:800;line-height:1.35}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
 .selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
 .quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0 8px 1.3em;padding:0;line-height:1.75}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
@@ -202,31 +202,105 @@ def load_json(path: Path, default):
 
 def index_data():return load_json(INDEX_FILE, {"lessons": [], "total_files": 0, "total_questions": 0})
 def members_data():return load_json(MEMBERS_FILE, {"members": []})
+
+def _password_key():
+    return hashlib.sha256((app.secret_key or "ldvl").encode("utf-8")).digest()
+
+def seal_password(plain):
+    raw = str(plain or "").encode("utf-8")
+    if not raw:
+        return ""
+    key = _password_key()
+    mixed = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
+    return "v1:" + base64.urlsafe_b64encode(mixed).decode("ascii")
+
+def unseal_password(token):
+    t = str(token or "")
+    if t.startswith("v1:"):
+        try:
+            mixed = base64.urlsafe_b64decode(t[3:].encode("ascii"))
+            key = _password_key()
+            return bytes(b ^ key[i % len(key)] for i, b in enumerate(mixed)).decode("utf-8")
+        except Exception:
+            return ""
+    if t and len(t) < 80 and not re.fullmatch(r"[0-9a-fA-F]{64}", t):
+        return t
+    return ""
+
+def set_member_password(member, plain):
+    plain = str(plain or "")
+    member["password_sha256"] = hashlib.sha256(plain.encode("utf-8")).hexdigest()
+    member["password_enc"] = seal_password(plain)
+    return member
+
+def member_password_plain(member):
+    if not member:
+        return ""
+    return unseal_password(member.get("password_enc") or member.get("password") or "")
+
+def persist_member_password_on_login(data, member, plain):
+    """Sau đăng nhập đúng: lưu bản xem được cho ADMIN nếu chưa có (hoặc SECRET_KEY đã đổi)."""
+    if not member or not str(plain or ""):
+        return
+    if member_password_plain(member) == str(plain):
+        return
+    set_member_password(member, plain)
+    try:
+        save_json_github(MEMBERS_FILE, data, "members.json", "Remember student password for ADMIN")
+    except Exception:
+        pass
+
 def access_data():
     d=load_json(ACCESS_FILE, {"default":"FREE","lessons":{}}); d.setdefault('default','FREE'); d.setdefault('lessons',{}); return d
 
+def _admin_member_record():
+    u = str(session.get('username') or ADMIN_USER or 'ADMIN').strip().casefold()
+    found = next((m for m in members_data().get('members', []) if str(m.get('username') or '').strip().casefold() == u), None)
+    if found:
+        return found
+    return {'username': ADMIN_USER or 'ADMIN', 'name': 'ADMIN', 'account_type': 'ADMIN', 'status': 'ON', 'class': ''}
+
 def member_current():
-    if session.get('role')!='member':return None
+    role = session.get('role')
+    if role == 'admin':
+        return _admin_member_record()
+    if role != 'member':
+        return None
     u=str(session.get('username') or '').strip().casefold()
     return next((m for m in members_data().get('members',[]) if str(m.get('username') or '').strip().casefold()==u and str(m.get('status','ON')).upper()=='ON'),None)
 def admin_current():return session.get('role')=='admin'
-def can_manage_bank():
-    """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
-    if admin_current(): return True
-    m=member_current()
-    if account_type_of(m)=='ADMIN': return True
-    u=str((m or {}).get('username') or '').strip()
-    return bool(u) and u.casefold()==ADMIN_USER.casefold()
 def account_type_of(m):
     s=str((m or {}).get('account_type','FREE')).strip().upper().replace('.','').replace('-','')
     return {'SVIP':'SVIP','VIP':'VIP','ADMIN':'ADMIN'}.get(s,'FREE')
+def is_admin_member(m):
+    if not m:
+        return False
+    if account_type_of(m) == 'ADMIN':
+        return True
+    u = str(m.get('username') or '').strip()
+    return bool(u) and u.casefold() == str(ADMIN_USER or 'ADMIN').casefold()
+def has_full_bank_access(m=None):
+    """ADMIN (phiên /admin hoặc tài khoản ADMIN) xem toàn bộ bài, mọi khối, VIP lẫn FREE."""
+    try:
+        if session.get('role') == 'admin':
+            return True
+    except Exception:
+        pass
+    return is_admin_member(m if m is not None else member_current())
+def can_manage_bank():
+    """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
+    return has_full_bank_access()
 def is_vip(m):return account_type_of(m) in {'VIP','SVIP','ADMIN'}
 def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
 def can_access(m,path):
+    if has_full_bank_access(m if m is not None else None):
+        return True
+    if is_admin_member(m):
+        return True
     if not m:return False
     typ=account_type_of(m)
-    if typ in {'SVIP','ADMIN','VIP'}:return True
+    if typ in {'SVIP','VIP'}:return True
     return lesson_level(path)=='FREE'
 
 def _safe_repo_file(path):
@@ -400,16 +474,19 @@ def nguon_html(q):
     if not n: return ''
     return f'<span class="nguon">Nguồn: {html.escape(n)}</span>'
 
-def dang_link_html(path, dang, total, kinds=None):
-    """Một dòng dạng bài trên mục lục: tên + 4 loại TN/ĐS/TLN/TL + tổng."""
+def dang_link_html(path, dang, total, kinds=None, n=0):
+    """Một dòng dạng bài trên mục lục: số thứ tự + tên thường màu xanh + 4 loại."""
     href=urllib.parse.quote(str(path or ''), safe='')
     name=str(dang or 'Chưa phân dạng')
     s=kinds if isinstance(kinds, dict) else {}
     tn=int(s.get('TN') or 0); ds=int(s.get('DS') or 0); tln=int(s.get('TLN') or 0); tl=int(s.get('TL') or 0)
     tot=int(total or 0) or (tn+ds+tln+tl)
+    try: seq=int(n or 0)
+    except Exception: seq=0
+    no=f"<span class='dangno'>{seq}.</span>" if seq else ""
     return (
-        f"<a class='dangrow danglink' href='/member/dang?path={href}&dang={urllib.parse.quote(name)}'>"
-        f"<span class='dangname'>{html.escape(name)}</span>"
+        f"<a class='dangrow danglink' data-dang='{html.escape(name, quote=True)}' href='/member/dang?path={href}&dang={urllib.parse.quote(name)}'>"
+        f"<span class='dangname'>{no}{html.escape(name)}</span>"
         f"<span class='dangkinds'><span class='kind'>TN {tn}</span><span class='kind'>ĐS {ds}</span>"
         f"<span class='kind'>TLN {tln}</span><span class='kind'>TL {tl}</span>"
         f"<span class='kind ktotal'>{tot} câu</span></span></a>"
@@ -1045,11 +1122,12 @@ def member_login():
     msg=''
     if request.method=='POST':
         u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()
-        found=None
-        for m in members_data().get('members',[]):
+        d=members_data();found=None
+        for m in d.get('members',[]):
             if str(m.get('username') or '').strip().casefold()==u.casefold() and str(m.get('status','ON')).upper()=='ON' and m.get('password_sha256')==h:
                 found=m;break
         if found:
+            persist_member_password_on_login(d, found, p)
             session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect('/member')
         msg='Sai tài khoản hoặc mật khẩu.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
@@ -1064,7 +1142,9 @@ def member_register():
         elif len(p)<4:msg='Mật khẩu phải từ 4 ký tự.'
         elif any(str(x.get('username') or '').casefold()==u.casefold() for x in d.get('members',[])):msg='Tài khoản đã tồn tại. Hãy đăng nhập.'
         else:
-            d.setdefault('members',[]).append({'username':u,'name':n or u,'class':'','account_type':'FREE','status':'ON','password_sha256':hashlib.sha256(p.encode()).hexdigest()})
+            rec={'username':u,'name':n or u,'class':'','account_type':'FREE','status':'ON'}
+            set_member_password(rec, p)
+            d.setdefault('members',[]).append(rec)
             try:save_json_github(MEMBERS_FILE,d,'members.json','Add member')
             except Exception as e:msg='Không ghi được tài khoản: '+str(e)
             else:
@@ -1098,7 +1178,7 @@ def member_index():
     for (mon,lop,chuong),arr in sorted(groups.items()):
         cards=[]
         for x in sorted(arr,key=lambda z:str(z.get('BaiHoc') or z.get('De') or '')):
-            path=str(x.get('path'));title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name);lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};kinds=x.get('dang_kinds') or {};href=urllib.parse.quote(path,safe='');dh=''.join(dang_link_html(path,k,v,kinds.get(str(k))) for k,v in dangs.items());lc='vip' if lvl=='VIP' else 'free'
+            path=str(x.get('path'));title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name);lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};kinds=x.get('dang_kinds') or {};href=urllib.parse.quote(path,safe='');dh=''.join(dang_link_html(path,k,v,kinds.get(str(k)), n=i) for i,(k,v) in enumerate(dangs.items(),1));lc='vip' if lvl=='VIP' else 'free'
             cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)

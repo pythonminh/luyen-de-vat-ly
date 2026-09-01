@@ -7,6 +7,13 @@ from admin_overrides import _can_member_see
 
 
 def final_can_access(member, path):
+    if getattr(base, "has_full_bank_access", lambda *_: False)(member):
+        return True
+    try:
+        if base.admin_current():
+            return True
+    except Exception:
+        pass
     if not member:
         return False
     for item in base.index_data().get('lessons', []):

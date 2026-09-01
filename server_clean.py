@@ -171,10 +171,11 @@ _original_member_register = app.view_functions.get("member_register")
 def _member_lookup(username: str, password: str):
     h = hashlib.sha256(password.encode("utf-8")).hexdigest()
     want = str(username or "").strip().casefold()
-    for m in base.members_data().get("members", []):
+    data = base.members_data()
+    for m in data.get("members", []):
         if str(m.get("username") or "").strip().casefold() == want and str(m.get("status", "ON")).upper() == "ON" and m.get("password_sha256") == h:
-            return m
-    return None
+            return data, m
+    return data, None
 
 
 def _auth_page(msg: str = "", mode: str = "login", values=None):
@@ -266,8 +267,8 @@ def unified_member_auth(*args, **kwargs):
                 "class": cls,
                 "account_type": "FREE",
                 "status": "ON",
-                "password_sha256": hashlib.sha256(password.encode("utf-8")).hexdigest(),
             }
+            base.set_member_password(member, password)
             d.setdefault("members", []).append(member)
             try:
                 base.save_json_github(base.MEMBERS_FILE, d, "members.json", "Register member")
@@ -278,8 +279,12 @@ def unified_member_auth(*args, **kwargs):
             session.permanent = remember
             return redirect("/member")
 
-        found = _member_lookup(username, password)
+        data, found = _member_lookup(username, password)
         if found:
+            try:
+                base.persist_member_password_on_login(data, found, password)
+            except Exception:
+                pass
             session.clear()
             session.permanent = remember
             session.update(role="member", username=found.get("username"), name=str(found.get("name") or username))
