@@ -44,7 +44,7 @@ function openStudentGeminiKey(){var old=document.getElementById('geminiKeyModal'
 function saveStudentGeminiKey(){var i=document.getElementById('geminiKeyInput'),key=i?i.value.trim():'';if(!key){alert('Vui lòng nhập Gemini API Key.');return;}if(key.length<20){alert('Gemini API Key có vẻ chưa đúng.');return;}localStorage.setItem('student_gemini_api_key',key);closeStudentGeminiKey();updateGeminiButton();}
 function closeStudentGeminiKey(){var m=document.getElementById('geminiKeyModal');if(m)m.remove();}
 function updateGeminiButton(){var b=document.getElementById('geminiKeyBtn');if(!b)return;var key=localStorage.getItem('student_gemini_api_key')||'';b.textContent=key?'🔑 Gemini ✓':'🔑 Nạp Gemini';}
-function askGemini(){var q=currentQ(),out=document.getElementById('geminiOut');if(!out)return;var key=localStorage.getItem('student_gemini_api_key')||'';if(!key){openStudentGeminiKey();return;}out.textContent='⏳ AI đang phân tích câu hỏi, đáp án và bài làm...';var payload={api_key:key,text:q.text||'',answer:q.answer||q.correct_answer||q.correct||q.key||'',student:studentAnswer(),solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''};fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(d){if(!d.ok){out.textContent='❌ '+(d.error||'Không gọi được AI');return;}out.textContent=d.text||'';var b=document.getElementById('speakReview');if(b)b.style.display='inline-block';if(window.MathJax&&window.MathJax.typesetPromise){window.MathJax.typesetClear([out]);window.MathJax.typesetPromise([out]).catch(function(){});}}).catch(function(e){out.textContent='❌ '+e;});}
+function askGemini(){var q=currentQ(),out=document.getElementById('geminiOut');if(!out)return;var key=localStorage.getItem('student_gemini_api_key')||'';if(!key){openStudentGeminiKey();return;}out.textContent='⏳ AI đang phân tích câu hỏi, đáp án và bài làm...';var correct='';if(q.kind==='TN'){var oi=(q.options||[]).findIndex(function(o){return !!o.correct;});correct=oi>=0?String.fromCharCode(65+oi):'';}else if(q.kind==='DS'){correct=(q.statements||[]).map(function(s){return s.correct?'Đ':'S';}).join('');}else{correct=q.answer||q.correct_answer||q.correct||q.key||'';}var payload={api_key:key,question:q.text||'',text:q.text||'',options:q.options||[],statements:q.statements||[],answer:correct,correct_answer:correct,student_answer:studentAnswer(),student:studentAnswer(),solution:q.solution||'',kind:q.kind||'',dang:q.dang||'',level:q.level||''};fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(d){if(!d.ok){out.textContent='❌ '+(d.error||'Không gọi được AI');return;}out.textContent=d.text||'';var b=document.getElementById('speakReview');if(b)b.style.display='inline-block';if(window.MathJax&&window.MathJax.typesetPromise){window.MathJax.typesetClear([out]);window.MathJax.typesetPromise([out]).catch(function(){});}}).catch(function(e){out.textContent='❌ '+e;});}
 function speakReview(){var o=document.getElementById('geminiOut');if(!o||!o.textContent.trim())return;if(!('speechSynthesis'in window)){alert('Trình duyệt không hỗ trợ đọc giọng nói.');return;}speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(o.textContent);u.lang='vi-VN';u.rate=.95;speechSynthesis.speak(u);}
 function installTools(){var q=document.getElementById('q');if(!q||document.getElementById('practiceTools'))return;var bar=document.createElement('div');bar.id='practiceTools';bar.innerHTML='<div class="gemTop"><button type="button" id="geminiKeyBtn" class="btn gemKeyBtn" onclick="openStudentGeminiKey()">🔑 Nạp Gemini</button><button type="button" class="btn gem" onclick="askGemini()">🤖 AI Phản biện</button></div><div class="gemHintTop">Nạp Key một lần trên thiết bị này để dùng AI Phản biện.</div><div class="practiceActions"><button type="button" class="btn redo" onclick="retryCurrent()">🔁 Đánh dấu làm lại</button><button type="button" id="speakReview" class="btn speak" style="display:none" onclick="speakReview()">🔊 Nghe phản biện</button></div><div id="geminiOut" class="gemOut"></div>';q.appendChild(bar);updateGeminiButton();}
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.pitem').forEach(function(b,i){b.dataset.pos=String(i);});installTools();var q=document.getElementById('q');if(q)new MutationObserver(installTools).observe(q,{childList:true,subtree:true});});
@@ -62,8 +62,36 @@ def catalog_two_rows(response):
     try:
         body=response.get_data(as_text=True)
         style=r'''<style>
-.dangrow{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto!important;align-items:center!important;row-gap:5px!important;padding:7px 4px!important;min-height:58px!important}.dangrow .dangname{grid-column:1 / -1!important;grid-row:1!important;width:100%!important;line-height:1.35!important;font-size:13px!important;white-space:normal!important}.dangrow .kind,.dangrow .ktotal,.dangrow .arrow{grid-row:2!important}.dangrow .kind{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;height:24px!important;padding:2px 6px!important;font-size:10px!important}.dangrow .ktotal{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;height:24px!important;border:1px solid #d3dfeb!important;border-radius:999px!important;background:#fff!important;font-size:10px!important}.dangrow .arrow{justify-self:end!important;font-size:16px!important}.dangrow{grid-template-columns:44px 44px 44px 44px 52px 18px!important;column-gap:5px!important}@media(max-width:700px){.dangrow{grid-template-columns:42px 42px 42px 42px 48px 14px!important;column-gap:3px!important}.dangrow .kind,.dangrow .ktotal{min-width:0!important;font-size:9px!important}.dangrow .dangname{font-size:12px!important}}
+.dangrow{display:grid!important;grid-template-columns:44px 44px 44px 44px 52px 18px!important;grid-template-rows:auto auto!important;align-items:center!important;row-gap:5px!important;column-gap:5px!important;padding:7px 4px!important;min-height:58px!important}.dangrow .dangname{grid-column:1 / -1!important;grid-row:1!important;width:100%!important;line-height:1.35!important;font-size:13px!important;white-space:normal!important}.dangrow .kind,.dangrow .ktotal,.dangrow .arrow{grid-row:2!important}.dangrow .kind{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;height:24px!important;padding:2px 6px!important;font-size:10px!important}.dangrow .ktotal{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;height:24px!important;border:1px solid #d3dfeb!important;border-radius:999px!important;background:#fff!important;font-size:10px!important}.dangrow .arrow{justify-self:end!important;font-size:16px!important}@media(max-width:700px){.dangrow{grid-template-columns:42px 42px 42px 42px 48px 14px!important;column-gap:3px!important}.dangrow .kind,.dangrow .ktotal{min-width:0!important;font-size:9px!important}.dangrow .dangname{font-size:12px!important}}
 </style>'''
         response.set_data(body.replace('</body>',style+'</body>'))
     except Exception: pass
+    return response
+
+@app.after_request
+def final_student_ui(response):
+    """Final compatibility layer: student pages are branded, GitHub-free, and show clean LaTeX."""
+    if request.path not in ('/member','/member/practice') or 'text/html' not in response.headers.get('Content-Type',''):
+        return response
+    try:
+        body=response.get_data(as_text=True)
+        import re
+        # Final branding: never expose the old GitHub product name to students.
+        body=body.replace('📚 Ngân hàng câu hỏi GitHub','📚 Luyện Đề Toán Lý')
+        body=body.replace('MỤC LỤC · GitHub','MỤC LỤC')
+        body=body.replace('Nguồn đề: bank_index.json + ngan-hàng/*.tex · Google Sheet không dùng cho đề','Zalo thầy Minh 0946111107')
+        body=body.replace('Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề','Zalo thầy Minh 0946111107')
+        # Remove GitHub navigation/link from student pages, regardless of its href.
+        body=re.sub(r'<a\b[^>]*>\s*🐙\s*GitHub\s*</a>','',body,flags=re.I|re.S)
+        body=re.sub(r'<a\b[^>]*href=["\'][^"\']*github\.com[^"\']*["\'][^>]*>.*?</a>','',body,flags=re.I|re.S)
+        # Clean leaked LaTeX environment/header from question text.
+        body=re.sub(r'\\begin\s*\{ex\}', '', body, flags=re.I)
+        body=re.sub(r'\\end\s*\{ex\}', '', body, flags=re.I)
+        body=re.sub(r'%\s*ID\s*:\s*[^%<\r\n]+', '', body, flags=re.I)
+        body=re.sub(r'%\s*Mức\s*:\s*[^%<\r\n]+', '', body, flags=re.I)
+        # Keep LaTeX intact for MathJax; add a typeset pass after the cleanup.
+        body=body.replace('</body>', "<script>window.addEventListener('load',function(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise().catch(function(){});});</script></body>")
+        response.set_data(body)
+    except Exception:
+        pass
     return response
