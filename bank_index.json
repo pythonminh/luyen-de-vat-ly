@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 93,
+  "total_files": 94,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3123,63 +3123,14 @@
       "questions": 98,
       "count": 98,
       "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 19,
-        "Bài toán về quá trình đẳng nhiệt": 1,
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20,
-        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": 18,
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 18,
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 10,
-        "Định luật I của nhiệt động lực học và quy ước dấu": 9,
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": 3
+        "Chưa phân dạng": 98
       },
       "dang_kinds": {
-        "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 11,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Bài toán về quá trình đẳng nhiệt": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
-          "TN": 12,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Nhận diện quá trình nhiệt động từ đồ thị và dữ kiện": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
-          "TN": 5,
-          "DS": 4,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
-          "TN": 0,
-          "DS": 6,
-          "TLN": 2,
-          "TL": 2
-        },
-        "Định luật I của nhiệt động lực học và quy ước dấu": {
-          "TN": 1,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+        "Chưa phân dạng": {
+          "TN": 42,
+          "DS": 30,
+          "TLN": 13,
+          "TL": 13
         }
       }
     },
@@ -4813,6 +4764,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-cac-cach-lam-bien-doi-noi-nang-cua-mot-vat.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
+      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Các cách làm biến đổi nội năng của một vật",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
