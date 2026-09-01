@@ -3095,15 +3095,15 @@
       "Mon": "Vật lý",
       "Lop": "12",
       "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Bài toán hiệu suất và hao phí của động cơ nhiệt",
-      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Bài toán hiệu suất và hao phí của động cơ nhiệt",
+      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
+      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "questions": 40,
       "count": 40,
       "dang": {
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": 40
+        "Chưa phân dạng": 40
       },
       "dang_kinds": {
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": {
+        "Chưa phân dạng": {
           "TN": 32,
           "DS": 3,
           "TLN": 3,
