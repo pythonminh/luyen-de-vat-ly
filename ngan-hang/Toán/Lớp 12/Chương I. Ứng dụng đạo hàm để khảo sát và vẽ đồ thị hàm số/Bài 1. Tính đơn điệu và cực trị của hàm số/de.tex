@@ -105,25 +105,92 @@ Tập xác định $\mathbb{R}$. $y' = 3x^2 - 10x - 8$. $y' = 0 \Leftrightarrow 
 }
 \end{ex}
 
-% ===== Câu 6 =====
 % ID: T12C1B1-02-TN
 % Mức: TH
 \begin{ex}
 % ID: T12C1B1-02-TN
 % Mức: TH
+
 Cho hàm số có bảng biến thiên như sau
- 
- Khẳng định nào sau đây là \textbf{đúng}?
+
+\begin{center}
+\begin{tikzpicture}[
+xscale=1.15,
+yscale=0.85,
+>=stealth,
+font=\normalsize
+]
+
+```
+% Khung bảng
+\draw (0,0) rectangle (6.8,2.7);
+
+% Các đường ngang
+\draw (0,1.7) -- (6.8,1.7);
+\draw (0,0.75) -- (6.8,0.75);
+
+% Các đường dọc
+\draw (1.0,0) -- (1.0,2.7);
+\draw (2.6,0) -- (2.6,2.7);
+\draw (4.2,0) -- (4.2,2.7);
+\draw (5.5,0) -- (5.5,2.7);
+
+% Nhãn
+\node at (0.5,2.25) {$x$};
+\node at (0.5,1.2) {$f'(x)$};
+\node at (0.5,0.35) {$f(x)$};
+
+% Hàng x
+\node at (1.0,2.25) {$-\infty$};
+\node at (2.6,2.25) {$-\dfrac43$};
+\node at (4.2,2.25) {$\dfrac12$};
+\node at (5.5,2.25) {$+\infty$};
+
+% Hàng f'
+\node at (1.8,1.2) {$+$};
+\node at (2.6,1.2) {$0$};
+\node at (3.4,1.2) {$-$};
+\node at (4.2,1.2) {$0$};
+\node at (4.85,1.2) {$+$};
+
+% Hàng f
+\node at (1.0,0.35) {$-\infty$};
+\node at (2.6,0.35) {$\nearrow$};
+\node at (4.2,0.35) {$\searrow$};
+\node at (5.5,0.35) {$\nearrow$};
+
+% Mũi tên biến thiên
+\draw[->,thick] (1.25,0.32) -- (2.35,0.32);
+\draw[->,thick] (2.85,0.32) -- (3.95,0.32);
+\draw[->,thick] (4.45,0.32) -- (5.25,0.32);
+```
+
+\end{tikzpicture}
+\end{center}
+
+Khẳng định nào sau đây là \textbf{đúng}?
+
 \choice
 {Hàm số nghịch biến trên khoảng $\left(-\infty;-\dfrac{4}{3}\right)$}
-{Hàm số đồng biến trên khoảng $\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$}
+{\True Hàm số đồng biến trên khoảng $\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$}
 {Hàm số nghịch biến trên khoảng $\left(\dfrac{7}{2};+\infty\right)$}
-{\True Hàm số đồng biến trên khoảng $\left(-\infty;-\dfrac{7}{3}\right)$}
+{Hàm số đồng biến trên khoảng $\left(-\infty;-\dfrac{7}{3}\right)$}
+
 \loigiai{
-Dựa vào bảng biến thiên ta thấy, hàm số đồng biến trên mỗi khoảng $\left(-\infty;-\dfrac{4}{3}\right)$ và $\left(\dfrac{1}{2};+\infty\right)$.
-Hàm số nghịch biến trên $\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$.
+Dựa vào bảng biến thiên ta thấy hàm số đồng biến trên các khoảng
+$\left(-\infty;-\dfrac{4}{3}\right)$ và
+$\left(\dfrac{1}{2};+\infty\right)$.
+
+Hàm số nghịch biến trên khoảng
+$\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$.
+
+Do đó khẳng định đúng là:
+``Hàm số nghịch biến trên khoảng
+$\left(-\dfrac{4}{3};\dfrac{1}{2}\right)$''.
 }
+
 \end{ex}
+
 
 % ===== Câu 7 =====
 % ID: T12C1B1-03-TLN
