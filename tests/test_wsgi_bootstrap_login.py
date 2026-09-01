@@ -29,7 +29,19 @@ class WsgiBootstrapLoginTests(unittest.TestCase):
         self.assertTrue(member_login.headers["Location"].endswith("/login"))
         self.assertTrue(admin_login.headers["Location"].endswith("/login"))
 
-    def test_bootstrap_admin_can_login_from_legacy_member_route(self):
+    def test_bootstrap_admin_can_login_from_unified_login_route(self):
+        with patch.object(app_module, "ADMIN_USER", "ADMIN"), patch.object(
+            app_module, "ADMIN_PASS", "secret"
+        ):
+            res = self.client.post(
+                "/login",
+                data={"username": "ADMIN", "password": "secret"},
+                follow_redirects=False,
+            )
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers["Location"].endswith("/admin"))
+
+    def test_bootstrap_legacy_member_post_redirects_to_unified_login(self):
         with patch.object(app_module, "ADMIN_USER", "ADMIN"), patch.object(
             app_module, "ADMIN_PASS", "secret"
         ):
@@ -38,8 +50,8 @@ class WsgiBootstrapLoginTests(unittest.TestCase):
                 data={"username": "ADMIN", "password": "secret"},
                 follow_redirects=False,
             )
-        self.assertEqual(res.status_code, 302)
-        self.assertTrue(res.headers["Location"].endswith("/admin"))
+        self.assertEqual(res.status_code, 307)
+        self.assertTrue(res.headers["Location"].endswith("/login"))
 
     def test_bootstrap_admin_can_use_practice_jump_route(self):
         with self.client.session_transaction() as sess:
