@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 104,
+  "total_files": 105,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4924,6 +4924,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
+      "De": "L12C2 Bài 10. Định luật Charles · Bài toán áp dụng định luật Charles tính toán thông số trạng thái (V,T)",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
