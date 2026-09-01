@@ -58,7 +58,8 @@ def _kind_rules(kind: str, statements: list, options: list, key: str) -> str:
         return (
             f"YÊU CẦU RIÊNG CHO CÂU ĐÚNG/SAI (câu này có {n} ý):\n"
             f"- BẮT BUỘC phân tích đủ cả {n} ý theo thứ tự, không được bỏ ý nào, kể cả ý học sinh làm đúng.\n"
-            "- Mỗi ý viết thành một đoạn riêng theo mẫu: \"Ý i) Đáp án: Đúng/Sai — học sinh chọn ...: đúng/sai. Lý do: ...\" kèm lập luận hoặc tính toán cụ thể, không nói chung chung.\n"
+            "- Mỗi ý viết thành một đoạn riêng, bắt đầu đúng bằng \"Ý i)\" theo mẫu: \"Ý i) Đáp án: Đúng/Sai — học sinh chọn Đúng/Sai: đúng/sai. Lý do: ...\" kèm lập luận hoặc tính toán cụ thể, không nói chung chung.\n"
+            "- Chữ đúng hoặc sai ngay trước \"Lý do\" là kết luận học sinh làm ĐÚNG hay SAI ý đó (không phải đáp án chuẩn). Không gộp nhiều ý trong một đoạn.\n"
             f"- Dòng cuối cùng bắt buộc ghi đúng chuỗi: \"ĐÁP ÁN ĐÚNG: {key}\" kèm số ý học sinh làm đúng trên {n}."
         )
     if kind == 'TN':
