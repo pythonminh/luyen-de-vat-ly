@@ -151,18 +151,18 @@
 				\node[below] at (4.25,0) {b)};
 				\node[below] at (2.5,-0.5) {Hình 2};
 				
-				\foreach \x in {0.3,0.6,...,3.0}{
-					\foreach \y in {0.3,0.6,...,2.4}{
+				\foreach \x in {0.3, 0.9, 1.5, 2.1, 2.7}{
+					\foreach \y in {0.3, 0.9, 1.5, 2.1}{
 						\shade[ball color=blue!60, opacity=0.95] (\x,\y) circle(0.12cm);
 					}
 				}
 				
 				\shade[ball color=blue!60, opacity=0.95] (4.25,1.25) circle(0.12cm);
 				
-				\foreach \x/\y in {0/180,45/-135,90/-90,135/-45}{
+				\foreach \angle in {0, 45, 90, 135}{
 					\draw[<->, dotted]
-					({4.25+0.5*cos(\x)},{1.25+0.5*sin(\x)})
-					-- ({4.25+0.5*cos(\y)},{1.25+0.5*sin(\y)});
+					({4.25+0.5*cos(\angle)},{1.25+0.5*sin(\angle)})
+					-- ({4.25+0.5*cos(\angle+180)},{1.25+0.5*sin(\angle+180)});
 				}
 			\end{scope}
 			
@@ -189,11 +189,11 @@
 				\shade[ball color=blue!60, opacity=0.95] (4,2) circle(0.12cm);
 				\shade[ball color=blue!60, opacity=0.95] (4.25,0.75) circle(0.12cm);
 				
-				\foreach \x/\y in {0/180,45/-135,90/-90,135/-45}{
+				\foreach \angle in {0, 45, 90, 135}{
 					\draw[<->, dotted] 
-					({4+0.5*cos(\x)},{2+0.5*sin(\x)}) -- ({4+0.5*cos(\y)},{2+0.5*sin(\y)});
+					({4+0.5*cos(\angle)},{2+0.5*sin(\angle)}) -- ({4+0.5*cos(\angle+180)},{2+0.5*sin(\angle+180)});
 					\draw[<->, dotted] 
-					({4.25+0.5*cos(\x)},{0.75+0.5*sin(\x)}) -- ({4.25+0.5*cos(\y)},{0.75+0.5*sin(\y)});
+					({4.25+0.5*cos(\angle)},{0.75+0.5*sin(\angle)}) -- ({4.25+0.5*cos(\angle+180)},{0.75+0.5*sin(\angle+180)});
 				}
 				
 				\draw[->, dotted] (4,2) [out=-20,in=60] to (4.25,0.75);
