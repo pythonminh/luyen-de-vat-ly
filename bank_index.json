@@ -4911,9 +4911,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 5,
+      "count": 5,
+      "dang": {
+        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 5
+      },
+      "dang_kinds": {
+        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": {
+          "TN": 5,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
