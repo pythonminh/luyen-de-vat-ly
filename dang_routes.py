@@ -133,7 +133,7 @@ def member_dang():
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
           f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{total} câu</b> · Số <b>Câu 1/{total}</b> là thứ tự trong dạng này. "
           + ("<b>ID</b> dùng để tìm trong file TEX trên GitHub. " if can_manage_bank() else "")
-          + f"Nguồn câu ghi bằng <code>\\nguon{{SGK}}</code> trong TEX.</div>{notice_extra}{dup_note}{flash_html}{dup_form}"
+          + f"Nguồn câu ghi bằng <code>\\nguon{{SGK}}</code>, video bài giảng ghi bằng <code>\\video{{link YouTube}}</code> trong TEX.</div>{notice_extra}{dup_note}{flash_html}{dup_form}"
           "<form method='post' action='/member/start-selected' id='questionForm'>"
           f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
