@@ -53,10 +53,20 @@ def admin_members():
     for i, m in enumerate(members_data().get("members", [])):
         u = str(m.get("username", "")); name = str(m.get("name", "")); cls = str(m.get("class", ""))
         typ = str(m.get("account_type", "FREE")).upper(); status = str(m.get("status", "ON")).upper()
+        grade = ""
+        import re
+        gm = re.search(r"(?<!\d)(10|11|12)(?!\d)", cls.upper())
+        if gm: grade = gm.group(1)
         rows.append(
             "<tr>"
             f"<td><b>{html.escape(u)}</b><input type='hidden' name='username' value='{html.escape(u, quote=True)}'></td>"
-            f"<td>{html.escape(name)}</td><td>{html.escape(cls)}</td>"
+            f"<td>{html.escape(name)}</td>"
+            "<td><select name='class_" + html.escape(u, quote=True) + "'>"
+            f"<option value='' {'selected' if not grade else ''}>Chưa cấp</option>"
+            f"<option value='10' {'selected' if grade=='10' else ''}>10</option>"
+            f"<option value='11' {'selected' if grade=='11' else ''}>11</option>"
+            f"<option value='12' {'selected' if grade=='12' else ''}>12</option>"
+            "</select></td>"
             "<td><select name='account_type'>"
             f"<option {'selected' if typ=='FREE' else ''}>FREE</option>"
             f"<option {'selected' if typ=='VIP' else ''}>VIP</option>"
@@ -71,7 +81,7 @@ def admin_members():
         )
     body = (
         "<div class='wrap'><div class='panel'><div class='head'>👥 ADMIN · Quản lý thành viên</div><div class='body'>"
-        "<div class='notice'>ADMIN có thể đổi <b>FREE/VIP/SVIP</b>, bật/tắt tài khoản và đặt lại mật khẩu. <b>SVIP</b> được xem toàn bộ khối lớp.</div>"
+        "<div class='notice'>ADMIN có thể cấp <b>lớp 10/11/12</b>, đổi <b>FREE/VIP/SVIP</b>, bật/tắt tài khoản và đặt lại mật khẩu. <b>SVIP</b> được xem toàn bộ khối lớp.</div>"
         "<form method='post' action='/admin/members/save'><div style='overflow:auto;margin-top:10px'><table class='selectgrid'>"
         "<tr><th>Tài khoản</th><th>Họ tên</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Mật khẩu mới</th><th></th></tr>"
         + "".join(rows) +
@@ -103,12 +113,19 @@ def _admin_members_save():
     if target['account_type'] not in {'FREE','VIP','SVIP'}:
         target['account_type'] = 'FREE'
     target['status'] = (request.form.get('status') or target.get('status') or 'ON').upper()
+    class_value = (request.form.get(f'class_{username}') or '').strip().upper()
+    if class_value in {'10','11','12'}:
+        target['class'] = class_value
+        target['grade'] = class_value
+    elif class_value == '':
+        target['class'] = ''
+        target['grade'] = ''
     new_password = request.form.get('new_password') or ''
     if new_password:
         target['password_sha256'] = hashlib.sha256(new_password.encode('utf-8')).hexdigest()
     try:
         _save_members(data)
-        return page('ADMIN', "<div class='wrap'><div class='panel'><div class='body'><div class='success'>✅ Đã cập nhật tài khoản và đồng bộ members.json lên GitHub.</div><a class='btn' href='/admin/members'>← Quản lý thành viên</a></div></div></div>")
+        return page('ADMIN', "<div class='wrap'><div class='panel'><div class='body'><div class='success'>✅ Đã cập nhật tài khoản, lớp và quyền; đồng bộ members.json lên GitHub.</div><a class='btn' href='/admin/members'>← Quản lý thành viên</a></div></div></div>")
     except Exception as e:
         return page('ADMIN lỗi', f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>"), 500
 
