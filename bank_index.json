@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 90,
+  "total_files": 87,
   "total_questions": 11536,
   "lessons": [
     {
@@ -3089,29 +3089,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Bài toán hiệu suất và hao phí của động cơ nhiệt",
-      "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Bài toán hiệu suất và hao phí của động cơ nhiệt",
-      "questions": 40,
-      "count": 40,
-      "dang": {
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": 40
-      },
-      "dang_kinds": {
-        "Bài toán hiệu suất và hao phí của động cơ nhiệt": {
-          "TN": 32,
-          "DS": 3,
-          "TLN": 3,
-          "TL": 2
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/de.tex",
@@ -3528,29 +3505,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-giai-thich-hien-tuong-thuc-te-lien-quan-den-chuy.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Giải thích hiện tượng thực tế liên quan đến chuyển thể",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Giải thích hiện tượng thực tế liên quan đến chuyển thể",
-      "questions": 29,
-      "count": 29,
-      "dang": {
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 29
-      },
-      "dang_kinds": {
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
-          "TN": 20,
-          "DS": 6,
-          "TLN": 1,
-          "TL": 2
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
@@ -3872,52 +3826,6 @@
           "DS": 11,
           "TLN": 6,
           "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat-va-chuy.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương II. Khí lí tưởng",
-      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
-      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Mô hình động học phân tử về cấu tạo chất và chuyển động Brown",
-      "questions": 29,
-      "count": 29,
-      "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 29
-      },
-      "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
-          "TN": 16,
-          "DS": 7,
-          "TLN": 3,
-          "TL": 3
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương II. Khí lí tưởng",
-      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
-      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
-      "questions": 26,
-      "count": 26,
-      "dang": {
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26
-      },
-      "dang_kinds": {
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
-          "TN": 13,
-          "DS": 7,
-          "TLN": 3,
-          "TL": 3
         }
       }
     },
@@ -4758,6 +4666,29 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-phan-biet-dac-diem-cau-truc-phan-tu-cua-chat-o-t.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
+      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí",
+      "questions": 26,
+      "count": 26,
+      "dang": {
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26
+      },
+      "dang_kinds": {
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
+          "TN": 13,
+          "DS": 7,
+          "TLN": 3,
+          "TL": 3
         }
       }
     }
