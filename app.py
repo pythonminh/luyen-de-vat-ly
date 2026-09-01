@@ -387,6 +387,76 @@ def parse_questions(tex):
         out.append(q)
     return out
 
+def _dup_norm(s):
+    s=clean_latex_web(s or '')
+    s=re.sub(r'\\(?:begin|end)\s*\{[^}]*\}',' ',s,flags=re.I)
+    s=re.sub(r'\\[a-zA-Z]+\*?',' ',s)
+    s=re.sub(r'[{}\[\]$&~^_\\]',' ',s)
+    s=s.casefold()
+    s=re.sub(r'\s+',' ',s).strip()
+    return s
+
+def question_dup_keys(q):
+    stem=_dup_norm(q.get('text') or '')
+    kind=str(q.get('kind') or 'TL')
+    if kind=='TN':
+        opts=tuple(sorted(_dup_norm(o.get('text') if isinstance(o,dict) else o) for o in (q.get('options') or []) if _dup_norm(o.get('text') if isinstance(o,dict) else o)))
+        return stem, (kind, stem, opts)
+    if kind=='DS':
+        stmts=tuple(sorted(_dup_norm(o.get('text') if isinstance(o,dict) else o) for o in (q.get('statements') or []) if _dup_norm(o.get('text') if isinstance(o,dict) else o)))
+        return stem, (kind, stem, stmts)
+    if kind=='TLN':
+        return stem, (kind, stem, _dup_norm(q.get('answer') or ''))
+    return stem, (kind, stem, _dup_norm(q.get('solution') or '')[:240])
+
+def find_duplicate_groups(questions):
+    from collections import defaultdict
+    by_body, by_stem = defaultdict(list), defaultdict(list)
+    for q in questions or []:
+        stem, body = question_dup_keys(q)
+        q['_dup_stem']=stem; q['_dup_body']=body
+        if stem and len(stem)>=8: by_stem[stem].append(q)
+        if body and stem and len(stem)>=8: by_body[body].append(q)
+    groups=[]; covered=set()
+    for arr in by_body.values():
+        if len(arr)<2: continue
+        arr=sorted(arr, key=lambda x: int(x.get('idx') or 0))
+        groups.append({'type':'dao','title':'Trùng câu hỏi + đáp án (kể cả đảo A–D / đảo thứ tự mệnh đề Đúng-Sai)','keep':arr[0]['idx'],'extras':[x['idx'] for x in arr[1:]],'members':arr})
+        covered.update(x['idx'] for x in arr)
+    for arr in by_stem.values():
+        if len(arr)<2: continue
+        bodies={x.get('_dup_body') for x in arr}
+        if len(bodies)<2: continue
+        arr=sorted(arr, key=lambda x: int(x.get('idx') or 0))
+        groups.append({'type':'cungde','title':'Cùng câu hỏi nhưng đáp án / mệnh đề khác nhau — cần xem lại','keep':arr[0]['idx'],'extras':[x['idx'] for x in arr[1:]],'members':arr})
+    return groups
+
+def tex_without_questions(tex, drop_idxs):
+    drop={int(x) for x in (drop_idxs or [])}
+    chunks=[]; last=0
+    for i,m in enumerate(EX_RE.finditer(tex)):
+        if i not in drop:
+            chunks.append(tex[last:m.end()]); last=m.end(); continue
+        pre=tex[last:m.start()]
+        pre=re.sub(r'(?:\r?\n)*%\s*=+\s*Câu\s+\d+[^\n]*(?:\r?\n%[^\n]*)*$','',pre,flags=re.I)
+        chunks.append(pre); last=m.end()
+    chunks.append(tex[last:])
+    return re.sub(r'\n{3,}','\n\n',''.join(chunks)).strip()+'\n'
+
+def dup_index_by_question(groups):
+    info={}
+    for gi,g in enumerate(groups,1):
+        for q in g['members']:
+            i=q['idx']
+            cur=info.setdefault(i, {'n':[], 'label':'', 'extra':False})
+            cur['n'].append(gi)
+            if g['type']=='dao':
+                cur['label']='TRÙNG (đảo đáp án)'
+                if i in g.get('extras',[]): cur['extra']=True
+            elif not cur['label']:
+                cur['label']='CÙNG ĐỀ'
+    return info
+
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
 
 def sort_ids_by_kind(questions, ids, shuffle_within=False):
@@ -679,6 +749,7 @@ def admin_home():
             "<td>"+html.escape(str(x.get('Chuong') or ''))+"</td><td>"+html.escape(title)+"</td>"
             "<td><code>"+html.escape(p)+"</code></td><td style='white-space:nowrap'>"
             "<a class='btn primary' href='/admin/edit?path="+qp+"'>✏️ Sửa trên web</a> "
+            "<a class='btn' href='/admin/dups?path="+qp+"'>🔎 Trùng</a> "
             "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên GitHub</a> "
             "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem</a> "
             "<form method='post' action='/admin/bank/delete' style='display:inline' onsubmit=\"return confirm('Xóa vĩnh viễn file này trên GitHub?')\">"
@@ -752,6 +823,82 @@ def admin_bank_delete():
         return redirect('/admin?ok='+urllib.parse.quote('Đã xóa '+p))
     except Exception as e:
         return redirect('/admin?err='+urllib.parse.quote(str(e)))
+
+@app.route('/admin/dups', methods=['GET','POST'])
+def admin_dups():
+    if not admin_current():return redirect('/admin/login')
+    p=str(request.values.get('path') or '').replace('\\','/')
+    try: sha,tex=read_tex(p, need_sha=True); qs=parse_questions(tex)
+    except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    groups=find_duplicate_groups(qs)
+    if request.method=='POST':
+        if request.form.get('confirm')!='yes':
+            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&err='+urllib.parse.quote('Phải xác nhận trước khi xóa trùng.'))
+        drop=[]
+        for g in groups:
+            if g['type']!='dao': continue
+            for raw in request.form.getlist('drop'):
+                try: i=int(raw)
+                except Exception: continue
+                if i in g['extras']: drop.append(i)
+        drop=sorted(set(drop))
+        if not drop:
+            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&err='+urllib.parse.quote('Chưa chọn câu trùng để xóa.'))
+        new=tex_without_questions(tex, drop)
+        try:
+            local=_safe_repo_file(p)[1]
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(new, encoding='utf-8')
+            if TOKEN:
+                github_put_text(p, new, 'ADMIN xóa '+str(len(drop))+' câu trùng trong '+p, sha or None)
+            try:
+                from dang_routes import _STATS_CACHE
+                _STATS_CACHE.pop(p, None)
+            except Exception:
+                pass
+            return redirect('/admin/dups?path='+urllib.parse.quote(p,safe='')+'&ok='+urllib.parse.quote('Đã xóa '+str(len(drop))+' câu trùng, giữ bản đầu mỗi nhóm.'))
+        except Exception as e:
+            return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
+    blocks=[]
+    extra_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
+    for gi,g in enumerate(groups,1):
+        rows=[]
+        for q in g['members']:
+            keep=q['idx']==g['keep']
+            chk='' if g['type']!='dao' else (
+                "<span class='tag'>GIỮ</span>" if keep else
+                f"<label><input type='checkbox' name='drop' value='{q['idx']}' checked> Xóa bản này</label>"
+            )
+            rows.append(
+                "<tr><td>"+chk+"</td><td>"+str(q.get('stt'))+"</td><td><code>"+html.escape(str(q.get('id') or '—'))+"</code></td>"
+                "<td>"+html.escape(str(q.get('kind')))+"</td><td>dòng "+str(q.get('line') or '')+"</td>"
+                "<td>"+html.escape((q.get('text') or '')[:180])+"</td></tr>"
+            )
+        blocks.append(
+            "<div class='review'><b>Nhóm "+str(gi)+" · "+html.escape(g['title'])+" · "+str(len(g['members']))+" câu</b>"
+            "<table class='selectgrid' style='margin-top:8px'><tr><th></th><th>STT</th><th>ID</th><th>Loại</th><th>Vị trí</th><th>Mở đầu câu</th></tr>"
+            +''.join(rows)+"</table></div>"
+        )
+    form_open="<form method='post' action='/admin/dups' onsubmit=\"return confirm('Xóa các câu trùng đã tick? Bản GIỮ sẽ không bị xóa.')\">" if extra_n else "<div>"
+    form_close=(
+        "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+        "<p><label><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản trùng đã chọn (giữ câu đầu mỗi nhóm).</label></p>"
+        "<button class='btn red' type='submit'>🗑 Xóa trùng đã chọn</button></form>"
+        if extra_n else "</div>"
+    )
+    body=(
+        "<div class='wrap'><div class='panel'><div class='head'>🔎 Câu trùng · <code>"+html.escape(p)+"</code></div><div class='body'>"
+        +(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")
+        +(f"<div class='err'>{html.escape(err)}</div>" if err else "")
+        +"<div class='notice'>App coi là trùng khi <b>cùng đề</b> và <b>cùng tập đáp án/mệnh đề</b>, dù thứ tự A–D hoặc Đúng/Sai bị đảo. "
+        "Hai câu cùng đề nhưng đáp án khác thì chỉ báo, không tự xóa.</div>"
+        +("<p class='muted'>Không thấy nhóm trùng mạnh.</p>" if extra_n==0 and not any(g['type']=='cungde' for g in groups) else "")
+        +form_open+''.join(blocks or ["<p class='success'>Không có câu trùng.</p>"])+form_close
+        +"<p><a class='btn' href='/admin'>← ngan-hang</a> <a class='btn' href='/admin/edit?path="+urllib.parse.quote(p,safe='')+"'>✏️ Sửa TEX</a></p>"
+        "</div></div></div>"
+    )
+    return page('Xóa trùng',body)
 
 @app.get('/admin/logout')
 def admin_logout():session.clear();return redirect('/admin/login')
