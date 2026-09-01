@@ -74,7 +74,7 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
 .selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
-.quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0 8px 1.3em;padding:0;line-height:1.75}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
+.quiztop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #cfddeb;border-radius:11px;padding:16px}.qtext{font-size:19px;line-height:1.8;margin-bottom:10px}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0 8px 1.3em;padding:0;line-height:1.75}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:11px;margin:8px 0;cursor:pointer}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.practice-split.is-ai{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.9fr);gap:12px;align-items:start}.practice-q{min-width:0}.practice-ai{position:sticky;top:calc(76px + env(safe-area-inset-top,0px));max-height:calc(100dvh - 90px);overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #cab9f0;background:#faf8ff;border-radius:12px;padding:12px;box-shadow:0 4px 18px #1b4d8a14}.practice-ai .review{margin-top:0}.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.modebar .btn.primary{min-width:160px}@media(max-width:900px){.practice-split.is-ai{grid-template-columns:1fr}.practice-ai{position:relative;top:auto;max-height:min(52dvh,520px)}}.tf{display:flex;align-items:center;gap:12px;border:2px solid #d8e4f0;border-radius:9px;padding:12px 14px;margin:8px 0}.tf-text{flex:1;min-width:0;font-size:18px;line-height:1.7}.tf-picks{display:flex;gap:10px;flex-shrink:0;margin-left:auto}.tf-pick{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:118px;padding:12px 18px;border:2px solid #c5d6ea;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;background:#fff;user-select:none}.tf-pick input{width:22px;height:22px;margin:0;accent-color:var(--blue)}.tf-pick.yes{border-color:#7dbe90;color:#0f6a32;background:#f3fbf6}.tf-pick.no{border-color:#e39aa0;color:#a41f28;background:#fff7f7}.tf-pick:hover{filter:brightness(.97)}.tf-pick:has(input:checked){box-shadow:0 0 0 3px #176bd333;border-width:3px}@media(max-width:700px){.tf{flex-wrap:wrap}.tf-picks{width:100%;margin-left:0}.tf-pick{flex:1}}.correct{background:#e8f8ee!important;border-color:#42ae6b!important}.wrong{background:#fff0f1!important;border-color:#e04d56!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{padding:10px;border-radius:9px;margin-top:10px;font-weight:900}.good{background:#eaf8ef;color:#116a32;border:1px solid #8ed1a2}.bad{background:#fff0f1;color:#a41f28;border:1px solid #efa2a8}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
 """
 
@@ -331,6 +331,31 @@ def can_access(m,path):
     typ=account_type_of(m)
     if typ in {'SVIP','VIP'}:return True
     return lesson_level(path)=='FREE'
+
+def can_view(m, path):
+    """Xem đề: khách xem bài FREE; thành viên theo quyền. Không gồm làm bài / Gemini."""
+    if has_full_bank_access(m if m is not None else None) or is_admin_member(m):
+        return True
+    if m:
+        return can_access(m, path)
+    return str(lesson_level(path) or 'FREE').upper() != 'VIP'
+
+def is_logged_in():
+    return bool(member_current())
+
+def safe_next_url(raw=None):
+    u = str(raw if raw is not None else (request.values.get('next') or '')).strip()
+    if not u.startswith('/') or u.startswith('//') or '\\' in u:
+        return '/member'
+    if not (u == '/member' or u.startswith('/member/') or u.startswith('/practice/')):
+        return '/member'
+    return u[:500]
+
+def login_url(next_path=None):
+    nxt = safe_next_url(next_path)
+    if nxt == '/member':
+        return '/member/login'
+    return '/member/login?next=' + urllib.parse.quote(nxt, safe='')
 
 def _safe_repo_file(path):
     p=str(path or '').replace('\\','/').lstrip('/')
@@ -1206,7 +1231,7 @@ def member_login():
                 found=m;break
         if found:
             persist_member_password_on_login(d, found, p)
-            session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect('/member')
+            session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect(safe_next_url())
         msg='Sai tài khoản hoặc mật khẩu.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
 
@@ -1230,13 +1255,13 @@ def member_register():
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post' action='/member/register'><div class='field'><label>Họ tên</label><input name='name' autocomplete='name'></div><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='new-password' required></div><button class='btn primary' type='submit'>Tạo tài khoản</button> <a class='btn' href='/member/login'>Đã có tài khoản</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng ký',body)
 
 @app.get('/member/logout')
-def member_logout():session.clear();return redirect('/member/login')
+def member_logout():session.clear();return redirect('/member')
 
 @app.get('/member/ai')
 def member_ai():
     m=member_current()
     if not m:return redirect('/member/login')
-    extra="<p class='muted'>Khi làm bài, sau khi chọn đáp án sẽ có nút <b>🤖 Phản biện</b> cho câu đó. Trang kết quả cũng có phản biện từng câu.</p>"
+    extra="<p class='muted'>Key dùng khi chọn chế độ <b>Làm bài + phản biện AI</b>. Sau khi xác nhận đáp án, màn hình chia đôi: bên trái là đề và lời giải, bên phải là Gemini (cuộn riêng).</p>"
     body=("<div class='wrap'><div class='panel'><div class='head'>🤖 Gemini — nạp key và phản biện</div><div class='body'>"
           +gemini_panel_html(extra)+
           "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>")
@@ -1245,8 +1270,11 @@ def member_ai():
 @app.get('/member')
 def member_index():
     m=member_current()
-    if not m:return redirect('/member/login')
     idx=index_data();items=[x for x in idx.get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')]
+    if m:
+        items=[x for x in items if can_view(m, str(x.get('path') or ''))]
+    else:
+        items=[x for x in items if str(lesson_level(str(x.get('path') or ''))).upper()!='VIP']
     subjects=sorted({str(x.get('Mon') or '') for x in items if x.get('Mon')});classes=sorted({str(x.get('Lop') or '') for x in items if x.get('Lop')});q=request.args.get('q','').strip().lower();sm=request.args.get('mon','');cl=request.args.get('lop','')
     def keep(x):
         t=' '.join(str(x.get(k) or '') for k in ('Mon','Lop','Chuong','BaiHoc','De')).lower();return (not q or q in t) and (not sm or str(x.get('Mon'))==sm) and (not cl or str(x.get('Lop'))==cl)
@@ -1260,15 +1288,20 @@ def member_index():
             cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
-    body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>"+str(idx.get('total_files',0))+" file</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'><div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"+gemini_panel_html()+"<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+(''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>")+"</div>")
+    if m:
+        who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"
+    else:
+        who="<div class='notice'>👁 <b>Xem đề không cần đăng nhập.</b> Để làm bài và dùng Gemini phản biện, hãy <a href='/member/login'>đăng nhập</a> hoặc <a href='/member/register'>đăng ký</a>.</div>"
+    body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>"+str(len(items))+" bài</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'>"+who+"<form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+(''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>")+"</div>")
     return page('Mục lục',body)
 
 @app.get('/member/select')
 def select_page():
-    m=member_current();
-    if not m:return redirect('/member/login')
+    m=member_current()
     p=request.args.get('path','')
-    if not can_access(m,p):return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
+    if not can_view(m,p):
+        if not m: return redirect(login_url(request.full_path if request.query_string else '/member/select?path='+urllib.parse.quote(p,safe='')))
+        return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     try:_,tex=read_tex(p);qs=parse_questions(tex)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     dang_names=[];seen=set()
@@ -1280,12 +1313,19 @@ def select_page():
         for kind,label in [('TN','Trắc nghiệm'),('DS','Đúng / Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')]:
             c={z:sum(1 for q in arr if q['kind']==kind and q['level']==z) for z in 'NHVC'};inputs=''.join(f"<input class='n' type='number' min='0' max='{c[z]}' value='0' name='pick:{di}:{kind}:{z}'>" for z in 'NHVC');total=sum(c.values())
             rows.append(f"<tr><td>{html.escape(dang)}</td><td>{label}</td><td>{c['N']}/{c['H']}/{c['V']}/{c['C']}</td><td>{inputs}</td><td>{total}</td></tr>")
-    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 Chọn dạng bài và số câu <span class='tag'>{len(qs)} câu thực tế trong TEX</span></div><div class='body'><form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div><button class='btn primary'>▶ Tạo bài luyện tập</button> <a class='btn' href='/member'>← Mục lục</a></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>";return page('Chọn câu',body)
+    guest = not m
+    if guest:
+        acts=f"<div class='notice'>👁 Bạn đang xem đề. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập để làm bài</a></div>"
+    else:
+        acts=("<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
+              "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div>")
+    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 Chọn dạng bài và số câu <span class='tag'>{len(qs)} câu thực tế trong TEX</span></div><div class='body'><form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+    return page('Chọn câu',body)
 
 @app.post('/member/start')
 def start_practice():
     m=member_current();
-    if not m:return redirect('/member/login')
+    if not m:return redirect(login_url('/member/practice'))
     if request.form.getlist('qid'):
         import dang_routes as _dang
         return _dang.start_selected_questions()
@@ -1309,7 +1349,7 @@ def start_practice():
             pool=[q for q in qs if q['dang']==dang_names[di] and q['kind']==kind and q['level']==lev];wanted.extend(q['idx'] for q in random.sample(pool,min(n,len(pool))))
     if not wanted:return redirect('/member/select?path='+urllib.parse.quote(p,safe=''))
     wanted=sort_ids_by_kind(qs, wanted, shuffle_within=True)
-    session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[]);return redirect('/member/practice')
+    session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=request.form.get('ai_review') in ('1','on','true','yes'));return redirect('/member/practice')
 
 def question_payload(q):
     """Toàn bộ dữ liệu một câu cho trang làm bài và cho AI phản biện."""
@@ -1329,31 +1369,39 @@ def review_payload(q,entry):
 @app.get('/member/practice')
 def practice():
     m=member_current();
-    if not m:return redirect('/member/login')
+    if not m:return redirect(login_url('/member/practice'))
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
+    ai=bool(session.get('practice_ai'))
     if not p or not ids:return redirect('/member')
     try:_,tex=read_tex(p);allq={q['idx']:q for q in parse_questions(tex)}
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
-        opts=''.join(f"<option value='{i}'>Câu {d.get('question') or i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done))
-        review=[review_payload(allq.get(ids[int(d.get('question') or 0)-1]) if 0<int(d.get('question') or 0)<=len(ids) else None,d) for d in done]
+        gem=''
+        if ai:
+            opts=''.join(f"<option value='{i}'>Câu {d.get('question') or i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done))
+            review=[review_payload(allq.get(ids[int(d.get('question') or 0)-1]) if 0<int(d.get('question') or 0)<=len(ids) else None,d) for d in done]
+            gem=(gemini_panel_html()
+                 + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
+                 + f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>")
         body=(
-            f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span></div>"
+            f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
+            f"<span class='tag'>{'🤖 Có phản biện' if ai else 'Không phản biện'}</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
-            + gemini_panel_html()
-            + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
-            f"<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
-            f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>"
+            + gem
+            + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
         )
         return page('Kết quả',body)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}' title='{html.escape(str(allq.get(qid,{}).get('id') or ''), quote=True)}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
     payload=question_payload(q)
-    body=f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>ID {html.escape(str(q.get('id') or '—'))}</span> · {html.escape(q['dang'])} · {q['kind']}</span><span>Đúng {right} · Chuỗi {streak}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div><div id='q' class='qbox'></div><div id='aibox'></div></div></div></div>"
+    mode_tag='🤖 Có phản biện AI' if ai else 'Không phản biện'
+    body=(f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>ID {html.escape(str(q.get('id') or '—'))}</span> · {html.escape(q['dang'])} · {q['kind']}</span>"
+          f"<span>Đúng {right} · Chuỗi {streak} · {html.escape(mode_tag)}</span></div><div class='body'><div class='palette'>{palette}</div><div id='praise'></div>"
+          f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
-const Q=__DATA__;let checked=false;
+const Q=__DATA__;const AI=__AI__;let checked=false;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 function lockInputs(){document.querySelectorAll('#q input,#q textarea').forEach(function(el){el.disabled=true});let b=document.getElementById('chkbtn');if(b)b.style.display='none';let hint=document.getElementById('hint');if(hint)hint.remove()}
@@ -1374,14 +1422,19 @@ if(q.kind==='DS'){for(let i=0;i<q.statements.length;i++){if(!document.querySelec
 let z=document.getElementById('ans');return !!(z&&z.value.trim())}
 function syncReady(){if(checked)return;let b=document.getElementById('chkbtn');if(!b)return;let ready=answered();b.disabled=!ready;b.title=ready?'':'Hãy chọn/nhập đáp án trước khi xác nhận.'}
 function openSolution(){if(!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box)return;box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none'}
+function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
+pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
+if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0}
 function check(){if(checked)return;let q=Q,ok=false,student='';
 if(q.kind==='TN'){let z=document.querySelector('input[name=a]:checked');if(!z)return alert('Hãy chọn đáp án.');let i=+z.value;student=String.fromCharCode(65+i);q.options.forEach((o,j)=>{if(o.correct)document.getElementById('o'+j).classList.add('correct');if(j===i&&!o.correct)document.getElementById('o'+j).classList.add('wrong')});ok=!!q.options[i].correct}
 else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){let z=document.querySelector('input[name=t'+i+']:checked');if(!z)return alert('Chọn đủ Đúng/Sai.');let v=z.value==='1';a.push(v?'Đ':'S');document.getElementById('t'+i).classList.add(v===q.statements[i].correct?'correct':'wrong');if(v!==q.statements[i].correct)ok=false}student=a.join('')}
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
-let note=q.kind==='TL'?'📝 Đã nộp bài tự luận — chờ chấm.':(ok?'✅ ĐÚNG':'❌ SAI');let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block';document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});let box=document.getElementById('aibox');if(box){box.innerHTML=ldvlGeminiMiniHtml('🤖 Gemini phản biện câu này')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện</button></p><div id="aiout" class="reviewout"></div>';if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs()}fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
+let note=q.kind==='TL'?'📝 Đã nộp bài tự luận — chờ chấm.':(ok?'✅ ĐÚNG':'❌ SAI');let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});
+if(AI){openSolution();showAiPane()}else{let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block'}
+fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
-draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1))
+draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1)).replace('__AI__','true' if ai else 'false')
     return page('Làm bài',body+js)
 
 @app.post('/member/answer')

@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import admin_current, app, can_access, can_manage_bank, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, member_current, nguon_html, page, parse_questions, read_tex, sort_ids_by_kind
+from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, login_url, member_current, nguon_html, page, parse_questions, read_tex, sort_ids_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -29,22 +29,20 @@ def _stats_for(path):
 @app.get('/member/dang-stats')
 def member_dang_stats():
     m=member_current()
-    if not m:return jsonify(ok=False,error='Chưa đăng nhập'),401
     path=request.args.get('path','').strip()
-    if not path or not can_access(m,path):return jsonify(ok=False,error='Không có quyền truy cập'),403
+    if not path or not can_view(m,path):return jsonify(ok=False,error='Không có quyền xem'),403
     try:return jsonify(ok=True,stats=_stats_for(path))
     except Exception as exc:return jsonify(ok=False,error=str(exc)),500
 
 @app.get('/member/dang-stats-all')
 def member_dang_stats_all():
     m=member_current()
-    if not m:return jsonify(ok=False,error='Chưa đăng nhập'),401
     out={}
     for x in (index_data().get('lessons') or []):
         if not isinstance(x, dict):
             continue
         path=str(x.get('path') or x.get('file') or '').strip()
-        if not path.startswith('ngan-hang/') or not can_access(m, path):
+        if not path.startswith('ngan-hang/') or not can_view(m, path):
             continue
         try:
             out[path]=_stats_for(path)
@@ -87,10 +85,11 @@ def _question_card(q, seq, total, path='', dup=None):
 @app.get('/member/dang')
 def member_dang():
     m=member_current()
-    if not m:return redirect('/member/login')
     path=request.args.get('path','').strip(); dang=request.args.get('dang','').strip()
     if not path or not dang:return redirect('/member')
-    if not can_access(m,path):
+    if not can_view(m,path):
+        if not m:
+            return redirect(login_url('/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')))
         return page('Bài VIP',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>🔒 Bài này dành cho VIP.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     try: _,tex=read_tex(path); qs=parse_questions(tex)
     except Exception as exc:
@@ -141,28 +140,46 @@ def member_dang():
         dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
-    body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
-          f"{notice_extra}{dup_note}{flash_html}{dup_form}"
-          "<form method='post' action='/member/start-selected' id='questionForm'>"
-          f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
-          +kindbar+
+    guest = not m
+    if guest:
+        guest_note=("<div class='notice'>👁 Bạn đang xem đề — chưa đăng nhập nên không làm bài và không gọi Gemini. "
+                    f"<a class='btn primary' href='{_esc(login_url('/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')))}'>Đăng nhập để làm bài</a></div>")
+        tools=''
+        bottom=f"<div class='toolbar bottom'><a class='btn' href='/member'>← Mục lục</a></div>"
+        form_open=f"<div class='guestview'>"
+        form_close="</div>"
+    else:
+        guest_note=''
+        tools=(kindbar+
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyKind(\"\")'>Tất cả loại</button>"+kind_btns+
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
           + "<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
-          "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>"
+          "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
+        bottom=("<div class='toolbar bottom modebar'>"
+                "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
+                "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
+                "<a class='btn' href='/member'>← Mục lục</a></div>")
+        form_open=("<form method='post' action='/member/start-selected' id='questionForm'>"
+                   f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
+        form_close="</form>"
+    body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
+          f"{guest_note}{notice_extra}{dup_note}{flash_html}{dup_form}"
+          +form_open+tools+
           f"<div class='questions'>{cards}</div>"
-          "<div class='toolbar bottom'><button class='btn primary' type='submit'>▶ Làm các câu đã chọn</button><a class='btn' href='/member'>← Mục lục</a></div>"
-          "</form></div></div></div>"
-          "<style>.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
-          "<script>let DUPONLY=false,KINDFILTER='';function vis(c){const q=(document.getElementById('findq').value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}function filterQ(){document.querySelectorAll('.qcard').forEach(vis);upd()}function onlyDup(v){DUPONLY=!!v;filterQ()}function onlyKind(k){KINDFILTER=k||'';filterQ()}function kindCount(k){return [...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"] input[name=qid]:checked')].length}function upd(){const a=[...document.querySelectorAll('.qcard:not(.hideq) input[name=qid]')];const n=a.filter(x=>x.checked).length;const bits=['TN','DS','TLN','TL'].map(k=>{const c=kindCount(k);const inp=document.querySelector('.kn[data-k=\"'+k+'\"]');if(inp&&document.activeElement!==inp)inp.value=c;return c?((k==='DS'?'ĐS':k)+' '+c):''}).filter(Boolean);document.getElementById('sum').textContent='Đã chọn: '+n+' câu'+(bits.length?' · '+bits.join(' · '):'')}function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(x=>x.checked=v);upd()}function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(inp=>{const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=[...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"]')];cards.slice(0,want).forEach(c=>{const i=c.querySelector('input[name=qid]');if(i)i.checked=true});});upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.querySelectorAll('.kn').forEach(x=>x.addEventListener('change',applyKinds));document.getElementById('findq').addEventListener('input',filterQ);document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
-    return page('Chọn câu',body)
+          +bottom+form_close+
+          "</div></div></div>"
+          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          + ("" if guest else "<script>let DUPONLY=false,KINDFILTER='';function vis(c){const q=(document.getElementById('findq').value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}function filterQ(){document.querySelectorAll('.qcard').forEach(vis);upd()}function onlyDup(v){DUPONLY=!!v;filterQ()}function onlyKind(k){KINDFILTER=k||'';filterQ()}function kindCount(k){return [...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"] input[name=qid]:checked')].length}function upd(){const a=[...document.querySelectorAll('.qcard:not(.hideq) input[name=qid]')];const n=a.filter(x=>x.checked).length;const bits=['TN','DS','TLN','TL'].map(k=>{const c=kindCount(k);const inp=document.querySelector('.kn[data-k=\"'+k+'\"]');if(inp&&document.activeElement!==inp)inp.value=c;return c?((k==='DS'?'ĐS':k)+' '+c):''}).filter(Boolean);document.getElementById('sum').textContent='Đã chọn: '+n+' câu'+(bits.length?' · '+bits.join(' · '):'')}function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(x=>x.checked=v);upd()}function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(inp=>{const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=[...document.querySelectorAll('.qcard:not(.hideq)[data-kind=\"'+k+'\"]')];cards.slice(0,want).forEach(c=>{const i=c.querySelector('input[name=qid]');if(i)i.checked=true});});upd()}document.querySelectorAll('input[name=qid]').forEach(x=>x.addEventListener('change',upd));document.querySelectorAll('.kn').forEach(x=>x.addEventListener('change',applyKinds));document.getElementById('findq').addEventListener('input',filterQ);document.getElementById('questionForm').addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});upd();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>")
+          + ("<script>if(window.ldvlTypeset)ldvlTypeset(document.body);</script>" if guest else "")
+          )
+    return page('Chọn câu' if not guest else 'Xem đề',body)
 
 def start_selected_questions():
     """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""
     m=member_current()
-    if not m:return redirect('/member/login')
+    if not m:return redirect(login_url('/member/practice'))
     if request.method!='POST':
         return redirect('/member')
     path=request.form.get('path','').strip()
@@ -205,6 +222,7 @@ def start_selected_questions():
         practice_streak=0,
         practice_best=0,
         practice_done=[],
+        practice_ai=request.form.get('ai_review') in ('1','on','true','yes'),
     )
     return redirect('/member/practice')
 
@@ -215,14 +233,14 @@ def member_start_selected():
 @app.get('/practice/jump/<int:pos>')
 def practice_jump(pos):
     ids=list(session.get('practice_ids') or [])
-    if session.get('role') not in {'member', 'admin'} or not ids:return redirect('/member/login')
+    if session.get('role') not in {'member', 'admin'} or not ids:return redirect(login_url('/member/practice'))
     pos=max(0,min(pos,len(ids)-1));session['practice_pos']=pos
     return redirect('/member/practice')
 
 @app.get('/practice/redo/<int:pos>')
 def practice_redo(pos):
     m=member_current()
-    if not m:return redirect('/member/login')
+    if not m:return redirect(login_url('/member/practice'))
     ids=list(session.get('practice_ids') or [])
     if pos<0 or pos>=len(ids):return redirect('/member/practice')
     qnum=pos+1;done=list(session.get('practice_done') or [])

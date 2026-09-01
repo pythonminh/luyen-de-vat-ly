@@ -14,11 +14,11 @@ app = base.app
 
 def _member_index():
     m = base.member_current()
-    if not m:
-        return redirect('/member/login')
     idx = base.index_data()
     lessons = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path') or x.get('file') or '').startswith('ngan-hang/')]
-    if getattr(base, 'has_full_bank_access', lambda *_: False)(m):
+    if not m:
+        items = [x for x in lessons if str(base.lesson_level(str(x.get('path') or x.get('file') or ''))).upper() != 'VIP']
+    elif getattr(base, 'has_full_bank_access', lambda *_: False)(m):
         items = lessons
     else:
         items = [x for x in lessons if _can_member_see(m, x)]
@@ -62,18 +62,22 @@ def _member_index():
 
     subjopts = ''.join(f"<option value='{html.escape(s, quote=True)}' {'selected' if sm==s else ''}>{html.escape(s)}</option>" for s in subjects)
     classopts = ''.join(f"<option value='{html.escape(c, quote=True)}' {'selected' if _grade(cl)==c else ''}>{html.escape(c)}</option>" for c in classes)
-    grade = _grade(m.get('class')) or 'Chưa cấp'
-    typ = _norm_type(m.get('account_type'))
-    if getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
-        note = '🔐 ADMIN · được xem toàn bộ bài, mọi khối, VIP lẫn FREE'
-    elif typ == 'SVIP':
-        note = '⭐ SVIP · được xem toàn bộ khối 10, 11, 12'
+    if not m:
+        note = '👁 Xem đề không cần đăng nhập · Đăng nhập để làm bài và dùng Gemini phản biện'
+        who = f"<div class='notice'>{html.escape(note)} · <a class='btn primary' href='/member/login'>Đăng nhập</a> <a class='btn' href='/member/register'>Đăng ký</a></div>"
     else:
-        note = f'🎓 Lớp {grade} · chỉ hiển thị bài đúng khối được cấp'
+        grade = _grade(m.get('class')) or 'Chưa cấp'
+        typ = _norm_type(m.get('account_type'))
+        if getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
+            note = '🔐 ADMIN · được xem toàn bộ bài, mọi khối, VIP lẫn FREE'
+        elif typ == 'SVIP':
+            note = '⭐ SVIP · được xem toàn bộ khối 10, 11, 12'
+        else:
+            note = f'🎓 Lớp {grade} · chỉ hiển thị bài đúng khối được cấp'
+        who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · Quyền <b>{html.escape(typ)}</b> · {html.escape(note)}</div>"
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
-<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · Quyền <b>{html.escape(typ)}</b> · {html.escape(note)}</div>
-{base.gemini_panel_html()}
+{who}
 <form method='get' style='display:grid;grid-template-columns:1fr 180px 160px auto;gap:7px;margin-top:10px'><input name='q' placeholder='Tìm bài, chương, dạng...' value='{html.escape(request.args.get('q',''))}'><select name='mon'><option value=''>Tất cả môn</option>{subjopts}</select><select name='lop'><option value=''>Tất cả lớp</option>{classopts}</select><button class='btn'>Tìm</button></form>
 </div></div>{''.join(sections) or "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài phù hợp. Tài khoản FREE xem bài Free; VIP xem theo lớp (nếu chưa ghi lớp thì xem hết).</div></div>"}</div>
 """

@@ -185,6 +185,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
     name = html.escape(str(values.get("name", "")), quote=True)
     cls = html.escape(str(values.get("class", "")), quote=True)
     err = f"<div class='err authmsg'>{html.escape(msg)}</div>" if msg else "<div class='authmsg'></div>"
+    nxt = html.escape(base.safe_next_url(), quote=True)
     login_active = " active" if mode == "login" else ""
     reg_active = " active" if mode == "register" else ""
     body = f"""
@@ -198,6 +199,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
 
     <form id='loginForm' class='authform' method='post' action='/member/login' style='display:{'block' if mode == 'login' else 'none'}'>
       <input type='hidden' name='action' value='login'>
+      <input type='hidden' name='next' value='{nxt}'>
       <div class='field'><label>Tài khoản</label><input id='loginUsername' name='username' value='{username}' autocomplete='username' required></div>
       <div class='field'><label>Mật khẩu</label><div class='passrow'><input id='loginPassword' name='password' type='password' autocomplete='current-password' required><button type='button' class='eye' onclick=\"togglePass('loginPassword',this)\">👁</button></div></div>
       <label class='check'><input id='remember' name='remember' type='checkbox'> Ghi nhớ đăng nhập trên thiết bị này</label>
@@ -207,6 +209,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
 
     <form id='registerForm' class='authform' method='post' action='/member/login' style='display:{'block' if mode == 'register' else 'none'}'>
       <input type='hidden' name='action' value='register'>
+      <input type='hidden' name='next' value='{nxt}'>
       <div class='field'><label>Họ tên</label><input id='regName' name='name' value='{name}' autocomplete='name'></div>
       <div class='field'><label>Tài khoản</label><input id='regUsername' name='username' value='{username}' autocomplete='username' required></div>
       <div class='field'><label>Mật khẩu</label><div class='passrow'><input id='regPassword' name='password' type='password' autocomplete='new-password' required><button type='button' class='eye' onclick=\"togglePass('regPassword',this)\">👁</button></div></div>
@@ -278,7 +281,7 @@ def unified_member_auth(*args, **kwargs):
             session.clear()
             session.update(role="member", username=username, name=member["name"])
             session.permanent = remember
-            return redirect("/member")
+            return redirect(base.safe_next_url())
 
         data, found = _member_lookup(username, password)
         if found:
@@ -289,7 +292,7 @@ def unified_member_auth(*args, **kwargs):
             session.clear()
             session.permanent = remember
             session.update(role="member", username=found.get("username"), name=str(found.get("name") or username))
-            return redirect("/member")
+            return redirect(base.safe_next_url())
         return _auth_page("Sai tài khoản hoặc mật khẩu.", "login", request.form)
 
     return _auth_page("", "login")
