@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Render bootstrap: load extensions, then apply final public UI filtering."""
-import re
+"""Single Render bootstrap: stable app + auth + Gemini endpoint + final UI."""
 import wsgi
-import student_gemini_ui
-import gemini_ui_fix
 import member_auth_fix
-import gemini_header
+import student_gemini
 import admin_manager
+# ui_sync is imported last and uses the WSGI response wrapper below, so its
+# filtering is guaranteed to happen after every Flask after_request extension.
+import ui_sync
 
 app = wsgi.app
 _original_wsgi = app.wsgi_app
 
 
 def _filter_final_response(environ, start_response):
-    """Buffer Flask's final HTML and apply branding/navigation rules last."""
+    """Final safety pass: branding and ADMIN-only GitHub visibility."""
     captured = {}
 
     def capture_start(status, headers, exc_info=None):
@@ -34,30 +34,19 @@ def _filter_final_response(environ, start_response):
     if 'text/html' in ctype:
         text = body.decode('utf-8', 'replace')
         path = environ.get('PATH_INFO', '') or '/'
-
-        # Public branding for every device.
-        text = text.replace(
-            '📚 Ngân hàng câu hỏi GitHub',
-            '📚 Luyện Đề Toán Lý <span class="zalo-brand">Zalo thầy Minh 0946111107</span>'
-        )
-
-        # GitHub is an ADMIN editing tool only. It is never shown on /member.
-        # /admin/login is also kept clean; authenticated /admin and /github pages
-        # are allowed to keep their GitHub navigation link.
+        # Final branding, independent of which legacy page generated the HTML.
+        text = text.replace('📚 Ngân hàng câu hỏi GitHub', '📚 Luyện Đề Toán Lý')
+        text = text.replace('MỤC LỤC · GitHub', 'MỤC LỤC')
+        # Never expose the repository link outside authenticated admin pages.
         can_show_github = (
             path.startswith('/admin/') and not path.startswith('/admin/login')
         ) or path.startswith('/github/')
-
         if not can_show_github:
             text = re.sub(
                 r'<a\b[^>]*href=["\'][^"\']*github\.com[^"\']*["\'][^>]*>.*?</a>',
                 '', text, flags=re.I | re.S
             )
-            text = re.sub(
-                r'<a\b[^>]*>\s*(?:[^<]{0,20})GitHub(?:\s*[^<]{0,20})?</a>',
-                '', text, flags=re.I | re.S
-            )
-
+            text = re.sub(r'\s*🐙\s*GitHub\s*', ' ', text, flags=re.I)
         body = text.encode('utf-8')
         headers = [(k, v) for k, v in headers if k.lower() != 'content-length']
         headers.append(('Content-Length', str(len(body))))
@@ -66,27 +55,6 @@ def _filter_final_response(environ, start_response):
     return [body]
 
 
-# Put the final filter around the original Flask callable.
+# re is intentionally imported here to keep this bootstrap tiny.
+import re
 app.wsgi_app = _filter_final_response
-
-
-@app.after_request
-def responsive_css(response):
-    """Responsive styling for laptop, tablet and phone."""
-    ctype = response.headers.get('Content-Type', '')
-    if 'text/html' not in ctype:
-        return response
-    try:
-        text = response.get_data(as_text=True)
-    except Exception:
-        return response
-    css = '''<style>
-.zalo-brand{color:#ffd21f;margin-left:6px;font-weight:900;white-space:nowrap}
-.topin{width:100%;max-width:1500px;margin:auto;display:flex;align-items:center;gap:14px}
-@media(max-width:900px){.topin{flex-wrap:wrap!important;padding:8px 10px!important}.brand{font-size:18px!important}.nav{width:100%;margin-left:0!important;justify-content:flex-start!important}}
-@media(max-width:480px){.brand{font-size:16px!important}.zalo-brand{display:block;margin-left:0;margin-top:2px;font-size:14px}.nav a,.nav button{padding:6px 8px!important;font-size:12px!important}}
-</style>'''
-    if '</head>' in text and 'zalo-brand' not in text:
-        text = text.replace('</head>', css + '</head>', 1)
-    response.set_data(text)
-    return response
