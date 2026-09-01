@@ -4799,9 +4799,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 2,
+      "count": 2,
+      "dang": {
+        "Quá trình chuyển pha": 2
+      },
+      "dang_kinds": {
+        "Quá trình chuyển pha": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
