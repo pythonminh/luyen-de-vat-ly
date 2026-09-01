@@ -1,1 +1,1 @@
-web: gunicorn admin_bootstrap:app -c gunicorn.conf.py
+web: gunicorn app:app -c gunicorn.conf.py

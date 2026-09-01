@@ -249,7 +249,7 @@ def member_index():
     for (mon,lop,chuong),arr in sorted(groups.items()):
         cards=[]
         for x in sorted(arr,key=lambda z:str(z.get('BaiHoc') or z.get('De') or '')):
-            path=str(x.get('path'));title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name);lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};dh=''.join("<div class='dangrow'><span>"+html.escape(str(k))+"</span><span class='tag'>"+str(int(v))+" câu</span></div>" for k,v in dangs.items());lc='vip' if lvl=='VIP' else 'free';href=urllib.parse.quote(path,safe='')
+            path=str(x.get('path'));title=str(x.get('BaiHoc') or x.get('De') or Path(path).parent.name);lvl=lesson_level(path);cnt=int(x.get('questions') or x.get('count') or 0);dangs=x.get('dang') or {};href=urllib.parse.quote(path,safe='');dh=''.join("<a class='dangrow danglink' href='/member/dang?path="+href+"&dang="+urllib.parse.quote(str(k))+"'><span>"+html.escape(str(k))+"</span><span class='tag'>"+str(int(v))+" câu</span></a>" for k,v in dangs.items());lc='vip' if lvl=='VIP' else 'free'
             cards.append("<div class='card'><b>"+html.escape(title)+"</b><div class='meta'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div><span class='tag "+lc+"'>"+html.escape(lvl)+"</span><span class='tag'>"+str(cnt)+" câu</span></div><div class='dang'><b>📌 Dạng bài</b>"+(dh or "<div class='muted'>Xem trực tiếp từ TEX khi mở bài</div>")+"</div><a class='btn primary' href='/member/select?path="+href+"'>Mở bài</a></div>")
         sections.append("<section style='margin-top:10px'><div class='titlebar'>"+html.escape(mon)+" · Lớp "+html.escape(lop)+" · "+html.escape(chuong)+"</div><div class='cards' style='margin-top:8px'>"+''.join(cards)+"</div></section>")
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
@@ -280,11 +280,8 @@ def start_practice():
     m=member_current();
     if not m:return redirect('/member/login')
     if request.form.getlist('qid'):
-        try:
-            import dang_routes as _dang
-            return _dang.start_selected_questions()
-        except Exception:
-            pass
+        import dang_routes as _dang
+        return _dang.start_selected_questions()
     p=request.form.get('path','')
     if not can_access(m,p):return redirect('/member')
     try:_,tex=read_tex(p);qs=parse_questions(tex)
@@ -318,7 +315,7 @@ def practice():
         score=right/len(ids)*10 if ids else 0;opts=''.join(f"<option value='{i}'>Câu {i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done));body=f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span></div><div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div><div class='review'><b>🤖 Gemini phản biện 1 câu</b><div style='margin-top:7px'><select id='pick'>{opts}</select> <button class='btn' onclick='rv()'>Phản biện</button></div><div id='out' class='reviewout'></div></div><a class='btn' href='/member'>← Mục lục</a></div></div></div><script>const D={json.dumps(done,ensure_ascii=False)};async function rv(){{let x=D[+document.getElementById('pick').value];let o=document.getElementById('out');o.textContent='⏳ Gemini đang phân tích...';let r=await fetch('/api/gemini/review',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(x)}});let d=await r.json();o.innerHTML=d.ok?d.text:'<span class=err>'+String(d.error||'Lỗi Gemini')+'</span>';if(window.MathJax)MathJax.typesetPromise()}}</script>";return page('Kết quả',body)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
-    palette=''.join(f"<span class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</span>" for j,qid in enumerate(ids))
+    palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
     payload={'kind':q['kind'],'text':q['text'],'solution':q['solution'],'dang':q['dang'],'level':q['level']}
     if q['kind']=='TN':payload['options']=q['options']
     elif q['kind']=='DS':payload['statements']=q['statements']
@@ -409,6 +406,20 @@ def admin_edit():
     return page('Sửa TEX',body)
 
 @app.errorhandler(Exception)
-def server_error(exc):return page('Lỗi máy chủ',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div><p><a class='btn' href='/health'>Kiểm tra /health</a></p></div></div></div>"),500
+def server_error(exc):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(exc, HTTPException):
+        return exc
+    return page('Lỗi máy chủ',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div><p><a class='btn' href='/health'>Kiểm tra /health</a></p></div></div></div>"),500
+
+# Always register chọn câu / làm bài, regardless of gunicorn target.
+import dang_routes  # noqa: E402,F401
+import student_gemini  # noqa: E402,F401
+try:
+    import admin_overrides as _admin_overrides  # noqa: F401
+    import student_overrides as _student_overrides  # noqa: F401
+    import security_patch as _security_patch  # noqa: F401
+except Exception:
+    pass
 
 if __name__=='__main__':app.run(host='0.0.0.0',port=int(os.getenv('PORT','5000')))

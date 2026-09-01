@@ -152,6 +152,27 @@ def start_selected_questions():
 def member_start_selected():
     return start_selected_questions()
 
+@app.get('/practice/jump/<int:pos>')
+def practice_jump(pos):
+    ids=list(session.get('practice_ids') or [])
+    if session.get('role')!='member' or not ids:return redirect('/member/login')
+    pos=max(0,min(pos,len(ids)-1));session['practice_pos']=pos
+    return redirect('/member/practice')
+
+@app.get('/practice/redo/<int:pos>')
+def practice_redo(pos):
+    m=member_current()
+    if not m:return redirect('/member/login')
+    ids=list(session.get('practice_ids') or [])
+    if pos<0 or pos>=len(ids):return redirect('/member/practice')
+    qnum=pos+1;done=list(session.get('practice_done') or [])
+    removed=[d for d in done if int(d.get('question',-1))==qnum]
+    kept=[d for d in done if int(d.get('question',-1))!=qnum]
+    right=int(session.get('practice_right') or 0)-sum(1 for d in removed if d.get('ok'))
+    session['practice_done']=kept;session['practice_right']=max(0,right)
+    session['practice_pos']=pos;session['practice_streak']=0;session.modified=True
+    return redirect('/member/practice')
+
 @app.after_request
 def make_catalog_rows_enhanced(response):
     if request.path!='/member' or 'text/html' not in response.headers.get('Content-Type',''): return response
