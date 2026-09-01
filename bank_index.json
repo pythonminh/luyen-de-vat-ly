@@ -3194,20 +3194,11 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
-      "questions": 16,
-      "count": 16,
+      "questions": 5,
+      "count": 5,
       "dang": {
         "Khái niệm nhiệt độ": 2,
-        "Truyền nhiệt": 2,
-        "Quá trình chuyển pha": 2,
-        "Nội năng": 1,
-        "Khái niệm nhiệt lượng": 1,
-        "Đồ thị nhiệt độ theo thời gian": 2,
-        "Đổi thang nhiệt độ và đọc nhiệt kế": 1,
-        "Đổi thang nhiệt độ": 2,
-        "Đồ thị sự thay đổi thể tích theo nhiệt độ": 1,
-        "Tính tốc độ tăng nhiệt độ": 1,
-        "Tính thời gian làm nóng vật": 1
+        "Thang nhiệt độ và nhiệt kế": 3
       },
       "dang_kinds": {
         "Khái niệm nhiệt độ": {
@@ -3216,64 +3207,10 @@
           "TLN": 0,
           "TL": 0
         },
-        "Truyền nhiệt": {
-          "TN": 1,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Quá trình chuyển pha": {
-          "TN": 2,
+        "Thang nhiệt độ và nhiệt kế": {
+          "TN": 3,
           "DS": 0,
           "TLN": 0,
-          "TL": 0
-        },
-        "Nội năng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Khái niệm nhiệt lượng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị nhiệt độ theo thời gian": {
-          "TN": 1,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đổi thang nhiệt độ và đọc nhiệt kế": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đổi thang nhiệt độ": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị sự thay đổi thể tích theo nhiệt độ": {
-          "TN": 0,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Tính tốc độ tăng nhiệt độ": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Tính thời gian làm nóng vật": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
           "TL": 0
         }
       }
