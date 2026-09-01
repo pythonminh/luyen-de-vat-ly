@@ -19,7 +19,7 @@ services:
       - key: GITHUB_TOKEN
         sync: false
       - key: ADMIN_USERNAME
-        value: ADMIN
+        sync: false
       - key: ADMIN_PASSWORD
         sync: false
       - key: GEMINI_API_KEY

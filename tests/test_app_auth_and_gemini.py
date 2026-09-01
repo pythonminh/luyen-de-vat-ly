@@ -154,7 +154,7 @@ class AppAuthAndGeminiTests(unittest.TestCase):
             "/login",
             data={"username": "khoa", "password": "matkhau"},
         )
-        self.assertIn("Sai mật khẩu.", wrong.get_data(as_text=True))
+        self.assertIn("Sai tài khoản hoặc mật khẩu.", wrong.get_data(as_text=True))
         self.assertIn(
             "Tài khoản của bạn hiện đang bị tắt. Vui lòng liên hệ ADMIN.",
             locked.get_data(as_text=True),

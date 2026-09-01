@@ -226,7 +226,7 @@ def shared_login():
         if m and str(m.get('status','ON')).upper()!='ON':msg='Tài khoản của bạn hiện đang bị tắt. Vui lòng liên hệ ADMIN.'
         elif m and m.get('password_sha256')==h:
             session.clear();session.update(role='member',username=u);return redirect('/member')
-        elif m:msg='Sai mật khẩu.'
+        elif m:msg='Sai tài khoản hoặc mật khẩu.'
         else:msg='Sai tài khoản hoặc mật khẩu.'
     return login_page(msg)
 
@@ -362,6 +362,7 @@ def gemini_review():
     client_api_key=str(d.pop('api_key','') or '').strip()
     api_key=client_api_key or GEMINI_KEY
     if not api_key:return jsonify(ok=False,error='Thiếu Gemini API key. Hãy nhập key của bạn hoặc cấu hình GEMINI_API_KEY trên server.'),400
+    if client_api_key and len(client_api_key)>200:return jsonify(ok=False,error='Gemini API key không hợp lệ.'),400
     if client_api_key and not re.fullmatch(r'AIza[0-9A-Za-z._-]{35,}',client_api_key):return jsonify(ok=False,error='Gemini API key không hợp lệ.'),400
     prompt=("Bạn là giáo viên Toán/Vật lý THPT. Phản biện đúng MỘT câu học sinh vừa làm. Trình bày bằng tiếng Việt: câu hỏi, học sinh trả lời gì, đúng/sai, lỗi cụ thể, lời giải đúng từng bước, và kết luận ngắn. Giữ nguyên công thức LaTeX trong $...$.\n\n"+json.dumps(d,ensure_ascii=False))
     url='https://generativelanguage.googleapis.com/v1beta/models/'+urllib.parse.quote(GEMINI_MODEL,safe='')+':generateContent?key='+urllib.parse.quote(api_key,safe='')
