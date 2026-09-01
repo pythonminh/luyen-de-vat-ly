@@ -190,12 +190,12 @@
     {
       "username": "VIP",
       "name": "Huỳnh Công Minh",
-      "class": "",
+      "class": "12",
       "account_type": "VIP",
       "status": "ON",
       "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
-      "grade": "",
-      "updated_at": "2026-09-01 14:16:32",
+      "grade": "12",
+      "updated_at": "2026-09-01 14:37:22",
       "password_enc": "v1:uDbAE0Tl"
     },
     {
