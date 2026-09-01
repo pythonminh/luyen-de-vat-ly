@@ -21,28 +21,44 @@ def _model_name(s: str) -> str:
 
 
 def _build_prompt(data: dict) -> str:
-    return f"""Bạn là trợ giảng Vật lý/Toán trung học phổ thông. Hãy phản biện bài làm của học sinh dựa đúng vào dữ liệu được cung cấp.
+    return f"""Bạn là AI trợ giảng Toán/Vật lý THPT, có nhiệm vụ PHẢN BIỆN MỘT CÂU HỎI dựa chính xác vào câu hỏi, đáp án chuẩn, lời giải chuẩn và bài làm của học sinh được cung cấp.
 
 Dạng bài: {data.get('dang','')}
 Loại câu: {data.get('kind','')}
 Mức độ: {data.get('level','')}
 
-CÂU HỎI:
+=== CÂU HỎI ===
 {data.get('text','')}
 
-TRẢ LỜI CỦA HỌC SINH:
+=== ĐÁP ÁN CHUẨN ===
+{data.get('answer','')}
+
+=== TRẢ LỜI CỦA HỌC SINH ===
 {data.get('student','')}
 
-LỜI GIẢI GỐC TRONG TEX:
+=== LỜI GIẢI CHUẨN ===
 {data.get('solution','')}
 
-Yêu cầu phản biện:
-1. Kết luận học sinh đúng hay sai hoặc phần nào đúng/sai.
-2. Chỉ ra chính xác chỗ sai nếu có.
-3. Giải thích ngắn gọn, dễ hiểu.
-4. Nêu cách làm đúng.
-5. Không tự thay đổi nội dung câu hỏi.
-Trả lời bằng tiếng Việt, trình bày rõ ràng."""
+Hãy tạo một KỊCH BẢN GIẢI THÍCH hoàn chỉnh, dễ nghe và dễ hiểu cho học sinh, theo đúng thứ tự:
+1. PHÂN TÍCH ĐỀ: xác định dữ kiện, đại lượng cần tìm và ý tưởng/công thức cần dùng.
+2. ĐỐI CHIẾU ĐÁP ÁN: nêu rõ đáp án chuẩn và đối chiếu với câu trả lời của học sinh.
+3. NHẬN ĐỊNH: kết luận rõ RÀNG ĐÚNG, SAI hoặc ĐÚNG MỘT PHẦN. Nếu sai, chỉ chính xác sai ở đâu và vì sao.
+4. GIẢI THÍCH: trình bày cách suy luận và các bước giải cần thiết, không bỏ qua bước quan trọng.
+5. KẾT QUẢ: viết lại kết quả cuối cùng thật rõ ràng; với câu trắc nghiệm phải nêu chữ cái/phương án đúng nếu có; với đúng-sai phải nêu từng nhận định Đúng/Sai; với trả lời ngắn phải nêu giá trị cuối cùng và đơn vị nếu có.
+6. LỖI DỄ NHẦM: chỉ ra 1-3 lỗi hoặc bẫy mà học sinh dễ mắc nếu phù hợp.
+
+QUY TẮC QUAN TRỌNG:
+- Chỉ sử dụng thông tin của đúng câu hỏi được gửi; không tự bịa dữ kiện.
+- Lời giải chuẩn là nguồn tham chiếu chính. Nếu dữ liệu mâu thuẫn, hãy nói rõ điểm mâu thuẫn thay vì đoán.
+- Không thay đổi đáp án chuẩn.
+- Không chỉ nói "đúng/sai"; phải giải thích nguyên nhân.
+- Công thức toán và vật lý PHẢI viết bằng LaTeX chuẩn để MathJax hiển thị tốt: dùng \\( ... \\) cho công thức trong dòng và \\[ ... \\] cho công thức riêng dòng. Không dùng Markdown code block cho công thức.
+- Không viết công thức bằng Unicode thay cho LaTeX khi có thể dùng LaTeX.
+- Đơn vị, số mũ, phân số, căn, vectơ và ký hiệu vật lý phải dùng LaTeX chuẩn.
+- Văn bản tiếng Việt rõ ràng, ngắn gọn nhưng đủ bước để có thể dùng làm lời đọc AI.
+- Không dùng bảng Markdown.
+
+Trả lời theo các tiêu đề: PHÂN TÍCH ĐỀ; ĐÁP ÁN VÀ ĐỐI CHIẾU; NHẬN ĐỊNH ĐÚNG/SAI; GIẢI THÍCH; KẾT QUẢ; LỖI DỄ NHẦM."""
 
 
 @app.post('/api/gemini/review_student')
@@ -62,7 +78,7 @@ def gemini_review_student():
     url = 'https://generativelanguage.googleapis.com/v1beta/models/' + urllib.parse.quote(model, safe='-_.') + ':generateContent?key=' + urllib.parse.quote(api_key, safe='')
     payload = {
         'contents': [{'parts': [{'text': _build_prompt(data)}]}],
-        'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 1200},
+        'generationConfig': {'temperature': 0.15, 'maxOutputTokens': 1800},
     }
     req = urllib.request.Request(
         url,
