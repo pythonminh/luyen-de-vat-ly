@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 96,
+  "total_files": 97,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4820,6 +4820,29 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
+      "questions": 20,
+      "count": 20,
+      "dang": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20
+      },
+      "dang_kinds": {
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
+          "TN": 12,
+          "DS": 5,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế/dang-tinh-do-bien-thien-noi-nang-trong-qua-trinh-nhie.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
+      "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế · Tính độ biến thiên nội năng trong quá trình nhiệt động lực học",
       "questions": 0,
       "count": 0,
       "dang": {}
