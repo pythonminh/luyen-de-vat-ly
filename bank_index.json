@@ -4845,9 +4845,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính tốc độ tăng nhiệt độ",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính tốc độ tăng nhiệt độ": 1
+      },
+      "dang_kinds": {
+        "Tính tốc độ tăng nhiệt độ": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
     }
   ]
 }
