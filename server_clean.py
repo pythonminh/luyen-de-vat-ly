@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Single authoritative Render entry point.
 
-The application itself remains in app.py/wsgi.py.  This module is the only
-Gunicorn entry point and applies one final, deterministic header/navigation
-and authentication policy so old GitHub UI fragments cannot leak back in.
+Keeps one UI/auth policy and, importantly, never rewrites LaTeX/JSON embedded
+inside the student-practice JavaScript.  Old cleanup code was deleting the
+question payload itself because `% ID` and `% Mức` comments lived on the same
+line as the question text.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from flask import redirect, request, session
 
 import app as base
 import wsgi
-import admin_manager  # noqa: F401 - registers ADMIN routes
+import admin_manager  # noqa: F401
 
 app = wsgi.app
 
@@ -69,7 +70,6 @@ def _nav() -> str:
 
 
 def _replace_top(body: str) -> str:
-    """Replace the complete old header, regardless of nested div structure."""
     header = (
         "<div class='top'><div class='topin'>"
         "<div><div class='brand'>" + BRAND + "</div>"
@@ -79,34 +79,25 @@ def _replace_top(body: str) -> str:
     )
     body = re.sub(
         r"<div\s+class=['\"]top['\"]>.*?</div>\s*(?=<div\s+class=['\"]wrap['\"]>)",
-        header,
-        body,
-        count=1,
-        flags=re.I | re.S,
+        header, body, count=1, flags=re.I | re.S,
     )
     if "class='top'" not in body and 'class="top"' not in body:
-        # Fallback for templates that do not use the standard .top wrapper.
         body = re.sub(r"<body[^>]*>", lambda m: m.group(0) + header, body, count=1, flags=re.I)
     return body
 
 
 def _clean_html(body: str) -> str:
     body = _replace_top(body)
-
-    # Remove any second/legacy navigation/header that survived a custom page.
+    # Only replace a real visible legacy navigation. Do not touch scripts.
     body = re.sub(r"<div\s+class=['\"]nav['\"]>.*?</div>", _nav(), body, count=1, flags=re.I | re.S)
 
-    # Never expose GitHub to non-ADMIN sessions.
     if session.get("role") != "admin":
         body = re.sub(
             r"<a\b[^>]*href=['\"][^'\"]*(?:github\.com|/github(?:/|['\"]))[^'\"]*['\"][^>]*>.*?</a>",
-            "",
-            body,
-            flags=re.I | re.S,
+            "", body, flags=re.I | re.S,
         )
         body = re.sub(r"<button\b[^>]*>\s*(?:🐙\s*)?GitHub\s*</button>", "", body, flags=re.I | re.S)
 
-    # Clean old branding wherever it occurs in custom pages.
     for old in (
         "📚 Ngân hàng câu hỏi GitHub",
         "Ngân hàng câu hỏi GitHub",
@@ -119,12 +110,13 @@ def _clean_html(body: str) -> str:
     body = re.sub(r"MỤC LỤC\s*[·•|]\s*GitHub", "MỤC LỤC", body, flags=re.I)
     body = re.sub(
         r"Nguồn đề:\s*bank_index\.json\s*\+\s*ngan-hang/\\?\*\.tex\s*(?:·|•|\|)\s*Google Sheet không dùng cho đề",
-        CONTACT,
-        body,
-        flags=re.I,
+        CONTACT, body, flags=re.I,
     )
 
-    if request.path.startswith("/member") or request.path == "/":
+    # IMPORTANT: Never strip LaTeX comments from /member/practice HTML.
+    # The practice page stores the question payload inside a <script> JSON
+    # literal; stripping `% ID` / `% Mức` there can delete the question text.
+    if (request.path.startswith("/member") or request.path == "/") and request.path != "/member/practice":
         body = re.sub(r"\\begin\s*\{\s*ex\s*\}", "", body, flags=re.I)
         body = re.sub(r"\\end\s*\{\s*ex\s*\}", "", body, flags=re.I)
         body = re.sub(r"%\s*ID\s*:\s*[^%<\r\n]+", "", body, flags=re.I)
@@ -132,8 +124,27 @@ def _clean_html(body: str) -> str:
     return body
 
 
-# Patch the single page factory used by app.py.  This prevents old branding
-# from being generated in the first place; after_request below is the safety net.
+# Clean the question text at the source instead of deleting pieces from the
+# rendered HTML/JavaScript later.
+_original_parse_questions = base.parse_questions
+
+
+def _fixed_parse_questions(tex: str):
+    qs = _original_parse_questions(tex)
+    for q in qs:
+        text = str(q.get("text") or "")
+        text = re.sub(
+            r"^\s*\\begin\s*\{\s*ex\s*\}\s*%\s*ID\s*:\s*[^%\r\n]*%\s*Mức\s*:\s*\S+\s*",
+            "", text, count=1, flags=re.I,
+        )
+        text = re.sub(r"^\s*\\begin\s*\{\s*ex\s*\}\s*", "", text, count=1, flags=re.I)
+        text = re.sub(r"\\end\s*\{\s*ex\s*\}\s*$", "", text, count=1, flags=re.I)
+        q["text"] = text.strip()
+    return qs
+
+
+base.parse_questions = _fixed_parse_questions
+
 _original_page = base.page
 
 
@@ -145,16 +156,12 @@ def authoritative_page(title: str, body: str):
 
 
 base.page = authoritative_page
-
-# admin_manager imported page directly, so replace its local alias as well.
 try:
     admin_manager.page = authoritative_page
 except Exception:
     pass
 
 
-# Allow ADMIN credentials from the normal member-login screen too.  This keeps
-# one login entry point for users while still sending ADMIN to /admin.
 _original_member_login = app.view_functions.get("member_login")
 if _original_member_login:
     def unified_member_login(*args, **kwargs):
@@ -183,12 +190,10 @@ def clean_admin_login():
             if not ADMIN_PASSWORD and not ADMIN_PASSWORD_SHA256
             else "Sai tài khoản hoặc mật khẩu ADMIN."
         )
-
     error = f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else ""
     body = (
         "<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'>"
-        "<div class='head'>🔐 ADMIN</div><div class='body'>"
-        "<form method='post'>"
+        "<div class='head'>🔐 ADMIN</div><div class='body'><form method='post'>"
         f"<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' value='{html.escape(ADMIN_USERNAME, quote=True)}' required></div>"
         "<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div>"
         "<button class='btn primary' type='submit'>Đăng nhập</button>"
@@ -206,6 +211,15 @@ def clean_admin_logout():
 
 
 app.view_functions["admin_logout"] = clean_admin_logout
+
+
+# Remove the destructive legacy wsgi response filter.  It ran after this
+# module's filter and deleted `% ID` / `% Mức` from the embedded practice JSON.
+try:
+    funcs = app.after_request_funcs.get(None, [])
+    app.after_request_funcs[None] = [f for f in funcs if getattr(f, "__name__", "") != "final_student_ui"]
+except Exception:
+    pass
 
 
 @app.after_request
