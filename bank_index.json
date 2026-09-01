@@ -4802,9 +4802,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Phân biệt chất rắn kết tinh và chất rắn vô định hình",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 23,
+      "count": 23,
+      "dang": {
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": 23
+      },
+      "dang_kinds": {
+        "Phân biệt chất rắn kết tinh và chất rắn vô định hình": {
+          "TN": 12,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 3
+        }
+      }
     }
   ]
 }
