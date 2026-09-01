@@ -58,14 +58,31 @@ a{text-decoration:none;color:#145bb0}.top{background:var(--blue);color:#fff}.top
 """
 
 def page(title: str, body: str) -> Response:
-    top = (
-        "<div class='top'><div class='topin'><div><div class='brand'>📚 Ngân hàng câu hỏi GitHub</div>"
-        "<div class='sub'>Nguồn đề: bank_index.json + ngan-hang/*.tex · Google Sheet không dùng cho đề</div></div>"
-        "<div class='nav'><a href='/member'>📚 Mục lục</a><a href='/admin/login'>🔐 ADMIN</a>"
-        f"<a href='https://github.com/{html.escape(REPO)}' target='_blank'>🐙 GitHub</a></div></div></div>"
+    nav = (
+        "<nav class='bg-gradient-to-r from-blue-700 to-blue-500 shadow-lg'>"
+        "<div class='max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap'>"
+        "<div class='flex-1 min-w-0'>"
+        "<div class='text-white font-black text-lg leading-tight'>📚 Ngân hàng câu hỏi GitHub</div>"
+        "<div class='text-blue-200 text-xs mt-0.5 truncate'>Nguồn đề: bank_index.json + ngan-hang/*.tex</div>"
+        "</div>"
+        "<div class='flex gap-3 flex-shrink-0'>"
+        "<a href='/member' class='text-white text-sm font-semibold hover:text-blue-200 transition'>📚 Mục lục</a>"
+        "<a href='/admin/login' class='text-white text-sm font-semibold hover:text-blue-200 transition'>🔐 ADMIN</a>"
+        f"<a href='https://github.com/{html.escape(REPO)}' target='_blank' class='text-white text-sm font-semibold hover:text-blue-200 transition'>🐙 GitHub</a>"
+        "</div></div></nav>"
     )
     mj = "<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre']}};</script><script async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
-    return Response(f"<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{CSS}</style>{mj}</head><body>{top}{body}</body></html>", mimetype='text/html')
+    tw = "<script src='https://cdn.tailwindcss.com'></script>"
+    return Response(
+        f"<!doctype html><html lang='vi'><head><meta charset='utf-8'>"
+        f"<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        f"<title>{html.escape(title)} · Luyện đề Vật lý</title>"
+        f"{tw}<style>{CSS}</style>{mj}"
+        f"</head><body class='bg-gray-50 min-h-screen'>{nav}"
+        f"<div class='max-w-screen-xl mx-auto px-4 py-6'>{body}</div>"
+        f"</body></html>",
+        mimetype='text/html'
+    )
 
 def load_json(path: Path, default):
     try:return json.loads(path.read_text(encoding='utf-8'))
@@ -191,7 +208,35 @@ def member_login():
             if m.get('username')==u and m.get('status','ON')=='ON' and m.get('password_sha256')==h:
                 session.clear();session.update(role='member',username=u);return redirect('/member')
         msg='Sai tài khoản hoặc mật khẩu.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
+    body = (
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+        "<div class='bg-gradient-to-r from-blue-700 to-blue-500 px-6 py-5 text-center'>"
+        "<div class='text-4xl mb-2'>👤</div>"
+        "<h2 class='text-white font-black text-xl'>Đăng nhập</h2>"
+        "<p class='text-blue-200 text-sm mt-1'>Học viên / Thành viên</p>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+        "<input name='username' required autocomplete='username'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+        "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+        "<input name='password' type='password' required autocomplete='current-password'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+        "<button class='w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm'>"
+        "Đăng nhập</button>"
+        "<div class='mt-3 text-center'>"
+        "<a href='/member/register' class='text-sm text-blue-600 hover:underline font-semibold'>Chưa có tài khoản? Đăng ký FREE</a>"
+        "</div>"
+        f"{'<div class=\'mt-3 text-sm text-red-600 font-semibold text-center\'>'+html.escape(msg)+'</div>' if msg else ''}"
+        "</form>"
+        "</div></div></div></div>"
+    )
+    return page('Đăng nhập', body)
 
 @app.route('/member/register',methods=['GET','POST'])
 def member_register():
@@ -199,7 +244,38 @@ def member_register():
         u=request.form.get('username','').strip();n=request.form.get('name','').strip();p=request.form.get('password','');d=members_data()
         if not u or not p or any(x.get('username')==u for x in d.get('members',[])):return redirect('/member/register')
         d.setdefault('members',[]).append({'username':u,'name':n or u,'class':'','account_type':'FREE','status':'ON','password_sha256':hashlib.sha256(p.encode()).hexdigest()});save_json_github(MEMBERS_FILE,d,'members.json','Add member');session.clear();session.update(role='member',username=u);return redirect('/member')
-    body="<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post'><div class='field'><label>Họ tên</label><input name='name'></div><div class='field'><label>Tài khoản</label><input name='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Tạo tài khoản</button></form></div></div></div>";return page('Đăng ký',body)
+    body = (
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+        "<div class='bg-gradient-to-r from-green-600 to-teal-500 px-6 py-5 text-center'>"
+        "<div class='text-4xl mb-2'>📝</div>"
+        "<h2 class='text-white font-black text-xl'>Đăng ký</h2>"
+        "<p class='text-green-100 text-sm mt-1'>Tạo tài khoản FREE miễn phí</p>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Họ tên</label>"
+        "<input name='name' placeholder='Nguyễn Văn A'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+        "<input name='username' required placeholder='vd: minhhoc123'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+        "<input name='password' type='password' required"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<button class='w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition text-sm'>"
+        "Tạo tài khoản FREE</button>"
+        "<div class='mt-3 text-center'>"
+        "<a href='/member/login' class='text-sm text-blue-600 hover:underline font-semibold'>Đã có tài khoản? Đăng nhập</a>"
+        "</div>"
+        "</form>"
+        "</div></div></div></div>"
+    )
+    return page('Đăng ký', body)
 
 @app.get('/member/logout')
 def member_logout():session.clear();return redirect('/member/login')
@@ -334,7 +410,32 @@ def admin_login():
     if request.method=='POST':
         if request.form.get('username','').strip()==ADMIN_USER and ADMIN_PASS and request.form.get('password','')==ADMIN_PASS:session.clear();session['role']='admin';return redirect('/admin')
         msg='Sai tài khoản hoặc mật khẩu ADMIN.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>🔐 ADMIN</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' value='{html.escape(ADMIN_USER)}' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('ADMIN',body)
+    body = (
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-xs'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+        "<div class='bg-gradient-to-r from-gray-800 to-gray-600 px-6 py-5 text-center'>"
+        "<div class='text-4xl mb-2'>🔐</div>"
+        "<h2 class='text-white font-black text-xl'>ADMIN</h2>"
+        "<p class='text-gray-400 text-sm mt-1'>Quản trị viên</p>"
+        "</div>"
+        "<div class='p-6'>"
+        "<form method='post'>"
+        f"<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+        f"<input name='username' value='{html.escape(ADMIN_USER)}' required"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-50'></div>"
+        "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+        "<input name='password' type='password' required autocomplete='current-password'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-50'></div>"
+        "<button class='w-full py-2.5 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl transition text-sm'>"
+        "Đăng nhập ADMIN</button>"
+        f"{'<div class=\'mt-3 text-sm text-red-600 font-semibold text-center\'>'+html.escape(msg)+'</div>' if msg else ''}"
+        "</form>"
+        "</div></div></div></div>"
+    )
+    return page('ADMIN', body)
 
 @app.get('/admin')
 def admin_home():

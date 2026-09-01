@@ -35,16 +35,38 @@ def member_login_fixed():
             session.clear(); session.update(role='member', username=str(member.get('username')), name=member.get('name') or username, account_type=str(member.get('account_type') or 'FREE').upper())
             return redirect('/member')
         msg = 'Sai tài khoản, mật khẩu hoặc tài khoản đã bị khóa.'
-    body = """
-<div class='wrap'><div class='panel login' style='max-width:480px;margin:40px auto'>
-<div class='head'>👤 Đăng nhập học viên</div><div class='body'>
-<div class='notice' style='margin-bottom:10px'>Tài khoản <b>FREE</b>: xem và làm bài FREE. Tài khoản <b>VIP</b>: dùng cả FREE + VIP.</div>
-<form method='post'>
-<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div>
-<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div>
-<button class='btn primary' type='submit'>🔐 Đăng nhập</button>
-<a class='btn' href='/member/register'>📝 Tạo tài khoản FREE</a>
-""" + (f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else '') + "</form></div></div></div>"
+    err_html = (f"<div class='mt-3 text-sm text-red-600 font-semibold text-center'>{html.escape(msg)}</div>" if msg else '')
+    body = (
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+        "<div class='bg-gradient-to-r from-blue-700 to-blue-500 px-6 py-5 text-center'>"
+        "<div class='text-4xl mb-2'>👤</div>"
+        "<h2 class='text-white font-black text-xl'>Đăng nhập</h2>"
+        "<p class='text-blue-200 text-sm mt-1'>Học viên / Thành viên</p>"
+        "</div>"
+        "<div class='p-6'>"
+        "<div class='mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700'>"
+        "🎓 <b>FREE</b>: xem bài FREE · <b>VIP</b>: dùng cả FREE + VIP"
+        "</div>"
+        "<form method='post'>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+        "<input name='username' autocomplete='username' required"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+        "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+        "<input name='password' type='password' autocomplete='current-password' required"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50'></div>"
+        "<button type='submit' class='w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm'>"
+        "🔐 Đăng nhập</button>"
+        "<div class='mt-3 text-center'>"
+        "<a href='/member/register' class='text-sm text-blue-600 hover:underline font-semibold'>📝 Chưa có tài khoản? Đăng ký FREE</a>"
+        "</div>"
+        + err_html +
+        "</form>"
+        "</div></div></div></div>"
+    )
     return page('Đăng nhập học viên', body)
 
 
@@ -63,15 +85,42 @@ def member_register_fixed():
                     session.clear(); session.update(role='member',username=username,name=name or username,account_type='FREE')
                     return redirect('/member')
                 except Exception as e: msg='Không lưu được tài khoản lên GitHub: '+str(e)
-    body = """
-<div class='wrap'><div class='panel login' style='max-width:480px;margin:40px auto'>
-<div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'>
-<div class='notice' style='margin-bottom:10px'>Tài khoản mới mặc định là <b>FREE</b>. ADMIN có thể nâng lên VIP.</div>
-<form method='post'><div class='field'><label>Họ tên</label><input name='name'></div>
-<div class='field'><label>Tài khoản</label><input name='username' required></div>
-<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div>
-<button class='btn primary'>✅ Tạo tài khoản</button> <a class='btn' href='/member/login'>← Đăng nhập</a>
-""" + (f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else '') + "</form></div></div></div>"
+    err_html = (f"<div class='mt-3 text-sm text-red-600 font-semibold text-center'>{html.escape(msg)}</div>" if msg else '')
+    body = (
+        "<div class='flex justify-center'>"
+        "<div class='w-full max-w-sm'>"
+        "<div class='bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-6'>"
+        "<div class='bg-gradient-to-r from-green-600 to-teal-500 px-6 py-5 text-center'>"
+        "<div class='text-4xl mb-2'>📝</div>"
+        "<h2 class='text-white font-black text-xl'>Đăng ký</h2>"
+        "<p class='text-green-100 text-sm mt-1'>Tạo tài khoản FREE miễn phí</p>"
+        "</div>"
+        "<div class='p-6'>"
+        "<div class='mb-3 p-3 bg-green-50 border border-green-100 rounded-xl text-xs text-green-700'>"
+        "✅ Tài khoản mới mặc định là <b>FREE</b>. ADMIN có thể nâng lên <b>VIP</b>."
+        "</div>"
+        "<form method='post'>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Họ tên</label>"
+        "<input name='name' placeholder='Nguyễn Văn A'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<div class='mb-4'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Tài khoản</label>"
+        "<input name='username' required placeholder='vd: minhhoc123'"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<div class='mb-5'><label class='block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide'>Mật khẩu</label>"
+        "<input name='password' type='password' required"
+        " class='w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm"
+        " focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50'></div>"
+        "<button class='w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition text-sm'>"
+        "✅ Tạo tài khoản FREE</button>"
+        "<div class='mt-3 text-center'>"
+        "<a href='/member/login' class='text-sm text-blue-600 hover:underline font-semibold'>← Đã có tài khoản? Đăng nhập</a>"
+        "</div>"
+        + err_html +
+        "</form>"
+        "</div></div></div></div>"
+    )
     return page('Đăng ký FREE', body)
 
 # Override or create the endpoints.
