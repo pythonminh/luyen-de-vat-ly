@@ -135,7 +135,10 @@ def gemini_panel_html(extra=''):
 
 def page(title: str, body: str) -> Response:
     role = session.get("role")
-    nav = ["<a href='/member'>📚 Mục lục</a>"]
+    nav = [
+        "<button type='button' class='navback' onclick=\"if(history.length>1)history.back();else location.href='/member'\">← Quay lại</button>",
+        "<a href='/member'>📚 MỤC LỤC</a>",
+    ]
     who = ""
     if role == "member":
         m = member_current()

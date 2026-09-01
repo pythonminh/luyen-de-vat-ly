@@ -130,10 +130,8 @@ def member_dang():
         dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
-    body=("<div class='wrap'><div class='panel'><div class='head'>📌 Dạng bài đang chọn</div><div class='body'>"
-          f"<div class='notice'><b>{_esc(title)}</b> · {_esc(dang)} · <b>{total} câu</b> · Số <b>Câu 1/{total}</b> là thứ tự trong dạng này. "
-          + ("<b>ID</b> dùng để tìm trong file TEX trên GitHub. " if can_manage_bank() else "")
-          + f"Nguồn câu ghi bằng <code>\\nguon{{SGK}}</code>, video bài giảng ghi bằng <code>\\video{{link YouTube}}</code> trong TEX.</div>{notice_extra}{dup_note}{flash_html}{dup_form}"
+    body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span></div><div class='body'>"
+          f"{notice_extra}{dup_note}{flash_html}{dup_form}"
           "<form method='post' action='/member/start-selected' id='questionForm'>"
           f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>"
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
