@@ -53,30 +53,30 @@ def admin_members():
     for i, m in enumerate(members_data().get("members", [])):
         u = str(m.get("username", "")); name = str(m.get("name", "")); cls = str(m.get("class", ""))
         typ = str(m.get("account_type", "FREE")).upper(); status = str(m.get("status", "ON")).upper()
-        grade = ""
         import re
         gm = re.search(r"(?<!\d)(10|11|12)(?!\d)", cls.upper())
-        if gm: grade = gm.group(1)
+        grade = gm.group(1) if gm else ""
+        safe_u = html.escape(u, quote=True)
         rows.append(
             "<tr>"
-            f"<td><b>{html.escape(u)}</b><input type='hidden' name='username' value='{html.escape(u, quote=True)}'></td>"
+            f"<td><b>{html.escape(u)}</b><input type='hidden' name='username' value='{safe_u}'></td>"
             f"<td>{html.escape(name)}</td>"
-            "<td><select name='class_" + html.escape(u, quote=True) + "'>"
+            f"<td><select name='class_{safe_u}'>"
             f"<option value='' {'selected' if not grade else ''}>Chưa cấp</option>"
             f"<option value='10' {'selected' if grade=='10' else ''}>10</option>"
             f"<option value='11' {'selected' if grade=='11' else ''}>11</option>"
             f"<option value='12' {'selected' if grade=='12' else ''}>12</option>"
             "</select></td>"
-            "<td><select name='account_type'>"
+            f"<td><select name='account_type_{safe_u}'>"
             f"<option {'selected' if typ=='FREE' else ''}>FREE</option>"
             f"<option {'selected' if typ=='VIP' else ''}>VIP</option>"
             f"<option {'selected' if typ in {'SVIP','S.VIP','S-VIP'} else ''}>SVIP</option>"
             "</select></td>"
-            "<td><select name='status'>"
+            f"<td><select name='status_{safe_u}'>"
             f"<option {'selected' if status=='ON' else ''}>ON</option><option {'selected' if status=='OFF' else ''}>OFF</option>"
             "</select></td>"
-            "<td><input name='new_password' type='password' placeholder='Mật khẩu mới (bỏ trống = giữ nguyên)'></td>"
-            f"<td><button class='btn green' name='save_user' value='{html.escape(u, quote=True)}'>💾 Lưu</button></td>"
+            f"<td><input name='new_password_{safe_u}' type='password' placeholder='Mật khẩu mới (bỏ trống = giữ nguyên)'></td>"
+            f"<td><button class='btn green' name='save_user' value='{safe_u}'>💾 Lưu</button></td>"
             "</tr>"
         )
     body = (
@@ -107,12 +107,13 @@ def _admin_members_save():
     data = members_data(); target = next((m for m in data.get('members', []) if str(m.get('username','')).strip() == username), None)
     if not target:
         return page('ADMIN', "<div class='wrap'><div class='panel'><div class='body err'>Không tìm thấy tài khoản.</div></div></div>")
-    target['account_type'] = (request.form.get('account_type') or target.get('account_type') or 'FREE').upper()
-    if target['account_type'] in {'S.VIP','S-VIP'}:
-        target['account_type'] = 'SVIP'
-    if target['account_type'] not in {'FREE','VIP','SVIP'}:
-        target['account_type'] = 'FREE'
-    target['status'] = (request.form.get('status') or target.get('status') or 'ON').upper()
+    account_type = (request.form.get(f'account_type_{username}') or target.get('account_type') or 'FREE').upper()
+    if account_type in {'S.VIP','S-VIP'}:
+        account_type = 'SVIP'
+    if account_type not in {'FREE','VIP','SVIP'}:
+        account_type = 'FREE'
+    target['account_type'] = account_type
+    target['status'] = (request.form.get(f'status_{username}') or target.get('status') or 'ON').upper()
     class_value = (request.form.get(f'class_{username}') or '').strip().upper()
     if class_value in {'10','11','12'}:
         target['class'] = class_value
@@ -120,7 +121,7 @@ def _admin_members_save():
     elif class_value == '':
         target['class'] = ''
         target['grade'] = ''
-    new_password = request.form.get('new_password') or ''
+    new_password = request.form.get(f'new_password_{username}') or ''
     if new_password:
         target['password_sha256'] = hashlib.sha256(new_password.encode('utf-8')).hexdigest()
     try:
