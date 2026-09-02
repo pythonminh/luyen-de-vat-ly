@@ -1806,8 +1806,8 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 143,
-      "count": 143,
+      "questions": 123,
+      "count": 123,
       "dang": {
         "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6,
         "Chưa có dạng": 6,
@@ -1818,7 +1818,6 @@
         "Xác định các đại lượng đặc trưng từ phương trình li độ": 17,
         "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": 8,
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 16,
-        "Xác định trạng thái của vật tại một thời điểm xác định": 20,
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 11,
         "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 13
       },
@@ -1875,12 +1874,6 @@
           "TN": 3,
           "DS": 10,
           "TLN": 3,
-          "TL": 0
-        },
-        "Xác định trạng thái của vật tại một thời điểm xác định": {
-          "TN": 9,
-          "DS": 7,
-          "TLN": 4,
           "TL": 0
         },
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
