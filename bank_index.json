@@ -5221,9 +5221,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": 27
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
