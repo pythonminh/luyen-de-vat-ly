@@ -3523,31 +3523,31 @@
       "questions": 82,
       "count": 82,
       "dang": {
-        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng (Celsius, Kelvin, Fahrenheit)": 29,
-        "Thiết lập và chuyển đổi thang nhiệt độ mới": 21,
-        "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": 14,
-        "Nguyên lí hoạt động và sử dụng nhiệt kế": 18
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 29,
+        "Thiết lập và chuyển đổi thang nhiệt độ tự chế": 21,
+        "Lý thuyết về nhiệt độ và cân bằng nhiệt": 14,
+        "Nguyên lý hoạt động và sử dụng nhiệt kế": 18
       },
       "dang_kinds": {
-        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng (Celsius, Kelvin, Fahrenheit)": {
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": {
           "TN": 21,
           "DS": 6,
           "TLN": 1,
           "TL": 1
         },
-        "Thiết lập và chuyển đổi thang nhiệt độ mới": {
+        "Thiết lập và chuyển đổi thang nhiệt độ tự chế": {
           "TN": 13,
           "DS": 5,
           "TLN": 1,
           "TL": 2
         },
-        "Lí thuyết về nhiệt độ, cân bằng nhiệt và độ không tuyệt đối": {
+        "Lý thuyết về nhiệt độ và cân bằng nhiệt": {
           "TN": 10,
           "DS": 1,
           "TLN": 1,
           "TL": 2
         },
-        "Nguyên lí hoạt động và sử dụng nhiệt kế": {
+        "Nguyên lý hoạt động và sử dụng nhiệt kế": {
           "TN": 10,
           "DS": 5,
           "TLN": 1,
