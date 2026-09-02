@@ -86,7 +86,7 @@ body.cinema .qid,.cinema-wait .qid{display:none}
 body.cinema .nguonrow{display:none}
 body.cinema .opt{cursor:default;display:flex;align-items:center;gap:10px}
 body.cinema .opt.picked{border-color:var(--blue);background:#eef6ff;box-shadow:0 0 0 3px #176bd322}
-body.cinema .opt.correct,body.cinema .tf.correct{background:#bbf7d0!important;border:3px solid #15803d!important;box-shadow:0 0 0 4px #22c55e44}
+body.cinema .opt.correct,body.cinema .tf.correct{background:#f3faf5!important;border:2px solid #86c99a!important;box-shadow:none}
 body.cinema .opt.correct .okmark,body.cinema .okmark{display:inline-block;margin-left:.4em;padding:.12em .55em;border-radius:999px;background:#15803d;color:#fff;font-size:.78em;font-weight:900;vertical-align:middle;white-space:nowrap}
 body.cinema .opt.wrong,body.cinema .tf.wrong{background:#fecaca!important;border:3px solid #b91c1c!important}
 body.cinema .tf{display:flex;align-items:center;gap:10px}
