@@ -5432,9 +5432,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 33
+      },
+      "dang_kinds": {
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 18,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
