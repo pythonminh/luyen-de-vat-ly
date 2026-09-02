@@ -1806,11 +1806,10 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 51,
-      "count": 51,
+      "questions": 45,
+      "count": 45,
       "dang": {
         "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6,
-        "Chưa có dạng": 6,
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 12,
         "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 22,
         "Đơn vị và đại lượng trong dao động điều hòa": 5
@@ -1820,12 +1819,6 @@
           "TN": 1,
           "DS": 2,
           "TLN": 3,
-          "TL": 0
-        },
-        "Chưa có dạng": {
-          "TN": 4,
-          "DS": 2,
-          "TLN": 0,
           "TL": 0
         },
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
