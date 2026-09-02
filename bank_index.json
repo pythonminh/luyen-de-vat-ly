@@ -519,24 +519,20 @@
       "questions": 227,
       "count": 227,
       "dang": {
-        "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": 29,
+        "Vận dụng tiến trình của phương pháp thực nghiệm": 49,
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 8,
-        "Phân tích vai trò và ảnh hưởng hai mặt của Vật lí đối với đời sống, khoa học và công nghệ": 19,
-        "Phương pháp mô hình trong nghiên cứu Vật lí": 18,
-        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": 20,
-        "Vận dụng tiến trình của phương pháp mô hình": 39,
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 37,
+        "Vận dụng tiến trình của phương pháp mô hình": 57,
         "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 18,
-        "Xác định đối tượng nghiên cứu và mục tiêu của môn Vật lí": 22,
-        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 18,
-        "Quá trình phát triển của Vật lí": 18,
-        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 18
+        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 40,
+        "Quá trình phát triển của Vật lí": 18
       },
       "dang_kinds": {
-        "Nhận diện và sắp xếp các bước của phương pháp thực nghiệm": {
-          "TN": 20,
-          "DS": 7,
-          "TLN": 1,
-          "TL": 1
+        "Vận dụng tiến trình của phương pháp thực nghiệm": {
+          "TN": 22,
+          "DS": 13,
+          "TLN": 7,
+          "TL": 7
         },
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": {
           "TN": 4,
@@ -544,29 +540,17 @@
           "TLN": 1,
           "TL": 1
         },
-        "Phân tích vai trò và ảnh hưởng hai mặt của Vật lí đối với đời sống, khoa học và công nghệ": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Phương pháp mô hình trong nghiên cứu Vật lí": {
-          "TN": 1,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Phương pháp thực nghiệm trong nghiên cứu Vật lí": {
-          "TN": 2,
-          "DS": 6,
-          "TLN": 6,
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": {
+          "TN": 11,
+          "DS": 13,
+          "TLN": 7,
           "TL": 6
         },
         "Vận dụng tiến trình của phương pháp mô hình": {
-          "TN": 33,
-          "DS": 5,
-          "TLN": 1,
-          "TL": 0
+          "TN": 34,
+          "DS": 10,
+          "TLN": 7,
+          "TL": 6
         },
         "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": {
           "TN": 1,
@@ -574,25 +558,13 @@
           "TLN": 6,
           "TL": 6
         },
-        "Xác định đối tượng nghiên cứu và mục tiêu của môn Vật lí": {
-          "TN": 18,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 0
-        },
         "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": {
-          "TN": 1,
-          "DS": 5,
-          "TLN": 6,
+          "TN": 19,
+          "DS": 8,
+          "TLN": 7,
           "TL": 6
         },
         "Quá trình phát triển của Vật lí": {
-          "TN": 1,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        },
-        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": {
           "TN": 1,
           "DS": 5,
           "TLN": 6,
