@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 142,
+  "total_files": 143,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5445,6 +5445,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
+      "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
