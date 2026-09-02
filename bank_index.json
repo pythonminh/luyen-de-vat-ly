@@ -28,10 +28,10 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 1. Mệnh đề",
       "De": "Bài 1. Mệnh đề",
-      "questions": 215,
-      "count": 215,
+      "questions": 216,
+      "count": 216,
       "dang": {
-        "Mệnh đề chứa biến": 29,
+        "Mệnh đề chứa biến": 30,
         "Xác định mệnh đề và tính đúng sai": 123,
         "Mệnh đề với mọi, tồn tại": 3,
         "Phủ định mệnh đề": 20,
@@ -41,7 +41,7 @@
       },
       "dang_kinds": {
         "Mệnh đề chứa biến": {
-          "TN": 9,
+          "TN": 10,
           "DS": 0,
           "TLN": 0,
           "TL": 20
