@@ -968,9 +968,11 @@ def select_admin_panel(path, qs, dang_names):
         "<p class='muted'>ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
         "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
         "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
-        "<b>Rà dạng cả chương</b>: AI kiểm tra dạng có đúng bài không, báo cáo số dạng từng bài, gợi ý chuyển. "
-        "Cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác trong cùng chương. File TEX hết câu sẽ bị xóa.</p>"
+        "<b>Rà dạng cả chương</b> mặc định <b>giữ dạng đã chọn</b> — không gợi ý chuyển/đổi tên. "
+        "Chỉ gợi ý khi cùng tên dạng nằm ở hai bài, hoặc khi tick «Sắp xếp lại», hoặc bật «Cho phép AI rà cả dạng đã khóa». "
+        "Cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác. File TEX hết câu sẽ bị xóa.</p>"
         "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
+        "<label><input type='checkbox' id='auditAll'> Cho phép AI rà / gợi ý chuyển cả dạng đã khóa (mặc định tắt)</label>"
         + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
         + "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
         "<button type='button' class='btn green' id='aiSave' disabled>💾 Ghi vào TEX + GitHub</button>"
@@ -982,7 +984,8 @@ def select_admin_panel(path, qs, dang_names):
         "<div id='aiOut' class='reviewout'></div></div>"
         "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
         ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
-        ".resortbox{display:flex;align-items:flex-start;gap:8px;font-weight:700;line-height:1.4}.selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
+        ".resortbox{display:flex;align-items:flex-start;gap:8px;font-weight:700;line-height:1.4}"
+        "#ai-classify>label{display:block;margin:8px 0;line-height:1.4}.selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
         + _admin_js(path)
     )
 
@@ -1022,8 +1025,8 @@ function destSelect(i, fromFolder, aiFolder){
 function renderMoves(extra){
   extra=extra||'';
   if(!MOVES.length){out(extra+'<div class="muted">Không thấy dạng nào giống bài khác.</div>');return;}
-  const rows=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý AI: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
-  out(extra+'<div class="success">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick rồi chọn bài đích (mặc định theo AI, có thể đổi). File nguồn hết câu sẽ bị xóa.</div>'
+  const rows=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'"></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý AI: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
+  out(extra+'<div class="success">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick dòng cần chuyển rồi chọn bài đích (mặc định theo AI, có thể đổi). Không tick = giữ nguyên.</div>'
     +'<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng</th><th>Đang ở</th><th>Chuyển tới</th></tr>'+rows+'</table></div>'
     +'<p><button type="button" class="btn green" id="aiMoveGo">✅ Đồng ý chuyển các dạng đã tick</button></p>');
   const go=document.getElementById('aiMoveGo');
@@ -1057,10 +1060,11 @@ async function doMove(){
     location.reload();
   }catch(e){out('<div class="err">'+e+'</div>');}
 }
-async function loadMoves(dangs, counts){
+async function loadMoves(dangs, counts, extra){
+  extra=extra||{};
   const k=keys();
   const r=await fetch('/api/admin/suggest-moves',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify({path:PATH,dangs:dangs||[],counts:counts||{},api_keys:k})});
+    body:JSON.stringify({path:PATH,dangs:dangs||[],counts:counts||{},api_keys:k,only_new:extra.only_new,resort:extra.resort||[]})});
   const d=await r.json();
   if(!d.ok) throw new Error(d.error||'Lỗi gợi ý');
   MOVES=d.moves||[];
@@ -1136,7 +1140,10 @@ document.getElementById('aiSplit').addEventListener('click',async function(){
 document.getElementById('aiHome').addEventListener('click',async function(){
   out('⏳ Đang đối chiếu dạng với các bài cùng môn/lớp...');
   try{
-    await loadMoves([]);
+    const allowAll=!!document.getElementById('auditAll').checked;
+    const onlyNew=allowAll?false:!!document.getElementById('onlyNew').checked;
+    const d=await loadMoves([], {}, {only_new:onlyNew,resort:resorts()});
+    if(d.message&&!(d.moves||[]).length){out('<div class="muted">'+esc(d.message)+'</div>');return;}
     renderMoves();
   }catch(e){out('<div class="err">'+e+'</div>');}
 });
@@ -1171,11 +1178,12 @@ document.getElementById('aiMerge').addEventListener('click',async function(){
 });
 document.getElementById('aiAudit').addEventListener('click',async function(){
   const k=keys();
-  if(!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
-  out('⏳ Đang rà tất cả dạng trong chương (AI + đối chiếu tên bài)...');
+  const reshuffle=!!document.getElementById('auditAll').checked;
+  if(reshuffle&&!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
+  out(reshuffle?'⏳ Đang rà tất cả dạng trong chương (AI + đối chiếu tên bài)...':'⏳ Đang rà chương — giữ dạng đã chọn, chỉ báo trùng tên giữa các bài...');
   try{
     const r=await fetch('/api/admin/audit-chapter',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:PATH,api_keys:k})});
+      body:JSON.stringify({path:PATH,api_keys:k,resort:resorts(),reshuffle:reshuffle})});
     const d=await r.json();
     if(!d.ok){out('<div class="err">'+(d.error||'Lỗi rà chương')+'</div>');return;}
     MOVES=(d.moves||[]).filter(m=>m&&m.dang&&m.dang!=='Chưa phân dạng').map(m=>({dang:m.dang,n:m.n,folder:m.folder,from_folder:m.from_folder,from_title:m.from_title,to_title:m.to_title,why:m.why}));
@@ -1191,11 +1199,11 @@ document.getElementById('aiAudit').addEventListener('click',async function(){
       html+=ov.map(x=>'<tr><td>'+esc(x.dang)+'</td><td>'+esc(x.kind)+'</td><td>'+esc((x.lessons||[]).map(l=>l.title+' · '+l.n+' câu').join(' | '))+'</td></tr>').join('');
       html+='</table></div>';
     }else html+='<p class="muted">Không thấy tên dạng trùng giữa hai bài.</p>';
-    if(!MOVES.length) html+='<p class="muted">AI không thấy dạng nào nằm sai bài.</p>';
+    if(!MOVES.length) html+='<p class="muted">Đã giữ các dạng đã chọn. Không có chồng chéo trùng tên cần chuyển'+(d.reshuffle?'':' (bật «Cho phép AI rà cả dạng đã khóa» nếu muốn AI gợi ý lại)')+'.</p>';
     else{
-      html+='<div class="success" style="margin-top:10px">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick dòng cần chuyển; cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác trong chương. Bỏ tick = giữ nguyên.</div>';
+      html+='<div class="success" style="margin-top:10px">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. <b>Không tick sẵn</b> — tick dòng cần chuyển; cột <b>Chuyển tới</b> có thể đổi bài. Dạng đã chọn giữ nguyên nếu không tick.</div>';
       html+='<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng</th><th>Đang ở</th><th>Chuyển tới</th></tr>';
-      html+=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý AI: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
+      html+=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'"></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
       html+='</table></div><p><button type="button" class="btn green" id="aiMoveGo">✅ Đồng ý chuyển các dạng đã tick</button></p>';
     }
     out(html);
@@ -1551,6 +1559,19 @@ def api_suggest_moves():
     names = [_norm_dang(x) for x in (data.get("dangs") or []) if str(x).strip()]
     if not names:
         names = [d for d in counts if d not in {"", "Chưa phân dạng"}]
+        only_new = data.get("only_new")
+        if only_new is None:
+            only_new = True
+        resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
+        if only_new:
+            names = [d for d in names if d in resort]
+            if not names:
+                return jsonify(
+                    ok=True,
+                    moves=[],
+                    lessons=_chapter_lesson_opts(path),
+                    message="Dạng đã chọn được giữ nguyên. Tick «Sắp xếp lại» hoặc bật «Cho phép AI rà cả dạng đã khóa» nếu muốn gợi ý chuyển.",
+                )
     moves, homes, cur = _suggest_for_dangs(path, names, counts)
     keys = _keys_from_payload(data)
     if keys and names:
@@ -1620,7 +1641,43 @@ def _chapter_audit_pack(path):
     return report, overlaps
 
 
-def _ai_audit_chapter(report, keys):
+def _overlap_exact_moves(report):
+    by_name = {}
+    for rec in report:
+        for d in rec["dangs"]:
+            by_name.setdefault(d["name"], []).append((rec, int(d["n"] or 0)))
+    out = []
+    for name, arr in by_name.items():
+        folders = {rec["folder"] for rec, _n in arr}
+        if len(folders) < 2:
+            continue
+        best = None
+        best_s = -1.0
+        for rec, _n in arr:
+            s = _sim(name, rec.get("title") or "")
+            if s > best_s:
+                best_s = s
+                best = rec
+        if not best:
+            continue
+        for rec, n in arr:
+            if rec["folder"] == best["folder"]:
+                continue
+            out.append(
+                {
+                    "dang": name,
+                    "n": n,
+                    "folder": best["folder"],
+                    "from_folder": rec["folder"],
+                    "from_title": rec["title"],
+                    "to_title": best["title"],
+                    "why": "Cùng tên dạng đang nằm ở nhiều bài — giữ ở bài khớp tên hơn.",
+                }
+            )
+    return out
+
+
+def _ai_audit_chapter(report, keys, locked_note=""):
     lines = []
     for rec in report:
         ds = "; ".join(f"{d['name']} ({d['n']})" for d in rec["dangs"][:18]) or "—"
@@ -1634,7 +1691,9 @@ def _ai_audit_chapter(report, keys):
         + "\n".join(lines)
         + "\nChỉ đề xuất dạng đang NẰM SAI bài. from_folder và folder phải copy đúng từ danh sách.\n"
         'JSON: [{"dang":"...","from_folder":"...","folder":"...","why":"..."}]\n'
-        "Không chuyển dạng đã đúng bài. Nếu ổn, trả []."
+        "Không đổi tên dạng. Không chuyển dạng đã đúng bài và chỉ xuất hiện một lần.\n"
+        + (locked_note + "\n" if locked_note else "")
+        + "Nếu ổn, trả []."
     )
     raw, err = _gemini_once(keys, prompt, 7000)
     if not raw:
@@ -1652,53 +1711,74 @@ def api_audit_chapter():
     data = request.get_json(silent=True) or {}
     path = str(data.get("path") or "").strip()
     keys = _keys_from_payload(data)
+    reshuffle = bool(data.get("reshuffle"))
     if not path:
         return jsonify(ok=False, error="Thiếu path."), 400
-    if not keys:
+    if reshuffle and not keys:
         return jsonify(ok=False, error="Chưa có Gemini API key."), 400
     report, overlaps = _chapter_audit_pack(path)
     if not report:
         return jsonify(ok=False, error="Không tìm thấy các bài cùng chương."), 400
-    moves = []
-    for rec in report:
-        names = [d["name"] for d in rec["dangs"]]
-        counts = {d["name"]: d["n"] for d in rec["dangs"]}
-        if not names:
-            continue
-        found, _, _ = _suggest_for_dangs(rec["path"], names, counts)
-        for m in found:
-            m["from_folder"] = rec["folder"]
-            m["from_title"] = rec["title"]
-            moves.append(m)
-    ai_rows, ai_err = _ai_audit_chapter(report, keys)
-    by_folder = {r["folder"]: r for r in report}
-    found_map = {(m["dang"], m.get("from_folder")): m for m in moves}
-    for row in ai_rows:
-        dest = str(row.get("folder") or "")
-        dang = row.get("dang")
-        dest_rec = by_folder.get(dest)
-        src_rec = by_folder.get(str(row.get("from_folder") or ""))
-        if not src_rec:
-            src_rec = next(
-                (
-                    r
-                    for r in report
-                    if r["folder"] != dest and any(d["name"] == dang for d in r["dangs"])
-                ),
-                None,
-            )
-        if not dest_rec or not src_rec or dest_rec["folder"] == src_rec["folder"]:
-            continue
-        n = next((d["n"] for d in src_rec["dangs"] if d["name"] == dang), 0)
-        found_map[(dang, src_rec["folder"])] = {
-            "dang": dang,
-            "n": n,
-            "folder": dest_rec["folder"],
-            "from_folder": src_rec["folder"],
-            "from_title": src_rec["title"],
-            "to_title": dest_rec["title"],
-            "why": row.get("why") or "AI: dạng không khớp bài đang chứa.",
-        }
+    resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
+    cur_folder = base.lesson_folder(path)
+    found_map = {}
+    for m in _overlap_exact_moves(report):
+        found_map[(m["dang"], m.get("from_folder"))] = m
+    if resort:
+        rec = next((r for r in report if r["folder"] == cur_folder), None)
+        if rec:
+            names = [d["name"] for d in rec["dangs"] if d["name"] in resort]
+            counts = {d["name"]: d["n"] for d in rec["dangs"]}
+            if names:
+                found, _, _ = _suggest_for_dangs(rec["path"], names, counts)
+                for m in found:
+                    m["from_folder"] = rec["folder"]
+                    m["from_title"] = rec["title"]
+                    found_map[(m["dang"], rec["folder"])] = m
+    ai_err = ""
+    if reshuffle:
+        for rec in report:
+            names = [d["name"] for d in rec["dangs"]]
+            counts = {d["name"]: d["n"] for d in rec["dangs"]}
+            if not names:
+                continue
+            found, _, _ = _suggest_for_dangs(rec["path"], names, counts)
+            for m in found:
+                m["from_folder"] = rec["folder"]
+                m["from_title"] = rec["title"]
+                found_map[(m["dang"], rec["folder"])] = m
+        ai_rows, ai_err = _ai_audit_chapter(
+            report,
+            keys,
+            locked_note="Không đề xuất chuyển các dạng ADMIN đã khóa, trừ khi trùng tên ở nhiều bài.",
+        )
+        by_folder = {r["folder"]: r for r in report}
+        for row in ai_rows:
+            dest = str(row.get("folder") or "")
+            dang = row.get("dang")
+            dest_rec = by_folder.get(dest)
+            src_rec = by_folder.get(str(row.get("from_folder") or ""))
+            if not src_rec:
+                src_rec = next(
+                    (
+                        r
+                        for r in report
+                        if r["folder"] != dest and any(d["name"] == dang for d in r["dangs"])
+                    ),
+                    None,
+                )
+            if not dest_rec or not src_rec or dest_rec["folder"] == src_rec["folder"]:
+                continue
+            n = next((d["n"] for d in src_rec["dangs"] if d["name"] == dang), 0)
+            found_map[(dang, src_rec["folder"])] = {
+                "dang": dang,
+                "n": n,
+                "folder": dest_rec["folder"],
+                "from_folder": src_rec["folder"],
+                "from_title": src_rec["title"],
+                "to_title": dest_rec["title"],
+                "why": row.get("why") or "AI: dạng không khớp bài đang chứa.",
+            }
     moves = [
         m
         for m in found_map.values()
@@ -1707,7 +1787,15 @@ def api_audit_chapter():
     lessons = [{"folder": r["folder"], "title": r["title"]} for r in report]
     if not lessons:
         lessons = _chapter_lesson_opts(path)
-    return jsonify(ok=True, report=report, overlaps=overlaps, moves=moves, lessons=lessons, ai_note=ai_err or "")
+    return jsonify(
+        ok=True,
+        report=report,
+        overlaps=overlaps,
+        moves=moves,
+        lessons=lessons,
+        ai_note=ai_err or "",
+        reshuffle=reshuffle,
+    )
 
 
 @base.app.post("/api/admin/move-dang")
