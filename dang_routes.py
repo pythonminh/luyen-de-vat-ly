@@ -150,7 +150,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             yes=bool((o or {}).get('correct')) if isinstance(o,dict) else False
             mark=f" <span class='okmark'>{'Đúng' if yes else 'Sai'}</span>" if show_solution else ''
             cls=' ok' if show_solution and yes else (' noans' if show_solution else '')
-            bits.append(f"<div class='tf{cls}'><b>{i+1}.</b> {txt}{mark}</div>")
+            bits.append(f"<div class='tf{cls}'><div class='tf-text'><b>{i+1}.</b> {txt}{mark}</div></div>")
         options='<div class="tfgrid">'+''.join(bits)+'</div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
