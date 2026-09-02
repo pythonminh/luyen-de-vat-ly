@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 124,
+  "total_files": 123,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3420,29 +3420,6 @@
           "DS": 0,
           "TLN": 0,
           "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
         }
       }
     },
