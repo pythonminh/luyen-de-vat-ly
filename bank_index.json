@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 142,
-  "total_questions": 11510,
+  "total_questions": 11488,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1921,16 +1921,16 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
-      "questions": 46,
-      "count": 46,
+      "questions": 24,
+      "count": 24,
       "dang": {
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 46
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 24
       },
       "dang_kinds": {
         "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
-          "TN": 23,
-          "DS": 17,
-          "TLN": 6,
+          "TN": 11,
+          "DS": 9,
+          "TLN": 4,
           "TL": 0
         }
       }
