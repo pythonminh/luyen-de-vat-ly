@@ -5455,9 +5455,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 20,
+      "count": 20,
+      "dang": {
+        "Xác định trạng thái của vật tại một thời điểm xác định": 20
+      },
+      "dang_kinds": {
+        "Xác định trạng thái của vật tại một thời điểm xác định": {
+          "TN": 9,
+          "DS": 7,
+          "TLN": 4,
+          "TL": 0
+        }
+      }
     }
   ]
 }
