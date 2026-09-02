@@ -1863,9 +1863,9 @@
       "count": 95,
       "dang": {
         "Chưa có dạng": 7,
-        "Liên hệ li độ - gia tốc": 34,
-        "Liên hệ li độ - vận tốc": 38,
-        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 16
+        "Liên hệ li độ - gia tốc": 27,
+        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 20,
+        "Liên hệ li độ - vận tốc": 41
       },
       "dang_kinds": {
         "Chưa có dạng": {
@@ -1876,20 +1876,20 @@
         },
         "Liên hệ li độ - gia tốc": {
           "TN": 20,
-          "DS": 9,
+          "DS": 2,
           "TLN": 5,
-          "TL": 0
-        },
-        "Liên hệ li độ - vận tốc": {
-          "TN": 20,
-          "DS": 9,
-          "TLN": 9,
           "TL": 0
         },
         "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": {
           "TN": 7,
-          "DS": 6,
+          "DS": 10,
           "TLN": 3,
+          "TL": 0
+        },
+        "Liên hệ li độ - vận tốc": {
+          "TN": 20,
+          "DS": 12,
+          "TLN": 9,
           "TL": 0
         }
       }
