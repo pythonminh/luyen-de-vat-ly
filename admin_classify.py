@@ -788,6 +788,22 @@ def _suggest_for_dangs(path, dang_names, counts):
     return out, homes, cur
 
 
+def _chapter_lesson_opts(path):
+    sibs, _cur = base.chapter_lessons_for(path)
+    out = []
+    for x in sibs:
+        folder = base.lesson_folder(str(x.get("path") or x.get("file") or ""))
+        if not folder:
+            continue
+        out.append(
+            {
+                "folder": folder,
+                "title": str(x.get("BaiHoc") or x.get("De") or folder),
+            }
+        )
+    return out
+
+
 def _parse_move_json(text):
     s = str(text or "").strip()
     m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.I)
@@ -952,7 +968,8 @@ def select_admin_panel(path, qs, dang_names):
         "<p class='muted'>ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
         "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
         "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
-        "<b>Rà dạng cả chương</b>: AI kiểm tra dạng có đúng bài không, báo cáo số dạng từng bài, gợi ý chuyển — ADMIN đồng ý mới chuyển, file TEX hết câu sẽ bị xóa.</p>"
+        "<b>Rà dạng cả chương</b>: AI kiểm tra dạng có đúng bài không, báo cáo số dạng từng bài, gợi ý chuyển. "
+        "Cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác trong cùng chương. File TEX hết câu sẽ bị xóa.</p>"
         "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
         + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
         + "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
@@ -978,23 +995,50 @@ const PATH=__PATH__;
 let LAST=null;
 let MOVES=[];
 let MERGES=[];
+let LESSONS=[];
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 function out(h){const el=document.getElementById('aiOut');if(el)el.innerHTML=h;}
 function resorts(){return [...document.querySelectorAll('.resort:checked')].map(x=>x.value);}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function destSelect(i, fromFolder, aiFolder){
+  const seen={};
+  const list=[];
+  function add(x){
+    const f=x&&x.folder;
+    if(!f||f===fromFolder||seen[f]) return;
+    seen[f]=1;
+    list.push({folder:f,title:x.title||f});
+  }
+  (LESSONS||[]).forEach(add);
+  const m=MOVES[i]||{};
+  add({folder:aiFolder,title:m.to_title||aiFolder});
+  if(!list.length) return '<span class="muted">'+esc(m.to_title||'')+'</span>';
+  const opts=list.map(function(x){
+    const sel=(x.folder===aiFolder)?' selected':'';
+    return '<option value="'+esc(x.folder)+'"'+sel+'>'+esc(x.title||x.folder)+'</option>';
+  }).join('');
+  return '<select class="mvdest" data-i="'+i+'" style="width:100%;max-width:420px;padding:6px 8px">'+opts+'</select>';
+}
 function renderMoves(extra){
   extra=extra||'';
   if(!MOVES.length){out(extra+'<div class="muted">Không thấy dạng nào giống bài khác.</div>');return;}
-  const rows=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td><b>'+esc(m.to_title||'')+'</b><div class="muted">'+esc(m.why||'')+'</div></td></tr>').join('');
-  out(extra+'<div class="success">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng sang bài khác. Tick rồi bấm Đồng ý — chưa tick thì giữ nguyên.</div>'
+  const rows=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý AI: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
+  out(extra+'<div class="success">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick rồi chọn bài đích (mặc định theo AI, có thể đổi). File nguồn hết câu sẽ bị xóa.</div>'
     +'<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng</th><th>Đang ở</th><th>Chuyển tới</th></tr>'+rows+'</table></div>'
     +'<p><button type="button" class="btn green" id="aiMoveGo">✅ Đồng ý chuyển các dạng đã tick</button></p>');
   const go=document.getElementById('aiMoveGo');
   if(go) go.addEventListener('click',doMove);
 }
 async function doMove(){
-  const picked=[...document.querySelectorAll('.mv:checked')].map(x=>MOVES[+x.getAttribute('data-i')]).filter(Boolean);
-  if(!picked.length){alert('Chưa tick dạng nào.');return;}
+  const picked=[...document.querySelectorAll('.mv:checked')].map(function(x){
+    const i=+x.getAttribute('data-i');
+    const m=Object.assign({},MOVES[i]||{});
+    const sel=document.querySelector('.mvdest[data-i="'+i+'"]');
+    if(sel&&sel.value){m.folder=sel.value; const o=sel.options[sel.selectedIndex]; if(o) m.to_title=o.text;}
+    if(!m.dang||!m.folder||m.folder===(m.from_folder||'')) return null;
+    return m;
+  }).filter(Boolean);
+  if(!picked.length){alert('Chưa tick dạng nào, hoặc bài đích trùng bài đang ở.');return;}
   if(!confirm('Chuyển '+picked.length+' dạng sang bài được gợi ý? Câu được ghi vào bài đích; file TEX nguồn hết câu sẽ bị xóa.'))return;
   out('⏳ Đang chuyển...');
   try{
@@ -1020,6 +1064,7 @@ async function loadMoves(dangs, counts){
   const d=await r.json();
   if(!d.ok) throw new Error(d.error||'Lỗi gợi ý');
   MOVES=d.moves||[];
+  LESSONS=d.lessons||LESSONS||[];
   return d;
 }
 async function preview(){
@@ -1133,7 +1178,8 @@ document.getElementById('aiAudit').addEventListener('click',async function(){
       body:JSON.stringify({path:PATH,api_keys:k})});
     const d=await r.json();
     if(!d.ok){out('<div class="err">'+(d.error||'Lỗi rà chương')+'</div>');return;}
-    MOVES=(d.moves||[]).map(m=>({dang:m.dang,n:m.n,folder:m.folder,from_folder:m.from_folder,from_title:m.from_title,to_title:m.to_title,why:m.why}));
+    MOVES=(d.moves||[]).filter(m=>m&&m.dang&&m.dang!=='Chưa phân dạng').map(m=>({dang:m.dang,n:m.n,folder:m.folder,from_folder:m.from_folder,from_title:m.from_title,to_title:m.to_title,why:m.why}));
+    LESSONS=d.lessons||[];
     const rep=d.report||[];
     const ov=d.overlaps||[];
     let html='<div class="success">Tổng kết <b>'+rep.length+'</b> bài trong chương.</div>';
@@ -1147,9 +1193,9 @@ document.getElementById('aiAudit').addEventListener('click',async function(){
     }else html+='<p class="muted">Không thấy tên dạng trùng giữa hai bài.</p>';
     if(!MOVES.length) html+='<p class="muted">AI không thấy dạng nào nằm sai bài.</p>';
     else{
-      html+='<div class="success" style="margin-top:10px">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick rồi Đồng ý — file nguồn hết câu sẽ bị xóa.</div>';
+      html+='<div class="success" style="margin-top:10px">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick dòng cần chuyển; cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác trong chương. Bỏ tick = giữ nguyên.</div>';
       html+='<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng</th><th>Đang ở</th><th>Chuyển tới</th></tr>';
-      html+=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td><b>'+esc(m.to_title||'')+'</b><div class="muted">'+esc(m.why||'')+'</div></td></tr>').join('');
+      html+=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td>'+destSelect(i,m.from_folder,m.folder)+'<div class="muted">Gợi ý AI: '+esc(m.to_title||'')+(m.why?' · '+esc(m.why):'')+'</div></td></tr>').join('');
       html+='</table></div><p><button type="button" class="btn green" id="aiMoveGo">✅ Đồng ý chuyển các dạng đã tick</button></p>';
     }
     out(html);
@@ -1514,7 +1560,7 @@ def api_suggest_moves():
                 moves = _merge_ai_moves(moves, ai_rows, homes, counts, cur)
         except Exception:
             pass
-    return jsonify(ok=True, moves=moves)
+    return jsonify(ok=True, moves=moves, lessons=_chapter_lesson_opts(path))
 
 
 def _chapter_audit_pack(path):
@@ -1653,8 +1699,15 @@ def api_audit_chapter():
             "to_title": dest_rec["title"],
             "why": row.get("why") or "AI: dạng không khớp bài đang chứa.",
         }
-    moves = list(found_map.values())
-    return jsonify(ok=True, report=report, overlaps=overlaps, moves=moves, ai_note=ai_err or "")
+    moves = [
+        m
+        for m in found_map.values()
+        if _norm_dang(m.get("dang")) not in {"", "Chưa phân dạng"}
+    ]
+    lessons = [{"folder": r["folder"], "title": r["title"]} for r in report]
+    if not lessons:
+        lessons = _chapter_lesson_opts(path)
+    return jsonify(ok=True, report=report, overlaps=overlaps, moves=moves, lessons=lessons, ai_note=ai_err or "")
 
 
 @base.app.post("/api/admin/move-dang")
@@ -1668,12 +1721,15 @@ def api_move_dang():
         return jsonify(ok=False, error="Thiếu danh sách chuyển."), 400
     done = []
     deleted = []
+    allowed = {x["folder"] for x in _chapter_lesson_opts(path)}
     for row in rows:
         if not isinstance(row, dict):
             continue
         dang = _norm_dang(row.get("dang"))
         dest_folder = str(row.get("folder") or "").replace("\\", "/").rstrip("/")
         from_folder = str(row.get("from_folder") or "").replace("\\", "/").rstrip("/")
+        if dest_folder not in allowed or dest_folder == from_folder:
+            continue
         srcs = []
         if from_folder.startswith("ngan-hang/"):
             srcs = list(base.lesson_tex_paths(from_folder + "/de.tex"))
