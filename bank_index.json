@@ -2000,10 +2000,10 @@
       "questions": 13,
       "count": 13,
       "dang": {
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 13
+        "Xác định tần số dao động dựa vào số dao động toàn phần và thời gian": 13
       },
       "dang_kinds": {
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
+        "Xác định tần số dao động dựa vào số dao động toàn phần và thời gian": {
           "TN": 6,
           "DS": 4,
           "TLN": 3,
