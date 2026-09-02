@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 140,
+  "total_files": 141,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5420,6 +5420,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
