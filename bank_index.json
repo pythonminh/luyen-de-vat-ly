@@ -5430,9 +5430,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
       "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 14,
+      "count": 14,
+      "dang": {
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": 14
+      },
+      "dang_kinds": {
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
+          "TN": 5,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
