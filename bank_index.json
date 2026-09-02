@@ -5366,9 +5366,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 41,
+      "count": 41,
+      "dang": {
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 41
+      },
+      "dang_kinds": {
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+          "TN": 20,
+          "DS": 12,
+          "TLN": 9,
+          "TL": 0
+        }
+      }
     }
   ]
 }
