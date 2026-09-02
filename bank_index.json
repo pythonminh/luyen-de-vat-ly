@@ -1806,12 +1806,11 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 39,
-      "count": 39,
+      "questions": 34,
+      "count": 34,
       "dang": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 12,
-        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 22,
-        "Đơn vị và đại lượng trong dao động điều hòa": 5
+        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 22
       },
       "dang_kinds": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
@@ -1824,12 +1823,6 @@
           "TN": 10,
           "DS": 4,
           "TLN": 8,
-          "TL": 0
-        },
-        "Đơn vị và đại lượng trong dao động điều hòa": {
-          "TN": 3,
-          "DS": 2,
-          "TLN": 0,
           "TL": 0
         }
       }
@@ -5261,9 +5254,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
       "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 5,
+      "count": 5,
+      "dang": {
+        "Đơn vị và đại lượng trong dao động điều hòa": 5
+      },
+      "dang_kinds": {
+        "Đơn vị và đại lượng trong dao động điều hòa": {
+          "TN": 3,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
