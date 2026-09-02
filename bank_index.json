@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 144,
-  "total_questions": 11521,
+  "total_files": 142,
+  "total_questions": 11362,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -18,80 +18,6 @@
       "count": 0,
       "dang": {},
       "dang_kinds": {}
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 1. Mệnh đề",
-      "De": "Bài 1. Mệnh đề",
-      "questions": 54,
-      "count": 54,
-      "dang": {
-        "Nhận biết mệnh đề và mệnh đề chứa biến": 6,
-        "Lập và phủ định mệnh đề": 2,
-        "Xác định tính đúng sai của mệnh đề": 43,
-        "Mệnh đề chứa kí hiệu ∀, ∃ và phủ định mệnh đề có lượng từ": 1,
-        "Mệnh đề kéo theo, mệnh đề đảo và điều kiện cần - đủ": 2
-      },
-      "dang_kinds": {
-        "Nhận biết mệnh đề và mệnh đề chứa biến": {
-          "TN": 3,
-          "DS": 1,
-          "TLN": 2,
-          "TL": 0
-        },
-        "Lập và phủ định mệnh đề": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định tính đúng sai của mệnh đề": {
-          "TN": 25,
-          "DS": 4,
-          "TLN": 8,
-          "TL": 6
-        },
-        "Mệnh đề chứa kí hiệu ∀, ∃ và phủ định mệnh đề có lượng từ": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Mệnh đề kéo theo, mệnh đề đảo và điều kiện cần - đủ": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 1. Mệnh đề",
-      "De": "Bài 1. Mệnh đề",
-      "questions": 105,
-      "count": 105,
-      "dang": {
-        "Chưa phân dạng": 105
-      },
-      "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 99,
-          "DS": 3,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex",
