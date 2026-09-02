@@ -4926,9 +4926,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27
+      },
+      "dang_kinds": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
