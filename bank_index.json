@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 144,
-  "total_questions": 11459,
+  "total_questions": 11569,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -28,19 +28,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 1. Mệnh đề",
       "De": "Bài 1. Mệnh đề",
-      "questions": 106,
-      "count": 106,
+      "questions": 216,
+      "count": 216,
       "dang": {
-        "Xác định mệnh đề, mệnh đề chứa biến": 97,
+        "Xác định mệnh đề, mệnh đề chứa biến": 207,
         "Xét tính đúng – sai của mệnh đề": 6,
         "Mệnh đề với mọi, tồn tại": 3
       },
       "dang_kinds": {
         "Xác định mệnh đề, mệnh đề chứa biến": {
-          "TN": 93,
+          "TN": 173,
           "DS": 0,
           "TLN": 3,
-          "TL": 1
+          "TL": 31
         },
         "Xét tính đúng – sai của mệnh đề": {
           "TN": 3,
