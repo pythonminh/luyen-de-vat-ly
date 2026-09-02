@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 129,
+  "total_files": 130,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5251,6 +5251,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
+      "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
