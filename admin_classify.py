@@ -36,6 +36,44 @@ def _norm_dang(s):
     return s[:120]
 
 
+def _parse_hint_dangs(raw):
+    out, seen = [], set()
+    if isinstance(raw, str):
+        parts = re.split(r"[\r\n;|]+", raw)
+    elif isinstance(raw, (list, tuple)):
+        parts = raw
+    else:
+        parts = []
+    for x in parts:
+        n = _norm_dang(x)
+        if not n or n == "Chưa phân dạng":
+            continue
+        k = _fold(n)
+        if not k or k in seen:
+            continue
+        seen.add(k)
+        out.append(n)
+    return out
+
+
+def _snap_dang(name, hints):
+    if not hints:
+        return _norm_dang(name)
+    n = _norm_dang(name)
+    if n == "Chưa phân dạng":
+        return hints[0]
+    fn = _fold(n)
+    for h in hints:
+        if _fold(h) == fn:
+            return h
+    best, score = hints[0], -1.0
+    for h in hints:
+        s = _sim(n, h)
+        if s > score:
+            best, score = h, s
+    return best if score >= 0.35 else hints[0]
+
+
 def _norm_muc(s):
     u = str(s or "").strip().upper().replace(" ", "")
     if u in {"C", "VDC", "VẬNDỤNGCAO", "VANDUNGCAO"}:
@@ -461,17 +499,28 @@ def _parse_ai_json(text):
     return out
 
 
-def _prompt(meta, existing, locked, items):
+def _prompt(meta, existing, locked, items, hints=None):
     exist = ", ".join(existing) if existing else "(chưa có dạng nào)"
     lock = ", ".join(locked) if locked else "(không khóa dạng nào)"
+    hints = [h for h in (hints or []) if h]
     rows = []
     for q in items:
         rows.append(
             f"- idx={q['idx']} | ID={q.get('id') or '—'} | loại={q['kind']} | dạng hiện tại={q['dang']} | mức={q.get('muc') or '—'} | đề: {q['text']}"
         )
+    hint_block = ""
+    if hints:
+        listed = "; ".join(hints)
+        hint_block = (
+            f"DẠNG GỢI Ý (BẮT BUỘC): chỉ gán mỗi câu vào ĐÚNG một tên sau, dùng đúng chữ, "
+            f"không tạo tên mới, không đồng nghĩa, không viết tắt khác: {listed}. "
+            "Nếu câu gần một dạng trong danh sách thì chọn dạng đó.\n"
+        )
+        exist = listed
     return (
         "Bạn là giáo viên Toán/Vật lý THPT. Hãy phân DẠNG BÀI và MỨC ĐỘ cho từng câu.\n"
         f"Bài học: {meta}\n"
+        f"{hint_block}"
         f"Dạng đã có trong file (ưu tiên dùng đúng tên, không đổi chữ nếu khớp): {exist}\n"
         f"Dạng đang giữ nguyên (không tạo tên mới trùng nghĩa, có thể gán câu mới vào đây nếu hợp): {lock}\n"
         "Mức độ chỉ một trong: NB (nhận biết), TH (thông hiểu), VD (vận dụng), VDC (vận dụng cao).\n"
@@ -974,7 +1023,9 @@ def select_admin_panel(path, qs, dang_names):
         "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
         "<label><input type='checkbox' id='auditAll'> Cho phép AI rà / gợi ý chuyển cả dạng đã khóa (mặc định tắt)</label>"
         + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
-        + "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
+        + "<label for='hintDangs'><b>Gợi ý dạng</b> — mỗi dòng một tên. Có danh sách thì AI <b>chỉ xếp vào đúng các dạng này</b>, không tạo tên mới. Để trống = AI tự đặt dạng.</label>"
+        "<textarea id='hintDangs' rows='4' placeholder='Nhận diện mệnh đề&#10;Nhận diện mệnh đề chứa biến'></textarea>"
+        "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
         "<button type='button' class='btn green' id='aiSave' disabled>💾 Ghi vào TEX + GitHub</button>"
         "<button type='button' class='btn' id='aiIds'>🔢 Gán ID còn thiếu</button>"
         "<button type='button' class='btn' id='aiSplit'>📂 Tách mỗi dạng ra file .tex</button>"
@@ -985,7 +1036,9 @@ def select_admin_panel(path, qs, dang_names):
         "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
         ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
         ".resortbox{display:flex;align-items:flex-start;gap:8px;font-weight:700;line-height:1.4}"
-        "#ai-classify>label{display:block;margin:8px 0;line-height:1.4}.selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
+        "#ai-classify>label{display:block;margin:8px 0;line-height:1.4}"
+        "#hintDangs{width:100%;max-width:720px;box-sizing:border-box;margin:0 0 10px;padding:8px 10px;border:1px solid #cab9f0;border-radius:8px;font:inherit;line-height:1.4}"
+        ".selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
         + _admin_js(path)
     )
 
@@ -1002,6 +1055,11 @@ let LESSONS=[];
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 function out(h){const el=document.getElementById('aiOut');if(el)el.innerHTML=h;}
 function resorts(){return [...document.querySelectorAll('.resort:checked')].map(x=>x.value);}
+function hintDangs(){
+  const el=document.getElementById('hintDangs');
+  if(!el) return [];
+  return String(el.value||'').split(/[\r\n;|]+/).map(s=>s.trim()).filter(s=>s && s.toLowerCase()!=='chưa phân dạng');
+}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
 function destSelect(i, fromFolder, aiFolder){
   const seen={};
@@ -1078,14 +1136,16 @@ async function preview(){
   btn.disabled=true; if(sav)sav.disabled=true; LAST=null;
   out('⏳ Đang gọi AI phân dạng...');
   try{
+    const hints=hintDangs();
     const r=await fetch('/api/admin/ai-classify',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:PATH,api_keys:k,only_new:!!document.getElementById('onlyNew').checked,resort:resorts()})});
+      body:JSON.stringify({path:PATH,api_keys:k,only_new:!!document.getElementById('onlyNew').checked,resort:resorts(),hint_dangs:hints})});
     const d=await r.json();
     if(!d.ok){out('<div class="err">'+(d.error||'Lỗi AI')+'</div>');return;}
     LAST=d.assignments||[];
     if(!LAST.length){out('<div class="muted">Không có câu nào cần xếp (bỏ tick «Chỉ chưa phân dạng» hoặc tick «Sắp xếp lại»).</div>');return;}
     let rows=LAST.map(a=>'<tr><td>'+a.idx+'</td><td>'+(a.id||'—')+'</td><td>'+(a.old_dang||'')+'</td><td><b>'+a.dang+'</b></td><td>'+(a.old_muc||'')+' → <b>'+a.muc+'</b></td></tr>').join('');
-    const table='<div class="success">Gợi ý '+LAST.length+' câu. Kiểm tra rồi bấm Ghi vào TEX.</div><div class="selectwrap"><table class="selectgrid"><tr><th>idx</th><th>ID</th><th>Dạng cũ</th><th>Dạng AI</th><th>Mức</th></tr>'+rows+'</table></div>';
+    const hintNote=hints.length?' Xếp vào <b>'+hints.length+'</b> dạng đã gợi ý.':'';
+    const table='<div class="success">Gợi ý '+LAST.length+' câu.'+hintNote+' Kiểm tra rồi bấm Ghi vào TEX.</div><div class="selectwrap"><table class="selectgrid"><tr><th>idx</th><th>ID</th><th>Dạng cũ</th><th>Dạng AI</th><th>Mức</th></tr>'+rows+'</table></div>';
     out(table);
     if(sav)sav.disabled=false;
     try{
@@ -1232,6 +1292,7 @@ def api_ai_classify():
         return jsonify(ok=False, error=str(e)), 400
     only_new = bool(data.get("only_new", True))
     resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
+    hints = _parse_hint_dangs(data.get("hint_dangs"))
     want = set()
     for q in qs:
         dang = str(q.get("dang") or "Chưa phân dạng")
@@ -1251,9 +1312,17 @@ def api_ai_classify():
         if n and n != "Chưa phân dạng" and n not in seen:
             seen.add(n)
             existing.append(n)
-    locked = [x for x in existing if x not in resort]
+    if hints:
+        hint_folds = {_fold(h) for h in hints}
+        for h in hints:
+            k = _fold(h)
+            if k and k not in {_fold(x) for x in existing}:
+                existing.append(h)
+        locked = [x for x in existing if x not in resort and _fold(x) in hint_folds]
+    else:
+        locked = [x for x in existing if x not in resort]
     meta = path.replace("ngan-hang/", "").replace("/de.tex", "")
-    prompt = _prompt(meta, existing, locked, items)
+    prompt = _prompt(meta, existing, locked, items, hints)
     last_err = "Gemini không trả lời."
     raw = ""
     for i, key in enumerate(keys, 1):
@@ -1287,11 +1356,14 @@ def api_ai_classify():
         if idx not in want or idx in seen_idx:
             continue
         q = by_id.get(idx) or {}
+        dang = g["dang"] if g["dang"] != "Chưa phân dạng" else (q.get("dang") or "Chưa phân dạng")
+        if hints:
+            dang = _snap_dang(dang, hints)
         asg.append(
             {
                 "idx": idx,
                 "id": q.get("id") or "",
-                "dang": g["dang"] if g["dang"] != "Chưa phân dạng" else (q.get("dang") or "Chưa phân dạng"),
+                "dang": dang,
                 "muc": g["muc"],
                 "old_dang": q.get("dang") or "",
                 "old_muc": MUC_FROM_LETTER.get(str(q.get("level") or "H"), "TH"),
