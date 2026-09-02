@@ -1836,11 +1836,10 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa",
-      "questions": 215,
-      "count": 215,
+      "questions": 179,
+      "count": 179,
       "dang": {
         "Chu kỳ,tần số,tần số góc, pha dao động": 12,
-        "Xác định biểu thức cơ năng trong dao động điều hòa": 36,
         "Chưa có dạng": 14,
         "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 36,
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38,
@@ -1853,12 +1852,6 @@
           "DS": 6,
           "TLN": 3,
           "TL": 0
-        },
-        "Xác định biểu thức cơ năng trong dao động điều hòa": {
-          "TN": 18,
-          "DS": 12,
-          "TLN": 3,
-          "TL": 3
         },
         "Chưa có dạng": {
           "TN": 9,
