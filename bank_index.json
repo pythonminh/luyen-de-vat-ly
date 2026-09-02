@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 143,
-  "total_questions": 11467,
+  "total_questions": 11353,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -28,8 +28,8 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 182,
-      "count": 182,
+      "questions": 105,
+      "count": 105,
       "dang": {
         "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 6,
         "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13,
@@ -38,7 +38,7 @@
         "Bài toán tham số về tập hợp và khoảng": 7,
         "Các tập số, khoảng, đoạn và nửa khoảng": 3,
         "Xác định đường biên và miền nghiệm": 3,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 128
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 51
       },
       "dang_kinds": {
         "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
@@ -84,10 +84,10 @@
           "TL": 0
         },
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 74,
-          "DS": 12,
-          "TLN": 24,
-          "TL": 18
+          "TN": 28,
+          "DS": 4,
+          "TLN": 9,
+          "TL": 10
         }
       }
     },
@@ -100,16 +100,16 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 105,
-      "count": 105,
+      "questions": 68,
+      "count": 68,
       "dang": {
-        "Chưa phân dạng": 105
+        "Chưa phân dạng": 68
       },
       "dang_kinds": {
         "Chưa phân dạng": {
-          "TN": 99,
-          "DS": 3,
-          "TLN": 3,
+          "TN": 65,
+          "DS": 1,
+          "TLN": 2,
           "TL": 0
         }
       }
