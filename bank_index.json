@@ -5430,9 +5430,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 6,
+      "count": 6,
+      "dang": {
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
+      },
+      "dang_kinds": {
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+          "TN": 1,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
