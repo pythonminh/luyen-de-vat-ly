@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 143,
+  "total_files": 142,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5210,29 +5210,6 @@
       "dang_kinds": {
         "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
           "TN": 7,
-          "DS": 6,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
-      "questions": 17,
-      "count": 17,
-      "dang": {
-        "Xác định các đại lượng đặc trưng từ phương trình li độ": 17
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng đặc trưng từ phương trình li độ": {
-          "TN": 8,
           "DS": 6,
           "TLN": 3,
           "TL": 0
