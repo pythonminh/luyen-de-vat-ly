@@ -5392,9 +5392,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 10,
+      "count": 10,
+      "dang": {
+        "__CHUA_PHAN_LOAI__": 10
+      },
+      "dang_kinds": {
+        "__CHUA_PHAN_LOAI__": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 10,
+          "TL": 0
+        }
+      }
     }
   ]
 }
