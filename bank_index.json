@@ -5430,9 +5430,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 28,
+      "count": 28,
+      "dang": {
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 28
+      },
+      "dang_kinds": {
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 6,
+          "DS": 16,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
     }
   ]
 }
