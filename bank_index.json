@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 143,
+  "total_files": 142,
   "total_questions": 11520,
   "lessons": [
     {
@@ -1982,29 +1982,6 @@
           "TN": 3,
           "DS": 3,
           "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa",
-      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa",
-      "questions": 11,
-      "count": 11,
-      "dang": {
-        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": {
-          "TN": 3,
-          "DS": 5,
-          "TLN": 3,
           "TL": 0
         }
       }
