@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 141,
+  "total_files": 140,
   "total_questions": 11520,
   "lessons": [
     {
@@ -1816,29 +1816,6 @@
           "TN": 9,
           "DS": 5,
           "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
-      "questions": 16,
-      "count": 16,
-      "dang": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 16
-      },
-      "dang_kinds": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
-          "TN": 7,
-          "DS": 6,
-          "TLN": 3,
           "TL": 0
         }
       }
