@@ -173,7 +173,8 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     rw=''
     if can_manage_bank():
         rw=(f"<div class='rwbar'><button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
-            "<span class='muted'>Xem bản AI rồi Chấp nhận mới thay TEX.</span><div class='rwout'></div></div>")
+            f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
+            "<span class='muted'>Sửa trực tiếp trên ô LaTeX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'

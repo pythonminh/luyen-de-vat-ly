@@ -14,6 +14,67 @@ _TAIL_RE = re.compile(r"\\(?:choiceTF|choice|shortans|loigiai)\b", re.I)
 _FORBIDDEN = re.compile(r"\\(?:begin|end)\s*\{\s*(?:ex|bt)\s*\}", re.I)
 
 
+def _repair_json_latex(s):
+    """JSON biến \\frac thành form-feed; gấp đôi backslash lệnh LaTeX trong chuỗi."""
+    out = []
+    in_str = False
+    esc = False
+    i = 0
+    n = len(s)
+    while i < n:
+        c = s[i]
+        if not in_str:
+            if c == '"':
+                in_str = True
+            out.append(c)
+            i += 1
+            continue
+        if esc:
+            out.append(c)
+            esc = False
+            i += 1
+            continue
+        if c == "\\":
+            nxt = s[i + 1] if i + 1 < n else ""
+            rest = s[i + 1 : i + 12]
+            if nxt == "f" and rest.startswith("frac"):
+                out.append("\\\\")
+                i += 1
+                continue
+            if nxt == "b" and (rest.startswith("egin") or rest.startswith("eta") or rest.startswith("ig")):
+                out.append("\\\\")
+                i += 1
+                continue
+            if nxt == "t" and (
+                rest.startswith("ext")
+                or rest.startswith("imes")
+                or rest.startswith("an")
+                or rest.startswith("o ")
+                or rest.startswith("o$")
+                or rest.startswith("heta")
+            ):
+                out.append("\\\\")
+                i += 1
+                continue
+            if nxt == "n" and (rest.startswith("eq") or rest.startswith("abla") or rest.startswith("ot")):
+                out.append("\\\\")
+                i += 1
+                continue
+            if nxt in '"\\/bfnrtu':
+                out.append(c)
+                esc = True
+                i += 1
+                continue
+            out.append("\\\\")
+            i += 1
+            continue
+        if c == '"':
+            in_str = False
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _parse_obj(text):
     s = str(text or "").strip()
     m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.I)
@@ -22,8 +83,50 @@ def _parse_obj(text):
     a, b = s.find("{"), s.rfind("}")
     if a < 0 or b <= a:
         return {}
-    data = json.loads(s[a : b + 1])
-    return data if isinstance(data, dict) else {}
+    chunk = s[a : b + 1]
+    for cand in (chunk, _repair_json_latex(chunk)):
+        try:
+            data = json.loads(cand)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            continue
+    return {}
+
+
+def _sect(raw, name):
+    m = re.search(
+        rf"===\s*{re.escape(name)}\s*===\s*([\s\S]*?)(?===\s*[A-Z]+\s*===|\Z)",
+        str(raw or ""),
+        re.I,
+    )
+    return (m.group(1).strip() if m else "")
+
+
+def _extract_ai_fields(raw):
+    obj = _parse_obj(raw)
+    for key, name in (("stem", "STEM"), ("solution", "SOLUTION"), ("answer", "ANSWER"), ("note", "NOTE")):
+        if not str(obj.get(key) or "").strip():
+            got = _sect(raw, name)
+            if got:
+                obj[key] = got
+    return obj
+
+
+def _fix_latex(t):
+    """Gỡ lỗi AI hay gặp: \\frac bị nuốt, \\ trước tiếng Việt, toán không bọc $."""
+    t = str(t or "")
+    t = t.replace("\x0c", r"\f")
+    t = t.replace("\x08", r"\b")
+    t = t.replace("\x0crac", r"\frac")
+    t = re.sub(r"(?<!\\)\trac\{", r"\\frac{", t)
+    t = re.sub(r"\\(?=[À-ỹĂăÂâÊêÔôƠơƯưĐđ])", "", t)
+    t = re.sub(r"\\\s+(?=[A-ZÀ-ỸĐ])", " ", t)
+    t = re.sub(r"([.:;,!?])\\(?=-?\d)", r"\1 ", t)
+    t = re.sub(r"\\(?=-\d)", "-", t)
+    t = re.sub(r"(?<!\\)\\([,;:])(?=\s|$)", r"\1", t)
+    t = re.sub(r"\$\s*\$", "", t)
+    return t.strip()
 
 
 def _clean_tex(s):
@@ -37,7 +140,7 @@ def _clean_tex(s):
             t = inner.strip()
     t = _FORBIDDEN.sub("", t)
     t = re.sub(r"^\\True\s*", "", t, flags=re.I)
-    return t.strip()
+    return _fix_latex(t)
 
 
 def _split_head_tail(inner):
@@ -184,15 +287,18 @@ def _prompt(pack):
         lab = letters[i] if pack["kind"] == "TN" else str(i + 1)
         opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
     return (
-        "Bạn là giáo viên THPT soạn đề. Hãy VIẾT LẠI ĐỀ và LỜI GIẢI cho đúng, gọn, "
-        "giọng giáo viên trên lớp (mạch lạc, không sáo).\n"
-        "Giữ nguyên dữ kiện số liệu, loại câu, đáp án đúng (vị trí A–D / Đúng-Sai không được đổi). "
-        "Tính lại cho khớp đáp án. Nếu lời giải cũ mâu thuẫn đáp án, lấy vật lý đúng và ghi note.\n"
-        "Công thức LaTeX trong $...$. Không bọc \\begin{ex}. Không đổi ID.\n"
-        "JSON đúng một object:\n"
-        '{"stem":"đề (LaTeX)","options":["pa1","pa2",...],'
-        '"answer":"nếu TLN thì đáp án shortans","solution":"lời giải LaTeX","note":""}\n'
-        "options cùng số lượng; không ghi \\True. solution là nội dung \\loigiai, không lệnh \\loigiai.\n\n"
+        "Bạn là giáo viên THPT soạn đề. VIẾT LẠI ĐỀ và LỜI GIẢI đúng, gọn, giọng giáo viên.\n"
+        "Giữ dữ kiện, loại câu, vị trí đáp án đúng. Tính lại cho khớp.\n"
+        "LaTeX BẮT BUỘC:\n"
+        "- Mọi công thức (kể cả \\pi, \\frac, \\Rightarrow, \\cos, \\left\\right) phải nằm trong $...$.\n"
+        "- Không gõ \\ trước chữ tiếng Việt (sai: \\Để  .\\Để  :\\-3). Viết: Để  : -3.\n"
+        "- Trong JSON, mỗi backslash LaTeX phải viết HAI lần: \\\\frac \\\\pi \\\\Rightarrow \\\\left \\\\right.\n"
+        "- Xuống dòng bằng \\n trong JSON, không dùng \\\\ rồi xuống dòng lung tung.\n"
+        "JSON một object: "
+        '{"stem":"...","options":["..."],"answer":"...","solution":"...","note":""}\n'
+        "Đồng thời lặp lại lời giải thuần LaTeX giữa các mốc:\n"
+        "===STEM===\n...===SOLUTION===\n...===ANSWER===\n...===NOTE===\n"
+        "options cùng số lượng, không \\True. solution không bọc \\loigiai / \\begin{ex}.\n\n"
         f"Loại: {pack['kind']} · ID: {pack['id']}\n"
         f"Đề cũ:\n{pack['text']}\n"
         + ("Phương án/mệnh đề cũ:\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
@@ -201,32 +307,99 @@ def _prompt(pack):
     )
 
 
+def _raw_parts(q):
+    raw = q.get("raw") or ""
+    head, _tail = _split_head_tail(raw)
+    _comments, stem = _split_comments(head)
+    sol = base.solution_of(raw) or (q.get("solution") or "")
+    return stem.strip(), sol.strip()
+
+
+def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
+    opt_html = ""
+    if options and kind == "TN":
+        bits = []
+        for i, o in enumerate(options[:4]):
+            mark = " <span class='okmark'>Đáp án đúng</span>" if o.get("correct") else ""
+            bits.append(
+                f"<div class='opt{' ok' if o.get('correct') else ''}'><b>{'ABCD'[i]}.</b> {base.html_question(o.get('text',''))}{mark}</div>"
+            )
+        opt_html = "<div class='opts'>" + "".join(bits) + "</div>"
+    elif options and kind == "DS":
+        bits = []
+        for i, o in enumerate(options):
+            yes = bool(o.get("correct"))
+            mark = f" <span class='okmark'>{'Đúng' if yes else 'Sai'}</span>"
+            bits.append(
+                f"<div class='tf{' ok' if yes else ' noans'}'><div class='tf-text'><b>{i+1}.</b> {base.html_question(o.get('text',''))}{mark}</div></div>"
+            )
+        opt_html = "<div class='tfgrid'>" + "".join(bits) + "</div>"
+    return {
+        "ok": True,
+        "src": src,
+        "file_idx": fi,
+        "kind": kind,
+        "note": note,
+        "stem": stem,
+        "solution": solution,
+        "answer": answer,
+        "options": options,
+        "stem_html": base.html_question(stem),
+        "sol_html": base.html_question(solution),
+        "opt_html": opt_html,
+        "answer_html": base.html_question(answer or ""),
+    }
+
+
+@base.app.post("/api/admin/tex-preview")
+def api_tex_preview():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    tex = _fix_latex(_clean_tex(data.get("tex") or data.get("latex") or ""))
+    return jsonify(ok=True, html=base.html_question(tex))
+
+
 @base.app.post("/api/admin/rewrite-question")
 def api_rewrite_question():
     if not base.can_manage_bank():
         return jsonify(ok=False, error="Chỉ ADMIN mới viết lại đề/lời giải."), 403
     data = request.get_json(silent=True) or {}
     src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
-    keys = _keys_from_payload(data)
     try:
         fi = int(data.get("file_idx"))
     except (TypeError, ValueError):
         return jsonify(ok=False, error="Thiếu file_idx."), 400
-    if not src.startswith("ngan-hang/") or not keys:
-        return jsonify(ok=False, error="Thiếu file TEX hoặc Gemini API key."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
     q, _tex = _load_q(src, fi)
     if not q:
         return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
     pack = _q_plain_pack(q)
+    raw_stem, raw_sol = _raw_parts(q)
+    mode = str(data.get("mode") or "ai").strip().lower()
+    if mode in {"current", "edit"}:
+        return jsonify(
+            _pack_payload(
+                src,
+                fi,
+                pack["kind"],
+                raw_stem or pack["text"],
+                raw_sol or pack["solution"],
+                pack.get("answer") or "",
+                pack["options"],
+                "Sửa trực tiếp — chưa ghi file.",
+            )
+        )
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Thiếu Gemini API key."), 400
     from admin_classify import _gemini_once
 
     raw, err = _gemini_once(keys, _prompt(pack), 5000)
     if not raw:
         return jsonify(ok=False, error=err or "Gemini không trả lời."), 400
-    try:
-        obj = _parse_obj(raw)
-    except Exception as e:
-        return jsonify(ok=False, error="AI không trả JSON hợp lệ: " + str(e)), 400
+    obj = _extract_ai_fields(raw)
     stem = _clean_tex(obj.get("stem") or "")
     solution = _clean_tex(obj.get("solution") or "")
     answer = _clean_tex(obj.get("answer") or "")
@@ -240,38 +413,21 @@ def api_rewrite_question():
             new_opts.append({"text": _clean_tex(txt), "correct": bool(o.get("correct"))})
     if not stem and not solution:
         return jsonify(ok=False, error="AI không viết được đề/lời giải."), 400
-    opt_html = ""
-    if new_opts and pack["kind"] == "TN":
-        bits = []
-        for i, o in enumerate(new_opts[:4]):
-            mark = " <span class='okmark'>Đáp án đúng</span>" if o.get("correct") else ""
-            bits.append(
-                f"<div class='opt{' ok' if o.get('correct') else ''}'><b>{'ABCD'[i]}.</b> {base.html_question(o.get('text',''))}{mark}</div>"
-            )
-        opt_html = "<div class='opts'>" + "".join(bits) + "</div>"
-    elif new_opts and pack["kind"] == "DS":
-        bits = []
-        for i, o in enumerate(new_opts):
-            yes = bool(o.get("correct"))
-            mark = f" <span class='okmark'>{'Đúng' if yes else 'Sai'}</span>"
-            bits.append(
-                f"<div class='tf{' ok' if yes else ' noans'}'><b>{i+1}.</b> {base.html_question(o.get('text',''))}{mark}</div>"
-            )
-        opt_html = "<div class='tfgrid'>" + "".join(bits) + "</div>"
+    if not stem:
+        stem = raw_stem or pack["text"]
+    if not solution:
+        solution = raw_sol or pack["solution"]
     return jsonify(
-        ok=True,
-        src=src,
-        file_idx=fi,
-        kind=pack["kind"],
-        note=str(obj.get("note") or "").strip()[:300],
-        stem=stem,
-        solution=solution,
-        answer=answer or pack.get("answer") or "",
-        options=new_opts,
-        stem_html=base.html_question(stem or pack["text"]),
-        sol_html=base.html_question(solution or pack["solution"]),
-        opt_html=opt_html,
-        answer_html=base.html_question(answer or pack.get("answer") or ""),
+        _pack_payload(
+            src,
+            fi,
+            pack["kind"],
+            stem,
+            solution,
+            answer or pack.get("answer") or "",
+            new_opts,
+            str(obj.get("note") or "").strip()[:300],
+        )
     )
 
 
@@ -343,59 +499,105 @@ def api_rewrite_question_save():
 
 
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
-async function runRewrite(src, fi, box){
-  const k=keys();
-  if(!k.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}
-  box.innerHTML='⏳ AI đang viết lại đề và lời giải...';
-  try{
-    const r=await fetch('/api/admin/rewrite-question',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({src:src,file_idx:fi,api_keys:k})});
-    const d=await r.json();
-    if(!d.ok){box.innerHTML='<div class="err">'+(d.error||'Lỗi AI')+'</div>';return;}
-    window.__rwDraft=d;
-    let h='<div class="rwprev"><div class="success">Bản AI — chưa ghi file. Bỏ tick phần không muốn thay.</div>';
-    if(d.note) h+='<p class="muted">'+esc(d.note)+'</p>';
-    h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> Thay đề</label>';
-    h+='<div class="qtext">'+d.stem_html+'</div>';
-    if(d.opt_html){h+='<label><input type="checkbox" class="rwf" data-k="opts" checked> Thay cách diễn đạt phương án (không đổi đáp án đúng)</label>'+d.opt_html;}
-    if(d.kind==='TLN'&&d.answer){h+='<label><input type="checkbox" class="rwf" data-k="answer" checked> Thay đáp án TLN</label><div class="answerline"><b>Đáp án:</b> '+d.answer_html+'</div>';}
-    h+='<label><input type="checkbox" class="rwf" data-k="sol" checked> Thay lời giải</label>';
-    h+='<div class="solution"><b>📖 Lời giải mới</b><div>'+d.sol_html+'</div></div>';
-    h+='<p><button type="button" class="btn green" id="rwAccept">✅ Chấp nhận và ghi TEX</button> <button type="button" class="btn" id="rwCancel">Hủy</button></p></div>';
-    box.innerHTML=h;
-    if(window.ldvlTypeset)ldvlTypeset(box);
-    document.getElementById('rwCancel').onclick=function(){box.innerHTML='';};
-    document.getElementById('rwAccept').onclick=async function(){
-      if(!confirm('Ghi đề/lời giải mới vào TEX + GitHub? Bản cũ sẽ bị thay.'))return;
-      const flags={};
-      box.querySelectorAll('.rwf').forEach(function(x){flags[x.getAttribute('data-k')]=x.checked});
-      const s=await fetch('/api/admin/rewrite-question-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({src:d.src,file_idx:d.file_idx,stem:d.stem,solution:d.solution,answer:d.answer,options:d.options||[],
-          apply_stem:!!flags.stem,apply_opts:!!flags.opts,apply_sol:!!flags.sol,apply_answer:!!flags.answer})});
-      const sd=await s.json();
-      if(!sd.ok){alert(sd.error||'Không ghi được');return;}
-      box.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
-      location.reload();
-    };
-  }catch(e){box.innerHTML='<div class="err">'+e+'</div>';}
-}
-window.ldvlAdminRewrite=runRewrite;
-document.addEventListener('click',function(e){
-  const btn=e.target.closest&&e.target.closest('.rwgo');
-  if(!btn) return;
-  e.preventDefault();
+function dropOf(btn){
   const raw=btn.getAttribute('data-drop')||'';
   const i=raw.lastIndexOf('||');
-  if(i<0) return;
-  const src=raw.slice(0,i), fi=+raw.slice(i+2);
+  if(i<0) return null;
+  return {src:raw.slice(0,i), fi:+raw.slice(i+2)};
+}
+function outBox(btn){
   let box=btn.parentElement&&btn.parentElement.querySelector('.rwout');
   if(!box){box=document.createElement('div');box.className='rwout';btn.parentElement.appendChild(box);}
-  runRewrite(src,fi,box);
+  return box;
+}
+function readDraft(box, d){
+  const stem=(box.querySelector('[data-ta=stem]')||{}).value;
+  const solution=(box.querySelector('[data-ta=sol]')||{}).value;
+  const answer=(box.querySelector('[data-ta=ans]')||{}).value;
+  const flags={};
+  box.querySelectorAll('.rwf').forEach(function(x){flags[x.getAttribute('data-k')]=x.checked});
+  const opts=(d.options||[]).map(function(o,i){
+    const el=box.querySelector('[data-ta=opt-'+i+']');
+    return {text:el?el.value:(o.text||''), correct:!!o.correct};
+  });
+  return {stem:stem!=null?stem:d.stem, solution:solution!=null?solution:d.solution, answer:answer!=null?answer:d.answer, options:opts, flags:flags};
+}
+async function previewBox(box){
+  const tas=box.querySelectorAll('.rwta');
+  const look=box.querySelector('.rwlook');
+  if(!look) return;
+  look.innerHTML='⏳ Đang xem trước...';
+  const parts=[];
+  for(const ta of tas){
+    const lab=ta.getAttribute('data-lab')||'';
+    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||''})});
+    const d=await r.json();
+    parts.push('<div class="muted">'+esc(lab)+'</div><div>'+(d.html||'')+'</div>');
+  }
+  look.innerHTML=parts.join('');
+  if(window.ldvlTypeset)ldvlTypeset(look);
+}
+function showEditor(box, d){
+  let h='<div class="rwprev"><div class="success">Chưa ghi file. Sửa LaTeX trong ô, bấm Xem trước, rồi Chấp nhận.</div>';
+  if(d.note) h+='<p class="muted">'+esc(d.note)+'</p>';
+  h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> Thay đề</label>';
+  h+='<textarea class="rwta" data-ta="stem" data-lab="Đề">'+esc(d.stem||'')+'</textarea>';
+  (d.options||[]).forEach(function(o,i){
+    if(!i) h+='<label><input type="checkbox" class="rwf" data-k="opts" checked> Thay cách diễn đạt phương án (không đổi đáp án đúng)</label>';
+    h+='<textarea class="rwta sm" data-ta="opt-'+i+'" data-lab="PA '+(d.kind==='TN'?'ABCD'[i]:(i+1))+'">'+esc(o.text||'')+'</textarea>';
+  });
+  if(d.kind==='TLN'){
+    h+='<label><input type="checkbox" class="rwf" data-k="answer" checked> Thay đáp án TLN</label>';
+    h+='<textarea class="rwta sm" data-ta="ans" data-lab="Đáp án">'+esc(d.answer||'')+'</textarea>';
+  }
+  h+='<label><input type="checkbox" class="rwf" data-k="sol" checked> Thay lời giải</label>';
+  h+='<textarea class="rwta" data-ta="sol" data-lab="Lời giải" style="min-height:180px">'+esc(d.solution||'')+'</textarea>';
+  h+='<p><button type="button" class="btn rwPrev">👁 Xem trước</button> <button type="button" class="btn green rwSave">✅ Chấp nhận và ghi TEX</button> <button type="button" class="btn rwCancel">Hủy</button></p>';
+  h+='<div class="rwlook"></div></div>';
+  box.innerHTML=h;
+  box.querySelector('.rwCancel').onclick=function(){box.innerHTML='';};
+  box.querySelector('.rwPrev').onclick=function(){previewBox(box)};
+  box.querySelector('.rwSave').onclick=async function(){
+    if(!confirm('Ghi đề/lời giải vào TEX + GitHub?'))return;
+    const x=readDraft(box,d);
+    const s=await fetch('/api/admin/rewrite-question-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:d.src,file_idx:d.file_idx,stem:x.stem,solution:x.solution,answer:x.answer,options:x.options,
+        apply_stem:!!x.flags.stem,apply_opts:!!x.flags.opts,apply_sol:!!x.flags.sol,apply_answer:!!x.flags.answer})});
+    const sd=await s.json();
+    if(!sd.ok){alert(sd.error||'Không ghi được');return;}
+    box.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+    location.reload();
+  };
+  previewBox(box);
+}
+async function loadRewrite(src, fi, box, mode){
+  box.innerHTML=mode==='edit'?'⏳ Đang tải lời giải hiện tại...':'⏳ AI đang viết lại đề và lời giải...';
+  try{
+    const body={src:src,file_idx:fi,mode:mode||'ai'};
+    if(mode!=='edit') body.api_keys=keys();
+    if(mode!=='edit'&&!(body.api_keys||[]).length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');box.innerHTML='';return;}
+    const r=await fetch('/api/admin/rewrite-question',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    showEditor(box,d);
+  }catch(e){box.innerHTML='<div class="err">'+e+'</div>';}
+}
+window.ldvlAdminRewrite=function(src,fi,box){loadRewrite(src,fi,box,'ai')};
+window.ldvlAdminEdit=function(src,fi,box){loadRewrite(src,fi,box,'edit')};
+document.addEventListener('click',function(e){
+  const go=e.target.closest&&e.target.closest('.rwgo');
+  const ed=e.target.closest&&e.target.closest('.rwedit');
+  const btn=go||ed;
+  if(!btn) return;
+  e.preventDefault();
+  const p=dropOf(btn);
+  if(!p) return;
+  loadRewrite(p.src,p.fi,outBox(btn),ed?'edit':'ai');
 });
 })();
 </script>
