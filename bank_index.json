@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 106,
+  "total_files": 107,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4900,6 +4900,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-dac-diem-chat-ran.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-dac-diem-chat-ran.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-dac-diem-chat-ran.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Đặc điểm chất rắn",
+      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Đặc điểm chất rắn",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
