@@ -300,6 +300,120 @@ def _write_tex(path, text, message, sha=None):
         base.github_put_text(path, text, message, sha or None)
 
 
+def _delete_tex_file(path):
+    path = str(path or "").replace("\\", "/")
+    _, local = base._safe_repo_file(path)
+    if base.TOKEN:
+        try:
+            base.github_delete_path(path, "ADMIN xóa TEX hết câu " + path)
+        except Exception:
+            pass
+    try:
+        if local.is_file():
+            local.unlink()
+    except Exception:
+        pass
+    try:
+        base.index_remove_lesson(path)
+    except Exception:
+        try:
+            d = base.index_data()
+            d["lessons"] = [x for x in (d.get("lessons") or []) if str(x.get("path") or x.get("file") or "") != path]
+            d["total_files"] = len(d["lessons"])
+            base.INDEX_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+
+def _header_only(tex):
+    m = BLOCK_RE.search(tex or "")
+    head = (tex or "")[: m.start()] if m else (tex or "")
+    head = re.sub(r"\\dang(?:bt)?\s*\{[^{}]*\}\s*", "", head)
+    return (head.strip() + "\n") if head.strip() else "% (hết câu — file giữ chỗ bài)\n"
+
+
+def _cleanup_source_file(path, rest, sha):
+    qs = base.parse_questions(rest) if rest else []
+    if qs:
+        _write_tex(path, rest, "ADMIN chuyển dạng khỏi " + path, sha)
+        _refresh_index(path, qs)
+        return {"kept": path, "left": len(qs)}
+    siblings = [
+        f.replace("\\", "/")
+        for f in base.lesson_tex_paths(path)
+        if f.replace("\\", "/") != str(path).replace("\\", "/")
+    ]
+    if siblings:
+        _delete_tex_file(path)
+        return {"deleted": path, "left": 0}
+    stub = _header_only(rest)
+    _write_tex(path, stub, "ADMIN hết câu, giữ file trống " + path, sha)
+    _refresh_index(path, [])
+    return {"emptied": path, "left": 0}
+
+
+def _append_to_dest(dest_folder, dang, chunk):
+    homes = {h["folder"]: h for h in _homes()}
+    h = homes.get(dest_folder)
+    if not h:
+        raise ValueError("Không tìm thấy bài đích.")
+    dest = _dest_tex_path(dest_folder, dang)
+    existed = False
+    dsha, dtex = None, ""
+    try:
+        dsha, dtex = base.read_tex(dest, need_sha=True)
+        existed = True
+    except Exception:
+        existed = False
+    if existed:
+        new_dest = dtex.rstrip() + "\n\n" + chunk + "\n"
+    else:
+        try:
+            _, de_tex = base.read_tex(h.get("de") or (dest_folder + "/de.tex"))
+        except Exception:
+            de_tex = ""
+        title = (h.get("title") or "Bài") + " · " + dang
+        new_dest = _preamble(de_tex, title) + chunk
+    new_dest, _, _ = stamp_missing_ids(new_dest, dest)
+    _write_tex(dest, new_dest, "ADMIN chuyển dạng " + dang + " → " + dest_folder, dsha if existed else None)
+    if not dest.replace("\\", "/").endswith("/de.tex"):
+        try:
+            base.index_upsert_lesson(
+                dest,
+                h.get("Mon") or "",
+                h.get("Lop") or "",
+                h.get("Chuong") or "",
+                (h.get("title") or "Bài") + " · " + dang,
+            )
+        except Exception:
+            pass
+    _refresh_index(dest, base.parse_questions(new_dest))
+    return dest
+
+
+def _move_dang_in_file(src_path, dang, dest_folder):
+    dest_folder = str(dest_folder or "").replace("\\", "/").rstrip("/")
+    src_path = str(src_path or "").replace("\\", "/")
+    dang = _norm_dang(dang)
+    if dang in {"", "Chưa phân dạng"} or dest_folder == base.lesson_folder(src_path):
+        return None
+    if ".." in dest_folder.split("/") or not dest_folder.startswith("ngan-hang/"):
+        return None
+    sha, tex = base.read_tex(src_path, need_sha=True)
+    qs = base.parse_questions(tex)
+    by_idx = _map_from_questions(qs)
+    idxs = [int(q.get("idx")) for q in qs if _norm_dang(q.get("dang")) == dang]
+    if not idxs:
+        return None
+    chunk = _extract_chunk(tex, by_idx, idxs, dang)
+    dest = _append_to_dest(dest_folder, dang, chunk)
+    keep = {int(q.get("idx")) for q in qs} - set(idxs)
+    rest = apply_taxonomy(tex, by_idx, keep=keep)
+    extra = _cleanup_source_file(src_path, rest, sha)
+    extra.update({"dang": dang, "n": len(idxs), "src": src_path, "dest": dest, "folder": dest_folder})
+    return extra
+
+
 def _header_fields(path, tex):
     mon = lop = chuong = bai = ""
     for m in re.finditer(r"(?m)^\s*%\s*(Môn|Lớp|Chương|Bài)\s*:\s*(.+?)\s*$", tex or "", re.I):
@@ -692,9 +806,17 @@ def _parse_move_json(text):
             continue
         dang = _norm_dang(item.get("dang"))
         folder = str(item.get("folder") or "").replace("\\", "/").rstrip("/")
+        from_folder = str(item.get("from_folder") or item.get("from") or "").replace("\\", "/").rstrip("/")
         if dang in {"", "Chưa phân dạng"} or not folder.startswith("ngan-hang/"):
             continue
-        out.append({"dang": dang, "folder": folder, "why": str(item.get("why") or "").strip()[:200]})
+        out.append(
+            {
+                "dang": dang,
+                "folder": folder,
+                "from_folder": from_folder,
+                "why": str(item.get("why") or "").strip()[:200],
+            }
+        )
     return out
 
 
@@ -829,7 +951,8 @@ def select_admin_panel(path, qs, dang_names):
         "Dạng <span class='tag miss'>Chưa có</span> cần xếp. Dạng <span class='tag had'>Đã có</span> mặc định giữ nguyên — tick ô dưới nếu muốn xếp lại.</p>"
         "<p class='muted'>ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
         "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
-        "<p class='muted'>Dạng gần giống (cùng kỹ năng, khác chi tiết) thì bấm <b>Gom dạng gần giống</b> — AI gợi ý, ADMIN tick rồi đồng ý mới gộp.</p>"
+        "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
+        "<b>Rà dạng cả chương</b>: AI kiểm tra dạng có đúng bài không, báo cáo số dạng từng bài, gợi ý chuyển — ADMIN đồng ý mới chuyển, file TEX hết câu sẽ bị xóa.</p>"
         "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
         + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
         + "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
@@ -837,7 +960,8 @@ def select_admin_panel(path, qs, dang_names):
         "<button type='button' class='btn' id='aiIds'>🔢 Gán ID còn thiếu</button>"
         "<button type='button' class='btn' id='aiSplit'>📂 Tách mỗi dạng ra file .tex</button>"
         "<button type='button' class='btn' id='aiHome'>🚚 Gợi ý chuyển sang bài đúng</button>"
-        "<button type='button' class='btn' id='aiMerge'>📎 Gom dạng gần giống</button></div>"
+        "<button type='button' class='btn' id='aiMerge'>📎 Gom dạng gần giống</button>"
+        "<button type='button' class='btn' id='aiAudit'>🔍 Rà dạng cả chương</button></div>"
         "<div id='aiOut' class='reviewout'></div></div>"
         "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
         ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
@@ -871,7 +995,7 @@ function renderMoves(extra){
 async function doMove(){
   const picked=[...document.querySelectorAll('.mv:checked')].map(x=>MOVES[+x.getAttribute('data-i')]).filter(Boolean);
   if(!picked.length){alert('Chưa tick dạng nào.');return;}
-  if(!confirm('Chuyển '+picked.length+' dạng sang bài được gợi ý? ID sẽ gán lại theo bài đích.'))return;
+  if(!confirm('Chuyển '+picked.length+' dạng sang bài được gợi ý? Câu được ghi vào bài đích; file TEX nguồn hết câu sẽ bị xóa.'))return;
   out('⏳ Đang chuyển...');
   try{
     if(LAST&&LAST.length){
@@ -881,11 +1005,11 @@ async function doMove(){
       if(!sd.ok){out('<div class="err">'+(sd.error||'Chưa ghi được dạng, không chuyển.')+'</div>');return;}
     }
     const r=await fetch('/api/admin/move-dang',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:PATH,moves:picked.map(m=>({dang:m.dang,folder:m.folder}))})});
+      body:JSON.stringify({path:PATH,moves:picked.map(m=>({dang:m.dang,folder:m.folder,from_folder:m.from_folder||''}))})});
     const d=await r.json();
     if(!d.ok){out('<div class="err">'+(d.error||'Không chuyển được')+'</div>');return;}
     const n=(d.moved||[]).length;
-    out('<div class="success">✅ Đã chuyển '+n+' dạng. Đang tải lại...</div>');
+    out('<div class="success">✅ Đã chuyển '+n+' dạng'+(d.deleted&&d.deleted.length?' · đã xóa '+d.deleted.length+' file TEX hết câu':'')+'. Đang tải lại...</div>');
     location.reload();
   }catch(e){out('<div class="err">'+e+'</div>');}
 }
@@ -998,6 +1122,39 @@ document.getElementById('aiMerge').addEventListener('click',async function(){
       out('<div class="success">✅ Đã gom '+ (sd.changed||picked.length) +' câu. Đang tải lại...</div>');
       location.reload();
     });
+  }catch(e){out('<div class="err">'+e+'</div>');}
+});
+document.getElementById('aiAudit').addEventListener('click',async function(){
+  const k=keys();
+  if(!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
+  out('⏳ Đang rà tất cả dạng trong chương (AI + đối chiếu tên bài)...');
+  try{
+    const r=await fetch('/api/admin/audit-chapter',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:PATH,api_keys:k})});
+    const d=await r.json();
+    if(!d.ok){out('<div class="err">'+(d.error||'Lỗi rà chương')+'</div>');return;}
+    MOVES=(d.moves||[]).map(m=>({dang:m.dang,n:m.n,folder:m.folder,from_folder:m.from_folder,from_title:m.from_title,to_title:m.to_title,why:m.why}));
+    const rep=d.report||[];
+    const ov=d.overlaps||[];
+    let html='<div class="success">Tổng kết <b>'+rep.length+'</b> bài trong chương.</div>';
+    html+='<div class="selectwrap"><table class="selectgrid"><tr><th>Bài</th><th>Số dạng</th><th>Số câu</th><th>Dạng</th></tr>';
+    html+=rep.map(x=>'<tr><td><b>'+esc(x.title)+'</b></td><td>'+esc(x.n_dang)+'</td><td>'+esc(x.n_q)+'</td><td>'+esc((x.dangs||[]).map(z=>z.name+' ('+z.n+')').join('; '))+'</td></tr>').join('');
+    html+='</table></div>';
+    if(ov.length){
+      html+='<div class="notice" style="margin-top:10px"><b>Chồng chéo giữa các bài</b></div><div class="selectwrap"><table class="selectgrid"><tr><th>Dạng</th><th>Loại</th><th>Xuất hiện ở</th></tr>';
+      html+=ov.map(x=>'<tr><td>'+esc(x.dang)+'</td><td>'+esc(x.kind)+'</td><td>'+esc((x.lessons||[]).map(l=>l.title+' · '+l.n+' câu').join(' | '))+'</td></tr>').join('');
+      html+='</table></div>';
+    }else html+='<p class="muted">Không thấy tên dạng trùng giữa hai bài.</p>';
+    if(!MOVES.length) html+='<p class="muted">AI không thấy dạng nào nằm sai bài.</p>';
+    else{
+      html+='<div class="success" style="margin-top:10px">Gợi ý chuyển <b>'+MOVES.length+'</b> dạng. Tick rồi Đồng ý — file nguồn hết câu sẽ bị xóa.</div>';
+      html+='<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng</th><th>Đang ở</th><th>Chuyển tới</th></tr>';
+      html+=MOVES.map((m,i)=>'<tr><td><input type="checkbox" class="mv" data-i="'+i+'" checked></td><td><b>'+esc(m.dang)+'</b><div class="muted">'+esc(m.n||0)+' câu</div></td><td>'+esc(m.from_title||'')+'</td><td><b>'+esc(m.to_title||'')+'</b><div class="muted">'+esc(m.why||'')+'</div></td></tr>').join('');
+      html+='</table></div><p><button type="button" class="btn green" id="aiMoveGo">✅ Đồng ý chuyển các dạng đã tick</button></p>';
+    }
+    out(html);
+    const go=document.getElementById('aiMoveGo');
+    if(go) go.addEventListener('click',doMove);
   }catch(e){out('<div class="err">'+e+'</div>');}
 });
 })();</script>""".replace("__PATH__", p)
@@ -1360,6 +1517,146 @@ def api_suggest_moves():
     return jsonify(ok=True, moves=moves)
 
 
+def _chapter_audit_pack(path):
+    sibs, _cur = base.chapter_lessons_for(path)
+    report = []
+    for x in sibs:
+        dangs = []
+        for k, v in (x.get("dang") or {}).items():
+            name = _norm_dang(k)
+            if name in {"", "Chưa phân dạng"}:
+                continue
+            dangs.append({"name": name, "n": int(v or 0)})
+        dangs.sort(key=lambda z: (-z["n"], z["name"]))
+        report.append(
+            {
+                "folder": base.lesson_folder(str(x.get("path") or x.get("file") or "")),
+                "title": str(x.get("BaiHoc") or x.get("De") or ""),
+                "n_q": int(x.get("questions") or x.get("count") or 0),
+                "n_dang": len(dangs),
+                "dangs": dangs,
+                "path": str(x.get("path") or x.get("file") or ""),
+            }
+        )
+    overlaps = []
+    by_name = {}
+    for rec in report:
+        for d in rec["dangs"]:
+            by_name.setdefault(d["name"], []).append(
+                {"title": rec["title"], "folder": rec["folder"], "n": d["n"]}
+            )
+    for name, arr in by_name.items():
+        if len({a["folder"] for a in arr}) > 1:
+            overlaps.append({"dang": name, "kind": "trùng tên giữa các bài", "lessons": arr})
+    seen_pair = set()
+    for i, a in enumerate(report):
+        for b in report[i + 1 :]:
+            for da in a["dangs"]:
+                for db in b["dangs"]:
+                    if da["name"] == db["name"]:
+                        continue
+                    if _sim(da["name"], db["name"]) < 0.7:
+                        continue
+                    key = tuple(sorted((da["name"], db["name"], a["folder"], b["folder"])))
+                    if key in seen_pair:
+                        continue
+                    seen_pair.add(key)
+                    overlaps.append(
+                        {
+                            "dang": da["name"] + " ≈ " + db["name"],
+                            "kind": "gần giống giữa hai bài",
+                            "lessons": [
+                                {"title": a["title"], "folder": a["folder"], "n": da["n"]},
+                                {"title": b["title"], "folder": b["folder"], "n": db["n"]},
+                            ],
+                        }
+                    )
+    return report, overlaps
+
+
+def _ai_audit_chapter(report, keys):
+    lines = []
+    for rec in report:
+        ds = "; ".join(f"{d['name']} ({d['n']})" for d in rec["dangs"][:18]) or "—"
+        lines.append(
+            f"- folder={rec['folder']} | bài={rec['title']} | {rec['n_q']} câu | {rec['n_dang']} dạng: {ds}"
+        )
+    prompt = (
+        "Bạn là giáo viên THPT. Hãy rà soát DẠNG BÀI của CẢ CHƯƠNG.\n"
+        "Mỗi dạng chỉ được nằm đúng một bài, khớp tên bài học (không chồng chéo).\n"
+        "Danh sách bài và dạng hiện có:\n"
+        + "\n".join(lines)
+        + "\nChỉ đề xuất dạng đang NẰM SAI bài. from_folder và folder phải copy đúng từ danh sách.\n"
+        'JSON: [{"dang":"...","from_folder":"...","folder":"...","why":"..."}]\n'
+        "Không chuyển dạng đã đúng bài. Nếu ổn, trả []."
+    )
+    raw, err = _gemini_once(keys, prompt, 7000)
+    if not raw:
+        return [], err
+    try:
+        return _parse_move_json(raw), ""
+    except Exception as e:
+        return [], str(e)
+
+
+@base.app.post("/api/admin/audit-chapter")
+def api_audit_chapter():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới rà dạng cả chương."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").strip()
+    keys = _keys_from_payload(data)
+    if not path:
+        return jsonify(ok=False, error="Thiếu path."), 400
+    if not keys:
+        return jsonify(ok=False, error="Chưa có Gemini API key."), 400
+    report, overlaps = _chapter_audit_pack(path)
+    if not report:
+        return jsonify(ok=False, error="Không tìm thấy các bài cùng chương."), 400
+    moves = []
+    for rec in report:
+        names = [d["name"] for d in rec["dangs"]]
+        counts = {d["name"]: d["n"] for d in rec["dangs"]}
+        if not names:
+            continue
+        found, _, _ = _suggest_for_dangs(rec["path"], names, counts)
+        for m in found:
+            m["from_folder"] = rec["folder"]
+            m["from_title"] = rec["title"]
+            moves.append(m)
+    ai_rows, ai_err = _ai_audit_chapter(report, keys)
+    by_folder = {r["folder"]: r for r in report}
+    found_map = {(m["dang"], m.get("from_folder")): m for m in moves}
+    for row in ai_rows:
+        dest = str(row.get("folder") or "")
+        dang = row.get("dang")
+        dest_rec = by_folder.get(dest)
+        src_rec = by_folder.get(str(row.get("from_folder") or ""))
+        if not src_rec:
+            src_rec = next(
+                (
+                    r
+                    for r in report
+                    if r["folder"] != dest and any(d["name"] == dang for d in r["dangs"])
+                ),
+                None,
+            )
+        if not dest_rec or not src_rec or dest_rec["folder"] == src_rec["folder"]:
+            continue
+        n = next((d["n"] for d in src_rec["dangs"] if d["name"] == dang), 0)
+        found_map[(dang, src_rec["folder"])] = {
+            "dang": dang,
+            "n": n,
+            "folder": dest_rec["folder"],
+            "from_folder": src_rec["folder"],
+            "from_title": src_rec["title"],
+            "to_title": dest_rec["title"],
+            "why": row.get("why") or "AI: dạng không khớp bài đang chứa.",
+        }
+    moves = list(found_map.values())
+    return jsonify(ok=True, report=report, overlaps=overlaps, moves=moves, ai_note=ai_err or "")
+
+
 @base.app.post("/api/admin/move-dang")
 def api_move_dang():
     if not base.can_manage_bank():
@@ -1369,79 +1666,31 @@ def api_move_dang():
     rows = data.get("moves") or []
     if not path or not isinstance(rows, list) or not rows:
         return jsonify(ok=False, error="Thiếu danh sách chuyển."), 400
-    try:
-        sha, tex = base.read_tex(path, need_sha=True)
-        qs = base.parse_questions(tex)
-    except Exception as e:
-        return jsonify(ok=False, error=str(e)), 400
-    by_idx = _map_from_questions(qs)
-    groups = {}
-    for q in qs:
-        groups.setdefault(_norm_dang(q.get("dang")), []).append(int(q.get("idx")))
-    homes = {h["folder"]: h for h in _homes()}
-    moved_idxs = set()
     done = []
+    deleted = []
     for row in rows:
         if not isinstance(row, dict):
             continue
         dang = _norm_dang(row.get("dang"))
-        folder = str(row.get("folder") or "").replace("\\", "/").rstrip("/")
-        if dang in {"", "Chưa phân dạng"} or ".." in folder.split("/") or not folder.startswith("ngan-hang/"):
-            continue
-        h = homes.get(folder)
-        if not h:
-            return jsonify(ok=False, error="Không tìm thấy bài đích: " + folder), 400
-        if folder == base.lesson_folder(path):
-            continue
-        idxs = [i for i in (groups.get(dang) or []) if i not in moved_idxs]
-        if not idxs:
-            continue
-        chunk = _extract_chunk(tex, by_idx, idxs, dang)
-        dest = _dest_tex_path(folder, dang)
-        existed = False
-        dsha, dtex = None, ""
-        try:
-            dsha, dtex = base.read_tex(dest, need_sha=True)
-            existed = True
-        except Exception:
-            existed = False
-        if existed:
-            new_dest = dtex.rstrip() + "\n\n" + chunk + "\n"
+        dest_folder = str(row.get("folder") or "").replace("\\", "/").rstrip("/")
+        from_folder = str(row.get("from_folder") or "").replace("\\", "/").rstrip("/")
+        srcs = []
+        if from_folder.startswith("ngan-hang/"):
+            srcs = list(base.lesson_tex_paths(from_folder + "/de.tex"))
         else:
+            srcs = [path]
+        for src in srcs:
             try:
-                _, de_tex = base.read_tex(h.get("de") or (folder + "/de.tex"))
-            except Exception:
-                de_tex = ""
-            title = (h.get("title") or "Bài") + " · " + dang
-            new_dest = _preamble(de_tex, title) + chunk
-        new_dest, _, _ = stamp_missing_ids(new_dest, dest)
-        try:
-            _write_tex(dest, new_dest, "ADMIN chuyển dạng " + dang + " → " + folder, dsha if existed else None)
-            if not dest.replace("\\", "/").endswith("/de.tex"):
-                try:
-                    base.index_upsert_lesson(
-                        dest,
-                        h.get("Mon") or "",
-                        h.get("Lop") or "",
-                        h.get("Chuong") or "",
-                        (h.get("title") or "Bài") + " · " + dang,
-                    )
-                except Exception:
-                    pass
-            _refresh_index(dest, base.parse_questions(new_dest))
-        except Exception as e:
-            return jsonify(ok=False, error=str(e), moved=done), 500
-        moved_idxs.update(idxs)
-        done.append({"dang": dang, "n": len(idxs), "dest": dest, "folder": folder})
+                info = _move_dang_in_file(src, dang, dest_folder)
+            except Exception as e:
+                return jsonify(ok=False, error=str(e), moved=done, deleted=deleted), 500
+            if not info:
+                continue
+            done.append(info)
+            if info.get("deleted"):
+                deleted.append(info.get("deleted"))
     if not done:
         return jsonify(ok=False, error="Không có câu nào để chuyển (hãy ghi dạng vào TEX trước)."), 400
-    keep = {int(q.get("idx")) for q in qs} - moved_idxs
-    rest = apply_taxonomy(tex, by_idx, keep=keep)
-    try:
-        _write_tex(path, rest, "ADMIN chuyển dạng khỏi " + path, sha)
-        _refresh_index(path, base.parse_questions(rest))
-    except Exception as e:
-        return jsonify(ok=False, error=str(e), moved=done), 500
     _clear_caches()
-    return jsonify(ok=True, moved=done)
+    return jsonify(ok=True, moved=done, deleted=deleted)
 
