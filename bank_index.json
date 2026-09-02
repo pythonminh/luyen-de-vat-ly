@@ -3550,14 +3550,13 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
-      "questions": 152,
-      "count": 152,
+      "questions": 145,
+      "count": 145,
       "dang": {
         "__CHUA_PHAN_LOAI__": 10,
         "Bài toán nóng chảy và đông đặc": 27,
         "Tính nhiệt lượng tổng hợp có chuyển pha": 81,
-        "Lí thuyết về nhiệt nóng chảy riêng": 27,
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
+        "Lí thuyết về nhiệt nóng chảy riêng": 27
       },
       "dang_kinds": {
         "__CHUA_PHAN_LOAI__": {
@@ -3583,12 +3582,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        },
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
-          "TN": 6,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
         }
       }
     },
@@ -5221,9 +5214,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
+      },
+      "dang_kinds": {
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
     }
   ]
 }
