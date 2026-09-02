@@ -1969,20 +1969,13 @@
       "count": 356,
       "dang": {
         "Chu kì biến thiên của động năng, thế năng": 36,
-        "Chưa có dạng": 11,
-        "Nhận diện phát biểu về năng lượng dao động": 18,
-        "Năng lượng của con lắc đơn dao động điều hòa": 24,
-        "Xác định độ cứng lò xo từ năng lượng ban đầu": 17,
+        "Tính động năng, thế năng và cơ năng của dao động điều hòa": 137,
+        "Lý thuyết và sự chuyển hóa năng lượng trong dao động điều hòa": 32,
+        "Năng lượng của con lắc đơn": 39,
+        "Xác định các thông số dao động từ năng lượng": 46,
         "Phân tích đồ thị năng lượng": 24,
-        "Sự chuyển hóa năng lượng trong dao động điều hòa": 14,
-        "Tính cơ năng của con lắc lò xo từ biên độ dao động": 15,
-        "Tính cơ năng của con lắc đơn": 15,
-        "Tính động năng, thế năng và cơ năng tại một li độ hoặc thời điểm xác định": 63,
-        "Xác định biểu thức cơ năng trong dao động điều hòa": 48,
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 12,
-        "Xác định vị trí dựa vào tỉ số động năng và thế năng": 30,
-        "Xác định độ cứng lò xo từ chu kì biến thiên năng lượng": 14,
-        "Xác định độ cứng lò xo từ cơ năng và thông số dao động": 15
+        "Xác định vị trí dựa vào tỉ số động năng và thế năng": 30
       },
       "dang_kinds": {
         "Chu kì biến thiên của động năng, thế năng": {
@@ -1991,28 +1984,28 @@
           "TLN": 3,
           "TL": 3
         },
-        "Chưa có dạng": {
-          "TN": 5,
-          "DS": 6,
-          "TLN": 0,
-          "TL": 0
+        "Tính động năng, thế năng và cơ năng của dao động điều hòa": {
+          "TN": 49,
+          "DS": 44,
+          "TLN": 32,
+          "TL": 12
         },
-        "Nhận diện phát biểu về năng lượng dao động": {
-          "TN": 5,
-          "DS": 7,
-          "TLN": 3,
-          "TL": 3
-        },
-        "Năng lượng của con lắc đơn dao động điều hòa": {
-          "TN": 5,
+        "Lý thuyết và sự chuyển hóa năng lượng trong dao động điều hòa": {
+          "TN": 11,
           "DS": 10,
           "TLN": 6,
-          "TL": 3
+          "TL": 5
         },
-        "Xác định độ cứng lò xo từ năng lượng ban đầu": {
-          "TN": 5,
-          "DS": 6,
-          "TLN": 6,
+        "Năng lượng của con lắc đơn": {
+          "TN": 8,
+          "DS": 13,
+          "TLN": 12,
+          "TL": 6
+        },
+        "Xác định các thông số dao động từ năng lượng": {
+          "TN": 12,
+          "DS": 18,
+          "TLN": 16,
           "TL": 0
         },
         "Phân tích đồ thị năng lượng": {
@@ -2020,36 +2013,6 @@
           "DS": 9,
           "TLN": 3,
           "TL": 3
-        },
-        "Sự chuyển hóa năng lượng trong dao động điều hòa": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 3,
-          "TL": 2
-        },
-        "Tính cơ năng của con lắc lò xo từ biên độ dao động": {
-          "TN": 3,
-          "DS": 3,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Tính cơ năng của con lắc đơn": {
-          "TN": 3,
-          "DS": 3,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Tính động năng, thế năng và cơ năng tại một li độ hoặc thời điểm xác định": {
-          "TN": 20,
-          "DS": 20,
-          "TLN": 20,
-          "TL": 3
-        },
-        "Xác định biểu thức cơ năng trong dao động điều hòa": {
-          "TN": 21,
-          "DS": 15,
-          "TLN": 6,
-          "TL": 6
         },
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
           "TN": 3,
@@ -2062,18 +2025,6 @@
           "DS": 9,
           "TLN": 3,
           "TL": 3
-        },
-        "Xác định độ cứng lò xo từ chu kì biến thiên năng lượng": {
-          "TN": 4,
-          "DS": 6,
-          "TLN": 4,
-          "TL": 0
-        },
-        "Xác định độ cứng lò xo từ cơ năng và thông số dao động": {
-          "TN": 3,
-          "DS": 6,
-          "TLN": 6,
-          "TL": 0
         }
       }
     },
