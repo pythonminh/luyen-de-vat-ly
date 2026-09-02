@@ -1372,6 +1372,18 @@ def dup_index_by_question(groups):
 
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
 
+def sort_questions_by_kind(questions):
+    """TN → Đúng/Sai → Trả lời ngắn → Tự luận. Trong mỗi loại giữ idx tăng dần."""
+    rank = {k: i for i, k in enumerate(KIND_ORDER)}
+    def key(q):
+        k = str((q or {}).get('kind') or 'TL')
+        try:
+            idx = int((q or {}).get('idx') or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        return (rank.get(k, 99), idx)
+    return sorted(list(questions or []), key=key)
+
 def sort_ids_by_kind(questions, ids, shuffle_within=False):
     """Làm bài: TN → ĐS → TLN → Tự luận. Giữ thứ tự trong từng loại (hoặc xáo trong loại)."""
     by = {q.get('idx'): q for q in (questions or [])}
@@ -1648,7 +1660,7 @@ def start_practice():
         if 0<=di<len(dang_names):
             pool=[q for q in qs if q['dang']==dang_names[di] and q['kind']==kind and q['level']==lev];wanted.extend(q['idx'] for q in random.sample(pool,min(n,len(pool))))
     if not wanted:return redirect('/member/select?path='+urllib.parse.quote(p,safe=''))
-    wanted=sort_ids_by_kind(qs, wanted, shuffle_within=True)
+    wanted=sort_ids_by_kind(qs, wanted, shuffle_within=False)
     session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=request.form.get('ai_review') in ('1','on','true','yes'));return redirect('/member/practice')
 
 def question_payload(q):
