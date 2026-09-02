@@ -14,7 +14,9 @@ from flask import jsonify, request, session
 import app as base
 
 _LOCK = threading.Lock()
+_QS_LOCK = threading.Lock()
 _ROOMS: dict = {}
+_QS_CACHE: dict = {}
 _ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _TTL = 6 * 3600
 
@@ -95,6 +97,23 @@ def _sanitize_live(raw):
     return live
 
 
+def _lesson_qs(path):
+    path = str(path or "")
+    with _QS_LOCK:
+        hit = _QS_CACHE.get(path)
+        if hit is not None:
+            return hit
+    qs = {q["idx"]: q for q in base.parse_lesson_questions(path)}
+    if not qs:
+        _, tex = base.read_tex(path)
+        qs = {q["idx"]: q for q in base.parse_questions(tex)}
+    with _QS_LOCK:
+        if len(_QS_CACHE) > 48:
+            _QS_CACHE.clear()
+        _QS_CACHE[path] = qs
+    return qs
+
+
 def _snapshot(show_sol=None, zoom=None, reveal=False):
     path = str(session.get("practice_path") or "")
     ids = list(session.get("practice_ids") or [])
@@ -102,10 +121,7 @@ def _snapshot(show_sol=None, zoom=None, reveal=False):
     if not path or not ids or pos < 0 or pos >= len(ids):
         return None, "Chưa đang chiếu một câu (hãy vào làm bài trước)."
     try:
-        qs = {q["idx"]: q for q in base.parse_lesson_questions(path)}
-        if not qs:
-            _, tex = base.read_tex(path)
-            qs = {q["idx"]: q for q in base.parse_questions(tex)}
+        qs = _lesson_qs(path)
     except Exception as e:
         return None, str(e)
     q = qs.get(ids[pos])
@@ -144,6 +160,30 @@ def _room_out(room, include_q=True):
     if include_q:
         d["q"] = room.get("q") or {}
     return d
+
+
+def _put_room(hid, code, token, snap, live):
+    """Tạo/cập nhật phòng. Cùng thầy được lấy lại mã sau khi server restart."""
+    with _LOCK:
+        _prune()
+        room = _ROOMS.get(code) if code else None
+        if room and room.get("host") and room.get("host") != hid:
+            return None, f"Mã {code} đang được người khác dùng. Chọn mã khác."
+        if not room:
+            if not code:
+                code = _new_code()
+            tok = token if token and len(str(token)) >= 8 else secrets.token_hex(8)
+            room = {"code": code, "token": tok, "host": hid, "ver": 0}
+            _ROOMS[code] = room
+        room.update(snap)
+        room["live"] = live
+        room["host"] = hid
+        room["code"] = code
+        room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        session["present_code"] = room["code"]
+        session["present_token"] = room["token"]
+        return room, ""
 
 
 @base.app.post("/api/present/start")
@@ -201,23 +241,24 @@ def api_present_push():
     data = request.get_json(silent=True) or {}
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
-    with _LOCK:
-        room = _ROOMS.get(code)
-        if not room or room.get("token") != token or room.get("host") != hid:
-            return jsonify(ok=False, error="Phòng chiếu không đúng (hãy bấm Chiếu chung lại)."), 403
-    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=_sanitize_live(data.get("live"))["checked"])
-    if not snap:
-        return jsonify(ok=False, error=err), 400
     live = _sanitize_live(data.get("live"))
-    with _LOCK:
-        room = _ROOMS.get(code)
-        if not room:
-            return jsonify(ok=False, error="Phòng đã đóng."), 404
-        room.update(snap)
-        room["live"] = live
-        room["ver"] = int(room.get("ver") or 0) + 1
-        ver = room["ver"]
-    return jsonify(ok=True, ver=ver, pos=snap["pos"], total=snap["total"])
+    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"])
+    if not snap:
+        with _LOCK:
+            room = _ROOMS.get(code)
+            if room and room.get("host") == hid:
+                room["live"] = live
+                room["show_sol"] = bool(data.get("show_sol"))
+                room["ver"] = int(room.get("ver") or 0) + 1
+                room["updated"] = _now()
+                return jsonify(ok=True, ver=room["ver"], pos=room.get("pos"), total=room.get("total"), token=room.get("token"))
+        return jsonify(ok=False, error=err), 400
+    if not code:
+        return jsonify(ok=False, error="Thiếu mã phòng."), 400
+    room, rerr = _put_room(hid, code, token, snap, live)
+    if not room:
+        return jsonify(ok=False, error=rerr), 409
+    return jsonify(ok=True, ver=room["ver"], pos=snap["pos"], total=snap["total"], token=room.get("token"), code=room["code"])
 
 
 @base.app.post("/api/present/stop")
@@ -250,6 +291,7 @@ def api_present_state():
                 error="Chưa có phòng mã này. Thầy phải vào làm bài, bấm 📺 Chiếu chung, rồi dùng đúng mã hiện trên thanh (hoặc đặt mã này).",
             ), 404
         ver = int(room.get("ver") or 0)
+        room["updated"] = _now()
         if since and since == ver:
             return jsonify(ok=True, unchanged=True, ver=ver)
         out = _room_out(room)
@@ -356,9 +398,13 @@ async function tick(){
     const r=await fetch('/api/present/state?code='+encodeURIComponent(CODE)+'&ver='+lastVer,{credentials:'same-origin'});
     const d=await r.json();
     if(!d.ok){
-      if(box) box.hidden=true;
-      if(err) err.innerHTML=(d.error||'Chưa có phòng.')
-        +'<div class="muted" style="margin-top:8px;font-weight:400">Đợi thầy bấm <b>Chiếu chung</b> với mã <code>'+E(CODE)+'</code> · <a href="/xem">Mã khác</a></div>';
+      if(lastVer<0){
+        if(box) box.hidden=true;
+        if(err) err.innerHTML=(d.error||'Chưa có phòng.')
+          +'<div class="muted" style="margin-top:8px;font-weight:400">Đợi thầy bấm <b>Chiếu chung</b> với mã <code>'+E(CODE)+'</code> · <a href="/xem">Mã khác</a></div>';
+      }else if(err){
+        err.innerHTML='<span class="muted" style="font-weight:700">Đang kết nối lại…</span>';
+      }
       return;
     }
     if(d.unchanged) return;
@@ -437,17 +483,33 @@ function showBar(p){
   };
 }
 async function presentPush(){
-  if(!P||!P.code) return;
+  if(!P||!P.code||P._busy) return;
   try{
     const r=await fetch('/api/present/push',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify(payload())});
     const d=await r.json().catch(function(){return {}});
-    if(r.status===403||r.status===404){
-      P=null; try{localStorage.removeItem('ldvlPresent')}catch(e){}
-      showBar(null);
-      if(d&&d.error) console.warn(d.error);
+    if(d&&d.ok){
+      if(d.token&&P){P.token=d.token;try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}}
+      return;
+    }
+    if(r.status===401) return;
+    await presentResume();
+  }catch(e){}
+}
+async function presentResume(){
+  if(!P||!P.code||P._busy) return;
+  P._busy=true;
+  try{
+    const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify(Object.assign(payload(),{code:P.code}))});
+    const d=await r.json().catch(function(){return {}});
+    if(d&&d.ok){
+      P={code:d.code,token:d.token,url:d.url};
+      try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}
+      showBar(P);
     }
   }catch(e){}
+  finally{if(P)P._busy=false}
 }
 async function presentStart(){
   const suggest=(P&&P.code)||'1234';
@@ -475,6 +537,7 @@ function mountBtn(){
   b.onclick=presentStart;
   bar.appendChild(b);
   if(P&&P.code){showBar(P);presentPush();}
+  setInterval(function(){if(P&&P.code)presentPush();},5000);
   document.addEventListener('change',function(e){
     const qel=document.getElementById('q');
     if(P&&qel&&e.target&&qel.contains(e.target)) presentPushSoon();
@@ -496,7 +559,6 @@ function wrap(name, afterMs){
   wrapped.__ldvlPresent=true;
   window[name]=wrapped;
 }
-wrap('ldvlApplyQZoom',0);
 wrap('openSolution',60);
 wrap('check',80);
 wrap('draw',80);
