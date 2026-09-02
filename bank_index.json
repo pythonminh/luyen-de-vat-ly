@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 138,
+  "total_files": 139,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5388,6 +5388,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
