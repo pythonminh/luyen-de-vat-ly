@@ -323,10 +323,10 @@ function draw(q, showSol, pos, total, live){
     if(o.correct) cls+=' correct';
     else if(checked&&picked) cls+=' wrong';
     else if(!checked&&picked) cls+=' picked';
-    let mark='';
-    if(picked) mark+=' <span class="pickmark">◀ thầy chọn</span>';
-    if(o.correct) mark+=' <span class="okmark">Đáp án đúng</span>';
-    h+='<div class="'+cls+'"><b>'+String.fromCharCode(65+i)+'.</b> '+o.text+mark+'</div>';
+    let flags='';
+    if(picked) flags+='<span class="pickmark">◀ thầy chọn</span>';
+    if(o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
+    h+='<div class="'+cls+'"><div class="tf-text"><b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
   });
   else if(q.kind==='DS')(q.statements||[]).forEach(function(s,i){
     const pick=(live.ds||[])[i];
@@ -335,10 +335,10 @@ function draw(q, showSol, pos, total, live){
     let cls='tf';
     if(revealed&&s.correct) cls+=' correct';
     else if(checked&&has&&pick!==s.correct) cls+=' wrong';
-    let mark='';
-    if(has) mark+=' <span class="pickmark">thầy: '+(pick?'Đúng':'Sai')+'</span>';
-    if(revealed) mark+=' <span class="okmark">'+(s.correct?'Đúng':'Sai')+'</span>';
-    h+='<div class="'+cls+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+mark+'</div></div>';
+    let flags='';
+    if(has) flags+='<span class="pickmark">thầy: '+(pick?'Đúng':'Sai')+'</span>';
+    if(revealed) flags+='<span class="okmark">'+(s.correct?'Đúng':'Sai')+'</span>';
+    h+='<div class="'+cls+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
   });
   else {
     const typed=String(live.text||'').trim();

@@ -84,11 +84,16 @@ body.cinema .cinema-q{min-height:100dvh;padding:10px 12px calc(16px + env(safe-a
 body.cinema .qbox{border:0;border-radius:0;padding:4px 2px 24px;font-size:calc(21px * var(--qzoom,1));max-width:52rem;margin:0 auto}
 body.cinema .qid,.cinema-wait .qid{display:none}
 body.cinema .nguonrow{display:none}
-body.cinema .opt{cursor:default}
+body.cinema .opt{cursor:default;display:flex;align-items:center;gap:10px}
 body.cinema .opt.picked{border-color:var(--blue);background:#eef6ff;box-shadow:0 0 0 3px #176bd322}
 body.cinema .opt.correct,body.cinema .tf.correct{background:#bbf7d0!important;border:3px solid #15803d!important;box-shadow:0 0 0 4px #22c55e44}
 body.cinema .opt.correct .okmark,body.cinema .okmark{display:inline-block;margin-left:.4em;padding:.12em .55em;border-radius:999px;background:#15803d;color:#fff;font-size:.78em;font-weight:900;vertical-align:middle;white-space:nowrap}
 body.cinema .opt.wrong,body.cinema .tf.wrong{background:#fecaca!important;border:3px solid #b91c1c!important}
+body.cinema .tf{display:flex;align-items:center;gap:10px}
+body.cinema .tf-text{flex:1;min-width:0;padding-right:8px}
+body.cinema .tf-flags{flex-shrink:0;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+body.cinema .tf-flags .okmark{margin-left:0;min-width:4.6em;text-align:center}
+body.cinema .tf-flags .pickmark{margin-left:0;font-size:.7em}
 body.cinema .pickmark{display:inline-block;margin-left:.4em;font-size:.78em;font-weight:900;color:#145bb0}
 body.cinema .err{padding:18px 12px;max-width:36rem;margin:20vh auto 0;text-align:center}
 """
