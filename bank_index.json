@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 139,
+  "total_files": 140,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5404,6 +5404,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
