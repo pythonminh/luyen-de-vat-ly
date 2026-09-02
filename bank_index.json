@@ -5318,9 +5318,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 46,
+      "count": 46,
+      "dang": {
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 46
+      },
+      "dang_kinds": {
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 23,
+          "DS": 17,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
     }
   ]
 }
