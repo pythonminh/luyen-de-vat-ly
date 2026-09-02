@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 123,
+  "total_files": 124,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5211,6 +5211,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
