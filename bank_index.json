@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 124,
+  "total_files": 125,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5227,6 +5227,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
+      "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
