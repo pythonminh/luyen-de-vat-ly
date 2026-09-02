@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 143,
-  "total_questions": 11459,
+  "total_questions": 11452,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3434,17 +3434,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 16,
-      "count": 16,
+      "questions": 9,
+      "count": 9,
       "dang": {
-        "Lý thuyết định luật I và ứng dụng": 16
+        "Lý thuyết định luật I và ứng dụng": 9
       },
       "dang_kinds": {
         "Lý thuyết định luật I và ứng dụng": {
           "TN": 1,
-          "DS": 8,
-          "TLN": 3,
-          "TL": 4
+          "DS": 3,
+          "TLN": 2,
+          "TL": 3
         }
       }
     },
@@ -3959,6 +3959,29 @@
           "TN": 6,
           "DS": 0,
           "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
+      "questions": 10,
+      "count": 10,
+      "dang": {
+        "__CHUA_PHAN_LOAI__": 10
+      },
+      "dang_kinds": {
+        "__CHUA_PHAN_LOAI__": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 10,
           "TL": 0
         }
       }
@@ -5373,29 +5396,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-chua-phan-loai.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · __CHUA_PHAN_LOAI__",
-      "questions": 10,
-      "count": 10,
-      "dang": {
-        "__CHUA_PHAN_LOAI__": 10
-      },
-      "dang_kinds": {
-        "__CHUA_PHAN_LOAI__": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 10,
-          "TL": 0
         }
       }
     }
