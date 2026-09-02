@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 143,
-  "total_questions": 11416,
+  "total_files": 144,
+  "total_questions": 11521,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -66,6 +66,29 @@
           "TN": 2,
           "DS": 0,
           "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/vbb.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 1. Mệnh đề",
+      "De": "Bài 1. Mệnh đề",
+      "questions": 105,
+      "count": 105,
+      "dang": {
+        "Chưa phân dạng": 105
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 99,
+          "DS": 3,
+          "TLN": 3,
           "TL": 0
         }
       }
