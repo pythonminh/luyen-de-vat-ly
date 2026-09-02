@@ -5455,9 +5455,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 11,
+      "count": 11,
+      "dang": {
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": {
+          "TN": 3,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
