@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 124,
+  "total_files": 123,
   "total_questions": 11523,
   "lessons": [
     {
@@ -3777,29 +3777,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27
-      },
-      "dang_kinds": {
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
@@ -5221,9 +5198,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27
+      },
+      "dang_kinds": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
