@@ -166,18 +166,19 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
     dup=dup or {}
     hid=str(highlight_id or '').strip().lower()
+    src=str(q.get('src') or path or '').replace('\\','/')
+    try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else n)
+    except (TypeError, ValueError): fi=int(n or 0)
+    drop_key=_esc(src+'||'+str(fi))
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'
     dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}</span>" if dup.get('label') else ''
     xoa=''
     if can_manage_bank() and dup.get('extra'):
-        src=str(q.get('src') or path or '').replace('\\','/')
-        try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else n)
-        except (TypeError, ValueError): fi=int(n or 0)
-        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{_esc(src+'||'+str(fi))}' checked> Xóa bản trùng này</label>"
+        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' checked> Xóa bản trùng này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
-    return (f"<article class='qcard{dcls}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+    return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
             f"<div class='qtext'>{html_question(text)}</div>{options}{sol_html}</article>")
@@ -249,6 +250,10 @@ def member_dang():
         dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
+    slim_html=''
+    if can_manage_bank():
+        from admin_slim import slim_bar_html
+        slim_html=slim_bar_html(path, dang, next_url)
     guest = not m
     find_box=("<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' "
               f"value='{_esc(highlight_id)}' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>")
@@ -297,12 +302,12 @@ def member_dang():
         )
     find_js += "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
     body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
-          f"{guest_note}{notice_extra}{dup_note}{flash_html}{dup_form}"
+          f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}"
           +form_open+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
-          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.opt.ok,.tf.ok{background:#e8f8ee;border-color:#42ae6b}.tf.noans{background:#fff8f0}.okmark{margin-left:6px;font-size:11px;font-weight:800;color:#116a32}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.qtext{font-size:16px;line-height:1.7;padding:10px 2px}.opts{display:grid;gap:7px}.opt,.tf{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff}.opt.ok,.tf.ok{background:#e8f8ee;border-color:#42ae6b}.tf.noans{background:#fff8f0}.okmark{margin-left:6px;font-size:11px;font-weight:800;color:#116a32}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           + find_js
           )
     return page('Chọn câu' if not guest else 'Xem đề',body)

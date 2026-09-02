@@ -2073,6 +2073,7 @@ def server_error(exc):
 import dang_routes  # noqa: E402,F401
 import student_gemini  # noqa: E402,F401
 import admin_classify  # noqa: E402,F401
+import admin_slim  # noqa: E402,F401
 try:
     import admin_overrides as _admin_overrides  # noqa: F401
     import student_overrides as _student_overrides  # noqa: F401
