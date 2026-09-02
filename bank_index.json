@@ -1882,21 +1882,14 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 109,
-      "count": 109,
+      "questions": 88,
+      "count": 88,
       "dang": {
-        "Chưa có dạng": 21,
         "Liên hệ li độ - gia tốc": 27,
         "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 20,
         "Liên hệ li độ - vận tốc": 41
       },
       "dang_kinds": {
-        "Chưa có dạng": {
-          "TN": 14,
-          "DS": 7,
-          "TLN": 0,
-          "TL": 0
-        },
         "Liên hệ li độ - gia tốc": {
           "TN": 20,
           "DS": 2,
