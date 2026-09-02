@@ -320,28 +320,30 @@ function draw(q, showSol, pos, total, live){
   if(q.kind==='TN')(q.options||[]).forEach(function(o,i){
     const picked=live.tn===i;
     let cls='opt';
-    if(checked&&o.correct) cls+=' correct';
-    if(checked&&picked&&!o.correct) cls+=' wrong';
-    if(!checked&&picked) cls+=' picked';
+    if(o.correct) cls+=' correct';
+    else if(checked&&picked) cls+=' wrong';
+    else if(!checked&&picked) cls+=' picked';
     let mark='';
     if(picked) mark+=' <span class="pickmark">◀ thầy chọn</span>';
-    if(showSol&&o.correct) mark+=' <span class="okmark">Đáp án đúng</span>';
+    if(o.correct) mark+=' <span class="okmark">Đáp án đúng</span>';
     h+='<div class="'+cls+'"><b>'+String.fromCharCode(65+i)+'.</b> '+o.text+mark+'</div>';
   });
   else if(q.kind==='DS')(q.statements||[]).forEach(function(s,i){
     const pick=(live.ds||[])[i];
     const has=pick===true||pick===false;
+    const revealed=showSol||checked;
     let cls='tf';
-    if(checked&&has) cls+= (pick===s.correct?' correct':' wrong');
+    if(revealed&&s.correct) cls+=' correct';
+    else if(checked&&has&&pick!==s.correct) cls+=' wrong';
     let mark='';
     if(has) mark+=' <span class="pickmark">thầy: '+(pick?'Đúng':'Sai')+'</span>';
-    if(showSol) mark+=' <span class="okmark">'+(s.correct?'Đúng':'Sai')+'</span>';
+    if(revealed) mark+=' <span class="okmark">'+(s.correct?'Đúng':'Sai')+'</span>';
     h+='<div class="'+cls+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+mark+'</div></div>';
   });
   else {
     const typed=String(live.text||'').trim();
     h+='<div class="answerline">'+(typed?('<b>Thầy viết:</b> '+E(typed)):'✎ Đang chờ thầy nhập…')+'</div>';
-    if(showSol&&q.answer) h+='<div class="answerline"><b>Đáp án:</b> '+E(q.answer)+'</div>';
+    if(showSol&&q.answer) h+='<div class="answerline result good"><b>Đáp án đúng:</b> '+E(q.answer)+'</div>';
   }
   if(showSol&&q.solution) h+='<div class="solution"><b>📖 Lời giải</b><div>'+q.solution+'</div></div>';
   box.innerHTML=h;
