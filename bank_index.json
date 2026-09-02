@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 142,
-  "total_questions": 11472,
+  "total_questions": 11471,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -516,10 +516,10 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 1. Làm quen với Vật lí",
       "De": "L10C1 Bài 1. Làm quen với Vật lí",
-      "questions": 216,
-      "count": 216,
+      "questions": 215,
+      "count": 215,
       "dang": {
-        "Vận dụng tiến trình của phương pháp thực nghiệm": 38,
+        "Vận dụng tiến trình của phương pháp thực nghiệm": 37,
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 8,
         "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 37,
         "Vận dụng tiến trình của phương pháp mô hình": 57,
@@ -529,7 +529,7 @@
       },
       "dang_kinds": {
         "Vận dụng tiến trình của phương pháp thực nghiệm": {
-          "TN": 15,
+          "TN": 14,
           "DS": 9,
           "TLN": 7,
           "TL": 7
