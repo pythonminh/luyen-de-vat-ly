@@ -4926,9 +4926,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 27
+      },
+      "dang_kinds": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
