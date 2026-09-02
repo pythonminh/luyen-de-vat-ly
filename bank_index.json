@@ -3437,21 +3437,14 @@
       "questions": 16,
       "count": 16,
       "dang": {
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": 10,
-        "Định luật I của nhiệt động lực học và quy ước dấu": 6
+        "Lý thuyết định luật I và ứng dụng": 16
       },
       "dang_kinds": {
-        "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
-          "TN": 0,
-          "DS": 6,
-          "TLN": 2,
-          "TL": 2
-        },
-        "Định luật I của nhiệt động lực học và quy ước dấu": {
+        "Lý thuyết định luật I và ứng dụng": {
           "TN": 1,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 2
+          "DS": 8,
+          "TLN": 3,
+          "TL": 4
         }
       }
     },
