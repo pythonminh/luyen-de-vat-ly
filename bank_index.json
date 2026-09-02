@@ -4910,9 +4910,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Đặc điểm chất rắn",
       "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Đặc điểm chất rắn",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Đặc điểm chất rắn": 3
+      },
+      "dang_kinds": {
+        "Đặc điểm chất rắn": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
