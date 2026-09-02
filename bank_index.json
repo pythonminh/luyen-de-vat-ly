@@ -1897,29 +1897,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
-      "questions": 8,
-      "count": 8,
-      "dang": {
-        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": 8
-      },
-      "dang_kinds": {
-        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": {
-          "TN": 5,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
@@ -5443,6 +5420,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
