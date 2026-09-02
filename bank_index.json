@@ -1995,21 +1995,14 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa",
       "De": "L11C1 Bài 4. Bài tập về dao động điều hòa",
-      "questions": 75,
-      "count": 75,
+      "questions": 47,
+      "count": 47,
       "dang": {
-        "Bài toán xác định thời điểm và quãng đường.": 28,
         "Viết phương trình dao động điều hòa.": 12,
         "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11,
         "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": 24
       },
       "dang_kinds": {
-        "Bài toán xác định thời điểm và quãng đường.": {
-          "TN": 14,
-          "DS": 6,
-          "TLN": 8,
-          "TL": 0
-        },
         "Viết phương trình dao động điều hòa.": {
           "TN": 3,
           "DS": 3,
