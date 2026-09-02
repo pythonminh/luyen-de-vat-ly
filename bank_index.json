@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 142,
+  "total_files": 141,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5142,29 +5142,6 @@
         "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
           "TN": 5,
           "DS": 6,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
-      "questions": 6,
-      "count": 6,
-      "dang": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
-      },
-      "dang_kinds": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
-          "TN": 1,
-          "DS": 2,
           "TLN": 3,
           "TL": 0
         }
