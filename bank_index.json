@@ -5455,9 +5455,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 17,
+      "count": 17,
+      "dang": {
+        "Xác định các đại lượng đặc trưng từ phương trình li độ": 17
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng đặc trưng từ phương trình li độ": {
+          "TN": 8,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
