@@ -3063,14 +3063,70 @@
       "questions": 10,
       "count": 10,
       "dang": {
-        "Chưa phân dạng": 10
+        "Đặc điểm chất rắn vô định hình": 1,
+        "Đặc điểm chất rắn kết tinh": 1,
+        "Phân loại chất rắn": 1,
+        "So sánh chất rắn kết tinh và vô định hình": 1,
+        "Ứng dụng và giải thích tính chất chất rắn": 1,
+        "Tổng hợp kiến thức phân biệt chất rắn": 1,
+        "Phân biệt chất rắn kết tinh và vô định hình": 2,
+        "Đánh giá nhận định về chất rắn": 1,
+        "Đặc điểm chung của chất rắn": 1
       },
       "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 3,
+        "Đặc điểm chất rắn vô định hình": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đặc điểm chất rắn kết tinh": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phân loại chất rắn": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "So sánh chất rắn kết tinh và vô định hình": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Ứng dụng và giải thích tính chất chất rắn": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tổng hợp kiến thức phân biệt chất rắn": {
+          "TN": 0,
           "DS": 1,
-          "TLN": 3,
-          "TL": 3
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phân biệt chất rắn kết tinh và vô định hình": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 2
+        },
+        "Đánh giá nhận định về chất rắn": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Đặc điểm chung của chất rắn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
         }
       }
     },
