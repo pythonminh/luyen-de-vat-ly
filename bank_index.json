@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 140,
+  "total_files": 141,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5420,6 +5420,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/dang-bai-toan-xac-dinh-thoi-diem-va-quang-duong.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/dang-bai-toan-xac-dinh-thoi-diem-va-quang-duong.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/dang-bai-toan-xac-dinh-thoi-diem-va-quang-duong.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Ôn Tập chương dao động · Bài toán xác định thời điểm và quãng đường.",
+      "De": "L11C1 Ôn Tập chương dao động · Bài toán xác định thời điểm và quãng đường.",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
