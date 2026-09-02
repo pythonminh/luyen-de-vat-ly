@@ -172,6 +172,7 @@ def page(title: str, body: str) -> Response:
     nav = [
         "<button type='button' class='navback' onclick=\"if(history.length>1)history.back();else location.href='/member'\">← Quay lại</button>",
         "<a href='/member'>📚 MỤC LỤC</a>",
+        "<a href='/xem'>📺 Xem chiếu</a>",
     ]
     who = ""
     if role == "member":
@@ -1812,6 +1813,8 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
         extra=REWRITE_CLIENT_JS
+    from live_present import PRESENT_HOST_JS
+    extra += PRESENT_HOST_JS
     return page('Làm bài',body+js+extra)
 
 @app.post('/member/answer')
@@ -2147,6 +2150,7 @@ import student_gemini  # noqa: E402,F401
 import admin_classify  # noqa: E402,F401
 import admin_slim  # noqa: E402,F401
 import admin_rewrite  # noqa: E402,F401
+import live_present  # noqa: E402,F401
 try:
     import admin_overrides as _admin_overrides  # noqa: F401
     import student_overrides as _student_overrides  # noqa: F401
