@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 107,
+  "total_files": 108,
   "total_questions": 11523,
   "lessons": [
     {
@@ -4916,6 +4916,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
