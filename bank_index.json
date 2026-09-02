@@ -1995,12 +1995,11 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa",
       "De": "L11C1 Bài 4. Bài tập về dao động điều hòa",
-      "questions": 47,
-      "count": 47,
+      "questions": 23,
+      "count": 23,
       "dang": {
         "Viết phương trình dao động điều hòa.": 12,
-        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11,
-        "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": 24
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 11
       },
       "dang_kinds": {
         "Viết phương trình dao động điều hòa.": {
@@ -2013,12 +2012,6 @@
           "TN": 3,
           "DS": 5,
           "TLN": 3,
-          "TL": 0
-        },
-        "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": {
-          "TN": 12,
-          "DS": 6,
-          "TLN": 6,
           "TL": 0
         }
       }
