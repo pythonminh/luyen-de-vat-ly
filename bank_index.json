@@ -5237,9 +5237,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27
+      },
+      "dang_kinds": {
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     }
   ]
 }
