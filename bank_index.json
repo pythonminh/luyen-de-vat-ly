@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 127,
+  "total_files": 128,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5226,6 +5226,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
+      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
