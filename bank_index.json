@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 123,
+  "total_files": 124,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5211,6 +5211,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
