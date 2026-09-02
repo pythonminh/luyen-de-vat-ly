@@ -5430,9 +5430,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 16
+      },
+      "dang_kinds": {
+        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
+          "TN": 7,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
     }
   ]
 }
