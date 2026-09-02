@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import secrets
 import threading
 import time
 
-from flask import jsonify, redirect, request, session, url_for
+from flask import jsonify, request, session
 
 import app as base
 
@@ -29,8 +30,15 @@ def _prune():
         _ROOMS.pop(c, None)
 
 
+def _norm_code(raw):
+    c = re.sub(r"[^A-Z0-9]", "", str(raw or "").upper())
+    if 3 <= len(c) <= 6:
+        return c
+    return ""
+
+
 def _new_code():
-    for _ in range(30):
+    for _ in range(40):
         c = "".join(random.choice(_ALPH) for _ in range(4))
         if c not in _ROOMS:
             return c
@@ -118,15 +126,32 @@ def api_present_start():
     snap, err = _snapshot(data.get("show_sol"), data.get("zoom"))
     if not snap:
         return jsonify(ok=False, error=err), 400
+    want = _norm_code(data.get("code"))
+    if data.get("code") not in (None, "") and not want:
+        return jsonify(ok=False, error="Mã phải 3–6 ký tự (chữ hoặc số), ví dụ 1234 hoặc K7M2."), 400
     with _LOCK:
         _prune()
-        old = str(session.get("present_code") or "")
-        if old in _ROOMS and _ROOMS[old].get("host") == hid:
-            room = _ROOMS[old]
+        old = _norm_code(session.get("present_code"))
+        mine = old if old in _ROOMS and _ROOMS[old].get("host") == hid else None
+        if want:
+            taken = _ROOMS.get(want)
+            if taken and taken.get("host") != hid:
+                return jsonify(ok=False, error=f"Mã {want} đang được người khác dùng. Chọn mã khác."), 409
+            if mine and mine != want:
+                room = _ROOMS.pop(mine)
+                room["code"] = want
+                _ROOMS[want] = room
+                mine = want
+            elif taken and taken.get("host") == hid:
+                mine = want
+        if mine:
+            room = _ROOMS[mine]
             room.update(snap)
             room["ver"] = int(room.get("ver") or 0) + 1
+            session["present_code"] = room["code"]
+            session["present_token"] = room["token"]
         else:
-            code = _new_code()
+            code = want or _new_code()
             tok = secrets.token_hex(8)
             room = {"code": code, "token": tok, "host": hid, "ver": 1, **snap}
             _ROOMS[code] = room
@@ -143,7 +168,7 @@ def api_present_push():
     if not hid:
         return jsonify(ok=False, error="Chưa đăng nhập."), 401
     data = request.get_json(silent=True) or {}
-    code = str(data.get("code") or session.get("present_code") or "").strip().upper()
+    code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     with _LOCK:
         room = _ROOMS.get(code)
@@ -164,7 +189,7 @@ def api_present_push():
 
 @base.app.post("/api/present/stop")
 def api_present_stop():
-    code = str((request.get_json(silent=True) or {}).get("code") or session.get("present_code") or "").strip().upper()
+    code = _norm_code((request.get_json(silent=True) or {}).get("code") or session.get("present_code") or "")
     token = str((request.get_json(silent=True) or {}).get("token") or session.get("present_token") or "")
     with _LOCK:
         room = _ROOMS.get(code)
@@ -177,7 +202,7 @@ def api_present_stop():
 
 @base.app.get("/api/present/state")
 def api_present_state():
-    code = str(request.args.get("code") or "").strip().upper()
+    code = _norm_code(request.args.get("code") or "")
     try:
         since = int(request.args.get("ver") or 0)
     except (TypeError, ValueError):
@@ -186,7 +211,11 @@ def api_present_state():
         _prune()
         room = _ROOMS.get(code)
         if not room:
-            return jsonify(ok=False, error="Không có phòng này (hết hạn hoặc đã tắt)."), 404
+            return jsonify(
+                ok=False,
+                waiting=True,
+                error="Chưa có phòng mã này. Thầy phải vào làm bài, bấm 📺 Chiếu chung, rồi dùng đúng mã hiện trên thanh (hoặc đặt mã này).",
+            ), 404
         ver = int(room.get("ver") or 0)
         if since and since == ver:
             return jsonify(ok=True, unchanged=True, ver=ver)
@@ -197,24 +226,24 @@ def api_present_state():
 @base.app.get("/xem")
 @base.app.get("/xem/<code>")
 def present_watch(code=""):
-    code = str(code or request.args.get("code") or "").strip().upper()
+    code = _norm_code(code or request.args.get("code") or "")
     if not code:
         body = (
             "<div class='wrap'><div class='panel' style='max-width:480px;margin:40px auto'><div class='head'>📺 Vào chiếu chung</div><div class='body'>"
-            "<p class='muted'>Nhập mã 4 ký tự thầy/cô đưa (hoặc mở link <code>/xem/XXXX</code>).</p>"
+            "<p class='muted'>Gõ đúng mã thầy đưa sau khi bấm <b>Chiếu chung</b> (3–6 ký tự, ví dụ <code>K7M2</code> hoặc <code>1234</code> nếu thầy đặt mã đó). Không tự bịa mã khi thầy chưa mở phòng.</p>"
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
-            "<input name='code' maxlength='8' placeholder='Ví dụ K7M2' style='flex:1;min-width:140px;padding:12px;font-size:22px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
+            "<input name='code' maxlength='8' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:22px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
-            "<p class='muted'>Không cần đăng nhập. Màn hình sẽ tự theo câu thầy đang chiếu.</p>"
+            "<p class='muted'>Không cần đăng nhập. Trang tự theo câu thầy đang chiếu.</p>"
             "</div></div></div>"
             "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
         return base.page("Vào chiếu chung", body)
     body = (
         "<div class='wrap'><div class='panel'><div class='head quiztop'>"
-        f"<span>📺 Chiếu chung · mã <b id='pc'>{base.html.escape(code)}</b> · <span id='pmeta'>đang kết nối…</span></span>"
+        f"<span>📺 Chiếu chung · mã <b id='pc'>{base.html.escape(code)}</b> · <span id='pmeta'>đang chờ thầy…</span></span>"
         "<span class='qzoombar'><span class='muted' id='phost'></span></span></div>"
-        "<div class='body'><div id='perr' class='err'></div><div class='practice-q'><div id='q' class='qbox'></div></div>"
+        "<div class='body'><div id='perr' class='err'></div><div class='practice-q'><div id='q' class='qbox' hidden></div></div>"
         "<p class='muted'>Tự cập nhật khi thầy chuyển câu. Toàn màn hình: nút ⛶ trên thanh xanh.</p></div></div></div>"
     )
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
@@ -230,6 +259,7 @@ function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||documen
 function draw(q, showSol, zoom, pos, total){
   const box=document.getElementById('q');
   if(!box||!q) return;
+  box.hidden=false;
   box.style.setProperty('--qzoom', String(zoom||1));
   let h=(q.nguon?'<div class="nguonrow"><span class="nguon">Nguồn: '+E(q.nguon)+'</span></div>':'')
     +'<div class="qtext"><b>Câu '+(pos+1)+'/'+total+'. </b>'+(q.id?'<span class="qid">ID '+E(q.id)+'</span> ':'')+q.text+'</div>';
@@ -251,17 +281,29 @@ function draw(q, showSol, zoom, pos, total){
 }
 async function tick(){
   const err=document.getElementById('perr');
+  const meta=document.getElementById('pmeta');
+  const box=document.getElementById('q');
   try{
     const r=await fetch('/api/present/state?code='+encodeURIComponent(CODE)+'&ver='+lastVer,{credentials:'same-origin'});
     const d=await r.json();
-    if(!d.ok){if(err)err.textContent=d.error||'Mất phòng chiếu.';return;}
+    if(!d.ok){
+      if(box) box.hidden=true;
+      if(meta) meta.textContent='đang chờ thầy mở phòng';
+      if(err) err.innerHTML=(d.error||'Chưa có phòng.')
+        +'<div class="muted" style="margin-top:8px;font-weight:400">Trang sẽ tự hiện câu khi thầy bấm <b>Chiếu chung</b> với đúng mã <code>'+E(CODE)+'</code>. '
+        +'Hoặc <a href="/xem">nhập mã khác</a>.</div>';
+      return;
+    }
     if(d.unchanged) return;
     lastVer=d.ver;
     if(err) err.textContent='';
     const h=document.getElementById('phost');
     if(h) h.textContent=d.host?('Theo '+d.host):'';
     draw(d.q, !!d.show_sol, d.zoom, d.pos, d.total);
-  }catch(e){if(err)err.textContent='Mất kết nối, đang thử lại…';}
+  }catch(e){
+    if(meta) meta.textContent='mất mạng, thử lại…';
+    if(err) err.textContent='Mất kết nối, đang thử lại…';
+  }
 }
 tick();
 setInterval(tick,1200);
@@ -321,8 +363,11 @@ async function presentPush(){
   }catch(e){}
 }
 async function presentStart(){
+  const suggest=(P&&P.code)||'1234';
+  const typed=prompt('Mã chiếu cho lớp gõ vào (3–6 ký tự). Có thể đặt 1234 cho dễ nhớ:', suggest);
+  if(typed===null) return;
   const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify({show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1})});
+    body:JSON.stringify({code:String(typed||'').trim(),show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1})});
   const d=await r.json();
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
