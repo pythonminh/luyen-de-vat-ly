@@ -2192,13 +2192,13 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Ôn Tập chương dao động",
       "De": "L11C1 Ôn Tập chương dao động",
-      "questions": 137,
-      "count": 137,
+      "questions": 149,
+      "count": 149,
       "dang": {
         "quãng đường": 27,
         "Chưa có dạng": 9,
         "Thời điểm vật qua x1": 23,
-        "Viết phương trình dao động điều hòa.": 20,
+        "Viết phương trình dao động điều hòa.": 32,
         "vận tốc trung bình và tốc độ trung bình": 29,
         "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 29
       },
@@ -2222,10 +2222,10 @@
           "TL": 0
         },
         "Viết phương trình dao động điều hòa.": {
-          "TN": 11,
-          "DS": 3,
-          "TLN": 3,
-          "TL": 3
+          "TN": 14,
+          "DS": 6,
+          "TLN": 6,
+          "TL": 6
         },
         "vận tốc trung bình và tốc độ trung bình": {
           "TN": 20,
