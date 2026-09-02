@@ -172,7 +172,10 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}</span>" if dup.get('label') else ''
     xoa=''
     if can_manage_bank() and dup.get('extra'):
-        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{n}' checked> Xóa bản trùng này</label>"
+        src=str(q.get('src') or path or '').replace('\\','/')
+        try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else n)
+        except (TypeError, ValueError): fi=int(n or 0)
+        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{_esc(src+'||'+str(fi))}' checked> Xóa bản trùng này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
     return (f"<article class='qcard{dcls}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
@@ -229,13 +232,15 @@ def member_dang():
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
                   "Bấm <b>Chỉ trùng</b> để lọc.</div>")
     next_url='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
+    srcs={str(q.get('src') or path).replace('\\','/') for q in selected}
     dup_form=''
-    srcs={str(q.get('src') or path) for q in selected}
-    if can_manage_bank() and dao_n and len(srcs)==1:
+    if can_manage_bank() and dao_n:
+        nfile=len(srcs)
+        note_file=f" Trùng có thể nằm ở {nfile} file TEX trong bài — xóa đúng file chứa bản thừa." if nfile>1 else ""
         dup_form=(
             f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản trùng đã tick trên thẻ đỏ? Bản đầu mỗi nhóm được giữ lại.')\">"
             f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
-            f"<b>Xóa trùng:</b> thẻ đỏ (bản thừa) có ô <b>Xóa bản trùng này</b> — mặc định đã tick. Còn <b>{dao_n}</b> bản thừa. "
+            f"<b>Xóa trùng:</b> thẻ đỏ (bản thừa) có ô <b>Xóa bản trùng này</b> — mặc định đã tick. Còn <b>{dao_n}</b> bản thừa.{note_file} "
             "Nhóm «cùng đề khác đáp án» không xóa hàng loạt. "
             "<label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick</label> "
             "<button class='btn red' type='submit'>🗑 Xóa các bản trùng đã chọn</button></form>"

@@ -1896,34 +1896,66 @@ def admin_dups():
     if not can_manage_bank():return redirect('/admin/login')
     p=str(request.values.get('path') or '').replace('\\','/')
     nxt=str(request.values.get('next') or '')
-    try: sha,tex=read_tex(p, need_sha=True); qs=parse_questions(tex)
+    try:
+        qs=parse_lesson_questions(p)
+        if not qs:
+            sha,tex=read_tex(p, need_sha=True); qs=parse_questions(tex)
+            for q in qs:
+                q['src']=p; q['file_idx']=int(q.get('idx') or 0)
+        else:
+            sha=''
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     groups=find_duplicate_groups(qs)
+    extra_keys=set()
+    for g in groups:
+        extras=set(g.get('extras') or [])
+        for q in g.get('members') or []:
+            if q.get('idx') not in extras:
+                continue
+            src=str(q.get('src') or p).replace('\\','/')
+            try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+            except (TypeError, ValueError):
+                continue
+            extra_keys.add((src, fi))
     if request.method=='POST':
         if request.form.get('confirm')!='yes':
             return _dup_after(p, nxt, 'err', 'Phải xác nhận trước khi xóa trùng.')
-        drop=[]
-        extra_ok={i for g in groups for i in g['extras']}
+        drops_by={}
         for raw in request.form.getlist('drop'):
-            try: i=int(raw)
-            except Exception: continue
-            if i in extra_ok: drop.append(i)
-        drop=sorted(set(drop))
-        if not drop:
+            raw=str(raw or '').strip()
+            src, fi = p, None
+            if '||' in raw:
+                src, _, idx_s = raw.replace('\\','/').rpartition('||')
+                try: fi=int(idx_s)
+                except Exception: continue
+            else:
+                try: fi=int(raw)
+                except Exception: continue
+                src=p
+            src=src.replace('\\','/')
+            if (src, fi) not in extra_keys:
+                continue
+            drops_by.setdefault(src, []).append(fi)
+        if not drops_by:
             return _dup_after(p, nxt, 'err', 'Chưa chọn câu trùng để xóa.')
-        new=tex_without_questions(tex, drop)
+        total=0
         try:
-            local=_safe_repo_file(p)[1]
-            local.parent.mkdir(parents=True, exist_ok=True)
-            local.write_text(new, encoding='utf-8')
-            if TOKEN:
-                github_put_text(p, new, 'ADMIN xóa '+str(len(drop))+' câu trùng trong '+p, sha or None)
+            for src, idxs in drops_by.items():
+                idxs=sorted(set(idxs))
+                fsha, tex = read_tex(src, need_sha=True)
+                new=tex_without_questions(tex, idxs)
+                local=_safe_repo_file(src)[1]
+                local.parent.mkdir(parents=True, exist_ok=True)
+                local.write_text(new, encoding='utf-8')
+                if TOKEN:
+                    github_put_text(src, new, 'ADMIN xóa '+str(len(idxs))+' câu trùng trong '+src, fsha or None)
+                total += len(idxs)
             try:
-                from dang_routes import _STATS_CACHE
-                _STATS_CACHE.pop(p, None)
+                from dang_routes import _STATS_CACHE, _QID_CACHE
+                _STATS_CACHE.clear(); _QID_CACHE.clear()
             except Exception:
                 pass
-            return _dup_after(p, nxt, 'ok', 'Đã xóa '+str(len(drop))+' câu trùng, giữ bản đầu mỗi nhóm.')
+            return _dup_after(p, nxt, 'ok', 'Đã xóa '+str(total)+' câu trùng, giữ bản đầu mỗi nhóm.')
         except Exception as e:
             return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
@@ -1937,10 +1969,14 @@ def admin_dups():
                 chk="<span class='tag'>GIỮ</span>"
             else:
                 auto=' checked' if g['type']=='dao' else ''
-                chk=f"<label><input type='checkbox' name='drop' value='{q['idx']}'{auto}> Xóa bản này</label>"
+                src=str(q.get('src') or p).replace('\\','/')
+                try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+                except (TypeError, ValueError): fi=int(q.get('idx') or 0)
+                chk=f"<label><input type='checkbox' name='drop' value='{html.escape(src+'||'+str(fi), quote=True)}'{auto}> Xóa bản này</label>"
+            fn=html.escape(str(q.get('src') or p).replace('\\','/').rsplit('/',1)[-1])
             rows.append(
                 "<tr><td>"+chk+"</td><td>"+str(q.get('stt'))+"</td><td><code>"+html.escape(str(q.get('id') or '—'))+"</code></td>"
-                "<td>"+html.escape(str(q.get('kind')))+"</td><td>dòng "+str(q.get('line') or '')+"</td>"
+                "<td>"+html.escape(str(q.get('kind')))+"</td><td>"+fn+" · dòng "+str(q.get('line') or '')+"</td>"
                 "<td>"+html.escape((q.get('text') or '')[:180])+"</td></tr>"
             )
         blocks.append(
@@ -1960,7 +1996,7 @@ def admin_dups():
         form_open="<div>"
         form_close="</div>"
     body=(
-        "<div class='wrap'><div class='panel'><div class='head'>🔎 Câu trùng · <code>"+html.escape(p)+"</code></div><div class='body'>"
+        "<div class='wrap'><div class='panel'><div class='head'>🔎 Câu trùng · cả bài</div><div class='body'>"
         +(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")
         +(f"<div class='err'>{html.escape(err)}</div>" if err else "")
         +"<div class='notice'>Trùng <b>đảo đáp án</b>: ô xóa mặc định đã tick. Cùng đề nhưng <b>đáp án khác</b>: ô xóa mặc định trống — xem kỹ rồi mới tick. Bản <b>GIỮ</b> là câu đầu mỗi nhóm, không xóa được từ đây.</div>"
