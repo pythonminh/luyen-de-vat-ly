@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 140,
+  "total_files": 141,
   "total_questions": 11520,
   "lessons": [
     {
@@ -5420,6 +5420,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
+      "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
