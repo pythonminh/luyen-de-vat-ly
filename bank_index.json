@@ -3797,21 +3797,14 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
-      "questions": 145,
-      "count": 145,
+      "questions": 135,
+      "count": 135,
       "dang": {
-        "__CHUA_PHAN_LOAI__": 10,
         "Bài toán nóng chảy và đông đặc": 27,
         "Tính nhiệt lượng tổng hợp có chuyển pha": 81,
         "Lí thuyết về nhiệt nóng chảy riêng": 27
       },
       "dang_kinds": {
-        "__CHUA_PHAN_LOAI__": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 10,
-          "TL": 0
-        },
         "Bài toán nóng chảy và đông đặc": {
           "TN": 10,
           "DS": 5,
