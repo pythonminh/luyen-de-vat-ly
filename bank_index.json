@@ -1836,13 +1836,12 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa",
-      "questions": 110,
-      "count": 110,
+      "questions": 64,
+      "count": 64,
       "dang": {
         "Chu kỳ,tần số,tần số góc, pha dao động": 12,
         "Chưa có dạng": 14,
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38,
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 46
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38
       },
       "dang_kinds": {
         "Chu kỳ,tần số,tần số góc, pha dao động": {
@@ -1860,12 +1859,6 @@
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
           "TN": 17,
           "DS": 15,
-          "TLN": 6,
-          "TL": 0
-        },
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
-          "TN": 23,
-          "DS": 17,
           "TLN": 6,
           "TL": 0
         }
