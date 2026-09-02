@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 125,
+  "total_files": 126,
   "total_questions": 11523,
   "lessons": [
     {
@@ -5215,6 +5215,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
