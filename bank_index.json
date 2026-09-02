@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 140,
-  "total_questions": 11523,
+  "total_questions": 11520,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1798,6 +1798,190 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
+      "questions": 14,
+      "count": 14,
+      "dang": {
+        "Chưa có dạng": 14
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 9,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 16
+      },
+      "dang_kinds": {
+        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
+          "TN": 7,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
+      "questions": 38,
+      "count": 38,
+      "dang": {
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 17,
+          "DS": 15,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
+      "questions": 39,
+      "count": 39,
+      "dang": {
+        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": 39
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": {
+          "TN": 18,
+          "DS": 18,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
+      "questions": 46,
+      "count": 46,
+      "dang": {
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 46
+      },
+      "dang_kinds": {
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 23,
+          "DS": 17,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
+      "questions": 41,
+      "count": 41,
+      "dang": {
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 41
+      },
+      "dang_kinds": {
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+          "TN": 20,
+          "DS": 12,
+          "TLN": 9,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 33
+      },
+      "dang_kinds": {
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 18,
+          "DS": 12,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
+      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
+      "questions": 28,
+      "count": 28,
+      "dang": {
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 28
+      },
+      "dang_kinds": {
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 6,
+          "DS": 16,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
@@ -1828,6 +2012,98 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
+      "questions": 17,
+      "count": 17,
+      "dang": {
+        "Xác định các đại lượng đặc trưng từ phương trình li độ": 17
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng đặc trưng từ phương trình li độ": {
+          "TN": 8,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
+      "questions": 14,
+      "count": 14,
+      "dang": {
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": 14
+      },
+      "dang_kinds": {
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
+          "TN": 5,
+          "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
+      "questions": 8,
+      "count": 8,
+      "dang": {
+        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": 8
+      },
+      "dang_kinds": {
+        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": {
+          "TN": 5,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
+      "questions": 20,
+      "count": 20,
+      "dang": {
+        "Xác định trạng thái của vật tại một thời điểm xác định": 20
+      },
+      "dang_kinds": {
+        "Xác định trạng thái của vật tại một thời điểm xác định": {
+          "TN": 9,
+          "DS": 7,
+          "TLN": 4,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
@@ -1845,6 +2121,29 @@
         "Chu kỳ,tần số,tần số góc, pha dao động": {
           "TN": 3,
           "DS": 6,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
+      "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
+      "questions": 6,
+      "count": 6,
+      "dang": {
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
+      },
+      "dang_kinds": {
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+          "TN": 1,
+          "DS": 2,
           "TLN": 3,
           "TL": 0
         }
@@ -1895,6 +2194,52 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
+      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 7
+      },
+      "dang_kinds": {
+        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": {
+          "TN": 3,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
+      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
+      "questions": 36,
+      "count": 36,
+      "dang": {
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 36
+      },
+      "dang_kinds": {
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
+          "TN": 18,
+          "DS": 15,
+          "TLN": 3,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/de.tex",
@@ -1934,6 +2279,29 @@
           "TN": 12,
           "DS": 6,
           "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
+      "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
+      "questions": 5,
+      "count": 5,
+      "dang": {
+        "Đơn vị và đại lượng trong dao động điều hòa": 5
+      },
+      "dang_kinds": {
+        "Đơn vị và đại lượng trong dao động điều hòa": {
+          "TN": 3,
+          "DS": 2,
+          "TLN": 0,
           "TL": 0
         }
       }
@@ -3097,11 +3465,11 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 19,
-      "count": 19,
+      "questions": 16,
+      "count": 16,
       "dang": {
         "Vận dụng định luật I giải thích hiện tượng và thiết bị": 10,
-        "Định luật I của nhiệt động lực học và quy ước dấu": 9
+        "Định luật I của nhiệt động lực học và quy ước dấu": 6
       },
       "dang_kinds": {
         "Vận dụng định luật I giải thích hiện tượng và thiết bị": {
@@ -3112,7 +3480,7 @@
         },
         "Định luật I của nhiệt động lực học và quy ước dấu": {
           "TN": 1,
-          "DS": 5,
+          "DS": 2,
           "TLN": 1,
           "TL": 2
         }
@@ -3249,6 +3617,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": 27
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
@@ -3261,6 +3652,52 @@
       "count": 0,
       "dang": {},
       "dang_kinds": {}
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": 27
+      },
+      "dang_kinds": {
+        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27
+      },
+      "dang_kinds": {
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-thoi-gian-lam-nong-vat.tex",
@@ -3367,6 +3804,29 @@
       "dang_kinds": {}
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
+      "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27
+      },
+      "dang_kinds": {
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/de.tex",
@@ -3403,6 +3863,52 @@
           "TL": 12
         },
         "Lí thuyết về nhiệt nóng chảy riêng": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Bài toán công suất, hiệu suất và thời gian đun": 27
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian đun": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
+      "questions": 27,
+      "count": 27,
+      "dang": {
+        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 27
+      },
+      "dang_kinds": {
+        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
           "TN": 10,
           "DS": 5,
           "TLN": 6,
@@ -3475,6 +3981,29 @@
           "TN": 15,
           "DS": 0,
           "TLN": 2,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
+      },
+      "dang_kinds": {
+        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 1,
           "TL": 0
         }
       }
@@ -4889,535 +5418,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-dun.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-hoa-ho.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán công suất, hiệu suất và thời gian hóa hơi",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian hóa hơi": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-khai-niem-cong-thuc-don-vi-va-y-nghia-cua-nhiet-.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": 27
-      },
-      "dang_kinds": {
-        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-thuc-nghiem-xac-dinh-nhiet-hoa-hoi-rieng.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Thực nghiệm xác định nhiệt hóa hơi riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": 27
-      },
-      "dang_kinds": {
-        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-cong-suat-hieu-suat-va-thoi-gian-nong-c.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 27
-      },
-      "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-xac-dinh-nhiet-nong-chay-rieng-bang-thu.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,",
-      "questions": 7,
-      "count": 7,
-      "dang": {
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
-      },
-      "dang_kinds": {
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
-          "TN": 6,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng/dang-thuc-nghiem-xac-dinh-nhiet-nong-chay-rieng.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "questions": 27,
-      "count": 27,
-      "dang": {
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27
-      },
-      "dang_kinds": {
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-trang-thai-cua-vat-tai-mot-thoi-diem-xa.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định trạng thái của vật tại một thời điểm xác định",
-      "questions": 20,
-      "count": 20,
-      "dang": {
-        "Xác định trạng thái của vật tại một thời điểm xác định": 20
-      },
-      "dang_kinds": {
-        "Xác định trạng thái của vật tại một thời điểm xác định": {
-          "TN": 9,
-          "DS": 7,
-          "TLN": 4,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-tu-phuong-trinh.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng từ phương trình li độ",
-      "questions": 17,
-      "count": 17,
-      "dang": {
-        "Xác định các đại lượng đặc trưng từ phương trình li độ": 17
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng đặc trưng từ phương trình li độ": {
-          "TN": 8,
-          "DS": 6,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-pha-ban-dau-pha-dao-dong-va-trang-thai-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t",
-      "questions": 8,
-      "count": 8,
-      "dang": {
-        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": 8
-      },
-      "dang_kinds": {
-        "Xác định pha ban đầu, pha dao động và trạng thái li độ tại thời điểm t": {
-          "TN": 5,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-viet-phuong-trinh-dao-dong-dieu-hoa-tu-do-thi-li.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
-      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
-      "questions": 7,
-      "count": 7,
-      "dang": {
-        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 7
-      },
-      "dang_kinds": {
-        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": {
-          "TN": 3,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/dang-khai-thac-cac-thong-so-dac-trung-tu-do-thi-li-do.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
-      "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa · Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian",
-      "questions": 6,
-      "count": 6,
-      "dang": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
-      },
-      "dang_kinds": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
-          "TN": 1,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa/dang-don-vi-va-dai-luong-trong-dao-dong-dieu-hoa.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
-      "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa · Đơn vị và đại lượng trong dao động điều hòa",
-      "questions": 5,
-      "count": 5,
-      "dang": {
-        "Đơn vị và đại lượng trong dao động điều hòa": 5
-      },
-      "dang_kinds": {
-        "Đơn vị và đại lượng trong dao động điều hòa": {
-          "TN": 3,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-va-viet-phuong-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian",
-      "questions": 39,
-      "count": 39,
-      "dang": {
-        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": 39
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": {
-          "TN": 18,
-          "DS": 18,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 4. Bài tập về dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-du.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
-      "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
-      "questions": 36,
-      "count": 36,
-      "dang": {
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 36
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
-          "TN": 18,
-          "DS": 15,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-li-do-va-pha-cua-dao-dong-tai-mot-thoi-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
-      "questions": 33,
-      "count": 33,
-      "dang": {
-        "Xác định li độ và pha của dao động tại một thời điểm xác định": 33
-      },
-      "dang_kinds": {
-        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
-          "TN": 18,
-          "DS": 12,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-do-lech-pha-giua-hai-dao-dong-dieu-hoa-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì",
-      "questions": 46,
-      "count": 46,
-      "dang": {
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 46
-      },
-      "dang_kinds": {
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
-          "TN": 23,
-          "DS": 17,
-          "TLN": 6,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-cac-dai-luong-dac-trung-cua-dao-dong-di.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
-      "questions": 38,
-      "count": 38,
-      "dang": {
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38
-      },
-      "dang_kinds": {
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
-          "TN": 17,
-          "DS": 15,
-          "TLN": 6,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-chua-co-dang.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
-      "questions": 14,
-      "count": 14,
-      "dang": {
-        "Chưa có dạng": 14
-      },
-      "dang_kinds": {
-        "Chưa có dạng": {
-          "TN": 9,
-          "DS": 5,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-gia-tri-cuc-dai-va-gia-tri-tai-cac-vi-t.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc",
-      "questions": 41,
-      "count": 41,
-      "dang": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 41
-      },
-      "dang_kinds": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
-          "TN": 20,
-          "DS": 12,
-          "TLN": 9,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-khai-thac-cac-dai-luong-dac-trung-tu-do-thi-van-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian",
-      "questions": 16,
-      "count": 16,
-      "dang": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 16
-      },
-      "dang_kinds": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
-          "TN": 7,
-          "DS": 6,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/dang-xac-dinh-chieu-va-tinh-chat-chuyen-dong-cua-vat-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
-      "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định chiều và tính chất chuyển động của vật dao động điều hòa",
-      "questions": 14,
-      "count": 14,
-      "dang": {
-        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": 14
-      },
-      "dang_kinds": {
-        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
-          "TN": 5,
-          "DS": 6,
-          "TLN": 3,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/dang-xac-dinh-va-tinh-toan-cac-dai-luong-van-toc-gia-.tex",
-      "Mon": "Vật lý",
-      "Lop": "11",
-      "Chuong": "Chương I. Dao động",
-      "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
-      "De": "L11C1 Bài 1. Dao động điều hòa · Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định",
-      "questions": 28,
-      "count": 28,
-      "dang": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 28
-      },
-      "dang_kinds": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
-          "TN": 6,
-          "DS": 16,
-          "TLN": 6,
-          "TL": 0
         }
       }
     }
