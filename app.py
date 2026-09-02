@@ -1653,7 +1653,11 @@ def start_practice():
 
 def question_payload(q):
     """Toàn bộ dữ liệu một câu cho trang làm bài và cho AI phản biện."""
-    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level']}
+    try:
+        fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+    except (TypeError, ValueError):
+        fi=0
+    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level'],'src':str(q.get('src') or ''),'file_idx':fi}
     if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
     elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':p['answer']=q.get('answer','')
@@ -1715,7 +1719,7 @@ if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><in
 else if(q.kind==='DS')q.statements.forEach((s,i)=>h+='<div class="tf" id="t'+i+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+'</div><div class="tf-picks"><label class="tf-pick yes"><input type="radio" name="t'+i+'" value="1"> Đúng</label><label class="tf-pick no"><input type="radio" name="t'+i+'" value="0"> Sai</label></div></div>');
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
-h+='<div class="quizacts"><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button><button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 Xem lời giải</button><button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'🔐 ADMIN: có thể xem lời giải không cần làm bài.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;typeset(document.getElementById('q'));bind()}
+h+='<div class="quizacts"><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button><button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 Xem lời giải</button><button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'🔐 ADMIN: có thể xem lời giải không cần làm bài.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;typeset(document.getElementById('q'));bind();if(IS_ADMIN)ldvlMountPracticeRewrite()}
 function bind(){let q=Q;
 if(q.kind==='TN')document.querySelectorAll('input[name=a]').forEach(function(el){el.addEventListener('change',syncReady)});
 else if(q.kind==='DS')document.querySelectorAll('.tf input[type=radio]').forEach(function(el){el.addEventListener('change',syncReady)});
@@ -1726,7 +1730,8 @@ if(q.kind==='TN')return !!document.querySelector('input[name=a]:checked');
 if(q.kind==='DS'){for(let i=0;i<q.statements.length;i++){if(!document.querySelector('input[name=t'+i+']:checked'))return false}return true}
 let z=document.getElementById('ans');return !!(z&&z.value.trim())}
 function syncReady(){if(checked)return;let b=document.getElementById('chkbtn');if(!b)return;let ready=answered();b.disabled=!ready;b.title=ready?'':'Hãy chọn/nhập đáp án trước khi xác nhận.'}
-function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none'}
+function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite()}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('afterend','<div class="rwbar" id="rwPractice"><button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button><div class="rwout" id="rwPrOut"></div></div>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0}
@@ -1740,7 +1745,11 @@ fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
 draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1)).replace('__AI__','true' if ai else 'false').replace('__ADMIN__','true' if is_admin else 'false')
-    return page('Làm bài',body+js)
+    extra=''
+    if is_admin:
+        from admin_rewrite import REWRITE_CLIENT_JS
+        extra=REWRITE_CLIENT_JS
+    return page('Làm bài',body+js+extra)
 
 @app.post('/member/answer')
 def answer():
@@ -2074,6 +2083,7 @@ import dang_routes  # noqa: E402,F401
 import student_gemini  # noqa: E402,F401
 import admin_classify  # noqa: E402,F401
 import admin_slim  # noqa: E402,F401
+import admin_rewrite  # noqa: E402,F401
 try:
     import admin_overrides as _admin_overrides  # noqa: F401
     import student_overrides as _student_overrides  # noqa: F401
