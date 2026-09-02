@@ -5432,9 +5432,19 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
       "De": "L11C1 Bài 1. Dao động điều hòa · Chưa có dạng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 21,
+      "count": 21,
+      "dang": {
+        "Chưa có dạng": 21
+      },
+      "dang_kinds": {
+        "Chưa có dạng": {
+          "TN": 14,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
