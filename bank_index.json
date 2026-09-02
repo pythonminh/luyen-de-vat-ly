@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 143,
-  "total_questions": 11419,
+  "total_questions": 11416,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1997,15 +1997,15 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
       "De": "L11C1 Bài 2. Mô tả dao động điều hòa · Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian",
-      "questions": 16,
-      "count": 16,
+      "questions": 13,
+      "count": 13,
       "dang": {
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 16
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 13
       },
       "dang_kinds": {
         "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
           "TN": 6,
-          "DS": 7,
+          "DS": 4,
           "TLN": 3,
           "TL": 0
         }
