@@ -28,19 +28,33 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 1. Mệnh đề",
       "De": "Bài 1. Mệnh đề",
-      "questions": 216,
-      "count": 216,
+      "questions": 215,
+      "count": 215,
       "dang": {
-        "Xác định mệnh đề, mệnh đề chứa biến": 207,
+        "Mệnh đề chứa biến": 29,
+        "Mệnh đề đúng": 97,
         "Xét tính đúng – sai của mệnh đề": 6,
-        "Mệnh đề với mọi, tồn tại": 3
+        "Mệnh đề với mọi, tồn tại": 3,
+        "Mệnh đề sai": 10,
+        "Phủ định mệnh đề": 10,
+        "Phủ định mệnh đề chứa biến": 10,
+        "Mệnh đề kéo theo": 10,
+        "Mệnh đề tương đương": 10,
+        "Mệnh đề đảo": 20,
+        "Mệnh đề về tính chất số": 10
       },
       "dang_kinds": {
-        "Xác định mệnh đề, mệnh đề chứa biến": {
-          "TN": 173,
+        "Mệnh đề chứa biến": {
+          "TN": 9,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 20
+        },
+        "Mệnh đề đúng": {
+          "TN": 94,
           "DS": 0,
           "TLN": 3,
-          "TL": 31
+          "TL": 0
         },
         "Xét tính đúng – sai của mệnh đề": {
           "TN": 3,
@@ -53,6 +67,48 @@
           "DS": 0,
           "TLN": 0,
           "TL": 0
+        },
+        "Mệnh đề sai": {
+          "TN": 10,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phủ định mệnh đề": {
+          "TN": 10,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phủ định mệnh đề chứa biến": {
+          "TN": 10,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mệnh đề kéo theo": {
+          "TN": 10,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mệnh đề tương đương": {
+          "TN": 10,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mệnh đề đảo": {
+          "TN": 20,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Mệnh đề về tính chất số": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 10
         }
       }
     },
