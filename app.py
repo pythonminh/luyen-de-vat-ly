@@ -196,7 +196,6 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     nav = [
         "<button type='button' class='navback' onclick=\"if(history.length>1)history.back();else location.href='/member'\">← Quay lại</button>",
         "<a href='/member'>📚 MỤC LỤC</a>",
-        "<a href='/xem'>📺 Xem chiếu</a>",
     ]
     who = ""
     if role == "member":
@@ -209,13 +208,19 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     elif role == "admin":
         who = "<span class='who'>🔐 ADMIN</span>"
         nav += [
+            "<a href='/xem'>📺 Xem chiếu</a>",
             "<a href='/admin'>📂 ngan-hang</a>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
             "<a href='/admin/members'>👥 Thành viên</a>",
             "<a href='/admin/logout'>🚪 Thoát</a>",
         ]
     else:
-        nav += ["<a href='/member/login'>🔑 Đăng nhập</a>", "<a href='/member/register'>📝 Đăng ký</a>", "<a href='/admin/login'>🔐 ADMIN</a>"]
+        nav += [
+            "<a href='/xem'>📺 Xem chiếu</a>",
+            "<a href='/member/login'>🔑 Đăng nhập</a>",
+            "<a href='/member/register'>📝 Đăng ký</a>",
+            "<a href='/admin/login'>🔐 ADMIN</a>",
+        ]
     top = (
         "<div class='top'><div class='topin'><div class='brandbox'><div class='brand'>📚 Luyện Đề Toán Lý</div>"
         "<div class='sub'>Zalo thầy Minh 0946111107</div></div>"
@@ -1892,9 +1897,8 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
-        extra=REWRITE_CLIENT_JS
-    from live_present import PRESENT_HOST_JS
-    extra += PRESENT_HOST_JS
+        from live_present import PRESENT_HOST_JS
+        extra=REWRITE_CLIENT_JS + PRESENT_HOST_JS
     return page('Làm bài',body+js+extra)
 
 @app.post('/member/answer')

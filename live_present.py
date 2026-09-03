@@ -48,11 +48,11 @@ def _new_code():
 
 
 def _host_id():
-    m = base.member_current()
-    if m:
-        return str(m.get("username") or m.get("name") or "member")
     if base.admin_current():
         return "ADMIN"
+    m = base.member_current()
+    if m and base.has_full_bank_access(m):
+        return str(m.get("username") or m.get("name") or "admin")
     return ""
 
 
