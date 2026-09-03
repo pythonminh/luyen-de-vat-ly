@@ -204,13 +204,36 @@
     {
       "username": "VIP",
       "name": "Huỳnh Công Minh",
-      "class": "12",
+      "class": "10+11+12",
       "account_type": "VIP",
       "status": "ON",
       "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
-      "grade": "12",
-      "updated_at": "2026-09-01 14:37:22",
-      "password_enc": "v1:uDbAE0Tl"
+      "grade": "10+11+12",
+      "updated_at": "2026-09-03 07:51:02",
+      "password_enc": "v1:uDbAE0Tl",
+      "package": {
+        "kind": "lop3",
+        "grades": [
+          "10",
+          "11",
+          "12"
+        ],
+        "subjects": [
+          "Toán",
+          "Vật lý"
+        ]
+      },
+      "grades": [
+        "10",
+        "11",
+        "12"
+      ],
+      "subjects": [
+        "Toán",
+        "Vật lý"
+      ],
+      "package_status": "approved",
+      "requested_package": null
     },
     {
       "username": "0946111107",
