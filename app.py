@@ -68,8 +68,8 @@ CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 CSS = r"""
 :root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px}
 *{box-sizing:border-box}html{height:100%;scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}body{margin:0;min-height:100dvh;background:var(--bg);color:#19324d;font:14px/1.45 Segoe UI,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}
-a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.whobar{display:none}.fsbtn{white-space:nowrap}.navtoggle{display:none;margin-left:auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:700px){html{scroll-padding-top:calc(68px + env(safe-area-inset-top,0px))}.brand{font-size:14px;line-height:1.2}.brandbox{flex:1 1 calc(100% - 44px);min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:inline-flex;flex-direction:column;align-items:flex-end;justify-content:center;order:4;margin:0;min-width:0;padding:3px 7px;font-size:10px;line-height:1.2;white-space:nowrap}.clock .clockday,.clock .clocktime{display:block}.clock .clockday::after{content:none}.whobar{display:inline-flex;order:3;flex:1 1 0;max-width:none;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:2}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:5px;gap:3px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
-.wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
+a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.whobar{display:none}.fsbtn{white-space:nowrap}.navtoggle{display:none;margin-left:auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:700px){html{scroll-padding-top:calc(68px + env(safe-area-inset-top,0px))}.brand{font-size:14px;line-height:1.2}.brandbox{flex:1 1 calc(100% - 44px);min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:inline-flex;flex-direction:column;align-items:flex-end;justify-content:center;order:4;margin:0;min-width:0;padding:3px 7px;font-size:10px;line-height:1.2;white-space:nowrap}.clock .clockday,.clock .clocktime{display:block}.clock .clockday::after{content:none}.whobar{display:inline-flex;order:3;flex:1 1 0;max-width:none;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:2}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:5px;gap:3px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.kindtabs{top:calc(68px + env(safe-area-inset-top,0px));padding:6px 8px}.kindtabs .ktab{padding:5px 8px;font-size:12px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
+.wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.kindtabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#eef6ff;border-bottom:1px solid var(--line);position:sticky;z-index:40;top:calc(72px + env(safe-area-inset-top,0px))}.kindtabs .ktab{display:inline-flex;align-items:center;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:7px 10px;font-weight:800;font-size:13px;cursor:pointer}.kindtabs .ktab.on{background:var(--blue);border-color:var(--blue);color:#fff}.kindtabs .ktab.off{opacity:.4;cursor:not-allowed;pointer-events:none}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
 .selectwrap{overflow:auto}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
@@ -1470,6 +1470,103 @@ def sort_ids_by_kind(questions, ids, shuffle_within=False):
     out.extend(other)
     return out
 
+KIND_TABS = (('', 'Tất cả loại'), ('TN', 'Chỉ TN'), ('DS', 'Chỉ ĐS'), ('TLN', 'Chỉ TLN'), ('TL', 'Chỉ TL'))
+
+def norm_kind_tab(kind):
+    k = str(kind or '').strip().upper()
+    return k if k in KIND_ORDER else ''
+
+def load_lesson_questions(path):
+    qs = parse_lesson_questions(path)
+    if not qs:
+        _, tex = read_tex(path)
+        qs = parse_questions(tex)
+    return qs
+
+def questions_in_scope(qs, dang=''):
+    dang = str(dang or '').strip()
+    if not dang:
+        return list(qs or [])
+    hit = [q for q in (qs or []) if str(q.get('dang') or '').strip() == dang]
+    if not hit and dang == 'Chưa phân dạng':
+        hit = [q for q in (qs or []) if not str(q.get('dang') or '').strip()]
+    return hit
+
+def kind_counts_for(qs):
+    c = {'': 0, 'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0}
+    for q in qs or []:
+        k = str(q.get('kind') or 'TL')
+        if k not in KIND_ORDER:
+            k = 'TL'
+        c[k] = c.get(k, 0) + 1
+        c[''] += 1
+    return c
+
+def ids_of_kind(qs, kind=''):
+    kind = norm_kind_tab(kind)
+    ids = []
+    for q in qs or []:
+        if kind and str(q.get('kind') or '') != kind:
+            continue
+        try:
+            ids.append(int(q['idx']))
+        except (TypeError, ValueError, KeyError):
+            continue
+    return sort_ids_by_kind(qs, ids, shuffle_within=False)
+
+def kind_tabs_html(path, dang='', current='', counts=None, guest=False):
+    counts = counts or {'': 0, 'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0}
+    current = norm_kind_tab(current)
+    base = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='')
+    if dang:
+        base += '&dang=' + urllib.parse.quote(str(dang), safe='')
+    bits = []
+    for k, lab in KIND_TABS:
+        n = int(counts.get(k, 0) if k else counts.get('', 0))
+        label = f'{lab} · {n}'
+        on = ' on' if current == k else ''
+        if n <= 0:
+            bits.append(f"<span class='ktab{on} off' title='Không có câu loại này'>{html.escape(label)}</span>")
+            continue
+        href = base + '&kind=' + urllib.parse.quote(k, safe='')
+        if guest:
+            href = login_url(href)
+        bits.append(f"<a class='ktab{on}' href='{html.escape(href, quote=True)}'>{html.escape(label)}</a>")
+    return "<nav class='kindtabs' aria-label='Loại câu'>" + ''.join(bits) + "</nav>"
+
+def begin_kind_practice(path, kind='', dang=''):
+    m = member_current()
+    if not m:
+        return redirect(login_url(request.full_path if request.query_string else '/member'))
+    path = str(path or '').strip()
+    dang = str(dang or '').strip()
+    kind = norm_kind_tab(kind)
+    if not path or not can_access(m, path):
+        return redirect('/member')
+    try:
+        qs = load_lesson_questions(path)
+    except Exception as e:
+        return page('Lỗi', f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    scoped = questions_in_scope(qs, dang)
+    ids = ids_of_kind(scoped, kind)
+    if not ids:
+        if dang:
+            return redirect('/member/dang?path=' + urllib.parse.quote(path, safe='') + '&dang=' + urllib.parse.quote(dang, safe=''))
+        return redirect('/member/select?path=' + urllib.parse.quote(path, safe=''))
+    session.update(
+        practice_path=path,
+        practice_dang=dang,
+        practice_kind=kind,
+        practice_ids=ids,
+        practice_pos=0,
+        practice_right=0,
+        practice_streak=0,
+        practice_best=max(int(session.get('practice_best') or 0), 0),
+        practice_done=[],
+        practice_ai=bool(session.get('practice_ai')),
+    )
+    return redirect('/member/practice')
+
 def norm_answer(s):
     s=clean_latex_web(str(s or ''));s=re.sub(r'\$+','',s).strip().lower();s=s.replace(',','.').replace(' ','');s=re.sub(r'\\text\{([^}]*)\}',r'\1',s);return s
 def answer_equal(a,b):
@@ -1685,7 +1782,9 @@ def select_page():
     chap=chapter_nav_html(p)
     _, cur_lesson = chapter_lessons_for(p)
     bai_name=html.escape(str((cur_lesson or {}).get('BaiHoc') or Path(p).parent.name))
-    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{chap}{admin_box}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+    tabs=kind_tabs_html(p, dang='', current='', counts=kind_counts_for(qs), guest=guest)
+    empty_note=("<div class='notice' style='margin-bottom:10px'>Bấm một trong 5 nhãn loại ở trên để làm ngay. Có thể đổi loại bất cứ lúc nào.</div>")
+    body=f"<div class='wrap'><div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div>{tabs}<div class='body'>{chap}{admin_box}{empty_note}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
     return page('Chọn câu',body)
 
 @app.post('/member/start')
@@ -1718,7 +1817,18 @@ def start_practice():
             pool=[q for q in qs if q['dang']==dang_names[di] and q['kind']==kind and q['level']==lev];wanted.extend(q['idx'] for q in random.sample(pool,min(n,len(pool))))
     if not wanted:return redirect('/member/select?path='+urllib.parse.quote(p,safe=''))
     wanted=sort_ids_by_kind(qs, wanted, shuffle_within=False)
-    session.update(practice_path=p,practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=request.form.get('ai_review') in ('1','on','true','yes'));return redirect('/member/practice')
+    kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
+    kinds={k for k in kinds if k}
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=request.form.get('ai_review') in ('1','on','true','yes'));return redirect('/member/practice')
+
+@app.get('/member/go-kind')
+def go_kind():
+    path = (request.args.get('path') or '').strip() or str(session.get('practice_path') or '')
+    if 'path' in request.args:
+        dang = request.args.get('dang') or ''
+    else:
+        dang = str(session.get('practice_dang') or '')
+    return begin_kind_practice(path, request.args.get('kind') or '', dang)
 
 def question_payload(q):
     """Toàn bộ dữ liệu một câu cho trang làm bài và cho AI phản biện."""
@@ -1761,7 +1871,7 @@ def practice():
                  + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
                  + f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>")
         body=(
-            f"<div class='wrap'><div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
+            f"<div class='wrap'><div class='panel'>{kind_tabs_html(p, dang=str(session.get('practice_dang') or ''), current=session.get('practice_kind') or '', counts=kind_counts_for(questions_in_scope(list(allq.values()), str(session.get('practice_dang') or ''))), guest=False)}<div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
             f"<span class='tag'>{'🤖 Có phản biện' if ai else 'Không phản biện'}</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
             + gem
@@ -1775,7 +1885,10 @@ def practice():
     is_admin=has_full_bank_access(m)
     mode_tag='🤖 Có phản biện AI' if ai else 'Không phản biện'
     if is_admin: mode_tag='🔐 ADMIN · xem lời giải không cần làm bài'+((' · '+mode_tag) if ai else '')
-    body=(f"<div class='wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']}</span></span>"
+    dang=str(session.get('practice_dang') or '')
+    scoped=questions_in_scope(list(allq.values()), dang)
+    tabs=kind_tabs_html(p, dang=dang, current=session.get('practice_kind') or '', counts=kind_counts_for(scoped), guest=False)
+    body=(f"<div class='wrap'><div class='panel'>{tabs}<div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
