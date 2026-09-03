@@ -278,7 +278,7 @@ def _replace_env(s: str, name: str, wrap, titled=False):
     return "".join(out)
 
 
-def _html(chunk: str) -> str:
+def _html_tex(chunk: str) -> str:
     t = chunk or ""
     t = re.sub(r"(?<!\\)%[^\n]*", "", t)
     t = t.replace(r"\%", "%")
@@ -288,6 +288,13 @@ def _html(chunk: str) -> str:
     t = re.sub(r"\\ref\s*\{[^{}]*\}", "hình trên", t)
     t = t.replace("\\centering", "")
     return base.html_question(t)
+
+
+def _html(chunk: str) -> str:
+    t = chunk or ""
+    if re.search(r"\\(?:choiceTF|choice|shortans|loigiai)\b", t, re.I):
+        return _html_quiz(t)
+    return _html_tex(t)
 
 
 def _html_quiz(chunk: str) -> str:
@@ -312,7 +319,7 @@ def _html_quiz(chunk: str) -> str:
             mark = "Đúng" if ok else "Sai"
             cls = " ok" if ok else ""
             rows.append(
-                f"<div class='lt-opt{cls}'><b>{i + 1}.</b> {_html(txt)} "
+                f"<div class='lt-opt{cls}'><b>{i + 1}.</b> {_html_tex(txt)} "
                 f"<span class='lt-key'>{mark}</span></div>"
             )
         opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
@@ -325,7 +332,7 @@ def _html_quiz(chunk: str) -> str:
             let = letters[i] if i < 4 else str(i + 1)
             cls = " ok" if ok else ""
             rows.append(
-                f"<div class='lt-opt{cls}'><span class='lt-let'>{let}</span> {_html(txt)}</div>"
+                f"<div class='lt-opt{cls}'><span class='lt-let'>{let}</span> {_html_tex(txt)}</div>"
             )
         opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
         stem = re.split(r"\\choice\b|\\loigiai\b|\\begin\s*\{\s*loigiai", b, 1, flags=re.I)[0]
@@ -335,13 +342,13 @@ def _html_quiz(chunk: str) -> str:
         if sm:
             ans, _ = base.get_braced(b, sm.end())
             if ans:
-                opts_html = f"<p class='lt-short'><b>Đáp án:</b> {_html(ans)}</p>"
-    stem_html = _html(base.strip_loigiai(stem))
+                opts_html = f"<p class='lt-short'><b>Đáp án:</b> {_html_tex(ans)}</p>"
+    stem_html = _html_tex(base.strip_loigiai(stem))
     sol_html = ""
     if (sol or "").strip():
         sol_html = (
             "<details class='lt-sol' open><summary>Lời giải</summary>"
-            f"<div>{_html(sol)}</div></details>"
+            f"<div>{_html_tex(sol)}</div></details>"
         )
     return f"<div class='lt-q'>{stem_html}{opts_html}{sol_html}</div>"
 
