@@ -32,8 +32,10 @@ LT_CSS = """
 .ltbox-body{padding:10px 16px 14px;line-height:1.62;color:#1e293b}
 .ltbox-body>:first-child{margin-top:0}
 .ltbox-body>:last-child{margin-bottom:0}
-.ltbox-body ul,.ltbox-body ol{margin:6px 0 4px;padding-left:1.25em}
-.ltbox-body li{margin:4px 0}
+.ltbox-body ul{margin:6px 0 4px;padding-left:1.35em}
+.ltbox-body ol,ol.tex-list{list-style:none;counter-reset:ltn;margin:8px 0 6px;padding:0}
+.ltbox-body ol>li,ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em;line-height:1.55}
+.ltbox-body ol>li::before,ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}
 .lt-hd-title{margin:0 0 8px;font-size:15px;font-weight:700;color:#9a3412}
 .ltbox.hd{background:#fff8f1;border-color:#fdba74;border-left:5px solid #ea580c}
 .ltbox.hd .k{background:#ffedd5;color:#9a3412}
