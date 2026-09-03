@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 144,
-  "total_questions": 11543,
+  "total_questions": 11568,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3259,30 +3259,142 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 7,
-      "count": 7,
+      "questions": 32,
+      "count": 32,
       "dang": {
-        "Phân loại và nhận biết chất rắn": 2,
-        "So sánh và phân biệt chất rắn": 3,
-        "Ứng dụng và giải thích tính chất chất rắn": 2
+        "Phân loại chất rắn": 5,
+        "Tính chất chất rắn kết tinh": 1,
+        "Tính chất chất rắn vô định hình": 2,
+        "Ví dụ về chất rắn": 1,
+        "Nhiệt độ nóng chảy": 2,
+        "Cấu trúc chất rắn": 1,
+        "Phân biệt chất rắn": 2,
+        "So sánh chất rắn": 3,
+        "Nhận biết chất rắn": 2,
+        "Ứng dụng chất rắn vô định hình": 1,
+        "Giải thích tính chất chất rắn": 2,
+        "Ứng dụng tính chất chất rắn": 2,
+        "Giải thích hiện tượng": 1,
+        "Phân biệt chất rắn kết tinh và vô định hình": 2,
+        "Tính chất và ứng dụng": 1,
+        "Đặc điểm chất rắn": 1,
+        "Nhận biết qua hiện tượng": 1,
+        "Khái niệm chất rắn kết tinh": 1,
+        "Ứng dụng và giải thích tính chất chất rắn": 1
       },
       "dang_kinds": {
-        "Phân loại và nhận biết chất rắn": {
-          "TN": 0,
-          "DS": 1,
+        "Phân loại chất rắn": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Tính chất chất rắn kết tinh": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính chất chất rắn vô định hình": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Ví dụ về chất rắn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhiệt độ nóng chảy": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Cấu trúc chất rắn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phân biệt chất rắn": {
+          "TN": 1,
+          "DS": 0,
           "TLN": 1,
           "TL": 0
         },
-        "So sánh và phân biệt chất rắn": {
+        "So sánh chất rắn": {
+          "TN": 2,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Nhận biết chất rắn": {
+          "TN": 1,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Ứng dụng chất rắn vô định hình": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Giải thích tính chất chất rắn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Ứng dụng tính chất chất rắn": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Giải thích hiện tượng": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Phân biệt chất rắn kết tinh và vô định hình": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tính chất và ứng dụng": {
+          "TN": 0,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đặc điểm chất rắn": {
           "TN": 0,
           "DS": 0,
           "TLN": 1,
-          "TL": 2
+          "TL": 0
+        },
+        "Nhận biết qua hiện tượng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Khái niệm chất rắn kết tinh": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         },
         "Ứng dụng và giải thích tính chất chất rắn": {
           "TN": 0,
           "DS": 0,
-          "TLN": 1,
+          "TLN": 0,
           "TL": 1
         }
       }
