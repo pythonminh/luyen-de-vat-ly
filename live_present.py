@@ -364,9 +364,14 @@ function draw(q, showSol, pos, total, live){
     function row(label, items){
       const n=Math.max(items.length,1);
       const cells=items.map(function(it){
-        return '<span class="keycell '+(it.cls||'')+'"><span class="kcirc">'+it.letter+'</span>'+(it.mark?(' '+it.mark):'')+'</span>';
+        const ds=it.mark||'';
+        if(!ds){
+          return '<span class="keycell '+(it.cls||'')+'"><span class="kcirc tn">'+it.letter+'</span></span>';
+        }
+        const kind=ds==='Đ'?'d':(ds==='S'?'s':'');
+        return '<span class="keycell '+(it.cls||'')+'"><span class="klet">'+it.letter+'</span><span class="kcirc '+kind+'">'+ds+'</span></span>';
       }).join('');
-      return '<div class="keyrow" style="grid-template-columns:7.2em repeat('+n+',minmax(3.2em,1fr))"><span class="keylab">'+label+'</span>'+cells+'</div>';
+      return '<div class="keyrow" style="grid-template-columns:7.2em repeat('+n+',2.6em)"><span class="keylab">'+label+'</span>'+cells+'</div>';
     }
     let extra='';
     if(q.kind==='TN'){
