@@ -389,7 +389,7 @@ def start_selected_questions():
         practice_streak=0,
         practice_best=0,
         practice_done=[],
-        practice_ai=request.form.get('ai_review') in ('1','on','true','yes'),
+        practice_ai=True,
     )
     return redirect('/member/practice')
 

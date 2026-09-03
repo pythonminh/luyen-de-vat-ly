@@ -1756,7 +1756,7 @@ def begin_kind_practice(path, kind='', dang=''):
         practice_streak=0,
         practice_best=max(int(session.get('practice_best') or 0), 0),
         practice_done=[],
-        practice_ai=bool(session.get('practice_ai')),
+        practice_ai=True,
     )
     return redirect('/member/practice')
 
@@ -2021,7 +2021,7 @@ def start_practice():
     wanted=sort_ids_by_kind(qs, wanted, shuffle_within=False)
     kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
     kinds={k for k in kinds if k}
-    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=request.form.get('ai_review') in ('1','on','true','yes'));return redirect('/member/practice')
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=True);return redirect('/member/practice')
 
 @app.get('/member/go-kind')
 def go_kind():
@@ -2056,7 +2056,7 @@ def practice():
     m=member_current();
     if not m:return redirect(login_url('/member/practice'))
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
-    ai=bool(session.get('practice_ai'))
+    ai=True
     if not p or not ids:return redirect('/member')
     try:
         allq={q['idx']:q for q in parse_lesson_questions(p)}
@@ -2184,7 +2184,7 @@ function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp �
 function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('afterend','<div class="rwbar" id="rwPractice"><button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
-if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0}
+if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}
 function verdictHtml(q, student, ok){
   const labs='ABCD';
   let head=q.kind==='TL'?'Đã nộp bài tự luận — chờ chấm.':(ok?'Đúng':'Sai');
@@ -2221,11 +2221,11 @@ if(q.kind==='TN'){let z=document.querySelector('input[name=a]:checked');if(!z)re
 else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){let z=document.querySelector('input[name=t'+i+']:checked');if(!z)return alert('Chọn đủ Đúng/Sai.');let v=z.value==='1';a.push(v?'Đ':'S');document.getElementById('t'+i).classList.add(v===q.statements[i].correct?'correct':'wrong');if(v!==q.statements[i].correct)ok=false}student=a.join('')}
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
 let note=verdictHtml(q,student,ok);let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});
-if(AI){openSolution();showAiPane()}else{let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block'}
+if(true){openSolution();showAiPane()}else{let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block'}
 fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
-draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1)).replace('__AI__','true' if ai else 'false').replace('__ADMIN__','true' if is_admin else 'false')
+draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
