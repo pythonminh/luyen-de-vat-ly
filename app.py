@@ -241,7 +241,6 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
             "<a href='/xem'>📺 Xem chiếu</a>",
             "<a href='/member/login'>🔑 Đăng nhập</a>",
             "<a href='/member/register'>📝 Đăng ký</a>",
-            "<a href='/admin/login'>🔐 ADMIN</a>",
         ]
     top = (
         "<div class='top'><div class='topin'><button type='button' class='brandbox' id='ldvlBaiBtn' aria-controls='ldvlDrawer' title='Chọn lớp, chương, bài'>"
@@ -2259,11 +2258,7 @@ def gemini_review():
 
 @app.route('/admin/login',methods=['GET','POST'])
 def admin_login():
-    msg=''
-    if request.method=='POST':
-        if request.form.get('username','').strip()==ADMIN_USER and ADMIN_PASS and request.form.get('password','')==ADMIN_PASS:session.clear();session['role']='admin';return redirect('/admin')
-        msg='Sai tài khoản hoặc mật khẩu ADMIN.'
-    body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>🔐 ADMIN</div><div class='body'><form method='post'><div class='field'><label>Tài khoản</label><input name='username' value='{html.escape(ADMIN_USER)}' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div><button class='btn primary'>Đăng nhập</button><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('ADMIN',body)
+    return redirect('/member/login')
 
 def list_bank_tex():
     items=[];seen=set()
@@ -2498,7 +2493,7 @@ def admin_dups():
     return page('Xóa trùng',body)
 
 @app.get('/admin/logout')
-def admin_logout():session.clear();return redirect('/admin/login')
+def admin_logout():session.clear();return redirect('/member/login')
 
 @app.route('/tikz/<hid>.png')
 def tikz_png(hid):

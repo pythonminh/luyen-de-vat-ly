@@ -331,15 +331,7 @@ def _admin_password_page():
 
 
 def _admin_login():
-    if request.method == "POST":
-        u = str(request.form.get("username") or "").strip()
-        p = request.form.get("password") or ""
-        d = _members(); a = _admin_record(d)
-        if a and u.casefold() == "admin" and str(a.get("status", "ON")).upper() == "ON" and hashlib.sha256(p.encode()).hexdigest() == str(a.get("password_sha256", "")):
-            session.clear(); session.update(role="admin", username="ADMIN", name="ADMIN"); session.permanent = request.form.get("remember") == "on"
-            return redirect("/admin")
-        return _admin_login_page("Sai tài khoản hoặc mật khẩu ADMIN.")
-    return _admin_login_page("")
+    return redirect("/member/login")
 
 
 def _admin_login_page(msg):

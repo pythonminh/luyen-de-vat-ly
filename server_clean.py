@@ -62,8 +62,8 @@ def _nav() -> str:
         ]
     else:
         links += [
-            "<a href='/member/login'>🔑 Đăng nhập / Đăng ký</a>",
-            "<a href='/admin/login'>🔐 ADMIN</a>",
+            "<a href='/member/login'>🔑 Đăng nhập</a>",
+            "<a href='/member/register'>📝 Đăng ký</a>",
         ]
     links.append("<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲 Cài app</button>")
     return "<div class='nav'>" + "".join(links) + "</div>"
@@ -197,7 +197,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
         selected = None
     body = f"""
 <div class='wrap'><div class='panel authpanel'>
-  <div class='head'>👤 Tài khoản học viên</div>
+  <div class='head'>🔑 Đăng nhập</div>
   <div class='body'>
     <div class='authtabs'>
       <button type='button' class='authtab{login_active}' onclick=\"authMode('login')\">🔑 Đăng nhập</button>
@@ -228,7 +228,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
       {err if mode == 'register' else ''}
     </form>
 
-    <div class='muted authnote'>Chọn gói 1 lớp, 2 lớp, 3 lớp, 1 môn hoặc 2 môn. ADMIN duyệt xong mới mở nội dung. Liên hệ thầy Minh 0357991010 (Zalo).</div>
+    <div class='muted authnote'>Một form đăng nhập cho mọi tài khoản: ADMIN tự vào trang quản lý, học viên vào luyện đề. Đăng ký gói rồi chờ duyệt. Liên hệ thầy Minh 0357991010 (Zalo).</div>
   </div>
 </div></div>
 {pkg.PKG_CSS}
@@ -249,7 +249,7 @@ function togglePass(id,btn){{const x=document.getElementById(id);if(!x)return;x.
 }})();
 </script>
 """
-    return authoritative_page("Tài khoản học viên", body)
+    return authoritative_page("Đăng nhập", body)
 
 
 def unified_member_auth(*args, **kwargs):
@@ -276,6 +276,8 @@ def unified_member_auth(*args, **kwargs):
             if err:
                 return _auth_page(err, "register", request.form)
             d = base.members_data()
+            if username.casefold() == "admin" or username.casefold() == ADMIN_USERNAME.casefold():
+                return _auth_page("Tài khoản này đã được dùng. Hãy chọn tên khác.", "register", request.form)
             if any(str(x.get("username", "")).casefold() == username.casefold() for x in d.get("members", [])):
                 return _auth_page("Tài khoản đã tồn tại. Hãy chọn tên khác hoặc chuyển sang Đăng nhập.", "register", request.form)
             member = {
@@ -299,6 +301,21 @@ def unified_member_auth(*args, **kwargs):
             return redirect("/member/goi")
 
         data, found = _member_lookup(username, password)
+        admin_ok = False
+        if found and getattr(base, "is_admin_member", lambda *_: False)(found):
+            admin_ok = True
+        elif username.casefold() == ADMIN_USERNAME.casefold() and _admin_password_ok(password):
+            admin_ok = True
+        if admin_ok:
+            if found:
+                try:
+                    base.persist_member_password_on_login(data, found, password)
+                except Exception:
+                    pass
+            session.clear()
+            session.permanent = remember
+            session.update(role="admin", username=str((found or {}).get("username") or ADMIN_USERNAME), name=str((found or {}).get("name") or "ADMIN"))
+            return redirect("/admin")
         if found:
             try:
                 base.persist_member_password_on_login(data, found, password)
@@ -323,29 +340,7 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 
 def clean_admin_login():
-    msg = ""
-    if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        password = request.form.get("password") or ""
-        if username == ADMIN_USERNAME and _admin_password_ok(password):
-            session.clear()
-            session.update(role="admin", username=ADMIN_USERNAME, name="ADMIN")
-            return redirect("/admin")
-        msg = (
-            "ADMIN chưa được cấu hình mật khẩu trên Render. Hãy đặt ADMIN_PASSWORD hoặc ADMIN_PASSWORD_SHA256 trong Environment Variables."
-            if not ADMIN_PASSWORD and not ADMIN_PASSWORD_SHA256
-            else "Sai tài khoản hoặc mật khẩu ADMIN."
-        )
-    error = f"<div class='err' style='margin-top:8px'>{html.escape(msg)}</div>" if msg else ""
-    body = (
-        "<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'>"
-        "<div class='head'>🔐 ADMIN</div><div class='body'><form method='post'>"
-        f"<div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' value='{html.escape(ADMIN_USERNAME, quote=True)}' required></div>"
-        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div>"
-        "<button class='btn primary' type='submit'>Đăng nhập</button>"
-        f"{error}</form></div></div></div>"
-    )
-    return authoritative_page("ADMIN", body)
+    return redirect("/member/login")
 
 
 app.view_functions["admin_login"] = clean_admin_login
@@ -353,7 +348,7 @@ app.view_functions["admin_login"] = clean_admin_login
 
 def clean_admin_logout():
     session.clear()
-    return redirect("/member")
+    return redirect("/member/login")
 
 
 app.view_functions["admin_logout"] = clean_admin_logout
