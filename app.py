@@ -1807,24 +1807,36 @@ def select_page():
         if not qs:
             _,tex=read_tex(p); qs=parse_questions(tex)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
-    dang_names=[];seen=set()
-    for q in qs:
-        if q['dang'] not in seen:seen.add(q['dang']);dang_names.append(q['dang'])
-    kind_rows=[('TN','Trắc nghiệm'),('DS','Đúng / Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')]
-    rows=[]
-    for di,dang in enumerate(dang_names):
-        arr=[q for q in qs if q['dang']==dang]
-        uncat=dang in ('','Chưa phân dạng')
-        mark=("<span class='tag miss'>Chưa có</span>" if uncat else "<span class='tag had'>Đã có</span>")
-        dang_cell=f"<td rowspan='{len(kind_rows)}'>{html.escape(dang)} {mark}</td>"
-        for ki,(kind,label) in enumerate(kind_rows):
-            c={z:sum(1 for q in arr if q['kind']==kind and q['level']==z) for z in 'NHVC'};inputs=''.join(f"<input class='n' type='number' min='0' max='{c[z]}' value='0' name='pick:{di}:{kind}:{z}'>" for z in 'NHVC');total=sum(c.values())
-            tr=f"<tr class='{'uncat' if uncat else 'had'}'>"
-            if ki==0: tr+=dang_cell
-            rows.append(tr+f"<td>{label}</td><td>{c['N']}/{c['H']}/{c['V']}/{c['C']}</td><td>{inputs}</td><td>{total}</td></tr>")
     guest = not m
+    admin_pick = can_manage_bank()
+    pick_html=''
+    if admin_pick:
+        dang_names=[];seen=set()
+        for q in qs:
+            if q['dang'] not in seen:seen.add(q['dang']);dang_names.append(q['dang'])
+        kind_rows=[('TN','Trắc nghiệm'),('DS','Đúng / Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')]
+        rows=[]
+        for di,dang in enumerate(dang_names):
+            arr=[q for q in qs if q['dang']==dang]
+            uncat=dang in ('','Chưa phân dạng')
+            mark=("<span class='tag miss'>Chưa có</span>" if uncat else "<span class='tag had'>Đã có</span>")
+            dang_cell=f"<td rowspan='{len(kind_rows)}'>{html.escape(dang)} {mark}</td>"
+            for ki,(kind,label) in enumerate(kind_rows):
+                c={z:sum(1 for q in arr if q['kind']==kind and q['level']==z) for z in 'NHVC'};inputs=''.join(f"<input class='n' type='number' min='0' max='{c[z]}' value='0' name='pick:{di}:{kind}:{z}'>" for z in 'NHVC');total=sum(c.values())
+                tr=f"<tr class='{'uncat' if uncat else 'had'}'>"
+                if ki==0: tr+=dang_cell
+                rows.append(tr+f"<td>{label}</td><td>{c['N']}/{c['H']}/{c['V']}/{c['C']}</td><td>{inputs}</td><td>{total}</td></tr>")
+        pick_html=(
+            "<form method='post' action='/member/start'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+            "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>"
+            +''.join(rows)+"</table></div>"
+            "<div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
+            "<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
+            "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div></form>"
+            "<script>function upd(){let t=0;document.querySelectorAll('.n').forEach(x=>{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+        )
     admin_box=''
-    if can_manage_bank():
+    if admin_pick:
         import admin_classify as _ac
         try:
             _,tex_one=read_tex(p); qs_one=parse_questions(tex_one)
@@ -1834,17 +1846,14 @@ def select_page():
         for q in qs_one:
             if q['dang'] not in seen_one:seen_one.add(q['dang']);names_one.append(q['dang'])
         admin_box=admin_tex_select_html(p)+_ac.select_admin_panel(p, qs_one, names_one)
+    guest_note=''
     if guest:
-        acts=f"<div class='notice'>👁 Bạn đang xem đề. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập để làm bài</a></div>"
-    else:
-        acts=("<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
-              "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div>")
+        guest_note=f"<div class='notice'>👁 Đăng nhập rồi bấm dạng / loại ở trên để làm bài. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập</a></div>"
     chap=chapter_nav_html(p)
     _, cur_lesson = chapter_lessons_for(p)
     bai_name=html.escape(str((cur_lesson or {}).get('BaiHoc') or Path(p).parent.name))
     tabs=lesson_switch_html(p, qs, dang='', kind='', guest=guest)
-    empty_note=("<div class='notice' style='margin-bottom:10px'>Bấm dạng ở hàng cam, rồi chọn loại (TN / ĐS / TLN / TL) để làm ngay.</div>")
-    body=f"<div class='wrap'>{tabs}<div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{chap}{admin_box}{empty_note}<form method='post' action='/member/start'><input type='hidden' name='path' value='{html.escape(p,quote=True)}'><div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>{''.join(rows)}</table></div><div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>{acts}<p><a class='btn' href='/member'>← Mục lục</a></p></form></div></div></div><script>function upd(){{let t=0;document.querySelectorAll('.n').forEach(x=>{{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v}});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+    body=f"<div class='wrap'>{tabs}<div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{chap}{admin_box}{guest_note}{pick_html}<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
     return page('Chọn câu',body)
 
 @app.post('/member/start')
