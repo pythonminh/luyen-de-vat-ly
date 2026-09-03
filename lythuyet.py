@@ -18,7 +18,7 @@ STATUS_FILE = ROOT / "companion_status.json"
 LT_CSS = """
 <style>
 .ltpage{max-width:none;width:100%}
-.ltnav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.ltnav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;position:relative;z-index:6}
 .lttoc{margin:0 0 14px;max-width:min(100%,720px)}
 .lttoc label{display:block;font-size:12px;color:#64748b;margin:0 0 5px;font-weight:600}
 .lttoc select{width:100%;padding:9px 12px;border:1px solid #c9d8e8;border-radius:10px;background:#fff;color:#173a5e;font-size:14px;line-height:1.35}
@@ -558,7 +558,7 @@ def _lesson_rows():
 
 @app.get("/admin/ly-thuyet")
 def admin_companion_list():
-    if not base.admin_current():
+    if not base.can_manage_bank():
         return redirect("/admin/login")
     want = str(request.args.get("st") or "pending").strip().lower()
     if want not in {"pending", "approved", "all"}:
@@ -656,7 +656,7 @@ def admin_companion_list():
 
 @app.post("/admin/companion/status")
 def admin_companion_status():
-    if not base.admin_current():
+    if not base.can_manage_bank():
         return redirect("/admin/login")
     path = str(request.form.get("path") or "")
     kind = str(request.form.get("kind") or "lt")
