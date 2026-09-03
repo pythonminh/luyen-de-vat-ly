@@ -492,7 +492,7 @@ def page_companion(de_path: str, kind: str = "lt"):
     nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
     if admin:
         fp = companion_path(de_path, kind)
-        nav.append(f"<a class='btn' href='/admin/edit?path={html.escape(fp, quote=True)}'>✏️ Sửa</a>")
+        nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa</a>")
         nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
     banner = ""
     if admin and not is_approved(de_path, kind):

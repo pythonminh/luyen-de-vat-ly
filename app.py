@@ -2578,9 +2578,29 @@ def tikz_png(hid):
     return Response(tikz_error_svg(err), mimetype='image/svg+xml', headers={'Cache-Control':'no-store'})
 
 
+@app.route('/admin/edit', methods=['GET', 'POST'])
 def admin_edit():
     if not admin_current():return redirect('/admin/login')
+    def _edit_path(raw):
+        p=str(raw or '').replace('\\','/').strip().lstrip('/')
+        if not p: raise ValueError('Thiếu đường dẫn file .tex')
+        if p.lower().endswith('.tex'): return p
+        folder=p.rstrip('/')
+        for name in ('de.tex','lt.tex','pp.tex'):
+            cand=folder+'/'+name
+            try:
+                _, local=_safe_repo_file(cand)
+                if local.is_file(): return cand
+            except Exception:
+                continue
+        return folder+'/de.tex'
     p=request.args.get('path','')
+    if request.method=='POST':
+        p=request.form.get('path','')
+    try:
+        p=_edit_path(p)
+    except Exception as e:
+        return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if request.method=='POST':
         p=request.form.get('path','');new=request.form.get('content','');sha=request.form.get('sha','');msg=request.form.get('message','Cập nhật TEX từ ADMIN')
         if not sha:
