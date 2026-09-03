@@ -370,18 +370,22 @@ function draw(q, showSol, pos, total, live){
     if(o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
     h+='<div class="'+cls+'"><div class="tf-text"><b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
   });
-  else if(q.kind==='DS')(q.statements||[]).forEach(function(s,i){
+  else if(q.kind==='DS'){
+    h+='<div class="tfgrid"><div class="tf-colhead"><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';
+    (q.statements||[]).forEach(function(s,i){
     const pick=(live.ds||[])[i];
     const has=pick===true||pick===false;
     const revealed=showSol||checked;
     let cls='tf';
     if(revealed&&s.correct) cls+=' correct';
     else if(checked&&has&&pick!==s.correct) cls+=' wrong';
-    let flags='';
-    if(has) flags+='<span class="pickmark">thầy: '+(pick?'Đúng':'Sai')+'</span>';
-    if(revealed) flags+='<span class="okmark">'+(s.correct?'Đúng':'Sai')+'</span>';
-    h+='<div class="'+cls+'"><div class="tf-text"><b>'+(i+1)+'.</b> '+s.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
+    const lab='abcd'.charAt(i)||(i+1);
+    h+='<div class="'+cls+'"><div class="tf-text"><b>'+lab+')</b> '+s.text+'</div>'
+      +'<span class="tf-box yes'+(pick===true?' pick':'')+(revealed&&s.correct?' on':'')+'"></span>'
+      +'<span class="tf-box no'+(pick===false?' pick':'')+(revealed&&!s.correct?' on':'')+'"></span></div>';
   });
+    h+='</div>';
+  }
   else {
     const typed=String(live.text||'').trim();
     h+='<div class="answerline">'+(typed?('<b>Thầy viết:</b> '+E(typed)):'✎ Đang chờ thầy nhập…')+'</div>';

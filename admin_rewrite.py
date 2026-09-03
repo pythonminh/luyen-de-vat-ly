@@ -129,6 +129,25 @@ def _fix_latex(t):
     return t.strip()
 
 
+def _strip_meta(s):
+    """Bỏ comment % ID / % Mức / %=== Câu và \\begin{ex} khỏi đề AI — không ghi vào khối ex."""
+    t = str(s or "").replace("\ufeff", "")
+    t = _FORBIDDEN.sub("", t)
+    keep = []
+    for line in t.splitlines():
+        raw = line.strip()
+        if not raw:
+            if keep and keep[-1] != "":
+                keep.append("")
+            continue
+        if raw.startswith("%") or raw.startswith("％"):
+            continue
+        if re.match(r"^[=-]{0,6}\s*Câu\s+\d+", raw, re.I):
+            continue
+        keep.append(line.rstrip())
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(keep)).strip()
+
+
 def _clean_tex(s):
     t = str(s or "").strip()
     t = re.sub(r"^```(?:latex|tex)?\s*", "", t, flags=re.I)
@@ -140,7 +159,31 @@ def _clean_tex(s):
             t = inner.strip()
     t = _FORBIDDEN.sub("", t)
     t = re.sub(r"^\\True\s*", "", t, flags=re.I)
-    return _fix_latex(t)
+    return _strip_meta(_fix_latex(t))
+
+
+def _compact_solution(sol, options):
+    """Xóa phần lời giải chép lại nguyên văn từng phương án (A. <đề PA>: ...)."""
+    t = _clean_tex(sol)
+    if not t:
+        return t
+    letters = "ABCD"
+    for i, o in enumerate(options or []):
+        piece = _clean_tex((o.get("text") if isinstance(o, dict) else o) or "")
+        if not piece:
+            continue
+        lab = letters[i] if i < 4 else str(i + 1)
+        body = re.escape(piece)
+        t = re.sub(
+            rf"(?:Phương án\s+)?{lab}\s*[\.\)\:：]\s*{body}\s*[:：.\-–]?",
+            f"Phương án {lab}: ",
+            t,
+            flags=re.I,
+        )
+    t = re.sub(r"[ \t]+\n", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"(?:Phương án [A-D]:\s*){2,}", lambda m: m.group(0).split(":")[0] + ": ", t)
+    return t.strip()
 
 
 def _split_head_tail(inner):
@@ -211,8 +254,10 @@ def _replace_shortans(block, new_ans):
 def _apply_inner(inner, kind, stem, solution, options, answer, flags):
     head, tail = _split_head_tail(inner)
     comments, _old_stem = _split_comments(head)
+    comments = _strip_meta(comments)
+    comments = (comments.rstrip() + "\n") if comments.strip() else ""
     if flags.get("stem") and stem:
-        head = comments + stem.strip() + "\n"
+        head = comments + _clean_tex(stem).strip() + "\n"
     block = head + tail
     if flags.get("opts") and options and kind in {"TN", "DS"}:
         cmd = "\\choiceTF" if kind == "DS" else "\\choice"
@@ -256,10 +301,10 @@ def _q_plain_pack(q):
     return {
         "kind": kind,
         "id": str(q.get("id") or ""),
-        "text": q.get("text") or "",
-        "solution": q.get("solution") or "",
-        "answer": q.get("answer") or "",
-        "options": opts,
+        "text": _clean_tex(q.get("text") or ""),
+        "solution": _clean_tex(q.get("solution") or ""),
+        "answer": _clean_tex(q.get("answer") or ""),
+        "options": [{"text": _clean_tex(o.get("text") or ""), "correct": bool(o.get("correct"))} for o in opts],
     }
 
 
@@ -279,16 +324,54 @@ def _load_q(src, file_idx):
     return None, tex
 
 
-def _prompt(pack):
+def _norm_cmp(s):
+    t = re.sub(r"%[^\n]*", "", str(s or ""))
+    t = re.sub(r"\\(?:begin|end)\s*\{[^}]*\}", " ", t, flags=re.I)
+    t = re.sub(r"\\[a-zA-Z]+\*?", " ", t)
+    t = re.sub(r"[{}$\\\[\]().,;:!?'\"«»–—\-]", "", t)
+    t = t.casefold()
+    return re.sub(r"\s+", "", t)
+
+
+def _copied_stem_or_opts(pack, stem, new_opts):
+    old_stem = _norm_cmp(pack.get("text") or "")
+    stem_same = bool(old_stem) and _norm_cmp(stem) == old_stem
+    old_opts = pack.get("options") or []
+    if not old_opts:
+        return stem_same
+    if not new_opts or len(new_opts) != len(old_opts):
+        return True
+    prose = []
+    for i, o in enumerate(old_opts):
+        txt = o.get("text") or ""
+        if len(re.findall(r"[A-Za-zÀ-ỹ]", txt)) >= 8:
+            prose.append(i)
+    if prose:
+        opts_same = all(_norm_cmp(old_opts[i].get("text")) == _norm_cmp(new_opts[i].get("text")) for i in prose)
+        return stem_same or opts_same
+    return stem_same
+
+
+def _prompt(pack, retry=False):
     letters = "ABCD"
     opt_lines = []
     for i, o in enumerate(pack.get("options") or []):
         mark = " [ĐÚNG]" if o.get("correct") else ""
         lab = letters[i] if pack["kind"] == "TN" else str(i + 1)
         opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
+    extra = ""
+    if retry:
+        extra = (
+            "LẦN 2 — bản trước gần như copy đề cũ. BẮT BUỘC đổi câu chữ đề và từng phương án "
+            "(diễn đạt khác, cùng ý toán). Không được dán lại nguyên văn.\n"
+        )
     return (
-        "Bạn là giáo viên THPT soạn đề. VIẾT LẠI ĐỀ và LỜI GIẢI đúng, gọn, giọng giáo viên.\n"
-        "Giữ dữ kiện, loại câu, vị trí đáp án đúng. Tính lại cho khớp.\n"
+        extra
+        + "Bạn là giáo viên THPT soạn đề. VIẾT LẠI ĐỀ và LỜI GIẢI đúng, gọn, giọng giáo viên.\n"
+        "Đổi cách diễn đạt đề và phương án (không copy nguyên văn). Giữ ý toán, số liệu, loại câu, vị trí đáp án đúng. Tính lại cho khớp.\n"
+        "CẤM trong stem/options/solution/answer: dòng comment LaTeX (bắt đầu %), % ID:, % Mức:, %=== Câu, \\begin{ex}, \\end{ex}, \\loigiai, \\True.\n"
+        "Không gán ID hay mức độ — đó là việc công cụ phân dạng, không phải form này.\n"
+        "Lời giải: chỉ gọi phương án A/B/C/D (hoặc 1/2/3), KHÔNG chép lại nguyên văn nội dung từng phương án — phần đó đã nằm ở options.\n"
         "LaTeX BẮT BUỘC:\n"
         "- Mọi công thức (kể cả \\pi, \\frac, \\Rightarrow, \\cos, \\left\\right) phải nằm trong $...$.\n"
         "- Không gõ \\ trước chữ tiếng Việt (sai: \\Để  .\\Để  :\\-3). Viết: Để  : -3.\n"
@@ -299,9 +382,9 @@ def _prompt(pack):
         "Đồng thời lặp lại lời giải thuần LaTeX giữa các mốc:\n"
         "===STEM===\n...===SOLUTION===\n...===ANSWER===\n...===NOTE===\n"
         "options cùng số lượng, không \\True. solution không bọc \\loigiai / \\begin{ex}.\n\n"
-        f"Loại: {pack['kind']} · ID: {pack['id']}\n"
-        f"Đề cũ:\n{pack['text']}\n"
-        + ("Phương án/mệnh đề cũ:\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
+        f"Loại: {pack['kind']}\n"
+        f"Đề cũ (chỉ tham khảo, phải viết lại):\n{pack['text']}\n"
+        + ("Phương án/mệnh đề cũ (viết lại diễn đạt, cùng thứ tự đúng/sai):\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
         + (f"Đáp án shortans cũ: {pack['answer']}\n" if pack.get("answer") else "")
         + f"Lời giải cũ:\n{pack['solution'] or '(trống)'}\n"
     )
@@ -312,10 +395,20 @@ def _raw_parts(q):
     head, _tail = _split_head_tail(raw)
     _comments, stem = _split_comments(head)
     sol = base.solution_of(raw) or (q.get("solution") or "")
-    return stem.strip(), sol.strip()
+    return _clean_tex(stem), _clean_tex(sol)
 
 
 def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
+    stem = _clean_tex(stem)
+    options = [
+        {
+            "text": _clean_tex(o.get("text") if isinstance(o, dict) else o),
+            "correct": bool(o.get("correct")) if isinstance(o, dict) else False,
+        }
+        for o in (options or [])
+    ]
+    solution = _compact_solution(solution, options)
+    answer = _clean_tex(answer)
     opt_html = ""
     if options and kind == "TN":
         bits = []
@@ -326,12 +419,15 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
             )
         opt_html = "<div class='opts'>" + "".join(bits) + "</div>"
     elif options and kind == "DS":
-        bits = []
+        bits = ['<div class="tf-colhead"><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
+        labs = "abcd"
         for i, o in enumerate(options):
             yes = bool(o.get("correct"))
-            mark = f" <span class='okmark'>{'Đúng' if yes else 'Sai'}</span>"
+            lab = labs[i] if i < 4 else str(i + 1)
+            y_on = " on" if yes else ""
+            n_on = " on" if not yes else ""
             bits.append(
-                f"<div class='tf{' ok' if yes else ' noans'}'><div class='tf-text'><b>{i+1}.</b> {base.html_question(o.get('text',''))}{mark}</div></div>"
+                f"<div class='tf'><div class='tf-text'><b>{lab})</b> {base.html_question(o.get('text',''))}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>"
             )
         opt_html = "<div class='tfgrid'>" + "".join(bits) + "</div>"
     return {
@@ -356,7 +452,7 @@ def api_tex_preview():
     if not base.can_manage_bank():
         return jsonify(ok=False, error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
-    tex = _fix_latex(_clean_tex(data.get("tex") or data.get("latex") or ""))
+    tex = _clean_tex(data.get("tex") or data.get("latex") or "")
     return jsonify(ok=True, html=base.html_question(tex))
 
 
@@ -396,27 +492,51 @@ def api_rewrite_question():
         return jsonify(ok=False, error="Thiếu Gemini API key."), 400
     from admin_classify import _gemini_once
 
+    def fields_from(raw):
+        obj = _extract_ai_fields(raw)
+        stem = _clean_tex(obj.get("stem") or "")
+        solution = _clean_tex(obj.get("solution") or "")
+        answer = _clean_tex(obj.get("answer") or "")
+        raw_opts = obj.get("options") if isinstance(obj.get("options"), list) else []
+        new_opts = []
+        old_opts = pack["options"]
+        if raw_opts and len(raw_opts) == len(old_opts):
+            for i, o in enumerate(old_opts):
+                txt = raw_opts[i]
+                txt = txt.get("text") if isinstance(txt, dict) else txt
+                new_opts.append({"text": _clean_tex(txt), "correct": bool(o.get("correct"))})
+        note = str(obj.get("note") or "").strip()[:300]
+        return stem, solution, answer, new_opts, note
+
     raw, err = _gemini_once(keys, _prompt(pack), 5000)
     if not raw:
         return jsonify(ok=False, error=err or "Gemini không trả lời."), 400
-    obj = _extract_ai_fields(raw)
-    stem = _clean_tex(obj.get("stem") or "")
-    solution = _clean_tex(obj.get("solution") or "")
-    answer = _clean_tex(obj.get("answer") or "")
-    raw_opts = obj.get("options") if isinstance(obj.get("options"), list) else []
-    old_opts = pack["options"]
-    new_opts = []
-    if raw_opts and len(raw_opts) == len(old_opts):
-        for i, o in enumerate(old_opts):
-            txt = raw_opts[i]
-            txt = txt.get("text") if isinstance(txt, dict) else txt
-            new_opts.append({"text": _clean_tex(txt), "correct": bool(o.get("correct"))})
+    stem, solution, answer, new_opts, note = fields_from(raw)
+    copied = _copied_stem_or_opts(pack, stem, new_opts)
+    if copied:
+        raw2, err2 = _gemini_once(keys, _prompt(pack, retry=True), 5000)
+        if raw2:
+            s2, sol2, a2, o2, n2 = fields_from(raw2)
+            if s2 or sol2:
+                stem, solution, answer, new_opts, note = s2, sol2, a2, o2, n2
+                if _copied_stem_or_opts(pack, stem, new_opts):
+                    note = ((note + " ") if note else "") + "AI vẫn gần đề cũ — hãy sửa tay trước khi ghi."
+                copied = False
+            else:
+                note = ((note + " ") if note else "") + (err2 or "Lần 2 trống — giữ bản đầu.")
+        else:
+            note = ((note + " ") if note else "") + (err2 or "Không gọi được lần 2 — giữ bản đầu.")
+        if copied:
+            note = ((note + " ") if note else "") + "AI gần như copy đề cũ — hãy sửa tay trước khi ghi."
     if not stem and not solution:
         return jsonify(ok=False, error="AI không viết được đề/lời giải."), 400
     if not stem:
         stem = raw_stem or pack["text"]
+        note = ((note + " ") if note else "") + "Thiếu đề mới — đang hiện đề cũ."
     if not solution:
         solution = raw_sol or pack["solution"]
+    if pack["options"] and not new_opts:
+        new_opts = pack["options"]
     return jsonify(
         _pack_payload(
             src,
@@ -426,7 +546,7 @@ def api_rewrite_question():
             solution,
             answer or pack.get("answer") or "",
             new_opts,
-            str(obj.get("note") or "").strip()[:300],
+            note,
         )
     )
 
@@ -473,7 +593,7 @@ def api_rewrite_question_save():
         inner,
         str(q.get("kind") or "TL"),
         _clean_tex(data.get("stem") or ""),
-        _clean_tex(data.get("solution") or ""),
+        _compact_solution(data.get("solution") or "", merged_opts),
         merged_opts,
         _clean_tex(data.get("answer") or ""),
         flags,
@@ -503,6 +623,14 @@ REWRITE_CLIENT_JS = r"""
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function stripMeta(s){
+  return String(s||'').replace(/\\\\begin\s*\{\s*(?:ex|bt)\s*\}/gi,'').replace(/\\\\end\s*\{\s*(?:ex|bt)\s*\}/gi,'').split(/\r?\n/).filter(function(l){
+    var t=l.replace(/^\uFEFF/,'').trim();
+    if(!t) return false;
+    var c=t.charAt(0);
+    return c!=='%' && c!=='\uFF05';
+  }).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 function dropOf(btn){
   const raw=btn.getAttribute('data-drop')||'';
@@ -516,16 +644,16 @@ function outBox(btn){
   return box;
 }
 function readDraft(box, d){
-  const stem=(box.querySelector('[data-ta=stem]')||{}).value;
-  const solution=(box.querySelector('[data-ta=sol]')||{}).value;
-  const answer=(box.querySelector('[data-ta=ans]')||{}).value;
+  const stem=stripMeta((box.querySelector('[data-ta=stem]')||{}).value);
+  const solution=stripMeta((box.querySelector('[data-ta=sol]')||{}).value);
+  const answer=stripMeta((box.querySelector('[data-ta=ans]')||{}).value);
   const flags={};
   box.querySelectorAll('.rwf').forEach(function(x){flags[x.getAttribute('data-k')]=x.checked});
   const opts=(d.options||[]).map(function(o,i){
     const el=box.querySelector('[data-ta=opt-'+i+']');
-    return {text:el?el.value:(o.text||''), correct:!!o.correct};
+    return {text:stripMeta(el?el.value:(o.text||'')), correct:!!o.correct};
   });
-  return {stem:stem!=null?stem:d.stem, solution:solution!=null?solution:d.solution, answer:answer!=null?answer:d.answer, options:opts, flags:flags};
+  return {stem:stem||d.stem, solution:solution||d.solution, answer:answer||d.answer, options:opts, flags:flags};
 }
 async function previewBox(box){
   const tas=box.querySelectorAll('.rwta');
@@ -543,6 +671,10 @@ async function previewBox(box){
   if(window.ldvlTypeset)ldvlTypeset(look);
 }
 function showEditor(box, d){
+  d.stem=stripMeta(d.stem||'');
+  d.solution=stripMeta(d.solution||'');
+  d.answer=stripMeta(d.answer||'');
+  (d.options||[]).forEach(function(o){o.text=stripMeta(o.text||'')});
   let h='<div class="rwprev"><div class="success">Chưa ghi file. Sửa LaTeX trong ô, bấm Xem trước, rồi Chấp nhận.</div>';
   if(d.note) h+='<p class="muted">'+esc(d.note)+'</p>';
   h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> Thay đề</label>';
