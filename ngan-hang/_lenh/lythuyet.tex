@@ -1,0 +1,44 @@
+% Định nghĩa lệnh Lý thuyết — dùng khi biên dịch lt.tex bằng TeX.
+% App web đọc lt.tex trực tiếp (bỏ \input file này).
+% Trong lt.tex, từ thư mục bài:
+%   \input{../../../../_lenh/lythuyet.tex}
+% từ gốc repo:
+%   \input{ngan-hang/_lenh/lythuyet.tex}
+\makeatletter
+\providecommand{\indam}[1]{\textbf{#1}}
+\providecommand{\chuy}[1]{\par\smallskip\noindent\textit{#1}\par}
+\providecommand{\luuy}[1]{\par\smallskip\noindent\textbf{Lưu ý.} #1\par}
+\providecommand{\ghichu}[1]{\par\smallskip\noindent\textbf{Ghi chú.} #1\par}
+\providecommand{\vidu}[1]{\par\smallskip\noindent\textbf{Ví dụ.} #1\par}
+\providecommand{\Blythuyet}{\subsection*{Lý thuyết}}
+% Hai cột: kiến thức | hình
+\providecommand{\haicotchay}[2]{%
+  \par\medskip\noindent
+  \begin{minipage}[t]{0.52\linewidth}#1\end{minipage}\hfill
+  \begin{minipage}[t]{0.46\linewidth}#2\end{minipage}%
+  \par\medskip
+}
+\providecommand{\kienthuccot}[2]{\haicotchay{#1}{#2}}
+% Dự phòng nếu chưa nạp graphicx / caption (không ghi đè bản thật)
+\providecommand{\resizebox}[3]{#3}
+\providecommand{\captionof}[2]{\par\smallskip\noindent\textit{#2}\par}
+\newenvironment{hoatdong}[1]{%
+  \par\medskip\noindent\textbf{Hoạt động.} #1\par\smallskip
+}{\par\medskip}
+\newenvironment{emcobiet}{%
+  \par\medskip\noindent\textbf{Em có biết}\par\smallskip
+}{\par\medskip}
+\newenvironment{emdahoc}{%
+  \par\medskip\noindent\textbf{Em đã học}\par\smallskip
+}{\par\medskip}
+\newenvironment{emcothe}{%
+  \par\medskip\noindent\textbf{Em có thể}\par\smallskip
+}{\par\medskip}
+\newenvironment{kienthuc}{%
+  \par\medskip\noindent\textbf{Kiến thức cốt lõi}\par\smallskip
+}{\par\medskip}
+\newenvironment{traloi}{%
+  \par\smallskip\noindent\textit{Trả lời / ghi chú của em}\par
+  \vspace{1.2em}%
+}{\par\medskip}
+\makeatother

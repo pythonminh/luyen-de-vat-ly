@@ -794,9 +794,22 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                             continue
                         pairs.append((str(k), cnt))
                     pairs.sort(key=lambda t: t[0])
-                    dlinks = [
+                    dlinks = []
+                    try:
+                        import lythuyet as _lt
+                        if _lt.theory_exists(p):
+                            lt_href = "/member/ly-thuyet?path=" + urllib.parse.quote(p, safe="")
+                            if guest:
+                                lt_href = login_url(lt_href)
+                            on_lt = on and str(request.path or "").rstrip("/") == "/member/ly-thuyet"
+                            dlinks.append(
+                                f"<a class='drawdang{' on' if on_lt else ''}' href='{html.escape(lt_href, quote=True)}'><span class='drawname'>📖 Lý thuyết</span><span class='drawn'></span></a>"
+                            )
+                    except Exception:
+                        pass
+                    dlinks.append(
                         f"<a class='drawdang{' on' if on and not current_dang else ''}' href='{html.escape(_go_kind_href(p, '', '', guest), quote=True)}'><span class='drawname'>Cả bài</span><span class='drawn'>{n}</span></a>"
-                    ]
+                    )
                     for i, (dname, cnt) in enumerate(pairs, 1):
                         short = dname if len(dname) <= 48 else dname[:47] + "…"
                         on_d = on and current_dang == dname
@@ -2558,6 +2571,7 @@ def server_error(exc):
 
 # Always register chọn câu / làm bài, regardless of gunicorn target.
 import dang_routes  # noqa: E402,F401
+import lythuyet  # noqa: E402,F401
 import student_gemini  # noqa: E402,F401
 import admin_classify  # noqa: E402,F401
 import admin_slim  # noqa: E402,F401
