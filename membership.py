@@ -77,17 +77,23 @@ def parse_package(kind, grades, subjects, student=False):
     if kind == "all":
         return {"kind": "all", "grades": list(GRADES), "subjects": list(SUBJECTS)}, ""
     if spec["need_grades"]:
-        if kind == "lop3":
+        if kind == "lop3" and not grades:
             grades = list(GRADES)
-        elif len(grades) != spec["need_grades"]:
-            return None, f"Gói {spec['label']} cần chọn đúng {spec['need_grades']} lớp."
-        subjects = list(SUBJECTS)
-    else:
-        if kind == "mon2":
+        if len(grades) != spec["need_grades"]:
+            return None, f"Gói {spec['label']}: hãy tick đúng {spec['need_grades']} lớp ở dòng Chọn lớp."
+        if not subjects:
             subjects = list(SUBJECTS)
-        elif len(subjects) != spec["need_subjects"]:
-            return None, f"Gói {spec['label']} cần chọn đúng {spec['need_subjects']} môn."
-        grades = list(GRADES)
+    else:
+        if kind == "mon2" and not subjects:
+            subjects = list(SUBJECTS)
+        if len(subjects) != spec["need_subjects"]:
+            return None, f"Gói {spec['label']}: hãy tick đúng {spec['need_subjects']} môn ở dòng Chọn môn."
+        if not grades:
+            grades = list(GRADES)
+    if not grades:
+        return None, "Hãy tick lớp (10, 11, 12) ở dòng Chọn lớp."
+    if not subjects:
+        return None, "Hãy tick môn (Toán, Vật lý) ở dòng Chọn môn."
     return {"kind": kind, "grades": grades, "subjects": subjects}, ""
 
 
@@ -280,6 +286,13 @@ def picker_html(prefix="", selected=None, student=True, name_package=None):
     kind = str(selected.get("kind") or "")
     grades = set(selected.get("grades") or [])
     subjects = set(selected.get("subjects") or [])
+    if kind.startswith("lop") and not subjects:
+        subjects = set(SUBJECTS)
+    if kind.startswith("mon") and not grades:
+        grades = set(GRADES)
+    if kind == "all":
+        grades = set(GRADES)
+        subjects = set(SUBJECTS)
     p = f"{prefix}_" if prefix else ""
     pname = name_package or (p + "package")
     gname = p + "grades"
@@ -289,7 +302,7 @@ def picker_html(prefix="", selected=None, student=True, name_package=None):
     for k in kinds:
         lab = PACKAGES[k]["label"]
         radios.append(
-            f"<label class='pkgopt'><input type='radio' name='{html.escape(pname)}' value='{k}'{' checked' if kind==k else ''} onchange='ldvlPkgSync(this.form)'> {html.escape(lab)}</label>"
+            f"<label class='pkgopt'><input type='radio' name='{html.escape(pname)}' value='{k}'{' checked' if kind==k else ''}> {html.escape(lab)}</label>"
         )
     gboxes = "".join(
         f"<label class='pkgchk'><input type='checkbox' name='{html.escape(gname)}' value='{g}'{' checked' if g in grades else ''}> Lớp {g}</label>"
@@ -303,18 +316,10 @@ def picker_html(prefix="", selected=None, student=True, name_package=None):
         "<div class='pkgbox'>"
         "<div class='pkglabel'>Gói thành viên</div>"
         f"<div class='pkgrads'>{''.join(radios)}</div>"
-        f"<div class='pkgrow pkggrades'><span>Chọn lớp</span>{gboxes}</div>"
-        f"<div class='pkgrow pkgsubs'><span>Chọn môn</span>{sboxes}</div>"
-        "<p class='pkghint muted'>1–3 lớp: học cả Toán và Lý đúng các khối đã chọn. 1–2 môn: học môn đó cho cả 10, 11, 12.</p>"
+        f"<div class='pkgrow pkggrades' style='display:flex'><span>Chọn lớp</span>{gboxes}</div>"
+        f"<div class='pkgrow pkgsubs' style='display:flex'><span>Chọn môn</span>{sboxes}</div>"
+        "<p class='pkghint muted'>Tick lớp 10/11/12 và môn Toán / Vật lý. Gói 1–3 lớp cần đúng số lớp; gói 1–2 môn cần đúng số môn.</p>"
         "</div>"
-        "<script>if(!window.ldvlPkgSync){window.ldvlPkgSync=function(f){if(!f)return;"
-        "var k=(f.querySelector('input[type=radio][name*=package]:checked')||{}).value||'';"
-        "var g=f.querySelectorAll('.pkggrades');var s=f.querySelectorAll('.pkgsubs');"
-        "var showG=k.indexOf('lop')===0;var showS=k.indexOf('mon')===0;"
-        "g.forEach(function(x){x.style.display=showG||!k?'flex':'none'});"
-        "s.forEach(function(x){x.style.display=showS?'flex':'none'});};"
-        "document.querySelectorAll('form').forEach(function(f){if(f.querySelector('.pkgbox'))ldvlPkgSync(f)});"
-        "}</script>"
     )
 
 
@@ -324,7 +329,7 @@ PKG_CSS = """
 .pkglabel{font-size:11px;font-weight:900;color:#4e6a88;margin-bottom:6px}
 .pkgrads{display:flex;flex-wrap:wrap;gap:6px}
 .pkgopt,.pkgchk{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #c9dbeb;border-radius:8px;padding:6px 9px;font-weight:800;cursor:pointer}
-.pkgrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.pkgrow{display:flex!important;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 .pkgrow>span{font-size:11px;font-weight:900;color:#5b738c;min-width:70px}
 .pkghint{margin:8px 0 0;font-size:11px}
 .pendcard{background:#fff8e6;border:1px solid #e6c56a;border-radius:10px;padding:10px;margin:8px 0}
