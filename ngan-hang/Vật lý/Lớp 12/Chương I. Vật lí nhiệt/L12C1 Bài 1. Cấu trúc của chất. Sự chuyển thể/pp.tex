@@ -214,7 +214,51 @@
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+	Các bình hình bên đều đựng cùng một lượng nước. Để cả ba bình vào trong phòng kín. Hỏi sau một tuần bình nào còn ít nước nhất?
+	\begin{center}
+		\begin{tikzpicture}[
+			line join=round,
+			line cap=round,
+			scale=0.9,
+			bo/.style={rounded corners=4pt},
+			nuoc/.style={cyan!20, rounded corners=2pt}
+			]
+			\begin{scope}[shift={(0,0)}]
+				\fill[nuoc] (0,0) rectangle (2,0.7);
+				\draw[blue!80!black, thick] (0,0.7) -- (2,0.7);
+				\draw[thick, bo]
+				(0.7,2.2) -- (0.7,1.5) -- (0,1) -- (0,0)
+				-- (2,0) -- (2,1) -- (1.3,1.5) -- (1.3,2.2);
+				\node at (1,-0.5) {Bình A};
+			\end{scope}
+			\begin{scope}[shift={(3.5,0)}]
+				\fill[nuoc] (0,0) rectangle (3,0.47);
+				\draw[blue!80!black, thick] (0,0.47) -- (3,0.47);
+				\draw[thick, bo]
+				(0,1.5) -- (0,0) -- (3,0) -- (3,1.5);
+				\node at (1.5,-0.5) {Bình B};
+			\end{scope}
+			\begin{scope}[shift={(8,0)}]
+				\fill[nuoc] (0,0) rectangle (1,1.4);
+				\draw[blue!80!black, thick] (0,1.4) -- (1,1.4);
+				\draw[thick, bo]
+				(0,2.5) -- (0,0) -- (1,0) -- (1,2.5);
+				\node at (0.5,-0.5) {Bình C};
+			\end{scope}
+		\end{tikzpicture}
+	\end{center}
+	\choice
+	{Bình A}
+	{\True Bình B}
+	{Bình C}
+	{Chưa xác định được}
+	\loigiai{
+		\begin{itemize}
+			\item Cả ba bình đều để trong cùng điều kiện về nhiệt độ, áp suất, độ ẩm, …
+			\item Tốc độ bay hơi của nước phụ thuộc vào diện tích mặt thoáng.
+			\item Bình B có diện tích mặt thoáng lớn nhất nên nước bay hơi nhiều nhất và sẽ còn lại ít nhất.
+		\end{itemize}
+	}
 \end{vidumau}
 
 \subsubsection{Dạng 18. Khái niệm chất rắn kết tinh}
