@@ -424,10 +424,11 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
         for i, o in enumerate(options):
             yes = bool(o.get("correct"))
             lab = labs[i] if i < 4 else str(i + 1)
+            cls = " ok" if yes else " noans"
             y_on = " on" if yes else ""
             n_on = " on" if not yes else ""
             bits.append(
-                f"<div class='tf'><div class='tf-text'><b>{lab})</b> {base.html_question(o.get('text',''))}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>"
+                f"<div class='tf{cls}'><div class='tf-text'><b>{lab})</b> {base.html_question(o.get('text',''))}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>"
             )
         opt_html = "<div class='tfgrid'>" + "".join(bits) + "</div>"
     return {
