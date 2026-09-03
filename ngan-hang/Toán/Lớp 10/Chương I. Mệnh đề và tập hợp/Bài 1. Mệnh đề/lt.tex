@@ -1,116 +1,153 @@
-\input{../../../../_lenh/lythuyet.tex}
+\subsection{Lý thuyết cần nhớ}
 
-\subsection{Lý thuyết}
-\subsubsection{Nội dung}
+\subsubsection{Mệnh đề, mệnh đề chứa biến}
 
 \begin{kienthuc}
 \begin{itemize}
-	\item \textbf{Mệnh đề:} Mệnh đề là một câu khẳng định có tính \textbf{đúng hoặc sai}. Mỗi mệnh đề chỉ nhận một trong hai giá trị chân lí: \textbf{đúng} hoặc \textbf{sai}.
+	\item \textbf{Mệnh đề:} Mệnh đề là một câu khẳng định đúng hoặc sai.
 	
-	\item \textbf{Mệnh đề chứa biến:} Là câu khẳng định mà tính đúng, sai của nó còn phụ thuộc vào giá trị của biến. Khi cho biến nhận một giá trị cụ thể, ta được một mệnh đề.
+	\item Câu khẳng định đúng gọi là \textbf{mệnh đề đúng}.
 	
-	\item \textbf{Mệnh đề phủ định:} Phủ định của mệnh đề $P$ là mệnh đề ``không phải $P$'', kí hiệu là $\overline{P}$.
+	\item Câu khẳng định sai gọi là \textbf{mệnh đề sai}.
+	
+	\item Một mệnh đề không thể vừa đúng, vừa sai.
+	
+	\item Những mệnh đề liên quan đến toán học được gọi là \textbf{mệnh đề toán học}.
+	
+	\item \textbf{Mệnh đề chứa biến:} Là câu khẳng định chứa biến nhận giá trị trong một tập xác định nào đó và với mỗi giá trị cụ thể của biến thuộc tập xác định, ta được một mệnh đề.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Mệnh đề phủ định}
+
+\begin{kienthuc}
+\begin{itemize}
+	\item Cho mệnh đề $P$. Mệnh đề ``không phải $P$'' gọi là \textbf{mệnh đề phủ định của $P$}.
+	
+	\item Mệnh đề phủ định của $P$ kí hiệu là $\overline{P}$.
+	
+	\item Nếu $P$ đúng thì $\overline{P}$ sai; nếu $P$ sai thì $\overline{P}$ đúng.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Mệnh đề kéo theo và mệnh đề đảo}
+
+\begin{kienthuc}
+\begin{itemize}
+	\item Cho hai mệnh đề $P$ và $Q$.
+	
+	\item Mệnh đề ``Nếu $P$ thì $Q$'' gọi là \textbf{mệnh đề kéo theo}, kí hiệu:
+	\[
+	P\Rightarrow Q.
+	\]
+	
+	\item Mệnh đề $P\Rightarrow Q$ còn được phát biểu là ``$P$ kéo theo $Q$'' hoặc ``Từ $P$ suy ra $Q$''.
+	
+	\item Mệnh đề $P\Rightarrow Q$ chỉ sai khi $P$ đúng và $Q$ sai.
+	
+	\item Trong mệnh đề $P\Rightarrow Q$:
 	\begin{itemize}
-		\item Nếu $P$ đúng thì $\overline{P}$ sai.
-		\item Nếu $P$ sai thì $\overline{P}$ đúng.
+		\item $P$ là \textbf{giả thiết}.
+		\item $Q$ là \textbf{kết luận}.
 	\end{itemize}
 	
-	\item \textbf{Mệnh đề kéo theo:} Với hai mệnh đề $P$ và $Q$, mệnh đề ``Nếu $P$ thì $Q$'' được gọi là mệnh đề kéo theo, kí hiệu $P\Rightarrow Q$.
+	\item \textbf{Mệnh đề đảo:} Cho mệnh đề $P\Rightarrow Q$. Khi đó, $Q\Rightarrow P$ gọi là \textbf{mệnh đề đảo} của $P\Rightarrow Q$.
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcothe}
+\begin{itemize}
+	\item Với mệnh đề $P\Rightarrow Q$, có thể phát biểu:
 	\begin{itemize}
-		\item $P$ được gọi là \textbf{giả thiết}.
-		\item $Q$ được gọi là \textbf{kết luận}.
-		\item Mệnh đề $P\Rightarrow Q$ chỉ \textbf{sai} khi $P$ đúng và $Q$ sai.
+		\item $P$ là điều kiện đủ để có $Q$.
+		\item $Q$ là điều kiện cần để có $P$.
 	\end{itemize}
+\end{itemize}
+\end{emcothe}
+
+\subsubsection{Mệnh đề tương đương}
+
+\begin{kienthuc}
+\begin{itemize}
+	\item Cho hai mệnh đề $P$ và $Q$. Mệnh đề ``$P$ nếu và chỉ nếu $Q$'' gọi là \textbf{mệnh đề tương đương}.
 	
-	\item \textbf{Mệnh đề đảo:} Mệnh đề đảo của $P\Rightarrow Q$ là $Q\Rightarrow P$.
-	
-	\item \textbf{Hai mệnh đề tương đương:} Hai mệnh đề $P$ và $Q$ tương đương nếu cả hai mệnh đề $P\Rightarrow Q$ và $Q\Rightarrow P$ đều đúng. Kí hiệu:
+	\item Kí hiệu:
 	\[
 	P\Leftrightarrow Q.
 	\]
-	Đọc là ``$P$ tương đương $Q$'' hoặc ``$P$ khi và chỉ khi $Q$''.
 	
-	\item \textbf{Điều kiện cần, điều kiện đủ:}
+	\item Mệnh đề $P\Leftrightarrow Q$ đúng khi cả hai mệnh đề $P\Rightarrow Q$ và $Q\Rightarrow P$ cùng đúng.
+	
+	\item Khi đó:
+	\[
+	P\Leftrightarrow Q
+	\]
+	có thể đọc là ``$P$ khi và chỉ khi $Q$'', ``$P$ tương đương $Q$''.
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcothe}
+\begin{itemize}
+	\item Với $P\Leftrightarrow Q$, ta có thể phát biểu:
 	\begin{itemize}
-		\item Nếu $P\Rightarrow Q$ thì $P$ là \textbf{điều kiện đủ} để có $Q$; $Q$ là \textbf{điều kiện cần} để có $P$.
-		\item Nếu $P\Leftrightarrow Q$ thì $P$ là điều kiện cần và đủ để có $Q$, và ngược lại.
+		\item $P$ là điều kiện cần và đủ để có $Q$.
+		\item $P$ khi và chỉ khi $Q$.
+		\item $P$ tương đương $Q$.
 	\end{itemize}
-	
-	\item \textbf{Mệnh đề chứa kí hiệu $\forall$:} 
+\end{itemize}
+\end{emcothe}
+
+\subsubsection{Mệnh đề có kí hiệu $\forall$, $\exists$}
+
+\begin{kienthuc}
+\begin{itemize}
+	\item \textbf{Mệnh đề chứa kí hiệu với mọi:}
 	\[
-	\forall x\in X,\ P(x)
+	\forall x\in X,\ P(x).
 	\]
-	nghĩa là ``Với mọi $x$ thuộc $X$, $P(x)$ đúng''.
 	
-	\item \textbf{Mệnh đề chứa kí hiệu $\exists$:}
+	Đọc là: ``Với mọi $x$ thuộc $X$, $P(x)$''.
+	
+	\item Mệnh đề này đúng khi \textbf{tất cả} các giá trị của $x\in X$ đều làm cho phát biểu $P(x)$ đúng.
+	
+	\item Nếu tìm được \textbf{ít nhất một} giá trị $x\in X$ làm cho $P(x)$ sai thì mệnh đề trên sai.
+	
+	\item \textbf{Mệnh đề chứa kí hiệu tồn tại:}
 	\[
-	\exists x\in X,\ P(x)
+	\exists x\in X,\ P(x).
 	\]
-	nghĩa là ``Tồn tại ít nhất một $x$ thuộc $X$ sao cho $P(x)$ đúng''.
 	
-	\item \textbf{Phủ định của mệnh đề chứa lượng từ:}
+	Đọc là: ``Tồn tại $x$ thuộc $X$ sao cho $P(x)$''.
+	
+	\item Mệnh đề này đúng khi tìm được \textbf{ít nhất một} giá trị $x\in X$ làm cho $P(x)$ đúng.
+	
+	\item Nếu tất cả các giá trị $x\in X$ đều làm cho $P(x)$ sai thì mệnh đề trên sai.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Phủ định mệnh đề chứa $\forall$, $\exists$}
+
+\begin{emcothe}
+\begin{itemize}
+	\item Phủ định của mệnh đề ``Với mọi $x\in X$, $P(x)$'' là:
 	\[
 	\overline{\left(\forall x\in X,\ P(x)\right)}
 	\Leftrightarrow
-	\exists x\in X,\ \overline{P(x)},
+	\exists x\in X,\ \overline{P(x)}.
 	\]
+	
+	\item Phủ định của mệnh đề ``Tồn tại $x\in X$ sao cho $P(x)$'' là:
 	\[
 	\overline{\left(\exists x\in X,\ P(x)\right)}
 	\Leftrightarrow
 	\forall x\in X,\ \overline{P(x)}.
 	\]
-\end{itemize}
-\end{kienthuc}
-
-\begin{emdahoc}
-\begin{itemize}
-	\item Nhận biết được một câu có phải là mệnh đề hay không.
-	\item Xác định được giá trị chân lí của một mệnh đề.
-	\item Nhận biết và phát biểu được mệnh đề chứa biến.
-	\item Viết được mệnh đề phủ định của một mệnh đề.
-	\item Nhận biết mệnh đề kéo theo, mệnh đề đảo và mệnh đề tương đương.
-	\item Xác định được giả thiết, kết luận trong mệnh đề dạng $P\Rightarrow Q$.
-	\item Nhận biết và sử dụng đúng các kí hiệu $\forall$, $\exists$.
-\end{itemize}
-\end{emdahoc}
-
-\begin{emcothe}
-\begin{itemize}
-	\item Khi xét một câu có phải là mệnh đề hay không, cần kiểm tra xem câu đó có \textbf{khẳng định một điều gì đó} và có xác định được \textbf{đúng hoặc sai} hay không.
 	
-	\item Với mệnh đề phủ định, không chỉ thêm từ ``không'' một cách máy móc mà phải phủ định đúng nội dung của mệnh đề.
-	
-	\item Với bất đẳng thức:
+	\item Cần nhớ:
 	\[
-	\overline{(a>b)}\Leftrightarrow a\le b,\qquad
-	\overline{(a\ge b)}\Leftrightarrow a<b.
+	\boxed{\overline{\forall}=\exists}
+	\qquad\text{và}\qquad
+	\boxed{\overline{\exists}=\forall}.
 	\]
-	
-	\item Với mệnh đề dạng $P\Rightarrow Q$, cần nhớ:
-	\[
-	P\Rightarrow Q\text{ chỉ sai khi }P\text{ đúng và }Q\text{ sai}.
-	\]
-	
-	\item Khi gặp ``\textbf{mọi}'', ``\textbf{tất cả}'', thường sử dụng lượng từ $\forall$; khi gặp ``\textbf{tồn tại}'', ``\textbf{có ít nhất một}'', sử dụng lượng từ $\exists$.
-	
-	\item Muốn chứng minh mệnh đề
-	\[
-	\forall x\in X,\ P(x)
-	\]
-	sai, chỉ cần tìm \textbf{một} giá trị $x\in X$ sao cho $P(x)$ sai.
-	
-	\item Muốn chứng minh mệnh đề
-	\[
-	\exists x\in X,\ P(x)
-	\]
-	đúng, chỉ cần tìm \textbf{một} giá trị $x\in X$ thỏa mãn $P(x)$.
-	
-	\item Phân biệt rõ:
-	\[
-	P\Rightarrow Q
-	\quad\text{và}\quad
-	Q\Rightarrow P.
-	\]
-	Hai mệnh đề này có thể có giá trị chân lí khác nhau.
 \end{itemize}
 \end{emcothe}
