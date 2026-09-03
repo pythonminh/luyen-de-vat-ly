@@ -180,14 +180,21 @@ def _member_lookup(username: str, password: str):
 
 
 def _auth_page(msg: str = "", mode: str = "login", values=None):
+    import membership as pkg
     values = values or {}
     username = html.escape(str(values.get("username", "")), quote=True)
     name = html.escape(str(values.get("name", "")), quote=True)
-    cls = html.escape(str(values.get("class", "")), quote=True)
+    phone = html.escape(str(values.get("phone", "")), quote=True)
     err = f"<div class='err authmsg'>{html.escape(msg)}</div>" if msg else "<div class='authmsg'></div>"
     nxt = html.escape(base.safe_next_url(), quote=True)
     login_active = " active" if mode == "login" else ""
     reg_active = " active" if mode == "register" else ""
+    selected = None
+    try:
+        p, _ = pkg.parse_package(values.get("package"), values.getlist("grades") if hasattr(values, "getlist") else [], values.getlist("subjects") if hasattr(values, "getlist") else [], student=True)
+        selected = p
+    except Exception:
+        selected = None
     body = f"""
 <div class='wrap'><div class='panel authpanel'>
   <div class='head'>👤 Tài khoản học viên</div>
@@ -212,17 +219,19 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
       <input type='hidden' name='next' value='{nxt}'>
       <div class='field'><label>Họ tên</label><input id='regName' name='name' value='{name}' autocomplete='name'></div>
       <div class='field'><label>Tài khoản</label><input id='regUsername' name='username' value='{username}' autocomplete='username' required></div>
+      <div class='field'><label>Điện thoại</label><input name='phone' value='{phone}' inputmode='tel'></div>
       <div class='field'><label>Mật khẩu</label><div class='passrow'><input id='regPassword' name='password' type='password' autocomplete='new-password' required><button type='button' class='eye' onclick=\"togglePass('regPassword',this)\">👁</button></div></div>
       <div class='field'><label>Nhập lại mật khẩu</label><div class='passrow'><input id='regPassword2' name='password2' type='password' autocomplete='new-password' required><button type='button' class='eye' onclick=\"togglePass('regPassword2',this)\">👁</button></div></div>
-      <div class='field'><label>Lớp <span class='muted'>(không bắt buộc)</span></label><input name='class' value='{cls}' autocomplete='organization-title'></div>
+      {pkg.picker_html(selected=selected, student=True)}
       <label class='check'><input id='rememberReg' name='remember' type='checkbox' checked> Ghi nhớ đăng nhập trên thiết bị này</label>
-      <button class='btn primary authsubmit' type='submit'>Tạo tài khoản &amp; đăng nhập</button>
+      <button class='btn primary authsubmit' type='submit'>Tạo tài khoản &amp; gửi gói</button>
       {err if mode == 'register' else ''}
     </form>
 
-    <div class='muted authnote'>Có thể bật/tắt mật khẩu bằng 👁. Trình duyệt có thể lưu mật khẩu; ứng dụng chỉ lưu tên tài khoản khi chọn “Ghi nhớ đăng nhập”.</div>
+    <div class='muted authnote'>Chọn gói 1 lớp, 2 lớp, 3 lớp, 1 môn hoặc 2 môn. ADMIN duyệt xong mới mở nội dung. Liên hệ thầy Minh 0357991010 (Zalo).</div>
   </div>
 </div></div>
+{pkg.PKG_CSS}
 <script>
 function authMode(m){{
   document.getElementById('loginForm').style.display=m==='login'?'block':'none';
@@ -251,9 +260,11 @@ def unified_member_auth(*args, **kwargs):
         remember = request.form.get("remember") == "on"
 
         if action == "register":
+            import membership as pkg
             name = (request.form.get("name") or "").strip()
-            cls = (request.form.get("class") or "").strip()
+            phone = (request.form.get("phone") or "").strip()
             password2 = request.form.get("password2") or ""
+            chosen, err = pkg.package_from_form(request.form, student=True)
             if not username or not password:
                 return _auth_page("Vui lòng nhập tài khoản và mật khẩu.", "register", request.form)
             if len(username) < 3:
@@ -262,16 +273,20 @@ def unified_member_auth(*args, **kwargs):
                 return _auth_page("Mật khẩu phải có ít nhất 4 ký tự.", "register", request.form)
             if password != password2:
                 return _auth_page("Hai mật khẩu chưa giống nhau.", "register", request.form)
+            if err:
+                return _auth_page(err, "register", request.form)
             d = base.members_data()
             if any(str(x.get("username", "")).casefold() == username.casefold() for x in d.get("members", [])):
                 return _auth_page("Tài khoản đã tồn tại. Hãy chọn tên khác hoặc chuyển sang Đăng nhập.", "register", request.form)
             member = {
                 "username": username,
                 "name": name or username,
-                "class": cls,
+                "phone": phone,
+                "class": "",
                 "account_type": "FREE",
                 "status": "ON",
             }
+            pkg.apply_request(member, chosen)
             base.set_member_password(member, password)
             d.setdefault("members", []).append(member)
             try:
@@ -281,7 +296,7 @@ def unified_member_auth(*args, **kwargs):
             session.clear()
             session.update(role="member", username=username, name=member["name"])
             session.permanent = remember
-            return redirect(base.safe_next_url())
+            return redirect("/member/goi")
 
         data, found = _member_lookup(username, password)
         if found:

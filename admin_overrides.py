@@ -13,6 +13,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 import app as base
+import membership as pkg
 from flask import redirect, request, session
 
 app = base.app
@@ -69,20 +70,7 @@ def _can_member_see(m, item):
         return False
     if _is_admin_account(m):
         return True
-    if _is_svip(m) or _norm_type(m.get("account_type")) in {"SVIP"}:
-        return True
-    if _norm_type(m.get("account_type")) == "VIP":
-        sg = _grade(m.get("class") or m.get("grade"))
-        lg = _lesson_grade(item)
-        if sg and lg:
-            return sg == lg
-        return True
-    sg = _grade(m.get("class") or m.get("grade"))
-    lg = _lesson_grade(item)
-    if sg and lg and sg != lg:
-        return False
-    level = str(base.lesson_level(str(item.get("path") or item.get("file") or ""))).upper()
-    return level == "FREE"
+    return pkg.can_see_item(m, item)
 
 
 def _allowed_items(m):
@@ -101,14 +89,18 @@ def _member_manager():
     members = [m for m in d["members"] if str(m.get("username", "")).strip() and str(m.get("username", "")).strip().casefold() != "admin"]
     q = str(request.args.get("q") or "").strip().lower()
     grade = str(request.args.get("grade") or "").strip()
-    typ = _norm_type(request.args.get("type")) if request.args.get("type") else ""
+    pack_filter = str(request.args.get("pack") or "").strip()
     status = str(request.args.get("status") or "").strip().upper()
     if q:
         members = [m for m in members if q in str(m.get("username", "")).lower() or q in str(m.get("name", "")).lower() or q in str(m.get("phone", "")).lower()]
     if grade:
-        members = [m for m in members if _grade(m.get("class")) == grade]
-    if typ:
-        members = [m for m in members if _norm_type(m.get("account_type")) == typ]
+        members = [m for m in members if grade in (pkg.granted_package(m) or {}).get("grades", []) or pkg._grade(m.get("class")) == grade]
+    if pack_filter == "pending":
+        members = [m for m in members if pkg.package_status(m) == "pending"]
+    elif pack_filter == "approved":
+        members = [m for m in members if pkg.package_status(m) == "approved"]
+    elif pack_filter == "none":
+        members = [m for m in members if pkg.package_status(m) in {"none", "rejected"}]
     if status in {"ON", "OFF"}:
         members = [m for m in members if str(m.get("status", "ON")).upper() == status]
 
@@ -116,53 +108,81 @@ def _member_manager():
     counts = {
         "total": len(allm),
         "on": sum(str(m.get("status", "ON")).upper() == "ON" for m in allm),
-        "free": sum(_norm_type(m.get("account_type")) == "FREE" for m in allm),
-        "vip": sum(_norm_type(m.get("account_type")) == "VIP" for m in allm),
-        "svip": sum(_norm_type(m.get("account_type")) == "SVIP" for m in allm),
-        "10": sum(_grade(m.get("class")) == "10" for m in allm),
-        "11": sum(_grade(m.get("class")) == "11" for m in allm),
-        "12": sum(_grade(m.get("class")) == "12" for m in allm),
+        "pending": sum(pkg.package_status(m) == "pending" for m in allm),
+        "approved": sum(pkg.package_status(m) == "approved" for m in allm),
+        "none": sum(pkg.package_status(m) in {"none", "rejected"} for m in allm),
     }
+    members.sort(key=lambda m: (0 if pkg.package_status(m) == "pending" else 1, str(m.get("name") or m.get("username") or "")))
 
-    rows = []
+    cards = []
     for m in members:
         u = str(m.get("username", "")).strip()
         su = _safe(u)
         name = _safe(m.get("name") or "—")
         phone = _safe(m.get("phone") or "—")
-        g = _grade(m.get("class"))
-        t = _norm_type(m.get("account_type"))
         st = str(m.get("status", "ON")).upper()
         seen = len(_allowed_items(m))
-        badge = "⭐ SVIP" if t == "SVIP" else ("🔑 VIP" if t == "VIP" else "FREE")
+        pst = pkg.package_status(m)
+        granted = pkg.granted_package(m)
+        req = pkg.requested_package(m)
         cur_pw = base.member_password_plain(m)
         cur_val = _safe(cur_pw)
         cur_ph = "Chưa xem được" if not cur_pw else "Mật khẩu hiện tại"
-        rows.append(
-            f"<tr><td><input type='checkbox' name='selected' value='{su}' form='bulkForm'></td>"
-            f"<td><b>{su}</b><small>{name}</small></td><td>{phone}</td>"
-            f"<td><select class='mini' name='class_{su}' form='row_{su}'><option value=''>Chưa cấp</option>"
-            f"<option value='10' {'selected' if g=='10' else ''}>10</option><option value='11' {'selected' if g=='11' else ''}>11</option><option value='12' {'selected' if g=='12' else ''}>12</option></select></td>"
-            f"<td><span class='badge {t.lower()}'>{badge}</span><select class='mini' name='account_type' form='row_{su}'><option value='FREE' {'selected' if t=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if t=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if t=='SVIP' else ''}>SVIP</option></select></td>"
-            f"<td><select class='mini' name='status' form='row_{su}'><option value='ON' {'selected' if st=='ON' else ''}>ON</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF</option></select></td>"
-            f"<td><div class='passcell'><div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\" title='Hiện/ẩn mật khẩu'>👁</button></div>"
-            f"<div class='passrow'><input class='pass' name='new_password' form='row_{su}' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div></div></td>"
-            f"<td><b>{seen}</b> bài <a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem</a> <form id='row_{su}' method='post' action='/admin/members/save' style='display:inline'><input type='hidden' name='save_user' value='{su}'><button class='btn green small'>💾 Lưu</button></form></td></tr>"
+        req_html = ""
+        if pst == "pending" and req:
+            req_html = (
+                f"<div class='pendcard'>⏳ Yêu cầu: <b class='req'>{_safe(pkg.package_label(req))}</b> "
+                f"<button class='btn green small' name='intent' value='approve' form='row_{su}'>✅ Duyệt đúng yêu cầu</button> "
+                f"<button class='btn small' name='intent' value='reject' form='row_{su}'>Từ chối</button></div>"
+            )
+        cards.append(
+            f"<article class='memcard{' wait' if pst=='pending' else ''}'>"
+            f"<div class='memtop'><label class='ck'><input type='checkbox' name='selected' value='{su}' form='bulkForm'> "
+            f"<b>{name}</b> · {su}</label><span class='muted'>{phone}</span>"
+            f"<span class='badge {pst}'>{'⏳ Chờ duyệt' if pst=='pending' else ('✅ Đã cấp' if pst=='approved' else 'Chưa cấp')}</span></div>"
+            f"{req_html}"
+            f"<form id='row_{su}' class='memform' method='post' action='/admin/members/save'>"
+            f"<input type='hidden' name='save_user' value='{su}'>"
+            f"<div class='now'>Hiện có: <b>{_safe(pkg.package_label(granted))}</b> · {seen} bài "
+            f"<a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem bài</a></div>"
+            + pkg.picker_html(prefix=u, selected=req or granted, student=False)
+            + f"<div class='memacts'><select name='status'><option value='ON' {'selected' if st=='ON' else ''}>ON · đang dùng</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF · khóa</option></select>"
+            f"<div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
+            f"<div class='passrow'><input class='pass' name='new_password' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
+            f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp gói</button></div></form></article>"
         )
 
+    create = (
+        "<details class='createbox'><summary>➕ Cấp thành viên mới (duyệt luôn)</summary>"
+        "<form method='post' action='/admin/members/create' class='createform'>"
+        "<div class='cgrid'><div class='field'><label>Họ tên</label><input name='name' required></div>"
+        "<div class='field'><label>Tài khoản</label><input name='username' required></div>"
+        "<div class='field'><label>Điện thoại</label><input name='phone'></div>"
+        "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div></div>"
+        + pkg.picker_html(student=False)
+        + "<button class='btn primary' type='submit'>✅ Tạo và cấp gói</button></form></details>"
+    )
+
     body = f"""
+{pkg.PKG_CSS}
 <style>
-.adminmembers{{max-width:1500px;margin:auto;padding:12px}}.hero{{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}}.hero h2{{margin:0}}
-.stats{{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0}}.stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px}}.stat b{{display:block;font-size:20px}}.stat span{{font-size:11px;color:#6c7d90;font-weight:800}}
-.toolbar,.bulk{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0;display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.mini,.pass{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{{width:100%}}
-.membertable{{overflow:auto;background:#fff;border:1px solid #d7e2ee;border-radius:10px}}table{{width:100%;min-width:1250px;border-collapse:collapse}}th,td{{border:1px solid #dfe7ef;padding:7px}}th{{background:#e9f2ff;position:sticky;top:0;z-index:2}}td small{{display:block;color:#718196}}.mini{{width:82px}}.pass{{width:150px}}.passcell{{display:flex;flex-direction:column;gap:4px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}.badge{{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900;margin-right:4px}}.badge.free{{background:#eefbf2;color:#14743a}}.badge.vip{{background:#fff0f7;color:#a2175f}}.badge.svip{{background:#fff7dc;color:#855a00}}.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff}}.btn.small{{padding:5px 7px;font-size:11px}}.note{{background:#fffdf3;border:1px solid #ecd68c;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}@media(max-width:1000px){{.stats{{grid-template-columns:repeat(3,1fr)}}}}
+.adminmembers{{max-width:1100px;margin:auto;padding:12px}}.hero{{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}}.hero h2{{margin:0}}
+.stats{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}}.stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px}}.stat b{{display:block;font-size:20px}}.stat span{{font-size:11px;color:#6c7d90;font-weight:800}}.stat.warn b{{color:#a15b00}}
+.toolbar,.bulk,.createbox{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0}}.toolbar{{display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label,.createform label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.pass,select{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{{width:100%}}
+.memcard{{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;margin:8px 0}}.memcard.wait{{border-color:#e0b84a;background:#fffdf6}}.memtop{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}}.ck{{font-weight:800}}.now{{margin:6px 0;font-size:13px}}.memacts{{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}}.pass{{width:150px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}
+.badge{{display:inline-block;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900}}.badge.pending{{background:#fff4d6;color:#8a5a00}}.badge.approved{{background:#e8f8ee;color:#116a32}}.badge.none,.badge.rejected{{background:#f1f4f8;color:#5d7084}}
+.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff;border-color:#128a4a}}.btn.small{{padding:5px 7px;font-size:11px}}
+.note{{background:#eef7ff;border:1px solid #b9d5ef;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}.cgrid{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}}@media(max-width:800px){{.stats{{grid-template-columns:repeat(2,1fr)}}.cgrid{{grid-template-columns:1fr}}}}
 </style>
-<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Sửa lớp · quyền · ON/OFF · mật khẩu · xem chính xác bài được phép học</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
-<div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div><div class='stat'><b>{counts['free']}</b><span>FREE</span></div><div class='stat'><b>{counts['vip']}</b><span>VIP</span></div><div class='stat'><b>{counts['svip']}</b><span>SVIP · tất cả</span></div><div class='stat'><b>10:{counts['10']} · 11:{counts['11']} · 12:{counts['12']}</b><span>Phân bố lớp</span></div></div>
-<div class='note'>📌 <b>Quy tắc:</b> SVIP xem toàn bộ 10/11/12. FREE chỉ xem bài FREE đúng khối được cấp. VIP chỉ xem bài trong đúng khối được cấp và các bài có quyền VIP. Tài khoản chưa cấp lớp không xem bài.<br>👁 <b>Mật khẩu:</b> bấm mắt để xem mật khẩu hiện tại. Tài khoản cũ chỉ hiện sau khi học sinh đăng nhập lại, hoặc ADMIN đặt mật khẩu mới rồi Lưu.</div>
-<form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>QUYỀN</label><select name='type'><option value=''>Tất cả</option><option value='FREE' {'selected' if typ=='FREE' else ''}>FREE</option><option value='VIP' {'selected' if typ=='VIP' else ''}>VIP</option><option value='SVIP' {'selected' if typ=='SVIP' else ''}>SVIP</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>ON</option><option value='OFF' {'selected' if status=='OFF' else ''}>OFF</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
-<form id='bulkForm' method='post' action='/admin/members/bulk'></form><div class='bulk'><b>⚡ Đã chọn:</b><select name='account_type' form='bulkForm'><option value=''>Giữ quyền</option><option value='FREE'>FREE</option><option value='VIP'>VIP</option><option value='SVIP'>SVIP</option></select><select name='class' form='bulkForm'><option value=''>Giữ lớp</option><option value='10'>10</option><option value='11'>11</option><option value='12'>12</option></select><select name='status' form='bulkForm'><option value=''>Giữ trạng thái</option><option value='ON'>Mở</option><option value='OFF'>Khóa</option></select><button class='btn green' form='bulkForm'>💾 Áp dụng</button></div>
-<div class='membertable'><table><tr><th>✓</th><th>Tài khoản / Họ tên</th><th>Điện thoại</th><th>Lớp</th><th>Quyền</th><th>Trạng thái</th><th>Mật khẩu</th><th>Quyền xem</th></tr>{''.join(rows) or '<tr><td colspan=8 style=text-align:center>Không có thành viên</td></tr>'}</table></div></div>
+<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Duyệt gói 1–3 lớp / 1–2 môn · cấp quyền · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
+<div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['approved']}</b><span>Đã cấp gói</span></div><div class='stat'><b>{counts['none']}</b><span>Chưa cấp</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
+<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN duyệt đúng yêu cầu, hoặc sửa gói rồi bấm <b>Lưu / cấp gói</b>. 1–3 lớp = cả Toán và Lý các khối đó. 1–2 môn = môn đó cho cả 10/11/12. Tài khoản cũ VIP vẫn giữ đúng lớp đã cấp.</div>
+{create}
+<form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>GÓI</label><select name='pack'><option value=''>Tất cả</option><option value='pending' {'selected' if pack_filter=='pending' else ''}>Chờ duyệt</option><option value='approved' {'selected' if pack_filter=='approved' else ''}>Đã cấp</option><option value='none' {'selected' if pack_filter=='none' else ''}>Chưa cấp</option></select></div><div><label>TÀI KHOẢN</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
+<form id='bulkForm' method='post' action='/admin/members/bulk'></form>
+<div class='bulk'><b>⚡ Đã chọn:</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button></div>
+{''.join(cards) or "<div class='note'>Không có thành viên phù hợp.</div>"}
+</div>
 <script>function togglePass(b){{const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'}}</script>
 """
     return base.page("ADMIN · Thành viên", body)
@@ -183,42 +203,91 @@ def _access_report():
         lines = ''.join(f"<tr><td>{_safe(x.get('Mon'))}</td><td>{_safe(x.get('Chuong'))}</td><td>{_safe(x.get('BaiHoc') or x.get('De'))}</td><td>{int(x.get('questions') or x.get('count') or 0)}</td><td>{_safe(x.get('path'))}</td></tr>" for x in arr)
         blocks.append(f"<h3>Khối {g} · {len(arr)} bài</h3><div style='overflow:auto'><table><tr><th>Môn</th><th>Chương</th><th>Bài</th><th>Câu</th><th>File</th></tr>{lines or '<tr><td colspan=5>Không được xem</td></tr>'}</table></div>")
     body = f"""
-<div class='wrap'><div class='panel'><div class='head'>👁 Quyền xem của học viên</div><div class='body'><div class='notice'><b>{_safe(m.get('name') or username)}</b> · <b>{_safe(username)}</b> · Lớp <b>{_safe(_grade(m.get('class')) or 'chưa cấp')}</b> · Quyền <b>{_safe(_norm_type(m.get('account_type')))}</b> · Được xem <b>{len(allowed)}</b> / {len(all_items)} bài · Bị khóa <b>{hidden}</b> bài</div>{''.join(blocks)}<p><a class='btn' href='/admin/members'>← Quản lý thành viên</a></p></div></div></div>
+<div class='wrap'><div class='panel'><div class='head'>👁 Quyền xem của học viên</div><div class='body'><div class='notice'><b>{_safe(m.get('name') or username)}</b> · <b>{_safe(username)}</b> · Gói <b>{_safe(pkg.scope_label(m))}</b> · Được xem <b>{len(allowed)}</b> / {len(all_items)} bài · Bị khóa <b>{hidden}</b> bài</div>{''.join(blocks)}<p><a class='btn' href='/admin/members'>← Quản lý thành viên</a></p></div></div></div>
 """
     return base.page("ADMIN · Quyền xem", body)
 
 
 def _save_member():
-    d = _members(); username = str(request.form.get("save_user") or "").strip()
+    d = _members()
+    username = str(request.form.get("save_user") or "").strip()
     target = next((m for m in d["members"] if str(m.get("username", "")) == username), None)
     if not target or username.casefold() == "admin":
         return redirect("/admin/members")
-    target["name"] = str(target.get("name") or username).strip()
-    target["class"] = _grade(request.form.get("class_" + username) or "")
-    target["grade"] = target["class"]
-    target["account_type"] = _norm_type(request.form.get("account_type") or target.get("account_type"))
+    intent = str(request.form.get("intent") or "save").strip().lower()
     target["status"] = "ON" if str(request.form.get("status") or target.get("status") or "ON").upper() == "ON" else "OFF"
     pw = str(request.form.get("new_password") or "")
     if pw:
         if len(pw) < 4:
             return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Mật khẩu phải có ít nhất 4 ký tự.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
         base.set_member_password(target, pw)
+    if intent == "reject":
+        target["package_status"] = "rejected"
+        target["requested_package"] = None
+        target["account_type"] = "FREE"
+        target["package"] = None
+    elif intent == "approve":
+        chosen = pkg.requested_package(target)
+        if not chosen:
+            chosen, err = pkg.package_from_form(request.form, prefix=username, student=False)
+            if err:
+                return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+        pkg.apply_granted(target, chosen, approved=True)
+        target["status"] = "ON"
+    else:
+        chosen, err = pkg.package_from_form(request.form, prefix=username, student=False)
+        if err:
+            return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+        pkg.apply_granted(target, chosen, approved=True)
     target["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    _save_members(d)
+    _save_members(d, f"ADMIN cấp gói {username}")
     return redirect("/admin/members")
 
 
 def _bulk_save():
-    d = _members(); selected = set(request.form.getlist("selected"))
-    typ = request.form.get("account_type") or ""; cls = request.form.get("class") or ""; st = request.form.get("status") or ""
+    d = _members()
+    selected = set(request.form.getlist("selected"))
+    intent = str(request.form.get("intent") or "").strip().lower()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     for m in d["members"]:
         if str(m.get("username")) not in selected or str(m.get("username")).casefold() == "admin":
             continue
-        if typ: m["account_type"] = _norm_type(typ)
-        if cls: m["class"] = _grade(cls); m["grade"] = m["class"]
-        if st in {"ON", "OFF"}: m["status"] = st
-        m["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if selected: _save_members(d, "ADMIN cấp quyền hàng loạt")
+        if intent == "off":
+            m["status"] = "OFF"
+        elif intent == "on":
+            m["status"] = "ON"
+        elif intent == "approve":
+            chosen = pkg.requested_package(m) or pkg.granted_package(m)
+            if chosen:
+                pkg.apply_granted(m, chosen, approved=True)
+                m["status"] = "ON"
+        m["updated_at"] = now
+    if selected:
+        _save_members(d, "ADMIN duyệt / khóa hàng loạt")
+    return redirect("/admin/members")
+
+
+def _create_member():
+    d = _members()
+    username = str(request.form.get("username") or "").strip()
+    name = str(request.form.get("name") or username).strip()
+    phone = str(request.form.get("phone") or "").strip()
+    password = str(request.form.get("password") or "")
+    if len(username) < 3:
+        return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Tài khoản phải có ít nhất 3 ký tự.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+    if len(password) < 4:
+        return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Mật khẩu phải có ít nhất 4 ký tự.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+    if any(str(x.get("username", "")).casefold() == username.casefold() for x in d.get("members", [])):
+        return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Tài khoản đã tồn tại.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+    chosen, err = pkg.package_from_form(request.form, student=False)
+    if err:
+        return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
+    rec = {"username": username, "name": name or username, "phone": phone, "status": "ON", "account_type": "VIP"}
+    base.set_member_password(rec, password)
+    pkg.apply_granted(rec, chosen, approved=True)
+    rec["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    d.setdefault("members", []).append(rec)
+    _save_members(d, f"ADMIN tạo thành viên {username}")
     return redirect("/admin/members")
 
 
@@ -288,6 +357,7 @@ def _authoritative_admin_routes():
     if p == "/admin/members/access" and request.method == "GET": return _access_report()
     if p == "/admin/members/save" and request.method == "POST": return _save_member()
     if p == "/admin/members/bulk" and request.method == "POST": return _bulk_save()
+    if p == "/admin/members/create" and request.method == "POST": return _create_member()
     if p == "/admin/password": return _admin_password_page()
     return None
 

@@ -192,6 +192,11 @@ def gemini_panel_html(extra=''):
     )
 
 def _class_label(m) -> str:
+    try:
+        import membership as _pkg
+        return _pkg.scope_label(m)
+    except Exception:
+        pass
     raw = str((m or {}).get("class") or (m or {}).get("grade") or "").strip()
     if not raw:
         return ""
@@ -219,6 +224,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         nm = str((m or {}).get("name") or session.get("name") or (m or {}).get("username") or session.get("username") or "").strip()
         if nm:
             who = _who_chip("👤 " + nm, _class_label(m))
+        nav.append("<a href='/member/goi'>🎫 Gói</a>")
         nav.append("<a href='/member/ai'>🤖 Gemini</a>")
         nav.append("<a href='/member/logout'>🚪 Thoát</a>")
     elif role == "admin":
@@ -436,9 +442,13 @@ def can_access(m,path):
     if is_admin_member(m):
         return True
     if not m:return False
-    typ=account_type_of(m)
-    if typ in {'SVIP','VIP'}:return True
-    return lesson_level(path)=='FREE'
+    try:
+        import membership as _pkg
+        return _pkg.can_access_path(m, path)
+    except Exception:
+        typ=account_type_of(m)
+        if typ in {'SVIP','VIP'}:return True
+        return lesson_level(path)=='FREE'
 
 def can_view(m, path):
     """Xem đề: khách xem bài FREE; thành viên theo quyền. Không gồm làm bài / Gemini."""
@@ -2557,6 +2567,8 @@ import admin_slim  # noqa: E402,F401
 import admin_rewrite  # noqa: E402,F401
 import live_present  # noqa: E402,F401
 try:
+    import membership as _membership  # noqa: F401
+    _membership.attach_routes()
     import admin_overrides as _admin_overrides  # noqa: F401
     import student_overrides as _student_overrides  # noqa: F401
     import security_patch as _security_patch  # noqa: F401

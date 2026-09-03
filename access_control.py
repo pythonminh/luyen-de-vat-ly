@@ -54,6 +54,11 @@ def student_can_access(member: dict | None, path: str) -> bool:
         pass
     if not member:
         return False
+    try:
+        import membership as pkg
+        return pkg.can_access_path(member, path)
+    except Exception:
+        pass
     if is_svip(member):
         return True
     student_grade = _grade(member.get("class"))
@@ -85,6 +90,11 @@ def _card_blocks(body: str):
 
 
 def _allowed_paths(member: dict) -> set[str]:
+    try:
+        import membership as pkg
+        return pkg.allowed_paths(member)
+    except Exception:
+        pass
     all_paths = {
         str(x.get("path") or x.get("file") or "").strip()
         for x in base.index_data().get("lessons", [])
