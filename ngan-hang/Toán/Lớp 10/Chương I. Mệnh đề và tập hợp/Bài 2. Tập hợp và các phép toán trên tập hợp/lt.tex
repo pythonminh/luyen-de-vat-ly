@@ -3,18 +3,971 @@
 % Chương: Chương I. Mệnh đề và tập hợp
 % Bài: Bài 2. Tập hợp và các phép toán trên tập hợp
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
+\subsubsection{Các khái niệm cơ bản về tập hợp}
+
+\paragraph{Tập hợp}
+
+\begin{hoatdong}{Khởi động}
+Lớp 10A có $24$ bạn tham gia thi đấu bóng đá và cầu lông, trong đó có $16$ bạn thi đấu bóng đá và $11$ bạn thi đấu cầu lông. Giả sử các trận bóng đá và cầu lông không tổ chức đồng thời. Hỏi có bao nhiêu bạn lớp 10A tham gia thi đấu cả bóng đá và cầu lông?
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Gọi $A$ là tập hợp các bạn thi đấu bóng đá, $B$ là tập hợp các bạn thi đấu cầu lông.
+    \item Số bạn tham gia ít nhất một trong hai môn là:
+    \[
+    \begin{aligned}
+        n(A \cup B) &= \thaydongcham{24}.
+    \end{aligned}
+    \]
+    \item Số bạn thi đấu cả hai môn là:
+    \[
+    \begin{aligned}
+        n(A \cap B) &= n(A) + n(B) - n(A \cup B) \\
+                    &= \thaydongcham{16} + \thaydongcham{11} - \thaydongcham{24} \\
+                    &= \thaydongcham{3}\ \text{bạn}.
+    \end{aligned}
+    \]
+    Kết luận: Có $3$ bạn tham gia thi đấu cả hai môn bóng đá và cầu lông.
+\end{enumerate}
+}
+
+\begin{hoatdong}{Hoạt động 1}
+Trong tình huống trên, gọi $A$ là tập hợp những thành viên tham gia Chuyên đề 1, $B$ là tập hợp những thành viên tham gia Chuyên đề 2.
+\begin{itemize}
+    \item[a)] Nam có là một phần tử của tập hợp $A$ không? Ngân có là một phần tử của tập hợp $B$ không?
+    \item[b)] Hãy mô tả các tập hợp $A$ và $B$ bằng cách liệt kê các phần tử.
+\end{itemize}
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xét sự thuộc về của các phần tử:
+    \[
+    \begin{aligned}
+        \text{Nam} &\in \thaydongcham{A} \\
+        \text{Ngân} &\notin \thaydongcham{B}.
+    \end{aligned}
+    \]
+    \item Mô tả tập hợp bằng cách liệt kê các phần tử:
+    \[
+    \begin{aligned}
+        A &= \thaydongcham{\{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}} \\
+        B &= \thaydongcham{\{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{hoatdong}{Hoạt động 2}
+Cho tập hợp: $C = \{\text{châu Á}; \text{châu Âu}; \text{châu Đại Dương}; \text{châu Mĩ}; \text{châu Nam Cực}; \text{châu Phi}\}$.
+\begin{itemize}
+    \item[a)] Hãy chỉ ra tính chất đặc trưng cho các phần tử của tập hợp $C$.
+    \item[b)] Tập hợp $C$ có bao nhiêu phần tử?
+\end{itemize}
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Tính chất đặc trưng của các phần tử trong tập hợp:
+    \[
+    \begin{aligned}
+        \text{Các phần tử thuộc } C &\text{ đều là các châu lục trên Trái Đất}.
+    \end{aligned}
+    \]
+    \item Số phần tử của tập hợp $C$:
+    \[
+    \begin{aligned}
+        n(C) &= \thaydongcham{6}\ \text{phần tử}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Có thể mô tả một tập hợp bằng một trong hai cách sau:
+    \begin{itemize}
+        \item Cách 1: Liệt kê các phần tử của tập hợp;
+        \item Cách 2: Chỉ ra tính chất đặc trưng cho các phần tử của tập hợp.
+    \end{itemize}
+    \item Kí hiệu $a \in S$ để chỉ phần tử $a$ thuộc tập hợp $S$. Kí hiệu $a \notin S$ để chỉ phần tử $a$ không thuộc tập hợp $S$.
+    \item Tập hợp không chứa phần tử nào được gọi là tập rỗng, kí hiệu là $\emptyset$.
+    \item Số phần tử của tập hợp $S$ được kí hiệu là $n(S)$.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+Cho tập hợp $D = \{n \in \mathbb{N} \mid n \text{ là số nguyên tố}, 5 < n < 20\}$.
+\begin{itemize}
+    \item[a)] Trong các số $5; 12; 17; 18$, số nào thuộc tập $D$, số nào không thuộc tập $D$?
+    \item[b)] Viết tập hợp $D$ bằng cách liệt kê các phần tử.
+\end{itemize}
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xét sự thuộc về tập hợp dựa vào điều kiện số nguyên tố lớn hơn 5 và nhỏ hơn 20:
+    \[
+    \begin{aligned}
+        5 &\notin \thaydongcham{D} \quad (\text{do } 5 \le 5) \\
+        12 &\notin \thaydongcham{D} \quad (\text{do 12 là hợp số}) \\
+        17 &\in \thaydongcham{D} \quad (\text{do 17 là số nguyên tố và } 5 < 17 < 20) \\
+        18 &\notin \thaydongcham{D} \quad (\text{do 18 là hợp số}).
+    \end{aligned}
+    \]
+    \item Liệt kê các số nguyên tố nằm giữa 5 và 20:
+    \[
+    \begin{aligned}
+        D &= \thaydongcham{\{7; 11; 13; 17; 19\}}.
+    \end{aligned}
+    \]
+    Kết luận: Tập hợp $D$ gồm 5 phần tử.
+\end{enumerate}
+}
+
+\begin{lt}
+Gọi $X$ là tập nghiệm của phương trình $x^2 - 24x + 143 = 0$. Các mệnh đề sau đúng hay sai?
+\begin{itemize}
+    \item[a)] $13 \in X$;
+    \item[b)] $11 \notin X$;
+    \item[c)] $n(X) = 2$.
+\end{itemize}
+\end{lt}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Tìm nghiệm của phương trình bậc hai:
+    \[
+    \begin{aligned}
+        x^2 - 24x + 143 = 0 &\Leftrightarrow \thaydongcham{(x-11)(x-13) = 0} \\
+                            &\Leftrightarrow \left[ \begin{aligned} x &= \thaydongcham{11} \\ x &= \thaydongcham{13} \end{aligned} \right.
+    \end{aligned}
+    \]
+    Tập nghiệm thu được là $X = \{11; 13\}$.
+    \item Xét tính đúng sai của các khẳng định:
+    \begin{itemize}
+        \item Mệnh đề a) là đúng vì $13$ thuộc tập hợp $X$.
+        \item Mệnh đề b) là sai vì số $11$ thuộc tập hợp $X$ nên viết $11 \notin X$ là sai.
+        \item Mệnh đề c) là đúng vì tập hợp $X$ có đúng 2 phần tử.
+    \end{itemize}
+\end{enumerate}
+}
+
+\paragraph{Tập hợp con}
+
+\begin{hoatdong}{Hoạt động 3}
+Gọi $H$ là tập hợp các bạn tham gia Chuyên đề 2 trong tình huống mở đầu có tên bắt đầu bằng chữ $H$. Các phần tử của tập hợp $H$ có là phần tử của tập hợp $B$ trong HĐ1 không?
+\end{hoatdong}
+\par
+\loigiai{
+\begin{itemize}
+    \item Liệt kê các phần tử của tập hợp $H$:
+    \[
+    \begin{aligned}
+        H &= \thaydongcham{\{\text{Hương}; \text{Hiền}; \text{Hân}\}}.
+    \end{aligned}
+    \]
+    \item Tập hợp $B$ là tập các học sinh tham gia Chuyên đề 2. Dễ thấy mọi học sinh thuộc $H$ đều có tên trong danh sách $B$.
+\end{itemize}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Nếu mọi phần tử của tập hợp $T$ đều là phần tử của tập hợp $S$ thì ta nói $T$ là một tập hợp con (tập con) của $S$ và viết là $T \subset S$.
+    \item Định nghĩa bằng kí hiệu: $T \subset S \Leftrightarrow (\forall x, x \in T \Rightarrow x \in S)$.
+    \item Quy ước tập rỗng $\emptyset$ là tập con của mọi tập hợp.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+Cho tập hợp $S = \{2; 3; 5\}$. Những tập hợp nào sau đây là tập con của $S$?
+\[
+S_1 = \{3\}, \quad S_2 = \{0; 2\}, \quad S_3 = \{3; 5\}
+\]
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Kiểm tra phần tử thuộc $S_1$ và $S_3$:
+    \[
+    \begin{aligned}
+        3 &\in S_1 \Rightarrow 3 \in S \quad (\text{đúng}) \\
+        3, 5 &\in S_3 \Rightarrow 3, 5 \in S \quad (\text{đúng}).
+    \end{aligned}
+    \]
+    Do đó, $S_1 \subset S$ và $S_3 \subset S$.
+    \item Kiểm tra phần tử thuộc $S_2$:
+    \[
+    \begin{aligned}
+        0 &\in S_2 \quad \text{nhưng} \quad 0 \notin S.
+    \end{aligned}
+    \]
+    Do đó, $S_2$ không phải là tập con của $S$.
+\end{enumerate}
+}
+
+\paragraph{Hai tập hợp bằng nhau}
+
+\begin{hoatdong}{Hoạt động 4}
+Sơn và Thu viết tập hợp các số chính phương nhỏ hơn 100 như sau:
+\begin{itemize}
+    \item Sơn: $S = \{0; 1; 4; 9; 16; 25; 36; 49; 64; 81\}$;
+    \item Thu: $T = \{n \in \mathbb{N} \mid n \text{ là số chính phương}, n < 100\}$.
+\end{itemize}
+Hỏi bạn nào viết đúng?
+\end{hoatdong}
+\par
+\loigiai{
+\begin{itemize}
+    \item Sơn liệt kê đầy đủ tất cả các số chính phương nhỏ hơn 100.
+    \item Thu biểu diễn tập hợp bằng cách nêu tính chất đặc trưng chuẩn xác. Cả hai bạn đều viết đúng.
+\end{itemize}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Hai tập hợp $S$ và $T$ được gọi là hai tập hợp bằng nhau nếu mỗi phần tử của $T$ cũng là phần tử của tập hợp $S$ và ngược lại. Kí hiệu là $S = T$.
+    \item Quy tắc bao hàm hai chiều: $S = T \Leftrightarrow (S \subset T \text{ và } T \subset S)$.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+Cho hai tập hợp:
+\[
+\begin{aligned}
+    C &= \{n \in \mathbb{N} \mid n \text{ là bội chung của 2 và 3}, n < 30\} \\
+    D &= \{n \in \mathbb{N} \mid n \text{ là bội của 6}, n < 30\}
+\end{aligned}
+\]
+Chứng minh $C = D$.
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Liệt kê phần tử của tập hợp $C$:
+    Các bội chung tự nhiên của 2 và 3 nhỏ hơn 30 là bội của 6 nhỏ hơn 30:
+    \[
+    \begin{aligned}
+        C &= \thaydongcham{\{0; 6; 12; 18; 24\}}.
+    \end{aligned}
+    \]
+    \item Liệt kê phần tử của tập hợp $D$:
+    Các bội tự nhiên của 6 nhỏ hơn 30:
+    \[
+    \begin{aligned}
+        D &= \thaydongcham{\{0; 6; 12; 18; 24\}}.
+    \end{aligned}
+    \]
+    Vì $C$ và $D$ có chung toàn bộ các phần tử nên hai tập hợp này bằng nhau, tức $C = D$.
+\end{enumerate}
+}
+
+\begin{lt}
+Giả sử $C$ là tập hợp các hình bình hành có hai đường chéo vuông góc; $D$ là tập hợp các hình vuông. Các mệnh đề sau đúng hay sai?
+\begin{itemize}
+    \item[a)] $C \subset D$;
+    \item[b)] $C \supset D$;
+    \item[c)] $C = D$.
+\end{itemize}
+\end{lt}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Định nghĩa hình học của tập $C$ và $D$:
+    Tập $C$ chính là tập hợp các hình thoi.
+    \item Xét tính chất bao hàm:
+    \begin{itemize}
+        \item Một hình thoi chưa chắc là hình vuông nên $C \subset D$ là sai. Mệnh đề a) là sai.
+        \item Mọi hình vuông đều là hình thoi nên $D \subset C$ (tức $C \supset D$) là đúng. Mệnh đề b) là đúng.
+        \item Do hai tập hợp không có quan hệ bao hàm hai chiều nên chúng không bằng nhau. Mệnh đề c) là sai.
+    \end{itemize}
+\end{enumerate}
+}
+
+\subsubsection{Các tập hợp số}
+
+\paragraph{Mối quan hệ giữa các tập hợp số}
+
+\begin{hoatdong}{Hoạt động 5}
+Các mệnh đề sau đúng hay sai?
+\begin{itemize}
+    \item[a)] Mọi số nguyên đều viết được dưới dạng phân số;
+    \item[b)] Tập hợp các số thực chứa tập hợp các số hữu tỉ;
+    \item[c)] Tồn tại một số thực không là số hữu tỉ.
+\end{itemize}
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xét số nguyên $n \in \mathbb{Z}$:
+    \[
+    \begin{aligned}
+        n &= \thaydongcham{\dfrac{n}{1}} \in \mathbb{Q}.
+    \end{aligned}
+    \]
+    Do đó, mệnh đề a) là đúng.
+    \item Mối quan hệ bao hàm giữa tập số hữu tỉ $\mathbb{Q}$ và tập số thực $\mathbb{R}$:
+    \[
+    \begin{aligned}
+        \mathbb{Q} &\subset \thaydongcham{\mathbb{R}}.
+    \end{aligned}
+    \]
+    Do đó, mệnh đề b) là đúng.
+    \item Tìm số thực không thuộc tập số hữu tỉ:
+    Ví dụ số $\sqrt{2}$ là số thực nhưng không viết được dưới dạng thương của hai số nguyên (nó là số vô tỉ). Do đó, mệnh đề c) là đúng.
+\end{enumerate}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Các tập hợp số cơ bản:
+    \begin{itemize}
+        \item Tập hợp số tự nhiên: $\mathbb{N} = \{0; 1; 2; 3; \dots\}$
+        \item Tập hợp số nguyên: $\mathbb{Z} = \{\dots; -2; -1; 0; 1; 2; \dots\}$
+        \item Tập hợp số hữu tỉ: $\mathbb{Q} = \left\{\dfrac{a}{b} \;\middle|\; a, b \in \mathbb{Z}, b \neq 0\right\}$
+        \item Tập hợp số thực: $\mathbb{R}$ bao gồm tất cả các số hữu tỉ và số vô tỉ.
+    \end{itemize}
+    \item Quan hệ bao hàm giữa các tập hợp số:
+    \[
+    \mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R}.
+    \]
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+Hãy xác định tính đúng sai của các mệnh đề sau:
+\[
+\begin{aligned}
+    \text{a)}\ 3,274 &\in \mathbb{Q} \\
+    \text{b)}\ \sqrt{2} &\in \mathbb{R} \\
+    \text{c)}\ \dfrac{3}{4} &\in \mathbb{Z}
+\end{aligned}
+\]
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Viết số thập phân dưới dạng phân số:
+    \[
+    \begin{aligned}
+        3,274 &= \thaydongcham{\dfrac{3274}{1000}} \in \mathbb{Q}.
+    \end{aligned}
+    \]
+    Do đó, mệnh đề a) là đúng.
+    \item Số thực $\sqrt{2}$ thuộc tập số thực $\mathbb{R}$:
+    \[
+    \begin{aligned}
+        \sqrt{2} &\in \thaydongcham{\mathbb{R}}.
+    \end{aligned}
+    \]
+    Do đó, mệnh đề b) là đúng.
+    \item Giá trị phân số $\dfrac{3}{4}$ không phải là số nguyên:
+    \[
+    \begin{aligned}
+        \dfrac{3}{4} &\notin \thaydongcham{\mathbb{Z}}.
+    \end{aligned}
+    \]
+    Do đó, mệnh đề c) là sai.
+\end{enumerate}
+}
+
+\begin{lt}
+Cho tập hợp $C = \{-4; 0; 1; 2\}$. Các mệnh đề sau đúng hay sai?
+\begin{itemize}
+    \item[a)] $C$ là tập con của $\mathbb{Z}$;
+    \item[b)] $C$ là tập con của $\mathbb{N}$;
+    \item[c)] $C$ là tập con của $\mathbb{R}$.
+\end{itemize}
+\end{lt}
+\par
+\loigiai{
+\begin{enumerate}
+    \item So sánh phần tử của $C$ với các tập hợp số:
+    \begin{itemize}
+        \item Mọi phần tử $-4, 0, 1, 2$ đều là số nguyên nên $C \subset \mathbb{Z}$ là đúng. Mệnh đề a) là đúng.
+        \item Vì phần tử $-4 \in C$ nhưng $-4 \notin \mathbb{N}$ nên $C \subset \mathbb{N}$ là sai. Mệnh đề b) là sai.
+        \item Vì $C \subset \mathbb{Z}$ và $\mathbb{Z} \subset \mathbb{R}$ nên $C \subset \mathbb{R}$ là đúng. Mệnh đề c) là đúng.
+    \end{itemize}
+\end{enumerate}
+}
+
+\paragraph{Các tập con thường dùng của số thực}
+
+\begin{hoatdong}{Hoạt động 6}
+Cho hai tập hợp $C = \{x \in \mathbb{R} \mid x \ge 3\}$ và $D = \{x \in \mathbb{R} \mid x > 3\}$. Các mệnh đề sau đúng hay sai?
+\begin{itemize}
+    \item[a)] $C, D$ là các tập con của $\mathbb{R}$;
+    \item[b)] $\forall x, x \in C \Rightarrow x \in D$;
+    \item[c)] $3 \in C$ nhưng $3 \notin D$;
+    \item[d)] $C = D$.
+\end{itemize}
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xét cấu trúc tập hợp:
+    Cả $C$ và $D$ đều được xác định từ các số thực $\mathbb{R}$ nên chúng là tập con của $\mathbb{R}$. Mệnh đề a) là đúng.
+    \item Xét phần tử $x = 3$:
+    Ta có $3 \in C$ (vì $3 \ge 3$ đúng) và $3 \notin D$ (vì $3 > 3$ sai).
+    Do đó, mệnh đề b) là sai và mệnh đề c) là đúng.
+    \item So sánh hai tập hợp:
+    Vì có giá trị $3 \in C$ nhưng $3 \notin D$ nên hai tập hợp không thể bằng nhau. Mệnh đề d) là sai.
+\end{enumerate}
+}
+
+\begin{dl}
+Một số tập con thường dùng của tập số thực $\mathbb{R}$ (với $a, b \in \mathbb{R}, a < b$):
+\begin{itemize}
+    \item Khoảng:
+    \begin{itemize}
+        \item $(a; b) = \{x \in \mathbb{R} \mid a < x < b\}$
+        \item $(a; +\infty) = \{x \in \mathbb{R} \mid x > a\}$
+        \item $(-\infty; b) = \{x \in \mathbb{R} \mid x < b\}$
+    \end{itemize}
+    \item Đoạn:
+    \begin{itemize}
+        \item $[a; b] = \{x \in \mathbb{R} \mid a \le x \le b\}$
+    \end{itemize}
+    \item Nửa khoảng:
+    \begin{itemize}
+        \item $[a; b) = \{x \in \mathbb{R} \mid a \le x < b\}$
+        \item $(a; b] = \{x \in \mathbb{R} \mid a < x \le b\}$
+        \item $[a; +\infty) = \{x \in \mathbb{R} \mid x \ge a\}$
+        \item $(-\infty; b] = \{x \in \mathbb{R} \mid x \le b\}$
+    \end{itemize}
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+Viết các tập hợp sau dưới dạng các khoảng, đoạn, nửa khoảng trong $\mathbb{R}$ rồi biểu diễn chúng trên trục số:
+\[
+C = \{x \in \mathbb{R} \mid 2 \le x \le 7\}, \quad D = \{x \in \mathbb{R} \mid x < 2\}
+\]
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Chuyển đổi tập hợp $C$:
+    \[
+    \begin{aligned}
+        C &= \thaydongcham{[2; 7]}.
+    \end{aligned}
+    \]
+    \item Chuyển đổi tập hợp $D$:
+    \[
+    \begin{aligned}
+        D &= \thaydongcham{(-\infty; 2)}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{lt}
+Hãy ghép mỗi dòng ở cột bên trái với một dòng thích hợp ở cột bên phải:
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+1) $x \in [2; 5]$ & a) $2 < x \le 5$ \\
+2) $x \in (2; 5]$ & b) $x \ge 7$ \\
+3) $x \in [7; +\infty)$ & c) $7 < x < 10$ \\
+4) $x \in (7; 10)$ & d) $2 \le x \le 5$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{lt}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Phân tích các miền giá trị trên trục số:
+    \[
+    \begin{aligned}
+        [2; 5] &\rightarrow \thaydongcham{2 \le x \le 5} \quad (\text{ghép với d}) \\
+        (2; 5] &\rightarrow \thaydongcham{2 < x \le 5} \quad (\text{ghép với a}) \\
+        [7; +\infty) &\rightarrow \thaydongcham{x \ge 7} \quad (\text{ghép với b}) \\
+        (7; 10) &\rightarrow \thaydongcham{7 < x < 10} \quad (\text{ghép với c}).
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\subsubsection{Các phép toán trên tập hợp}
+
+\paragraph{Giao của hai tập hợp}
+
+\begin{hoatdong}{Hoạt động 7}
+Viết tập hợp $X$ gồm những thành viên tham gia cả hai Chuyên đề 1 và 2 trong tình huống mở đầu. Tập $X$ có phải là tập con của tập $A$ không? Tập $X$ có phải là tập con của tập $B$ không? ($A, B$ là các tập hợp trong HĐ1).
+\end{hoatdong}
+\par
+\loigiai{
+\begin{itemize}
+    \item Tìm phần tử chung giữa hai tập danh sách:
+    \[
+    \begin{aligned}
+        X &= \thaydongcham{\{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}\}}.
+    \end{aligned}
+    \]
+    \item Do các phần tử thuộc $X$ đều có mặt ở cả hai tập nên $X \subset A$ và $X \subset B$ là hoàn toàn đúng.
+\end{itemize}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Tập hợp gồm các phần tử thuộc cả hai tập hợp $S$ và $T$ gọi là giao của hai tập hợp $S$ và $T$, kí hiệu là $S \cap T$.
+    \item Biểu diễn bằng kí hiệu: $S \cap T = \{x \mid x \in S \text{ và } x \in T\}$.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+\begin{itemize}
+    \item[a)] Cho hai tập hợp $C = \{4; 7; 27\}$ và $D = \{2; 4; 9; 27; 36\}$. Hãy xác định tập hợp $C \cap D$.
+    \item[b)] Cho hai tập hợp $E = [1; +\infty)$ và $F = (-\infty; 3]$. Hãy xác định tập hợp $E \cap F$.
+\end{itemize}
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xác định giao của hai tập hợp hữu hạn $C$ và $D$:
+    \[
+    \begin{aligned}
+        C \cap D &= \thaydongcham{\{4; 27\}}.
+    \end{aligned}
+    \]
+    \item Xác định giao của hai nửa khoảng số thực $E$ và $F$:
+    Biểu diễn trên trục số và lấy phần chung:
+    \[
+    \begin{aligned}
+        E \cap F &= \thaydongcham{[1; 3]}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{lt}
+Cho các tập hợp $C = [1; 5]$, $D = [-2; 3]$. Hãy xác định tập hợp $C \cap D$.
+\end{lt}
+\par
+\loigiai{
+\begin{itemize}
+    \item Biểu diễn hai khoảng số thực lên trục số để tìm phần chung giao nhau:
+    \[
+    \begin{aligned}
+        C \cap D &= [1; 5] \cap [-2; 3] \\
+                 &= \thaydongcham{[1; 3]}.
+    \end{aligned}
+    \]
+    Kết quả thu được là đoạn từ 1 đến 3.
+\end{itemize}
+}
+
+\paragraph{Hợp của hai tập hợp}
+
+\begin{hoatdong}{Hoạt động 8}
+Trở lại tình huống mở đầu, hãy xác định tập hợp các thành viên tham gia Chuyên đề 1 hoặc Chuyên đề 2.
+\end{hoatdong}
+\par
+\loigiai{
+\begin{itemize}
+    \item Hợp các tên học sinh ở cả hai chuyên đề (không viết lặp lại tên trùng nhau):
+    \[
+    \begin{aligned}
+        A \cup B &= \thaydongcham{\{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}; \text{Hân}; \text{Hiền}; \text{Lam}\}}.
+    \end{aligned}
+    \]
+\end{itemize}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Tập hợp gồm các phần tử thuộc tập hợp $S$ hoặc thuộc tập hợp $T$ gọi là hợp của hai tập hợp $S$ và $T$, kí hiệu là $S \cup T$.
+    \item Biểu diễn bằng kí hiệu: $S \cup T = \{x \mid x \in S \text{ hoặc } x \in T\}$.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+\begin{itemize}
+    \item[a)] Cho hai tập hợp $C = \{2; 3; 4; 7\}$ và $D = \{-1; 2; 3; 4; 6\}$. Hãy xác định tập hợp $C \cup D$.
+    \item[b)] Cho hai tập hợp $E = (-1; 2]$ và $F = [0; 3]$. Hãy xác định tập hợp $E \cup F$.
+\end{itemize}
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Tìm hợp của hai tập hợp rời rạc $C$ và $D$:
+    \[
+    \begin{aligned}
+        C \cup D &= \thaydongcham{\{-1; 2; 3; 4; 6; 7\}}.
+    \end{aligned}
+    \]
+    \item Tìm hợp của hai khoảng thực $E$ và $F$:
+    Biểu diễn trên trục số và lấy tất cả các phần tử thuộc ít nhất một trong hai tập hợp:
+    \[
+    \begin{aligned}
+        E \cup F &= \thaydongcham{(-1; 3]}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{lt}
+Hãy biểu diễn tập hợp $A \cap B$ và $A \cup B$ bằng biểu đồ Ven, với $A, B$ được cho trong HĐ1.
+\end{lt}
+\par
+\loigiai{
+\begin{itemize}
+    \item Vẽ biểu đồ Ven gồm hai vòng tròn giao nhau:
+    \begin{itemize}
+        \item Phần chung ở giữa chứa các phần tử của tập $A \cap B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}\}$.
+        \item Phần chỉ thuộc hình tròn bên trái (không giáp phần chung) chứa các phần tử: $\{\text{Nam}; \text{Ngân}\}$.
+        \item Phần chỉ thuộc hình tròn bên phải (không giáp phần chung) chứa các phần tử: $\{\text{Hân}; \text{Hiền}; \text{Lam}\}$.
+    \end{itemize}
+\end{itemize}
+}
+
+\paragraph{Hiệu của hai tập hợp}
+
+\begin{hoatdong}{Hoạt động 9}
+Trở lại tình huống mở đầu, hãy xác định tập hợp các thành viên chỉ tham gia Chuyên đề 1 mà không tham gia Chuyên đề 2.
+\end{hoatdong}
+\par
+\loigiai{
+\begin{itemize}
+    \item Tìm tập các thành viên thuộc tập hợp $A$ nhưng không nằm trong danh sách của tập hợp $B$:
+    \[
+    \begin{aligned}
+        A \setminus B &= \thaydongcham{\{\text{Nam}; \text{Ngân}\}}.
+    \end{aligned}
+    \]
+\end{itemize}
+}
+
+\begin{dl}
+\begin{itemize}
+    \item Hiệu của hai tập hợp $S$ và $T$ là tập hợp gồm các phần tử thuộc $S$ nhưng không thuộc $T$, kí hiệu là $S \setminus T$.
+    \item Biểu diễn bằng kí hiệu: $S \setminus T = \{x \mid x \in S \text{ và } x \notin T\}$.
+    \item Trường hợp đặc biệt khi $T \subset S$, thì $S \setminus T$ được gọi là phần bù của $T$ trong $S$, kí hiệu là $C_S T$.
+\end{itemize}
+\end{dl}
+
+\begin{vd}
+\begin{itemize}
+    \item[a)] Cho hai tập hợp $A = \{1; 2; 3; 4\}$ và $B = \{3; 4; 5; 6\}$. Xác định tập hợp $A \setminus B$ và $B \setminus A$.
+    \item[b)] Cho tập hợp $E = [1; 5]$ và $F = (3; 5]$. Xác định tập hợp $E \setminus F$.
+\end{itemize}
+\end{vd}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Hiệu của hai tập hợp số hữu hạn $A$ và $B$:
+    \[
+    \begin{aligned}
+        A \setminus B &= \thaydongcham{\{1; 2\}} \\
+        B \setminus A &= \thaydongcham{\{5; 6\}}.
+    \end{aligned}
+    \]
+    \item Hiệu của hai khoảng số thực $E$ và $F$:
+    Loại bỏ các phần tử lớn hơn 3 và nhỏ hơn hoặc bằng 5 khỏi đoạn $[1; 5]$:
+    \[
+    \begin{aligned}
+        E \setminus F &= [1; 5] \setminus (3; 5] \\
+                      &= \thaydongcham{[1; 3]}.
+    \end{aligned}
+    \]
+    (Chú ý rằng giá trị 3 không thuộc tập hợp $F$ nên không bị loại bỏ, vẫn giữ ngoặc vuông $[1; 3]$).
+\end{enumerate}
+}
+
+\begin{lt}
+Tìm phần bù của các tập hợp sau trong $\mathbb{R}$:
+\begin{itemize}
+    \item[a)] $(-\infty; 2)$;
+    \item[b)] $[-5; +\infty)$.
+\end{itemize}
+\end{lt}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Phần bù của khoảng $(-\infty; 2)$ trong tập số thực $\mathbb{R}$:
+    \[
+    \begin{aligned}
+        C_{\mathbb{R}}(-\infty; 2) &= \mathbb{R} \setminus (-\infty; 2) \\
+                                    &= \thaydongcham{[2; +\infty)}.
+    \end{aligned}
+    \]
+    \item Phần bù của nửa khoảng $[-5; +\infty)$ trong tập số thực $\mathbb{R}$:
+    \[
+    \begin{aligned}
+        C_{\mathbb{R}}[-5; +\infty) &= \mathbb{R} \setminus [-5; +\infty) \\
+                                     &= \thaydongcham{(-\infty; -5)}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\begin{hoatdong}{Vận dụng}
+Lớp 10A có 24 bạn tham gia thi đấu bóng đá và cầu lông, trong đó có 16 bạn thi đấu bóng đá và 11 bạn thi đấu cầu lông. Hỏi có bao nhiêu bạn lớp 10A tham gia thi đấu cả bóng đá và cầu lông?
+\end{hoatdong}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Gọi $A$ là tập hợp các bạn thi đấu bóng đá, $B$ là tập hợp các bạn thi đấu cầu lông.
+    \item Số bạn tham gia ít nhất một môn thể thao là $n(A \cup B) = 24$.
+    \item Áp dụng quy tắc tính số phần tử của hợp hai tập hợp:
+    \[
+    \begin{aligned}
+        n(A \cup B) &= n(A) + n(B) - n(A \cap B) \\
+        24 &= \thaydongcham{16} + \thaydongcham{11} - n(A \cap B) \\
+        n(A \cap B) &= 27 - 24 = \thaydongcham{3}\ \text{bạn}.
+    \end{aligned}
+    \]
+    Kết luận: Có 3 bạn tham gia thi đấu cả hai môn thể thao.
+\end{enumerate}
+}
+
+\subsubsection{Bài tập}
+
+\paragraph{Bài 1.8}
+Gọi $X$ là tập hợp các quốc gia tiếp giáp với Việt Nam. Hãy liệt kê các phần tử của tập hợp $X$ và biểu diễn tập $X$ bằng biểu đồ Ven.
+\par
+\loigiai{
+\begin{enumerate}
+    \item Xác định các quốc gia láng giềng giáp biên giới đất liền với Việt Nam:
+    \[
+    \begin{aligned}
+        X &= \thaydongcham{\{\text{Lào}; \text{Campuchia}; \text{Trung Quốc}\}}.
+    \end{aligned}
+    \]
+    \item Biểu diễn bằng biểu đồ Ven: Vẽ một vòng tròn khép kín và ghi tên của ba quốc gia này vào bên trong vòng tròn.
+\end{enumerate}
+}
+
+\paragraph{Bài 1.9}
+Kí hiệu $E$ là tập hợp các quốc gia tại khu vực Đông Nam Á.
+\begin{itemize}
+    \item[a)] Nêu ít nhất hai phần tử thuộc tập hợp $E$.
+    \item[b)] Nêu ít nhất hai phần tử không thuộc tập hợp $E$.
+    \item[c)] Liệt kê các phần tử thuộc tập hợp $E$. Tập hợp $E$ có bao nhiêu phần tử?
+\end{itemize}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Chỉ ra hai quốc gia nằm trong khu vực Đông Đông Nam Á:
+    \[
+    \begin{aligned}
+        \text{Việt Nam} &\in \thaydongcham{E} \\
+        \text{Lào} &\in \thaydongcham{E}.
+    \end{aligned}
+    \]
+    \item Chỉ ra hai quốc gia nằm ngoài khu vực Đông Nam Á:
+    \[
+    \begin{aligned}
+        \text{Nhật Bản} &\notin \thaydongcham{E} \\
+        \text{Hàn Quốc} &\notin \thaydongcham{E}.
+    \end{aligned}
+    \]
+    \item Liệt kê toàn bộ các nước Đông Nam Á:
+    \[
+    \begin{aligned}
+        E &= \thaydongcham{\{\text{Việt Nam}; \text{Lào}; \text{Campuchia}; \text{Thái Lan}; \text{Myanmar}; \text{Malaysia}; \text{Singapore}; \text{Indonesia}; \text{Brunei}; \text{Philippines}; \text{Đông Timor}\}}.
+    \end{aligned}
+    \]
+    Tập hợp $E$ có tổng cộng $n(E) = \thaydongcham{11}$ phần tử.
+\end{enumerate}
+}
+
+\paragraph{Bài 1.10}
+Hãy viết tập hợp sau bằng cách nêu tính chất đặc trưng cho các phần tử của tập hợp: $A = \{0; 4; 8; 12; 16\}$.
+\par
+\loigiai{
+\begin{itemize}
+    \item Phân tích đặc điểm chung của dãy số:
+    Các số đều chia hết cho 4 và không lớn hơn 16.
+    \[
+    \begin{aligned}
+        A &= \thaydongcham{\{x \in \mathbb{N} \mid x \text{ là bội của 4 và } x \le 16\}}.
+    \end{aligned}
+    \]
+\end{itemize}
+}
+
+\paragraph{Bài 1.11}
+Trong các tập hợp sau, tập nào là tập hợp rỗng?
+\[
+A = \{x \in \mathbb{R} \mid x^2 - 6 = 0\}, \quad B = \{x \in \mathbb{Z} \mid x^2 - 6 = 0\}
+\]
+\par
+\loigiai{
+\begin{enumerate}
+    \item Khảo sát tập hợp $A$:
+    Phương trình $x^2 - 6 = 0 \Leftrightarrow x = \pm\sqrt{6}$.
+    Vì các giá trị này là số thực nên $A = \{-\sqrt{6}; \sqrt{6}\} \neq \emptyset$.
+    \item Khảo sát tập hợp $B$:
+    Do điều kiện $x \in \mathbb{Z}$ và $\pm\sqrt{6} \notin \mathbb{Z}$, nên phương trình không có nghiệm nguyên nào thỏa mãn.
+    Vậy tập hợp $B = \thaydongcham{\emptyset}$ (tập rỗng).
+\end{enumerate}
+}
+
+\paragraph{Bài 1.12}
+Cho $X = \{a; b\}$. Các cách viết sau đúng hay sai? Giải thích kết luận đưa ra.
+\begin{center}
+a) $a \subset X$;\quad b) $\{a\} \subset X$;\quad c) $\emptyset \in X$.
+\end{center}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Cách viết a) là sai, vì $a$ là một phần tử thuộc tập hợp $X$. Để biểu diễn đúng phải viết $a \in X$.
+    \item Cách viết b) là đúng, vì $\{a\}$ là một tập hợp con chứa phần tử $a$ nằm trong $X$.
+    \item Cách viết c) là sai, vì tập rỗng $\emptyset$ là một tập con của tập hợp $X$ ($\emptyset \subset X$), không phải là phần tử của $X$.
+\end{enumerate}
+}
+
+\paragraph{Bài 1.13}
+Cho $A = \{2; 5\}$, $B = \{5; x\}$, $C = \{2; y\}$. Tìm $x, y$ để $A = B = C$.
+\par
+\loigiai{
+\begin{itemize}
+    \item Để $A = B = C$ thì hai tập hợp $B$ và $C$ phải nhận chính xác các phần tử của $A$.
+    \begin{itemize}
+        \item Với tập hợp $B = \{5; x\}$, phần tử còn thiếu là 2 $\Rightarrow x = \thaydongcham{2}$.
+        \item Với tập hợp $C = \{2; y\}$, phần tử còn thiếu là 5 $\Rightarrow y = \thaydongcham{5}$.
+    \end{itemize}
+    Vậy ta tìm được $x = 2$ và $y = 5$.
+\end{itemize}
+}
+
+\paragraph{Bài 1.14}
+Cho $A = \{x \in \mathbb{Z} \mid x < 4\}$; $B = \{x \in \mathbb{Z} \mid (5x - 3x^2)(x^2 + 2x - 3) = 0\}$.
+\begin{itemize}
+    \item[a)] Liệt kê các phần tử của hai tập hợp $A$ và $B$.
+    \item[b)] Hãy xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
+\end{itemize}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Liệt kê phần tử:
+    Tập hợp $A$:
+    \[
+    \begin{aligned}
+        A &= \thaydongcham{\{\dots; -2; -1; 0; 1; 2; 3\}}.
+    \end{aligned}
+    \]
+    Giải phương trình tìm phần tử của tập hợp $B$:
+    \[
+    \begin{aligned}
+        (5x - 3x^2)(x^2 + 2x - 3) = 0 &\Leftrightarrow \left[ \begin{aligned} x(5-3x) &= 0 \\ x^2 + 2x - 3 &= 0 \end{aligned} \right. \\
+                                      & \Leftrightarrow x \in \thaydongcham{\left\{-3; 0; 1; \dfrac{5}{3}\right\}}.
+    \end{aligned}
+    \]
+    Vì $x \in \mathbb{Z}$ nên ta loại giá trị $x = \dfrac{5}{3}$. Vậy $B = \thaydongcham{\{-3; 0; 1\}}$.
+    \item Thực hiện các phép toán tập hợp:
+    \[
+    \begin{aligned}
+        A \cap B &= \thaydongcham{\{-3; 0; 1\}} = B \\
+        A \cup B &= \thaydongcham{\{\dots; -2; -1; 0; 1; 2; 3\}} = A \\
+        A \setminus B &= \thaydongcham{\{\dots; -4; -2; -1; 2; 3\}}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\paragraph{Bài 1.15}
+Hãy xác định các tập hợp sau và biểu diễn chúng trên trục số:
+\begin{itemize}
+    \item[a)] $(-4; 1] \cap [0; 3)$;
+    \item[b)] $(0; 2] \cup (-3; 1]$;
+    \item[c)] $(-2; 1) \cap (-\infty; 1]$;
+    \item[d)] $\mathbb{R} \setminus (-\infty; 3]$.
+\end{itemize}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Giao câu a):
+    \[
+    \begin{aligned}
+        (-4; 1] \cap [0; 3) &= \thaydongcham{[0; 1]}.
+    \end{aligned}
+    \]
+    \item Hợp câu b):
+    \[
+    \begin{aligned}
+        (0; 2] \cup (-3; 1] &= \thaydongcham{(-3; 2]}.
+    \end{aligned}
+    \]
+    \item Giao câu c):
+    \[
+    \begin{aligned}
+        (-2; 1) \cap (-\infty; 1] &= \thaydongcham{(-2; 1)}.
+    \end{aligned}
+    \]
+    \item Hiệu câu d):
+    \[
+    \begin{aligned}
+        \mathbb{R} \setminus (-\infty; 3] &= \thaydongcham{(3; +\infty)}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
+\paragraph{Bài 1.16}
+Để phục vụ cho một hội nghị quốc tế, ban tổ chức huy động 35 người phiên dịch tiếng Anh, 30 người phiên dịch tiếng Pháp, trong đó có 16 người phiên dịch được cả hai thứ tiếng Anh và Pháp. Hãy trả lời các câu hỏi sau:
+\begin{itemize}
+    \item[a)] Ban tổ chức đã huy động bao nhiêu người phiên dịch cho hội nghị đó?
+    \item[b)] Có bao nhiêu người chỉ phiên dịch được tiếng Anh?
+    \item[c)] Có bao nhiêu người chỉ phiên dịch được tiếng Pháp?
+\end{itemize}
+\par
+\loigiai{
+\begin{enumerate}
+    \item Gọi $A$ là tập hợp những người phiên dịch tiếng Anh, $B$ là tập hợp những người phiên dịch tiếng Pháp.
+    Ta có các số liệu: $n(A) = 35$, $n(B) = 30$, $n(A \cap B) = 16$.
+    Số người phiên dịch được huy động:
+    \[
+    \begin{aligned}
+        n(A \cup B) &= n(A) + n(B) - n(A \cap B) \\
+                    &= \thaydongcham{35} + \thaydongcham{30} - \thaydongcham{16} \\
+                    &= \thaydongcham{49}\ \text{người}.
+    \end{aligned}
+    \]
+    \item Số người chỉ phiên dịch được tiếng Anh:
+    \[
+    \begin{aligned}
+        n(A \setminus B) &= n(A) - n(A \cap B) \\
+                         &= \thaydongcham{35} - \thaydongcham{16} \\
+                         &= \thaydongcham{19}\ \text{người}.
+    \end{aligned}
+    \]
+    \item Số người chỉ phiên dịch được tiếng Pháp:
+    \[
+    \begin{aligned}
+        n(B \setminus A) &= n(B) - n(A \cap B) \\
+                         &= \thaydongcham{30} - \thaydongcham{16} \\
+                         &= \thaydongcham{14}\ \text{người}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Khái niệm tập hợp, phần tử thuộc tập hợp, tập rỗng, tập hợp con, hai tập hợp bằng nhau và cách mô tả tập hợp.
+    \item Định nghĩa và ký hiệu về các phép toán giao, hợp, hiệu của hai tập hợp và phần bù của một tập con trong tập lớn hơn.
+    \item Mối quan hệ giữa các tập hợp số tự nhiên, số nguyên, số hữu tỉ, số thực và các tập con thường dùng của số thực (khoảng, đoạn, nửa khoảng).
+\end{itemize}
 \end{emdahoc}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Biểu diễn linh hoạt các tập hợp bằng cách liệt kê phần tử hoặc chỉ ra tính chất đặc trưng.
+    \item Thực hiện thành thạo các phép toán giao, hợp, hiệu trên các khoảng, đoạn, nửa khoảng của tập số thực và biểu diễn chúng chính xác trên trục số.
+    \item Giải quyết tốt các bài toán đếm thực tế (sử dụng biểu đồ Ven) liên quan đến các nhóm đối tượng giao thoa nhau trong đời sống xã hội.
+\end{itemize}
 \end{emcothe}
+
+\begin{emcobiet}
+\paragraph{John Venn và Biểu đồ Ven}
+Khái niệm tập hợp và các phép toán trên tập hợp được mô tả trực quan sinh động nhất thông qua một công cụ đồ họa hình học vô cùng nổi tiếng gọi là Biểu đồ Ven (Venn diagram). Công cụ này được giới thiệu lần đầu tiên vào năm 1880 bởi nhà logic học và triết học người Anh John Venn (1834 – 1923) trong bài báo có tiêu đề "Về sự biểu diễn cơ học và biểu đồ của các mệnh đề và lý luận". Biểu đồ Venn sử dụng các đường cong khép kín (thường là hình tròn hoặc hình elip) nằm trong một hình chữ nhật lớn đại diện cho vũ trụ tập hợp để mô tả các mối quan hệ logic giữa các tập hợp như giao, hợp, hiệu và phần bù. Không chỉ dừng lại ở toán học thuần túy, biểu đồ Venn ngày nay đã trở thành một công cụ tư duy không thể thiếu trong giảng dạy logic, xác suất thống kê, khoa học máy tính và thậm chí cả trong các chiến lược tiếp thị, phân tích dữ liệu kinh doanh của các doanh nghiệp hiện đại.
+\end{emcobiet}
