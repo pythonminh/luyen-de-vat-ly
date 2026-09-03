@@ -42,15 +42,15 @@
       "dang_kinds": {
         "Mệnh đề chứa biến": {
           "TN": 2,
-          "DS": 1,
+          "DS": 2,
           "TLN": 0,
-          "TL": 1
+          "TL": 0
         },
         "Xác định mệnh đề và tính đúng sai": {
           "TN": 107,
-          "DS": 3,
+          "DS": 13,
           "TLN": 3,
-          "TL": 10
+          "TL": 0
         },
         "Mệnh đề với mọi, tồn tại": {
           "TN": 3,
