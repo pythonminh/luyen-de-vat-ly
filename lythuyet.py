@@ -62,6 +62,17 @@ LT_CSS = """
 .lt-split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:16px;align-items:start;margin:12px 0}
 .lt-split>div:last-child{background:#f8fbff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;text-align:center}
 .lt-chuy{margin:10px 0;padding:10px 12px 10px 14px;border-radius:10px;border:1px solid #fcd34d;border-left:5px solid #d97706;background:#fffbeb;font-style:italic;color:#78350f}
+.lt-q{margin:4px 0}
+.lt-opts{display:grid;gap:6px;margin:10px 0 8px}
+.lt-opt{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d7e2ee;border-radius:10px;background:#fff}
+.lt-opt.ok{border-color:#86efac;background:#f0fdf4}
+.lt-let{flex:0 0 1.6em;width:1.6em;height:1.6em;border-radius:999px;background:#e2e8f0;color:#334155;font-weight:800;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.lt-opt.ok .lt-let{background:#16a34a;color:#fff}
+.lt-key{margin-left:auto;font-size:11px;font-weight:800;color:#166534;white-space:nowrap}
+.lt-sol{margin:10px 0 0;padding:8px 10px;border:1px solid #bad5f2;border-radius:10px;background:#f7fbff}
+.lt-sol summary{cursor:pointer;font-weight:800;color:#145bb0}
+.lt-sol div{margin-top:8px}
+.lt-short{margin:8px 0;font-weight:700}
 @media(max-width:800px){.lt-split{grid-template-columns:1fr}}
 </style>
 """
@@ -279,6 +290,62 @@ def _html(chunk: str) -> str:
     return base.html_question(t)
 
 
+def _html_quiz(chunk: str) -> str:
+    """Render \\choice / \\choiceTF / \\shortans / \\loigiai like a bank question."""
+    b = chunk or ""
+    sol = base.solution_of(b)
+    if not (sol or "").strip():
+        m = re.search(
+            r"\\begin\s*\{\s*loigiai\s*\}(.*?)\\end\s*\{\s*loigiai\s*\}",
+            b,
+            flags=re.I | re.S,
+        )
+        if m:
+            sol = m.group(1)
+    opts_html = ""
+    letters = "ABCD"
+    if re.search(r"\\choiceTF\b", b, re.I):
+        rows = []
+        for i, x in enumerate(base.command_args(b, "\\choiceTF")):
+            ok = bool(re.match(r"^\\True\b", x.strip(), re.I))
+            txt = re.sub(r"^\\True\s*", "", x.strip(), flags=re.I)
+            mark = "Đúng" if ok else "Sai"
+            cls = " ok" if ok else ""
+            rows.append(
+                f"<div class='lt-opt{cls}'><b>{i + 1}.</b> {_html(txt)} "
+                f"<span class='lt-key'>{mark}</span></div>"
+            )
+        opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
+        stem = re.split(r"\\choiceTF\b|\\loigiai\b|\\begin\s*\{\s*loigiai", b, 1, flags=re.I)[0]
+    elif re.search(r"\\choice\b", b, re.I):
+        rows = []
+        for i, x in enumerate(base.command_args(b, "\\choice")[:4]):
+            ok = bool(re.match(r"^\\True\b", x.strip(), re.I))
+            txt = re.sub(r"^\\True\s*", "", x.strip(), flags=re.I)
+            let = letters[i] if i < 4 else str(i + 1)
+            cls = " ok" if ok else ""
+            rows.append(
+                f"<div class='lt-opt{cls}'><span class='lt-let'>{let}</span> {_html(txt)}</div>"
+            )
+        opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
+        stem = re.split(r"\\choice\b|\\loigiai\b|\\begin\s*\{\s*loigiai", b, 1, flags=re.I)[0]
+    else:
+        stem = re.split(r"\\shortans\b|\\loigiai\b|\\begin\s*\{\s*loigiai", b, 1, flags=re.I)[0]
+        sm = re.search(r"\\shortans\s*(?:\[[^\]]*\])?\s*", b, re.I)
+        if sm:
+            ans, _ = base.get_braced(b, sm.end())
+            if ans:
+                opts_html = f"<p class='lt-short'><b>Đáp án:</b> {_html(ans)}</p>"
+    stem_html = _html(base.strip_loigiai(stem))
+    sol_html = ""
+    if (sol or "").strip():
+        sol_html = (
+            "<details class='lt-sol' open><summary>Lời giải</summary>"
+            f"<div>{_html(sol)}</div></details>"
+        )
+    return f"<div class='lt-q'>{stem_html}{opts_html}{sol_html}</div>"
+
+
 def preprocess(s: str) -> str:
     s = s.replace("\r\n", "\n")
     s = re.sub(r"\\input\s*\{[^{}]*lythuyet\.tex\}", "", s)
@@ -413,11 +480,22 @@ def _html_or_tokens(chunk: str) -> str:
         chunk,
     )
     out = []
+    mode = ""
     for b in bits:
         if not b:
             continue
+        if b == "@@SAMPLE@@" or b == "@@EX@@":
+            mode = "quiz"
+            out.append(b)
+            continue
+        if b in ("@@/SAMPLE@@", "@@/EX@@"):
+            mode = ""
+            out.append(b)
+            continue
         if b.startswith("@@"):
             out.append(b)
+        elif mode == "quiz":
+            out.append(_html_quiz(b))
         else:
             out.append(_html(b))
     return "".join(out)
