@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, kind_counts_for, kind_tabs_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind
+from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -229,7 +229,7 @@ def member_dang():
                       for k,lab in (('TN','Trắc nghiệm'),('DS','Đúng/Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')) if kc.get(k))
              +"<button type='button' class='btn primary' onclick='applyKinds()'>Áp dụng số câu</button></div>")
     guest = not m
-    tabs=kind_tabs_html(path, dang=dang, current='', counts=kind_counts_for(selected), guest=guest)
+    tabs=lesson_switch_html(path, qs, dang=dang, kind='', guest=guest)
     groups=find_duplicate_groups(selected)
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
@@ -320,7 +320,7 @@ def member_dang():
     if can_manage_bank():
         from admin_rewrite import REWRITE_CLIENT_JS
         rw_js = REWRITE_CLIENT_JS
-    body=("<div class='wrap'><div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div>"+tabs+"<div class='body'>"
+    body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}"
           +form_open+tools+
           f"<div class='questions'>{cards}</div>"
