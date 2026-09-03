@@ -68,7 +68,7 @@ CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 CSS = r"""
 :root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px}
 *{box-sizing:border-box}html{height:100%;scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}body{margin:0;min-height:100dvh;background:var(--bg);color:#19324d;font:14px/1.45 Segoe UI,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}
-a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.whobar{display:none}.fsbtn{white-space:nowrap}.navtoggle{display:none;margin-left:auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.regline{width:100%;text-align:center;font-size:11px;font-weight:600;color:#fde047;padding:0 10px 6px;line-height:1.35;letter-spacing:.01em}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:700px){html{scroll-padding-top:calc(88px + env(safe-area-inset-top,0px))}.brand{font-size:14px;line-height:1.2}.brandbox{flex:1 1 calc(100% - 44px);min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:inline-flex;flex-direction:column;align-items:flex-end;justify-content:center;order:4;margin:0;min-width:0;padding:3px 7px;font-size:10px;line-height:1.2;white-space:nowrap}.clock .clockday,.clock .clocktime{display:block}.clock .clockday::after{content:none}.whobar{display:inline-flex;order:3;flex:1 1 0;max-width:none;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.regline{font-size:10px;padding:0 8px 4px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:2}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:6px 8px;gap:4px}.pitems{flex-wrap:wrap;overflow:visible}.pdang{font-size:11px;font-weight:600;min-width:0}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.subnav{top:calc(88px + env(safe-area-inset-top,0px));margin-bottom:8px}.dangtabs{padding:6px 8px}.dtab{padding:5px 8px;font-size:11px;max-width:min(14rem,62vw)}.kindtabs{padding:5px 6px;gap:3px}.kindtabs .ktab{padding:4px 2px;font-size:10px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
+a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:1500px;margin:auto;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}.brand{font-weight:900;font-size:20px}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:12.2em;text-align:center}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap}.whobar{display:none}.fsbtn{white-space:nowrap}.navtoggle{display:none;margin-left:auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.baimenu{display:inline-flex;align-items:center;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;cursor:pointer;white-space:nowrap}.drawer{position:fixed;inset:0;z-index:2147483602;pointer-events:none}.drawer.open{pointer-events:auto}.drawer-back{position:absolute;inset:0;background:#08142888;opacity:0;transition:opacity .2s}.drawer.open .drawer-back{opacity:1}.drawer-panel{position:absolute;left:0;top:0;bottom:0;width:min(92vw,400px);background:#fff;color:#19324d;box-shadow:8px 0 28px #0004;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}.drawer.open .drawer-panel{transform:none}.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #e5edf5}.drawer-hint{margin:0;padding:8px 12px;font-size:12px;color:#6c7d90}.drawer-tree{overflow:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;flex:1}.drawer-tree details{border-bottom:1px solid #edf2f7}.drawer-tree summary{cursor:pointer;padding:9px 8px;font-weight:800;font-size:14px;list-style:none}.drawer-tree summary::-webkit-details-marker{display:none}.drawer-tree summary::before{content:'▸ ';color:#145bb0}.drawer-tree details[open]>summary::before{content:'▾ '}.drawnest{padding:0 0 6px 10px}.drawbais{display:flex;flex-direction:column;gap:4px;padding:0 0 8px 8px}.drawbai{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #d7e2ee;border-radius:8px;background:#f8fbff;color:#173a5e;font-weight:700;font-size:13px;line-height:1.35}.drawbai span{flex-shrink:0;color:#145bb0;font-size:12px}.drawbai.on{background:#145bb0;color:#fff;border-color:#145bb0}.drawbai.on span{color:#fff}.drawer-lock{overflow:hidden}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:700px){html{scroll-padding-top:calc(88px + env(safe-area-inset-top,0px))}.brand{font-size:14px;line-height:1.2}.brandbox{flex:1 1 calc(100% - 44px);min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:inline-flex;flex-direction:column;align-items:flex-end;justify-content:center;order:4;margin:0;min-width:0;padding:3px 7px;font-size:10px;line-height:1.2;white-space:nowrap}.clock .clockday,.clock .clocktime{display:block}.clock .clockday::after{content:none}.whobar{display:inline-flex;order:3;flex:1 1 0;max-width:none;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.regline{font-size:10px;padding:0 8px 4px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:2}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:6px 8px;gap:4px}.pitems{flex-wrap:wrap;overflow:visible}.pdang{font-size:11px;font-weight:600;min-width:0}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.subnav{top:calc(88px + env(safe-area-inset-top,0px));margin-bottom:8px}.dangtabs{padding:6px 8px}.dtab{padding:5px 8px;font-size:11px;max-width:min(14rem,62vw)}.kindtabs{padding:5px 6px;gap:3px}.kindtabs .ktab{padding:4px 2px;font-size:10px}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
 .wrap{max-width:1500px;margin:auto;padding:12px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.subnav{position:sticky;z-index:40;top:calc(96px + env(safe-area-inset-top,0px));margin:0 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 10px #1b4d8a10}.dangtabs{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;padding:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff7ed;border-bottom:1px solid #fed7aa}.dtab{flex:0 0 auto;max-width:min(18rem,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:8px;padding:6px 10px;font-weight:700;font-size:12px}.dtab.on{background:#c2410c;border-color:#c2410c;color:#fff}.kindtabs{display:flex;flex-wrap:nowrap;gap:4px;align-items:stretch;padding:6px 8px;background:#eef6ff;border-bottom:1px solid var(--line)}.subnav .kindtabs{position:static;top:auto;border-bottom:0;z-index:auto}.kindtabs .ktab{display:inline-flex;flex:1 1 0;min-width:0;align-items:center;justify-content:center;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:5px 4px;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap}.kindtabs .ktab.on{background:var(--blue);border-color:var(--blue);color:#fff}.kindtabs .ktab.off{opacity:.4;cursor:not-allowed;pointer-events:none}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
@@ -240,6 +240,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     top = (
         "<div class='top'><div class='topin'><div class='brandbox'><div class='brand'>📚 Luyện Đề Toán Lý</div>"
         "<div class='sub'>Zalo thầy Minh 0946111107</div></div>"
+        "<button type='button' class='baimenu' id='ldvlBaiBtn' aria-controls='ldvlDrawer' title='Chọn lớp, chương, bài'>📚 Bài</button>"
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         + (f"<span class='whobar'>{who}</span>" if who else "")
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Menu'>☰</button>"
@@ -250,6 +251,11 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<div class='regline'>Đăng ký dùng: liên hệ thầy Minh 0357991010 (Zalo)</div>"
         "</div>"
     )
+    try:
+        cur_path = str(request.args.get("path") or session.get("practice_path") or "").strip()
+    except Exception:
+        cur_path = ""
+    drawer = lesson_drawer_html(member_current() if role in ("member", "admin") else None, cur_path)
     mj = (
         "<script>"
         "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']}},"
@@ -290,6 +296,13 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "document.addEventListener('DOMContentLoaded',function(){ldvlTickClock();setInterval(ldvlTickClock,1000);"
         "var tb=document.getElementById('ldvlNavToggle'),nv=document.getElementById('ldvlNav');"
         "if(tb&&nv){tb.onclick=function(){var on=document.querySelector('.top').classList.toggle('nav-open');tb.setAttribute('aria-expanded',on?'true':'false');tb.textContent=on?'✕':'☰';};}"
+        "var db=document.getElementById('ldvlBaiBtn'),dr=document.getElementById('ldvlDrawer');"
+        "function ldvlDrawerOpen(on){if(!dr)return;dr.classList.toggle('open',!!on);dr.setAttribute('aria-hidden',on?'false':'true');document.body.classList.toggle('drawer-lock',!!on);}"
+        "if(db&&dr){db.onclick=function(){ldvlDrawerOpen(!dr.classList.contains('open'));};"
+        "var bk=document.getElementById('ldvlDrawerBack'),cl=document.getElementById('ldvlDrawerClose');"
+        "if(bk)bk.onclick=function(){ldvlDrawerOpen(false)};if(cl)cl.onclick=function(){ldvlDrawerOpen(false)};"
+        "document.addEventListener('keydown',function(e){if(e.key==='Escape')ldvlDrawerOpen(false)});"
+        "}"
         "if(ldvlPwaStandalone()){var b=document.getElementById('ldvlInstall');if(b)b.style.display='none';}"
         "if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});}"
         "});"
@@ -314,7 +327,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         f"<title>{html.escape(title)}</title><style>{CSS}</style>{mj}"
     )
     cls = " class='cinema'" if cinema else ""
-    chrome = "" if cinema else top
+    chrome = "" if cinema else (top + drawer)
     extra = "" if cinema else (pwa_tip + GEMINI_CLIENT_JS)
     return Response(f"<!doctype html><html lang='vi'><head>{head}</head><body{cls}>{chrome}{body}{extra}</body></html>", mimetype='text/html')
 
@@ -705,6 +718,86 @@ def chapter_nav_html(path):
         "<style>.chaptree{margin-bottom:14px}.bairow{display:flex;flex-wrap:wrap;gap:8px}"
         ".baitab{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:8px 10px;border:1px solid #c9d8e8;border-radius:9px;background:#fff;text-decoration:none;color:#173a5e;font-weight:700;font-size:13px;line-height:1.35}"
         ".baitab.on{background:#145bb0;color:#fff;border-color:#145bb0}.baitab.on .tag{background:#fff;color:#145bb0}</style>"
+    )
+
+
+def catalog_items_for(m=None):
+    raw = [
+        x
+        for x in (index_data().get("lessons") or [])
+        if isinstance(x, dict) and str(x.get("path") or x.get("file") or "").startswith("ngan-hang/")
+    ]
+    items = merge_catalog_lessons(raw)
+    if m:
+        items = [x for x in items if can_view(m, str(x.get("path") or x.get("file") or ""))]
+    else:
+        items = [x for x in items if str(lesson_level(str(x.get("path") or x.get("file") or ""))).upper() != "VIP"]
+    return items
+
+
+def lesson_drawer_html(m=None, current_path=""):
+    items = catalog_items_for(m)
+    cur_folder = lesson_folder(current_path) if current_path else ""
+    tree = {}
+    for x in items:
+        mon = str(x.get("Mon") or "Khác").strip() or "Khác"
+        lop = str(x.get("Lop") or "?").strip() or "?"
+        chuong = str(x.get("Chuong") or "Chưa xác định").strip() or "Chưa xác định"
+        tree.setdefault(mon, {}).setdefault(lop, {}).setdefault(chuong, []).append(x)
+
+    def lop_key(s):
+        return (0, int(s)) if str(s).isdigit() else (1, str(s))
+
+    blocks = []
+    for mon in sorted(tree):
+        lop_bits = []
+        open_mon = False
+        for lop in sorted(tree[mon], key=lop_key):
+            chuong_bits = []
+            open_lop = False
+            for chuong in sorted(tree[mon][lop]):
+                bais = []
+                open_ch = False
+                arr = sorted(tree[mon][lop][chuong], key=lambda z: str(z.get("BaiHoc") or z.get("De") or ""))
+                for x in arr:
+                    p = str(x.get("path") or x.get("file") or "")
+                    on = bool(cur_folder) and lesson_folder(p) == cur_folder
+                    if on:
+                        open_ch = True
+                    n = int(x.get("questions") or x.get("count") or 0)
+                    title = html.escape(str(x.get("BaiHoc") or x.get("De") or "Bài"))
+                    href = urllib.parse.quote(p, safe="")
+                    bais.append(
+                        f"<a class='drawbai{' on' if on else ''}' href='/member/select?path={href}'>{title}<span>{n}</span></a>"
+                    )
+                if open_ch:
+                    open_lop = True
+                chuong_bits.append(
+                    f"<details class='drawchuong'{' open' if open_ch else ''}>"
+                    f"<summary>{html.escape(chuong)}</summary>"
+                    f"<div class='drawbais'>{''.join(bais)}</div></details>"
+                )
+            if open_lop:
+                open_mon = True
+            lop_bits.append(
+                f"<details class='drawlop'{' open' if open_lop else ''}>"
+                f"<summary>Lớp {html.escape(lop)}</summary>"
+                f"<div class='drawnest'>{''.join(chuong_bits)}</div></details>"
+            )
+        blocks.append(
+            f"<details class='drawmon'{' open' if open_mon or len(tree)==1 else ''}>"
+            f"<summary>{html.escape(mon)}</summary>"
+            f"<div class='drawnest'>{''.join(lop_bits)}</div></details>"
+        )
+    inner = "".join(blocks) or "<p class='muted' style='padding:12px'>Chưa có bài.</p>"
+    return (
+        "<div id='ldvlDrawer' class='drawer' aria-hidden='true'>"
+        "<div class='drawer-back' id='ldvlDrawerBack'></div>"
+        "<aside class='drawer-panel' role='dialog' aria-label='Chọn bài'>"
+        "<div class='drawer-head'><b>📚 Chọn bài</b>"
+        "<button type='button' class='btn' id='ldvlDrawerClose'>✕</button></div>"
+        "<p class='drawer-hint'>Bấm lớp → chương → bài. Bài đang làm được tô xanh.</p>"
+        f"<div class='drawer-tree'>{inner}</div></aside></div>"
     )
 
 
