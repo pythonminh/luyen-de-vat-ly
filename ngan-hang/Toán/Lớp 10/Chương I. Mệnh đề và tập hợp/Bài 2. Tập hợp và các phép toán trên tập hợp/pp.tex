@@ -67,43 +67,121 @@ Kết luận: Có đúng $5$ học sinh không thích môn học nào.}{\centeri
 }
 
 \subsubsection{Dạng 2. Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+
 \begin{phuongphap}
 \begin{enumerate}
 \item Giao của hai tập hợp $A \cap B$ gồm các phần tử vừa thuộc $A$ vừa thuộc $B$.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.85]
+% Tập A
+\fill[blue!20] (-1.4,0) circle (1.5);
+% Tập B
+\fill[red!20] (1.4,0) circle (1.5);
+% Phần giao
+\begin{scope}
+\clip (-1.4,0) circle (1.5);
+\fill[green!45] (1.4,0) circle (1.5);
+\end{scope}
+\draw (-1.4,0) circle (1.5);
+\draw (1.4,0) circle (1.5);
+\node at (-2.15,0) {$A$};
+\node at (2.15,0) {$B$};
+\node at (0,0) {$A\cap B$};
+\end{tikzpicture}
+\end{center}
+
 \item Hợp của hai tập hợp $A \cup B$ gồm các phần tử thuộc ít nhất một trong hai tập hợp $A$ hoặc $B$.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.85]
+\fill[blue!25] (-1.4,0) circle (1.5);
+\fill[red!25] (1.4,0) circle (1.5);
+% Tô toàn bộ phần hợp
+\draw[very thick] (-1.4,0) circle (1.5);
+\draw[very thick] (1.4,0) circle (1.5);
+\node at (-2.15,0) {$A$};
+\node at (2.15,0) {$B$};
+\node at (0,0) {$A\cup B$};
+\end{tikzpicture}
+\end{center}
+
 \item Hiệu của hai tập hợp $A \setminus B$ gồm các phần tử thuộc $A$ nhưng không thuộc $B$.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.85]
+% Chỉ tô phần A không thuộc B
+\fill[green!45] (-1.4,0) circle (1.5);
+\begin{scope}
+\clip (-1.4,0) circle (1.5);
+\fill[white] (1.4,0) circle (1.5);
+\end{scope}
+\draw (-1.4,0) circle (1.5);
+\draw (1.4,0) circle (1.5);
+\node at (-2.15,0) {$A$};
+\node at (2.15,0) {$B$};
+\node at (-1.25,0) {$A\setminus B$};
+\end{tikzpicture}
+\end{center}
+
 \item Phần bù $C_E A$ của tập $A$ trong tập $E$ (với $A \subset E$) gồm các phần tử thuộc $E$ nhưng không thuộc $A$.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.85]
+% Miền E
+\fill[blue!15] (-2.4,-1.7) rectangle (2.4,1.7);
+% Tập A
+\fill[white] (0,0) circle (1.05);
+\draw (-2.4,-1.7) rectangle (2.4,1.7);
+\draw (0,0) circle (1.05);
+\node at (2.05,1.35) {$E$};
+\node at (0,0) {$A$};
+\node at (1.45,-0.85) {$C_EA$};
+\end{tikzpicture}
+\end{center}
+
 \end{enumerate}
 \end{phuongphap}
 
 \begin{vidumau}
-Cho hai tập hợp $A = \{1; 2; 3; 4; 5\}$ và $B = \{3; 4; 5; 6; 7\}$. Xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
+Cho hai tập hợp $A = {1; 2; 3; 4; 5}$ và $B = {3; 4; 5; 6; 7}$. Xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
 \end{vidumau}\par
+
 \loigiai{
 \begin{enumerate}
 \item Xác định tập hợp giao $A \cap B$:
-Các phần tử xuất hiện ở cả hai tập hợp $A$ và $B$ là $3, 4, 5$. Do đó:
-\[
+
+Các phần tử xuất hiện ở cả hai tập hợp $A$ và $B$ là $3,4,5$. Do đó:
+
+$$
 \begin{aligned}
-A \cap B &= \{3; 4; 5\}.
+A \cap B &= \{3;4;5\}.
 \end{aligned}
-\]
+$$
+
 \item Xác định tập hợp hợp $A \cup B$:
+
 Gộp tất cả các phần tử của cả hai tập hợp $A$ và $B$ lại (mỗi phần tử chỉ liệt kê một lần):
-\[
+
+$$
 \begin{aligned}
-A \cup B &= \{1; 2; 3; 4; 5; 6; 7\}.
+A \cup B &= \{1;2;3;4;5;6;7\}.
 \end{aligned}
-\]
+$$
+
 \item Xác định tập hợp hiệu $A \setminus B$:
-Các phần tử nằm trong tập hợp $A$ nhưng không nằm trong tập hợp $B$ là $1, 2$. Do đó:
-\[
+
+Các phần tử nằm trong tập hợp $A$ nhưng không nằm trong tập hợp $B$ là $1,2$. Do đó:
+
+$$
 \begin{aligned}
-A \setminus B &= \{1; 2\}.
+A \setminus B &= \{1;2\}.
 \end{aligned}
-\]
+$$
+
 \end{enumerate}
 }
+
 
 \subsubsection{Dạng 3. Tập hợp bằng nhau, tập rỗng và số tập con}
 \begin{phuongphap}
