@@ -1,20 +1,116 @@
-% Môn: Toán
-% Lớp: 10
-% Chương: Chương I. Mệnh đề và tập hợp
-% Bài: Bài 1. Mệnh đề
-% Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Lý thuyết}
 \subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
+
 \begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
+\begin{itemize}
+	\item \textbf{Mệnh đề:} Mệnh đề là một câu khẳng định có tính \textbf{đúng hoặc sai}. Mỗi mệnh đề chỉ nhận một trong hai giá trị chân lí: \textbf{đúng} hoặc \textbf{sai}.
+	
+	\item \textbf{Mệnh đề chứa biến:} Là câu khẳng định mà tính đúng, sai của nó còn phụ thuộc vào giá trị của biến. Khi cho biến nhận một giá trị cụ thể, ta được một mệnh đề.
+	
+	\item \textbf{Mệnh đề phủ định:} Phủ định của mệnh đề $P$ là mệnh đề ``không phải $P$'', kí hiệu là $\overline{P}$.
+	\begin{itemize}
+		\item Nếu $P$ đúng thì $\overline{P}$ sai.
+		\item Nếu $P$ sai thì $\overline{P}$ đúng.
+	\end{itemize}
+	
+	\item \textbf{Mệnh đề kéo theo:} Với hai mệnh đề $P$ và $Q$, mệnh đề ``Nếu $P$ thì $Q$'' được gọi là mệnh đề kéo theo, kí hiệu $P\Rightarrow Q$.
+	\begin{itemize}
+		\item $P$ được gọi là \textbf{giả thiết}.
+		\item $Q$ được gọi là \textbf{kết luận}.
+		\item Mệnh đề $P\Rightarrow Q$ chỉ \textbf{sai} khi $P$ đúng và $Q$ sai.
+	\end{itemize}
+	
+	\item \textbf{Mệnh đề đảo:} Mệnh đề đảo của $P\Rightarrow Q$ là $Q\Rightarrow P$.
+	
+	\item \textbf{Hai mệnh đề tương đương:} Hai mệnh đề $P$ và $Q$ tương đương nếu cả hai mệnh đề $P\Rightarrow Q$ và $Q\Rightarrow P$ đều đúng. Kí hiệu:
+	\[
+	P\Leftrightarrow Q.
+	\]
+	Đọc là ``$P$ tương đương $Q$'' hoặc ``$P$ khi và chỉ khi $Q$''.
+	
+	\item \textbf{Điều kiện cần, điều kiện đủ:}
+	\begin{itemize}
+		\item Nếu $P\Rightarrow Q$ thì $P$ là \textbf{điều kiện đủ} để có $Q$; $Q$ là \textbf{điều kiện cần} để có $P$.
+		\item Nếu $P\Leftrightarrow Q$ thì $P$ là điều kiện cần và đủ để có $Q$, và ngược lại.
+	\end{itemize}
+	
+	\item \textbf{Mệnh đề chứa kí hiệu $\forall$:} 
+	\[
+	\forall x\in X,\ P(x)
+	\]
+	nghĩa là ``Với mọi $x$ thuộc $X$, $P(x)$ đúng''.
+	
+	\item \textbf{Mệnh đề chứa kí hiệu $\exists$:}
+	\[
+	\exists x\in X,\ P(x)
+	\]
+	nghĩa là ``Tồn tại ít nhất một $x$ thuộc $X$ sao cho $P(x)$ đúng''.
+	
+	\item \textbf{Phủ định của mệnh đề chứa lượng từ:}
+	\[
+	\overline{\left(\forall x\in X,\ P(x)\right)}
+	\Leftrightarrow
+	\exists x\in X,\ \overline{P(x)},
+	\]
+	\[
+	\overline{\left(\exists x\in X,\ P(x)\right)}
+	\Leftrightarrow
+	\forall x\in X,\ \overline{P(x)}.
+	\]
+\end{itemize}
 \end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+	\item Nhận biết được một câu có phải là mệnh đề hay không.
+	\item Xác định được giá trị chân lí của một mệnh đề.
+	\item Nhận biết và phát biểu được mệnh đề chứa biến.
+	\item Viết được mệnh đề phủ định của một mệnh đề.
+	\item Nhận biết mệnh đề kéo theo, mệnh đề đảo và mệnh đề tương đương.
+	\item Xác định được giả thiết, kết luận trong mệnh đề dạng $P\Rightarrow Q$.
+	\item Nhận biết và sử dụng đúng các kí hiệu $\forall$, $\exists$.
+\end{itemize}
 \end{emdahoc}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+	\item Khi xét một câu có phải là mệnh đề hay không, cần kiểm tra xem câu đó có \textbf{khẳng định một điều gì đó} và có xác định được \textbf{đúng hoặc sai} hay không.
+	
+	\item Với mệnh đề phủ định, không chỉ thêm từ ``không'' một cách máy móc mà phải phủ định đúng nội dung của mệnh đề.
+	
+	\item Với bất đẳng thức:
+	\[
+	\overline{(a>b)}\Leftrightarrow a\le b,\qquad
+	\overline{(a\ge b)}\Leftrightarrow a<b.
+	\]
+	
+	\item Với mệnh đề dạng $P\Rightarrow Q$, cần nhớ:
+	\[
+	P\Rightarrow Q\text{ chỉ sai khi }P\text{ đúng và }Q\text{ sai}.
+	\]
+	
+	\item Khi gặp ``\textbf{mọi}'', ``\textbf{tất cả}'', thường sử dụng lượng từ $\forall$; khi gặp ``\textbf{tồn tại}'', ``\textbf{có ít nhất một}'', sử dụng lượng từ $\exists$.
+	
+	\item Muốn chứng minh mệnh đề
+	\[
+	\forall x\in X,\ P(x)
+	\]
+	sai, chỉ cần tìm \textbf{một} giá trị $x\in X$ sao cho $P(x)$ sai.
+	
+	\item Muốn chứng minh mệnh đề
+	\[
+	\exists x\in X,\ P(x)
+	\]
+	đúng, chỉ cần tìm \textbf{một} giá trị $x\in X$ thỏa mãn $P(x)$.
+	
+	\item Phân biệt rõ:
+	\[
+	P\Rightarrow Q
+	\quad\text{và}\quad
+	Q\Rightarrow P.
+	\]
+	Hai mệnh đề này có thể có giá trị chân lí khác nhau.
+\end{itemize}
 \end{emcothe}
