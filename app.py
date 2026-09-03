@@ -872,9 +872,31 @@ def admin_tex_select_html(path):
     )
 
 
+def theory_catalog_html(path, guest=False):
+    """Nút / dòng Lý thuyết trên mục lục bài (khi có lt.tex)."""
+    try:
+        import lythuyet as _lt
+        if not _lt.theory_exists(path):
+            return "", ""
+    except Exception:
+        return "", ""
+    href = "/member/ly-thuyet?path=" + urllib.parse.quote(str(path or ""), safe="")
+    if guest:
+        href = login_url(href)
+    safe = html.escape(href, quote=True)
+    row = (
+        f"<a class='dangrow danglink ltrow' href='{safe}'>"
+        f"<span class='dangname'>📖 Lý thuyết</span>"
+        f"<span class='dangkinds'><span class='kind ktotal'>Đọc</span></span></a>"
+    )
+    btn = f"<a class='btn ltbtn' href='{safe}'>📖 Lý thuyết</a>"
+    return row, btn
+
+
 def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
     """Một chương: danh sách bài xổ dạng, không tách thẻ theo file."""
     bits = []
+    guest = not member_current()
     for x in sorted(arr, key=lambda z: str(z.get("BaiHoc") or z.get("De") or "")):
         path = str(x.get("path") or x.get("file") or "")
         title = str(x.get("BaiHoc") or x.get("De") or path.rsplit("/", 1)[-1])
@@ -882,9 +904,10 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
         href = urllib.parse.quote(path, safe="")
         dangs = x.get("dang") or {}
         kinds = x.get("dang_kinds") or {}
-        dh = ""
+        lt_row, lt_btn = theory_catalog_html(path, guest=guest)
+        dh = lt_row
         if dang_link:
-            dh = "".join(
+            dh += "".join(
                 dang_link_html(path, k, v, kinds.get(str(k)), n=i)
                 for i, (k, v) in enumerate(
                     ((k, v) for k, v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))),
@@ -896,7 +919,7 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
             f"<details><summary><b>{html.escape(title)}</b> <span class='tag'>{cnt} câu</span></summary>"
             f"<div class='dang'><b>📌 Dạng trong bài này</b>{dh or '<div class=muted>Chưa có dạng</div>'}</div>"
             "</details>"
-            f"<a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div></div>"
+            f"<div class='baiacc-btns'>{lt_btn}<a class='btn primary' href='/member/select?path={href}'>Mở bài</a></div></div></div>"
         )
     return (
         f"<section class='chapterbox' style='margin-top:10px'><div class='titlebar'>{html.escape(str(mon))} · Lớp {html.escape(str(lop))} · {html.escape(str(chuong))}</div>"
@@ -904,7 +927,9 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
         + "".join(bits)
         + "</div></section>"
         "<style>.baiacc-top{display:flex;gap:8px;align-items:flex-start}.baiacc-top details{flex:1;min-width:0}"
-        ".baiacc-top summary{cursor:pointer;padding:8px 4px}.baiacc-top .btn{flex:0 0 auto;margin-top:6px}</style>"
+        ".baiacc-top summary{cursor:pointer;padding:8px 4px}.baiacc-btns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;margin-top:6px}"
+        ".ltrow{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:8px 10px;margin:8px 0 6px}"
+        ".ltrow .dangname{font-weight:700;color:#5b21b6}.ltbtn{background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6}</style>"
     )
 
 

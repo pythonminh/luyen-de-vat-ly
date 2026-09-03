@@ -15,21 +15,49 @@ ROOT = Path(base.ROOT)
 LT_CSS = """
 <style>
 .ltpage{max-width:none;width:100%}
-.lttoc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.lttoc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
 .lttoc a{border:1px solid #c9d8e8;background:#fff;color:#173a5e;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:400}
 .lttoc a.on{background:#145bb0;color:#fff;border-color:#145bb0}
-.ltsec{margin:0 0 18px;padding:12px 14px;border:1px solid #d7e2ee;border-radius:12px;background:#fff}
-.ltsec h2{margin:0 0 10px;font-size:18px;font-weight:700;color:#145bb0}
-.ltsec h3{margin:14px 0 8px;font-size:15px;font-weight:600}
-.ltsec h4{margin:12px 0 6px;font-size:14px;font-weight:600}
-.ltbox{margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid #d7e2ee}
-.ltbox.hd{background:#fff7ed;border-color:#fdba74}
-.ltbox.know{background:#f4f9ff;border-color:#b9d5ef}
-.ltbox.fun{background:#f5f3ff;border-color:#c4b5fd}
-.ltbox.sum{background:#f0fdf4;border-color:#86efac}
-.ltbox .k{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#64748b;margin-bottom:6px;font-weight:600}
-.lt-split{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:14px;align-items:start;margin:10px 0}
-.lt-chuy{margin:8px 0;padding:8px 10px;border-left:4px solid #f59e0b;background:#fffbeb;font-style:italic}
+.ltsec{margin:0 0 18px;padding:14px 16px 16px;border:1px solid #d7e2ee;border-radius:14px;background:#fff}
+.ltsec h2{margin:0 0 12px;font-size:18px;font-weight:700;color:#145bb0}
+.ltsec h3{margin:16px 0 8px;font-size:15px;font-weight:700;color:#0f3f73}
+.ltsec h4{margin:14px 0 6px;font-size:14px;font-weight:700;color:#334155}
+.ltbox{margin:14px 0;padding:0;overflow:hidden;border-radius:14px;border:1px solid #d7e2ee;background:#fff;box-shadow:0 1px 2px #0f172a0c,0 10px 28px -18px #0f172a33}
+.ltbox .k{display:flex;align-items:center;gap:8px;margin:0;padding:9px 14px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;line-height:1.2}
+.ltbox .k:before{content:'';flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:center/14px 14px no-repeat #fff;box-shadow:inset 0 0 0 1px #0001}
+.ltbox-body{padding:10px 16px 14px;line-height:1.62;color:#1e293b}
+.ltbox-body>:first-child{margin-top:0}
+.ltbox-body>:last-child{margin-bottom:0}
+.ltbox-body ul,.ltbox-body ol{margin:6px 0 4px;padding-left:1.25em}
+.ltbox-body li{margin:4px 0}
+.lt-hd-title{margin:0 0 8px;font-size:15px;font-weight:700;color:#9a3412}
+.ltbox.hd{background:#fff8f1;border-color:#fdba74;border-left:5px solid #ea580c}
+.ltbox.hd .k{background:#ffedd5;color:#9a3412}
+.ltbox.hd .k:before{background-color:#fff;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ea580c' stroke-width='2.2' stroke-linecap='round'><path d='M4 19h4l10-10-4-4L4 15v4z'/><path d='M13 6l4 4'/></svg>")}
+.ltbox.know{background:#f4f9ff;border-color:#93c5fd;border-left:5px solid #2563eb}
+.ltbox.know .k{background:#dbeafe;color:#1e40af}
+.ltbox.know .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.2' stroke-linecap='round'><path d='M4 5h10a3 3 0 013 3v11H7a3 3 0 00-3 3V5z'/><path d='M20 19V8a3 3 0 00-3-3'/></svg>")}
+.ltbox.fun{background:#f7f4ff;border-color:#c4b5fd;border-left:5px solid #7c3aed}
+.ltbox.fun .k{background:#ede9fe;color:#5b21b6}
+.ltbox.fun .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c3aed' stroke-width='2.2' stroke-linecap='round'><path d='M9 18h6'/><path d='M10 21h4'/><path d='M12 3a6 6 0 00-3.5 10.8c.6.5 1 1.2 1.1 2.2h4.8c.1-1 .5-1.7 1.1-2.2A6 6 0 0012 3z'/></svg>")}
+.ltbox.learned{background:#f3fdf6;border-color:#86efac;border-left:5px solid #16a34a}
+.ltbox.learned .k{background:#dcfce7;color:#166534}
+.ltbox.learned .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2.4' stroke-linecap='round'><path d='M5 12.5l4.2 4.2L19 7.5'/></svg>")}
+.ltbox.can{background:#f0fbfd;border-color:#67e8f9;border-left:5px solid #0891b2}
+.ltbox.can .k{background:#cffafe;color:#155e75}
+.ltbox.can .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230891b2' stroke-width='2.2' stroke-linecap='round'><circle cx='12' cy='12' r='8'/><circle cx='12' cy='12' r='3'/><path d='M12 4v2M12 18v2M4 12h2M18 12h2'/></svg>")}
+.ltbox.note{background:#fffbeb;border-color:#fcd34d;border-left:5px solid #d97706}
+.ltbox.note .k{background:#fef3c7;color:#92400e}
+.ltbox.note .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2.2' stroke-linecap='round'><path d='M12 9v4'/><path d='M12 17h.01'/><path d='M12 4l9 16H3L12 4z'/></svg>")}
+.ltbox.example{background:#f8fafc;border-color:#cbd5e1;border-left:5px solid #475569}
+.ltbox.example .k{background:#e2e8f0;color:#334155}
+.ltbox.example .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.2' stroke-linecap='round'><circle cx='12' cy='12' r='8'/><path d='M12 8v5'/><path d='M12 16h.01'/></svg>")}
+.ltbox.ans{background:#f8fafc;border-color:#cbd5e1;border-left:5px solid #64748b}
+.ltbox.ans .k{background:#e2e8f0;color:#334155}
+.ltbox.ans .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round'><path d='M4 19V7a2 2 0 012-2h9l5 5v9a2 2 0 01-2 2H6a2 2 0 01-2-2z'/><path d='M15 5v4h4'/></svg>")}
+.lt-split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:16px;align-items:start;margin:12px 0}
+.lt-split>div:last-child{background:#f8fbff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;text-align:center}
+.lt-chuy{margin:10px 0;padding:10px 12px 10px 14px;border-radius:10px;border:1px solid #fcd34d;border-left:5px solid #d97706;background:#fffbeb;font-style:italic;color:#78350f}
 @media(max-width:800px){.lt-split{grid-template-columns:1fr}}
 </style>
 """
@@ -155,7 +183,8 @@ def _replace_env(s: str, name: str, wrap, titled=False):
 
 def _html(chunk: str) -> str:
     t = chunk or ""
-    t = re.sub(r"%[^\n]*", "", t)
+    t = re.sub(r"(?<!\\)%[^\n]*", "", t)
+    t = t.replace(r"\%", "%")
     t = re.sub(r"\\Blythuyet\b", "", t)
     t = re.sub(r"\\captionof\s*\{figure\}\s*\{([^{}]*)\}", r"\n\\textbf{Hình: \1}\n", t)
     t = re.sub(r"\\label\s*\{[^{}]*\}", "", t)
@@ -200,7 +229,10 @@ def _flush_tokens(s: str) -> str:
             if b < 0:
                 break
             inner = s[a + len(tok_open) : b]
-            box = f"<div class='ltbox {cls}'><span class='k'>{html.escape(label)}</span>{inner}</div>"
+            box = (
+                f"<div class='ltbox {cls}'><div class='k'>{html.escape(label)}</div>"
+                f"<div class='ltbox-body'>{inner}</div></div>"
+            )
             s = s[:a] + box + s[b + len(tok_close) :]
         return s
 
@@ -227,15 +259,18 @@ def _flush_tokens(s: str) -> str:
             break
         title = s[a + 5 : mid]
         body = s[mid + 2 : e]
-        box = f"<div class='ltbox hd'><span class='k'>Hoạt động</span><b>{html.escape(title)}</b>{body}</div>"
+        box = (
+            f"<div class='ltbox hd'><div class='k'>Hoạt động</div>"
+            f"<div class='ltbox-body'><div class='lt-hd-title'>{html.escape(title)}</div>{body}</div></div>"
+        )
         s = s[:a] + box + s[e + 7 :]
     s = split_box("@@FUN@@", "@@/FUN@@", "fun", "Em có biết")
-    s = split_box("@@SUM1@@", "@@/SUM1@@", "sum", "Em đã học")
-    s = split_box("@@SUM2@@", "@@/SUM2@@", "sum", "Em có thể")
+    s = split_box("@@SUM1@@", "@@/SUM1@@", "learned", "Em đã học")
+    s = split_box("@@SUM2@@", "@@/SUM2@@", "can", "Em có thể")
     s = split_box("@@KNOW@@", "@@/KNOW@@", "know", "Kiến thức cốt lõi")
-    s = split_box("@@NOTE@@", "@@/NOTE@@", "hd", "Lưu ý")
-    s = split_box("@@EX@@", "@@/EX@@", "know", "Ví dụ")
-    s = split_box("@@ANS@@", "@@/ANS@@", "sum", "Trả lời")
+    s = split_box("@@NOTE@@", "@@/NOTE@@", "note", "Lưu ý")
+    s = split_box("@@EX@@", "@@/EX@@", "example", "Ví dụ")
+    s = split_box("@@ANS@@", "@@/ANS@@", "ans", "Trả lời")
     return s
 
 
