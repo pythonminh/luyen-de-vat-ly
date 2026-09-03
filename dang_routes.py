@@ -145,7 +145,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     elif kind=='DS':
         st=q.get('statements') or []
         bits=['<div class="tf-colhead"><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
-        labs='abcd'
+        labs='ABCD'
         for i,o in enumerate(st):
             txt=html_question(o.get('text','') if isinstance(o,dict) else o)
             yes=bool((o or {}).get('correct')) if isinstance(o,dict) else False
@@ -153,7 +153,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             cls=' ok' if show_solution and yes else (' noans' if show_solution else '')
             y_on=" on" if show_solution and yes else ""
             n_on=" on" if show_solution and not yes else ""
-            bits.append(f"<div class='tf{cls}'><div class='tf-text'><b>{lab})</b> {txt}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>")
+            bits.append(f"<div class='tf{cls}'><div class='tf-text'>{lab}) {txt}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>")
         options='<div class="tfgrid">'+''.join(bits)+'</div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"

@@ -360,16 +360,24 @@ function draw(q, showSol, pos, total, live){
   let h='<div class="qtext"><b>Câu '+(pos+1)+'/'+total+'.</b> '+q.text+'</div>';
   if(checked && live.ok!=null){
     const labs='ABCD';
-    let head=live.ok?'✅ Thầy đúng':'❌ Thầy sai';
+    let head=live.ok?'Đúng':'Sai';
+    function row(label, items){
+      const n=Math.max(items.length,1);
+      const cells=items.map(function(it){
+        return '<span class="keycell '+(it.cls||'')+'"><span class="kcirc">'+it.letter+'</span>'+(it.mark?(' '+it.mark):'')+'</span>';
+      }).join('');
+      return '<div class="keyrow" style="grid-template-columns:7.2em repeat('+n+',minmax(3.2em,1fr))"><span class="keylab">'+label+'</span>'+cells+'</div>';
+    }
     let extra='';
     if(q.kind==='TN'){
-      const key=(q.options||[]).map(function(o,i){return o.correct?labs.charAt(i):''}).filter(Boolean).join(', ')||'—';
-      const pick=live.tn==null?'—':labs.charAt(live.tn);
-      extra='<div class="keyline">ĐÁP ÁN ĐÚNG: '+key+'</div><div class="keyline">THẦY CHỌN: '+pick+'</div>';
+      const key=(q.options||[]).map(function(o,i){return o.correct?labs.charAt(i):''}).filter(Boolean).join('')||'?';
+      const pick=live.tn==null?'?':labs.charAt(live.tn);
+      extra='<div class="keygrid">'+row('Đáp án đúng',[{letter:key,mark:'',cls:'ok'}])+row('Thầy chọn',[{letter:pick,mark:'',cls:pick===key?'ok':'bad'}])+'</div>';
     }else if(q.kind==='DS'){
-      const key=(q.statements||[]).map(function(s,i){return labs.charAt(i)+'-'+(s.correct?'Đ':'S')}).join(', ');
-      const pick=(q.statements||[]).map(function(s,i){const p=(live.ds||[])[i];return labs.charAt(i)+'-'+(p===true?'Đ':(p===false?'S':'?'))}).join(', ');
-      extra='<div class="keyline">ĐÁP ÁN ĐÚNG: '+key+'</div><div class="keyline">THẦY CHỌN: '+pick+'</div>';
+      const keys=(q.statements||[]).map(function(s){return s.correct?'Đ':'S'});
+      const ans=keys.map(function(m,i){return {letter:labs.charAt(i),mark:m,cls:'ok'}});
+      const you=keys.map(function(m,i){const p=(live.ds||[])[i];const mk=p===true?'Đ':(p===false?'S':'?');return {letter:labs.charAt(i),mark:mk,cls:mk===m?'ok':'bad'}});
+      extra='<div class="keygrid">'+row('Đáp án đúng',ans)+row('Thầy chọn',you)+'</div>';
     }
     h+='<div class="result '+(live.ok?'good':'bad')+'">'+head+extra+'</div>';
   }
@@ -393,8 +401,8 @@ function draw(q, showSol, pos, total, live){
     let cls='tf';
     if(revealed&&s.correct) cls+=' correct';
     else if(checked&&has&&pick!==s.correct) cls+=' wrong';
-    const lab='abcd'.charAt(i)||(i+1);
-    h+='<div class="'+cls+'"><div class="tf-text"><b>'+lab+')</b> '+s.text+'</div>'
+    const lab='ABCD'.charAt(i)||(i+1);
+    h+='<div class="'+cls+'"><div class="tf-text">'+lab+') '+s.text+'</div>'
       +'<span class="tf-box yes'+(pick===true?' pick':'')+(revealed&&s.correct?' on':'')+'"></span>'
       +'<span class="tf-box no'+(pick===false?' pick':'')+(revealed&&!s.correct?' on':'')+'"></span></div>';
   });
