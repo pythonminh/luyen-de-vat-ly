@@ -63,18 +63,41 @@ LT_CSS = """
 """
 
 
-def theory_tex_path(de_path: str) -> str:
+TRACKS = {
+    "lt": {
+        "file": "lt.tex",
+        "route": "/member/ly-thuyet",
+        "label": "Lý thuyết",
+        "icon": "📖",
+    },
+    "pp": {
+        "file": "pp.tex",
+        "route": "/member/phuong-phap",
+        "label": "Dạng mẫu",
+        "icon": "✏️",
+    },
+}
+
+
+def companion_path(de_path: str, kind: str = "lt") -> str:
+    spec = TRACKS.get(kind) or TRACKS["lt"]
     p = str(de_path or "").replace("\\", "/").strip()
-    if p.lower().endswith("/lt.tex"):
+    if p.lower().endswith("/" + spec["file"]):
         return p
     folder = base.lesson_folder(p)
-    return folder.rstrip("/") + "/lt.tex"
+    return folder.rstrip("/") + "/" + spec["file"]
+
+
+def companion_exists(de_path: str, kind: str = "lt") -> bool:
+    return (ROOT / companion_path(de_path, kind)).is_file()
+
+
+def theory_tex_path(de_path: str) -> str:
+    return companion_path(de_path, "lt")
 
 
 def theory_exists(de_path: str) -> bool:
-    rel = theory_tex_path(de_path)
-    local = ROOT / rel
-    return local.is_file()
+    return companion_exists(de_path, "lt")
 
 
 def _grab_group(s: str, i: int):
@@ -212,11 +235,14 @@ def preprocess(s: str) -> str:
         lambda a, b: "\n@@SPLIT@@" + a + "@@MID@@" + b + "@@/SPLIT@@\n",
     )
     s = _replace_env(s, "hoatdong", lambda t, b: "\n@@HD:" + t + "@@" + b + "@@/HD@@\n", titled=True)
+    s = _replace_env(s, "dangmau", lambda t, b: "\n@@HD:" + t + "@@" + b + "@@/HD@@\n", titled=True)
     s = _replace_env(s, "emcobiet", lambda b: "\n@@FUN@@" + b + "@@/FUN@@\n")
     s = _replace_env(s, "emdahoc", lambda b: "\n@@SUM1@@" + b + "@@/SUM1@@\n")
     s = _replace_env(s, "emcothe", lambda b: "\n@@SUM2@@" + b + "@@/SUM2@@\n")
     s = _replace_env(s, "kienthuc", lambda b: "\n@@KNOW@@" + b + "@@/KNOW@@\n")
     s = _replace_env(s, "traloi", lambda b: "\n@@ANS@@" + b + "@@/ANS@@\n")
+    s = _replace_env(s, "phuongphap", lambda b: "\n@@METH@@" + b + "@@/METH@@\n")
+    s = _replace_env(s, "vidumau", lambda b: "\n@@SAMPLE@@" + b + "@@/SAMPLE@@\n")
     return s
 
 
@@ -271,6 +297,8 @@ def _flush_tokens(s: str) -> str:
     s = split_box("@@NOTE@@", "@@/NOTE@@", "note", "Lưu ý")
     s = split_box("@@EX@@", "@@/EX@@", "example", "Ví dụ")
     s = split_box("@@ANS@@", "@@/ANS@@", "ans", "Trả lời")
+    s = split_box("@@METH@@", "@@/METH@@", "know", "Phương pháp giải")
+    s = split_box("@@SAMPLE@@", "@@/SAMPLE@@", "example", "Bài mẫu")
     return s
 
 
@@ -318,7 +346,7 @@ def parse_theory(tex: str):
 def _html_or_tokens(chunk: str) -> str:
     """Keep @@ tokens, convert the rest with latex_to_web in pieces."""
     bits = re.split(
-        r"(@@(?:SPLIT|CHUY|HD:[^@]+|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|H3|H4)@@|@@/(?:SPLIT|CHUY|HD|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|H3|H4)@@|@@MID@@)",
+        r"(@@(?:SPLIT|CHUY|HD:[^@]+|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@/(?:SPLIT|CHUY|HD|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@MID@@)",
         chunk,
     )
     out = []
@@ -332,46 +360,64 @@ def _html_or_tokens(chunk: str) -> str:
     return "".join(out)
 
 
-def page_theory(de_path: str):
+def page_companion(de_path: str, kind: str = "lt"):
+    spec = TRACKS.get(kind) or TRACKS["lt"]
     m = base.member_current()
     de_path = str(de_path or "").strip()
     if not de_path or not base.can_view(m, de_path):
         if not m:
-            return redirect(base.login_url("/member/ly-thuyet?path=" + de_path))
+            return redirect(base.login_url(spec["route"] + "?path=" + de_path))
         return redirect("/member")
-    lt = theory_tex_path(de_path)
+    rel = companion_path(de_path, kind)
     try:
-        _, tex = base.read_tex(lt)
+        _, tex = base.read_tex(rel)
     except Exception as e:
         return base.page(
-            "Lý thuyết",
-            f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file lt.tex. {html.escape(str(e))}</div>"
+            spec["label"],
+            f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file {html.escape(spec['file'])}. {html.escape(str(e))}</div>"
             f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
         )
     secs = parse_theory(tex)
-    toc = "".join(
-        f"<a href='#{s['id']}'>{html.escape(s['title'])}</a>" for s in secs
-    )
+    toc = "".join(f"<a href='#{s['id']}'>{html.escape(s['title'])}</a>" for s in secs)
     blocks = "".join(
         f"<section class='ltsec' id='{s['id']}'><h2>{html.escape(s['title'])}</h2>{s['html']}</section>"
         for s in secs
-    ) or "<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong lt.tex.</p>"
+    ) or f"<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong {html.escape(spec['file'])}.</p>"
+    folder = base.lesson_folder(de_path)
     title = ""
     for x in base.index_data().get("lessons") or []:
-        if str(x.get("path") or x.get("file") or "") == de_path:
+        p = str(x.get("path") or x.get("file") or "")
+        if base.lesson_folder(p) == folder and base.is_bank_question_tex(p):
             title = str(x.get("BaiHoc") or x.get("De") or "")
-            break
+            if str(p).replace("\\", "/").lower().endswith("/de.tex"):
+                break
     qhref = "/member/select?path=" + html.escape(de_path, quote=True)
+    nav = []
+    for k, meta in TRACKS.items():
+        href = meta["route"] + "?path=" + html.escape(de_path, quote=True)
+        on = " primary" if k == kind else ""
+        nav.append(f"<a class='btn{on}' href='{href}'>{html.escape(meta['icon'] + ' ' + meta['label'])}</a>")
+    nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
+    head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
     body = (
         LT_CSS
         + "<div class='wrap ltpage'>"
-        + f"<div class='panel'><div class='head'>📖 Lý thuyết · {html.escape(title or 'Bài')}</div><div class='body'>"
-        + f"<p><a class='btn primary' href='{qhref}'>▶ Luyện đề bài này</a></p>"
+        + f"<div class='panel'><div class='head'>{head}</div><div class='body'>"
+        + f"<p>{''.join(nav)}</p>"
         + f"<nav class='lttoc'>{toc}</nav>{blocks}</div></div></div>"
     )
-    return base.page("Lý thuyết", body)
+    return base.page(spec["label"], body)
+
+
+def page_theory(de_path: str):
+    return page_companion(de_path, "lt")
 
 
 @app.get("/member/ly-thuyet")
 def member_ly_thuyet():
-    return page_theory(request.args.get("path") or "")
+    return page_companion(request.args.get("path") or "", "lt")
+
+
+@app.get("/member/phuong-phap")
+def member_phuong_phap():
+    return page_companion(request.args.get("path") or "", "pp")

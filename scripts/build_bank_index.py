@@ -47,7 +47,10 @@ def path_meta(rel):
 def build():
  if not BANK_DIR.exists(): raise SystemExit(f'Không tìm thấy {BANK_DIR}')
  lessons=[]
+ skip_names={'lt.tex','pp.tex'}
  for fp in sorted(BANK_DIR.rglob('*.tex'),key=lambda p:str(p).lower()):
+  if fp.name.lower() in skip_names: continue
+  if '_lenh' in fp.parts: continue
   try: text=fp.read_text(encoding='utf-8',errors='replace')
   except Exception as e: print('[WARN]',fp,e); continue
   rel=fp.relative_to(ROOT).as_posix(); meta={**path_meta(rel),**get_header(text)}; n,d,kinds=count_questions(text)

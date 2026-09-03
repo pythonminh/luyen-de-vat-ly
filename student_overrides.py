@@ -14,7 +14,7 @@ app = base.app
 def _member_index():
     m = base.member_current()
     idx = base.index_data()
-    lessons = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path') or x.get('file') or '').startswith('ngan-hang/')]
+    lessons = [x for x in idx.get('lessons', []) if isinstance(x, dict) and str(x.get('path') or x.get('file') or '').startswith('ngan-hang/') and base.is_bank_question_tex(str(x.get('path') or x.get('file') or ''))]
     if not m:
         items = [x for x in lessons if str(base.lesson_level(str(x.get('path') or x.get('file') or ''))).upper() != 'VIP']
     elif getattr(base, 'has_full_bank_access', lambda *_: False)(m):

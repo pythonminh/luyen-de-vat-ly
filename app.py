@@ -598,6 +598,21 @@ def lesson_folder(path):
     return p
 
 
+COMPANION_TEX = {"lt.tex", "pp.tex"}
+
+
+def is_bank_question_tex(path):
+    """de.tex / dang-*.tex — không tính lý thuyết, dạng mẫu, file lệnh."""
+    p = str(path or "").replace("\\", "/")
+    if not p.lower().endswith(".tex"):
+        return False
+    parts = p.split("/")
+    if "_lenh" in parts:
+        return False
+    name = parts[-1].lower()
+    return name not in COMPANION_TEX
+
+
 def _tex_name_key(path):
     name = str(path or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
     if name == "de.tex":
@@ -613,10 +628,10 @@ def lesson_tex_paths(path):
     found = []
     for x in index_data().get("lessons") or []:
         p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
-        if p.lower().endswith(".tex") and lesson_folder(p) == folder:
+        if is_bank_question_tex(p) and lesson_folder(p) == folder:
             found.append(p)
     p0 = str(path or "").replace("\\", "/")
-    if p0.lower().endswith(".tex") and p0 not in found:
+    if is_bank_question_tex(p0) and p0 not in found:
         found.append(p0)
     try:
         dummy = folder + "/de.tex"
@@ -625,7 +640,7 @@ def lesson_tex_paths(path):
         if parent.is_dir():
             for f in sorted(parent.glob("*.tex")):
                 rel = str(f.relative_to(ROOT)).replace("\\", "/")
-                if rel not in found:
+                if is_bank_question_tex(rel) and rel not in found:
                     found.append(rel)
     except Exception:
         pass
@@ -654,7 +669,7 @@ def merge_catalog_lessons(items):
         if not isinstance(x, dict):
             continue
         p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
-        if not p:
+        if not p or not is_bank_question_tex(p):
             continue
         buckets.setdefault(lesson_folder(p), []).append(x)
     out = []
@@ -797,13 +812,15 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     dlinks = []
                     try:
                         import lythuyet as _lt
-                        if _lt.theory_exists(p):
-                            lt_href = "/member/ly-thuyet?path=" + urllib.parse.quote(p, safe="")
+                        for kind, meta in _lt.TRACKS.items():
+                            if not _lt.companion_exists(p, kind):
+                                continue
+                            href = meta["route"] + "?path=" + urllib.parse.quote(p, safe="")
                             if guest:
-                                lt_href = login_url(lt_href)
-                            on_lt = on and str(request.path or "").rstrip("/") == "/member/ly-thuyet"
+                                href = login_url(href)
+                            on_k = on and str(request.path or "").rstrip("/") == meta["route"]
                             dlinks.append(
-                                f"<a class='drawdang{' on' if on_lt else ''}' href='{html.escape(lt_href, quote=True)}'><span class='drawname'>📖 Lý thuyết</span><span class='drawn'></span></a>"
+                                f"<a class='drawdang{' on' if on_k else ''}' href='{html.escape(href, quote=True)}'><span class='drawname'>{html.escape(meta['icon'] + ' ' + meta['label'])}</span><span class='drawn'></span></a>"
                             )
                     except Exception:
                         pass
@@ -873,24 +890,29 @@ def admin_tex_select_html(path):
 
 
 def theory_catalog_html(path, guest=False):
-    """Nút / dòng Lý thuyết trên mục lục bài (khi có lt.tex)."""
+    """Dòng + nút Lý thuyết / Dạng mẫu trên mục lục (khi có lt.tex / pp.tex)."""
+    rows, btns = [], []
     try:
         import lythuyet as _lt
-        if not _lt.theory_exists(path):
-            return "", ""
     except Exception:
         return "", ""
-    href = "/member/ly-thuyet?path=" + urllib.parse.quote(str(path or ""), safe="")
-    if guest:
-        href = login_url(href)
-    safe = html.escape(href, quote=True)
-    row = (
-        f"<a class='dangrow danglink ltrow' href='{safe}'>"
-        f"<span class='dangname'>📖 Lý thuyết</span>"
-        f"<span class='dangkinds'><span class='kind ktotal'>Đọc</span></span></a>"
-    )
-    btn = f"<a class='btn ltbtn' href='{safe}'>📖 Lý thuyết</a>"
-    return row, btn
+    for kind, meta in _lt.TRACKS.items():
+        if not _lt.companion_exists(path, kind):
+            continue
+        href = meta["route"] + "?path=" + urllib.parse.quote(str(path or ""), safe="")
+        if guest:
+            href = login_url(href)
+        safe = html.escape(href, quote=True)
+        cls = "ltrow" if kind == "lt" else "pprow"
+        btncls = "ltbtn" if kind == "lt" else "ppbtn"
+        label = html.escape(meta["icon"] + " " + meta["label"])
+        rows.append(
+            f"<a class='dangrow danglink {cls}' href='{safe}'>"
+            f"<span class='dangname'>{label}</span>"
+            f"<span class='dangkinds'><span class='kind ktotal'>Đọc</span></span></a>"
+        )
+        btns.append(f"<a class='btn {btncls}' href='{safe}'>{label}</a>")
+    return "".join(rows), "".join(btns)
 
 
 def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
@@ -929,7 +951,9 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
         "<style>.baiacc-top{display:flex;gap:8px;align-items:flex-start}.baiacc-top details{flex:1;min-width:0}"
         ".baiacc-top summary{cursor:pointer;padding:8px 4px}.baiacc-btns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;margin-top:6px}"
         ".ltrow{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:8px 10px;margin:8px 0 6px}"
-        ".ltrow .dangname{font-weight:700;color:#5b21b6}.ltbtn{background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6}</style>"
+        ".ltrow .dangname{font-weight:700;color:#5b21b6}.ltbtn{background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6}"
+        ".pprow{background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:8px 10px;margin:0 0 6px}"
+        ".pprow .dangname{font-weight:700;color:#0e7490}.ppbtn{background:#ecfeff;border-color:#67e8f9;color:#0e7490}</style>"
     )
 
 
@@ -1939,7 +1963,7 @@ def member_ai():
 @app.get('/member')
 def member_index():
     m=member_current()
-    idx=index_data();items=[x for x in idx.get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/')]
+    idx=index_data();items=[x for x in idx.get('lessons',[]) if isinstance(x,dict) and str(x.get('path','')).startswith('ngan-hang/') and is_bank_question_tex(str(x.get('path') or ''))]
     if m:
         items=[x for x in items if can_view(m, str(x.get('path') or ''))]
     else:
