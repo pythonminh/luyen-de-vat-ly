@@ -144,7 +144,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         options='<div class="opts">'+''.join(bits)+'</div>'
     elif kind=='DS':
         st=q.get('statements') or []
-        bits=['<div class="tf-colhead"><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
+        bits=['<div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
         labs='ABCD'
         for i,o in enumerate(st):
             txt=html_question(o.get('text','') if isinstance(o,dict) else o)
@@ -153,8 +153,8 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             cls=' ok' if show_solution and yes else (' noans' if show_solution else '')
             y_on=" on" if show_solution and yes else ""
             n_on=" on" if show_solution and not yes else ""
-            bits.append(f"<div class='tf{cls}'><div class='tf-text'>{lab}) {txt}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>")
-        options='<div class="tfgrid">'+''.join(bits)+'</div>'
+            bits.append(f"<div class='tf{cls}'><span class='tflab'>{lab}</span><div class='tf-text'>{txt}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>")
+        options='<div class="qbody ds"><div class="qfig" hidden></div><div class="qtf"><div class="tfgrid">'+''.join(bits)+'</div></div></div>'
     elif kind=='TLN':
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
         if show_solution:
@@ -189,7 +189,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
-            f"<div class='qtext'>{html_question(text)}</div>{options}{rw}{sol_html}</article>")
+            f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text)}</div></div>{options}{rw}{sol_html}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -309,7 +309,15 @@ def member_dang():
             "document.querySelectorAll('.kn').forEach(function(x){x.addEventListener('change',applyKinds)});"
             "const form=document.getElementById('questionForm');if(form)form.addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});"
         )
-    find_js += "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
+    find_js += (
+        "document.querySelectorAll('.qcard').forEach(function(card){"
+        "const stem=card.querySelector('.qstem');const fig=card.querySelector('.qfig');const body=card.querySelector('.qbody.ds');"
+        "if(!stem||!fig||!body)return;const bits=[];"
+        "stem.querySelectorAll('.immini,.tikz-row,.tikzfig,.tikz-live,.ytbox,table.tex-table').forEach(function(el){"
+        "if(el.closest('.immini,.tikz-row')&&!el.matches('.immini,.tikz-row'))return;bits.push(el);});"
+        "if(!bits.length){fig.remove();return;}bits.forEach(function(el){fig.appendChild(el)});fig.hidden=false;body.classList.add('hassplit');});"
+        "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
+    )
     rw_js = ""
     if can_manage_bank():
         from admin_rewrite import REWRITE_CLIENT_JS

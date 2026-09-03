@@ -357,7 +357,7 @@ function draw(q, showSol, pos, total, live){
   live=live||{};
   const checked=!!live.checked;
   box.hidden=false;
-  let h='<div class="qtext"><b>Câu '+(pos+1)+'/'+total+'.</b> '+q.text+'</div>';
+  let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span><div class="qstem">'+q.text+'</div></div>';
   if(checked && live.ok!=null){
     const labs='ABCD';
     let head=live.ok?'Đúng':'Sai';
@@ -395,10 +395,10 @@ function draw(q, showSol, pos, total, live){
     let flags='';
     if(picked) flags+='<span class="pickmark">◀ thầy chọn</span>';
     if(o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
-    h+='<div class="'+cls+'"><div class="tf-text"><b>'+String.fromCharCode(65+i)+'.</b> '+o.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
+    h+='<div class="'+cls+'"><span class="tflab">'+String.fromCharCode(65+i)+'</span><div class="tf-text">'+o.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
   });
   else if(q.kind==='DS'){
-    h+='<div class="tfgrid"><div class="tf-colhead"><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';
+    h+='<div class="qbody ds"><div class="qfig" hidden></div><div class="qtf"><div class="tfgrid"><div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';
     (q.statements||[]).forEach(function(s,i){
     const pick=(live.ds||[])[i];
     const has=pick===true||pick===false;
@@ -407,11 +407,11 @@ function draw(q, showSol, pos, total, live){
     if(revealed&&s.correct) cls+=' correct';
     else if(checked&&has&&pick!==s.correct) cls+=' wrong';
     const lab='ABCD'.charAt(i)||(i+1);
-    h+='<div class="'+cls+'"><div class="tf-text">'+lab+') '+s.text+'</div>'
+    h+='<div class="'+cls+'"><span class="tflab">'+lab+'</span><div class="tf-text">'+s.text+'</div>'
       +'<span class="tf-box yes'+(pick===true?' pick':'')+(revealed&&s.correct?' on':'')+'"></span>'
       +'<span class="tf-box no'+(pick===false?' pick':'')+(revealed&&!s.correct?' on':'')+'"></span></div>';
   });
-    h+='</div>';
+    h+='</div></div></div>';
   }
   else {
     const typed=String(live.text||'').trim();
@@ -420,6 +420,21 @@ function draw(q, showSol, pos, total, live){
   }
   if(showSol&&q.solution) h+='<div class="solution"><b>📖 Lời giải</b><div>'+q.solution+'</div></div>';
   box.innerHTML=h;
+  (function(){
+    const stem=box.querySelector('.qstem');
+    const fig=box.querySelector('.qfig');
+    const body=box.querySelector('.qbody.ds');
+    if(!stem||!fig||!body) return;
+    const bits=[];
+    stem.querySelectorAll('.immini,.tikz-row,.tikzfig,.tikz-live,.ytbox,table.tex-table').forEach(function(el){
+      if(el.closest('.immini,.tikz-row')&&!el.matches('.immini,.tikz-row')) return;
+      bits.push(el);
+    });
+    if(!bits.length){fig.remove();return;}
+    bits.forEach(function(el){fig.appendChild(el)});
+    fig.hidden=false;
+    body.classList.add('hassplit');
+  })();
   typeset(box);
 }
 async function tick(){
