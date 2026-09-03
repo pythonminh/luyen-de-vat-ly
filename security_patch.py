@@ -16,6 +16,11 @@ def final_can_access(member, path):
         pass
     if not member:
         return False
+    try:
+        import membership as pkg
+        return pkg.can_access_path(member, path)
+    except Exception:
+        pass
     for item in base.index_data().get('lessons', []):
         if not isinstance(item, dict):
             continue
@@ -28,3 +33,4 @@ def final_can_access(member, path):
 base.can_access = final_can_access
 access_control.student_can_access = final_can_access
 dang_routes.can_access = final_can_access
+dang_routes.can_view = base.can_view

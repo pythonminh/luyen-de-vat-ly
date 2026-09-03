@@ -450,11 +450,15 @@ def can_access(m,path):
         return lesson_level(path)=='FREE'
 
 def can_view(m, path):
-    """Xem đề: khách xem bài FREE; thành viên theo quyền. Không gồm làm bài / Gemini."""
+    """Xem đề: khách xem bài FREE; thành viên theo gói đã duyệt."""
     if has_full_bank_access(m if m is not None else None) or is_admin_member(m):
         return True
     if m:
-        return can_access(m, path)
+        try:
+            import membership as _pkg
+            return _pkg.can_access_path(m, path)
+        except Exception:
+            return can_access(m, path)
     return str(lesson_level(path) or 'FREE').upper() != 'VIP'
 
 def is_logged_in():

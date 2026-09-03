@@ -320,6 +320,11 @@ except Exception:
 
 
 def _strict_member_access(m, path):
+    try:
+        import membership as pkg
+        return pkg.can_access_path(m, path)
+    except Exception:
+        pass
     if _base_app is not None and getattr(_base_app, 'has_full_bank_access', lambda *_: False)(m):
         return True
     if admin_current() or (m and _norm_type(m.get('account_type')) == 'ADMIN'):
@@ -333,9 +338,8 @@ def _strict_member_access(m, path):
         return False
     wanted = _member_class(m)
     if not wanted:
-        return False
-    # Chỉ cho phép đúng khối lớp của tài khoản; bài VIP/FREE vẫn giữ chính sách
-    # phí cũ ở can_access của app, nhưng không được vượt qua khối lớp.
+        grades = str(m.get('class') or m.get('grade') or '')
+        return any(f'/Lớp {g}/' in ('/' + str(path)) or f'/Lop {g}/' in ('/' + str(path)) for g in ('10', '11', '12') if g in grades)
     return f'/Lớp {wanted}/' in ('/' + str(path)) or f'/Lop {wanted}/' in ('/' + str(path))
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import datetime
+from urllib.parse import unquote
 
 GRADES = ("10", "11", "12")
 SUBJECTS = ("Toán", "Vật lý")
@@ -217,6 +218,29 @@ def lesson_subject(item) -> str:
     return _subject((item or {}).get("Mon") or (item or {}).get("mon") or "")
 
 
+def _norm_path(path: str) -> str:
+    return unquote(str(path or "")).replace("\\", "/").strip()
+
+
+def _item_from_path(path: str) -> dict:
+    p = _norm_path(path)
+    parts = [x for x in p.split("/") if x]
+    item = {"path": p, "file": p}
+    if len(parts) >= 2:
+        item["Mon"] = parts[1]
+    if len(parts) >= 3:
+        item["Lop"] = parts[2].replace("Lớp", "").replace("Lop", "").strip() or parts[2]
+    return item
+
+
+def package_covers_all(pkg) -> bool:
+    if not pkg:
+        return False
+    if pkg.get("kind") == "all":
+        return True
+    return set(pkg.get("grades") or []) >= set(GRADES) and set(pkg.get("subjects") or []) >= set(SUBJECTS)
+
+
 def can_see_item(m, item) -> bool:
     if not m or str(m.get("status", "ON")).upper() != "ON":
         return False
@@ -230,6 +254,8 @@ def can_see_item(m, item) -> bool:
             return level == "FREE"
         except Exception:
             return False
+    if package_covers_all(pkg):
+        return True
     g = lesson_grade(item)
     s = lesson_subject(item)
     grades = set(pkg.get("grades") or [])
@@ -238,8 +264,6 @@ def can_see_item(m, item) -> bool:
         return False
     if s and subjects and s not in subjects:
         return False
-    if not g and not s:
-        return True
     return True
 
 
@@ -254,13 +278,19 @@ def can_access_path(m, path: str) -> bool:
         pass
     if not m:
         return False
+    pkg = granted_package(m)
+    if package_covers_all(pkg):
+        return True
+    want = _norm_path(path)
+    if not want:
+        return False
     for item in base.index_data().get("lessons", []) or []:
         if not isinstance(item, dict):
             continue
-        p = str(item.get("path") or item.get("file") or "")
-        if p == str(path):
+        p = _norm_path(item.get("path") or item.get("file") or "")
+        if p == want:
             return can_see_item(m, item)
-    return False
+    return can_see_item(m, _item_from_path(want))
 
 
 def allowed_paths(m) -> set[str]:
