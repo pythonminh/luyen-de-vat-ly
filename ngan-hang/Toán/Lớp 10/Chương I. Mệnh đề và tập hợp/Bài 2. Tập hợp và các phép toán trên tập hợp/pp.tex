@@ -69,78 +69,114 @@ Kết luận: Có đúng $5$ học sinh không thích môn học nào.}{\centeri
 \subsubsection{Dạng 2. Phép giao, hợp, hiệu và phần bù của hai tập hợp}
 
 \begin{phuongphap}
-\begin{enumerate}
-\item Giao của hai tập hợp $A \cap B$ gồm các phần tử vừa thuộc $A$ vừa thuộc $B$.
-
 \begin{center}
-\begin{tikzpicture}[scale=0.85]
-% Tập A
-\fill[blue!20] (-1.4,0) circle (1.5);
-% Tập B
-\fill[red!20] (1.4,0) circle (1.5);
-% Phần giao
+\begin{tikzpicture}[scale=0.82,
+font=\small,
+set/.style={draw, thick},
+highlight/.style={fill=green!45}
+]
+
+%================================================
+% Ô 1: GIAO
+%================================================
+\begin{scope}[xshift=-4.2cm,yshift=2.8cm]
+\draw[rounded corners] (-2.2,-2) rectangle (2.2,2);
+\node[font=\bfseries] at (0,1.55) {GIAO: $A\cap B$};
+
+```
+\fill[blue!15] (-0.75,0) circle (1.15);
+\fill[red!15] (0.75,0) circle (1.15);
+
 \begin{scope}
-\clip (-1.4,0) circle (1.5);
-\fill[green!45] (1.4,0) circle (1.5);
+	\clip (-0.75,0) circle (1.15);
+	\fill[green!50] (0.75,0) circle (1.15);
 \end{scope}
-\draw (-1.4,0) circle (1.5);
-\draw (1.4,0) circle (1.5);
-\node at (-2.15,0) {$A$};
-\node at (2.15,0) {$B$};
-\node at (0,0) {$A\cap B$};
-\end{tikzpicture}
-\end{center}
 
-\item Hợp của hai tập hợp $A \cup B$ gồm các phần tử thuộc ít nhất một trong hai tập hợp $A$ hoặc $B$.
+\draw[set] (-0.75,0) circle (1.15);
+\draw[set] (0.75,0) circle (1.15);
 
-\begin{center}
-\begin{tikzpicture}[scale=0.85]
-\fill[blue!25] (-1.4,0) circle (1.5);
-\fill[red!25] (1.4,0) circle (1.5);
-% Tô toàn bộ phần hợp
-\draw[very thick] (-1.4,0) circle (1.5);
-\draw[very thick] (1.4,0) circle (1.5);
-\node at (-2.15,0) {$A$};
-\node at (2.15,0) {$B$};
-\node at (0,0) {$A\cup B$};
-\end{tikzpicture}
-\end{center}
+\node at (-1.25,0) {$A$};
+\node at (1.25,0) {$B$};
+\node[font=\bfseries] at (0,-1.45) {Cả $A$ và $B$};
+```
 
-\item Hiệu của hai tập hợp $A \setminus B$ gồm các phần tử thuộc $A$ nhưng không thuộc $B$.
+\end{scope}
 
-\begin{center}
-\begin{tikzpicture}[scale=0.85]
-% Chỉ tô phần A không thuộc B
-\fill[green!45] (-1.4,0) circle (1.5);
+%================================================
+% Ô 2: HỢP
+%================================================
+\begin{scope}[xshift=4.2cm,yshift=2.8cm]
+\draw[rounded corners] (-2.2,-2) rectangle (2.2,2);
+\node[font=\bfseries] at (0,1.55) {HỢP: $A\cup B$};
+
+```
+\fill[green!45] (-0.75,0) circle (1.15);
+\fill[green!45] (0.75,0) circle (1.15);
+
+\draw[set] (-0.75,0) circle (1.15);
+\draw[set] (0.75,0) circle (1.15);
+
+\node at (-1.25,0) {$A$};
+\node at (1.25,0) {$B$};
+\node[font=\bfseries] at (0,-1.45) {Ít nhất một trong $A,B$};
+```
+
+\end{scope}
+
+%================================================
+% Ô 3: HIỆU
+%================================================
+\begin{scope}[xshift=-4.2cm,yshift=-2.8cm]
+\draw[rounded corners] (-2.2,-2) rectangle (2.2,2);
+\node[font=\bfseries] at (0,1.55) {HIỆU: $A\setminus B$};
+
+```
+\fill[green!50] (-0.75,0) circle (1.15);
+
 \begin{scope}
-\clip (-1.4,0) circle (1.5);
-\fill[white] (1.4,0) circle (1.5);
+	\clip (-0.75,0) circle (1.15);
+	\fill[white] (0.75,0) circle (1.15);
 \end{scope}
-\draw (-1.4,0) circle (1.5);
-\draw (1.4,0) circle (1.5);
-\node at (-2.15,0) {$A$};
-\node at (2.15,0) {$B$};
-\node at (-1.25,0) {$A\setminus B$};
-\end{tikzpicture}
-\end{center}
 
-\item Phần bù $C_E A$ của tập $A$ trong tập $E$ (với $A \subset E$) gồm các phần tử thuộc $E$ nhưng không thuộc $A$.
+\fill[red!12] (0.75,0) circle (1.15);
 
-\begin{center}
-\begin{tikzpicture}[scale=0.85]
+\draw[set] (-0.75,0) circle (1.15);
+\draw[set] (0.75,0) circle (1.15);
+
+\node at (-1.25,0) {$A$};
+\node at (1.25,0) {$B$};
+\node[font=\bfseries] at (0,-1.45) {Trong $A$, không trong $B$};
+```
+
+\end{scope}
+
+%================================================
+% Ô 4: PHẦN BÙ
+%================================================
+\begin{scope}[xshift=4.2cm,yshift=-2.8cm]
+\draw[rounded corners] (-2.2,-2) rectangle (2.2,2);
+\node[font=\bfseries] at (0,1.55) {PHẦN BÙ: $C_EA$};
+
+```
 % Miền E
-\fill[blue!15] (-2.4,-1.7) rectangle (2.4,1.7);
+\fill[green!40] (-1.75,-1.25) rectangle (1.75,1.25);
+
 % Tập A
-\fill[white] (0,0) circle (1.05);
-\draw (-2.4,-1.7) rectangle (2.4,1.7);
-\draw (0,0) circle (1.05);
-\node at (2.05,1.35) {$E$};
+\fill[white] (0,0) circle (0.85);
+
+\draw[set] (-1.75,-1.25) rectangle (1.75,1.25);
+\draw[set] (0,0) circle (0.85);
+
+\node at (1.45,0.95) {$E$};
 \node at (0,0) {$A$};
-\node at (1.45,-0.85) {$C_EA$};
+\node[font=\bfseries] at (0,-1.55) {Trong $E$, không trong $A$};
+```
+
+\end{scope}
+
 \end{tikzpicture}
 \end{center}
 
-\end{enumerate}
 \end{phuongphap}
 
 \begin{vidumau}
