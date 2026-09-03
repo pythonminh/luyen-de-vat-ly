@@ -4,21 +4,25 @@ from __future__ import annotations
 
 import html
 import re
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import app as base
 from flask import redirect, request
 
 app = base.app
 ROOT = Path(base.ROOT)
+STATUS_FILE = ROOT / "companion_status.json"
 
 LT_CSS = """
 <style>
 .ltpage{max-width:none;width:100%}
-.lttoc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
-.lttoc a{border:1px solid #c9d8e8;background:#fff;color:#173a5e;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:400}
-.lttoc a.on{background:#145bb0;color:#fff;border-color:#145bb0}
-.ltsec{margin:0 0 18px;padding:14px 16px 16px;border:1px solid #d7e2ee;border-radius:14px;background:#fff}
+.ltnav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.lttoc{margin:0 0 14px;max-width:min(100%,720px)}
+.lttoc label{display:block;font-size:12px;color:#64748b;margin:0 0 5px;font-weight:600}
+.lttoc select{width:100%;padding:9px 12px;border:1px solid #c9d8e8;border-radius:10px;background:#fff;color:#173a5e;font-size:14px;line-height:1.35}
+.ltsec{margin:0 0 18px;padding:14px 16px 16px;border:1px solid #d7e2ee;border-radius:14px;background:#fff;scroll-margin-top:110px}
 .ltsec h2{margin:0 0 12px;font-size:18px;font-weight:700;color:#145bb0}
 .ltsec h3{margin:16px 0 8px;font-size:15px;font-weight:700;color:#0f3f73}
 .ltsec h4{margin:14px 0 6px;font-size:14px;font-weight:700;color:#334155}
@@ -98,6 +102,65 @@ def theory_tex_path(de_path: str) -> str:
 
 def theory_exists(de_path: str) -> bool:
     return companion_exists(de_path, "lt")
+
+
+def _folder_key(de_path: str) -> str:
+    return base.lesson_folder(de_path).replace("\\", "/").strip("/")
+
+
+def _kind_of_file(path: str) -> str:
+    name = str(path or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    if name == "pp.tex":
+        return "pp"
+    return "lt"
+
+
+def status_data():
+    d = base.load_json(STATUS_FILE, {"lessons": {}})
+    d.setdefault("lessons", {})
+    return d
+
+
+def save_status(data, message="ADMIN duyệt lý thuyết / dạng mẫu"):
+    base.save_json_github(STATUS_FILE, data, "companion_status.json", message)
+
+
+def is_approved(de_path: str, kind: str = "lt") -> bool:
+    folder = _folder_key(de_path)
+    rec = (status_data().get("lessons") or {}).get(folder) or {}
+    st = str((rec.get(kind) or {}).get("status") or "pending").strip().lower()
+    return st == "approved"
+
+
+def set_status(de_path: str, kind: str, approved: bool):
+    folder = _folder_key(de_path)
+    d = status_data()
+    lessons = d.setdefault("lessons", {})
+    rec = lessons.setdefault(folder, {})
+    rec[kind] = {
+        "status": "approved" if approved else "pending",
+        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    save_status(d, "ADMIN " + ("duyệt" if approved else "gỡ duyệt") + f" {kind} " + folder)
+
+
+def companion_visible(de_path: str, kind: str = "lt", for_admin: bool = False) -> bool:
+    if not companion_exists(de_path, kind):
+        return False
+    if is_approved(de_path, kind):
+        return True
+    return bool(for_admin)
+
+
+def looks_like_stub(de_path: str, kind: str = "lt") -> bool:
+    p = ROOT / companion_path(de_path, kind)
+    if not p.is_file():
+        return True
+    try:
+        t = p.read_text(encoding="utf-8", errors="replace")[:2500]
+    except Exception:
+        return True
+    return "Chưa soạn" in t or "Chèn bài mẫu" in t
 
 
 def _grab_group(s: str, i: int):
@@ -369,6 +432,21 @@ def page_companion(de_path: str, kind: str = "lt"):
             return redirect(base.login_url(spec["route"] + "?path=" + de_path))
         return redirect("/member")
     rel = companion_path(de_path, kind)
+    admin = bool(base.has_full_bank_access(m))
+    if not companion_exists(de_path, kind):
+        return base.page(
+            spec["label"],
+            f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file {html.escape(spec['file'])}.</div>"
+            f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
+        )
+    if not is_approved(de_path, kind) and not admin:
+        return base.page(
+            spec["label"],
+            "<div class='wrap'><div class='panel'><div class='head'>"
+            + html.escape(spec["icon"] + " " + spec["label"])
+            + "</div><div class='body'><p>Nội dung đang chờ ADMIN soạn và duyệt. Học viên sẽ thấy khi được duyệt.</p>"
+            f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
+        )
     try:
         _, tex = base.read_tex(rel)
     except Exception as e:
@@ -378,7 +456,19 @@ def page_companion(de_path: str, kind: str = "lt"):
             f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
         )
     secs = parse_theory(tex)
-    toc = "".join(f"<a href='#{s['id']}'>{html.escape(s['title'])}</a>" for s in secs)
+    nsec = len(secs)
+    opts = "".join(
+        f"<option value='{html.escape(s['id'], quote=True)}'>{html.escape(s['title'])}</option>"
+        for s in secs
+    )
+    toc = (
+        f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục</label>"
+        f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select></nav>"
+        "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
+        "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
+        "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'smooth',block:'start'});}});"
+        "})();</script>"
+    )
     blocks = "".join(
         f"<section class='ltsec' id='{s['id']}'><h2>{html.escape(s['title'])}</h2>{s['html']}</section>"
         for s in secs
@@ -394,17 +484,29 @@ def page_companion(de_path: str, kind: str = "lt"):
     qhref = "/member/select?path=" + html.escape(de_path, quote=True)
     nav = []
     for k, meta in TRACKS.items():
+        if not companion_visible(de_path, k, for_admin=admin):
+            continue
         href = meta["route"] + "?path=" + html.escape(de_path, quote=True)
         on = " primary" if k == kind else ""
         nav.append(f"<a class='btn{on}' href='{href}'>{html.escape(meta['icon'] + ' ' + meta['label'])}</a>")
     nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
+    if admin:
+        fp = companion_path(de_path, kind)
+        nav.append(f"<a class='btn' href='/admin/edit?path={html.escape(fp, quote=True)}'>✏️ Sửa</a>")
+        nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
+    banner = ""
+    if admin and not is_approved(de_path, kind):
+        banner = "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> Học viên chưa thấy mục này — bấm Duyệt sau khi sửa xong.</div>"
     head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
     body = (
         LT_CSS
         + "<div class='wrap ltpage'>"
         + f"<div class='panel'><div class='head'>{head}</div><div class='body'>"
-        + f"<p>{''.join(nav)}</p>"
-        + f"<nav class='lttoc'>{toc}</nav>{blocks}</div></div></div>"
+        + banner
+        + f"<p class='ltnav'>{''.join(nav)}</p>"
+        + toc
+        + blocks
+        + "</div></div></div>"
     )
     return base.page(spec["label"], body)
 
@@ -421,3 +523,143 @@ def member_ly_thuyet():
 @app.get("/member/phuong-phap")
 def member_phuong_phap():
     return page_companion(request.args.get("path") or "", "pp")
+
+
+def _lesson_rows():
+    rows = []
+    seen = set()
+    for x in base.index_data().get("lessons") or []:
+        p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
+        if not base.is_bank_question_tex(p):
+            continue
+        folder = base.lesson_folder(p)
+        if folder in seen:
+            continue
+        seen.add(folder)
+        rows.append(
+            {
+                "folder": folder,
+                "path": folder + "/de.tex",
+                "mon": str(x.get("Mon") or ""),
+                "lop": str(x.get("Lop") or ""),
+                "chuong": str(x.get("Chuong") or ""),
+                "bai": str(x.get("BaiHoc") or x.get("De") or folder.rsplit("/", 1)[-1]),
+            }
+        )
+    rows.sort(key=lambda z: (z["mon"], z["lop"], z["chuong"], z["bai"]))
+    return rows
+
+
+@app.get("/admin/ly-thuyet")
+def admin_companion_list():
+    if not base.admin_current():
+        return redirect("/admin/login")
+    want = str(request.args.get("st") or "pending").strip().lower()
+    if want not in {"pending", "approved", "all"}:
+        want = "pending"
+    q = str(request.args.get("q") or "").strip().lower()
+    bits = []
+    n_wait = n_ok = 0
+    for row in _lesson_rows():
+        blob = " ".join(row[k] for k in ("mon", "lop", "chuong", "bai")).lower()
+        if q and q not in blob:
+            continue
+        cells = []
+        for kind, meta in TRACKS.items():
+            exists = companion_exists(row["path"], kind)
+            ok = is_approved(row["path"], kind) if exists else False
+            stub = looks_like_stub(row["path"], kind) if exists else True
+            if ok:
+                n_ok += 1
+            elif exists:
+                n_wait += 1
+            fp = companion_path(row["path"], kind)
+            if not exists:
+                cells.append("<td class='muted'>—</td>")
+                continue
+            badge = (
+                "<span class='tag had'>Đã duyệt</span>"
+                if ok
+                else "<span class='tag miss'>Chờ duyệt</span>"
+            )
+            if stub and not ok:
+                badge += " <span class='muted'>khung trống</span>"
+            qp = quote(fp, safe="")
+            cells.append(
+                "<td>"
+                + badge
+                + f"<div style='margin-top:6px;display:flex;gap:4px;flex-wrap:wrap'>"
+                f"<a class='btn' href='/admin/edit?path={qp}'>✏️ Sửa</a>"
+                f"<a class='btn' href='{html.escape(meta['route'])}?path={quote(row['path'], safe='')}'>👁 Xem</a>"
+                f"<form method='post' action='/admin/companion/status' style='display:inline'>"
+                f"<input type='hidden' name='path' value='{html.escape(fp, quote=True)}'>"
+                f"<input type='hidden' name='kind' value='{kind}'>"
+                f"<input type='hidden' name='next' value='/admin/ly-thuyet?st={html.escape(want)}'>"
+                + (
+                    f"<button class='btn green' name='status' value='approved' type='submit'>Duyệt</button>"
+                    if not ok
+                    else f"<button class='btn red' name='status' value='pending' type='submit'>Gỡ</button>"
+                )
+                + "</form></div></td>"
+            )
+        if want != "all":
+            keep = False
+            for kind in TRACKS:
+                exists = companion_exists(row["path"], kind)
+                ok = is_approved(row["path"], kind) if exists else False
+                if want == "pending" and exists and not ok:
+                    keep = True
+                if want == "approved" and ok:
+                    keep = True
+            if not keep:
+                continue
+        bits.append(
+            "<tr><td>"
+            + html.escape(row["mon"])
+            + "</td><td>"
+            + html.escape(row["lop"])
+            + "</td><td>"
+            + html.escape(row["bai"])
+            + "</td>"
+            + "".join(cells)
+            + "</tr>"
+        )
+    tabs = "".join(
+        f"<a class='btn{' primary' if want==k else ''}' href='/admin/ly-thuyet?st={k}'>{lab}</a>"
+        for k, lab in (("pending", "Chờ duyệt"), ("approved", "Đã duyệt"), ("all", "Tất cả"))
+    )
+    body = (
+        "<div class='wrap'><div class='panel'><div class='head'>📖 ADMIN · Lý thuyết và dạng mẫu</div><div class='body'>"
+        "<div class='notice'>Học viên chỉ thấy mục đã <b>Duyệt</b>. Sửa file trên web sẽ tự <b>gỡ duyệt</b> — duyệt lại khi xong. "
+        f"Đang chờ: <b>{n_wait}</b> · Đã duyệt: <b>{n_ok}</b>.</div>"
+        f"<p style='display:flex;gap:8px;flex-wrap:wrap'>{tabs}"
+        f"<a class='btn' href='/admin'>← ngan-hang</a></p>"
+        "<form method='get' style='display:flex;gap:8px;margin:8px 0'><input type='hidden' name='st' value='"
+        + html.escape(want)
+        + "'><input name='q' value='"
+        + html.escape(q)
+        + "' placeholder='Tìm bài…' style='flex:1;padding:8px;border:1px solid #cbd8e6;border-radius:8px'>"
+        "<button class='btn'>Tìm</button></form>"
+        "<div class='bankwrap'><table class='selectgrid'><thead><tr><th>Môn</th><th>Lớp</th><th>Bài</th>"
+        "<th>Lý thuyết</th><th>Dạng mẫu</th></tr></thead><tbody>"
+        + ("".join(bits) or "<tr><td colspan='5' class='muted'>Không có mục phù hợp.</td></tr>")
+        + "</tbody></table></div></div></div></div>"
+    )
+    return base.page("Duyệt lý thuyết", body)
+
+
+@app.post("/admin/companion/status")
+def admin_companion_status():
+    if not base.admin_current():
+        return redirect("/admin/login")
+    path = str(request.form.get("path") or "")
+    kind = str(request.form.get("kind") or "lt")
+    if kind not in TRACKS:
+        kind = _kind_of_file(path)
+    approved = str(request.form.get("status") or "") == "approved"
+    if path:
+        set_status(path, kind, approved)
+    nxt = str(request.form.get("next") or "/admin/ly-thuyet")
+    if not nxt.startswith("/admin"):
+        nxt = "/admin/ly-thuyet"
+    return redirect(nxt)

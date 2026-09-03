@@ -234,6 +234,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
             "<a href='/admin'>📂 ngan-hang</a>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
             "<a href='/admin/members'>👥 Thành viên</a>",
+            "<a href='/admin/ly-thuyet'>📖 Duyệt LT</a>",
             "<a href='/admin/logout'>🚪 Thoát</a>",
         ]
     else:
@@ -812,8 +813,9 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     dlinks = []
                     try:
                         import lythuyet as _lt
+                        admin_see = (not guest) and base.has_full_bank_access()
                         for kind, meta in _lt.TRACKS.items():
-                            if not _lt.companion_exists(p, kind):
+                            if not _lt.companion_visible(p, kind, for_admin=admin_see):
                                 continue
                             href = meta["route"] + "?path=" + urllib.parse.quote(p, safe="")
                             if guest:
@@ -896,8 +898,9 @@ def theory_catalog_html(path, guest=False):
         import lythuyet as _lt
     except Exception:
         return "", ""
+    admin_see = (not guest) and has_full_bank_access()
     for kind, meta in _lt.TRACKS.items():
-        if not _lt.companion_exists(path, kind):
+        if not _lt.companion_visible(path, kind, for_admin=admin_see):
             continue
         href = meta["route"] + "?path=" + urllib.parse.quote(str(path or ""), safe="")
         if guest:
@@ -2375,6 +2378,7 @@ def admin_home():
         "<a class='btn primary' href='"+html.escape(gh,quote=True)+"' target='_blank' rel='noopener'>🐙 Mở thư mục ngan-hang trên GitHub</a>"
         "<a class='btn' href='https://github.com/"+html.escape(REPO)+"' target='_blank' rel='noopener'>📦 Repo</a>"
         "<a class='btn' href='/admin/members'>👥 Thành viên</a>"
+        "<a class='btn' href='/admin/ly-thuyet'>📖 Lý thuyết / dạng mẫu</a>"
         "<a class='btn' href='/member'>📚 Mục lục học viên</a>"
         "</p>"
         "<h3>➕ Thêm bài (tạo file de.tex mới)</h3>"
@@ -2589,15 +2593,44 @@ def admin_edit():
                 local.write_text(new, encoding='utf-8')
             except Exception:
                 pass
+            try:
+                import lythuyet as _lt
+                kn = str(p or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+                if kn in ("lt.tex", "pp.tex"):
+                    _lt.set_status(p, _lt._kind_of_file(p), False)
+            except Exception:
+                pass
             return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&saved=1')
         except Exception as e:return page('Lỗi commit',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     saved=request.args.get('saved')=='1';notice="<div class='success'>✅ Đã commit lên GitHub.</div>" if saved else ''
+    companion_bar=''
+    try:
+        import lythuyet as _lt
+        kn=str(p or '').replace('\\','/').rsplit('/',1)[-1].lower()
+        if kn in ('lt.tex','pp.tex'):
+            kind=_lt._kind_of_file(p)
+            ok=_lt.is_approved(p, kind)
+            st='Đã duyệt — học viên thấy' if ok else 'Chưa duyệt — học viên không thấy'
+            notice += "<div class='notice'><b>Lý thuyết / dạng mẫu:</b> "+html.escape(st)+". Sửa file sẽ <b>gỡ duyệt</b>, cần bấm Duyệt lại.</div>"
+            companion_bar=(
+                "<form method='post' action='/admin/companion/status' style='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0'>"
+                "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+                "<input type='hidden' name='kind' value='"+html.escape(kind)+"'>"
+                "<input type='hidden' name='next' value='/admin/edit?path="+urllib.parse.quote(p,safe='')+"'>"
+                +("<button class='btn green' name='status' value='approved' type='submit'>✅ Duyệt cho học viên</button>" if not ok else "")
+                +("<button class='btn red' name='status' value='pending' type='submit'>↩ Gỡ duyệt</button>" if ok else "")
+                +"<a class='btn' href='/admin/ly-thuyet'>📋 Danh sách duyệt</a></form>"
+            )
+    except Exception:
+        companion_bar=''
+    hint=("<div class='notice'>Nguồn từng câu: ghi <code>\\nguon{SGK}</code> (hoặc SBT, tên sách…) trong <code>\\begin{ex}</code>. App hiện dòng <b>Nguồn: …</b> trên mỗi câu.</div>"
+          if str(p or '').replace('\\','/').rsplit('/',1)[-1].lower() not in ('lt.tex','pp.tex')
+          else "")
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX trên GitHub</div><div class='body'>"
-        "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice
-        +"<div class='notice'>Nguồn từng câu: ghi <code>\\nguon{SGK}</code> (hoặc SBT, tên sách…) trong <code>\\begin{ex}</code>. App hiện dòng <b>Nguồn: …</b> trên mỗi câu.</div>"
+        "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar+hint
         +"<p style='display:flex;gap:8px;flex-wrap:wrap'>"
         "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem trên GitHub</a>"
         "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên github.com</a>"
