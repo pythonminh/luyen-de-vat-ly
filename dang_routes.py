@@ -228,6 +228,7 @@ def member_dang():
              +''.join(f"<label>{lab} <input class='kn' data-k='{k}' type='number' min='0' max='{kc[k]}' value='0'> / {kc[k]}</label>"
                       for k,lab in (('TN','Trắc nghiệm'),('DS','Đúng/Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')) if kc.get(k))
              +"<button type='button' class='btn primary' onclick='applyKinds()'>Áp dụng số câu</button></div>")
+    guest = not m
     tabs=kind_tabs_html(path, dang=dang, current='', counts=kind_counts_for(selected), guest=guest)
     groups=find_duplicate_groups(selected)
     dmap=dup_index_by_question(groups)
@@ -262,7 +263,6 @@ def member_dang():
     if can_manage_bank():
         from admin_slim import slim_bar_html
         slim_html=slim_bar_html(path, dang, next_url)
-    guest = not m
     find_box=("<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' "
               f"value='{_esc(highlight_id)}' style='flex:1;min-width:180px;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>")
     login_next='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
