@@ -2602,30 +2602,40 @@ def admin_edit():
     except Exception as e:
         return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if request.method=='POST':
-        p=request.form.get('path','');new=request.form.get('content','');sha=request.form.get('sha','');msg=request.form.get('message','Cập nhật TEX từ ADMIN')
-        if not sha:
-            try:sha=github_file_sha(p)
-            except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+        new=request.form.get('content','')
+        msg=(request.form.get('message') or 'ADMIN cập nhật TEX').strip() or 'ADMIN cập nhật TEX'
         try:
-            gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}','PUT',{'message':msg,'content':base64.b64encode(new.encode()).decode(),'branch':BRANCH,'sha':sha})
+            _, local=_safe_repo_file(p)
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(new, encoding='utf-8')
+        except Exception as e:
+            return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>Không ghi được máy: {html.escape(str(e))}</div></div></div>")
+        gh_err=''
+        if TOKEN:
             try:
-                _, local=_safe_repo_file(p)
-                local.parent.mkdir(parents=True, exist_ok=True)
-                local.write_text(new, encoding='utf-8')
-            except Exception:
-                pass
-            try:
-                import lythuyet as _lt
-                kn = str(p or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
-                if kn in ("lt.tex", "pp.tex"):
-                    _lt.set_status(p, _lt._kind_of_file(p), False)
-            except Exception:
-                pass
-            return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&saved=1')
-        except Exception as e:return page('Lỗi commit',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+                sha=str(request.form.get('sha') or '').strip() or github_file_sha(p)
+                github_put_text(p, new, msg, sha=sha or None)
+            except Exception as e:
+                try:
+                    github_put_text(p, new, msg, sha=github_file_sha(p) or None)
+                except Exception as e2:
+                    gh_err=str(e2 or e)
+        try:
+            import lythuyet as _lt
+            kn=str(p or '').replace('\\','/').rsplit('/',1)[-1].lower()
+            if kn in ('lt.tex','pp.tex'):
+                _lt.set_status(p, _lt._kind_of_file(p), False)
+        except Exception:
+            pass
+        q='saved=1' if not gh_err else 'saved=1&gher='+urllib.parse.quote(gh_err[:180])
+        if not TOKEN:
+            q='saved=1&gher='+urllib.parse.quote('Chưa có GITHUB_TOKEN trên Render — đã lưu máy, chưa lên GitHub.')
+        return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&'+q)
     try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
-    saved=request.args.get('saved')=='1';notice="<div class='success'>✅ Đã commit lên GitHub.</div>" if saved else ''
+    saved=request.args.get('saved')=='1';gher=request.args.get('gher') or ''
+    notice="<div class='success'>✅ Đã lưu. Sửa tiếp trong ô bên dưới rồi bấm <b>Lưu</b>.</div>" if saved else ''
+    if gher: notice += "<div class='err'>"+html.escape(gher)+"</div>"
     companion_bar=''
     try:
         import lythuyet as _lt
@@ -2634,7 +2644,7 @@ def admin_edit():
             kind=_lt._kind_of_file(p)
             ok=_lt.is_approved(p, kind)
             st='Đã duyệt — học viên thấy' if ok else 'Chưa duyệt — học viên không thấy'
-            notice += "<div class='notice'><b>Lý thuyết / dạng mẫu:</b> "+html.escape(st)+". Sửa file sẽ <b>gỡ duyệt</b>, cần bấm Duyệt lại.</div>"
+            notice += "<div class='notice'><b>Lý thuyết / dạng mẫu:</b> "+html.escape(st)+". Bấm <b>Lưu</b> sẽ gỡ duyệt; xong thì Duyệt lại.</div>"
             companion_bar=(
                 "<form method='post' action='/admin/companion/status' style='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0'>"
                 "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
@@ -2646,22 +2656,24 @@ def admin_edit():
             )
     except Exception:
         companion_bar=''
-    hint=("<div class='notice'>Nguồn từng câu: ghi <code>\\nguon{SGK}</code> (hoặc SBT, tên sách…) trong <code>\\begin{ex}</code>. App hiện dòng <b>Nguồn: …</b> trên mỗi câu.</div>"
-          if str(p or '').replace('\\','/').rsplit('/',1)[-1].lower() not in ('lt.tex','pp.tex')
-          else "")
     body=(
-        "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa trực tiếp TEX trên GitHub</div><div class='body'>"
-        "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar+hint
-        +"<p style='display:flex;gap:8px;flex-wrap:wrap'>"
-        "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem trên GitHub</a>"
-        "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên github.com</a>"
-        "<a class='btn' href='"+html.escape(github_folder_url(),quote=True)+"' target='_blank' rel='noopener'>📂 Thư mục ngan-hang</a>"
-        "</p>"
-        "<form method='post'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+        "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa TEX ngay trên trang này</div><div class='body'>"
+        "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar
+        +"<p class='notice'><b>Gõ sửa trong ô đen dưới đây</b> (không cần sang GitHub), rồi bấm <b>💾 Lưu</b>.</p>"
+        "<form method='post' class='edittex'>"
+        "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
         "<input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'>"
-        "<textarea name='content' class='code'>"+html.escape(txt)+"</textarea>"
-        "<div style='margin-top:8px'><input name='message' value='ADMIN cập nhật TEX' style='width:70%;padding:9px;border:1px solid #cbd8e6;border-radius:7px'>"
-        "<button class='btn green'>💾 Commit GitHub</button> <a class='btn' href='/admin'>← Danh sách ngan-hang</a></div></form></div></div></div>"
+        "<div class='editbar'><input name='message' value='ADMIN cập nhật TEX' style='flex:1;min-width:12rem;padding:9px;border:1px solid #cbd8e6;border-radius:7px'>"
+        "<button class='btn green' type='submit'>💾 Lưu</button> "
+        "<a class='btn' href='/admin/ly-thuyet'>← Duyệt LT</a></div>"
+        "<label class='muted' style='display:block;margin:8px 0 4px'>Nội dung file</label>"
+        "<textarea name='content' class='code' spellcheck='false' autocomplete='off'>"+html.escape(txt)+"</textarea>"
+        "</form>"
+        "<p class='muted' style='margin-top:10px'><a href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>Sửa trên github.com</a> · "
+        "<a href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>Xem GitHub</a></p>"
+        "</div></div></div>"
+        "<style>.editbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:calc(76px + env(safe-area-inset-top,0px));z-index:8;background:#fff;padding:8px 0 10px}"
+        ".code{display:block;width:100%;min-height:min(62vh,720px);height:62vh;padding:12px;border:2px solid #145bb0;border-radius:8px;background:#fffef8;font:13px/1.45 Consolas,ui-monospace,monospace;color:#19324d}</style>"
     )
     return page('Sửa TEX',body)
 
