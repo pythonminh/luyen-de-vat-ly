@@ -55,7 +55,7 @@ def _student_picks(kind: str, student: str, count: int) -> list[str]:
 
 def _answer_key(kind: str, statements: list, options: list, answer: str) -> str:
     if kind == 'DS' and statements:
-        return ', '.join(f"{i+1}-{'Đ' if s.get('correct') else 'S'}" for i, s in enumerate(statements))
+        return ', '.join(f"{'ABCD'[i] if i < 4 else i + 1}-{'Đ' if s.get('correct') else 'S'}" for i, s in enumerate(statements))
     if kind == 'TN' and options:
         return ', '.join(chr(65 + i) for i, o in enumerate(options) if o.get('correct'))
     return str(answer or '')

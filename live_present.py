@@ -358,7 +358,21 @@ function draw(q, showSol, pos, total, live){
   const checked=!!live.checked;
   box.hidden=false;
   let h='<div class="qtext"><b>Câu '+(pos+1)+'/'+total+'.</b> '+q.text+'</div>';
-  if(checked && live.ok!=null) h+='<div class="result '+(live.ok?'good':'bad')+'">'+(live.ok?'✅ Thầy đúng':'❌ Thầy sai')+'</div>';
+  if(checked && live.ok!=null){
+    const labs='ABCD';
+    let head=live.ok?'✅ Thầy đúng':'❌ Thầy sai';
+    let extra='';
+    if(q.kind==='TN'){
+      const key=(q.options||[]).map(function(o,i){return o.correct?labs.charAt(i):''}).filter(Boolean).join(', ')||'—';
+      const pick=live.tn==null?'—':labs.charAt(live.tn);
+      extra='<div class="keyline">ĐÁP ÁN ĐÚNG: '+key+'</div><div class="keyline">THẦY CHỌN: '+pick+'</div>';
+    }else if(q.kind==='DS'){
+      const key=(q.statements||[]).map(function(s,i){return labs.charAt(i)+'-'+(s.correct?'Đ':'S')}).join(', ');
+      const pick=(q.statements||[]).map(function(s,i){const p=(live.ds||[])[i];return labs.charAt(i)+'-'+(p===true?'Đ':(p===false?'S':'?'))}).join(', ');
+      extra='<div class="keyline">ĐÁP ÁN ĐÚNG: '+key+'</div><div class="keyline">THẦY CHỌN: '+pick+'</div>';
+    }
+    h+='<div class="result '+(live.ok?'good':'bad')+'">'+head+extra+'</div>';
+  }
   if(q.kind==='TN')(q.options||[]).forEach(function(o,i){
     const picked=live.tn===i;
     let cls='opt';
