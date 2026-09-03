@@ -4,90 +4,375 @@
 % Bài: Bài 1. Mệnh đề
 % Loại: Dạng mẫu · phương pháp giải
 % File riêng pp.tex, không trộn vào de.tex
+
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
+
 \subsubsection{Dạng 1. Mệnh đề chứa biến}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định biến và tập xác định của biến.
+	\item Thay giá trị cụ thể của biến vào mệnh đề chứa biến.
+	\item Kiểm tra phát biểu nhận được là đúng hay sai.
+	\item Kết luận giá trị cụ thể đó có làm cho mệnh đề chứa biến đúng hay không.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Cho mệnh đề chứa biến
+\[
+P(x)\colon x^2-3x+2=0,\qquad x\in\mathbb{R}.
+\]
+Trong các mệnh đề $P(1)$, $P(2)$ và $P(3)$, mệnh đề nào đúng?
+
+\textbf{Lời giải.}
+
+Ta có
+\[
+P(1)\colon 1^2-3\cdot1+2=0,
+\]
+nên $P(1)$ là mệnh đề đúng.
+
+Tương tự,
+\[
+P(2)\colon 2^2-3\cdot2+2=0,
+\]
+nên $P(2)$ là mệnh đề đúng.
+
+Với $x=3$:
+\[
+P(3)\colon 3^2-3\cdot3+2=2\ne0,
+\]
+nên $P(3)$ là mệnh đề sai.
+
+\textbf{Kết luận:} $P(1)$ và $P(2)$ đúng; $P(3)$ sai.
 \end{vidumau}
+
 
 \subsubsection{Dạng 2. Xác định mệnh đề và tính đúng sai}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Đọc từng câu và xác định câu đó có phải là một câu khẳng định hay không.
+	\item Nếu câu khẳng định có thể xác định được đúng hoặc sai thì đó là một mệnh đề.
+	\item Nếu là mệnh đề, kiểm tra nội dung để xác định giá trị chân lí.
+	\item Lưu ý: câu hỏi, câu cảm thán, câu yêu cầu hoặc câu chưa xác định được đúng -- sai không phải là mệnh đề.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Trong các câu sau, câu nào là mệnh đề?
+\begin{enumerate}
+	\item $2+3=5$.
+	\item $x+1>0$.
+	\item Bạn có khỏe không?
+	\item Hãy giải phương trình $x^2-1=0$.
+\end{enumerate}
+
+\textbf{Lời giải.}
+
+\begin{enumerate}
+	\item $2+3=5$ là câu khẳng định và đúng nên là một mệnh đề đúng.
+	
+	\item $x+1>0$ là câu khẳng định nhưng còn phụ thuộc vào giá trị của $x$, nên là mệnh đề chứa biến.
+	
+	\item ``Bạn có khỏe không?'' là câu hỏi nên không phải là mệnh đề.
+	
+	\item ``Hãy giải phương trình $x^2-1=0$'' là câu yêu cầu nên không phải là mệnh đề.
+\end{enumerate}
+
+\textbf{Kết luận:} Câu 1 là mệnh đề; câu 2 là mệnh đề chứa biến; câu 3 và câu 4 không phải là mệnh đề.
 \end{vidumau}
+
 
 \subsubsection{Dạng 3. Mệnh đề với mọi, tồn tại}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định tập hợp $X$ và mệnh đề chứa biến $P(x)$.
+	\item Với mệnh đề
+	\[
+	\forall x\in X,\ P(x),
+	\]
+	cần kiểm tra $P(x)$ đúng với \textbf{mọi} giá trị $x\in X$.
+	\item Với mệnh đề
+	\[
+	\exists x\in X,\ P(x),
+	\]
+	chỉ cần tìm \textbf{ít nhất một} giá trị $x\in X$ làm cho $P(x)$ đúng.
+	\item Muốn bác bỏ mệnh đề $\forall$, chỉ cần tìm một phản ví dụ.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Xét các mệnh đề:
+\[
+P\colon \forall x\in\mathbb{R},\ x^2+1>0,
+\]
+\[
+Q\colon \exists x\in\mathbb{R},\ x^2-4=0.
+\]
+Hãy xác định tính đúng sai của $P$ và $Q$.
+
+\textbf{Lời giải.}
+
+Với mọi $x\in\mathbb{R}$, ta có
+\[
+x^2\ge0
+\]
+nên
+\[
+x^2+1\ge1>0.
+\]
+Do đó $P$ là mệnh đề đúng.
+
+Đối với $Q$, chọn $x=2$ thì
+\[
+2^2-4=0.
+\]
+Tồn tại một giá trị $x\in\mathbb{R}$ làm cho $x^2-4=0$, nên $Q$ là mệnh đề đúng.
+
+\textbf{Kết luận:} $P$ và $Q$ đều là mệnh đề đúng.
 \end{vidumau}
+
 
 \subsubsection{Dạng 4. Phủ định mệnh đề}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định nội dung cần phủ định.
+	\item Nếu mệnh đề không chứa lượng từ, viết lại phát biểu sao cho giá trị đúng -- sai được đảo ngược.
+	\item Với các bất đẳng thức, sử dụng:
+	\[
+	\overline{(a>b)}\Leftrightarrow a\le b,
+	\qquad
+	\overline{(a\ge b)}\Leftrightarrow a<b.
+	\]
+	\item Với mệnh đề chứa lượng từ, đổi:
+	\[
+	\forall\longleftrightarrow\exists.
+	\]
+	Đồng thời phủ định mệnh đề bên trong.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Viết mệnh đề phủ định của các mệnh đề sau:
+\[
+P\colon x>3,
+\]
+\[
+Q\colon \forall x\in\mathbb{R},\ x^2\ge0.
+\]
+
+\textbf{Lời giải.}
+
+Mệnh đề phủ định của $P$ là
+\[
+\overline{P}\colon x\le3.
+\]
+
+Với mệnh đề $Q$, ta đổi $\forall$ thành $\exists$ và phủ định $x^2\ge0$:
+\[
+\overline{(x^2\ge0)}\Leftrightarrow x^2<0.
+\]
+Do đó
+\[
+\overline{Q}\colon
+\exists x\in\mathbb{R},\ x^2<0.
+\]
+
+\textbf{Kết luận:}
+\[
+\boxed{\overline{P}\colon x\le3}
+\]
+và
+\[
+\boxed{\overline{Q}\colon
+\exists x\in\mathbb{R},\ x^2<0.}
+\]
 \end{vidumau}
+
 
 \subsubsection{Dạng 5. Mệnh đề kéo theo}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định hai mệnh đề $P$ và $Q$.
+	\item Viết mệnh đề kéo theo dưới dạng
+	\[
+	P\Rightarrow Q.
+	\]
+	\item Xác định giả thiết là $P$, kết luận là $Q$.
+	\item Nhớ rằng $P\Rightarrow Q$ chỉ sai trong trường hợp $P$ đúng và $Q$ sai.
+	\item Khi phát biểu điều kiện:
+	\begin{itemize}
+		\item $P$ là điều kiện đủ để có $Q$.
+		\item $Q$ là điều kiện cần để có $P$.
+	\end{itemize}
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Cho hai mệnh đề:
+\[
+P\colon x=2,
+\qquad
+Q\colon x^2=4.
+\]
+Phát biểu mệnh đề $P\Rightarrow Q$ và xác định điều kiện cần, điều kiện đủ.
+
+\textbf{Lời giải.}
+
+Ta có
+\[
+P\Rightarrow Q:
+\quad
+\text{Nếu }x=2\text{ thì }x^2=4.
+\]
+Mệnh đề này đúng vì khi $x=2$ thì
+\[
+x^2=2^2=4.
+\]
+
+Trong mệnh đề $P\Rightarrow Q$:
+\begin{itemize}
+	\item $P\colon x=2$ là giả thiết.
+	\item $Q\colon x^2=4$ là kết luận.
+\end{itemize}
+
+Do đó:
+\begin{itemize}
+	\item $P$ là điều kiện đủ để có $Q$.
+	\item $Q$ là điều kiện cần để có $P$.
+\end{itemize}
 \end{vidumau}
+
 
 \subsubsection{Dạng 6. Mệnh đề tương đương}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định hai mệnh đề $P$ và $Q$.
+	\item Kiểm tra hai mệnh đề kéo theo:
+	\[
+	P\Rightarrow Q
+	\qquad\text{và}\qquad
+	Q\Rightarrow P.
+	\]
+	\item Nếu cả hai cùng đúng thì kết luận:
+	\[
+	P\Leftrightarrow Q.
+	\]
+	\item Có thể phát biểu $P\Leftrightarrow Q$ bằng các cách:
+	\begin{itemize}
+		\item $P$ khi và chỉ khi $Q$.
+		\item $P$ tương đương $Q$.
+		\item $P$ là điều kiện cần và đủ để có $Q$.
+	\end{itemize}
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\textbf{Ví dụ.} Cho hai mệnh đề
+\[
+P\colon x=2,
+\qquad
+Q\colon x^2=4,\ x>0.
+\]
+Chứng minh rằng $P\Leftrightarrow Q$.
+
+\textbf{Lời giải.}
+
+\textbf{Chiều thuận:} Nếu $P$ đúng, tức là $x=2$, thì
+\[
+x^2=4
+\]
+và $x>0$. Do đó $Q$ đúng.
+
+Suy ra
+\[
+P\Rightarrow Q.
+\]
+
+\textbf{Chiều đảo:} Nếu $Q$ đúng, tức là
+\[
+x^2=4,\qquad x>0,
+\]
+thì $x=2$. Do đó $P$ đúng.
+
+Suy ra
+\[
+Q\Rightarrow P.
+\]
+
+Vậy
+\[
+\boxed{P\Leftrightarrow Q}.
+\]
+
+Do đó $P$ là điều kiện cần và đủ để có $Q$.
 \end{vidumau}
+
 
 \subsubsection{Dạng 7. Mệnh đề đảo}
+
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+	\item Xác định mệnh đề kéo theo ban đầu:
+	\[
+	P\Rightarrow Q.
+	\]
+	\item Đổi vị trí giả thiết và kết luận.
+	\item Mệnh đề nhận được
+	\[
+	Q\Rightarrow P
+	\]
+	là mệnh đề đảo của $P\Rightarrow Q$.
+	\item Không được mặc nhiên kết luận mệnh đề đảo đúng chỉ vì mệnh đề ban đầu đúng.
+	\item Muốn khẳng định $P\Leftrightarrow Q$, phải kiểm tra cả hai chiều.
 \end{enumerate}
 \end{phuongphap}
-\begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
 
+\begin{vidumau}
+\textbf{Ví dụ.} Cho mệnh đề:
+\[
+P\Rightarrow Q:
+\quad
+\text{Nếu }x=2\text{ thì }x^2=4.
+\]
+Hãy viết mệnh đề đảo và xét tính đúng sai.
+
+\textbf{Lời giải.}
+
+Mệnh đề ban đầu có dạng
+\[
+P\Rightarrow Q,
+\]
+trong đó
+\[
+P\colon x=2,
+\qquad
+Q\colon x^2=4.
+\]
+
+Mệnh đề đảo là
+\[
+Q\Rightarrow P:
+\quad
+\text{Nếu }x^2=4\text{ thì }x=2.
+\]
+
+Mệnh đề đảo sai vì với $x=-2$:
+\[
+x^2=4
+\]
+nhưng
+\[
+x\ne2.
+\]
+
+Vậy mệnh đề đảo của mệnh đề đã cho là \textbf{sai}.
+\end{vidumau}
