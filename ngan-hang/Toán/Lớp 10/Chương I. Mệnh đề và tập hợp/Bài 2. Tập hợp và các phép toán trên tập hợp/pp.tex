@@ -7,111 +7,360 @@
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
+
 \subsubsection{Dạng 1. Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Đặt tên các tập hợp liên quan đến các đối tượng trong bài toán thực tế.
+\item Xác định số lượng phần tử của từng tập hợp dựa trên giả thiết đề bài đã cho.
+\item Áp dụng công thức đếm phần tử của hợp hai tập hợp hữu hạn:
+$n(A \cup B) = n(A) + n(B) - n(A \cap B)$.
+\item Vẽ sơ đồ Venn để biểu diễn trực quan các mối quan hệ giao, hiệu, hợp giữa các tập hợp nếu bài toán có nhiều nhóm đối tượng đan xen.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Lớp 10A có $40$ học sinh, trong đó có $25$ bạn thích môn Toán, $20$ bạn thích môn Ngữ văn và $10$ bạn thích cả hai môn Toán và Ngữ văn. Hỏi lớp 10A có bao nhiêu học sinh không thích môn nào trong hai môn Toán và Ngữ văn?
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Gọi $T$ là tập hợp các học sinh thích môn Toán và $V$ là tập hợp các học sinh thích môn Ngữ văn. Theo bài ra, ta có các số liệu sau:
+\[
+\begin{aligned}
+n(T) &= 25 \\
+n(V) &= 20 \\
+n(T \cap V) &= 10.
+\end{aligned}
+\]
+\item Số học sinh thích ít nhất một trong hai môn Toán hoặc Ngữ văn là:
+\[
+\begin{aligned}
+n(T \cup V) &= n(T) + n(V) - n(T \cap V) \\
+&= 25 + 20 - 10 \\
+&= 35 \text{ học sinh}.
+\end{aligned}
+\]
+\item Số học sinh không thích môn nào trong hai môn Toán và Ngữ văn là:
+\[
+\begin{aligned}
+N &= 40 - n(T \cup V) \\
+&= 40 - 35 \\
+&= 5 \text{ học sinh}.
+\end{aligned}
+\]
+Kết luận: Có đúng $5$ học sinh không thích môn học nào.
+\end{enumerate}
+}
 
 \subsubsection{Dạng 2. Phép giao, hợp, hiệu và phần bù của hai tập hợp}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Giao của hai tập hợp $A \cap B$ gồm các phần tử vừa thuộc $A$ vừa thuộc $B$.
+\item Hợp của hai tập hợp $A \cup B$ gồm các phần tử thuộc ít nhất một trong hai tập hợp $A$ hoặc $B$.
+\item Hiệu của hai tập hợp $A \setminus B$ gồm các phần tử thuộc $A$ nhưng không thuộc $B$.
+\item Phần bù $C_E A$ của tập $A$ trong tập $E$ (với $A \subset E$) gồm các phần tử thuộc $E$ nhưng không thuộc $A$.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Cho hai tập hợp $A = \{1; 2; 3; 4; 5\}$ và $B = \{3; 4; 5; 6; 7\}$. Xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Xác định tập hợp giao $A \cap B$:
+Các phần tử xuất hiện ở cả hai tập hợp $A$ và $B$ là $3, 4, 5$. Do đó:
+\[
+\begin{aligned}
+A \cap B &= \{3; 4; 5\}.
+\end{aligned}
+\]
+\item Xác định tập hợp hợp $A \cup B$:
+Gộp tất cả các phần tử của cả hai tập hợp $A$ và $B$ lại (mỗi phần tử chỉ liệt kê một lần):
+\[
+\begin{aligned}
+A \cup B &= \{1; 2; 3; 4; 5; 6; 7\}.
+\end{aligned}
+\]
+\item Xác định tập hợp hiệu $A \setminus B$:
+Các phần tử nằm trong tập hợp $A$ nhưng không nằm trong tập hợp $B$ là $1, 2$. Do đó:
+\[
+\begin{aligned}
+A \setminus B &= \{1; 2\}.
+\end{aligned}
+\]
+\end{enumerate}
+}
 
 \subsubsection{Dạng 3. Tập hợp bằng nhau, tập rỗng và số tập con}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Tập hợp $A$ bằng tập hợp $B$ (kí hiệu $A = B$) nếu mọi phần tử của $A$ đều thuộc $B$ và ngược lại. Ta thường chứng minh đồng thời $A \subset B$ và $B \subset A$.
+\item Tập hợp rỗng $\emptyset$ là tập hợp không chứa bất kì phần tử nào. Phương trình định nghĩa tập hợp vô nghiệm sẽ sinh ra tập rỗng.
+\item Một tập hợp hữu hạn có $n$ phần tử thì số tập hợp con của nó được tính bằng công thức:
+$S_c = 2^n$.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Cho tập hợp $A = \{x \in \mathbb{R} \mid (x^2 - 1)(x^2 - 4) = 0\}$. Liệt kê các phần tử của tập hợp $A$ và tính số tập con của tập hợp này.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Giải phương trình xác định phần tử của tập hợp $A$:
+\[
+\begin{aligned}
+(x^2 - 1)(x^2 - 4) = 0 &\Leftrightarrow \left[ \begin{aligned} x^2 - 1 &= 0 \\ x^2 - 4 &= 0 \end{aligned} \right. \\
+&\Leftrightarrow \left[ \begin{aligned} x &= \pm 1 \\ x &= \pm 2 \end{aligned} \right.
+\end{aligned}
+\]
+Vì tất cả các nghiệm $\pm 1, \pm 2$ đều là số thực, ta liệt kê được tập hợp $A$:
+\[
+\begin{aligned}
+A &= \{-2; -1; 1; 2\}.
+\end{aligned}
+\]
+\item Tính số tập hợp con của $A$:
+Tập hợp $A$ có số phần tử là $n = 4$. Số tập hợp con của tập hợp $A$ là:
+\[
+\begin{aligned}
+S_c &= 2^n \\
+&= 2^4 \\
+&= 16 \text{ tập con}.
+\end{aligned}
+\]
+Kết luận: Tập hợp $A$ có tất cả $16$ tập con.
+\end{enumerate}
+}
 
 \subsubsection{Dạng 4. Xác định tập hợp, phần tử và tập con}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Đọc kĩ định nghĩa hoặc điều kiện xác định phần tử của tập hợp.
+\item Sử dụng các phép toán số học hoặc giải phương trình, bất phương trình để tìm phần tử.
+\item Để viết các tập con thỏa mãn điều kiện số lượng phần tử, ta tiến hành chọn lần lượt các phần tử từ tập hợp ban đầu sao cho không bỏ sót và không trùng lặp.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Cho tập hợp $A = \{x \in \mathbb{Z} \mid -2 \le x < 3\}$. Liệt kê các phần tử của tập hợp $A$ và viết tất cả các tập con chứa đúng hai phần tử của $A$ mà có chứa số $0$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Tìm các phần tử là số nguyên thuộc nửa khoảng $[-2; 3)$:
+Các số nguyên lớn hơn hoặc bằng $-2$ và nhỏ hơn $3$ gồm: $-2, -1, 0, 1, 2$. Do đó ta viết được tập hợp $A$:
+\[
+\begin{aligned}
+A &= \{-2; -1; 0; 1; 2\}.
+\end{aligned}
+\]
+\item Thiết lập các tập con thỏa mãn yêu cầu:
+Các tập con có đúng 2 phần tử và bắt buộc phải chứa phần tử $0$ có dạng $\{0; y\}$ với $y \in A \setminus \{0\}$.
+Chọn lần lượt các giá trị $y \in \{-2; -1; 1; 2\}$, ta được các tập con cần tìm là:
+\[
+\begin{aligned}
+T_1 &= \{-2; 0\} \\
+T_2 &= \{-1; 0\} \\
+T_3 &= \{0; 1\} \\
+T_4 &= \{0; 2\}.
+\end{aligned}
+\]
+\end{enumerate}
+}
 
 \subsubsection{Dạng 5. Bài toán tham số về tập hợp và khoảng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Biểu diễn các tập hợp chứa tham số lên trục số thực.
+\item Thiết lập các điều kiện liên quan đến đầu mút để một tập hợp là tập con của tập hợp kia ($A \subset B$) hoặc giao của hai tập hợp bằng rỗng ($A \cap B = \emptyset$).
+\item Lưu ý kĩ điều kiện lấy dấu bằng "$=$" tại các điểm đầu mút (mút tròn "$($", "$)$" hay mút vuông "$[$", "$]$").
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Cho hai tập hợp $A = [m; m + 2]$ và $B = [1; 5]$. Tìm tất cả các giá trị thực của tham số $m$ để $A \subset B$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Để tập hợp $A = [m; m + 2]$ là tập con của $B = [1; 5]$, ta cần có mọi phần tử thuộc $A$ đều phải thuộc $B$.
+Điều này xảy ra khi và chỉ khi đoạn $[m; m+2]$ nằm hoàn toàn bên trong đoạn $[1; 5]$.
+\item Ta thiết lập hệ bất phương trình ràng buộc các đầu mút của hai đoạn:
+\[
+\begin{aligned}
+\begin{cases} m &\ge 1 \\ m + 2 &\le 5 \end{cases} &\Leftrightarrow \begin{cases} m &\ge 1 \\ m &\le 3 \end{cases} \\
+&\Leftrightarrow 1 \le m \le 3.
+\end{aligned}
+\]
+Kết luận: Giá trị tham số $m$ cần tìm là $1 \le m \le 3$.
+\end{enumerate}
+}
 
 \subsubsection{Dạng 6. Các tập số, khoảng, đoạn và nửa khoảng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định các khoảng, đoạn, nửa khoảng dựa trên các bất đẳng thức mô tả phần tử của tập hợp.
+\item Sử dụng các phép toán số học trên trục số để biểu diễn tập hợp kết quả:
+\begin{itemize}
+\item Với phép giao $\cap$: giữ lại phần chung, gạch bỏ các phần còn lại.
+\item Với phép hợp $\cup$: lấy toàn bộ phạm vi phủ của cả hai tập hợp.
+\item Với phép hiệu $\setminus$: giữ lại phần thuộc tập thứ nhất nhưng không thuộc tập thứ hai.
+\end{itemize}
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Cho hai tập hợp $A = [-3; 2)$ và $B = (0; 5]$. Xác định các tập hợp $A \cap B$ và $A \setminus B$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Xác định giao của hai tập hợp $A \cap B$:
+Ta tìm các số thực $x$ vừa thỏa mãn $-3 \le x < 2$ vừa thỏa mãn $0 < x \le 5$.
+Phạm vi chung là các số thực lớn hơn $0$ và nhỏ hơn $2$. Do đó ta thu được nửa khoảng:
+\[
+\begin{aligned}
+A \cap B &= (0; 2).
+\end{aligned}
+\]
+\item Xác định hiệu của hai tập hợp $A \setminus B$:
+Ta lấy các số thực $x$ thuộc $A$ nhưng loại bỏ đi những số thực thuộc $B$.
+Tức là lấy những số thực thuộc $[-3; 2)$ và nằm ngoài khoảng $(0; 5]$.
+Phần còn lại là nửa khoảng từ $-3$ đến $0$ (kể cả số $0$ vì số $0$ không thuộc $B$). Do đó:
+\[
+\begin{aligned}
+A \setminus B &= [-3; 0].
+\end{aligned}
+\]
+\end{enumerate}
+}
 
 \subsubsection{Dạng 7. Xác định đường biên và miền nghiệm}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Để biểu diễn miền nghiệm của bất phương trình bậc nhất hai ẩn $ax + by + c \ge 0$ (hoặc $\le 0, < 0, > 0$):
+\item Bước 1: Vẽ đường thẳng bờ $d: ax + by + c = 0$ trên hệ trục tọa độ $Oxy$.
+\item Bước 2: Chọn một điểm kiểm tra $M_0(x_0; y_0)$ không nằm trên đường thẳng $d$ (thông thường chọn gốc tọa độ $O(0; 0)$ nếu $c \neq 0$).
+\item Bước 3: Thay tọa độ $M_0$ vào bất phương trình. Nếu ta được khẳng định đúng thì nửa mặt phẳng chứa $M_0$ chính là miền nghiệm. Nếu sai thì miền nghiệm là nửa mặt phẳng không chứa $M_0$.
+\item Vẽ nét liền nếu bất phương trình có chứa dấu bằng ($\ge, \le$), vẽ nét đứt nếu bất phương trình không chứa dấu bằng ($>, <$).
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Xác định miền nghiệm của bất phương trình $x - 2y + 4 \ge 0$ trên mặt phẳng tọa độ $Oxy$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item \haicotchay{
+Để xác định miền nghiệm của bất phương trình:
+\begin{itemize}
+\item Bước 1: Vẽ đường thẳng bờ $d: x - 2y + 4 = 0$ đi qua hai điểm $(-4; 0)$ và $(0; 2)$. Vì bất phương trình chứa dấu $\ge$ nên đường thẳng $d$ được vẽ bằng nét liền.
+\item Bước 2: Chọn gốc tọa độ $O(0; 0) \notin d$. Thế tọa độ $O$ vào biểu thức vế trái của bất phương trình, ta có:
+\[
+\begin{aligned}
+0 - 2 \cdot 0 + 4 = 4 \ge 0.
+\end{aligned}
+\]
+Đây là một khẳng định đúng.
+\item Bước 3: Miền nghiệm của bất phương trình là nửa mặt phẳng bờ $d$ có chứa gốc tọa độ $O(0; 0)$ (kể cả đường thẳng $d$).
+\end{itemize}
+}{
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[scale=0.6, >=stealth]
+\draw[->] (-5,0) -- (2,0) node[below] {$x$};
+\draw[->] (0,-1) -- (0,4) node[left] {$y$};
+\node[below left] at (0,0) {$O$};
+\fill[blue!10, opacity=0.4] (-5,-1) -- (-5, -0.5) -- (2, 2.5) -- (2, -1) -- cycle;
+\draw[thick] (-5,-0.5) -- (2,3) node[above right] {$d$};
+\draw[fill=black] (0,2) circle (1.5pt) node[right] {$(0;2)$};
+\draw[fill=black] (-4,0) circle (1.5pt) node[below] {$(-4;0)$};
+\end{tikzpicture}%
+}
+}
+\end{enumerate}
+}
 
 \subsubsection{Dạng 8. Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Bước 1: Gọi $x, y$ lần lượt là các đại lượng cần tìm trong bài toán thực tế và đặt điều kiện thích hợp cho ẩn (thường là $x \ge 0, y \ge 0$).
+\item Bước 2: Chuyển đổi các điều kiện ràng buộc, giới hạn của đề bài thành các bất phương trình bậc nhất hai ẩn $x, y$.
+\item Bước 3: Thiết lập hệ bất phương trình biểu diễn toàn bộ các điều kiện của bài toán.
+\item Bước 4: Biểu diễn miền nghiệm của hệ bất phương trình trên cùng một mặt phẳng tọa độ $Oxy$ để giải quyết các yêu cầu tối ưu hóa tiếp theo (nếu có).
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Một gia đình cần mua tối đa $20\text{ kg}$ thịt gồm thịt lợn và thịt bò. Biết giá thịt lợn là $100$ nghìn đồng/kg, giá thịt bò là $200$ nghìn đồng/kg. Gia đình chỉ có tối đa $3$ triệu đồng để mua thịt. Viết hệ bất phương trình mô tả các điều kiện trên.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Gọi $x$ (kg) là khối lượng thịt lợn và $y$ (kg) là khối lượng thịt bò gia đình cần mua. Do khối lượng không thể âm nên ta có điều kiện:
+\[
+\begin{aligned}
+x &\ge 0 \\
+y &\ge 0.
+\end{aligned}
+\]
+\item Tổng khối lượng thịt gia đình mua không vượt quá $20\text{ kg}$, ta lập được bất phương trình:
+\[
+\begin{aligned}
+x + y &\le 20.
+\end{aligned}
+\]
+\item Chi phí để mua số thịt trên là $100x + 200y$ (nghìn đồng). Vì số tiền tối đa là $3$ triệu đồng ($3\,000$ nghìn đồng) nên ta có bất phương trình chi phí:
+\[
+\begin{aligned}
+100x + 200y &\le 3\,000 \\
+\Leftrightarrow x + 2y &\le 30.
+\end{aligned}
+\]
+\item Hệ bất phương trình mô tả tất cả các điều kiện ràng buộc trên là:
+\[
+\begin{aligned}
+\begin{cases}
+x \ge 0 \\
+y \ge 0 \\
+x + y \le 20 \\
+x + 2y \le 30
+\end{cases}
+\end{aligned}
+\]
+\end{enumerate}
+}
 
 \subsubsection{Dạng 9. Chưa phân dạng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Đọc kĩ đề, xác định các mối liên hệ số học và tập hợp đặc biệt.
+\item Đối với bài toán tìm điều kiện để hai tập hợp có giao bằng rỗng ($A \cap B = \emptyset$), ta xét các trường hợp biên của chúng trên trục số:
+\begin{itemize}
+\item Trường hợp 1: Tập này nằm hoàn toàn bên trái tập kia.
+\item Trường hợp 2: Tập này nằm hoàn toàn bên phải tập kia.
+\end{itemize}
 \end{enumerate}
 \end{phuongphap}
-\begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
 
+\begin{vidumau}
+Cho các tập hợp $A = [m - 1; m + 3]$ và $B = (1; 6)$. Tìm tất cả các giá trị thực của tham số $m$ để $A \cap B = \emptyset$.
+\end{vidumau}\par
+\loigiai{
+\begin{enumerate}
+\item Để đoạn $A = [m - 1; m + 3]$ không giao với khoảng $B = (1; 6)$ thì đoạn $A$ phải nằm hoàn toàn về phía bên trái hoặc hoàn toàn về phía bên phải của khoảng $B$ trên trục số thực.
+\item Trường hợp 1: Đoạn $A$ nằm hoàn toàn bên trái khoảng $B$.
+Điều này xảy ra khi và chỉ khi đầu mút bên phải của $A$ nhỏ hơn hoặc bằng đầu mút bên trái của $B$:
+\[
+\begin{aligned}
+m + 3 &\le 1 \\
+\Leftrightarrow m &\le -2.
+\end{aligned}
+\]
+\item Trường hợp 2: Đoạn $A$ nằm hoàn toàn bên phải khoảng $B$.
+Điều này xảy ra khi và chỉ khi đầu mút bên trái của $A$ lớn hơn hoặc bằng đầu mút bên phải của $B$:
+\[
+\begin{aligned}
+m - 1 &\ge 6 \\
+\Leftrightarrow m &\ge 7.
+\end{aligned}
+\]
+Kết luận: Tất cả các giá trị thực của tham số $m$ thỏa mãn yêu cầu bài toán là $m \le -2$ hoặc $m \ge 7$.
+\end{enumerate}
+}
