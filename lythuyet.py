@@ -492,11 +492,17 @@ def page_companion(de_path: str, kind: str = "lt"):
     nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
     if admin:
         fp = companion_path(de_path, kind)
-        nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa</a>")
+        nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa file TEX</a>")
         nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
     banner = ""
     if admin and not is_approved(de_path, kind):
-        banner = "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> Học viên chưa thấy mục này — bấm Duyệt sau khi sửa xong.</div>"
+        banner = (
+            "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> "
+            "Học viên chưa thấy mục này.<br>"
+            "<b>Cách sửa:</b> bấm <b>✏️ Sửa file TEX</b> → soạn LaTeX (mỗi dạng một "
+            "<code>\\subsubsection</code>, hộp <code>phuongphap</code> và <code>vidumau</code>) "
+            "→ <b>Commit GitHub</b> → quay lại bấm <b>📋 Duyệt</b>.</div>"
+        )
     head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
     body = (
         LT_CSS
