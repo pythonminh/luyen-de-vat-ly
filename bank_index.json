@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11434,
+  "total_questions": 11431,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2091,11 +2091,11 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 31,
-      "count": 31,
+      "questions": 28,
+      "count": 28,
       "dang": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 9,
-        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 22
+        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 19
       },
       "dang_kinds": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
@@ -2105,9 +2105,9 @@
           "TL": 0
         },
         "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": {
-          "TN": 10,
+          "TN": 9,
           "DS": 4,
-          "TLN": 8,
+          "TLN": 6,
           "TL": 0
         }
       }
