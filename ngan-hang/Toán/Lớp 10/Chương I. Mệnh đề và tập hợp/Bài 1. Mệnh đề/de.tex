@@ -2476,3 +2476,47 @@ Cho mệnh đề chứa biến $P(n):$ "$n$ là bội của 3" với $n$ là s�
 }
 \nguon{Toán 10 Học kì 1 GV.pdf Bài 1 Ví dụ 3}
 \end{ex}
+
+
+
+
+
+
+
+\dangbt{Mệnh đề chứa biến}
+\begin{ex}
+Cho mệnh đề chứa biến \\(P(n):\\) "\\(n^2 + n + 1\\) là số lẻ" với \\(n\\) là số tự nhiên. Xét tính đúng sai của các khẳng định sau:
+\choiceTF
+{\True Với \\(n = 0\\), ta nhận được một mệnh đề đúng.}
+{\True Với \\(n = 5\\), ta nhận được một mệnh đề đúng.}
+{Mệnh đề phủ định của \\(P(n)\\) là \\(\overline{P}(n):\\) "\\(n^2 + n + 1\\) là số chẵn" với mọi \\(n \in \mathbb{N}\\).}
+{Tồn tại số tự nhiên \\(n\\) để \\(P(n)\\) là mệnh đề sai.}
+\loigiai{
+Ta xét biểu thức \\(A = n^2 + n + 1 = n(n + 1) + 1\\):
+- Vì \\(n(n + 1)\\) luôn là tích của hai số tự nhiên liên tiếp nên \\(n(n+1)\\) luôn là số chẵn. Do đó \\(n(n+1) + 1\\) luôn là số lẻ với mọi \\(n \in \mathbb{N}\\).
+- Như vậy, với mọi số tự nhiên \\(n\\), \\(P(n)\\) luôn là một mệnh đề đúng.
+- Ý thứ nhất Đúng vì \\(0^2 + 0 + 1 = 1\\) là số lẻ.
+- Ý thứ hai Đúng vì \\(5^2 + 5 + 1 = 31\\) là số lẻ.
+- Ý thứ ba Sai vì phủ định của một mệnh đề chứa biến \\(P(n)\\) đơn thuần chỉ là phủ định tính chất của biến, tức là \\(\overline{P}(n):\\) "\\(n^2 + n + 1\\) không là số lẻ", nhưng chú ý mệnh đề phủ định của một mệnh đề chứa biến không dùng lượng từ "với mọi".
+- Ý thứ tư Sai vì không tồn tại \\(n\\) để \\(P(n)\\) sai (biểu thức luôn lẻ).
+}
+\nguon{Toán 10 Học kì 1 GV.pdf Bài 1 trang 8}
+\end{ex}
+
+\dangbt{Mệnh đề chứa biến}
+\begin{ex}
+Cho mệnh đề chứa biến \\(Q(x):\\) "\\(x^2 - x - 2 < 0\\)" với \\(x\\) là số thực. Xét tính đúng sai của các khẳng định sau:
+\choiceTF
+{\True \\(Q(0)\\) là một mệnh đề đúng.}
+{\\(Q(2)\\) là một mệnh đề đúng.}
+{\\(Q(-2)\\) là một mệnh đề đúng.}
+{Có vô số giá trị nguyên của \\(x\\) để nhận được một mệnh đề đúng.}
+\loigiai{
+Ta xét biểu thức \\(f(x) = x^2 - x - 2\\):
+- Với \\(x = 0\\), ta có \\(f(0) = -2 < 0\\) (khẳng định đúng). Do đó \\(Q(0)\\) là mệnh đề đúng.
+- Với \\(x = 2\\), ta có \\(f(2) = 0 < 0\\) (khẳng định sai). Do đó \\(Q(2)\\) là mệnh đề sai.
+- Với \\(x = -2\\), ta có \\(f(-2) = 4 < 0\\) (khẳng định sai). Do đó \\(Q(-2)\\) là mệnh đề sai.
+- Giải bất phương trình \\(x^2 - x - 2 < 0 \Leftrightarrow -1 < x < 2\\). Vì \\(x \in \mathbb{Z}\\) nên \\(x \in \{0; 1\}\\). Do đó chỉ có đúng \\(2\\) giá trị nguyên của \\(x\\) để nhận được mệnh đề đúng. Khẳng định có vô số là sai.
+}
+\nguon{Toán 10 Học kì 1 GV.pdf Bài 1 trang 10}
+\end{ex}
