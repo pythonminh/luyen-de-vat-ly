@@ -28,54 +28,10 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề",
       "De": "Mệnh đề",
-      "questions": 33,
-      "count": 33,
-      "dang": {
-        "Mệnh đề chứa biến": 1,
-        "Xác định mệnh đề và tính đúng sai": 7,
-        "Mệnh đề với mọi, tồn tại": 3,
-        "Phủ định mệnh đề": 3,
-        "Mệnh đề kéo theo": 1,
-        "Mệnh đề tương đương": 18
-      },
-      "dang_kinds": {
-        "Mệnh đề chứa biến": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định mệnh đề và tính đúng sai": {
-          "TN": 4,
-          "DS": 1,
-          "TLN": 2,
-          "TL": 0
-        },
-        "Mệnh đề với mọi, tồn tại": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Phủ định mệnh đề": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Mệnh đề kéo theo": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Mệnh đề tương đương": {
-          "TN": 9,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex",
