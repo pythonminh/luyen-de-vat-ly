@@ -5619,9 +5619,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Phủ định mệnh đề",
       "De": "Mệnh đề · Phủ định mệnh đề",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Phủ định mệnh đề": 3
+      },
+      "dang_kinds": {
+        "Phủ định mệnh đề": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
