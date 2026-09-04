@@ -746,7 +746,49 @@ document.addEventListener('click',async function(e){
     const d=await r.json();
     if(!d.ok){if(out) out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     if(out) out.innerHTML='<div class="success">'+esc(d.summary||'')+'</div>'+(d.note?'<div class="muted">'+esc(d.note)+'</div>':'');
+    if(bar&&d.add) bar.setAttribute('data-add', JSON.stringify(d.add));
   }catch(err){if(out) out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
+document.addEventListener('click',async function(e){
+  const fill=e.target.closest&&e.target.closest('#aiFill');
+  const save=e.target.closest&&e.target.closest('#aiFillSave');
+  if(!fill&&!save) return;
+  e.preventDefault();
+  const bar=document.querySelector('.admindang');
+  const out=document.getElementById('aiGapOut');
+  if(!bar||!out) return;
+  const path=bar.getAttribute('data-path')||'';
+  const dang=bar.getAttribute('data-dang')||'';
+  if(save){
+    const ta=document.getElementById('aiFillTex');
+    if(!ta||!(ta.value||'').trim()){alert('Chưa có LaTeX để ghi.');return;}
+    if(!confirm('Ghi các câu mới vào file TEX + GitHub?'))return;
+    save.disabled=true;
+    try{
+      const r=await fetch('/api/admin/dang-fill-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:path,dang:dang,latex:ta.value})});
+      const d=await r.json();
+      if(!d.ok){out.insertAdjacentHTML('afterbegin','<div class="err">'+(d.error||'Không ghi được')+'</div>');save.disabled=false;return;}
+      out.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){out.insertAdjacentHTML('afterbegin','<div class="err">'+esc(err)+'</div>');save.disabled=false;}
+    return;
+  }
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+  out.innerHTML='⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...';
+  let add=null;
+  try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
+  try{
+    const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks})});
+    const d=await r.json();
+    if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
+      +(d.note?'<div class="muted">'+esc(d.note)+'</div>':'')
+      +'<textarea id="aiFillTex" class="rwta" style="min-height:220px">'+esc(d.latex||'')+'</textarea>'
+      +'<p><button type="button" class="btn green" id="aiFillSave">3. ✅ Chấp nhận ghi TEX</button></p>';
+  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
 });
 })();
 </script>

@@ -1884,7 +1884,9 @@ def admin_dang_bar_html(path, qs, dang=''):
         + kind_chips_html(counts)
         + "<span class='gapnote'>"+html.escape(miss)+"</span>"
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
-        "<button type='button' class='btn' id='aiGap'>🤖 AI gợi ý số câu cần thêm</button>"
+        "<button type='button' class='btn' id='aiGap'>1. 🤖 Đếm số câu thiếu</button>"
+        "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
+        "<span class='muted'>Rồi bấm <b>Chấp nhận ghi TEX</b>. Muốn gõ tay thì bấm TEX dạng này.</span>"
         "<div id='aiGapOut'></div></div>"
     )
 

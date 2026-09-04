@@ -494,6 +494,122 @@ def api_admin_dang_gaps():
     summary = ('; '.join(bits) + '.') if bits else 'Dạng này đã đủ mức tối thiểu cả 4 loại.'
     return jsonify(ok=True, counts=counts, add=add, summary=summary, note=note)
 
+def _cap_fill_add(add):
+    from app import KIND_ORDER
+    out, total = {}, 0
+    for k in KIND_ORDER:
+        try:
+            n = max(0, int((add or {}).get(k) or 0))
+        except (TypeError, ValueError):
+            n = 0
+        n = min(2, n)
+        if total + n > 6:
+            n = max(0, 6 - total)
+        out[k] = n
+        total += n
+    return out
+
+def _extract_ex_blocks(text):
+    blocks = []
+    for m in re.finditer(r'\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}', str(text or ''), re.I | re.S):
+        blocks.append(m.group(0).strip())
+    return blocks
+
+@app.post('/api/admin/dang-fill')
+def api_admin_dang_fill():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, dang_tex_anchor, kind_gap_heuristic, load_lesson_questions, questions_in_scope
+    from student_gemini import _gemini_generate, _keys_from_payload
+    data = request.get_json(silent=True) or {}
+    path = str(data.get('path') or '').replace('\\', '/').strip()
+    dang = str(data.get('dang') or '').strip()
+    if not path.startswith('ngan-hang/') or not dang:
+        return jsonify(ok=False, error='Thiếu path hoặc tên dạng.'), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error='Nạp key Gemini rồi bấm lại.'), 400
+    try:
+        qs = load_lesson_questions(path)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    per, _allc = dang_kind_counts_of(qs)
+    counts = {k: int((per.get(dang) or {}).get(k) or 0) for k in KIND_ORDER}
+    add = data.get('add') if isinstance(data.get('add'), dict) else kind_gap_heuristic(counts)
+    add = _cap_fill_add(add)
+    if not any(add.values()):
+        return jsonify(ok=False, error='Dạng này chưa cần thêm câu (hoặc bấm Đếm số câu thiếu trước).'), 400
+    samples = []
+    for q in questions_in_scope(qs, dang)[:3]:
+        samples.append((str(q.get('kind') or ''), str(q.get('text') or '')[:280]))
+    want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k))
+    prompt = (
+        "Bạn là giáo viên ra đề thi THPT. Viết câu hỏi LaTeX MỚI cho đúng dạng bài, không copy đề mẫu.\n"
+        "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
+        "Dạng: " + dang + "\nCần viết: " + want + "\n"
+        "Quy ước:\n"
+        "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
+        "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
+        "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+        "- TL: không \\choice, có \\loigiai{...}\n"
+        "Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n"
+        "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"
+        + ("\n".join(f"- {k}: {t}" for k, t in samples) or "(chưa có)")
+    )
+    raw, err = '', ''
+    for key in keys:
+        try:
+            raw = _gemini_generate(key, prompt, 8000, 0.35)
+            err = ''
+            break
+        except Exception as e:
+            err = str(e)
+            raw = ''
+    if not raw:
+        return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
+    raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
+    blocks = _extract_ex_blocks(raw)
+    if not blocks:
+        return jsonify(ok=False, error='AI không ra khối \\begin{ex}...\\end{ex}. Thử lại.'), 400
+    src, _line = dang_tex_anchor(path, dang, qs=qs)
+    latex = '\n\n'.join(blocks) + '\n'
+    labs = dict(KIND_CHIP_LABS)
+    summary = 'AI soạn ' + str(len(blocks)) + ' câu (' + want + '). Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
+    return jsonify(ok=True, src=src, latex=latex, n=len(blocks), add=add, counts=counts, summary=summary)
+
+@app.post('/api/admin/dang-fill-save')
+def api_admin_dang_fill_save():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    from app import TOKEN, _safe_repo_file, dang_tex_anchor, github_put_text, load_lesson_questions, read_tex
+    data = request.get_json(silent=True) or {}
+    path = str(data.get('path') or '').replace('\\', '/').strip()
+    dang = str(data.get('dang') or '').strip()
+    blocks = _extract_ex_blocks(data.get('latex') or '')
+    if not path.startswith('ngan-hang/') or not dang or not blocks:
+        return jsonify(ok=False, error='Thiếu dạng hoặc không có \\begin{ex}.'), 400
+    try:
+        qs = load_lesson_questions(path)
+    except Exception:
+        qs = []
+    src, _line = dang_tex_anchor(path, dang, qs=qs)
+    if not src.startswith('ngan-hang/') or not src.lower().endswith('.tex'):
+        return jsonify(ok=False, error='File TEX không hợp lệ.'), 400
+    chunk = '\n\\dangbt{' + dang + '}\n' + '\n\n'.join(blocks) + '\n'
+    try:
+        sha, tex = read_tex(src, need_sha=True)
+        new = (tex or '').rstrip() + '\n' + chunk
+        local = _safe_repo_file(src)[1]
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text(new, encoding='utf-8')
+        if TOKEN:
+            github_put_text(src, new, 'ADMIN AI thêm ' + str(len(blocks)) + ' câu dạng ' + dang, sha or None)
+        _STATS_CACHE.clear()
+        _QID_CACHE.clear()
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=True, n=len(blocks), src=src)
+
 def start_selected_questions():
     """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""
     m=member_current()
