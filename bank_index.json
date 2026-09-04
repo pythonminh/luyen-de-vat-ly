@@ -5596,9 +5596,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Mệnh đề với mọi, tồn tại",
       "De": "Mệnh đề · Mệnh đề với mọi, tồn tại",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Mệnh đề với mọi, tồn tại": 3
+      },
+      "dang_kinds": {
+        "Mệnh đề với mọi, tồn tại": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
