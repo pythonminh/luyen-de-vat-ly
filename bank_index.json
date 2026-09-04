@@ -5573,9 +5573,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
       "De": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Xác định mệnh đề và tính đúng sai": 7
+      },
+      "dang_kinds": {
+        "Xác định mệnh đề và tính đúng sai": {
+          "TN": 4,
+          "DS": 1,
+          "TLN": 2,
+          "TL": 0
+        }
+      }
     }
   ]
 }
