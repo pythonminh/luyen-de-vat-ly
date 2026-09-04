@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 144,
+  "total_files": 145,
   "total_questions": 11412,
   "lessons": [
     {
@@ -5540,6 +5540,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề chứa biến",
+      "De": "Mệnh đề · Mệnh đề chứa biến",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
