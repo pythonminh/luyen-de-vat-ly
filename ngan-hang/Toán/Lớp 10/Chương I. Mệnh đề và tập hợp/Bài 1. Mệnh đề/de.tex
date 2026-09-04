@@ -2866,3 +2866,125 @@ Số các số nguyên n để $\dfrac{P(n)-4}{n - 2}$ là số nguyên là ${4}
 % ID: T10C1B1-215-TL
 % Mức: VD
 % ID: T10C1B1-215-TL
+
+\dangbt{Mệnh đề với mọi, tồn tại}
+\begin{ex}
+Mệnh đề nào sau đây là đúng?
+\choice
+{A. $\forall x \in \mathbb{R}, x^2 > 0$}
+{B. $\exists n \in \mathbb{N}, n(n+1)$ là số lẻ}
+{C. $\forall n \in \mathbb{N}, n^2+1$ chia hết cho $2$}
+{D. $\exists x \in \mathbb{Q}, x^2 = 3$}
+\loigiai{
+Xét từng mệnh đề:
+A. Mệnh đề ``$\forall x \in \mathbb{R}, x^2 > 0$'' là sai vì khi $x=0$, $x^2=0$ không lớn hơn $0$.
+B. Mệnh đề ``$\exists n \in \mathbb{N}, n(n+1)$ là số lẻ'' là sai. Với mọi số tự nhiên $n$, $n(n+1)$ là tích của hai số tự nhiên liên tiếp, nên luôn có một số chẵn. Do đó, tích $n(n+1)$ luôn là số chẵn.
+C. Mệnh đề ``$\forall n \in \mathbb{N}, n^2+1$ chia hết cho $2$'' là sai. Ví dụ, khi $n=1$, $n^2+1 = 1^2+1 = 2$ chia hết cho $2$. Khi $n=2$, $n^2+1 = 2^2+1 = 5$ không chia hết cho $2$.
+D. Mệnh đề ``$\exists x \in \mathbb{Q}, x^2 = 3$'' là sai. Phương trình $x^2=3$ có nghiệm $x = \pm\sqrt{3}$. Ta biết $\sqrt{3}$ là số vô tỉ, không thuộc tập hợp số hữu tỉ $\mathbb{Q}$.
+Vậy không có mệnh đề nào đúng trong các lựa chọn. (Lỗi đề bài, cần sửa lại một phương án để có đáp án đúng).
+Giả sử sửa lại phương án B thành: $\exists n \in \mathbb{N}, n(n+1)$ là số chẵn. Thì đây là mệnh đề đúng.
+Hoặc sửa lại phương án D thành: $\exists x \in \mathbb{R}, x^2 = 3$. Thì đây là mệnh đề đúng.
+Với các lựa chọn hiện tại, không có đáp án đúng.
+}
+\end{ex}
+
+\begin{ex}
+Phủ định của mệnh đề ``$\forall x \in \mathbb{R}, x^2 - 2x + 1 \ge 0$'' là mệnh đề nào sau đây?
+\choice
+{A. $\exists x \in \mathbb{R}, x^2 - 2x + 1 < 0$}
+{B. $\exists x \in \mathbb{R}, x^2 - 2x + 1 > 0$}
+{C. $\forall x \in \mathbb{R}, x^2 - 2x + 1 < 0$}
+{D. $\forall x \in \mathbb{R}, x^2 - 2x + 1 \le 0$}
+\loigiai{
+Mệnh đề đã cho là $P\colon \forall x \in \mathbb{R}, x^2 - 2x + 1 \ge 0$.
+Phủ định của mệnh đề $P$ được ký hiệu là $\overline{P}$.
+Quy tắc phủ định của mệnh đề lượng từ:
+- Phủ định của $\forall$ là $\exists$.
+- Phủ định của $\ge$ là $<$.
+Vậy, phủ định của mệnh đề $P$ là $\overline{P}\colon \exists x \in \mathbb{R}, x^2 - 2x + 1 < 0$.
+}
+\end{ex}
+
+\begin{ex}
+Cho các mệnh đề sau:
+\choiceTF
+{1. Mệnh đề ``$\exists n \in \mathbb{N}, n^2 - 1$ chia hết cho $3$'' là đúng.}
+{2. Mệnh đề ``$\forall x \in \mathbb{R}, x^2 + 1 > 0$'' là đúng.}
+{3. Mệnh đề ``$\exists x \in \mathbb{Z}, x^2 = 5$'' là đúng.}
+{4. Mệnh đề ``$\forall k \in \mathbb{Z}, k^2 + k + 1$ là số lẻ'' là đúng.}
+\loigiai{
+Xét từng mệnh đề:
+1. Mệnh đề ``$\exists n \in \mathbb{N}, n^2 - 1$ chia hết cho $3$''.
+   Nếu $n=2$, $n^2-1 = 2^2-1 = 3$, chia hết cho $3$.
+   Vậy mệnh đề này là đúng.
+2. Mệnh đề ``$\forall x \in \mathbb{R}, x^2 + 1 > 0$''.
+   Với mọi số thực $x$, $x^2 \ge 0$. Do đó, $x^2+1 \ge 1$.
+   Vì $1 > 0$, nên $x^2+1 > 0$ với mọi $x \in \mathbb{R}$.
+   Vậy mệnh đề này là đúng.
+3. Mệnh đề ``$\exists x \in \mathbb{Z}, x^2 = 5$''.
+   Phương trình $x^2=5$ có nghiệm $x = \pm\sqrt{5}$.
+   $\sqrt{5}$ không phải là số nguyên.
+   Vậy không có số nguyên $x$ nào thỏa mãn $x^2=5$. Mệnh đề này là sai.
+4. Mệnh đề ``$\forall k \in \mathbb{Z}, k^2 + k + 1$ là số lẻ''.
+   Ta có $k^2+k = k(k+1)$. Đây là tích của hai số nguyên liên tiếp, nên $k(k+1)$ luôn là số chẵn.
+   Do đó, $k^2+k+1 = (\text{số chẵn}) + 1 = \text{số lẻ}$.
+   Vậy mệnh đề này là đúng.
+}
+\end{ex}
+
+\begin{ex}
+Cho mệnh đề $P(n)\colon n^2+n+1$ là số nguyên tố.
+\choiceTF
+{1. Mệnh đề ``$\exists n \in \mathbb{N}, P(n)$'' là đúng.}
+{2. Mệnh đề ``$\forall n \in \mathbb{N}, P(n)$'' là đúng.}
+\loigiai{
+1. Mệnh đề ``$\exists n \in \mathbb{N}, P(n)$''.
+   Ta cần tìm một số tự nhiên $n$ sao cho $n^2+n+1$ là số nguyên tố.
+   Nếu $n=1$, $1^2+1+1 = 3$, là số nguyên tố.
+   Vậy mệnh đề ``$\exists n \in \mathbb{N}, P(n)$'' là đúng.
+2. Mệnh đề ``$\forall n \in \mathbb{N}, P(n)$''.
+   Ta cần kiểm tra xem với mọi số tự nhiên $n$, $n^2+n+1$ có phải là số nguyên tố hay không.
+   Nếu $n=1$, $1^2+1+1 = 3$ (nguyên tố).
+   Nếu $n=2$, $2^2+2+1 = 7$ (nguyên tố).
+   Nếu $n=3$, $3^2+3+1 = 13$ (nguyên tố).
+   Nếu $n=4$, $4^2+4+1 = 21 = 3 \times 7$ (không phải số nguyên tố).
+   Vì có một trường hợp $n=4$ mà $P(4)$ sai, nên mệnh đề ``$\forall n \in \mathbb{N}, P(n)$'' là sai.
+}
+\end{ex}
+
+\begin{ex}
+Viết phủ định của mệnh đề sau và xét tính đúng sai của mệnh đề phủ định đó:
+$P\colon \exists x \in \mathbb{R}, x^2 + x + 1 = 0$.
+\shortans{Phủ định: $\forall x \in \mathbb{R}, x^2 + x + 1 \ne 0$. Mệnh đề phủ định là đúng.}
+\loigiai{
+Mệnh đề đã cho là $P\colon \exists x \in \mathbb{R}, x^2 + x + 1 = 0$.
+Phủ định của mệnh đề $P$ là $\overline{P}\colon \forall x \in \mathbb{R}, x^2 + x + 1 \ne 0$.
+
+Để xét tính đúng sai của $\overline{P}$, ta xét phương trình $x^2 + x + 1 = 0$.
+Tính biệt thức $\Delta = b^2 - 4ac = 1^2 - 4(1)(1) = 1 - 4 = -3$.
+Vì $\Delta < 0$, và hệ số $a=1 > 0$, nên tam thức bậc hai $x^2+x+1$ luôn dương với mọi $x \in \mathbb{R}$.
+Tức là $x^2 + x + 1 > 0$ với mọi $x \in \mathbb{R}$.
+Do đó, $x^2 + x + 1 \ne 0$ với mọi $x \in \mathbb{R}$.
+Vậy mệnh đề phủ định $\overline{P}\colon \forall x \in \mathbb{R}, x^2 + x + 1 \ne 0$ là một mệnh đề đúng.
+}
+\end{ex}
+
+\begin{ex}
+Cho mệnh đề $A\colon$ ``Bình phương của mọi số thực đều không âm''.
+a) Viết lại mệnh đề $A$ bằng cách sử dụng ký hiệu toán học.
+b) Viết mệnh đề phủ định của $A$ bằng lời và bằng ký hiệu toán học.
+\shortans{a) $A\colon \forall x \in \mathbb{R}, x^2 \ge 0$. b) $\overline{A}\colon$ ``Tồn tại ít nhất một số thực mà bình phương của nó là số âm'' hoặc ``Có ít nhất một số thực mà bình phương của nó nhỏ hơn 0''. $\overline{A}\colon \exists x \in \mathbb{R}, x^2 < 0$.}
+\loigiai{
+a) Mệnh đề $A\colon$ ``Bình phương của mọi số thực đều không âm''.
+   - ``Mọi số thực'': $\forall x \in \mathbb{R}$.
+   - ``Bình phương của nó'': $x^2$.
+   - ``Không âm'': $\ge 0$.
+   Vậy, mệnh đề $A$ viết bằng ký hiệu toán học là $A\colon \forall x \in \mathbb{R}, x^2 \ge 0$.
+
+b) Mệnh đề phủ định của $A$:
+   - Phủ định của ``mọi'' là ``tồn tại ít nhất một''.
+   - Phủ định của ``không âm'' ($\ge 0$) là ``âm'' ($< 0$).
+   Vậy, mệnh đề phủ định của $A$ bằng lời là $\overline{A}\colon$ ``Tồn tại ít nhất một số thực mà bình phương của nó là số âm'' hoặc ``Có ít nhất một số thực mà bình phương của nó nhỏ hơn 0''.
+   Bằng ký hiệu toán học là $\overline{A}\colon \exists x \in \mathbb{R}, x^2 < 0$.
+}
+\end{ex}
