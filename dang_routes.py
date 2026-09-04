@@ -438,16 +438,18 @@ def _q_preview(q, n=90):
 
 def _review_similar_html(path, qs, dang, next_url):
     from admin_slim import cluster_similar
-    from app import KIND_AIM, KIND_CHIP_LABS, KIND_MAX, KIND_ORDER, dang_kind_counts_of, dang_names_of, kind_gap_heuristic, kind_over_max, kind_quota_line, questions_in_scope
+    from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, dang_names_of, kind_gap_heuristic, kind_over_max, kind_quota_line, questions_in_scope
     names, _c = dang_names_of(qs)
     focus = [dang] if dang else list(names)
     if not focus:
         focus = ['Chưa phân dạng']
-    bits = [
+    head = (
         "<div class='simrev'><b>Soát từng dạng</b> — mục tiêu 9 TN / 2 ĐS / 3 TLN / 4 TL · trần 18 / 4 / 6 / 8. "
-        "Câu gần trùng: giữ bản có lời giải, gợi ý xóa bản kia.</div>"
-    ]
+        "Câu gần trùng: giữ bản có lời giải. Tick nhiều câu rồi xóa một lần.</div>"
+    )
+    body = []
     n_drop = 0
+    seen = set()
     per, _allc = dang_kind_counts_of(qs)
     for name in focus:
         scoped = questions_in_scope(qs, name)
@@ -457,42 +459,120 @@ def _review_similar_html(path, qs, dang, next_url):
         labs = dict(KIND_CHIP_LABS)
         extra = ' · '.join(f"{labs[k]} thừa {over[k]}" for k in KIND_ORDER if over.get(k))
         miss = ' · '.join(f"{labs[k]} +{add[k]}" for k in KIND_ORDER if add.get(k))
-        bits.append("<h4>" + html.escape(name) + "</h4><div class='muted'>" + html.escape(kind_quota_line(counts)) + "</div>")
+        body.append("<h4>" + html.escape(name) + "</h4><div class='muted'>" + html.escape(kind_quota_line(counts)) + "</div>")
         if extra:
-            bits.append("<div class='gapnote'>Vượt trần — bớt câu tương tự trước khi thêm mới. " + html.escape(extra) + "</div>")
+            body.append("<div class='gapnote'>Vượt trần — bớt câu tương tự trước khi thêm mới. " + html.escape(extra) + "</div>")
         elif miss:
-            bits.append("<div class='muted'>Còn thiếu: " + html.escape(miss) + "</div>")
+            body.append("<div class='muted'>Còn thiếu: " + html.escape(miss) + "</div>")
         groups = cluster_similar(scoped, 0.72) if len(scoped) >= 2 else []
         if not groups:
-            bits.append("<div class='muted'>Không thấy cặp gần trùng trong dạng này.</div>")
+            body.append("<div class='muted'>Không thấy cặp gần trùng trong dạng này.</div>")
             continue
         for g in groups:
             keep = g.get('keep') or {}
             extras = g.get('extras') or []
             why = str(g.get('kind') or 'ý gần nhau')
             sim = int(g.get('sim') or 0)
-            bits.append(
+            body.append(
                 "<div class='simrow'><span class='dupok'>Giữ "
                 + html.escape(str(keep.get('id') or '—')) + " · "
                 + html.escape(_q_preview(keep, 70))
                 + "</span> <span class='muted'>(" + html.escape(why) + " " + str(sim) + "%)</span></div>"
             )
             for ex in extras:
+                dk = _q_drop_key(ex)
+                if dk in seen:
+                    continue
+                seen.add(dk)
                 n_drop += 1
-                dk = html.escape(_q_drop_key(ex), quote=True)
-                bits.append(
-                    "<div class='simrow'>Gợi ý xóa "
+                body.append(
+                    "<div class='simrow'><label class='simx'><input type='checkbox' name='drop' value='"
+                    + html.escape(dk, quote=True) + "' checked> Gợi ý xóa "
                     + html.escape(str(ex.get('kind') or '')) + " "
-                    + html.escape(str(ex.get('id') or '—')) + " — "
-                    + html.escape(_q_preview(ex, 80))
-                    + "<form method='post' action='/admin/delete-question' style='display:inline' onsubmit=\"return confirm('Xóa câu gần trùng này khỏi TEX?')\">"
-                    + "<input type='hidden' name='path' value='" + html.escape(path, quote=True) + "'>"
-                    + "<input type='hidden' name='dang' value='" + html.escape(name, quote=True) + "'>"
-                    + "<input type='hidden' name='next' value='" + html.escape(next_url, quote=True) + "'>"
-                    + "<input type='hidden' name='confirm' value='yes'>"
-                    + "<button class='btn mini red' type='submit' name='drop' value='" + dk + "'>🗑 Xóa bản này</button></form></div>"
+                    + html.escape(str(ex.get('id') or '—')) + "</label> — "
+                    + html.escape(_q_preview(ex, 80)) + "</div>"
                 )
-    return ''.join(bits), n_drop
+    if n_drop:
+        bar = (
+            "<form id='simdel' method='post' action='/admin/delete-questions' onsubmit=\"return confirm('Xóa '+document.querySelectorAll('#simdel input[name=drop]:checked').length+' câu đã tick khỏi TEX?')\">"
+            + "<input type='hidden' name='path' value='" + html.escape(path, quote=True) + "'>"
+            + "<input type='hidden' name='dang' value='" + html.escape(dang, quote=True) + "'>"
+            + "<input type='hidden' name='next' value='" + html.escape(next_url, quote=True) + "'>"
+            + "<div class='simbar'><b>Xóa hàng loạt:</b> các ô đỏ mặc định đã tick. Bản GIỮ không có ô."
+            + " <button type='button' class='btn mini' onclick=\"document.querySelectorAll('#simdel input[name=drop]').forEach(function(x){x.checked=true})\">Tick hết gợi ý</button>"
+            + " <button type='button' class='btn mini' onclick=\"document.querySelectorAll('#simdel input[name=drop]').forEach(function(x){x.checked=false})\">Bỏ tick</button>"
+            + " <label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các câu đã tick</label>"
+            + " <button class='btn red' type='submit'>🗑 Xóa các câu đã tick</button></div>"
+        )
+        return head + bar + ''.join(body) + "</form>", n_drop
+    return head + ''.join(body), n_drop
+
+@app.post('/admin/delete-questions')
+def admin_delete_questions():
+    if not can_manage_bank():
+        return redirect('/admin/login')
+    path = str(request.form.get('path') or '').replace('\\', '/').strip()
+    dang = str(request.form.get('dang') or '').strip()
+    nxt = str(request.form.get('next') or '')
+    if not (nxt.startswith('/member/dang?') or nxt.startswith('/member/select?')):
+        nxt = '/member/dang?path=' + urllib.parse.quote(path, safe='') + '&dang=' + urllib.parse.quote(dang, safe='')
+
+    def back(key, msg):
+        sep = '&' if '?' in nxt else '?'
+        return redirect(nxt + sep + key + '=' + urllib.parse.quote(msg))
+
+    if request.form.get('confirm') != 'yes':
+        return back('err', 'Phải xác nhận trước khi xóa các câu đã tick.')
+    try:
+        qs = parse_lesson_questions(path) if path else []
+    except Exception as e:
+        return back('err', str(e))
+    allowed = set()
+    for q in qs:
+        src = str(q.get('src') or '').replace('\\', '/')
+        try:
+            fi = int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+        except (TypeError, ValueError):
+            continue
+        if src.startswith('ngan-hang/') and src.lower().endswith('.tex'):
+            allowed.add((src, fi))
+    drops_by = {}
+    for raw in request.form.getlist('drop'):
+        raw = str(raw or '').strip()
+        if '||' not in raw:
+            continue
+        src, _, idx_s = raw.replace('\\', '/').rpartition('||')
+        src = src.replace('\\', '/').strip()
+        try:
+            fi = int(idx_s)
+        except (TypeError, ValueError):
+            continue
+        if (src, fi) not in allowed:
+            continue
+        drops_by.setdefault(src, []).append(fi)
+    if not drops_by:
+        return back('err', 'Chưa tick câu nào để xóa.')
+    total = 0
+    try:
+        for src, idxs in drops_by.items():
+            idxs = sorted(set(idxs))
+            fsha, tex = read_tex(src, need_sha=True)
+            new = tex_without_questions(tex, idxs)
+            if new == tex:
+                continue
+            local = _safe_repo_file(src)[1]
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(new, encoding='utf-8')
+            if TOKEN:
+                github_put_text(src, new, 'ADMIN xóa ' + str(len(idxs)) + ' câu gần trùng trong ' + src, fsha or None)
+            total += len(idxs)
+        _STATS_CACHE.clear()
+        _QID_CACHE.clear()
+    except Exception as e:
+        return back('err', str(e))
+    if not total:
+        return back('err', 'Không gỡ được câu khỏi file TEX.')
+    return back('ok', 'Đã xóa ' + str(total) + ' câu đã tick, giữ các bản không tick.')
 
 @app.post('/api/admin/dang-gaps')
 def api_admin_dang_gaps():

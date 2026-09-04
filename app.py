@@ -90,7 +90,8 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .admindang{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
 .admindang .simrev h4{margin:10px 0 4px;font-size:13px}
-.admindang .simrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed #fed7aa;font-size:13px}
+.admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff}
+.admindang .simx{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:800;color:#9f1239}
 .admindang .gapnote{font-size:13px;font-weight:700;color:#9a3412}
 .admindang #aiGapOut{flex:1 1 100%;font-size:13px;line-height:1.45}
 html:has(body.cinema){scroll-padding-top:0}
