@@ -367,7 +367,7 @@ def admin_delete_question():
     path=str(request.form.get('path') or '').replace('\\','/').strip()
     dang=str(request.form.get('dang') or '').strip()
     nxt=str(request.form.get('next') or '')
-    if not nxt.startswith('/member/dang?'):
+    if not (nxt.startswith('/member/dang?') or nxt.startswith('/member/select?')):
         nxt='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
 
     def back(key, msg):
@@ -423,11 +423,82 @@ def admin_delete_question():
         return back('err',str(e))
     return back('ok','Đã xóa câu '+qid+' khỏi file TEX.')
 
+def _q_drop_key(q):
+    src = str(q.get('src') or '').replace('\\', '/')
+    try:
+        fi = int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+    except (TypeError, ValueError):
+        fi = 0
+    return src + '||' + str(fi)
+
+def _q_preview(q, n=90):
+    t = re.sub(r'<[^>]+>', ' ', str(q.get('text') or ''))
+    t = re.sub(r'\s+', ' ', t).strip()
+    return (t[:n] + '…') if len(t) > n else t
+
+def _review_similar_html(path, qs, dang, next_url):
+    from admin_slim import cluster_similar
+    from app import KIND_AIM, KIND_CHIP_LABS, KIND_MAX, KIND_ORDER, dang_kind_counts_of, dang_names_of, kind_gap_heuristic, kind_over_max, kind_quota_line, questions_in_scope
+    names, _c = dang_names_of(qs)
+    focus = [dang] if dang else list(names)
+    if not focus:
+        focus = ['Chưa phân dạng']
+    bits = [
+        "<div class='simrev'><b>Soát từng dạng</b> — mục tiêu 9 TN / 2 ĐS / 3 TLN / 4 TL · trần 18 / 4 / 6 / 8. "
+        "Câu gần trùng: giữ bản có lời giải, gợi ý xóa bản kia.</div>"
+    ]
+    n_drop = 0
+    per, _allc = dang_kind_counts_of(qs)
+    for name in focus:
+        scoped = questions_in_scope(qs, name)
+        counts = {k: int((per.get(name) or {}).get(k) or 0) for k in KIND_ORDER}
+        add = kind_gap_heuristic(counts)
+        over = kind_over_max(counts)
+        labs = dict(KIND_CHIP_LABS)
+        extra = ' · '.join(f"{labs[k]} thừa {over[k]}" for k in KIND_ORDER if over.get(k))
+        miss = ' · '.join(f"{labs[k]} +{add[k]}" for k in KIND_ORDER if add.get(k))
+        bits.append("<h4>" + html.escape(name) + "</h4><div class='muted'>" + html.escape(kind_quota_line(counts)) + "</div>")
+        if extra:
+            bits.append("<div class='gapnote'>Vượt trần — bớt câu tương tự trước khi thêm mới. " + html.escape(extra) + "</div>")
+        elif miss:
+            bits.append("<div class='muted'>Còn thiếu: " + html.escape(miss) + "</div>")
+        groups = cluster_similar(scoped, 0.72) if len(scoped) >= 2 else []
+        if not groups:
+            bits.append("<div class='muted'>Không thấy cặp gần trùng trong dạng này.</div>")
+            continue
+        for g in groups:
+            keep = g.get('keep') or {}
+            extras = g.get('extras') or []
+            why = str(g.get('kind') or 'ý gần nhau')
+            sim = int(g.get('sim') or 0)
+            bits.append(
+                "<div class='simrow'><span class='dupok'>Giữ "
+                + html.escape(str(keep.get('id') or '—')) + " · "
+                + html.escape(_q_preview(keep, 70))
+                + "</span> <span class='muted'>(" + html.escape(why) + " " + str(sim) + "%)</span></div>"
+            )
+            for ex in extras:
+                n_drop += 1
+                dk = html.escape(_q_drop_key(ex), quote=True)
+                bits.append(
+                    "<div class='simrow'>Gợi ý xóa "
+                    + html.escape(str(ex.get('kind') or '')) + " "
+                    + html.escape(str(ex.get('id') or '—')) + " — "
+                    + html.escape(_q_preview(ex, 80))
+                    + "<form method='post' action='/admin/delete-question' style='display:inline' onsubmit=\"return confirm('Xóa câu gần trùng này khỏi TEX?')\">"
+                    + "<input type='hidden' name='path' value='" + html.escape(path, quote=True) + "'>"
+                    + "<input type='hidden' name='dang' value='" + html.escape(name, quote=True) + "'>"
+                    + "<input type='hidden' name='next' value='" + html.escape(next_url, quote=True) + "'>"
+                    + "<input type='hidden' name='confirm' value='yes'>"
+                    + "<button class='btn mini red' type='submit' name='drop' value='" + dk + "'>🗑 Xóa bản này</button></form></div>"
+                )
+    return ''.join(bits), n_drop
+
 @app.post('/api/admin/dang-gaps')
 def api_admin_dang_gaps():
     if not can_manage_bank():
         return jsonify(ok=False, error='Chỉ ADMIN.'), 403
-    from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, kind_gap_heuristic, load_lesson_questions
+    from app import KIND_AIM, KIND_CHIP_LABS, KIND_MAX, KIND_ORDER, dang_kind_counts_of, dang_names_of, kind_gap_heuristic, kind_over_max, load_lesson_questions
     from student_gemini import _gemini_generate, _keys_from_payload
     data = request.get_json(silent=True) or {}
     path = str(data.get('path') or '').replace('\\', '/').strip()
@@ -443,27 +514,34 @@ def api_admin_dang_gaps():
     counts = {k: int((counts or {}).get(k) or 0) for k in KIND_ORDER}
     add = kind_gap_heuristic(counts)
     note = ''
+    names, _cnts = dang_names_of(qs)
     keys = _keys_from_payload(data)
+    nxt = '/member/dang?path=' + urllib.parse.quote(path, safe='') + '&dang=' + urllib.parse.quote(dang, safe='')
+    if not dang:
+        nxt = '/member/select?path=' + urllib.parse.quote(path, safe='')
     if keys:
-        others = []
-        for name, bucket in per.items():
-            if dang and name == dang:
-                continue
-            others.append(name + ': ' + ', '.join(f"{lab} {int(bucket.get(k) or 0)}" for k, lab in KIND_CHIP_LABS))
+        rows = []
+        for name in ( [dang] if dang else names[:20] ):
+            bucket = per.get(name) if name else allc
+            bucket = {k: int((bucket or {}).get(k) or 0) for k in KIND_ORDER}
+            have = ', '.join(f"{lab} {bucket[k]}" for k, lab in KIND_CHIP_LABS)
+            need = ', '.join(f"{lab} {kind_gap_heuristic(bucket)[k]}" for k, lab in KIND_CHIP_LABS if kind_gap_heuristic(bucket).get(k))
+            rows.append(name + ': ' + have + (' → thiếu ' + need if need else ' → đủ mục tiêu'))
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT Toán/Vật lý. Trả về ĐÚNG một JSON, không markdown.\n"
-            'Schema: {"add":{"TN":số,"DS":số,"TLN":số,"TL":số},"note":"một câu tiếng Việt"}\n'
-            "add = số câu CẦN THÊM (0 nếu đã đủ), không phải tổng hiện có.\n"
-            "Dạng đang xét: " + (dang or "Cả bài") + "\n"
-            "Hiện có: " + ", ".join(f"{lab} {counts[k]}" for k, lab in KIND_CHIP_LABS) + "\n"
-            "Mức tối thiểu gợi ý sẵn: 8 TN, 6 ĐS, 5 TLN, 3 TL.\n"
-            "Các dạng khác trong cùng bài:\n" + ("\n".join(others[:12]) or "(không có)") + "\n"
-            "Điều chỉnh add cho cân với đề thi (TN nhiều hơn, vẫn phải có ĐS/TLN/TL)."
+            "Bạn là giáo viên ra đề THPT. Soát ngân hàng từng dạng. Trả về ĐÚNG một JSON, không markdown.\n"
+            'Schema: {"add":{"TN":số,"DS":số,"TLN":số,"TL":số},"note":"tiếng Việt"}\n'
+            "add = số câu CẦN THÊM cho dạng đang xét (0 nếu đủ hoặc đang quá nhiều câu cùng ý).\n"
+            "Mục tiêu cố gắng mỗi dạng: 9 TN, 2 ĐS, 3 TLN, 4 TL.\n"
+            "Trần tối đa: 18 TN, 4 ĐS, 6 TLN, 8 TL — không đề xuất thêm nếu đã chạm/vượt trần loại đó.\n"
+            "Nếu nhiều câu cùng ý, để add=0 cho loại đó và note gợi ý xóa bản thừa, đừng viết thêm biến thể.\n"
+            "Dạng đang xét: " + (dang or "Cả bài — add theo mức thiếu chung, note nhắc dạng nào thừa/thiếu") + "\n"
+            "Hiện có dạng này: " + ", ".join(f"{lab} {counts[k]}" for k, lab in KIND_CHIP_LABS) + "\n"
+            "Từng dạng:\n" + ("\n".join(rows) or "(trống)")
         )
         raw, err = '', ''
         for key in keys:
             try:
-                raw = _gemini_generate(key, prompt, 800, 0.2)
+                raw = _gemini_generate(key, prompt, 900, 0.15)
                 err = ''
                 break
             except Exception as e:
@@ -490,25 +568,66 @@ def api_admin_dang_gaps():
             except Exception:
                 note = (raw or '')[:280]
         elif err:
-            note = 'AI lỗi, dùng mức tối thiểu. ' + err[:120]
+            note = 'AI lỗi, dùng mức cố gắng. ' + err[:120]
     else:
-        note = 'Chưa có key Gemini — đang dùng mức tối thiểu 8 TN / 6 ĐS / 5 TLN / 3 TL.'
+        note = 'Chưa có key Gemini — dùng mức 9 TN / 2 ĐS / 3 TLN / 4 TL, trần 18 / 4 / 6 / 8.'
+    for k in KIND_ORDER:
+        n = counts[k]
+        add[k] = min(int(add.get(k) or 0), max(0, KIND_AIM[k] - n), max(0, KIND_MAX[k] - n))
+        if n >= KIND_MAX[k]:
+            add[k] = 0
+    review_html, n_drop = _review_similar_html(path, qs, dang, nxt)
     labs = dict(KIND_CHIP_LABS)
     bits = [f"{labs[k]} cần thêm {add[k]}" for k in KIND_ORDER if add.get(k)]
-    summary = ('; '.join(bits) + '.') if bits else 'Dạng này đã đủ mức tối thiểu cả 4 loại.'
-    return jsonify(ok=True, counts=counts, add=add, summary=summary, note=note)
+    over = kind_over_max(counts)
+    over_bits = [f"{labs[k]} thừa {over[k]}" for k in KIND_ORDER if over.get(k)]
+    if bits:
+        summary = '; '.join(bits) + '.'
+    elif over_bits:
+        summary = 'Không thêm mới. ' + '; '.join(over_bits) + '.'
+    else:
+        summary = 'Đã đạt mức cố gắng cả 4 loại, chưa vượt trần.'
+    if n_drop:
+        summary += ' Gợi ý xóa ' + str(n_drop) + ' câu gần trùng.'
+    return jsonify(ok=True, counts=counts, add=add, summary=summary, note=note, review_html=review_html)
 
-def _cap_fill_add(add):
-    from app import KIND_ORDER
+@app.post('/api/admin/notebooklm-prompt')
+def api_admin_notebooklm_prompt():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    from app import load_lesson_questions, notebooklm_prompt_text
+    data = request.get_json(silent=True) or {}
+    path = str(data.get('path') or '').replace('\\', '/').strip()
+    dang = str(data.get('dang') or '').strip()
+    if not path.startswith('ngan-hang/'):
+        return jsonify(ok=False, error='Thiếu path bài.'), 400
+    try:
+        qs = load_lesson_questions(path)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    prompt = notebooklm_prompt_text(path, qs, dang)
+    return jsonify(ok=True, prompt=prompt)
+
+def _cap_fill_add(add, counts=None):
+    from app import KIND_AIM, KIND_MAX, KIND_ORDER
+    batch = {'TN': 5, 'DS': 2, 'TLN': 3, 'TL': 4}
     out, total = {}, 0
     for k in KIND_ORDER:
         try:
             n = max(0, int((add or {}).get(k) or 0))
         except (TypeError, ValueError):
             n = 0
-        n = min(2, n)
-        if total + n > 6:
-            n = max(0, 6 - total)
+        try:
+            have = int((counts or {}).get(k) or 0)
+        except (TypeError, ValueError):
+            have = 0
+        room = max(0, int(KIND_MAX[k]) - have)
+        toward = max(0, int(KIND_AIM[k]) - have)
+        n = min(n, batch[k], room, toward if toward else room)
+        if toward == 0:
+            n = 0
+        if total + n > 12:
+            n = max(0, 12 - total)
         out[k] = n
         total += n
     return out
@@ -518,6 +637,123 @@ def _extract_ex_blocks(text):
     for m in re.finditer(r'\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}', str(text or ''), re.I | re.S):
         blocks.append(m.group(0).strip())
     return blocks
+
+def _chunks_from_import(text, fallback_dang=''):
+    """Tách (tên dạng, khối ex) — AI có thể gắn \\dangbt trước từng câu."""
+    text = str(text or '')
+    marks = [(m.start(), 'd', (m.group(1) or '').strip()) for m in re.finditer(r'\\dang(?:bt)?\s*\{([^{}]*)\}', text, re.I)]
+    exs = [(m.start(), 'e', m.group(0).strip()) for m in re.finditer(r'\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}', text, re.I | re.S)]
+    cur = (fallback_dang or '').strip() or 'Chưa phân dạng'
+    out = []
+    for _, kind, val in sorted(marks + exs, key=lambda x: x[0]):
+        if kind == 'd':
+            cur = val or cur
+        else:
+            out.append((cur, val))
+    return out
+
+def _import_tex_chunk(text, fallback_dang=''):
+    rows = _chunks_from_import(text, fallback_dang)
+    if not rows:
+        return ''
+    bits = []
+    for dname, block in rows:
+        bits.append('\\dangbt{' + dname + '}\n' + block)
+    return '\n\n'.join(bits) + '\n'
+
+def _tex_nguon_url(url):
+    s = str(url or '').strip()
+    s = re.sub(r'[{}\\]', '', s)
+    return s.replace('%', '\\%').replace('#', '\\#')
+
+def _block_with_nguon(block, url):
+    src = _tex_nguon_url(url)
+    if not src or not block:
+        return block
+    needle = src.replace('\\%', '%').replace('\\#', '#')
+    existing = re.search(r'\\nguon\s*\{([^{}]*)\}', block, re.I)
+    if existing and needle in (existing.group(1) or '').replace('\\%', '%').replace('\\#', '#'):
+        return block
+    cmd = '\\nguon{' + src + '}'
+    if existing:
+        return block[:existing.start()] + cmd + block[existing.end():]
+    m = re.search(r'\\end\s*\{\s*ex\s*\}', block, re.I)
+    if not m:
+        return block.rstrip() + '\n' + cmd + '\n'
+    return block[:m.start()] + cmd + '\n' + block[m.start():]
+
+def _latex_with_nguon(text, url):
+    if not url:
+        return text
+    parts, last = [], 0
+    for m in re.finditer(r'\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}', str(text or ''), re.I | re.S):
+        parts.append(text[last:m.start()])
+        parts.append(_block_with_nguon(m.group(0), url))
+        last = m.end()
+    parts.append(text[last:])
+    return ''.join(parts)
+
+def _kind_of_block(block):
+    b = str(block or '')
+    if re.search(r'\\choiceTF\b', b, re.I):
+        return 'DS'
+    if re.search(r'\\choice\b', b, re.I):
+        return 'TN'
+    if re.search(r'\\shortans\b', b, re.I):
+        return 'TLN'
+    return 'TL'
+
+def _q_from_block(block, dang=''):
+    wrap = '\\dangbt{' + str(dang or 'Chưa phân dạng') + '}\n' + str(block or '')
+    qs = parse_questions(wrap)
+    return qs[0] if qs else {'kind': _kind_of_block(block), 'text': block, 'dang': dang}
+
+def _near_dup(new_q, pool, thr):
+    from admin_slim import cluster_similar
+    if not pool:
+        return False
+    groups = cluster_similar(list(pool) + [new_q], thr)
+    for g in groups:
+        mem = g.get('members') or []
+        if new_q in mem and len(mem) > 1:
+            return True
+    return False
+
+def _filter_import_rows(rows, qs, fallback_dang=''):
+    """Bỏ câu gần trùng / vượt trần; ưu tiên đủ mức cố gắng rồi mới nhận câu khác biệt."""
+    from app import KIND_AIM, KIND_MAX, KIND_ORDER, _dang_name
+    from collections import defaultdict
+    have = defaultdict(lambda: {k: 0 for k in KIND_ORDER})
+    pools = defaultdict(list)
+    for q in qs or []:
+        d = _dang_name(q)
+        k = str(q.get('kind') or 'TL')
+        if k not in KIND_ORDER:
+            k = 'TL'
+        have[d][k] += 1
+        pools[(d, k)].append(q)
+    kept, skipped = [], []
+    for dname, block in rows:
+        dname = (dname or fallback_dang or 'Chưa phân dạng').strip() or 'Chưa phân dạng'
+        fake = _q_from_block(block, dname)
+        k = str(fake.get('kind') or _kind_of_block(block) or 'TL')
+        if k not in KIND_ORDER:
+            k = 'TL'
+        n = have[dname][k]
+        if n >= KIND_MAX[k]:
+            skipped.append('vượt trần ' + k)
+            continue
+        pool = pools[(dname, k)]
+        if _near_dup(fake, pool, 0.72):
+            skipped.append('gần trùng ' + k)
+            continue
+        if n >= KIND_AIM[k] and _near_dup(fake, pool, 0.58):
+            skipped.append('cùng ý khi đã đủ ' + k)
+            continue
+        kept.append((dname, block))
+        have[dname][k] += 1
+        pools[(dname, k)].append(fake)
+    return kept, skipped
 
 _BLOCK_HOSTS = {
     'localhost', '127.0.0.1', '::1', '0.0.0.0',
@@ -590,13 +826,13 @@ def _fetch_public_page(url):
             ctype = str(r.headers.get('Content-Type') or '').lower()
             if ctype and 'html' not in ctype and 'text' not in ctype and 'xml' not in ctype:
                 return '', 'Trang này không phải HTML/văn bản.'
-            raw = r.read(450000)
+            raw = r.read(900000)
     except urllib.error.HTTPError as e:
         return '', 'Không tải được trang (HTTP %s).' % e.code
     except Exception as e:
         return '', 'Không tải được trang: ' + str(e)[:160]
-    if len(raw) >= 450000:
-        raw = raw[:449000]
+    if len(raw) >= 900000:
+        raw = raw[:899000]
     charset = 'utf-8'
     cm = re.search(r'charset=([A-Za-z0-9._-]+)', ctype)
     if cm:
@@ -608,7 +844,7 @@ def _fetch_public_page(url):
     plain = _html_to_text(text)
     if len(plain) < 40:
         return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
-    return plain[:14000], ''
+    return plain[:36000], ''
 
 @app.post('/api/admin/dang-fill')
 def api_admin_dang_fill():
@@ -619,8 +855,8 @@ def api_admin_dang_fill():
     data = request.get_json(silent=True) or {}
     path = str(data.get('path') or '').replace('\\', '/').strip()
     dang = str(data.get('dang') or '').strip()
-    if not path.startswith('ngan-hang/') or not dang:
-        return jsonify(ok=False, error='Thiếu path hoặc tên dạng.'), 400
+    if not path.startswith('ngan-hang/'):
+        return jsonify(ok=False, error='Thiếu path bài.'), 400
     keys = _keys_from_payload(data)
     if not keys:
         return jsonify(ok=False, error='Nạp key Gemini rồi bấm lại.'), 400
@@ -630,39 +866,65 @@ def api_admin_dang_fill():
         page_text, ferr = _fetch_public_page(source_url)
         if ferr:
             return jsonify(ok=False, error=ferr), 400
+    if not dang and not page_text:
+        return jsonify(ok=False, error='Đang ở Cả bài: dán link rồi bấm Lấy từ link (không cần chọn dạng). Muốn AI viết câu mới thì hãy mở một dạng.'), 400
     try:
         qs = load_lesson_questions(path)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 400
+    from app import dang_names_of
+    names, _cnts = dang_names_of(qs)
     per, _allc = dang_kind_counts_of(qs)
-    counts = {k: int((per.get(dang) or {}).get(k) or 0) for k in KIND_ORDER}
-    add = data.get('add') if isinstance(data.get('add'), dict) else kind_gap_heuristic(counts)
-    add = _cap_fill_add(add)
-    if not page_text and not any(add.values()):
+    counts = {k: int((per.get(dang) or {}).get(k) or 0) for k in KIND_ORDER} if dang else {k: int((_allc or {}).get(k) or 0) for k in KIND_ORDER}
+    add = data.get('add') if isinstance(data.get('add'), dict) else (kind_gap_heuristic(counts) if dang else {})
+    add = _cap_fill_add(add, counts) if dang else {k: 0 for k in KIND_ORDER}
+    if dang and not page_text and not any(add.values()):
         return jsonify(ok=False, error='Dạng này chưa cần thêm câu (hoặc bấm Đếm số câu thiếu trước).'), 400
     samples = []
-    for q in questions_in_scope(qs, dang)[:3]:
+    for q in (questions_in_scope(qs, dang) if dang else qs)[:3]:
         samples.append((str(q.get('kind') or ''), str(q.get('text') or '')[:280]))
-    want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k)) or 'các câu trên trang thuộc dạng này'
-    if page_text:
+    want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k)) or 'các câu trên trang'
+    dang_list = '; '.join(names) if names else '(chưa có dạng — tự đặt tên ngắn, rõ)'
+    nguon_line = '\\nguon{' + _tex_nguon_url(source_url) + '}' if source_url else ''
+    kind_rules = (
+        "Quy ước loại câu:\n"
+        "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
+        "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
+        "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+        "- TL: không \\choice, có \\loigiai{...}\n"
+        "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Công thức $...$. Không % ID.\n"
+        + ("Trong MỖI khối \\begin{ex} phải có đúng một " + nguon_line + " (link tải trang, không đổi).\n" if nguon_line else "")
+    )
+    if page_text and not dang:
+        prompt = (
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB sang LaTeX ngân hàng.\n"
+            "Gán vào dạng đã có; mỗi dạng cố gắng 9 TN / 2 ĐS / 3 TLN / 4 TL, trần 18 / 4 / 6 / 8.\n"
+            "Không lấy hai câu cùng ý. Đủ mục tiêu thì chỉ lấy câu thật khác; chạm trần thì bỏ.\n"
+            "Không bịa đề không có trên trang.\n"
+            "Với MỖI câu, trước \\begin{ex} phải có đúng một dòng \\dangbt{Tên dạng}.\n"
+            "Ưu tiên gán vào các dạng ĐÃ CÓ của bài: " + dang_list + "\n"
+            "Chỉ tạo tên dạng mới khi câu không khớp dạng nào ở trên. Không markdown, không lời dẫn.\n"
+            "Không bịa đề không có trên trang.\n"
+            + kind_rules
+            + "Nội dung trang:\n" + page_text
+        )
+    elif page_text:
         prompt = (
             "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB sang LaTeX ngân hàng câu hỏi.\n"
             "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
-            "Dạng đang nạp: " + dang + "\nNguồn: " + source_url + "\n"
-            "Chỉ lấy câu THUỘC dạng này. Không bịa đề không có trên trang. Tối đa 6 câu.\n"
-            "Quy ước:\n"
-            "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
-            "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-            "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
-            "- TL: không \\choice, có \\loigiai{...}\n"
-            "Mỗi câu phải có \\loigiai{...} (nếu trang không có lời giải thì viết ngắn đúng đáp án). Công thức $...$. Không \\dangbt, không % ID.\n"
-            "Nội dung trang (đã gỡ HTML):\n" + page_text
+            "Dạng đang nạp: " + dang + "\n"
+            "Lấy các câu trên trang CÙNG CHỦ ĐỀ dạng này. Ý khác nhau — bỏ biến thể cùng một bài toán.\n"
+            "Không vượt trần mỗi dạng: 18 TN, 4 ĐS, 6 TLN, 8 TL. Ưu tiên đủ 9 TN, 2 ĐS, 3 TLN, 4 TL rồi dừng nếu chỉ còn câu giống.\n"
+            "Không bịa đề không có trên trang. Không \\dangbt.\n"
+            + kind_rules
+            + "Nội dung trang (đã gỡ HTML):\n" + page_text
         )
     else:
         prompt = (
             "Bạn là giáo viên ra đề thi THPT. Viết câu hỏi LaTeX MỚI cho đúng dạng bài, không copy đề mẫu.\n"
             "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
             "Dạng: " + dang + "\nCần viết: " + want + "\n"
+            "Mỗi câu một ý khác nhau, không viết biến thể cùng số liệu. Cấm trùng / gần trùng mẫu dưới.\n"
             "Quy ước:\n"
             "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
             "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
@@ -672,10 +934,11 @@ def api_admin_dang_fill():
             "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"
             + ("\n".join(f"- {k}: {t}" for k, t in samples) or "(chưa có)")
         )
+    tok = 16000 if page_text else 8000
     raw, err = '', ''
     for key in keys:
         try:
-            raw = _gemini_generate(key, prompt, 8000, 0.35)
+            raw = _gemini_generate(key, prompt, tok, 0.25)
             err = ''
             break
         except Exception as e:
@@ -685,13 +948,43 @@ def api_admin_dang_fill():
         return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
     raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
     blocks = _extract_ex_blocks(raw)
+    if page_text and len(blocks) < 4 and keys:
+        more_prompt = (
+            prompt
+            + "\n\nLần trước chỉ ra được " + str(len(blocks)) + " câu. Trang còn nhiều câu. "
+            "Viết TIẾP các khối \\begin{ex} CHƯA có, không lặp đề cũ. Vẫn đủ \\nguon và \\loigiai.\n"
+            "Đã có (cấm trùng):\n" + raw[-4000:]
+        )
+        extra = ''
+        for key in keys:
+            try:
+                extra = _gemini_generate(key, more_prompt, tok, 0.2)
+                break
+            except Exception:
+                extra = ''
+        if extra:
+            extra = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', extra.strip(), flags=re.I)
+            raw = (raw + '\n\n' + extra).strip()
+            blocks = _extract_ex_blocks(raw)
     if not blocks:
         return jsonify(ok=False, error='AI không ra khối \\begin{ex}...\\end{ex}. Thử lại.'), 400
     src, _line = dang_tex_anchor(path, dang, qs=qs)
-    latex = '\n\n'.join(blocks) + '\n'
-    labs = dict(KIND_CHIP_LABS)
-    summary = 'AI soạn ' + str(len(blocks)) + ' câu' + ((' từ link' if source_url else ' (' + want + ')') ) + '. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
-    return jsonify(ok=True, src=src, latex=latex, n=len(blocks), add=add, counts=counts, summary=summary)
+    latex = _import_tex_chunk(raw, dang) if (page_text and not dang) else ('\n\n'.join(blocks) + '\n')
+    if not latex.strip():
+        latex = '\n\n'.join(blocks) + '\n'
+    rows = _chunks_from_import(latex, dang)
+    kept, skipped = _filter_import_rows(rows, qs, dang)
+    if kept:
+        latex = '\n\n'.join('\\dangbt{' + d + '}\n' + b for d, b in kept) + '\n'
+    elif page_text:
+        return jsonify(ok=False, error='Mọi câu từ link đều gần trùng hoặc đã chạm trần dạng. Soát gợi ý xóa rồi thử lại.'), 400
+    else:
+        return jsonify(ok=False, error='Câu AI viết gần trùng đề đang có. Soát xóa bản thừa, đừng nhồi thêm biến thể.'), 400
+    latex = _latex_with_nguon(latex, source_url)
+    nd = len(_chunks_from_import(latex, dang))
+    skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần).') if skipped else ''
+    summary = 'AI soạn ' + str(nd or len(blocks)) + ' câu' + (' từ link (tự gán dạng)' if (source_url and not dang) else (' từ link' if source_url else ' (' + want + ')')) + skip_txt + '. Mỗi câu có \\nguon{link}. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
+    return jsonify(ok=True, src=src, latex=latex, n=nd or len(blocks), add=add, counts=counts, summary=summary)
 
 @app.post('/api/admin/dang-fill-save')
 def api_admin_dang_fill_save():
@@ -701,9 +994,10 @@ def api_admin_dang_fill_save():
     data = request.get_json(silent=True) or {}
     path = str(data.get('path') or '').replace('\\', '/').strip()
     dang = str(data.get('dang') or '').strip()
-    blocks = _extract_ex_blocks(data.get('latex') or '')
-    if not path.startswith('ngan-hang/') or not dang or not blocks:
-        return jsonify(ok=False, error='Thiếu dạng hoặc không có \\begin{ex}.'), 400
+    raw_tex = str(data.get('latex') or '')
+    rows = _chunks_from_import(raw_tex, dang)
+    if not path.startswith('ngan-hang/') or not rows:
+        return jsonify(ok=False, error='Thiếu bài hoặc không có \\begin{ex}.'), 400
     try:
         qs = load_lesson_questions(path)
     except Exception:
@@ -711,7 +1005,7 @@ def api_admin_dang_fill_save():
     src, _line = dang_tex_anchor(path, dang, qs=qs)
     if not src.startswith('ngan-hang/') or not src.lower().endswith('.tex'):
         return jsonify(ok=False, error='File TEX không hợp lệ.'), 400
-    chunk = '\n\\dangbt{' + dang + '}\n' + '\n\n'.join(blocks) + '\n'
+    chunk = _latex_with_nguon(_import_tex_chunk(raw_tex, dang), data.get('source_url') or '')
     try:
         sha, tex = read_tex(src, need_sha=True)
         new = (tex or '').rstrip() + '\n' + chunk
@@ -719,12 +1013,12 @@ def api_admin_dang_fill_save():
         local.parent.mkdir(parents=True, exist_ok=True)
         local.write_text(new, encoding='utf-8')
         if TOKEN:
-            github_put_text(src, new, 'ADMIN AI thêm ' + str(len(blocks)) + ' câu dạng ' + dang, sha or None)
+            github_put_text(src, new, 'ADMIN AI thêm ' + str(len(rows)) + ' câu từ link/bài', sha or None)
         _STATS_CACHE.clear()
         _QID_CACHE.clear()
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
-    return jsonify(ok=True, n=len(blocks), src=src)
+    return jsonify(ok=True, n=len(rows), src=src)
 
 def start_selected_questions():
     """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""

@@ -88,6 +88,9 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .drawdang.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
 @media(max-width:1024px){.dtab{max-width:min(20rem,90vw);white-space:normal}}
 .admindang{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
+.admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
+.admindang .simrev h4{margin:10px 0 4px;font-size:13px}
+.admindang .simrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed #fed7aa;font-size:13px}
 .admindang .gapnote{font-size:13px;font-weight:700;color:#9a3412}
 .admindang #aiGapOut{flex:1 1 100%;font-size:13px;line-height:1.45}
 html:has(body.cinema){scroll-padding-top:0}
@@ -1660,6 +1663,8 @@ def dup_index_by_question(groups):
 
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
 KIND_CHIP_LABS = (('TN', 'TN'), ('DS', 'ĐS'), ('TLN', 'TLN'), ('TL', 'TL'))
+KIND_AIM = {'TN': 9, 'DS': 2, 'TLN': 3, 'TL': 4}
+KIND_MAX = {'TN': 18, 'DS': 4, 'TLN': 6, 'TL': 8}
 
 def kind_chips_html(counts):
     """Báo nhỏ 4 loại câu trên một dạng (TN / ĐS / TLN / TL)."""
@@ -1846,16 +1851,175 @@ def dang_tex_anchor(path, dang, qs=None):
     return p0, 1
 
 def kind_gap_heuristic(counts):
-    """Số câu nên thêm để dạng có đủ 4 loại (mức tối thiểu luyện thi)."""
-    targets = {'TN': 8, 'DS': 6, 'TLN': 5, 'TL': 3}
+    """Số câu nên thêm để đạt mức cố gắng; không thêm khi đã chạm trần."""
     add = {}
     for k in KIND_ORDER:
         try:
             n = int((counts or {}).get(k) or 0)
         except (TypeError, ValueError):
             n = 0
-        add[k] = max(0, int(targets[k]) - n)
+        if n >= int(KIND_MAX[k]):
+            add[k] = 0
+        else:
+            add[k] = max(0, int(KIND_AIM[k]) - n)
     return add
+
+def kind_over_max(counts):
+    over = {}
+    for k in KIND_ORDER:
+        try:
+            n = int((counts or {}).get(k) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        over[k] = max(0, n - int(KIND_MAX[k]))
+    return over
+
+def kind_quota_line(counts):
+    labs = dict(KIND_CHIP_LABS)
+    add = kind_gap_heuristic(counts)
+    over = kind_over_max(counts)
+    have = ' · '.join(f"{lab} {int((counts or {}).get(k) or 0)}/{KIND_AIM[k]}" for k, lab in KIND_CHIP_LABS)
+    miss = ' · '.join(f"{labs[k]} +{add[k]}" for k in KIND_ORDER if add.get(k))
+    extra = ' · '.join(f"{labs[k]} thừa {over[k]}" for k in KIND_ORDER if over.get(k))
+    bits = [have]
+    if miss:
+        bits.append('cần thêm ' + miss)
+    if extra:
+        bits.append('vượt trần (nên bớt câu tương tự): ' + extra)
+    if not miss and not extra:
+        bits.append('đã đạt mức cố gắng, chưa vượt trần')
+    return ' · '.join(bits)
+
+def lesson_catalog_of(path):
+    _sibs, cur = chapter_lessons_for(path)
+    if cur:
+        return cur
+    folder = Path(str(path or '').replace('\\', '/')).as_posix()
+    parts = [p for p in folder.split('/') if p]
+    # ngan-hang / Mon / Lớp x / Chương / Bài / de.tex
+    mon = parts[1] if len(parts) > 1 else ''
+    lop = parts[2] if len(parts) > 2 else ''
+    chuong = parts[3] if len(parts) > 3 else ''
+    bai = parts[4] if len(parts) > 4 else Path(folder).parent.name
+    return {'Mon': mon, 'Lop': lop, 'Chuong': chuong, 'BaiHoc': bai, 'path': path}
+
+def notebooklm_prompt_text(path, qs, dang=''):
+    """Prompt dán vào NotebookLM: chép bài KNTT, đúng LaTeX ngân hàng, đúng chỗ đang thiếu."""
+    meta = lesson_catalog_of(path) or {}
+    mon = str(meta.get('Mon') or '').strip() or 'Toán / Vật lý'
+    lop = str(meta.get('Lop') or '').strip()
+    if lop and not lop.lower().startswith('lớp'):
+        lop = 'Lớp ' + lop
+    chuong = str(meta.get('Chuong') or '').strip()
+    bai = str(meta.get('BaiHoc') or meta.get('De') or '').strip()
+    bm = re.search(r'Bài\s*(\d+(?:\.\d+)?)', bai, re.I)
+    bai_so = bm.group(1) if bm else ''
+    dang = str(dang or '').strip()
+    per, _allc = dang_kind_counts_of(qs)
+    names, _cnts = dang_names_of(qs)
+    focus = [dang] if dang else list(names)
+    if not focus:
+        focus = ['Chưa phân dạng']
+    labs = dict(KIND_CHIP_LABS)
+    kind_long = {'TN': 'trắc nghiệm 4 phương án', 'DS': 'đúng/sai 4 mệnh đề', 'TLN': 'trả lời ngắn', 'TL': 'tự luận'}
+    need_lines, have_lines, skip_lines = [], [], []
+    for name in focus:
+        counts = {k: int((per.get(name) or {}).get(k) or 0) for k in KIND_ORDER}
+        add = kind_gap_heuristic(counts)
+        over = kind_over_max(counts)
+        have_lines.append(
+            '- Dạng «' + name + '»: đang có ' + ', '.join(f"{labs[k]} {counts[k]}" for k in KIND_ORDER)
+            + f' (mục tiêu {KIND_AIM["TN"]} TN / {KIND_AIM["DS"]} ĐS / {KIND_AIM["TLN"]} TLN / {KIND_AIM["TL"]} TL; trần {KIND_MAX["TN"]}/{KIND_MAX["DS"]}/{KIND_MAX["TLN"]}/{KIND_MAX["TL"]}).'
+        )
+        bits = [f"{kind_long[k]}: cần thêm {add[k]} câu (không vượt trần {KIND_MAX[k]})" for k in KIND_ORDER if add.get(k)]
+        if bits:
+            need_lines.append('- Dạng «' + name + '» — ' + '; '.join(bits) + '.')
+        extra = [f"{labs[k]} đang thừa {over[k]} so với trần" for k in KIND_ORDER if over.get(k)]
+        if extra:
+            skip_lines.append('- Dạng «' + name + '»: ' + '; '.join(extra) + ' — KHÔNG chép thêm loại đó.')
+        scoped = questions_in_scope(qs, name) if name else []
+        stems = []
+        for q in scoped[:8]:
+            t = re.sub(r'\s+', ' ', str(q.get('text') or '')).strip()
+            t = re.sub(r'<[^>]+>', '', t)
+            if t:
+                stems.append('  · [' + str(q.get('kind') or '') + '] ' + (t[:110] + '…' if len(t) > 110 else t))
+        if stems:
+            have_lines.append('  Đã có (cấm chép trùng / cùng ý):\n' + '\n'.join(stems))
+    if not need_lines:
+        need_lines.append('- Mọi dạng đang xét đã đạt mức cố gắng. Chỉ chép câu SBT/SGK KHÁC Ý hẳn, không vượt trần từng loại.')
+    sach = 'bộ sách giáo khoa và sách bài tập Kết nối tri thức với cuộc sống'
+    where = ', '.join(x for x in (mon, lop, chuong, bai) if x)
+    return '\n'.join([
+        'Bạn là trợ lý soạn ngân hàng câu hỏi. Chỉ dùng nội dung trong tài liệu tôi đã tải lên NotebookLM (SGK/SBT ' + sach + ').',
+        'Không bịa đề, không lấy sách Cánh Diều / Chân trời / KNTT năm khác nếu không có trong nguồn.',
+        '',
+        'BÀI CẦN BỔ SUNG',
+        '- Môn: ' + mon,
+        '- Khối: ' + (lop or '(ghi đúng lớp trong sách)'),
+        '- Chương: ' + (chuong or '(đúng tên chương SGK KNTT)'),
+        '- Bài học: ' + (bai or '(đúng số bài SGK)'),
+        ('- Số bài SGK/SBT cần mở: Bài ' + bai_so + ' (và bài luyện tập / bài tập cuối bài tương ứng trong SBT).') if bai_so else '- Mở đúng bài học trùng tên ở SGK rồi sang SBT cùng bài.',
+        '- Sách: ' + sach + ' — môn ' + mon + (', ' + lop if lop else '') + '.',
+        '- Nơi ghi trên đề: ' + where + '.',
+        '',
+        'CẦN BỔ SUNG (theo dạng đang thiếu trên web)',
+        *need_lines,
+        '',
+        'HIỆN TRẠNG NGÂN HÀNG (để khỏi trùng)',
+        *have_lines,
+        *(['', 'KHÔNG THÊM (đã đầy/vượt trần)'] + skip_lines if skip_lines else []),
+        '',
+        'VIỆC CẦN LÀM',
+        '1) Trong SGK + SBT KNTT, tìm bài tập đúng bài/lớp/chương trên, thuộc các dạng đã liệt kê.',
+        '2) Chép nguyên đề (và lời giải/đáp án nếu sách có). Ghi rõ lấy từ SGK hay SBT, bài mấy, câu mấy.',
+        '3) Mỗi câu một ý; bỏ biến thể cùng số liệu. Đủ mục tiêu thì dừng loại đó.',
+        '4) Trả về ĐÚNG LaTeX ngân hàng dưới đây — không markdown, không lời dẫn dài.',
+        '',
+        'ĐỊNH DẠNG LATEX (bắt buộc)',
+        'Trước mỗi câu: \\dangbt{Tên dạng} — dùng đúng tên dạng ở trên, không đặt tên mới trừ khi sách ra dạng khác hẳn.',
+        'Khối câu: \\begin{ex} ... \\end{ex}',
+        'Trong mỗi câu có \\nguon{SGK KNTT ' + mon + ' ' + (lop or '') + ' Bài ' + (bai_so or '…') + ' câu …} hoặc \\nguon{SBT KNTT … Bài … câu …}',
+        'Công thức toán trong $...$. Có \\loigiai{...} (nếu sách không có lời giải thì giải ngắn đúng đáp án).',
+        'Không bọc ```latex. Không % ID.',
+        '',
+        'Trắc nghiệm (TN):',
+        '\\dangbt{Tên dạng}',
+        '\\begin{ex}',
+        'Đề...',
+        '\\choice',
+        '{A}',
+        '{B}',
+        '{\\True C đúng}',
+        '{D}',
+        '\\loigiai{...}',
+        '\\nguon{SBT KNTT ...}',
+        '\\end{ex}',
+        '',
+        'Đúng sai (ĐS) — đúng 4 mệnh đề:',
+        '\\begin{ex}',
+        'Đề...',
+        '\\choiceTF',
+        '{\\True mệnh đề đúng}',
+        '{mệnh đề sai}',
+        '{...}',
+        '{...}',
+        '\\loigiai{...}',
+        '\\nguon{...}',
+        '\\end{ex}',
+        '',
+        'Trả lời ngắn (TLN):',
+        '\\begin{ex}',
+        'Đề...',
+        '\\shortans{đáp án}',
+        '\\loigiai{...}',
+        '\\nguon{...}',
+        '\\end{ex}',
+        '',
+        'Tự luận (TL): không \\choice / \\choiceTF / \\shortans; có \\loigiai{...}.',
+        '',
+        'Nếu trong tài liệu NotebookLM không có SGK/SBT KNTT đúng môn-lớp-bài: trả lời một câu «Thiếu sách …» và không bịa đề.',
+    ])
 
 def admin_dang_bar_html(path, qs, dang=''):
     if not can_manage_bank():
@@ -1869,26 +2033,37 @@ def admin_dang_bar_html(path, qs, dang=''):
     if line:
         href += '&line=' + str(int(line))
     missing = [lab for k, lab in KIND_CHIP_LABS if int(counts.get(k) or 0) == 0]
-    if missing:
+    over = kind_over_max(counts) if dang else {}
+    over_labs = [lab for k, lab in KIND_CHIP_LABS if over.get(k)]
+    if not dang:
+        miss = 'Cả bài: soát từng dạng (không cộng chung các dạng).'
+        heur_txt = 'Mỗi dạng cố gắng 9 TN / 2 ĐS / 3 TLN / 4 TL · trần 18 / 4 / 6 / 8.'
+    elif over_labs:
+        miss = 'Vượt trần: ' + ', '.join(over_labs) + ' — soát câu gần trùng rồi xóa bớt.'
+        heur_txt = kind_quota_line(counts)
+    elif missing:
         miss = 'Còn thiếu loại: ' + ', '.join(missing)
+        heur_txt = kind_quota_line(counts)
     else:
-        miss = 'Đã có đủ 4 loại (mỗi loại ≥ 1 câu).'
-    heur = kind_gap_heuristic(counts)
-    heur_bits = ' · '.join(f"{lab} +{heur[k]}" for k, lab in KIND_CHIP_LABS if heur.get(k))
-    heur_txt = ('Gợi ý tối thiểu: thêm ' + heur_bits) if heur_bits else 'Đã đạt mức tối thiểu 8 TN / 6 ĐS / 5 TLN / 3 TL.'
+        miss = 'Đã có đủ 4 loại.'
+        heur_txt = kind_quota_line(counts)
     title = html.escape(dang or 'Cả bài')
+    tex_lab = '✏️ TEX dạng này' if dang else '✏️ TEX cả bài'
+    url_ph = 'Dán link đề — không cần chọn dạng, AI tự gán dạng'
+    hint = 'Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>. Nút Prompt NotebookLM: dán vào NotebookLM (SGK/SBT KNTT) để chép bài đúng LaTeX.'
     return (
         "<div class='admindang' data-path='"+html.escape(str(path or ''), quote=True)+"' data-dang='"+html.escape(dang, quote=True)+"'>"
-        "<a class='btn' href='"+html.escape(href, quote=True)+"'>✏️ TEX dạng này</a>"
+        "<a class='btn' href='"+html.escape(href, quote=True)+"'>"+tex_lab+"</a>"
         "<span class='muted'>«"+title+"»</span>"
         + kind_chips_html(counts)
         + "<span class='gapnote'>"+html.escape(miss)+"</span>"
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
-        "<button type='button' class='btn' id='aiGap'>1. 🤖 Đếm số câu thiếu</button>"
+        "<button type='button' class='btn' id='aiGap'>1. 🤖 Soát dạng · đếm thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
-        "<input id='aiSrcUrl' type='url' placeholder='Hoặc dán link đề (trang web khác)' style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+        "<input id='aiSrcUrl' type='url' placeholder='"+html.escape(url_ph, quote=True)+"' style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
         "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link → TEX</button>"
-        "<span class='muted'>Link: AI chuyển đề sẵn sang \\begin{ex} (thường nhanh hơn viết mới). Rồi bấm Chấp nhận ghi TEX.</span>"
+        "<button type='button' class='btn' id='aiNb'>📋 Prompt NotebookLM</button>"
+        "<span class='muted'>"+hint+"</span>"
         "<div id='aiGapOut'></div></div>"
     )
 

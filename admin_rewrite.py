@@ -738,16 +738,50 @@ document.addEventListener('click',async function(e){
   e.preventDefault();
   const bar=btn.closest('.admindang');
   const out=document.getElementById('aiGapOut');
-  if(out) out.innerHTML='⏳ AI đang đếm số câu còn thiếu...';
+  if(out) out.innerHTML='⏳ Đang soát từng dạng (thiếu/thừa + câu gần trùng)...';
   const ks=keys();
   try{
     const r=await fetch('/api/admin/dang-gaps',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({path:bar&&bar.getAttribute('data-path')||'',dang:bar&&bar.getAttribute('data-dang')||'',api_keys:ks})});
     const d=await r.json();
     if(!d.ok){if(out) out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
-    if(out) out.innerHTML='<div class="success">'+esc(d.summary||'')+'</div>'+(d.note?'<div class="muted">'+esc(d.note)+'</div>':'');
+    if(out) out.innerHTML='<div class="success">'+esc(d.summary||'')+'</div>'+(d.note?'<div class="muted">'+esc(d.note)+'</div>':'')+(d.review_html||'');
     if(bar&&d.add) bar.setAttribute('data-add', JSON.stringify(d.add));
   }catch(err){if(out) out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
+document.addEventListener('click',async function(e){
+  const btn=e.target.closest&&e.target.closest('#aiNb');
+  if(!btn) return;
+  e.preventDefault();
+  const bar=btn.closest('.admindang')||document.querySelector('.admindang');
+  const out=document.getElementById('aiGapOut');
+  if(!bar||!out) return;
+  out.innerHTML='⏳ Đang soạn prompt NotebookLM theo bài/lớp/dạng đang thiếu...';
+  try{
+    const r=await fetch('/api/admin/notebooklm-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:bar.getAttribute('data-path')||'',dang:bar.getAttribute('data-dang')||''})});
+    const d=await r.json();
+    if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    const p=d.prompt||'';
+    out.innerHTML='<div class="success">Prompt NotebookLM: tải SGK/SBT KNTT đúng môn-lớp-bài vào NotebookLM, dán prompt, lấy LaTeX rồi dán vào ô hoặc bấm Lấy từ link.</div>'
+      +'<textarea id="aiNbTex" class="rwta" style="min-height:280px">'+esc(p)+'</textarea>'
+      +'<p><button type="button" class="btn green" id="aiNbCopy">📋 Sao chép prompt</button></p>';
+    const ta=document.getElementById('aiNbTex');
+    if(ta){ta.focus();ta.select();}
+    if(navigator.clipboard&&p){
+      try{await navigator.clipboard.writeText(p);}catch(err){}
+    }
+  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
+document.addEventListener('click',function(e){
+  const btn=e.target.closest&&e.target.closest('#aiNbCopy');
+  if(!btn) return;
+  e.preventDefault();
+  const ta=document.getElementById('aiNbTex');
+  const p=ta?ta.value:'';
+  if(!p) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(p).then(function(){btn.textContent='✅ Đã sao chép';}).catch(function(){ta.select();document.execCommand('copy');});
+  else {ta.select();document.execCommand('copy');}
 });
 document.addEventListener('click',async function(e){
   const fill=e.target.closest&&e.target.closest('#aiFill');
@@ -767,7 +801,7 @@ document.addEventListener('click',async function(e){
     save.disabled=true;
     try{
       const r=await fetch('/api/admin/dang-fill-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({path:path,dang:dang,latex:ta.value})});
+        body:JSON.stringify({path:path,dang:dang,latex:ta.value,source_url:(document.getElementById('aiSrcUrl')||{}).value||''})});
       const d=await r.json();
       if(!d.ok){out.insertAdjacentHTML('afterbegin','<div class="err">'+(d.error||'Không ghi được')+'</div>');save.disabled=false;return;}
       out.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
@@ -779,7 +813,8 @@ document.addEventListener('click',async function(e){
   if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
   const urlEl=document.getElementById('aiSrcUrl');
   const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
-  if(imp && !sourceUrl){alert('Dán link http/https vào ô rồi bấm Lấy từ link.');return;}
+  if(imp && !sourceUrl){alert('Dán link http/https vào ô rồi bấm Lấy từ link. Không cần chọn dạng — để Cả bài.');return;}
+  if(fill && !dang && !sourceUrl){alert('Đang ở Cả bài: dán link rồi bấm Lấy từ link. Nút AI viết thiếu dùng khi đã mở một dạng.');return;}
   out.innerHTML=sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...';
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
