@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 148,
+  "total_files": 149,
   "total_questions": 11412,
   "lessons": [
     {
@@ -5632,6 +5632,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề kéo theo",
+      "De": "Mệnh đề · Mệnh đề kéo theo",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
