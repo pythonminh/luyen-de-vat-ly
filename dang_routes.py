@@ -2,10 +2,14 @@
 """Member question browser: show every question before building a test."""
 from __future__ import annotations
 import html
+import ipaddress
 import json
 import re
+import socket
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from flask import request, jsonify, redirect, session
 from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, tex_without_questions
 
@@ -515,6 +519,97 @@ def _extract_ex_blocks(text):
         blocks.append(m.group(0).strip())
     return blocks
 
+_BLOCK_HOSTS = {
+    'localhost', '127.0.0.1', '::1', '0.0.0.0',
+    'metadata.google.internal', 'metadata.google.internal.',
+}
+
+def _host_blocked(host):
+    host = str(host or '').strip().rstrip('.').lower()
+    if not host or host in _BLOCK_HOSTS or host.endswith('.localhost') or host.endswith('.local'):
+        return True
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return True
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except Exception:
+            return True
+        if (
+            ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast
+            or ip.is_reserved or ip.is_unspecified
+        ):
+            return True
+        if ip.exploded in {'0000:0000:0000:0000:0000:0000:0000:0001'} or str(ip) == '169.254.169.254':
+            return True
+    return False
+
+def _assert_public_http_url(raw):
+    u = urllib.parse.urlparse(str(raw or '').strip())
+    if u.scheme not in ('http', 'https'):
+        raise ValueError('Chỉ nhận link http/https.')
+    if u.username or u.password:
+        raise ValueError('Link không hợp lệ.')
+    host = u.hostname
+    if not host or _host_blocked(host):
+        raise ValueError('Không lấy được link nội bộ / địa chỉ cấm.')
+    if u.port in (22, 25, 3306, 5432, 6379, 9200, 11211):
+        raise ValueError('Cổng này không được phép.')
+    return u.geturl()
+
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _assert_public_http_url(newurl)
+        return urllib.request.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, headers, newurl)
+
+def _html_to_text(raw):
+    s = str(raw or '')
+    s = re.sub(r'(?is)<(script|style|noscript|svg)[^>]*>.*?</\1>', ' ', s)
+    s = re.sub(r'(?i)<br\s*/?>', '\n', s)
+    s = re.sub(r'(?i)</(p|div|li|tr|h[1-6]|section|article)>', '\n', s)
+    s = re.sub(r'(?s)<[^>]+>', ' ', s)
+    s = html.unescape(s)
+    s = re.sub(r'[ \t\f\v]+', ' ', s)
+    s = re.sub(r'\n{3,}', '\n\n', s)
+    return s.strip()
+
+def _fetch_public_page(url):
+    try:
+        url = _assert_public_http_url(url)
+    except ValueError as e:
+        return '', str(e)
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'luyen-de-vat-ly-admin/1.0 (question import)',
+        'Accept': 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1',
+    })
+    opener = urllib.request.build_opener(_SafeRedirect)
+    try:
+        with opener.open(req, timeout=18) as r:
+            ctype = str(r.headers.get('Content-Type') or '').lower()
+            if ctype and 'html' not in ctype and 'text' not in ctype and 'xml' not in ctype:
+                return '', 'Trang này không phải HTML/văn bản.'
+            raw = r.read(450000)
+    except urllib.error.HTTPError as e:
+        return '', 'Không tải được trang (HTTP %s).' % e.code
+    except Exception as e:
+        return '', 'Không tải được trang: ' + str(e)[:160]
+    if len(raw) >= 450000:
+        raw = raw[:449000]
+    charset = 'utf-8'
+    cm = re.search(r'charset=([A-Za-z0-9._-]+)', ctype)
+    if cm:
+        charset = cm.group(1)
+    try:
+        text = raw.decode(charset, errors='replace')
+    except Exception:
+        text = raw.decode('utf-8', errors='replace')
+    plain = _html_to_text(text)
+    if len(plain) < 40:
+        return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
+    return plain[:14000], ''
+
 @app.post('/api/admin/dang-fill')
 def api_admin_dang_fill():
     if not can_manage_bank():
@@ -529,6 +624,12 @@ def api_admin_dang_fill():
     keys = _keys_from_payload(data)
     if not keys:
         return jsonify(ok=False, error='Nạp key Gemini rồi bấm lại.'), 400
+    source_url = str(data.get('source_url') or data.get('url') or '').strip()
+    page_text = ''
+    if source_url:
+        page_text, ferr = _fetch_public_page(source_url)
+        if ferr:
+            return jsonify(ok=False, error=ferr), 400
     try:
         qs = load_lesson_questions(path)
     except Exception as e:
@@ -537,25 +638,40 @@ def api_admin_dang_fill():
     counts = {k: int((per.get(dang) or {}).get(k) or 0) for k in KIND_ORDER}
     add = data.get('add') if isinstance(data.get('add'), dict) else kind_gap_heuristic(counts)
     add = _cap_fill_add(add)
-    if not any(add.values()):
+    if not page_text and not any(add.values()):
         return jsonify(ok=False, error='Dạng này chưa cần thêm câu (hoặc bấm Đếm số câu thiếu trước).'), 400
     samples = []
     for q in questions_in_scope(qs, dang)[:3]:
         samples.append((str(q.get('kind') or ''), str(q.get('text') or '')[:280]))
-    want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k))
-    prompt = (
-        "Bạn là giáo viên ra đề thi THPT. Viết câu hỏi LaTeX MỚI cho đúng dạng bài, không copy đề mẫu.\n"
-        "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
-        "Dạng: " + dang + "\nCần viết: " + want + "\n"
-        "Quy ước:\n"
-        "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
-        "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-        "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
-        "- TL: không \\choice, có \\loigiai{...}\n"
-        "Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n"
-        "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"
-        + ("\n".join(f"- {k}: {t}" for k, t in samples) or "(chưa có)")
-    )
+    want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k)) or 'các câu trên trang thuộc dạng này'
+    if page_text:
+        prompt = (
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB sang LaTeX ngân hàng câu hỏi.\n"
+            "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
+            "Dạng đang nạp: " + dang + "\nNguồn: " + source_url + "\n"
+            "Chỉ lấy câu THUỘC dạng này. Không bịa đề không có trên trang. Tối đa 6 câu.\n"
+            "Quy ước:\n"
+            "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
+            "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
+            "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+            "- TL: không \\choice, có \\loigiai{...}\n"
+            "Mỗi câu phải có \\loigiai{...} (nếu trang không có lời giải thì viết ngắn đúng đáp án). Công thức $...$. Không \\dangbt, không % ID.\n"
+            "Nội dung trang (đã gỡ HTML):\n" + page_text
+        )
+    else:
+        prompt = (
+            "Bạn là giáo viên ra đề thi THPT. Viết câu hỏi LaTeX MỚI cho đúng dạng bài, không copy đề mẫu.\n"
+            "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
+            "Dạng: " + dang + "\nCần viết: " + want + "\n"
+            "Quy ước:\n"
+            "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
+            "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
+            "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+            "- TL: không \\choice, có \\loigiai{...}\n"
+            "Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n"
+            "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"
+            + ("\n".join(f"- {k}: {t}" for k, t in samples) or "(chưa có)")
+        )
     raw, err = '', ''
     for key in keys:
         try:
@@ -574,7 +690,7 @@ def api_admin_dang_fill():
     src, _line = dang_tex_anchor(path, dang, qs=qs)
     latex = '\n\n'.join(blocks) + '\n'
     labs = dict(KIND_CHIP_LABS)
-    summary = 'AI soạn ' + str(len(blocks)) + ' câu (' + want + '). Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
+    summary = 'AI soạn ' + str(len(blocks)) + ' câu' + ((' từ link' if source_url else ' (' + want + ')') ) + '. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
     return jsonify(ok=True, src=src, latex=latex, n=len(blocks), add=add, counts=counts, summary=summary)
 
 @app.post('/api/admin/dang-fill-save')

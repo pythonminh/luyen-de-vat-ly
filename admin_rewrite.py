@@ -752,7 +752,8 @@ document.addEventListener('click',async function(e){
 document.addEventListener('click',async function(e){
   const fill=e.target.closest&&e.target.closest('#aiFill');
   const save=e.target.closest&&e.target.closest('#aiFillSave');
-  if(!fill&&!save) return;
+  const imp=e.target.closest&&e.target.closest('#aiImport');
+  if(!fill&&!save&&!imp) return;
   e.preventDefault();
   const bar=document.querySelector('.admindang');
   const out=document.getElementById('aiGapOut');
@@ -776,12 +777,15 @@ document.addEventListener('click',async function(e){
   }
   const ks=keys();
   if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
-  out.innerHTML='⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...';
+  const urlEl=document.getElementById('aiSrcUrl');
+  const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
+  if(imp && !sourceUrl){alert('Dán link http/https vào ô rồi bấm Lấy từ link.');return;}
+  out.innerHTML=sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...';
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl})});
     const d=await r.json();
     if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'

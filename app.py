@@ -1886,7 +1886,9 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
         "<button type='button' class='btn' id='aiGap'>1. 🤖 Đếm số câu thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
-        "<span class='muted'>Rồi bấm <b>Chấp nhận ghi TEX</b>. Muốn gõ tay thì bấm TEX dạng này.</span>"
+        "<input id='aiSrcUrl' type='url' placeholder='Hoặc dán link đề (trang web khác)' style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+        "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link → TEX</button>"
+        "<span class='muted'>Link: AI chuyển đề sẵn sang \\begin{ex} (thường nhanh hơn viết mới). Rồi bấm Chấp nhận ghi TEX.</span>"
         "<div id='aiGapOut'></div></div>"
     )
 
