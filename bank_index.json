@@ -5550,9 +5550,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Mệnh đề chứa biến",
       "De": "Mệnh đề · Mệnh đề chứa biến",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Mệnh đề chứa biến": 1
+      },
+      "dang_kinds": {
+        "Mệnh đề chứa biến": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
