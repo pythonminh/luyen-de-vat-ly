@@ -487,7 +487,7 @@ def _review_similar_html(path, qs, dang, next_url):
                 n_drop += 1
                 body.append(
                     "<div class='simrow'><label class='simx'><input type='checkbox' name='drop' value='"
-                    + html.escape(dk, quote=True) + "' checked> Gợi ý xóa "
+                    + html.escape(dk, quote=True) + "' checked> Tick xóa "
                     + html.escape(str(ex.get('kind') or '')) + " "
                     + html.escape(str(ex.get('id') or '—')) + "</label> — "
                     + html.escape(_q_preview(ex, 80)) + "</div>"

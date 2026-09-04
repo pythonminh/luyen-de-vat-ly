@@ -90,8 +90,9 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .admindang{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
 .admindang .simrev h4{margin:10px 0 4px;font-size:13px}
-.admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff}
-.admindang .simx{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:800;color:#9f1239}
+.admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff;position:sticky;top:0;z-index:2}
+.admindang .simx{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;color:#fff;background:#9f1239;border-radius:999px;padding:4px 12px 4px 8px}
+.admindang .simx input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;accent-color:#fff;flex:0 0 auto}
 .admindang .gapnote{font-size:13px;font-weight:700;color:#9a3412}
 .admindang #aiGapOut{flex:1 1 100%;font-size:13px;line-height:1.45}
 html:has(body.cinema){scroll-padding-top:0}
