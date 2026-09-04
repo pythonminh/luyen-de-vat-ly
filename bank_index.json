@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11431,
+  "total_questions": 11403,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1953,16 +1953,16 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ",
-      "questions": 38,
-      "count": 38,
+      "questions": 10,
+      "count": 10,
       "dang": {
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 38
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 10
       },
       "dang_kinds": {
         "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
-          "TN": 17,
-          "DS": 15,
-          "TLN": 6,
+          "TN": 4,
+          "DS": 4,
+          "TLN": 2,
           "TL": 0
         }
       }
