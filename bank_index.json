@@ -5642,9 +5642,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Mệnh đề kéo theo",
       "De": "Mệnh đề · Mệnh đề kéo theo",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Mệnh đề kéo theo": 1
+      },
+      "dang_kinds": {
+        "Mệnh đề kéo theo": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
