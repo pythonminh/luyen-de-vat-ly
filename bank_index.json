@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11412,
+  "total_questions": 11429,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -18,6 +18,144 @@
       "count": 0,
       "dang": {},
       "dang_kinds": {}
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề chứa biến",
+      "De": "Mệnh đề · Mệnh đề chứa biến",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Mệnh đề chứa biến": 1
+      },
+      "dang_kinds": {
+        "Mệnh đề chứa biến": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề kéo theo",
+      "De": "Mệnh đề · Mệnh đề kéo theo",
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "Mệnh đề kéo theo": 18
+      },
+      "dang_kinds": {
+        "Mệnh đề kéo theo": {
+          "TN": 9,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề tương đương",
+      "De": "Mệnh đề · Mệnh đề tương đương",
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "Mệnh đề tương đương": 18
+      },
+      "dang_kinds": {
+        "Mệnh đề tương đương": {
+          "TN": 9,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Mệnh đề với mọi, tồn tại",
+      "De": "Mệnh đề · Mệnh đề với mọi, tồn tại",
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Mệnh đề với mọi, tồn tại": 3
+      },
+      "dang_kinds": {
+        "Mệnh đề với mọi, tồn tại": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Phủ định mệnh đề",
+      "De": "Mệnh đề · Phủ định mệnh đề",
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Phủ định mệnh đề": 3
+      },
+      "dang_kinds": {
+        "Phủ định mệnh đề": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
+      "De": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Xác định mệnh đề và tính đúng sai": 7
+      },
+      "dang_kinds": {
+        "Xác định mệnh đề và tính đúng sai": {
+          "TN": 4,
+          "DS": 1,
+          "TLN": 2,
+          "TL": 0
+        }
+      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/de.tex",
@@ -5494,144 +5632,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Mệnh đề chứa biến",
-      "De": "Mệnh đề · Mệnh đề chứa biến",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Mệnh đề chứa biến": 1
-      },
-      "dang_kinds": {
-        "Mệnh đề chứa biến": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
-      "De": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
-      "questions": 7,
-      "count": 7,
-      "dang": {
-        "Xác định mệnh đề và tính đúng sai": 7
-      },
-      "dang_kinds": {
-        "Xác định mệnh đề và tính đúng sai": {
-          "TN": 4,
-          "DS": 1,
-          "TLN": 2,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-voi-moi-ton-tai.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Mệnh đề với mọi, tồn tại",
-      "De": "Mệnh đề · Mệnh đề với mọi, tồn tại",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Mệnh đề với mọi, tồn tại": 3
-      },
-      "dang_kinds": {
-        "Mệnh đề với mọi, tồn tại": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-phu-dinh-menh-de.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Phủ định mệnh đề",
-      "De": "Mệnh đề · Phủ định mệnh đề",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Phủ định mệnh đề": 3
-      },
-      "dang_kinds": {
-        "Phủ định mệnh đề": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-keo-theo.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Mệnh đề kéo theo",
-      "De": "Mệnh đề · Mệnh đề kéo theo",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Mệnh đề kéo theo": 1
-      },
-      "dang_kinds": {
-        "Mệnh đề kéo theo": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-tuong-duong.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Mệnh đề · Mệnh đề tương đương",
-      "De": "Mệnh đề · Mệnh đề tương đương",
-      "questions": 18,
-      "count": 18,
-      "dang": {
-        "Mệnh đề tương đương": 18
-      },
-      "dang_kinds": {
-        "Mệnh đề tương đương": {
-          "TN": 9,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
         }
       }
     }
