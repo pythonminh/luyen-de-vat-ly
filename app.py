@@ -1043,6 +1043,20 @@ def command_args(block,cmd):
         vals.append(v);p=p2
     return vals
 
+def split_true_mark(s):
+    """\\True có thể dính khoảng trắng: { \\True $99$ ... } — web vẫn nhận đáp án đúng."""
+    t = str(s or '').strip()
+    ok = bool(re.match(r'^\\True\b', t, re.I))
+    if ok:
+        t = re.sub(r'^\\True\b\s*', '', t, flags=re.I)
+    return t, ok
+
+def peel_tex_breaks(s):
+    """TeX: \\ cuối dòng là nối dòng, không in ra web."""
+    s = re.sub(r'\\\s*\r?\n', ' ', str(s or ''))
+    s = re.sub(r'\\\s*$', '', s)
+    return s
+
 def solution_of(block):
     m=re.search(r'\\loigiai\s*\{',block,re.I)
     if not m:return ''
@@ -1582,10 +1596,20 @@ def parse_questions(tex):
         if cut>=0: pre=pre[cut:]
         nguon=' · '.join(dict.fromkeys(extract_nguon(pre)+extract_nguon(b)))
         stem=re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b|\\loigiai\b',b,1,flags=re.I)[0]
-        stem=strip_loigiai(stem)
+        stem=peel_tex_breaks(strip_loigiai(stem))
         q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'text':clean_latex_web(stem),'solution':clean_latex_web(solution_of(b)),'raw':b}
-        if kind=='TN':q['options']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choice')[:4]]
-        elif kind=='DS':q['statements']=[{'text':clean_latex_web(re.sub(r'^\\True\s*','',x,flags=re.I)),'correct':bool(re.match(r'^\\True\b',x,re.I))} for x in command_args(b,'\\choiceTF')]
+        if kind=='TN':
+            opts=[]
+            for x in command_args(b,'\\choice')[:4]:
+                t,ok=split_true_mark(x)
+                opts.append({'text':clean_latex_web(t),'correct':ok})
+            q['options']=opts
+        elif kind=='DS':
+            stmts=[]
+            for x in command_args(b,'\\choiceTF'):
+                t,ok=split_true_mark(x)
+                stmts.append({'text':clean_latex_web(t),'correct':ok})
+            q['statements']=stmts
         elif kind=='TLN':
             sm=re.search(r'\\shortans\s*(?:\[[^\]]*\])?\s*',b,re.I);ans=''
             if sm:ans,_=get_braced(b,sm.end())
