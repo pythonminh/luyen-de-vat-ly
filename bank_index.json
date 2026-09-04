@@ -5665,9 +5665,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Mệnh đề tương đương",
       "De": "Mệnh đề · Mệnh đề tương đương",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "Mệnh đề tương đương": 18
+      },
+      "dang_kinds": {
+        "Mệnh đề tương đương": {
+          "TN": 9,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
+        }
+      }
     }
   ]
 }
