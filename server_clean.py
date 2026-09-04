@@ -87,8 +87,7 @@ def _replace_top(body: str) -> str:
 
 
 def _clean_html(body: str) -> str:
-    body = _replace_top(body)
-    body = re.sub(r"<div\s+class=['\"]nav['\"]>.*?</div>", _nav(), body, count=1, flags=re.I | re.S)
+    # Keep page() header/nav (hamburger + drawer). Do not rewrite .top / .nav.
 
     if session.get("role") != "admin":
         body = re.sub(
