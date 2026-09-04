@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 145,
+  "total_files": 146,
   "total_questions": 11412,
   "lessons": [
     {
@@ -5563,6 +5563,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-xac-dinh-menh-de-va-tinh-dung-sai.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
+      "De": "Mệnh đề · Xác định mệnh đề và tính đúng sai",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
