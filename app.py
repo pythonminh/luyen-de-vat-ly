@@ -77,6 +77,16 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
 .qzoombar{display:inline-flex;align-items:center;gap:6px;margin-left:8px;flex-wrap:wrap}.qzoombar .btn{padding:6px 10px;font-size:13px}.qzoombar b{min-width:3.4em;text-align:center}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitems{display:flex;flex-wrap:wrap;gap:5px;width:100%}.pdang{order:-1;font-weight:600;font-size:12px;line-height:1.35;color:#173a5e}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #d4c4f0;border-radius:11px;padding:16px;font-size:calc(19px * var(--qzoom,1));--qzoom:1;font-family:'Times New Roman',Times,serif;overflow-x:auto;max-width:100%}.qtext,.tf-text,.opt,.solution{line-height:1.75}mjx-container[jax="CHTML"]:not([display="true"]){display:inline!important;vertical-align:baseline!important;margin:0 .12em 0 0!important;padding:0!important;text-indent:0}mjx-container[jax="CHTML"][display="true"]{display:block;margin:.55em 0;max-width:100%;overflow-x:auto}.qtext{font-size:1em;line-height:1.75;margin-bottom:10px;overflow-x:auto;max-width:100%}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.qbox .tikzfig,.qbox .tikz-live{height:calc(var(--figh) * var(--qzoom,1))}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff;max-width:100%}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0;padding:0;line-height:1.75}ul.tex-list{padding-left:1.35em}ol.tex-list{list-style:none;counter-reset:ltn;padding:0}ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em}ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:.55em .7em;margin:.45em 0;cursor:pointer;font-size:1em}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.practice-split.is-ai{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.9fr);gap:12px;align-items:start}.practice-q{min-width:0}.practice-ai{position:sticky;top:calc(var(--header-h) + 8px);max-height:calc(100dvh - var(--header-h) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #cab9f0;background:#faf8ff;border-radius:12px;padding:12px;box-shadow:0 4px 18px #1b4d8a14}.practice-ai .review{margin-top:0}.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.modebar .btn.primary{min-width:160px}@media(max-width:900px){.practice-split.is-ai{grid-template-columns:1fr}.practice-ai{position:relative;top:auto;max-height:min(52dvh,520px)}}.tfgrid{margin:8px 0 4px;display:flex;flex-direction:column;gap:0}.qheadline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.qbadge{display:inline-block;background:#5b21b6;color:#fff;border-radius:8px;padding:.28em .8em;font:400 1em 'Times New Roman',Times,serif;flex-shrink:0;line-height:1.3}.qstem{flex:1 1 100%;min-width:100%;width:100%}.qbody.ds.hassplit{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(250px,1.2fr);gap:18px;align-items:start}.qfig .tikzfig,.qfig .tikz-live{height:auto;max-height:min(68vh,540px);margin:0;width:100%}.qfig .tex-table{margin:0 auto}.tflab{display:inline-flex;align-items:center;justify-content:center;min-width:1.75em;height:1.55em;padding:0 .3em;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6;margin:0;font:400 .95em 'Times New Roman',Times,serif;flex-shrink:0}.tf-colhead,.tfgrid .tf{display:grid;grid-template-columns:2.2em minmax(0,1fr) 3.1em 3.1em;column-gap:4px;align-items:center}.tf-colhead{padding:0 2px 2px}.tf-h{text-align:center;font-weight:400;font-size:.95em;line-height:1.15}.tf-h.yes{color:#5b21b6}.tf-h.no{color:#e11d48}.tfgrid .tf{border:0;border-radius:0;padding:7px 2px;margin:0;background:transparent}.tf-text{min-width:0;font-size:1em;line-height:1.7}.tf-box{width:1.2em;height:1.2em;border:2px solid #475569;border-radius:3px;background:#fff;justify-self:center;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;position:relative}.tf-box input{appearance:none;-webkit-appearance:none;position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}.tf-box:has(input:checked),.tf-box.on,.tf-box.pick{background:#fff;border-color:#475569}.tf-box:has(input:checked)::after,.tf-box.on::after,.tf-box.pick::after{content:"";width:.48em;height:.48em;border-radius:1px;background:#1d4ed8}.tfgrid .tf.correct,.tfgrid .tf.ok{background:#f7fbf8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.wrong,.tfgrid .tf.noans{background:#fdf8f8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.correct .tf-text,.tfgrid .tf.ok .tf-text{color:#2f4a38;font-weight:400}.tfgrid .tf.wrong .tf-text,.tfgrid .tf.noans .tf-text{color:#6a3a3a;font-weight:400}.tfgrid .tf.correct .tf-box:has(input:checked)::after,.tfgrid .tf.ok .tf-box.on::after,.tfgrid .tf.correct .tf-box.on::after,.tfgrid .tf.noans .tf-box.on::after{background:#15803d}.tfgrid .tf.wrong .tf-box:has(input:checked)::after,.tfgrid .tf.wrong .tf-box.pick::after{background:#b91c1c}@media(max-width:700px){.tf-colhead,.tfgrid .tf{grid-template-columns:1.9em minmax(0,1fr) 2.6em 2.6em}.tf-h{font-size:.82em}.qbody.ds.hassplit{grid-template-columns:1fr}}.correct{background:#f7fbf8!important;border-color:#c5ddd0!important}.wrong{background:#fdf8f8!important;border-color:#e6d0d0!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:9px;margin-top:10px;font-weight:400;font-family:'Times New Roman',Times,serif}.result .keyline,.result .vres{margin:0;font-size:.95em;font-weight:400;line-height:1.5}.result .keygrid{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin:0 0 0 8px;vertical-align:middle}.result .keyrow{display:inline-flex;align-items:center;gap:6px}.result .keylab{font-weight:400;opacity:.9;margin-right:2px}.result .keycell{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:400;white-space:nowrap}.result .klet{font-size:.78em;color:#64748b;line-height:1}.result .kcirc{display:inline-flex;width:2.15em;height:2.15em;border:0;border-radius:50%;align-items:center;justify-content:center;font-weight:400;font-size:1.05em;font-family:'Times New Roman',Times,serif;flex-shrink:0}.result .kcirc.d{background:#f8f1c8;color:#1e4b8c}.result .kcirc.s{background:#d8eedd;color:#b42318}.result .kcirc.tn{background:#e8f0f8;color:#1e4b8c}.result .keycell.ok{color:inherit}.result .keycell.bad .kcirc{box-shadow:0 0 0 1px #c98a8a}.good{background:#f7fbf8;color:#2f4a38;border:1px solid #d5e6db}.bad{background:#fdf8f8;color:#6a3a3a;border:1px solid #ead4d4}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.reviewout .ai-y{display:block;white-space:pre-wrap;margin:8px 0;padding:9px 11px;border-radius:8px;border-left:5px solid #cbd8e6;background:#fff}.reviewout .ai-y.ok{color:#116a32;background:#eaf8ef;border-color:#42ae6b}.reviewout .ai-y.bad{color:#a41f28;background:#fff0f1;border-color:#e04d56}.reviewout .ai-y .ai-tag{font-weight:900}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}.gkeyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.gkeyhead b{margin:0}.gkeyfold{padding:5px 10px;font-size:12px;white-space:nowrap}.review.gkey-collapsed .gkeybody{display:none}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
+.dtab{display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:min(22rem,86vw);white-space:normal;overflow:visible;text-overflow:unset;line-height:1.3}
+.dtab .dname{font-weight:800}
+.dkinds{display:flex;flex-wrap:wrap;gap:3px}
+.dk{display:inline-block;border:1px solid #fdba74;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:800;background:#fff;color:#9a3412}
+.dk.z{opacity:.42;font-weight:700}
+.dtab.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
+.drawdang{flex-wrap:wrap}
+.drawdang .dkinds{flex:1 1 100%}
+.drawdang.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
+@media(max-width:1024px){.dtab{max-width:min(20rem,90vw);white-space:normal}}
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
 body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px}
@@ -819,6 +829,17 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                             continue
                         pairs.append((str(k), cnt))
                     pairs.sort(key=lambda t: t[0])
+                    dang_kinds = x.get("dang_kinds") or {}
+                    all_kinds = {k: 0 for k in KIND_ORDER}
+                    for bucket in dang_kinds.values():
+                        if not isinstance(bucket, dict):
+                            continue
+                        for kk, vv in bucket.items():
+                            if kk in all_kinds:
+                                try:
+                                    all_kinds[kk] += int(vv or 0)
+                                except (TypeError, ValueError):
+                                    pass
                     dlinks = []
                     try:
                         import lythuyet as _lt
@@ -836,13 +857,13 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     except Exception:
                         pass
                     dlinks.append(
-                        f"<a class='drawdang{' on' if on and not current_dang else ''}' href='{html.escape(_go_kind_href(p, '', '', guest), quote=True)}'><span class='drawname'>Cả bài</span><span class='drawn'>{n}</span></a>"
+                        f"<a class='drawdang{' on' if on and not current_dang else ''}' href='{html.escape(_go_kind_href(p, '', '', guest), quote=True)}'><span class='drawname'>Cả bài</span><span class='drawn'>{n}</span>{kind_chips_html(all_kinds)}</a>"
                     )
                     for i, (dname, cnt) in enumerate(pairs, 1):
                         short = dname if len(dname) <= 48 else dname[:47] + "…"
                         on_d = on and current_dang == dname
                         dlinks.append(
-                            f"<a class='drawdang{' on' if on_d else ''}' href='{html.escape(_go_kind_href(p, dname, '', guest), quote=True)}' title='{html.escape(dname, quote=True)}'><span class='drawname'>{i}. {html.escape(short)}</span><span class='drawn'>{cnt}</span></a>"
+                            f"<a class='drawdang{' on' if on_d else ''}' href='{html.escape(_go_kind_href(p, dname, '', guest), quote=True)}' title='{html.escape(dname, quote=True)}'><span class='drawname'>{i}. {html.escape(short)}</span><span class='drawn'>{cnt}</span>{kind_chips_html(dang_kinds.get(dname))}</a>"
                         )
                     bais.append(
                         f"<details class='drawbaiwrap'{' open' if on else ''}>"
@@ -1635,6 +1656,19 @@ def dup_index_by_question(groups):
     return info
 
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
+KIND_CHIP_LABS = (('TN', 'TN'), ('DS', 'ĐS'), ('TLN', 'TLN'), ('TL', 'TL'))
+
+def kind_chips_html(counts):
+    """Báo nhỏ 4 loại câu trên một dạng (TN / ĐS / TLN / TL)."""
+    s = counts if isinstance(counts, dict) else {}
+    bits = []
+    for k, lab in KIND_CHIP_LABS:
+        try:
+            n = int(s.get(k) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        bits.append(f"<span class='dk{' z' if n==0 else ''}'>{html.escape(lab)} {n}</span>")
+    return "<span class='dkinds'>" + ''.join(bits) + "</span>"
 
 def sort_questions_by_kind(questions):
     """TN → Đúng/Sai → Trả lời ngắn → Tự luận. Trong mỗi loại giữ idx tăng dần."""
@@ -1762,6 +1796,18 @@ def dang_names_of(qs):
         counts[d] = counts.get(d, 0) + 1
     return names, counts
 
+def dang_kind_counts_of(qs):
+    per, allc = {}, {k: 0 for k in KIND_ORDER}
+    for q in qs or []:
+        d = _dang_name(q)
+        k = str(q.get('kind') or 'TL')
+        if k not in KIND_ORDER:
+            k = 'TL'
+        b = per.setdefault(d, {x: 0 for x in KIND_ORDER})
+        b[k] = b.get(k, 0) + 1
+        allc[k] = allc.get(k, 0) + 1
+    return per, allc
+
 def _go_kind_href(path, dang, kind, guest=False):
     href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
     if dang:
@@ -1772,11 +1818,12 @@ def _go_kind_href(path, dang, kind, guest=False):
 
 def dang_tabs_html(path, qs, current_dang='', kind='', guest=False):
     names, counts = dang_names_of(qs)
+    per, allc = dang_kind_counts_of(qs)
     current_dang = str(current_dang or '').strip()
     kind = norm_kind_tab(kind)
     total = sum(counts.values())
     bits = [
-        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest), quote=True)}' title='Mọi dạng trong bài'>Cả bài · {total}</a>"
+        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest), quote=True)}' title='Mọi dạng trong bài'><span class='dname'>Cả bài · {total}</span>{kind_chips_html(allc)}</a>"
     ]
     for i, name in enumerate(names, 1):
         n = int(counts.get(name) or 0)
@@ -1784,7 +1831,7 @@ def dang_tabs_html(path, qs, current_dang='', kind='', guest=False):
         lab = f'{i}. {short} · {n}'
         on = ' on' if current_dang == name else ''
         bits.append(
-            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest), quote=True)}' title='{html.escape(name, quote=True)}'>{html.escape(lab)}</a>"
+            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
         )
     return "<nav class='dangtabs' aria-label='Dạng bài tập'>" + ''.join(bits) + "</nav>"
 
@@ -2642,8 +2689,12 @@ def admin_edit():
     try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     saved=request.args.get('saved')=='1';gher=request.args.get('gher') or ''
+    try: jump=int(request.args.get('line') or 0)
+    except (TypeError, ValueError): jump=0
+    if jump<1: jump=0
     notice="<div class='success'>✅ Đã lưu. Sửa tiếp trong ô bên dưới rồi bấm <b>Lưu</b>.</div>" if saved else ''
     if gher: notice += "<div class='err'>"+html.escape(gher)+"</div>"
+    if jump: notice += "<div class='notice'>Đang mở <b>dòng "+str(jump)+"</b> trong file (từ thẻ câu ngân hàng).</div>"
     companion_bar=''
     try:
         import lythuyet as _lt
@@ -2675,13 +2726,22 @@ def admin_edit():
         "<button class='btn green' type='submit'>💾 Lưu</button> "
         "<a class='btn' href='/admin/ly-thuyet'>← Duyệt LT</a></div>"
         "<label class='muted' style='display:block;margin:8px 0 4px'>Nội dung file</label>"
-        "<textarea name='content' class='code' spellcheck='false' autocomplete='off'>"+html.escape(txt)+"</textarea>"
+        "<textarea name='content' class='code' id='texsrc' spellcheck='false' autocomplete='off'>"+html.escape(txt)+"</textarea>"
         "</form>"
         "<p class='muted' style='margin-top:10px'><a href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>Sửa trên github.com</a> · "
         "<a href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>Xem GitHub</a></p>"
         "</div></div></div>"
         "<style>.editbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:calc(76px + env(safe-area-inset-top,0px));z-index:8;background:#fff;padding:8px 0 10px}"
         ".code{display:block;width:100%;min-height:min(62vh,720px);height:62vh;padding:12px;border:2px solid #145bb0;border-radius:8px;background:#fffef8;font:13px/1.45 Consolas,ui-monospace,monospace;color:#19324d}</style>"
+        + ("" if not jump else (
+            "<script>(function(){var ta=document.getElementById('texsrc');if(!ta)return;var line="+str(jump)+";"
+            "var lines=(ta.value||'').split('\\n');var n=Math.min(Math.max(1,line),Math.max(1,lines.length));"
+            "var pos=0;for(var i=0;i<n-1;i++)pos+=lines[i].length+1;"
+            "var end=pos+((lines[n-1]||'').length);"
+            "try{ta.focus();ta.setSelectionRange(pos,end);}catch(e){}"
+            "var cs=getComputedStyle(ta);var lh=parseFloat(cs.lineHeight);if(!lh||lh!==lh)lh=parseFloat(cs.fontSize)*1.45||20;"
+            "ta.scrollTop=Math.max(0,(n-4)*lh);})();</script>"
+        ))
     )
     return page('Sửa TEX',body)
 

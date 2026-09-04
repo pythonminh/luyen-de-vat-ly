@@ -5,7 +5,7 @@ import html
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
-from app import admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind
+from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, tex_without_questions
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -164,12 +164,18 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         options="<div class='answerline'>✎ Câu tự luận</div>" if member_current() else "<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập rồi làm bài mới xem lời giải</div>"
     if show_solution:
         sol_html=_sol_block(q)
+    src=str(q.get('src') or path or '').replace('\\','/')
     gh=''
-    if can_manage_bank() and path and line:
-        gh=f" <a class='btn mini' href='{_esc(github_blob_url(path))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
+    tex_badge=f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>"
+    if can_manage_bank() and src:
+        edit_href='/admin/edit?path='+urllib.parse.quote(src,safe='')
+        if line:
+            edit_href+='&line='+str(line)
+        tex_badge=f"<a class='btn mini metafile' href='{_esc(edit_href)}'>✏️ TEX Câu {html.escape(str(cau))} · STT file {n+1}</a>"
+        if line:
+            gh=f" <a class='btn mini' href='{_esc(github_blob_url(src))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
     dup=dup or {}
     hid=str(highlight_id or '').strip().lower()
-    src=str(q.get('src') or path or '').replace('\\','/')
     try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else n)
     except (TypeError, ValueError): fi=int(n or 0)
     drop_key=_esc(src+'||'+str(fi))
@@ -177,7 +183,8 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     if can_manage_bank():
         rw=(f"<div class='rwbar'><button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
-            "<span class='muted'>Sửa trực tiếp trên ô LaTeX, không cần GitHub.</span><div class='rwout'></div></div>")
+            f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
+            "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'
@@ -188,7 +195,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
-            f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
+            f"{tex_badge}{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span></div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text)}</div></div>{options}{rw}{sol_html}</article>")
 
 @app.get('/member/dang')
@@ -259,6 +266,15 @@ def member_dang():
         dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
+    qdel_form=''
+    if can_manage_bank():
+        qdel_form=(
+            f"<form id='qdel' method='post' action='/admin/delete-question'>"
+            f"<input type='hidden' name='path' value='{_esc(path)}'>"
+            f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
+            f"<input type='hidden' name='next' value='{_esc(next_url)}'>"
+            f"<input type='hidden' name='confirm' value='yes'></form>"
+        )
     slim_html=''
     if can_manage_bank():
         from admin_slim import slim_bar_html
@@ -281,6 +297,7 @@ def member_dang():
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
+          + f"<a class='btn' href='{_esc('/admin/edit?path='+urllib.parse.quote(path,safe=''))}'>✏️ Sửa file TEX</a>"
           + find_box
           + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
         bottom=("<div class='toolbar bottom modebar'>"
@@ -327,7 +344,7 @@ def member_dang():
         from admin_rewrite import REWRITE_CLIENT_JS
         rw_js = REWRITE_CLIENT_JS
     body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
-          f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}"
+          f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
           +form_open+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
@@ -336,6 +353,69 @@ def member_dang():
           + find_js + rw_js
           )
     return page('Chọn câu' if not guest else 'Xem đề',body)
+
+@app.post('/admin/delete-question')
+def admin_delete_question():
+    if not can_manage_bank():
+        return redirect('/admin/login')
+    path=str(request.form.get('path') or '').replace('\\','/').strip()
+    dang=str(request.form.get('dang') or '').strip()
+    nxt=str(request.form.get('next') or '')
+    if not nxt.startswith('/member/dang?'):
+        nxt='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
+
+    def back(key, msg):
+        sep='&' if '?' in nxt else '?'
+        return redirect(nxt+sep+key+'='+urllib.parse.quote(msg))
+
+    if request.form.get('confirm')!='yes':
+        return back('err','Phải xác nhận trước khi xóa câu.')
+    raw=str(request.form.get('drop') or '').strip()
+    if '||' not in raw:
+        return back('err','Thiếu vị trí câu cần xóa.')
+    src,_,idx_s=raw.replace('\\','/').rpartition('||')
+    src=src.replace('\\','/').strip()
+    try:
+        fi=int(idx_s)
+    except (TypeError, ValueError):
+        return back('err','Vị trí câu không hợp lệ.')
+    if not src.startswith('ngan-hang/') or not src.lower().endswith('.tex'):
+        return back('err','File TEX không hợp lệ.')
+    try:
+        qs=parse_lesson_questions(path) if path else []
+        if not qs:
+            _,tex=read_tex(src); qs=parse_questions(tex)
+            for q in qs:
+                q['src']=src; q['file_idx']=int(q.get('idx') or 0)
+    except Exception as e:
+        return back('err',str(e))
+    allowed=False
+    qid='—'
+    for q in qs:
+        qsrc=str(q.get('src') or src).replace('\\','/')
+        try: qfi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+        except (TypeError, ValueError):
+            continue
+        if qsrc==src and qfi==fi:
+            allowed=True
+            qid=str(q.get('id') or '—').strip() or '—'
+            break
+    if not allowed:
+        return back('err','Không tìm thấy câu này trong bài.')
+    try:
+        fsha, tex = read_tex(src, need_sha=True)
+        new=tex_without_questions(tex, [fi])
+        if new==tex:
+            return back('err','Không gỡ được câu khỏi file TEX.')
+        local=_safe_repo_file(src)[1]
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text(new, encoding='utf-8')
+        if TOKEN:
+            github_put_text(src, new, 'ADMIN xóa câu '+qid+' trong '+src, fsha or None)
+        _STATS_CACHE.clear(); _QID_CACHE.clear()
+    except Exception as e:
+        return back('err',str(e))
+    return back('ok','Đã xóa câu '+qid+' khỏi file TEX.')
 
 def start_selected_questions():
     """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""
