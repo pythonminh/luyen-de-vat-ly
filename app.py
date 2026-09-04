@@ -87,6 +87,9 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .drawdang .dkinds{flex:1 1 100%}
 .drawdang.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
 @media(max-width:1024px){.dtab{max-width:min(20rem,90vw);white-space:normal}}
+.admindang{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
+.admindang .gapnote{font-size:13px;font-weight:700;color:#9a3412}
+.admindang #aiGapOut{flex:1 1 100%;font-size:13px;line-height:1.45}
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
 body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px}
@@ -1808,6 +1811,93 @@ def dang_kind_counts_of(qs):
         allc[k] = allc.get(k, 0) + 1
     return per, allc
 
+def dang_tex_anchor(path, dang, qs=None):
+    """File + dòng \\dangbt{tên dạng} để ADMIN mở thẳng TEX của dạng."""
+    dang = str(dang or '').strip()
+    files, seen = [], set()
+    for fp in (lesson_tex_paths(path) or [path]):
+        fp = str(fp or '').replace('\\', '/')
+        if fp and fp not in seen:
+            seen.add(fp)
+            files.append(fp)
+    if dang:
+        for fp in files:
+            try:
+                _, tex = read_tex(fp)
+            except Exception:
+                continue
+            for m in DANG_RE.finditer(tex or ''):
+                if (m.group(1) or '').strip() == dang:
+                    return fp, tex[:m.start()].count('\n') + 1
+        if qs is None:
+            try:
+                qs = load_lesson_questions(path)
+            except Exception:
+                qs = []
+        scoped = questions_in_scope(qs, dang)
+        if scoped:
+            q = scoped[0]
+            try:
+                line = int(q.get('line') or 0)
+            except (TypeError, ValueError):
+                line = 0
+            return str(q.get('src') or path or '').replace('\\', '/'), line
+    p0 = str(path or '').replace('\\', '/')
+    return p0, 1
+
+def kind_gap_heuristic(counts):
+    """Số câu nên thêm để dạng có đủ 4 loại (mức tối thiểu luyện thi)."""
+    targets = {'TN': 8, 'DS': 6, 'TLN': 5, 'TL': 3}
+    add = {}
+    for k in KIND_ORDER:
+        try:
+            n = int((counts or {}).get(k) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        add[k] = max(0, int(targets[k]) - n)
+    return add
+
+def admin_dang_bar_html(path, qs, dang=''):
+    if not can_manage_bank():
+        return ''
+    per, allc = dang_kind_counts_of(qs)
+    dang = str(dang or '').strip()
+    counts = per.get(dang) if dang else allc
+    counts = counts or {k: 0 for k in KIND_ORDER}
+    src, line = dang_tex_anchor(path, dang, qs=qs)
+    href = '/admin/edit?path=' + urllib.parse.quote(src, safe='')
+    if line:
+        href += '&line=' + str(int(line))
+    missing = [lab for k, lab in KIND_CHIP_LABS if int(counts.get(k) or 0) == 0]
+    if missing:
+        miss = 'Còn thiếu loại: ' + ', '.join(missing)
+    else:
+        miss = 'Đã có đủ 4 loại (mỗi loại ≥ 1 câu).'
+    heur = kind_gap_heuristic(counts)
+    heur_bits = ' · '.join(f"{lab} +{heur[k]}" for k, lab in KIND_CHIP_LABS if heur.get(k))
+    heur_txt = ('Gợi ý tối thiểu: thêm ' + heur_bits) if heur_bits else 'Đã đạt mức tối thiểu 8 TN / 6 ĐS / 5 TLN / 3 TL.'
+    title = html.escape(dang or 'Cả bài')
+    return (
+        "<div class='admindang' data-path='"+html.escape(str(path or ''), quote=True)+"' data-dang='"+html.escape(dang, quote=True)+"'>"
+        "<a class='btn' href='"+html.escape(href, quote=True)+"'>✏️ TEX dạng này</a>"
+        "<span class='muted'>«"+title+"»</span>"
+        + kind_chips_html(counts)
+        + "<span class='gapnote'>"+html.escape(miss)+"</span>"
+        "<span class='muted'>"+html.escape(heur_txt)+"</span>"
+        "<button type='button' class='btn' id='aiGap'>🤖 AI gợi ý số câu cần thêm</button>"
+        "<div id='aiGapOut'></div></div>"
+    )
+
+def lesson_switch_html(path, qs, dang='', kind='', guest=False):
+    scoped = questions_in_scope(qs, dang)
+    return (
+        "<div class='subnav'>"
+        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest)
+        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest)
+        + admin_dang_bar_html(path, qs, dang=dang)
+        + "</div>"
+    )
+
 def _go_kind_href(path, dang, kind, guest=False):
     href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
     if dang:
@@ -1834,15 +1924,6 @@ def dang_tabs_html(path, qs, current_dang='', kind='', guest=False):
             f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
         )
     return "<nav class='dangtabs' aria-label='Dạng bài tập'>" + ''.join(bits) + "</nav>"
-
-def lesson_switch_html(path, qs, dang='', kind='', guest=False):
-    scoped = questions_in_scope(qs, dang)
-    return (
-        "<div class='subnav'>"
-        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest)
-        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest)
-        + "</div>"
-    )
 
 
 def begin_kind_practice(path, kind='', dang=''):
@@ -2108,7 +2189,11 @@ def select_page():
     bai_name=html.escape(str((cur_lesson or {}).get('BaiHoc') or Path(p).parent.name))
     tabs=lesson_switch_html(p, qs, dang='', kind='', guest=guest)
     body=f"<div class='wrap'>{tabs}<div class='panel'><div class='head'>🧩 {bai_name} <span class='tag'>{len(qs)} câu trong bài</span></div><div class='body'>{chap}{admin_box}{guest_note}{pick_html}<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
-    return page('Chọn câu',body)
+    extra=''
+    if admin_pick:
+        from admin_rewrite import REWRITE_CLIENT_JS
+        extra=REWRITE_CLIENT_JS
+    return page('Chọn câu',body+extra)
 
 @app.post('/member/start')
 def start_practice():
@@ -2159,7 +2244,7 @@ def question_payload(q):
         fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
     except (TypeError, ValueError):
         fi=0
-    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level'],'src':str(q.get('src') or ''),'file_idx':fi}
+    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level'],'src':str(q.get('src') or ''),'file_idx':fi,'line':int(q.get('line') or 0)}
     if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
     elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':p['answer']=q.get('answer','')
@@ -2302,7 +2387,7 @@ if(q.kind==='DS'){for(let i=0;i<q.statements.length;i++){if(!document.querySelec
 let z=document.getElementById('ans');return !!(z&&z.value.trim())}
 function syncReady(){if(checked)return;let b=document.getElementById('chkbtn');if(!b)return;let ready=answered();b.disabled=!ready;b.title=ready?'':'Hãy chọn/nhập đáp án trước khi xác nhận.'}
 function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite()}
-function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('afterend','<div class="rwbar" id="rwPractice"><button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<div class="rwbar" id="rwPractice"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}

@@ -2,6 +2,8 @@
 """Member question browser: show every question before building a test."""
 from __future__ import annotations
 import html
+import json
+import re
 import time
 import urllib.parse
 from flask import request, jsonify, redirect, session
@@ -416,6 +418,81 @@ def admin_delete_question():
     except Exception as e:
         return back('err',str(e))
     return back('ok','Đã xóa câu '+qid+' khỏi file TEX.')
+
+@app.post('/api/admin/dang-gaps')
+def api_admin_dang_gaps():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, kind_gap_heuristic, load_lesson_questions
+    from student_gemini import _gemini_generate, _keys_from_payload
+    data = request.get_json(silent=True) or {}
+    path = str(data.get('path') or '').replace('\\', '/').strip()
+    dang = str(data.get('dang') or '').strip()
+    if not path.startswith('ngan-hang/'):
+        return jsonify(ok=False, error='Thiếu path bài.'), 400
+    try:
+        qs = load_lesson_questions(path)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    per, allc = dang_kind_counts_of(qs)
+    counts = per.get(dang) if dang else allc
+    counts = {k: int((counts or {}).get(k) or 0) for k in KIND_ORDER}
+    add = kind_gap_heuristic(counts)
+    note = ''
+    keys = _keys_from_payload(data)
+    if keys:
+        others = []
+        for name, bucket in per.items():
+            if dang and name == dang:
+                continue
+            others.append(name + ': ' + ', '.join(f"{lab} {int(bucket.get(k) or 0)}" for k, lab in KIND_CHIP_LABS))
+        prompt = (
+            "Bạn là giáo viên ra đề thi THPT Toán/Vật lý. Trả về ĐÚNG một JSON, không markdown.\n"
+            'Schema: {"add":{"TN":số,"DS":số,"TLN":số,"TL":số},"note":"một câu tiếng Việt"}\n'
+            "add = số câu CẦN THÊM (0 nếu đã đủ), không phải tổng hiện có.\n"
+            "Dạng đang xét: " + (dang or "Cả bài") + "\n"
+            "Hiện có: " + ", ".join(f"{lab} {counts[k]}" for k, lab in KIND_CHIP_LABS) + "\n"
+            "Mức tối thiểu gợi ý sẵn: 8 TN, 6 ĐS, 5 TLN, 3 TL.\n"
+            "Các dạng khác trong cùng bài:\n" + ("\n".join(others[:12]) or "(không có)") + "\n"
+            "Điều chỉnh add cho cân với đề thi (TN nhiều hơn, vẫn phải có ĐS/TLN/TL)."
+        )
+        raw, err = '', ''
+        for key in keys:
+            try:
+                raw = _gemini_generate(key, prompt, 800, 0.2)
+                err = ''
+                break
+            except Exception as e:
+                err = str(e)
+                raw = ''
+        if raw:
+            m = re.search(r'\{[\s\S]*\}', raw)
+            try:
+                obj = json.loads(m.group(0) if m else raw)
+                src = obj.get('add') if isinstance(obj, dict) else None
+                if not isinstance(src, dict):
+                    src = obj if isinstance(obj, dict) else {}
+                for k in KIND_ORDER:
+                    rawv = src.get(k)
+                    if rawv is None and k == 'DS':
+                        rawv = src.get('ĐS')
+                    if rawv is None:
+                        continue
+                    try:
+                        add[k] = max(0, int(rawv))
+                    except (TypeError, ValueError):
+                        pass
+                note = str((obj or {}).get('note') or '').strip()
+            except Exception:
+                note = (raw or '')[:280]
+        elif err:
+            note = 'AI lỗi, dùng mức tối thiểu. ' + err[:120]
+    else:
+        note = 'Chưa có key Gemini — đang dùng mức tối thiểu 8 TN / 6 ĐS / 5 TLN / 3 TL.'
+    labs = dict(KIND_CHIP_LABS)
+    bits = [f"{labs[k]} cần thêm {add[k]}" for k in KIND_ORDER if add.get(k)]
+    summary = ('; '.join(bits) + '.') if bits else 'Dạng này đã đủ mức tối thiểu cả 4 loại.'
+    return jsonify(ok=True, counts=counts, add=add, summary=summary, note=note)
 
 def start_selected_questions():
     """Start practice from checkbox qid values. Used by /member/start-selected and /member/start."""

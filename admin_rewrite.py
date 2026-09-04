@@ -732,6 +732,22 @@ document.addEventListener('click',function(e){
   if(!p) return;
   loadRewrite(p.src,p.fi,outBox(btn),ed?'edit':'ai');
 });
+document.addEventListener('click',async function(e){
+  const btn=e.target.closest&&e.target.closest('#aiGap');
+  if(!btn) return;
+  e.preventDefault();
+  const bar=btn.closest('.admindang');
+  const out=document.getElementById('aiGapOut');
+  if(out) out.innerHTML='⏳ AI đang đếm số câu còn thiếu...';
+  const ks=keys();
+  try{
+    const r=await fetch('/api/admin/dang-gaps',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:bar&&bar.getAttribute('data-path')||'',dang:bar&&bar.getAttribute('data-dang')||'',api_keys:ks})});
+    const d=await r.json();
+    if(!d.ok){if(out) out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    if(out) out.innerHTML='<div class="success">'+esc(d.summary||'')+'</div>'+(d.note?'<div class="muted">'+esc(d.note)+'</div>':'');
+  }catch(err){if(out) out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
 })();
 </script>
 """
