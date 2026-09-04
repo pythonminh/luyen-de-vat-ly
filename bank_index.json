@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11377,
+  "total_questions": 11352,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2068,16 +2068,16 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
       "De": "L11C1 Bài 1. Dao động điều hòa · Xác định li độ và pha của dao động tại một thời điểm xác định",
-      "questions": 33,
-      "count": 33,
+      "questions": 8,
+      "count": 8,
       "dang": {
-        "Xác định li độ và pha của dao động tại một thời điểm xác định": 33
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 8
       },
       "dang_kinds": {
         "Xác định li độ và pha của dao động tại một thời điểm xác định": {
-          "TN": 18,
-          "DS": 12,
-          "TLN": 3,
+          "TN": 4,
+          "DS": 3,
+          "TLN": 1,
           "TL": 0
         }
       }
