@@ -72,6 +72,7 @@ LT_CSS = """
 .lt-split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:16px;align-items:start;margin:12px 0}
 .lt-split>div:last-child{background:#f8fbff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;text-align:center}
 .lt-chuy{margin:10px 0;padding:10px 12px 10px 14px;border-radius:10px;border:1px solid #fcd34d;border-left:5px solid #d97706;background:#fffbeb;font-style:italic;color:#78350f}
+.lt-chuy ul,.lt-chuy ol{margin:6px 0 0;padding-left:1.3em}
 .lt-q{margin:4px 0}
 .lt-opts{display:grid;gap:6px;margin:10px 0 8px}
 .lt-opt{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d7e2ee;border-radius:10px;background:#fff}
@@ -424,7 +425,7 @@ def _flush_tokens(s: str) -> str:
         e = s.find("@@/CHUY@@", a)
         if e < 0:
             break
-        s = s[:a] + f"<p class='lt-chuy'>{s[a + 8 : e]}</p>" + s[e + 9 :]
+        s = s[:a] + f"<div class='lt-chuy'>{s[a + 8 : e]}</div>" + s[e + 9 :]
     while "@@HD:" in s:
         a = s.find("@@HD:")
         mid = s.find("@@", a + 5)
