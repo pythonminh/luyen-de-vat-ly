@@ -1,81 +1,117 @@
-% Môn: Vật lý
-% Lớp: 10
-% Chương: Chương I. Mở đầu
-% Bài: L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
+
 \subsubsection{Dạng 1. Phép đo trực tiếp và phép đo gián tiếp}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Phân biệt phép đo trực tiếp (đọc trực tiếp trên dụng cụ đo như thước, cân, nhiệt kế) và phép đo gián tiếp (tính toán qua công thức liên hệ từ các phép đo trực tiếp).
+\item Xác định các đại lượng đo trực tiếp và biểu thức liên hệ toán học để tính đại lượng đo gián tiếp.
+\item Đổi các đơn vị đo về cùng một hệ chuẩn (hệ SI) trước khi tính toán.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Để đo thể tích $V$ của một khối gỗ hình hộp chữ nhật, người ta dùng thước thẳng có độ chia nhỏ nhất là $1\,\mathrm{mm}$ để đo ba cạnh gồm chiều dài $a$, chiều rộng $b$ và chiều cao $c$. Phép đo nào là phép đo trực tiếp, phép đo nào là phép đo gián tiếp? Viết công thức xác định thể tích khối gỗ.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Xác định cách thức thu thập số liệu cho từng đại lượng. Phép đo ba cạnh chiều dài $a$, chiều rộng $b$ và chiều cao $c$ bằng thước thẳng là các phép đo mà kết quả được đọc trực tiếp từ các vạch chia trên thước, do đó chúng là các phép đo trực tiếp.
+\item Bước 2: Xác định cách thức thu thập số liệu của thể tích. Thể tích $V$ của khối gỗ hình hộp chữ nhật không thể đọc trực tiếp từ thước đo, mà phải tính toán thông qua công thức liên hệ của hình học không gian.
+\item Bước 3: Áp dụng công thức liên hệ để kết luận. Thể tích khối gỗ được xác định bằng công thức $V = a \cdot b \cdot c$. Vì thể tích được tìm ra gián tiếp qua phép toán từ các đại lượng đo trực tiếp, nên đây là phép đo gián tiếp.
+\end{itemize}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 2. Sai số}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định sai số tuyệt đối của các phép đo trực tiếp thông qua sai số ngẫu nhiên trung bình và sai số dụng cụ: $\Delta A = \overline{\Delta A} + \Delta A_{\text{dc}}$.
+\item Áp dụng quy tắc tính sai số gián tiếp: đối với phép tính tổng hoặc hiệu $F = B \pm C$ thì sai số tuyệt đối là $\Delta F = \Delta B + \Delta C$; đối với phép tính tích hoặc thương $F = B \cdot C$ hoặc $F = \dfrac{B}{C}$ thì sai số tỉ đối là $\delta F = \delta B + \delta C$.
+\item Từ sai số tỉ đối, tính sai số tuyệt đối của đại lượng đo gián tiếp bằng công thức $\Delta F = \delta F \cdot \overline{F}$, làm tròn và biểu diễn kết quả dưới dạng $F = \overline{F} \pm \Delta F$.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một học sinh thực hành đo tốc độ trung bình của một viên bi chuyển động thẳng bằng cách đo quãng đường đi được $s = 1,60 \pm 0,02\,\mathrm{m}$ và thời gian chuyển động tương ứng $t = 2,0 \pm 0,1\,\mathrm{s}$. Hãy xác định sai số tỉ đối, sai số tuyệt đối và ghi kết quả phép đo tốc độ trung bình $v$.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Tính giá trị trung bình của tốc độ trung bình theo công thức liên hệ: $\overline{v} = \dfrac{\overline{s}}{\overline{t}} = \dfrac{1,60}{2,0} = 0,80\,\mathrm{m/s}$.
+\item Bước 2: Áp dụng quy tắc tính sai số tỉ đối cho thương số của hai đại lượng. Ta có: $\delta v = \delta s + \delta t = \dfrac{\Delta s}{\overline{s}} \cdot 100\% + \dfrac{\Delta t}{\overline{t}} \cdot 100\% = \dfrac{0,02}{1,60} \cdot 100\% + \dfrac{0,1}{2,0} \cdot 100\% = 1,25\% + 5\% = 6,25\%$.
+\item Bước 3: Tính sai số tuyệt đối của tốc độ trung bình và làm tròn theo quy tắc chữ số có nghĩa: $\Delta v = \delta v \cdot \overline{v} = 6,25\% \cdot 0,80 = 0,05\,\mathrm{m/s}$. Biểu diễn kết quả đo tốc độ trung bình của viên bi: $v = 0,80 \pm 0,05\,\mathrm{m/s}$.
+\end{itemize}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 3. Xác định chữ số có nghĩa trong giá trị đo}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Đếm tất cả các chữ số khác không ($0$) có mặt trong số biểu diễn giá trị đo.
+\item Đếm các chữ số không ($0$) nằm ở giữa hai chữ số khác không hoặc nằm ở bên phải của dấu thập phân và đứng sau một chữ số khác không.
+\item Không đếm các chữ số không ($0$) nằm ở đầu bên trái số thập phân dùng để định vị hàng phân số (ví dụ các số không trong $0,005$).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Hãy xác định số chữ số có nghĩa trong các kết quả đo đại lượng vật lí sau đây: $s_1 = 302,5\,\mathrm{m}$; $t_1 = 0,040\,\mathrm{s}$; $m_1 = 1,50 \cdot 10^2\,\mathrm{g}$; $d_1 = 12,00\,\mathrm{mm}$.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Xét giá trị quãng đường $s_1 = 302,5\,\mathrm{m}$. Số này gồm bốn chữ số khác không hoặc chữ số không nằm giữa các chữ số khác không, do đó có bốn chữ số có nghĩa (3, 0, 2, 5).
+\item Bước 2: Xét giá trị thời gian $t_1 = 0,040\,\mathrm{s}$. Các chữ số không ở bên trái số 4 dùng để xác định hàng thập phân không phải chữ số có nghĩa, chữ số không ở bên phải sau số 4 là chữ số có nghĩa, do đó số này có hai chữ số có nghĩa (4, 0). Xét giá trị khối lượng $m_1 = 1,50 \cdot 10^2\,\mathrm{g}$. Thừa số lũy thừa mười không tính vào số chữ số có nghĩa, phần hệ số 1,50 có ba chữ số có nghĩa (1, 5, 0).
+\item Bước 3: Xét giá trị đường kính $d_1 = 12,00\,\mathrm{mm}$. Các chữ số không ở bên phải dấu thập phân đứng sau chữ số khác không là chữ số có nghĩa, do đó số này có bốn chữ số có nghĩa (1, 2, 0, 0).
+\end{itemize}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 4. Thứ nguyên}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Thứ nguyên là quy luật nêu lên sự phụ thuộc của đại lượng vật lí vào các đại lượng cơ bản. Ba thứ nguyên cơ bản thường dùng là: chiều dài $[L]$, khối lượng $[M]$ và thời gian $[T]$.
+\item Viết công thức định nghĩa hoặc mối liên hệ của đại lượng cần xác định thứ nguyên với các đại lượng cơ bản.
+\item Thay thế các thứ nguyên cơ bản tương ứng vào công thức để tìm ra biểu thức thứ nguyên của đại lượng đó.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Động năng $W_{\mathrm{đ}}$ của một vật chuyển động có khối lượng $m$ và tốc độ $v$ được xác định bằng công thức $W_{\mathrm{đ}} = \dfrac{1}{2} m v^2$. Hãy xác định thứ nguyên của động năng $W_{\mathrm{đ}}$ thông qua các thứ nguyên cơ bản.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Xác định thứ nguyên của các đại lượng cơ bản trong công thức. Đại lượng khối lượng $m$ có thứ nguyên là $[M]$. Đại lượng tốc độ $v$ có đơn vị là mét trên giây, tương ứng với thứ nguyên của chiều dài chia cho thời gian: $[v] = \dfrac{[L]}{[T]} = [L]\cdot[T]^{-1}$.
+\item Bước 2: Thiết lập biểu thức thứ nguyên cho động năng $W_{\mathrm{đ}}$. Hệ số tự do $\dfrac{1}{2}$ là một hằng số không có thứ nguyên. Thứ nguyên của động năng bằng tích thứ nguyên của khối lượng và bình phương thứ nguyên của tốc độ: $[W_{\mathrm{đ}}] = [m] \cdot [v]^2$.
+\item Bước 3: Thay các biểu thức thứ nguyên cơ bản vào phương trình để kết luận: $[W_{\mathrm{đ}}] = [M] \cdot ([L]\cdot[T]^{-1})^2 = [M]\cdot[L]^2\cdot[T]^{-2}$.
+\end{itemize}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 5. Tính giá trị trung bình của đại lượng đo}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Ghi nhận các giá trị đo được qua $n$ lần thực hiện phép đo trực tiếp: $A_1, A_2, \dots, A_n$.
+\item Áp dụng công thức tính giá trị trung bình cộng: $\overline{A} = \dfrac{A_1 + A_2 + \dots + A_n}{n}$.
+\item Làm tròn kết quả đo trung bình thu được đến hàng thập phân phù hợp theo quy tắc đếm chữ số có nghĩa và sai số dụng cụ đo.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một học sinh tiến hành đo thời gian rơi tự do của một quả cầu nhỏ từ cùng một độ cao sau 5 lần đo liên tiếp, kết quả thu được lần lượt là: $t_1 = 0,202\,\mathrm{s}$; $t_2 = 0,204\,\mathrm{s}$; $t_3 = 0,201\,\mathrm{s}$; $t_4 = 0,203\,\mathrm{s}$; $t_5 = 0,205\,\mathrm{s}$. Hãy xác định giá trị trung bình của thời gian rơi tự do này.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Tập hợp đầy đủ các giá trị đo được trong 5 lần thí nghiệm: $t_1 = 0,202\,\mathrm{s}$, $t_2 = 0,204\,\mathrm{s}$, $t_3 = 0,201\,\mathrm{s}$, $t_4 = 0,203\,\mathrm{s}$ và $t_5 = 0,205\,\mathrm{s}$.
+\item Bước 2: Áp dụng công thức tính giá trị trung bình cộng cho cả 5 lần đo thực hiện: $\overline{t} = \dfrac{t_1 + t_2 + t_3 + t_4 + t_5}{5}$.
+\item Bước 3: Thay số vào tính toán và kết luận giá trị trung bình: $\overline{t} = \dfrac{0,202 + 0,204 + 0,201 + 0,203 + 0,205}{5} = \dfrac{1,015}{5} = 0,203\,\mathrm{s}$.
+\end{itemize}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 6. Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Chuyển đổi số đo ban đầu về dạng kí hiệu khoa học chuẩn có cấu trúc: $a \cdot 10^n$, trong đó hệ số $a$ thỏa mãn điều kiện $1 \le |a| < 10$ và $n$ là một số nguyên.
+\item Xác định số lượng chữ số có nghĩa cần giữ lại theo yêu cầu của đề bài ở phần hệ số $a$.
+\item Thực hiện quy tắc làm tròn số đối với hệ số $a$: nếu chữ số bị bỏ đi ngay sau chữ số cần giữ lại nhỏ hơn 5 thì giữ nguyên; nếu lớn hơn hoặc bằng 5 thì tăng chữ số cuối cùng giữ lại lên một đơn vị.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Kết quả đo quãng đường đi được của một vật chuyển động là $s = 25482\,\mathrm{m}$. Hãy biểu diễn giá trị quãng đường này dưới dạng kí hiệu khoa học lần lượt với ba và bốn chữ số có nghĩa.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Viết giá trị đo ban đầu dưới dạng kí hiệu khoa học chưa làm tròn: $s = 2,5482 \cdot 10^4\,\mathrm{m}$.
+\item Bước 2: Thực hiện làm tròn hệ số $a = 2,5482$ để giữ lại đúng ba chữ số có nghĩa (lấy đến hàng phần trăm). Chữ số đầu tiên bị bỏ đi kề sau là số 8 (lớn hơn hoặc bằng 5), nên ta tăng chữ số cuối cùng được giữ lại lên một đơn vị: $a \approx 2,55$. Kết quả biểu diễn là $s = 2,55 \cdot 10^4\,\mathrm{m}$.
+\item Bước 3: Thực hiện làm tròn hệ số $a = 2,5482$ để giữ lại đúng bốn chữ số có nghĩa (lấy đến hàng phần nghìn). Chữ số đầu tiên bị bỏ đi kề sau là số 2 (nhỏ hơn 5), nên ta giữ nguyên chữ số kề trước nó: $a \approx 2,548$. Kết quả biểu diễn là $s = 2,548 \cdot 10^4\,\mathrm{m}$.
+\end{itemize}
+}
 \end{vidumau}
-
