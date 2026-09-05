@@ -23,7 +23,14 @@ LT_CSS = """
 .lttoc label{display:block;font-size:12px;color:#64748b;margin:0 0 5px;font-weight:600}
 .lttoc select{width:100%;padding:9px 12px;border:1px solid #c9d8e8;border-radius:10px;background:#fff;color:#173a5e;font-size:14px;line-height:1.35}
 .ltsec{margin:0 0 18px;padding:14px 16px 16px;border:1px solid #d7e2ee;border-radius:14px;background:#fff;scroll-margin-top:110px}
-.ltsec h2{margin:0 0 12px;font-size:18px;font-weight:700;color:#145bb0}
+.ltsec-h{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:space-between;margin:0 0 12px}
+.ltsec-h h2,.ltsec h2{margin:0;font-size:18px;font-weight:700;color:#145bb0;flex:1}
+.ltsec-tools{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}
+.ltsec-tools .btn{font-size:13px;padding:6px 10px;white-space:nowrap}
+.ltsecedit{margin-top:10px;padding:10px 12px;border:1px dashed #7dd3fc;border-radius:10px;background:#f0f9ff}
+.ltsecedit .rwta{width:100%;min-height:240px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}
+.lt-title-in{width:100%;padding:8px 10px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px;font-size:15px;box-sizing:border-box}
+.ltsecedit .rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#fff}
 .ltsec h3{margin:16px 0 8px;font-size:15px;font-weight:700;color:#0f3f73}
 .ltsec h4{margin:14px 0 6px;font-size:14px;font-weight:700;color:#334155}
 .ltbox{margin:14px 0;padding:0;overflow:hidden;border-radius:14px;border:1px solid #d7e2ee;background:#fff;box-shadow:0 1px 2px #0f172a0c,0 10px 28px -18px #0f172a33}
@@ -31,7 +38,8 @@ LT_CSS = """
 .ltbox .k:before{content:'';flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:center/14px 14px no-repeat #fff;box-shadow:inset 0 0 0 1px #0001}
 .ltbox-body{padding:10px 16px 14px;line-height:1.62;color:#1e293b}
 .ltbox-body>:first-child{margin-top:0}
-.ltbox-body>:last-child{margin-bottom:0}
+.lt-math{margin:10px 0;overflow-x:auto;padding:4px 0}
+.ltsec-tools .btn.primary{background:#145bb0;color:#fff;border:0}
 .ltbox-body ul{margin:6px 0 4px;padding-left:1.35em}
 .ltbox-body ol,ol.tex-list{list-style:none;counter-reset:ltn;margin:8px 0 6px;padding:0}
 .ltbox-body ol>li,ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em;line-height:1.55}
@@ -287,7 +295,8 @@ def _html_tex(chunk: str) -> str:
     t = re.sub(r"\\Blythuyet\b", "", t)
     t = re.sub(r"\\captionof\s*\{figure\}\s*\{([^{}]*)\}", r"\n\\textbf{Hình: \1}\n", t)
     t = re.sub(r"\\label\s*\{[^{}]*\}", "", t)
-    t = re.sub(r"\\ref\s*\{[^{}]*\}", "hình trên", t)
+    t = re.sub(r"(?i)hình\s*\\ref\s*\{[^{}]*\}", "hình bên", t)
+    t = re.sub(r"\\ref\s*\{[^{}]*\}", "hình bên", t)
     t = t.replace("\\centering", "")
     return base.html_question(t)
 
@@ -542,7 +551,7 @@ def page_companion(de_path: str, kind: str = "lt"):
             f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file {html.escape(spec['file'])}. {html.escape(str(e))}</div>"
             f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
         )
-    secs = parse_theory(tex)
+    secs, blocks = _section_blocks_html(tex, admin=admin)
     nsec = len(secs)
     opts = "".join(
         f"<option value='{html.escape(s['id'], quote=True)}'>{html.escape(s['title'])}</option>"
@@ -556,10 +565,10 @@ def page_companion(de_path: str, kind: str = "lt"):
         "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'smooth',block:'start'});}});"
         "})();</script>"
     )
-    blocks = "".join(
-        f"<section class='ltsec' id='{s['id']}'><h2>{html.escape(s['title'])}</h2>{s['html']}</section>"
-        for s in secs
-    ) or f"<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong {html.escape(spec['file'])}.</p>"
+    if not blocks.strip():
+        blocks = (
+            f"<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong {html.escape(spec['file'])}.</p>"
+        )
     folder = base.lesson_folder(de_path)
     title = ""
     for x in base.index_data().get("lessons") or []:
@@ -588,16 +597,31 @@ def page_companion(de_path: str, kind: str = "lt"):
             banner = (
                 "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> "
                 "Học viên chưa thấy mục này.<br>"
-                "<b>Cách sửa:</b> bấm <b>✏️ Sửa file TEX</b> (có AI đọc TEX + link) "
-                "hoặc soạn LaTeX (mỗi dạng một <code>\\subsubsection</code>, hộp "
-                "<code>phuongphap</code> và <code>vidumau</code>) "
-                "→ <b>Lưu</b> → <b>📋 Duyệt</b>.</div>"
+                "<b>Sửa từng mục:</b> <b>✏️ Sửa mục</b> hoặc <b>✍️ AI viết lại mục</b> "
+                "(LaTeX → Xem trước → Chấp nhận ghi GitHub, giống câu hỏi). "
+                "Có thể thêm/xóa <code>\\subsubsection</code>. Ghi xong vào <b>📋 Duyệt</b>.</div>"
+            )
+        else:
+            banner = (
+                "<div class='notice' style='margin-bottom:10px'>"
+                "ADMIN: sửa từng mục bằng <b>✏️ Sửa mục</b>. Ghi TEX sẽ <b>gỡ duyệt</b> — duyệt lại khi xong."
+                "</div>"
             )
         banner += companion_ai_panel_html(fp, kind)
+        banner += SECTION_EDIT_JS
     head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
+    wrap_attrs = ""
+    if admin:
+        wrap_attrs = (
+            " data-lt-path='"
+            + html.escape(companion_path(de_path, kind), quote=True)
+            + "' data-lt-kind='"
+            + html.escape(kind)
+            + "'"
+        )
     body = (
         LT_CSS
-        + "<div class='wrap ltpage'>"
+        + f"<div class='wrap ltpage'{wrap_attrs}>"
         + f"<div class='panel'><div class='head'>{head}</div><div class='body'>"
         + banner
         + f"<p class='ltnav'>{''.join(nav)}</p>"
@@ -686,8 +710,8 @@ def admin_companion_list():
                 "<td>"
                 + badge
                 + f"<div style='margin-top:6px;display:flex;gap:4px;flex-wrap:wrap'>"
-                f"<a class='btn' href='/admin/edit?path={qp}'>✏️ Sửa / AI</a>"
-                f"<a class='btn' href='{html.escape(meta['route'])}?path={quote(row['path'], safe='')}'>👁 Xem</a>"
+                f"<a class='btn' href='{html.escape(meta['route'])}?path={quote(row['path'], safe='')}'>✏️ Sửa từng mục</a>"
+                f"<a class='btn' href='/admin/edit?path={qp}'>📄 Cả file</a>"
                 f"<form method='post' action='/admin/companion/status' style='display:inline'>"
                 f"<input type='hidden' name='path' value='{html.escape(fp, quote=True)}'>"
                 f"<input type='hidden' name='kind' value='{kind}'>"
@@ -727,7 +751,7 @@ def admin_companion_list():
     )
     body = (
         "<div class='wrap'><div class='panel'><div class='head'>📖 ADMIN · Lý thuyết và dạng mẫu</div><div class='body'>"
-        "<div class='notice'>Học viên chỉ thấy mục đã <b>Duyệt</b>. Sửa file trên web sẽ tự <b>gỡ duyệt</b> — duyệt lại khi xong. "
+        "<div class='notice'>Học viên chỉ thấy mục đã <b>Duyệt</b>. Sửa từng mục trên trang xem (✏️ Sửa mục) hoặc sửa file sẽ tự <b>gỡ duyệt</b> — duyệt lại khi xong. "
         "ADMIN bấm <b>Sửa / AI</b> để đọc TEX hiện có, dán link SGK/SBT, rồi để Gemini viết lại lý thuyết hoặc phương pháp. "
         f"Đang chờ: <b>{n_wait}</b> · Đã duyệt: <b>{n_ok}</b>.</div>"
         f"<p style='display:flex;gap:8px;flex-wrap:wrap'>{tabs}"
@@ -806,26 +830,185 @@ def _split_companion_tex(tex):
     return "".join(lines[:i]), "".join(lines[i:])
 
 
+def split_companion_sections(tex):
+    prefix, rest = _split_companion_tex(tex)
+    parts = re.split(r"\\subsubsection\s*\{([^{}]*)\}", rest)
+    secs = [{"idx": 0, "title": "", "body": parts[0] if parts else rest}]
+    n = 1
+    for i in range(1, len(parts), 2):
+        secs.append(
+            {
+                "idx": n,
+                "title": (parts[i] or "").strip(),
+                "body": parts[i + 1] if i + 1 < len(parts) else "",
+            }
+        )
+        n += 1
+    return prefix, secs
+
+
+def join_companion_sections(prefix, secs):
+    bits = [str(prefix or "")]
+    if bits[0] and not bits[0].endswith("\n"):
+        bits[0] += "\n"
+    for s in secs or []:
+        idx = int(s.get("idx") or 0)
+        body = str(s.get("body") or "")
+        if idx == 0:
+            bits.append(body)
+            continue
+        title = str(s.get("title") or "Mục").replace("}", "").strip() or "Mục"
+        if bits and not str(bits[-1]).endswith("\n"):
+            bits.append("\n")
+        bits.append("\\subsubsection{" + title + "}")
+        if not body.startswith("\n"):
+            bits.append("\n")
+        bits.append(body)
+    text = "".join(bits)
+    return text if text.endswith("\n") else text + "\n"
+
+
+def _normalize_section_payload(idx, title, body):
+    title = str(title or "").replace("}", "").strip()
+    body = str(body or "")
+    m = re.match(r"\\subsubsection\s*\{([^{}]*)\}\s*", body)
+    if m:
+        if int(idx) != 0 and not title:
+            title = (m.group(1) or "").strip()
+        body = body[m.end() :]
+    if int(idx) != 0 and not title:
+        title = "Mục"
+    return title, body
+
+
+def _section_preview_html(idx, title, body):
+    if int(idx) == 0:
+        secs = parse_theory(body)
+    else:
+        secs = parse_theory("\\subsubsection{" + (title or "Mục") + "}\n" + body)
+    return "".join((s.get("html") or "") for s in secs[:6])
+
+
+def _section_blocks_html(tex, admin=False):
+    secs = parse_theory(tex)
+    _, raw_secs = split_companion_sections(tex)
+    has_pre = bool(raw_secs) and _html_preamble_visible(raw_secs[0].get("body") or "")
+    start = 0 if has_pre else 1
+    bits = []
+    for i, s in enumerate(secs):
+        raw_idx = start + i
+        tools = ""
+        if admin:
+            del_btn = (
+                f"<button type='button' class='btn red ltSecDel' data-idx='{raw_idx}'>🗑 Xóa mục</button>"
+                if raw_idx
+                else ""
+            )
+            tools = (
+                "<div class='ltsec-tools'>"
+                f"<button type='button' class='btn primary ltSecEdit' data-idx='{raw_idx}' style='background:#145bb0;color:#fff'>✏️ Sửa mục này</button>"
+                + (
+                    f"<button type='button' class='btn green ltSecAi' data-idx='{raw_idx}'>✍️ AI viết lại mục</button>"
+                    if raw_idx
+                    else ""
+                )
+                + del_btn
+                + "</div>"
+            )
+        bits.append(
+            f"<section class='ltsec' id='{html.escape(s['id'], quote=True)}' data-idx='{raw_idx}'>"
+            f"<div class='ltsec-h'><h2>{html.escape(s['title'])}</h2>{tools}</div>"
+            f"{s['html']}<div class='ltSecOut'></div></section>"
+        )
+    blocks = "".join(bits) or "<p class='muted'>Chưa tách được mục \\subsubsection.</p>"
+    if admin:
+        blocks += (
+            "<p style='margin-top:12px'><button type='button' class='btn ltSecAdd'>＋ Thêm mục (\\subsubsection)</button></p>"
+            "<div class='ltSecOut ltSecAddOut'></div>"
+        )
+    return secs, blocks
+
+
+def companion_section_editor_html(path, kind, tex):
+    _secs, blocks = _section_blocks_html(tex, admin=True)
+    return (
+        LT_CSS
+        + "<div class='ltpage' data-lt-path='"
+        + html.escape(path, quote=True)
+        + "' data-lt-kind='"
+        + html.escape(kind)
+        + "'>"
+        "<p class='notice'><b>Sửa từng mục</b> giống câu hỏi: ✏️ Sửa / ✍️ AI → xem trước → "
+        "✅ Chấp nhận ghi TEX + GitHub (Render cập nhật theo). Ghi xong cần <b>Duyệt</b> lại.</p>"
+        + blocks
+        + "</div>"
+        + SECTION_EDIT_JS
+    )
+
+
+def _html_preamble_visible(body):
+    preamble = re.sub(r"\\subsection\s*\{[^{}]*\}", "", body or "")
+    html_body = _flush_tokens(_html_or_tokens(preprocess(preamble)))
+    return bool(re.sub(r"<[^>]+>", "", html_body).strip())
+
+
 def _strip_tex_fence(s):
     t = str(s or "").strip()
     t = re.sub(r"^```(?:latex|tex)?\s*", "", t, flags=re.I)
     t = re.sub(r"\s*```$", "", t)
+    t = re.sub(
+        r"\n*\(?⚠️ Phần phản biện bị cắt vì quá dài[^\n]*\)?\s*$",
+        "",
+        t,
+    )
     return t.strip()
+
+
+def _tex_window(s, n=14000):
+    s = str(s or "")
+    if len(s) <= n:
+        return s
+    half = n // 2
+    return s[:half] + "\n\n% ... [cắt giữa file dài] ...\n\n" + s[-half:]
 
 
 def _merge_companion_tex(old, generated, kind, folder):
     body = _strip_tex_fence(generated)
+    _, body = _split_companion_tex(body)
+    body = re.sub(r"\\input\s*\{[^{}]*lythuyet\.tex\}\s*", "", body, flags=re.I)
     prefix = _companion_prefix(folder, kind, old)
-    if "\\input" in body and "\\subsubsection" in body:
-        return body if body.endswith("\n") else body + "\n"
     return prefix + body.lstrip() + ("\n" if not body.endswith("\n") else "")
+
+
+def _companion_quality_error(kind, latex):
+    t = str(latex or "")
+    if "Chưa soạn" in t or "Chèn bài mẫu" in t:
+        return "AI còn chữ khung (Chưa soạn / Chèn bài mẫu). Thử lại."
+    if kind == "pp":
+        generic = 0
+        generic += len(re.findall(r"Đọc đề, xác định đại lượng", t))
+        generic += len(re.findall(r"Đọc đề, nêu dữ kiện", t))
+        generic += len(re.findall(r"Tính toán và đối chiếu đơn vị, dấu", t))
+        if generic >= 2:
+            return "AI còn phương pháp 3 bước chung. Thử lại hoặc dán link SGK."
+    return ""
+
+
+def _companion_preview_html(latex):
+    bits = []
+    for sec in parse_theory(latex)[:8]:
+        bits.append("<h3>" + html.escape(sec.get("title") or "") + "</h3>" + (sec.get("html") or ""))
+    out = "<div class='ltpage'>" + "".join(bits) + "</div>"
+    if len(out) > 80000:
+        out = out[:80000] + "…"
+    return out
 
 
 def _lesson_ai_context(path):
     folder = base.lesson_folder(path)
     de = folder.rstrip("/") + "/de.tex"
     try:
-        qs = base.load_lesson_questions(de if (ROOT / de).is_file() else path)
+        qs = base.load_lesson_questions(de)
     except Exception:
         qs = []
     names, _c = base.dang_names_of(qs)
@@ -900,7 +1083,7 @@ def _companion_prompt(kind, ctx, old_tex, page_text):
         if page
         else "Không có link. Dựa TEX hiện có + dạng/câu mẫu của bài. Không bịa định luật sai."
     )
-    old = str(old_tex or "")[-14000:]
+    old = _tex_window(old_tex, 14000)
     if kind == "pp":
         return (
             "Bạn là giáo viên THPT soạn DẠNG MẪU · PHƯƠNG PHÁP GIẢI (file pp.tex), KNTT.\n"
@@ -1011,8 +1194,115 @@ document.addEventListener('click',async function(e){
     const d=await r.json();
     if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Soát LaTeX rồi bấm Chấp nhận.')+'</div>'
+      +'<details open style="margin:8px 0"><summary>Xem trước (như học viên)</summary>'
+      +'<div class="ltAiPrevWrap" style="max-height:420px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#fff;margin-top:8px">'+(d.preview||'')+'</div></details>'
       +'<textarea class="ltAiTex rwta" style="width:100%;min-height:260px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:8px 0">'+esc(d.latex||'')+'</textarea>'
       +'<p><button type="button" class="btn green ltAiSave" data-kind="'+esc(kind)+'">✅ Chấp nhận ghi '+esc(d.file||'')+'</button></p>';
+  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
+})();
+</script>
+"""
+
+SECTION_EDIT_JS = r"""
+<script>
+(function(){
+if(window.ldvlCompanionSec) return;
+window.ldvlCompanionSec=true;
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function ctx(){
+  const w=document.querySelector('.ltpage');
+  return {path:(w&&w.getAttribute('data-lt-path'))||'', kind:(w&&w.getAttribute('data-lt-kind'))||'lt'};
+}
+function showEditor(out, d){
+  const isPre=Number(d.idx)===0;
+  let h='<div class="ltsecedit"><div class="success">Chưa ghi file. Sửa LaTeX, Xem trước, rồi Chấp nhận (TEX + GitHub).</div>';
+  if(!isPre){
+    h+='<label>Tiêu đề \\subsubsection</label><input class="lt-title-in" data-k="title" value="'+esc(d.title||'')+'">';
+  }else{
+    h+='<p class="muted">Phần mở đầu (trước mục đầu tiên). Có thể giữ \\subsection{...}.</p>';
+  }
+  h+='<label>LaTeX mục này</label><textarea class="rwta" data-k="body">'+esc(d.body||'')+'</textarea>';
+  h+='<p><button type="button" class="btn ltSecPrev">👁 Xem trước</button> '
+    +'<button type="button" class="btn green ltSecSave">✅ Chấp nhận ghi TEX</button> '
+    +'<button type="button" class="btn ltSecCancel">Hủy</button></p>';
+  h+='<div class="rwlook"></div></div>';
+  out.innerHTML=h;
+  out.querySelector('.ltSecCancel').onclick=function(){out.innerHTML='';};
+  async function preview(){
+    const look=out.querySelector('.rwlook');
+    look.innerHTML='⏳ Đang xem trước...';
+    const title=(out.querySelector('[data-k=title]')||{}).value||d.title||'';
+    const body=(out.querySelector('[data-k=body]')||{}).value||'';
+    const r=await fetch('/api/admin/companion-section-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({idx:d.idx,title:title,body:body})});
+    const x=await r.json();
+    look.innerHTML=x.ok?(x.html||'(trống)'):('<div class="err">'+(x.error||'Lỗi')+'</div>');
+    if(window.ldvlTypeset) ldvlTypeset(look);
+  }
+  out.querySelector('.ltSecPrev').onclick=preview;
+  out.querySelector('.ltSecSave').onclick=async function(){
+    if(!confirm('Ghi mục này vào TEX + GitHub? Học viên chỉ thấy sau khi Duyệt lại.')) return;
+    const c=ctx();
+    const title=(out.querySelector('[data-k=title]')||{}).value||d.title||'';
+    const body=(out.querySelector('[data-k=body]')||{}).value||'';
+    const r=await fetch('/api/admin/companion-section-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:c.path,kind:c.kind,idx:d.idx,title:title,body:body})});
+    const x=await r.json();
+    if(!x.ok){alert(x.error||'Không ghi được');return;}
+    out.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+    location.reload();
+  };
+  preview();
+}
+document.addEventListener('click',async function(e){
+  const ed=e.target.closest&&e.target.closest('.ltSecEdit');
+  const ai=e.target.closest&&e.target.closest('.ltSecAi');
+  const del=e.target.closest&&e.target.closest('.ltSecDel');
+  const add=e.target.closest&&e.target.closest('.ltSecAdd');
+  if(!ed&&!ai&&!del&&!add) return;
+  e.preventDefault();
+  const c=ctx();
+  if(add){
+    const out=document.querySelector('.ltSecAddOut');
+    if(out) showEditor(out,{idx:-1,title:'',body:''});
+    return;
+  }
+  if(del){
+    const idx=+del.getAttribute('data-idx');
+    if(!idx) return;
+    if(!confirm('Xóa mục này khỏi TEX + GitHub?')) return;
+    const r=await fetch('/api/admin/companion-section-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:c.path,kind:c.kind,idx:idx,delete:true})});
+    const d=await r.json();
+    if(!d.ok){alert(d.error||'Không xóa được');return;}
+    location.reload();
+    return;
+  }
+  const btn=ed||ai;
+  const sec=btn.closest('.ltsec');
+  const out=sec&&sec.querySelector('.ltSecOut');
+  if(!out) return;
+  if(ai){
+    const ks=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
+    if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+    out.innerHTML='⏳ AI đang viết lại mục này...';
+    try{
+      const r=await fetch('/api/admin/companion-section-ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:c.path,kind:c.kind,idx:+ai.getAttribute('data-idx'),api_keys:ks})});
+      const d=await r.json();
+      if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+      showEditor(out,d);
+    }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+    return;
+  }
+  out.innerHTML='⏳ Đang tải LaTeX mục...';
+  try{
+    const r=await fetch('/api/admin/companion-section',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:c.path,kind:c.kind,idx:+ed.getAttribute('data-idx')})});
+    const d=await r.json();
+    if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    showEditor(out,d);
   }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
 });
 })();
@@ -1052,35 +1342,60 @@ def api_admin_companion_ai():
         if ferr:
             return jsonify(ok=False, error=ferr), 400
     ctx = _lesson_ai_context(path)
-    prompt = _companion_prompt(kind, ctx, old, page_text)
-    raw, err = "", ""
     tok = 16000 if page_text else 12000
-    for key in keys:
-        try:
-            raw = _gemini_generate(key, prompt, tok, 0.2)
-            err = ""
-            break
-        except Exception as e:
-            err = str(e)
-            raw = ""
-    if not raw:
-        return jsonify(ok=False, error="AI không viết được: " + (err or "trống")), 400
-    latex = _merge_companion_tex(old, raw, kind, ctx["folder"])
-    if "\\subsubsection" not in latex:
-        return jsonify(ok=False, error="AI không ra \\subsubsection. Thử lại hoặc dán link SGK."), 400
-    if kind == "pp" and "\\begin{phuongphap}" not in latex:
-        return jsonify(ok=False, error="AI thiếu \\begin{phuongphap}. Thử lại."), 400
+    latex, err, qerr = "", "", ""
+    extra = ""
+    for _attempt in range(2):
+        prompt = _companion_prompt(kind, ctx, old, page_text) + extra
+        raw = ""
+        for key in keys:
+            try:
+                raw = _gemini_generate(key, prompt, tok, 0.2)
+                err = ""
+                break
+            except Exception as e:
+                err = str(e)
+                raw = ""
+        if not raw:
+            continue
+        latex = _merge_companion_tex(old, raw, kind, ctx["folder"])
+        if "\\subsubsection" not in latex:
+            qerr = "AI không ra \\subsubsection."
+            extra = "\n\nLần trước thiếu \\subsubsection. Viết đủ mục."
+            continue
+        if kind == "pp" and "\\begin{phuongphap}" not in latex:
+            qerr = "AI thiếu \\begin{phuongphap}."
+            extra = "\n\nLần trước thiếu \\begin{phuongphap}."
+            continue
+        qerr = _companion_quality_error(kind, latex)
+        if qerr:
+            extra = "\n\nLần trước bị từ chối: " + qerr + " Viết cụ thể, không khung 3 bước chung."
+            continue
+        qerr = ""
+        break
+    if not latex or "\\subsubsection" not in latex:
+        return jsonify(ok=False, error="AI không viết được: " + (qerr or err or "trống")), 400
+    if qerr:
+        return jsonify(ok=False, error=qerr + " Thử lại hoặc dán link SGK."), 400
     spec = TRACKS[kind]
     summary = (
         "AI soạn "
         + spec["label"]
         + " từ TEX"
         + (" + link" if source_url else "")
-        + ". Soát ô LaTeX (công thức, mục), rồi Chấp nhận ghi "
+        + ". Soát xem trước + ô LaTeX, rồi Chấp nhận ghi "
         + spec["file"]
         + "."
     )
-    return jsonify(ok=True, latex=latex, file=spec["file"], kind=kind, src=rel, summary=summary)
+    return jsonify(
+        ok=True,
+        latex=latex,
+        file=spec["file"],
+        kind=kind,
+        src=rel,
+        summary=summary,
+        preview=_companion_preview_html(latex),
+    )
 
 
 @app.post("/api/admin/companion-ai-save")
@@ -1103,6 +1418,168 @@ def api_admin_companion_ai_save():
         text = _merge_companion_tex(old, latex, kind, folder)
         from admin_classify import _write_tex
         _write_tex(rel, text, "ADMIN AI soạn " + TRACKS[kind]["file"], sha or None)
+        set_status(rel, kind, False)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=True, src=rel, kind=kind)
+
+
+def _companion_admin_file(path, kind):
+    kind = str(kind or _kind_of_file(path) or "lt").strip().lower()
+    if kind not in TRACKS:
+        kind = "lt"
+    rel = companion_path(path, kind)
+    if not rel.startswith("ngan-hang/"):
+        return None, None, "File không hợp lệ."
+    return rel, kind, ""
+
+
+@app.post("/api/admin/companion-section")
+def api_admin_companion_section():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    rel, kind, err = _companion_admin_file(data.get("path"), data.get("kind"))
+    if err:
+        return jsonify(ok=False, error=err), 400
+    try:
+        idx = int(data.get("idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu idx."), 400
+    try:
+        _sha, tex = base.read_tex(rel)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    _prefix, secs = split_companion_sections(tex)
+    hit = next((s for s in secs if int(s["idx"]) == idx), None)
+    if not hit:
+        return jsonify(ok=False, error="Không thấy mục."), 400
+    return jsonify(ok=True, idx=idx, title=hit.get("title") or "", body=hit.get("body") or "", file=TRACKS[kind]["file"])
+
+
+@app.post("/api/admin/companion-section-ai")
+def api_admin_companion_section_ai():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    from student_gemini import _gemini_generate, _keys_from_payload
+    data = request.get_json(silent=True) or {}
+    rel, kind, err = _companion_admin_file(data.get("path"), data.get("kind"))
+    if err:
+        return jsonify(ok=False, error=err), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Nạp key Gemini rồi bấm lại."), 400
+    try:
+        idx = int(data.get("idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu idx."), 400
+    if idx <= 0:
+        return jsonify(ok=False, error="Chọn một \\subsubsection (không phải phần mở đầu)."), 400
+    try:
+        _sha, tex = base.read_tex(rel)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    _prefix, secs = split_companion_sections(tex)
+    hit = next((s for s in secs if int(s["idx"]) == idx), None)
+    if not hit:
+        return jsonify(ok=False, error="Không thấy mục."), 400
+    spec = TRACKS[kind]
+    extra = ""
+    if kind == "pp":
+        extra = (
+            "Dùng \\begin{phuongphap} các bước CỤ THỂ (không 3 bước chung) "
+            "và \\begin{vidumau} bài ngắn + \\loigiai.\n"
+        )
+    else:
+        extra = "Dùng hoatdong / kienthuc / emcobiet / emdahoc / emcothe / \\chuy khi hợp.\n"
+    prompt = (
+        f"Bạn là giáo viên THPT. Viết lại ĐÚNG MỘT mục của file {spec['file']} (KNTT).\n"
+        f"Tiêu đề hiện tại: {hit.get('title') or 'Mục'}\n"
+        "Chỉ trả LaTeX:\n\\subsubsection{tiêu đề}\n"
+        "rồi nội dung. Công thức $...$. Không markdown, không \\dangbt, không \\input, không cả file.\n"
+        + extra
+        + "Nội dung cũ:\n"
+        + str(hit.get("body") or "")[:8000]
+    )
+    raw, err = "", ""
+    for key in keys:
+        try:
+            raw = _gemini_generate(key, prompt, 8000, 0.2)
+            err = ""
+            break
+        except Exception as e:
+            err = str(e)
+            raw = ""
+    if not raw:
+        return jsonify(ok=False, error="AI không viết được: " + (err or "trống")), 400
+    title, body = _normalize_section_payload(idx, hit.get("title") or "", _strip_tex_fence(raw))
+    if not body.strip():
+        return jsonify(ok=False, error="AI trả về trống."), 400
+    return jsonify(
+        ok=True,
+        idx=idx,
+        title=title,
+        body=body,
+        file=spec["file"],
+        note="Chưa ghi file. Soát rồi Chấp nhận.",
+    )
+
+
+@app.post("/api/admin/companion-section-preview")
+def api_admin_companion_section_preview():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        idx = int(data.get("idx") if data.get("idx") is not None else -1)
+    except (TypeError, ValueError):
+        idx = -1
+    title, body = _normalize_section_payload(idx, data.get("title") or "", data.get("body") or "")
+    return jsonify(ok=True, html=_section_preview_html(idx, title, body))
+
+
+@app.post("/api/admin/companion-section-save")
+def api_admin_companion_section_save():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    rel, kind, err = _companion_admin_file(data.get("path"), data.get("kind"))
+    if err:
+        return jsonify(ok=False, error=err), 400
+    try:
+        idx = int(data.get("idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu idx."), 400
+    try:
+        sha, tex = base.read_tex(rel, need_sha=True)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    prefix, secs = split_companion_sections(tex)
+    if data.get("delete"):
+        if idx <= 0:
+            return jsonify(ok=False, error="Không xóa phần mở đầu."), 400
+        nxt = [s for s in secs if int(s["idx"]) != idx]
+        if len(nxt) == len(secs):
+            return jsonify(ok=False, error="Không thấy mục."), 400
+        secs = nxt
+        msg = "ADMIN xóa mục " + TRACKS[kind]["file"]
+    else:
+        title, body = _normalize_section_payload(idx, data.get("title") or "", data.get("body") or "")
+        if idx < 0:
+            new_idx = max(int(s["idx"]) for s in secs) + 1 if secs else 1
+            secs.append({"idx": new_idx, "title": title, "body": body})
+            msg = "ADMIN thêm mục " + TRACKS[kind]["file"]
+        else:
+            hit = next((s for s in secs if int(s["idx"]) == idx), None)
+            if not hit:
+                return jsonify(ok=False, error="Không thấy mục."), 400
+            hit["title"] = title
+            hit["body"] = body
+            msg = "ADMIN sửa mục " + TRACKS[kind]["file"]
+    text = join_companion_sections(prefix, secs)
+    try:
+        from admin_classify import _write_tex
+        _write_tex(rel, text, msg, sha or None)
         set_status(rel, kind, False)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500

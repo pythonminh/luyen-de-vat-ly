@@ -1482,29 +1482,78 @@ def convert_tabulars(s, tab_stash):
             tab_stash.append(tabular_to_html(body))
             s=s[:m.start()]+tok+rest
 
-def convert_list_env(s, name, tag, stash):
-    s=s or ''
-    while True:
-        m=re.search(r'\\begin\s*\{\s*'+name+r'\s*\}', s, re.I)
-        if not m: return s
-        em=re.search(r'\\end\s*\{\s*'+name+r'\s*\}', s[m.end():], re.I)
-        if not em:
-            s=s[:m.start()]+s[m.end():]
+def _match_tex_env(s, name, start=0):
+    open_re = re.compile(r'\\begin\s*\{\s*' + re.escape(name) + r'\s*\}', re.I)
+    close_re = re.compile(r'\\end\s*\{\s*' + re.escape(name) + r'\s*\}', re.I)
+    m = open_re.search(s, start)
+    if not m:
+        return None
+    depth = 1
+    i = m.end()
+    while i < len(s) and depth:
+        mo = open_re.search(s, i)
+        mc = close_re.search(s, i)
+        if not mc:
+            return None
+        if mo and mo.start() < mc.start():
+            depth += 1
+            i = mo.end()
             continue
-        body=s[m.end():m.end()+em.start()]
-        items=re.split(r'\\item\b', body)[1:]
-        lis=[]
+        depth -= 1
+        if depth == 0:
+            return m.start(), m.end(), mc.start(), mc.end()
+        i = mc.end()
+    return None
+
+
+def _tex_inline_html(it):
+    it = it or ''
+    dms = []
+    def stash_dm(m):
+        dms.append(m.group(0).strip())
+        return f'@@DM{len(dms)-1}@@'
+    it = re.sub(r'\\\[.*?\\\]', stash_dm, it, flags=re.S)
+    it = re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', it)
+    it = re.sub(r'\\textit\s*\{([^{}]*)\}', r'@@I@@\1@@/I@@', it)
+    it = re.sub(r'\\emph\s*\{([^{}]*)\}', r'@@I@@\1@@/I@@', it)
+    inner = html.escape(prepare_math(it), quote=False).replace('\n', '<br>\n')
+    inner = inner.replace('@@B@@', '<b>').replace('@@/B@@', '</b>')
+    inner = inner.replace(html.escape('@@B@@', quote=False), '<b>').replace(html.escape('@@/B@@', quote=False), '</b>')
+    inner = inner.replace('@@I@@', '<i>').replace('@@/I@@', '</i>')
+    inner = inner.replace(html.escape('@@I@@', quote=False), '<i>').replace(html.escape('@@/I@@', quote=False), '</i>')
+    for i, dm in enumerate(dms):
+        tok = f'@@DM{i}@@'
+        block = f'<div class="lt-math">{html.escape(prepare_math(dm), quote=False)}</div>'
+        inner = inner.replace(html.escape(tok, quote=False), block).replace(tok, block)
+    return inner
+
+
+def convert_list_env(s, name, tag, stash):
+    s = s or ''
+    others = [('itemchoice', 'ul'), ('itemize', 'ul'), ('enumerate', 'ol')]
+    while True:
+        hit = _match_tex_env(s, name)
+        if not hit:
+            return s
+        a0, a1, b0, b1 = hit
+        body = s[a1:b0]
+        for other, otag in others:
+            if other != name:
+                body = convert_list_env(body, other, otag, stash)
+        items = re.split(r'\\item\b', body)[1:]
+        lis = []
         for it in items:
-            it=it.strip()
-            if not it: continue
-            it=re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', it)
-            inner=html.escape(prepare_math(it), quote=False).replace('\n','<br>\n')
-            inner=inner.replace('@@B@@','<b>').replace('@@/B@@','</b>')
-            inner=inner.replace(html.escape('@@B@@', quote=False),'<b>').replace(html.escape('@@/B@@', quote=False),'</b>')
+            it = it.strip()
+            if not it:
+                continue
+            inner = _tex_inline_html(it)
+            for i, html_ls in enumerate(stash):
+                tok = f'@@LST{i}@@'
+                inner = inner.replace(html.escape(tok, quote=False), html_ls).replace(tok, html_ls)
             lis.append(f'<li>{inner}</li>')
-        tok=f'@@LST{len(stash)}@@'
+        tok = f'@@LST{len(stash)}@@'
         stash.append(f'<{tag} class="tex-list">{"".join(lis)}</{tag}>')
-        s=s[:m.start()]+tok+s[m.end()+em.end():]
+        s = s[:a0] + tok + s[b1:]
 
 def id_of(block):
     ids=ID_RE.findall(block or '')
@@ -1550,7 +1599,7 @@ def video_html(vid, title=''):
 
 def latex_to_web(s):
     """HTML cho web: TikZ → hình, tabular → bảng, list → HTML, còn lại $...$ cho MathJax."""
-    figs=[]; bolds=[]; tabs=[]; lists=[]; vids=[]
+    figs=[]; bolds=[]; italics=[]; tabs=[]; lists=[]; vids=[]
     def stash_tikz(m):
         figs.append(tikz_to_html(m.group(0)))
         return f'@@FIG{len(figs)-1}@@'
@@ -1576,6 +1625,11 @@ def latex_to_web(s):
     s=convert_list_env(s, 'itemchoice', 'ul', lists)
     s=convert_list_env(s, 'itemize', 'ul', lists)
     s=convert_list_env(s, 'enumerate', 'ol', lists)
+    dms=[]
+    def stash_dm(m):
+        dms.append(m.group(0).strip())
+        return f'@@DM{len(dms)-1}@@'
+    s=re.sub(r'\\\[.*?\\\]', stash_dm, s, flags=re.S)
     s=re.sub(r'\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]*\}','@@IMG@@',s,flags=re.I)
     s=re.sub(r'\\begin\s*\{\s*(?:center|minipage|figure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(?:center|minipage|figure)\s*\}','',s,flags=re.I)
@@ -1588,6 +1642,11 @@ def latex_to_web(s):
         bolds.append(m.group(1))
         return f'@@BF{len(bolds)-1}@@'
     s=re.sub(r'\\textbf\s*\{([^{}]*)\}', stash_bf, s)
+    def stash_it(m):
+        italics.append(m.group(1))
+        return f'@@IT{len(italics)-1}@@'
+    s=re.sub(r'\\textit\s*\{([^{}]*)\}', stash_it, s)
+    s=re.sub(r'\\emph\s*\{([^{}]*)\}', stash_it, s)
     s=re.sub(r'\\item\b','\n• ',s)
     s=html.escape(prepare_math(s), quote=False).replace('\n','<br>\n')
     s=LINK_RE.sub(lambda m: f'<a href="{m.group(0)}" target="_blank" rel="noopener">{m.group(0)}</a>', s)
@@ -1596,6 +1655,10 @@ def latex_to_web(s):
         s=s.replace(html.escape(tok, quote=False), html_val).replace(tok, html_val)
     for i,t in enumerate(bolds):
         put(f'@@BF{i}@@', f'<b>{html.escape(t, quote=False)}</b>')
+    for i,t in enumerate(italics):
+        put(f'@@IT{i}@@', f'<i>{html.escape(t, quote=False)}</i>')
+    for i,dm in enumerate(dms):
+        put(f'@@DM{i}@@', f'<div class="lt-math">{html.escape(prepare_math(dm), quote=False)}</div>')
     for i,fig in enumerate(figs):
         put(f'@@FIG{i}@@', fig)
     for i,tb in enumerate(tabs):
@@ -3041,11 +3104,12 @@ def admin_edit():
                 +("<button class='btn red' name='status' value='pending' type='submit'>↩ Gỡ duyệt</button>" if ok else "")
                 +"<a class='btn' href='/admin/ly-thuyet'>📋 Danh sách duyệt</a></form>"
                 + _lt.companion_ai_panel_html(p, kind)
+                + _lt.companion_section_editor_html(p, kind, txt)
             )
         elif kn=='de.tex' or is_bank_question_tex(p):
             companion_bar=_lt.companion_ai_panel_html(p, 'lt')
-    except Exception:
-        companion_bar=''
+    except Exception as e:
+        companion_bar="<div class='err'>Không mở được sửa từng mục: "+html.escape(str(e)[:240])+"</div>"
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa TEX ngay trên trang này</div><div class='body'>"
         "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar
