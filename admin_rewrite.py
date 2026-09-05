@@ -384,45 +384,152 @@ def _tln_plain_number(s):
     return val
 
 
-def _coerce_tln(answer, solution):
+def _sol_too_thin(sol):
+    """Lời giải TLN chỉ còn một số (vd 20) — chưa đủ bước."""
+    t = _clean_tex(sol)
+    return len(re.findall(r"[A-Za-zÀ-ỹ]", t)) < 24
+
+
+def _coerce_tln(answer, solution, keep_solution=True):
     ans = _tln_plain_number(answer)
-    if ans:
-        return ans, ans
-    from_sol = _tln_plain_number(solution)
-    if from_sol:
-        return from_sol, from_sol
-    nums = _TLN_NUM_RE.findall(_clean_tex(solution) or "")
-    if nums:
-        val = nums[-1].replace(".", ",")
-        val = re.sub(r"\s+", "", val)
-        if re.fullmatch(r"-?\d+/1", val):
-            val = val.split("/")[0]
-        return val, val
-    return "", ""
+    if not ans:
+        from_sol = _tln_plain_number(solution)
+        if from_sol:
+            ans = from_sol
+        else:
+            nums = _TLN_NUM_RE.findall(_clean_tex(solution) or "")
+            if nums:
+                val = nums[-1].replace(".", ",")
+                val = re.sub(r"\s+", "", val)
+                if re.fullmatch(r"-?\d+/1", val):
+                    val = val.split("/")[0]
+                ans = val
+    sol = _clean_tex(solution)
+    if not ans:
+        return "", sol if keep_solution else ""
+    if keep_solution:
+        return ans, sol
+    return ans, ans
+
+
+_TN_STYLE_STEM_RE = re.compile(
+    r"(nào\s+sau\s+đây|đâu\s+là|phương\s+án\s+nào|chọn\s+(?:câu|đáp\s+án)|"
+    r"tính\s+chất\s+nào|phát\s+biểu\s+nào|ý\s+nào\s+sau|không\s+phải\s+là\s+đặc\s+trưng)",
+    re.I,
+)
+
+
+def tn_style_stem(s):
+    t = re.sub(r"\s+", " ", str(s or ""))
+    return bool(_TN_STYLE_STEM_RE.search(t))
+
+
+def stem_incomplete(s):
+    """Đề rỗng / chỉ comment / quá ngắn — cần AI viết bổ sung từ lời giải."""
+    t = _clean_tex(s)
+    t = re.sub(r"%[^\n]*", " ", t)
+    t = re.sub(r"\\(?:begin|end)\s*\{\s*ex\s*\}", " ", t, flags=re.I)
+    t = re.sub(r"\\[a-zA-Z]+\*?", " ", t)
+    t = re.sub(r"[{}$\\\[\]]", " ", t)
+    letters = re.findall(r"[A-Za-zÀ-ỹ0-9]", t)
+    return len(letters) < 18
+
+
+def kind_structure_text(kind):
+    kind = str(kind or "").upper()
+    if kind == "DS":
+        return (
+            "Cấu trúc ĐÚNG/SAI (DS) bắt buộc:\n"
+            "- Stem: câu dẫn ngắn, kiểu «Xét các phát biểu sau» / «Khi phân tích … hãy nhận xét».\n"
+            "- CẤM stem chọn 1 ý (nào sau đây, đâu là, tính chất nào, phương án nào).\n"
+            "- Đúng 4 mệnh đề khẳng định độc lập trong options (JSON) hoặc \\choiceTF {..}{..}{..}{..}.\n"
+            "- Mỗi mệnh đề tự đứng được (đúng hoặc sai), không phải A/B/C/D của một câu TN.\n"
+            "- Lời giải lần lượt ý a/b/c/d: đúng/sai vì sao. Không chép nguyên văn từng mệnh đề.\n"
+        )
+    if kind == "TN":
+        return (
+            "Cấu trúc TRẮC NGHIỆM (TN) bắt buộc:\n"
+            "- Stem hỏi chọn 1 đáp án. Đúng 4 phương án trong options / \\choice {A}{B}{C}{D}, một \\True.\n"
+            "- Không dùng \\choiceTF. Không để trống phương án.\n"
+        )
+    if kind == "TLN":
+        return (
+            "Cấu trúc TRẢ LỜI NGẮN (TLN) bắt buộc:\n"
+            "- Stem nêu rõ đại lượng và đơn vị học sinh phải ghi (ví dụ theo mΩ).\n"
+            "- Đề phải đủ giả thiết; cấm stem trống.\n"
+            "- answer là SỐ (12 hoặc 25,12 hoặc 3/2). Cấm đơn vị trong answer, CẤM A–D, CẤM ngày 15/01/1900.\n"
+            "- solution: các bước tính đầy đủ, kết quả khớp answer. Không chỉ một số trơ.\n"
+            "- \\shortans{số}. Không \\choice.\n"
+        )
+    return (
+        "Cấu trúc TỰ LUẬN (TL) bắt buộc:\n"
+        "- Chỉ đề + lời giải. Không \\choice, không \\choiceTF, không \\shortans, không A/B/C/D.\n"
+    )
+
+
+def _rewrite_bad_structure(kind, stem, new_opts, answer, solution=""):
+    kind = str(kind or "").upper()
+    if stem_incomplete(stem):
+        return True
+    opts = list(new_opts or [])
+    if kind == "DS":
+        if tn_style_stem(stem):
+            return True
+        if len(opts) != 4:
+            return True
+        return any(len(str((o.get("text") if isinstance(o, dict) else o) or "").strip()) < 4 for o in opts)
+    if kind == "TN":
+        if len(opts) != 4:
+            return True
+        return not any(bool(o.get("correct")) for o in opts if isinstance(o, dict))
+    if kind == "TLN":
+        return (not _tln_plain_number(answer)) or _sol_too_thin(solution)
+    if kind == "TL":
+        return bool(opts)
+    return False
 
 
 def _prompt(pack, retry=False):
     letters = "ABCD"
+    kind = str(pack.get("kind") or "TL").upper()
     opt_lines = []
     for i, o in enumerate(pack.get("options") or []):
         mark = " [ĐÚNG]" if o.get("correct") else ""
-        lab = letters[i] if pack["kind"] == "TN" else str(i + 1)
+        lab = letters[i] if kind == "TN" else str(i + 1)
         opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
     extra = ""
     if retry:
         extra = (
-            "LẦN 2 — bản trước gần như copy đề cũ. BẮT BUỘC đổi câu chữ đề và từng phương án "
-            "(diễn đạt khác, cùng ý toán). Không được dán lại nguyên văn.\n"
+            "LẦN 2 — bản trước SAI CẤU TRÚC (thiếu đề, lời giải chỉ là một số, lẫn TN/ĐS, thiếu 4 mệnh đề). "
+            "BẮT BUỘC đề đầy đủ VÀ lời giải đủ bước (công thức, đổi đơn vị, tính ra đáp án). CẤM solution chỉ ghi 20.\n"
         )
+    if stem_incomplete(pack.get("text") or ""):
+        extra += (
+            "Đề cũ THIẾU hoặc gần như trống (học viên chỉ thấy ô nhập đáp án). "
+            "BẮT BUỘC viết BỔ SUNG đề đầy đủ: đủ giả thiết, số liệu, câu hỏi. "
+            "Dùng lời giải + đáp án để khôi phục đề. "
+            "Nếu số liệu trong lời giải không khớp đáp án thì SỬA số liệu cho khớp (ví dụ đáp án 20 thì chọn S, ρ, l sao cho ra 20), "
+            "KHÔNG viết «đề có lỗi đánh máy». "
+            "TLN: đề nêu rõ đơn vị cần ghi (ví dụ mΩ), answer/solution chỉ là số (20).\n"
+        )
+    opt_json = (
+        'DS: options đúng 4 chuỗi mệnh đề. TN: options đúng 4 phương án. '
+        'TLN/TL: options = [].'
+        if kind in {"DS", "TN"}
+        else "options = [] (không bịa A–D)."
+    )
     return (
         extra
-        + "Bạn là giáo viên THPT soạn đề. VIẾT LẠI ĐỀ và LỜI GIẢI đúng, gọn, giọng giáo viên.\n"
-        "Đổi cách diễn đạt đề và phương án (không copy nguyên văn). Giữ ý toán, số liệu, loại câu, vị trí đáp án đúng. Tính lại cho khớp.\n"
-        "CẤM trong stem/options/solution/answer: dòng comment LaTeX (bắt đầu %), % ID:, % Mức:, %=== Câu, \\begin{ex}, \\end{ex}, \\loigiai, \\True.\n"
+        +         "Bạn là giáo viên THPT soạn đề. VIẾT LẠI (hoặc BỔ SUNG nếu đề cũ thiếu) ĐỀ và LỜI GIẢI cho ĐẦY ĐỦ, đúng, gọn, giọng giáo viên.\n"
+        "Không được để stem trống. Không copy nguyên văn nếu đề cũ đã đủ. Giữ ý toán khi đề cũ đủ; nếu đề cũ thiếu thì dựng đề khớp lời giải/đáp án. Tính lại cho khớp.\n"
+        f"Loại câu này là {kind} — không đổi sang loại khác.\n"
+        + kind_structure_text(kind)
+        + "CẤM trong stem/options/solution/answer: dòng comment LaTeX (bắt đầu %), % ID:, % Mức:, %=== Câu, \\begin{ex}, \\end{ex}, \\loigiai, \\True.\n"
         "Không gán ID hay mức độ — đó là việc công cụ phân dạng, không phải form này.\n"
-        "Lời giải TN/ĐS: chỉ gọi phương án A/B/C/D (hoặc 1/2/3), KHÔNG chép lại nguyên văn nội dung từng phương án — phần đó đã nằm ở options.\n"
-        "Nếu Loại là TLN: answer và solution CHỈ là số (vd 12 hoặc 25,12 hoặc 3/2). "
-        "CẤM đơn vị, CẤM A/B/C/D, CẤM dạng ngày Excel kiểu 15/01/1900 hay 15/1/1900 "
+        "Lời giải TN/ĐS: chỉ gọi phương án A/B/C/D (hoặc a/b/c/d), KHÔNG chép lại nguyên văn nội dung từng phương án — phần đó đã nằm ở options.\n"
+        "Nếu Loại là TLN: answer CHỈ là số (vd 12 hoặc 25,12 hoặc 3/2). "
+        "solution là lời giải đủ bước, khớp answer. "
+        "CẤM đơn vị trong answer, CẤM A/B/C/D, CẤM dạng ngày Excel kiểu 15/01/1900 hay 15/1/1900 "
         "(Excel hay đổi phân số 15/1 thành ngày — hãy ghi 15). Không nhầm số với ngày tháng.\n"
         "LaTeX BẮT BUỘC:\n"
         "- Mọi công thức (kể cả \\pi, \\frac, \\Rightarrow, \\cos, \\left\\right) phải nằm trong $...$.\n"
@@ -431,11 +538,12 @@ def _prompt(pack, retry=False):
         "- Xuống dòng bằng \\n trong JSON, không dùng \\\\ rồi xuống dòng lung tung.\n"
         "JSON một object: "
         '{"stem":"...","options":["..."],"answer":"...","solution":"...","note":""}\n'
-        "Đồng thời lặp lại lời giải thuần LaTeX giữa các mốc:\n"
+        + opt_json
+        + "\nĐồng thời lặp lại lời giải thuần LaTeX giữa các mốc:\n"
         "===STEM===\n...===SOLUTION===\n...===ANSWER===\n...===NOTE===\n"
-        "options cùng số lượng, không \\True. solution không bọc \\loigiai / \\begin{ex}.\n\n"
-        f"Loại: {pack['kind']}\n"
-        f"Đề cũ (chỉ tham khảo, phải viết lại):\n{pack['text']}\n"
+        "options không chứa \\True. solution không bọc \\loigiai / \\begin{ex}.\n\n"
+        f"Loại: {kind}\n"
+        f"Đề cũ (nếu trống/thiếu thì phải viết mới cho đủ; nếu đã có thì viết lại diễn đạt):\n{pack['text'] or '(TRỐNG — hãy viết đầy đủ đề)'}\n"
         + ("Phương án/mệnh đề cũ (viết lại diễn đạt, cùng thứ tự đúng/sai):\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
         + (f"Đáp án shortans cũ: {pack['answer']}\n" if pack.get("answer") else "")
         + f"Lời giải cũ:\n{pack['solution'] or '(trống)'}\n"
@@ -552,12 +660,19 @@ def api_rewrite_question():
         answer = _clean_tex(obj.get("answer") or "")
         raw_opts = obj.get("options") if isinstance(obj.get("options"), list) else []
         new_opts = []
-        old_opts = pack["options"]
-        if raw_opts and len(raw_opts) == len(old_opts):
-            for i, o in enumerate(old_opts):
+        old_opts = pack["options"] or []
+        kind = pack["kind"]
+        need = 4 if kind in ("TN", "DS") else len(old_opts)
+        if kind in ("TN", "DS") and len(raw_opts) == 4:
+            need = 4
+        if raw_opts and need and len(raw_opts) == need:
+            for i in range(need):
                 txt = raw_opts[i]
                 txt = txt.get("text") if isinstance(txt, dict) else txt
-                new_opts.append({"text": _clean_tex(txt), "correct": bool(o.get("correct"))})
+                correct = bool(old_opts[i].get("correct")) if i < len(old_opts) else False
+                if isinstance(raw_opts[i], dict) and "correct" in raw_opts[i] and i >= len(old_opts):
+                    correct = bool(raw_opts[i].get("correct"))
+                new_opts.append({"text": _clean_tex(txt), "correct": correct})
         note = str(obj.get("note") or "").strip()[:300]
         if pack["kind"] == "TLN":
             answer, solution = _coerce_tln(answer, solution)
@@ -568,11 +683,12 @@ def api_rewrite_question():
         return jsonify(ok=False, error=err or "Gemini không trả lời."), 400
     stem, solution, answer, new_opts, note = fields_from(raw)
     copied = _copied_stem_or_opts(pack, stem, new_opts)
-    if copied:
+    bad_struct = _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution)
+    if copied or bad_struct:
         raw2, err2 = _gemini_once(keys, _prompt(pack, retry=True), 5000)
         if raw2:
             s2, sol2, a2, o2, n2 = fields_from(raw2)
-            if s2 or sol2:
+            if s2 or sol2 or o2:
                 stem, solution, answer, new_opts, note = s2, sol2, a2, o2, n2
                 if _copied_stem_or_opts(pack, stem, new_opts):
                     note = ((note + " ") if note else "") + "AI vẫn gần đề cũ — hãy sửa tay trước khi ghi."
@@ -585,16 +701,48 @@ def api_rewrite_question():
             note = ((note + " ") if note else "") + "AI gần như copy đề cũ — hãy sửa tay trước khi ghi."
     if not stem and not solution:
         return jsonify(ok=False, error="AI không viết được đề/lời giải."), 400
-    if not stem:
+    if stem_incomplete(stem) and not stem_incomplete(raw_stem or pack["text"]):
         stem = raw_stem or pack["text"]
         note = ((note + " ") if note else "") + "Thiếu đề mới — đang hiện đề cũ."
+    if stem_incomplete(stem):
+        return jsonify(
+            ok=False,
+            error="AI chưa viết đủ đề. Bấm lại «AI viết lại đề + lời giải» — hệ thống sẽ bổ sung đề từ lời giải và đáp án.",
+        ), 400
     if not solution:
         solution = raw_sol or pack["solution"]
     if pack["kind"] == "TLN":
-        answer, solution = _coerce_tln(answer, solution or pack.get("answer") or "")
+        answer, sol_keep = _coerce_tln(answer, solution or "")
         if not answer:
-            answer, solution = _coerce_tln(pack.get("answer") or "", raw_sol or pack.get("solution") or "")
-    if pack["options"] and not new_opts:
+            answer, _ignored = _coerce_tln(pack.get("answer") or "", raw_sol or pack.get("solution") or "")
+        if _sol_too_thin(sol_keep):
+            if not _sol_too_thin(raw_sol or pack.get("solution") or ""):
+                solution = raw_sol or pack.get("solution") or ""
+                note = ((note + " ") if note else "") + "AI chỉ ghi số ở lời giải — đang hiện lời giải cũ. Sửa cho khớp đề rồi ghi."
+            else:
+                return jsonify(
+                    ok=False,
+                    error="AI chưa viết lời giải đủ bước (không được chỉ ghi 20). Bấm lại «AI viết lại đề + lời giải».",
+                ), 400
+        else:
+            solution = sol_keep
+    old_ok = not stem_incomplete(raw_stem or pack["text"]) and (
+        pack["kind"] not in ("DS", "TN") or len(pack["options"] or []) == 4
+    )
+    if _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution) and pack["kind"] in ("DS", "TN"):
+        if old_ok:
+            stem = raw_stem or pack["text"]
+            new_opts = pack["options"]
+            note = (
+                ((note + " ") if note else "")
+                + "AI sai dạng câu (ĐS = 4 mệnh đề, không hỏi «nào sau đây»; TN = 4 phương án). Đang hiện đề cũ — sửa tay hoặc bấm viết lại."
+            )
+        else:
+            return jsonify(
+                ok=False,
+                error="Câu đang thiếu đề/phương án. AI chưa bổ sung đủ (ĐS/TN cần 4 ý). Bấm viết lại lần nữa.",
+            ), 400
+    elif pack["options"] and not new_opts:
         new_opts = pack["options"]
     return jsonify(
         _pack_payload(

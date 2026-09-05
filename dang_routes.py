@@ -783,6 +783,40 @@ def _kind_of_block(block):
         return 'TLN'
     return 'TL'
 
+def _stem_of_ex(block):
+    b = re.sub(r'\\begin\s*\{\s*ex\s*\}', '', str(block or ''), count=1, flags=re.I)
+    return re.split(r'\\(?:choiceTF|choice|shortans|loigiai)\b', b, maxsplit=1, flags=re.I)[0]
+
+def _block_ok_for_kind(block, kind):
+    from app import command_args, split_true_mark
+    from admin_rewrite import stem_incomplete, tn_style_stem
+    kind = str(kind or '').upper()
+    if _kind_of_block(block) != kind:
+        return False
+    if stem_incomplete(_stem_of_ex(block)):
+        return False
+    if kind == 'DS':
+        opts = command_args(block, '\\choiceTF')
+        if len(opts) != 4:
+            return False
+        if tn_style_stem(_stem_of_ex(block)):
+            return False
+        return all(len(re.sub(r'\s+', '', o or '')) >= 4 for o in opts)
+    if kind == 'TN':
+        opts = command_args(block, '\\choice')
+        if len(opts) != 4:
+            return False
+        return sum(1 for o in opts if split_true_mark(o)[1]) == 1
+    if kind == 'TLN':
+        from app import solution_of
+        from admin_rewrite import _sol_too_thin
+        if not command_args(block, '\\shortans'):
+            return False
+        return not _sol_too_thin(solution_of(block))
+    if re.search(r'\\choice(?:TF)?\b|\\shortans\b', block or '', re.I):
+        return False
+    return bool(re.search(r'\\loigiai\s*\{', block or '', re.I))
+
 def _q_from_block(block, dang=''):
     wrap = '\\dangbt{' + str(dang or 'Chưa phân dạng') + '}\n' + str(block or '')
     qs = parse_questions(wrap)
@@ -819,6 +853,9 @@ def _filter_import_rows(rows, qs, fallback_dang=''):
         k = str(fake.get('kind') or _kind_of_block(block) or 'TL')
         if k not in KIND_ORDER:
             k = 'TL'
+        if not _block_ok_for_kind(block, k):
+            skipped.append('sai cấu trúc ' + k)
+            continue
         n = have[dname][k]
         if n >= KIND_MAX[k]:
             skipped.append('vượt trần ' + k)
@@ -926,12 +963,73 @@ def _fetch_public_page(url):
         return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
     return plain[:36000], ''
 
+def _gemini_fill_raw(keys, prompt, tok, temp=0.25):
+    from student_gemini import _gemini_generate
+    raw, err = '', ''
+    for key in keys:
+        try:
+            raw = _gemini_generate(key, prompt, tok, temp)
+            err = ''
+            break
+        except Exception as e:
+            err = str(e)
+            raw = ''
+    return raw, err
+
+def _kind_rules_all():
+    from admin_rewrite import kind_structure_text
+    parts = [
+        'Mỗi câu một khối \\begin{ex}...\\end{ex}. Công thức $...$. Không markdown, không % ID, không \\dangbt (trừ khi được yêu cầu).\n',
+        kind_structure_text('TN'),
+        'TN LaTeX:\n\\begin{ex}\nĐề...\n\\choice\n{\\True phương án đúng}\n{sai}\n{sai}\n{sai}\n\\loigiai{...}\n\\end{ex}\n',
+        kind_structure_text('DS'),
+        'ĐS LaTeX:\n\\begin{ex}\nXét các phát biểu sau.\n\\choiceTF\n{\\True mệnh đề đúng}\n{mệnh đề sai}\n{...}\n{...}\n\\loigiai{a đúng vì ...; b sai vì ...}\n\\end{ex}\n',
+        kind_structure_text('TLN'),
+        'TLN LaTeX: \\shortans{12}\\loigiai{12} — cùng một số, không đơn vị.\n',
+        kind_structure_text('TL'),
+    ]
+    return ''.join(parts)
+
+def _fill_kind_blocks(keys, dang, kind, n, samples, tok=5000):
+    from admin_rewrite import kind_structure_text
+    if n <= 0:
+        return []
+    lab = {'TN': 'trắc nghiệm 4 lựa chọn', 'DS': 'đúng/sai 4 mệnh đề', 'TLN': 'trả lời ngắn', 'TL': 'tự luận'}.get(kind, kind)
+    sample_txt = '\n'.join(f'- {k}: {t}' for k, t in samples if not k or k == kind) or '(chưa có cùng loại)'
+    prompt = (
+        f'Bạn là giáo viên ra đề thi THPT. Viết ĐÚNG {n} câu loại {kind} ({lab}) về dạng: {dang}\n'
+        'Chỉ trả về các khối \\begin{ex}...\\end{ex}. Không markdown, không lời dẫn.\n'
+        'CẤM viết loại khác. CẤM biến thể cùng số liệu. CẤM trùng mẫu dưới.\n'
+        + kind_structure_text(kind)
+        + ('ĐS: stem ngắn «Xét các phát biểu sau»; \\choiceTF đủ 4 mệnh đề; CẤM câu hỏi «tính chất nào / đâu là».\n' if kind == 'DS' else '')
+        + ('TLN: đề đủ số liệu trước \\shortans. \\shortans{chỉ số}. \\loigiai{công thức, đổi đơn vị, tính ra số — CẤM chỉ ghi một số}.\n' if kind == 'TLN' else '')
+        + 'Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n'
+        'Mẫu đang có (cấm trùng):\n' + sample_txt
+    )
+    raw, _err = _gemini_fill_raw(keys, prompt, tok, 0.25)
+    raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', (raw or '').strip(), flags=re.I)
+    kept = [b for b in _extract_ex_blocks(raw) if _block_ok_for_kind(b, kind)]
+    if len(kept) < n:
+        more = (
+            prompt
+            + f'\n\nLần trước chỉ nhận được {len(kept)}/{n} câu ĐÚNG cấu trúc {kind}. '
+            f'Viết THÊM {n - len(kept)} câu {kind} nữa, không lặp.\n'
+        )
+        extra, _ = _gemini_fill_raw(keys, more, tok, 0.2)
+        extra = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', (extra or '').strip(), flags=re.I)
+        for b in _extract_ex_blocks(extra):
+            if _block_ok_for_kind(b, kind) and b not in kept:
+                kept.append(b)
+            if len(kept) >= n:
+                break
+    return kept[:n]
+
 @app.post('/api/admin/dang-fill')
 def api_admin_dang_fill():
     if not can_manage_bank():
         return jsonify(ok=False, error='Chỉ ADMIN.'), 403
     from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, dang_tex_anchor, kind_gap_heuristic, load_lesson_questions, questions_in_scope
-    from student_gemini import _gemini_generate, _keys_from_payload
+    from student_gemini import _keys_from_payload
     data = request.get_json(silent=True) or {}
     path = str(data.get('path') or '').replace('\\', '/').strip()
     dang = str(data.get('dang') or '').strip()
@@ -967,12 +1065,8 @@ def api_admin_dang_fill():
     dang_list = '; '.join(names) if names else '(chưa có dạng — tự đặt tên ngắn, rõ)'
     nguon_line = '\\nguon{' + _tex_nguon_url(source_url) + '}' if source_url else ''
     kind_rules = (
-        "Quy ước loại câu:\n"
-        "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
-        "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-        "- TLN: \\shortans{chỉ số, không đơn vị, không A/B/C/D, không ngày 15/01/1900} rồi \\loigiai{cùng số đó}\n"
-        "- TL: không \\choice, có \\loigiai{...}\n"
-        "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Công thức $...$. Không % ID.\n"
+        _kind_rules_all()
+        + "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Không % ID.\n"
         + ("Trong MỖI khối \\begin{ex} phải có đúng một " + nguon_line + " (link tải trang, không đổi).\n" if nguon_line else "")
     )
     if page_text and not dang:
@@ -1000,54 +1094,45 @@ def api_admin_dang_fill():
             + "Nội dung trang (đã gỡ HTML):\n" + page_text
         )
     else:
-        prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Viết câu hỏi LaTeX MỚI cho đúng dạng bài, không copy đề mẫu.\n"
-            "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
-            "Dạng: " + dang + "\nCần viết: " + want + "\n"
-            "Mỗi câu một ý khác nhau, không viết biến thể cùng số liệu. Cấm trùng / gần trùng mẫu dưới.\n"
-            "Quy ước:\n"
-            "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
-            "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-            "- TLN: \\shortans{chỉ số, không đơn vị, không A/B/C/D, không ngày 15/01/1900} rồi \\loigiai{cùng số đó}\n"
-            "- TL: không \\choice, có \\loigiai{...}\n"
-            "Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n"
-            "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"
-            + ("\n".join(f"- {k}: {t}" for k, t in samples) or "(chưa có)")
-        )
-    tok = 16000 if page_text else 8000
-    raw, err = '', ''
-    for key in keys:
-        try:
-            raw = _gemini_generate(key, prompt, tok, 0.25)
-            err = ''
-            break
-        except Exception as e:
-            err = str(e)
-            raw = ''
-    if not raw:
-        return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
-    raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
-    blocks = _extract_ex_blocks(raw)
-    if page_text and len(blocks) < 4 and keys:
-        more_prompt = (
-            prompt
-            + "\n\nLần trước chỉ ra được " + str(len(blocks)) + " câu. Trang còn nhiều câu. "
-            "Viết TIẾP các khối \\begin{ex} CHƯA có, không lặp đề cũ. Vẫn đủ \\nguon và \\loigiai.\n"
-            "Đã có (cấm trùng):\n" + raw[-4000:]
-        )
-        extra = ''
-        for key in keys:
-            try:
-                extra = _gemini_generate(key, more_prompt, tok, 0.2)
-                break
-            except Exception:
-                extra = ''
-        if extra:
-            extra = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', extra.strip(), flags=re.I)
-            raw = (raw + '\n\n' + extra).strip()
-            blocks = _extract_ex_blocks(raw)
-    if not blocks:
-        return jsonify(ok=False, error='AI không ra khối \\begin{ex}...\\end{ex}. Thử lại.'), 400
+        blocks = []
+        miss = []
+        for k, lab in KIND_CHIP_LABS:
+            n = int(add.get(k) or 0)
+            if n <= 0:
+                continue
+            got = _fill_kind_blocks(keys, dang, k, n, samples)
+            blocks.extend(got)
+            if len(got) < n:
+                miss.append(f'{lab} {len(got)}/{n}')
+        if not blocks:
+            return jsonify(ok=False, error='AI không ra đúng cấu trúc từng loại (ĐS phải \\choiceTF 4 mệnh đề, TN phải \\choice 4 ý). Thử lại.'), 400
+        raw = '\n\n'.join(blocks)
+        if miss:
+            want = want + ' — thiếu cấu trúc: ' + ', '.join(miss)
+        tok = 8000
+        prompt = ''
+        err = ''
+    if page_text:
+        tok = 16000
+        raw, err = _gemini_fill_raw(keys, prompt, tok, 0.25)
+        if not raw:
+            return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
+        raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
+        blocks = _extract_ex_blocks(raw)
+        if len(blocks) < 4 and keys:
+            more_prompt = (
+                prompt
+                + "\n\nLần trước chỉ ra được " + str(len(blocks)) + " câu. Trang còn nhiều câu. "
+                "Viết TIẾP các khối \\begin{ex} CHƯA có, không lặp đề cũ. Vẫn đủ \\nguon và \\loigiai.\n"
+                "Đã có (cấm trùng):\n" + raw[-4000:]
+            )
+            extra, _ = _gemini_fill_raw(keys, more_prompt, tok, 0.2)
+            if extra:
+                extra = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', extra.strip(), flags=re.I)
+                raw = (raw + '\n\n' + extra).strip()
+                blocks = _extract_ex_blocks(raw)
+        if not blocks:
+            return jsonify(ok=False, error='AI không ra khối \\begin{ex}...\\end{ex}. Thử lại.'), 400
     src, _line = dang_tex_anchor(path, dang, qs=qs)
     latex = _import_tex_chunk(raw, dang) if (page_text and not dang) else ('\n\n'.join(blocks) + '\n')
     if not latex.strip():
@@ -1057,12 +1142,14 @@ def api_admin_dang_fill():
     if kept:
         latex = '\n\n'.join('\\dangbt{' + d + '}\n' + b for d, b in kept) + '\n'
     elif page_text:
-        return jsonify(ok=False, error='Mọi câu từ link đều gần trùng hoặc đã chạm trần dạng. Soát gợi ý xóa rồi thử lại.'), 400
+        return jsonify(ok=False, error='Mọi câu từ link đều gần trùng, sai cấu trúc, hoặc đã chạm trần dạng. Soát gợi ý xóa rồi thử lại.'), 400
     else:
+        if skipped and all('sai cấu trúc' in s for s in skipped):
+            return jsonify(ok=False, error='Câu AI viết sai cấu trúc loại (ĐS = \\choiceTF 4 mệnh đề, không hỏi «nào sau đây»; TN = \\choice 4 ý). Thử lại.'), 400
         return jsonify(ok=False, error='Câu AI viết gần trùng đề đang có. Soát xóa bản thừa, đừng nhồi thêm biến thể.'), 400
     latex = _latex_with_nguon(latex, source_url)
     nd = len(_chunks_from_import(latex, dang))
-    skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần).') if skipped else ''
+    skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần / sai cấu trúc).') if skipped else ''
     summary = 'AI soạn ' + str(nd or len(blocks)) + ' câu' + (' từ link (tự gán dạng)' if (source_url and not dang) else (' từ link' if source_url else ' (' + want + ')')) + skip_txt + '. Mỗi câu có \\nguon{link}. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
     return jsonify(ok=True, src=src, latex=latex, n=nd or len(blocks), add=add, counts=counts, summary=summary)
 
