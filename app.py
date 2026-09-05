@@ -3040,7 +3040,10 @@ def admin_edit():
                 +("<button class='btn green' name='status' value='approved' type='submit'>✅ Duyệt cho học viên</button>" if not ok else "")
                 +("<button class='btn red' name='status' value='pending' type='submit'>↩ Gỡ duyệt</button>" if ok else "")
                 +"<a class='btn' href='/admin/ly-thuyet'>📋 Danh sách duyệt</a></form>"
+                + _lt.companion_ai_panel_html(p, kind)
             )
+        elif kn=='de.tex' or is_bank_question_tex(p):
+            companion_bar=_lt.companion_ai_panel_html(p, 'lt')
     except Exception:
         companion_bar=''
     body=(

@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import app as base
-from flask import redirect, request
+from flask import jsonify, redirect, request
 
 app = base.app
 ROOT = Path(base.ROOT)
@@ -582,14 +582,18 @@ def page_companion(de_path: str, kind: str = "lt"):
         nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa file TEX</a>")
         nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
     banner = ""
-    if admin and not is_approved(de_path, kind):
-        banner = (
-            "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> "
-            "Học viên chưa thấy mục này.<br>"
-            "<b>Cách sửa:</b> bấm <b>✏️ Sửa file TEX</b> → soạn LaTeX (mỗi dạng một "
-            "<code>\\subsubsection</code>, hộp <code>phuongphap</code> và <code>vidumau</code>) "
-            "→ <b>Commit GitHub</b> → quay lại bấm <b>📋 Duyệt</b>.</div>"
-        )
+    if admin:
+        fp = companion_path(de_path, kind)
+        if not is_approved(de_path, kind):
+            banner = (
+                "<div class='notice' style='margin-bottom:10px'><b>ADMIN xem trước.</b> "
+                "Học viên chưa thấy mục này.<br>"
+                "<b>Cách sửa:</b> bấm <b>✏️ Sửa file TEX</b> (có AI đọc TEX + link) "
+                "hoặc soạn LaTeX (mỗi dạng một <code>\\subsubsection</code>, hộp "
+                "<code>phuongphap</code> và <code>vidumau</code>) "
+                "→ <b>Lưu</b> → <b>📋 Duyệt</b>.</div>"
+            )
+        banner += companion_ai_panel_html(fp, kind)
     head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
     body = (
         LT_CSS
@@ -682,7 +686,7 @@ def admin_companion_list():
                 "<td>"
                 + badge
                 + f"<div style='margin-top:6px;display:flex;gap:4px;flex-wrap:wrap'>"
-                f"<a class='btn' href='/admin/edit?path={qp}'>✏️ Sửa</a>"
+                f"<a class='btn' href='/admin/edit?path={qp}'>✏️ Sửa / AI</a>"
                 f"<a class='btn' href='{html.escape(meta['route'])}?path={quote(row['path'], safe='')}'>👁 Xem</a>"
                 f"<form method='post' action='/admin/companion/status' style='display:inline'>"
                 f"<input type='hidden' name='path' value='{html.escape(fp, quote=True)}'>"
@@ -724,6 +728,7 @@ def admin_companion_list():
     body = (
         "<div class='wrap'><div class='panel'><div class='head'>📖 ADMIN · Lý thuyết và dạng mẫu</div><div class='body'>"
         "<div class='notice'>Học viên chỉ thấy mục đã <b>Duyệt</b>. Sửa file trên web sẽ tự <b>gỡ duyệt</b> — duyệt lại khi xong. "
+        "ADMIN bấm <b>Sửa / AI</b> để đọc TEX hiện có, dán link SGK/SBT, rồi để Gemini viết lại lý thuyết hoặc phương pháp. "
         f"Đang chờ: <b>{n_wait}</b> · Đã duyệt: <b>{n_ok}</b>.</div>"
         f"<p style='display:flex;gap:8px;flex-wrap:wrap'>{tabs}"
         f"<a class='btn' href='/admin'>← ngan-hang</a></p>"
@@ -756,3 +761,349 @@ def admin_companion_status():
     if not nxt.startswith("/admin"):
         nxt = "/admin/ly-thuyet"
     return redirect(nxt)
+
+
+def _lythuyet_input(folder):
+    parts = [p for p in str(folder or "").replace("\\", "/").split("/") if p]
+    if parts and parts[0].lower() == "ngan-hang":
+        parts = parts[1:]
+    ups = "../" * max(1, len(parts))
+    return "\\input{" + ups + "_lenh/lythuyet.tex}"
+
+
+def _companion_prefix(folder, kind, old=""):
+    m = re.search(r"\\input\s*\{[^{}]*lythuyet\.tex\}", str(old or ""), re.I)
+    inp = m.group(0) if m else _lythuyet_input(folder)
+    meta = {}
+    for x in base.index_data().get("lessons") or []:
+        p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
+        if base.lesson_folder(p) == folder.replace("\\", "/"):
+            meta = x
+            if p.lower().endswith("/de.tex"):
+                break
+    spec = TRACKS.get(kind) or TRACKS["lt"]
+    heads = [
+        "% Môn: " + str(meta.get("Mon") or ""),
+        "% Lớp: " + str(meta.get("Lop") or ""),
+        "% Chương: " + str(meta.get("Chuong") or ""),
+        "% Bài: " + str(meta.get("BaiHoc") or meta.get("De") or folder.rsplit("/", 1)[-1]),
+        "% Loại: " + spec["label"],
+        "% File riêng, không trộn vào de.tex",
+        inp,
+    ]
+    return "\n".join(heads) + "\n\n"
+
+
+def _split_companion_tex(tex):
+    lines = str(tex or "").splitlines(True)
+    i = 0
+    while i < len(lines):
+        t = lines[i].strip()
+        if (not t) or t.startswith("%") or t.lower().startswith("\\input"):
+            i += 1
+            continue
+        break
+    return "".join(lines[:i]), "".join(lines[i:])
+
+
+def _strip_tex_fence(s):
+    t = str(s or "").strip()
+    t = re.sub(r"^```(?:latex|tex)?\s*", "", t, flags=re.I)
+    t = re.sub(r"\s*```$", "", t)
+    return t.strip()
+
+
+def _merge_companion_tex(old, generated, kind, folder):
+    body = _strip_tex_fence(generated)
+    prefix = _companion_prefix(folder, kind, old)
+    if "\\input" in body and "\\subsubsection" in body:
+        return body if body.endswith("\n") else body + "\n"
+    return prefix + body.lstrip() + ("\n" if not body.endswith("\n") else "")
+
+
+def _lesson_ai_context(path):
+    folder = base.lesson_folder(path)
+    de = folder.rstrip("/") + "/de.tex"
+    try:
+        qs = base.load_lesson_questions(de if (ROOT / de).is_file() else path)
+    except Exception:
+        qs = []
+    names, _c = base.dang_names_of(qs)
+    samples = []
+    seen = set()
+    for q in qs:
+        d = str(q.get("dang") or "").strip()
+        if d in seen:
+            continue
+        seen.add(d)
+        samples.append((d, str(q.get("kind") or ""), str(q.get("text") or "")[:220]))
+        if len(samples) >= 12:
+            break
+    title = ""
+    for x in base.index_data().get("lessons") or []:
+        p = str(x.get("path") or "")
+        if base.lesson_folder(p) == folder:
+            title = str(x.get("BaiHoc") or x.get("De") or "")
+            break
+    return {
+        "folder": folder,
+        "title": title or folder.rsplit("/", 1)[-1],
+        "dangs": names,
+        "samples": samples,
+    }
+
+
+def _ensure_companion_file(rel, kind):
+    local = ROOT / rel
+    if local.is_file():
+        return
+    folder = base.lesson_folder(rel)
+    prefix = _companion_prefix(folder, kind, "")
+    if kind == "pp":
+        ctx = _lesson_ai_context(rel)
+        bits = [prefix, "\\subsection{Dạng bài tập mẫu}\n"]
+        dangs = ctx["dangs"] or ["Dạng 1"]
+        for i, name in enumerate(dangs, 1):
+            bits.append(
+                f"\\subsubsection{{Dạng {i}. {name}}}\n"
+                "\\begin{phuongphap}\n"
+                "\\begin{enumerate}\n"
+                "\\item Đọc đề, nêu dữ kiện và cái cần tìm.\n"
+                "\\item Chọn công thức / mô hình đúng bài.\n"
+                "\\item Tính, đổi đơn vị, đối chiếu kết quả.\n"
+                "\\end{enumerate}\n"
+                "\\end{phuongphap}\n"
+                "\\begin{vidumau}\n"
+                "\\textit{Chưa soạn bài mẫu.}\n"
+                "\\end{vidumau}\n\n"
+            )
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text("".join(bits), encoding="utf-8")
+        return
+    body = (
+        prefix
+        + "\\subsection{Lý thuyết}\n"
+        "\\subsubsection{Nội dung}\n"
+        "\\textit{Chưa soạn.}\n"
+        "\\begin{kienthuc}\nCác ý kiến thức cốt lõi.\n\\end{kienthuc}\n"
+    )
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text(body, encoding="utf-8")
+
+
+def _companion_prompt(kind, ctx, old_tex, page_text):
+    dangs = "; ".join(ctx.get("dangs") or []) or "(chưa có dạng — tự đặt tên ngắn theo bài)"
+    samples = "\n".join(f"- [{k}] {d}: {t}" for d, k, t in (ctx.get("samples") or [])) or "(chưa có câu)"
+    page = (page_text or "").strip()
+    src = (
+        "Tài liệu từ link (ưu tiên đúng SGK/SBT KNTT; không bịa nếu trang không có):\n" + page[:32000]
+        if page
+        else "Không có link. Dựa TEX hiện có + dạng/câu mẫu của bài. Không bịa định luật sai."
+    )
+    old = str(old_tex or "")[-14000:]
+    if kind == "pp":
+        return (
+            "Bạn là giáo viên THPT soạn DẠNG MẪU · PHƯƠNG PHÁP GIẢI (file pp.tex), KNTT.\n"
+            f"Bài: {ctx.get('title')}\nCác dạng đang có trong ngân hàng: {dangs}\n"
+            "Viết lại pp.tex cho ĐÚNG phương pháp từng dạng — không 3 bước chung chung.\n"
+            "Bắt buộc:\n"
+            "- Giữ % đầu file và \\input{...lythuyet.tex} (hoặc để hệ thống ghép).\n"
+            "- \\subsection{Dạng bài tập mẫu}\n"
+            "- Mỗi dạng một \\subsubsection{Dạng: ...} đúng tên dạng ở trên.\n"
+            "- \\begin{phuongphap} ... các bước CỤ THỂ (công thức, đổi đơn vị, dấu, bẫy) \\end{phuongphap}\n"
+            "- \\begin{vidumau} một bài ngắn cùng dạng: stem + \\choice 4 ý một \\True HOẶC lời giải tự luận; có \\loigiai{...} \\end{vidumau}\n"
+            "- Công thức $...$. Không markdown. Không \\dangbt. Không trộn vào de.tex.\n"
+            "Câu mẫu (chỉ để cùng chủ đề, đừng copy nguyên văn):\n"
+            + samples
+            + "\n\nTEX hiện có:\n"
+            + old
+            + "\n\n"
+            + src
+        )
+    return (
+        "Bạn là giáo viên THPT soạn LÝ THUYẾT (file lt.tex), SGK KNTT.\n"
+        f"Bài: {ctx.get('title')}\nDạng liên quan: {dangs}\n"
+        "Viết lại lt.tex cho ĐÚNG lý thuyết, đủ mục, giọng SGK. Sửa chỗ sai/thiếu trong TEX cũ.\n"
+        "Bắt buộc:\n"
+        "- Giữ % đầu file và \\input{...lythuyet.tex} (hoặc để hệ thống ghép).\n"
+        "- \\subsection{Lý thuyết} rồi từng \\subsubsection{...}.\n"
+        "- Dùng môi trường: hoatdong, kienthuc, emcobiet, emdahoc, emcothe; macro \\chuy{...}.\n"
+        "- Có thể \\haicotchay{chữ}{hình TikZ đơn giản} khi cần minh họa.\n"
+        "- Công thức $...$. Không markdown. Không \\begin{ex} ngân hàng, không \\dangbt.\n"
+        "Câu mẫu của bài (để khớp nội dung, đừng copy đề):\n"
+        + samples
+        + "\n\nTEX hiện có:\n"
+        + old
+        + "\n\n"
+        + src
+    )
+
+
+def companion_ai_panel_html(path, kind="lt"):
+    spec = TRACKS.get(kind) or TRACKS["lt"]
+    kinds = [kind] if kind in TRACKS else ["lt", "pp"]
+    if str(path or "").replace("\\", "/").rsplit("/", 1)[-1].lower() not in {"lt.tex", "pp.tex"}:
+        kinds = ["lt", "pp"]
+    btns = []
+    for k in kinds:
+        lab = TRACKS[k]["icon"] + " AI viết " + TRACKS[k]["label"]
+        btns.append(
+            f"<button type='button' class='btn green ltAiGo' data-kind='{k}' data-path='{html.escape(path, quote=True)}'>{html.escape(lab)}</button>"
+        )
+    return (
+        "<div class='notice ltai' data-path='"
+        + html.escape(path, quote=True)
+        + "' style='margin:10px 0'>"
+        "<b>ADMIN · AI soạn "
+        + html.escape(spec["label"] if len(kinds) == 1 else "lý thuyết / phương pháp")
+        + "</b><br>"
+        "<span class='muted'>Đọc TEX hiện có. Có thể dán link SGK/SBT (http/https). Nạp key Gemini trên thanh menu rồi bấm viết. Xem LaTeX → Chấp nhận ghi file (tự gỡ duyệt).</span>"
+        "<div style='display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center'>"
+        "<input class='ltAiUrl' type='url' placeholder='Link SGK/SBT / trang lý thuyết (không bắt buộc)' "
+        "style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+        + "".join(btns)
+        + "</div><div class='ltAiOut'></div></div>"
+        + COMPANION_AI_JS
+    )
+
+
+COMPANION_AI_JS = r"""
+<script>
+(function(){
+if(window.ldvlCompanionAi) return;
+window.ldvlCompanionAi=true;
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
+document.addEventListener('click',async function(e){
+  const go=e.target.closest&&e.target.closest('.ltAiGo');
+  const save=e.target.closest&&e.target.closest('.ltAiSave');
+  if(!go&&!save) return;
+  e.preventDefault();
+  const box=e.target.closest('.ltai');
+  if(!box) return;
+  const out=box.querySelector('.ltAiOut');
+  const path=box.getAttribute('data-path')||'';
+  if(save){
+    const ta=box.querySelector('.ltAiTex');
+    const kind=save.getAttribute('data-kind')||'lt';
+    if(!ta||!(ta.value||'').trim()){alert('Chưa có LaTeX.');return;}
+    if(!confirm('Ghi vào file TEX + GitHub? Học viên chỉ thấy sau khi Duyệt lại.'))return;
+    save.disabled=true;
+    try{
+      const r=await fetch('/api/admin/companion-ai-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:path,kind:kind,latex:ta.value})});
+      const d=await r.json();
+      if(!d.ok){out.insertAdjacentHTML('afterbegin','<div class="err">'+(d.error||'Không ghi được')+'</div>');save.disabled=false;return;}
+      out.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){out.insertAdjacentHTML('afterbegin','<div class="err">'+esc(err)+'</div>');save.disabled=false;}
+    return;
+  }
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+  const kind=go.getAttribute('data-kind')||'lt';
+  const urlEl=box.querySelector('.ltAiUrl');
+  const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
+  out.innerHTML=sourceUrl?'⏳ Đang đọc link + TEX rồi AI viết...':'⏳ AI đang đọc TEX hiện có rồi viết lại...';
+  try{
+    const r=await fetch('/api/admin/companion-ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,kind:kind,api_keys:ks,source_url:sourceUrl})});
+    const d=await r.json();
+    if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Soát LaTeX rồi bấm Chấp nhận.')+'</div>'
+      +'<textarea class="ltAiTex rwta" style="width:100%;min-height:260px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:8px 0">'+esc(d.latex||'')+'</textarea>'
+      +'<p><button type="button" class="btn green ltAiSave" data-kind="'+esc(kind)+'">✅ Chấp nhận ghi '+esc(d.file||'')+'</button></p>';
+  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+});
+})();
+</script>
+"""
+
+
+@app.post("/api/admin/companion-ai")
+def api_admin_companion_ai():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    from student_gemini import _gemini_generate, _keys_from_payload
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").replace("\\", "/").strip()
+    kind = str(data.get("kind") or _kind_of_file(path) or "lt").strip().lower()
+    if kind not in TRACKS:
+        kind = "lt"
+    if not path.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Nạp key Gemini rồi bấm lại."), 400
+    rel = companion_path(path, kind)
+    try:
+        _ensure_companion_file(rel, kind)
+    except Exception as e:
+        return jsonify(ok=False, error="Không tạo được file: " + str(e)), 500
+    try:
+        _sha, old = base.read_tex(rel)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    page_text = ""
+    source_url = str(data.get("source_url") or data.get("url") or "").strip()
+    if source_url:
+        from dang_routes import _fetch_public_page
+        page_text, ferr = _fetch_public_page(source_url)
+        if ferr:
+            return jsonify(ok=False, error=ferr), 400
+    ctx = _lesson_ai_context(path)
+    prompt = _companion_prompt(kind, ctx, old, page_text)
+    raw, err = "", ""
+    tok = 16000 if page_text else 12000
+    for key in keys:
+        try:
+            raw = _gemini_generate(key, prompt, tok, 0.2)
+            err = ""
+            break
+        except Exception as e:
+            err = str(e)
+            raw = ""
+    if not raw:
+        return jsonify(ok=False, error="AI không viết được: " + (err or "trống")), 400
+    latex = _merge_companion_tex(old, raw, kind, ctx["folder"])
+    if "\\subsubsection" not in latex:
+        return jsonify(ok=False, error="AI không ra \\subsubsection. Thử lại hoặc dán link SGK."), 400
+    if kind == "pp" and "\\begin{phuongphap}" not in latex:
+        return jsonify(ok=False, error="AI thiếu \\begin{phuongphap}. Thử lại."), 400
+    spec = TRACKS[kind]
+    summary = (
+        "AI soạn "
+        + spec["label"]
+        + " từ TEX"
+        + (" + link" if source_url else "")
+        + ". Soát ô LaTeX (công thức, mục), rồi Chấp nhận ghi "
+        + spec["file"]
+        + "."
+    )
+    return jsonify(ok=True, latex=latex, file=spec["file"], kind=kind, src=rel, summary=summary)
+
+
+@app.post("/api/admin/companion-ai-save")
+def api_admin_companion_ai_save():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").replace("\\", "/").strip()
+    kind = str(data.get("kind") or _kind_of_file(path) or "lt").strip().lower()
+    if kind not in TRACKS:
+        kind = "lt"
+    latex = str(data.get("latex") or "")
+    if not path.startswith("ngan-hang/") or "\\subsubsection" not in latex:
+        return jsonify(ok=False, error="Thiếu LaTeX (cần \\subsubsection)."), 400
+    rel = companion_path(path, kind)
+    try:
+        _ensure_companion_file(rel, kind)
+        sha, old = base.read_tex(rel, need_sha=True)
+        folder = base.lesson_folder(rel)
+        text = _merge_companion_tex(old, latex, kind, folder)
+        from admin_classify import _write_tex
+        _write_tex(rel, text, "ADMIN AI soạn " + TRACKS[kind]["file"], sha or None)
+        set_status(rel, kind, False)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=True, src=rel, kind=kind)
