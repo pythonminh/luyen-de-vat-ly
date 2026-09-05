@@ -6,15 +6,214 @@
 % File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
 \input{../../../../_lenh/lythuyet.tex}
 
+\input{../../../../_lenh/lythuyet.tex}
 \subsection{Lý thuyết}
 \subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
+\subsubsection{Phép đo trực tiếp và phép đo gián tiếp}
+\paragraph{Phép đo trực tiếp}
+\begin{itemize}
+\item Đo trực tiếp một đại lượng bằng dụng cụ đo, kết quả được đọc trực tiếp trên dụng cụ đo được gọi là phép đo trực tiếp.
+\item Ví dụ: Dùng thước cuộn để đo chiều dài của chiếc bàn học, dùng cân đồng hồ để đo khối lượng của một túi trái cây, dùng nhiệt kế để đo nhiệt độ phòng học.
+\end{itemize}
+\paragraph{Phép đo gián tiếp}
+\begin{itemize}
+\item Đo một đại lượng không trực tiếp mà thông qua công thức liên hệ với các đại lượng có thể đo trực tiếp được gọi là phép đo gián tiếp.
+\item Ví dụ: Để đo tốc độ trung bình $v$ của một chiếc xe đồ chơi chuyển động thẳng, người ta phải đo trực tiếp quãng đường đi được $s$ bằng thước và đo trực tiếp khoảng thời gian chuyển động $t$ bằng đồng hồ bấm giây, rồi tính toán tốc độ qua công thức $v = \dfrac{s}{t}$.
+\end{itemize}
+\begin{hoatdong}{Lập phương án đo tốc độ}
+Hãy lập phương án đo tốc độ chuyển động của chiếc xe ô tô đồ chơi chỉ dùng thước, đồng hồ bấm giây và trả lời các câu hỏi sau:
+\begin{itemize}
+\item Để đo tốc độ chuyển động của chiếc xe cần đo những đại lượng nào?
+\item Xác định tốc độ chuyển động của xe theo công thức nào?
+\item Phép đo nào là phép đo trực tiếp? Tại sao?
+\item Phép đo nào là phép đo gián tiếp? Tại sao?
+\end{itemize}
+\end{hoatdong}
+\subsubsection{Sai số phép đo và phân loại sai số}
+\paragraph{Khái niệm sai số phép đo}
+\begin{itemize}
+\item Trong quá trình thực hiện phép đo, chúng ta không thể tránh khỏi sự chênh lệch giữa giá trị thật và số đo (giá trị đo được). Độ chênh lệch này gọi là sai số phép đo.
+\item Nguyên nhân gây ra sai số là do giới hạn về độ chính xác của dụng cụ đo, do kĩ thuật đo, quy trình đo, hoặc do chủ quan của người đo.
+\end{itemize}
+\haicotchay{
+\paragraph{Sai số dụng cụ và cách đọc}
+\begin{itemize}
+\item Sai số dụng cụ luôn tồn tại do giới hạn chế tạo của nhà sản xuất.
+\item Khi đo chiều dài của một vật bằng thước thẳng, ta cần đặt vật dọc theo thước, một đầu trùng với vạch số 0.
+\item Tại đầu còn lại, ta đọc vạch chia gần nhất. Do đầu vật thường nằm giữa hai vạch chia nên phép đo luôn chứa sai số bằng một nửa ĐCNN của thước.
+\end{itemize}
+}{
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[scale=0.8, font=\small]
+\draw[fill=gray!20] (0,0.5) rectangle (4.2, 1.2);
+\node at (2.1, 0.85) {Vật cần đo};
+\draw[thick] (0,0) rectangle (6,0.5);
+\foreach \x in {0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6} {
+  \draw (\x,0) -- (\x,0.25);
+  \node[above, font=\tiny] at (\x,0.25) {\x};
+}
+\foreach \x in {0.1,0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2.1,2.2,2.3,2.4,2.6,2.7,2.8,2.9,3.1,3.2,3.3,3.4,3.6,3.7,3.8,3.9,4.1,4.2,4.3,4.4,4.6,4.7,4.8,4.9,5.1,5.2,5.3,5.4,5.6,5.7,5.8,5.9} {
+  \draw (\x,0) -- (\x,0.12);
+}
+\draw[red, dashed, thick] (4.2, 1.2) -- (4.2, -0.3);
+\draw[blue, ->] (4.2, -0.3) -- (3.5, -0.3) node[left] {Đọc gần nhất};
+\end{tikzpicture}%
+}
+}
+\paragraph{Phân loại sai số}
+\begin{itemize}
+\item Sai số của phép đo được phân thành hai loại chính là sai số hệ thống (bao gồm sai số dụng cụ) và sai số ngẫu nhiên.
+\item Sai số hệ thống: Là sai số có tính quy luật và được lặp lại ở tất cả các lần đo. Sai số hệ thống làm cho giá trị đo được luôn tăng hoặc luôn giảm một lượng nhất định so với giá trị thực.
+\item Nguyên nhân gây ra sai số hệ thống thường xuất phát từ cấu tạo và đặc điểm của dụng cụ đo (ví dụ: điểm 0 ban đầu của dụng cụ đo bị lệch mà chưa hiệu chỉnh trước khi đo).
+\item Sai số dụng cụ $\Delta A_{\text{dc}}$: Thường lấy bằng một nửa độ chia nhỏ nhất (ĐCNN) trên dụng cụ (ví dụ: thước đo có ĐCNN là $1\,\mathrm{mm}$ thì sai số dụng cụ là $0,5\,\mathrm{mm}$), hoặc được ghi trực tiếp trên dụng cụ do nhà sản xuất xác định.
+\item Sai số ngẫu nhiên: Là sai số xuất phát từ sai sót, phản xạ của người làm thí nghiệm hoặc do chịu tác động từ những yếu tố ngẫu nhiên bên ngoài (như gió, nhiệt độ môi trường biến động).
+\item Nguyên nhân gây ra sai số ngẫu nhiên không rõ ràng dẫn đến sự phân tán các kết quả đo xung quanh giá trị trung bình.
+\item Để hạn chế sai số ngẫu nhiên, ta cần thực hiện phép đo nhiều lần và lấy giá trị trung bình.
+\end{itemize}
+\subsubsection{Cách xác định sai số phép đo trực tiếp}
+\paragraph{Giá trị trung bình}
+\begin{itemize}
+\item Khi tiến hành phép đo đại lượng vật lí $A$ nhiều lần ($n$ lần) với cùng một điều kiện, giá trị trung bình $\overline{A}$ được xác định bằng công thức:
+\[
+\overline{A} = \dfrac{A_1 + A_2 + \dots + A_n}{n}
+\]
+\item Giá trị trung bình này được xem là giá trị gần đúng nhất với giá trị thực của đại lượng vật lí cần đo.
+\end{itemize}
+\paragraph{Sai số tuyệt đối của phép đo trực tiếp}
+\begin{itemize}
+\item Sai số ngẫu nhiên tuyệt đối của từng lần đo là trị tuyệt đối của hiệu số giữa giá trị trung bình và giá trị đo được của lần đo đó:
+\[
+\Delta A_1 = |\overline{A} - A_1|; \quad \Delta A_2 = |\overline{A} - A_2|; \quad \dots; \quad \Delta A_n = |\overline{A} - A_n|
+\]
+\item Sai số ngẫu nhiên tuyệt đối trung bình $\overline{\Delta A}$ của $n$ lần đo được tính bằng công thức:
+\[
+\overline{\Delta A} = \dfrac{\Delta A_1 + \Delta A_2 + \dots + \Delta A_n}{n}
+\]
+\item Sai số tuyệt đối $\Delta A$ của phép đo trực tiếp bằng tổng của sai số ngẫu nhiên tuyệt đối trung bình và sai số dụng cụ:
+\[
+\Delta A = \overline{\Delta A} + \Delta A_{\text{dc}}
+\]
+\end{itemize}
+\paragraph{Sai số tỉ đối (sai số tương đối)}
+\begin{itemize}
+\item Sai số tỉ đối $\delta A$ của phép đo là tỉ lệ phần trăm giữa sai số tuyệt đối và giá trị trung bình của đại lượng cần đo:
+\[
+\delta A = \dfrac{\Delta A}{\overline{A}} \cdot 100\%
+\]
+\item Sai số tỉ đối càng nhỏ thì phép đo càng chính xác.
+\end{itemize}
+\subsubsection{Cách xác định sai số phép đo gián tiếp}
+\paragraph{Quy tắc xác định sai số tuyệt đối và sai số tỉ đối}
+\begin{itemize}
+\item Sai số tuyệt đối của một tổng hoặc hiệu bằng tổng các sai số tuyệt đối của các số hạng.
+\item Nếu $F = B + C$ hoặc $F = B - C$ thì:
+\[
+\Delta F = \Delta B + \Delta C
+\]
+\item Sai số tỉ đối của một tích hoặc thương bằng tổng các sai số tỉ đối của các thừa số.
+\item Nếu $F = B \cdot C$ hoặc $F = \dfrac{B}{C}$ thì:
+\[
+\delta F = \delta B + \delta C
+\]
+\item Từ sai số tỉ đối $\delta F$, ta xác định được sai số tuyệt đối $\Delta F$ thông qua công thức:
+\[
+\Delta F = \delta F \cdot \overline{F}
+\]
+\end{itemize}
+\begin{emcobiet}
+Cách xác định sai số tỉ đối của một tích hay một thương khi các đại lượng có luỹ thừa:
+Nếu $F = x^m \cdot \dfrac{y^n}{z^k}$ thì $\delta F = m \cdot \delta x + n \cdot \delta y + k \cdot \delta z$.
+Ví dụ: Nếu $A = B \cdot \sqrt{C}$ thì $\delta A = \delta B + \dfrac{1}{2} \cdot \delta C$.
+\end{emcobiet}
+\subsubsection{Cách ghi kết quả đo và chữ số có nghĩa}
+\paragraph{Cách ghi kết quả đo}
+\begin{itemize}
+\item Kết quả đo đại lượng vật lí $A$ được biểu diễn dưới dạng một khoảng giá trị:
+\[
+(\overline{A} - \Delta A) \le A \le (\overline{A} + \Delta A) \quad \text{hoặc} \quad A = \overline{A} \pm \Delta A
+\]
+\item Sai số tuyệt đối $\Delta A$ thường được viết đến một hoặc hai chữ số có nghĩa (thường được làm tròn tới đơn vị của độ chia nhỏ nhất).
+\item Giá trị trung bình $\overline{A}$ được viết đến bậc thập phân tương ứng với chữ số có nghĩa của sai số tuyệt đối $\Delta A$.
+\end{itemize}
+\paragraph{Nguyên tắc đếm chữ số có nghĩa}
+\begin{itemize}
+\item Tất cả các chữ số khác 0 đều là chữ số có nghĩa. Ví dụ: $159$ có ba chữ số có nghĩa.
+\item Các chữ số 0 nằm ở giữa hai chữ số khác 0 là chữ số có nghĩa. Ví dụ: $105$ có ba chữ số có nghĩa.
+\item Các chữ số 0 ở bên phải của dấu thập phân và đứng sau một chữ số khác 0 là chữ số có nghĩa. Ví dụ: $1,80$ có ba chữ số có nghĩa.
+\item Các chữ số 0 ở đầu bên trái số thập phân dùng để định vị hàng phân số thì không phải là chữ số có nghĩa. Ví dụ: $0,002$ chỉ có một chữ số có nghĩa là số 2.
+\end{itemize}
+\paragraph{Quy tắc làm tròn số}
+\begin{itemize}
+\item Nếu chữ số ở hàng bỏ đi nhỏ hơn 5 thì chữ số bên trái kề nó vẫn giữ nguyên.
+\item Nếu chữ số ở hàng bỏ đi lớn hơn hoặc bằng 5 thì chữ số bên trái kề nó tăng thêm một đơn vị.
+\item Ví dụ: $s = 1,52723\,\mathrm{m}$ và $\Delta s = 0,002\,\mathrm{m}$ thì kết quả đo ghi là: $s = (1,527 \pm 0,002)\,\mathrm{m}$.
+\end{itemize}
+\begin{vd}
+Một học sinh sử dụng thước kẹp có sai số dụng cụ là $\Delta d_{\text{dc}} = 0,02\,\mathrm{mm}$ để đo đường kính $d$ của một viên bi thép. Kết quả đo sau 5 lần lần lượt là: $6,32\,\mathrm{mm}$; $6,32\,\mathrm{mm}$; $6,32\,\mathrm{mm}$; $6,34\,\mathrm{mm}$; $6,34\,\mathrm{mm}$. Hãy xác định sai số tuyệt đối, sai số tỉ đối và biểu diễn kết quả phép đo đường kính viên bi.
+\loigiai{
+\begin{itemize}
+\item Bước 1: Tính giá trị trung bình của đường kính viên bi thép:
+\[
+\overline{d} = \dfrac{6,32 + 6,32 + 6,32 + 6,34 + 6,34}{5} = 6,328\,\mathrm{mm}
+\]
+Làm tròn giá trị trung bình đến chữ số thập phân tương ứng với ĐCNN và sai số là $\overline{d} \approx 6,33\,\mathrm{mm}$.
+\item Bước 2: Xác định sai số ngẫu nhiên tuyệt đối ở mỗi lần đo:
+\[
+\Delta d_1 = |6,33 - 6,32| = 0,01\,\mathrm{mm}
+\]
+\[
+\Delta d_2 = |6,33 - 6,32| = 0,01\,\mathrm{mm}
+\]
+\[
+\Delta d_3 = |6,33 - 6,32| = 0,01\,\mathrm{mm}
+\]
+\[
+\Delta d_4 = |6,33 - 6,34| = 0,01\,\mathrm{mm}
+\]
+\[
+\Delta d_5 = |6,33 - 6,34| = 0,01\,\mathrm{mm}
+\]
+Sai số tuyệt đối ngẫu nhiên trung bình:
+\[
+\overline{\Delta d} = \dfrac{0,01 \cdot 5}{5} = 0,01\,\mathrm{mm}
+\]
+Sai số tuyệt đối của phép đo:
+\[
+\Delta d = \overline{\Delta d} + \Delta d_{\text{dc}} = 0,01 + 0,02 = 0,03\,\mathrm{mm}
+\]
+\item Bước 3: Xác định sai số tỉ đối:
+\[
+\delta d = \dfrac{\Delta d}{\overline{d}} \cdot 100\% = \dfrac{0,03}{6,33} \cdot 100\% \approx 0,47\%
+\]
+Biểu diễn kết quả phép đo:
+\[
+d = \overline{d} \pm \Delta d = 6,33 \pm 0,03\,\mathrm{mm}
+\]
+\end{itemize}
+}
+\end{vd}
 \begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
+Các ý kiến thức cốt lõi của bài:
+\begin{itemize}
+\item Hiểu rõ khái niệm và phân biệt được sự khác nhau giữa phép đo trực tiếp và phép đo gián tiếp.
+\item Phân biệt được sai số hệ thống (gồm sai số dụng cụ) và sai số ngẫu nhiên, biết cách khắc phục sai số để nâng cao độ chính xác.
+\item Tính thành thạo sai số tuyệt đối, sai số tỉ đối của phép đo trực tiếp và gián tiếp.
+\item Nắm vững quy tắc đếm chữ số có nghĩa, làm tròn số và cách biểu diễn kết quả phép đo chuẩn xác.
+\end{itemize}
 \end{kienthuc}
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+\item Có hai loại phép đo là phép đo trực tiếp và phép đo gián tiếp.
+\item Sai số của phép đo gồm sai số dụng cụ và sai số ngẫu nhiên. Có thể hạn chế sai số bằng cách thao tác đúng cách, lựa chọn thiết bị phù hợp và tiến hành đo nhiều lần để lấy giá trị trung bình.
+\item Cách ghi kết quả đo: $A = \overline{A} \pm \Delta A$ với $\Delta A = \overline{\Delta A} + \Delta A_{\text{dc}}$.
+\item Sai số tương đối (sai số tỉ đối) được tính bằng tỉ số giữa sai số tuyệt đối và giá trị trung bình: $\delta A = \dfrac{\Delta A}{\overline{A}} \cdot 100\%$.
+\end{itemize}
 \end{emdahoc}
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+\item Tính toán được sai số tuyệt đối, sai số tỉ đối và biểu diễn đúng kết quả đo của các phép đo thực hành trong phòng thí nghiệm Vật lí.
+\item Đánh giá được mức độ chính xác của các phép đo khác nhau dựa vào giá trị sai số tỉ đối.
+\item Thiết kế được bảng biểu thu thập dữ liệu khoa học, xử lí số liệu thực nghiệm một cách trung thực và khách quan.
+\end{itemize}
 \end{emcothe}
