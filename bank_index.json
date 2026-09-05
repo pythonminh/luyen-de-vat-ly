@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11419,
+  "total_questions": 11427,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3383,17 +3383,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
-      "questions": 10,
-      "count": 10,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Quá trình chuyển pha": 10
+        "Quá trình chuyển pha": 18
       },
       "dang_kinds": {
         "Quá trình chuyển pha": {
-          "TN": 8,
+          "TN": 9,
           "DS": 2,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 3,
+          "TL": 4
         }
       }
     },
