@@ -1452,7 +1452,7 @@ def tabular_to_html(body):
         cells=[c.strip() for c in re.split(r'(?<!\\)&', row)]
         parts.append('<tr>')
         for c in cells:
-            c=re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', c)
+            c=_replace_tex_macro(c, 'textbf', lambda b: '@@B@@'+b+'@@/B@@')
             inner=html.escape(prepare_math(c), quote=False)
             inner=inner.replace('@@B@@','<b>').replace('@@/B@@','</b>')
             inner=inner.replace(html.escape('@@B@@', quote=False),'<b>').replace(html.escape('@@/B@@', quote=False),'</b>')
@@ -1506,16 +1506,67 @@ def _match_tex_env(s, name, start=0):
     return None
 
 
+def _tex_grab_group(s, i):
+    while i < len(s) and s[i] in " \t\n\r":
+        i += 1
+    if i >= len(s) or s[i] != "{":
+        return None, i
+    depth = 0
+    j = i
+    while j < len(s):
+        if s[j] == "\\" and j + 1 < len(s):
+            j += 2
+            continue
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1 : j], j + 1
+        j += 1
+    return s[i + 1 :], len(s)
+
+
+def _replace_tex_macro(s, name, wrap):
+    """\\name{...} with nested braces, e.g. \\textbf{... $\\mathrm{C}$}."""
+    token = "\\" + name
+    n = len(token)
+    out = []
+    i = 0
+    s = s or ""
+    while True:
+        j = s.find(token, i)
+        if j < 0:
+            out.append(s[i:])
+            break
+        nxt = s[j + n : j + n + 1] if j + n < len(s) else ""
+        if (j > 0 and s[j - 1] == "\\") or nxt.isalpha():
+            out.append(s[i : j + n])
+            i = j + n
+            continue
+        out.append(s[i:j])
+        body, k = _tex_grab_group(s, j + n)
+        if body is None:
+            out.append(s[j : j + n])
+            i = j + n
+            continue
+        out.append(wrap(body))
+        i = k
+    return "".join(out)
+
+
 def _tex_inline_html(it):
-    it = it or ''
+    it = it or ""
     dms = []
+
     def stash_dm(m):
         dms.append(m.group(0).strip())
-        return f'@@DM{len(dms)-1}@@'
-    it = re.sub(r'\\\[.*?\\\]', stash_dm, it, flags=re.S)
-    it = re.sub(r'\\textbf\s*\{([^{}]*)\}', r'@@B@@\1@@/B@@', it)
-    it = re.sub(r'\\textit\s*\{([^{}]*)\}', r'@@I@@\1@@/I@@', it)
-    it = re.sub(r'\\emph\s*\{([^{}]*)\}', r'@@I@@\1@@/I@@', it)
+        return f"@@DM{len(dms)-1}@@"
+
+    it = re.sub(r"\\\[.*?\\\]", stash_dm, it, flags=re.S)
+    it = _replace_tex_macro(it, "textbf", lambda b: "@@B@@" + b + "@@/B@@")
+    it = _replace_tex_macro(it, "textit", lambda b: "@@I@@" + b + "@@/I@@")
+    it = _replace_tex_macro(it, "emph", lambda b: "@@I@@" + b + "@@/I@@")
     inner = html.escape(prepare_math(it), quote=False).replace('\n', '<br>\n')
     inner = inner.replace('@@B@@', '<b>').replace('@@/B@@', '</b>')
     inner = inner.replace(html.escape('@@B@@', quote=False), '<b>').replace(html.escape('@@/B@@', quote=False), '</b>')
@@ -1638,15 +1689,9 @@ def latex_to_web(s):
     s=re.sub(r'(@@FIG\d+@@)\s*&\s*', r'\1 ', s)
     s=re.sub(r'(?<!\\)&',' ',s)
     s=re.sub(r'((?:@@FIG\d+@@\s*){2,})', lambda m: '@@ROW@@'+m.group(1)+'@@/ROW@@', s)
-    def stash_bf(m):
-        bolds.append(m.group(1))
-        return f'@@BF{len(bolds)-1}@@'
-    s=re.sub(r'\\textbf\s*\{([^{}]*)\}', stash_bf, s)
-    def stash_it(m):
-        italics.append(m.group(1))
-        return f'@@IT{len(italics)-1}@@'
-    s=re.sub(r'\\textit\s*\{([^{}]*)\}', stash_it, s)
-    s=re.sub(r'\\emph\s*\{([^{}]*)\}', stash_it, s)
+    s=_replace_tex_macro(s, 'textbf', lambda b: (bolds.append(b) or f'@@BF{len(bolds)-1}@@'))
+    s=_replace_tex_macro(s, 'textit', lambda b: (italics.append(b) or f'@@IT{len(italics)-1}@@'))
+    s=_replace_tex_macro(s, 'emph', lambda b: (italics.append(b) or f'@@IT{len(italics)-1}@@'))
     s=re.sub(r'\\item\b','\n• ',s)
     s=html.escape(prepare_math(s), quote=False).replace('\n','<br>\n')
     s=LINK_RE.sub(lambda m: f'<a href="{m.group(0)}" target="_blank" rel="noopener">{m.group(0)}</a>', s)
@@ -1654,9 +1699,9 @@ def latex_to_web(s):
         nonlocal s
         s=s.replace(html.escape(tok, quote=False), html_val).replace(tok, html_val)
     for i,t in enumerate(bolds):
-        put(f'@@BF{i}@@', f'<b>{html.escape(t, quote=False)}</b>')
+        put(f'@@BF{i}@@', f'<b>{html.escape(prepare_math(t), quote=False)}</b>')
     for i,t in enumerate(italics):
-        put(f'@@IT{i}@@', f'<i>{html.escape(t, quote=False)}</i>')
+        put(f'@@IT{i}@@', f'<i>{html.escape(prepare_math(t), quote=False)}</i>')
     for i,dm in enumerate(dms):
         put(f'@@DM{i}@@', f'<div class="lt-math">{html.escape(prepare_math(dm), quote=False)}</div>')
     for i,fig in enumerate(figs):
