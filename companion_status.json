@@ -7,7 +7,7 @@
       },
       "pp": {
         "status": "pending",
-        "updated": "2026-09-05T05:16:57Z"
+        "updated": "2026-09-05T05:16:26Z"
       }
     },
     "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề": {
@@ -54,6 +54,12 @@
       "pp": {
         "status": "approved",
         "updated": "2026-09-05T05:11:59Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 1. Làm quen với Vật lí": {
+      "lt": {
+        "status": "pending",
+        "updated": "2026-09-05T05:21:20Z"
       }
     }
   }
