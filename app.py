@@ -2378,14 +2378,10 @@ def select_page():
     admin_box=''
     if admin_pick:
         import admin_classify as _ac
-        try:
-            _,tex_one=read_tex(p); qs_one=parse_questions(tex_one)
-        except Exception:
-            qs_one=qs
         names_one=[];seen_one=set()
-        for q in qs_one:
+        for q in qs:
             if q['dang'] not in seen_one:seen_one.add(q['dang']);names_one.append(q['dang'])
-        admin_box=admin_tex_select_html(p)+_ac.select_admin_panel(p, qs_one, names_one)
+        admin_box=admin_tex_select_html(p)+_ac.select_admin_panel(p, qs, names_one)
     guest_note=''
     if guest:
         guest_note=f"<div class='notice'>👁 Đăng nhập rồi bấm dạng / loại ở trên để làm bài. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập</a></div>"

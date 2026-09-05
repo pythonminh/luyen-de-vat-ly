@@ -7,6 +7,7 @@ import re
 import unicodedata
 import urllib.error
 import urllib.parse
+from difflib import SequenceMatcher
 from flask import jsonify, request
 
 import app as base
@@ -574,7 +575,7 @@ def _heuristic_merges(names, counts):
 
     for i, a in enumerate(names):
         for b in names[i + 1 :]:
-            if _sim(a, b) >= 0.55:
+            if _sim(a, b) >= 0.52:
                 union(a, b)
     groups = {}
     for n in names:
@@ -628,14 +629,16 @@ def _merge_prompt(meta, rows):
         "Danh sách dạng hiện có:\n"
         + "\n".join(lines)
         + "\n\nQuy tắc:\n"
-        "- Gom khi cùng một kỹ năng, chỉ khác chi tiết số liệu hoặc cặp thang "
+        "- Gom khi cùng chủ đề/kỹ năng, chỉ khác cách đặt tên "
+        "(phân loại / phân biệt / so sánh / nhận biết / đặc điểm / tính chất / khái niệm cùng một đối tượng).\n"
+        "- Gom khi cùng một kỹ năng, chỉ khác số liệu hoặc cặp thang "
         "(C↔K, C↔F, C↔K↔F, «ba thang», «các thang thông dụng» là CÙNG dạng).\n"
-        "- Đặt tên gộp ngắn, rõ, tiếng Việt (không dài hơn 1 câu).\n"
+        "- Đặt tên gộp ngắn, rõ, tiếng Việt (không dài hơn 1 câu). Ưu tiên tên đã có nhiều câu nhất.\n"
         "- KHÔNG gom lý thuyết với bài tập. KHÔNG gom thang tự chế/thang mới với chuyển đổi C/K/F thông dụng.\n"
-        "- Không bịa dạng. Chỉ trả các dòng from khác to.\n"
+        "- Không bịa dạng lạ. from phải trùng tên trong danh sách. to là tên trong danh sách hoặc tên gộp ngắn.\n"
         "Trả về DUY NHẤT JSON:\n"
         '[{"from":"tên cũ","to":"tên gộp","why":"lý do ngắn"}]\n'
-        "Nếu không có dạng nào nên gom, trả []."
+        "Chỉ trả [] khi các dạng thật sự khác kỹ năng, không cùng chủ đề."
     )
 
 
@@ -719,9 +722,9 @@ def _sim(a, b):
     if fa in fb or fb in fa:
         return 0.86 if min(len(fa), len(fb)) >= 8 else 0.72
     ta, tb = set(_tokens(a)), set(_tokens(b))
-    if not ta or not tb:
-        return 0.0
-    return len(ta & tb) / len(ta | tb)
+    jac = (len(ta & tb) / len(ta | tb)) if ta and tb else 0.0
+    seq = SequenceMatcher(None, fa, fb).ratio()
+    return max(jac, seq)
 
 
 def _lop_key(s):
@@ -1209,7 +1212,6 @@ document.getElementById('aiHome').addEventListener('click',async function(){
 });
 document.getElementById('aiMerge').addEventListener('click',async function(){
   const k=keys();
-  if(!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
   out('⏳ Đang gợi ý gom dạng gần giống...');
   try{
     const r=await fetch('/api/admin/merge-dang',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
@@ -1217,7 +1219,7 @@ document.getElementById('aiMerge').addEventListener('click',async function(){
     const d=await r.json();
     if(!d.ok){out('<div class="err">'+(d.error||'Lỗi gom dạng')+'</div>');return;}
     MERGES=d.merges||[];
-    if(!MERGES.length){out('<div class="muted">AI không thấy dạng nào cần gom (hoặc chỉ tick ít dạng quá khác nhau).</div>');return;}
+    if(!MERGES.length){out('<div class="muted">'+esc(d.message||'Không thấy dạng nào gần giống để gom. Tick từ 2 dạng ở «Sắp xếp lại», hoặc bỏ tick hết để xét cả bài.')+'</div>');return;}
     const rows=MERGES.map((m,i)=>'<tr><td><input type="checkbox" class="mg" data-i="'+i+'" checked></td><td>'+esc(m.from)+'<div class="muted">'+esc(m.n||0)+' câu</div></td><td><b>'+esc(m.to)+'</b><div class="muted">'+esc(m.why||'')+'</div></td></tr>').join('');
     out('<div class="success">Gợi ý gom <b>'+MERGES.length+'</b> tên dạng. Bỏ tick nếu muốn giữ riêng. Chưa ghi file cho đến khi Đồng ý.</div>'
       +'<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng hiện tại</th><th>Gom thành</th></tr>'+rows+'</table></div>'
@@ -1434,11 +1436,11 @@ def api_merge_dang():
     keys = _keys_from_payload(data)
     if not path:
         return jsonify(ok=False, error="Thiếu path."), 400
-    if not keys:
-        return jsonify(ok=False, error="Chưa có Gemini API key."), 400
     try:
-        _, tex = base.read_tex(path)
-        qs = base.parse_questions(tex)
+        qs = base.parse_lesson_questions(path)
+        if not qs:
+            _, tex = base.read_tex(path)
+            qs = base.parse_questions(tex)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 400
     resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
@@ -1455,28 +1457,39 @@ def api_merge_dang():
             samples[d] = _plain(q.get("text") or "", 220)
     names = list(counts.keys())
     if len(names) < 2:
-        return jsonify(ok=True, merges=[], message="Cần ít nhất 2 dạng (tick «Sắp xếp lại» hoặc để trống để xét cả file).")
+        msg = (
+            "Cần ít nhất 2 dạng. Bỏ tick hết «Sắp xếp lại» để xét cả bài, hoặc tick từ 2 dạng gần nhau."
+            if resort
+            else "File/bài này chưa có đủ 2 dạng để gom."
+        )
+        return jsonify(ok=True, merges=[], message=msg)
     rows = [{"dang": n, "n": counts[n], "sample": samples.get(n) or ""} for n in names]
     meta = path.replace("ngan-hang/", "").replace("/de.tex", "")
-    raw, err = _gemini_once(keys, _merge_prompt(meta, rows), 5000)
-    merges = []
+    raw = ""
+    if keys:
+        raw, _err = _gemini_once(keys, _merge_prompt(meta, rows), 5000)
+    ai_merges = []
     if raw:
         try:
-            merges = _parse_merge_json(raw)
+            ai_merges = _parse_merge_json(raw)
         except Exception:
-            merges = []
-    if not merges:
-        merges = _heuristic_merges(names, counts)
+            ai_merges = []
+    heur = _heuristic_merges(names, counts)
+    by_from = {m["from"]: m for m in heur}
+    for m in ai_merges:
+        if m.get("from"):
+            by_from[m["from"]] = m
     valid = set(names)
     out = []
     seen = set()
-    for m in merges:
-        src, dst = m["from"], m["to"]
-        if src not in valid or src in seen:
+    for src, m in by_from.items():
+        dst = m["to"]
+        if src not in valid or src in seen or src == dst:
             continue
         seen.add(src)
         out.append({"from": src, "to": dst, "n": counts.get(src, 0), "why": m.get("why") or ""})
-    return jsonify(ok=True, merges=out, used_ai=bool(raw))
+    msg = "" if out else "Không thấy cặp tên đủ gần. Tick vài dạng cùng chủ đề rồi thử lại."
+    return jsonify(ok=True, merges=out, used_ai=bool(ai_merges), message=msg)
 
 
 @base.app.post("/api/admin/merge-dang-save")
@@ -1499,30 +1512,49 @@ def api_merge_dang_save():
         mapping[src] = dst
     if not mapping:
         return jsonify(ok=False, error="Không có cặp gom hợp lệ."), 400
+    files = []
     try:
-        sha, tex = base.read_tex(path, need_sha=True)
-        qs = base.parse_questions(tex)
-    except Exception as e:
-        return jsonify(ok=False, error=str(e)), 400
-    by_idx = _map_from_questions(qs)
-    changed = 0
-    for q in qs:
-        i = int(q.get("idx"))
-        cur = _norm_dang(by_idx[i]["dang"])
-        if cur in mapping:
-            by_idx[i]["dang"] = mapping[cur]
-            changed += 1
-    if not changed:
-        return jsonify(ok=True, changed=0, message="Không có câu nào thuộc các dạng đã chọn.")
-    new = apply_taxonomy(tex, by_idx)
-    new, n_id, _ = stamp_missing_ids(new, path, by_idx)
+        files = list(base.lesson_tex_paths(path) or [path])
+    except Exception:
+        files = [path]
+    if path not in files:
+        files.append(path)
+    total = 0
+    n_id_all = 0
     try:
-        _write_tex(path, new, "ADMIN gom dạng gần giống " + path, sha)
-        _refresh_index(path, base.parse_questions(new))
+        for fp in files:
+            fp = str(fp or "").replace("\\", "/")
+            if not fp:
+                continue
+            sha, tex = base.read_tex(fp, need_sha=True)
+            qs = base.parse_questions(tex)
+            if not qs:
+                continue
+            by_idx = _map_from_questions(qs)
+            changed = 0
+            for q in qs:
+                i = int(q.get("idx"))
+                cur = _norm_dang(by_idx[i]["dang"])
+                if cur in mapping:
+                    by_idx[i]["dang"] = mapping[cur]
+                    changed += 1
+            if not changed:
+                continue
+            new = apply_taxonomy(tex, by_idx)
+            new, n_id, _ = stamp_missing_ids(new, fp, by_idx)
+            _write_tex(fp, new, "ADMIN gom dạng gần giống " + fp, sha)
+            try:
+                _refresh_index(fp, base.parse_questions(new))
+            except Exception:
+                pass
+            total += changed
+            n_id_all += n_id
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
+    if not total:
+        return jsonify(ok=True, changed=0, message="Không có câu nào thuộc các dạng đã chọn.")
     _clear_caches()
-    return jsonify(ok=True, changed=changed, ids=n_id)
+    return jsonify(ok=True, changed=total, ids=n_id_all)
 
 
 @base.app.post("/api/admin/stamp-ids")
