@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11398,
+  "total_questions": 11389,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3346,18 +3346,18 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 78,
-      "count": 78,
+      "questions": 69,
+      "count": 69,
       "dang": {
-        "Đặc điểm và phân loại chất rắn": 72,
+        "Đặc điểm và phân loại chất rắn": 63,
         "Ứng dụng tính chất chất rắn": 4,
         "Phân loại chất rắn": 2
       },
       "dang_kinds": {
         "Đặc điểm và phân loại chất rắn": {
-          "TN": 36,
-          "DS": 9,
-          "TLN": 12,
+          "TN": 30,
+          "DS": 8,
+          "TLN": 10,
           "TL": 15
         },
         "Ứng dụng tính chất chất rắn": {
