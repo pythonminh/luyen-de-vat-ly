@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11352,
+  "total_questions": 11365,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3346,10 +3346,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 32,
-      "count": 32,
+      "questions": 45,
+      "count": 45,
       "dang": {
-        "Phân loại chất rắn": 5,
+        "Phân loại chất rắn": 18,
         "Tính chất chất rắn kết tinh": 1,
         "Tính chất chất rắn vô định hình": 2,
         "Ví dụ về chất rắn": 1,
@@ -3371,10 +3371,10 @@
       },
       "dang_kinds": {
         "Phân loại chất rắn": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 2,
-          "TL": 0
+          "TN": 9,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
         },
         "Tính chất chất rắn kết tinh": {
           "TN": 1,
