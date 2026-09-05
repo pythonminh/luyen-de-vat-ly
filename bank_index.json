@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11445,
+  "total_questions": 11461,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3681,18 +3681,18 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
-      "questions": 5,
-      "count": 5,
+      "questions": 21,
+      "count": 21,
       "dang": {
-        "Khái niệm nhiệt độ": 2,
+        "Khái niệm nhiệt độ": 18,
         "Thang nhiệt độ và nhiệt kế": 3
       },
       "dang_kinds": {
         "Khái niệm nhiệt độ": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TN": 9,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
         },
         "Thang nhiệt độ và nhiệt kế": {
           "TN": 3,
