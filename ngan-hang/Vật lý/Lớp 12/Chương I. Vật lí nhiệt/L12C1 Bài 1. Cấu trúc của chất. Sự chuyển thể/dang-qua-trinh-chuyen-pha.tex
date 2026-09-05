@@ -160,3 +160,51 @@ a đúng theo định nghĩa sự nóng chảy;
  d đúng vì với mỗi chất, nhiệt độ nóng chảy bằng nhiệt độ đông đặc.
 }
 \end{ex}
+\dangbt{Quá trình chuyển pha}
+\begin{ex}
+Khi đun nóng một lượng nước đá, đồ thị nhiệt độ $t$ phụ thuộc vào thời gian đun $T$ được biểu diễn như hình vẽ.
+\begin{center}
+\begin{tikzpicture}[>=stealth,scale=0.9]
+	% Trục
+	\draw[->] (0,0) -- (8,0) node[below] {$T$ (thời gian)};
+	\draw[->] (0,0) -- (0,5.5) node[left] {$t\,({}^\circ\mathrm{C})$};
+
+	% Mức nhiệt độ
+	\draw[dashed,gray] (0,1.2) -- (7.6,1.2);
+	\draw[dashed,gray] (0,4.2) -- (7.6,4.2);
+
+	\node[left] at (0,1.2) {$0^\circ\mathrm{C}$};
+	\node[left] at (0,4.2) {$100^\circ\mathrm{C}$};
+
+	% Đường biểu diễn
+	\draw[very thick]
+	(0.8,0.7) -- (2.4,1.2)
+	-- (4.2,4.2)
+	-- (6.0,4.2)
+	-- (7.4,5.1);
+
+	% Điểm A B C D E
+	\foreach \x/\y in {
+		0.8/0.7,
+		2.4/1.2,
+		4.2/4.2,
+		6.0/4.2,
+		7.4/5.1}
+		\fill (\x,\y) circle (2pt);
+
+	\node[below left] at (0.8,0.7) {$A$};
+	\node[below] at (2.4,1.2) {$B$};
+	\node[above left] at (4.2,4.2) {$C$};
+	\node[above] at (6.0,4.2) {$D$};
+	\node[above right] at (7.4,5.1) {$E$};
+\end{tikzpicture}
+\end{center}
+Trong các phát biểu sau, phát biểu nào là đúng?
+\choice
+{Đoạn $AB$ ứng với quá trình nước đá đang tan.}
+{Đoạn $BC$ ứng với quá trình nước đang sôi.}
+{\True Đoạn $CD$ ứng với quá trình nước đang sôi.}
+{Đoạn $DE$ ứng với quá trình nước đang bay hơi.}
+\loigiai{Đoạn $AB$ ứng với quá trình nước đá đang nóng chảy. Đoạn $BC$ ứng với quá trình nước đang nóng lên. Đoạn $CD$ ứng với quá trình nước đang sôi. Đoạn $DE$ ứng với quá trình hơi nước đang nóng lên.}
+\nguon{https://www.scribd.com/document/1058018453/S\%E1\%BB\%B1-Chuy\%E1\%BB\%83n-Th\%E1\%BB\%83-Bai-T\%E1\%BA\%ADp}
+\end{ex}
