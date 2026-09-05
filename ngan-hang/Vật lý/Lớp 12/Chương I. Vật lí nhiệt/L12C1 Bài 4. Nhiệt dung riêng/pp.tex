@@ -7,111 +7,331 @@
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
+
 \subsubsection{Dạng 1. Bài toán công suất, hiệu suất và thời gian hóa hơi}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định nhiệt lượng có ích cần thiết để đưa chất lỏng lên nhiệt độ sôi và hóa hơi chất lỏng ở nhiệt độ sôi:
+\[
+Q_{\text{ích}} = m \cdot c \cdot (t_{\text{sôi}} - t_0) + m \cdot L
+\]
+\item Xác định năng lượng toàn phần do thiết bị cung cấp từ công suất $P$ và thời gian hoạt động $\tau$:
+\[
+A = P \cdot \tau
+\]
+\item Áp dụng công thức hiệu suất nhiệt của thiết bị đun:
+\[
+H = \dfrac{Q_{\text{ích}}}{A} \cdot 100\% = \dfrac{Q_{\text{ích}}}{P \cdot \tau} \cdot 100\% \implies \tau = \dfrac{Q_{\text{ích}}}{H \cdot P}
+\]
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một ấm điện có công suất phát nhiệt $P = 2{,}0\ \mathrm{kW}$ hoạt động với hiệu suất truyền nhiệt có ích đạt $85\%$. Ấm chứa $1{,}5\ \mathrm{kg}$ nước sôi đang ở nhiệt độ $100\ ^\circ\mathrm{C}$ dưới áp suất tiêu chuẩn. Biết nhiệt hóa hơi riêng của nước là $L = 2{,}26 \cdot 10^6\ \mathrm{J/kg}$. Xác định tổng thời gian cần thiết để hóa hơi hoàn toàn lượng nước sôi này trong ấm.
+\loigiai{
+Nhiệt lượng có ích cần cung cấp để làm lượng nước sôi hóa hơi hoàn toàn ở nhiệt độ sôi không đổi $100\ ^\circ\mathrm{C}$ là:
+\[
+Q_{\text{ích}} = L \cdot m = 2{,}26 \cdot 10^6 \cdot 1{,}5 = 3390000\ \mathrm{J} = 3390\ \mathrm{kJ}.
+\]
+Công suất định mức của ấm điện đun nước là:
+\[
+P = 2{,}0\ \mathrm{kW} = 2000\ \mathrm{W}.
+\]
+Do hiệu suất truyền nhiệt của ấm đạt $H = 85\% = 0{,}85$, thời gian cần thiết để hóa hơi hoàn toàn lượng nước trong ấm là:
+\[
+\tau = \dfrac{Q_{\text{ích}}}{H \cdot P} = \dfrac{3390000}{0{,}85 \cdot 2000} = 1994{,}12\ \mathrm{s} \approx 33{,}2\ \mathrm{phút}.
+\]
+Vậy thời gian cần thiết để hóa hơi hoàn toàn lượng nước là khoảng $1994$ giây (hoặc $33{,}2$ phút).
+}
 \end{vidumau}
 
 \subsubsection{Dạng 2. Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Sử dụng định nghĩa: Nhiệt hóa hơi riêng $L$ của một chất lỏng là nhiệt lượng cần cung cấp cho $1\ \mathrm{kg}$ chất lỏng đó để nó hóa hơi hoàn toàn ở nhiệt độ sôi không đổi.
+\item Công thức tính nhiệt lượng hóa hơi:
+\[
+Q = L \cdot m \implies L = \dfrac{Q}{m}
+\]
+\item Đơn vị đo trong hệ SI của nhiệt hóa hơi riêng là jun trên kilôgam ($\mathrm{J/kg}$). Con số nhiệt hóa hơi riêng cho biết lượng nhiệt năng thu vào để phá vỡ liên kết lỏng của mỗi đơn vị khối lượng chất lỏng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Nêu ý nghĩa vật lý của con số nhiệt hóa hơi riêng của nước đạt giá trị $L = 2{,}26 \cdot 10^6\ \mathrm{J/kg}$ dưới áp suất tiêu chuẩn. Hãy tính lượng nhiệt lượng cần cung cấp để hóa hơi hoàn toàn một lượng nước sôi có khối lượng bằng $450\ \mathrm{g}$ ở nhiệt độ $100\ ^\circ\mathrm{C}$.
+\loigiai{
+Ý nghĩa vật lý:
+- Con số $L = 2{,}26 \cdot 10^6\ \mathrm{J/kg}$ cho biết để làm hóa hơi hoàn toàn $1\ \mathrm{kg}$ nước ở nhiệt độ sôi ổn định $100\ ^\circ\mathrm{C}$ dưới áp suất tiêu chuẩn, ta cần phải cung cấp một lượng nhiệt lượng bằng đúng $2{,}26 \cdot 10^6\ \mathrm{J}$ từ nguồn đun ngoài.
+Tính toán nhiệt lượng:
+- Đổi khối lượng của nước lỏng sang đơn vị chuẩn kilôgam:
+\[
+m = 450\ \mathrm{g} = 0{,}45\ \mathrm{kg}.
+\]
+- Áp dụng hệ thức tính nhiệt lượng cung cấp cho quá trình chuyển thể hóa hơi:
+\[
+Q = L \cdot m = 2{,}26 \cdot 10^6 \cdot 0{,}45 = 1017000\ \mathrm{J} = 1017\ \mathrm{kJ}.
+\]
+Vậy nhiệt lượng cần cung cấp cho lượng nước trên để hóa hơi hoàn toàn là $1017\ \mathrm{kJ}$.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 3. Thực nghiệm xác định nhiệt hóa hơi riêng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định khối lượng chất lỏng bị hóa hơi thoát ra ngoài miệng bình hở bằng phép hiệu số khối lượng của hệ trước và sau thời gian khảo sát:
+\[
+\Delta m = m_1 - m_2
+\]
+\item Xác định lượng nhiệt lượng do dây điện trở tỏa ra từ nguồn điện ổn định có công suất trung bình $\overline{P}$ trong khoảng thời gian $\Delta \tau$:
+\[
+Q = \overline{P} \cdot \Delta \tau
+\]
+\item Áp dụng công thức tính nhiệt hóa hơi riêng thực nghiệm thu được từ phép đo:
+\[
+L = \dfrac{Q}{\Delta m} = \dfrac{\overline{P} \cdot \Delta \tau}{m_1 - m_2}
+\]
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một nhóm học sinh tiến hành thí nghiệm khảo sát để đo nhiệt hóa hơi riêng của nước sôi. Họ sử dụng một bếp điện tỏa ra công suất phát nhiệt ổn định là $\overline{P} = 150\ \mathrm{W}$ đun bình nhiệt lượng kế không đậy nắp. Sau khoảng thời gian đun nước sôi bay hơi là $\Delta \tau = 400\ \mathrm{s}$, khối lượng của bình chứa nước hiển thị trên cân điện tử giảm từ mốc $m_1 = 420{,}50\ \mathrm{g}$ xuống còn $m_2 = 394{,}30\ \mathrm{g}$. Xác định giá trị nhiệt hóa hơi riêng của nước đo được từ phép thực nghiệm này.
+\loigiai{
+Khối lượng lượng nước sôi đã hóa hơi bay thoát ra khỏi miệng bình hở trong suốt quá trình đun đè lên cân điện tử là:
+\[
+\Delta m = m_1 - m_2 = 420{,}50 - 394{,}30 = 26{,}20\ \mathrm{g} = 0{,}0262\ \mathrm{kg}.
+\]
+Nhiệt lượng do dây điện trở của bình đun tỏa ra có ích trong khoảng thời gian đun $\Delta \tau = 400\ \mathrm{s}$ là:
+\[
+Q = \overline{P} \cdot \Delta \tau = 150 \cdot 400 = 60000\ \mathrm{J}.
+\]
+Áp dụng công thức thực nghiệm để tính giá trị nhiệt hóa hơi riêng của nước:
+\[
+L = \dfrac{Q}{\Delta m} = \dfrac{60000}{0{,}0262} \approx 2{,}29 \cdot 10^6\ \mathrm{J/kg}.
+\]
+Vậy giá trị nhiệt hóa hơi riêng của nước đo được từ thực nghiệm này xấp xỉ bằng $2{,}29 \cdot 10^6\ \mathrm{J/kg}$.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 4. Tính thời gian làm nóng vật}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định nhiệt lượng có ích cần thiết để nâng nhiệt độ của khối chất từ $t_1$ lên $t_2$:
+\[
+Q_{\text{ích}} = m \cdot c \cdot \Delta T = m \cdot c \cdot (t_2 - t_1)
+\]
+\item Xác định công suất phát nhiệt toàn phần $P$ của thiết bị cung cấp nhiệt và hiệu suất truyền nhiệt có ích $H$.
+\item Áp dụng hệ thức liên hệ thời gian đun nóng:
+\[
+Q_{\text{ích}} = H \cdot A = H \cdot P \cdot \tau \implies \tau = \dfrac{m \cdot c \cdot (t_2 - t_1)}{H \cdot P}
+\]
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một ấm đun nước bằng điện có công suất phát điện định mức $P = 1{,}2\ \mathrm{kW}$ hoạt động với hiệu suất đạt $90\%$. Ấm chứa một lượng nước lỏng có khối lượng $m = 1{,}8\ \mathrm{kg}$ ở nhiệt độ phòng là $25\ ^\\circ\mathrm{C}$. Tính thời gian cần thiết để đun sôi lượng nước này đến nhiệt độ sôi $100\ ^\\circ\mathrm{C}$. Cho biết nhiệt dung riêng của nước lỏng là $c = 4200\ \mathrm{J/(kg\cdot K)}$.
+\loigiai{
+Nhiệt lượng có ích cần thiết để đưa khối lượng nước lỏng lên đến nhiệt độ sôi là:
+\[
+Q_{\text{ích}} = m \cdot c \cdot (t_2 - t_1) = 1{,}8 \cdot 4200 \cdot (100 - 25) = 567000\ \mathrm{J} = 567\ \mathrm{kJ}.
+\]
+Công suất định mức ấm điện là $P = 1{,}2\ \mathrm{kW} = 1200\ \mathrm{W}$.
+Do ấm đun tỏa nhiệt có hiệu suất truyền nhiệt hữu ích đạt $H = 90\% = 0{,}90$, thời gian cần thiết để đun nước sôi đạt giá trị bằng:
+\[
+\tau = \dfrac{Q_{\text{ích}}}{H \cdot P} = \dfrac{567000}{0{,}90 \cdot 1200} = 525\ \mathrm{s} = 8{,}75\ \mathrm{phút}.
+\]
+Vậy thời gian cần thiết để đun sôi ấm nước là $525$ giây (tức $8{,}75$ phút).
+}
 \end{vidumau}
 
 \subsubsection{Dạng 5. Tính tốc độ tăng nhiệt độ}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Thiết lập hệ thức liên hệ giữa nhiệt năng tỏa ra trong khoảng thời gian $\Delta \tau$ và độ dâng cao nhiệt độ tương ứng $\Delta T$:
+\[
+Q = H \cdot P \cdot \Delta \tau = m \cdot c \cdot \Delta T
+\]
+\item Từ đó rút ra tốc độ tăng nhiệt độ của chất lỏng (số chỉ biến thiên độ tăng nhiệt độ trên mỗi đơn vị thời gian giây):
+\[
+\dfrac{\Delta T}{\Delta \tau} = \dfrac{H \cdot P}{m \cdot c}
+\]
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một ấm điện chứa $1{,}2\ \mathrm{kg}$ một mẫu chất lỏng có nhiệt dung riêng $c = 2500\ \mathrm{J/(kg\cdot K)}$. Ấm được cấp điện từ một lò sưởi có công suất phát điện $P = 800\ \mathrm{W}$ hoạt động với hiệu suất truyền nhiệt có ích đạt $75\%$. Hãy xác định tốc độ dâng cao nhiệt độ của mẫu chất lỏng này theo đơn vị $^\circ\mathrm{C/s}$ (hoặc $\mathrm{K/s}$).
+\loigiai{
+Nhiệt lượng có ích truyền vào mẫu chất lỏng trong khoảng thời gian đun ngắn $\Delta \tau$ là:
+\[
+Q = H \cdot P \cdot \Delta \tau
+\]
+Mặt khác, lượng nhiệt lượng này làm tăng nhiệt độ của mẫu chất lỏng một lượng $\Delta T$:
+\[
+Q = m \cdot c \cdot \Delta T
+\]
+Đồng nhất hai biểu thức nhiệt lượng, ta rút ra tốc độ tăng nhiệt độ của chất lỏng là:
+\[
+\dfrac{\Delta T}{\Delta \tau} = \dfrac{H \cdot P}{m \cdot c} = \dfrac{0{,}75 \cdot 800}{1{,}2 \cdot 2500} = 0{,}2\ ^\circ\mathrm{C/s}\ (\text{hay}\ 0{,}2\ \mathrm{K/s}).
+\]
+Vậy tốc độ dâng cao nhiệt độ trung bình của chất lỏng là $0{,}2\ ^\circ\mathrm{C/s}$.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 6. Bài toán cân bằng nhiệt}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Xác định các vật tỏa nhiệt (nhiệt độ ban đầu lớn hơn nhiệt độ cân bằng $t$) và vật thu nhiệt (nhiệt độ ban đầu nhỏ hơn $t$).
+\item Viết biểu thức tính nhiệt lượng tỏa ra và thu vào của từng thành phần:
+\[
+Q_{\text{tỏa}} = m_1 \cdot c_1 \cdot (t_1 - t) \quad \text{và} \quad Q_{\text{thu}} = m_2 \cdot c_2 \cdot (t - t_2)
+\]
+\item Áp dụng phương trình cân bằng nhiệt cho quá trình truyền nhiệt:
+\[
+Q_{\text{tỏa}} = Q_{\text{thu}} \implies m_1 \cdot c_1 \cdot (t_1 - t) = m_2 \cdot c_2 \cdot (t - t_2)
+\]
+\item Giải phương trình bậc nhất để tìm giá trị ẩn số nhiệt độ cân bằng $t$ hoặc khối lượng, nhiệt dung riêng tương ứng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một cốc thủy tinh chứa $150\ \mathrm{g}$ nước lỏng ở nhiệt độ phòng bằng $20\ ^\circ\mathrm{C}$. Người ta rót thêm vào cốc một lượng nước nóng có khối lượng bằng $100\ \mathrm{g}$ đang ở nhiệt độ cao đạt giá trị bằng $80\ ^\circ\mathrm{C}$. Bỏ qua nhiệt dung riêng của cốc thủy tinh chịu nhiệt và sự tỏa nhiệt hao phí ra môi trường ngoài. Hãy xác định nhiệt độ của nước trong cốc khi đã đạt trạng thái cân bằng nhiệt.
+\loigiai{
+Đổi khối lượng các phần nước lỏng sang đơn vị chuẩn kilôgam:
+\[
+m_1 = 150\ \mathrm{g} = 0{,}15\ \mathrm{kg}, \quad m_2 = 100\ \mathrm{g} = 0{,}10\ \mathrm{kg}.
+\]
+Gọi $t$ là nhiệt độ chung của hệ nước lỏng sau khi đã hòa trộn đạt trạng thái cân bằng nhiệt.
+Nhiệt lượng tỏa ra từ phần nước nóng khi hạ nhiệt độ từ $80\ ^\circ\mathrm{C}$ xuống $t$ là:
+\[
+Q_{\text{tỏa}} = m_2 \cdot c_{\mathrm{H_2O}} \cdot (t_2 - t) = 0{,}10 \cdot c_{\mathrm{H_2O}} \cdot (80 - t).
+\]
+Nhiệt lượng thu vào từ phần nước lỏng lạnh trong cốc khi tăng nhiệt độ từ $20\ ^\circ\mathrm{C}$ lên $t$ là:
+\[
+Q_{\text{thu}} = m_1 \cdot c_{\mathrm{H_2O}} \cdot (t - t_1) = 0{,}15 \cdot c_{\mathrm{H_2O}} \cdot (t - 20).
+\]
+Áp dụng phương trình cân bằng nhiệt trao đổi:
+\[
+\begin{aligned}
+    Q_{\text{tỏa}} &= Q_{\text{thu}} \\
+    \Leftrightarrow 0{,}10 \cdot c_{\mathrm{H_2O}} \cdot (80 - t) &= 0{,}15 \cdot c_{\mathrm{H_2O}} \cdot (t - 20) \\
+    \Leftrightarrow 0{,}10 \cdot (80 - t) &= 0{,}15 \cdot (t - 20) \\
+    \Leftrightarrow 8 - 0{,}10 \cdot t &= 0{,}15 \cdot t - 3 \\
+    \Leftrightarrow 0{,}25 \cdot t &= 11 \\
+    \Leftrightarrow t &= 44\ ^\circ\mathrm{C}.
+\end{aligned}
+\]
+Vậy nhiệt độ của lượng nước khi đã đạt trạng thái cân bằng nhiệt bằng đúng $44\ ^\circ\mathrm{C}$.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 7. Bài toán cân bằng nhiệt (phương pháp hỗn hợp)}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Khi hệ trao đổi nhiệt gồm nhiều hơn hai vật trao đổi năng lượng đồng thời (ví dụ bình chứa nhiệt lượng kế, khối nước bên trong và mẫu kim loại thả vào).
+\item Áp dụng hệ thức tổng nhiệt lượng tỏa ra bằng tổng nhiệt lượng thu vào khi đạt cân bằng:
+\[
+\sum Q_{\text{tỏa}} = \sum Q_{\text{thu}}
+\]
+\item Cần phân tích kỹ các thành phần chất tham gia tỏa nhiệt hoặc thu nhiệt dựa trên mức nhiệt độ ban đầu so với nhiệt độ cân bằng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một bình nhiệt lượng kế bằng đồng có khối lượng $m_0 = 100\ \mathrm{g}$ đang chứa một khối lượng nước $m_1 = 200\ \mathrm{g}$ ở nhiệt độ ban đầu $20\ ^\circ\mathrm{C}$. Người ta thả vào bình một khối hợp kim nhôm và sắt có khối lượng tổng cộng $m = 150\ \mathrm{g}$ đang ở nhiệt độ cao ổn định $120\ ^\circ\mathrm{C}$. Nhiệt độ chung của toàn bộ hệ thống khi cân bằng đo được là $26{,}5\ ^\circ\mathrm{C}$. Cho biết nhiệt dung riêng của đồng là $c_0 = 380\ \mathrm{J/(kg\cdot K)}$, và của nước lỏng là $c_1 = 4200\ \mathrm{J/(kg\cdot K)}$. Bỏ qua hao phí tỏa nhiệt ra môi trường. Tính nhiệt dung riêng trung bình của khối hợp kim thả vào.
+\loigiai{
+Đổi khối lượng các chất sang đơn vị chuẩn kilôgam:
+\[
+m_0 = 0{,}1\ \mathrm{kg}, \quad m_1 = 0{,}2\ \mathrm{kg}, \quad m = 0{,}15\ \mathrm{kg}.
+\]
+Nhiệt lượng do bình nhiệt lượng kế đồng và nước lỏng hấp thụ thu vào để tăng nhiệt từ $20\ ^\circ\mathrm{C}$ lên $26{,}5\ ^\circ\mathrm{C}$ là:
+\[
+\begin{aligned}
+    Q_{\text{thu}} &= (m_0 \cdot c_0 + m_1 \cdot c_1) \cdot (t - t_1) \\
+                   &= (0{,}1 \cdot 380 + 0{,}2 \cdot 4200) \cdot (26{,}5 - 20) \\
+                   &= (38 + 840) \cdot 6{,}5 = 878 \cdot 6{,}5 = 5707\ \mathrm{J}.
+\end{aligned}
+\]
+Nhiệt lượng do khối hợp kim kim loại tỏa ra khi hạ nhiệt độ từ $120\ ^\circ\mathrm{C}$ xuống nhiệt độ cân bằng $26{,}5\ ^\circ\mathrm{C}$ là:
+\[
+Q_{\text{tỏa}} = m \cdot c \cdot (t_{\text{hợp\\ kim}} - t) = 0{,}15 \cdot c \cdot (120 - 26{,}5) = 14{,}025 \cdot c\ \mathrm{J}.
+\]
+Áp dụng phương trình cân bằng nhiệt cho hệ:
+\[
+\begin{aligned}
+    Q_{\text{tỏa}} &= Q_{\text{thu}} \\
+    14{,}025 \cdot c &= 5707 \\
+    \Rightarrow c &\approx 406{,}92\ \mathrm{J/(kg\cdot K)}.
+\end{aligned}
+\]
+Vậy nhiệt dung riêng trung bình của khối hợp kim thả vào đạt giá trị xấp xỉ bằng $406{,}92\ \mathrm{J/(kg\cdot K)}$.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 8. So sánh nhiệt dung riêng dựa trên đồ thị và số liệu}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Khi đun nóng hai chất lỏng khác nhau có cùng khối lượng $m$ bằng hai nguồn nhiệt cung cấp công suất hữu ích $P$ như nhau.
+\item Đồ thị biểu diễn sự biến thiên của nhiệt độ $t$ theo thời gian đun dốc lên tuyến tính có hệ số góc dốc:
+\[
+\text{Độ dốc } k = \dfrac{\Delta T}{\Delta \tau} = \dfrac{P}{m \cdot c}
+\]
+\item Nhận xét tỉ lệ nghịch: Đồ thị dốc lên càng nhanh (độ dốc $k$ lớn hay nhiệt độ tăng dâng cao nhanh hơn) thì chất lỏng đó có nhiệt dung riêng $c$ nhỏ hơn và ngược lại.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Hai chất lỏng $A$ và $B$ có cùng khối lượng bằng $0{,}4\ \mathrm{kg}$ ban đầu ở nhiệt độ phòng $20\ ^\circ\mathrm{C}$ được đun sưởi nóng bằng hai nguồn nhiệt giống hệt nhau có cùng công suất phát nhiệt có ích không đổi. Kết quả đo cho thấy: sau khoảng thời gian đun là $5\ \mathrm{phút}$, nhiệt độ của mẫu $A$ tăng dâng cao lên đến $50\ ^\circ\mathrm{C}$, còn nhiệt độ của mẫu $B$ tăng dâng cao mạnh hơn đạt tới $80\ ^\circ\mathrm{C}$. Hãy so sánh tỉ lệ nhiệt dung riêng của hai mẫu chất lỏng này.
+\loigiai{
+Vì hai bếp có cùng công suất và đun trong cùng thời gian $\Delta \tau = 5\ \mathrm{phút} = 300\ \mathrm{s}$, nên nhiệt lượng hai mẫu chất lỏng $A$ và $B$ thu nhận được từ bếp đun là bằng nhau:
+\[
+Q_A = Q_B = Q.
+\]
+Nhiệt độ dâng tăng cao tương ứng của chất lỏng $A$ và $B$ là:
+\[
+\Delta T_A = 50 - 20 = 30\ ^\circ\mathrm{C} = 30\ \mathrm{K}, \quad \Delta T_B = 80 - 20 = 60\ ^\circ\mathrm{C} = 60\ \mathrm{K}.
+\]
+Áp dụng công thức tính nhiệt lượng thu nhận cho cả hai chất:
+\[
+Q_A = m_A \cdot c_A \cdot \Delta T_A \quad \text{và} \quad Q_B = m_B \cdot c_B \cdot \Delta T_B.
+\]
+Vì khối lượng hai chất lỏng bằng nhau $m_A = m_B = 0{,}4\ \mathrm{kg}$ và $Q_A = Q_B$, ta có mối liên hệ:
+\[
+c_A \cdot \Delta T_A = c_B \cdot \Delta T_B.
+\]
+Lập tỉ số nhiệt dung riêng của hai mẫu chất lỏng ta thu được:
+\[
+\dfrac{c_A}{c_B} = \dfrac{\Delta T_B}{\Delta T_A} = \dfrac{60}{30} = 2 \implies c_A = 2 \cdot c_B.
+\]
+Vậy chất lỏng $A$ có nhiệt dung riêng lớn gấp hai lần chất lỏng $B$. Chất lỏng $B$ có nhiệt dung riêng nhỏ hơn nên tăng nhiệt độ dốc dâng lên nhanh hơn khi nhận cùng nhiệt năng.
+}
 \end{vidumau}
 
 \subsubsection{Dạng 9. Xác định nhiệt dung riêng của một chất}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item Sử dụng phép cân đo trong phương pháp nhiệt lượng kế để xác định gián tiếp nhiệt dung riêng chưa biết $c_x$ của một mẫu chất rắn khối lượng $m_x$.
+\item Đun nóng mẫu chất lên nhiệt độ chuẩn xác cao $t_x$ (thường bằng nhiệt độ hơi nước đang sôi $100\ ^\circ\mathrm{C}$).
+\item Thả mẫu vào bình nhiệt lượng kế chứa nước khối lượng $m_n$ ở nhiệt độ phòng $t_n$. Đo nhiệt độ cân bằng $t$ của hệ hỗn hợp.
+\item Thiết lập phương trình cân bằng nhiệt và rút ra biểu thức xác định $c_x$:
+\[
+c_x = \dfrac{m_n \cdot c_n \cdot (t - t_n)}{m_x \cdot (t_x - t)}
+\]
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Để đo xác định nhiệt dung riêng của một mẫu hợp kim kim loại chịu lực mới chế tạo, kĩ sư dùng cân điện tử xác định khối lượng mẫu đạt $m_x = 250\ \mathrm{g}$. Đun nóng mẫu kim loại này dâng cao nhiệt độ đạt giá trị ổn định bằng nhiệt độ hơi nước đang sôi là $100\ ^\circ\mathrm{C}$, rồi thả nhanh vào bình cách nhiệt chứa $300\ \mathrm{g}$ nước lỏng ở nhiệt độ ban đầu $22\ ^\circ\mathrm{C}$. Nhiệt độ chung của hệ nước lỏng khi đạt cân bằng là $28\ ^\circ\mathrm{C}$. Cho biết nhiệt dung riêng của nước là $c_n = 4180\ \mathrm{J/(kg\cdot K)}$; bỏ qua nhiệt dung của bình đun và hao phí truyền nhiệt ngoài. Tính nhiệt dung riêng đo được của mẫu hợp kim mới.
+\loigiai{
+Đổi khối lượng các mẫu sang đơn vị đo chuẩn kilôgam:
+\[
+m_x = 250\ \mathrm{g} = 0{,}25\ \mathrm{kg}, \quad m_n = 300\ \mathrm{g} = 0{,}30\ \mathrm{kg}.
+\]
+Nhiệt lượng do khối nước lỏng trong bình thu vào để dâng tăng nhiệt độ từ $22\ ^\circ\mathrm{C}$ lên $28\ ^\circ\mathrm{C}$ là:
+\[
+Q_{\text{thu}} = m_n \cdot c_n \cdot (t - t_n) = 0{,}30 \cdot 4180 \cdot (28 - 22) = 1254 \cdot 6 = 7524\ \mathrm{J}.
+\]
+Nhiệt lượng do mẫu hợp kim kim loại tỏa ra khi giảm hạ nhiệt độ từ $100\ ^\circ\mathrm{C}$ xuống $28\ ^\circ\mathrm{C}$ là:
+\[
+Q_{\text{tỏa}} = m_x \cdot c_x \cdot (t_x - t) = 0{,}25 \cdot c_x \cdot (100 - 28) = 18 \cdot c_x\ \mathrm{J}.
+\]
+Áp dụng phương trình cân bằng trao đổi nhiệt cho hệ:
+\[
+\begin{aligned}
+    Q_{\text{tỏa}} &= Q_{\text{thu}} \\
+    18 \cdot c_x &= 7524 \\
+    \Rightarrow c_x &= \dfrac{7524}{18} = 418\ \mathrm{J/(kg\cdot K)}.
+\end{aligned}
+\]
+Vậy nhiệt dung riêng đo xác định được của mẫu hợp kim kim loại mới chế tạo bằng đúng $418\ \mathrm{J/(kg\cdot K)}$.
+}
 \end{vidumau}
-
