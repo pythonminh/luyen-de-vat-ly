@@ -1,20 +1,78 @@
-% Môn: Vật lý
-% Lớp: 12
-% Chương: Chương I. Vật lí nhiệt
-% Bài: L12C1 Bài 4. Nhiệt dung riêng
-% Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
-\input{../../../../_lenh/lythuyet.tex}
-
 \subsection{Lý thuyết}
 \subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
+
+\paragraph{1. Định nghĩa nhiệt dung riêng và hệ thức tính nhiệt lượng}
+\begin{itemize}
+    \item \textbf{Các yếu tố ảnh hưởng đến nhiệt lượng thay đổi nhiệt độ:} Thực nghiệm chứng tỏ nhiệt lượng $Q$ cần cung cấp cho một vật để làm tăng nhiệt độ của nó phụ thuộc vào ba yếu tố chính:
+    \begin{itemize}
+        \item Khối lượng $m$ của vật: Khối lượng càng lớn thì nhiệt lượng cần cung cấp càng lớn (tỉ lệ thuận).
+        \item Độ biến thiên nhiệt độ $\Delta T$ (hoặc $\Delta t$): Độ tăng nhiệt độ càng nhiều thì nhiệt lượng cần cung cấp càng lớn (tỉ lệ thuận).
+        \item Tính chất của chất làm vật: Các chất khác nhau có khả năng hấp thụ nhiệt và nóng lên khác nhau.
+    \end{itemize}
+    \item \textbf{Hệ thức tính nhiệt lượng:}
+    \[
+    Q = m \cdot c \cdot \Delta T
+    \]
+    Trong đó:
+    \begin{itemize}
+        \item $Q$ là nhiệt lượng cần cung cấp hoặc tỏa ra của vật, đơn vị là jun ($\mathrm{J}$).
+        \item $m$ là khối lượng của vật, đơn vị là kilôgam ($\mathrm{kg}$).
+        \item $c$ là nhiệt dung riêng của chất làm vật, đơn vị là $\mathrm{J/(kg\cdot K)}$ hoặc $\mathrm{J/(kg\cdot ^\circ C)}$.
+        \item $\Delta T = T_2 - T_1 = t_2 - t_1$ là độ biến thiên nhiệt độ của vật, đơn vị là kelvin ($\mathrm{K}$) hoặc độ Celsius ($\mathrm{^\circ C}$).
+    \end{itemize}
+    \item \textbf{Định nghĩa nhiệt dung riêng:}
+    Nhiệt dung riêng của một chất là nhiệt lượng cần thiết để cung cấp cho $1\ \mathrm{kg}$ chất đó để làm cho nhiệt độ của nó tăng thêm $1\ \mathrm{K}$ (hoặc $1\ \mathrm{^\circ C}$):
+    \[
+    c = \dfrac{Q}{m \cdot \Delta T}
+    \]
+    \item \textbf{Ý nghĩa của nhiệt dung riêng:}
+    \begin{itemize}
+        \item Mỗi chất có một giá trị nhiệt dung riêng đặc trưng. Chất có nhiệt dung riêng lớn thì cần nhiều nhiệt lượng để làm nó nóng lên và ngược lại cũng tỏa nhiều nhiệt khi nguội đi.
+        \item Nước lỏng có nhiệt dung riêng rất lớn ($c \approx 4200\ \mathrm{J/(kg\cdot K)}$), lớn gấp khoảng 5 lần đất, đá. Do đó nước hấp thụ nhiệt tốt, giữ nhiệt lâu, được ứng dụng rộng rãi làm chất tản nhiệt trong các động cơ đốt trong, lò sưởi hoặc điều hòa khí hậu tự nhiên (gây ra gió đất, gió biển thổi luân phiên ngày và đêm ở vùng ven biển).
+    \end{itemize}
+\end{itemize}
+
+\paragraph{2. Thực hành đo nhiệt dung riêng của nước}
+\begin{itemize}
+    \item \textbf{Mục đích thí nghiệm:} Xác định nhiệt dung riêng của nước lỏng bằng phương pháp thực nghiệm đun nóng.
+    \item \textbf{Dụng cụ thí nghiệm:}
+    \begin{itemize}
+        \item Biến thế nguồn (cấp nguồn điện ổn định).
+        \item Bộ đo công suất nguồn điện (oát kế) tích hợp tính năng đo thời gian.
+        \item Bình nhiệt lượng kế cách nhiệt tốt, bên trong chứa dây điện trở nhiệt đun nước.
+        \item Nhiệt kế điện tử hoặc cảm biến đo nhiệt độ.
+        \item Cân điện tử để xác định chính xác khối lượng nước $m$.
+    \end{itemize}
+    \item \textbf{Nguyên lý thí nghiệm:}
+    Khi cho dòng điện chạy qua dây điện trở nhiệt đặt chìm trong nước trong nhiệt lượng kế cách nhiệt tốt, bỏ qua hao phí nhiệt lượng truyền ra ngoài môi trường và nhiệt lượng làm nóng vỏ bình, điện năng do dây điện trở tiêu thụ $A$ được chuyển hóa hoàn toàn thành nhiệt lượng $Q$ làm nước nóng lên:
+    \[
+    Q = A \implies m \cdot c \cdot (t_2 - t_1) = \mathscr{P} \cdot (\tau_2 - \tau_1)
+    \]
+    Nhiệt dung riêng của nước được xác định bằng công thức:
+    \[
+    c = \dfrac{\mathscr{P} \cdot (\tau_2 - \tau_1)}{m \cdot (t_2 - t_1)}
+    \]
+    Trong đó $\mathscr{P}$ là công suất dòng điện đun nước ($\mathrm{W}$), $\tau_2 - \tau_1$ là thời gian đun ($\mathrm{s}$), $m$ là khối lượng nước ($\mathrm{kg}$), $t_2 - t_1$ là độ tăng nhiệt độ tương ứng ($\mathrm{^\circ C}$ hoặc $\mathrm{K}$).
+\end{itemize}
+
 \begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
+- Nhiệt dung riêng ($c$) của một chất là nhiệt lượng cần cung cấp cho $1\ \mathrm{kg}$ chất đó để làm cho nhiệt độ của nó tăng thêm $1\ \mathrm{K}$ (hoặc $1\ \mathrm{^\circ C}$): $c = \dfrac{Q}{m \cdot \Delta T}$. Đơn vị đo là $\mathrm{J/(kg\cdot K)}$ hoặc $\mathrm{J/(kg\cdot ^\circ C)}$.
+- Công thức tính nhiệt lượng truyền cho một chất để thay đổi nhiệt độ: $Q = m \cdot c \cdot \Delta T$.
+- Nước có nhiệt dung riêng rất lớn ($4200\ \mathrm{J/(kg\cdot K)}$), giữ vai trò cực kỳ quan trọng trong việc làm mát động cơ ô tô, máy biến thế công nghiệp và điều hòa khí hậu tự nhiên.
+- Đo nhiệt dung riêng của nước bằng thực nghiệm dựa trên nguyên lý chuyển hóa năng lượng: Điện năng tiêu thụ của dòng điện chạy qua dây điện trở chuyển hóa hoàn toàn thành nhiệt năng làm nước nóng lên: $c = \dfrac{\mathscr{P} \cdot (\tau_2 - \tau_1)}{m \cdot (t_2 - t_1)}$.
 \end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Phát biểu được định nghĩa nhiệt dung riêng và viết được hệ thức tính nhiệt lượng thay đổi nhiệt độ.
+    \item Giải thích được các ứng dụng và hiện tượng tự nhiên liên quan đến nhiệt dung riêng (tản nhiệt động cơ, hiện tượng gió biển và gió đất).
+    \item Trình bày được sơ đồ dụng cụ, quy trình tiến hành và phương pháp xử lý số liệu thực nghiệm đo nhiệt dung riêng của nước.
+\end{itemize}
 \end{emdahoc}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Giải thích được sự khác biệt trong việc lựa chọn chất làm mát giữa nước trong động cơ nhiệt và dầu cách điện trong máy biến thế công nghiệp dựa trên nhiệt dung riêng và nhiệt độ sôi.
+    \item Thiết kế và tự thực hiện được một thí nghiệm đơn giản ở nhà để ước tính nhiệt dung riêng của một khối kim loại (như đồng, sắt) bằng phương pháp trộn lẫn nhiệt lượng kế.
+\end{itemize}
 \end{emcothe}
