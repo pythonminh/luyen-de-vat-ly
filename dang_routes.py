@@ -928,28 +928,82 @@ def _html_to_text(raw):
     s = re.sub(r'\n{3,}', '\n\n', s)
     return s.strip()
 
+def _looks_like_latex(s):
+    t = str(s or '')
+    if len(t) < 20 or '\\' not in t:
+        return False
+    hits = 0
+    for pat in (
+        r'\\begin\s*\{',
+        r'\\documentclass\b',
+        r'\\chapter\b',
+        r'\\section\b',
+        r'\\choice\b',
+        r'\\dangbt\b',
+        r'\\kienthuc\b',
+        r'\\phuongphap\b',
+        r'\\textbf\b',
+    ):
+        if re.search(pat, t):
+            hits += 1
+    return hits >= 1
+
+def _to_raw_source_url(url):
+    u = urllib.parse.urlparse(str(url or '').strip())
+    host = (u.hostname or '').lower()
+    path = u.path or ''
+    if host in {'github.com', 'www.github.com'}:
+        m = re.match(r'^/([^/]+)/([^/]+)/(?:blob|raw)/(.+)$', path)
+        if m:
+            return 'https://raw.githubusercontent.com/' + m.group(1) + '/' + m.group(2) + '/' + m.group(3)
+    if host == 'gist.github.com':
+        parts = [p for p in path.split('/') if p and p != 'raw']
+        if len(parts) >= 2:
+            return 'https://gist.githubusercontent.com/' + parts[0] + '/' + parts[1] + '/raw'
+        if len(parts) == 1:
+            return 'https://gist.githubusercontent.com/' + parts[0] + '/raw'
+    if 'gitlab.' in host or host == 'gitlab.com':
+        path2 = path.replace('/-/blob/', '/-/raw/')
+        if path2 != path:
+            return urllib.parse.urlunparse(u._replace(path=path2))
+    return url
+
+def _extract_latex_from_html(html_s):
+    chunks = []
+    for m in re.finditer(r'(?is)<(?:pre|code|textarea)[^>]*>(.*?)</(?:pre|code|textarea)>', html_s or ''):
+        inner = html.unescape(re.sub(r'(?s)<[^>]+>', '', m.group(1)))
+        if _looks_like_latex(inner):
+            chunks.append(inner.strip())
+    if chunks:
+        return '\n\n'.join(chunks)
+    plain = _html_to_text(html_s)
+    if _looks_like_latex(plain):
+        return plain
+    return ''
+
 def _fetch_public_page(url):
     try:
-        url = _assert_public_http_url(url)
+        url = _assert_public_http_url(_to_raw_source_url(url))
     except ValueError as e:
         return '', str(e)
+    low = url.lower()
+    want_tex = low.endswith('.tex') or '/raw/' in low or 'raw.githubusercontent.com' in low or 'gist.githubusercontent.com' in low
+    accept = 'text/html,application/xhtml+xml,text/plain,text/x-tex,application/x-tex,*/*;q=0.8'
     req = urllib.request.Request(url, headers={
         'User-Agent': 'luyen-de-vat-ly-admin/1.0 (question import)',
-        'Accept': 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1',
+        'Accept': accept,
     })
     opener = urllib.request.build_opener(_SafeRedirect)
     try:
-        with opener.open(req, timeout=18) as r:
+        with opener.open(req, timeout=28) as r:
             ctype = str(r.headers.get('Content-Type') or '').lower()
-            if ctype and 'html' not in ctype and 'text' not in ctype and 'xml' not in ctype:
-                return '', 'Trang này không phải HTML/văn bản.'
-            raw = r.read(900000)
+            raw = r.read(1200000)
     except urllib.error.HTTPError as e:
         return '', 'Không tải được trang (HTTP %s).' % e.code
     except Exception as e:
         return '', 'Không tải được trang: ' + str(e)[:160]
-    if len(raw) >= 900000:
-        raw = raw[:899000]
+    if len(raw) >= 1200000:
+        raw = raw[:1190000]
     charset = 'utf-8'
     cm = re.search(r'charset=([A-Za-z0-9._-]+)', ctype)
     if cm:
@@ -958,10 +1012,31 @@ def _fetch_public_page(url):
         text = raw.decode(charset, errors='replace')
     except Exception:
         text = raw.decode('utf-8', errors='replace')
+    ok_type = (not ctype) or any(
+        x in ctype
+        for x in ('html', 'text', 'xml', 'tex', 'latex', 'octet-stream', 'json')
+    )
+    if not ok_type and not _looks_like_latex(text):
+        return '', 'Trang này không phải HTML/văn bản/LaTeX.'
+    if want_tex or _looks_like_latex(text) or 'tex' in ctype or 'latex' in ctype:
+        if '<html' in text[:800].lower() or '<!doctype html' in text[:400].lower():
+            extracted = _extract_latex_from_html(text)
+            if extracted:
+                text = extracted
+            else:
+                text = _html_to_text(text)
+        else:
+            text = text.replace('\r\n', '\n')
+        if len(text.strip()) < 40:
+            return '', 'File LaTeX/trang gần như trống (có thể cần đăng nhập).'
+        return text[:80000], ''
+    extracted = _extract_latex_from_html(text)
+    if extracted:
+        return extracted[:80000], ''
     plain = _html_to_text(text)
     if len(plain) < 40:
         return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
-    return plain[:36000], ''
+    return plain[:48000], ''
 
 def _gemini_fill_raw(keys, prompt, tok, temp=0.25):
     from student_gemini import _gemini_generate
@@ -1071,27 +1146,27 @@ def api_admin_dang_fill():
     )
     if page_text and not dang:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB sang LaTeX ngân hàng.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB hoặc FILE LATEX sang ngân hàng.\n"
+            "CHỈ lấy câu thuộc BÀI đang soạn (đúng chủ đề các dạng dưới). Bỏ bài/chương khác trong cùng file.\n"
             "Gán vào dạng đã có; mỗi dạng cố gắng 9 TN / 2 ĐS / 3 TLN / 4 TL, trần 18 / 4 / 6 / 8.\n"
             "Không lấy hai câu cùng ý. Đủ mục tiêu thì chỉ lấy câu thật khác; chạm trần thì bỏ.\n"
-            "Không bịa đề không có trên trang.\n"
+            "Không bịa đề không có trong nguồn. Nếu nguồn là .tex: lọc \\begin{ex}, sửa cho khớp cấu trúc ngân hàng.\n"
             "Với MỖI câu, trước \\begin{ex} phải có đúng một dòng \\dangbt{Tên dạng}.\n"
             "Ưu tiên gán vào các dạng ĐÃ CÓ của bài: " + dang_list + "\n"
             "Chỉ tạo tên dạng mới khi câu không khớp dạng nào ở trên. Không markdown, không lời dẫn.\n"
-            "Không bịa đề không có trên trang.\n"
             + kind_rules
-            + "Nội dung trang:\n" + page_text
+            + "Nguồn (HTML đã gỡ hoặc LaTeX gốc):\n" + page_text
         )
     elif page_text:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB sang LaTeX ngân hàng câu hỏi.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB hoặc FILE LATEX sang ngân hàng câu hỏi.\n"
             "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
             "Dạng đang nạp: " + dang + "\n"
-            "Lấy các câu trên trang CÙNG CHỦ ĐỀ dạng này. Ý khác nhau — bỏ biến thể cùng một bài toán.\n"
+            "Lấy các câu trong nguồn CÙNG CHỦ ĐỀ dạng này. Ý khác nhau — bỏ biến thể cùng một bài toán.\n"
             "Không vượt trần mỗi dạng: 18 TN, 4 ĐS, 6 TLN, 8 TL. Ưu tiên đủ 9 TN, 2 ĐS, 3 TLN, 4 TL rồi dừng nếu chỉ còn câu giống.\n"
-            "Không bịa đề không có trên trang. Không \\dangbt.\n"
+            "Không bịa đề không có trong nguồn. Không \\dangbt.\n"
             + kind_rules
-            + "Nội dung trang (đã gỡ HTML):\n" + page_text
+            + "Nguồn:\n" + page_text
         )
     else:
         blocks = []

@@ -1079,11 +1079,14 @@ def _companion_prompt(kind, ctx, old_tex, page_text):
     dangs = "; ".join(ctx.get("dangs") or []) or "(chưa có dạng — tự đặt tên ngắn theo bài)"
     samples = "\n".join(f"- [{k}] {d}: {t}" for d, k, t in (ctx.get("samples") or [])) or "(chưa có câu)"
     page = (page_text or "").strip()
-    src = (
-        "Tài liệu từ link (ưu tiên đúng SGK/SBT KNTT; không bịa nếu trang không có):\n" + page[:32000]
-        if page
-        else "Không có link. Dựa TEX hiện có + dạng/câu mẫu của bài. Không bịa định luật sai."
-    )
+    if page:
+        src = (
+            "Nguồn từ link (HTML hoặc FILE LATEX). Có thể cả chương/sách — CHỈ lọc phần khớp BÀI này, bỏ bài khác.\n"
+            "Nếu là .tex: giữ công thức, viết lại cho đúng file đích, không dump nguyên cuốn.\n"
+            + page[:48000]
+        )
+    else:
+        src = "Không có link. Dựa TEX hiện có + dạng/câu mẫu của bài. Không bịa định luật sai."
     old = _tex_window(old_tex, 14000)
     if kind == "pp":
         return (
@@ -1124,26 +1127,31 @@ def _companion_prompt(kind, ctx, old_tex, page_text):
 
 
 def companion_ai_panel_html(path, kind="lt"):
-    spec = TRACKS.get(kind) or TRACKS["lt"]
-    kinds = [kind] if kind in TRACKS else ["lt", "pp"]
-    if str(path or "").replace("\\", "/").rsplit("/", 1)[-1].lower() not in {"lt.tex", "pp.tex"}:
-        kinds = ["lt", "pp"]
+    kinds = ["lt", "pp"]
+    folder = base.lesson_folder(path)
+    de = folder.rstrip("/") + "/de.tex"
     btns = []
     for k in kinds:
         lab = TRACKS[k]["icon"] + " AI viết " + TRACKS[k]["label"]
         btns.append(
             f"<button type='button' class='btn green ltAiGo' data-kind='{k}' data-path='{html.escape(path, quote=True)}'>{html.escape(lab)}</button>"
         )
+    btns.append(
+        "<button type='button' class='btn primary ltAiGo' data-kind='all' data-path='"
+        + html.escape(path, quote=True)
+        + "'>📚 AI từ link · LT + dạng mẫu + bài tập</button>"
+    )
     return (
         "<div class='notice ltai' data-path='"
         + html.escape(path, quote=True)
+        + "' data-de-path='"
+        + html.escape(de, quote=True)
         + "' style='margin:10px 0'>"
-        "<b>ADMIN · AI soạn "
-        + html.escape(spec["label"] if len(kinds) == 1 else "lý thuyết / phương pháp")
-        + "</b><br>"
-        "<span class='muted'>Đọc TEX hiện có. Có thể dán link SGK/SBT (http/https). Nạp key Gemini trên thanh menu rồi bấm viết. Xem LaTeX → Chấp nhận ghi file (tự gỡ duyệt).</span>"
+        "<b>ADMIN · AI soạn lý thuyết / dạng mẫu / bài tập</b><br>"
+        "<span class='muted'>Dán link <b>.tex</b> (GitHub blob/raw, trang có LaTeX) hoặc SGK/SBT. Hệ thống đọc nguồn, <b>lọc đúng bài này</b>, viết lại. "
+        "Nút vàng: cả lý thuyết + dạng mẫu + câu ngân hàng. Nạp key Gemini trên thanh menu. Xem trước → Chấp nhận ghi (tự gỡ duyệt LT/PP).</span>"
         "<div style='display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center'>"
-        "<input class='ltAiUrl' type='url' placeholder='Link SGK/SBT / trang lý thuyết (không bắt buộc)' "
+        "<input class='ltAiUrl' type='url' placeholder='Link .tex / GitHub / SGK (http/https)' "
         "style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
         + "".join(btns)
         + "</div><div class='ltAiOut'></div></div>"
@@ -1161,14 +1169,60 @@ function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 document.addEventListener('click',async function(e){
   const go=e.target.closest&&e.target.closest('.ltAiGo');
   const save=e.target.closest&&e.target.closest('.ltAiSave');
-  if(!go&&!save) return;
+  const saveEx=e.target.closest&&e.target.closest('.ltAiSaveEx');
+  const saveAll=e.target.closest&&e.target.closest('.ltAiSaveAll');
+  if(!go&&!save&&!saveEx&&!saveAll) return;
   e.preventDefault();
   const box=e.target.closest('.ltai');
   if(!box) return;
   const out=box.querySelector('.ltAiOut');
   const path=box.getAttribute('data-path')||'';
+  const dePath=box.getAttribute('data-de-path')||path;
+  const urlEl=box.querySelector('.ltAiUrl');
+  const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
+  if(saveEx){
+    const ta=box.querySelector('.ltAiEx');
+    if(!ta||!(ta.value||'').trim()){alert('Chưa có bài tập.');return;}
+    if(!confirm('Thêm các \\begin{ex} vào ngân hàng + GitHub?'))return;
+    saveEx.disabled=true;
+    try{
+      const r=await fetch('/api/admin/dang-fill-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:dePath,dang:'',latex:ta.value,source_url:sourceUrl})});
+      const d=await r.json();
+      if(!d.ok){alert(d.error||'Không ghi bài tập');saveEx.disabled=false;return;}
+      out.insertAdjacentHTML('afterbegin','<div class="success">✅ Đã thêm '+(d.n||'')+' câu vào ngân hàng.</div>');
+    }catch(err){alert(err);saveEx.disabled=false;}
+    return;
+  }
+  if(saveAll){
+    saveAll.disabled=true;
+    try{
+      const jobs=[];
+      const lt=box.querySelector('.ltAiTex[data-kind=lt]');
+      const pp=box.querySelector('.ltAiTex[data-kind=pp]');
+      const ex=box.querySelector('.ltAiEx');
+      if(lt&&(lt.value||'').trim()){
+        jobs.push(fetch('/api/admin/companion-ai-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+          body:JSON.stringify({path:path,kind:'lt',latex:lt.value})}).then(r=>r.json()));
+      }
+      if(pp&&(pp.value||'').trim()){
+        jobs.push(fetch('/api/admin/companion-ai-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+          body:JSON.stringify({path:path,kind:'pp',latex:pp.value})}).then(r=>r.json()));
+      }
+      if(ex&&(ex.value||'').trim()){
+        jobs.push(fetch('/api/admin/dang-fill-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+          body:JSON.stringify({path:dePath,dang:'',latex:ex.value,source_url:sourceUrl})}).then(r=>r.json()));
+      }
+      const rs=await Promise.all(jobs);
+      const bad=rs.find(d=>!d.ok);
+      if(bad){alert(bad.error||'Có phần chưa ghi được');saveAll.disabled=false;return;}
+      out.innerHTML='<div class="success">✅ Đã ghi LT / dạng mẫu / bài tập. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){alert(err);saveAll.disabled=false;}
+    return;
+  }
   if(save){
-    const ta=box.querySelector('.ltAiTex');
+    const ta=box.querySelector('.ltAiTex[data-kind="'+kind+'"]')||box.querySelector('.ltAiTex');
     const kind=save.getAttribute('data-kind')||'lt';
     if(!ta||!(ta.value||'').trim()){alert('Chưa có LaTeX.');return;}
     if(!confirm('Ghi vào file TEX + GitHub? Học viên chỉ thấy sau khi Duyệt lại.'))return;
@@ -1186,12 +1240,49 @@ document.addEventListener('click',async function(e){
   const ks=keys();
   if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
   const kind=go.getAttribute('data-kind')||'lt';
-  const urlEl=box.querySelector('.ltAiUrl');
-  const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
-  out.innerHTML=sourceUrl?'⏳ Đang đọc link + TEX rồi AI viết...':'⏳ AI đang đọc TEX hiện có rồi viết lại...';
-  try{
+  const urlEl2=box.querySelector('.ltAiUrl');
+  const sourceUrl2=urlEl2?String(urlEl2.value||'').trim():sourceUrl;
+  if(kind==='all'&&!sourceUrl2){alert('Dán link .tex / GitHub / SGK trước, rồi bấm AI từ link.');return;}
+  out.innerHTML=sourceUrl2?'⏳ Đang đọc link (lọc đúng bài này)...':'⏳ AI đang đọc TEX hiện có rồi viết lại...';
+  async function runOne(k){
     const r=await fetch('/api/admin/companion-ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,kind:kind,api_keys:ks,source_url:sourceUrl})});
+      body:JSON.stringify({path:path,kind:k,api_keys:ks,source_url:sourceUrl2})});
+    return r.json();
+  }
+  try{
+    if(kind==='all'){
+      out.innerHTML='⏳ 1/3 Lý thuyết từ link...';
+      const lt=await runOne('lt');
+      out.innerHTML='⏳ 2/3 Dạng mẫu từ link...';
+      const pp=await runOne('pp');
+      out.innerHTML='⏳ 3/3 Lọc bài tập \\begin{ex} từ link...';
+      const er=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:dePath,dang:'',api_keys:ks,source_url:sourceUrl2})});
+      const ex=await er.json();
+      let h='';
+      if(lt.ok){
+        h+='<div class="success">'+esc(lt.summary||'Lý thuyết')+'</div>'
+          +'<details open><summary>Xem trước LT</summary><div class="ltAiPrevWrap" style="max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#fff;margin:6px 0">'+(lt.preview||'')+'</div></details>'
+          +'<textarea class="ltAiTex rwta" data-kind="lt" style="width:100%;min-height:180px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;margin:6px 0">'+esc(lt.latex||'')+'</textarea>'
+          +'<p><button type="button" class="btn green ltAiSave" data-kind="lt">✅ Ghi lt.tex</button></p>';
+      }else h+='<div class="err">LT: '+esc(lt.error||'lỗi')+'</div>';
+      if(pp.ok){
+        h+='<div class="success">'+esc(pp.summary||'Dạng mẫu')+'</div>'
+          +'<details><summary>Xem trước dạng mẫu</summary><div class="ltAiPrevWrap" style="max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#fff;margin:6px 0">'+(pp.preview||'')+'</div></details>'
+          +'<textarea class="ltAiTex rwta" data-kind="pp" style="width:100%;min-height:180px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;margin:6px 0">'+esc(pp.latex||'')+'</textarea>'
+          +'<p><button type="button" class="btn green ltAiSave" data-kind="pp">✅ Ghi pp.tex</button></p>';
+      }else h+='<div class="err">Dạng mẫu: '+esc(pp.error||'lỗi')+'</div>';
+      if(ex.ok){
+        h+='<div class="success">'+esc(ex.summary||'Bài tập')+'</div>'
+          +'<textarea class="ltAiEx rwta" style="width:100%;min-height:220px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;margin:6px 0">'+esc(ex.latex||'')+'</textarea>'
+          +'<p><button type="button" class="btn green ltAiSaveEx">✅ Thêm bài tập vào ngân hàng</button></p>';
+      }else h+='<div class="err">Bài tập: '+esc(ex.error||'lỗi')+'</div>';
+      if((lt.ok||pp.ok||ex.ok)) h+='<p><button type="button" class="btn primary ltAiSaveAll">✅ Chấp nhận ghi cả ba</button></p>';
+      out.innerHTML=h;
+      return;
+    }
+    const r=await fetch('/api/admin/companion-ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,kind:kind,api_keys:ks,source_url:sourceUrl2})});
     const d=await r.json();
     if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Soát LaTeX rồi bấm Chấp nhận.')+'</div>'
