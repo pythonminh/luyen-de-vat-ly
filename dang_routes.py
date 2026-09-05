@@ -1038,6 +1038,17 @@ def _fetch_public_page(url):
         return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
     return plain[:48000], ''
 
+def _page_text_from_payload(data):
+    """Ưu tiên file .tex gửi từ máy ADMIN; không thì tải http/https."""
+    data = data or {}
+    raw = str(data.get('source_tex') or data.get('source_text') or data.get('tex') or '')
+    if raw.strip():
+        return raw.replace('\r\n', '\n')[:80000], ''
+    url = str(data.get('source_url') or data.get('url') or '').strip()
+    if url:
+        return _fetch_public_page(url)
+    return '', ''
+
 def _gemini_fill_raw(keys, prompt, tok, temp=0.25):
     from student_gemini import _gemini_generate
     raw, err = '', ''
@@ -1114,13 +1125,11 @@ def api_admin_dang_fill():
     if not keys:
         return jsonify(ok=False, error='Nạp key Gemini rồi bấm lại.'), 400
     source_url = str(data.get('source_url') or data.get('url') or '').strip()
-    page_text = ''
-    if source_url:
-        page_text, ferr = _fetch_public_page(source_url)
-        if ferr:
-            return jsonify(ok=False, error=ferr), 400
+    page_text, ferr = _page_text_from_payload(data)
+    if ferr:
+        return jsonify(ok=False, error=ferr), 400
     if not dang and not page_text:
-        return jsonify(ok=False, error='Đang ở Cả bài: dán link rồi bấm Lấy từ link (không cần chọn dạng). Muốn AI viết câu mới thì hãy mở một dạng.'), 400
+        return jsonify(ok=False, error='Chọn file .tex trên máy hoặc dán link, rồi bấm AI từ file/link (không cần chọn dạng).'), 400
     try:
         qs = load_lesson_questions(path)
     except Exception as e:
