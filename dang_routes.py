@@ -970,7 +970,7 @@ def api_admin_dang_fill():
         "Quy ước loại câu:\n"
         "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
         "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-        "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+        "- TLN: \\shortans{chỉ số, không đơn vị, không A/B/C/D, không ngày 15/01/1900} rồi \\loigiai{cùng số đó}\n"
         "- TL: không \\choice, có \\loigiai{...}\n"
         "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Công thức $...$. Không % ID.\n"
         + ("Trong MỖI khối \\begin{ex} phải có đúng một " + nguon_line + " (link tải trang, không đổi).\n" if nguon_line else "")
@@ -1008,7 +1008,7 @@ def api_admin_dang_fill():
             "Quy ước:\n"
             "- TN: \\choice rồi 4 dòng {A}{B}{C}{D}, đúng thì {\\True ...}\n"
             "- ĐS: \\choiceTF rồi 4 mệnh đề, đúng thì {\\True ...}\n"
-            "- TLN: \\shortans{đáp án} rồi \\loigiai{...}\n"
+            "- TLN: \\shortans{chỉ số, không đơn vị, không A/B/C/D, không ngày 15/01/1900} rồi \\loigiai{cùng số đó}\n"
             "- TL: không \\choice, có \\loigiai{...}\n"
             "Mỗi câu phải có \\loigiai{...}. Công thức trong $...$. Không \\dangbt, không % ID.\n"
             "Mẫu đề đang có (chỉ để cùng phong cách, cấm trùng):\n"

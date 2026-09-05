@@ -352,6 +352,55 @@ def _copied_stem_or_opts(pack, stem, new_opts):
     return stem_same
 
 
+_EXCEL_DATE_RE = re.compile(
+    r"^\s*\$?\s*(\d{1,2})\s*/\s*(\d{1,2})\s*/\s*(?:19)?0{2,4}\s*\$?\s*$"
+)
+_TLN_LETTER_RE = re.compile(r"^\s*\$?\s*[A-Da-d]\s*\$?\s*$")
+_TLN_NUM_RE = re.compile(
+    r"(-?\d+(?:[.,]\d+)?(?:\s*/\s*-?\d+(?:[.,]\d+)?)?)"
+)
+
+
+def _tln_plain_number(s):
+    """Đáp án TLN: chỉ số, không đơn vị / A–D / ngày Excel 15/01/1900."""
+    t = _clean_tex(s)
+    t = re.sub(r"^\$+|\$+$", "", t).strip()
+    t = t.replace(r"\,", "").replace("~", " ")
+    if _EXCEL_DATE_RE.match(t) or _TLN_LETTER_RE.match(t):
+        return ""
+    t = re.sub(r"\\(?:mathrm|text|textrm|textbf)\s*\{[^{}]*\}", "", t)
+    t = re.sub(r"\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}", r"\1/\2", t)
+    t = re.sub(r"\\dfrac\s*\{([^{}]+)\}\s*\{([^{}]+)\}", r"\1/\2", t)
+    t = re.sub(r"[{}$\\]", "", t)
+    t = re.sub(r"(cm/s|rad/s|m/s|Hz|cm|mm|ms|s|m|J|N|W|kg|g)\b", "", t, flags=re.I)
+    t = t.strip(" .,;:")
+    t = re.sub(r"\s+", "", t)
+    m = _TLN_NUM_RE.fullmatch(t)
+    if not m:
+        return ""
+    val = m.group(1).replace(".", ",").replace(" ", "")
+    if re.fullmatch(r"-?\d+/1", val):
+        val = val.split("/")[0]
+    return val
+
+
+def _coerce_tln(answer, solution):
+    ans = _tln_plain_number(answer)
+    if ans:
+        return ans, ans
+    from_sol = _tln_plain_number(solution)
+    if from_sol:
+        return from_sol, from_sol
+    nums = _TLN_NUM_RE.findall(_clean_tex(solution) or "")
+    if nums:
+        val = nums[-1].replace(".", ",")
+        val = re.sub(r"\s+", "", val)
+        if re.fullmatch(r"-?\d+/1", val):
+            val = val.split("/")[0]
+        return val, val
+    return "", ""
+
+
 def _prompt(pack, retry=False):
     letters = "ABCD"
     opt_lines = []
@@ -371,7 +420,10 @@ def _prompt(pack, retry=False):
         "Đổi cách diễn đạt đề và phương án (không copy nguyên văn). Giữ ý toán, số liệu, loại câu, vị trí đáp án đúng. Tính lại cho khớp.\n"
         "CẤM trong stem/options/solution/answer: dòng comment LaTeX (bắt đầu %), % ID:, % Mức:, %=== Câu, \\begin{ex}, \\end{ex}, \\loigiai, \\True.\n"
         "Không gán ID hay mức độ — đó là việc công cụ phân dạng, không phải form này.\n"
-        "Lời giải: chỉ gọi phương án A/B/C/D (hoặc 1/2/3), KHÔNG chép lại nguyên văn nội dung từng phương án — phần đó đã nằm ở options.\n"
+        "Lời giải TN/ĐS: chỉ gọi phương án A/B/C/D (hoặc 1/2/3), KHÔNG chép lại nguyên văn nội dung từng phương án — phần đó đã nằm ở options.\n"
+        "Nếu Loại là TLN: answer và solution CHỈ là số (vd 12 hoặc 25,12 hoặc 3/2). "
+        "CẤM đơn vị, CẤM A/B/C/D, CẤM dạng ngày Excel kiểu 15/01/1900 hay 15/1/1900 "
+        "(Excel hay đổi phân số 15/1 thành ngày — hãy ghi 15). Không nhầm số với ngày tháng.\n"
         "LaTeX BẮT BUỘC:\n"
         "- Mọi công thức (kể cả \\pi, \\frac, \\Rightarrow, \\cos, \\left\\right) phải nằm trong $...$.\n"
         "- Không gõ \\ trước chữ tiếng Việt (sai: \\Để  .\\Để  :\\-3). Viết: Để  : -3.\n"
@@ -507,6 +559,8 @@ def api_rewrite_question():
                 txt = txt.get("text") if isinstance(txt, dict) else txt
                 new_opts.append({"text": _clean_tex(txt), "correct": bool(o.get("correct"))})
         note = str(obj.get("note") or "").strip()[:300]
+        if pack["kind"] == "TLN":
+            answer, solution = _coerce_tln(answer, solution)
         return stem, solution, answer, new_opts, note
 
     raw, err = _gemini_once(keys, _prompt(pack), 5000)
@@ -536,6 +590,10 @@ def api_rewrite_question():
         note = ((note + " ") if note else "") + "Thiếu đề mới — đang hiện đề cũ."
     if not solution:
         solution = raw_sol or pack["solution"]
+    if pack["kind"] == "TLN":
+        answer, solution = _coerce_tln(answer, solution or pack.get("answer") or "")
+        if not answer:
+            answer, solution = _coerce_tln(pack.get("answer") or "", raw_sol or pack.get("solution") or "")
     if pack["options"] and not new_opts:
         new_opts = pack["options"]
     return jsonify(
@@ -590,13 +648,18 @@ def api_rewrite_question_save():
             t = opts_in[i]
             t = t.get("text") if isinstance(t, dict) else t
             merged_opts.append({"text": _clean_tex(t), "correct": bool(o.get("correct"))})
+    kind = str(q.get("kind") or "TL")
+    sol_in = data.get("solution") or ""
+    ans_in = data.get("answer") or ""
+    if kind == "TLN":
+        ans_in, sol_in = _coerce_tln(ans_in, sol_in)
     new_inner = _apply_inner(
         inner,
-        str(q.get("kind") or "TL"),
+        kind,
         _clean_tex(data.get("stem") or ""),
-        _compact_solution(data.get("solution") or "", merged_opts),
+        _compact_solution(sol_in, merged_opts),
         merged_opts,
-        _clean_tex(data.get("answer") or ""),
+        _clean_tex(ans_in),
         flags,
     )
     new_tex = _replace_ex(tex, fi, new_inner)

@@ -116,10 +116,8 @@ Một chất điểm chuyển động tròn đều với tốc độ góc bằng
 % Mức: VD
 [SGK CTST]
 	Một vật dao động điều hòa có chu kỳ $T=0,5~\mathrm{s}$. Trong thời gian $3\,\text{s}$, vật đi qua vị trí cân bằng bao nhiêu lần?
-\shortans{11/01/1900}
-\loigiai{
-Mỗi chu kỳ vật qua VTCB 2 lần. Số chu kỳ: $3: 0,5=6\Rightarrow~\mathrm{s}$ Số lần qua VTCB= $6\cdot 2=12$.
-}
+\shortans{12}
+\loigiai{12}
 \end{ex}
 
 % ===== Câu 28 =====
@@ -174,11 +172,8 @@ Một vật dao động điều hòa có đồ thị li độ – thời gian d�
 % ID: L11C1B1-11-TLN
 % Mức: VD
 Một vật dao động điều hòa trên một quỹ đạo là đoạn thẳng dài $18\,\text{cm}$. Xác định biên độ dao động của vật (theo cm).
-\shortans{08/01/1900}
-\loigiai{
-Chiều dài quỹ đạo dao động:
- $L = 2A \implies A = \dfrac{L}{2} = \dfrac{18}{2} = 9  \text{cm}.$
-}
+\shortans{9}
+\loigiai{9}
 \end{ex}
 
 % ===== Câu 32 =====
@@ -278,11 +273,8 @@ Một vật dao động điều hòa thực hiện được đúng $120$ dao đ�
 % ID: L11C1B1-14-TLN
 % Mức: VD
 Một vật dao động điều hòa với biên độ $8\,\text{cm}$ và chu kì dao động là $2\,\text{s}$. Tính tốc độ trung bình của vật trong một chu kì (theo cm/s).
-\shortans{15/01/1900}
-\loigiai{
-Quãng đường trong $1$ chu kì:
- $S = 4A = 4 \cdot 8 = 32.$ v_{tb} = $\dfrac{S}{T}$ = $\dfrac{32}{2}$ = 16.
-}
+\shortans{16}
+\loigiai{16}
 \end{ex}
 
 % ===== Câu 41 =====
@@ -292,10 +284,8 @@ Quãng đường trong $1$ chu kì:
 % ID: L11C1B1-17-TLN
 % Mức: VD
 Một vật dao động điều hòa có chu kì dao động là $0,25\,\text{s}$. Tính tần số góc ($\omega$) của dao động (theo rad/s). Lấy $\pi \approx 3,14$.
-\shortans{C}
-\loigiai{
-$\omega = \dfrac{2\pi}{T} = \dfrac{2 \cdot 3,14}{0,25} \approx 25,12.$
-}
+\shortans{25,12}
+\loigiai{25,12}
 \end{ex}
 
 % ===== Câu 43 =====
@@ -443,16 +433,34 @@ Tần số của dao động là số dao động thực hiện được trong $
 % ===== Câu 60 =====
 % ID: L11C1B1-27-TN
 % Mức: NB
-\begin{ex}Một chất điểm dao động điều hòa với biên độ $A = 3$ cm và chu kỳ $T = 1$ s. Đồ thị li độ được cho như hình vẽ.
- Tính tốc độ trung bình của chất điểm trong 1 chu kỳ.
+\begin{ex}
+% ID: L11C1B1-27-TN
+% Mức: NB
+\immini{
+Một chất điểm dao động điều hòa với biên độ $A = 3\,\mathrm{cm}$ và chu kì $T = 1\,\mathrm{s}$. Đồ thị li độ–thời gian như hình bên. Tốc độ trung bình của chất điểm trong một chu kì bằng
+}{
+\begin{tikzpicture}[>=stealth, line cap=round, line join=round, scale=1.05]
+  \draw[->] (-0.15,0) -- (2.35,0) node[below] {$t\,(\mathrm{s})$};
+  \draw[->] (0,-1.55) -- (0,1.7) node[left] {$x\,(\mathrm{cm})$};
+  \foreach \x/\lab in {0.5/0{,}5,1/1,1.5/1{,}5,2/2}
+    \draw (\x,0.06) -- (\x,-0.06) node[below=2pt] {\lab};
+  \draw (0.06,1.2) -- (-0.06,1.2) node[left=2pt] {$3$};
+  \draw (0.06,-1.2) -- (-0.06,-1.2) node[left=2pt] {$-3$};
+  \draw[thick, domain=0:2, samples=200, smooth]
+    plot (\x, {1.2*cos(360*\x)});
+\end{tikzpicture}
+}
 \choice
-{$24\ \mathrm{cm/s}$}
-{$6\ \mathrm{cm/s}$}
-{\True $12\ \mathrm{cm/s}$}
-{$3\ \mathrm{cm/s}$}
+{$24\,\mathrm{cm/s}$}
+{$6\,\mathrm{cm/s}$}
+{\True $12\,\mathrm{cm/s}$}
+{$3\,\mathrm{cm/s}$}
 \loigiai{
-Trong 1 chu kỳ, vật đi quãng đường $S = 4A = 12$ cm
- , $v_{tb} = \dfrac{S}{T} = \dfrac{12}{1} = 12\ \mathrm{cm/s}$
+Tốc độ trung bình là $v_{\mathrm{tb}} = \dfrac{S}{\Delta t}$, khác với vận tốc trung bình $\vec{v}_{\mathrm{tb}} = \dfrac{\Delta x}{\Delta t}$.
+
+Trong một chu kì, chất điểm đi hết một dao động toàn phần nên quãng đường $S = 4A = 4\cdot 3 = 12\,\mathrm{cm}$ và $\Delta t = T = 1\,\mathrm{s}$. Do đó $v_{\mathrm{tb}} = \dfrac{S}{T} = \dfrac{12}{1} = 12\,\mathrm{cm/s}$. Đây là phương án C.
+
+Các nhiễu thường gặp: $\dfrac{A}{T} = 3\,\mathrm{cm/s}$, $\dfrac{2A}{T} = 6\,\mathrm{cm/s}$, $\dfrac{8A}{T} = 24\,\mathrm{cm/s}$. Vận tốc trung bình trong một chu kì bằng $0$ vì độ dời $\Delta x = 0$.
 }
 \end{ex}
 
