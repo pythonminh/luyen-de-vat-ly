@@ -705,12 +705,21 @@ def merge_catalog_lessons(items):
         arr = sorted(arr, key=lambda z: _tex_name_key(str(z.get("path") or z.get("file") or "")))
         canon = dict(arr[0])
         path = str(canon.get("path") or canon.get("file") or "")
-        dang, kinds, n = {}, {}, 0
+        dang, kinds, n, order = {}, {}, 0, []
         for x in arr:
             n += int(x.get("questions") or x.get("count") or 0)
-            for k, v in (x.get("dang") or {}).items():
-                name = str(k)
-                dang[name] = dang.get(name, 0) + int(v or 0)
+            src = x.get("dang") or {}
+            seen_here = [str(nm) for nm in (x.get("dang_order") or []) if str(nm) in src]
+            for k in src:
+                if str(k) not in seen_here:
+                    seen_here.append(str(k))
+            for name in seen_here:
+                if name not in dang:
+                    order.append(name)
+                try:
+                    dang[name] = dang.get(name, 0) + int(src.get(name) or 0)
+                except (TypeError, ValueError):
+                    pass
             for dname, bucket in (x.get("dang_kinds") or {}).items():
                 dst = kinds.setdefault(str(dname), {"TN": 0, "DS": 0, "TLN": 0, "TL": 0})
                 if isinstance(bucket, dict):
@@ -725,8 +734,54 @@ def merge_catalog_lessons(items):
         canon["questions"] = n
         canon["count"] = n
         canon["dang"] = dang
+        canon["dang_order"] = order
         canon["dang_kinds"] = kinds
         out.append(canon)
+    return out
+
+
+def dang_pairs_of(item):
+    """Danh sách (tên dạng, số câu) theo thứ tự đã gộp — không xếp ABC."""
+    dangs = item.get("dang") or {}
+    order = item.get("dang_order")
+    names = []
+    if isinstance(order, list) and order:
+        for nm in order:
+            s = str(nm)
+            if s in dangs and s not in names:
+                names.append(s)
+        for k in dangs:
+            if str(k) not in names:
+                names.append(str(k))
+    else:
+        names = [str(k) for k in dangs]
+    pairs = []
+    for name in names:
+        try:
+            cnt = int(dangs.get(name) or 0)
+        except (TypeError, ValueError):
+            continue
+        if cnt > 0:
+            pairs.append((name, cnt))
+    return pairs
+
+
+def overlay_live_dangs(item, path):
+    """Bài đang mở: sidebar dùng đúng parse TEX như tab dạng."""
+    if lesson_folder(str((item or {}).get("path") or "")) != lesson_folder(path):
+        return item
+    try:
+        qs = load_lesson_questions(path)
+    except Exception:
+        return item
+    names, counts = dang_names_of(qs)
+    per, _allc = dang_kind_counts_of(qs)
+    out = dict(item or {})
+    out["dang"] = counts
+    out["dang_order"] = names
+    out["dang_kinds"] = per
+    out["questions"] = len(qs)
+    out["count"] = len(qs)
     return out
 
 
@@ -824,19 +879,10 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     on = bool(cur_folder) and lesson_folder(p) == cur_folder
                     if on:
                         open_ch = True
+                        x = overlay_live_dangs(x, current_path)
                     n = int(x.get("questions") or x.get("count") or 0)
                     title = html.escape(str(x.get("BaiHoc") or x.get("De") or "Bài"))
-                    dang_map = x.get("dang") or {}
-                    pairs = []
-                    for k, v in dang_map.items():
-                        try:
-                            cnt = int(v or 0)
-                        except (TypeError, ValueError):
-                            continue
-                        if cnt <= 0:
-                            continue
-                        pairs.append((str(k), cnt))
-                    pairs.sort(key=lambda t: t[0])
+                    pairs = dang_pairs_of(x)
                     dang_kinds = x.get("dang_kinds") or {}
                     all_kinds = {k: 0 for k in KIND_ORDER}
                     for bucket in dang_kinds.values():
@@ -965,17 +1011,13 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
         title = str(x.get("BaiHoc") or x.get("De") or path.rsplit("/", 1)[-1])
         cnt = int(x.get("questions") or x.get("count") or 0)
         href = urllib.parse.quote(path, safe="")
-        dangs = x.get("dang") or {}
         kinds = x.get("dang_kinds") or {}
         lt_row, lt_btn = theory_catalog_html(path, guest=guest)
         dh = lt_row
         if dang_link:
             dh += "".join(
                 dang_link_html(path, k, v, kinds.get(str(k)), n=i)
-                for i, (k, v) in enumerate(
-                    ((k, v) for k, v in dangs.items() if str(v).isdigit() or isinstance(v, (int, float))),
-                    1,
-                )
+                for i, (k, v) in enumerate(dang_pairs_of(x), 1)
             )
         bits.append(
             "<div class='baiacc'><div class='baiacc-top'>"
