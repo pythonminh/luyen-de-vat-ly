@@ -60,6 +60,10 @@
       "lt": {
         "status": "approved",
         "updated": "2026-09-05T05:27:23Z"
+      },
+      "pp": {
+        "status": "pending",
+        "updated": "2026-09-05T05:30:12Z"
       }
     }
   }
