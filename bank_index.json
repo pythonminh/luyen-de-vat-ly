@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11438,
+  "total_questions": 11445,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3512,17 +3512,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Nội năng và truyền nhiệt",
-      "questions": 4,
-      "count": 4,
+      "questions": 11,
+      "count": 11,
       "dang": {
-        "Nội năng và truyền nhiệt": 4
+        "Nội năng và truyền nhiệt": 11
       },
       "dang_kinds": {
         "Nội năng và truyền nhiệt": {
           "TN": 3,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
+          "DS": 2,
+          "TLN": 3,
+          "TL": 3
         }
       }
     },
