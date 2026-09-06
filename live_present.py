@@ -452,7 +452,7 @@ def api_present_tts():
         import edge_tts
 
         buf = io.BytesIO()
-        comm = edge_tts.Communicate(raw, voice, rate="-3%", pitch="-2Hz" if gender == "m" else "+0Hz")
+        comm = edge_tts.Communicate(raw, voice, rate="+22%", pitch="-2Hz" if gender == "m" else "+0Hz")
         async for chunk in comm.stream():
             if chunk.get("type") == "audio":
                 buf.write(chunk.get("data") or b"")
@@ -552,17 +552,17 @@ PRESENT_TTS_JS = r"""
 if(window.ldvlSpeak) return;
 const U={
   gender:(function(){try{return localStorage.getItem('ldvlSpeakG')||'f'}catch(e){return 'f'}})(),
-  mode:'idle', wantPlay:false, gen:0, sig:'', audio:null, auto:false, unlocked:false
+  mode:'idle', wantPlay:false, gen:0, sig:'', audio:null, auto:false, unlocked:false, piece:false, lastEl:null
 };
-function msg(s){const el=document.getElementById('spkMsg'); if(el) el.textContent=s||'';}
+function msg(s){
+  document.querySelectorAll('#spkMsg, .spkmsg').forEach(function(el){el.textContent=s||'';});
+}
 function paint(){
-  const f=document.getElementById('spkF'), m=document.getElementById('spkM');
-  if(f) f.classList.toggle('on', U.gender==='f');
-  if(m) m.classList.toggle('on', U.gender==='m');
-  const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
-  if(play) play.disabled=U.mode==='play';
-  if(pause) pause.disabled=U.mode!=='play';
-  if(resume) resume.disabled=U.mode!=='pause';
+  document.querySelectorAll('#spkF, .spk-f').forEach(function(f){f.classList.toggle('on', U.gender==='f');});
+  document.querySelectorAll('#spkM, .spk-m').forEach(function(m){m.classList.toggle('on', U.gender==='m');});
+  document.querySelectorAll('#spkPlay, .spk-play').forEach(function(play){play.disabled=U.mode==='play';});
+  document.querySelectorAll('#spkPause, .spk-pause').forEach(function(pause){pause.disabled=U.mode!=='play';});
+  document.querySelectorAll('#spkResume, .spk-resume').forEach(function(resume){resume.disabled=U.mode!=='pause';});
 }
 function speakTextOf(el){
   if(!el) return '';
@@ -637,7 +637,7 @@ function playLocal(text, gen){
     const u=new SpeechSynthesisUtterance(text);
     u.lang='vi-VN';
     if(v) u.voice=v;
-    u.rate=U.gender==='m'?0.92:1;
+    u.rate=U.gender==='m'?1.18:1.28;
     u.pitch=U.gender==='m'?0.72:1.18;
     u.onend=function(){ if(U.gen===gen) resolve(); };
     u.onerror=function(){ if(U.gen===gen) resolve(); };
@@ -658,23 +658,27 @@ async function run(text){
   if(U.gen!==gen) return;
   if(U.mode==='play'){ U.mode='idle'; if(!U.auto) U.wantPlay=false; paint(); msg(''); }
 }
-function startReadText(t){
+function startReadText(t, asPiece){
   t=String(t||'').trim();
-  U.sig=t.length+':'+(t.slice(0,60));
   if(!t){ msg('Không có chữ để đọc.'); return; }
+  U.piece=asPiece!==false;
+  if(!U.piece) U.sig=t.length+':'+(t.slice(0,60));
   stopHard();
   try{ new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA').play().catch(function(){}); }catch(e){}
   U.unlocked=true; U.auto=false; U.wantPlay=true;
   run(t);
 }
 function startRead(){
-  startReadText(speakTextOf(target()));
+  const pane=document.getElementById('aiout');
+  if(U.lastEl && pane && pane.contains(U.lastEl)) startReadText(speakTextOf(U.lastEl), true);
+  else if(pane && pane.innerText.trim()) startReadText(speakTextOf(pane), true);
+  else startReadText(speakTextOf(target()), false);
 }
 function isCinema(){return !!(document.body&&document.body.classList.contains('cinema'));}
 function canClickHost(host){
   if(!host||!host.matches) return false;
   if(isCinema()) return !host.matches('label');
-  return host.matches('.solution, .ai-y, .reviewout, .ltbox, details.lt-sol');
+  return host.matches('.solution, .ai-y, .ai-sec, details.lt-sol');
 }
 function markReading(host, btn){
   document.querySelectorAll('.spkchunk.on').forEach(function(x){x.classList.remove('on')});
@@ -695,7 +699,8 @@ function addSpk(host, src){
       ev.preventDefault();
       ev.stopPropagation();
       markReading(host, b);
-      startReadText(speakTextOf(src));
+      U.lastEl=src;
+      startReadText(speakTextOf(src), true);
     };
     const sum=host.tagName==='DETAILS'?host.querySelector('summary'):null;
     if(sum) sum.appendChild(b);
@@ -709,13 +714,15 @@ function addSpk(host, src){
       ev.preventDefault();
       ev.stopPropagation();
       markReading(host, host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk'));
-      startReadText(speakTextOf(src));
+      U.lastEl=src;
+      startReadText(speakTextOf(src), true);
     });
   }
 }
 function mountChunks(root){
   root=root||document;
-  if(root.nodeType===1 && root.id!=='gkey-ping' && (root.matches('.ltbox, details.lt-sol, .qheadline, .opt, .tf, .solution, .ai-y, .reviewout') || root.id==='aiout')){
+  function skipWhole(el){return el && el.matches && el.matches('.reviewout') && el.querySelector('.ai-sec,.ai-y');}
+  if(root.nodeType===1 && root.id!=='gkey-ping' && !skipWhole(root) && (root.matches('.ltbox, details.lt-sol, .qheadline, .opt, .tf, .solution, .ai-y, .ai-sec, .reviewout') || root.id==='aiout')){
     const src=root.matches('.qheadline')?(root.querySelector('.qstem')||root):root;
     addSpk(root, src);
   }
@@ -727,16 +734,20 @@ function mountChunks(root){
   root.querySelectorAll('.ltbox-body > ol > li').forEach(function(li){ addSpk(li, li); });
   root.querySelectorAll('.qheadline').forEach(function(el){ addSpk(el, el.querySelector('.qstem')||el); });
   root.querySelectorAll('.opt, .tf, .solution').forEach(function(el){ addSpk(el, el); });
-  root.querySelectorAll('.ai-y').forEach(function(el){ addSpk(el, el); });
+  root.querySelectorAll('.ai-sec, .ai-y').forEach(function(el){ addSpk(el, el); });
   root.querySelectorAll('.reviewout').forEach(function(el){
-    if(el.id==='gkey-ping') return;
+    if(el.id==='gkey-ping' || skipWhole(el)) return;
     addSpk(el, el);
   });
 }
 window.ldvlSpeak={
   play:function(){ startRead(); },
-  playEl:function(el){ startReadText(speakTextOf(el)); },
+  playEl:function(el){ U.lastEl=el||null; startReadText(speakTextOf(el), true); },
   mountChunks:mountChunks,
+  stop:function(){
+    stopHard();
+    U.mode='idle'; U.wantPlay=false; U.piece=false; paint(); msg('');
+  },
   pause:function(){
     if(U.mode!=='play') return;
     U.mode='pause';
@@ -766,8 +777,8 @@ window.ldvlSpeak={
     const sig=t.length+':'+(t.slice(0,60));
     if(sig===U.sig) return;
     U.sig=sig;
-    if(U.mode==='play') stopHard();
-    U.mode='idle'; U.wantPlay=false; paint();
+    if(U.mode==='play' && !U.piece){ stopHard(); U.mode='idle'; U.wantPlay=false; paint(); }
+    else if(U.mode!=='play' && U.mode!=='pause'){ U.mode='idle'; U.wantPlay=false; paint(); }
     mountChunks(document.getElementById('q')||document);
     const pane=document.getElementById('aipane');
     if(pane) mountChunks(pane);
@@ -776,7 +787,7 @@ window.ldvlSpeak={
     U.auto=false;
     const gate=document.getElementById('spkGate');
     if(gate) gate.hidden=true;
-    if(!document.getElementById('spkPlay')){
+    if(!document.getElementById('spkPlay') && !document.querySelector('.spk-play')){
       const host=document.getElementById('presentHost');
       if(host){
         const row=document.createElement('div');
@@ -785,13 +796,18 @@ window.ldvlSpeak={
         host.appendChild(row);
       }
     }
-    const f=document.getElementById('spkF'), m=document.getElementById('spkM');
-    const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
-    if(f && !f.__spk){ f.__spk=1; f.onclick=function(){ window.ldvlSpeak.setGender('f'); }; }
-    if(m && !m.__spk){ m.__spk=1; m.onclick=function(){ window.ldvlSpeak.setGender('m'); }; }
-    if(play && !play.__spk){ play.__spk=1; play.onclick=function(){ window.ldvlSpeak.play(); }; }
-    if(pause && !pause.__spk){ pause.__spk=1; pause.onclick=function(){ window.ldvlSpeak.pause(); }; }
-    if(resume && !resume.__spk){ resume.__spk=1; resume.onclick=function(){ window.ldvlSpeak.resume(); }; }
+    function wire(sel, fn){
+      document.querySelectorAll(sel).forEach(function(el){
+        if(el.__spk) return;
+        el.__spk=1;
+        el.onclick=fn;
+      });
+    }
+    wire('#spkF, .spk-f', function(){ window.ldvlSpeak.setGender('f'); });
+    wire('#spkM, .spk-m', function(){ window.ldvlSpeak.setGender('m'); });
+    wire('#spkPlay, .spk-play', function(){ window.ldvlSpeak.play(); });
+    wire('#spkPause, .spk-pause', function(){ window.ldvlSpeak.stop(); });
+    wire('#spkResume, .spk-resume', function(){ window.ldvlSpeak.resume(); });
     const jump=document.getElementById('ltjump');
     if(jump && !jump.__spk){
       jump.__spk=1;
