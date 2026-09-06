@@ -227,7 +227,21 @@ def _room_out(room, include_q=True):
     return d
 
 
-def _put_room(hid, code, token, snap, live):
+def _companion_kind(snap):
+    return str(((snap or {}).get("q") or {}).get("kind") or "")
+
+
+def _block_kind_steal(room, snap, force_kind):
+    if force_kind:
+        return False
+    old = _companion_kind(room)
+    new = _companion_kind(snap)
+    if old in {"LT", "PP"} and new in {"LT", "PP"} and old != new:
+        return True
+    return False
+
+
+def _put_room(hid, code, token, snap, live, force_kind=False):
     """Tạo/cập nhật phòng. Cùng thầy được lấy lại mã sau khi server restart."""
     with _LOCK:
         _prune()
@@ -240,6 +254,11 @@ def _put_room(hid, code, token, snap, live):
             tok = token if token and len(str(token)) >= 8 else secrets.token_hex(8)
             room = {"code": code, "token": tok, "host": hid, "ver": 0}
             _ROOMS[code] = room
+        if room.get("q") and _block_kind_steal(room, snap, force_kind):
+            room["updated"] = _now()
+            session["present_code"] = room["code"]
+            session["present_token"] = room["token"]
+            return room, ""
         prev_fp = (
             room.get("pos"),
             room.get("total"),
@@ -298,9 +317,11 @@ def api_present_start():
                 mine = want
         if mine:
             room = _ROOMS[mine]
-            room.update(snap)
-            room["live"] = live
-            room["ver"] = int(room.get("ver") or 0) + 1
+            force_kind = bool(data.get("force_kind"))
+            if not (room.get("q") and _block_kind_steal(room, snap, force_kind)):
+                room.update(snap)
+                room["live"] = live
+                room["ver"] = int(room.get("ver") or 0) + 1
             session["present_code"] = room["code"]
             session["present_token"] = room["token"]
         else:
@@ -337,7 +358,7 @@ def api_present_push():
         return jsonify(ok=False, error=err), 400
     if not code:
         return jsonify(ok=False, error="Thiếu mã phòng."), 400
-    room, rerr = _put_room(hid, code, token, snap, live)
+    room, rerr = _put_room(hid, code, token, snap, live, force_kind=bool(data.get("force_kind")))
     if not room:
         return jsonify(ok=False, error=rerr), 409
     return jsonify(ok=True, ver=room["ver"], pos=snap["pos"], total=snap["total"], token=room.get("token"), code=room["code"])
@@ -967,11 +988,14 @@ function showBar(p){
   };
   syncStartLabel();
 }
-async function presentPush(){
+async function presentPush(opts){
+  opts=opts||{};
   if(!P||!P.code||P._busy) return;
+  if(!opts.force && document.hidden) return;
   const body=payload();
-  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,pos:window.practicePos||null});
-  if(fp===window.__ldvlPresentFp) return;
+  if(opts.force) body.force_kind=true;
+  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
+  if(!opts.force && fp===window.__ldvlPresentFp) return;
   try{
     const r=await fetch('/api/present/push',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify(body)});
@@ -990,7 +1014,7 @@ async function presentResume(){
   P._busy=true;
   try{
     const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify(Object.assign(payload(),{code:P.code}))});
+      body:JSON.stringify(Object.assign(payload(),{code:P.code,force_kind:false}))});
     const d=await r.json().catch(function(){return {}});
     if(d&&d.ok){
       P={code:d.code,token:d.token,url:d.url};
@@ -1005,7 +1029,7 @@ async function presentStart(){
   const typed=prompt('Mã chiếu cho lớp gõ vào (3–6 ký tự). Có thể đặt 1234 cho dễ nhớ:', suggest);
   if(typed===null) return;
   const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify(Object.assign(payload(),{code:String(typed||'').trim()}))});
+    body:JSON.stringify(Object.assign(payload(),{code:String(typed||'').trim(),force_kind:true}))});
   const d=await r.json();
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
@@ -1027,14 +1051,14 @@ function mountBtn(){
   if(ltBtn) ltBtn.onclick=async function(){
     if(P&&P.code){
       applyPresentFold(false);
-      await presentPush();
+      await presentPush({force:true});
       window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');
       return;
     }
     presentStart();
   };
-  if(P&&P.code){showBar(P);presentPush();}
-  setInterval(function(){if(P&&P.code)presentPush();},5000);
+  if(P&&P.code){showBar(P);presentPush({force:true});}
+  setInterval(function(){if(P&&P.code && !document.hidden) presentPush();},8000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
   const jump=document.getElementById('ltjump');
   if(jump) jump.addEventListener('change', function(){
