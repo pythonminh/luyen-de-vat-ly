@@ -180,6 +180,16 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
     }, ""
 
 
+def _keep_room_cursor(data, room):
+    """Heartbeat không gửi sec thì giữ dạng/câu đang chiếu, không về mục 1."""
+    if not room or not isinstance(data, dict):
+        return
+    if str(data.get("comp_kind") or "").strip().lower() in {"lt", "pp"} and not str(data.get("sec") or "").strip():
+        data["sec"] = str(((room.get("q") or {}).get("sec_id")) or room.get("pos") or "")
+    if data.get("quiz_ids") is not None and data.get("quiz_pos") is None and room.get("ids") is not None:
+        data["quiz_pos"] = int(room.get("pos") or 0)
+
+
 def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
     data = data if isinstance(data, dict) else {}
     kind = str(data.get("comp_kind") or "").strip().lower()
@@ -313,8 +323,11 @@ def api_present_start():
     hid = _host_id()
     if not hid:
         return jsonify(ok=False, error="Hãy đăng nhập để mở phòng chiếu."), 401
-    data = request.get_json(silent=True) or {}
+    data = dict(request.get_json(silent=True) or {})
     live = _sanitize_live(data.get("live"))
+    want_pre = _norm_code(data.get("code") or session.get("present_code") or "")
+    with _LOCK:
+        _keep_room_cursor(data, _ROOMS.get(want_pre))
     snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
     if not snap:
         return jsonify(ok=False, error=err), 400
@@ -362,10 +375,12 @@ def api_present_push():
     hid = _host_id()
     if not hid:
         return jsonify(ok=False, error="Chưa đăng nhập."), 401
-    data = request.get_json(silent=True) or {}
+    data = dict(request.get_json(silent=True) or {})
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     live = _sanitize_live(data.get("live"))
+    with _LOCK:
+        _keep_room_cursor(data, _ROOMS.get(code))
     snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
     if not snap:
         with _LOCK:
@@ -998,17 +1013,20 @@ function collectLive(){
   if(window.checked && window.LAST_REVIEW && typeof window.LAST_REVIEW.ok==='boolean') live.ok=window.LAST_REVIEW.ok;
   return live;
 }
-function payload(){
+function payload(opts){
+  opts=opts||{};
   const o={code:P&&P.code,token:P&&P.token,show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
   const page=document.querySelector('.ltpage[data-de-path]');
   if(page){
     o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
     o.de_path=page.getAttribute('data-de-path')||'';
-    const sel=document.getElementById('ltjump');
-    let sec=(sel&&sel.value)||'';
-    if(!sec) sec=window.__ldvlPresentSec||'';
-    if(sec) window.__ldvlPresentSec=sec;
-    o.sec=sec;
+    if(opts.force || window.__ldvlSecTouched){
+      const sel=document.getElementById('ltjump');
+      let sec=(sel&&sel.value)||'';
+      if(!sec) sec=window.__ldvlPresentSec||'';
+      if(sec){ window.__ldvlPresentSec=sec; o.sec=sec; }
+      window.__ldvlSecTouched=false;
+    }
   }
   const form=document.getElementById('questionForm');
   if(form && !page){
@@ -1018,9 +1036,12 @@ function payload(){
     let ids=boxes.filter(function(x){return x.checked}).map(function(x){return +x.value});
     if(!ids.length) ids=boxes.map(function(x){return +x.value});
     o.quiz_ids=ids;
-    let pos=typeof window.__ldvlQuizPos==='number'?window.__ldvlQuizPos:0;
-    if(pos<0||pos>=ids.length) pos=0;
-    o.quiz_pos=pos;
+    if(opts.force || window.__ldvlQuizTouched){
+      let pos=typeof window.__ldvlQuizPos==='number'?window.__ldvlQuizPos:0;
+      if(pos<0||pos>=ids.length) pos=0;
+      o.quiz_pos=pos;
+      window.__ldvlQuizTouched=false;
+    }
   }
   return o;
 }
@@ -1143,7 +1164,7 @@ async function presentPush(opts){
   opts=opts||{};
   if(!P||!P.code||P._busy) return;
   if(!opts.force && document.hidden) return;
-  const body=payload();
+  const body=payload(opts);
   if(opts.force) body.force_kind=true;
   const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',quiz_path:body.quiz_path||'',quiz_ids:body.quiz_ids||[],quiz_pos:body.quiz_pos,show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
   if(!opts.force && fp===window.__ldvlPresentFp) return;
@@ -1180,7 +1201,7 @@ async function presentStart(){
   const typed=prompt('Mã chiếu cho lớp gõ vào (3–6 ký tự). Có thể đặt 1234 cho dễ nhớ:', suggest);
   if(typed===null) return;
   const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify(Object.assign(payload(),{code:String(typed||'').trim(),force_kind:true}))});
+    body:JSON.stringify(Object.assign(payload({force:true}),{code:String(typed||'').trim(),force_kind:true}))});
   const d=await r.json();
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
@@ -1202,6 +1223,7 @@ function mountBtn(){
   const qBtn=document.getElementById('qPresentBtn');
   if(qBtn) qBtn.onclick=async function(){
     window.__ldvlQuizPos=0;
+    window.__ldvlQuizTouched=true;
     window.__ldvlPresentFp='';
     if(P&&P.code){applyPresentFold(false);await presentPush({force:true});window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');return;}
     presentStart();
@@ -1212,6 +1234,7 @@ function mountBtn(){
       const id=+b.getAttribute('data-idx');
       document.querySelectorAll('.qcard input[name=qid]').forEach(function(x){x.checked=+x.value===id});
       window.__ldvlQuizPos=0;
+      window.__ldvlQuizTouched=true;
       window.__ldvlPresentFp='';
       if(P&&P.code){applyPresentFold(false);await presentPush({force:true});window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');return;}
       presentStart();
@@ -1226,12 +1249,13 @@ function mountBtn(){
     }
     presentStart();
   };
-  if(P&&P.code){showBar(P);presentPush({force:true});}
+  if(P&&P.code){showBar(P);presentPush();}
   setInterval(function(){if(P&&P.code && !document.hidden) presentPush();},8000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
   const jump=document.getElementById('ltjump');
   if(jump) jump.addEventListener('change', function(){
     if(jump.value) window.__ldvlPresentSec=jump.value;
+    window.__ldvlSecTouched=true;
     window.__ldvlPresentFp='';
     presentPushSoon();
   });
