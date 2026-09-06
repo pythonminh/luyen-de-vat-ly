@@ -164,9 +164,12 @@ def _clean_tex(s):
 
 def _compact_solution(sol, options):
     """Xóa phần lời giải chép lại nguyên văn từng phương án (A. <đề PA>: ...)."""
-    t = _clean_tex(sol)
-    if not t:
-        return t
+    orig = _clean_tex(sol)
+    if not orig:
+        return orig
+    if re.search(r"(?m)^\s*[A-D]\s*[\.\)]\s*(Đúng|Sai)\b", orig):
+        return orig
+    t = orig
     letters = "ABCD"
     for i, o in enumerate(options or []):
         piece = _clean_tex((o.get("text") if isinstance(o, dict) else o) or "")
@@ -183,7 +186,10 @@ def _compact_solution(sol, options):
     t = re.sub(r"[ \t]+\n", "\n", t)
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = re.sub(r"(?:Phương án [A-D]:\s*){2,}", lambda m: m.group(0).split(":")[0] + ": ", t)
-    return t.strip()
+    t = t.strip()
+    if options and len(t) < max(80, int(len(orig) * 0.45)):
+        return orig
+    return t
 
 
 def _split_head_tail(inner):
@@ -215,11 +221,32 @@ def _replace_loigiai(block, new_inner):
     return block.rstrip() + "\n\\loigiai{\n" + new_inner + "\n}\n"
 
 
+def _pack_choice_braces(new_vals, trues):
+    parts = []
+    for i, nv in enumerate(new_vals):
+        inner = _clean_tex(nv)
+        if i < len(trues) and trues[i]:
+            inner = r"\True " + inner
+        parts.append("{" + inner + "}")
+    return "".join(parts)
+
+
 def _replace_cmd_braces(block, cmd, new_vals, trues):
-    m = re.search(re.escape(cmd) + r"\b", block, re.I)
-    if not m or not new_vals:
+    if not new_vals:
         return block
+    packed = _pack_choice_braces(new_vals, trues)
+    m = re.search(re.escape(cmd) + r"\b", block, re.I)
+    if not m:
+        lg = re.search(r"\\loigiai\s*\{", block, re.I)
+        if lg:
+            return block[: lg.start()] + cmd + packed + "\n" + block[lg.start() :]
+        return block.rstrip() + "\n" + cmd + packed + "\n"
     p = m.end()
+    p_scan = p
+    while p_scan < len(block) and block[p_scan].isspace():
+        p_scan += 1
+    if p_scan >= len(block) or block[p_scan] != "{":
+        return block[:p] + packed + "\n" + block[p:]
     out = [block[:p]]
     for i, nv in enumerate(new_vals):
         while p < len(block) and block[p].isspace():
@@ -227,7 +254,7 @@ def _replace_cmd_braces(block, cmd, new_vals, trues):
             p += 1
         val, p2 = base.get_braced(block, p)
         if val is None:
-            return block
+            return block[: m.end()] + packed + "\n" + block[m.end() :]
         inner = _clean_tex(nv)
         if i < len(trues) and trues[i]:
             inner = r"\True " + inner
@@ -298,6 +325,12 @@ def _q_plain_pack(q):
                     "correct": bool(o.get("correct")) if isinstance(o, dict) else False,
                 }
             )
+        if len(opts) < 4:
+            rec = base.ds_statements_from_solution(
+                base.solution_of(q.get("raw") or "") or (q.get("solution") or "")
+            )
+            if rec:
+                opts = rec
     return {
         "kind": kind,
         "id": str(q.get("id") or ""),
@@ -512,6 +545,13 @@ def _prompt(pack, retry=False):
             "KHÔNG viết «đề có lỗi đánh máy». "
             "TLN: đề nêu rõ đơn vị cần ghi (ví dụ mΩ), answer/solution chỉ là số (20).\n"
         )
+    if kind == "DS" and len(pack.get("options") or []) < 4:
+        extra += (
+            "FILE ĐS đang thiếu 4 mệnh đề \\choiceTF (lệnh trống). "
+            "BẮT BUỘC tách từ lời giải ra đúng 4 options: chỉ khẳng định, không chữ Đúng/Sai. "
+            'JSON: "options":[{"text":"...","correct":true}, ...] đúng 4 phần A–D. '
+            "solution GIỮ lời giải đủ a/b/c/d (đúng/sai vì sao) — không được để trống.\n"
+        )
     opt_json = (
         'DS: options đúng 4 chuỗi mệnh đề. TN: options đúng 4 phương án. '
         'TLN/TL: options = [].'
@@ -662,16 +702,23 @@ def api_rewrite_question():
         new_opts = []
         old_opts = pack["options"] or []
         kind = pack["kind"]
+        if kind == "DS" and len(raw_opts) != 4:
+            rec = base.ds_statements_from_solution(solution)
+            if len(rec) == 4:
+                raw_opts = rec
         need = 4 if kind in ("TN", "DS") else len(old_opts)
         if kind in ("TN", "DS") and len(raw_opts) == 4:
             need = 4
         if raw_opts and need and len(raw_opts) == need:
             for i in range(need):
-                txt = raw_opts[i]
-                txt = txt.get("text") if isinstance(txt, dict) else txt
-                correct = bool(old_opts[i].get("correct")) if i < len(old_opts) else False
-                if isinstance(raw_opts[i], dict) and "correct" in raw_opts[i] and i >= len(old_opts):
-                    correct = bool(raw_opts[i].get("correct"))
+                item = raw_opts[i]
+                txt = item.get("text") if isinstance(item, dict) else item
+                if isinstance(item, dict) and "correct" in item:
+                    correct = bool(item.get("correct"))
+                elif i < len(old_opts):
+                    correct = bool(old_opts[i].get("correct"))
+                else:
+                    correct = False
                 new_opts.append({"text": _clean_tex(txt), "correct": correct})
         note = str(obj.get("note") or "").strip()[:300]
         if pack["kind"] == "TLN":
@@ -791,12 +838,23 @@ def api_rewrite_question_save():
     opts_in = data.get("options") if isinstance(data.get("options"), list) else []
     merged_opts = []
     old = _q_plain_pack(q)["options"]
-    if opts_in and len(opts_in) == len(old):
+    kind = str(q.get("kind") or "TL")
+    if kind in ("TN", "DS"):
+        src_opts = opts_in if len(opts_in) == 4 else old
+        for i, item in enumerate(src_opts[:4]):
+            t = item.get("text") if isinstance(item, dict) else item
+            if isinstance(item, dict) and "correct" in item:
+                correct = bool(item.get("correct"))
+            elif i < len(old):
+                correct = bool(old[i].get("correct"))
+            else:
+                correct = False
+            merged_opts.append({"text": _clean_tex(t), "correct": correct})
+    elif opts_in and len(opts_in) == len(old):
         for i, o in enumerate(old):
             t = opts_in[i]
             t = t.get("text") if isinstance(t, dict) else t
             merged_opts.append({"text": _clean_tex(t), "correct": bool(o.get("correct"))})
-    kind = str(q.get("kind") or "TL")
     sol_in = data.get("solution") or ""
     ans_in = data.get("answer") or ""
     if kind == "TLN":

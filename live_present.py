@@ -180,14 +180,41 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
     }, ""
 
 
+def _pos_after_ids_change(old_ids, old_pos, new_ids):
+    """Câu đang chiếu bị bỏ khỏi danh sách → lùi câu liền trước còn lại, không về câu 1."""
+    old_ids = list(old_ids or [])
+    new_ids = list(new_ids or [])
+    if not new_ids:
+        return 0
+    try:
+        old_pos = int(old_pos or 0)
+    except (TypeError, ValueError):
+        old_pos = 0
+    cur = old_ids[old_pos] if 0 <= old_pos < len(old_ids) else None
+    if cur is not None and cur in new_ids:
+        return new_ids.index(cur)
+    for i in range(old_pos - 1, -1, -1):
+        if old_ids[i] in new_ids:
+            return new_ids.index(old_ids[i])
+    for i in range(old_pos, len(old_ids)):
+        if old_ids[i] in new_ids:
+            return new_ids.index(old_ids[i])
+    return max(0, min(len(new_ids) - 1, old_pos))
+
+
 def _keep_room_cursor(data, room):
     """Heartbeat không gửi sec thì giữ dạng/câu đang chiếu, không về mục 1."""
     if not room or not isinstance(data, dict):
         return
     if str(data.get("comp_kind") or "").strip().lower() in {"lt", "pp"} and not str(data.get("sec") or "").strip():
         data["sec"] = str(((room.get("q") or {}).get("sec_id")) or room.get("pos") or "")
-    if data.get("quiz_ids") is not None and data.get("quiz_pos") is None and room.get("ids") is not None:
-        data["quiz_pos"] = int(room.get("pos") or 0)
+    if data.get("quiz_ids") is not None and room.get("ids") is not None:
+        try:
+            new_ids = [int(x) for x in data.get("quiz_ids") if str(x).isdigit() or isinstance(x, int)]
+        except (TypeError, ValueError):
+            new_ids = []
+        if data.get("quiz_pos") is None:
+            data["quiz_pos"] = _pos_after_ids_change(room.get("ids"), room.get("pos"), new_ids)
 
 
 def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
@@ -218,6 +245,8 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
         path = str(session.get("practice_path") or "")
         ids = list(session.get("practice_ids") or [])
         pos = int(session.get("practice_pos") or 0)
+    if ids:
+        pos = max(0, min(len(ids) - 1, pos))
     if not path or not ids or pos < 0 or pos >= len(ids):
         return None, "Chưa đang chiếu (vào Lý thuyết / Dạng mẫu / chọn câu bài tập rồi bấm Chiếu)."
     try:
@@ -539,7 +568,7 @@ def present_watch(code=""):
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
     body = (
         "<div class='cinema-q'>"
-        "<a class='cinema-exit' href='/xem' title='Thoát'>✕</a>"
+        "<button type='button' class='cinema-exit' id='cinemaExit' title='Câu trước'>✕</button>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
@@ -1042,6 +1071,11 @@ setInterval(tick,2500);
   const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
   if(a) a.onclick=function(){stepDang(-1)};
   if(b) b.onclick=function(){stepDang(1)};
+  const x=document.getElementById('cinemaExit');
+  if(x) x.onclick=function(){
+    if(hostTok()){ stepDang(-1); return; }
+    location.href='/xem';
+  };
 })();
 window.addEventListener('resize',function(){});
 </script>
@@ -1217,6 +1251,22 @@ function ensureHost(){
   applyPresentFold(presentFolded());
   return host;
 }
+async function presentStep(delta){
+  if(!P||!P.code) return;
+  try{
+    const r=await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({code:P.code,token:P.token,delta:delta})});
+    const d=await r.json().catch(function(){return {}});
+    if(d&&d.ok){
+      if(typeof d.pos==='number'){
+        window.__ldvlQuizPos=d.pos;
+        window.__ldvlQuizTouched=true;
+      }
+      window.__ldvlPresentFp='';
+      await presentPush({force:true});
+    }
+  }catch(e){}
+}
 function showBar(p){
   const host=ensureHost();
   if(!host) return;
@@ -1229,11 +1279,17 @@ function showBar(p){
   const url=p.url||(location.origin+'/xem/'+p.code);
   el.innerHTML='<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
     +'<a class="btn primary" href="'+url+'" target="_blank" rel="noopener">🖥 Mở màn chiếu</a> '
+    +'<button type="button" class="btn" id="pPrev">◀ Câu trước</button> '
+    +'<button type="button" class="btn" id="pNext">Câu sau ▶</button> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Máy chiếu tự hiện chữ. Bấm <b>🔊</b> cuối mỗi đoạn (định nghĩa, phương pháp, đề bài, lời giải) để đọc đúng đoạn đó. Nữ/Nam chọn giọng. Thanh trên: đọc cả mục / dừng / tiếp.</div>';
+    +'<div class="muted">Đang chiếu: <b>Xóa</b> / ✕ chỉ lùi câu liền trước — không xóa file TEX, không về câu 1. Máy chiếu tự hiện chữ.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
+  const pv=document.getElementById('pPrev');
+  if(pv) pv.onclick=function(){presentStep(-1)};
+  const nx=document.getElementById('pNext');
+  if(nx) nx.onclick=function(){presentStep(1)};
   const s=document.getElementById('pstop');
   if(s) s.onclick=async function(){
     await fetch('/api/present/stop',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code:p.code,token:p.token})});
@@ -1257,6 +1313,7 @@ async function presentPush(opts){
     if(d&&d.ok){
       window.__ldvlPresentFp=fp;
       if(d.token&&P){P.token=d.token;try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}}
+      if(typeof d.pos==='number') window.__ldvlQuizPos=d.pos;
       return;
     }
     if(r.status===401) return;
@@ -1304,8 +1361,10 @@ function mountBtn(){
   const ltBtn=document.getElementById('ltPresentBtn');
   const qBtn=document.getElementById('qPresentBtn');
   if(qBtn) qBtn.onclick=async function(){
-    window.__ldvlQuizPos=0;
-    window.__ldvlQuizTouched=true;
+    if(!(P&&P.code)){
+      window.__ldvlQuizPos=0;
+      window.__ldvlQuizTouched=true;
+    }
     window.__ldvlPresentFp='';
     if(P&&P.code){applyPresentFold(false);await presentPush({force:true});window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');return;}
     presentStart();
@@ -1331,6 +1390,23 @@ function mountBtn(){
     }
     presentStart();
   };
+  document.addEventListener('click',function(e){
+    if(!P||!P.code) return;
+    const t=e.target;
+    if(!t||!t.closest) return;
+    const btn=t.closest('button[form="qdel"],button[form=qdel]');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    presentStep(-1);
+  },true);
+  document.addEventListener('submit',function(e){
+    if(!P||!P.code) return;
+    if(e.target&&e.target.id==='qdel'){
+      e.preventDefault();
+      presentStep(-1);
+    }
+  },true);
   if(P&&P.code){showBar(P);presentPush();}
   setInterval(function(){if(P&&P.code && !document.hidden) presentPush();},8000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();

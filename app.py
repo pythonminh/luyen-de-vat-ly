@@ -1273,6 +1273,44 @@ def command_args(block,cmd):
         vals.append(v);p=p2
     return vals
 
+def _tex_first_sentence(s):
+    s=str(s or '').strip()
+    if not s:return ''
+    out=[]; math=False
+    for i,c in enumerate(s):
+        if c=='$':
+            math=not math; out.append(c); continue
+        if (not math) and c in '.!?' and (i+1>=len(s) or s[i+1] in ' \n\t'):
+            out.append(c); break
+        out.append(c)
+    t=''.join(out).strip()
+    t=re.split(r'\s+Mệnh đề cho\b', t, 1, flags=re.I)[0].strip()
+    return t
+
+def ds_statements_from_solution(sol):
+    """Khi \\choiceTF trống, tách 4 mệnh đề + đúng/sai từ lời giải A./B./C./D."""
+    sol=str(sol or '')
+    out=[]
+    for m in re.finditer(
+        r'(?m)^\s*([A-D])\s*[\.\)]\s*(Đúng|Sai)\b\s*[—\-–:]?\s*(.*?)(?=(?:^\s*[A-D]\s*[\.\)])|\Z)',
+        sol, re.I|re.S):
+        ok=m.group(2).casefold()=='đúng'
+        rest=m.group(3).strip()
+        claim=re.search(r'Mệnh đề cho là\s*(.+?)(?:\s*[,.]|\s+do đó|\Z)', rest, re.I|re.S)
+        first_math=re.search(r'\$[^$]+\$', rest)
+        if claim and first_math:
+            math_inner=first_math.group(0).strip('$').split('=',1)[0].strip()
+            stmt=('$'+math_inner+'$ = '+claim.group(1).strip()).strip()
+            stmt=re.sub(r'\s+',' ',stmt)
+        else:
+            rest=re.sub(r'^(?:Ta có|Vì|Do)\s+', '', rest, flags=re.I)
+            stmt=_tex_first_sentence(rest)
+        if len(re.findall(r'[A-Za-zÀ-ỹ0-9]', stmt))<2:
+            stmt=(m.group(3).strip().split('\n') or [''])[0].strip()
+        if stmt:
+            out.append({'text':stmt,'correct':ok})
+    return out[:4]
+
 def split_true_mark(s):
     """\\True có thể dính khoảng trắng: { \\True $99$ ... } — web vẫn nhận đáp án đúng."""
     t = str(s or '').strip()
@@ -1946,7 +1984,12 @@ def parse_questions(tex):
             stmts=[]
             for x in command_args(b,'\\choiceTF'):
                 t,ok=split_true_mark(x)
-                stmts.append({'text':clean_latex_web(t),'correct':ok})
+                if str(t or '').strip():
+                    stmts.append({'text':clean_latex_web(t),'correct':ok})
+            if len(stmts)<4:
+                rec=ds_statements_from_solution(solution_of(b) or q.get('solution') or '')
+                if rec:
+                    stmts=[{'text':clean_latex_web(x.get('text') or ''),'correct':bool(x.get('correct'))} for x in rec]
             q['statements']=stmts
         elif kind=='TLN':
             sm=re.search(r'\\shortans\s*(?:\[[^\]]*\])?\s*',b,re.I);ans=''
