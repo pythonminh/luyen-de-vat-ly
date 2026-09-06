@@ -114,12 +114,80 @@ def _lesson_qs(path):
     return qs
 
 
-def _snapshot(show_sol=None, zoom=None, reveal=False):
+def _zoom(zoom):
+    try:
+        z = float(zoom if zoom is not None else 1)
+    except (TypeError, ValueError):
+        z = 1.0
+    return max(0.8, min(2.6, z))
+
+
+def _comp_snapshot(kind, de_path, sec, zoom=None):
+    import lythuyet as lt
+
+    kind = "pp" if str(kind or "").strip().lower() == "pp" else "lt"
+    de_path = str(de_path or "").strip()
+    if not de_path:
+        return None, "Thiếu đường dẫn bài."
+    if not lt.companion_exists(de_path, kind):
+        return None, "Chưa có file lý thuyết / dạng mẫu để chiếu."
+    rel = lt.companion_path(de_path, kind)
+    try:
+        _, tex = base.read_tex(rel)
+    except Exception as e:
+        return None, str(e)
+    secs, start = lt._theory_secs(tex)
+    if not secs:
+        return None, "Chưa tách được mục (\\subsubsection) để chiếu."
+    idx = 0
+    sec = str(sec or "").strip()
+    if sec:
+        found = False
+        for i, s in enumerate(secs):
+            if str(s.get("id") or "") == sec:
+                idx = i
+                found = True
+                break
+        if not found:
+            try:
+                n = int(sec)
+                if 0 <= n < len(secs):
+                    idx = n
+            except (TypeError, ValueError):
+                pass
+    s = secs[idx]
+    html_body = lt._html_secs([s], start=start + idx, admin=False)
+    spec = lt.TRACKS.get(kind) or lt.TRACKS["lt"]
+    return {
+        "path": de_path,
+        "pos": idx,
+        "total": len(secs),
+        "show_sol": True,
+        "zoom": _zoom(zoom),
+        "q": {
+            "kind": "LT" if kind == "lt" else "PP",
+            "text": html_body,
+            "title": str(s.get("title") or ""),
+            "dang": spec["label"],
+            "options": [],
+            "statements": [],
+            "solution": "",
+        },
+        "updated": _now(),
+    }, ""
+
+
+def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
+    data = data if isinstance(data, dict) else {}
+    kind = str(data.get("comp_kind") or "").strip().lower()
+    de_path = str(data.get("de_path") or "").strip()
+    if kind in {"lt", "pp"} and de_path:
+        return _comp_snapshot(kind, de_path, data.get("sec"), zoom)
     path = str(session.get("practice_path") or "")
     ids = list(session.get("practice_ids") or [])
     pos = int(session.get("practice_pos") or 0)
     if not path or not ids or pos < 0 or pos >= len(ids):
-        return None, "Chưa đang chiếu một câu (hãy vào làm bài trước)."
+        return None, "Chưa đang chiếu (vào Lý thuyết / Dạng mẫu / làm bài rồi bấm Chiếu chung)."
     try:
         qs = _lesson_qs(path)
     except Exception as e:
@@ -129,17 +197,12 @@ def _snapshot(show_sol=None, zoom=None, reveal=False):
         return None, "Không tải được câu hiện tại."
     show = bool(show_sol)
     keys = bool(show or reveal)
-    try:
-        z = float(zoom if zoom is not None else 1)
-    except (TypeError, ValueError):
-        z = 1.0
-    z = max(0.8, min(2.6, z))
     return {
         "path": path,
         "pos": pos,
         "total": len(ids),
         "show_sol": show,
-        "zoom": z,
+        "zoom": _zoom(zoom),
         "q": _public_q(q, keys),
         "updated": _now(),
     }, ""
@@ -193,7 +256,7 @@ def api_present_start():
         return jsonify(ok=False, error="Hãy đăng nhập để mở phòng chiếu."), 401
     data = request.get_json(silent=True) or {}
     live = _sanitize_live(data.get("live"))
-    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"])
+    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
     if not snap:
         return jsonify(ok=False, error=err), 400
     want = _norm_code(data.get("code"))
@@ -242,7 +305,7 @@ def api_present_push():
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     live = _sanitize_live(data.get("live"))
-    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"])
+    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
     if not snap:
         with _LOCK:
             room = _ROOMS.get(code)
@@ -309,14 +372,21 @@ def present_watch(code=""):
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
             "<input name='code' maxlength='8' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:22px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
-            "<p class='muted'>Không cần đăng nhập. Trang tự theo câu thầy đang chiếu.</p>"
+            "<p class='muted'>Không cần đăng nhập. Trang tự theo câu / lý thuyết / dạng mẫu thầy đang chiếu.</p>"
             "</div></div></div>"
             "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
         return base.page("Vào chiếu chung", body)
-    js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
+    js = PRESENT_TTS_JS + FOLLOW_JS.replace("__CODE__", json.dumps(code))
     body = (
         "<div class='cinemahud'>"
+        "<div class='cinemaspeak' id='speakBar'>"
+        "<button type='button' id='spkF' title='Giọng nữ tiếng Việt'>Nữ</button>"
+        "<button type='button' id='spkM' title='Giọng nam tiếng Việt'>Nam</button>"
+        "<button type='button' id='spkPlay' title='Đọc nội dung đang chiếu'>▶ Đọc</button>"
+        "<button type='button' id='spkPause' title='Tạm dừng'>⏸ Dừng</button>"
+        "<button type='button' id='spkResume' title='Đọc tiếp từ chỗ dừng'>▶ Tiếp</button>"
+        "<span class='spkmsg' id='spkMsg'></span></div>"
         "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
         "<a href='/xem' title='Thoát'>✕</a></div>"
         f"<div class='cinema-q'><div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
@@ -324,6 +394,197 @@ def present_watch(code=""):
     )
     return base.page("Chiếu chung " + code, body, cinema=True)
 
+
+PRESENT_TTS_JS = r"""
+<script>
+(function(){
+if(window.ldvlSpeak) return;
+const U={
+  gender:(function(){try{return localStorage.getItem('ldvlSpeakG')||'f'}catch(e){return 'f'}})(),
+  chunks:[], i:0, mode:'idle', wantPlay:false
+};
+function voices(){try{return speechSynthesis.getVoices()||[]}catch(e){return []}}
+function viList(){
+  return voices().filter(function(v){
+    const lang=String(v.lang||'').toLowerCase();
+    const name=String(v.name||'').toLowerCase();
+    return lang.indexOf('vi')===0 || name.indexOf('viet')>=0 || name.indexOf('việt')>=0;
+  });
+}
+function isFem(v){
+  const n=String(v.name||'').toLowerCase();
+  if(/nam\s*minh|namminh/.test(n)) return false;
+  return /hoai\s*my|hoaimy|linh|nữ|\bnu\b|female|\bmy\b/.test(n);
+}
+function isMal(v){
+  const n=String(v.name||'').toLowerCase();
+  return /nam\s*minh|namminh|\bmale\b/.test(n);
+}
+function pick(g){
+  const all=viList();
+  let pool=all.filter(g==='m'?isMal:isFem);
+  if(!pool.length) pool=all.filter(function(v){return g==='m'? !isFem(v): !isMal(v)});
+  if(!pool.length) pool=all;
+  function score(v){
+    const n=String(v.name||'').toLowerCase();
+    let s=0;
+    if(/online|natural|neural|google/.test(n)) s+=8;
+    if(!v.localService) s+=5;
+    if(String(v.lang||'').toLowerCase().indexOf('vi-vn')===0) s+=2;
+    return s;
+  }
+  pool.sort(function(a,b){return score(b)-score(a)});
+  return pool[0]||null;
+}
+function speakTextOf(el){
+  if(!el) return '';
+  const c=el.cloneNode(true);
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg').forEach(function(n){n.remove()});
+  let t=(c.innerText||c.textContent||'').replace(/\u00a0/g,' ');
+  return t.replace(/\s+/g,' ').trim();
+}
+function target(){
+  const q=document.getElementById('q');
+  if(q && !q.hidden && (q.innerText||'').trim()) return q;
+  const jump=document.getElementById('ltjump');
+  if(jump && jump.value){
+    const el=document.getElementById(jump.value);
+    if(el) return el;
+  }
+  const h=(location.hash||'').replace(/^#/,'');
+  if(h){
+    const el=document.getElementById(h);
+    if(el) return el;
+  }
+  return document.querySelector('.ltpage .ltsec') || document.querySelector('.ltpage');
+}
+function split(t){
+  t=String(t||'').trim();
+  if(!t) return [];
+  const out=[]; let buf='';
+  const parts=t.split(/([.!?…:;]+ |\n+)/);
+  for(let i=0;i<parts.length;i++){
+    const p=parts[i];
+    if(!p) continue;
+    if((buf+p).length>240 && buf){out.push(buf.trim()); buf=p;}
+    else buf+=p;
+  }
+  if(buf.trim()) out.push(buf.trim());
+  return out.filter(Boolean);
+}
+function msg(s){const el=document.getElementById('spkMsg'); if(el) el.textContent=s||'';}
+function paint(){
+  const f=document.getElementById('spkF'), m=document.getElementById('spkM');
+  if(f) f.classList.toggle('on', U.gender==='f');
+  if(m) m.classList.toggle('on', U.gender==='m');
+  const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
+  if(play) play.disabled=U.mode==='play';
+  if(pause) pause.disabled=U.mode!=='play';
+  if(resume) resume.disabled=U.mode!=='pause';
+}
+function stopHard(){try{speechSynthesis.cancel()}catch(e){}}
+function speakChunk(){
+  if(U.mode!=='play') return;
+  if(!navigator.onLine){
+    msg('Cần Internet để đọc tiếng Việt tự nhiên.');
+    U.mode='idle'; U.wantPlay=false; paint(); return;
+  }
+  if(U.i>=U.chunks.length){U.mode='idle'; U.wantPlay=false; paint(); msg(''); return;}
+  const v=pick(U.gender);
+  if(!v){
+    msg('Cần Chrome hoặc Edge, có mạng, để lấy giọng Nam/Nữ tiếng Việt.');
+    U.mode='idle'; U.wantPlay=false; paint(); return;
+  }
+  const u=new SpeechSynthesisUtterance(U.chunks[U.i]);
+  u.lang='vi-VN';
+  u.voice=v;
+  u.rate=0.96;
+  u.pitch=U.gender==='f'?1.04:0.9;
+  u.onend=function(){ if(U.mode!=='play') return; U.i+=1; speakChunk(); };
+  u.onerror=function(){ if(U.mode==='play'){ U.i+=1; speakChunk(); } };
+  speechSynthesis.speak(u);
+}
+function startFrom(i){
+  const t=speakTextOf(target());
+  U.chunks=split(t);
+  U.i=Math.max(0, i||0);
+  if(!U.chunks.length){ msg('Không có chữ để đọc.'); U.mode='idle'; paint(); return; }
+  U.mode='play'; U.wantPlay=true; paint(); msg('');
+  stopHard();
+  setTimeout(speakChunk, 80);
+}
+function ensureBar(){
+  if(document.getElementById('spkPlay')) return;
+  const host=document.getElementById('presentHost');
+  if(!host) return;
+  const row=document.createElement('div');
+  row.className='presentspeak';
+  row.innerHTML='<button type="button" class="btn" id="spkF">Nữ</button>'
+    +'<button type="button" class="btn" id="spkM">Nam</button>'
+    +'<button type="button" class="btn primary" id="spkPlay">▶ Đọc</button>'
+    +'<button type="button" class="btn" id="spkPause">⏸ Dừng</button>'
+    +'<button type="button" class="btn" id="spkResume">▶ Tiếp</button>'
+    +'<span class="spkmsg" id="spkMsg"></span>';
+  host.appendChild(row);
+}
+window.ldvlSpeak={
+  play:function(){ startFrom(0); },
+  pause:function(){
+    if(U.mode!=='play') return;
+    U.mode='pause';
+    try{
+      speechSynthesis.pause();
+      if(!speechSynthesis.paused) stopHard();
+    }catch(e){ stopHard(); }
+    paint();
+  },
+  resume:function(){
+    if(U.mode!=='pause'){ startFrom(0); return; }
+    U.mode='play'; U.wantPlay=true; paint();
+    try{ if(speechSynthesis.paused){ speechSynthesis.resume(); return; } }catch(e){}
+    stopHard();
+    setTimeout(speakChunk, 80);
+  },
+  setGender:function(g){
+    U.gender=g==='m'?'m':'f';
+    try{localStorage.setItem('ldvlSpeakG', U.gender)}catch(e){}
+    paint();
+    if(U.mode==='play') startFrom(U.i);
+  },
+  onDraw:function(){
+    if(U.wantPlay && U.mode!=='pause') startFrom(0);
+    else{
+      stopHard();
+      if(U.mode==='play'||U.mode==='pause'){ U.mode='idle'; U.wantPlay=false; }
+      paint();
+    }
+  },
+  bind:function(){
+    ensureBar();
+    const f=document.getElementById('spkF'), m=document.getElementById('spkM');
+    const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
+    if(f && !f.__spk){ f.__spk=1; f.onclick=function(){ window.ldvlSpeak.setGender('f'); }; }
+    if(m && !m.__spk){ m.__spk=1; m.onclick=function(){ window.ldvlSpeak.setGender('m'); }; }
+    if(play && !play.__spk){ play.__spk=1; play.onclick=function(){ window.ldvlSpeak.play(); }; }
+    if(pause && !pause.__spk){ pause.__spk=1; pause.onclick=function(){ window.ldvlSpeak.pause(); }; }
+    if(resume && !resume.__spk){ resume.__spk=1; resume.onclick=function(){ window.ldvlSpeak.resume(); }; }
+    try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=function(){ speechSynthesis.getVoices(); }; }catch(e){}
+    const jump=document.getElementById('ltjump');
+    if(jump && !jump.__spk){
+      jump.__spk=1;
+      jump.addEventListener('change', function(){ if(U.wantPlay && U.mode!=='pause') startFrom(0); });
+    }
+    paint();
+  }
+};
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden && U.mode==='play') window.ldvlSpeak.pause();
+});
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ window.ldvlSpeak.bind(); });
+else window.ldvlSpeak.bind();
+})();
+</script>
+"""
 
 FOLLOW_JS = r"""
 <script>
@@ -333,6 +594,7 @@ function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
+  if(box.querySelector('.ltsec')) return;
   const availH=Math.max(220, window.innerHeight-28);
   const availW=Math.max(240, window.innerWidth-20);
   let lo=0.95, hi=2.5, best=0.95;
@@ -355,6 +617,13 @@ function draw(q, showSol, pos, total, live){
   const box=document.getElementById('q');
   if(!box||!q) return;
   live=live||{};
+  if(q.kind==='LT'||q.kind==='PP'){
+    const lab=q.kind==='LT'?'Lý thuyết':'Dạng mẫu';
+    box.hidden=false;
+    box.innerHTML='<div class="qheadline"><span class="qbadge">'+lab+' · '+(pos+1)+'/'+total+'</span></div>'+(q.text||'');
+    typeset(box);
+    return;
+  }
   const checked=!!live.checked;
   box.hidden=false;
   let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span><div class="qstem">'+q.text+'</div></div>';
@@ -457,6 +726,7 @@ async function tick(){
     lastVer=d.ver;
     if(err) err.textContent='';
     draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
+    if(window.ldvlSpeak) window.ldvlSpeak.onDraw();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
@@ -472,6 +742,14 @@ PRESENT_HOST_JS = r"""
 (function(){
 if(window.__ldvlPresentHost) return;
 window.__ldvlPresentHost=true;
+try{
+  var phone=window.matchMedia('(max-width:900px)').matches;
+  var saved='';
+  try{saved=localStorage.getItem('ldvlSubnavFold')||''}catch(e){}
+  var compact=phone||saved!=='0';
+  document.documentElement.classList.toggle('ldvlAdminCompact',compact);
+  if(document.body) document.body.classList.toggle('ldvlAdminCompact',compact);
+}catch(e){}
 let P=null;
 try{P=JSON.parse(localStorage.getItem('ldvlPresent')||'null')}catch(e){P=null}
 function solVisible(){
@@ -498,27 +776,109 @@ function collectLive(){
   return live;
 }
 function payload(){
-  return {code:P&&P.code,token:P&&P.token,show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
+  const o={code:P&&P.code,token:P&&P.token,show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
+  const page=document.querySelector('.ltpage[data-de-path]');
+  if(page){
+    o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
+    o.de_path=page.getAttribute('data-de-path')||'';
+    const sel=document.getElementById('ltjump');
+    o.sec=(sel&&sel.value)||(location.hash||'').replace(/^#/,'')||'';
+  }
+  return o;
+}
+function subnavFolded(){
+  if(window.matchMedia('(max-width:900px)').matches) return true;
+  try{
+    if(localStorage.getItem('ldvlSubnavFold')==='0') return false;
+  }catch(e){}
+  return true;
+}
+function presentFolded(){
+  try{
+    const v=localStorage.getItem('ldvlPresentFold');
+    if(v==='0') return false;
+  }catch(e){}
+  return true;
+}
+function applySubnavFold(on){
+  document.querySelectorAll('details.admin-chrome,details.admindang-fold').forEach(function(d){if(on) d.open=false});
+  document.documentElement.classList.toggle('ldvlAdminCompact', !!on);
+  if(document.body) document.body.classList.toggle('ldvlAdminCompact', !!on);
+  const fold=document.getElementById('navFold');
+  if(fold){
+    fold.textContent=on?'▸ Mở rộng':'▾ Thu gọn';
+    fold.title=on?'Mở tab dạng và công cụ ADMIN':'Ẩn tab dạng và công cụ ADMIN';
+  }
+  try{localStorage.setItem('ldvlSubnavFold', on?'1':'0')}catch(e){}
+}
+function applyPresentFold(on){
+  const host=document.getElementById('presentHost');
+  if(host) host.classList.toggle('is-folded', !!on);
+  try{localStorage.setItem('ldvlPresentFold', on?'1':'0')}catch(e){}
+}
+function syncStartLabel(){
+  const b=document.getElementById('pStart');
+  if(!b) return;
+  if(P&&P.code){
+    b.textContent='📺 Đang chiếu · '+P.code;
+    b.title='Bấm để hiện / ẩn mã và link chiếu';
+  }else{
+    b.textContent='📺 Chiếu chung';
+    b.title='Học viên xem cùng câu trên điện thoại / máy khác';
+  }
+}
+function ensureHost(){
+  let host=document.getElementById('presentHost');
+  if(host) return host;
+  host=document.createElement('div');
+  host.id='presentHost';
+  host.className='present-host is-folded';
+  const fold=document.createElement('button');
+  fold.type='button'; fold.className='btn'; fold.id='navFold';
+  fold.textContent='▾ Thu gọn';
+  const b=document.createElement('button');
+  b.type='button'; b.className='btn primary'; b.id='pStart';
+  b.textContent='📺 Chiếu chung';
+  const el=document.createElement('div');
+  el.id='presentBar'; el.className='notice present-details'; el.hidden=true;
+  host.appendChild(b);
+  host.appendChild(fold);
+  host.appendChild(el);
+  const sub=document.querySelector('.subnav');
+  if(sub&&sub.parentNode) sub.parentNode.insertBefore(host, sub);
+  else{
+    const lt=document.querySelector('.ltnav');
+    if(lt&&lt.parentNode) lt.parentNode.insertBefore(host, lt);
+    else{
+    const qz=document.querySelector('.quiztop')||document.querySelector('.qzoombar');
+    if(qz&&qz.parentNode) qz.parentNode.insertBefore(host, qz);
+    else return null;
+    }
+  }
+  fold.onclick=function(){applySubnavFold(!(document.documentElement.classList.contains('ldvlAdminCompact')||document.body.classList.contains('ldvlAdminCompact')))};
+  b.onclick=function(){
+    if(P&&P.code){applyPresentFold(!host.classList.contains('is-folded'));return;}
+    presentStart();
+  };
+  applySubnavFold(subnavFolded());
+  applyPresentFold(presentFolded());
+  return host;
 }
 function showBar(p){
-  let el=document.getElementById('presentBar');
-  if(!el){
-    el=document.createElement('div');
-    el.id='presentBar';
-    el.className='notice';
-    el.style.margin='0 0 10px';
-    const body=document.querySelector('.panel .body');
-    if(body) body.insertBefore(el, body.firstChild);
-    else return;
-  }
-  if(!p){el.innerHTML='';el.hidden=true;return;}
+  const host=ensureHost();
+  if(!host) return;
+  const el=document.getElementById('presentBar');
+  if(!el) return;
+  syncStartLabel();
+  if(!p){el.innerHTML='';el.hidden=true;applyPresentFold(true);syncStartLabel();return;}
   el.hidden=false;
+  applyPresentFold(presentFolded());
   const url=p.url||(location.origin+'/xem/'+p.code);
   el.innerHTML='<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
     +'<a href="'+url+'" target="_blank" rel="noopener">'+url+'</a> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Học viên mở link: chỉ thấy câu hỏi (ẩn menu). Họ theo bước chọn và lời giải khi thầy mở.</div>';
+    +'<div class="muted">Học viên mở link: thấy nội dung đang chiếu (câu / lý thuyết / dạng mẫu). Trên máy chiếu bấm <b>Nữ</b> hoặc <b>Nam</b> rồi <b>Đọc</b> — cần mạng; <b>Dừng</b> / <b>Tiếp</b> để tạm dừng và đọc tiếp.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
   const s=document.getElementById('pstop');
@@ -527,6 +887,7 @@ function showBar(p){
     P=null; try{localStorage.removeItem('ldvlPresent')}catch(e){}
     showBar(null);
   };
+  syncStartLabel();
 }
 async function presentPush(){
   if(!P||!P.code||P._busy) return;
@@ -575,15 +936,14 @@ function presentPushSoon(){
   pushTimer=setTimeout(presentPush,160);
 }
 function mountBtn(){
-  const bar=document.querySelector('.qzoombar');
-  if(!bar||document.getElementById('pStart')) return;
-  const b=document.createElement('button');
-  b.type='button'; b.className='btn primary'; b.id='pStart'; b.textContent='📺 Chiếu chung';
-  b.title='Học viên xem cùng câu trên điện thoại / máy khác';
-  b.onclick=presentStart;
-  bar.appendChild(b);
+  if(document.getElementById('pStart')) return;
+  if(!ensureHost()) return;
   if(P&&P.code){showBar(P);presentPush();}
   setInterval(function(){if(P&&P.code)presentPush();},5000);
+  if(window.ldvlSpeak) window.ldvlSpeak.bind();
+  const jump=document.getElementById('ltjump');
+  if(jump) jump.addEventListener('change', presentPushSoon);
+  window.addEventListener('hashchange', function(){if(P&&P.code) presentPushSoon();});
   document.addEventListener('change',function(e){
     const qel=document.getElementById('q');
     if(P&&qel&&e.target&&qel.contains(e.target)) presentPushSoon();
@@ -600,6 +960,7 @@ function wrap(name, afterMs){
     const out=fn.apply(this,arguments);
     if(afterMs) setTimeout(presentPush, afterMs);
     else presentPush();
+    if(name==='draw' && window.ldvlSpeak) setTimeout(function(){window.ldvlSpeak.onDraw()}, afterMs||80);
     return out;
   };
   wrapped.__ldvlPresent=true;

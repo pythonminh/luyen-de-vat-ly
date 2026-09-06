@@ -764,13 +764,17 @@ def page_companion(de_path: str, kind: str = "lt"):
         banner += companion_ai_panel_html(fp, kind)
         banner += SECTION_EDIT_JS
     head = html.escape(spec["icon"] + " " + spec["label"] + " · " + (title or "Bài"))
-    wrap_attrs = ""
+    wrap_attrs = (
+        " data-de-path='"
+        + html.escape(de_path, quote=True)
+        + "' data-lt-kind='"
+        + html.escape(kind)
+        + "'"
+    )
     if admin:
-        wrap_attrs = (
+        wrap_attrs += (
             " data-lt-path='"
             + html.escape(companion_path(de_path, kind), quote=True)
-            + "' data-lt-kind='"
-            + html.escape(kind)
             + "'"
         )
     body = (
@@ -784,7 +788,11 @@ def page_companion(de_path: str, kind: str = "lt"):
         + lock
         + "</div></div></div>"
     )
-    return base.page(spec["label"], body)
+    extra = ""
+    if admin:
+        from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
+        extra = PRESENT_TTS_JS + PRESENT_HOST_JS
+    return base.page(spec["label"], body + extra)
 
 
 def page_theory(de_path: str):

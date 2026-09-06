@@ -127,10 +127,22 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .admindang .simx input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;accent-color:#fff;flex:0 0 auto}
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
-body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px}
-body.cinema .cinemahud a,body.cinema .cinemahud button{width:40px;height:40px;border-radius:999px;border:1px solid #c5d6ea;background:#ffffffee;color:#145bb0;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 10px #0002}
-body.cinema .cinema-q{min-height:100dvh;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px));padding-top:calc(10px + env(safe-area-inset-top,0px))}
-body.cinema .qbox{border:0;border-radius:0;padding:4px 12px 24px;font-size:calc(21px * var(--qzoom,1));max-width:none;width:100%;margin:0}
+body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px;align-items:flex-start;justify-content:flex-end;pointer-events:none}
+body.cinema .cinemahud>*{pointer-events:auto}
+body.cinema .cinemahud a,body.cinema .cinemahud>button{width:40px;height:40px;border-radius:999px;border:1px solid #c5d6ea;background:#ffffffee;color:#145bb0;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 10px #0002;flex:0 0 auto}
+body.cinema .cinemaspeak{margin-right:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:calc(100% - 96px);padding:4px;border-radius:12px;background:#ffffffee;border:1px solid #c5d6ea;box-shadow:0 2px 10px #0002}
+body.cinema .cinemahud .cinemaspeak button{width:auto;min-width:40px;height:34px;border-radius:10px;padding:0 10px;font-size:13px;font-weight:800;box-shadow:none}
+body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
+.spkmsg{font-size:12px;color:#64748b;font-weight:600}
+.present-host .presentspeak{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.present-host .presentspeak button{padding:6px 10px;font-size:13px;font-weight:800;border-radius:10px}
+body.cinema .cinema-q{min-height:100dvh;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px));padding-top:calc(58px + env(safe-area-inset-top,0px))}
+body.cinema .qbox{border:0;border-radius:0;padding:4px 12px 24px;font-size:calc(21px * var(--qzoom,1));max-width:none;width:100%;margin:0;overflow-y:auto;max-height:100dvh}
+body.cinema .ltsec{border:0;padding:4px 0;margin:0;background:transparent;box-shadow:none;scroll-margin-top:0}
+body.cinema .ltsec-tools,body.cinema .ltSecOut,body.cinema .ltSecAdd{display:none!important}
+body.cinema .ltbox{margin:12px 0;border:1px solid #d7e2ee;border-radius:12px;overflow:hidden;background:#fff}
+body.cinema .ltbox .k{padding:8px 12px;font-size:12px;font-weight:800;background:#eef6ff}
+body.cinema .ltbox-body{padding:10px 14px;line-height:1.65}
 body.cinema .qid,.cinema-wait .qid{display:none}
 body.cinema .nguonrow{display:none}
 body.cinema .opt{cursor:default;display:flex;align-items:center;gap:10px}
@@ -2941,8 +2953,8 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
-        from live_present import PRESENT_HOST_JS
-        extra=REWRITE_CLIENT_JS + PRESENT_HOST_JS
+        from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
+        extra=REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
     return page('Làm bài',body+js+extra)
 
 @app.post('/member/answer')
