@@ -696,7 +696,7 @@ def page_companion(de_path: str, kind: str = "lt"):
         f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select></nav>"
         "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
         "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
-        "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'smooth',block:'start'});}});"
+        "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'auto',block:'start'});}});"
         "})();</script>"
     )
     blocks = _html_secs(secs, start=start, admin=admin and full, fade_last=clipped, add_btn=admin and full)

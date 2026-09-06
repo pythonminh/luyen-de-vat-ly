@@ -646,6 +646,7 @@ let lastDrawKey='';
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function drawKey(q, showSol, pos, total, live){
   live=live||{};
+  if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||''].join('\x1f');
   return [q&&q.kind,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
 }
 function fitQuestion(){
@@ -666,7 +667,8 @@ function fitQuestion(){
 }
 function typeset(el){
   const box=el||document.getElementById('q');
-  const done=function(){fitQuestion()};
+  if(box&&box.getAttribute('data-mj')==='1') return;
+  const done=function(){if(box) box.setAttribute('data-mj','1'); fitQuestion();};
   const p=window.ldvlTypeset?window.ldvlTypeset(box):null;
   if(p&&typeof p.then==='function') p.then(done, done); else setTimeout(done,120);
 }
@@ -677,6 +679,7 @@ function draw(q, showSol, pos, total, live){
   const key=drawKey(q, showSol, pos, total, live);
   if(key===lastDrawKey && box.innerHTML) return false;
   lastDrawKey=key;
+  box.removeAttribute('data-mj');
   if(q.kind==='LT'||q.kind==='PP'){
     const lab=q.kind==='LT'?'Lý thuyết':'Dạng mẫu';
     box.hidden=false;
@@ -793,8 +796,8 @@ async function tick(){
   }
 }
 tick();
-setInterval(tick,900);
-window.addEventListener('resize',function(){fitQuestion()});
+setInterval(tick,2500);
+window.addEventListener('resize',function(){});
 </script>
 """
 
@@ -843,11 +846,9 @@ function payload(){
     o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
     o.de_path=page.getAttribute('data-de-path')||'';
     const sel=document.getElementById('ltjump');
-    let sec=(sel&&sel.value)||(location.hash||'').replace(/^#/,'')||'';
-    if(!sec && sel && sel.options && sel.options.length>1){
-      sec=sel.options[1].value||'';
-      if(sel && sec) sel.value=sec;
-    }
+    let sec=(sel&&sel.value)||'';
+    if(!sec) sec=window.__ldvlPresentSec||'';
+    if(sec) window.__ldvlPresentSec=sec;
     o.sec=sec;
   }
   return o;
@@ -968,11 +969,15 @@ function showBar(p){
 }
 async function presentPush(){
   if(!P||!P.code||P._busy) return;
+  const body=payload();
+  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,pos:window.practicePos||null});
+  if(fp===window.__ldvlPresentFp) return;
   try{
     const r=await fetch('/api/present/push',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify(payload())});
+      body:JSON.stringify(body)});
     const d=await r.json().catch(function(){return {}});
     if(d&&d.ok){
+      window.__ldvlPresentFp=fp;
       if(d.token&&P){P.token=d.token;try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}}
       return;
     }
@@ -1005,6 +1010,7 @@ async function presentStart(){
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
   try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}
+  window.__ldvlPresentFp='';
   showBar(P);
   try{ if(d.url) window.open(d.url,'_blank','noopener'); }catch(e){}
 }
@@ -1031,8 +1037,11 @@ function mountBtn(){
   setInterval(function(){if(P&&P.code)presentPush();},5000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
   const jump=document.getElementById('ltjump');
-  if(jump) jump.addEventListener('change', presentPushSoon);
-  window.addEventListener('hashchange', function(){if(P&&P.code) presentPushSoon();});
+  if(jump) jump.addEventListener('change', function(){
+    if(jump.value) window.__ldvlPresentSec=jump.value;
+    window.__ldvlPresentFp='';
+    presentPushSoon();
+  });
   document.addEventListener('change',function(e){
     const qel=document.getElementById('q');
     if(P&&qel&&e.target&&qel.contains(e.target)) presentPushSoon();
