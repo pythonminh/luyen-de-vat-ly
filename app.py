@@ -139,6 +139,7 @@ body.cinema .spkhost.on{outline:2px solid #93c5fd;outline-offset:2px}
 .aispeak .btn{padding:6px 10px;font-size:13px;font-weight:800}
 .aispeak .btn.on{background:#145bb0;color:#fff;border-color:#145bb0}
 .ai-sec,.ai-y{position:relative;padding:8px 32px 8px 10px;margin:8px 0;border:1px solid #d7e2ee;border-radius:8px;cursor:pointer;background:#fff}
+.ai-opt{margin-left:12px;margin-top:6px;margin-bottom:6px}
 .ai-sec:hover,.ai-y:hover,.ai-sec.spkhost.on,.ai-y.spkhost.on{background:#eef6ff;border-color:#93c5fd}
 body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
 body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:auto;min-width:0;height:36px;border-radius:8px;padding:0 8px;font-size:13px;font-weight:800;line-height:36px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
@@ -196,12 +197,24 @@ function ldvlAiVerdict(chunk){
   if(!m) return '';
   return m[1].toLowerCase()==='đúng'?'ok':'bad';
 }
+function ldvlSplitOpts(p){
+  var bits=String(p||'').split(/\n(?=(?:[-*•]\s*)?(?:\*\*)?(?:Phương án\s+)?[A-D][\.\):]\s)/i);
+  return bits.map(function(x){return x.replace(/^\s*[-*•]\s*/,'').trim()}).filter(Boolean);
+}
 function ldvlSplitAi(t){
   t=String(t||'').replace(/\r\n/g,'\n').trim();
   if(!t) return [];
   var parts=t.split(/\n(?=(?:PHÂN TÍCH ĐỀ|ĐÁP ÁN VÀ ĐỐI CHIẾU|NHẬN ĐỊNH|LỖI DỄ NHẦM|GIẢI THÍCH|KẾT QUẢ|LỜI GIẢI|ĐÁP ÁN ĐÚNG:|Ý\s*\d+\s*[).]))/i);
   if(parts.length<2 && t.length>450) parts=t.split(/\n{2,}/);
-  return parts.map(function(p){return p.trim()}).filter(Boolean);
+  var out=[];
+  parts.forEach(function(p){
+    p=p.trim();
+    if(!p) return;
+    var bits=ldvlSplitOpts(p);
+    if(bits.length>1) bits.forEach(function(b){out.push(b);});
+    else out.push(p);
+  });
+  return out;
 }
 function ldvlFmtAi(t){
   var parts=ldvlSplitAi(t);
@@ -209,7 +222,8 @@ function ldvlFmtAi(t){
   return parts.map(function(p){
     var cls=ldvlAiVerdict(p);
     var inner=ldvlAiNl(p).replace(/^(<br>)+/,'').replace(/(<br>)+$/,'');
-    var kind=/^\s*Ý\s*\d+/.test(p)?'ai-y':'ai-sec';
+    var isOpt=/^\s*(?:\*\*)?(?:Phương án\s+)?[A-D][\.\):]/i.test(p);
+    var kind=/^\s*Ý\s*\d+/.test(p)?'ai-y':(isOpt?'ai-sec ai-opt':'ai-sec');
     if(cls==='ok') inner=inner.replace(/^Ý\s*\d+\s*[).]/,function(x){return '<span class="ai-tag">✅ '+x+'</span>'});
     else if(cls==='bad') inner=inner.replace(/^Ý\s*\d+\s*[).]/,function(x){return '<span class="ai-tag">❌ '+x+'</span>'});
     return '<div class="'+kind+(cls?' '+cls:'')+'">'+inner+'</div>';
