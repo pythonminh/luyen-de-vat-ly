@@ -126,7 +126,8 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .admindang .simx{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;color:#fff;background:#9f1239;border-radius:999px;padding:4px 12px 4px 8px}
 .admindang .simx input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;accent-color:#fff;flex:0 0 auto}
 html:has(body.cinema){scroll-padding-top:0}
-body.cinema{background:#fff;padding:0;overflow-anchor:none}
+body.cinema .cinemagate{position:fixed;inset:0;z-index:50;border:0;background:#145bb0ee;color:#fff;font-size:22px;font-weight:800;cursor:pointer}
+body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
 body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
