@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -68,8 +69,14 @@ CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 CSS = r"""
 :root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px;--header-h:72px}
 *{box-sizing:border-box}html{height:100%;scroll-padding-top:var(--header-h)}body{margin:0;min-height:100dvh;background:var(--bg);color:#19324d;font:14px/1.45 Segoe UI,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}img,svg,video{max-width:100%;height:auto}
-a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:none;width:100%;margin:0;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.brand{font-weight:900;font-size:20px}.brandbai{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #ffffff66;border-radius:6px;font-size:13px;font-weight:800;vertical-align:middle}.brandbox{appearance:none;-webkit-appearance:none;background:none;border:0;color:inherit;text-align:left;padding:0;cursor:pointer;font:inherit;min-width:0;max-width:100%}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:0;text-align:center;flex:0 0 auto}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:none;gap:6px;flex-wrap:wrap;align-items:center;min-width:0;flex-basis:100%;width:100%}.top.nav-open .nav{display:flex}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap;max-width:min(22rem,40vw);overflow:hidden;text-overflow:ellipsis}.nav .who{display:none}.whobar{display:inline-flex;align-items:center;min-width:0;max-width:min(22rem,36vw)}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsbtn{white-space:nowrap}.navtoggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.baimenu{display:inline-flex;align-items:center;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;cursor:pointer;white-space:nowrap}.drawer{position:fixed;inset:0;z-index:2147483602;pointer-events:none;visibility:hidden}.drawer.open{pointer-events:auto;visibility:visible}.drawer-back{position:absolute;inset:0;background:#08142888;opacity:0;transition:opacity .2s}.drawer.open .drawer-back{opacity:1}.drawer-panel{position:absolute;left:0;top:0;bottom:0;width:min(92vw,400px);background:#fff;color:#19324d;box-shadow:8px 0 28px #0004;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}.drawer.open .drawer-panel{transform:none}.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #e5edf5}.drawer-head b{font-weight:400;font-size:14px}.drawer-hint{margin:0;padding:8px 12px;font-size:12px;color:#6c7d90}.drawer-tree{overflow:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;flex:1}.drawer-tree details{border-bottom:1px solid #edf2f7}.drawer-tree summary{cursor:pointer;padding:7px 8px;font-weight:400;font-size:12px;list-style:none}.drawer-tree summary::-webkit-details-marker{display:none}.drawer-tree summary::before{content:'▸ ';color:#145bb0}.drawer-tree details[open]>summary::before{content:'▾ '}.drawnest{padding:0 0 6px 10px}.drawbais{display:flex;flex-direction:column;gap:4px;padding:0 0 8px}.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #d7e2ee;border-radius:8px;background:#f8fbff;color:#173a5e;font-weight:400;font-size:12px;line-height:1.35;text-align:left}.drawname{flex:1;min-width:0;text-align:left}.drawn{flex:0 0 auto;margin-left:auto;text-align:right}.drawbai.on{background:#145bb0;color:#fff;border-color:#145bb0}.drawbaiwrap{border-bottom:0}.drawbaiwrap>summary.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none}.drawer-tree .drawbaiwrap>summary::before{content:none!important}.drawdangs{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px}.drawdang{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#9a3412;font-weight:400;font-size:11px;line-height:1.35}.drawdang.on{background:#c2410c;border-color:#c2410c;color:#fff}.drawer-lock{overflow:hidden}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:1024px){html{scroll-padding-top:var(--header-h)}.brand{font-size:15px;line-height:1.2}.brandbox{flex:1 1 8rem;min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:none}.whobar{display:inline-flex;order:2;flex:0 1 11rem;max-width:42%;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.regline{font-size:10px;padding:0 8px 4px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:3}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:4;min-width:0}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:6px 8px;gap:4px}.pitems{flex-wrap:wrap;overflow:visible}.pdang{font-size:11px;font-weight:600;min-width:0}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.subnav{top:var(--header-h);margin-bottom:8px}.dangtabs{padding:6px 8px}.dtab{padding:5px 8px;font-size:11px;max-width:min(14rem,62vw)}.kindtabs{padding:5px 6px;gap:3px;flex-wrap:wrap}.kindtabs .ktab{padding:4px 6px;font-size:10px;flex:1 1 auto}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
-.wrap{max-width:none;width:100%;margin:0;padding:12px 16px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:100%}.subnav{position:sticky;z-index:40;top:var(--header-h);margin:0 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 10px #1b4d8a10}.dangtabs{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;padding:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff7ed;border-bottom:1px solid #fed7aa}.dtab{flex:0 0 auto;max-width:min(18rem,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:8px;padding:6px 10px;font-weight:700;font-size:12px}.dtab.on{background:#c2410c;border-color:#c2410c;color:#fff}.kindtabs{display:flex;flex-wrap:wrap;gap:4px;align-items:stretch;padding:6px 8px;background:#eef6ff;border-bottom:1px solid var(--line)}.subnav .kindtabs{position:static;top:auto;border-bottom:0;z-index:auto}.kindtabs .ktab{display:inline-flex;flex:1 1 auto;min-width:0;align-items:center;justify-content:center;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:5px 4px;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap}.kindtabs .ktab.on{background:var(--blue);border-color:var(--blue);color:#fff}.kindtabs .ktab.off{opacity:.4;cursor:not-allowed;pointer-events:none}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
+a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:none;width:100%;margin:0;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.brand{font-weight:900;font-size:20px}.brandbai{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #ffffff66;border-radius:6px;font-size:13px;font-weight:800;vertical-align:middle}.brandbox{appearance:none;-webkit-appearance:none;background:none;border:0;color:inherit;text-align:left;padding:0;cursor:pointer;font:inherit;min-width:0;max-width:100%}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:0;text-align:center;flex:0 0 auto}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:none;gap:6px;flex-wrap:wrap;align-items:center;min-width:0;flex-basis:100%;width:100%}.top.nav-open .nav{display:flex}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap;max-width:min(22rem,40vw);overflow:hidden;text-overflow:ellipsis}.nav .who{display:none}.whobar{display:inline-flex;align-items:center;min-width:0;max-width:min(22rem,36vw)}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsbtn{white-space:nowrap}.adminjump{display:inline-flex;align-items:center;flex:0 0 auto;color:#fff;border:1px solid #ffffffaa;background:#ffffff28;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;white-space:nowrap}.adminjump:hover{background:#ffffff44}.top:not(.nav-open) .regline{display:none}.navtoggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.baimenu{display:inline-flex;align-items:center;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;cursor:pointer;white-space:nowrap}.drawer{position:fixed;inset:0;z-index:2147483602;pointer-events:none;visibility:hidden}.drawer.open{pointer-events:auto;visibility:visible}.drawer-back{position:absolute;inset:0;background:#08142888;opacity:0;transition:opacity .2s}.drawer.open .drawer-back{opacity:1}.drawer-panel{position:absolute;left:0;top:0;bottom:0;width:min(92vw,400px);background:#fff;color:#19324d;box-shadow:8px 0 28px #0004;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}.drawer.open .drawer-panel{transform:none}.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #e5edf5}.drawer-head b{font-weight:400;font-size:14px}.drawer-hint{margin:0;padding:8px 12px;font-size:12px;color:#6c7d90}.drawer-tree{overflow:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;flex:1}.drawer-tree details{border-bottom:1px solid #edf2f7}.drawer-tree summary{cursor:pointer;padding:7px 8px;font-weight:400;font-size:12px;list-style:none}.drawer-tree summary::-webkit-details-marker{display:none}.drawer-tree summary::before{content:'▸ ';color:#145bb0}.drawer-tree details[open]>summary::before{content:'▾ '}.drawnest{padding:0 0 6px 10px}.drawbais{display:flex;flex-direction:column;gap:4px;padding:0 0 8px}.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #d7e2ee;border-radius:8px;background:#f8fbff;color:#173a5e;font-weight:400;font-size:12px;line-height:1.35;text-align:left}.drawname{flex:1;min-width:0;text-align:left}.drawn{flex:0 0 auto;margin-left:auto;text-align:right}.drawbai.on{background:#145bb0;color:#fff;border-color:#145bb0}.drawbaiwrap{border-bottom:0}.drawbaiwrap>summary.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none}.drawer-tree .drawbaiwrap>summary::before{content:none!important}.drawdangs{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px}.drawdang{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#9a3412;font-weight:400;font-size:11px;line-height:1.35}.drawdang.on{background:#c2410c;border-color:#c2410c;color:#fff}.drawer-lock{overflow:hidden}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:1024px){html{scroll-padding-top:var(--header-h)}.brand{font-size:15px;line-height:1.2}.brandbox{flex:1 1 8rem;min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:none}.whobar{display:inline-flex;order:2;flex:0 1 11rem;max-width:42%;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.regline{font-size:10px;padding:0 8px 4px}.adminjump{order:3;font-size:12px;padding:5px 8px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:4}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5;min-width:0}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:6px 8px;gap:4px}.pitems{flex-wrap:wrap;overflow:visible}.pdang{font-size:11px;font-weight:600;min-width:0}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.subnav{top:var(--header-h);margin-bottom:8px}.dangtabs{padding:6px 8px}.dtab{padding:5px 8px;font-size:11px;max-width:min(14rem,62vw)}.kindtabs{padding:5px 6px;gap:3px;flex-wrap:wrap}.kindtabs .ktab{padding:4px 6px;font-size:10px;flex:1 1 auto}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}}
+.wrap{max-width:none;width:100%;margin:0;padding:12px 16px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:100%}.subnav{position:sticky;z-index:40;top:var(--header-h);margin:0 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 10px #1b4d8a10}.lttabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#f5f3ff;border-bottom:1px solid #ddd6fe}
+.lttabs .dtab{border-color:#c4b5fd;color:#5b21b6;background:#fff}
+.lttabs .dtab.pp{border-color:#67e8f9;color:#0e7490}
+.lttabs .dk.wait{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+.lttabs .dk.ok{background:#eaf9ef;border-color:#86efac;color:#166534}
+.lttabs .ltform{display:inline;margin:0}
+.dangtabs{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;padding:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff7ed;border-bottom:1px solid #fed7aa}.dtab{flex:0 0 auto;max-width:min(18rem,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:8px;padding:6px 10px;font-weight:700;font-size:12px}.dtab.on{background:#c2410c;border-color:#c2410c;color:#fff}.kindtabs{display:flex;flex-wrap:wrap;gap:4px;align-items:stretch;padding:6px 8px;background:#eef6ff;border-bottom:1px solid var(--line)}.subnav .kindtabs{position:static;top:auto;border-bottom:0;z-index:auto}.kindtabs .ktab{display:inline-flex;flex:1 1 auto;min-width:0;align-items:center;justify-content:center;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:5px 4px;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap}.kindtabs .ktab.on{background:var(--blue);border-color:var(--blue);color:#fff}.kindtabs .ktab.off{opacity:.4;cursor:not-allowed;pointer-events:none}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
 .catsearch{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-top:10px}.catsearch input[name=q]{flex:1 1 100%;min-width:0;padding:10px 12px;border:1px solid #cbd8e6;border-radius:8px;font:inherit}.catsearch select{flex:1 1 180px;min-width:140px;padding:10px 12px;border:1px solid #cbd8e6;border-radius:8px;background:#fff;font:inherit}.catsearch .btn{flex:0 0 auto;align-self:stretch}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
@@ -77,24 +84,47 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
 .qzoombar{display:inline-flex;align-items:center;gap:6px;margin-left:8px;flex-wrap:wrap}.qzoombar .btn{padding:6px 10px;font-size:13px}.qzoombar b{min-width:3.4em;text-align:center}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitems{display:flex;flex-wrap:wrap;gap:5px;width:100%}.pdang{order:-1;font-weight:600;font-size:12px;line-height:1.35;color:#173a5e}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #d4c4f0;border-radius:11px;padding:16px;font-size:calc(19px * var(--qzoom,1));--qzoom:1;font-family:'Times New Roman',Times,serif;overflow-x:auto;max-width:100%}.qtext,.tf-text,.opt,.solution{line-height:1.75}mjx-container[jax="CHTML"]:not([display="true"]){display:inline!important;vertical-align:baseline!important;margin:0 .12em 0 0!important;padding:0!important;text-indent:0}mjx-container[jax="CHTML"][display="true"]{display:block;margin:.55em 0;max-width:100%;overflow-x:auto}.qtext{font-size:1em;line-height:1.75;margin-bottom:10px;overflow-x:auto;max-width:100%}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.qbox .tikzfig,.qbox .tikz-live{height:calc(var(--figh) * var(--qzoom,1))}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff;max-width:100%}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0;padding:0;line-height:1.75}ul.tex-list{padding-left:1.35em}ol.tex-list{list-style:none;counter-reset:ltn;padding:0}ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em}ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:.55em .7em;margin:.45em 0;cursor:pointer;font-size:1em}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.practice-split.is-ai{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.9fr);gap:12px;align-items:start}.practice-q{min-width:0}.practice-ai{position:sticky;top:calc(var(--header-h) + 8px);max-height:calc(100dvh - var(--header-h) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #cab9f0;background:#faf8ff;border-radius:12px;padding:12px;box-shadow:0 4px 18px #1b4d8a14}.practice-ai .review{margin-top:0}.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.modebar .btn.primary{min-width:160px}@media(max-width:900px){.practice-split.is-ai{grid-template-columns:1fr}.practice-ai{position:relative;top:auto;max-height:min(52dvh,520px)}}.tfgrid{margin:8px 0 4px;display:flex;flex-direction:column;gap:0}.qheadline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.qbadge{display:inline-block;background:#5b21b6;color:#fff;border-radius:8px;padding:.28em .8em;font:400 1em 'Times New Roman',Times,serif;flex-shrink:0;line-height:1.3}.qstem{flex:1 1 100%;min-width:100%;width:100%}.qbody.ds.hassplit{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(250px,1.2fr);gap:18px;align-items:start}.qfig .tikzfig,.qfig .tikz-live{height:auto;max-height:min(68vh,540px);margin:0;width:100%}.qfig .tex-table{margin:0 auto}.tflab{display:inline-flex;align-items:center;justify-content:center;min-width:1.75em;height:1.55em;padding:0 .3em;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6;margin:0;font:400 .95em 'Times New Roman',Times,serif;flex-shrink:0}.tf-colhead,.tfgrid .tf{display:grid;grid-template-columns:2.2em minmax(0,1fr) 3.1em 3.1em;column-gap:4px;align-items:center}.tf-colhead{padding:0 2px 2px}.tf-h{text-align:center;font-weight:400;font-size:.95em;line-height:1.15}.tf-h.yes{color:#5b21b6}.tf-h.no{color:#e11d48}.tfgrid .tf{border:0;border-radius:0;padding:7px 2px;margin:0;background:transparent}.tf-text{min-width:0;font-size:1em;line-height:1.7}.tf-box{width:1.2em;height:1.2em;border:2px solid #475569;border-radius:3px;background:#fff;justify-self:center;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;position:relative}.tf-box input{appearance:none;-webkit-appearance:none;position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}.tf-box:has(input:checked),.tf-box.on,.tf-box.pick{background:#fff;border-color:#475569}.tf-box:has(input:checked)::after,.tf-box.on::after,.tf-box.pick::after{content:"";width:.48em;height:.48em;border-radius:1px;background:#1d4ed8}.tfgrid .tf.correct,.tfgrid .tf.ok{background:#f7fbf8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.wrong,.tfgrid .tf.noans{background:#fdf8f8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.correct .tf-text,.tfgrid .tf.ok .tf-text{color:#2f4a38;font-weight:400}.tfgrid .tf.wrong .tf-text,.tfgrid .tf.noans .tf-text{color:#6a3a3a;font-weight:400}.tfgrid .tf.correct .tf-box:has(input:checked)::after,.tfgrid .tf.ok .tf-box.on::after,.tfgrid .tf.correct .tf-box.on::after,.tfgrid .tf.noans .tf-box.on::after{background:#15803d}.tfgrid .tf.wrong .tf-box:has(input:checked)::after,.tfgrid .tf.wrong .tf-box.pick::after{background:#b91c1c}@media(max-width:700px){.tf-colhead,.tfgrid .tf{grid-template-columns:1.9em minmax(0,1fr) 2.6em 2.6em}.tf-h{font-size:.82em}.qbody.ds.hassplit{grid-template-columns:1fr}}.correct{background:#f7fbf8!important;border-color:#c5ddd0!important}.wrong{background:#fdf8f8!important;border-color:#e6d0d0!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:9px;margin-top:10px;font-weight:400;font-family:'Times New Roman',Times,serif}.result .keyline,.result .vres{margin:0;font-size:.95em;font-weight:400;line-height:1.5}.result .keygrid{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin:0 0 0 8px;vertical-align:middle}.result .keyrow{display:inline-flex;align-items:center;gap:6px}.result .keylab{font-weight:400;opacity:.9;margin-right:2px}.result .keycell{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:400;white-space:nowrap}.result .klet{font-size:.78em;color:#64748b;line-height:1}.result .kcirc{display:inline-flex;width:2.15em;height:2.15em;border:0;border-radius:50%;align-items:center;justify-content:center;font-weight:400;font-size:1.05em;font-family:'Times New Roman',Times,serif;flex-shrink:0}.result .kcirc.d{background:#f8f1c8;color:#1e4b8c}.result .kcirc.s{background:#d8eedd;color:#b42318}.result .kcirc.tn{background:#e8f0f8;color:#1e4b8c}.result .keycell.ok{color:inherit}.result .keycell.bad .kcirc{box-shadow:0 0 0 1px #c98a8a}.good{background:#f7fbf8;color:#2f4a38;border:1px solid #d5e6db}.bad{background:#fdf8f8;color:#6a3a3a;border:1px solid #ead4d4}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.reviewout .ai-y{display:block;white-space:pre-wrap;margin:8px 0;padding:9px 11px;border-radius:8px;border-left:5px solid #cbd8e6;background:#fff}.reviewout .ai-y.ok{color:#116a32;background:#eaf8ef;border-color:#42ae6b}.reviewout .ai-y.bad{color:#a41f28;background:#fff0f1;border-color:#e04d56}.reviewout .ai-y .ai-tag{font-weight:900}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}.gkeyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.gkeyhead b{margin:0}.gkeyfold{padding:5px 10px;font-size:12px;white-space:nowrap}.review.gkey-collapsed .gkeybody{display:none}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
-.dtab{display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:min(22rem,86vw);white-space:normal;overflow:visible;text-overflow:unset;line-height:1.3}
-.dtab .dname{font-weight:800}
-.dkinds{display:flex;flex-wrap:wrap;gap:3px}
-.dk{display:inline-block;border:1px solid #fdba74;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:800;background:#fff;color:#9a3412}
+.dtab{display:inline-flex;flex-direction:row;align-items:center;gap:4px;max-width:min(16rem,72vw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.dtab .dname{font-weight:800;overflow:hidden;text-overflow:ellipsis}
+.dkinds{display:inline-flex;flex-wrap:nowrap;gap:2px;flex:0 0 auto}
+.dk{display:inline-block;border:1px solid #fdba74;border-radius:999px;padding:0 5px;font-size:9px;font-weight:800;background:#fff;color:#9a3412}
 .dk.z{opacity:.42;font-weight:700}
 .dtab.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
 .drawdang{flex-wrap:wrap}
 .drawdang .dkinds{flex:1 1 100%}
 .drawdang.on .dk{border-color:#ffffff99;background:#ffffff22;color:#fff}
-@media(max-width:1024px){.dtab{max-width:min(20rem,90vw);white-space:normal}}
-.admindang{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
+@media(max-width:1024px){.dtab{max-width:min(14rem,62vw)}.dtab .dkinds{display:none}.dtab.on .dkinds{display:inline-flex}}
+.present-host{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:#eef6ff;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;position:sticky;top:var(--header-h);z-index:45;box-shadow:0 2px 10px #1b4d8a10}
+.present-host .btn,.present-host #pStart,.present-host #navFold{flex:0 0 auto;padding:6px 10px;font-size:13px;white-space:nowrap}
+.present-host #navFold{margin-left:auto}
+.present-host #presentBar{flex:1 1 100%;margin:0;padding:8px;max-height:28vh;overflow:auto}
+.present-host.is-folded #presentBar,.present-host #presentBar[hidden]{display:none!important}
+.wrap > .subnav,.subnav{position:relative!important;top:auto!important;z-index:1;overflow:visible!important}
+details.admin-chrome{display:block;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+details.admin-chrome>summary.admin-chrome-sum{list-style:none;cursor:pointer;padding:8px 10px;font:800 13px/1.25 Segoe UI,Arial,sans-serif;background:#eef6ff;color:#145bb0}
+details.admin-chrome>summary.admin-chrome-sum::-webkit-details-marker{display:none}
+details.admin-chrome[open]>summary.admin-chrome-sum{border-bottom:1px solid var(--line)}
+details.admin-chrome:not([open])>.admin-chrome-body{display:none!important}
+.admin-chrome-body .subnav{margin:0;border:0;border-radius:0;box-shadow:none}
+.admindang{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px;background:#f8fbff;border-top:1px solid #d7e2ee}
+details.admindang-fold{display:block;border-top:1px solid #d7e2ee;background:#f8fbff}
+details.admindang-fold>summary.admindang-sum{list-style:none;cursor:pointer;padding:8px 10px;font:800 13px/1.25 Segoe UI,Arial,sans-serif;color:#145bb0;background:#eef6ff}
+details.admindang-fold>summary.admindang-sum::-webkit-details-marker{display:none}
+details.rwfold{display:block;margin:8px 0 0;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff}
+details.rwfold>summary{cursor:pointer;padding:7px 10px;font:800 12px/1.3 Segoe UI,Arial,sans-serif;color:#0369a1;list-style:none}
+details.rwfold>summary::-webkit-details-marker{display:none}
+details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7dd3fc}
+.admindang .muted{display:none}
+.admindang .btn,.admindang a.btn{padding:6px 8px;font-size:12px}
+.admindang input,#aiSrcUrl{flex:1 1 12rem;min-width:10rem;padding:6px 8px;border:1px solid #cbd8e6;border-radius:7px}
+.admindang .gapnote{font-size:12px;font-weight:700;color:#9a3412}
+.admindang #aiGapOut:empty{display:none}
+.admindang #aiGapOut:not(:empty){flex:1 1 100%;font-size:13px;line-height:1.4;max-height:30vh;overflow:auto}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
 .admindang .simrev h4{margin:10px 0 4px;font-size:13px}
-.admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff;position:sticky;top:0;z-index:2}
+.admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff}
 .admindang .simx{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;color:#fff;background:#9f1239;border-radius:999px;padding:4px 12px 4px 8px}
 .admindang .simx input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;accent-color:#fff;flex:0 0 auto}
-.admindang .gapnote{font-size:13px;font-weight:700;color:#9a3412}
-.admindang #aiGapOut{flex:1 1 100%;font-size:13px;line-height:1.45}
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
 body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px}
@@ -238,7 +268,30 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<a href='/member'>📚 MỤC LỤC</a>",
     ]
     who = ""
-    if role == "member":
+    admin_jump = ""
+    admin_ui = role == "admin"
+    try:
+        admin_ui = admin_ui or can_manage_bank()
+    except Exception:
+        pass
+    if admin_ui:
+        extra = _class_label(member_current())
+        label = "🔐 ADMIN" + (f" · {extra}" if extra else "")
+        who = (
+            f"<a class='who' href='/admin/members' title='Quản lý thành viên'>"
+            f"{html.escape(label)}</a>"
+        )
+        admin_jump = "<a class='adminjump' href='/admin/members' title='Quản lý thành viên'>👥 Thành viên</a>"
+        out_href = "/admin/logout" if role == "admin" else "/member/logout"
+        nav += [
+            "<a href='/xem'>📺 Xem chiếu</a>",
+            "<a href='/admin'>📂 ngan-hang</a>",
+            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
+            "<a href='/admin/members'>👥 Thành viên</a>",
+            "<a href='/admin/ly-thuyet'>📖 Duyệt LT</a>",
+            f"<a href='{out_href}'>🚪 Thoát</a>",
+        ]
+    elif role == "member":
         m = member_current()
         nm = str((m or {}).get("name") or session.get("name") or (m or {}).get("username") or session.get("username") or "").strip()
         if nm:
@@ -246,16 +299,6 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         nav.append("<a href='/member/goi'>🎫 Gói</a>")
         nav.append("<a href='/member/ai'>🤖 Gemini</a>")
         nav.append("<a href='/member/logout'>🚪 Thoát</a>")
-    elif role == "admin":
-        who = _who_chip("🔐 ADMIN", _class_label(member_current()))
-        nav += [
-            "<a href='/xem'>📺 Xem chiếu</a>",
-            "<a href='/admin'>📂 ngan-hang</a>",
-            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
-            "<a href='/admin/members'>👥 Thành viên</a>",
-            "<a href='/admin/ly-thuyet'>📖 Duyệt LT</a>",
-            "<a href='/admin/logout'>🚪 Thoát</a>",
-        ]
     else:
         nav += [
             "<a href='/xem'>📺 Xem chiếu</a>",
@@ -268,6 +311,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<div class='sub'>Zalo thầy Minh 0946111107</div></button>"
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         + (f"<span class='whobar'>{who}</span>" if who else "")
+        + admin_jump
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
         + "<div class='nav' id='ldvlNav'>" + who + "".join(nav)
         + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲 Cài app</button>"
@@ -329,8 +373,9 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "window.ldvlNavApply=function(on){var top=document.querySelector('.top');if(!top||!tb)return;"
         "top.classList.toggle('nav-open',!!on);tb.setAttribute('aria-expanded',on?'true':'false');tb.textContent=on?'✕':'☰';"
         "try{localStorage.setItem('ldvlNavOpen',on?'1':'0')}catch(e){}ldvlSyncHeaderH();};"
-        "if(tb&&nv){var want=false;try{var v=localStorage.getItem('ldvlNavOpen');if(v==='1')want=true;else if(v==='0')want=false;else want=window.innerWidth>1024;}catch(e){want=window.innerWidth>1024}"
+        "if(tb&&nv){var want=false;try{if(localStorage.getItem('ldvlNavOpen')==='1')want=true}catch(e){}"
         "ldvlNavApply(want);tb.onclick=function(){ldvlNavApply(!document.querySelector('.top').classList.contains('nav-open'));};}"
+        "document.querySelectorAll('details.admin-chrome,details.admindang-fold').forEach(function(d){d.open=false;});"
         "var db=document.getElementById('ldvlBaiBtn'),dr=document.getElementById('ldvlDrawer');"
         "function ldvlDrawerOpen(on){if(!dr)return;dr.classList.toggle('open',!!on);dr.setAttribute('aria-hidden',on?'false':'true');document.body.classList.toggle('drawer-lock',!!on);}"
         "if(db&&dr){db.onclick=function(){ldvlDrawerOpen(!dr.classList.contains('open'));};"
@@ -373,8 +418,40 @@ def load_json(path: Path, default):
 def index_data():return load_json(INDEX_FILE, {"lessons": [], "total_files": 0, "total_questions": 0})
 def members_data():return load_json(MEMBERS_FILE, {"members": []})
 
-def _password_key():
-    return hashlib.sha256((app.secret_key or "ldvl").encode("utf-8")).digest()
+def _password_key_sources():
+    """Khóa hiện tại trước, rồi các khóa cũ để ADMIN vẫn xem / học viên vẫn vào được."""
+    seen = []
+    for raw in (
+        os.getenv("MEMBERS_PASSWORD_KEY"),
+        os.getenv("SECRET_KEY"),
+        os.getenv("APP_SECRET"),
+        app.secret_key,
+        "dev-change-me",
+        "ldvl",
+    ):
+        s = str(raw or "").strip()
+        if s and s not in seen:
+            seen.append(s)
+    return seen or ["ldvl"]
+
+def _password_key(raw=None):
+    return hashlib.sha256(str(raw or _password_key_sources()[0]).encode("utf-8")).digest()
+
+def _sha256_hex(plain):
+    return hashlib.sha256(str(plain or "").encode("utf-8")).hexdigest()
+
+def _password_try_values(plain):
+    p = str(plain or "")
+    out = []
+    for x in (p, p.replace("\r", "").strip(), p.strip()):
+        try:
+            nfc = unicodedata.normalize("NFC", x)
+        except Exception:
+            nfc = x
+        for v in (x, nfc):
+            if v not in out:
+                out.append(v)
+    return out
 
 def seal_password(plain):
     raw = str(plain or "").encode("utf-8")
@@ -384,23 +461,34 @@ def seal_password(plain):
     mixed = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
     return "v1:" + base64.urlsafe_b64encode(mixed).decode("ascii")
 
+def _unseal_v1(token, key_raw):
+    try:
+        mixed = base64.urlsafe_b64decode(str(token)[3:].encode("ascii"))
+        key = _password_key(key_raw)
+        got = bytes(b ^ key[i % len(key)] for i, b in enumerate(mixed)).decode("utf-8")
+        if got and got.isprintable():
+            return got
+    except Exception:
+        return ""
+    return ""
+
 def unseal_password(token):
     t = str(token or "")
     if t.startswith("v1:"):
-        try:
-            mixed = base64.urlsafe_b64decode(t[3:].encode("ascii"))
-            key = _password_key()
-            return bytes(b ^ key[i % len(key)] for i, b in enumerate(mixed)).decode("utf-8")
-        except Exception:
-            return ""
+        for raw in _password_key_sources():
+            got = _unseal_v1(t, raw)
+            if got:
+                return got
+        return ""
     if t and len(t) < 80 and not re.fullmatch(r"[0-9a-fA-F]{64}", t):
         return t
     return ""
 
 def set_member_password(member, plain):
     plain = str(plain or "")
-    member["password_sha256"] = hashlib.sha256(plain.encode("utf-8")).hexdigest()
+    member["password_sha256"] = _sha256_hex(plain)
     member["password_enc"] = seal_password(plain)
+    member.pop("password", None)
     return member
 
 def member_password_plain(member):
@@ -408,17 +496,67 @@ def member_password_plain(member):
         return ""
     return unseal_password(member.get("password_enc") or member.get("password") or "")
 
+def password_matches(member, plain):
+    """Đúng nếu khớp SHA-256 hoặc khớp mật khẩu ADMIN đang xem được."""
+    if not member:
+        return False
+    stored = str(member.get("password_sha256") or "").strip().lower()
+    shown = member_password_plain(member)
+    leftover = str(member.get("password") or "")
+    if leftover and (len(leftover) >= 80 or re.fullmatch(r"[0-9a-fA-F]{64}", leftover)):
+        leftover = ""
+    for cand in _password_try_values(plain):
+        if stored and _sha256_hex(cand).lower() == stored:
+            return True
+        if shown and cand == shown:
+            return True
+        if leftover and cand == leftover:
+            return True
+    return False
+
+def matched_member_password(member, plain):
+    stored = str((member or {}).get("password_sha256") or "").strip().lower()
+    shown = member_password_plain(member)
+    leftover = str((member or {}).get("password") or "")
+    if leftover and (len(leftover) >= 80 or re.fullmatch(r"[0-9a-fA-F]{64}", leftover)):
+        leftover = ""
+    for cand in _password_try_values(plain):
+        if stored and _sha256_hex(cand).lower() == stored:
+            return cand
+        if shown and cand == shown:
+            return cand
+        if leftover and cand == leftover:
+            return cand
+    return ""
+
 def persist_member_password_on_login(data, member, plain):
-    """Sau đăng nhập đúng: lưu bản xem được cho ADMIN nếu chưa có (hoặc SECRET_KEY đã đổi)."""
-    if not member or not str(plain or ""):
+    """Sau đăng nhập đúng: hash + bản ADMIN xem được cùng một mật khẩu."""
+    matched = matched_member_password(member, plain)
+    if not member or not matched:
         return
-    if member_password_plain(member) == str(plain):
+    current_shown = _unseal_v1(str(member.get("password_enc") or ""), _password_key_sources()[0])
+    if str(member.get("password_sha256") or "").lower() == _sha256_hex(matched).lower() and current_shown == matched:
         return
-    set_member_password(member, plain)
+    set_member_password(member, matched)
     try:
         save_json_github(MEMBERS_FILE, data, "members.json", "Remember student password for ADMIN")
     except Exception:
         pass
+
+def apply_admin_visible_password(member, typed=""):
+    """Lưu đúng mật khẩu ADMIN đang thấy / vừa gõ để học viên đăng nhập được."""
+    if not member:
+        return False
+    plain = str(typed or "").strip() or member_password_plain(member)
+    if not plain:
+        return False
+    shown = member_password_plain(member)
+    hashed = str(member.get("password_sha256") or "").lower()
+    current_key_ok = _unseal_v1(str(member.get("password_enc") or ""), _password_key_sources()[0]) == plain
+    if hashed == _sha256_hex(plain).lower() and shown == plain and current_key_ok:
+        return False
+    set_member_password(member, plain)
+    return True
 
 def access_data():
     d=load_json(ACCESS_FILE, {"default":"FREE","lessons":{}}); d.setdefault('default','FREE'); d.setdefault('lessons',{}); return d
@@ -897,16 +1035,15 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     dlinks = []
                     try:
                         import lythuyet as _lt
-                        admin_see = (not guest) and base.has_full_bank_access()
+                        admin_see = (not guest) and has_full_bank_access()
                         for kind, meta in _lt.TRACKS.items():
                             if not _lt.companion_visible(p, kind, for_admin=admin_see):
                                 continue
                             href = meta["route"] + "?path=" + urllib.parse.quote(p, safe="")
-                            if guest:
-                                href = login_url(href)
                             on_k = on and str(request.path or "").rstrip("/") == meta["route"]
+                            st = _lt.companion_access_label(p, kind, m)
                             dlinks.append(
-                                f"<a class='drawdang{' on' if on_k else ''}' href='{html.escape(href, quote=True)}'><span class='drawname'>{html.escape(meta['icon'] + ' ' + meta['label'])}</span><span class='drawn'></span></a>"
+                                f"<a class='drawdang{' on' if on_k else ''}' href='{html.escape(href, quote=True)}'><span class='drawname'>{html.escape(meta['icon'] + ' ' + meta['label'])}</span><span class='drawn'>{html.escape(st)}</span></a>"
                             )
                     except Exception:
                         pass
@@ -984,21 +1121,23 @@ def theory_catalog_html(path, guest=False):
         return "", ""
     admin_see = (not guest) and has_full_bank_access()
     for kind, meta in _lt.TRACKS.items():
-        if not _lt.companion_visible(path, kind, for_admin=admin_see):
+        if not _lt.companion_exists(path, kind):
+            continue
+        ok = _lt.is_approved(path, kind)
+        if not admin_see and not ok:
             continue
         href = meta["route"] + "?path=" + urllib.parse.quote(str(path or ""), safe="")
-        if guest:
-            href = login_url(href)
         safe = html.escape(href, quote=True)
         cls = "ltrow" if kind == "lt" else "pprow"
         btncls = "ltbtn" if kind == "lt" else "ppbtn"
+        st = _lt.companion_access_label(path, kind, None if guest else member_current())
         label = html.escape(meta["icon"] + " " + meta["label"])
         rows.append(
             f"<a class='dangrow danglink {cls}' href='{safe}'>"
             f"<span class='dangname'>{label}</span>"
-            f"<span class='dangkinds'><span class='kind ktotal'>Đọc</span></span></a>"
+            f"<span class='dangkinds'><span class='kind ktotal'>{html.escape(st)}</span></span></a>"
         )
-        btns.append(f"<a class='btn {btncls}' href='{safe}'>{label}</a>")
+        btns.append(f"<a class='btn {btncls}' href='{safe}'>{label} · {html.escape(st)}</a>")
     return "".join(rows), "".join(btns)
 
 
@@ -2223,34 +2362,42 @@ def admin_dang_bar_html(path, qs, dang=''):
     else:
         miss = 'Đã có đủ 4 loại.'
         heur_txt = kind_quota_line(counts)
-    title = html.escape(dang or 'Cả bài')
     tex_lab = '✏️ TEX dạng này' if dang else '✏️ TEX cả bài'
     url_ph = 'Dán link đề — không cần chọn dạng, AI tự gán dạng'
-    hint = 'Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>. Nút Prompt NotebookLM: dán vào NotebookLM (SGK/SBT KNTT) để chép bài đúng LaTeX.'
+    hint = 'Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>.'
     return (
+        "<details class='admindang-fold'>"
+        "<summary class='admindang-sum'>▸ Công cụ ADMIN · TEX / AI / link</summary>"
         "<div class='admindang' data-path='"+html.escape(str(path or ''), quote=True)+"' data-dang='"+html.escape(dang, quote=True)+"'>"
         "<a class='btn' href='"+html.escape(href, quote=True)+"'>"+tex_lab+"</a>"
-        "<span class='muted'>«"+title+"»</span>"
+        "<span class='muted'>«"+html.escape(dang or 'Cả bài')+"»</span>"
         + kind_chips_html(counts)
         + "<span class='gapnote'>"+html.escape(miss)+"</span>"
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
         "<button type='button' class='btn' id='aiGap'>1. 🤖 Soát dạng · đếm thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
-        "<input id='aiSrcUrl' type='url' placeholder='"+html.escape(url_ph, quote=True)+"' style='flex:1;min-width:16rem;padding:8px;border:1px solid #cbd8e6;border-radius:7px'>"
+        "<input id='aiSrcUrl' type='url' placeholder='"+html.escape(url_ph, quote=True)+"'>"
         "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link → TEX</button>"
         "<button type='button' class='btn' id='aiNb'>📋 Prompt NotebookLM</button>"
         "<span class='muted'>"+hint+"</span>"
-        "<div id='aiGapOut'></div></div>"
+        "<div id='aiGapOut'></div></div></details>"
     )
 
 def lesson_switch_html(path, qs, dang='', kind='', guest=False):
     scoped = questions_in_scope(qs, dang)
+    lt_bar = ''
+    try:
+        import lythuyet as _lt
+        lt_bar = _lt.companion_bar_html(path, guest=guest)
+    except Exception:
+        lt_bar = ''
     return (
-        "<div class='subnav'>"
+        "<nav class='subnav'>"
+        + lt_bar
         + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest)
         + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest)
+        + "</nav>"
         + admin_dang_bar_html(path, qs, dang=dang)
-        + "</div>"
     )
 
 def _go_kind_href(path, dang, kind, guest=False):
@@ -2412,15 +2559,19 @@ def ngan_hang_redirect():
 def member_login():
     msg=''
     if request.method=='POST':
-        u=request.form.get('username','').strip();p=request.form.get('password','');h=hashlib.sha256(p.encode()).hexdigest()
-        d=members_data();found=None
+        u=request.form.get('username','').strip();p=request.form.get('password','')
+        d=members_data();found=None;why=''
         for m in d.get('members',[]):
-            if str(m.get('username') or '').strip().casefold()==u.casefold() and str(m.get('status','ON')).upper()=='ON' and m.get('password_sha256')==h:
-                found=m;break
-        if found:
+            if str(m.get('username') or '').strip().casefold()==u.casefold():
+                if not password_matches(m, p):
+                    why='badpass';break
+                if str(m.get('status','ON')).upper()!='ON':
+                    found=m;why='off';break
+                found=m;why='ok';break
+        if found and why=='ok':
             persist_member_password_on_login(d, found, p)
             session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect(safe_next_url())
-        msg='Sai tài khoản hoặc mật khẩu.'
+        msg='Tài khoản đang khóa. Liên hệ ADMIN để mở lại.' if why=='off' else 'Sai tài khoản hoặc mật khẩu.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
 
 @app.route('/member/register',methods=['GET','POST'])
@@ -2738,7 +2889,7 @@ if(q.kind==='DS'){for(let i=0;i<q.statements.length;i++){if(!document.querySelec
 let z=document.getElementById('ans');return !!(z&&z.value.trim())}
 function syncReady(){if(checked)return;let b=document.getElementById('chkbtn');if(!b)return;let ready=answered();b.disabled=!ready;b.title=ready?'':'Hãy chọn/nhập đáp án trước khi xác nhận.'}
 function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite()}
-function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<div class="rwbar" id="rwPractice"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}
@@ -3203,6 +3354,7 @@ import live_present  # noqa: E402,F401
 try:
     import membership as _membership  # noqa: F401
     _membership.attach_routes()
+    import admin_manager as _admin_manager  # noqa: F401
     import admin_overrides as _admin_overrides  # noqa: F401
     import student_overrides as _student_overrides  # noqa: F401
     import security_patch as _security_patch  # noqa: F401
