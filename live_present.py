@@ -455,7 +455,6 @@ def present_watch(code=""):
     js = PRESENT_TTS_JS + FOLLOW_JS.replace("__CODE__", json.dumps(code))
     body = (
         "<div class='cinema-q'>"
-        "<button type='button' class='cinemagate' id='spkGate'>Chạm để chiếu và đọc</button>"
         "<div class='cinemaspeak' id='speakBar'>"
         "<button type='button' id='spkF' title='Giọng nữ Hoài My'>Nữ</button>"
         "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
@@ -477,7 +476,7 @@ PRESENT_TTS_JS = r"""
 if(window.ldvlSpeak) return;
 const U={
   gender:(function(){try{return localStorage.getItem('ldvlSpeakG')||'f'}catch(e){return 'f'}})(),
-  mode:'idle', wantPlay:false, gen:0, sig:'', audio:null, auto:true, unlocked:false
+  mode:'idle', wantPlay:false, gen:0, sig:'', audio:null, auto:false, unlocked:false
 };
 function msg(s){const el=document.getElementById('spkMsg'); if(el) el.textContent=s||'';}
 function paint(){
@@ -583,17 +582,51 @@ async function run(text){
   if(U.gen!==gen) return;
   if(U.mode==='play'){ U.mode='idle'; if(!U.auto) U.wantPlay=false; paint(); msg(''); }
 }
-function startRead(){
-  const t=speakTextOf(target());
+function startReadText(t){
+  t=String(t||'').trim();
   U.sig=t.length+':'+(t.slice(0,60));
   if(!t){ msg('Không có chữ để đọc.'); return; }
   stopHard();
   try{ new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA').play().catch(function(){}); }catch(e){}
-  U.unlocked=true; U.auto=true; U.wantPlay=true;
+  U.unlocked=true; U.auto=false; U.wantPlay=true;
   run(t);
+}
+function startRead(){
+  startReadText(speakTextOf(target()));
+}
+function addSpk(host, src){
+  if(!host||!src) return;
+  if(host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk')) return;
+  const b=document.createElement('button');
+  b.type='button';
+  b.className='spkchunk';
+  b.title='Đọc đoạn này';
+  b.setAttribute('aria-label','Đọc đoạn này');
+  b.textContent='🔊';
+  b.onclick=function(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+    document.querySelectorAll('.spkchunk.on').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    startReadText(speakTextOf(src));
+  };
+  const sum=host.tagName==='DETAILS'?host.querySelector('summary'):null;
+  if(sum) sum.appendChild(b);
+  else host.appendChild(b);
+}
+function mountChunks(root){
+  root=root||document;
+  root.querySelectorAll('.ltbox').forEach(function(box){
+    const k=box.querySelector(':scope > .k');
+    addSpk(k||box, box);
+  });
+  root.querySelectorAll('details.lt-sol').forEach(function(d){ addSpk(d, d); });
+  root.querySelectorAll('.ltbox-body > ol > li').forEach(function(li){ addSpk(li, li); });
 }
 window.ldvlSpeak={
   play:function(){ startRead(); },
+  playEl:function(el){ startReadText(speakTextOf(el)); },
+  mountChunks:mountChunks,
   pause:function(){
     if(U.mode!=='play') return;
     U.mode='pause';
@@ -623,19 +656,14 @@ window.ldvlSpeak={
     const sig=t.length+':'+(t.slice(0,60));
     if(sig===U.sig) return;
     U.sig=sig;
-    if(U.mode==='pause') return;
-    if(U.unlocked && U.auto) startRead();
+    if(U.mode==='play') stopHard();
+    U.mode='idle'; U.wantPlay=false; paint();
+    mountChunks(document.getElementById('q')||document);
   },
   bind:function(){
-    U.auto=true;
+    U.auto=false;
     const gate=document.getElementById('spkGate');
-    if(gate && !gate.__spk){
-      gate.__spk=1;
-      gate.onclick=function(){
-        gate.hidden=true;
-        window.ldvlSpeak.play();
-      };
-    }
+    if(gate) gate.hidden=true;
     if(!document.getElementById('spkPlay')){
       const host=document.getElementById('presentHost');
       if(host){
@@ -659,6 +687,7 @@ window.ldvlSpeak={
     }
     try{ speechSynthesis.getVoices(); }catch(e){}
     paint();
+    mountChunks(document);
   }
 };
 document.addEventListener('visibilitychange', function(){
@@ -716,6 +745,7 @@ function draw(q, showSol, pos, total, live){
     const lab=q.kind==='LT'?'Lý thuyết':'Dạng mẫu';
     box.hidden=false;
     box.innerHTML='<div class="qheadline"><span class="qbadge">'+lab+' · '+(pos+1)+'/'+total+'</span></div>'+(q.text||'');
+    if(window.ldvlSpeak&&window.ldvlSpeak.mountChunks) window.ldvlSpeak.mountChunks(box);
     typeset(box);
     return true;
   }
@@ -988,7 +1018,7 @@ function showBar(p){
     +'<a class="btn primary" href="'+url+'" target="_blank" rel="noopener">🖥 Mở màn chiếu</a> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Máy chiếu mở link: <b>tự hiện chữ</b> đang dạy. Chạm <b>Chạm để chiếu và đọc</b> một lần để loa <b>tự đọc</b> mục đó. Không tự sang mục khác — đổi ở mục lục. Không ghi âm.</div>';
+    +'<div class="muted">Máy chiếu tự hiện chữ. Bấm <b>🔊</b> cuối mỗi đoạn (định nghĩa, phương pháp, đề bài, lời giải) để đọc đúng đoạn đó. Nữ/Nam chọn giọng. Thanh trên: đọc cả mục / dừng / tiếp.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
   const s=document.getElementById('pstop');
