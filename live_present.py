@@ -1118,11 +1118,15 @@ function payload(opts){
   return o;
 }
 function subnavFolded(){
-  if(window.matchMedia('(max-width:900px)').matches) return true;
+  if(window.matchMedia('(max-width:900px)').matches){
+    try{ if(localStorage.getItem('ldvlSubnavFold')==='0') return false; }catch(e){}
+    return true;
+  }
   try{
+    if(localStorage.getItem('ldvlSubnavFold')==='1') return true;
     if(localStorage.getItem('ldvlSubnavFold')==='0') return false;
   }catch(e){}
-  return true;
+  return false;
 }
 function presentFolded(){
   try{
@@ -1132,13 +1136,19 @@ function presentFolded(){
   return true;
 }
 function applySubnavFold(on){
-  document.querySelectorAll('details.admin-chrome,details.admindang-fold').forEach(function(d){if(on) d.open=false});
   document.documentElement.classList.toggle('ldvlAdminCompact', !!on);
   if(document.body) document.body.classList.toggle('ldvlAdminCompact', !!on);
+  document.querySelectorAll('details.admin-chrome,details.admindang-fold').forEach(function(d){
+    d.open=!on;
+    const sum=d.querySelector('summary');
+    if(sum && /Công cụ ADMIN/.test(sum.textContent||'')){
+      sum.textContent=d.open?'▾ Công cụ ADMIN · TEX / AI / link':'▸ Công cụ ADMIN · TEX / AI / link';
+    }
+  });
   const fold=document.getElementById('navFold');
   if(fold){
     fold.textContent=on?'▸ Mở rộng':'▾ Thu gọn';
-    fold.title=on?'Mở tab dạng và công cụ ADMIN':'Ẩn tab dạng và công cụ ADMIN';
+    fold.title=on?'Mở tab dạng và công cụ ADMIN (AI viết lại, TEX, link)':'Ẩn tab dạng và thu gọn công cụ ADMIN';
   }
   try{localStorage.setItem('ldvlSubnavFold', on?'1':'0')}catch(e){}
 }

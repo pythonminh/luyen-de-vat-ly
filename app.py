@@ -97,6 +97,8 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .present-host{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:#eef6ff;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;position:sticky;top:var(--header-h);z-index:45;box-shadow:0 2px 10px #1b4d8a10}
 .present-host .btn,.present-host #pStart,.present-host #navFold{flex:0 0 auto;padding:6px 10px;font-size:13px;white-space:nowrap}
 .present-host #navFold{margin-left:auto}
+html.ldvlAdminCompact .dangtabs,body.ldvlAdminCompact .dangtabs{display:none}
+html.ldvlAdminCompact details.admindang-fold:not([open]),body.ldvlAdminCompact details.admindang-fold:not([open]){border-top:0}
 .present-host #presentBar{flex:1 1 100%;margin:0;padding:8px;max-height:28vh;overflow:auto}
 .present-host.is-folded #presentBar,.present-host #presentBar[hidden]{display:none!important}
 .wrap > .subnav,.subnav{position:relative!important;top:auto!important;z-index:1;overflow:visible!important}
@@ -419,7 +421,6 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "try{localStorage.setItem('ldvlNavOpen',on?'1':'0')}catch(e){}ldvlSyncHeaderH();};"
         "if(tb&&nv){var want=false;try{if(localStorage.getItem('ldvlNavOpen')==='1')want=true}catch(e){}"
         "ldvlNavApply(want);tb.onclick=function(){ldvlNavApply(!document.querySelector('.top').classList.contains('nav-open'));};}"
-        "document.querySelectorAll('details.admin-chrome,details.admindang-fold').forEach(function(d){d.open=false;});"
         "var db=document.getElementById('ldvlBaiBtn'),dr=document.getElementById('ldvlDrawer');"
         "function ldvlDrawerOpen(on){if(!dr)return;dr.classList.toggle('open',!!on);dr.setAttribute('aria-hidden',on?'false':'true');document.body.classList.toggle('drawer-lock',!!on);}"
         "if(db&&dr){db.onclick=function(){ldvlDrawerOpen(!dr.classList.contains('open'));};"
