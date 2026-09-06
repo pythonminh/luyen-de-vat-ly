@@ -642,7 +642,12 @@ FOLLOW_JS = r"""
 <script>
 const CODE=__CODE__;
 let lastVer=-1;
+let lastDrawKey='';
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function drawKey(q, showSol, pos, total, live){
+  live=live||{};
+  return [q&&q.kind,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
+}
 function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
@@ -667,14 +672,17 @@ function typeset(el){
 }
 function draw(q, showSol, pos, total, live){
   const box=document.getElementById('q');
-  if(!box||!q) return;
+  if(!box||!q) return false;
   live=live||{};
+  const key=drawKey(q, showSol, pos, total, live);
+  if(key===lastDrawKey && box.innerHTML) return false;
+  lastDrawKey=key;
   if(q.kind==='LT'||q.kind==='PP'){
     const lab=q.kind==='LT'?'Lý thuyết':'Dạng mẫu';
     box.hidden=false;
     box.innerHTML='<div class="qheadline"><span class="qbadge">'+lab+' · '+(pos+1)+'/'+total+'</span></div>'+(q.text||'');
     typeset(box);
-    return;
+    return true;
   }
   const checked=!!live.checked;
   box.hidden=false;
@@ -757,6 +765,7 @@ function draw(q, showSol, pos, total, live){
     body.classList.add('hassplit');
   })();
   typeset(box);
+  return true;
 }
 async function tick(){
   const err=document.getElementById('perr');
@@ -777,8 +786,8 @@ async function tick(){
     if(d.unchanged) return;
     lastVer=d.ver;
     if(err) err.textContent='';
-    draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
-    if(window.ldvlSpeak) window.ldvlSpeak.onDraw();
+    const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
+    if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
@@ -873,6 +882,13 @@ function applyPresentFold(on){
   if(host) host.classList.toggle('is-folded', !!on);
   try{localStorage.setItem('ldvlPresentFold', on?'1':'0')}catch(e){}
 }
+function presentKindLabel(){
+  const page=document.querySelector('.ltpage[data-lt-kind]');
+  const k=page&&page.getAttribute('data-lt-kind');
+  if(k==='pp') return 'Chiếu dạng mẫu';
+  if(k==='lt') return 'Chiếu lý thuyết';
+  return 'Chiếu chung';
+}
 function syncStartLabel(){
   const b=document.getElementById('pStart');
   if(!b) return;
@@ -880,8 +896,8 @@ function syncStartLabel(){
     b.textContent='📺 Đang chiếu · '+P.code;
     b.title='Bấm để hiện / ẩn mã và link chiếu';
   }else{
-    b.textContent='📺 Chiếu chung';
-    b.title='Học viên xem cùng câu trên điện thoại / máy khác';
+    b.textContent='📺 '+presentKindLabel();
+    b.title='Học viên xem cùng nội dung trên điện thoại / máy khác';
   }
 }
 function ensureHost(){
@@ -895,7 +911,7 @@ function ensureHost(){
   fold.textContent='▾ Thu gọn';
   const b=document.createElement('button');
   b.type='button'; b.className='btn primary'; b.id='pStart';
-  b.textContent='📺 Chiếu chung';
+  b.textContent='📺 '+presentKindLabel();
   const el=document.createElement('div');
   el.id='presentBar'; el.className='notice present-details'; el.hidden=true;
   host.appendChild(b);
@@ -1002,9 +1018,10 @@ function mountBtn(){
   if(!ensureHost()) return;
   window.__ldvlPresentMounted=true;
   const ltBtn=document.getElementById('ltPresentBtn');
-  if(ltBtn) ltBtn.onclick=function(){
+  if(ltBtn) ltBtn.onclick=async function(){
     if(P&&P.code){
       applyPresentFold(false);
+      await presentPush();
       window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');
       return;
     }

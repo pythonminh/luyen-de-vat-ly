@@ -128,7 +128,7 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
 body.cinema .cinemahud{display:none}
-body.cinema .cinema-q{min-height:100dvh;padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
+body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
 body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
 body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:auto;min-width:0;height:36px;border-radius:8px;padding:0 8px;font-size:13px;font-weight:800;line-height:36px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}

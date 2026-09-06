@@ -722,7 +722,12 @@ def page_companion(de_path: str, kind: str = "lt"):
         nav.append(f"<a class='btn{on}' href='{href}'>{html.escape(meta['icon'] + ' ' + meta['label'])}</a>")
     nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
     if admin:
-        nav.insert(0, "<button type='button' class='btn primary' id='ltPresentBtn'>📺 Chiếu lý thuyết</button>")
+        nav.insert(
+            0,
+            "<button type='button' class='btn primary' id='ltPresentBtn'>📺 Chiếu "
+            + html.escape(spec["label"])
+            + "</button>",
+        )
     if admin:
         fp = companion_path(de_path, kind)
         nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa file TEX</a>")
