@@ -127,17 +127,17 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .admindang .simx input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;accent-color:#fff;flex:0 0 auto}
 html:has(body.cinema){scroll-padding-top:0}
 body.cinema{background:#fff;padding:0}
-body.cinema .cinemahud{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px));right:calc(6px + env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px;align-items:flex-start;justify-content:flex-end;pointer-events:none}
-body.cinema .cinemahud>*{pointer-events:auto}
-body.cinema .cinemahud a,body.cinema .cinemahud>button{width:40px;height:40px;border-radius:999px;border:1px solid #c5d6ea;background:#ffffffee;color:#145bb0;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 10px #0002;flex:0 0 auto}
-body.cinema .cinemaspeak{margin-right:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:calc(100% - 96px);padding:4px;border-radius:12px;background:#ffffffee;border:1px solid #c5d6ea;box-shadow:0 2px 10px #0002}
-body.cinema .cinemahud .cinemaspeak button{width:auto;min-width:40px;height:34px;border-radius:10px;padding:0 10px;font-size:13px;font-weight:800;box-shadow:none}
+body.cinema .cinemahud{display:none}
+body.cinema .cinema-q{min-height:100dvh;padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
+body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
+body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:auto;min-width:0;height:36px;border-radius:8px;padding:0 8px;font-size:13px;font-weight:800;line-height:36px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
+body.cinema .cinemaspeak .spkmsg{flex:1 1 auto;min-width:4rem;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.cinema .qbox{border:0;border-radius:0;padding:8px 12px 20px;font-size:calc(18px * var(--qzoom,1));max-width:none;width:100%;margin:0;overflow:visible;max-height:none}
+body.cinema .qheadline{margin:0 0 8px;padding:0}
 .spkmsg{font-size:12px;color:#64748b;font-weight:600}
-.present-host .presentspeak{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.present-host .presentspeak button{padding:6px 10px;font-size:13px;font-weight:800;border-radius:10px}
-body.cinema .cinema-q{min-height:100dvh;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px));padding-top:calc(58px + env(safe-area-inset-top,0px))}
-body.cinema .qbox{border:0;border-radius:0;padding:4px 12px 24px;font-size:calc(21px * var(--qzoom,1));max-width:none;width:100%;margin:0;overflow-y:auto;max-height:100dvh}
+.present-host .presentspeak{flex:1 1 100%;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto}
+.present-host .presentspeak button{padding:6px 8px;font-size:13px;font-weight:800;border-radius:8px;white-space:nowrap}
 body.cinema .ltsec{border:0;padding:4px 0;margin:0;background:transparent;box-shadow:none;scroll-margin-top:0}
 body.cinema .ltsec-tools,body.cinema .ltSecOut,body.cinema .ltSecAdd{display:none!important}
 body.cinema .ltbox{margin:12px 0;border:1px solid #d7e2ee;border-radius:12px;overflow:hidden;background:#fff}
@@ -160,7 +160,8 @@ body.cinema .tf-flags{display:none}
 body.cinema .tf-flags .okmark{margin-left:0;min-width:4.6em;text-align:center}
 body.cinema .tf-flags .pickmark{margin-left:0;font-size:.7em}
 body.cinema .pickmark{display:inline-block;margin-left:.4em;font-size:.78em;font-weight:900;color:#145bb0}
-body.cinema .err{padding:18px 12px;max-width:36rem;margin:20vh auto 0;text-align:center}
+body.cinema .err{padding:18px 12px;max-width:36rem;margin:12px auto 0;text-align:center}
+body.cinema #perr:empty{display:none;margin:0;padding:0}
 """
 
 GEMINI_CLIENT_JS = r"""<script>

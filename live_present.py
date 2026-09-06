@@ -2,6 +2,8 @@
 """Chiếu chung: một người dẫn, máy khác theo cùng câu (poll ~1s, RAM 1 worker)."""
 from __future__ import annotations
 
+import asyncio
+import io
 import json
 import random
 import re
@@ -9,7 +11,7 @@ import secrets
 import threading
 import time
 
-from flask import jsonify, request, session
+from flask import Response, jsonify, request, session
 
 import app as base
 
@@ -238,11 +240,28 @@ def _put_room(hid, code, token, snap, live):
             tok = token if token and len(str(token)) >= 8 else secrets.token_hex(8)
             room = {"code": code, "token": tok, "host": hid, "ver": 0}
             _ROOMS[code] = room
+        prev_fp = (
+            room.get("pos"),
+            room.get("total"),
+            bool(room.get("show_sol")),
+            (room.get("q") or {}).get("kind"),
+            (room.get("q") or {}).get("text"),
+            json.dumps(room.get("live") or {}, sort_keys=True, ensure_ascii=False),
+        )
         room.update(snap)
         room["live"] = live
         room["host"] = hid
         room["code"] = code
-        room["ver"] = int(room.get("ver") or 0) + 1
+        new_fp = (
+            room.get("pos"),
+            room.get("total"),
+            bool(room.get("show_sol")),
+            (room.get("q") or {}).get("kind"),
+            (room.get("q") or {}).get("text"),
+            json.dumps(live, sort_keys=True, ensure_ascii=False),
+        )
+        if prev_fp != new_fp:
+            room["ver"] = int(room.get("ver") or 0) + 1
         room["updated"] = _now()
         session["present_code"] = room["code"]
         session["present_token"] = room["token"]
@@ -361,6 +380,41 @@ def api_present_state():
     return jsonify(out)
 
 
+@base.app.post("/api/present/tts")
+def api_present_tts():
+    data = request.get_json(silent=True) or {}
+    raw = re.sub(r"\s+", " ", str(data.get("text") or "")).strip()[:3500]
+    if len(raw) < 2:
+        return jsonify(ok=False, error="Không có chữ để đọc."), 400
+    gender = "m" if str(data.get("gender") or "").strip().lower() in {"m", "male", "nam"} else "f"
+    voice = "vi-VN-NamMinhNeural" if gender == "m" else "vi-VN-HoaiMyNeural"
+
+    async def _synth():
+        import edge_tts
+
+        buf = io.BytesIO()
+        comm = edge_tts.Communicate(raw, voice, rate="-3%", pitch="-2Hz" if gender == "m" else "+0Hz")
+        async for chunk in comm.stream():
+            if chunk.get("type") == "audio":
+                buf.write(chunk.get("data") or b"")
+        return buf.getvalue()
+
+    try:
+        try:
+            mp3 = asyncio.run(_synth())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                mp3 = loop.run_until_complete(_synth())
+            finally:
+                loop.close()
+    except Exception as e:
+        return jsonify(ok=False, error="Chưa đọc được giọng Việt online: " + str(e)[:180]), 502
+    if not mp3:
+        return jsonify(ok=False, error="Không tạo được âm thanh."), 502
+    return Response(mp3, mimetype="audio/mpeg", headers={"Cache-Control": "no-store"})
+
+
 @base.app.get("/xem")
 @base.app.get("/xem/<code>")
 def present_watch(code=""):
@@ -379,17 +433,17 @@ def present_watch(code=""):
         return base.page("Vào chiếu chung", body)
     js = PRESENT_TTS_JS + FOLLOW_JS.replace("__CODE__", json.dumps(code))
     body = (
-        "<div class='cinemahud'>"
+        "<div class='cinema-q'>"
         "<div class='cinemaspeak' id='speakBar'>"
-        "<button type='button' id='spkF' title='Giọng nữ tiếng Việt'>Nữ</button>"
-        "<button type='button' id='spkM' title='Giọng nam tiếng Việt'>Nam</button>"
-        "<button type='button' id='spkPlay' title='Đọc nội dung đang chiếu'>▶ Đọc</button>"
-        "<button type='button' id='spkPause' title='Tạm dừng'>⏸ Dừng</button>"
-        "<button type='button' id='spkResume' title='Đọc tiếp từ chỗ dừng'>▶ Tiếp</button>"
-        "<span class='spkmsg' id='spkMsg'></span></div>"
+        "<button type='button' id='spkF' title='Giọng nữ Hoài My'>Nữ</button>"
+        "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
+        "<button type='button' id='spkPlay'>▶ Đọc</button>"
+        "<button type='button' id='spkPause'>⏸ Dừng</button>"
+        "<button type='button' id='spkResume'>▶ Tiếp</button>"
         "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
-        "<a href='/xem' title='Thoát'>✕</a></div>"
-        f"<div class='cinema-q'><div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
+        "<a href='/xem' title='Thoát'>✕</a>"
+        "<span class='spkmsg' id='spkMsg'></span></div>"
+        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
     return base.page("Chiếu chung " + code, body, cinema=True)
@@ -401,47 +455,23 @@ PRESENT_TTS_JS = r"""
 if(window.ldvlSpeak) return;
 const U={
   gender:(function(){try{return localStorage.getItem('ldvlSpeakG')||'f'}catch(e){return 'f'}})(),
-  chunks:[], i:0, mode:'idle', wantPlay:false
+  mode:'idle', wantPlay:false, gen:0, sig:'', audio:null
 };
-function voices(){try{return speechSynthesis.getVoices()||[]}catch(e){return []}}
-function viList(){
-  return voices().filter(function(v){
-    const lang=String(v.lang||'').toLowerCase();
-    const name=String(v.name||'').toLowerCase();
-    return lang.indexOf('vi')===0 || name.indexOf('viet')>=0 || name.indexOf('việt')>=0;
-  });
-}
-function isFem(v){
-  const n=String(v.name||'').toLowerCase();
-  if(/nam\s*minh|namminh/.test(n)) return false;
-  return /hoai\s*my|hoaimy|linh|nữ|\bnu\b|female|\bmy\b/.test(n);
-}
-function isMal(v){
-  const n=String(v.name||'').toLowerCase();
-  return /nam\s*minh|namminh|\bmale\b/.test(n);
-}
-function pick(g){
-  const all=viList();
-  let pool=all.filter(g==='m'?isMal:isFem);
-  if(!pool.length) pool=all.filter(function(v){return g==='m'? !isFem(v): !isMal(v)});
-  if(!pool.length) pool=all;
-  function score(v){
-    const n=String(v.name||'').toLowerCase();
-    let s=0;
-    if(/online|natural|neural|google/.test(n)) s+=8;
-    if(!v.localService) s+=5;
-    if(String(v.lang||'').toLowerCase().indexOf('vi-vn')===0) s+=2;
-    return s;
-  }
-  pool.sort(function(a,b){return score(b)-score(a)});
-  return pool[0]||null;
+function msg(s){const el=document.getElementById('spkMsg'); if(el) el.textContent=s||'';}
+function paint(){
+  const f=document.getElementById('spkF'), m=document.getElementById('spkM');
+  if(f) f.classList.toggle('on', U.gender==='f');
+  if(m) m.classList.toggle('on', U.gender==='m');
+  const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
+  if(play) play.disabled=U.mode==='play';
+  if(pause) pause.disabled=U.mode!=='play';
+  if(resume) resume.disabled=U.mode!=='pause';
 }
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
-  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg').forEach(function(n){n.remove()});
-  let t=(c.innerText||c.textContent||'').replace(/\u00a0/g,' ');
-  return t.replace(/\s+/g,' ').trim();
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak').forEach(function(n){n.remove()});
+  return (c.innerText||c.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
 }
 function target(){
   const q=document.getElementById('q');
@@ -458,109 +488,131 @@ function target(){
   }
   return document.querySelector('.ltpage .ltsec') || document.querySelector('.ltpage');
 }
-function split(t){
-  t=String(t||'').trim();
-  if(!t) return [];
-  const out=[]; let buf='';
-  const parts=t.split(/([.!?…:;]+ |\n+)/);
-  for(let i=0;i<parts.length;i++){
-    const p=parts[i];
-    if(!p) continue;
-    if((buf+p).length>240 && buf){out.push(buf.trim()); buf=p;}
-    else buf+=p;
+function stopHard(){
+  U.gen+=1;
+  try{speechSynthesis.cancel()}catch(e){}
+  if(U.audio){
+    try{U.audio.onended=null; U.audio.pause(); U.audio.src='';}catch(e){}
+    U.audio=null;
   }
-  if(buf.trim()) out.push(buf.trim());
-  return out.filter(Boolean);
 }
-function msg(s){const el=document.getElementById('spkMsg'); if(el) el.textContent=s||'';}
-function paint(){
-  const f=document.getElementById('spkF'), m=document.getElementById('spkM');
-  if(f) f.classList.toggle('on', U.gender==='f');
-  if(m) m.classList.toggle('on', U.gender==='m');
-  const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
-  if(play) play.disabled=U.mode==='play';
-  if(pause) pause.disabled=U.mode!=='play';
-  if(resume) resume.disabled=U.mode!=='pause';
+function playAudio(url, gen){
+  return new Promise(function(resolve, reject){
+    const a=new Audio(url);
+    U.audio=a;
+    a.onended=function(){ if(U.gen===gen) resolve('end'); };
+    a.onerror=function(){ reject(new Error('audio')); };
+    const p=a.play();
+    if(p&&p.catch) p.catch(reject);
+  });
 }
-function stopHard(){try{speechSynthesis.cancel()}catch(e){}}
-function speakChunk(){
-  if(U.mode!=='play') return;
-  if(!navigator.onLine){
-    msg('Cần Internet để đọc tiếng Việt tự nhiên.');
-    U.mode='idle'; U.wantPlay=false; paint(); return;
+async function playNet(text, gen){
+  msg(U.gender==='m'?'Nam Minh…':'Hoài My…');
+  const r=await fetch('/api/present/tts',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({text:text,gender:U.gender})});
+  if(U.gen!==gen) return;
+  if(!r.ok){
+    const d=await r.json().catch(function(){return {}});
+    throw new Error(d.error||('tts '+r.status));
   }
-  if(U.i>=U.chunks.length){U.mode='idle'; U.wantPlay=false; paint(); msg(''); return;}
-  const v=pick(U.gender);
-  if(!v){
-    msg('Cần Chrome hoặc Edge, có mạng, để lấy giọng Nam/Nữ tiếng Việt.');
-    U.mode='idle'; U.wantPlay=false; paint(); return;
-  }
-  const u=new SpeechSynthesisUtterance(U.chunks[U.i]);
-  u.lang='vi-VN';
-  u.voice=v;
-  u.rate=0.96;
-  u.pitch=U.gender==='f'?1.04:0.9;
-  u.onend=function(){ if(U.mode!=='play') return; U.i+=1; speakChunk(); };
-  u.onerror=function(){ if(U.mode==='play'){ U.i+=1; speakChunk(); } };
-  speechSynthesis.speak(u);
+  const blob=await r.blob();
+  if(U.gen!==gen) return;
+  const url=URL.createObjectURL(blob);
+  msg(U.gender==='m'?'Nam Minh':'Hoài My');
+  await playAudio(url, gen);
 }
-function startFrom(i){
+function pickVoice(){
+  let vs=[];
+  try{vs=speechSynthesis.getVoices()||[]}catch(e){}
+  const vi=vs.filter(function(v){
+    const lang=String(v.lang||'').toLowerCase();
+    const name=String(v.name||'').toLowerCase();
+    return lang.indexOf('vi')===0 || name.indexOf('viet')>=0 || name.indexOf('việt')>=0;
+  });
+  const want=U.gender==='m'
+    ? /nam\s*minh|namminh|\bmale\b/
+    : /hoai\s*my|hoaimy|linh|nữ|\bnu\b|female|\bmy\b/;
+  return vi.filter(function(v){return want.test(String(v.name||'').toLowerCase())})[0] || vi[0] || null;
+}
+function playLocal(text, gen){
+  return new Promise(function(resolve){
+    const v=pickVoice();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='vi-VN';
+    if(v) u.voice=v;
+    u.rate=U.gender==='m'?0.92:1;
+    u.pitch=U.gender==='m'?0.72:1.18;
+    u.onend=function(){ if(U.gen===gen) resolve(); };
+    u.onerror=function(){ if(U.gen===gen) resolve(); };
+    speechSynthesis.speak(u);
+  });
+}
+async function run(text){
+  const gen=++U.gen;
+  U.mode='play'; U.wantPlay=true; paint();
+  if(!navigator.onLine){ msg('Cần mạng để đọc giọng Nam/Nữ.'); U.mode='idle'; U.wantPlay=false; paint(); return; }
+  try{
+    await playNet(text, gen);
+  }catch(e){
+    if(U.gen!==gen) return;
+    msg('Giọng máy…');
+    await playLocal(text, gen);
+  }
+  if(U.gen!==gen) return;
+  if(U.mode==='play'){ U.mode='idle'; U.wantPlay=false; paint(); msg(''); }
+}
+function startRead(){
   const t=speakTextOf(target());
-  U.chunks=split(t);
-  U.i=Math.max(0, i||0);
-  if(!U.chunks.length){ msg('Không có chữ để đọc.'); U.mode='idle'; paint(); return; }
-  U.mode='play'; U.wantPlay=true; paint(); msg('');
+  U.sig=t.length+':'+(t.slice(0,60));
+  if(!t){ msg('Không có chữ để đọc.'); return; }
   stopHard();
-  setTimeout(speakChunk, 80);
-}
-function ensureBar(){
-  if(document.getElementById('spkPlay')) return;
-  const host=document.getElementById('presentHost');
-  if(!host) return;
-  const row=document.createElement('div');
-  row.className='presentspeak';
-  row.innerHTML='<button type="button" class="btn" id="spkF">Nữ</button>'
-    +'<button type="button" class="btn" id="spkM">Nam</button>'
-    +'<button type="button" class="btn primary" id="spkPlay">▶ Đọc</button>'
-    +'<button type="button" class="btn" id="spkPause">⏸ Dừng</button>'
-    +'<button type="button" class="btn" id="spkResume">▶ Tiếp</button>'
-    +'<span class="spkmsg" id="spkMsg"></span>';
-  host.appendChild(row);
+  try{ new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA').play().catch(function(){}); }catch(e){}
+  run(t);
 }
 window.ldvlSpeak={
-  play:function(){ startFrom(0); },
+  play:function(){ startRead(); },
   pause:function(){
     if(U.mode!=='play') return;
     U.mode='pause';
-    try{
-      speechSynthesis.pause();
-      if(!speechSynthesis.paused) stopHard();
-    }catch(e){ stopHard(); }
+    if(U.audio && !U.audio.paused){ try{U.audio.pause()}catch(e){} }
+    else { try{speechSynthesis.pause(); if(!speechSynthesis.paused) speechSynthesis.cancel();}catch(e){} }
     paint();
   },
   resume:function(){
-    if(U.mode!=='pause'){ startFrom(0); return; }
+    if(U.mode!=='pause'){ startRead(); return; }
     U.mode='play'; U.wantPlay=true; paint();
+    if(U.audio){
+      const p=U.audio.play();
+      if(p&&p.catch) p.catch(function(){ startRead(); });
+      return;
+    }
     try{ if(speechSynthesis.paused){ speechSynthesis.resume(); return; } }catch(e){}
-    stopHard();
-    setTimeout(speakChunk, 80);
+    startRead();
   },
   setGender:function(g){
     U.gender=g==='m'?'m':'f';
     try{localStorage.setItem('ldvlSpeakG', U.gender)}catch(e){}
     paint();
-    if(U.mode==='play') startFrom(U.i);
+    if(U.mode==='play'||U.wantPlay) startRead();
   },
   onDraw:function(){
-    if(U.wantPlay && U.mode!=='pause') startFrom(0);
-    else{
-      stopHard();
-      if(U.mode==='play'||U.mode==='pause'){ U.mode='idle'; U.wantPlay=false; }
-      paint();
-    }
+    const t=speakTextOf(target());
+    const sig=t.length+':'+(t.slice(0,60));
+    if(sig===U.sig) return;
+    U.sig=sig;
+    if(U.wantPlay && U.mode!=='pause') startRead();
+    else if(U.mode==='play'||U.mode==='pause'){ stopHard(); U.mode='idle'; U.wantPlay=false; paint(); }
   },
   bind:function(){
-    ensureBar();
+    if(!document.getElementById('spkPlay')){
+      const host=document.getElementById('presentHost');
+      if(host){
+        const row=document.createElement('div');
+        row.className='presentspeak';
+        row.innerHTML='<button type="button" class="btn" id="spkF">Nữ</button><button type="button" class="btn" id="spkM">Nam</button><button type="button" class="btn primary" id="spkPlay">▶ Đọc</button><button type="button" class="btn" id="spkPause">⏸ Dừng</button><button type="button" class="btn" id="spkResume">▶ Tiếp</button><span class="spkmsg" id="spkMsg"></span>';
+        host.appendChild(row);
+      }
+    }
     const f=document.getElementById('spkF'), m=document.getElementById('spkM');
     const play=document.getElementById('spkPlay'), pause=document.getElementById('spkPause'), resume=document.getElementById('spkResume');
     if(f && !f.__spk){ f.__spk=1; f.onclick=function(){ window.ldvlSpeak.setGender('f'); }; }
@@ -568,12 +620,12 @@ window.ldvlSpeak={
     if(play && !play.__spk){ play.__spk=1; play.onclick=function(){ window.ldvlSpeak.play(); }; }
     if(pause && !pause.__spk){ pause.__spk=1; pause.onclick=function(){ window.ldvlSpeak.pause(); }; }
     if(resume && !resume.__spk){ resume.__spk=1; resume.onclick=function(){ window.ldvlSpeak.resume(); }; }
-    try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=function(){ speechSynthesis.getVoices(); }; }catch(e){}
     const jump=document.getElementById('ltjump');
     if(jump && !jump.__spk){
       jump.__spk=1;
-      jump.addEventListener('change', function(){ if(U.wantPlay && U.mode!=='pause') startFrom(0); });
+      jump.addEventListener('change', function(){ if(U.wantPlay && U.mode!=='pause') startRead(); });
     }
+    try{ speechSynthesis.getVoices(); }catch(e){}
     paint();
   }
 };
