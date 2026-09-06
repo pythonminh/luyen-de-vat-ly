@@ -536,33 +536,11 @@ def present_watch(code=""):
             "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
         return base.page("Vào chiếu chung", body)
-    admin_speak = False
-    try:
-        admin_speak = bool(base.can_manage_bank())
-    except Exception:
-        admin_speak = bool(base.admin_current())
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
-    if admin_speak:
-        js = PRESENT_TTS_JS + js
-        speak_bar = (
-            "<div class='cinemaspeak' id='speakBar'>"
-            "<button type='button' id='spkF' title='Giọng nữ Hoài My'>Nữ</button>"
-            "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
-            "<button type='button' id='spkPlay'>▶ Đọc</button>"
-            "<button type='button' id='spkPause'>⏸ Dừng</button>"
-            "<button type='button' id='spkResume' title='Đọc tiếp đoạn đang dừng'>▶ Đọc tiếp</button>"
-            "<button type='button' id='secPrev' hidden>◀ Trước</button>"
-            "<button type='button' id='secNext' hidden>Sau ▶</button>"
-            "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
-            "<a href='/xem' title='Thoát'>✕</a>"
-            "<span class='spkmsg' id='spkMsg'></span></div>"
-        )
-    else:
-        speak_bar = "<a class='cinema-exit' href='/xem' title='Thoát'>✕</a>"
     body = (
         "<div class='cinema-q'>"
-        + speak_bar
-        + "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
+        "<a class='cinema-exit' href='/xem' title='Thoát'>✕</a>"
+        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
     return base.page("Chiếu chung " + code, body, cinema=True)
