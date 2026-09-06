@@ -567,8 +567,26 @@ function paint(){
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
-  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak').forEach(function(n){n.remove()});
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
   return (c.innerText||c.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+}
+function kindLabel(k){
+  k=String(k||'').toUpperCase();
+  return {TN:'Trắc nghiệm',DS:'Đúng sai',TLN:'Trả lời ngắn',TL:'Tự luận',LT:'Lý thuyết',PP:'Dạng mẫu'}[k]||'';
+}
+function dangSpeak(q){
+  const d=String((q&&q.dang)||'').trim();
+  const k=kindLabel(q&&q.kind);
+  if(!d) return k?('Dạng '+k):'';
+  let s=d.replace(/\s*[-–]\s*\b(TN|DS|TLN|TL)\b\s*$/i, function(_,x){return ' '+kindLabel(x);});
+  if(k && s.toLowerCase().indexOf(k.toLowerCase())<0) s=s+' '+k;
+  return 'Dạng '+s;
+}
+function dangHtml(q){
+  const t=dangSpeak(q);
+  if(!t) return '';
+  const e=String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return '<div class="qdang">'+e+'</div>';
 }
 function target(){
   const q=document.getElementById('q');
@@ -678,7 +696,7 @@ function isCinema(){return !!(document.body&&document.body.classList.contains('c
 function canClickHost(host){
   if(!host||!host.matches) return false;
   if(isCinema()) return !host.matches('label');
-  return host.matches('.solution, .ai-y, .ai-sec, details.lt-sol');
+  return host.matches('.solution, .ai-y, .ai-sec, .qdang, details.lt-sol');
 }
 function markReading(host, btn){
   document.querySelectorAll('.spkchunk.on').forEach(function(x){x.classList.remove('on')});
@@ -722,7 +740,7 @@ function addSpk(host, src){
 function mountChunks(root){
   root=root||document;
   function skipWhole(el){return el && el.matches && el.matches('.reviewout') && el.querySelector('.ai-sec,.ai-y');}
-  if(root.nodeType===1 && root.id!=='gkey-ping' && !skipWhole(root) && (root.matches('.ltbox, details.lt-sol, .qheadline, .opt, .tf, .solution, .ai-y, .ai-sec, .reviewout') || root.id==='aiout')){
+  if(root.nodeType===1 && root.id!=='gkey-ping' && !skipWhole(root) && (root.matches('.ltbox, details.lt-sol, .qheadline, .qdang, .opt, .tf, .solution, .ai-y, .ai-sec, .reviewout') || root.id==='aiout')){
     const src=root.matches('.qheadline')?(root.querySelector('.qstem')||root):root;
     addSpk(root, src);
   }
@@ -732,7 +750,8 @@ function mountChunks(root){
   });
   root.querySelectorAll('details.lt-sol').forEach(function(d){ addSpk(d, d); });
   root.querySelectorAll('.ltbox-body > ol > li').forEach(function(li){ addSpk(li, li); });
-  root.querySelectorAll('.qheadline').forEach(function(el){ addSpk(el, el.querySelector('.qstem')||el); });
+  root.querySelectorAll('.qheadline').forEach(function(el){ addSpk(el, el); });
+  root.querySelectorAll('.qdang').forEach(function(el){ addSpk(el, el); });
   root.querySelectorAll('.opt, .tf, .solution').forEach(function(el){ addSpk(el, el); });
   root.querySelectorAll('.ai-sec, .ai-y').forEach(function(el){ addSpk(el, el); });
   root.querySelectorAll('.reviewout').forEach(function(el){
@@ -853,10 +872,21 @@ async function stepDang(delta){
     body:JSON.stringify({code:p.code,token:p.token,delta:delta})});
 }
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function dangLine(q){
+  const d=String((q&&q.dang)||'').trim();
+  const k={TN:'Trắc nghiệm',DS:'Đúng sai',TLN:'Trả lời ngắn',TL:'Tự luận',LT:'Lý thuyết',PP:'Dạng mẫu'}[String((q&&q.kind)||'').toUpperCase()]||'';
+  if(!d) return k?('Dạng '+k):'';
+  let s=d.replace(/\s*[-–]\s*\b(TN|DS|TLN|TL)\b\s*$/i, function(_,x){
+    const lab={TN:'Trắc nghiệm',DS:'Đúng sai',TLN:'Trả lời ngắn',TL:'Tự luận'}[String(x).toUpperCase()]||x;
+    return ' '+lab;
+  });
+  if(k && s.toLowerCase().indexOf(k.toLowerCase())<0) s=s+' '+k;
+  return 'Dạng '+s;
+}
 function drawKey(q, showSol, pos, total, live){
   live=live||{};
   if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||''].join('\x1f');
-  return [q&&q.kind,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
+  return [q&&q.kind,q&&q.dang,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
 }
 function fitQuestion(){
   const box=document.getElementById('q');
@@ -899,7 +929,7 @@ function draw(q, showSol, pos, total, live){
   }
   const checked=!!live.checked;
   box.hidden=false;
-  let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span><div class="qstem">'+q.text+'</div></div>';
+  let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span>'+(dangLine(q)?'<div class="qdang">'+E(dangLine(q))+'</div>':'')+'<div class="qstem">'+q.text+'</div></div>';
   if(checked && live.ok!=null){
     const labs='ABCD';
     let head=live.ok?'Đúng':'Sai';

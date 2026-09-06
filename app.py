@@ -140,7 +140,8 @@ body.cinema .spkhost.on{outline:2px solid #93c5fd;outline-offset:2px}
 .aispeak .btn.on{background:#145bb0;color:#fff;border-color:#145bb0}
 .ai-sec,.ai-y{position:relative;padding:8px 32px 8px 10px;margin:8px 0;border:1px solid #d7e2ee;border-radius:8px;cursor:pointer;background:#fff}
 .ai-opt{margin-left:12px;margin-top:6px;margin-bottom:6px}
-.ai-sec:hover,.ai-y:hover,.ai-sec.spkhost.on,.ai-y.spkhost.on{background:#eef6ff;border-color:#93c5fd}
+.qdang{font-size:.92em;font-weight:800;color:#145bb0;margin:4px 0 8px;padding-right:28px;line-height:1.35}
+body.cinema .qdang{font-size:calc(15px * var(--qzoom,1));margin:2px 0 10px}
 body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
 body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:auto;min-width:0;height:36px;border-radius:8px;padding:0 8px;font-size:13px;font-weight:800;line-height:36px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
@@ -2923,7 +2924,7 @@ function ldvlPlaceFigs(root){
   fig.hidden=false;
   body.classList.add('hassplit');
 }
-function draw(){let q=Q,h=(q.nguon?'<div class="nguonrow"><span class="nguon">Nguồn: '+E(q.nguon)+'</span></div>':'')+'<div class="qheadline"><span class="qbadge">Câu __POS__</span>'+(q.id?'<span class="qid">'+E(q.id)+'</span> ':'')+'<div class="qstem">'+q.text+'</div></div>';
+function draw(){let q=Q,h=(q.nguon?'<div class="nguonrow"><span class="nguon">Nguồn: '+E(q.nguon)+'</span></div>':'')+'<div class="qheadline"><span class="qbadge">Câu __POS__</span>'+(q.id?'<span class="qid">'+E(q.id)+'</span> ':'')+(function(){const d=String(q.dang||'').trim();const k={TN:'Trắc nghiệm',DS:'Đúng sai',TLN:'Trả lời ngắn',TL:'Tự luận'}[String(q.kind||'').toUpperCase()]||'';let s=d.replace(/\s*[-–]\s*\b(TN|DS|TLN|TL)\b\s*$/i,function(_,x){return ' '+({TN:'Trắc nghiệm',DS:'Đúng sai',TLN:'Trả lời ngắn',TL:'Tự luận'}[String(x).toUpperCase()]||x)});if(k&&s.toLowerCase().indexOf(k.toLowerCase())<0)s=(s?s+' ':'')+k;return s?'<div class="qdang">Dạng '+E(s)+'</div>':(k?'<div class="qdang">Dạng '+E(k)+'</div>':'')})()+'<div class="qstem">'+q.text+'</div></div>';
 if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><input type="radio" name="a" value="'+i+'"> <span class="tflab">'+String.fromCharCode(65+i)+'</span> '+o.text+'</label>');
 else if(q.kind==='DS'){h+='<div class="qbody ds"><div class="qfig" hidden></div><div class="qtf"><div class="tfgrid"><div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';q.statements.forEach((s,i)=>{const lab='ABCD'.charAt(i)||(i+1);h+='<div class="tf" id="t'+i+'"><span class="tflab">'+lab+'</span><div class="tf-text">'+s.text+'</div><label class="tf-box yes"><input type="radio" name="t'+i+'" value="1"></label><label class="tf-box no"><input type="radio" name="t'+i+'" value="0"></label></div>'});h+='</div></div></div>'}
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
