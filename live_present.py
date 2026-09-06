@@ -452,7 +452,7 @@ def api_present_tts():
         import edge_tts
 
         buf = io.BytesIO()
-        comm = edge_tts.Communicate(raw, voice, rate="+22%", pitch="-2Hz" if gender == "m" else "+0Hz")
+        comm = edge_tts.Communicate(raw, voice, rate="-3%", pitch="-2Hz" if gender == "m" else "+0Hz")
         async for chunk in comm.stream():
             if chunk.get("type") == "audio":
                 buf.write(chunk.get("data") or b"")
@@ -637,7 +637,7 @@ function playLocal(text, gen){
     const u=new SpeechSynthesisUtterance(text);
     u.lang='vi-VN';
     if(v) u.voice=v;
-    u.rate=U.gender==='m'?1.18:1.28;
+    u.rate=U.gender==='m'?0.92:1;
     u.pitch=U.gender==='m'?0.72:1.18;
     u.onend=function(){ if(U.gen===gen) resolve(); };
     u.onerror=function(){ if(U.gen===gen) resolve(); };
