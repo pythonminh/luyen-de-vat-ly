@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 150,
-  "total_questions": 11474,
+  "total_questions": 11476,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -402,11 +402,11 @@
       "Chuong": "Chương I. Hàm số lượng giác và phương trình lượng giác",
       "BaiHoc": "Bài 1. Giá trị lượng giác của góc lượng giác",
       "De": "Bài 1. Giá trị lượng giác của góc lượng giác",
-      "questions": 12,
-      "count": 12,
+      "questions": 14,
+      "count": 14,
       "dang": {
         "Chuyển đổi số đo góc giữa độ và radian": 6,
-        "Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác": 3,
+        "Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác": 5,
         "Xác định góc phần tư của góc lượng giác": 2,
         "Tính độ dài cung tròn khi biết bán kính và số đo góc": 1
       },
@@ -420,8 +420,8 @@
         "Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác": {
           "TN": 0,
           "DS": 3,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 1,
+          "TL": 1
         },
         "Xác định góc phần tư của góc lượng giác": {
           "TN": 0,
