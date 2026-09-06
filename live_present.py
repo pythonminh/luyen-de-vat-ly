@@ -170,6 +170,7 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
             "kind": "LT" if kind == "lt" else "PP",
             "text": html_body,
             "title": str(s.get("title") or ""),
+            "sec_id": str(s.get("id") or ""),
             "dang": spec["label"],
             "options": [],
             "statements": [],
@@ -185,11 +186,30 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
     de_path = str(data.get("de_path") or "").strip()
     if kind in {"lt", "pp"} and de_path:
         return _comp_snapshot(kind, de_path, data.get("sec"), zoom)
-    path = str(session.get("practice_path") or "")
-    ids = list(session.get("practice_ids") or [])
-    pos = int(session.get("practice_pos") or 0)
+    path = str(data.get("quiz_path") or session.get("practice_path") or "").strip()
+    ids = data.get("quiz_ids")
+    if not isinstance(ids, list):
+        ids = list(session.get("practice_ids") or [])
+    else:
+        ids = [int(x) for x in ids if str(x).isdigit() or isinstance(x, int)]
+    try:
+        pos = int(data.get("quiz_pos") if data.get("quiz_pos") is not None else session.get("practice_pos") or 0)
+    except (TypeError, ValueError):
+        pos = 0
+    if path and ids:
+        try:
+            session["practice_path"] = path
+            session["practice_ids"] = ids
+            session["practice_pos"] = max(0, min(pos, len(ids) - 1))
+        except Exception:
+            pass
+        pos = int(session.get("practice_pos") or 0)
+    else:
+        path = str(session.get("practice_path") or "")
+        ids = list(session.get("practice_ids") or [])
+        pos = int(session.get("practice_pos") or 0)
     if not path or not ids or pos < 0 or pos >= len(ids):
-        return None, "Chưa đang chiếu (vào Lý thuyết / Dạng mẫu / làm bài rồi bấm Chiếu chung)."
+        return None, "Chưa đang chiếu (vào Lý thuyết / Dạng mẫu / chọn câu bài tập rồi bấm Chiếu)."
     try:
         qs = _lesson_qs(path)
     except Exception as e:
@@ -201,6 +221,7 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
     keys = bool(show or reveal)
     return {
         "path": path,
+        "ids": ids,
         "pos": pos,
         "total": len(ids),
         "show_sol": show,
@@ -436,6 +457,52 @@ def api_present_tts():
     return Response(mp3, mimetype="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
+@base.app.post("/api/present/step")
+def api_present_step():
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or "")
+    token = str(data.get("token") or "")
+    try:
+        delta = int(data.get("delta") or 0)
+    except (TypeError, ValueError):
+        delta = 0
+    if delta not in (-1, 1) or not code:
+        return jsonify(ok=False, error="Thiếu hướng chuyển dạng."), 400
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token:
+            return jsonify(ok=False, error="Chỉ máy thầy đổi dạng được."), 401
+        q = room.get("q") or {}
+        qk = str(q.get("kind") or "")
+        path = str(room.get("path") or "")
+        pos = int(room.get("pos") or 0) + delta
+        ids = list(room.get("ids") or [])
+        zoom = room.get("zoom")
+        hid = str(room.get("host") or "")
+        show_sol = bool(room.get("show_sol"))
+    if qk in {"LT", "PP"}:
+        pos = max(0, min(max(1, int((room or {}).get("total") or 1)) - 1, pos))
+        kind = "pp" if qk == "PP" else "lt"
+        snap, err = _comp_snapshot(kind, path, pos, zoom)
+    elif ids:
+        pos = max(0, min(len(ids) - 1, pos))
+        snap, err = _snapshot(show_sol, zoom, reveal=show_sol, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+    else:
+        return jsonify(ok=False, error="Không chuyển được câu."), 400
+    if not snap:
+        return jsonify(ok=False, error=err or "Không tải được."), 400
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token:
+            return jsonify(ok=False, error="Phòng đã tắt."), 401
+        live = room.get("live") or {}
+        hid = str(room.get("host") or hid)
+    room, rerr = _put_room(hid, code, token, snap, live if isinstance(live, dict) else {}, force_kind=True)
+    if not room:
+        return jsonify(ok=False, error=rerr), 409
+    return jsonify(ok=True, pos=room.get("pos"), total=room.get("total"), ver=room.get("ver"))
+
+
 @base.app.get("/xem")
 @base.app.get("/xem/<code>")
 def present_watch(code=""):
@@ -460,7 +527,9 @@ def present_watch(code=""):
         "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
         "<button type='button' id='spkPlay'>▶ Đọc</button>"
         "<button type='button' id='spkPause'>⏸ Dừng</button>"
-        "<button type='button' id='spkResume'>▶ Tiếp</button>"
+        "<button type='button' id='spkResume' title='Đọc tiếp đoạn đang dừng'>▶ Đọc tiếp</button>"
+        "<button type='button' id='secPrev' hidden>◀ Trước</button>"
+        "<button type='button' id='secNext' hidden>Sau ▶</button>"
         "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
         "<a href='/xem' title='Thoát'>✕</a>"
         "<span class='spkmsg' id='spkMsg'></span></div>"
@@ -622,6 +691,8 @@ function mountChunks(root){
   });
   root.querySelectorAll('details.lt-sol').forEach(function(d){ addSpk(d, d); });
   root.querySelectorAll('.ltbox-body > ol > li').forEach(function(li){ addSpk(li, li); });
+  root.querySelectorAll('.qheadline').forEach(function(el){ addSpk(el, el.querySelector('.qstem')||el); });
+  root.querySelectorAll('.opt, .tf, .solution').forEach(function(el){ addSpk(el, el); });
 }
 window.ldvlSpeak={
   play:function(){ startRead(); },
@@ -704,6 +775,26 @@ FOLLOW_JS = r"""
 const CODE=__CODE__;
 let lastVer=-1;
 let lastDrawKey='';
+function hostTok(){
+  try{
+    const p=JSON.parse(localStorage.getItem('ldvlPresent')||'null');
+    if(p&&String(p.code||'').toUpperCase()===String(CODE).toUpperCase()&&p.token) return p;
+  }catch(e){}
+  return null;
+}
+function paintSecNav(pos,total){
+  const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
+  if(!a||!b) return;
+  const on=!!hostTok();
+  a.hidden=!on; b.hidden=!on;
+  a.disabled=!on||!(pos>0);
+  b.disabled=!on||!(pos<total-1);
+}
+async function stepDang(delta){
+  const p=hostTok(); if(!p) return;
+  await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:p.code,token:p.token,delta:delta})});
+}
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function drawKey(q, showSol, pos, total, live){
   live=live||{};
@@ -853,12 +944,18 @@ async function tick(){
     if(err) err.textContent='';
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
+    paintSecNav(d.pos, d.total);
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
 }
 tick();
 setInterval(tick,2500);
+(function(){
+  const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
+  if(a) a.onclick=function(){stepDang(-1)};
+  if(b) b.onclick=function(){stepDang(1)};
+})();
 window.addEventListener('resize',function(){});
 </script>
 """
@@ -913,6 +1010,18 @@ function payload(){
     if(sec) window.__ldvlPresentSec=sec;
     o.sec=sec;
   }
+  const form=document.getElementById('questionForm');
+  if(form && !page){
+    const p=form.querySelector('input[name=path]');
+    o.quiz_path=p?p.value:'';
+    const boxes=Array.prototype.slice.call(document.querySelectorAll('.qcard input[name=qid]'));
+    let ids=boxes.filter(function(x){return x.checked}).map(function(x){return +x.value});
+    if(!ids.length) ids=boxes.map(function(x){return +x.value});
+    o.quiz_ids=ids;
+    let pos=typeof window.__ldvlQuizPos==='number'?window.__ldvlQuizPos:0;
+    if(pos<0||pos>=ids.length) pos=0;
+    o.quiz_pos=pos;
+  }
   return o;
 }
 function subnavFolded(){
@@ -950,6 +1059,7 @@ function presentKindLabel(){
   const k=page&&page.getAttribute('data-lt-kind');
   if(k==='pp') return 'Chiếu dạng mẫu';
   if(k==='lt') return 'Chiếu lý thuyết';
+  if(document.getElementById('questionForm')) return 'Chiếu câu';
   return 'Chiếu chung';
 }
 function syncStartLabel(){
@@ -990,7 +1100,7 @@ function ensureHost(){
     const lt=document.querySelector('.ltnav');
     if(lt&&lt.parentNode) lt.parentNode.insertBefore(host, lt);
     else{
-    const qz=document.querySelector('.quiztop')||document.querySelector('.qzoombar');
+    const qz=document.querySelector('.quiztop')||document.querySelector('.qzoombar')||document.querySelector('.panel .toolbar');
     if(qz&&qz.parentNode) qz.parentNode.insertBefore(host, qz);
     else return null;
     }
@@ -1035,7 +1145,7 @@ async function presentPush(opts){
   if(!opts.force && document.hidden) return;
   const body=payload();
   if(opts.force) body.force_kind=true;
-  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
+  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',quiz_path:body.quiz_path||'',quiz_ids:body.quiz_ids||[],quiz_pos:body.quiz_pos,show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
   if(!opts.force && fp===window.__ldvlPresentFp) return;
   try{
     const r=await fetch('/api/present/push',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
@@ -1089,6 +1199,24 @@ function mountBtn(){
   if(!ensureHost()) return;
   window.__ldvlPresentMounted=true;
   const ltBtn=document.getElementById('ltPresentBtn');
+  const qBtn=document.getElementById('qPresentBtn');
+  if(qBtn) qBtn.onclick=async function(){
+    window.__ldvlQuizPos=0;
+    window.__ldvlPresentFp='';
+    if(P&&P.code){applyPresentFold(false);await presentPush({force:true});window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');return;}
+    presentStart();
+  };
+  document.querySelectorAll('.presentQ').forEach(function(b){
+    b.onclick=async function(e){
+      e.preventDefault();
+      const id=+b.getAttribute('data-idx');
+      document.querySelectorAll('.qcard input[name=qid]').forEach(function(x){x.checked=+x.value===id});
+      window.__ldvlQuizPos=0;
+      window.__ldvlPresentFp='';
+      if(P&&P.code){applyPresentFold(false);await presentPush({force:true});window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');return;}
+      presentStart();
+    };
+  });
   if(ltBtn) ltBtn.onclick=async function(){
     if(P&&P.code){
       applyPresentFold(false);

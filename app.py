@@ -135,7 +135,7 @@ body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:a
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
 body.cinema .cinemaspeak .spkmsg{flex:1 1 auto;min-width:4rem;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.cinema .qbox{border:0;border-radius:0;padding:8px 12px 20px;font-size:calc(18px * var(--qzoom,1));max-width:none;width:100%;margin:0;overflow:visible;max-height:none}
-body.cinema .spkchunk{width:36px;height:36px;font-size:17px}
+body.cinema .spkchunk{width:22px;height:22px;font-size:13px;opacity:.38}
 .spkmsg{font-size:12px;color:#64748b;font-weight:600}
 .present-host .presentspeak{flex:1 1 100%;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto}
 .present-host .presentspeak button{padding:6px 8px;font-size:13px;font-weight:800;border-radius:8px;white-space:nowrap}

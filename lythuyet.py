@@ -35,8 +35,9 @@ LT_CSS = """
 .ltsec h4{margin:14px 0 6px;font-size:14px;font-weight:700;color:#334155}
 .ltbox{margin:14px 0;padding:0;overflow:hidden;border-radius:14px;border:1px solid #d7e2ee;background:#fff;box-shadow:0 1px 2px #0f172a0c,0 10px 28px -18px #0f172a33}
 .ltbox .k{display:flex;align-items:center;gap:8px;margin:0;padding:9px 14px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;line-height:1.2}
-.spkchunk{flex:0 0 auto;margin-left:auto;width:34px;height:34px;padding:0;border:1px solid #c5d6ea;border-radius:999px;background:#fff;font-size:16px;line-height:1;cursor:pointer;color:#145bb0}
-.spkchunk.on{background:#145bb0;color:#fff;border-color:#145bb0}
+.spkchunk{flex:0 0 auto;margin-left:auto;width:22px;height:22px;padding:0;border:0;border-radius:999px;background:transparent;font-size:13px;line-height:1;cursor:pointer;color:#145bb0;opacity:.38}
+.spkchunk:hover,.spkchunk:focus{opacity:1;background:#eef6ff}
+.spkchunk.on{opacity:1;background:#dbeafe;color:#145bb0}
 .lt-sol summary{display:flex;align-items:center;gap:8px;list-style:none}
 .lt-sol summary .spkchunk{margin-left:auto}
 .ltbox .k:before{content:'';flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:center/14px 14px no-repeat #fff;box-shadow:inset 0 0 0 1px #0001}
@@ -47,7 +48,7 @@ LT_CSS = """
 .ltbox-body ul{margin:6px 0 4px;padding-left:1.35em}
 .ltbox-body ol,ol.tex-list{list-style:none;counter-reset:ltn;margin:8px 0 6px;padding:0}
 .ltbox-body ol>li,ol.tex-list>li{position:relative;margin:8px 0;padding:2px 2.6em 2px 2.45em;line-height:1.55}
-.ltbox-body ol>li>.spkchunk{position:absolute;right:0;top:.05em;margin:0;width:30px;height:30px;font-size:14px}
+.ltbox-body ol>li>.spkchunk{position:absolute;right:0;top:.2em;margin:0;width:20px;height:20px;font-size:12px}
 .ltbox-body ol>li::before,ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}
 .lt-hd-title{margin:0 0 8px;font-size:15px;font-weight:700;color:#9a3412}
 .ltbox.hd{background:#fff8f1;border-color:#fdba74;border-left:5px solid #ea580c}
@@ -698,8 +699,14 @@ def page_companion(de_path: str, kind: str = "lt"):
         f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục"
         + (" (xem trước 30%)" if clipped else "")
         + "</label>"
-        f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select></nav>"
+        f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select>"
+        "<div class='lttoc-nav' style='display:flex;gap:6px;margin-top:6px'>"
+        "<button type='button' class='btn' id='secPrev'>◀ Dạng trước</button>"
+        "<button type='button' class='btn' id='secNext'>Dạng sau ▶</button></div></nav>"
         "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
+        "function go(d){var i=s.selectedIndex;if(i<1)i=1;i+=d;if(i<1||i>=s.options.length)return;s.selectedIndex=i;s.dispatchEvent(new Event('change'));}"
+        "var a=document.getElementById('secPrev'),b=document.getElementById('secNext');"
+        "if(a)a.onclick=function(){go(-1)};if(b)b.onclick=function(){go(1)};"
         "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
         "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'auto',block:'start'});}});"
         "})();</script>"
