@@ -439,6 +439,8 @@ def api_present_state():
 
 @base.app.post("/api/present/tts")
 def api_present_tts():
+    if not _host_id():
+        return jsonify(ok=False, error="Chỉ ADMIN mới đọc được."), 401
     data = request.get_json(silent=True) or {}
     raw = re.sub(r"\s+", " ", str(data.get("text") or "")).strip()[:3500]
     if len(raw) < 2:
@@ -534,21 +536,33 @@ def present_watch(code=""):
             "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
         return base.page("Vào chiếu chung", body)
-    js = PRESENT_TTS_JS + FOLLOW_JS.replace("__CODE__", json.dumps(code))
+    admin_speak = False
+    try:
+        admin_speak = bool(base.can_manage_bank())
+    except Exception:
+        admin_speak = bool(base.admin_current())
+    js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
+    if admin_speak:
+        js = PRESENT_TTS_JS + js
+        speak_bar = (
+            "<div class='cinemaspeak' id='speakBar'>"
+            "<button type='button' id='spkF' title='Giọng nữ Hoài My'>Nữ</button>"
+            "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
+            "<button type='button' id='spkPlay'>▶ Đọc</button>"
+            "<button type='button' id='spkPause'>⏸ Dừng</button>"
+            "<button type='button' id='spkResume' title='Đọc tiếp đoạn đang dừng'>▶ Đọc tiếp</button>"
+            "<button type='button' id='secPrev' hidden>◀ Trước</button>"
+            "<button type='button' id='secNext' hidden>Sau ▶</button>"
+            "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
+            "<a href='/xem' title='Thoát'>✕</a>"
+            "<span class='spkmsg' id='spkMsg'></span></div>"
+        )
+    else:
+        speak_bar = "<a class='cinema-exit' href='/xem' title='Thoát'>✕</a>"
     body = (
         "<div class='cinema-q'>"
-        "<div class='cinemaspeak' id='speakBar'>"
-        "<button type='button' id='spkF' title='Giọng nữ Hoài My'>Nữ</button>"
-        "<button type='button' id='spkM' title='Giọng nam Nam Minh'>Nam</button>"
-        "<button type='button' id='spkPlay'>▶ Đọc</button>"
-        "<button type='button' id='spkPause'>⏸ Dừng</button>"
-        "<button type='button' id='spkResume' title='Đọc tiếp đoạn đang dừng'>▶ Đọc tiếp</button>"
-        "<button type='button' id='secPrev' hidden>◀ Trước</button>"
-        "<button type='button' id='secNext' hidden>Sau ▶</button>"
-        "<button type='button' title='Toàn màn hình' onclick='ldvlToggleFs()'>⛶</button>"
-        "<a href='/xem' title='Thoát'>✕</a>"
-        "<span class='spkmsg' id='spkMsg'></span></div>"
-        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
+        + speak_bar
+        + "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
     return base.page("Chiếu chung " + code, body, cinema=True)
@@ -678,28 +692,55 @@ function startReadText(t){
 function startRead(){
   startReadText(speakTextOf(target()));
 }
+function isCinema(){return !!(document.body&&document.body.classList.contains('cinema'));}
+function canClickHost(host){
+  if(!host||!host.matches) return false;
+  if(isCinema()) return !host.matches('label');
+  return host.matches('.solution, .ai-y, .reviewout, .ltbox, details.lt-sol');
+}
+function markReading(host, btn){
+  document.querySelectorAll('.spkchunk.on').forEach(function(x){x.classList.remove('on')});
+  document.querySelectorAll('.spkhost.on').forEach(function(x){x.classList.remove('on')});
+  if(btn) btn.classList.add('on');
+  if(host) host.classList.add('on');
+}
 function addSpk(host, src){
   if(!host||!src) return;
-  if(host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk')) return;
-  const b=document.createElement('button');
-  b.type='button';
-  b.className='spkchunk';
-  b.title='Đọc đoạn này';
-  b.setAttribute('aria-label','Đọc đoạn này');
-  b.textContent='🔊';
-  b.onclick=function(ev){
-    ev.preventDefault();
-    ev.stopPropagation();
-    document.querySelectorAll('.spkchunk.on').forEach(function(x){x.classList.remove('on')});
-    b.classList.add('on');
-    startReadText(speakTextOf(src));
-  };
-  const sum=host.tagName==='DETAILS'?host.querySelector('summary'):null;
-  if(sum) sum.appendChild(b);
-  else host.appendChild(b);
+  if(!host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk')){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='spkchunk';
+    b.title='Đọc đoạn này';
+    b.setAttribute('aria-label','Đọc đoạn này');
+    b.textContent='🔊';
+    b.onclick=function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      markReading(host, b);
+      startReadText(speakTextOf(src));
+    };
+    const sum=host.tagName==='DETAILS'?host.querySelector('summary'):null;
+    if(sum) sum.appendChild(b);
+    else host.appendChild(b);
+  }
+  if(!host.__spkClick && canClickHost(host)){
+    host.__spkClick=1;
+    host.classList.add('spkhost');
+    host.addEventListener('click', function(ev){
+      if(ev.target.closest('button,a,input,textarea,select,label,.spkchunk')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      markReading(host, host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk'));
+      startReadText(speakTextOf(src));
+    });
+  }
 }
 function mountChunks(root){
   root=root||document;
+  if(root.nodeType===1 && root.id!=='gkey-ping' && (root.matches('.ltbox, details.lt-sol, .qheadline, .opt, .tf, .solution, .ai-y, .reviewout') || root.id==='aiout')){
+    const src=root.matches('.qheadline')?(root.querySelector('.qstem')||root):root;
+    addSpk(root, src);
+  }
   root.querySelectorAll('.ltbox').forEach(function(box){
     const k=box.querySelector(':scope > .k');
     addSpk(k||box, box);
@@ -708,6 +749,11 @@ function mountChunks(root){
   root.querySelectorAll('.ltbox-body > ol > li').forEach(function(li){ addSpk(li, li); });
   root.querySelectorAll('.qheadline').forEach(function(el){ addSpk(el, el.querySelector('.qstem')||el); });
   root.querySelectorAll('.opt, .tf, .solution').forEach(function(el){ addSpk(el, el); });
+  root.querySelectorAll('.ai-y').forEach(function(el){ addSpk(el, el); });
+  root.querySelectorAll('.reviewout').forEach(function(el){
+    if(el.id==='gkey-ping') return;
+    addSpk(el, el);
+  });
 }
 window.ldvlSpeak={
   play:function(){ startRead(); },
@@ -745,6 +791,8 @@ window.ldvlSpeak={
     if(U.mode==='play') stopHard();
     U.mode='idle'; U.wantPlay=false; paint();
     mountChunks(document.getElementById('q')||document);
+    const pane=document.getElementById('aipane');
+    if(pane) mountChunks(pane);
   },
   bind:function(){
     U.auto=false;

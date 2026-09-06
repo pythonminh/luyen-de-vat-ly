@@ -130,6 +130,11 @@ body.cinema .cinemagate{position:fixed;inset:0;z-index:50;border:0;background:#1
 body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
+body.cinema .cinema-exit{position:fixed;top:8px;right:10px;z-index:31;width:36px;height:36px;border-radius:8px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:0 2px 8px #0f172a14}
+body.cinema .spkhost{cursor:pointer;position:relative}
+body.cinema .spkhost.on{outline:2px solid #93c5fd;outline-offset:2px}
+.solution.spkhost,.ai-y.spkhost,.reviewout.spkhost{cursor:pointer;position:relative}
+.spkhost>.spkchunk{position:absolute;right:6px;top:6px}
 body.cinema .cinemaspeak{position:sticky;top:0;z-index:30;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #c5d6ea;border-radius:0;background:#fff;box-shadow:0 2px 8px #0f172a14;max-width:none;overflow-x:auto}
 body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:auto;min-width:0;height:36px;border-radius:8px;padding:0 8px;font-size:13px;font-weight:800;line-height:36px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
@@ -216,7 +221,7 @@ async function ldvlGeminiReview(payload,outEl){
   try{
     var r=await fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json();
-    if(d.ok){outEl.innerHTML=ldvlFmtAi(d.text);if(window.ldvlTypeset)ldvlTypeset(outEl);}
+    if(d.ok){outEl.innerHTML=ldvlFmtAi(d.text);if(window.ldvlTypeset)ldvlTypeset(outEl);if(window.ldvlSpeak&&window.ldvlSpeak.mountChunks)window.ldvlSpeak.mountChunks(outEl);}
     else outEl.innerHTML='<span class="err">'+ldvlFmtAi(d.error||'Lỗi Gemini')+'</span>';
   }catch(e){outEl.innerHTML='<span class="err">'+ldvlFmtAi(e.message||e)+'</span>';}
 }
@@ -2805,7 +2810,11 @@ def practice():
             + gem
             + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
         )
-        return page('Kết quả',body)
+        extra_js=''
+        if has_full_bank_access(m):
+            from live_present import PRESENT_TTS_JS
+            extra_js=PRESENT_TTS_JS
+        return page('Kết quả',body+extra_js)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
     palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}' title='{html.escape(str(allq.get(qid,{}).get('id') or ''), quote=True)}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
@@ -2906,7 +2915,8 @@ if(q.kind==='TN')return !!document.querySelector('input[name=a]:checked');
 if(q.kind==='DS'){for(let i=0;i<q.statements.length;i++){if(!document.querySelector('input[name=t'+i+']:checked'))return false}return true}
 let z=document.getElementById('ans');return !!(z&&z.value.trim())}
 function syncReady(){if(checked)return;let b=document.getElementById('chkbtn');if(!b)return;let ready=answered();b.disabled=!ready;b.title=ready?'':'Hãy chọn/nhập đáp án trước khi xác nhận.'}
-function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite()}
+function ldvlRemountSpeak(){if(!(window.ldvlSpeak&&window.ldvlSpeak.mountChunks))return;window.ldvlSpeak.mountChunks(document.getElementById('q'));let pane=document.getElementById('aipane');if(pane)window.ldvlSpeak.mountChunks(pane)}
+function openSolution(){if(!IS_ADMIN&&!checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display='block';typeset(box);let b=document.getElementById('solbtn');if(b)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite();ldvlRemountSpeak()}
 function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<p style="margin-top:10px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
