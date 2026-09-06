@@ -296,7 +296,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         admin_jump = "<a class='adminjump' href='/admin/members' title='Quản lý thành viên'>👥 Thành viên</a>"
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
-            "<a href='/xem'>📺 Xem chiếu</a>",
+            "<a href='/xem' title='Học viên nhập mã. Thầy bấm Chiếu lý thuyết trên trang bài.'>📺 Xem chiếu</a>",
             "<a href='/admin'>📂 ngan-hang</a>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
             "<a href='/admin/members'>👥 Thành viên</a>",
@@ -313,7 +313,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         nav.append("<a href='/member/logout'>🚪 Thoát</a>")
     else:
         nav += [
-            "<a href='/xem'>📺 Xem chiếu</a>",
+            "<a href='/xem' title='Học viên nhập mã. Thầy bấm Chiếu lý thuyết trên trang bài.'>📺 Xem chiếu</a>",
             "<a href='/member/login'>🔑 Đăng nhập</a>",
             "<a href='/member/register'>📝 Đăng ký</a>",
         ]

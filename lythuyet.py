@@ -18,7 +18,7 @@ STATUS_FILE = ROOT / "companion_status.json"
 LT_CSS = """
 <style>
 .ltpage{max-width:none;width:100%}
-.ltnav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;position:relative;z-index:6}
+.ltnav .btn,.ltnav button.btn{font-size:14px}
 .lttoc{margin:0 0 14px;max-width:min(100%,720px)}
 .lttoc label{display:block;font-size:12px;color:#64748b;margin:0 0 5px;font-weight:600}
 .lttoc select{width:100%;padding:9px 12px;border:1px solid #c9d8e8;border-radius:10px;background:#fff;color:#173a5e;font-size:14px;line-height:1.35}
@@ -722,6 +722,8 @@ def page_companion(de_path: str, kind: str = "lt"):
         nav.append(f"<a class='btn{on}' href='{href}'>{html.escape(meta['icon'] + ' ' + meta['label'])}</a>")
     nav.append(f"<a class='btn' href='{qhref}'>▶ Luyện đề</a>")
     if admin:
+        nav.insert(0, "<button type='button' class='btn primary' id='ltPresentBtn'>📺 Chiếu lý thuyết</button>")
+    if admin:
         fp = companion_path(de_path, kind)
         nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa file TEX</a>")
         nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
@@ -781,6 +783,7 @@ def page_companion(de_path: str, kind: str = "lt"):
         LT_CSS
         + f"<div class='wrap ltpage'{wrap_attrs}>"
         + f"<div class='panel'><div class='head'>{head}</div><div class='body'>"
+        + "<div id='presentSlot'></div>"
         + banner
         + f"<p class='ltnav'>{''.join(nav)}</p>"
         + toc

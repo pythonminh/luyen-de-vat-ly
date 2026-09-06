@@ -782,7 +782,12 @@ function payload(){
     o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
     o.de_path=page.getAttribute('data-de-path')||'';
     const sel=document.getElementById('ltjump');
-    o.sec=(sel&&sel.value)||(location.hash||'').replace(/^#/,'')||'';
+    let sec=(sel&&sel.value)||(location.hash||'').replace(/^#/,'')||'';
+    if(!sec && sel && sel.options && sel.options.length>1){
+      sec=sel.options[1].value||'';
+      if(sel && sec) sel.value=sec;
+    }
+    o.sec=sec;
   }
   return o;
 }
@@ -844,8 +849,12 @@ function ensureHost(){
   host.appendChild(b);
   host.appendChild(fold);
   host.appendChild(el);
+  const slot=document.getElementById('presentSlot');
+  const ltBody=document.querySelector('.ltpage .panel > .body');
   const sub=document.querySelector('.subnav');
-  if(sub&&sub.parentNode) sub.parentNode.insertBefore(host, sub);
+  if(slot) slot.appendChild(host);
+  else if(ltBody) ltBody.insertBefore(host, ltBody.firstChild);
+  else if(sub&&sub.parentNode) sub.parentNode.insertBefore(host, sub);
   else{
     const lt=document.querySelector('.ltnav');
     if(lt&&lt.parentNode) lt.parentNode.insertBefore(host, lt);
@@ -875,10 +884,10 @@ function showBar(p){
   applyPresentFold(presentFolded());
   const url=p.url||(location.origin+'/xem/'+p.code);
   el.innerHTML='<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
-    +'<a href="'+url+'" target="_blank" rel="noopener">'+url+'</a> '
+    +'<a class="btn primary" href="'+url+'" target="_blank" rel="noopener">🖥 Mở màn chiếu</a> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Học viên mở link: thấy nội dung đang chiếu (câu / lý thuyết / dạng mẫu). Trên máy chiếu bấm <b>Nữ</b> hoặc <b>Nam</b> rồi <b>Đọc</b> — cần mạng; <b>Dừng</b> / <b>Tiếp</b> để tạm dừng và đọc tiếp.</div>';
+    +'<div class="muted">Máy chiếu / điện thoại mở link trên. Đổi mục ở <b>mục lục</b> thì màn hình đổi theo. Đọc: <b>Nữ</b>/<b>Nam</b> → <b>Đọc</b> / <b>Dừng</b> / <b>Tiếp</b>.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
   const s=document.getElementById('pstop');
@@ -929,6 +938,7 @@ async function presentStart(){
   P={code:d.code,token:d.token,url:d.url};
   try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}
   showBar(P);
+  try{ if(d.url) window.open(d.url,'_blank','noopener'); }catch(e){}
 }
 let pushTimer=0;
 function presentPushSoon(){
@@ -936,8 +946,18 @@ function presentPushSoon(){
   pushTimer=setTimeout(presentPush,160);
 }
 function mountBtn(){
-  if(document.getElementById('pStart')) return;
+  if(window.__ldvlPresentMounted) return;
   if(!ensureHost()) return;
+  window.__ldvlPresentMounted=true;
+  const ltBtn=document.getElementById('ltPresentBtn');
+  if(ltBtn) ltBtn.onclick=function(){
+    if(P&&P.code){
+      applyPresentFold(false);
+      window.open(P.url||(location.origin+'/xem/'+P.code),'_blank','noopener');
+      return;
+    }
+    presentStart();
+  };
   if(P&&P.code){showBar(P);presentPush();}
   setInterval(function(){if(P&&P.code)presentPush();},5000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
