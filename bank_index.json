@@ -406,7 +406,7 @@
       "count": 12,
       "dang": {
         "Chuyển đổi số đo góc giữa độ và radian": 6,
-        "Xác định góc có cùng điểm biểu diễn trên đường tròn": 3,
+        "Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác": 3,
         "Xác định góc phần tư của góc lượng giác": 2,
         "Tính độ dài cung tròn khi biết bán kính và số đo góc": 1
       },
@@ -417,7 +417,7 @@
           "TLN": 2,
           "TL": 2
         },
-        "Xác định góc có cùng điểm biểu diễn trên đường tròn": {
+        "Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác": {
           "TN": 0,
           "DS": 3,
           "TLN": 0,
