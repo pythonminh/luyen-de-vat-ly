@@ -84,6 +84,10 @@ LT_CSS = """
 .lt-sol summary{cursor:pointer;font-weight:800;color:#145bb0}
 .lt-sol div{margin-top:8px}
 .lt-short{margin:8px 0;font-weight:700}
+.ltlock{margin:16px 0 4px;padding:16px 18px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb;text-align:center}
+.ltlock p{margin:0 0 12px;color:#92400e;line-height:1.55}
+.ltfade{position:relative;overflow:hidden}
+.ltfade:after{content:'';pointer-events:none;position:absolute;left:0;right:0;bottom:0;height:88px;background:linear-gradient(transparent,#fff)}
 @media(max-width:800px){.lt-split{grid-template-columns:1fr}}
 </style>
 """
@@ -172,6 +176,131 @@ def companion_visible(de_path: str, kind: str = "lt", for_admin: bool = False) -
     if is_approved(de_path, kind):
         return True
     return bool(for_admin)
+
+
+def sees_full_companion(m=None) -> bool:
+    """VIP / SVIP / ADMIN xem hết; khách và FREE xem 30%."""
+    if m is None:
+        try:
+            m = base.member_current()
+        except Exception:
+            m = None
+    return bool(base.has_full_bank_access(m) or base.is_vip(m))
+
+
+def companion_access_label(de_path: str, kind: str, m=None) -> str:
+    if not is_approved(de_path, kind):
+        return "Chờ duyệt"
+    if sees_full_companion(m):
+        return "Xem hết"
+    return "Xem 30%"
+
+
+PREVIEW_RATIO = 0.30
+
+
+def _cut_html(s: str, n: int) -> str:
+    s = str(s or "")
+    if n <= 0:
+        return ""
+    if len(s) <= n:
+        return s
+    chunk = s[:n]
+    gt = chunk.rfind(">")
+    lt = chunk.rfind("<")
+    if lt > gt:
+        chunk = chunk[:lt]
+    elif gt > max(40, n * 0.4):
+        chunk = s[: gt + 1]
+    return chunk.rstrip()
+
+
+def clip_companion_secs(secs, ratio=PREVIEW_RATIO):
+    """Giữ khoảng 30% dung lượng HTML (không gửi hết lời giải phía sau)."""
+    secs = list(secs or [])
+    if not secs:
+        return secs, False
+    total = sum(max(len(s.get("html") or ""), 1) for s in secs)
+    budget = max(160, int(total * float(ratio)))
+    if budget >= total:
+        return secs, False
+    out = []
+    used = 0
+    for s in secs:
+        body = s.get("html") or ""
+        if used >= budget:
+            break
+        remain = budget - used
+        if len(body) <= remain:
+            out.append(s)
+            used += len(body)
+            continue
+        ns = dict(s)
+        ns["html"] = _cut_html(body, remain)
+        out.append(ns)
+        break
+    return out, True
+
+
+def companion_bar_html(de_path: str, guest: bool = False, next_url: str = ""):
+    """Thẻ Lý thuyết / Dạng mẫu + trạng thái duyệt; ADMIN duyệt ngay trên trang bài."""
+    admin = (not guest) and bool(base.can_manage_bank())
+    nxt = str(next_url or "")
+    if not nxt:
+        try:
+            nxt = request.full_path if request.query_string else (request.path or "")
+            if nxt.endswith("?"):
+                nxt = nxt[:-1]
+        except Exception:
+            nxt = ""
+    if nxt.startswith("/member/ly-thuyet") or nxt.startswith("/member/phuong-phap"):
+        nxt = "/member/select?path=" + quote(str(de_path or ""), safe="")
+    bits = []
+    for kind, meta in TRACKS.items():
+        exists = companion_exists(de_path, kind)
+        if not exists:
+            if admin:
+                bits.append(
+                    f"<span class='dtab {kind}'><span class='dname'>{html.escape(meta['icon'] + ' ' + meta['label'])}</span>"
+                    f"<span class='dkinds'><span class='dk wait'>Chưa có file</span></span></span>"
+                )
+            continue
+        ok = is_approved(de_path, kind)
+        if not admin and not ok:
+            continue
+        href = meta["route"] + "?path=" + quote(str(de_path or ""), safe="")
+        who = None if guest else base.member_current()
+        st = companion_access_label(de_path, kind, who) if not admin else ("Đã duyệt · học viên thấy" if ok else "Chờ duyệt")
+        stcls = "ok" if ok else "wait"
+        form = ""
+        if admin:
+            form = (
+                "<form class='ltform' method='post' action='/admin/companion/status'>"
+                "<input type='hidden' name='path' value='"
+                + html.escape(str(de_path or ""), quote=True)
+                + "'>"
+                "<input type='hidden' name='kind' value='"
+                + html.escape(kind)
+                + "'>"
+                "<input type='hidden' name='next' value='"
+                + html.escape(nxt or "/member/select?path=" + str(de_path or ""), quote=True)
+                + "'>"
+                + (
+                    f"<button class='btn green' name='status' value='approved' type='submit'>✅ Duyệt {html.escape(meta['label'])}</button>"
+                    if not ok
+                    else f"<button class='btn red' name='status' value='pending' type='submit'>↩ Gỡ duyệt</button>"
+                )
+                + "</form>"
+            )
+        bits.append(
+            f"<a class='dtab {kind}' href='{html.escape(href, quote=True)}'>"
+            f"<span class='dname'>{html.escape(meta['icon'] + ' ' + meta['label'])}</span>"
+            f"<span class='dkinds'><span class='dk {stcls}'>{html.escape(st)}</span></span></a>"
+            + form
+        )
+    if not bits:
+        return ""
+    return "<nav class='lttabs' aria-label='Lý thuyết và dạng mẫu'>" + "".join(bits) + "</nav>"
 
 
 def looks_like_stub(de_path: str, kind: str = "lt") -> bool:
@@ -524,9 +653,7 @@ def page_companion(de_path: str, kind: str = "lt"):
     spec = TRACKS.get(kind) or TRACKS["lt"]
     m = base.member_current()
     de_path = str(de_path or "").strip()
-    if not de_path or not base.can_view(m, de_path):
-        if not m:
-            return redirect(base.login_url(spec["route"] + "?path=" + de_path))
+    if not de_path:
         return redirect("/member")
     rel = companion_path(de_path, kind)
     admin = bool(base.has_full_bank_access(m))
@@ -552,21 +679,28 @@ def page_companion(de_path: str, kind: str = "lt"):
             f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file {html.escape(spec['file'])}. {html.escape(str(e))}</div>"
             f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
         )
-    secs, blocks = _section_blocks_html(tex, admin=admin)
+    full = sees_full_companion(m)
+    secs, start = _theory_secs(tex)
+    clipped = False
+    if not full:
+        secs, clipped = clip_companion_secs(secs)
     nsec = len(secs)
     opts = "".join(
         f"<option value='{html.escape(s['id'], quote=True)}'>{html.escape(s['title'])}</option>"
         for s in secs
     )
     toc = (
-        f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục</label>"
+        f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục"
+        + (" (xem trước 30%)" if clipped else "")
+        + "</label>"
         f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select></nav>"
         "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
         "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
         "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'smooth',block:'start'});}});"
         "})();</script>"
     )
-    if not blocks.strip():
+    blocks = _html_secs(secs, start=start, admin=admin and full, fade_last=clipped, add_btn=admin and full)
+    if not str(blocks or "").strip():
         blocks = (
             f"<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong {html.escape(spec['file'])}.</p>"
         )
@@ -592,6 +726,25 @@ def page_companion(de_path: str, kind: str = "lt"):
         nav.append(f"<a class='btn' href='/admin/edit?path={quote(fp, safe='')}'>✏️ Sửa file TEX</a>")
         nav.append("<a class='btn' href='/admin/ly-thuyet'>📋 Duyệt</a>")
     banner = ""
+    lock = ""
+    if clipped:
+        here = spec["route"] + "?path=" + quote(de_path, safe="")
+        if m:
+            lock = (
+                "<div class='ltlock'><p><b>Bạn đang xem 30% nội dung.</b> "
+                "Tài khoản <b>VIP</b> (hoặc SVIP) được xem hết lý thuyết và phương pháp.</p>"
+                "<p><a class='btn primary' href='/member/goi'>Nâng VIP để xem hết</a> "
+                "<a class='btn' href='" + html.escape(qhref, quote=True) + "'>Luyện đề</a></p></div>"
+            )
+        else:
+            lock = (
+                "<div class='ltlock'><p><b>Khách xem trước 30%.</b> "
+                "Đăng nhập <b>VIP</b> để xem toàn bộ lý thuyết / dạng mẫu.</p>"
+                "<p><a class='btn primary' href='"
+                + html.escape(base.login_url(here), quote=True)
+                + "'>Đăng nhập VIP</a> "
+                "<a class='btn' href='/member/login'>Đăng ký</a></p></div>"
+            )
     if admin:
         fp = companion_path(de_path, kind)
         if not is_approved(de_path, kind):
@@ -628,6 +781,7 @@ def page_companion(de_path: str, kind: str = "lt"):
         + f"<p class='ltnav'>{''.join(nav)}</p>"
         + toc
         + blocks
+        + lock
         + "</div></div></div>"
     )
     return base.page(spec["label"], body)
@@ -783,7 +937,7 @@ def admin_companion_status():
     if path:
         set_status(path, kind, approved)
     nxt = str(request.form.get("next") or "/admin/ly-thuyet")
-    if not nxt.startswith("/admin"):
+    if "://" in nxt or not (nxt.startswith("/admin") or nxt.startswith("/member")):
         nxt = "/admin/ly-thuyet"
     return redirect(nxt)
 
@@ -890,13 +1044,18 @@ def _section_preview_html(idx, title, body):
     return "".join((s.get("html") or "") for s in secs[:6])
 
 
-def _section_blocks_html(tex, admin=False):
+def _theory_secs(tex):
     secs = parse_theory(tex)
     _, raw_secs = split_companion_sections(tex)
     has_pre = bool(raw_secs) and _html_preamble_visible(raw_secs[0].get("body") or "")
     start = 0 if has_pre else 1
+    return secs, start
+
+
+def _html_secs(secs, start=0, admin=False, fade_last=False, add_btn=False):
     bits = []
-    for i, s in enumerate(secs):
+    n = len(secs or [])
+    for i, s in enumerate(secs or []):
         raw_idx = start + i
         tools = ""
         if admin:
@@ -916,18 +1075,24 @@ def _section_blocks_html(tex, admin=False):
                 + del_btn
                 + "</div>"
             )
+        fade = " ltfade" if fade_last and i == n - 1 else ""
         bits.append(
-            f"<section class='ltsec' id='{html.escape(s['id'], quote=True)}' data-idx='{raw_idx}'>"
+            f"<section class='ltsec{fade}' id='{html.escape(s['id'], quote=True)}' data-idx='{raw_idx}'>"
             f"<div class='ltsec-h'><h2>{html.escape(s['title'])}</h2>{tools}</div>"
             f"{s['html']}<div class='ltSecOut'></div></section>"
         )
     blocks = "".join(bits) or "<p class='muted'>Chưa tách được mục \\subsubsection.</p>"
-    if admin:
+    if add_btn:
         blocks += (
             "<p style='margin-top:12px'><button type='button' class='btn ltSecAdd'>＋ Thêm mục (\\subsubsection)</button></p>"
             "<div class='ltSecOut ltSecAddOut'></div>"
         )
-    return secs, blocks
+    return blocks
+
+
+def _section_blocks_html(tex, admin=False):
+    secs, start = _theory_secs(tex)
+    return secs, _html_secs(secs, start=start, admin=admin, add_btn=admin)
 
 
 def companion_section_editor_html(path, kind, tex):

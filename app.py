@@ -1130,7 +1130,11 @@ def theory_catalog_html(path, guest=False):
         safe = html.escape(href, quote=True)
         cls = "ltrow" if kind == "lt" else "pprow"
         btncls = "ltbtn" if kind == "lt" else "ppbtn"
-        st = _lt.companion_access_label(path, kind, None if guest else member_current())
+        lab_fn = getattr(_lt, "companion_access_label", None)
+        if lab_fn:
+            st = lab_fn(path, kind, None if guest else member_current())
+        else:
+            st = "Đã duyệt" if ok else "Chờ duyệt"
         label = html.escape(meta["icon"] + " " + meta["label"])
         rows.append(
             f"<a class='dangrow danglink {cls}' href='{safe}'>"
