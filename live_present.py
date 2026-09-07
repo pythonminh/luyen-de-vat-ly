@@ -160,10 +160,12 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
     s = secs[idx]
     html_body = lt._html_secs([s], start=start + idx, admin=False)
     spec = lt.TRACKS.get(kind) or lt.TRACKS["lt"]
+    titles = [str(x.get("title") or f"Mục {i + 1}").strip() or f"Mục {i + 1}" for i, x in enumerate(secs)]
     return {
         "path": de_path,
         "pos": idx,
         "total": len(secs),
+        "sec_titles": titles,
         "show_sol": True,
         "zoom": _zoom(zoom),
         "q": {
@@ -281,6 +283,7 @@ def _room_out(room, include_q=True):
         "zoom": float(room.get("zoom") or 1),
         "host": room.get("host") or "",
         "live": room.get("live") or {},
+        "secs": list(room.get("sec_titles") or []),
     }
     if include_q:
         d["q"] = room.get("q") or {}
@@ -462,6 +465,12 @@ def api_present_state():
         room["updated"] = _now()
         if since and since == ver:
             return jsonify(ok=True, unchanged=True, ver=ver)
+        qk = str((room.get("q") or {}).get("kind") or "")
+        if qk in {"LT", "PP"} and not room.get("sec_titles"):
+            kind = "pp" if qk == "PP" else "lt"
+            snap, _err = _comp_snapshot(kind, room.get("path"), room.get("pos"), room.get("zoom"))
+            if snap:
+                room["sec_titles"] = list(snap.get("sec_titles") or [])
         out = _room_out(room)
     return jsonify(out)
 
@@ -508,11 +517,17 @@ def api_present_step():
     data = request.get_json(silent=True) or {}
     code = _norm_code(data.get("code") or "")
     token = str(data.get("token") or "")
+    have_abs = data.get("pos") is not None and str(data.get("pos")) != ""
     try:
         delta = int(data.get("delta") or 0)
     except (TypeError, ValueError):
         delta = 0
-    if delta not in (-1, 1) or not code:
+    try:
+        abs_pos = int(data.get("pos")) if have_abs else None
+    except (TypeError, ValueError):
+        abs_pos = None
+        have_abs = False
+    if not code or (not have_abs and delta not in (-1, 1)):
         return jsonify(ok=False, error="Thiếu hướng chuyển dạng."), 400
     with _LOCK:
         room = _ROOMS.get(code)
@@ -521,7 +536,8 @@ def api_present_step():
         q = room.get("q") or {}
         qk = str(q.get("kind") or "")
         path = str(room.get("path") or "")
-        pos = int(room.get("pos") or 0) + delta
+        cur = int(room.get("pos") or 0)
+        pos = abs_pos if have_abs else cur + delta
         ids = list(room.get("ids") or [])
         zoom = room.get("zoom")
         hid = str(room.get("host") or "")
@@ -568,7 +584,12 @@ def present_watch(code=""):
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
     body = (
         "<div class='cinema-q'>"
-        "<button type='button' class='cinema-exit' id='cinemaExit' title='Câu trước'>✕</button>"
+        "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát / dạng trước'>✕</button>"
+        "<div class='cinemahost' id='cinemaHost' hidden>"
+        "<button type='button' id='secPrev' title='Dạng trước'>◀</button>"
+        "<select id='secJump' aria-label='Chọn dạng'></select>"
+        "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
+        "</div>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
@@ -887,18 +908,41 @@ function hostTok(){
   }catch(e){}
   return null;
 }
-function paintSecNav(pos,total){
+function paintSecNav(pos,total,secs,kind){
+  const bar=document.getElementById('cinemaHost');
+  const jump=document.getElementById('secJump');
   const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
-  if(!a||!b) return;
   const on=!!hostTok();
-  a.hidden=!on; b.hidden=!on;
-  a.disabled=!on||!(pos>0);
-  b.disabled=!on||!(pos<total-1);
+  if(bar) bar.hidden=!on;
+  if(a) a.hidden=!on;
+  if(b) b.hidden=!on;
+  if(!on) return;
+  const n=Math.max(1, total||1);
+  const p=Math.max(0, Math.min(n-1, pos||0));
+  if(a) a.disabled=!(p>0);
+  if(b) b.disabled=!(p<n-1);
+  if(!jump) return;
+  const lab={PP:'Dạng',LT:'Mục'}[String(kind||'').toUpperCase()]||'Câu';
+  let titles=Array.isArray(secs)&&secs.length?secs.map(function(t,i){return String(t||'').trim()||(lab+' '+(i+1));}):null;
+  if(!titles) titles=Array.from({length:n},function(_,i){return lab+' '+(i+1)+' / '+n;});
+  const fp=titles.join('\x1f')+'\x1f'+n;
+  if(jump.dataset.fp!==fp){
+    jump.innerHTML=titles.map(function(t,i){return '<option value="'+i+'">'+E((i+1)+'. '+t)+'</option>';}).join('');
+    jump.dataset.fp=fp;
+  }
+  jump.value=String(p);
 }
 async function stepDang(delta){
   const p=hostTok(); if(!p) return;
   await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,delta:delta})});
+  lastVer=-1; tick();
+}
+async function jumpPos(pos){
+  const p=hostTok(); if(!p) return;
+  await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:p.code,token:p.token,pos:pos})});
+  lastVer=-1; tick();
 }
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function dangLine(q){
@@ -1060,7 +1104,7 @@ async function tick(){
     if(err) err.textContent='';
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
-    paintSecNav(d.pos, d.total);
+    paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'');
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
@@ -1068,9 +1112,10 @@ async function tick(){
 tick();
 setInterval(tick,2500);
 (function(){
-  const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
+  const a=document.getElementById('secPrev'), b=document.getElementById('secNext'), jump=document.getElementById('secJump');
   if(a) a.onclick=function(){stepDang(-1)};
   if(b) b.onclick=function(){stepDang(1)};
+  if(jump) jump.onchange=function(){jumpPos(parseInt(jump.value,10)||0)};
   const x=document.getElementById('cinemaExit');
   if(x) x.onclick=function(){
     if(hostTok()){ stepDang(-1); return; }

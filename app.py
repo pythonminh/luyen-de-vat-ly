@@ -177,8 +177,11 @@ body.cinema .tf-flags .pickmark{margin-left:0;font-size:.7em}
 body.cinema .pickmark{display:inline-block;margin-left:.4em;font-size:.78em;font-weight:900;color:#145bb0}
 body.cinema .err{padding:18px 12px;max-width:36rem;margin:12px auto 0;text-align:center}
 body.cinema #perr:empty{display:none;margin:0;padding:0}
-body.cinema .cinema-exit{top:calc(8px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));width:44px;height:44px}
-body.cinema .cinema-q{padding-top:calc(52px + env(safe-area-inset-top,0px));padding-right:calc(8px + env(safe-area-inset-right,0px))}
+body.cinema .cinemahost{position:sticky;top:0;z-index:32;display:flex;gap:6px;align-items:stretch;padding:calc(8px + env(safe-area-inset-top,0px)) 52px 8px 8px;background:#fff;border-bottom:1px solid #c5d6ea}
+body.cinema .cinemahost[hidden]{display:none!important}
+body.cinema .cinemahost select{flex:1;min-width:0;font-size:16px;font-weight:800;padding:8px 10px;min-height:44px;border:1px solid #c4b5fd;border-radius:8px;background:#f5f3ff;color:#5b21b6}
+body.cinema .cinemahost button{flex:0 0 auto;min-width:44px;min-height:44px;border:1px solid #c5d6ea;border-radius:8px;background:#fff;color:#145bb0;font-size:18px;font-weight:800;cursor:pointer}
+body.cinema:has(#cinemaHost:not([hidden])) .cinema-q{padding-top:0;padding-right:0}
 body.cinema .qbox{padding-right:12px}
 .present-host #pCode{display:none;font:800 18px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.1em;padding:4px 8px}
 .present-host.has-code #pCode{display:inline-flex;align-items:center}
