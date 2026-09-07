@@ -558,7 +558,7 @@ def present_watch(code=""):
             "<div class='wrap'><div class='panel' style='max-width:480px;margin:40px auto'><div class='head'>📺 Vào chiếu chung</div><div class='body'>"
             "<p class='muted'>Gõ đúng mã thầy đưa sau khi bấm <b>Chiếu chung</b> (3–6 ký tự, ví dụ <code>K7M2</code> hoặc <code>1234</code> nếu thầy đặt mã đó). Không tự bịa mã khi thầy chưa mở phòng.</p>"
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
-            "<input name='code' maxlength='8' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:22px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
+            "<input name='code' maxlength='8' inputmode='text' autocomplete='off' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
             "<p class='muted'>Không cần đăng nhập. Trang tự theo câu / lý thuyết / dạng mẫu thầy đang chiếu.</p>"
             "</div></div></div>"
@@ -1222,9 +1222,20 @@ function ensureHost(){
   const b=document.createElement('button');
   b.type='button'; b.className='btn primary'; b.id='pStart';
   b.textContent='📺 '+presentKindLabel();
+  const codeEl=document.createElement('b');
+  codeEl.id='pCode';
+  const prev=document.createElement('button');
+  prev.type='button'; prev.className='btn'; prev.id='pPrevQuick'; prev.textContent='◀';
+  prev.title='Câu trước'; prev.onclick=function(){presentStep(-1)};
+  const next=document.createElement('button');
+  next.type='button'; next.className='btn'; next.id='pNextQuick'; next.textContent='▶';
+  next.title='Câu sau'; next.onclick=function(){presentStep(1)};
   const el=document.createElement('div');
   el.id='presentBar'; el.className='notice present-details'; el.hidden=true;
   host.appendChild(b);
+  host.appendChild(codeEl);
+  host.appendChild(prev);
+  host.appendChild(next);
   host.appendChild(fold);
   host.appendChild(el);
   const slot=document.getElementById('presentSlot');
@@ -1273,7 +1284,14 @@ function showBar(p){
   const el=document.getElementById('presentBar');
   if(!el) return;
   syncStartLabel();
-  if(!p){el.innerHTML='';el.hidden=true;applyPresentFold(true);syncStartLabel();return;}
+  const codeEl=document.getElementById('pCode');
+  if(!p){
+    host.classList.remove('has-code');
+    if(codeEl) codeEl.textContent='';
+    el.innerHTML='';el.hidden=true;applyPresentFold(true);syncStartLabel();return;
+  }
+  host.classList.add('has-code');
+  if(codeEl) codeEl.textContent=p.code||'';
   el.hidden=false;
   applyPresentFold(presentFolded());
   const url=p.url||(location.origin+'/xem/'+p.code);

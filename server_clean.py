@@ -144,8 +144,8 @@ base.parse_questions = _fixed_parse_questions
 _original_page = base.page
 
 
-def authoritative_page(title: str, body: str):
-    response = _original_page(title, body)
+def authoritative_page(title: str, body: str, **kwargs):
+    response = _original_page(title, body, **kwargs)
     if "text/html" in response.headers.get("Content-Type", ""):
         response.set_data(_clean_html(response.get_data(as_text=True)))
     return response
