@@ -100,6 +100,66 @@ def _sanitize_live(raw):
     return live
 
 
+def _norm_ans(s):
+    t = re.sub(r"\$+", "", str(s or ""))
+    t = re.sub(r"\s+", "", t).replace(",", ".").lower()
+    return t
+
+
+def _raw_q_from_room(room):
+    path = str((room or {}).get("path") or "")
+    ids = list((room or {}).get("ids") or [])
+    try:
+        pos = int((room or {}).get("pos") or 0)
+    except (TypeError, ValueError):
+        pos = 0
+    if not path or not ids or pos < 0 or pos >= len(ids):
+        return None
+    try:
+        qs = _lesson_qs(path)
+    except Exception:
+        return None
+    return qs.get(ids[pos])
+
+
+def _score_live(q, live):
+    live = _sanitize_live(live)
+    kind = str((q or {}).get("kind") or "").upper()
+    if kind == "TN":
+        opts = q.get("options") or []
+        i = live.get("tn")
+        if i is None:
+            return live, "Hãy chọn một phương án."
+        try:
+            i = int(i)
+        except (TypeError, ValueError):
+            return live, "Hãy chọn một phương án."
+        if i < 0 or i >= len(opts):
+            return live, "Hãy chọn một phương án."
+        live["checked"] = True
+        live["ok"] = bool(opts[i].get("correct"))
+        return live, ""
+    if kind == "DS":
+        stmts = q.get("statements") or []
+        ds = list(live.get("ds") or [])
+        if len(ds) < len(stmts) or any(x is not True and x is not False for x in ds[: len(stmts)]):
+            return live, "Hãy chọn Đúng/Sai đủ các ý."
+        live["ds"] = ds[: len(stmts)]
+        live["checked"] = True
+        live["ok"] = all(bool(ds[i]) == bool(stmts[i].get("correct")) for i in range(len(stmts)))
+        return live, ""
+    text = str(live.get("text") or "").strip()
+    if not text:
+        return live, "Hãy nhập đáp án trước."
+    live["checked"] = True
+    ans = str((q or {}).get("answer") or "").strip()
+    if kind == "TLN" and ans:
+        live["ok"] = _norm_ans(text) == _norm_ans(ans)
+    else:
+        live["ok"] = None
+    return live, ""
+
+
 def _lesson_qs(path):
     path = str(path or "")
     with _QS_LOCK:
@@ -358,10 +418,11 @@ def api_present_start():
         return jsonify(ok=False, error="Hãy đăng nhập để mở phòng chiếu."), 401
     data = dict(request.get_json(silent=True) or {})
     live = _sanitize_live(data.get("live"))
+    want_sol = bool(data.get("show_sol")) and bool(live.get("checked"))
     want_pre = _norm_code(data.get("code") or session.get("present_code") or "")
     with _LOCK:
         _keep_room_cursor(data, _ROOMS.get(want_pre))
-    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
+    snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         return jsonify(ok=False, error=err), 400
     want = _norm_code(data.get("code"))
@@ -412,15 +473,16 @@ def api_present_push():
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     live = _sanitize_live(data.get("live"))
+    want_sol = bool(data.get("show_sol")) and bool(live.get("checked"))
     with _LOCK:
         _keep_room_cursor(data, _ROOMS.get(code))
-    snap, err = _snapshot(data.get("show_sol"), data.get("zoom"), reveal=live["checked"], data=data)
+    snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         with _LOCK:
             room = _ROOMS.get(code)
             if room and room.get("host") == hid:
                 room["live"] = live
-                room["show_sol"] = bool(data.get("show_sol"))
+                room["show_sol"] = want_sol
                 room["ver"] = int(room.get("ver") or 0) + 1
                 room["updated"] = _now()
                 return jsonify(ok=True, ver=room["ver"], pos=room.get("pos"), total=room.get("total"), token=room.get("token"))
@@ -598,14 +660,15 @@ def api_present_step():
         ids = list(room.get("ids") or [])
         zoom = room.get("zoom")
         hid = str(room.get("host") or "")
-        show_sol = bool(room.get("show_sol"))
+        show_sol = False
+        live_clear = {"tn": None, "ds": [], "text": "", "checked": False, "ok": None}
     if qk in {"LT", "PP"}:
         pos = max(0, min(max(1, int((room or {}).get("total") or 1)) - 1, pos))
         kind = "pp" if qk == "PP" else "lt"
         snap, err = _comp_snapshot(kind, path, pos, zoom)
     elif ids:
         pos = max(0, min(len(ids) - 1, pos))
-        snap, err = _snapshot(show_sol, zoom, reveal=show_sol, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+        snap, err = _snapshot(False, zoom, reveal=False, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
     else:
         return jsonify(ok=False, error="Không chuyển được câu."), 400
     if not snap:
@@ -614,9 +677,8 @@ def api_present_step():
         room = _ROOMS.get(code)
         if not room or str(room.get("token") or "") != token:
             return jsonify(ok=False, error="Phòng đã tắt."), 401
-        live = room.get("live") or {}
         hid = str(room.get("host") or hid)
-    room, rerr = _put_room(hid, code, token, snap, live if isinstance(live, dict) else {}, force_kind=True)
+    room, rerr = _put_room(hid, code, token, snap, live_clear, force_kind=True)
     if not room:
         return jsonify(ok=False, error=rerr), 409
     return jsonify(ok=True, pos=room.get("pos"), total=room.get("total"), ver=room.get("ver"))
@@ -641,8 +703,11 @@ def api_present_reveal():
         pos = int(room.get("pos") or 0)
         zoom = room.get("zoom")
         live = room.get("live") if isinstance(room.get("live"), dict) else {}
+    live = _sanitize_live(live)
     if qk in {"LT", "PP"}:
         return jsonify(ok=True, show_sol=False, ver=int((room or {}).get("ver") or 0))
+    if show and not live.get("checked"):
+        return jsonify(ok=False, error="Hãy chọn đáp án và bấm Xác nhận trước."), 400
     snap, err = _snapshot(show, zoom, reveal=show, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
     if not snap:
         return jsonify(ok=False, error=err or "Không tải được câu."), 400
@@ -650,6 +715,61 @@ def api_present_reveal():
     if not room:
         return jsonify(ok=False, error=rerr), 409
     return jsonify(ok=True, show_sol=bool(room.get("show_sol")), ver=room.get("ver"))
+
+
+@base.app.post("/api/present/live")
+def api_present_live():
+    hid = _host_id()
+    if not hid:
+        return jsonify(ok=False, error="Hãy đăng nhập ADMIN trên máy đang chiếu."), 401
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or session.get("present_code") or "")
+    token = str(data.get("token") or session.get("present_token") or "")
+    commit = bool(data.get("commit"))
+    incoming = _sanitize_live(data.get("live"))
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token or str(room.get("host") or "") != hid:
+            return jsonify(ok=False, error="Không phải phòng của bạn."), 401
+        qk = str((room.get("q") or {}).get("kind") or "")
+        path = str(room.get("path") or "")
+        ids = list(room.get("ids") or [])
+        pos = int(room.get("pos") or 0)
+        zoom = room.get("zoom")
+        show_sol = bool(room.get("show_sol"))
+        old = _sanitize_live(room.get("live") if isinstance(room.get("live"), dict) else {})
+    if qk in {"LT", "PP"}:
+        return jsonify(ok=True, ver=int((room or {}).get("ver") or 0))
+    if old.get("checked") and not commit:
+        return jsonify(ok=True, ver=int((room or {}).get("ver") or 0), live=old)
+    if commit:
+        if old.get("checked"):
+            incoming = old
+        else:
+            q = _raw_q_from_room({"path": path, "ids": ids, "pos": pos})
+            if not q:
+                return jsonify(ok=False, error="Không tải được câu."), 400
+            incoming, err = _score_live(q, incoming)
+            if err:
+                return jsonify(ok=False, error=err), 400
+        want_sol = show_sol and bool(incoming.get("checked"))
+        snap, err = _snapshot(want_sol, zoom, reveal=want_sol, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+        if not snap:
+            return jsonify(ok=False, error=err or "Không tải được câu."), 400
+        room, rerr = _put_room(hid, code, token, snap, incoming, force_kind=True)
+        if not room:
+            return jsonify(ok=False, error=rerr), 409
+        return jsonify(ok=True, ver=room.get("ver"), live=room.get("live") or incoming)
+    incoming["checked"] = False
+    incoming["ok"] = None
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token or str(room.get("host") or "") != hid:
+            return jsonify(ok=False, error="Phòng đã tắt."), 401
+        room["live"] = incoming
+        room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        return jsonify(ok=True, ver=room["ver"], live=incoming)
 
 
 @base.app.get("/xem/<code>/qr.svg")
@@ -688,6 +808,7 @@ def present_watch(code=""):
         "<button type='button' id='secPrev' title='Dạng trước'>◀</button>"
         "<select id='secJump' aria-label='Chọn dạng'></select>"
         "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
+        "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận</button>"
         "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "<button type='button' class='cinema-tool spk-f'>Nữ</button>"
@@ -922,11 +1043,6 @@ function startReadText(t, asPiece){
   run(t);
 }
 async function cinemaRead(){
-  try{
-    if(typeof presentReveal==='function' && typeof hostTok==='function' && hostTok() && typeof lastShowSol!=='undefined' && !lastShowSol && lastQ && String(lastQ.kind||'').toUpperCase()!=='LT' && String(lastQ.kind||'').toUpperCase()!=='PP'){
-      await presentReveal(true);
-    }
-  }catch(e){}
   const bits=[];
   const q=document.getElementById('q');
   if(q && !q.hidden) bits.push(speakTextOf(q));
@@ -1151,20 +1267,54 @@ function isQuizQ(q){
   const k=String((q&&q.kind)||'').toUpperCase();
   return k && k!=='LT' && k!=='PP';
 }
+function cinemaReady(){
+  const q=lastQ||{};
+  const live=lastLive||{};
+  const k=String(q.kind||'').toUpperCase();
+  if(k==='TN') return live.tn!=null && live.tn!=='';
+  if(k==='DS'){
+    const n=(q.statements||[]).length;
+    const ds=live.ds||[];
+    if(!n || ds.length<n) return false;
+    for(let i=0;i<n;i++) if(ds[i]!==true && ds[i]!==false) return false;
+    return true;
+  }
+  return String(live.text||'').trim().length>0;
+}
 function paintHostTools(){
   const on=!!hostTok();
   const quiz=on && isQuizQ(lastQ);
+  const done=!!(lastLive&&lastLive.checked);
+  document.body.classList.toggle('is-host', on);
+  document.body.classList.toggle('sol-on', !!lastShowSol);
+  const chk=document.getElementById('chkToggle');
   const sol=document.getElementById('solToggle');
   const ai=document.getElementById('aiToggle');
+  if(chk){
+    chk.hidden=!quiz || !!lastShowSol;
+    chk.disabled=done || !cinemaReady();
+    chk.textContent=done?'✅ Đã xác nhận':'✅ Xác nhận';
+    chk.title=done?'Đã khóa lựa chọn':(cinemaReady()?'Khóa đáp án lớp chọn':'Hãy chọn đủ đáp án trước.');
+  }
   if(sol){
     sol.hidden=!quiz;
+    sol.disabled=!done && !lastShowSol;
     sol.classList.toggle('on', !!lastShowSol);
     sol.textContent=lastShowSol?'🙈 Ẩn đáp án':'📖 Đáp án';
+    sol.title=done||lastShowSol?'':'Hãy chọn đáp án và bấm Xác nhận trước.';
   }
-  if(ai) ai.hidden=!quiz;
+  if(ai){
+    ai.hidden=!quiz;
+    ai.disabled=!done;
+    ai.title=done?'':'Hãy chọn đáp án và bấm Xác nhận trước.';
+  }
 }
 async function presentReveal(show){
   const p=hostTok(); if(!p) return false;
+  if(show && !(lastLive&&lastLive.checked)){
+    alert('Hãy chọn đáp án và bấm Xác nhận trước.');
+    return false;
+  }
   const r=await fetch('/api/present/reveal',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,show_sol:!!show})});
   const d=await r.json().catch(function(){return {}});
@@ -1172,6 +1322,42 @@ async function presentReveal(show){
   lastVer=-1;
   await tick();
   return true;
+}
+async function presentLive(patch, commit){
+  const p=hostTok(); if(!p) return false;
+  const live=Object.assign({tn:null,ds:[],text:'',checked:false,ok:null}, lastLive||{}, patch||{});
+  if(patch && Object.prototype.hasOwnProperty.call(patch,'ds')) live.ds=patch.ds;
+  const r=await fetch('/api/present/live',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:p.code,token:p.token,live:live,commit:!!commit})});
+  const d=await r.json().catch(function(){return {}});
+  if(!d||!d.ok){alert((d&&d.error)||'Không gửi được lựa chọn.');return false;}
+  lastVer=-1;
+  await tick();
+  return true;
+}
+function cinemaDsCopy(){
+  const n=((lastQ&&lastQ.statements)||[]).length;
+  const ds=(lastLive.ds||[]).slice();
+  while(ds.length<n) ds.push(null);
+  return ds.slice(0,n);
+}
+function bindCinemaPick(){
+  if(!hostTok() || lastShowSol || (lastLive&&lastLive.checked) || !isQuizQ(lastQ)) return;
+  const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
+  document.querySelectorAll('#q .opt').forEach(function(el,i){
+    el.onclick=function(){ presentLive({tn:i}, false); };
+  });
+  document.querySelectorAll('#q .tf').forEach(function(row,i){
+    const yes=row.querySelector('.tf-box.yes');
+    const no=row.querySelector('.tf-box.no');
+    if(yes) yes.onclick=function(){ const ds=cinemaDsCopy(); ds[i]=true; presentLive({ds:ds}, false); };
+    if(no) no.onclick=function(){ const ds=cinemaDsCopy(); ds[i]=false; presentLive({ds:ds}, false); };
+  });
+  const save=document.getElementById('cinemaAnsSave');
+  const inp=document.getElementById('cinemaAns');
+  if(save && inp && (k==='TLN'||k==='TL')){
+    save.onclick=function(){ presentLive({text:String(inp.value||'')}, false); };
+  }
 }
 function liveStudent(q, live){
   live=live||{};
@@ -1269,27 +1455,29 @@ function draw(q, showSol, pos, total, live){
       return '<div class="keyrow" style="grid-template-columns:7.2em repeat('+n+',2.6em)"><span class="keylab">'+label+'</span>'+cells+'</div>';
     }
     let extra='';
-    if(q.kind==='TN'){
-      const key=(q.options||[]).map(function(o,i){return o.correct?labs.charAt(i):''}).filter(Boolean).join('')||'?';
-      const pick=live.tn==null?'?':labs.charAt(live.tn);
-      extra='<div class="keygrid">'+row('Đáp án đúng',[{letter:key,mark:'',cls:'ok'}])+row('Thầy chọn',[{letter:pick,mark:'',cls:pick===key?'ok':'bad'}])+'</div>';
-    }else if(q.kind==='DS'){
-      const keys=(q.statements||[]).map(function(s){return s.correct?'Đ':'S'});
-      const ans=keys.map(function(m,i){return {letter:labs.charAt(i),mark:m,cls:'ok'}});
-      const you=keys.map(function(m,i){const p=(live.ds||[])[i];const mk=p===true?'Đ':(p===false?'S':'?');return {letter:labs.charAt(i),mark:mk,cls:mk===m?'ok':'bad'}});
-      extra='<div class="keygrid">'+row('Đáp án đúng',ans)+row('Thầy chọn',you)+'</div>';
+    if(showSol){
+      if(q.kind==='TN'){
+        const key=(q.options||[]).map(function(o,i){return o.correct?labs.charAt(i):''}).filter(Boolean).join('')||'?';
+        const pick=live.tn==null?'?':labs.charAt(live.tn);
+        extra='<div class="keygrid">'+row('Đáp án đúng',[{letter:key,mark:'',cls:'ok'}])+row('Thầy chọn',[{letter:pick,mark:'',cls:pick===key?'ok':'bad'}])+'</div>';
+      }else if(q.kind==='DS'){
+        const keys=(q.statements||[]).map(function(s){return s.correct?'Đ':'S'});
+        const ans=keys.map(function(m,i){return {letter:labs.charAt(i),mark:m,cls:'ok'}});
+        const you=keys.map(function(m,i){const p=(live.ds||[])[i];const mk=p===true?'Đ':(p===false?'S':'?');return {letter:labs.charAt(i),mark:mk,cls:mk===m?'ok':'bad'}});
+        extra='<div class="keygrid">'+row('Đáp án đúng',ans)+row('Thầy chọn',you)+'</div>';
+      }
     }
     h+='<div class="result '+(live.ok?'good':'bad')+'">'+head+extra+'</div>';
   }
   if(q.kind==='TN')(q.options||[]).forEach(function(o,i){
     const picked=live.tn===i;
     let cls='opt';
-    if(o.correct) cls+=' correct';
-    else if((checked||showSol)&&picked) cls+=' wrong';
-    else if(!checked&&!showSol&&picked) cls+=' picked';
+    if(showSol && o.correct) cls+=' correct';
+    else if(showSol && picked) cls+=' wrong';
+    else if(!showSol && picked) cls+=' picked';
     let flags='';
     if(picked) flags+='<span class="pickmark">◀ thầy chọn</span>';
-    if(o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
+    if(showSol && o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
     h+='<div class="'+cls+'"><span class="tflab">'+String.fromCharCode(65+i)+'</span><div class="tf-text">'+o.text+'</div>'+(flags?'<div class="tf-flags">'+flags+'</div>':'')+'</div>';
   });
   else if(q.kind==='DS'){
@@ -1319,7 +1507,11 @@ function draw(q, showSol, pos, total, live){
   }
   else {
     const typed=String(live.text||'').trim();
-    h+='<div class="answerline">'+(typed?('<b>Thầy viết:</b> '+E(typed)):'✎ Đang chờ thầy nhập…')+'</div>';
+    if(hostTok() && !showSol && !checked){
+      h+='<div class="answerline"><input id="cinemaAns" class="cinema-ans" value="'+E(typed)+'" placeholder="Nhập đáp án lớp chọn"><button type="button" class="cinema-tool" id="cinemaAnsSave">Ghi</button></div>';
+    }else{
+      h+='<div class="answerline">'+(typed?('<b>Thầy viết:</b> '+E(typed)):'✎ Đang chờ thầy nhập…')+'</div>';
+    }
     if(showSol&&q.answer) h+='<div class="answerline result good"><b>Đáp án đúng:</b> '+E(q.answer)+'</div>';
   }
   if(showSol&&q.solution) h+='<div class="solution"><b>📖 Lời giải</b><div>'+q.solution+'</div></div>';
@@ -1367,6 +1559,7 @@ async function tick(){
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
     paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'');
+    bindCinemaPick();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
@@ -1385,11 +1578,17 @@ setInterval(tick,2500);
   };
   const sol=document.getElementById('solToggle');
   if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
+  const chk=document.getElementById('chkToggle');
+  if(chk) chk.onclick=async function(){ await presentLive(null, true); };
   const ai=document.getElementById('aiToggle');
   if(ai) ai.onclick=async function(){
     const pane=document.getElementById('cinemaAi');
     if(!pane) return;
     if(!pane.hidden){ pane.hidden=true; return; }
+    if(!(lastLive&&lastLive.checked)){
+      alert('Hãy chọn đáp án và bấm Xác nhận trước.');
+      return;
+    }
     if(!lastShowSol) await presentReveal(true);
     pane.hidden=false;
     if(typeof ldvlGeminiReview!=='function'){
@@ -1490,7 +1689,7 @@ function collectLive(){
 }
 function payload(opts){
   opts=opts||{};
-  const o={code:P&&P.code,token:P&&P.token,show_sol:solVisible(),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
+  const o={code:P&&P.code,token:P&&P.token,show_sol:!!(window.checked && solVisible()),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
   const page=document.querySelector('.ltpage[data-de-path]');
   if(page){
     o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
