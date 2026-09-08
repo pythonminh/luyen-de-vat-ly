@@ -165,7 +165,13 @@ body.cinema .cinemaspeak button,body.cinema .cinemaspeak a{flex:0 0 auto;width:a
 body.cinema .cinemaspeak button.on,.present-host .presentspeak button.on{background:#145bb0;color:#fff;border-color:#145bb0}
 body.cinema .cinemaspeak .spkmsg{flex:1 1 auto;min-width:4rem;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.cinema .qbox{border:0;border-radius:0;padding:8px 12px 20px;font-size:calc(18px * var(--qzoom,1));max-width:none;width:100%;margin:0;overflow:visible;max-height:none}
-body.cinema .spkchunk,body.cinema .spkhost>.spkchunk{display:none!important}
+body.cinema .spkchunk,body.cinema .spkhost>.spkchunk,body.cinema button.spkchunk{display:none!important;width:0!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}
+body.cinema .tf-box.ok{border-color:#15803d!important;background:#ecfdf3!important}
+body.cinema .tf-box.ok::after{content:"";width:.5em;height:.5em;border-radius:1px;background:#15803d!important}
+body.cinema .tf-box.bad{border-color:#b91c1c!important;background:#fef2f2!important}
+body.cinema .tf-box.bad::after{content:"";width:.5em;height:.5em;border-radius:1px;background:#b91c1c!important}
+body.cinema .opt.correct{background:#ecfdf3!important;border:2px solid #15803d!important}
+body.cinema .opt.wrong{background:#fef2f2!important;border:2px solid #b91c1c!important}
 .spkmsg{font-size:12px;color:#64748b;font-weight:600}
 .present-host .presentspeak{flex:1 1 100%;display:flex;flex-wrap:nowrap;gap:4px;align-items:center;overflow-x:auto}
 .present-host .presentspeak button{padding:6px 8px;font-size:13px;font-weight:800;border-radius:8px;white-space:nowrap}

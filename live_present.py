@@ -957,6 +957,7 @@ function markReading(host, btn){
   if(host) host.classList.add('on');
 }
 function addSpk(host, src){
+  if(isCinema()) return;
   if(!host||!src) return;
   if(!host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk')){
     const b=document.createElement('button');
@@ -1284,8 +1285,8 @@ function draw(q, showSol, pos, total, live){
     const picked=live.tn===i;
     let cls='opt';
     if(o.correct) cls+=' correct';
-    else if(checked&&picked) cls+=' wrong';
-    else if(!checked&&picked) cls+=' picked';
+    else if((checked||showSol)&&picked) cls+=' wrong';
+    else if(!checked&&!showSol&&picked) cls+=' picked';
     let flags='';
     if(picked) flags+='<span class="pickmark">◀ thầy chọn</span>';
     if(o.correct) flags+='<span class="okmark">Đáp án đúng</span>';
@@ -1296,14 +1297,23 @@ function draw(q, showSol, pos, total, live){
     (q.statements||[]).forEach(function(s,i){
     const pick=(live.ds||[])[i];
     const has=pick===true||pick===false;
-    const revealed=showSol||checked;
+    const revealed=!!showSol;
     let cls='tf';
-    if(revealed&&s.correct) cls+=' correct';
-    else if(checked&&has&&pick!==s.correct) cls+=' wrong';
+    if(revealed && has && pick!==s.correct) cls+=' wrong';
+    else if(revealed) cls+=' ok';
     const lab='ABCD'.charAt(i)||(i+1);
+    function box(side, val, right){
+      let c='tf-box '+side;
+      if(revealed && right) c+=' ok';
+      if(has && pick===val){
+        if(revealed && !right) c+=' bad';
+        else if(!revealed) c+=' pick';
+      }
+      return c;
+    }
     h+='<div class="'+cls+'"><span class="tflab">'+lab+'</span><div class="tf-text">'+s.text+'</div>'
-      +'<span class="tf-box yes'+(pick===true?' pick':'')+(revealed&&s.correct?' on':'')+'"></span>'
-      +'<span class="tf-box no'+(pick===false?' pick':'')+(revealed&&!s.correct?' on':'')+'"></span></div>';
+      +'<span class="'+box('yes',true,!!s.correct)+'"></span>'
+      +'<span class="'+box('no',false,!s.correct)+'"></span></div>';
   });
     h+='</div></div></div>';
   }
