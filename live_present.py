@@ -476,12 +476,68 @@ def api_present_state():
     return jsonify(out)
 
 
+def _tts_speak_letters(x: str) -> str:
+    x = re.sub(r"[\\{}]", "", str(x or "")).replace(" ", "")
+    if re.fullmatch(r"[A-Z]{2,8}", x):
+        return " ".join(x)
+    return x
+
+
+def _tts_speak_tex(t: str) -> str:
+    t = str(t or "")
+
+    def vec(m):
+        return " vectơ " + _tts_speak_letters(m.group(1)) + " "
+
+    t = re.sub(r"\\overrightarrow\s*\{([^{}]*)\}", vec, t)
+    t = re.sub(r"\\vec\s*\{([^{}]*)\}", vec, t)
+    t = re.sub(r"\\overline\s*\{([^{}]*)\}", lambda m: " " + _tts_speak_letters(m.group(1)) + " ", t)
+    t = re.sub(r"\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", lambda m: " " + _tts_speak_tex(m.group(1)) + " trên " + _tts_speak_tex(m.group(2)) + " ", t)
+    t = re.sub(r"\\sqrt\s*\{([^{}]*)\}", lambda m: " căn " + _tts_speak_tex(m.group(1)) + " ", t)
+    t = re.sub(r"\\(?:left|right)\b", "", t)
+    t = re.sub(r"\\[,;!]|\\quad|\\qquad", " ", t)
+    t = re.sub(r"\\(?:times|cdot|ast)\b", " nhân ", t)
+    t = re.sub(r"\\(?:leq|le)\b", " nhỏ hơn hoặc bằng ", t)
+    t = re.sub(r"\\(?:geq|ge)\b", " lớn hơn hoặc bằng ", t)
+    t = re.sub(r"\\(?:neq|ne)\b", " khác ", t)
+    t = re.sub(r"\\approx\b", " khoảng ", t)
+    t = re.sub(r"\\infty\b", " vô cực ", t)
+    t = re.sub(r"\\pi\b", " pi ", t)
+    t = re.sub(r"\\(?:mathrm|text)\s*\{([^{}]*)\}", r" \1 ", t)
+    t = re.sub(r"\^{2}|\^\{2\}", " bình ", t)
+    t = re.sub(r"\^\{([^}]+)\}", r" mũ \1 ", t)
+    t = re.sub(r"\|([^|]+)\|", r" độ dài \1 ", t)
+    t = re.sub(r"\\[a-zA-Z]+", " ", t)
+    t = re.sub(r"[{}]", "", t)
+    t = t.replace("=", " bằng ").replace("+", " cộng ").replace("-", " trừ ")
+    t = re.sub(r"\b([A-Z]{2,8})\b", lambda m: " ".join(m.group(1)), t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def _tts_speak_latex(raw: str) -> str:
+    s = str(raw or "")
+
+    def wrap(m):
+        return " " + _tts_speak_tex(m.group(1)) + " "
+
+    s = re.sub(r"\$\$([\s\S]*?)\$\$", wrap, s)
+    s = re.sub(r"\$([^$]+)\$", wrap, s)
+    s = re.sub(r"\\\(([\s\S]*?)\\\)", wrap, s)
+    s = re.sub(r"\\\[([\s\S]*?)\\\]", wrap, s)
+    s = re.sub(r"\\?overrightarrow\s*\{([^{}]*)\}", lambda m: " vectơ " + _tts_speak_letters(m.group(1)) + " ", s)
+    s = re.sub(r"\|([^|]+)\|", r" độ dài \1 ", s)
+    s = re.sub(r"vectơ\s+vectơ", "vectơ", s, flags=re.I)
+    return re.sub(r"\s+", " ", s).strip()
+
+
 @base.app.post("/api/present/tts")
 def api_present_tts():
     if not _host_id():
         return jsonify(ok=False, error="Chỉ ADMIN mới đọc được."), 401
     data = request.get_json(silent=True) or {}
-    raw = re.sub(r"\s+", " ", str(data.get("text") or "")).strip()[:3500]
+    raw = _tts_speak_latex(str(data.get("text") or ""))
+    raw = re.sub(r"\s+", " ", raw).strip()[:3500]
     if len(raw) < 2:
         return jsonify(ok=False, error="Không có chữ để đọc."), 400
     gender = "m" if str(data.get("gender") or "").strip().lower() in {"m", "male", "nam"} else "f"
@@ -664,11 +720,64 @@ function paint(){
   document.querySelectorAll('#spkPause, .spk-pause').forEach(function(pause){pause.disabled=U.mode!=='play';});
   document.querySelectorAll('#spkResume, .spk-resume').forEach(function(resume){resume.disabled=U.mode!=='pause';});
 }
+function speakLetters(x){
+  x=String(x||'').replace(/\\/g,'').replace(/[{}]/g,'').replace(/\s+/g,'').trim();
+  if(/^[A-Z]{2,8}$/.test(x)) return x.split('').join(' ');
+  return x;
+}
+function speakTexBody(t){
+  t=String(t||'');
+  t=t.replace(/\\overrightarrow\s*\{([^{}]*)\}/g,function(_,x){return ' vectơ '+speakLetters(x)+' ';});
+  t=t.replace(/\\vec\s*\{([^{}]*)\}/g,function(_,x){return ' vectơ '+speakLetters(x)+' ';});
+  t=t.replace(/\\overline\s*\{([^{}]*)\}/g,function(_,x){return ' '+speakLetters(x)+' ';});
+  t=t.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g,function(_,a,b){return ' '+speakTexBody(a)+' trên '+speakTexBody(b)+' ';});
+  t=t.replace(/\\sqrt\s*\{([^{}]*)\}/g,function(_,x){return ' căn '+speakTexBody(x)+' ';});
+  t=t.replace(/\\left|\\right/g,'');
+  t=t.replace(/\\,|\\;|\\!|\\quad|\\qquad/g,' ');
+  t=t.replace(/\\times|\\cdot|\\ast/g,' nhân ');
+  t=t.replace(/\\leq|\\le/g,' nhỏ hơn hoặc bằng ');
+  t=t.replace(/\\geq|\\ge/g,' lớn hơn hoặc bằng ');
+  t=t.replace(/\\neq|\\ne/g,' khác ');
+  t=t.replace(/\\approx/g,' khoảng ');
+  t=t.replace(/\\infty/g,' vô cực ');
+  t=t.replace(/\\pi/g,' pi ');
+  t=t.replace(/\\alpha/g,' alpha ');
+  t=t.replace(/\\beta/g,' beta ');
+  t=t.replace(/\\theta/g,' theta ');
+  t=t.replace(/\\Delta/g,' delta ');
+  t=t.replace(/\\mathrm\s*\{([^{}]*)\}/g,' $1 ');
+  t=t.replace(/\\text\s*\{([^{}]*)\}/g,' $1 ');
+  t=t.replace(/\^{2}|\^\{2\}/g,' bình ');
+  t=t.replace(/\^\{([^}]+)\}/g,' mũ $1 ');
+  t=t.replace(/\|([^|]+)\|/g,function(_,x){return ' độ dài '+x+' ';});
+  t=t.replace(/\\[a-zA-Z]+/g,' ');
+  t=t.replace(/[{}]/g,'');
+  t=t.replace(/=/g,' bằng ');
+  t=t.replace(/\+/g,' cộng ');
+  t=t.replace(/-/g,' trừ ');
+  t=t.replace(/\b([A-Z]{2,8})\b/g,function(_,x){return x.split('').join(' ');});
+  t=t.replace(/\s+/g,' ').trim();
+  return t;
+}
+function speakLatex(s){
+  s=String(s||'');
+  s=s.replace(/\$\$([\s\S]*?)\$\$/g,function(_,m){return ' '+speakTexBody(m)+' ';});
+  s=s.replace(/\$([^$]+)\$/g,function(_,m){return ' '+speakTexBody(m)+' ';});
+  s=s.replace(/\\\(([\s\S]*?)\\\)/g,function(_,m){return ' '+speakTexBody(m)+' ';});
+  s=s.replace(/\\\[([\s\S]*?)\\\]/g,function(_,m){return ' '+speakTexBody(m)+' ';});
+  s=s.replace(/\\?overrightarrow\s*\{([^{}]*)\}/g,function(_,x){return ' vectơ '+speakLetters(x)+' ';});
+  s=s.replace(/\|([^|]+)\|/g,function(_,x){return ' độ dài '+x+' ';});
+  return s.replace(/vectơ\s+vectơ/gi,'vectơ').replace(/\s+/g,' ').trim();
+}
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
   c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.cinema-ai,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
-  return (c.innerText||c.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+  c.querySelectorAll('mjx-container, .MathJax').forEach(function(n){
+    const lab=n.getAttribute('aria-label')||n.textContent||'';
+    n.replaceWith(document.createTextNode(' '+lab+' '));
+  });
+  return speakLatex((c.innerText||c.textContent||'').replace(/\u00a0/g,' '));
 }
 function kindLabel(k){
   k=String(k||'').toUpperCase();
@@ -777,7 +886,7 @@ async function run(text){
   if(U.mode==='play'){ U.mode='idle'; if(!U.auto) U.wantPlay=false; paint(); msg(''); }
 }
 function startReadText(t, asPiece){
-  t=String(t||'').trim();
+  t=speakLatex(String(t||'').trim());
   if(!t){ msg('Không có chữ để đọc.'); return; }
   U.piece=asPiece!==false;
   if(!U.piece) U.sig=t.length+':'+(t.slice(0,60));
