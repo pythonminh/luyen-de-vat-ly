@@ -566,6 +566,36 @@ def api_present_step():
     return jsonify(ok=True, pos=room.get("pos"), total=room.get("total"), ver=room.get("ver"))
 
 
+@base.app.post("/api/present/reveal")
+def api_present_reveal():
+    hid = _host_id()
+    if not hid:
+        return jsonify(ok=False, error="Hãy đăng nhập ADMIN trên máy đang chiếu."), 401
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or session.get("present_code") or "")
+    token = str(data.get("token") or session.get("present_token") or "")
+    show = bool(data.get("show_sol"))
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token or str(room.get("host") or "") != hid:
+            return jsonify(ok=False, error="Không phải phòng của bạn."), 401
+        qk = str((room.get("q") or {}).get("kind") or "")
+        path = str(room.get("path") or "")
+        ids = list(room.get("ids") or [])
+        pos = int(room.get("pos") or 0)
+        zoom = room.get("zoom")
+        live = room.get("live") if isinstance(room.get("live"), dict) else {}
+    if qk in {"LT", "PP"}:
+        return jsonify(ok=True, show_sol=False, ver=int((room or {}).get("ver") or 0))
+    snap, err = _snapshot(show, zoom, reveal=show, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+    if not snap:
+        return jsonify(ok=False, error=err or "Không tải được câu."), 400
+    room, rerr = _put_room(hid, code, token, snap, live if isinstance(live, dict) else {}, force_kind=True)
+    if not room:
+        return jsonify(ok=False, error=rerr), 409
+    return jsonify(ok=True, show_sol=bool(room.get("show_sol")), ver=room.get("ver"))
+
+
 @base.app.get("/xem/<code>/qr.svg")
 def present_qr_svg(code):
     code = _norm_code(code)
@@ -602,14 +632,18 @@ def present_watch(code=""):
         "<button type='button' id='secPrev' title='Dạng trước'>◀</button>"
         "<select id='secJump' aria-label='Chọn dạng'></select>"
         "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
+        "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
+        "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "</div>"
         "<div class='cinema-qr' id='cinemaQr'>"
         "<img src='" + qr_src + "' width='96' height='96' alt='QR vào chiếu'>"
         "<span>" + code + "</span></div>"
-        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
+        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div>"
+        "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
-    return base.page("Chiếu chung " + code, body, cinema=True)
+    extra = base.GEMINI_CLIENT_JS if _host_id() else ""
+    return base.page("Chiếu chung " + code, body + extra, cinema=True)
 
 
 PRESENT_TTS_JS = r"""
@@ -633,7 +667,7 @@ function paint(){
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
-  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.cinema-ai,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
   return (c.innerText||c.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
 }
 function kindLabel(k){
@@ -917,6 +951,9 @@ FOLLOW_JS = r"""
 const CODE=__CODE__;
 let lastVer=-1;
 let lastDrawKey='';
+let lastQ=null;
+let lastLive={};
+let lastShowSol=false;
 function hostTok(){
   try{
     const p=JSON.parse(localStorage.getItem('ldvlPresent')||'null');
@@ -932,7 +969,7 @@ function paintSecNav(pos,total,secs,kind){
   if(bar) bar.hidden=!on;
   if(a) a.hidden=!on;
   if(b) b.hidden=!on;
-  if(!on) return;
+  if(!on){paintHostTools();return;}
   const n=Math.max(1, total||1);
   const p=Math.max(0, Math.min(n-1, pos||0));
   if(a) a.disabled=!(p>0);
@@ -947,15 +984,55 @@ function paintSecNav(pos,total,secs,kind){
     jump.dataset.fp=fp;
   }
   jump.value=String(p);
+  paintHostTools();
+}
+function hideCinemaAi(){
+  const pane=document.getElementById('cinemaAi');
+  if(pane) pane.hidden=true;
+}
+function isQuizQ(q){
+  const k=String((q&&q.kind)||'').toUpperCase();
+  return k && k!=='LT' && k!=='PP';
+}
+function paintHostTools(){
+  const on=!!hostTok();
+  const quiz=on && isQuizQ(lastQ);
+  const sol=document.getElementById('solToggle');
+  const ai=document.getElementById('aiToggle');
+  if(sol){
+    sol.hidden=!quiz;
+    sol.classList.toggle('on', !!lastShowSol);
+    sol.textContent=lastShowSol?'🙈 Ẩn đáp án':'📖 Đáp án';
+  }
+  if(ai) ai.hidden=!quiz;
+}
+async function presentReveal(show){
+  const p=hostTok(); if(!p) return false;
+  const r=await fetch('/api/present/reveal',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:p.code,token:p.token,show_sol:!!show})});
+  const d=await r.json().catch(function(){return {}});
+  if(!d||!d.ok){alert((d&&d.error)||'Không hiện được đáp án. Đăng nhập ADMIN trên máy này.');return false;}
+  lastVer=-1;
+  await tick();
+  return true;
+}
+function liveStudent(q, live){
+  live=live||{};
+  const k=String((q&&q.kind)||'').toUpperCase();
+  if(k==='TN') return live.tn==null||live.tn===''?'':String.fromCharCode(65+Number(live.tn));
+  if(k==='DS') return (live.ds||[]).map(function(x){return x===true?'Đ':(x===false?'S':'')}).join('');
+  return String(live.text||'').trim();
 }
 async function stepDang(delta){
   const p=hostTok(); if(!p) return;
+  hideCinemaAi();
   await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,delta:delta})});
   lastVer=-1; tick();
 }
 async function jumpPos(pos){
   const p=hostTok(); if(!p) return;
+  hideCinemaAi();
   await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,pos:pos})});
   lastVer=-1; tick();
@@ -1117,6 +1194,9 @@ async function tick(){
     }
     if(d.unchanged) return;
     lastVer=d.ver;
+    lastQ=d.q||null;
+    lastLive=d.live||{};
+    lastShowSol=!!d.show_sol;
     if(err) err.textContent='';
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
@@ -1136,6 +1216,33 @@ setInterval(tick,2500);
   if(x) x.onclick=function(){
     if(hostTok()){ stepDang(-1); return; }
     location.href='/xem';
+  };
+  const sol=document.getElementById('solToggle');
+  if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
+  const ai=document.getElementById('aiToggle');
+  if(ai) ai.onclick=async function(){
+    const pane=document.getElementById('cinemaAi');
+    if(!pane) return;
+    if(!pane.hidden){ pane.hidden=true; return; }
+    if(!lastShowSol) await presentReveal(true);
+    pane.hidden=false;
+    if(typeof ldvlGeminiReview!=='function'){
+      pane.innerHTML='<p class="err">Hãy đăng nhập ADMIN trên máy này rồi tải lại trang chiếu.</p>';
+      return;
+    }
+    pane.innerHTML=(typeof ldvlGeminiMiniHtml==='function'?ldvlGeminiMiniHtml('🤖 Phản biện AI'):'')
+      +'<p style="margin:8px 0"><button type="button" class="btn primary" id="cinemaAiGo">🤖 Phản biện câu này</button></p>'
+      +'<div id="aiout" class="reviewout"></div>';
+    if(window.ldvlFillGeminiInputs) ldvlFillGeminiInputs();
+    const go=document.getElementById('cinemaAiGo');
+    const out=document.getElementById('aiout');
+    const run=function(){
+      if(!lastQ) return;
+      window.LAST_REVIEW=Object.assign({}, lastQ, {student:liveStudent(lastQ, lastLive), ok:lastLive&&lastLive.ok});
+      ldvlGeminiReview(window.LAST_REVIEW, out);
+    };
+    if(go) go.onclick=run;
+    if(typeof ldvlFilledKeys==='function' && ldvlFilledKeys().length) run();
   };
 })();
 window.addEventListener('resize',function(){});

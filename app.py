@@ -186,6 +186,11 @@ body.cinema .cinemahost{position:sticky;top:0;z-index:32;display:flex;gap:6px;al
 body.cinema .cinemahost[hidden]{display:none!important}
 body.cinema .cinemahost select{flex:1;min-width:0;font-size:16px;font-weight:800;padding:8px 10px;min-height:44px;border:1px solid #c4b5fd;border-radius:8px;background:#f5f3ff;color:#5b21b6}
 body.cinema .cinemahost button{flex:0 0 auto;min-width:44px;min-height:44px;border:1px solid #c5d6ea;border-radius:8px;background:#fff;color:#145bb0;font-size:18px;font-weight:800;cursor:pointer}
+body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 10px;font-size:13px;white-space:nowrap}
+body.cinema .cinemahost .cinema-tool.on{background:#145bb0;color:#fff;border-color:#145bb0}
+body.cinema .cinema-ai{padding:8px 12px 16px;border-top:1px solid #c5d6ea;background:#f8fbff}
+body.cinema .cinema-ai[hidden]{display:none!important}
+body.cinema .cinema-ai .reviewout{max-height:42vh;overflow:auto}
 body.cinema:has(#cinemaHost:not([hidden])) .cinema-q{padding-top:0;padding-right:0}
 body.cinema .qbox{padding-right:12px}
 @media(min-width:701px){
@@ -279,7 +284,7 @@ async function ldvlGeminiReview(payload,outEl){
   outEl.textContent='⏳ Gemini đang phản biện...';
   var body=Object.assign({},payload||{},{api_key:keys[0],api_keys:keys,model:'gemini-2.5-flash'});
   try{
-    var r=await fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var r=await fetch('/api/gemini/review_student',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
     var d=await r.json();
     if(d.ok){
       outEl.innerHTML=ldvlFmtAi(d.text);
