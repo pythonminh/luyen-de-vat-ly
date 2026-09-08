@@ -11,6 +11,7 @@ import secrets
 import threading
 import time
 
+import segno
 from flask import Response, jsonify, request, session
 
 import app as base
@@ -565,6 +566,17 @@ def api_present_step():
     return jsonify(ok=True, pos=room.get("pos"), total=room.get("total"), ver=room.get("ver"))
 
 
+@base.app.get("/xem/<code>/qr.svg")
+def present_qr_svg(code):
+    code = _norm_code(code)
+    if not code:
+        return Response("Mã không hợp lệ.", status=400, mimetype="text/plain")
+    url = request.host_url.rstrip("/") + "/xem/" + code
+    buf = io.BytesIO()
+    segno.make(url, error="m").save(buf, kind="svg", scale=4, border=2)
+    return Response(buf.getvalue(), mimetype="image/svg+xml")
+
+
 @base.app.get("/xem")
 @base.app.get("/xem/<code>")
 def present_watch(code=""):
@@ -582,6 +594,7 @@ def present_watch(code=""):
         )
         return base.page("Vào chiếu chung", body)
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
+    qr_src = "/xem/" + code + "/qr.svg"
     body = (
         "<div class='cinema-q'>"
         "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát / dạng trước'>✕</button>"
@@ -590,6 +603,9 @@ def present_watch(code=""):
         "<select id='secJump' aria-label='Chọn dạng'></select>"
         "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
         "</div>"
+        "<div class='cinema-qr' id='cinemaQr'>"
+        "<img src='" + qr_src + "' width='96' height='96' alt='QR vào chiếu'>"
+        "<span>" + code + "</span></div>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div></div>"
         + js
     )
@@ -617,7 +633,7 @@ function paint(){
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
-  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
   return (c.innerText||c.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
 }
 function kindLabel(k){
@@ -1340,7 +1356,9 @@ function showBar(p){
   el.hidden=false;
   applyPresentFold(presentFolded());
   const url=p.url||(location.origin+'/xem/'+p.code);
-  el.innerHTML='<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
+  const qr='/xem/'+encodeURIComponent(p.code)+'/qr.svg';
+  el.innerHTML='<span class="present-qr"><img src="'+qr+'" width="88" height="88" alt="QR vào chiếu"></span>'
+    +'<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
     +'<a class="btn primary" href="'+url+'" target="_blank" rel="noopener">🖥 Mở màn chiếu</a> '
     +'<button type="button" class="btn" id="pPrev">◀ Câu trước</button> '
     +'<button type="button" class="btn" id="pNext">Câu sau ▶</button> '

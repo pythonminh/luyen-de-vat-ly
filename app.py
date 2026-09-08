@@ -133,6 +133,11 @@ body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
 body.cinema .cinema-exit{position:fixed;top:8px;right:10px;z-index:31;width:36px;height:36px;border-radius:8px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:0 2px 8px #0f172a14}
+body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:28;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:#fff;border:1px solid #c5d6ea;border-radius:10px;box-shadow:0 2px 10px #0f172a18;pointer-events:none}
+body.cinema .cinema-qr img{width:96px;height:96px;display:block}
+body.cinema .cinema-qr span{font:800 13px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.1em;color:#145bb0}
+.present-qr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 8px 0 0;padding:6px;background:#fff;border:1px solid #c5d6ea;border-radius:10px}
+.present-qr img{width:88px;height:88px;display:block}
 body.cinema .spkhost{cursor:pointer;position:relative}
 body.cinema .spkhost.on{outline:2px solid #93c5fd;outline-offset:2px}
 .solution.spkhost,.ai-y.spkhost,.ai-sec.spkhost,.reviewout.spkhost{cursor:pointer;position:relative}
@@ -183,6 +188,12 @@ body.cinema .cinemahost select{flex:1;min-width:0;font-size:16px;font-weight:800
 body.cinema .cinemahost button{flex:0 0 auto;min-width:44px;min-height:44px;border:1px solid #c5d6ea;border-radius:8px;background:#fff;color:#145bb0;font-size:18px;font-weight:800;cursor:pointer}
 body.cinema:has(#cinemaHost:not([hidden])) .cinema-q{padding-top:0;padding-right:0}
 body.cinema .qbox{padding-right:12px}
+@media(min-width:701px){
+body.cinema .qbox{padding-right:128px;padding-bottom:140px}
+}
+@media(max-width:700px){
+body.cinema .cinema-qr{display:none!important}
+}
 .present-host #pCode{display:none;font:800 18px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.1em;padding:4px 8px}
 .present-host.has-code #pCode{display:inline-flex;align-items:center}
 .present-host #pPrevQuick,.present-host #pNextQuick{display:none;min-width:44px;min-height:40px}
