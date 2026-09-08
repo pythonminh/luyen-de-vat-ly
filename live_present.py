@@ -990,6 +990,10 @@ function addSpk(host, src){
   }
 }
 function mountChunks(root){
+  if(isCinema()){
+    (root&&root.querySelectorAll?root:document).querySelectorAll('.spkchunk').forEach(function(n){n.remove()});
+    return;
+  }
   root=root||document;
   function skipWhole(el){return el && el.matches && el.matches('.reviewout') && el.querySelector('.ai-sec,.ai-y');}
   if(root.nodeType===1 && root.id!=='gkey-ping' && !skipWhole(root) && (root.matches('.ltbox, details.lt-sol, .qheadline, .qdang, .opt, .tf, .solution, .ai-y, .ai-sec, .reviewout') || root.id==='aiout')){
