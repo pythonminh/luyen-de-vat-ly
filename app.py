@@ -133,9 +133,11 @@ body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
 body.cinema .cinema-exit{position:fixed;top:8px;right:10px;z-index:31;width:36px;height:36px;border-radius:8px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:0 2px 8px #0f172a14}
-body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:28;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:#fff;border:1px solid #c5d6ea;border-radius:10px;box-shadow:0 2px 10px #0f172a18;pointer-events:none}
-body.cinema .cinema-qr img{width:96px;height:96px;display:block}
-body.cinema .cinema-qr span{font:800 13px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.1em;color:#145bb0}
+body.cinema .cinema-qr{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:52px;z-index:33;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 6px 5px;background:#145bb0;border:0;border-radius:10px;box-shadow:0 2px 10px #0f172a28;pointer-events:none}
+body.cinema .cinema-qr img{width:72px;height:72px;display:block;background:#fff;padding:3px;border-radius:6px;box-sizing:border-box}
+body.cinema .cinema-qr span{font:800 11px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:#fff}
+body.cinema:has(#cinemaHost:not([hidden])) .cinema-qr{left:8px;right:auto;top:calc(6px + env(safe-area-inset-top,0px))}
+body.cinema:has(#cinemaHost:not([hidden])) .cinemahost{padding-left:96px}
 .present-qr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 8px 0 0;padding:6px;background:#fff;border:1px solid #c5d6ea;border-radius:10px}
 .present-qr img{width:88px;height:88px;display:block}
 body.cinema .spkhost{cursor:pointer;position:relative}
@@ -194,7 +196,8 @@ body.cinema .cinema-ai .reviewout{max-height:42vh;overflow:auto}
 body.cinema:has(#cinemaHost:not([hidden])) .cinema-q{padding-top:0;padding-right:0}
 body.cinema .qbox{padding-right:12px}
 @media(min-width:701px){
-body.cinema .qbox{padding-right:128px;padding-bottom:140px}
+body.cinema .qbox{padding-right:12px;padding-bottom:20px}
+body.cinema:not(:has(#cinemaHost:not([hidden]))) .qbox{padding-top:108px}
 }
 @media(max-width:700px){
 body.cinema .cinema-qr{display:none!important}

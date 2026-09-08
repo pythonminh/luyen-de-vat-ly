@@ -636,8 +636,8 @@ def present_watch(code=""):
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "</div>"
         "<div class='cinema-qr' id='cinemaQr'>"
-        "<img src='" + qr_src + "' width='96' height='96' alt='QR vào chiếu'>"
-        "<span>" + code + "</span></div>"
+        "<img src='" + qr_src + "' width='72' height='72' alt='QR vào chiếu'>"
+        "<span>Quét · " + code + "</span></div>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
