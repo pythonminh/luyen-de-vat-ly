@@ -690,15 +690,24 @@ def present_watch(code=""):
         "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
         "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
+        "<button type='button' class='cinema-tool spk-f'>Nữ</button>"
+        "<button type='button' class='cinema-tool spk-m'>Nam</button>"
+        "<button type='button' class='cinema-tool spk-play'>▶ Đọc</button>"
+        "<button type='button' class='cinema-tool spk-pause'>⏸</button>"
+        "<span class='spkmsg' id='spkMsg'></span>"
         "</div>"
-        "<div class='cinema-qr' id='cinemaQr'>"
+        "<div class='cinema-qr is-min' id='cinemaQr'>"
+        "<div class='qr-tools'>"
+        "<button type='button' id='qrShrink' title='Thu nhỏ QR'>−</button>"
+        "<button type='button' id='qrGrow' title='Mở rộng QR để quét'>+</button>"
+        "</div>"
         "<img src='" + qr_src + "' width='72' height='72' alt='QR vào chiếu'>"
         "<span>Quét · " + code + "</span></div>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
-    extra = base.GEMINI_CLIENT_JS if _host_id() else ""
+    extra = PRESENT_TTS_JS + (base.GEMINI_CLIENT_JS if _host_id() else "")
     return base.page("Chiếu chung " + code, body + extra, cinema=True)
 
 
@@ -1008,7 +1017,7 @@ window.ldvlSpeak={
     if(U.mode==='play' && !U.piece){ stopHard(); U.mode='idle'; U.wantPlay=false; paint(); }
     else if(U.mode!=='play' && U.mode!=='pause'){ U.mode='idle'; U.wantPlay=false; paint(); }
     mountChunks(document.getElementById('q')||document);
-    const pane=document.getElementById('aipane');
+    const pane=document.getElementById('aipane')||document.getElementById('cinemaAi');
     if(pane) mountChunks(pane);
   },
   bind:function(){
@@ -1345,14 +1354,36 @@ setInterval(tick,2500);
     if(window.ldvlFillGeminiInputs) ldvlFillGeminiInputs();
     const go=document.getElementById('cinemaAiGo');
     const out=document.getElementById('aiout');
-    const run=function(){
+    const run=async function(){
       if(!lastQ) return;
       window.LAST_REVIEW=Object.assign({}, lastQ, {student:liveStudent(lastQ, lastLive), ok:lastLive&&lastLive.ok});
-      ldvlGeminiReview(window.LAST_REVIEW, out);
+      await ldvlGeminiReview(window.LAST_REVIEW, out);
+      if(window.ldvlSpeak){ window.ldvlSpeak.bind(); window.ldvlSpeak.onDraw(); }
     };
     if(go) go.onclick=run;
     if(typeof ldvlFilledKeys==='function' && ldvlFilledKeys().length) run();
   };
+  (function(){
+    const box=document.getElementById('cinemaQr');
+    if(!box) return;
+    const sizes=['min','mid','max'];
+    function cur(){
+      if(box.classList.contains('is-max')) return 'max';
+      if(box.classList.contains('is-min')) return 'min';
+      return 'mid';
+    }
+    function apply(sz){
+      sizes.forEach(function(s){ box.classList.toggle('is-'+s, s===sz); });
+      try{localStorage.setItem('ldvlCinemaQr', sz)}catch(e){}
+    }
+    let start='';
+    try{start=localStorage.getItem('ldvlCinemaQr')||''}catch(e){}
+    if(sizes.indexOf(start)<0) start='min';
+    apply(start);
+    const minus=document.getElementById('qrShrink'), plus=document.getElementById('qrGrow');
+    if(minus) minus.onclick=function(){ apply(sizes[Math.max(0, sizes.indexOf(cur())-1)]); };
+    if(plus) plus.onclick=function(){ apply(sizes[Math.min(sizes.length-1, sizes.indexOf(cur())+1)]); };
+  })();
 })();
 window.addEventListener('resize',function(){});
 </script>
