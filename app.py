@@ -858,6 +858,21 @@ def lesson_folder(path):
     return p
 
 
+def _folder_bai_name(path):
+    return lesson_folder(path).replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def _lesson_sort_key(item):
+    """Theo số Bài trong tên thư mục (Bài 1, Bài 2…) — không xếp ABC tên hiển thị."""
+    path = str((item or {}).get("path") or (item or {}).get("file") or "")
+    name = _folder_bai_name(path)
+    title = str((item or {}).get("BaiHoc") or (item or {}).get("De") or name)
+    m = re.search(r"Bài\s+(\d+)", name, re.I) or re.search(r"Bài\s+(\d+)", title, re.I)
+    if m:
+        return (0, int(m.group(1)), name.lower())
+    return (1, 0, (title or name).lower())
+
+
 COMPANION_TEX = {"lt.tex", "pp.tex"}
 
 
@@ -909,6 +924,8 @@ def lesson_tex_paths(path):
 
 def lesson_card_title(folder, arr):
     name = str(folder or "").replace("\\", "/").rsplit("/", 1)[-1]
+    if re.search(r"Bài\s+\d+", name, re.I):
+        return name
     for x in arr or []:
         p = str(x.get("path") or x.get("file") or "").replace("\\", "/")
         if p.endswith("/de.tex"):
@@ -1036,7 +1053,7 @@ def chapter_lessons_for(path, items=None):
         for x in items
         if (str(x.get("Mon") or ""), str(x.get("Lop") or ""), str(x.get("Chuong") or "")) == key
     ]
-    sibs.sort(key=lambda z: str(z.get("BaiHoc") or z.get("De") or ""))
+    sibs.sort(key=_lesson_sort_key)
     return sibs, cur
 
 
@@ -1105,7 +1122,7 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
             for chuong in sorted(tree[mon][lop]):
                 bais = []
                 open_ch = False
-                arr = sorted(tree[mon][lop][chuong], key=lambda z: str(z.get("BaiHoc") or z.get("De") or ""))
+                arr = sorted(tree[mon][lop][chuong], key=_lesson_sort_key)
                 for x in arr:
                     p = str(x.get("path") or x.get("file") or "")
                     on = bool(cur_folder) and lesson_folder(p) == cur_folder
@@ -1243,7 +1260,7 @@ def catalog_chapter_html(mon, lop, chuong, arr, dang_link=True):
     """Một chương: danh sách bài xổ dạng, không tách thẻ theo file."""
     bits = []
     guest = not member_current()
-    for x in sorted(arr, key=lambda z: str(z.get("BaiHoc") or z.get("De") or "")):
+    for x in sorted(arr, key=_lesson_sort_key):
         path = str(x.get("path") or x.get("file") or "")
         title = str(x.get("BaiHoc") or x.get("De") or path.rsplit("/", 1)[-1])
         cnt = int(x.get("questions") or x.get("count") or 0)
