@@ -141,7 +141,11 @@ body.cinema .cinema-qr.is-min img{width:36px;height:36px}
 body.cinema .cinema-qr.is-mid img{width:72px;height:72px}
 body.cinema .cinema-qr.is-max{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);padding:12px;z-index:45}
 body.cinema .cinema-qr.is-max img{width:min(72vw,280px);height:min(72vw,280px)}
-body.cinema .cinema-qr span{font:800 11px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:#fff}
+body.cinema .cinema-qr.is-hide{padding:4px}
+body.cinema .cinema-qr.is-hide img,body.cinema .cinema-qr.is-hide span,body.cinema .cinema-qr.is-hide #qrShrink,body.cinema .cinema-qr.is-hide #qrGrow{display:none}
+body.cinema .cinema-qr.is-hide .qr-tools{width:auto}
+body.cinema .cinema-qr.is-hide #qrHide{min-width:44px;min-height:36px;font-size:13px;font-weight:900}
+body.cinema.qr-hidden .qbox,body.cinema.qr-hidden .cinema-ai{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 body.cinema .qbox,body.cinema .cinema-ai{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .present-qr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 8px 0 0;padding:6px;background:#fff;border:1px solid #c5d6ea;border-radius:10px}
 .present-qr img{width:88px;height:88px;display:block}

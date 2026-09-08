@@ -537,7 +537,7 @@ def api_present_tts():
         return jsonify(ok=False, error="Chỉ ADMIN mới đọc được."), 401
     data = request.get_json(silent=True) or {}
     raw = _tts_speak_latex(str(data.get("text") or ""))
-    raw = re.sub(r"\s+", " ", raw).strip()[:3500]
+    raw = re.sub(r"\s+", " ", raw).strip()[:4000]
     if len(raw) < 2:
         return jsonify(ok=False, error="Không có chữ để đọc."), 400
     gender = "m" if str(data.get("gender") or "").strip().lower() in {"m", "male", "nam"} else "f"
@@ -698,6 +698,7 @@ def present_watch(code=""):
         "</div>"
         "<div class='cinema-qr is-min' id='cinemaQr'>"
         "<div class='qr-tools'>"
+        "<button type='button' id='qrHide' title='Ẩn QR'>✕</button>"
         "<button type='button' id='qrShrink' title='Thu nhỏ QR'>−</button>"
         "<button type='button' id='qrGrow' title='Mở rộng QR để quét'>+</button>"
         "</div>"
@@ -781,7 +782,7 @@ function speakLatex(s){
 function speakTextOf(el){
   if(!el) return '';
   const c=el.cloneNode(true);
-  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.cinema-ai,.qid,.pickmark,.okmark,.keygrid,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
+  c.querySelectorAll('script,style,button,.ltsec-tools,.cinemahud,.present-host,.cinema-qr,.qid,.pickmark,.qbadge,.spkmsg,.cinemaspeak,.spkchunk').forEach(function(n){n.remove()});
   c.querySelectorAll('mjx-container, .MathJax').forEach(function(n){
     const lab=n.getAttribute('aria-label')||n.textContent||'';
     n.replaceWith(document.createTextNode(' '+lab+' '));
@@ -880,12 +881,28 @@ function playLocal(text, gen){
     speechSynthesis.speak(u);
   });
 }
+function splitSpeak(t){
+  t=String(t||'').trim();
+  const max=2800, out=[];
+  while(t.length>max){
+    let cut=t.lastIndexOf('. ', max);
+    if(cut<Math.floor(max*0.4)) cut=max;
+    out.push(t.slice(0,cut).trim());
+    t=t.slice(cut).replace(/^[.\s]+/,'').trim();
+  }
+  if(t) out.push(t);
+  return out;
+}
 async function run(text){
   const gen=++U.gen;
   U.mode='play'; U.wantPlay=true; paint();
   if(!navigator.onLine){ msg('Cần mạng để đọc giọng Nam/Nữ.'); U.mode='idle'; U.wantPlay=false; paint(); return; }
+  const parts=splitSpeak(text);
   try{
-    await playNet(text, gen);
+    for(let i=0;i<parts.length;i++){
+      if(U.gen!==gen) return;
+      await playNet(parts[i], gen);
+    }
   }catch(e){
     if(U.gen!==gen) return;
     msg('Giọng máy…');
@@ -904,7 +921,24 @@ function startReadText(t, asPiece){
   U.unlocked=true; U.auto=false; U.wantPlay=true;
   run(t);
 }
+async function cinemaRead(){
+  try{
+    if(typeof presentReveal==='function' && typeof hostTok==='function' && hostTok() && typeof lastShowSol!=='undefined' && !lastShowSol && lastQ && String(lastQ.kind||'').toUpperCase()!=='LT' && String(lastQ.kind||'').toUpperCase()!=='PP'){
+      await presentReveal(true);
+    }
+  }catch(e){}
+  const bits=[];
+  const q=document.getElementById('q');
+  if(q && !q.hidden) bits.push(speakTextOf(q));
+  const ai=document.getElementById('aiout');
+  const wrap=document.getElementById('cinemaAi');
+  if(ai && (!wrap || !wrap.hidden) && (ai.innerText||'').replace(/\s+/g,' ').trim().length>20){
+    bits.push('Phản biện. '+speakTextOf(ai));
+  }
+  startReadText(bits.filter(Boolean).join('. '), false);
+}
 function startRead(){
+  if(isCinema()){ cinemaRead(); return; }
   const pane=document.getElementById('aiout');
   if(U.lastEl && pane && pane.contains(U.lastEl)) startReadText(speakTextOf(U.lastEl), true);
   else if(pane && pane.innerText.trim()) startReadText(speakTextOf(pane), true);
@@ -1380,9 +1414,22 @@ setInterval(tick,2500);
     try{start=localStorage.getItem('ldvlCinemaQr')||''}catch(e){}
     if(sizes.indexOf(start)<0) start='min';
     apply(start);
-    const minus=document.getElementById('qrShrink'), plus=document.getElementById('qrGrow');
+    const minus=document.getElementById('qrShrink'), plus=document.getElementById('qrGrow'), hide=document.getElementById('qrHide');
     if(minus) minus.onclick=function(){ apply(sizes[Math.max(0, sizes.indexOf(cur())-1)]); };
-    if(plus) plus.onclick=function(){ apply(sizes[Math.min(sizes.length-1, sizes.indexOf(cur())+1)]); };
+    if(plus) plus.onclick=function(){
+      if(box.classList.contains('is-hide')){ box.classList.remove('is-hide'); document.body.classList.remove('qr-hidden'); if(hide){hide.textContent='✕';hide.title='Ẩn QR';} return; }
+      apply(sizes[Math.min(sizes.length-1, sizes.indexOf(cur())+1)]);
+    };
+    function setHide(on){
+      box.classList.toggle('is-hide', on);
+      document.body.classList.toggle('qr-hidden', on);
+      if(hide){ hide.textContent=on?'QR':'✕'; hide.title=on?'Hiện QR':'Ẩn QR'; }
+      try{localStorage.setItem('ldvlCinemaQrHide', on?'1':'0')}catch(e){}
+    }
+    let hid='';
+    try{hid=localStorage.getItem('ldvlCinemaQrHide')||''}catch(e){}
+    if(hid==='1') setHide(true);
+    if(hide) hide.onclick=function(){ setHide(!box.classList.contains('is-hide')); };
   })();
 })();
 window.addEventListener('resize',function(){});
