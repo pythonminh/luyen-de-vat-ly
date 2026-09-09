@@ -307,6 +307,15 @@
       "status": "ON",
       "password_sha256": "a3a8eb9785a95ea1c04a264fff4de9a596a3513209d30f99c955a17f0038f61e",
       "password_enc": "v1:522fUDHi_oA="
+    },
+    {
+      "username": "Phucly123",
+      "name": "Lý Võ Hữu Phúc",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "d83036ffb5b49a153bc391fd12b4a10df06bbb200f39fed97c331b03b6833ce7",
+      "password_enc": "v1:uTDCFQ=="
     }
   ]
 }
