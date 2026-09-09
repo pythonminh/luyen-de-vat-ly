@@ -5608,9 +5608,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính nhiệt hóa hơi": 1
+      },
+      "dang_kinds": {
+        "Tính nhiệt hóa hơi": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
