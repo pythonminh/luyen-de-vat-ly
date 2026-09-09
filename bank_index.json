@@ -4264,20 +4264,13 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
-      "questions": 55,
-      "count": 55,
+      "questions": 34,
+      "count": 34,
       "dang": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21,
         "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 1,
         "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
       },
       "dang_kinds": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 0,
-          "TL": 6
-        },
         "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
           "TN": 1,
           "DS": 0,
