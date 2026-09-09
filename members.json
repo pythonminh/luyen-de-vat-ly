@@ -307,6 +307,24 @@
       "status": "ON",
       "password_sha256": "1df0de1a06942eb511e86e530697b3216a1b8f62c0981fffa17c45902a04c5d6",
       "password_enc": "v1:u0CpZEaluoGYDlZTJdmb"
+    },
+    {
+      "username": "dthuan",
+      "name": "ng đức thuận",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "7d3d94a719eb7f4bac2989bf18394aa5900da776eb778ae70c2f5cfd02f8c1e3",
+      "password_enc": "v1:5GmRFkPg"
+    },
+    {
+      "username": "minhtriet",
+      "name": "Liên Minh Triết",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "51aa128a2df09459ce2189fe2a553f6a929a75384f31d6d408e0728ebeb84057",
+      "password_enc": "v1:zW6HShS3o9rQbCA="
     }
   ]
 }
