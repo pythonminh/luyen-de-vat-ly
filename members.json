@@ -262,6 +262,15 @@
       "status": "ON",
       "password_sha256": "69060b692a35ed2b1c99315e811d0a4fdcbdf57c628277301602af9044796bf5",
       "password_enc": "v1:4WuQUxCj_YHSag=="
+    },
+    {
+      "username": "nguyenquangminh11qt1",
+      "name": "nguyenquangminh11qt1",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "243b8936e40939e0e67194b516d7f02ef1c2529c7359971415b6fdfa25355a59",
+      "password_enc": "v1:7zeYFSi9oeHSbHtVQOWo"
     }
   ]
 }
