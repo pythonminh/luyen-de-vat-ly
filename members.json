@@ -280,6 +280,15 @@
       "status": "ON",
       "password_sha256": "88e9c230e8b4223f2bbd5c52166327903b9a2877a52b1085c36bf28c2b609199",
       "password_enc": "v1:yGqbVgSq_YHSeg=="
+    },
+    {
+      "username": "hoanggvy2009@gmail.com",
+      "name": "Nguyễn Trần Hoàng Vỹ",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "380ab575fb9ab101d6c7e68dc319897eda4a6a13a18add69ebd9fe75950f1b38",
+      "password_enc": "v1:uDPDHjE="
     }
   ]
 }
