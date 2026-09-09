@@ -6,90 +6,180 @@
 % File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
-\newenvironment{hoatdong}{%
-    \begin{tcolorbox}[
-        colback=blue!5!white,
-        colframe=blue!75!black,
-        title=\textbf{Hoạt động},
-        fonttitle=\bfseries,
-        boxsep=5pt,
-        arc=4pt,
-        boxrule=1pt,
-        left=5mm, right=5mm, top=3mm, bottom=3mm
-    ]%
-}{\end{tcolorbox}}
+\subsection{Lý thuyết}
+\subsubsection{1. Khái niệm nội năng}
 
-\newenvironment{kienthuc}{%
-    \begin{tcolorbox}[
-        colback=green!5!white,
-        colframe=green!75!black,
-        title=\textbf{Kiến thức trọng tâm},
-        fonttitle=\bfseries,
-        boxsep=5pt,
-        arc=4pt,
-        boxrule=1pt,
-        left=5mm, right=5mm, top=3mm, bottom=3mm
-    ]%
-}{\end{tcolorbox}}
+\begin{itemize}
+    \item \textbf{Động năng và thế năng phân tử:}
+    \begin{itemize}
+        \item Các phân tử cấu tạo nên vật luôn chuyển động nhiệt không ngừng nên chúng có \textbf{động năng phân tử}. Động năng này phụ thuộc vào tốc độ chuyển động nhiệt của các phân tử, nghĩa là phụ thuộc vào nhiệt độ $T$ của vật.
+        \item Giữa các phân tử có lực tương tác (hút và đẩy) nên chúng có \textbf{thế năng tương tác phân tử}. Thế năng này phụ thuộc vào khoảng cách trung bình giữa các phân tử, nghĩa là phụ thuộc vào thể tích $V$ của vật.
+    \end{itemize}
+    \item \textbf{Định nghĩa nội năng:}
+    \begin{itemize}
+        \item Tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật gọi là \textbf{nội năng} của vật.
+        \item Kí hiệu nội năng là $U$, đơn vị đo trong hệ SI là jun ($\mathrm{J}$).
+        \item Nội năng của một vật là một đại lượng phụ thuộc vào nhiệt độ $T$ và thể tích $V$ của vật:
+        \[
+        U = f(T, V)
+        \]
+        \item Đối với khí lí tưởng, do bỏ qua lực tương tác giữa các phân tử khi chưa va chạm nên thế năng tương tác phân tử bằng không. Do đó, nội năng của khối khí lí tưởng chỉ phụ thuộc vào nhiệt độ $T$ của khối khí: $U = f(T)$.
+    \end{itemize}
+\end{itemize}
 
-\newenvironment{emcobiet}{%
-    \begin{tcolorbox}[
-        colback=yellow!5!white,
-        colframe=yellow!75!black,
-        title=\textbf{Em có biết},
-        fonttitle=\bfseries,
-        boxsep=5pt,
-        arc=4pt,
-        boxrule=1pt,
-        left=5mm, right=5mm, top=3mm, bottom=3mm
-    ]%
-}{\end{tcolorbox}}
-
-\newenvironment{emdahoc}{%
-    \begin{tcolorbox}[
-        colback=orange!5!white,
-        colframe=orange!75!black,
-        title=\textbf{Em đã học},
-        fonttitle=\bfseries,
-        boxsep=5pt,
-        arc=4pt,
-        boxrule=1pt,
-        left=5mm, right=5mm, top=3mm, bottom=3mm
-    ]%
-}{\end{tcolorbox}}
-
-\newenvironment{emcothe}{%
-    \begin{tcolorbox}[
-        colback=red!5!white,
-        colframe=red!75!black,
-        title=\textbf{Em có thể},
-        fonttitle=\bfseries,
-        boxsep=5pt,
-        arc=4pt,
-        boxrule=1pt,
-        left=5mm, right=5mm, top=3mm, bottom=3mm
-    ]%
-}{\end{tcolorbox}}
-
-% Macro cho haicotchay
-\newcommand{\haicotchay}[2]{%
-    \begin{figure}[H]
-        \centering
-        \begin{tikzpicture}
-            \node[text width=0.8\textwidth, align=justify] (text) {#1};
-            \node[right=1cm of text.east, anchor=west] (image) {#2};
-        \end{tikzpicture}
-    \end{figure}
+\haicotchay{
+    \textbf{Thí nghiệm về mối liên hệ giữa nội năng và năng lượng phân tử (Hình 2.2 SGK KNTT):}
+    \begin{itemize}
+        \item Bố trí thí nghiệm gồm một ống nghiệm chứa một chút nước, miệng bịt chặt bằng nút bấc, đun nóng ống nghiệm bằng đèn cồn.
+        \item \textit{Hiện tượng:} Sau một thời gian đun, nước sôi và hóa hơi, áp suất khí tăng cao đẩy nút bấc bị bật ra ngoài.
+        \item \textit{Giải thích:} Khi bị đun nóng, nhiệt độ tăng làm động năng chuyển động nhiệt của các phân tử khí tăng. Các phân tử va chạm mạnh hơn vào nút bấc, làm tăng áp suất khí trong ống nghiệm và đẩy bật nút bấc ra. Thí nghiệm chứng tỏ khi năng lượng phân tử tăng thì nội năng của hệ tăng.
+    \end{itemize}
+}{
+    \centering
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[scale=1.1, >=latex]
+        % Giá đỡ thí nghiệm
+        \draw[thick, double, gray] (0,0) -- (0,2.5);
+        \draw[thick, gray] (-0.8,0) -- (0.8,0);
+        \draw[thick, fill=darkgray!50] (0,1.8) rectangle (0.8,2.0);
+        % Ống nghiệm nằm nghiêng
+        \begin{scope}[rotate=20]
+            \draw[thick, blue!80!black] (0.4,1.8) -- (2.2,1.8);
+            \draw[thick, blue!80!black] (0.4,1.4) -- (2.2,1.4);
+            \draw[thick, blue!80!black] (0.4,1.4) arc (-90:90:0.2);
+            % Nút bấc bật ra
+            \draw[thick, fill=brown!80!black] (2.6,1.4) -- (2.9,1.4) -- (2.9,1.8) -- (2.6,1.8) -- cycle;
+            \draw[->, ultra thick, red] (2.3,1.6) -- (2.55,1.6);
+            % Hơi nước
+            \foreach \x in {1.8, 2.0, 2.2} {
+                \draw[gray, opacity=0.6] (\x, 1.5) to[out=60,in=240] (\x+0.1, 1.7);
+            }
+            % Nước lỏng trong ống
+            \fill[cyan!30] (0.4,1.4) -- (1.0,1.4) -- (1.0,1.8) -- (0.4,1.8) -- cycle;
+            \draw[cyan!80!black, thin] (1.0,1.4) -- (1.0,1.8);
+        \end{scope}
+        % Đèn cồn bên dưới
+        \draw[thick, fill=gray!30] (0.8,0.2) rectangle (1.4,0.8);
+        \draw[thick, fill=orange] (1.1,0.8) -- (1.0,1.2) -- (1.2,1.2) -- cycle;
+        \node at (1.1,1.4) [red, scale=0.8] {$\Delta T$};
+        \node at (1.1,-0.3) [black, font=\small] {Thí nghiệm đun nóng ống nghiệm};
+        \end{tikzpicture}%
+    }
 }
 
-\newcommand{\chuy}[1]{\textbf{\textcolor{red}{Chú ý:}} #1}
+\subsubsection{2. Các cách làm biến đổi nội năng}
 
-% Giữ dòng này để hệ thống ghép
+Có hai cách làm thay đổi nội năng của một vật:
+\begin{itemize}
+    \item \textbf{Thực hiện công:}
+    \begin{itemize}
+        \item Quá trình thực hiện công có sự tác dụng lực và dịch chuyển quãng đường.
+        \item Có sự chuyển hóa năng lượng từ dạng khác (như cơ năng) sang nội năng của vật.
+        \item \textit{Ví dụ:} Nén khí trong xi lanh làm nhiệt độ khí tăng; cọ xát hai vật vào nhau.
+    \end{itemize}
+    \item \textbf{Truyền nhiệt:}
+    \begin{itemize}
+        \item Quá trình truyền nhiệt không có sự thực hiện công, không có sự chuyển hóa năng lượng trung gian, chỉ có sự truyền nội năng trực tiếp dưới dạng nhiệt năng từ vật này sang vật khác.
+        \item Số đo phần nội năng biến đổi trong quá trình truyền nhiệt gọi là \textbf{nhiệt lượng} (kí hiệu $Q$, đơn vị $\mathrm{J}$ hoặc $\mathrm{cal}$).
+        \item Công thức tính nhiệt lượng trao đổi khi thay đổi nhiệt độ: $Q = m \cdot c \cdot \Delta T$.
+    \end{itemize}
+\end{itemize}
 
-\begin{document}
+\haicotchay{
+    \textbf{Thí nghiệm biến đổi nội năng khí trong xi lanh (Hình 2.3 SGK KNTT):}
+    \begin{enumerate}
+        \item[\textbf{a)}] \textbf{Thực hiện công:} Dùng tay ấn nhanh pít-tông xuống nén khí trong xi lanh. Cơ năng của tay chuyển hóa thành nội năng làm nhiệt độ khối khí tăng lên.
+        \item[\textbf{b)}] \textbf{Truyền nhiệt:} Đặt xi lanh chứa khí tiếp xúc với ngọn lửa đèn cồn. Nhiệt năng truyền trực tiếp từ ngọn lửa qua vỏ xi lanh vào khối khí làm nội năng của khí tăng lên.
+    \end{enumerate}
+}{
+    \centering
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[scale=1.0, >=stealth]
+        % Hình a: Thực hiện công
+        \draw[thick] (0,0) -- (0,1.8) -- (1.2,1.8) -- (1.2,0);
+        \draw[thick, fill=gray!40] (0.05,0.6) rectangle (1.15,0.8);
+        \draw[thick, ->, red] (0.6,1.4) -- (0.6,0.95);
+        \node at (0.6,1.6) [above, scale=0.8] {$\vec{F}$};
+        \node at (0.6,0.3) [blue, scale=0.8] {Khí};
+        \node at (0.6, -0.3) [black, font=\small] {a) Thực hiện công};
+        
+        % Hình b: Truyền nhiệt
+        \begin{scope}[xshift=2.0cm]
+        \draw[thick] (0,0) -- (0,1.8) -- (1.2,1.8) -- (1.2,0);
+        \draw[thick, fill=gray!40] (0.05,1.2) rectangle (1.15,1.4);
+        \draw[thick, fill=orange] (0.6,-0.3) -- (0.4,-0.6) -- (0.8,-0.6) -- cycle;
+        \node at (0.6,0.5) [blue, scale=0.8] {Khí};
+        \node at (0.6, -0.9) [black, font=\small] {b) Truyền nhiệt};
+        \end{scope}
+        \end{tikzpicture}%
+    }
+}
 
-\subsection{Lý thuyết}
+\subsubsection{3. Định luật I của nhiệt động lực học}
 
+\begin{itemize}
+    \item \textbf{Phát biểu định luật I:}
+    Độ biến thiên nội năng của vật bằng tổng công và nhiệt lượng mà vật nhận được:
+    \[
+    \Delta U = A + Q
+    \]
+    Trong đó:
+    \begin{itemize}
+        \item $\Delta U = U_2 - U_1$ là độ biến thiên nội năng của vật ($\mathrm{J}$).
+        \item $A$ là công mà vật nhận được hoặc thực hiện ($\mathrm{J}$).
+        \item $Q$ là nhiệt lượng mà vật nhận được hoặc tỏa ra ($\mathrm{J}$).
+    \end{itemize}
+\end{itemize}
+
+\haicotchay{
+    \textbf{Quy ước dấu của các đại lượng $A$ và $Q$ (Hình 2.4 SGK KNTT):}
+    \begin{itemize}
+        \item $Q > 0$: Vật nhận nhiệt lượng từ vật khác.
+        \item $Q < 0$: Vật truyền (tỏa) nhiệt lượng cho vật khác.
+        \item $A > 0$: Vật nhận công từ vật khác.
+        \item $A < 0$: Vật thực hiện công lên vật khác.
+    \end{itemize}
+    \textbf{Động cơ nhiệt:} Động cơ nhiệt chuyển hóa nội năng của nhiên liệu bị đốt cháy thành cơ năng dựa trên nguyên tắc của định luật I nhiệt động lực học.
+}{
+    \centering
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[scale=1.1, >=stealth]
+        % Khung vật
+        \draw[thick, fill=blue!5] (0,0) rectangle (2.5,1.5);
+        \node at (1.25,0.75) [blue, font=\bfseries] {VẬT};
+        % Mũi tên công A
+        \draw[->, ultra thick, green!60!black] (-0.8,1.1) -- (0.2,1.1) node[midway, above] {$A > 0$};
+        \draw[<-, ultra thick, red] (-0.8,0.4) -- (0.2,0.4) node[midway, below] {$A < 0$};
+        % Mũi tên nhiệt Q
+        \draw[->, ultra thick, green!60!black] (3.3,1.1) -- (2.3,1.1) node[midway, above] {$Q > 0$};
+        \draw[<-, ultra thick, red] (3.3,0.4) -- (2.3,0.4) node[midway, below] {$Q < 0$};
+        \end{tikzpicture}%
+    }
+}
+
+\begin{kienthuc}
+- Nội năng ($U$) của một vật là tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật. Nội năng phụ thuộc vào nhiệt độ $T$ và thể tích $V$ của vật: $U = f(T, V)$. Đối với khí lí tưởng, nội năng chỉ phụ thuộc vào nhiệt độ $T$.
+- Hai cách làm thay đổi nội năng của vật là thực hiện công (có sự chuyển hóa năng lượng) và truyền nhiệt (không có sự chuyển hóa năng lượng, chỉ có truyền nội năng).
+- Định luật I nhiệt động lực học: $\Delta U = A + Q$.
+- Quy ước dấu: $Q > 0$ (nhận nhiệt), $Q < 0$ (tỏa nhiệt); $A > 0$ (nhận công), $A < 0$ (thực hiện công).
+- Động cơ nhiệt chuyển hóa nội năng của nhiên liệu thành cơ năng hoạt động dựa trên định luật I nhiệt động lực học.
+\end{kienthuc}
+
+\begin{emdahoc}
+\begin{itemize}
+    \item Nêu được định nghĩa nội năng và giải thích được sự phụ thuộc của nội năng vào nhiệt độ và thể tích của vật.
+    \item Phân biệt được hai cách làm biến đổi nội năng là thực hiện công và truyền nhiệt.
+    \item Phát biểu được định luật I nhiệt động lực học, viết được hệ thức $\Delta U = A + Q$ và vận dụng đúng quy ước dấu trong các bài tập tính toán.
+    \item Trình bày được nguyên tắc hoạt động cơ bản của động cơ nhiệt dựa trên sự chuyển hóa nội năng thành cơ năng.
+\end{itemize}
+\end{emdahoc}
+
+\begin{emcothe}
+\begin{itemize}
+    \item Giải thích được các hiện tượng thực tế như: sự nóng lên của bơm xe đạp khi bơm khí, sự tăng nhiệt độ trong ô tô đóng kín cửa để ngoài trời nắng, hiện tượng quẹt diêm tạo lửa.
+    \item Vận dụng định luật I nhiệt động lực học để giải thích nguyên lý hoạt động của máy hơi nước, động cơ đốt trong và các thiết bị làm lạnh trong đời sống.
+\end{itemize}
+\end{emcothe}
 \subsubsection{1. Khái niệm nội năng}
 \begin{hoatdong}
 \textbf{Thảo luận:}
