@@ -3465,29 +3465,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/nhiệt hóa hơi riêng.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/nhiệt hóa hơi riêng.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/nhiệt hóa hơi riêng.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Chưa phân dạng": 1
-      },
-      "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
@@ -4091,6 +4068,29 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": 1
+      },
+      "dang_kinds": {
+        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
         }
       }
     },
