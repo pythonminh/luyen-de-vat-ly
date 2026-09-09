@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 156,
+  "total_files": 155,
   "total_questions": 11513,
   "lessons": [
     {
@@ -4252,29 +4252,6 @@
           "DS": 6,
           "TLN": 1,
           "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/de.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng",
-      "questions": 33,
-      "count": 33,
-      "dang": {
-        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
-      },
-      "dang_kinds": {
-        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 12,
-          "TL": 6
         }
       }
     },
