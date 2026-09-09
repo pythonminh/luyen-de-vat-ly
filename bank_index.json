@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 153,
+  "total_files": 154,
   "total_questions": 11513,
   "lessons": [
     {
@@ -5598,6 +5598,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
