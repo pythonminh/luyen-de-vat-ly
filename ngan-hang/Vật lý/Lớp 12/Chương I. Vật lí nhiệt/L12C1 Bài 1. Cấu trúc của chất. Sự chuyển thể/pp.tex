@@ -194,3 +194,366 @@ Ngược lại, chất rắn vô định hình không có cấu trúc tinh thể
 	}
 \end{vidumau}
 
+% Môn: Vật lý
+% Lớp: 12
+% Chương: Chương I. Vật lí nhiệt
+% Bài: L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể
+% Loại: Dạng mẫu · phương pháp giải
+% File riêng pp.tex, không trộn vào de.tex
+\input{../../../../_lenh/lythuyet.tex}
+
+
+
+\subsubsection{Dạng: Xác định số phân tử, khối lượng phân tử và mật độ phân tử}
+
+\begin{phuongphap}
+	\begin{enumerate}
+		\item Dấu hiệu nhận biết:Bài toán yêu cầu tính toán số phân tử, khối lượng của một phân tử, hoặc mật độ phân tử (số phân tử trong một đơn vị thể tích) của một chất ở thể rắn, lỏng, khí khi biết khối lượng, khối lượng riêng hoặc thể tích của chất đó.
+		{\bf\color{mauchuong}
+			\begin{equation}
+				N = \dfrac{m}{M} \cdot N_A \quad \text{và} \quad \mu = \dfrac{N}{V} = \dfrac{D \cdot N_A}{M}
+				\label{eq:solid_mol}
+		\end{equation}}
+		\item Lưu ý sai lầm thường gặp nếu có Cần đổi đúng đơn vị khối lượng sang gam hoặc kilôgam tương thích với khối lượng mol $M$; thể tích phải đổi về mét khối ($\mathrm{m^3}$).
+	\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một bình chứa dung tích $2{,}0\ \mathrm{l}$ đựng đầy nước lỏng ở nhiệt độ phòng. Biết khối lượng riêng của nước là $1000\ \mathrm{kg/m^3}$ và khối lượng mol của nước là $18\ \mathrm{g/mol}$. Cho hằng số Avogadro $N_A \approx 6{,}02 \cdot 10^{23}\ \mathrm{mol^{-1}}$.
+		\begin{enumerate}
+			\item Tính tổng khối lượng nước trong bình.
+			\item Tính số phân tử nước có trong bình.
+			\item Tính mật độ phân tử nước lỏng trong bình theo đơn vị $\mathrm{m^{-3}}$.
+		\end{enumerate}
+\begin{center}
+\resizebox{0.9\linewidth}{!}{%
+			\begin{tikzpicture}[scale=1.0, >=stealth]
+				% Draw beaker / cylinder filled with water
+				\draw[thick] (-0.8,1.4) -- (-0.8,0) to[out=-90,in=-90,looseness=0.5] (0.8,0) -- (0.8,1.4);
+				% Water fill level
+				\draw[cyan!60, fill=cyan!15] (-0.8,1.0) -- (-0.8,0) to[out=-90,in=-90,looseness=0.5] (0.8,0) -- (0.8,1.0) to[out=170,in=-10] (-0.8,1.0);
+				% Draw some molecules in the liquid
+				\foreach \x/\y in {-0.4/0.2, 0.3/0.3, -0.2/0.6, 0.4/0.7, 0.0/0.4, -0.5/0.8, 0.2/0.1} {
+					\fill[blue!50!cyan] (\x,\y) circle (2.5pt);
+				}
+				% Label
+				\node at (0,-0.6) [font=\footnotesize] {$V = 2{,}0\ \mathrm{l}$};
+			\end{tikzpicture}%
+		}
+\end{center}
+\loigiai{
+\begin{enumerate}
+		\item Thể tích nước trong bình là $V = 2{,}0\ \mathrm{l} = 2{,}0 \cdot 10^{-3}\ \mathrm{m^3}$.
+		Khối lượng nước trong bình là:
+		\[
+		\begin{aligned}
+			m &= D \cdot V \\
+			&= 1000 \cdot 2{,}0 \cdot 10^{-3} \\
+			&= 2{,}0\ \mathrm{kg} = 2000\ \mathrm{g}.
+		\end{aligned}
+		\]
+		\item Số phân tử nước có trong bình nước là:
+		\[
+		\begin{aligned}
+			N &= \dfrac{m}{M} \cdot N_A \\
+			&= \dfrac{2000}{18} \cdot 6{,}02 \cdot 10^{23} \\
+			&\approx 6{,}69 \cdot 10^{25}\ \mathrm{phân\ tử}.
+		\end{aligned}
+		\]
+		\item Mật độ phân tử nước lỏng (số phân tử nước trong một mét khối) là:
+		\[
+		\begin{aligned}
+			\mu &= \dfrac{N}{V} \\
+			&= \dfrac{6{,}69 \cdot 10^{25}}{2{,}0 \cdot 10^{-3}} \\
+			&\approx 3{,}35 \cdot 10^{28}\ \mathrm{m^{-3}}.
+		\end{aligned}
+		\]
+	\end{enumerate}
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Ước tính khoảng cách trung bình giữa các phân tử ở các thể khác nhau}
+
+\begin{phuongphap}
+	\begin{enumerate}
+		\item Dấu hiệu nhận biết:Bài toán yêu cầu tính toán phần không gian trung bình mà mỗi phân tử chiếm giữ, từ đó suy ra khoảng cách trung bình giữa các phân tử bằng cách coi mỗi phân tử chiếm giữ một hình lập phương nhỏ có cạnh là $d$.
+		{\bf\color{mauchuong}
+			\begin{equation}
+				V_0 = \dfrac{V}{N} = \dfrac{M}{D \cdot N_A} \implies d = \sqrt[3]{V_0}
+				\label{eq:mol_dist}
+		\end{equation}}
+		\item Lưu ý sai lầm thường gặp nếu có Coi thể tích trung bình này là thể tích thực của phân tử khí là sai. Ở thể khí, thể tích thực của bản thân phân tử rất nhỏ, phần lớn là khoảng trống, còn $d$ là khoảng cách trung bình giữa chúng.
+	\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một mol hơi nước ở điều kiện tiêu chuẩn có thể tích là $22{,}4\ \mathrm{l}$ chứa $6{,}02 \cdot 10^{23}$ phân tử hơi nước chuyển động hỗn loạn không ngừng. Coi phần thể tích không gian trung bình mà mỗi phân tử hơi nước chiếm giữ có dạng một hình lập phương nhỏ có cạnh bằng khoảng cách trung bình $d$ giữa hai phân tử lân cận. Hãy:
+		\begin{enumerate}
+			\item Tính thể tích trung bình $V_0$ mà một phân tử hơi nước chiếm giữ theo đơn vị $\mathrm{m^3}$.
+			\item Tính khoảng cách trung bình $d$ giữa các phân tử hơi nước này theo đơn vị $\mathrm{nm}$.
+		\end{enumerate}
+\begin{center}
+\resizebox{\linewidth}{!}{%
+			\begin{tikzpicture}[scale=1.2, >=stealth]
+				\draw[thick, blue] (0,0) rectangle (2,2);
+				\foreach \x in {0.4, 1.6} {
+					\foreach \y in {0.4, 1.6} {
+						\fill[red] (\x,\y) circle (2.5pt);
+					}
+				}
+				\draw[<->, thick, green!60!black] (0.4,0.4) -- (1.6,0.4) node[midway, below] {$d$};
+				\draw[<->, thick, green!60!black] (0.4,0.4) -- (0.4,1.6) node[midway, left] {$d$};
+				\node at (1,1) [blue] {$V_0 = d^3$};
+			\end{tikzpicture}%
+		}
+\end{center}
+\loigiai{
+\begin{enumerate}
+		\item Thể tích một mol hơi nước ở điều kiện tiêu chuẩn là $V = 22{,}4\ \mathrm{l} = 22{,}4 \cdot 10^{-3}\ \mathrm{m^3}$.
+		Thể tích trung bình mà một phân tử hơi nước chiếm giữ là:
+		\[
+		\begin{aligned}
+			V_0 &= \dfrac{V}{N_A} \\
+			&= \dfrac{22{,}4 \cdot 10^{-3}}{6{,}02 \cdot 10^{23}} \\
+			&\approx 3{,}72 \cdot 10^{-26}\ \mathrm{m^3}.
+		\end{aligned}
+		\]
+		\item Khoảng cách trung bình giữa hai phân tử hơi nước lân cận (cạnh của hình lập phương nhỏ) là:
+		\[
+		\begin{aligned}
+			d &= \sqrt[3]{V_0} \\
+			&= \sqrt[3]{3{,}72 \cdot 10^{-26}} \\
+			&\approx 3{,}34 \cdot 10^{-9}\ \mathrm{m} = 3{,}34\ \mathrm{nm}.
+		\end{aligned}
+		\]
+		Khoảng cách này lớn gấp khoảng mười lần đường kính phân tử nước (cỡ $0{,}3\ \mathrm{nm}$), phù hợp với mô hình động học phân tử chất khí.
+	\end{enumerate}
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Phân tích đồ thị chuyển thể nóng chảy và đông đặc}
+
+\begin{phuongphap}
+	\begin{enumerate}
+		\item Dấu hiệu nhận biết:Đồ thị biểu diễn sự biến thiên nhiệt độ của chất theo thời gian đun hoặc tỏa nhiệt. Cần xác định nhiệt độ nóng chảy, thời gian nóng chảy từ các đoạn nằm ngang, và tính toán nhiệt lượng đun nóng/nóng chảy.
+		{\bf\color{mauchuong}
+			\begin{equation}
+				Q = m c \Delta T \quad \text{và} \quad Q = \lambda m
+				\label{eq:heat_graph}
+		\end{equation}}
+		\item Lưu ý sai lầm thường gặp nếu có Trong giai đoạn nóng chảy (đoạn nằm ngang), nhiệt độ không đổi, do đó độ biến thiên nhiệt độ $\Delta T = 0$ nhưng chất vẫn nhận nhiệt lượng $Q = \lambda m$.
+	\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một khối nước đá có khối lượng $0{,}50\ \mathrm{kg}$ ban đầu ở nhiệt độ $-8\ ^\circ\mathrm{C}$ được đun nóng bằng một bếp điện có công suất phát nhiệt có ích không đổi là $200\ \mathrm{W}$. Đồ thị biểu diễn sự thay đổi nhiệt độ theo thời gian đun được cho ở hình bên. Cho biết nhiệt dung riêng của nước đá là $2100\ \mathrm{J/(kg\cdot K)}$ và nhiệt nóng chảy riêng của nước đá là $\lambda = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$.
+		\begin{enumerate}
+			\item Tính thời gian $\tau_1$ cần thiết để đưa khối nước đá từ $-8\ ^\circ\mathrm{C}$ lên $0\ ^\circ\mathrm{C}$.
+			\item Tính thời gian $\tau_2$ đun nóng chảy hoàn toàn khối nước đá ở $0\ ^\circ\mathrm{C}$.
+		\end{enumerate}
+\begin{center}
+\resizebox{\linewidth}{!}{%
+			\begin{tikzpicture}[>=stealth, scale=1.0]
+				\draw[->, thick] (0,-1) -- (0,3) node[above] {$t\ (^\circ\mathrm{C})$};
+				\draw[->, thick] (0,0) -- (4.5,0) node[right] {$\tau\ (\mathrm{s})$};
+				\draw[thick, blue] (0,-0.8) -- (1,0) -- (3,0) -- (4,1.5);
+				\node at (0,-0.8) [left] {$-8$};
+				\node at (0,0) [below left] {$O$};
+				\draw[dashed] (1,0) -- (1,-0.4) node[below] {$\tau_1$};
+				\draw[dashed] (3,0) -- (3,-0.4) node[below] {$\tau_1 + \tau_2$};
+			\end{tikzpicture}%
+		}
+\end{center}
+\loigiai{
+\begin{enumerate}
+		\item Nhiệt lượng cần cung cấp để tăng nhiệt độ của khối nước đá từ $-8\ ^\circ\mathrm{C}$ lên $0\ ^\circ\mathrm{C}$ là:
+		\[
+		\begin{aligned}
+			Q_1 &= m \cdot c_{\text{đ}} \cdot (t_{\text{nc}} - t_0) \\
+			&= 0{,}50 \cdot 2100 \cdot [0 - (-8)] \\
+			&= 8400\ \mathrm{J}.
+		\end{aligned}
+		\]
+		Thời gian đun $\tau_1$ tương ứng của bếp điện công suất $\mathscr{P} = 200\ \mathrm{W}$ là:
+		\[
+		\begin{aligned}
+			\tau_1 &= \dfrac{Q_1}{\mathscr{P}} \\
+			&= \dfrac{8400}{200} \\
+			&= 42\ \mathrm{s}.
+		\end{aligned}
+		\]
+		\item Nhiệt lượng cần cung cấp để làm nóng chảy hoàn toàn khối nước đá ở $0\ ^\circ\mathrm{C}$ là:
+		\[
+		\begin{aligned}
+			Q_2 &= \lambda \cdot m \\
+			&= 3{,}34 \cdot 10^5 \cdot 0{,}50 \\
+			&= 167000\ \mathrm{J}.
+		\end{aligned}
+		\]
+		Thời gian đun nóng chảy hoàn toàn $\tau_2$ của bếp điện là:
+		\[
+		\begin{aligned}
+			\tau_2 &= \dfrac{Q_2}{\mathscr{P}} \\
+			&= \dfrac{167000}{200} \\
+			&= 835\ \mathrm{s}.
+		\end{aligned}
+		\]
+	\end{enumerate}
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Sự bay hơi của chất lỏng và sự biến thiên khối lượng}
+
+\begin{phuongphap}
+	\begin{enumerate}
+		\item Dấu hiệu nhận biết:Chất lỏng bay hơi dần từ mặt thoáng làm khối lượng giảm đi theo thời gian. Tính toán số phân tử thoát ra khỏi bề mặt chất lỏng trong một giây hoặc thời gian bay hơi hoàn toàn từ công suất nhận được.
+		{\bf\color{mauchuong}
+			\begin{equation}
+				\Delta m = m_1 - m_2 \implies \Delta N = \dfrac{\Delta m}{M} \cdot N_A \implies n_0 = \dfrac{\Delta N}{\Delta \tau}
+				\label{eq:evap_rate}
+		\end{equation}}
+		\item Lưu ý sai lầm thường gặp nếu có Phân biệt rõ khối lượng chất lỏng bị bay hơi $\Delta m$ và khối lượng chất lỏng còn lại trong cốc. Đơn vị thời gian khi tính tốc độ bay hơi phải quy đổi về giây ($\mathrm{s}$).
+	\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một cốc đựng $200\ \mathrm{g}$ nước lỏng đặt trong phòng. Sau khoảng thời gian $20\ \text{phút}$, một lượng nước lỏng đã bay hơi ra không khí, khối lượng nước còn lại trong cốc đo được là $199{,}1\ \mathrm{g}$. Cho biết khối lượng mol của nước là $18\ \mathrm{g/mol}$ và hằng số Avogadro là $N_A \approx 6{,}02 \cdot 10^{23}\ \mathrm{mol^{-1}}$.
+		\begin{enumerate}
+			\item Tính khối lượng nước đã bay hơi và số phân tử nước đã thoát ra khỏi bề mặt nước lỏng trong cốc.
+			\item Ước tính số phân tử nước thoát ra khỏi bề mặt chất lỏng trung bình trong một giây.
+		\end{enumerate}
+\begin{center}
+\resizebox{0.9\linewidth}{!}{%
+			\begin{tikzpicture}[scale=1.0, >=stealth]
+				% Draw beaker
+				\draw[thick] (-0.8,1.2) -- (-0.8,-0.4) to[out=-90,in=-90,looseness=0.5] (0.8,-0.4) -- (0.8,1.2);
+				% Water level
+				\draw[cyan!60, fill=cyan!15] (-0.8,0.5) -- (-0.8,-0.4) to[out=-90,in=-90,looseness=0.5] (0.8,-0.4) -- (0.8,0.5) to[out=170,in=-10] (-0.8,0.5);
+				% Molecules escaping (evaporation)
+				\fill[blue!50] (-0.3,0.3) circle (2.5pt);
+				\fill[blue!50] (0.2,0.4) circle (2.5pt);
+				\draw[->, thick, red] (-0.3,0.3) -- (-0.3,0.9);
+				\draw[->, thick, red] (0.2,0.4) -- (0.2,1.0);
+				\fill[blue!30] (-0.3,0.9) circle (2.5pt);
+				\fill[blue!30] (0.2,1.0) circle (2.5pt);
+				\node at (-0.3, 1.15) [font=\tiny, red] {$\mathrm{H_2O}$};
+				\node at (0.2, 1.25) [font=\tiny, red] {$\mathrm{H_2O}$};
+				% Labels
+				\node at (0,-0.9) [font=\footnotesize] {Sự bay hơi};
+			\end{tikzpicture}%
+		}
+\end{center}
+\loigiai{
+\begin{enumerate}
+		\item Khối lượng nước đã bay hơi là:
+		\[
+		\begin{aligned}
+			\Delta m &= m_1 - m_2 \\
+			&= 200 - 199{,}1 \\
+			&= 0{,}9\ \mathrm{g}.
+		\end{aligned}
+		\]
+		Số phân tử nước tương ứng đã thoát ra khỏi bề mặt chất lỏng là:
+		\[
+		\begin{aligned}
+			\Delta N &= \dfrac{\Delta m}{M} \cdot N_A \\
+			&= \dfrac{0{,}9}{18} \cdot 6{,}02 \cdot 10^{23} \\
+			&= 3{,}01 \cdot 10^{22}\ \mathrm{phân\ tử}.
+		\end{aligned}
+		\]
+		\item Đổi khoảng thời gian bay hơi sang giây: $\Delta \tau = 20\ \mathrm{ph\text{ú}t} = 20 \cdot 60 = 1200\ \mathrm{s}$.
+		Sử dụng kết quả số phân tử nước thoát ra $\Delta N$ tính được ở trên, số phân tử nước thoát ra trung bình trong một giây là:
+		\[
+		\begin{aligned}
+			n_0 &= \dfrac{\Delta N}{\Delta \tau} \\
+			&= \dfrac{3{,}01 \cdot 10^{22}}{1200} \\
+			&\approx 2{,}51 \cdot 10^{19}\ \mathrm{phân\ tử/s}.
+		\end{aligned}
+		\]
+	\end{enumerate}
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Bài toán đun nóng nâng nhiệt độ kết hợp nóng chảy và hóa hơi}
+
+\begin{phuongphap}
+	\begin{enumerate}
+		\item Dấu hiệu nhận biết:Một khối chất lỏng hoặc chất rắn nhận năng lượng nhiệt từ thiết bị đun nóng để trải qua cả quá trình nâng nhiệt độ và chuyển thể (nóng chảy rồi hóa hơi hoặc ngược lại).
+		{\bf\color{mauchuong}
+			\begin{equation}
+				Q_{\text{tp}} = \sum Q_i = m c_1 \Delta T_1 + \lambda m + m c_2 \Delta T_2 + m L
+				\label{eq:full_heating}
+		\end{equation}}
+		\item Lưu ý sai lầm thường gặp nếu có Cần sử dụng đúng nhiệt dung riêng của từng thể khác nhau của chất (ví dụ nước đá là $2100\ \mathrm{J/(kg\cdot K)}$, nước lỏng là $4180\ \mathrm{J/(kg\cdot K)}$). Khi chuyển thể hoàn toàn thì nhiệt độ giữ nguyên.
+	\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một lò nung nung nóng chảy hoàn toàn $2{,}0\ \mathrm{kg}$ nước đá từ nhiệt độ ban đầu $-10\ ^\circ\mathrm{C}$ thành nước lỏng ở $20\ ^\circ\mathrm{C}$. Cho biết nhiệt dung riêng của nước đá là $c_{\text{đ}} = 2100\ \mathrm{J/(kg\cdot K)}$, của nước lỏng là $c_{\text{n}} = 4180\ \mathrm{J/(kg\cdot K)}$ và nhiệt nóng chảy riêng của nước đá là $\lambda = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$.
+		\begin{enumerate}
+			\item Tính nhiệt lượng $Q_1$ cần thiết để đưa khối nước đá từ $-10\ ^\circ\mathrm{C}$ lên $0\ ^\circ\mathrm{C}$ và nóng chảy hoàn toàn ở $0\ ^\circ\mathrm{C}$.
+			\item Tính tổng nhiệt lượng $Q$ cần cung cấp trong toàn bộ quá trình đun để đưa khối nước đá ban đầu thành nước lỏng ở $20\ ^\circ\mathrm{C}$.
+		\end{enumerate}
+\begin{center}
+\resizebox{0.9\linewidth}{!}{%
+			\begin{tikzpicture}[scale=1.0, >=stealth]
+				\draw[->, thick] (0,-0.8) -- (0,2.5) node[above] {$t\ (^\circ\mathrm{C})$};
+				\draw[->, thick] (0,0) -- (4.2,0) node[right] {$\tau$};
+				% Draw heating curve
+				\draw[thick, blue] (0,-0.5) -- (1,0) -- (2.8,0) -- (3.8,1.2);
+				% Marks
+				\draw[dashed, gray] (0,-0.5) -- (0,-0.5) node[left, black] {$-10$};
+				\node at (0,0) [below left] {$O$};
+				\draw[dashed, gray] (3.8,1.2) -- (0,1.2) node[left, black] {$20$};
+				\draw[dashed, gray] (3.8,1.2) -- (3.8,0);
+				\node at (0.5,-0.6) [font=\tiny, blue] {$\text{Đá}$};
+				\node at (1.9,0.2) [font=\tiny, blue] {$\text{Đang chảy}$};
+				\node at (3.5,0.7) [font=\tiny, blue] {$\text{Nước}$};
+			\end{tikzpicture}%
+		}
+\end{center}
+\loigiai{
+\begin{enumerate}
+		\item Nhiệt lượng cần thiết để đưa khối nước đá từ $-10\ ^\circ\mathrm{C}$ lên $0\ ^\circ\mathrm{C}$ là:
+		\[
+		\begin{aligned}
+			Q_{\text{nâng}} &= m \cdot c_{\text{đ}} \cdot [0 - (-10)] \\
+			&= 2{,}0 \cdot 2100 \cdot 10 \\
+			&= 42000\ \mathrm{J}.
+		\end{aligned}
+		\]
+		Nhiệt lượng cần thiết để làm nóng chảy hoàn toàn lượng nước đá này ở $0\ ^\circ\mathrm{C}$ là:
+		\[
+		\begin{aligned}
+			Q_{\text{nóng chảy}} &= \lambda \cdot m \\
+			&= 3{,}34 \cdot 10^5 \cdot 2{,}0 \\
+			&= 668000\ \mathrm{J}.
+		\end{aligned}
+		\]
+		Nhiệt lượng $Q_1$ cần thiết cho giai đoạn này là:
+		\[
+		\begin{aligned}
+			Q_1 &= Q_{\text{nâng}} + Q_{\text{nóng chảy}} \\
+			&= 42000 + 668000 \\
+			&= 710000\ \mathrm{J}.
+		\end{aligned}
+		\]
+		\item Sử dụng kết quả nhiệt lượng $Q_1$ ở câu trước, ta tính tiếp nhiệt lượng $Q_2$ để đưa lượng nước lỏng thu được sau khi tan tăng nhiệt độ từ $0\ ^\circ\mathrm{C}$ lên $20\ ^\circ\mathrm{C}$:
+		\[
+		\begin{aligned}
+			Q_2 &= m \cdot c_{\text{n}} \cdot (20 - 0) \\
+			&= 2{,}0 \cdot 4180 \cdot 20 \\
+			&= 167200\ \mathrm{J}.
+		\end{aligned}
+		\]
+		Tổng nhiệt lượng cần cung cấp trong toàn bộ quá trình là:
+		\[
+		\begin{aligned}
+			Q &= Q_1 + Q_2 \\
+			&= 710000 + 167200 \\
+			&= 877200\ \mathrm{J}.
+		\end{aligned}
+		\]
+	\end{enumerate}
+}
+\end{vidumau}
