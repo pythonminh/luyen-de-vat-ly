@@ -316,6 +316,15 @@
       "status": "ON",
       "password_sha256": "d83036ffb5b49a153bc391fd12b4a10df06bbb200f39fed97c331b03b6833ce7",
       "password_enc": "v1:uTDCFQ=="
+    },
+    {
+      "username": "akai@210",
+      "name": "Tran Pham Minh Nhat",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "067d4fd0d0b90279e08b967b1aea6bb52bd2a3349f75fb0db7bf6c49237cf6c6",
+      "password_enc": "v1:zmyWcxC8jd2JEHtAAw=="
     }
   ]
 }
