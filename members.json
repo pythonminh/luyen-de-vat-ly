@@ -253,6 +253,15 @@
       "status": "ON",
       "password_sha256": "a00bbc7ace3066320baf1db6d7e7598a4c2769b786141bae363ae4c7323a5c0a",
       "password_enc": "v1:yEK_cjCd_Io="
+    },
+    {
+      "username": "minh Nguyên",
+      "name": "Nguyễn Đặng Minh Nguyên",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "69060b692a35ed2b1c99315e811d0a4fdcbdf57c628277301602af9044796bf5",
+      "password_enc": "v1:4WuQUxCj_YHSag=="
     }
   ]
 }
