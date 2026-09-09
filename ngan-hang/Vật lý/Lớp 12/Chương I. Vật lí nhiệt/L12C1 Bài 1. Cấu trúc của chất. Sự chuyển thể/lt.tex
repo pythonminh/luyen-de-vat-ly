@@ -9,7 +9,7 @@
         \begin{tikzpicture}[scale=0.8]
             % Phần a) - Chất rắn
             \begin{scope}[shift={(0,0)}]
-                \node at (1.5,-2.5) {\textbf{a) Chất rắn}};
+                \node at (1.5,-0.5) {\textbf{a) Chất rắn}};
                 \foreach \x in {0.5,1.0,...,2.5} {
                     \foreach \y in {0.5,1.0,...,2.5} {
                         \shade[ball color=blue!70] (\x,\y) circle(0.11cm);
@@ -22,7 +22,7 @@
 
             % Phần b) - Chất lỏng
             \begin{scope}[shift={(4,0)}]
-                \node at (1.5,2.5) {\textbf{b) Chất lỏng}};
+                \node at (1.5,-0.5) {\textbf{b) Chất lỏng}};
                 \foreach \x in {0.5,1.0,...,2.5} {
                     \foreach \y in {0.5,1.0,...,2.5} {
                         \pgfmathparse{rnd}
@@ -42,7 +42,7 @@
 
             % Phần c) - Chất khí
             \begin{scope}[shift={(8,0)}]
-                \node at (1.5,2.5) {\textbf{c) Chất khí}};
+                \node at (1.5,-0.5) {\textbf{c) Chất khí}};
                 \shade[ball color=blue!70] (0.5,2.0) circle(0.11cm);
                 \shade[ball color=blue!70] (2.5,1.5) circle(0.11cm);
                 \shade[ball color=blue!70] (1.0,0.5) circle(0.11cm);
