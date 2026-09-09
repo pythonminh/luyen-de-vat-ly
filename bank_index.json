@@ -5608,9 +5608,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 21,
+      "count": 21,
+      "dang": {
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21
+      },
+      "dang_kinds": {
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 6
+        }
+      }
     }
   ]
 }
