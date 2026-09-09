@@ -5640,9 +5640,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
+      },
+      "dang_kinds": {
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 12,
+          "TL": 6
+        }
+      }
     }
   ]
 }
