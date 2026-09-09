@@ -244,6 +244,15 @@
       "password_sha256": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
       "grade": "",
       "updated_at": "2026-09-01 13:39:36"
+    },
+    {
+      "username": "nguyen09.luan09@gmail.com",
+      "name": "Luân Nguyễn",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "a00bbc7ace3066320baf1db6d7e7598a4c2769b786141bae363ae4c7323a5c0a",
+      "password_enc": "v1:yEK_cjCd_Io="
     }
   ]
 }
