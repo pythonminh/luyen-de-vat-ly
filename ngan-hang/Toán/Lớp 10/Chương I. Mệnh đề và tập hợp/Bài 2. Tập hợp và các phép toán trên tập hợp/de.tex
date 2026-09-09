@@ -11,22 +11,29 @@
 % ID: T10C1B2-01-DS
 % Mức: VD
 \dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
-\begin{ex}
-% ID: T10C1B2-01-DS
-% Mức: VD
-Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên. Khi đó
+\begin{ex}Xét các phát biểu sau về số lượng học sinh tham gia các câu lạc bộ trong lớp $10C6$: Lớp $10C6$ có $18$ học sinh tham gia câu lạc bộ bóng đá và $15$ học sinh tham gia câu lạc bộ bóng rổ. Biết rằng có $10$ học sinh tham gia cả hai câu lạc bộ trên.
 \choiceTF
-{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
-{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên}
-{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá}
-{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ}
+{\True Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên.}
+{\True Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên.}
+{Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá.}
+{Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ.}
 \loigiai{
-\begin{itemchoice}
-\item (Đúng) Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này sai
-\item (Đúng) Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên. (Vì): Số học sinh tham gia ít nhất một trong hai câu lạc bộ là $|BĐ \cup BR| = |BĐ| + |BR| - |BĐ \cap BR| = 18 + 15 - 10 = 23$. Mệnh đề này đúng
-\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá. (Vì): Gọi $L$ là tập hợp học sinh lớp $10C6$, ta có $|L| = 45$. Số học sinh không tham gia câu lạc bộ bóng đá là $|L| - |BĐ| = 45 - 18 = 27$. Mệnh đề này sai
-\item (Sai) Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ. (Vì): ố học sinh không tham gia cả hai câu lạc bộ là $|L| - |BĐ \cup BR| = 45 - 23 = 22$. Mệnh đề này sai
-\end{itemchoice}
+Gọi $A$ là tập hợp học sinh tham gia câu lạc bộ bóng đá, $B$ là tập hợp học sinh tham gia câu lạc bộ bóng rổ.
+Theo đề bài, ta có: $|A| = 18$, $|B| = 15$, $|A \cap B| = 10$.
+a) Số học sinh tham gia ít nhất một trong hai câu lạc bộ là số phần tử của tập hợp $A \cup B$. Ta có công thức:
+$|A \cup B| = |A| + |B| - |A \cap B||A \cup B| = 18 + 15 - 10 = 33 - 10 = 23$.
+Phát biểu "Có $8$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên" là Sai.
+b) Dựa trên kết quả tính toán ở câu a), số học sinh tham gia ít nhất một trong hai câu lạc bộ là $23$.
+Phát biểu "Có $23$ học sinh tham gia ít nhất một trong hai câu lạc bộ trên" là Đúng.
+c) Gọi $L$ là tập hợp học sinh lớp $10C6$. Theo đề bài, $|L| = 45$.
+Số học sinh không tham gia câu lạc bộ bóng đá là số học sinh thuộc lớp $10C6$ nhưng không thuộc tập $A$. Số này được tính bằng $|L| - |A|$.
+Số học sinh không tham gia câu lạc bộ bóng đá là $45 - 18 = 27$.
+Phát biểu "Biết lớp $10C6$ có $45$ học sinh. Có $25$ học sinh không tham gia câu lạc bộ bóng đá" là Sai.
+d) Gọi $L$ là tập hợp học sinh lớp $10C6$. Theo đề bài, $|L| = 45$.
+Số học sinh không tham gia cả hai câu lạc bộ là số học sinh thuộc lớp $10C6$ nhưng không thuộc tập $A \cup B$. Số này được tính bằng $|L| - |A \cup B|$.
+Từ câu a), ta có $|A \cup B| = 23$.
+Số học sinh không tham gia cả hai câu lạc bộ là $45 - 23 = 22$.
+Phát biểu "Biết lớp $10C6$ có $45$ học sinh. Có $24$ học sinh không tham gia cả hai câu lạc bộ" là Sai.
 }
 \end{ex}
 
