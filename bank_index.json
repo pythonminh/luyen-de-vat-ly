@@ -4267,15 +4267,15 @@
       "questions": 55,
       "count": 55,
       "dang": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 27,
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21,
         "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 1,
-        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 27
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
       },
       "dang_kinds": {
         "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
+          "TLN": 0,
           "TL": 6
         },
         "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
@@ -4287,7 +4287,7 @@
         "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
+          "TLN": 12,
           "TL": 6
         }
       }
