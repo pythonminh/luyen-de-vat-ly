@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 151,
-  "total_questions": 11490,
+  "total_questions": 11494,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3420,15 +3420,15 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 9,
-      "count": 9,
+      "questions": 13,
+      "count": 13,
       "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 9
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 13
       },
       "dang_kinds": {
         "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
           "TN": 9,
-          "DS": 0,
+          "DS": 4,
           "TLN": 0,
           "TL": 0
         }
