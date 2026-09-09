@@ -271,6 +271,15 @@
       "status": "ON",
       "password_sha256": "8a4454247c642c30aa7bf0d305bf64d0a634391673687f2c6364a59aa15503f8",
       "password_enc": "v1:6mWcUxm2qMaYbCMQRw=="
+    },
+    {
+      "username": "Nguyên",
+      "name": "Đặng Trí Nguyên",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "f6688cef4991e5865fa215215e9b17b5d8a600a6428e273cfc75a37672ceaa63",
+      "password_enc": "v1:uTXBF0Xn_IvZbSM="
     }
   ]
 }
