@@ -82,6 +82,7 @@ LT_CSS = """
 .lt-q{margin:4px 0}
 .lt-opts{display:grid;gap:6px;margin:10px 0 8px}
 .lt-opt{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d7e2ee;border-radius:10px;background:#fff}
+.lt-opt-body{flex:1 1 auto;min-width:0}
 .lt-opt.ok{border-color:#86efac;background:#f0fdf4}
 .lt-let{flex:0 0 1.6em;width:1.6em;height:1.6em;border-radius:999px;background:#e2e8f0;color:#334155;font-weight:800;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
 .lt-opt.ok .lt-let{background:#16a34a;color:#fff}
@@ -466,7 +467,8 @@ def _html_quiz(chunk: str) -> str:
             mark = "Đúng" if ok else "Sai"
             cls = " ok" if ok else ""
             rows.append(
-                f"<div class='lt-opt{cls}'><b>{i + 1}.</b> {_html_tex(txt)} "
+                f"<div class='lt-opt{cls}'><b>{i + 1}.</b> "
+                f"<div class='lt-opt-body'>{_html_tex(txt)}</div> "
                 f"<span class='lt-key'>{mark}</span></div>"
             )
         opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
@@ -479,7 +481,8 @@ def _html_quiz(chunk: str) -> str:
             let = letters[i] if i < 4 else str(i + 1)
             cls = " ok" if ok else ""
             rows.append(
-                f"<div class='lt-opt{cls}'><span class='lt-let'>{let}</span> {_html_tex(txt)}</div>"
+                f"<div class='lt-opt{cls}'><span class='lt-let'>{let}</span> "
+                f"<div class='lt-opt-body'>{_html_tex(txt)}</div></div>"
             )
         opts_html = "<div class='lt-opts'>" + "".join(rows) + "</div>"
         stem = re.split(r"\\choice\b|\\loigiai\b|\\begin\s*\{\s*loigiai", b, 1, flags=re.I)[0]
@@ -685,33 +688,37 @@ def page_companion(de_path: str, kind: str = "lt"):
             f"<div class='wrap'><div class='panel'><div class='body err'>Chưa có file {html.escape(spec['file'])}. {html.escape(str(e))}</div>"
             f"<p><a class='btn' href='/member/select?path={html.escape(de_path, quote=True)}'>← Luyện đề</a></p></div></div></div>",
         )
-    full = sees_full_companion(m)
-    secs, start = _theory_secs(tex)
-    clipped = False
-    if not full:
-        secs, clipped = clip_companion_secs(secs)
-    nsec = len(secs)
-    opts = "".join(
-        f"<option value='{html.escape(s['id'], quote=True)}'>{html.escape(s['title'])}</option>"
-        for s in secs
-    )
-    toc = (
-        f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục"
-        + (" (xem trước 30%)" if clipped else "")
-        + "</label>"
-        f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select>"
-        "<div class='lttoc-nav' style='display:flex;gap:6px;margin-top:6px'>"
-        "<button type='button' class='btn' id='secPrev'>◀ Dạng trước</button>"
-        "<button type='button' class='btn' id='secNext'>Dạng sau ▶</button></div></nav>"
-        "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
-        "function go(d){var i=s.selectedIndex;if(i<1)i=1;i+=d;if(i<1||i>=s.options.length)return;s.selectedIndex=i;s.dispatchEvent(new Event('change'));}"
-        "var a=document.getElementById('secPrev'),b=document.getElementById('secNext');"
-        "if(a)a.onclick=function(){go(-1)};if(b)b.onclick=function(){go(1)};"
-        "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
-        "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'auto',block:'start'});}});"
-        "})();</script>"
-    )
-    blocks = _html_secs(secs, start=start, admin=admin and full, fade_last=clipped, add_btn=admin and full)
+    tok = base._TEX_SRC.set(rel)
+    try:
+        full = sees_full_companion(m)
+        secs, start = _theory_secs(tex)
+        clipped = False
+        if not full:
+            secs, clipped = clip_companion_secs(secs)
+        nsec = len(secs)
+        opts = "".join(
+            f"<option value='{html.escape(s['id'], quote=True)}'>{html.escape(s['title'])}</option>"
+            for s in secs
+        )
+        toc = (
+            f"<nav class='lttoc'><label for='ltjump'>Mục lục · {nsec} mục"
+            + (" (xem trước 30%)" if clipped else "")
+            + "</label>"
+            f"<select id='ltjump'><option value=''>Chọn mục để xem…</option>{opts}</select>"
+            "<div class='lttoc-nav' style='display:flex;gap:6px;margin-top:6px'>"
+            "<button type='button' class='btn' id='secPrev'>◀ Dạng trước</button>"
+            "<button type='button' class='btn' id='secNext'>Dạng sau ▶</button></div></nav>"
+            "<script>(function(){var s=document.getElementById('ltjump');if(!s)return;"
+            "function go(d){var i=s.selectedIndex;if(i<1)i=1;i+=d;if(i<1||i>=s.options.length)return;s.selectedIndex=i;s.dispatchEvent(new Event('change'));}"
+            "var a=document.getElementById('secPrev'),b=document.getElementById('secNext');"
+            "if(a)a.onclick=function(){go(-1)};if(b)b.onclick=function(){go(1)};"
+            "s.addEventListener('change',function(){if(!this.value)return;var el=document.getElementById(this.value);"
+            "if(el){history.replaceState(null,'','#'+this.value);el.scrollIntoView({behavior:'auto',block:'start'});}});"
+            "})();</script>"
+        )
+        blocks = _html_secs(secs, start=start, admin=admin and full, fade_last=clipped, add_btn=admin and full)
+    finally:
+        base._TEX_SRC.reset(tok)
     if not str(blocks or "").strip():
         blocks = (
             f"<p class='muted'>Chưa tách được mục. Kiểm tra \\subsubsection trong {html.escape(spec['file'])}.</p>"

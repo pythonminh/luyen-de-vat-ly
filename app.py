@@ -6,9 +6,11 @@ No Google Sheet is used for the question flow.
 from __future__ import annotations
 
 import base64
+import contextvars
 import hashlib
 import html
 import json
+import mimetypes
 import os
 import random
 import re
@@ -82,7 +84,7 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:9px}.card{border:1px solid #d8e3ee;border-radius:10px;padding:11px;background:#fff}.titlebar{padding:10px 12px;border-radius:10px;background:linear-gradient(90deg,#1c61ce,#5798e7);color:#fff;font-weight:900}.meta{font-size:11px;color:#6a7d90}.tag{display:inline-block;border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;margin:2px}.free{background:#eefbf2;border-color:#83d39e;color:#14743a}.vip{background:#fff0f7;border-color:#eaa3c9;color:#a2175f}.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}.dang{margin-top:8px;border:1px solid #d9e5f0;background:#fbfdff;border-radius:8px;padding:7px}.dangrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:7px 0;border-bottom:1px solid #edf2f7}.dangrow:last-child{border-bottom:0}.danglink{color:#1a6bb8}.dangname{font-weight:400;line-height:1.45;color:#1a6bb8}.dangno{font-weight:400;color:#1a6bb8;margin-right:.35em}.dangkinds{display:flex;flex-wrap:wrap;gap:4px}.kind{display:inline-block;border:1px solid #d3dfeb;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:800;background:#fff}.ktotal{background:#e9f2ff;border-color:#b8d5f6;color:#145bb0}
 .selectwrap{overflow:auto;max-width:100%;-webkit-overflow-scrolling:touch}.selectgrid{width:100%;border-collapse:collapse;font-size:12px}.selectgrid th,.selectgrid td{border:1px solid #dfe7ef;padding:7px}.selectgrid thead th{position:sticky;top:0;z-index:4;background:#e9f2ff;box-shadow:0 1px 0 #c5d4e6}.selectgrid th{background:#e9f2ff;text-align:center}.n{width:52px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .bankwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px}.bankwrap .selectgrid{border-collapse:separate;border-spacing:0}.addbank{display:grid;grid-template-columns:1.1fr 90px 1.3fr 1.3fr auto;gap:7px;align-items:end;margin:10px 0;padding:10px;border:1px dashed #b8d5f6;border-radius:9px;background:#f8fbff}.addbank .field{margin:0}
-.qzoombar{display:inline-flex;align-items:center;gap:6px;margin-left:8px;flex-wrap:wrap}.qzoombar .btn{padding:6px 10px;font-size:13px}.qzoombar b{min-width:3.4em;text-align:center}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitems{display:flex;flex-wrap:wrap;gap:5px;width:100%}.pdang{order:-1;font-weight:600;font-size:12px;line-height:1.35;color:#173a5e}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #d4c4f0;border-radius:11px;padding:16px;font-size:calc(19px * var(--qzoom,1));--qzoom:1;font-family:'Times New Roman',Times,serif;overflow-x:auto;max-width:100%}.qtext,.tf-text,.opt,.solution{line-height:1.75}mjx-container[jax="CHTML"]:not([display="true"]){display:inline!important;vertical-align:baseline!important;margin:0 .12em 0 0!important;padding:0!important;text-indent:0}mjx-container[jax="CHTML"][display="true"]{display:block;margin:.55em 0;max-width:100%;overflow-x:auto}.qtext{font-size:1em;line-height:1.75;margin-bottom:10px;overflow-x:auto;max-width:100%}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.qbox .tikzfig,.qbox .tikz-live{height:calc(var(--figh) * var(--qzoom,1))}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff;max-width:100%}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0;padding:0;line-height:1.75}ul.tex-list{padding-left:1.35em}ol.tex-list{list-style:none;counter-reset:ltn;padding:0}ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em}ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}@media(max-width:700px){.immini{grid-template-columns:1fr}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:.55em .7em;margin:.45em 0;cursor:pointer;font-size:1em}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.practice-split.is-ai{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.9fr);gap:12px;align-items:start}.practice-q{min-width:0}.practice-ai{position:sticky;top:calc(var(--header-h) + 8px);max-height:calc(100dvh - var(--header-h) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #cab9f0;background:#faf8ff;border-radius:12px;padding:12px;box-shadow:0 4px 18px #1b4d8a14}.practice-ai .review{margin-top:0}.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.modebar .btn.primary{min-width:160px}@media(max-width:900px){.practice-split.is-ai{grid-template-columns:1fr}.practice-ai{position:relative;top:auto;max-height:min(52dvh,520px)}}.tfgrid{margin:8px 0 4px;display:flex;flex-direction:column;gap:0}.qheadline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.qbadge{display:inline-block;background:#5b21b6;color:#fff;border-radius:8px;padding:.28em .8em;font:400 1em 'Times New Roman',Times,serif;flex-shrink:0;line-height:1.3}.qstem{flex:1 1 100%;min-width:100%;width:100%}.qbody.ds.hassplit{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(250px,1.2fr);gap:18px;align-items:start}.qfig .tikzfig,.qfig .tikz-live{height:auto;max-height:min(68vh,540px);margin:0;width:100%}.qfig .tex-table{margin:0 auto}.tflab{display:inline-flex;align-items:center;justify-content:center;min-width:1.75em;height:1.55em;padding:0 .3em;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6;margin:0;font:400 .95em 'Times New Roman',Times,serif;flex-shrink:0}.tf-colhead,.tfgrid .tf{display:grid;grid-template-columns:2.2em minmax(0,1fr) 3.1em 3.1em;column-gap:4px;align-items:center}.tf-colhead{padding:0 2px 2px}.tf-h{text-align:center;font-weight:400;font-size:.95em;line-height:1.15}.tf-h.yes{color:#5b21b6}.tf-h.no{color:#e11d48}.tfgrid .tf{border:0;border-radius:0;padding:7px 2px;margin:0;background:transparent}.tf-text{min-width:0;font-size:1em;line-height:1.7}.tf-box{width:1.2em;height:1.2em;border:2px solid #475569;border-radius:3px;background:#fff;justify-self:center;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;position:relative}.tf-box input{appearance:none;-webkit-appearance:none;position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}.tf-box:has(input:checked),.tf-box.on,.tf-box.pick{background:#fff;border-color:#475569}.tf-box:has(input:checked)::after,.tf-box.on::after,.tf-box.pick::after{content:"";width:.48em;height:.48em;border-radius:1px;background:#1d4ed8}.tfgrid .tf.correct,.tfgrid .tf.ok{background:#f7fbf8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.wrong,.tfgrid .tf.noans{background:#fdf8f8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.correct .tf-text,.tfgrid .tf.ok .tf-text{color:#2f4a38;font-weight:400}.tfgrid .tf.wrong .tf-text,.tfgrid .tf.noans .tf-text{color:#6a3a3a;font-weight:400}.tfgrid .tf.correct .tf-box:has(input:checked)::after,.tfgrid .tf.ok .tf-box.on::after,.tfgrid .tf.correct .tf-box.on::after,.tfgrid .tf.noans .tf-box.on::after{background:#15803d}.tfgrid .tf.wrong .tf-box:has(input:checked)::after,.tfgrid .tf.wrong .tf-box.pick::after{background:#b91c1c}@media(max-width:700px){.tf-colhead,.tfgrid .tf{grid-template-columns:1.9em minmax(0,1fr) 44px 44px}.tf-h{font-size:.82em}.qbody.ds.hassplit{grid-template-columns:1fr}.tf-box{width:44px;height:44px;min-width:44px;min-height:44px}.opt{padding:12px 12px;min-height:44px;display:flex;align-items:flex-start;gap:8px}.palette .pitems{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.pitem{min-width:44px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}.field input,.field select,.catsearch input,.catsearch select,.answerbox{font-size:16px}.body:has(.quizacts){padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}.quizacts{position:fixed;left:0;right:0;bottom:0;z-index:90;margin:0;display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 20px #0f172a18}.quizacts .btn{flex:1 1 0;min-height:44px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}.pwatip{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}.correct{background:#f7fbf8!important;border-color:#c5ddd0!important}.wrong{background:#fdf8f8!important;border-color:#e6d0d0!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:9px;margin-top:10px;font-weight:400;font-family:'Times New Roman',Times,serif}.result .keyline,.result .vres{margin:0;font-size:.95em;font-weight:400;line-height:1.5}.result .keygrid{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin:0 0 0 8px;vertical-align:middle}.result .keyrow{display:inline-flex;align-items:center;gap:6px}.result .keylab{font-weight:400;opacity:.9;margin-right:2px}.result .keycell{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:400;white-space:nowrap}.result .klet{font-size:.78em;color:#64748b;line-height:1}.result .kcirc{display:inline-flex;width:2.15em;height:2.15em;border:0;border-radius:50%;align-items:center;justify-content:center;font-weight:400;font-size:1.05em;font-family:'Times New Roman',Times,serif;flex-shrink:0}.result .kcirc.d{background:#f8f1c8;color:#1e4b8c}.result .kcirc.s{background:#d8eedd;color:#b42318}.result .kcirc.tn{background:#e8f0f8;color:#1e4b8c}.result .keycell.ok{color:inherit}.result .keycell.bad .kcirc{box-shadow:0 0 0 1px #c98a8a}.good{background:#f7fbf8;color:#2f4a38;border:1px solid #d5e6db}.bad{background:#fdf8f8;color:#6a3a3a;border:1px solid #ead4d4}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.reviewout .ai-y{display:block;white-space:pre-wrap;margin:8px 0;padding:9px 11px;border-radius:8px;border-left:5px solid #cbd8e6;background:#fff}.reviewout .ai-y.ok{color:#116a32;background:#eaf8ef;border-color:#42ae6b}.reviewout .ai-y.bad{color:#a41f28;background:#fff0f1;border-color:#e04d56}.reviewout .ai-y .ai-tag{font-weight:900}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}.gkeyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.gkeyhead b{margin:0}.gkeyfold{padding:5px 10px;font-size:12px;white-space:nowrap}.review.gkey-collapsed .gkeybody{display:none}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
+.qzoombar{display:inline-flex;align-items:center;gap:6px;margin-left:8px;flex-wrap:wrap}.qzoombar .btn{padding:6px 10px;font-size:13px}.qzoombar b{min-width:3.4em;text-align:center}.qid{display:inline-block;border:1px solid #efca73;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#fff7dc;color:#7a5300;font-family:Consolas,monospace}.nguonrow{margin:0 0 8px}.nguon{display:inline-block;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f0f9ff;color:#0369a1}.palette{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px;background:#f8fbff;border:1px solid var(--line);border-radius:9px;margin-bottom:10px}.pitems{display:flex;flex-wrap:wrap;gap:5px;width:100%}.pdang{order:-1;font-weight:600;font-size:12px;line-height:1.35;color:#173a5e}.pitem{padding:5px 8px;border:1px solid #cad7e6;border-radius:7px;background:#fff;font-size:11px}.pcur{border:2px solid var(--blue);font-weight:900}.pdone{background:#eaf9ef;border-color:#82c99b}.pwrong{background:#fff0f1;border-color:#eca0a7}.qbox{border:1px solid #d4c4f0;border-radius:11px;padding:16px;font-size:calc(19px * var(--qzoom,1));--qzoom:1;font-family:'Times New Roman',Times,serif;overflow-x:auto;max-width:100%}.qtext,.tf-text,.opt,.solution{line-height:1.75}mjx-container[jax="CHTML"]:not([display="true"]){display:inline!important;vertical-align:baseline!important;margin:0 .12em 0 0!important;padding:0!important;text-indent:0}mjx-container[jax="CHTML"][display="true"]{display:block;margin:.55em 0;max-width:100%;overflow-x:auto}.qtext{font-size:1em;line-height:1.75;margin-bottom:10px;overflow-x:auto;max-width:100%}.tikzfig,.tikz-live{display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--figh);margin:12px 0;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.qbox .tikzfig,.qbox .tikz-live{height:calc(var(--figh) * var(--qzoom,1))}.tikz-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin:12px 0;align-items:start}.tikz-row .tikzfig,.tikz-row .tikz-live{margin:0;height:calc(var(--figh) * .7)}.tikzfig svg,.tikz-live svg,.tikzfig img,.tikz-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain}@media(max-width:700px){.tikzfig,.tikz-live{height:calc(var(--figh) * .68)}}.tikz-live:has(svg) .tikz-wait{display:none}.ytbox{margin:12px 0;max-width:min(100%,620px)}.ytplay{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;padding:0;border:1px solid #cfddeb;border-radius:11px;background:#0b1220 center/cover no-repeat;color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 4px #000c;box-shadow:inset 0 0 0 300px #0b122059}.ytplay:hover .ytplay-ico{background:#f00}.ytplay-ico{display:inline-flex;align-items:center;justify-content:center;width:56px;height:39px;border-radius:9px;background:#e60000cc;font-size:18px;text-shadow:none}.ytframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:11px}.ytlink{display:inline-block;margin-top:5px;font-size:12px;font-weight:800}.exlink{display:inline-block;margin:6px 0;font-weight:800}.tex-table{border-collapse:collapse;margin:10px auto;font-size:15px;background:#fff;max-width:100%}.tex-table td,.tex-table th{border:1px solid #334155;padding:6px 10px;text-align:center}.tex-list{margin:8px 0;padding:0;line-height:1.75}ul.tex-list{padding-left:1.35em}ol.tex-list{list-style:none;counter-reset:ltn;padding:0}ol.tex-list>li{position:relative;margin:8px 0;padding:2px 0 2px 2.45em}ol.tex-list>li::before{content:counter(ltn);counter-increment:ltn;position:absolute;left:0;top:.12em;width:1.65em;height:1.65em;border:1.5px solid #145bb0;border-radius:50%;background:#fff;color:#145bb0;font:800 12px/1.65em Segoe UI,Arial,sans-serif;text-align:center;box-sizing:border-box}.immini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:10px 0}.immini-txt{min-width:0}.immini-fig{flex:0 0 auto}.tex-img{max-width:min(100%,280px);height:auto;border:1px solid #d7e2ee;border-radius:10px;background:#fff;display:block}.tex-img-miss{display:block;margin:8px 0;padding:8px 10px;border:1px dashed #fdba74;background:#fff7ed;border-radius:8px;color:#9a3412}.qbox .tex-img{max-width:min(100%,calc(220px * var(--qzoom,1)))}@media(max-width:700px){.immini{grid-template-columns:1fr}.tex-img{max-width:100%}}.opt{display:block;border:2px solid #d8e4f0;border-radius:9px;padding:.55em .7em;margin:.45em 0;cursor:pointer;font-size:1em}.opt:hover{background:#f8fbff}.opt:has(input:checked){border-color:var(--blue);background:#f1f7ff;box-shadow:0 0 0 3px #176bd322}.quizacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.hintline{margin-top:8px;font-size:13px;color:#6c7d90;font-weight:700}.practice-split.is-ai{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.9fr);gap:12px;align-items:start}.practice-q{min-width:0}.practice-ai{position:sticky;top:calc(var(--header-h) + 8px);max-height:calc(100dvh - var(--header-h) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #cab9f0;background:#faf8ff;border-radius:12px;padding:12px;box-shadow:0 4px 18px #1b4d8a14}.practice-ai .review{margin-top:0}.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.modebar .btn.primary{min-width:160px}@media(max-width:900px){.practice-split.is-ai{grid-template-columns:1fr}.practice-ai{position:relative;top:auto;max-height:min(52dvh,520px)}}.tfgrid{margin:8px 0 4px;display:flex;flex-direction:column;gap:0}.qheadline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.qbadge{display:inline-block;background:#5b21b6;color:#fff;border-radius:8px;padding:.28em .8em;font:400 1em 'Times New Roman',Times,serif;flex-shrink:0;line-height:1.3}.qstem{flex:1 1 100%;min-width:100%;width:100%}.qbody.ds.hassplit{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(250px,1.2fr);gap:18px;align-items:start}.qfig .tikzfig,.qfig .tikz-live{height:auto;max-height:min(68vh,540px);margin:0;width:100%}.qfig .tex-table{margin:0 auto}.tflab{display:inline-flex;align-items:center;justify-content:center;min-width:1.75em;height:1.55em;padding:0 .3em;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6;margin:0;font:400 .95em 'Times New Roman',Times,serif;flex-shrink:0}.tf-colhead,.tfgrid .tf{display:grid;grid-template-columns:2.2em minmax(0,1fr) 3.1em 3.1em;column-gap:4px;align-items:center}.tf-colhead{padding:0 2px 2px}.tf-h{text-align:center;font-weight:400;font-size:.95em;line-height:1.15}.tf-h.yes{color:#5b21b6}.tf-h.no{color:#e11d48}.tfgrid .tf{border:0;border-radius:0;padding:7px 2px;margin:0;background:transparent}.tf-text{min-width:0;font-size:1em;line-height:1.7}.tf-box{width:1.2em;height:1.2em;border:2px solid #475569;border-radius:3px;background:#fff;justify-self:center;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;position:relative}.tf-box input{appearance:none;-webkit-appearance:none;position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}.tf-box:has(input:checked),.tf-box.on,.tf-box.pick{background:#fff;border-color:#475569}.tf-box:has(input:checked)::after,.tf-box.on::after,.tf-box.pick::after{content:"";width:.48em;height:.48em;border-radius:1px;background:#1d4ed8}.tfgrid .tf.correct,.tfgrid .tf.ok{background:#f7fbf8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.wrong,.tfgrid .tf.noans{background:#fdf8f8!important;border:0!important;box-shadow:none;border-radius:6px}.tfgrid .tf.correct .tf-text,.tfgrid .tf.ok .tf-text{color:#2f4a38;font-weight:400}.tfgrid .tf.wrong .tf-text,.tfgrid .tf.noans .tf-text{color:#6a3a3a;font-weight:400}.tfgrid .tf.correct .tf-box:has(input:checked)::after,.tfgrid .tf.ok .tf-box.on::after,.tfgrid .tf.correct .tf-box.on::after,.tfgrid .tf.noans .tf-box.on::after{background:#15803d}.tfgrid .tf.wrong .tf-box:has(input:checked)::after,.tfgrid .tf.wrong .tf-box.pick::after{background:#b91c1c}@media(max-width:700px){.tf-colhead,.tfgrid .tf{grid-template-columns:1.9em minmax(0,1fr) 44px 44px}.tf-h{font-size:.82em}.qbody.ds.hassplit{grid-template-columns:1fr}.tf-box{width:44px;height:44px;min-width:44px;min-height:44px}.opt{padding:12px 12px;min-height:44px;display:flex;align-items:flex-start;gap:8px}.palette .pitems{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.pitem{min-width:44px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}.field input,.field select,.catsearch input,.catsearch select,.answerbox{font-size:16px}.body:has(.quizacts){padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}.quizacts{position:fixed;left:0;right:0;bottom:0;z-index:90;margin:0;display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 20px #0f172a18}.quizacts .btn{flex:1 1 0;min-height:44px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}.pwatip{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}.correct{background:#f7fbf8!important;border-color:#c5ddd0!important}.wrong{background:#fdf8f8!important;border-color:#e6d0d0!important}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.result{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:9px;margin-top:10px;font-weight:400;font-family:'Times New Roman',Times,serif}.result .keyline,.result .vres{margin:0;font-size:.95em;font-weight:400;line-height:1.5}.result .keygrid{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin:0 0 0 8px;vertical-align:middle}.result .keyrow{display:inline-flex;align-items:center;gap:6px}.result .keylab{font-weight:400;opacity:.9;margin-right:2px}.result .keycell{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:400;white-space:nowrap}.result .klet{font-size:.78em;color:#64748b;line-height:1}.result .kcirc{display:inline-flex;width:2.15em;height:2.15em;border:0;border-radius:50%;align-items:center;justify-content:center;font-weight:400;font-size:1.05em;font-family:'Times New Roman',Times,serif;flex-shrink:0}.result .kcirc.d{background:#f8f1c8;color:#1e4b8c}.result .kcirc.s{background:#d8eedd;color:#b42318}.result .kcirc.tn{background:#e8f0f8;color:#1e4b8c}.result .keycell.ok{color:inherit}.result .keycell.bad .kcirc{box-shadow:0 0 0 1px #c98a8a}.good{background:#f7fbf8;color:#2f4a38;border:1px solid #d5e6db}.bad{background:#fdf8f8;color:#6a3a3a;border:1px solid #ead4d4}.praise{margin:10px 0;padding:11px;border-radius:9px;background:#fff8df;border:1px solid #efca73;color:#855a00;font-size:16px;font-weight:900}.review{margin-top:12px;padding:12px;border:1px solid #cab9f0;background:#faf8ff;border-radius:9px}.reviewout{margin-top:10px;white-space:pre-wrap;line-height:1.7}.reviewout .ai-y{display:block;white-space:pre-wrap;margin:8px 0;padding:9px 11px;border-radius:8px;border-left:5px solid #cbd8e6;background:#fff}.reviewout .ai-y.ok{color:#116a32;background:#eaf8ef;border-color:#42ae6b}.reviewout .ai-y.bad{color:#a41f28;background:#fff0f1;border-color:#e04d56}.reviewout .ai-y .ai-tag{font-weight:900}.gkeyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.gkeygrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.gkeycell label{display:block;font-size:11px;font-weight:800;color:#66778a;margin-bottom:4px}.gkey-input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cbd8e6;border-radius:8px;font-size:15px}.gkeylink{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:16px}.gkeylink:hover{text-decoration:underline}.gkeyhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.gkeyhead b{margin:0}.gkeyfold{padding:5px 10px;font-size:12px;white-space:nowrap}.review.gkey-collapsed .gkeybody{display:none}@media(max-width:800px){.gkeygrid{grid-template-columns:1fr}}.adminbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.code{width:100%;height:70vh;font:12px/1.5 Consolas,monospace;padding:10px;border:1px solid #cbd8e6;border-radius:8px}.notice{padding:10px;border:1px solid #b6d3ef;background:#f4f9ff;border-radius:8px}.err{color:#b42318;font-weight:800}.success{color:#0d7b35;font-weight:800}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.adminbox{grid-template-columns:1fr}.tree{max-height:38vh}.addbank{grid-template-columns:1fr}}
 .dtab{display:inline-flex;flex-direction:row;align-items:center;gap:4px;max-width:min(16rem,72vw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
 .dtab .dname{font-weight:800;overflow:hidden;text-overflow:ellipsis}
@@ -865,11 +867,162 @@ def read_tex(path, need_sha=False):
             sha=''
     return sha, text
 
+_TEX_SRC = contextvars.ContextVar("tex_src", default="")
+IMG_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+LESSON_IMAGE_DIRS = ("images", "ImagesGPT", "Images")
+INC_CMD_RE = re.compile(r"\\includegraphics(?:\s*\[(?P<opt>[^\]]*)\])?\s*", re.I)
+WRAPFIG_RE = re.compile(r"\\begin\s*\{\s*wrapfigure\s*\}.*?\\end\s*\{\s*wrapfigure\s*\}", re.I | re.S)
+
 def lesson_folder(path):
     p = str(path or "").replace("\\", "/").rstrip("/")
     if p.lower().endswith(".tex"):
         return p.rsplit("/", 1)[0]
     return p
+
+
+def _fetch_bytes_remote(path):
+    p, _ = _safe_repo_file(path)
+    raw_url = f"https://raw.githubusercontent.com/{REPO}/{urllib.parse.quote(BRANCH, safe='')}/{urllib.parse.quote(p, safe='/')}"
+    headers = {"User-Agent": "luyen-de-vat-ly-clean", "Cache-Control": "no-cache", "Pragma": "no-cache"}
+    if TOKEN:
+        headers["Authorization"] = f"Bearer {TOKEN}"
+    req = urllib.request.Request(raw_url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return r.read()
+    except Exception:
+        if not TOKEN:
+            raise
+        d = gh_api(f"contents/{urllib.parse.quote(p, safe='/')}?ref={urllib.parse.quote(BRANCH)}")
+        return base64.b64decode((d.get("content") or "").replace("\n", ""))
+
+
+def _norm_graphic_name(raw):
+    t = str(raw or "").strip().strip('"').strip("'").replace("\\", "/")
+    t = t.replace("%20", " ")
+    while t.startswith("./"):
+        t = t[2:]
+    return t.lstrip("/")
+
+
+def _graphic_name_variants(name):
+    name = _norm_graphic_name(name)
+    if not name or ".." in name.split("/"):
+        return []
+    stem, ext = os.path.splitext(name)
+    base = name.rsplit("/", 1)[-1]
+    base_stem, base_ext = os.path.splitext(base)
+    out = []
+    if ext.lower() in IMG_EXTS:
+        out.extend([name, base])
+    else:
+        for e in IMG_EXTS:
+            out.extend([name + e, stem + e, base + e, base_stem + e])
+        out.extend([name, base])
+    if "/" in name:
+        out.append(name.split("/", 1)[-1])
+        leaf = name.rsplit("/", 1)[-1]
+        leaf_stem, leaf_ext = os.path.splitext(leaf)
+        if leaf_ext.lower() in IMG_EXTS:
+            out.append(leaf)
+        else:
+            for e in IMG_EXTS:
+                out.append(leaf + e)
+                out.append(leaf_stem + e)
+    seen, uniq = set(), []
+    for x in out:
+        x = str(x).replace("\\", "/").lstrip("/")
+        if x and x not in seen and ".." not in x.split("/"):
+            seen.add(x)
+            uniq.append(x)
+    return uniq
+
+
+def _candidate_image_rels(name, tex_path=""):
+    tex_path = str(tex_path or _TEX_SRC.get() or "").replace("\\", "/")
+    folder = lesson_folder(tex_path) if tex_path else ""
+    names = _graphic_name_variants(name)
+    roots = []
+    if folder.startswith("ngan-hang/"):
+        roots.append(folder)
+        for d in LESSON_IMAGE_DIRS:
+            roots.append(folder + "/" + d)
+    roots.append("ngan-hang")
+    rels, seen = [], set()
+    for root in roots:
+        for n in names:
+            rel = (root.rstrip("/") + "/" + n).replace("//", "/")
+            if not rel.startswith("ngan-hang/") or ".." in rel.split("/"):
+                continue
+            if rel not in seen:
+                seen.add(rel)
+                rels.append(rel)
+    return rels
+
+
+def resolve_lesson_image(name, tex_path=""):
+    rels = _candidate_image_rels(name, tex_path)
+    for rel in rels:
+        try:
+            p, local = _safe_repo_file(rel)
+        except Exception:
+            continue
+        if local.is_file() and local.stat().st_size > 20:
+            return p, local
+    if not (_on_render() or os.getenv("FORCE_GITHUB_TEX") == "1"):
+        return "", None
+    for rel in rels[:8]:
+        try:
+            p, local = _safe_repo_file(rel)
+            blob = _fetch_bytes_remote(p)
+        except Exception:
+            continue
+        if blob and len(blob) > 20 and blob[:15] != b"404: Not Found" and blob[:9] != b"Not Found":
+            try:
+                local.parent.mkdir(parents=True, exist_ok=True)
+                local.write_bytes(blob)
+                return p, local
+            except Exception:
+                continue
+    return "", None
+
+
+def includegraphics_html(opt, raw_name):
+    rel, _local = resolve_lesson_image(raw_name)
+    shown = html.escape(_norm_graphic_name(raw_name) or "ảnh")
+    if not rel:
+        return (
+            f"<span class='tex-img-miss'>Thiếu ảnh <b>{shown}</b>. "
+            "Đặt file png/jpg vào thư mục <b>images/</b> của bài (cạnh de.tex) rồi đẩy GitHub.</span>"
+        )
+    url = "/bank-img/" + urllib.parse.quote(rel[len("ngan-hang/"):], safe="/")
+    style = ""
+    m = re.search(r"width\s*=\s*([\d.]+)\s*cm", str(opt or ""), re.I)
+    if m:
+        px = int(round(float(m.group(1)) * 38))
+        style = f" style='max-width:{max(80, min(px, 420))}px'"
+    return (
+        f"<img class='tex-img' src='{html.escape(url, quote=True)}' alt='{shown}'{style} "
+        "loading='lazy' decoding='async'>"
+    )
+
+
+def _replace_includegraphics(s, bucket):
+    out, i = [], 0
+    while True:
+        m = INC_CMD_RE.search(s, i)
+        if not m:
+            out.append(s[i:])
+            break
+        arg, end = get_braced(s, m.end())
+        if arg is None:
+            out.append(s[i:m.end()])
+            i = m.end()
+            continue
+        bucket.append(includegraphics_html(m.group("opt") or "", arg))
+        out.append(s[i:m.start()] + f"@@INC{len(bucket)-1}@@")
+        i = end
+    return "".join(out)
 
 
 def _folder_bai_name(path):
@@ -1347,6 +1500,14 @@ def command_args(block,cmd):
     m=re.search(re.escape(cmd)+r'\b',block,re.I)
     if not m:return []
     vals=[];p=m.end()
+    while p<len(block) and block[p].isspace():
+        p+=1
+    if p<len(block) and block[p]=='[':
+        depth=1;p+=1
+        while p<len(block) and depth:
+            if block[p]=='[': depth+=1
+            elif block[p]==']': depth-=1
+            p+=1
     while True:
         v,p2=get_braced(block,p)
         if v is None:break
@@ -1492,8 +1653,15 @@ def strip_bank_meta(s):
 def clean_latex_web(s):
     return strip_bank_meta(s or '')
 
-def html_question(s):
-    return latex_to_web(s or '')
+def html_question(s, tex_path=None):
+    token = None
+    if tex_path:
+        token = _TEX_SRC.set(str(tex_path).replace("\\", "/"))
+    try:
+        return latex_to_web(s or "")
+    finally:
+        if token is not None:
+            _TEX_SRC.reset(token)
 
 def prepare_math(s):
     """Make LaTeX visible to MathJax: keep $...$ and wrap bare \\overrightarrow{ }."""
@@ -1955,8 +2123,8 @@ def video_html(vid, title=''):
             f'<a class="ytlink" href="https://www.youtube.com/watch?v={vid}" target="_blank" rel="noopener">↗ Mở trên YouTube</a></div>')
 
 def latex_to_web(s):
-    """HTML cho web: TikZ → hình, tabular → bảng, list → HTML, còn lại $...$ cho MathJax."""
-    figs=[]; bolds=[]; italics=[]; tabs=[]; lists=[]; vids=[]
+    """HTML cho web: TikZ → hình, ảnh bài → <img>, tabular → bảng, còn lại $...$ cho MathJax."""
+    figs=[]; bolds=[]; italics=[]; tabs=[]; lists=[]; vids=[]; incs=[]; wraps=[]
     def stash_tikz(m):
         figs.append(tikz_to_html(m.group(0)))
         return f'@@FIG{len(figs)-1}@@'
@@ -1972,12 +2140,19 @@ def latex_to_web(s):
         else:
             return url
         return f'@@VID{len(vids)-1}@@'
+    def stash_wrap(m):
+        inner = m.group(0)
+        found = []
+        _replace_includegraphics(inner, found)
+        wraps.append(found[0] if found else '')
+        return f'@@WRAP{len(wraps)-1}@@'
     s=strip_loigiai(peel_immini(s or ''))
-    s=strip_wrapfigure(s)
+    s=WRAPFIG_RE.sub(stash_wrap, s)
     s=strip_resizebox(s)
     s=VIDEO_CMD_RE.sub(stash_video, s)
     s=YT_URL_RE.sub(stash_video, s)
     s=TIKZ_RE.sub(stash_tikz, s)
+    s=_replace_includegraphics(s, incs)
     s=convert_tabulars(s, tabs)
     s=convert_list_env(s, 'itemchoice', 'ul', lists)
     s=convert_list_env(s, 'itemize', 'ul', lists)
@@ -1987,7 +2162,6 @@ def latex_to_web(s):
         dms.append(m.group(0).strip())
         return f'@@DM{len(dms)-1}@@'
     s=re.sub(r'\\\[.*?\\\]', stash_dm, s, flags=re.S)
-    s=re.sub(r'\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]*\}','@@IMG@@',s,flags=re.I)
     s=re.sub(r'\\begin\s*\{\s*(?:center|minipage|figure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(?:center|minipage|figure)\s*\}','',s,flags=re.I)
     s=re.sub(r'\\vspace\s*\{[^{}]*\}','',s,flags=re.I)
@@ -2018,13 +2192,19 @@ def latex_to_web(s):
         put(f'@@LST{i}@@', ls)
     for i,vd in enumerate(vids):
         put(f'@@VID{i}@@', vd)
-    put('@@IMG@@', '<span class="muted">[Hình]</span>')
+    for i,im in enumerate(incs):
+        put(f'@@INC{i}@@', im)
+    for i,_w in enumerate(wraps):
+        put(f'@@WRAP{i}@@', '')
     s=s.replace('@@ROW@@',"<div class='tikz-row'>").replace('@@/ROW@@','</div>')
     s=s.replace(html.escape('@@ROW@@', quote=False),"<div class='tikz-row'>").replace(html.escape('@@/ROW@@', quote=False),'</div>')
     s=re.sub(r'\\begin\s*\{\s*(?:tabular|center|tikzpicture|figure|minipage|itemchoice|itemize|enumerate|wrapfigure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(?:tabular|center|tikzpicture|figure|minipage|itemchoice|itemize|enumerate|wrapfigure)\s*\}','',s,flags=re.I)
     s=re.sub(r'\\(?:immini|resizebox)(?:\s*\[[^\]]*\])?(?:\s*\{[^{}]*\}){0,3}\s*\{?','',s,flags=re.I)
     s=re.sub(r'%\s*\[[^\]]+\]','',s)
+    if any(wraps):
+        figs_html=''.join(f"<div class='immini-fig'>{w}</div>" for w in wraps if w)
+        s=f"<div class='immini'><div class='immini-txt'>{s}</div>{figs_html}</div>"
     return s
 
 def dang_for_pos(tex,pos):
@@ -2918,9 +3098,10 @@ def question_payload(q):
         fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
     except (TypeError, ValueError):
         fi=0
-    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text']),'solution':html_question(q['solution']),'dang':q['dang'],'level':q['level'],'src':str(q.get('src') or ''),'file_idx':fi,'line':int(q.get('line') or 0)}
-    if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text','')),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
-    elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
+    src=str(q.get('src') or '')
+    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text'], src),'solution':html_question(q['solution'], src),'dang':q['dang'],'level':q['level'],'src':src,'file_idx':fi,'line':int(q.get('line') or 0)}
+    if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text',''), src),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
+    elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o, src),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':p['answer']=q.get('answer','')
     return p
 
@@ -3382,6 +3563,31 @@ def admin_dups():
 
 @app.get('/admin/logout')
 def admin_logout():session.clear();return redirect('/member/login')
+
+@app.route('/bank-img/<path:rel>')
+def bank_img(rel):
+    """Ảnh trong thư mục images/ (hoặc ImagesGPT/) của từng bài."""
+    p = 'ngan-hang/' + str(rel or '').replace('\\', '/').lstrip('/')
+    if Path(p).suffix.lower() not in IMG_EXTS:
+        abort(404)
+    try:
+        p, local = _safe_repo_file(p)
+    except Exception:
+        abort(404)
+    if not local.is_file():
+        try:
+            blob = _fetch_bytes_remote(p)
+            if blob and len(blob) > 20:
+                local.parent.mkdir(parents=True, exist_ok=True)
+                local.write_bytes(blob)
+        except Exception:
+            pass
+    if not local.is_file():
+        abort(404)
+    mime = mimetypes.guess_type(str(local))[0] or 'image/png'
+    resp = send_file(local, mimetype=mime, conditional=True)
+    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    return resp
 
 @app.route('/tikz/<hid>.png')
 def tikz_png(hid):

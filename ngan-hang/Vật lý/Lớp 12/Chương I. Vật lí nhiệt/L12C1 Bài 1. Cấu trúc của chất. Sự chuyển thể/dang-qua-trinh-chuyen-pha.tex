@@ -305,3 +305,43 @@ Cồn y tế (ethanol) là một chất lỏng rất dễ bay hơi ở nhiệt �
 \loigiai{Quá trình cồn y tế chuyển thể từ thể lỏng sang thể khí ngay ở nhiệt độ phòng là quá trình bay hơi (một hình thức của sự hóa hơi). Để các phân tử cồn lỏng ở bề mặt bứt phá ra khỏi lực liên kết và bay hơi, chúng cần thu nhận một lượng nhiệt năng nhất định. Lượng nhiệt năng này được lấy trực tiếp từ vùng da tiếp xúc của cơ thể. Việc mất đi nhiệt lượng đột ngột làm nhiệt độ của vùng da đó giảm xuống nhanh chóng, kích thích các dây thần kinh khiến ta cảm thấy mát lạnh.}
 \nguon{SGK KNTT Vật lý Lớp 12 Bài 1 Mục III.1 Câu hỏi lệnh trang 11}
 \end{ex}
+
+\dangbt{Quá trình chuyển pha}
+\begin{ex}
+% ID: L12C1B1-DS-17
+% Mức: TH
+{\color{red}\footnotesize\ttfamily [L12C1B1-DS-17]}\par %HienID
+Đồ thị biểu diễn sự thay đổi nhiệt độ của một lượng nước được đun sôi đến khi chuyển thể hoàn toàn thành hơi theo thời gian như hình vẽ.
+\begin{center}
+\begin{tikzpicture}[x=0.46cm,y=0.036cm,>=stealth,font=\small]
+\draw[gray!28] (0,0) grid[xstep=2,ystep=20] (18,140);
+\draw[->,thick] (-0.2,0) -- (19.4,0) node[right] {Thời gian (phút)};
+\draw[->,thick] (0,-2) -- (0,152) node[above] {Nhiệt độ ($^\circ$C)};
+\foreach \x in {0,2,...,18} \draw (\x,1.6) -- (\x,-1.6) node[below] {\x};
+\foreach \y in {20,40,...,140} \draw (0.35,\y) -- (-0.35,\y) node[left] {\y};
+\node[left] at (-0.35,0) {0};
+\draw[dashed,gray] (4,0) -- (4,100) -- (0,100);
+\draw[dashed,gray] (14,0) -- (14,100);
+\draw[dashed,gray] (16,0) -- (16,140) -- (0,140);
+\draw[red,very thick] (0,20) -- (4,100) -- (14,100) -- (16,140);
+\fill[red] (0,20) circle (2.2pt) node[below right] {A};
+\fill[red] (4,100) circle (2.2pt) node[above left] {B};
+\fill[red] (14,100) circle (2.2pt) node[above] {C};
+\fill[red] (16,140) circle (2.2pt) node[above right] {D};
+\end{tikzpicture}
+\end{center}
+\choiceTF[t]
+{\True Tại thời điểm ban đầu, nhiệt độ của nước là $20^\circ\mathrm{C}$.}
+{Tốc độ chuyển động nhiệt của các phân tử nước sau $10$ phút đun nước lớn hơn tốc độ chuyển động nhiệt của các phân tử nước sau $4$ phút đun nước.}
+{Sự sôi là sự hóa hơi xảy ra chỉ ở mặt thoáng của chất lỏng.}
+{\True Đoạn $BC$ biểu diễn quá trình nước đang sôi. Trong giai đoạn này toàn bộ nhiệt lượng cung cấp cho nước dùng để hóa hơi nước.}
+\loigiai{
+\begin{itemchoice}
+\item Điểm $A$ có tọa độ $(0;20)$, nên lúc $t=0$ nhiệt độ nước là $20^\circ\mathrm{C}$. Mệnh đề đúng.
+\item Từ phút $4$ đến phút $14$ đồ thị nằm ngang ở $100^\circ\mathrm{C}$ (đoạn $BC$): nước đang sôi, nhiệt độ không đổi. Phút $4$ và phút $10$ cùng nhiệt độ nên tốc độ chuyển động nhiệt trung bình của phân tử như nhau. Mệnh đề sai.
+\item Bay hơi xảy ra ở mặt thoáng; sự sôi là hóa hơi xảy ra trong toàn bộ thể tích chất lỏng (bọt khí). Mệnh đề sai.
+\item Đoạn $BC$ là quá trình sôi ở $100^\circ\mathrm{C}$. Nhiệt lượng cung cấp dùng để phá vỡ liên kết, hóa hơi, không làm tăng nhiệt độ. Mệnh đề đúng.
+\end{itemchoice}
+}
+\end{ex}
+

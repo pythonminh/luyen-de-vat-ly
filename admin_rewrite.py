@@ -615,7 +615,7 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
         for i, o in enumerate(options[:4]):
             mark = " <span class='okmark'>Đáp án đúng</span>" if o.get("correct") else ""
             bits.append(
-                f"<div class='opt{' ok' if o.get('correct') else ''}'><b>{'ABCD'[i]}.</b> {base.html_question(o.get('text',''))}{mark}</div>"
+                f"<div class='opt{' ok' if o.get('correct') else ''}'><b>{'ABCD'[i]}.</b> {base.html_question(o.get('text',''), src)}{mark}</div>"
             )
         opt_html = "<div class='opts'>" + "".join(bits) + "</div>"
     elif options and kind == "DS":
@@ -628,7 +628,7 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
             y_on = " on" if yes else ""
             n_on = " on" if not yes else ""
             bits.append(
-                f"<div class='tf{cls}'><span class='tflab'>{lab}</span><div class='tf-text'>{base.html_question(o.get('text',''))}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>"
+                f"<div class='tf{cls}'><span class='tflab'>{lab}</span><div class='tf-text'>{base.html_question(o.get('text',''), src)}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>"
             )
         opt_html = "<div class='tfgrid'>" + "".join(bits) + "</div>"
     return {
@@ -641,10 +641,10 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
         "solution": solution,
         "answer": answer,
         "options": options,
-        "stem_html": base.html_question(stem),
-        "sol_html": base.html_question(solution),
+        "stem_html": base.html_question(stem, src),
+        "sol_html": base.html_question(solution, src),
         "opt_html": opt_html,
-        "answer_html": base.html_question(answer or ""),
+        "answer_html": base.html_question(answer or "", src),
     }
 
 
@@ -654,7 +654,8 @@ def api_tex_preview():
         return jsonify(ok=False, error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
     tex = _clean_tex(data.get("tex") or data.get("latex") or "")
-    return jsonify(ok=True, html=base.html_question(tex))
+    src = str(data.get("src") or data.get("path") or "")
+    return jsonify(ok=True, html=base.html_question(tex, src))
 
 
 @base.app.post("/api/admin/rewrite-question")

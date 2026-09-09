@@ -130,13 +130,15 @@ def member_dang_stats_all():
 
 def _sol_block(q):
     sol=(q.get('solution') or '').strip()
-    inner=html_question(sol) if sol else "<div class='muted'>Chưa có lời giải trong file TEX.</div>"
+    src=q.get('src') or ''
+    inner=html_question(sol, src) if sol else "<div class='muted'>Chưa có lời giải trong file TEX.</div>"
     return f"<div class='solution'><b>📖 Lời giải</b><div>{inner}</div></div>"
 
 def _question_card(q, seq, total, path='', dup=None, show_solution=False, highlight_id=''):
     n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
     qid=str(q.get('id') or '').strip() or '—'
     cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
+    src=str(q.get('src') or path or '').replace('\\','/')
     badge={'TN':'TN · Trắc nghiệm','DS':'ĐS · Đúng / Sai','TLN':'TLN · Trả lời ngắn','TL':'TL · Tự luận'}.get(kind,kind)
     options=''
     sol_html=''
@@ -146,14 +148,14 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         for i,o in enumerate((q.get('options') or [])[:4]):
             ok=show_solution and bool(o.get('correct'))
             mark=" <span class='okmark'>Đáp án đúng</span>" if ok else ''
-            bits.append(f"<div class='opt{' ok' if ok else ''}'><b>{letters[i]}.</b> {html_question(o.get('text',''))}{mark}</div>")
+            bits.append(f"<div class='opt{' ok' if ok else ''}'><b>{letters[i]}.</b> {html_question(o.get('text',''), src)}{mark}</div>")
         options='<div class="opts">'+''.join(bits)+'</div>'
     elif kind=='DS':
         st=q.get('statements') or []
         bits=['<div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
         labs='ABCD'
         for i,o in enumerate(st):
-            txt=html_question(o.get('text','') if isinstance(o,dict) else o)
+            txt=html_question(o.get('text','') if isinstance(o,dict) else o, src)
             yes=bool((o or {}).get('correct')) if isinstance(o,dict) else False
             lab=labs[i] if i<4 else str(i+1)
             cls=' ok' if show_solution and yes else (' noans' if show_solution else '')
@@ -165,12 +167,11 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         options="<div class='answerline'>✎ Học viên nhập đáp án khi làm bài</div>"
         if show_solution:
             ans=str(q.get('answer') or '').strip()
-            options+=f"<div class='answerline'><b>Đáp án:</b> {html_question(ans) if ans else '—'}</div>"
+            options+=f"<div class='answerline'><b>Đáp án:</b> {html_question(ans, src) if ans else '—'}</div>"
     else:
         options="<div class='answerline'>✎ Câu tự luận</div>" if member_current() else "<div class='answerline'>✎ Câu tự luận · 🔒 Đăng nhập rồi làm bài mới xem lời giải</div>"
     if show_solution:
         sol_html=_sol_block(q)
-    src=str(q.get('src') or path or '').replace('\\','/')
     gh=''
     tex_badge=f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>"
     if can_manage_bank() and src:
@@ -205,7 +206,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
             + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if can_manage_bank() else "")
             + "</div>"
-            f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text)}</div></div>{options}{rw}{sol_html}</article>")
+            f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{rw}{sol_html}</article>")
 
 @app.get('/member/dang')
 def member_dang():
