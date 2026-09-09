@@ -280,6 +280,15 @@
       "status": "ON",
       "password_sha256": "f6688cef4991e5865fa215215e9b17b5d8a600a6428e273cfc75a37672ceaa63",
       "password_enc": "v1:uTXBF0Xn_IvZbSM="
+    },
+    {
+      "username": "anhquy",
+      "name": "Hoàng Anh Quy",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "88e9c230e8b4223f2bbd5c52166327903b9a2877a52b1085c36bf28c2b609199",
+      "password_enc": "v1:yGqbVgSq_YHSeg=="
     }
   ]
 }
