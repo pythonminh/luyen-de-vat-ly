@@ -1,20 +1,102 @@
-% Môn: Vật lý
-% Lớp: 12
-% Chương: Chương I. Vật lí nhiệt
-% Bài: L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học
-% Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
-\input{../../../../_lenh/lythuyet.tex}
-
 \subsection{Lý thuyết}
 \subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
+
+\paragraph{1. Khái niệm nội năng}
+\begin{itemize}
+    \item \textbf{Động năng và thế năng phân tử:}
+    \begin{itemize}
+        \item Các phân tử cấu tạo nên vật luôn chuyển động nhiệt không ngừng nên chúng có \textbf{động năng phân tử}. Động năng này phụ thuộc vào tốc độ chuyển động của các phân tử, nghĩa là phụ thuộc vào nhiệt độ $T$ của vật.
+        \item Giữa các phân tử có lực tương tác (hút và đẩy) nên chúng có \textbf{thế năng tương tác phân tử}. Thế năng này phụ thuộc vào khoảng cách trung bình giữa các phân tử, nghĩa là phụ thuộc vào thể tích $V$ của vật.
+    \end{itemize}
+    \item \textbf{Định nghĩa nội năng:}
+    \begin{itemize}
+        \item Tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật gọi là \textbf{nội năng} của vật.
+        \item Kí hiệu nội năng là $U$, đơn vị đo trong hệ SI là jun ($\mathrm{J}$).
+        \item Trong nhiệt động lực học, nội năng của một vật là một đại lượng phụ thuộc vào nhiệt độ $T$ và thể tích $V$ của vật:
+        \[
+        U = f(T, V)
+        \]
+        \item Đối với khí lí tưởng, do bỏ qua lực tương tác giữa các phân tử khi chưa va chạm nên thế năng tương tác phân tử bằng không. Do đó, nội năng của khối khí lí tưởng chỉ phụ thuộc vào nhiệt độ $T$ của khối khí.
+    \end{itemize}
+    \item \textbf{Thí nghiệm về mối liên hệ giữa nội năng và năng lượng phân tử:}
+    \begin{itemize}
+        \item \textit{Thí nghiệm đun nóng ống nghiệm bịt nút bấc:} Khi hơ nóng một ống nghiệm chứa không khí được đậy kín bằng nút bấc, sau một thời gian ngắn nút bấc bị đẩy bật ra khỏi ống nghiệm.
+        \item \textit{Giải thích:} Khi bị đốt nóng, nhiệt độ không khí trong ống nghiệm tăng lên làm động năng chuyển động nhiệt của các phân tử khí tăng lên. Các phân tử khí chuyển động nhanh hơn, va chạm vào nút bấc và thành ống mạnh hơn, tạo ra lực áp suất đủ lớn đẩy bật nút bấc ra ngoài. Thí nghiệm chứng tỏ khi năng lượng (động năng) của các phân tử tăng thì nội năng của hệ tăng.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{2. Các cách làm thay đổi nội năng}
+Có hai cách làm thay đổi nội năng của một vật:
+\begin{itemize}
+    \item \textbf{Thực hiện công:}
+    \begin{itemize}
+        \item Quá trình thực hiện công có sự tác dụng lực và dịch chuyển quãng đường.
+        \item Có sự chuyển hóa từ dạng năng lượng khác (như cơ năng) sang nội năng của vật.
+        \item \textit{Ví dụ:} Ấn mạnh pít-tông xuống để nén khí trong xi lanh, cơ năng của tay chuyển hóa thành nội năng làm khối khí nóng lên; hoặc ma sát cọ xát miếng kim loại lên mặt bàn.
+    \end{itemize}
+    \item \textbf{Truyền nhiệt:}
+    \begin{itemize}
+        \item Quá trình truyền nhiệt không có sự thực hiện công và không có sự chuyển hóa năng lượng từ dạng này sang dạng khác, chỉ có sự truyền nội năng trực tiếp từ vật này sang vật khác dưới dạng nhiệt năng.
+        \item Số đo phần nội năng biến đổi trong quá trình truyền nhiệt gọi là \textbf{nhiệt lượng} (kí hiệu là $Q$, đơn vị là $\mathrm{J}$ hoặc $\mathrm{cal}$; với $1\ \mathrm{cal} = 4{,}186\ \mathrm{J}$).
+        \item Nhiệt lượng trao đổi khi vật thay đổi nhiệt độ:
+        \[
+        Q = m \cdot c \cdot \Delta T
+        \]
+        \item \textit{Ví dụ:} Cho xi lanh chứa khí tiếp xúc trực tiếp với ngọn lửa đèn cồn hoặc nhúng chiếc thìa kim loại vào cốc nước nóng.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{3. Định luật I của nhiệt động lực học}
+\begin{itemize}
+    \item \textbf{Phát biểu định luật:}
+    Độ biến thiên nội năng của vật bằng tổng công và nhiệt lượng mà vật nhận được:
+    \[
+    \Delta U = A + Q
+    \]
+    Trong đó:
+    \begin{itemize}
+        \item $\Delta U = U_2 - U_1$ là độ biến thiên nội năng của vật ($\mathrm{J}$).
+        \item $A$ là công mà vật nhận được hoặc thực hiện ($\mathrm{J}$).
+        \item $Q$ là nhiệt lượng mà vật nhận được hoặc tỏa ra ($\mathrm{J}$).
+    \end{itemize}
+    \item \textbf{Quy ước dấu của các đại lượng:}
+    \begin{itemize}
+        \item $Q > 0$: Vật nhận nhiệt lượng từ vật khác.
+        \item $Q < 0$: Vật truyền (tỏa) nhiệt lượng cho vật khác.
+        \item $A > 0$: Vật nhận công từ vật khác.
+        \item $A < 0$: Vật thực hiện công lên vật khác.
+    \end{itemize}
+    \item \textbf{Ứng dụng - Nguyên tắc hoạt động của động cơ nhiệt:}
+    \begin{itemize}
+        \item Động cơ nhiệt là thiết bị hoạt động dựa trên nguyên tắc biến đổi nội năng của nhiên liệu bị đốt cháy thành cơ năng.
+        \item Động cơ nhiệt gồm 3 bộ phận cơ bản: Nguồn nóng (cung cấp nhiệt lượng $Q_1$ ở nhiệt độ $T_1$), Tác nhân và bộ phận phát động (nhận nhiệt $Q_1$, giãn nở sinh công $A'$ có ích), Nguồn lạnh (nhận nhiệt lượng $Q_2'$ tỏa ra từ tác nhân ở nhiệt độ $T_2 < T_1$).
+        \item Hiệu suất của động cơ nhiệt:
+        \[
+        H = \dfrac{|A'|}{Q_1} = \dfrac{Q_1 - Q_2'}{Q_1}
+        \]
+    \end{itemize}
+\end{itemize}
+
 \begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
+- Nội năng ($U$) của một vật là tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật. Nội năng phụ thuộc vào nhiệt độ $T$ và thể tích $V$ của vật: $U = f(T, V)$. Đối với khí lí tưởng, nội năng chỉ phụ thuộc vào nhiệt độ $T$.
+- Hai cách làm thay đổi nội năng của vật là thực hiện công (có sự chuyển hóa năng lượng) và truyền nhiệt (không có sự chuyển hóa năng lượng, chỉ có truyền nội năng).
+- Định luật I nhiệt động lực học: $\Delta U = A + Q$.
+- Quy ước dấu: $Q > 0$ (nhận nhiệt), $Q < 0$ (tỏa nhiệt); $A > 0$ (nhận công), $A < 0$ (thực hiện công).
+- Động cơ nhiệt chuyển hóa nội năng của nhiên liệu thành cơ năng hoạt động dựa trên định luật I nhiệt động lực học.
 \end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Nêu được định nghĩa nội năng và giải thích được sự phụ thuộc của nội năng vào nhiệt độ và thể tích của vật.
+    \item Phân biệt được hai cách làm biến đổi nội năng là thực hiện công và truyền nhiệt.
+    \item Phát biểu được định luật I nhiệt động lực học, viết được hệ thức $\Delta U = A + Q$ và vận dụng đúng quy ước dấu trong các bài tập tính toán.
+    \item Trình bày được nguyên tắc hoạt động cơ bản của động cơ nhiệt dựa trên sự chuyển hóa nội năng thành cơ năng.
+\end{itemize}
 \end{emdahoc}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Giải thích được các hiện tượng thực tế như: sự nóng lên của bơm xe đạp khi bơm khí, sự tăng nhiệt độ trong ô tô đóng kín cửa để ngoài trời nắng, hiện tượng quẹt diêm tạo lửa.
+    \item Vận dụng định luật I nhiệt động lực học để giải thích nguyên lý hoạt động của máy hơi nước, động cơ đốt trong và các thiết bị làm lạnh trong đời sống.
+\end{itemize}
 \end{emcothe}
