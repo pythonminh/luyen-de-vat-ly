@@ -1,7 +1,6 @@
 
 \subsection{Lý thuyết}
 \subsubsection{Mô hình động học phân tử về cấu tạo chất}
-
 \haicotchay{
 	Mô hình động học phân tử về cấu tạo chất có những nội dung cơ bản sau đây:
 	\begin{enumerate}
@@ -12,23 +11,114 @@
 	\chuy{Dùng mô hình này có thể giải thích được cấu trúc của các chất rắn, chất lỏng, chất khí và sự chuyển thể.}
 	
 }{
-	\centering
-	\resizebox{\linewidth}{!}{%
-		\begin{tikzpicture}
-			\draw[thick, fill=blue!5] (0,0) rectangle (4,4);
-			\draw[fill=blue] (1,1) circle (0.1);
-			\draw[->, thick] (1,1) -- (1.5,1.5);
-			\draw[fill=blue] (2,3) circle (0.1);
-			\draw[->, thick] (2,3) -- (1.5,2.5);
-			\draw[fill=blue] (3,1.5) circle (0.1);
-			\draw[->, thick] (3,1.5) -- (3.5,1.2);
-			\draw[fill=orange] (2,2) circle (0.3) node[below] {Phấn hoa};
-			\draw[->, ultra thick, orange] (2,2) -- (2.3,1.6);
 	
-		\end{tikzpicture}%
-	}
-		\captionof{figure}{Chuyển động của phân tử}
-	\label{fig: Chuyển động của phân tử  }
+\begin{figure}[ht]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[>=stealth]
+
+% Khung chứa chất lỏng
+\draw[
+    thick,
+    rounded corners=2pt,
+    fill=blue!3
+] (0,0) rectangle (7,5);
+
+% =========================
+% Các phân tử nước
+% =========================
+\foreach \x/\y/\dx/\dy in {
+    0.8/4.2/0.55/-0.35,
+    1.4/2.9/-0.45/0.40,
+    1.0/1.0/0.55/0.25,
+    2.2/4.3/-0.35/-0.45,
+    2.5/1.0/0.45/0.40,
+    3.1/3.9/0.40/0.45,
+    3.8/4.5/-0.55/-0.30,
+    4.8/4.0/0.45/-0.50,
+    5.9/4.4/-0.45/-0.35,
+    6.5/3.0/-0.50/0.35,
+    6.2/1.0/-0.55/0.30,
+    5.2/0.8/0.45/0.45,
+    4.1/0.7/-0.45/0.35,
+    3.3/2.0/-0.40/-0.45,
+    1.8/1.9/0.50/-0.35,
+    0.7/2.0/0.45/-0.40
+}{
+    \draw[fill=blue!60]
+        (\x,\y) circle (0.065);
+
+    \draw[
+        ->,
+        thin,
+        blue!70
+    ]
+        (\x,\y) -- ++(\dx,\dy);
+}
+
+% =========================
+% Phấn hoa
+% =========================
+\shade[
+    ball color=orange!80
+]
+    (3.5,2.5) circle (0.38);
+
+% Viền phấn hoa
+\draw[
+    thick,
+    orange!80!black
+]
+    (3.5,2.5) circle (0.38);
+
+% =========================
+% Quỹ đạo ngẫu nhiên của hạt phấn
+% =========================
+\draw[
+    orange!80!black,
+    dashed,
+    thick,
+    ->,
+    rounded corners
+]
+    (3.5,2.5)
+    -- (4.15,2.95)
+    -- (4.65,2.45)
+    -- (4.25,1.85)
+    -- (3.55,1.55)
+    -- (3.00,2.05)
+    -- (3.5,2.5);
+
+% Mũi tên chỉ chuyển động tức thời
+\draw[
+    ->,
+    ultra thick,
+    orange!90!black
+]
+    (3.5,2.5) -- (4.05,2.05);
+
+% Nhãn
+\node[
+    fill=white,
+    inner sep=2pt,
+    font=\bfseries
+]
+    at (3.5,3.15) {Phấn hoa};
+
+\node[
+    align=center,
+    font=\small
+]
+    at (3.5,-0.45)
+    {Các phân tử nước chuyển động hỗn loạn\\
+     va chạm làm hạt phấn chuyển động Brown};
+
+\end{tikzpicture}%
+}
+\captionof{figure}{Mô hình chuyển động Brown của hạt phấn hoa trong nước}
+\label{fig:chuyen-dong-brown}
+\end{figure}
+
 }
 \begin{emcobiet}
 	\begin{itemize}
@@ -39,6 +129,7 @@
 
 
 \subsubsection{Cấu trúc của chất rắn, lỏng, khí}
+
 \begin{hoatdong}{Tìm hiểu cấu trúc của chất rắn, lỏng, khí}
     \chuy{Quan sát Hình \ref{fig:three-states-v2} và mô tả sự sắp xếp, chuyển động của các phân tử trong chất rắn, chất lỏng và chất khí.}
 
@@ -101,6 +192,7 @@
 \end{kienthuc}
 
 \subsubsection{Sự chuyển thể}
+
 
 \paragraph{Khái niệm sự chuyển thể}
 \haicotchay{
