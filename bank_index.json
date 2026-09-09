@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 154,
+  "total_files": 155,
   "total_questions": 11513,
   "lessons": [
     {
@@ -5614,6 +5614,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
