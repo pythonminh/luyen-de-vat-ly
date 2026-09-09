@@ -334,6 +334,15 @@
       "status": "ON",
       "password_sha256": "985e55d2b610e9670a8df18be32dea9b984ce730d93963d3c075711483f03596",
       "password_enc": "v1:52GYSDHh_ILR"
+    },
+    {
+      "username": "Ckiaaa99",
+      "name": "Nguyen Dao Anh Phuc",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "f3f9ecf0f39c85d6173ad29a48b429ea40ddb5e78983da90ec5748752f75ffb6",
+      "password_enc": "v1:x2OGXhS9nNuUPSITRKj0"
     }
   ]
 }
