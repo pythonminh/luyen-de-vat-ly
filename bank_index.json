@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 150,
-  "total_questions": 11481,
+  "total_files": 151,
+  "total_questions": 11490,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3410,6 +3410,29 @@
       "count": 0,
       "dang": {},
       "dang_kinds": {}
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Mô hình động học phân tử về cấu tạo chất.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Mô hình động học phân tử về cấu tạo chất.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Mô hình động học phân tử về cấu tạo chất.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "questions": 9,
+      "count": 9,
+      "dang": {
+        "Chưa phân dạng": 9
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 9,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học/dang-bai-toan-hieu-suat-va-hao-phi-cua-dong-co-nhiet.tex",
