@@ -1,0 +1,2 @@
+﻿Thả ảnh vào đây (PNG/JPG/SVG/PDF). Trong đề viết:
+\includegraphics[width=0.45\textwidth]{images/ten-file.png}
