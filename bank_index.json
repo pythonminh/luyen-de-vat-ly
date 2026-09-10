@@ -4371,36 +4371,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "De": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "questions": 28,
-      "count": 28,
-      "dang": {
-        "Đề ôn 1": 13,
-        "Đề ôn 2": 15
-      },
-      "dang_kinds": {
-        "Đề ôn 1": {
-          "TN": 12,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đề ôn 2": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 6,
-          "TL": 0
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 2 - Tân Bình.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 2 - Tân Bình.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 2 - Tân Bình.tex",
@@ -4418,6 +4388,36 @@
         "Chưa phân dạng": {
           "TN": 18,
           "DS": 4,
+          "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 -/Đề ôn 1 - Tân Bình.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 -/Đề ôn 1 - Tân Bình.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 -/Đề ôn 1 - Tân Bình.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "Ôn tập Chương 1 - Lý 12 -",
+      "De": "Ôn tập Chương 1 - Lý 12 -",
+      "questions": 28,
+      "count": 28,
+      "dang": {
+        "Đề ôn 1": 13,
+        "Đề ôn 2": 15
+      },
+      "dang_kinds": {
+        "Đề ôn 1": {
+          "TN": 12,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đề ôn 2": {
+          "TN": 6,
+          "DS": 3,
           "TLN": 6,
           "TL": 0
         }
