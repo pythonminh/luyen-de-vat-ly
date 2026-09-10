@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 155,
-  "total_questions": 11513,
+  "total_files": 157,
+  "total_questions": 11532,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3338,6 +3338,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
+      "questions": 21,
+      "count": 21,
+      "dang": {
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21
+      },
+      "dang_kinds": {
+        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 0,
+          "TL": 6
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-mo-hinh-dong-hoc-phan-tu-ve-cau-tao-chat.tex",
@@ -3779,6 +3802,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 1
+      },
+      "dang_kinds": {
+        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-do-thi-qua-trinh-nhiet.tex",
@@ -3834,6 +3880,29 @@
           "TN": 10,
           "DS": 5,
           "TLN": 6,
+          "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
+      "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
+      "questions": 33,
+      "count": 33,
+      "dang": {
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
+      },
+      "dang_kinds": {
+        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
+          "TN": 10,
+          "DS": 5,
+          "TLN": 12,
           "TL": 6
         }
       }
@@ -4072,6 +4141,29 @@
       }
     },
     {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoa-hoi-nuoc-o-nhiet-do-soi.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": 1
+      },
+      "dang_kinds": {
+        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-bai-toan-nhiet-hoc-tong-hop-yeu-cau-tinh-nang-lu.tex",
@@ -4252,6 +4344,52 @@
           "DS": 6,
           "TLN": 1,
           "TL": 2
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
+      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Tính nhiệt hóa hơi": 1
+      },
+      "dang_kinds": {
+        "Tính nhiệt hóa hơi": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
+      "De": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "Chưa phân dạng": 18
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 18,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
         }
       }
     },
@@ -5535,98 +5673,6 @@
           "TN": 10,
           "DS": 5,
           "TLN": 6,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng/dang-tinh-nhiet-hoa-hoi.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
-      "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Tính nhiệt hóa hơi",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Tính nhiệt hóa hơi": 1
-      },
-      "dang_kinds": {
-        "Tính nhiệt hóa hơi": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/dang-giai-thich-hien-tuong-va-ung-dung-lien-quan-den-.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
-      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi",
-      "questions": 21,
-      "count": 21,
-      "dang": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21
-      },
-      "dang_kinds": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 0,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-bai-toan-tinh-toan-nhiet-luong-can-thiet-de-hoa-.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": 1
-      },
-      "dang_kinds": {
-        "Bài toán tính toán nhiệt lượng cần thiết để hóa hơi hoàn toàn một lượng chất lỏng ở nhiệt độ sôi (áp dụng công thức Q =": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-nhiet-luong-khoi-luong-va-nhiet-hoa-hoi-rie.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
-      "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm",
-      "questions": 33,
-      "count": 33,
-      "dang": {
-        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": 33
-      },
-      "dang_kinds": {
-        "Tính nhiệt lượng, khối lượng và nhiệt hóa hơi riêng bằng Q = Lm": {
-          "TN": 10,
-          "DS": 5,
-          "TLN": 12,
           "TL": 6
         }
       }
