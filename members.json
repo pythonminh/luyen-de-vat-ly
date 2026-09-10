@@ -352,6 +352,15 @@
       "status": "ON",
       "password_sha256": "7d3d94a719eb7f4bac2989bf18394aa5900da776eb778ae70c2f5cfd02f8c1e3",
       "password_enc": "v1:5GmRFkPg"
+    },
+    {
+      "username": "neko chan",
+      "name": "neko chan",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "89e7e067ceee1ca82c78c255a8da3fa8b377af6a8fa228c007d733dc0ff0f5fb",
+      "password_enc": "v1:x2GYSDHh_ILR"
     }
   ]
 }
