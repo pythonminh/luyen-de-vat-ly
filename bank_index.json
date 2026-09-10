@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 159,
-  "total_questions": 11564,
+  "total_files": 158,
+  "total_questions": 11570,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4371,29 +4371,6 @@
       }
     },
     {
-      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình - Đúng Sai.tex",
-      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình - Đúng Sai.tex",
-      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình - Đúng Sai.tex",
-      "Mon": "Vật lý",
-      "Lop": "12",
-      "Chuong": "Chương I. Vật lí nhiệt",
-      "BaiHoc": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình - Đúng Sai.tex",
-      "De": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình - Đúng Sai.tex",
-      "questions": 4,
-      "count": 4,
-      "dang": {
-        "Chưa phân dạng": 4
-      },
-      "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 0,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
       "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
       "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
@@ -4402,16 +4379,16 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
       "De": "Ôn tập Chương 1 - Lý 12 - Đề ôn 1 - Tân Bình.tex",
-      "questions": 18,
-      "count": 18,
+      "questions": 28,
+      "count": 28,
       "dang": {
-        "Chưa phân dạng": 18
+        "Chưa phân dạng": 28
       },
       "dang_kinds": {
         "Chưa phân dạng": {
           "TN": 18,
-          "DS": 0,
-          "TLN": 0,
+          "DS": 4,
+          "TLN": 6,
           "TL": 0
         }
       }
