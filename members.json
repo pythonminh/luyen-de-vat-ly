@@ -343,6 +343,15 @@
       "status": "ON",
       "password_sha256": "f3f9ecf0f39c85d6173ad29a48b429ea40ddb5e78983da90ec5748752f75ffb6",
       "password_enc": "v1:x2OGXhS9nNuUPSITRKj0"
+    },
+    {
+      "username": "thuận",
+      "name": "ng đức thuận",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "7d3d94a719eb7f4bac2989bf18394aa5900da776eb778ae70c2f5cfd02f8c1e3",
+      "password_enc": "v1:5GmRFkPg"
     }
   ]
 }
