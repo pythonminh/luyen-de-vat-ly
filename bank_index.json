@@ -4405,18 +4405,11 @@
       "questions": 28,
       "count": 28,
       "dang": {
-        "Chưa phân dạng": 3,
-        "Đề ôn 2": 25
+        "Đề ôn 2": 28
       },
       "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
         "Đề ôn 2": {
-          "TN": 15,
+          "TN": 18,
           "DS": 4,
           "TLN": 6,
           "TL": 0
