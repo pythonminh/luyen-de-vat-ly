@@ -140,3 +140,51 @@ Cho mệnh đề chứa biến $M(k)$: "$k^2 + k$ là số chẵn", với $k$ l�
 a) Mệnh đề $M(3)$ là đúng hay sai?
 b) Mệnh đề $M(4)$ là đúng hay sai?
 \end{ex}
+\dangbt{Mệnh đề chứa biến}
+\begin{ex}
+Xét các phát biểu sau về mệnh đề chứa biến $P(x)$: "$x^2 - 5x + 6 = 0$".
+\choiceTF
+{Mệnh đề $P(2)$ là mệnh đề đúng.}
+{Mệnh đề $P(3)$ là mệnh đề sai.}
+{Tập hợp các giá trị của $x$ để $P(x)$ là mệnh đề đúng là $\{2; 3\}$.}
+{Mệnh đề "$ \exists x \in \mathbb{R}, P(x)$" là mệnh đề sai.}
+\loigiai{
+a) Đúng. Thay $x=2$ vào $x^2 - 5x + 6 = 0$, ta được $2^2 - 5(2) + 6 = 4 - 10 + 6 = 0$. Vậy $P(2)$ là mệnh đề đúng.
+b) Sai. Thay $x=3$ vào $x^2 - 5x + 6 = 0$, ta được $3^2 - 5(3) + 6 = 9 - 15 + 6 = 0$. Vậy $P(3)$ là mệnh đề đúng.
+c) Đúng. Phương trình $x^2 - 5x + 6 = 0$ có hai nghiệm là $x=2$ và $x=3$. Do đó, tập hợp các giá trị của $x$ để $P(x)$ là mệnh đề đúng là $\{2; 3\}$.
+d) Sai. Mệnh đề "$ \exists x \in \mathbb{R}, P(x)$" có nghĩa là "Tồn tại số thực $x$ sao cho $x^2 - 5x + 6 = 0$". Vì phương trình có nghiệm thực ($x=2$ hoặc $x=3$), nên mệnh đề này là đúng.
+}
+\end{ex}
+
+\dangbt{Mệnh đề chứa biến}
+\begin{ex}
+Cho mệnh đề chứa biến $Q(n)$: "$n+1$ là số chẵn", với $n$ là số tự nhiên. Tìm số giá trị của $n$ trong tập hợp $\{1, 2, 3, 4, 5\}$ để $Q(n)$ là mệnh đề đúng.
+\shortans{2}
+\loigiai{Để $Q(n)$ là mệnh đề đúng, $n+1$ phải là số chẵn.
+Nếu $n=1$, $n+1=2$ (chẵn).
+Nếu $n=2$, $n+1=3$ (lẻ).
+Nếu $n=3$, $n+1=4$ (chẵn).
+Nếu $n=4$, $n+1=5$ (lẻ).
+Nếu $n=5$, $n+1=6$ (chẵn).
+Các giá trị của $n$ làm cho $Q(n)$ đúng là $n=1, 3, 5$.
+Vậy có 3 giá trị của $n$ trong tập hợp đã cho để $Q(n)$ là mệnh đề đúng.}
+\end{ex}
+
+\dangbt{Mệnh đề chứa biến}
+\begin{ex}
+Cho mệnh đề chứa biến $P(x)$: "$x^2 - 3x + 2 = 0$" với $x \in \mathbb{R}$.
+a) Tìm các giá trị của $x$ để $P(x)$ là mệnh đề đúng.
+b) Tìm các giá trị của $x$ để $P(x)$ là mệnh đề sai.
+\loigiai{
+a) Mệnh đề $P(x)$ là đúng khi $x^2 - 3x + 2 = 0$.
+Giải phương trình bậc hai: $x^2 - 3x + 2 = 0$.
+Ta có $\Delta = (-3)^2 - 4(1)(2) = 9 - 8 = 1$.
+Các nghiệm của phương trình là $x_1 = \frac{-(-3) + \sqrt{1}}{2(1)} = \frac{3+1}{2} = 2$ và $x_2 = \frac{-(-3) - \sqrt{1}}{2(1)} = \frac{3-1}{2} = 1$.
+Vậy, các giá trị của $x$ để $P(x)$ là mệnh đề đúng là $x=1$ hoặc $x=2$.
+
+b) Mệnh đề $P(x)$ là sai khi $x^2 - 3x + 2 \neq 0$.
+Dựa trên kết quả câu a), phương trình $x^2 - 3x + 2 = 0$ có nghiệm là $x=1$ và $x=2$.
+Do đó, $x^2 - 3x + 2 \neq 0$ khi $x \neq 1$ và $x \neq 2$.
+Vậy, các giá trị của $x$ để $P(x)$ là mệnh đề sai là $x \in \mathbb{R} \setminus \{1; 2\}$.
+}
+\end{ex}
