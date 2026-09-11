@@ -2,20 +2,23 @@
 % Lớp: 10
 % Chương: Chương I. Mệnh đề và tập hợp
 % Bài: Bài 2. Tập hợp và các phép toán trên tập hợp
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
 
-\subsubsection{Dạng 1. Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\subsubsection{Dạng: Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đặt tên các tập hợp liên quan đến các đối tượng trong bài toán thực tế.
-\item Xác định số lượng phần tử của từng tập hợp dựa trên giả thiết đề bài đã cho.
-\item Áp dụng công thức đếm phần tử của hợp hai tập hợp hữu hạn:
-$n(A \cup B) = n(A) + n(B) - n(A \cap B)$.
-\item Vẽ sơ đồ Venn để biểu diễn trực quan các mối quan hệ giao, hiệu, hợp giữa các tập hợp nếu bài toán có nhiều nhóm đối tượng đan xen.
+\item \textbf{Xác định các tập hợp và số lượng phần tử:} Đặt tên các tập hợp liên quan đến các đối tượng trong bài toán thực tế (ví dụ: $A$ là tập hợp học sinh thích Toán, $B$ là tập hợp học sinh thích Văn). Ghi lại số lượng phần tử của từng tập hợp và các tập hợp giao (nếu có) dựa trên giả thiết đề bài.
+\item \textbf{Áp dụng công thức đếm:}
+\begin{itemize}
+    \item Đối với hai tập hợp $A, B$: $n(A \cup B) = n(A) + n(B) - n(A \cap B)$.
+    \item Đối với ba tập hợp $A, B, C$: $n(A \cup B \cup C) = n(A) + n(B) + n(C) - n(A \cap B) - n(A \cap C) - n(B \cap C) + n(A \cap B \cap C)$.
+\end{itemize}
+\item \textbf{Vẽ sơ đồ Venn (nếu cần):} Biểu diễn trực quan các mối quan hệ giao, hiệu, hợp giữa các tập hợp để dễ dàng hình dung và tính toán, đặc biệt khi bài toán có nhiều nhóm đối tượng đan xen.
+\item \textbf{Tính toán kết quả:} Dựa vào các công thức và sơ đồ Venn để tìm ra số lượng phần tử của tập hợp cần tìm theo yêu cầu của bài toán.
 \end{enumerate}
 \end{phuongphap}
 
@@ -24,14 +27,14 @@ Lớp 10A có $40$ học sinh, trong đó có $25$ bạn thích môn Toán, $20$
 \end{vidumau}\par
 \loigiai{
 \begin{enumerate}
-\item \haicotchay{Gọi $T$ là tập hợp các học sinh thích môn Toán và $V$ là tập hợp các học sinh thích môn Ngữ văn. Theo bài ra, ta có các số liệu sau:
-\[
-\begin{aligned}
-n(T) &= 25 \\
-n(V) &= 20 \\
-n(T \cap V) &= 10.
-\end{aligned}
-\]
+\item \haicotchay{Gọi $T$ là tập hợp các học sinh thích môn Toán và $V$ là tập hợp các học sinh thích môn Ngữ văn.
+Theo bài ra, ta có các số liệu sau:
+\begin{itemize}
+    \item Số học sinh thích môn Toán: $n(T) = 25$.
+    \item Số học sinh thích môn Ngữ văn: $n(V) = 20$.
+    \item Số học sinh thích cả hai môn Toán và Ngữ văn: $n(T \cap V) = 10$.
+\end{itemize}
+\item Áp dụng công thức đếm phần tử của hợp hai tập hợp:
 Số học sinh thích ít nhất một trong hai môn Toán hoặc Ngữ văn là:
 \[
 \begin{aligned}
@@ -39,14 +42,16 @@ n(T \cup V) &= n(T) + n(V) - n(T \cap V) \\
 &= 25 + 20 - 10 = 35.
 \end{aligned}
 \]
+\item Tính số học sinh không thích môn nào:
+Tổng số học sinh của lớp là $40$.
 Số học sinh không thích môn nào trong hai môn Toán và Ngữ văn là:
 \[
 \begin{aligned}
-N &= 40 - n(T \cup V) \\
+N &= (\text{Tổng số học sinh}) - n(T \cup V) \\
 &= 40 - 35 = 5.
 \end{aligned}
 \]
-Kết luận: Có đúng $5$ học sinh không thích môn học nào.}{\centering
+Kết luận: Có đúng $5$ học sinh không thích môn học nào trong hai môn Toán và Ngữ văn.}{\centering
 \resizebox{0.95\linewidth}{!}{%
 \begin{tikzpicture}[scale=0.8, >=stealth]
 \draw[thick, fill=blue!5] (-0.8,0) circle (1.3);
@@ -65,166 +70,83 @@ Kết luận: Có đúng $5$ học sinh không thích môn học nào.}{\centeri
 \end{enumerate}
 }
 
-\subsubsection{Dạng 2. Phép giao, hợp, hiệu và phần bù của hai tập hợp}
+\subsubsection{Dạng: Phép giao, hợp, hiệu và phần bù của hai tập hợp}
 
 \begin{phuongphap}
-
-\begin{tikzpicture}[scale=0.82,
-font=\small,
-set/.style={draw, thick},
-highlight/.style={fill=green!45}
-]
-
-%================================================
-% Ô 1: GIAO
-%================================================
-\begin{scope}[xshift=-4.2cm,yshift=2.8cm]
-\draw[rounded corners] (-2.5,-2.5) rectangle (2.5,2.5);
-\node[font=\bfseries] at (0,1.55) {GIAO: $A\cap B$};
-
-```
-\fill[blue!15] (-0.75,0) circle (1.15);
-\fill[red!15] (0.75,0) circle (1.15);
-
-\begin{scope}
-	\clip (-0.75,0) circle (1.15);
-	\fill[green!50] (0.75,0) circle (1.15);
-\end{scope}
-
-\draw[set] (-0.75,0) circle (1.15);
-\draw[set] (0.75,0) circle (1.15);
-
-\node at (-1.25,0) {$A$};
-\node at (1.25,0) {$B$};
-\node[font=\bfseries] at (0,-1.45) {Cả $A$ và $B$};
-```
-
-\end{scope}
-
-%================================================
-% Ô 2: HỢP
-%================================================
-\begin{scope}[xshift=4.2cm,yshift=2.8cm]
-\draw[rounded corners] (-2.5,-2.5) rectangle (2.5,2.5);
-\node[font=\bfseries] at (0,1.55) {HỢP: $A\cup B$};
-
-```
-\fill[green!45] (-0.75,0) circle (1.15);
-\fill[green!45] (0.75,0) circle (1.15);
-
-\draw[set] (-0.75,0) circle (1.15);
-\draw[set] (0.75,0) circle (1.15);
-
-\node at (-1.25,0) {$A$};
-\node at (1.25,0) {$B$};
-\node[font=\bfseries] at (0,-1.45) {Ít nhất một trong $A,B$};
-```
-
-\end{scope}
-
-%================================================
-% Ô 3: HIỆU
-%================================================
-\begin{scope}[xshift=-4.2cm,yshift=-2.8cm]
-\draw[rounded corners] (-2.5,-2.5) rectangle (2.5,2.5);
-\node[font=\bfseries] at (0,1.55) {HIỆU: $A\setminus B$};
-
-```
-\fill[green!50] (-0.75,0) circle (1.15);
-
-\begin{scope}
-	\clip (-0.75,0) circle (1.15);
-	\fill[white] (0.75,0) circle (1.15);
-\end{scope}
-
-\fill[red!12] (0.75,0) circle (1.15);
-
-\draw[set] (-0.75,0) circle (1.15);
-\draw[set] (0.75,0) circle (1.15);
-
-\node at (-1.25,0) {$A$};
-\node at (1.25,0) {$B$};
-\node[font=\bfseries] at (0,-1.45) {Trong $A$, không trong $B$};
-```
-
-\end{scope}
-
-%================================================
-% Ô 4: PHẦN BÙ
-%================================================
-\begin{scope}[xshift=4.2cm,yshift=-2.8cm]
-\draw[rounded corners] (-2.5,-2.5) rectangle (2.5,2.5);
-\node[font=\bfseries] at (0,1.55) {PHẦN BÙ: $C_EA$};
-
-```
-% Miền E
-\fill[green!40] (-1.75,-1.25) rectangle (1.75,1.25);
-
-% Tập A
-\fill[white] (0,0) circle (0.85);
-
-\draw[set] (-1.75,-1.25) rectangle (1.75,1.25);
-\draw[set] (0,0) circle (0.85);
-
-\node at (1.45,0.95) {$E$};
-\node at (0,0) {$A$};
-\node[font=\bfseries] at (0,-1.55) {Trong $E$, không trong $A$};
-```
-
-\end{scope}
-
-\end{tikzpicture}
-
-
+\begin{enumerate}
+    \item \textbf{Xác định các phần tử của tập hợp:} Nếu các tập hợp được cho dưới dạng mô tả tính chất, hãy liệt kê rõ ràng các phần tử của chúng (nếu là tập hữu hạn) hoặc xác định rõ ràng các khoảng, đoạn, nửa khoảng (nếu là tập con của $\mathbb{R}$).
+    \item \textbf{Thực hiện phép giao ($A \cap B$):}
+    \begin{itemize}
+        \item \textit{Với tập hợp liệt kê phần tử:} Tìm các phần tử chung xuất hiện trong cả tập hợp $A$ và tập hợp $B$.
+        \item \textit{Với tập hợp là khoảng, đoạn, nửa khoảng:} Biểu diễn hai tập hợp trên trục số. Phần giao là phần chung của cả hai tập hợp trên trục số.
+    \end{itemize}
+    \item \textbf{Thực hiện phép hợp ($A \cup B$):}
+    \begin{itemize}
+        \item \textit{Với tập hợp liệt kê phần tử:} Gộp tất cả các phần tử của tập hợp $A$ và tập hợp $B$ lại, mỗi phần tử chỉ liệt kê một lần.
+        \item \textit{Với tập hợp là khoảng, đoạn, nửa khoảng:} Biểu diễn hai tập hợp trên trục số. Phần hợp là toàn bộ phạm vi mà ít nhất một trong hai tập hợp phủ lên.
+    \end{itemize}
+    \item \textbf{Thực hiện phép hiệu ($A \setminus B$):}
+    \begin{itemize}
+        \item \textit{Với tập hợp liệt kê phần tử:} Tìm các phần tử thuộc tập hợp $A$ nhưng không thuộc tập hợp $B$.
+        \item \textit{Với tập hợp là khoảng, đoạn, nửa khoảng:} Biểu diễn hai tập hợp trên trục số. Phần hiệu là phần thuộc $A$ nhưng không thuộc $B$. Lưu ý các điểm mút: nếu một điểm mút thuộc $B$ và là mút của phần chung, thì khi lấy hiệu, điểm mút đó sẽ không thuộc phần hiệu (mút vuông thành mút tròn).
+    \end{itemize}
+    \item \textbf{Thực hiện phép phần bù ($C_E A$):}
+    \begin{itemize}
+        \item Phần bù của $A$ trong tập $E$ (tập vũ trụ) là tập hợp các phần tử thuộc $E$ nhưng không thuộc $A$. Kí hiệu $C_E A = E \setminus A$.
+        \item Áp dụng phương pháp tìm hiệu tập hợp như trên.
+    \end{itemize}
+\end{enumerate}
 \end{phuongphap}
 
 \begin{vidumau}
-Cho hai tập hợp $A = {1; 2; 3; 4; 5}$ và $B = {3; 4; 5; 6; 7}$. Xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
+Cho hai tập hợp $A = \{1; 2; 3; 4; 5\}$ và $B = \{3; 4; 5; 6; 7\}$. Xác định các tập hợp $A \cap B$, $A \cup B$ và $A \setminus B$.
 \end{vidumau}\par
 
 \loigiai{
 \begin{enumerate}
-\item Xác định tập hợp giao $A \cap B$:
-
-Các phần tử xuất hiện ở cả hai tập hợp $A$ và $B$ là $3,4,5$. Do đó:
-
+\item \textbf{Xác định tập hợp giao $A \cap B$:}
+Các phần tử xuất hiện ở cả hai tập hợp $A$ và $B$ là $3, 4, 5$.
+Do đó:
 $$
-\begin{aligned}
-A \cap B &= \{3;4;5\}.
-\end{aligned}
+A \cap B = \{3; 4; 5\}.
 $$
 
-\item Xác định tập hợp hợp $A \cup B$:
-
-Gộp tất cả các phần tử của cả hai tập hợp $A$ và $B$ lại (mỗi phần tử chỉ liệt kê một lần):
-
+\item \textbf{Xác định tập hợp hợp $A \cup B$:}
+Gộp tất cả các phần tử của cả hai tập hợp $A$ và $B$ lại, mỗi phần tử chỉ liệt kê một lần:
 $$
-\begin{aligned}
-A \cup B &= \{1;2;3;4;5;6;7\}.
-\end{aligned}
+A \cup B = \{1; 2; 3; 4; 5; 6; 7\}.
 $$
 
-\item Xác định tập hợp hiệu $A \setminus B$:
-
-Các phần tử nằm trong tập hợp $A$ nhưng không nằm trong tập hợp $B$ là $1,2$. Do đó:
-
+\item \textbf{Xác định tập hợp hiệu $A \setminus B$:}
+Các phần tử nằm trong tập hợp $A$ nhưng không nằm trong tập hợp $B$ là $1, 2$.
+Do đó:
 $$
-\begin{aligned}
-A \setminus B &= \{1;2\}.
-\end{aligned}
+A \setminus B = \{1; 2\}.
 $$
-
 \end{enumerate}
 }
 
 
-\subsubsection{Dạng 3. Tập hợp bằng nhau, tập rỗng và số tập con}
+\subsubsection{Dạng: Tập hợp bằng nhau, tập rỗng và số tập con}
 \begin{phuongphap}
 \begin{enumerate}
-\item Tập hợp $A$ bằng tập hợp $B$ (kí hiệu $A = B$) nếu mọi phần tử của $A$ đều thuộc $B$ và ngược lại. Ta thường chứng minh đồng thời $A \subset B$ và $B \subset A$.
-\item Tập hợp rỗng $\emptyset$ là tập hợp không chứa bất kì phần tử nào. Phương trình định nghĩa tập hợp vô nghiệm sẽ sinh ra tập rỗng.
-\item Một tập hợp hữu hạn có $n$ phần tử thì số tập hợp con của nó được tính bằng công thức:
-$S_c = 2^n$.
+\item \textbf{Để chứng minh hai tập hợp $A$ và $B$ bằng nhau ($A = B$):}
+\begin{itemize}
+    \item Chứng minh mọi phần tử của $A$ đều thuộc $B$ (tức là $A \subset B$).
+    \item Chứng minh mọi phần tử của $B$ đều thuộc $A$ (tức là $B \subset A$).
+    \item Nếu cả hai điều kiện trên đều đúng, thì $A = B$.
+\end{itemize}
+\item \textbf{Để xác định tập hợp rỗng ($\emptyset$):}
+\begin{itemize}
+    \item Tập hợp rỗng là tập hợp không chứa bất kì phần tử nào.
+    \item Nếu điều kiện xác định phần tử của một tập hợp không có nghiệm hoặc không có phần tử nào thỏa mãn, thì tập hợp đó là tập rỗng. Ví dụ: $\{x \in \mathbb{R} \mid x^2 < 0\}$ là tập rỗng.
+\end{itemize}
+\item \textbf{Để tính số tập con của một tập hợp hữu hạn:}
+\begin{itemize}
+    \item Xác định số phần tử của tập hợp đó, gọi là $n$.
+    \item Số tập hợp con của tập hợp có $n$ phần tử được tính bằng công thức: $S_c = 2^n$.
+    \item Lưu ý: Tập rỗng là tập con của mọi tập hợp. Mỗi tập hợp là tập con của chính nó.
+\end{itemize}
 \end{enumerate}
 \end{phuongphap}
 
@@ -233,25 +155,25 @@ Cho tập hợp $A = \{x \in \mathbb{R} \mid (x^2 - 1)(x^2 - 4) = 0\}$. Liệt k
 \end{vidumau}\par
 \loigiai{
 \begin{enumerate}
-\item Giải phương trình xác định phần tử của tập hợp $A$:
+\item \textbf{Liệt kê các phần tử của tập hợp $A$:}
+Để xác định các phần tử của tập hợp $A$, ta giải phương trình $(x^2 - 1)(x^2 - 4) = 0$:
 \[
 \begin{aligned}
 (x^2 - 1)(x^2 - 4) = 0 &\Leftrightarrow \left[ \begin{aligned} x^2 - 1 &= 0 \\ x^2 - 4 &= 0 \end{aligned} \right. \\
+&\Leftrightarrow \left[ \begin{aligned} x^2 &= 1 \\ x^2 &= 4 \end{aligned} \right. \\
 &\Leftrightarrow \left[ \begin{aligned} x &= \pm 1 \\ x &= \pm 2 \end{aligned} \right.
 \end{aligned}
 \]
 Vì tất cả các nghiệm $\pm 1, \pm 2$ đều là số thực, ta liệt kê được tập hợp $A$:
 \[
-\begin{aligned}
-A &= \{-2; -1; 1; 2\}.
-\end{aligned}
+A = \{-2; -1; 1; 2\}.
 \]
-\item Tính số tập hợp con của $A$:
-Tập hợp $A$ có số phần tử là $n = 4$. Số tập hợp con của tập hợp $A$ là:
+\item \textbf{Tính số tập hợp con của $A$:}
+Tập hợp $A$ có số phần tử là $n = 4$.
+Số tập hợp con của tập hợp $A$ được tính bằng công thức $S_c = 2^n$:
 \[
 \begin{aligned}
-S_c &= 2^n \\
-&= 2^4 \\
+S_c &= 2^4 \\
 &= 16 \text{ tập con}.
 \end{aligned}
 \]
@@ -259,12 +181,21 @@ Kết luận: Tập hợp $A$ có tất cả $16$ tập con.
 \end{enumerate}
 }
 
-\subsubsection{Dạng 4. Xác định tập hợp, phần tử và tập con}
+\subsubsection{Dạng: Xác định tập hợp, phần tử và tập con}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc kĩ định nghĩa hoặc điều kiện xác định phần tử của tập hợp.
-\item Sử dụng các phép toán số học hoặc giải phương trình, bất phương trình để tìm phần tử.
-\item Để viết các tập con thỏa mãn điều kiện số lượng phần tử, ta tiến hành chọn lần lượt các phần tử từ tập hợp ban đầu sao cho không bỏ sót và không trùng lặp.
+\item \textbf{Xác định phần tử của tập hợp:}
+\begin{itemize}
+    \item Đọc kĩ định nghĩa hoặc điều kiện xác định phần tử của tập hợp (ví dụ: $x \in \mathbb{Z}$, $x \in \mathbb{N}$, $x \in \mathbb{R}$).
+    \item Giải các phương trình, bất phương trình hoặc áp dụng các phép toán số học để tìm ra các phần tử thỏa mãn điều kiện.
+    \item Liệt kê các phần tử tìm được vào trong dấu ngoặc nhọn $\{\dots\}$ hoặc biểu diễn dưới dạng khoảng, đoạn, nửa khoảng.
+\end{itemize}
+\item \textbf{Xác định tập con:}
+\begin{itemize}
+    \item Để viết các tập con thỏa mãn điều kiện số lượng phần tử hoặc chứa/không chứa một phần tử cụ thể, ta tiến hành chọn lần lượt các phần tử từ tập hợp ban đầu.
+    \item Đảm bảo không bỏ sót và không trùng lặp các tập con.
+    \item Nếu yêu cầu tập con có $k$ phần tử, ta có thể sử dụng tổ hợp $C_n^k$ để kiểm tra số lượng tập con cần tìm.
+\end{itemize}
 \end{enumerate}
 \end{phuongphap}
 
@@ -273,33 +204,44 @@ Cho tập hợp $A = \{x \in \mathbb{Z} \mid -2 \le x < 3\}$. Liệt kê các ph
 \end{vidumau}\par
 \loigiai{
 \begin{enumerate}
-\item Tìm các phần tử là số nguyên thuộc nửa khoảng $[-2; 3)$:
-Các số nguyên lớn hơn hoặc bằng $-2$ và nhỏ hơn $3$ gồm: $-2, -1, 0, 1, 2$. Do đó ta viết được tập hợp $A$:
+\item \textbf{Liệt kê các phần tử của tập hợp $A$:}
+Điều kiện xác định phần tử của tập hợp $A$ là $x \in \mathbb{Z}$ và $-2 \le x < 3$.
+Các số nguyên lớn hơn hoặc bằng $-2$ và nhỏ hơn $3$ gồm: $-2, -1, 0, 1, 2$.
+Do đó, tập hợp $A$ là:
 \[
-\begin{aligned}
-A &= \{-2; -1; 0; 1; 2\}.
-\end{aligned}
+A = \{-2; -1; 0; 1; 2\}.
 \]
-\item Thiết lập các tập con thỏa mãn yêu cầu:
-Các tập con có đúng 2 phần tử và bắt buộc phải chứa phần tử $0$ có dạng $\{0; y\}$ với $y \in A \setminus \{0\}$.
-Chọn lần lượt các giá trị $y \in \{-2; -1; 1; 2\}$, ta được các tập con cần tìm là:
-\[
-\begin{aligned}
-T_1 &= \{-2; 0\} \\
-T_2 &= \{-1; 0\} \\
-T_3 &= \{0; 1\} \\
-T_4 &= \{0; 2\}.
-\end{aligned}
-\]
+\item \textbf{Viết các tập con chứa đúng hai phần tử của $A$ mà có chứa số $0$:}
+Các tập con cần tìm phải có dạng $\{0; y\}$, trong đó $y$ là một phần tử khác $0$ của tập hợp $A$.
+Các phần tử khác $0$ trong $A$ là $\{-2; -1; 1; 2\}$.
+Chọn lần lượt các giá trị $y$ từ tập hợp này, ta được các tập con cần tìm là:
+\begin{itemize}
+    \item Với $y = -2$: $\{-2; 0\}$
+    \item Với $y = -1$: $\{-1; 0\}$
+    \item Với $y = 1$: $\{0; 1\}$
+    \item Với $y = 2$: $\{0; 2\}$
+\end{itemize}
+Vậy, các tập con thỏa mãn yêu cầu là: $\{-2; 0\}$, $\{-1; 0\}$, $\{0; 1\}$, $\{0; 2\}$.
 \end{enumerate}
 }
 
-\subsubsection{Dạng 5. Bài toán tham số về tập hợp và khoảng}
+\subsubsection{Dạng: Bài toán tham số về tập hợp và khoảng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Biểu diễn các tập hợp chứa tham số lên trục số thực.
-\item Thiết lập các điều kiện liên quan đến đầu mút để một tập hợp là tập con của tập hợp kia ($A \subset B$) hoặc giao của hai tập hợp bằng rỗng ($A \cap B = \emptyset$).
-\item Lưu ý kĩ điều kiện lấy dấu bằng "$=$" tại các điểm đầu mút (mút tròn "$($", "$)$" hay mút vuông "$[$", "$]$").
+\item \textbf{Biểu diễn các tập hợp trên trục số:} Vẽ trục số thực và biểu diễn các tập hợp đã cho (có thể chứa tham số $m$) dưới dạng khoảng, đoạn, nửa khoảng. Sử dụng các kí hiệu mút tròn "$($", "$)$" cho khoảng mở và mút vuông "$[$", "$]$" cho khoảng đóng.
+\item \textbf{Thiết lập điều kiện dựa trên mối quan hệ giữa các tập hợp:}
+\begin{itemize}
+    \item \textbf{Tập con ($A \subset B$):} Để $A \subset B$, mọi phần tử của $A$ phải thuộc $B$. Điều này có nghĩa là khoảng (đoạn, nửa khoảng) $A$ phải nằm hoàn toàn bên trong khoảng (đoạn, nửa khoảng) $B$. Thiết lập hệ bất phương trình ràng buộc các đầu mút của $A$ và $B$.
+    \item \textbf{Giao khác rỗng ($A \cap B \ne \emptyset$):} Hai tập hợp có phần tử chung. Điều này xảy ra khi các khoảng (đoạn, nửa khoảng) của chúng có ít nhất một điểm chung.
+    \item \textbf{Giao bằng rỗng ($A \cap B = \emptyset$):} Hai tập hợp không có phần tử chung. Điều này xảy ra khi các khoảng (đoạn, nửa khoảng) của chúng không giao nhau.
+\end{itemize}
+\item \textbf{Giải hệ bất phương trình và kết luận:} Giải hệ bất phương trình đã thiết lập để tìm ra các giá trị của tham số $m$.
+\item \textbf{Lưu ý đặc biệt về dấu bằng tại các điểm mút:}
+\begin{itemize}
+    \item Khi một mút là mút vuông "$[$" hoặc "$]$", nó bao gồm điểm đó.
+    \item Khi một mút là mút tròn "$($" hoặc "$)$", nó không bao gồm điểm đó.
+    \item Cần cẩn thận khi xét điều kiện dấu bằng "$=$" tại các điểm mút, đặc biệt trong trường hợp tập con hoặc giao rỗng. Ví dụ: $[a; b] \subset (c; d)$ thì $c < a$ và $b < d$. Còn $[a; b] \subset [c; d]$ thì $c \le a$ và $b \le d$.
+\end{itemize}
 \end{enumerate}
 \end{phuongphap}
 
@@ -308,8 +250,10 @@ Cho hai tập hợp $A = [m; m + 2]$ và $B = [1; 5]$. Tìm tất cả các giá
 \end{vidumau}\par
 \loigiai{
 \begin{enumerate}
-\item Để tập hợp $A = [m; m + 2]$ là tập con của $B = [1; 5]$, ta cần có mọi phần tử thuộc $A$ đều phải thuộc $B$.
-Điều này xảy ra khi và chỉ khi đoạn $[m; m+2]$ nằm hoàn toàn bên trong đoạn $[1; 5]$. Minh họa trên trục số:
+\item \textbf{Biểu diễn các tập hợp trên trục số và thiết lập điều kiện:}
+Để tập hợp $A = [m; m + 2]$ là tập con của $B = [1; 5]$, mọi phần tử thuộc $A$ đều phải thuộc $B$.
+Điều này xảy ra khi và chỉ khi đoạn $[m; m+2]$ nằm hoàn toàn bên trong đoạn $[1; 5]$.
+Minh họa trên trục số:
 \begin{center}
 \begin{tikzpicture}[scale=1.2, >=stealth]
 \draw[->, thick] (-1,0) -- (6,0) node[above] {$\mathbb{R}$};
@@ -327,10 +271,12 @@ Cho hai tập hợp $A = [m; m + 2]$ và $B = [1; 5]$. Tìm tất cả các giá
 \node[red, above] at (3,-0.05) {$A$};
 \end{tikzpicture}
 \end{center}
-\item Ta thiết lập hệ bất phương trình ràng buộc các đầu mút của hai đoạn:
+\item \textbf{Giải hệ bất phương trình:}
+Từ hình minh họa và định nghĩa tập con, ta thiết lập hệ bất phương trình ràng buộc các đầu mút của hai đoạn:
 \[
 \begin{aligned}
-\begin{cases} m &\ge 1 \\ m + 2 &\le 5 \end{cases} &\Leftrightarrow \begin{cases} m &\ge 1 \\ m &\le 3 \end{cases} \\
+\begin{cases} m &\ge 1 \\ m + 2 &\le 5 \end{cases} &\Leftrightarrow \begin{cases} m &\ge 1 \\ m &\le 5 - 2 \end{cases} \\
+&\Leftrightarrow \begin{cases} m &\ge 1 \\ m &\le 3 \end{cases} \\
 &\Leftrightarrow 1 \le m \le 3.
 \end{aligned}
 \]
@@ -338,16 +284,22 @@ Kết luận: Giá trị tham số $m$ cần tìm là $1 \le m \le 3$.
 \end{enumerate}
 }
 
-\subsubsection{Dạng 6. Các tập số, khoảng, đoạn và nửa khoảng}
+\subsubsection{Dạng: Các tập số, khoảng, đoạn và nửa khoảng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Xác định các khoảng, đoạn, nửa khoảng dựa trên các bất đẳng thức mô tả phần tử của tập hợp.
-\item Sử dụng các phép toán số học trên trục số để biểu diễn tập hợp kết quả:
+\item \textbf{Xác định dạng của tập hợp:}
 \begin{itemize}
-\item Với phép giao $\cap$: giữ lại phần chung, gạch bỏ các phần còn lại.
-\item Với phép hợp $\cup$: lấy toàn bộ phạm vi phủ của cả hai tập hợp.
-\item Với phép hiệu $\setminus$: giữ lại phần thuộc tập thứ nhất nhưng không thuộc tập thứ hai.
+    \item Đọc kĩ các bất đẳng thức mô tả phần tử của tập hợp để xác định đó là khoảng, đoạn hay nửa khoảng.
+    \item Ví dụ: $a < x < b$ là khoảng $(a; b)$; $a \le x \le b$ là đoạn $[a; b]$; $a \le x < b$ là nửa khoảng $[a; b)$; $a < x \le b$ là nửa khoảng $(a; b]$.
 \end{itemize}
+\item \textbf{Biểu diễn các tập hợp trên trục số:} Vẽ trục số thực và biểu diễn từng tập hợp bằng các kí hiệu mút tròn "$($", "$)$" hoặc mút vuông "$[$", "$]$" và tô đậm phần tương ứng.
+\item \textbf{Thực hiện các phép toán trên trục số:}
+\begin{itemize}
+    \item \textbf{Phép giao ($\cap$):} Giữ lại phần chung (phần bị tô đậm bởi cả hai tập hợp). Gạch bỏ các phần còn lại.
+    \item \textbf{Phép hợp ($\cup$):} Lấy toàn bộ phạm vi phủ của cả hai tập hợp (phần bị tô đậm bởi ít nhất một trong hai tập hợp).
+    \item \textbf{Phép hiệu ($\setminus$):} Giữ lại phần thuộc tập thứ nhất nhưng không thuộc tập thứ hai. Khi gạch bỏ phần thuộc tập thứ hai, cần chú ý đổi mút vuông thành mút tròn (nếu điểm mút đó thuộc tập thứ hai và là điểm chung) hoặc giữ nguyên mút (nếu điểm mút đó không thuộc tập thứ hai).
+\end{itemize}
+\item \textbf{Viết kết quả dưới dạng khoảng, đoạn, nửa khoảng:} Dựa vào biểu diễn trên trục số để viết tập hợp kết quả.
 \end{enumerate}
 \end{phuongphap}
 
@@ -356,48 +308,65 @@ Cho hai tập hợp $A = [-3; 2)$ và $B = (0; 5]$. Xác định các tập hợ
 \end{vidumau}\par
 \loigiai{
 \begin{enumerate}
-\item Xác định giao của hai tập hợp $A \cap B$:
-Ta tìm các số thực $x$ vừa thỏa mãn $-3 \le x < 2$ vừa thỏa mãn $0 < x \le 5$.
-Phạm vi chung là các số thực lớn hơn $0$ và nhỏ hơn $2$. Do đó ta thu được nửa khoảng $A \cap B = (0; 2)$. Minh họa trên trục số:
+\item \textbf{Xác định giao của hai tập hợp $A \cap B$:}
+Tập hợp $A = [-3; 2)$ bao gồm các số thực $x$ thỏa mãn $-3 \le x < 2$.
+Tập hợp $B = (0; 5]$ bao gồm các số thực $x$ thỏa mãn $0 < x \le 5$.
+Để tìm $A \cap B$, ta tìm các số thực $x$ vừa thỏa mãn $-3 \le x < 2$ vừa thỏa mãn $0 < x \le 5$.
+Phạm vi chung là các số thực lớn hơn $0$ và nhỏ hơn $2$.
+Do đó, ta thu được nửa khoảng $A \cap B = (0; 2)$.
+Minh họa trên trục số:
 \begin{center}
 \begin{tikzpicture}[scale=1.2, >=stealth]
 \draw[->, thick] (-4,0) -- (6,0) node[above] {$\mathbb{R}$};
-\foreach \x in {-4.0,-3.8,...,0.0} {
-  \draw (\x-0.1,-0.2) -- (\x+0.1,0.2);
-}
-\foreach \x in {2.0,2.2,...,5.8} {
-  \draw (\x-0.1,-0.2) -- (\x+0.1,0.2);
-}
+% Gạch phần không thuộc A
+\draw[line width=1.5pt, gray!50] (-4,0) -- (-3,0);
+\draw[line width=1.5pt, gray!50] (2,0) -- (6,0);
+% Gạch phần không thuộc B
+\draw[line width=1.5pt, gray!50] (-4,0.1) -- (0,0.1);
+\draw[line width=1.5pt, gray!50] (5,0.1) -- (6,0.1);
+
 \node[below] at (-3,0) {$-3$};
 \node[below] at (0,0) {$0$};
 \node[below] at (2,0) {$2$};
 \node[below] at (5,0) {$5$};
-\node[red, thick] at (0,0) {$($};
-\node[red, thick] at (2,0) {$)$};
-\draw[red, very thick] (0.1,0) -- (1.9,0);
+
+\node[thick] at (-3,0) {$[$};
+\node[thick] at (2,0) {$)$};
+\node[thick] at (0,0.1) {$($};
+\node[thick] at (5,0.1) {$]$};
+
+\draw[red, very thick] (0,0) -- (2,0);
 \node[red, above] at (1,0.2) {$A \cap B = (0; 2)$};
 \end{tikzpicture}
 \end{center}
-\item Xác định hiệu của hai tập hợp $A \setminus B$:
+\item \textbf{Xác định hiệu của hai tập hợp $A \setminus B$:}
 Ta lấy các số thực $x$ thuộc $A$ nhưng loại bỏ đi những số thực thuộc $B$.
-Tức là lấy những số thực thuộc $[-3; 2)$ và nằm ngoài khoảng $(0; 5]$.
-Phần còn lại là nửa khoảng từ $-3$ đến $0$ (kể cả số $0$ vì số $0$ không thuộc $B$). Do đó ta thu được đoạn $A \setminus B = [-3; 0]$. Minh họa trên trục số:
+Tức là lấy những số thực thuộc $[-3; 2)$ và không thuộc $(0; 5]$.
+Phần thuộc $A$ là $[-3; 2)$. Phần thuộc $B$ là $(0; 5]$.
+Khi loại bỏ phần $(0; 5]$ khỏi $[-3; 2)$, ta chỉ còn lại phần từ $-3$ đến $0$.
+Điểm $0$ không thuộc $B=(0;5]$ nên $0$ vẫn thuộc $A \setminus B$.
+Do đó, ta thu được đoạn $A \setminus B = [-3; 0]$.
+Minh họa trên trục số:
 \begin{center}
 \begin{tikzpicture}[scale=1.2, >=stealth]
 \draw[->, thick] (-4,0) -- (6,0) node[above] {$\mathbb{R}$};
-\foreach \x in {-4.0,-3.8,...,-3.0} {
-  \draw (\x-0.1,-0.2) -- (\x+0.1,0.2);
-}
-\foreach \x in {0.0,0.2,...,5.8} {
-  \draw (\x-0.1,-0.2) -- (\x+0.1,0.2);
-}
+% Gạch phần thuộc B
+\draw[line width=1.5pt, gray!50] (0,0) -- (5,0);
+% Gạch phần không thuộc A
+\draw[line width=1.5pt, gray!50] (-4,0) -- (-3,0);
+\draw[line width=1.5pt, gray!50] (2,0) -- (6,0);
+
 \node[below] at (-3,0) {$-3$};
 \node[below] at (0,0) {$0$};
 \node[below] at (2,0) {$2$};
 \node[below] at (5,0) {$5$};
-\node[red, thick] at (-3,0) {$[$};
-\node[red, thick] at (0,0) {$]$};
-\draw[red, very thick] (-2.9,0) -- (-0.1,0);
+
+\node[thick] at (-3,0) {$[$};
+\node[thick] at (2,0) {$)$};
+\node[thick] at (0,0) {$($}; % Mút tròn của B
+\node[thick] at (5,0) {$]$};
+
+\draw[red, very thick] (-3,0) -- (0,0);
 \node[red, above] at (-1.5,0.2) {$A \setminus B = [-3; 0]$};
 \end{tikzpicture}
 \end{center}
