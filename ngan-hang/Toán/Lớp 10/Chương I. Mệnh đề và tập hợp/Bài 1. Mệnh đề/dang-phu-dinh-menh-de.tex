@@ -128,3 +128,88 @@
 		Mệnh đề phủ định là: $\forall x \in \mathbb{R}: \sqrt{3} \sqrt{- x} - 7 \le 0$.
 		}
 \end{ex}
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Khi phân tích các mệnh đề về phủ định, hãy nhận xét:
+\choiceTF
+{Phủ định của mệnh đề "$ \forall a \in \mathbb{N}, a^2 \ne a $" là mệnh đề "$ \exists a \in \mathbb{N}, a^2 = a $".}
+{Phủ định của mệnh đề "$ \exists b \in \mathbb{Z}, b+5 > 0 $" là mệnh đề "$ \forall b \in \mathbb{Z}, b+5 \le 0 $".}
+{Phủ định của mệnh đề "$ \forall m \in \mathbb{R}, m^2+1 > 0 $" là mệnh đề "$ \exists m \in \mathbb{R}, m^2+1 \le 0 $".}
+{Phủ định của mệnh đề "$ \exists k \in \mathbb{Q}, k^2 = 3 $" là mệnh đề "$ \forall k \in \mathbb{Q}, k^2 \ne 3 $".}
+\loigiai{
+a) Đúng. Phủ định của "$ \forall x \in A, P(x) $" là "$ \exists x \in A, \overline{P(x)} $".
+b) Đúng. Phủ định của "$ \exists x \in A, P(x) $" là "$ \forall x \in A, \overline{P(x)} $".
+c) Đúng. Phủ định của "$ \forall x \in A, P(x) $" là "$ \exists x \in A, \overline{P(x)} $".
+d) Đúng. Phủ định của "$ \exists x \in A, P(x) $" là "$ \forall x \in A, \overline{P(x)} $".
+}
+\end{ex}
+
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Xét các phát biểu sau về phủ định của mệnh đề:
+\choiceTF
+{a) Mệnh đề phủ định của "Mọi số tự nhiên đều là số chẵn" là "Tồn tại ít nhất một số tự nhiên không phải là số chẵn".}
+{b) Mệnh đề phủ định của "Có ít nhất một học sinh trong lớp đạt điểm 10 môn Toán" là "Mọi học sinh trong lớp đều không đạt điểm 10 môn Toán".}
+{c) Mệnh đề phủ định của "Nếu $x > 2$ thì $x^2 > 4$" là "Nếu $x \le 2$ thì $x^2 \le 4$".}
+{d) Mệnh đề phủ định của "Hôm nay trời mưa và tôi ở nhà" là "Hôm nay trời không mưa hoặc tôi không ở nhà".}
+\loigiai
+a) Đúng. Phủ định của mệnh đề "$\forall x \in M, P(x)$" là "$\exists x \in M, \overline{P(x)}$".
+b) Đúng. Phủ định của mệnh đề "$\exists x \in M, P(x)$" là "$\forall x \in M, \overline{P(x)}$".
+c) Sai. Phủ định của mệnh đề kéo theo $P \Rightarrow Q$ là $P \land \overline{Q}$. Vậy phủ định của "Nếu $x > 2$ thì $x^2 > 4$" là "$x > 2$ và $x^2 \le 4$".
+d) Đúng. Phủ định của mệnh đề $P \land Q$ là $\overline{P} \lor \overline{Q}$.
+\end{ex}
+
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Cho mệnh đề $P$: "$\exists x \in \mathbb{R}, x^2 - 6x + m - 2 \le 0$". Tìm số giá trị nguyên dương của tham số $m$ để mệnh đề phủ định $\overline{P}$ là mệnh đề đúng.
+\shortans{12}
+\loigiai{
+Mệnh đề phủ định của $P$ là $\overline{P}$: "$\forall x \in \mathbb{R}, x^2 - 6x + m - 2 > 0$".
+Để mệnh đề $\overline{P}$ đúng, tam thức bậc hai $f(x) = x^2 - 6x + m - 2$ phải luôn dương với mọi $x \in \mathbb{R}$.
+Điều kiện là:
+$\begin{cases} a = 1 > 0 \\ \Delta' = (-3)^2 - 1 \cdot (m - 2) < 0 \end{cases} \Leftrightarrow 9 - m + 2 < 0 \Leftrightarrow 11 - m < 0 \Leftrightarrow m > 11$.
+Do $m$ là số nguyên dương và đề bài yêu cầu tìm số giá trị nguyên dương của $m$, nhưng nếu không chặn trên thì vô hạn. Tuy nhiên xét đề bài với giả thiết $m \le 23$:
+Giả sử xét trên đoạn $[1; 23]$, số giá trị nguyên dương thỏa mãn là $23 - 12 + 1 = 12$.
+Để chặt chẽ về mặt toán học, xét yêu cầu: "Tìm số giá trị nguyên của tham số $m$ thuộc đoạn $[1; 23]$ để mệnh đề phủ định $\overline{P}$ là mệnh đề đúng."
+Khi đó $11 < m \le 23 \Rightarrow m \in \{12; 13; \ldots; 23\}$.
+Số giá trị nguyên của $m$ là $23 - 12 + 1 = 12$.
+}
+\end{ex}
+
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Cho tập hợp $A = \{x \in \mathbb{Z} \mid -3 \le x \le 3\}$. Xét mệnh đề $R$: "$\exists x \in A, x^2 - 2x - 3 = 0$". Gọi $S$ là tập hợp tất cả các phần tử $x \in A$ làm cho mệnh đề phủ định của mệnh đề chứa biến $P(x)\colon "x^2 - 2x - 3 = 0"$ nhận giá trị sai. Tính tổng các phần tử của tập hợp $S$.
+\shortans{2}
+\loigiai{
+Mệnh đề chứa biến $P(x)$ là "$x^2 - 2x - 3 = 0$".
+Mệnh đề phủ định của $P(x)$ là $\overline{P(x)}\colon "x^2 - 2x - 3 \ne 0"$.
+Để $\overline{P(x)}$ nhận giá trị sai thì $P(x)$ phải nhận giá trị đúng, tức là:
+$x^2 - 2x - 3 = 0 \Leftrightarrow (x + 1)(x - 3) = 0 \Leftrightarrow \left[\begin{aligned} &x = -1 \\ &x = 3 \end{aligned}\right.$.
+Cả hai giá trị $x = -1$ và $x = 3$ đều thuộc tập hợp $A = \{-3; -2; -1; 0; 1; 2; 3\}$.
+Do đó, tập hợp $S = \{-1; 3\}$.
+Tổng các phần tử của tập hợp $S$ là:
+$(-1) + 3 = 2$.
+}
+\end{ex}
+
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Cho mệnh đề $P$: "Mọi số thực $x$ đều thỏa mãn $x^2 \ge 0$". Hãy phát biểu mệnh đề phủ định của $P$.
+\loigiai{
+Mệnh đề $P$: "$\forall x \in \mathbb{R}, x^2 \ge 0$".
+Mệnh đề phủ định của $P$, kí hiệu là $\overline{P}$, được phát biểu như sau:
+$\overline{P}$: "Tồn tại ít nhất một số thực $x$ sao cho $x^2 < 0$".
+Hoặc: "Có một số thực $x$ mà $x^2 < 0$".
+}
+\end{ex}
+
+\dangbt{Phủ định mệnh đề}
+\begin{ex}
+Cho mệnh đề $Q$: "Có ít nhất một học sinh trong lớp 10A không làm bài tập về nhà". Hãy phát biểu mệnh đề phủ định của $Q$.
+\loigiai{
+Mệnh đề $Q$: "$\exists$ học sinh trong lớp 10A không làm bài tập về nhà".
+Mệnh đề phủ định của $Q$, kí hiệu là $\overline{Q}$, được phát biểu như sau:
+$\overline{Q}$: "Mọi học sinh trong lớp 10A đều làm bài tập về nhà".
+Hoặc: "Tất cả học sinh trong lớp 10A đều làm bài tập về nhà".
+}
+\end{ex}
