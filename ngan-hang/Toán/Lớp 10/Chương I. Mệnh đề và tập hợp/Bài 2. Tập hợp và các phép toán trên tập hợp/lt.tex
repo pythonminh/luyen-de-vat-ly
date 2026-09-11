@@ -10,25 +10,27 @@
 
 \subsubsection{Các khái niệm cơ bản về tập hợp}
 
-\paragraph{Tập hợp và phần tử của tập hợp}
-
 \begin{hoatdong}{Khởi động}
 Lớp 10A có $24$ bạn tham gia thi đấu bóng đá và cầu lông, trong đó có $16$ bạn thi đấu bóng đá và $11$ bạn thi đấu cầu lông. Giả sử các trận bóng đá và cầu lông không tổ chức đồng thời. Hỏi có bao nhiêu bạn lớp 10A tham gia thi đấu cả bóng đá và cầu lông?
 \end{hoatdong}
-\par
 \loigiai{
+Để giải quyết bài toán này, chúng ta có thể sử dụng sơ đồ Venn hoặc công thức về số phần tử của hợp hai tập hợp.
 \begin{enumerate}
     \item Gọi $A$ là tập hợp các bạn thi đấu bóng đá, $B$ là tập hợp các bạn thi đấu cầu lông.
-    \item Số bạn tham gia ít nhất một trong hai môn là $n(A \cup B) = 24$.
-    \item Số bạn thi đấu cả hai môn là:
+    \item Số bạn tham gia bóng đá là $n(A) = 16$.
+    \item Số bạn tham gia cầu lông là $n(B) = 11$.
+    \item Số bạn tham gia ít nhất một trong hai môn (tức là tham gia bóng đá hoặc cầu lông hoặc cả hai) là $n(A \cup B) = 24$.
+    \item Số bạn tham gia thi đấu cả hai môn (tức là thuộc cả tập $A$ và tập $B$) là $n(A \cap B)$.
+    Theo công thức: $n(A \cup B) = n(A) + n(B) - n(A \cap B)$.
+    Từ đó suy ra:
     \[
     \begin{aligned}
         n(A \cap B) &= n(A) + n(B) - n(A \cup B) \\
                     &= 16 + 11 - 24 \\
-                    &= 3\ \text{bạn}.
+                    &= 3.
     \end{aligned}
     \]
-    Kết luận: Có $3$ bạn tham gia thi đấu cả hai môn bóng đá và cầu lông.
+    Vậy, có $3$ bạn lớp 10A tham gia thi đấu cả bóng đá và cầu lông.
 \end{enumerate}
 }
 
@@ -40,24 +42,21 @@ Gọi $A$ là tập hợp những thành viên tham gia Chuyên đề 1, $B$ là
     \item[b)] Hãy mô tả các tập hợp $A$ và $B$ bằng cách liệt kê các phần tử.
 \end{itemize}
 \end{hoatdong}
-\par
 \loigiai{
-\begin{enumerate}
-    \item Xét sự thuộc về của các phần tử:
-    \[
-    \begin{aligned}
-        \text{Nam} &\in A \\
-        \text{Ngân} &\notin B.
-    \end{aligned}
-    \]
-    \item Mô tả tập hợp bằng cách liệt kê các phần tử:
+\begin{itemize}
+    \item[a)]
+    \begin{itemize}
+        \item Nam là một trong các thành viên của Chuyên đề 1, vậy Nam là một phần tử của tập hợp $A$. Kí hiệu: $\text{Nam} \in A$.
+        \item Ngân là một thành viên của Chuyên đề 1 nhưng không có tên trong danh sách thành viên của Chuyên đề 2. Vậy Ngân không phải là phần tử của tập hợp $B$. Kí hiệu: $\text{Ngân} \notin B$.
+    \end{itemize}
+    \item[b)] Mô tả tập hợp $A$ và $B$ bằng cách liệt kê các phần tử:
     \[
     \begin{aligned}
         A &= \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\} \\
         B &= \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}.
     \end{aligned}
     \]
-\end{enumerate}
+\end{itemize}
 }
 
 \begin{hoatdong}{Hoạt động 2}
@@ -67,33 +66,32 @@ Cho tập hợp: $C = \{\text{châu Á}; \text{châu Âu}; \text{châu Đại D�
     \item[b)] Tập hợp $C$ có bao nhiêu phần tử?
 \end{itemize}
 \end{hoatdong}
-\par
 \loigiai{
-\begin{enumerate}
-    \item Tính chất đặc trưng của các phần tử trong tập hợp:
-    \[
-    \begin{aligned}
-        \text{Các phần tử thuộc } C &\text{ đều là các châu lục trên Trái Đất}.
-    \end{aligned}
-    \]
-    \item Số phần tử của tập hợp $C$:
-    \[
-    \begin{aligned}
-        n(C) &= 6\ \text{phần tử}.
-    \end{aligned}
-    \]
-\end{enumerate}
+\begin{itemize}
+    \item[a)] Tính chất đặc trưng cho các phần tử của tập hợp $C$ là: "là một châu lục trên Trái Đất".
+    Vậy, tập hợp $C$ có thể được viết dưới dạng chỉ ra tính chất đặc trưng là:
+    $C = \{x \mid x \text{ là một châu lục trên Trái Đất}\}$.
+    \item[b)] Bằng cách đếm các phần tử đã liệt kê, ta thấy tập hợp $C$ có $6$ phần tử. Kí hiệu: $n(C) = 6$.
+\end{itemize}
 }
 
 \begin{kienthuc}
+\paragraph{Tập hợp và phần tử}
 \begin{itemize}
-    \item Một tập hợp là một bộ sưu tập các đối tượng phân biệt. Các đối tượng đó được gọi là các \chuy{phần tử} của tập hợp.
-    \item Kí hiệu $a \in S$ để chỉ phần tử $a$ thuộc tập hợp $S$. Kí hiệu $a \notin S$ để chỉ phần tử $a$ không thuộc tập hợp $S$.
-    \item Có hai cách thường dùng để mô tả một tập hợp:
-    \begin{itemize}
-        \item \chuy{Cách 1: Liệt kê các phần tử của tập hợp.} Các phần tử được viết trong dấu ngoặc nhọn $\{\dots\}$, cách nhau bởi dấu chấm phẩy hoặc dấu phẩy. Mỗi phần tử chỉ được liệt kê một lần và thứ tự liệt kê không quan trọng.
-        \item \chuy{Cách 2: Chỉ ra tính chất đặc trưng cho các phần tử của tập hợp.} Tập hợp được viết dưới dạng $S = \{x \mid x \text{ có tính chất } P\}$.
-    \end{itemize}
+    \item Một \chuy{tập hợp} là một bộ sưu tập các đối tượng phân biệt. Các đối tượng đó được gọi là các \chuy{phần tử} của tập hợp.
+    \item Kí hiệu $a \in S$ để chỉ phần tử $a$ thuộc tập hợp $S$.
+    \item Kí hiệu $a \notin S$ để chỉ phần tử $a$ không thuộc tập hợp $S$.
+\end{itemize}
+
+\paragraph{Cách mô tả tập hợp}
+Có hai cách thường dùng để mô tả một tập hợp:
+\begin{itemize}
+    \item \chuy{Cách 1: Liệt kê các phần tử của tập hợp.} Các phần tử được viết trong dấu ngoặc nhọn $\{\dots\}$, cách nhau bởi dấu chấm phẩy hoặc dấu phẩy. Mỗi phần tử chỉ được liệt kê một lần và thứ tự liệt kê không quan trọng.
+    \item \chuy{Cách 2: Chỉ ra tính chất đặc trưng cho các phần tử của tập hợp.} Tập hợp được viết dưới dạng $S = \{x \mid x \text{ có tính chất } P\}$.
+\end{itemize}
+
+\paragraph{Tập rỗng và số phần tử của tập hợp}
+\begin{itemize}
     \item Tập hợp không chứa phần tử nào được gọi là \chuy{tập rỗng}, kí hiệu là $\emptyset$.
     \item Số phần tử của tập hợp $S$ được kí hiệu là $n(S)$.
 \end{itemize}
@@ -106,26 +104,21 @@ Cho tập hợp $D = \{n \in \mathbb{N} \mid n \text{ là số nguyên tố}, 5 
     \item[b)] Viết tập hợp $D$ bằng cách liệt kê các phần tử.
 \end{itemize}
 \end{vd}
-\par
 \loigiai{
-\begin{enumerate}
-    \item Xét sự thuộc về tập hợp dựa vào điều kiện số nguyên tố lớn hơn 5 và nhỏ hơn 20:
-    \[
-    \begin{aligned}
-        5 &\notin D \quad (\text{do } 5 \text{ không lớn hơn } 5) \\
-        12 &\notin D \quad (\text{do 12 là hợp số}) \\
-        17 &\in D \quad (\text{do 17 là số nguyên tố và } 5 < 17 < 20) \\
-        18 &\notin D \quad (\text{do 18 là hợp số}).
-    \end{aligned}
-    \]
-    \item Liệt kê các số nguyên tố nằm giữa 5 và 20:
-    \[
-    \begin{aligned}
-        D &= \{7; 11; 13; 17; 19\}.
-    \end{aligned}
-    \]
-    Kết luận: Tập hợp $D$ gồm 5 phần tử.
-\end{enumerate}
+\begin{itemize}
+    \item[a)] Để xác định một số có thuộc tập $D$ hay không, ta kiểm tra xem số đó có thỏa mãn cả ba điều kiện: là số tự nhiên, là số nguyên tố, và lớn hơn $5$ nhỏ hơn $20$.
+    \begin{itemize}
+        \item Số $5$: là số tự nhiên, là số nguyên tố, nhưng $5$ không lớn hơn $5$. Vậy $5 \notin D$.
+        \item Số $12$: là số tự nhiên, $5 < 12 < 20$, nhưng $12$ không phải là số nguyên tố (vì $12 = 2^2 \cdot 3$). Vậy $12 \notin D$.
+        \item Số $17$: là số tự nhiên, là số nguyên tố, và $5 < 17 < 20$. Vậy $17 \in D$.
+        \item Số $18$: là số tự nhiên, $5 < 18 < 20$, nhưng $18$ không phải là số nguyên tố (vì $18 = 2 \cdot 3^2$). Vậy $18 \notin D$.
+    \end{itemize}
+    \item[b)] Để viết tập hợp $D$ bằng cách liệt kê các phần tử, ta tìm tất cả các số tự nhiên là số nguyên tố và nằm giữa $5$ và $20$.
+    Các số nguyên tố lớn hơn $5$ là $7, 11, 13, 17, 19, 23, \dots$.
+    Các số nguyên tố nhỏ hơn $20$ là $2, 3, 5, 7, 11, 13, 17, 19$.
+    Vậy, các số nguyên tố thỏa mãn $5 < n < 20$ là $7, 11, 13, 17, 19$.
+    Do đó, $D = \{7; 11; 13; 17; 19\}$.
+\end{itemize}
 }
 
 \begin{lt}
@@ -136,24 +129,23 @@ Gọi $X$ là tập nghiệm của phương trình $x^2 - 24x + 143 = 0$. Các m
     \item[c)] $n(X) = 2$.
 \end{itemize}
 \end{lt}
-\par
 \loigiai{
-\begin{enumerate}
-    \item Tìm nghiệm của phương trình bậc hai:
-    \[
-    \begin{aligned}
-        x^2 - 24x + 143 = 0 &\Leftrightarrow (x-11)(x-13) = 0 \\
-                            &\Leftrightarrow \left[ \begin{aligned} x &= 11 \\ x &= 13 \end{aligned} \right.
-    \end{aligned}
-    \]
-    Tập nghiệm thu được là $X = \{11; 13\}$.
-    \item Xét tính đúng sai của các khẳng định:
-    \begin{itemize}
-        \item Mệnh đề a) là đúng vì $13$ thuộc tập hợp $X$.
-        \item Mệnh đề b) là sai vì số $11$ thuộc tập hợp $X$ nên viết $11 \notin X$ là sai.
-        \item Mệnh đề c) là đúng vì tập hợp $X$ có đúng 2 phần tử.
-    \end{itemize}
-\end{enumerate}
+Trước hết, ta cần tìm tập nghiệm $X$ của phương trình $x^2 - 24x + 143 = 0$.
+Ta có thể giải phương trình bậc hai bằng cách phân tích thành nhân tử hoặc dùng công thức nghiệm.
+$x^2 - 24x + 143 = 0$
+$\Leftrightarrow x^2 - 11x - 13x + 143 = 0$
+$\Leftrightarrow x(x - 11) - 13(x - 11) = 0$
+$\Leftrightarrow (x - 11)(x - 13) = 0$
+$\Leftrightarrow \left[ \begin{aligned} x - 11 &= 0 \\ x - 13 &= 0 \end{aligned} \right.$
+$\Leftrightarrow \left[ \begin{aligned} x &= 11 \\ x &= 13 \end{aligned} \right.$
+Vậy, tập nghiệm của phương trình là $X = \{11; 13\}$.
+
+Bây giờ, ta xét tính đúng sai của các mệnh đề:
+\begin{itemize}
+    \item[a)] Mệnh đề "$13 \in X$": Vì $13$ là một nghiệm của phương trình, nên $13$ là một phần tử của tập $X$. Vậy mệnh đề này là \chuy{đúng}.
+    \item[b)] Mệnh đề "$11 \notin X$": Vì $11$ là một nghiệm của phương trình, nên $11$ là một phần tử của tập $X$. Do đó, việc nói $11 \notin X$ là sai. Vậy mệnh đề này là \chuy{sai}.
+    \item[c)] Mệnh đề "$n(X) = 2$": Tập $X$ có hai phần tử là $11$ và $13$. Vậy số phần tử của $X$ là $2$. Mệnh đề này là \chuy{đúng}.
+\end{itemize}
 }
 
 \paragraph{Tập hợp con}
@@ -161,27 +153,41 @@ Gọi $X$ là tập nghiệm của phương trình $x^2 - 24x + 143 = 0$. Các m
 \begin{hoatdong}{Hoạt động 3}
 Gọi $H$ là tập hợp các bạn tham gia Chuyên đề 2 trong tình huống mở đầu có tên bắt đầu bằng chữ $H$. Các phần tử của tập hợp $H$ có là phần tử của tập hợp $B$ trong HĐ1 không?
 \end{hoatdong}
-\par
 \loigiai{
+Trong Hoạt động 1, tập hợp $B$ là tập hợp các thành viên tham gia Chuyên đề 2:
+$B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$.
+
+Tập hợp $H$ là tập hợp các bạn tham gia Chuyên đề 2 có tên bắt đầu bằng chữ $H$.
+Các thành viên trong $B$ có tên bắt đầu bằng chữ $H$ là: Hương, Hân, Hiền.
+Vậy, $H = \{\text{Hương}; \text{Hân}; \text{Hiền}\}$.
+
+Quan sát các phần tử của $H$:
 \begin{itemize}
-    \item Liệt kê các phần tử của tập hợp $H$:
-    \[
-    \begin{aligned}
-        H &= \{\text{Hương}; \text{Hiền}; \text{Hân}\}.
-    \end{aligned}
-    \]
-    \item Tập hợp $B$ là tập các học sinh tham gia Chuyên đề 2. Dễ thấy mọi học sinh thuộc $H$ đều có tên trong danh sách $B$.
+    \item Hương $\in B$
+    \item Hân $\in B$
+    \item Hiền $\in B$
 \end{itemize}
+Tất cả các phần tử của tập hợp $H$ đều là phần tử của tập hợp $B$.
 }
 
 \begin{kienthuc}
 \begin{itemize}
-    \item Nếu mọi phần tử của tập hợp $T$ đều là phần tử của tập hợp $S$ thì ta nói $T$ là một \chuy{tập hợp con} (tập con) của $S$ và viết là $T \subset S$.
+    \item Nếu mọi phần tử của tập hợp $T$ đều là phần tử của tập hợp $S$ thì ta nói $T$ là một \chuy{tập hợp con} (hay \chuy{tập con}) của $S$ và viết là $T \subset S$.
     \item Định nghĩa bằng kí hiệu: $T \subset S \Leftrightarrow (\forall x, x \in T \Rightarrow x \in S)$.
     \item Nếu $T \subset S$ và $T \neq S$ thì ta nói $T$ là \chuy{tập con thực sự} của $S$.
     \item Quy ước tập rỗng $\emptyset$ là tập con của mọi tập hợp.
 \end{itemize}
 \end{kienthuc}
+
+\begin{haicotchay}{Minh họa tập con}{
+\begin{tikzpicture}
+\draw (0,0) circle (2cm);
+\draw (0.5,0.5) circle (1cm);
+\node at (0, 2.2) {$S$};
+\node at (0.5, 0.5) {$T$};
+\end{tikzpicture}
+}
+\end{haicotchay}
 
 \begin{vd}
 Cho tập hợp $S = \{2; 3; 5\}$. Những tập hợp nào sau đây là tập con của $S$?
@@ -189,46 +195,52 @@ Cho tập hợp $S = \{2; 3; 5\}$. Những tập hợp nào sau đây là tập 
 S_1 = \{3\}, \quad S_2 = \{0; 2\}, \quad S_3 = \{3; 5\}
 \]
 \end{vd}
-\par
 \loigiai{
-\begin{enumerate}
-    \item Kiểm tra phần tử thuộc $S_1$ và $S_3$:
-    \[
-    \begin{aligned}
-        3 &\in S_1 \Rightarrow 3 \in S \quad (\text{đúng}) \\
-        3, 5 &\in S_3 \Rightarrow 3, 5 \in S \quad (\text{đúng}).
-    \end{aligned}
-    \]
-    Do đó, $S_1 \subset S$ và $S_3 \subset S$.
-    \item Kiểm tra phần tử thuộc $S_2$:
-    \[
-    \begin{aligned}
-        0 &\in S_2 \quad \text{nhưng} \quad 0 \notin S.
-    \end{aligned}
-    \]
-    Do đó, $S_2$ không phải là tập con của $S$.
-\end{enumerate}
+Để xác định một tập hợp có phải là tập con của $S$ hay không, ta kiểm tra xem tất cả các phần tử của tập hợp đó có thuộc $S$ hay không.
+\begin{itemize}
+    \item Với $S_1 = \{3\}$: Phần tử $3 \in S$. Vậy $S_1 \subset S$.
+    \item Với $S_2 = \{0; 2\}$: Phần tử $0 \notin S$. Vậy $S_2$ không phải là tập con của $S$. Kí hiệu: $S_2 \not\subset S$.
+    \item Với $S_3 = \{3; 5\}$: Các phần tử $3 \in S$ và $5 \in S$. Vậy $S_3 \subset S$.
+\end{itemize}
+}
+
+\begin{lt}
+Cho tập hợp $A = \{x \in \mathbb{N} \mid x \text{ là ước của } 12\}$.
+\begin{itemize}
+    \item[a)] Viết tập hợp $A$ bằng cách liệt kê các phần tử.
+    \item[b)] Tập hợp $B = \{1; 2; 3; 4\}$ có phải là tập con của $A$ không?
+\end{itemize}
+\end{lt}
+\loigiai{
+\begin{itemize}
+    \item[a)] Tập hợp $A$ gồm các số tự nhiên là ước của $12$.
+    Các ước của $12$ là $1, 2, 3, 4, 6, 12$.
+    Vậy, $A = \{1; 2; 3; 4; 6; 12\}$.
+    \item[b)] Để kiểm tra $B$ có phải là tập con của $A$ không, ta xem xét tất cả các phần tử của $B$ có thuộc $A$ không.
+    Các phần tử của $B$ là $1, 2, 3, 4$.
+    Ta thấy: $1 \in A$, $2 \in A$, $3 \in A$, $4 \in A$.
+    Vì mọi phần tử của $B$ đều là phần tử của $A$, nên $B$ là tập con của $A$. Kí hiệu: $B \subset A$.
+\end{itemize}
 }
 
 \paragraph{Hai tập hợp bằng nhau}
 
 \begin{kienthuc}
-Hai tập hợp $A$ và $B$ được gọi là \chuy{bằng nhau} nếu chúng có cùng các phần tử. Kí hiệu $A = B$.
-Điều này có nghĩa là: $A = B \Leftrightarrow (A \subset B \text{ và } B \subset A)$.
+Hai tập hợp $A$ và $B$ được gọi là \chuy{bằng nhau} nếu $A$ là tập con của $B$ và $B$ là tập con của $A$. Kí hiệu là $A = B$.
+Định nghĩa bằng kí hiệu: $A = B \Leftrightarrow (A \subset B \text{ và } B \subset A)$.
 \end{kienthuc}
 
 \begin{vd}
-Cho $A = \{x \in \mathbb{N} \mid x \text{ là ước của } 6\}$ và $B = \{1; 2; 3; 6\}$. Hỏi $A$ và $B$ có bằng nhau không?
+Cho tập hợp $A = \{x \in \mathbb{Z} \mid (x-1)(x^2-4)=0\}$ và $B = \{-2; 1; 2\}$. Hai tập hợp này có bằng nhau không?
 \end{vd}
-\par
 \loigiai{
-\begin{itemize}
-    \item Liệt kê các phần tử của tập hợp $A$: Các ước tự nhiên của 6 là $1, 2, 3, 6$.
-    Vậy $A = \{1; 2; 3; 6\}$.
-    \item So sánh với tập hợp $B = \{1; 2; 3; 6\}$.
-    Ta thấy $A$ và $B$ có cùng các phần tử.
-    Vậy $A = B$.
-\end{itemize}
+Trước hết, ta cần xác định các phần tử của tập hợp $A$.
+Phương trình $(x-1)(x^2-4)=0$ có các nghiệm:
+$x-1=0 \Rightarrow x=1$
+$x^2-4=0 \Rightarrow x^2=4 \Rightarrow x=\pm 2$
+Vậy, tập nghiệm của phương trình là $A = \{-2; 1; 2\}$.
+Ta thấy tập hợp $B$ cũng là $B = \{-2; 1; 2\}$.
+Vì $A$ và $B$ có cùng các phần tử, nên $A = B$.
 }
 
 \subsubsection{Các phép toán trên tập hợp}
@@ -236,32 +248,34 @@ Cho $A = \{x \in \mathbb{N} \mid x \text{ là ước của } 6\}$ và $B = \{1; 
 \paragraph{Phép giao của hai tập hợp}
 
 \begin{hoatdong}{Hoạt động 4}
-Trong HĐ1, hãy chỉ ra các thành viên tham gia cả hai chuyên đề.
+Trong Hoạt động 1, hãy chỉ ra các thành viên tham gia cả Chuyên đề 1 và Chuyên đề 2.
 \end{hoatdong}
-\par
 \loigiai{
-\begin{itemize}
-    \item Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
-    \item Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
-    \item Các thành viên tham gia cả hai chuyên đề là những thành viên có mặt trong cả hai danh sách $A$ và $B$. Đó là: Hương, Chi, Tú, Bình, Khánh.
-\end{itemize}
+Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
+Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
+
+Các thành viên tham gia cả Chuyên đề 1 và Chuyên đề 2 là những thành viên có mặt trong cả hai danh sách $A$ và $B$.
+Bằng cách so sánh hai danh sách, ta tìm được các thành viên chung: Hương, Chi, Tú, Bình, Khánh.
+Vậy, các thành viên tham gia cả hai chuyên đề là: Hương, Chi, Tú, Bình, Khánh.
 }
 
 \begin{kienthuc}
 \begin{itemize}
-    \item \chuy{Giao của hai tập hợp} $A$ và $B$, kí hiệu là $A \cap B$, là tập hợp gồm các phần tử chung của $A$ và $B$.
+    \item \chuy{Phép giao} của hai tập hợp $A$ và $B$, kí hiệu là $A \cap B$, là tập hợp gồm các phần tử chung của $A$ và $B$.
     \item Định nghĩa bằng kí hiệu: $A \cap B = \{x \mid x \in A \text{ và } x \in B\}$.
 \end{itemize}
 \end{kienthuc}
 
 \begin{haicotchay}{Minh họa phép giao}{
 \begin{tikzpicture}
-\fill[blue!20] (0,0) circle (1.5);
-\fill[red!20] (1.5,0) circle (1.5);
-\fill[green!40] (0,0) circle (1.5) intersect (1.5,0) circle (1.5);
-\node at (-0.7, 0.7) {$A$};
-\node at (2.2, 0.7) {$B$};
-\node at (0.75, 0) {$A \cap B$};
+\fill[blue!20] (0,0) circle (1.5cm);
+\fill[red!20] (2,0) circle (1.5cm);
+\fill[green!50!black!50] (intersection of 0,0 circle 1.5 and 2,0 circle 1.5);
+\draw (0,0) circle (1.5cm);
+\draw (2,0) circle (1.5cm);
+\node at (-1, 1) {$A$};
+\node at (3, 1) {$B$};
+\node at (1, 0) {$A \cap B$};
 \end{tikzpicture}
 }
 \end{haicotchay}
@@ -269,41 +283,45 @@ Trong HĐ1, hãy chỉ ra các thành viên tham gia cả hai chuyên đề.
 \begin{vd}
 Cho $A = \{0; 1; 2; 3; 4\}$ và $B = \{2; 4; 6; 8\}$. Tìm $A \cap B$.
 \end{vd}
-\par
 \loigiai{
+Để tìm $A \cap B$, ta liệt kê các phần tử có mặt trong cả hai tập hợp $A$ và $B$.
 Các phần tử chung của $A$ và $B$ là $2$ và $4$.
-Vậy $A \cap B = \{2; 4\}$.
+Vậy, $A \cap B = \{2; 4\}$.
 }
 
 \paragraph{Phép hợp của hai tập hợp}
 
 \begin{hoatdong}{Hoạt động 5}
-Trong HĐ1, hãy chỉ ra các thành viên tham gia ít nhất một trong hai chuyên đề.
+Trong Hoạt động 1, hãy chỉ ra các thành viên tham gia ít nhất một trong hai Chuyên đề 1 hoặc Chuyên đề 2.
 \end{hoatdong}
-\par
 \loigiai{
-\begin{itemize}
-    \item Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
-    \item Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
-    \item Các thành viên tham gia ít nhất một trong hai chuyên đề là tất cả các thành viên có mặt trong danh sách $A$ hoặc danh sách $B$ (hoặc cả hai).
-    Đó là: Nam, Hương, Chi, Tú, Bình, Ngân, Khánh, Hân, Hiền, Lam.
-\end{itemize}
+Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
+Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
+
+Các thành viên tham gia ít nhất một trong hai chuyên đề là tất cả các thành viên có mặt trong $A$ hoặc trong $B$ (hoặc cả hai). Để tìm tập hợp này, ta gộp tất cả các phần tử của $A$ và $B$ lại, mỗi phần tử chỉ liệt kê một lần.
+Các phần tử của $A$: Nam, Hương, Chi, Tú, Bình, Ngân, Khánh.
+Các phần tử của $B$: Hương, Chi, Tú, Khánh, Bình, Hân, Hiền, Lam.
+Gộp lại, ta được: Nam, Hương, Chi, Tú, Bình, Ngân, Khánh, Hân, Hiền, Lam.
+Vậy, tập hợp các thành viên tham gia ít nhất một trong hai chuyên đề là:
+$\{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}; \text{Hân}; \text{Hiền}; \text{Lam}\}$.
 }
 
 \begin{kienthuc}
 \begin{itemize}
-    \item \chuy{Hợp của hai tập hợp} $A$ và $B$, kí hiệu là $A \cup B$, là tập hợp gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$.
+    \item \chuy{Phép hợp} của hai tập hợp $A$ và $B$, kí hiệu là $A \cup B$, là tập hợp gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ (hoặc thuộc cả hai).
     \item Định nghĩa bằng kí hiệu: $A \cup B = \{x \mid x \in A \text{ hoặc } x \in B\}$.
 \end{itemize}
 \end{kienthuc}
 
 \begin{haicotchay}{Minh họa phép hợp}{
 \begin{tikzpicture}
-\fill[blue!20] (0,0) circle (1.5);
-\fill[red!20] (1.5,0) circle (1.5);
-\node at (-0.7, 0.7) {$A$};
-\node at (2.2, 0.7) {$B$};
-\node at (0.75, 0) {$A \cup B$};
+\fill[blue!20] (0,0) circle (1.5cm);
+\fill[red!20] (2,0) circle (1.5cm);
+\draw (0,0) circle (1.5cm);
+\draw (2,0) circle (1.5cm);
+\node at (-1, 1) {$A$};
+\node at (3, 1) {$B$};
+\node at (1, 0) {$A \cup B$};
 \end{tikzpicture}
 }
 \end{haicotchay}
@@ -311,39 +329,44 @@ Trong HĐ1, hãy chỉ ra các thành viên tham gia ít nhất một trong hai 
 \begin{vd}
 Cho $A = \{0; 1; 2; 3; 4\}$ và $B = \{2; 4; 6; 8\}$. Tìm $A \cup B$.
 \end{vd}
-\par
 \loigiai{
-Các phần tử thuộc $A$ hoặc thuộc $B$ là $0, 1, 2, 3, 4, 6, 8$.
-Vậy $A \cup B = \{0; 1; 2; 3; 4; 6; 8\}$.
+Để tìm $A \cup B$, ta gộp tất cả các phần tử của $A$ và $B$ lại, mỗi phần tử chỉ liệt kê một lần.
+Các phần tử của $A$: $0, 1, 2, 3, 4$.
+Các phần tử của $B$: $2, 4, 6, 8$.
+Gộp lại, ta được: $0, 1, 2, 3, 4, 6, 8$.
+Vậy, $A \cup B = \{0; 1; 2; 3; 4; 6; 8\}$.
 }
 
 \paragraph{Phép hiệu của hai tập hợp}
 
 \begin{hoatdong}{Hoạt động 6}
-Trong HĐ1, hãy chỉ ra các thành viên chỉ tham gia Chuyên đề 1 mà không tham gia Chuyên đề 2.
+Trong Hoạt động 1, hãy chỉ ra các thành viên tham gia Chuyên đề 1 nhưng không tham gia Chuyên đề 2.
 \end{hoatdong}
-\par
 \loigiai{
-\begin{itemize}
-    \item Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
-    \item Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
-    \item Các thành viên chỉ tham gia Chuyên đề 1 mà không tham gia Chuyên đề 2 là những thành viên có mặt trong danh sách $A$ nhưng không có mặt trong danh sách $B$.
-    Đó là: Nam, Ngân.
-\end{itemize}
+Tập hợp $A = \{\text{Nam}; \text{Hương}; \text{Chi}; \text{Tú}; \text{Bình}; \text{Ngân}; \text{Khánh}\}$
+Tập hợp $B = \{\text{Hương}; \text{Chi}; \text{Tú}; \text{Khánh}; \text{Bình}; \text{Hân}; \text{Hiền}; \text{Lam}\}$
+
+Các thành viên tham gia Chuyên đề 1 nhưng không tham gia Chuyên đề 2 là những thành viên thuộc $A$ nhưng không thuộc $B$.
+Ta loại bỏ các phần tử chung của $A$ và $B$ ra khỏi $A$.
+Các phần tử chung là: Hương, Chi, Tú, Bình, Khánh.
+Các phần tử của $A$ không thuộc $B$ là: Nam, Ngân.
+Vậy, các thành viên tham gia Chuyên đề 1 nhưng không tham gia Chuyên đề 2 là: Nam, Ngân.
 }
 
 \begin{kienthuc}
 \begin{itemize}
-    \item \chuy{Hiệu của hai tập hợp} $A$ và $B$, kí hiệu là $A \setminus B$, là tập hợp gồm các phần tử thuộc $A$ nhưng không thuộc $B$.
+    \item \chuy{Phép hiệu} của hai tập hợp $A$ và $B$, kí hiệu là $A \setminus B$ (hoặc $A - B$), là tập hợp gồm các phần tử thuộc $A$ nhưng không thuộc $B$.
     \item Định nghĩa bằng kí hiệu: $A \setminus B = \{x \mid x \in A \text{ và } x \notin B\}$.
 \end{itemize}
 \end{kienthuc}
 
 \begin{haicotchay}{Minh họa phép hiệu}{
 \begin{tikzpicture}
-\fill[blue!20] (0,0) circle (1.5);
-\fill[white] (1.5,0) circle (1.5);
-\fill[blue!20] (0,0) circle (1.5) -- (1.5,0) circle (1.5);
+\fill[blue!20] (0,0) circle (1.5cm);
+\fill[white] (2,0) circle (1.5cm);
+\fill[white] (intersection of 0,0 circle 1.5 and 2,0 circle 1.5);
+\draw (0,0) circle (1.5cm);
+\draw (2,0) circle (1.5cm);
 \node at (-0.7, 0.7) {$A$};
 \node at (2.2, 0.7) {$B$};
 \node at (-0.7, 0) {$A \setminus B$};
@@ -354,12 +377,17 @@ Trong HĐ1, hãy chỉ ra các thành viên chỉ tham gia Chuyên đề 1 mà k
 \begin{vd}
 Cho $A = \{0; 1; 2; 3; 4\}$ và $B = \{2; 4; 6; 8\}$. Tìm $A \setminus B$ và $B \setminus A$.
 \end{vd}
-\par
 \loigiai{
 \begin{itemize}
-    \item Các phần tử thuộc $A$ nhưng không thuộc $B$ là $0, 1, 3$.
+    \item Để tìm $A \setminus B$, ta tìm các phần tử thuộc $A$ nhưng không thuộc $B$.
+    Các phần tử của $A$ là $0, 1, 2, 3, 4$.
+    Các phần tử chung của $A$ và $B$ là $2, 4$.
+    Loại bỏ $2, 4$ khỏi $A$, ta còn lại $0, 1, 3$.
     Vậy $A \setminus B = \{0; 1; 3\}$.
-    \item Các phần tử thuộc $B$ nhưng không thuộc $A$ là $6, 8$.
+    \item Để tìm $B \setminus A$, ta tìm các phần tử thuộc $B$ nhưng không thuộc $A$.
+    Các phần tử của $B$ là $2, 4, 6, 8$.
+    Các phần tử chung của $A$ và $B$ là $2, 4$.
+    Loại bỏ $2, 4$ khỏi $B$, ta còn lại $6, 8$.
     Vậy $B \setminus A = \{6; 8\}$.
 \end{itemize}
 }
@@ -368,7 +396,7 @@ Cho $A = \{0; 1; 2; 3; 4\}$ và $B = \{2; 4; 6; 8\}$. Tìm $A \setminus B$ và $
 
 \begin{kienthuc}
 \begin{itemize}
-    \item Cho $A$ là một tập con của tập hợp $E$. \chuy{Phần bù} của $A$ trong $E$, kí hiệu là $C_E A$ (hoặc $A'$ nếu $E$ được hiểu ngầm), là tập hợp gồm các phần tử thuộc $E$ nhưng không thuộc $A$.
+    \item Cho $A$ là một tập con của tập hợp $E$. \chuy{Phần bù} của $A$ trong $E$, kí hiệu là $C_E A$ (hoặc $A'$ nếu tập $E$ được hiểu ngầm), là tập hợp gồm các phần tử thuộc $E$ nhưng không thuộc $A$.
     \item Định nghĩa bằng kí hiệu: $C_E A = \{x \mid x \in E \text{ và } x \notin A\}$.
     \item Từ định nghĩa, ta thấy $C_E A = E \setminus A$.
 \end{itemize}
@@ -389,15 +417,18 @@ Cho $A = \{0; 1; 2; 3; 4\}$ và $B = \{2; 4; 6; 8\}$. Tìm $A \setminus B$ và $
 \begin{vd}
 Cho $E = \{0; 1; 2; 3; 4; 5; 6; 7; 8; 9\}$ và $A = \{0; 2; 4; 6; 8\}$. Tìm $C_E A$.
 \end{vd}
-\par
 \loigiai{
-Các phần tử thuộc $E$ nhưng không thuộc $A$ là $1, 3, 5, 7, 9$.
+Để tìm $C_E A$, ta tìm các phần tử thuộc $E$ nhưng không thuộc $A$.
+Các phần tử của $E$ là $0, 1, 2, 3, 4, 5, 6, 7, 8, 9$.
+Các phần tử của $A$ là $0, 2, 4, 6, 8$.
+Loại bỏ các phần tử của $A$ ra khỏi $E$, ta còn lại $1, 3, 5, 7, 9$.
 Vậy $C_E A = \{1; 3; 5; 7; 9\}$.
 }
 
 \subsubsection{Các tập hợp số}
 
 \begin{kienthuc}
+\paragraph{Các tập hợp số cơ bản}
 \begin{itemize}
     \item Tập hợp số tự nhiên: $\mathbb{N} = \{0; 1; 2; 3; \dots\}$
     \item Tập hợp số tự nhiên khác 0: $\mathbb{N}^* = \{1; 2; 3; \dots\}$
@@ -405,7 +436,7 @@ Vậy $C_E A = \{1; 3; 5; 7; 9\}$.
     \item Tập hợp số hữu tỉ: $\mathbb{Q} = \left\{\dfrac{a}{b} \mid a \in \mathbb{Z}, b \in \mathbb{Z}, b \neq 0\right\}$
     \item Tập hợp số thực: $\mathbb{R}$
 \end{itemize}
-Mối quan hệ giữa các tập hợp số này là: $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R}$.
+Mối quan hệ bao hàm giữa các tập hợp số này là: $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q} \subset \mathbb{R}$.
 \end{kienthuc}
 
 \paragraph{Các tập con thường dùng của tập số thực}
@@ -442,65 +473,83 @@ Hãy xác định các tập hợp sau và biểu diễn chúng trên trục s�
     \item[c)] $[-1; 6) \setminus (2; 8)$.
 \end{itemize}
 \end{vd}
-\par
 \loigiai{
 \begin{enumerate}
-    \item Giao câu a):
-    \[
-    \begin{aligned}
-        (-2; 5] \cap [1; 7) &= [1; 5].
-    \end{aligned}
-    \]
+    \item[a)] Xác định $(-2; 5] \cap [1; 7)$:
+    Tập hợp $(-2; 5]$ bao gồm các số thực $x$ sao cho $-2 < x \le 5$.
+    Tập hợp $[1; 7)$ bao gồm các số thực $x$ sao cho $1 \le x < 7$.
+    Phép giao là tập hợp các phần tử chung, tức là các số $x$ thỏa mãn cả hai điều kiện:
+    $1 \le x \le 5$.
+    Vậy, $(-2; 5] \cap [1; 7) = [1; 5]$.
     \begin{center}
     \begin{tikzpicture}
     \draw[->] (-3,0) -- (8,0) node[right] {$x$};
     \draw (-2,0) node[below] {$-2$} circle (2pt);
     \draw (5,0) node[below] {$5$} circle (2pt);
-    \draw[line width=1.5pt, blue] (-2,0) -- (5,0);
+    \draw[line width=1.5pt, blue, opacity=0.6] (-2,0) -- (5,0);
     \draw (1,0) node[below] {$1$} circle (2pt);
     \draw (7,0) node[below] {$7$} circle (2pt);
-    \draw[line width=1.5pt, red] (1,0) -- (7,0);
+    \draw[line width=1.5pt, red, opacity=0.6] (1,0) -- (7,0);
     \draw[line width=2.5pt, green!50!black] (1,0) -- (5,0);
     \fill (1,0) circle (2pt);
     \fill (5,0) circle (2pt);
+    \node[above] at (1,0) {$[$};
+    \node[above] at (5,0) {$]$};
+    \node[above] at (-2,0) {$( $};
+    \node[above] at (7,0) {$)$};
     \end{tikzpicture}
     \end{center}
-    \item Hợp câu b):
-    \[
-    \begin{aligned}
-        (-\infty; 3) \cup [0; 4] &= (-\infty; 4].
-    \end{aligned}
-    \]
+    \item[b)] Xác định $(-\infty; 3) \cup [0; 4]$:
+    Tập hợp $(-\infty; 3)$ bao gồm các số thực $x$ sao cho $x < 3$.
+    Tập hợp $[0; 4]$ bao gồm các số thực $x$ sao cho $0 \le x \le 4$.
+    Phép hợp là tập hợp các phần tử thuộc ít nhất một trong hai tập hợp.
+    Khi hợp hai tập này, ta lấy từ giá trị nhỏ nhất đến giá trị lớn nhất của các khoảng.
+    Các số $x$ thỏa mãn $x < 3$ hoặc $0 \le x \le 4$.
+    Điều này tương đương với $x \le 4$.
+    Vậy, $(-\infty; 3) \cup [0; 4] = (-\infty; 4]$.
     \begin{center}
     \begin{tikzpicture}
     \draw[->] (-3,0) -- (5,0) node[right] {$x$};
     \draw (3,0) node[below] {$3$} circle (2pt);
-    \draw[line width=1.5pt, blue] (-3,0) -- (3,0);
+    \draw[line width=1.5pt, blue, opacity=0.6] (-3,0) -- (3,0);
     \draw (0,0) node[below] {$0$} circle (2pt);
     \draw (4,0) node[below] {$4$} circle (2pt);
-    \draw[line width=1.5pt, red] (0,0) -- (4,0);
+    \draw[line width=1.5pt, red, opacity=0.6] (0,0) -- (4,0);
     \draw[line width=2.5pt, green!50!black] (-3,0) -- (4,0);
     \fill (4,0) circle (2pt);
+    \node[above] at (3,0) {$)$};
+    \node[above] at (0,0) {$[$};
+    \node[above] at (4,0) {$]$};
     \end{tikzpicture}
     \end{center}
-    \item Hiệu câu c):
-    \[
-    \begin{aligned}
-        [-1; 6) \setminus (2; 8) &= [-1; 2].
-    \end{aligned}
-    \]
+    \item[c)] Xác định $[-1; 6) \setminus (2; 8)$:
+    Tập hợp $[-1; 6)$ bao gồm các số thực $x$ sao cho $-1 \le x < 6$.
+    Tập hợp $(2; 8)$ bao gồm các số thực $x$ sao cho $2 < x < 8$.
+    Phép hiệu là tập hợp các phần tử thuộc $[-1; 6)$ nhưng không thuộc $(2; 8)$.
+    Tức là, ta lấy các số $x$ thỏa mãn $-1 \le x < 6$ và $x \notin (2; 8)$.
+    Điều kiện $x \notin (2; 8)$ có nghĩa là $x \le 2$ hoặc $x \ge 8$.
+    Kết hợp với $-1 \le x < 6$:
+    \begin{itemize}
+        \item Nếu $x \le 2$: ta có $-1 \le x \le 2$.
+        \item Nếu $x \ge 8$: không có giá trị nào thỏa mãn đồng thời $x < 6$ và $x \ge 8$.
+    \end{itemize}
+    Vậy, $[-1; 6) \setminus (2; 8) = [-1; 2]$.
     \begin{center}
     \begin{tikzpicture}
     \draw[->] (-2,0) -- (9,0) node[right] {$x$};
     \draw (-1,0) node[below] {$-1$} circle (2pt);
     \draw (6,0) node[below] {$6$} circle (2pt);
-    \draw[line width=1.5pt, blue] (-1,0) -- (6,0);
+    \draw[line width=1.5pt, blue, opacity=0.6] (-1,0) -- (6,0);
     \draw (2,0) node[below] {$2$} circle (2pt);
     \draw (8,0) node[below] {$8$} circle (2pt);
-    \draw[line width=1.5pt, red] (2,0) -- (8,0);
+    \draw[line width=1.5pt, red, opacity=0.6] (2,0) -- (8,0);
     \draw[line width=2.5pt, green!50!black] (-1,0) -- (2,0);
     \fill (-1,0) circle (2pt);
     \fill (2,0) circle (2pt);
+    \node[above] at (-1,0) {$[$};
+    \node[above] at (6,0) {$)$};
+    \node[above] at (2,0) {$($};
+    \node[above] at (8,0) {$)$};
     \end{tikzpicture}
     \end{center}
 \end{enumerate}
@@ -508,9 +557,9 @@ Hãy xác định các tập hợp sau và biểu diễn chúng trên trục s�
 
 \begin{emdahoc}
 \begin{itemize}
-    \item Khái niệm tập hợp, phần tử thuộc tập hợp, tập rỗng, tập hợp con, hai tập hợp bằng nhau và cách mô tả tập hợp.
-    \item Định nghĩa và ký hiệu về các phép toán giao, hợp, hiệu của hai tập hợp và phần bù của một tập con trong tập lớn hơn.
-    \item Mối quan hệ giữa các tập hợp số tự nhiên, số nguyên, số hữu tỉ, số thực và các tập con thường dùng của số thực (khoảng, đoạn, nửa khoảng).
+    \item Khái niệm tập hợp, phần tử thuộc tập hợp, tập rỗng, tập hợp con, hai tập hợp bằng nhau và các cách mô tả tập hợp (liệt kê phần tử, chỉ ra tính chất đặc trưng).
+    \item Định nghĩa và kí hiệu về các phép toán giao, hợp, hiệu của hai tập hợp và phần bù của một tập con trong tập lớn hơn.
+    \item Mối quan hệ giữa các tập hợp số tự nhiên ($\mathbb{N}$), số nguyên ($\mathbb{Z}$), số hữu tỉ ($\mathbb{Q}$), số thực ($\mathbb{R}$) và các tập con thường dùng của tập số thực (khoảng, đoạn, nửa khoảng).
 \end{itemize}
 \end{emdahoc}
 
@@ -524,5 +573,5 @@ Hãy xác định các tập hợp sau và biểu diễn chúng trên trục s�
 
 \begin{emcobiet}
 \paragraph{John Venn và Biểu đồ Venn}
-Khái niệm tập hợp và các phép toán trên tập hợp được mô tả trực quan sinh động nhất thông qua một công cụ đồ họa hình học vô cùng nổi tiếng gọi là Biểu đồ Venn (Venn diagram). Công cụ này được giới thiệu lần đầu tiên vào năm 1880 bởi nhà logic học và triết học người Anh John Venn (1834 – 1923) trong bài báo có tiêu đề "Về sự biểu diễn cơ học và biểu đồ của các mệnh đề và lý luận". Biểu đồ Venn sử dụng các đường cong khép kín (thường là hình tròn hoặc hình elip) nằm trong một hình chữ nhật lớn đại diện cho vũ trụ tập hợp để mô tả các mối quan hệ logic giữa các tập hợp như giao, hợp, hiệu và phần bù. Không chỉ dừng lại ở toán học thuần túy, biểu đồ Venn ngày nay đã trở thành một công cụ tư duy không thể thiếu trong giảng dạy logic, xác suất thống kê, khoa học máy tính và thậm chí cả trong các chiến lược tiếp thị, phân tích dữ liệu kinh doanh của các doanh nghiệp hiện đại.
+Khái niệm tập hợp và các phép toán trên tập hợp được mô tả trực quan sinh động nhất thông qua một công cụ đồ họa hình học vô cùng nổi tiếng gọi là \chuy{Biểu đồ Venn} (Venn diagram). Công cụ này được giới thiệu lần đầu tiên vào năm 1880 bởi nhà logic học và triết học người Anh \chuy{John Venn} (1834 – 1923) trong bài báo có tiêu đề "Về sự biểu diễn cơ học và biểu đồ của các mệnh đề và lý luận". Biểu đồ Venn sử dụng các đường cong khép kín (thường là hình tròn hoặc hình elip) nằm trong một hình chữ nhật lớn đại diện cho vũ trụ tập hợp để mô tả các mối quan hệ logic giữa các tập hợp như giao, hợp, hiệu và phần bù. Không chỉ dừng lại ở toán học thuần túy, biểu đồ Venn ngày nay đã trở thành một công cụ tư duy không thể thiếu trong giảng dạy logic, xác suất thống kê, khoa học máy tính và thậm chí cả trong các chiến lược tiếp thị, phân tích dữ liệu kinh doanh của các doanh nghiệp hiện đại.
 \end{emcobiet}
