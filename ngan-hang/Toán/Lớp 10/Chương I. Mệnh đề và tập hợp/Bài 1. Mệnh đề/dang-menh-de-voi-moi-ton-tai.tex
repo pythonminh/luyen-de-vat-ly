@@ -571,3 +571,56 @@
 		Phát biểu bằng lời của mệnh đề $B\colon$ \lq\lq$\exists x \in \mathbb{R}, x^2 = 2$\rq\rq\, là \lq\lq Có ít nhất một số thực mà bình phương của nó bằng $2$\rq\rq.
 		}
 \end{ex}
+\dangbt{Mệnh đề với mọi, tồn tại}
+\begin{ex}
+Khi phân tích các mệnh đề về số học, hãy nhận xét:
+\choiceTF
+{a) Với mọi số nguyên $k$, $k^2 - k$ chia hết cho 2.}
+{b) Tồn tại số nguyên tố $p$ sao cho $p^2 - 1$ là số nguyên tố.}
+{c) Với mọi số thực $x$, nếu $x > 1$ thì $x^2 > x$.}
+{d) Tồn tại số tự nhiên $n$ sao cho $n^2 + 1$ chia hết cho 3.}
+\loigiai{
+a) Đúng. Ta có $k^2 - k = k(k-1)$. Đây là tích của hai số nguyên liên tiếp, nên luôn có một số chẵn. Do đó, tích $k(k-1)$ luôn chia hết cho 2.
+b) Sai. Nếu $p$ là số nguyên tố, thì $p \ge 2$.
+Nếu $p=2$, $p^2-1 = 2^2-1 = 3$, là số nguyên tố.
+Nếu $p=3$, $p^2-1 = 3^2-1 = 8$, không là số nguyên tố.
+Nếu $p > 2$, thì $p$ là số nguyên tố lẻ. Khi đó $p^2-1 = (p-1)(p+1)$. Vì $p$ là số lẻ, $p-1$ và $p+1$ là hai số chẵn liên tiếp. Do đó $p-1 \ge 2$ và $p+1 \ge 4$. Vì $p-1$ và $p+1$ đều là số chẵn, nên $(p-1)(p+1)$ là hợp số (có ít nhất hai thừa số chẵn). Vậy không tồn tại số nguyên tố $p$ sao cho $p^2-1$ là số nguyên tố.
+c) Đúng. Nếu $x > 1$, ta nhân cả hai vế của bất đẳng thức $x > 1$ với $x$ (là số dương), ta được $x \cdot x > 1 \cdot x$, tức là $x^2 > x$.
+d) Sai. Xét các trường hợp của $n$ khi chia cho 3:
+Nếu $n \equiv 0 \pmod{3}$, thì $n^2+1 \equiv 0^2+1 \equiv 1 \pmod{3}$.
+Nếu $n \equiv 1 \pmod{3}$, thì $n^2+1 \equiv 1^2+1 \equiv 2 \pmod{3}$.
+Nếu $n \equiv 2 \pmod{3}$, thì $n^2+1 \equiv 2^2+1 \equiv 4+1 \equiv 5 \equiv 2 \pmod{3}$.
+Trong mọi trường hợp, $n^2+1$ không chia hết cho 3.
+}
+\end{ex}
+
+\dangbt{Mệnh đề với mọi, tồn tại}
+\begin{ex}
+Cho tập hợp $A = \{1, 2, 3, 4, 5\}$. Mệnh đề "$ \exists x \in A, x^2 - 5x + 6 = 0 $" đúng hay sai? Nếu đúng, hãy ghi giá trị của $x$ thỏa mãn (là số nguyên).
+\shortans{2}
+\loigiai{Ta cần tìm $x \in A$ sao cho $x^2 - 5x + 6 = 0$.
+Giải phương trình bậc hai: $x^2 - 5x + 6 = 0 \Leftrightarrow (x-2)(x-3) = 0$.
+Các nghiệm của phương trình là $x=2$ hoặc $x=3$.
+Cả hai giá trị $x=2$ và $x=3$ đều thuộc tập hợp $A$.
+Vì có ít nhất một giá trị $x \in A$ thỏa mãn điều kiện, mệnh đề là đúng.
+Giá trị $x$ thỏa mãn là 2 (hoặc 3, nhưng chỉ cần ghi một giá trị).}
+\end{ex}
+
+\dangbt{Mệnh đề với mọi, tồn tại}
+\begin{ex}
+Cho mệnh đề $P(n)$: "$n^2 - 1$ chia hết cho 3".
+a) Mệnh đề $\forall n \in \mathbb{N}^*, P(n)$ đúng hay sai? Giải thích.
+b) Mệnh đề $\exists n \in \mathbb{N}^*, P(n)$ đúng hay sai? Giải thích.
+\loigiai{
+a) Mệnh đề $\forall n \in \mathbb{N}^*, P(n)$ là "Với mọi số tự nhiên $n$ khác 0, $n^2 - 1$ chia hết cho 3".
+Mệnh đề này sai.
+Giải thích: Chọn $n=2 \in \mathbb{N}^*$. Khi đó $n^2 - 1 = 2^2 - 1 = 4 - 1 = 3$. $3$ chia hết cho $3$.
+Chọn $n=3 \in \mathbb{N}^*$. Khi đó $n^2 - 1 = 3^2 - 1 = 9 - 1 = 8$. $8$ không chia hết cho $3$.
+Vì có một giá trị $n=3$ làm cho mệnh đề $P(n)$ sai, nên mệnh đề $\forall n \in \mathbb{N}^*, P(n)$ sai.
+
+b) Mệnh đề $\exists n \in \mathbb{N}^*, P(n)$ là "Tồn tại số tự nhiên $n$ khác 0 sao cho $n^2 - 1$ chia hết cho 3".
+Mệnh đề này đúng.
+Giải thích: Chọn $n=1 \in \mathbb{N}^*$. Khi đó $n^2 - 1 = 1^2 - 1 = 0$. $0$ chia hết cho $3$.
+Vì có ít nhất một giá trị $n=1$ làm cho mệnh đề $P(n)$ đúng, nên mệnh đề $\exists n \in \mathbb{N}^*, P(n)$ đúng.
+}
+\end{ex}
