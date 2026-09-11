@@ -361,6 +361,15 @@
       "status": "ON",
       "password_sha256": "89e7e067ceee1ca82c78c255a8da3fa8b377af6a8fa228c007d733dc0ff0f5fb",
       "password_enc": "v1:x2GYSDHh_ILR"
+    },
+    {
+      "username": "Nguyễn Dương Nhã Thư",
+      "name": "Nguyễn Dương Nhã Thư",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "password_sha256": "cd446f5c322f63a0c9d71c3600ba11d22bf2dde2c11ad44ba4b8d2dbcb579f5a",
+      "password_enc": "v1:yGiaRBTj9ILT"
     }
   ]
 }
