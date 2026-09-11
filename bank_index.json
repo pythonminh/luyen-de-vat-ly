@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 158,
-  "total_questions": 11576,
+  "total_questions": 11582,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -120,17 +120,17 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Phủ định mệnh đề",
       "De": "Mệnh đề · Phủ định mệnh đề",
-      "questions": 3,
-      "count": 3,
+      "questions": 9,
+      "count": 9,
       "dang": {
-        "Phủ định mệnh đề": 3
+        "Phủ định mệnh đề": 9
       },
       "dang_kinds": {
         "Phủ định mệnh đề": {
           "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "DS": 2,
+          "TLN": 2,
+          "TL": 2
         }
       }
     },
