@@ -510,6 +510,8 @@ def preprocess(s: str) -> str:
     s = _replace_macro_one(s, "chuy", lambda b: "\n@@CHUY@@" + b + "@@/CHUY@@\n")
     s = _replace_macro_one(s, "luuy", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
     s = _replace_macro_one(s, "ghichu", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
+    # Hỗ trợ môi trường \begin{vd}...\end{vd} như một hộp Ví dụ.
+    s = _replace_env(s, "vd", lambda b: "\n@@EX@@" + b + "@@/EX@@\n")
     s = _replace_macro_one(s, "vidu", lambda b: "\n@@EX@@" + b + "@@/EX@@\n")
     s = _replace_macro_two(
         s,
