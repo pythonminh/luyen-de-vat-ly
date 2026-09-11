@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 158,
-  "total_questions": 11573,
+  "total_questions": 11576,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -97,17 +97,17 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Mệnh đề · Mệnh đề với mọi, tồn tại",
       "De": "Mệnh đề · Mệnh đề với mọi, tồn tại",
-      "questions": 3,
-      "count": 3,
+      "questions": 6,
+      "count": 6,
       "dang": {
-        "Mệnh đề với mọi, tồn tại": 3
+        "Mệnh đề với mọi, tồn tại": 6
       },
       "dang_kinds": {
         "Mệnh đề với mọi, tồn tại": {
           "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "DS": 1,
+          "TLN": 1,
+          "TL": 1
         }
       }
     },
