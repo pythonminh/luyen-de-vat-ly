@@ -5916,9 +5916,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 13,
+      "count": 13,
+      "dang": {
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 13
+      },
+      "dang_kinds": {
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 4
+        }
+      }
     }
   ]
 }
