@@ -5985,9 +5985,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 9,
+      "count": 9,
+      "dang": {
+        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": 9
+      },
+      "dang_kinds": {
+        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
