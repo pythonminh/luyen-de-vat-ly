@@ -5847,9 +5847,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": 15
+      },
+      "dang_kinds": {
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": {
+          "TN": 10,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 2
+        }
+      }
     }
   ]
 }
