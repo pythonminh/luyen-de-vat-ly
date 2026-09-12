@@ -5778,9 +5778,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 24,
+      "count": 24,
+      "dang": {
+        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": 24
+      },
+      "dang_kinds": {
+        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": {
+          "TN": 16,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
