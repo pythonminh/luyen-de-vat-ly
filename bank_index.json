@@ -5824,9 +5824,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Xây dựng quy trình thực hành an toàn": 16
+      },
+      "dang_kinds": {
+        "Xây dựng quy trình thực hành an toàn": {
+          "TN": 8,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
     }
   ]
 }
