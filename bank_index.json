@@ -5709,9 +5709,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 14,
+      "count": 14,
+      "dang": {
+        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 14
+      },
+      "dang_kinds": {
+        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
     }
   ]
 }
