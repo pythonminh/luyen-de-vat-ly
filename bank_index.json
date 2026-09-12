@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 171,
-  "total_questions": 11582,
+  "total_questions": 11616,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -693,6 +693,305 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
+      "questions": 14,
+      "count": 14,
+      "dang": {
+        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 14
+      },
+      "dang_kinds": {
+        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
+      "questions": 18,
+      "count": 18,
+      "dang": {
+        "An toàn khi sử dụng thiết bị điện": 18
+      },
+      "dang_kinds": {
+        "An toàn khi sử dụng thiết bị điện": {
+          "TN": 9,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
+      "questions": 17,
+      "count": 17,
+      "dang": {
+        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 17
+      },
+      "dang_kinds": {
+        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 6
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 3
+      },
+      "dang_kinds": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.",
+      "questions": 9,
+      "count": 9,
+      "dang": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": 9
+      },
+      "dang_kinds": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": {
+          "TN": 6,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Nhận biết nội quy và quy tắc an toàn": 15
+      },
+      "dang_kinds": {
+        "Nhận biết nội quy và quy tắc an toàn": {
+          "TN": 7,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
+      "questions": 13,
+      "count": 13,
+      "dang": {
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 13
+      },
+      "dang_kinds": {
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": 15
+      },
+      "dang_kinds": {
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
+      "questions": 9,
+      "count": 9,
+      "dang": {
+        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": 9
+      },
+      "dang_kinds": {
+        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": {
+          "TN": 7,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
+      "questions": 51,
+      "count": 51,
+      "dang": {
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 51
+      },
+      "dang_kinds": {
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
+          "TN": 47,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
+      "questions": 24,
+      "count": 24,
+      "dang": {
+        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": 24
+      },
+      "dang_kinds": {
+        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": {
+          "TN": 16,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Xây dựng quy trình thực hành an toàn": 16
+      },
+      "dang_kinds": {
+        "Xây dựng quy trình thực hành an toàn": {
+          "TN": 8,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": 15
+      },
+      "dang_kinds": {
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": {
+          "TN": 10,
+          "DS": 2,
+          "TLN": 1,
+          "TL": 2
         }
       }
     },
@@ -5604,305 +5903,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
-      "questions": 14,
-      "count": 14,
-      "dang": {
-        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 14
-      },
-      "dang_kinds": {
-        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
-      "questions": 18,
-      "count": 18,
-      "dang": {
-        "An toàn khi sử dụng thiết bị điện": 18
-      },
-      "dang_kinds": {
-        "An toàn khi sử dụng thiết bị điện": {
-          "TN": 9,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
-      "questions": 51,
-      "count": 51,
-      "dang": {
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 51
-      },
-      "dang_kinds": {
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
-          "TN": 47,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-van-dung-quy-tac-an-toan-khi-su-dung-cac-thiet-b.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.",
-      "questions": 24,
-      "count": 24,
-      "dang": {
-        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": 24
-      },
-      "dang_kinds": {
-        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": {
-          "TN": 16,
-          "DS": 8,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
-      "questions": 17,
-      "count": 17,
-      "dang": {
-        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 17
-      },
-      "dang_kinds": {
-        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": {
-          "TN": 6,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xay-dung-quy-trinh-thuc-hanh-an-toan.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xây dựng quy trình thực hành an toàn",
-      "questions": 16,
-      "count": 16,
-      "dang": {
-        "Xây dựng quy trình thực hành an toàn": 16
-      },
-      "dang_kinds": {
-        "Xây dựng quy trình thực hành an toàn": {
-          "TN": 8,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-xu-li-su-co-va-so-cuu-trong-phong-thuc-hanh.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Xử lí sự cố và sơ cứu trong phòng thực hành",
-      "questions": 15,
-      "count": 15,
-      "dang": {
-        "Xử lí sự cố và sơ cứu trong phòng thực hành": 15
-      },
-      "dang_kinds": {
-        "Xử lí sự cố và sơ cứu trong phòng thực hành": {
-          "TN": 10,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 2
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.",
-      "questions": 9,
-      "count": 9,
-      "dang": {
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": 9
-      },
-      "dang_kinds": {
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-noi-quy-va-quy-tac-an-toan.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
-      "questions": 15,
-      "count": 15,
-      "dang": {
-        "Nhận biết nội quy và quy tắc an toàn": 15
-      },
-      "dang_kinds": {
-        "Nhận biết nội quy và quy tắc an toàn": {
-          "TN": 7,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
-      "questions": 13,
-      "count": 13,
-      "dang": {
-        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 13
-      },
-      "dang_kinds": {
-        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-moi-nguy-va-danh-gia-muc-do-rui-ro.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
-      "questions": 15,
-      "count": 15,
-      "dang": {
-        "Phân tích mối nguy và đánh giá mức độ rủi ro": 15
-      },
-      "dang_kinds": {
-        "Phân tích mối nguy và đánh giá mức độ rủi ro": {
-          "TN": 6,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 4
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-giai-nghia-cac-ki-hieu-ki-thuat-va-bien-canh-bao-2.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 3
-      },
-      "dang_kinds": {
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương I. Mở đầu",
-      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
-      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
-      "questions": 9,
-      "count": 9,
-      "dang": {
-        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": 9
-      },
-      "dang_kinds": {
-        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
         }
       }
     }
