@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 171,
-  "total_questions": 11616,
+  "total_files": 172,
+  "total_questions": 11644,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3690,6 +3690,29 @@
           "DS": 4,
           "TLN": 0,
           "TL": 2
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Ôn tập bài 1.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Ôn tập bài 1.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Ôn tập bài 1.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương I. Vật lí nhiệt",
+      "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
+      "questions": 28,
+      "count": 28,
+      "dang": {
+        "Chưa phân dạng": 28
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 18,
+          "DS": 4,
+          "TLN": 6,
+          "TL": 0
         }
       }
     },
