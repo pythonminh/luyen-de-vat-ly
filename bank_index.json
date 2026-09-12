@@ -5893,9 +5893,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết nội quy và quy tắc an toàn",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Nhận biết nội quy và quy tắc an toàn": 15
+      },
+      "dang_kinds": {
+        "Nhận biết nội quy và quy tắc an toàn": {
+          "TN": 7,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 4
+        }
+      }
     }
   ]
 }
