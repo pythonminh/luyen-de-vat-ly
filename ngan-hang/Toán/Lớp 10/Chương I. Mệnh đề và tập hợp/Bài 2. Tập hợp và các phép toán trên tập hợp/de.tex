@@ -698,17 +698,23 @@ Phần tử chung của hai tập hợp $A$ và $B$ là 0 và 1. Do đó, $A\cap
 % ID: T10C1B2-15-TN
 % Mức: NB
 \dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
-\begin{ex}
-% ID: T10C1B2-15-TN
-% Mức: NB
-Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Venn như sau. Khẳng định nào sau đây $\textbf{sai}$?
+\begin{ex}Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Venn như hình vẽ dưới đây. Khẳng định nào sau đây là $\textbf{sai}$?
 \choice
 {$B \subset C_X A$}
-{$A \cap B=\varnothing$}
+{$A \cap B = \varnothing$}
 {$A \subset C_X B$}
-{\True $A \cup B=X$}
+{\True $A \cup B = X$}
 \loigiai{
-Nhìn biểu đồ, ta thấy $A \cup B \neq X$.
+Để xác định khẳng định sai, chúng ta sẽ phân tích từng phương án dựa trên biểu đồ Venn đã cho.
+*   **Phương án A:** $B \subset C_X A$.
+    $C_X A$ là phần bù của $A$ trong $X$, tức là tập hợp các phần tử thuộc $X$ nhưng không thuộc $A$. Nhìn vào biểu đồ Venn, ta thấy toàn bộ tập hợp $B$ nằm hoàn toàn bên ngoài tập hợp $A$ và nằm trong $X$. Do đó, mọi phần tử của $B$ đều thuộc $C_X A$. Khẳng định $B \subset C_X A$ là đúng.
+*   **Phương án B:** $A \cap B = \varnothing$.
+    $A \cap B$ là giao của hai tập hợp $A$ và $B$, tức là tập hợp các phần tử chung của $A$ và $B$. Nhìn vào biểu đồ Venn, ta thấy tập hợp $A$ và tập hợp $B$ không có phần tử chung nào (hai hình tròn không giao nhau). Do đó, $A \cap B = \varnothing$. Khẳng định $A \cap B = \varnothing$ là đúng.
+*   **Phương án C:** $A \subset C_X B$.
+    $C_X B$ là phần bù của $B$ trong $X$, tức là tập hợp các phần tử thuộc $X$ nhưng không thuộc $B$. Nhìn vào biểu đồ Venn, ta thấy toàn bộ tập hợp $A$ nằm hoàn toàn bên ngoài tập hợp $B$ và nằm trong $X$. Do đó, mọi phần tử của $A$ đều thuộc $C_X B$. Khẳng định $A \subset C_X B$ là đúng.
+*   **Phương án D:** $A \cup B = X$.
+    $A \cup B$ là hợp của hai tập hợp $A$ và $B$, tức là tập hợp các phần tử thuộc $A$ hoặc thuộc $B$ (hoặc cả hai). Nhìn vào biểu đồ Venn, ta thấy rằng có một phần của tập hợp $X$ nằm bên ngoài cả $A$ và $B$. Điều này có nghĩa là $A \cup B$ không bao phủ toàn bộ $X$. Do đó, $A \cup B \neq X$. Khẳng định $A \cup B = X$ là sai.
+Vậy, khẳng định sai là $A \cup B = X$.
 }
 \end{ex}
 
