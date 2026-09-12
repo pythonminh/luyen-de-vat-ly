@@ -5962,9 +5962,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 3
+      },
+      "dang_kinds": {
+        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
