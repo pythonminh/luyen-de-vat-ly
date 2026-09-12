@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 162,
+  "total_files": 163,
   "total_questions": 11582,
   "lessons": [
     {
@@ -5791,6 +5791,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-voi-nguon-nhiet-va-nguy-co-chay-no.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
