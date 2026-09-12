@@ -5939,9 +5939,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích mối nguy và đánh giá mức độ rủi ro",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": 15
+      },
+      "dang_kinds": {
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 4
+        }
+      }
     }
   ]
 }
