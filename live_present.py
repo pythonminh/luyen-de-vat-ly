@@ -73,6 +73,42 @@ def _public_q(q, show_sol):
     return p
 
 
+def _want_sol(data, live, room):
+    """Heartbeat ADMIN không gửi show_sol thì giữ trạng thái đã chiếu đáp án."""
+    data = data if isinstance(data, dict) else {}
+    live = live if isinstance(live, dict) else {}
+    if "show_sol" in data:
+        return bool(data.get("show_sol")) and bool(live.get("checked"))
+    return bool((room or {}).get("show_sol"))
+
+
+def _teacher_peek_payload(q):
+    if not q:
+        return None
+    p = base.question_payload(q)
+    kind = str(p.get("kind") or "").upper()
+    labs = "ABCDEFGH"
+    hint = ""
+    if kind == "TN":
+        hint = "".join(
+            labs[i]
+            for i, o in enumerate(p.get("options") or [])
+            if o.get("correct") and i < len(labs)
+        )
+    elif kind == "DS":
+        parts = []
+        for i, s in enumerate(p.get("statements") or []):
+            lab = labs[i] if i < len(labs) else str(i + 1)
+            parts.append(lab + ("Đ" if s.get("correct") else "S"))
+        hint = " ".join(parts)
+    elif kind == "TLN":
+        hint = str(p.get("answer") or "").strip()
+    else:
+        raw = re.sub(r"<[^>]+>", " ", str(p.get("solution") or ""))
+        hint = re.sub(r"\s+", " ", raw).strip()[:180]
+    return {"hint": hint or "—", "solution": p.get("solution") or "", "kind": kind}
+
+
 def _sanitize_live(raw):
     d = raw if isinstance(raw, dict) else {}
     live = {"tn": None, "ds": [], "text": "", "checked": False, "ok": None}
@@ -239,8 +275,89 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
             "statements": [],
             "solution": "",
         },
+        "dang_nav": [],
+        "dang_has_prev": idx > 0,
+        "dang_has_next": idx < len(secs) - 1,
         "updated": _now(),
     }, ""
+
+
+def _quiz_nav(qs, ids):
+    titles = []
+    dang_nav = []
+    seen = set()
+    n = len(ids)
+    for i, qid in enumerate(ids):
+        q = qs.get(qid) or {}
+        kind = str(q.get("kind") or "?").upper()
+        dang = base._dang_name(q)
+        titles.append("Câu " + str(i + 1) + "/" + str(n) + " · " + kind)
+        if dang not in seen:
+            seen.add(dang)
+            dang_nav.append({"name": dang, "pos": i})
+    return titles, dang_nav
+
+
+def _dang_index(dang_nav, cur):
+    di = 0
+    for i, d in enumerate(dang_nav or []):
+        try:
+            if int(d.get("pos") or 0) <= int(cur or 0):
+                di = i
+        except (TypeError, ValueError):
+            pass
+    return di
+
+
+def _dang_step(path, ids, cur, delta, zoom):
+    try:
+        qs = _lesson_qs(path)
+    except Exception as e:
+        return None, str(e)
+    ids = list(ids or [])
+    if not ids:
+        return None, "Không chuyển được dạng."
+    cur = max(0, min(len(ids) - 1, int(cur or 0)))
+    _titles, dang_nav = _quiz_nav(qs, ids)
+    di = _dang_index(dang_nav, cur)
+    nxt = di + int(delta)
+    if 0 <= nxt < len(dang_nav):
+        pos = int(dang_nav[nxt].get("pos") or 0)
+        return _snapshot(False, zoom, False, {"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+    ordered = [qs[k] for k in sorted(qs.keys())] if qs else []
+    all_names, _cnts = base.dang_names_of(ordered)
+    cur_name = base._dang_name(qs.get(ids[cur]) or {})
+    try:
+        gi = all_names.index(cur_name)
+    except ValueError:
+        return None, "Hết dạng."
+    ni = gi + int(delta)
+    if ni < 0 or ni >= len(all_names):
+        return None, "Hết dạng."
+    new_dang = all_names[ni]
+    kinds = {str((qs.get(i) or {}).get("kind") or "").upper() for i in ids}
+    kinds.discard("")
+    new_ids = []
+    for q in ordered:
+        if base._dang_name(q) != new_dang:
+            continue
+        if kinds and str(q.get("kind") or "").upper() not in kinds:
+            continue
+        try:
+            new_ids.append(int(q["idx"]))
+        except (TypeError, ValueError, KeyError):
+            pass
+    if not new_ids:
+        for q in ordered:
+            if base._dang_name(q) != new_dang:
+                continue
+            try:
+                new_ids.append(int(q["idx"]))
+            except (TypeError, ValueError, KeyError):
+                pass
+    if not new_ids:
+        return None, "Dạng này chưa có câu để chiếu."
+    return _snapshot(False, zoom, False, {"quiz_path": path, "quiz_ids": new_ids, "quiz_pos": 0})
 
 
 def _pos_after_ids_change(old_ids, old_pos, new_ids):
@@ -321,11 +438,26 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
         return None, "Không tải được câu hiện tại."
     show = bool(show_sol)
     keys = bool(show or reveal)
+    titles, dang_nav = _quiz_nav(qs, ids)
+    di = _dang_index(dang_nav, pos)
+    ordered = [qs[k] for k in sorted(qs.keys())] if qs else []
+    all_names, _cnts = base.dang_names_of(ordered)
+    cur_name = base._dang_name(q)
+    try:
+        gi = all_names.index(cur_name) if all_names else -1
+    except ValueError:
+        gi = -1
+    has_prev = di > 0 or gi > 0
+    has_next = (di < len(dang_nav) - 1) or (gi >= 0 and gi < len(all_names) - 1)
     return {
         "path": path,
         "ids": ids,
         "pos": pos,
         "total": len(ids),
+        "sec_titles": titles,
+        "dang_nav": dang_nav,
+        "dang_has_prev": has_prev,
+        "dang_has_next": has_next,
         "show_sol": show,
         "zoom": _zoom(zoom),
         "q": _public_q(q, keys),
@@ -345,6 +477,16 @@ def _room_out(room, include_q=True):
         "host": room.get("host") or "",
         "live": room.get("live") or {},
         "secs": list(room.get("sec_titles") or []),
+        "dangs": list(room.get("dang_nav") or []),
+        "dang_has_prev": bool(room.get("dang_has_prev")),
+        "dang_has_next": bool(room.get("dang_has_next")),
+        "ids_sig": str(len(list(room.get("ids") or [])))
+        + ":"
+        + str((room.get("ids") or [None])[0])
+        + ":"
+        + str((room.get("ids") or [None])[-1])
+        + ":"
+        + str(room.get("path") or ""),
     }
     if include_q:
         d["q"] = room.get("q") or {}
@@ -392,6 +534,10 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
             json.dumps(room.get("live") or {}, sort_keys=True, ensure_ascii=False),
         )
         room.update(snap)
+        qk = str((snap.get("q") or {}).get("kind") or "")
+        if qk in {"LT", "PP"}:
+            room["ids"] = []
+            room["dang_nav"] = []
         room["live"] = live
         room["host"] = hid
         room["code"] = code
@@ -418,10 +564,11 @@ def api_present_start():
         return jsonify(ok=False, error="Hãy đăng nhập để mở phòng chiếu."), 401
     data = dict(request.get_json(silent=True) or {})
     live = _sanitize_live(data.get("live"))
-    want_sol = bool(data.get("show_sol")) and bool(live.get("checked"))
     want_pre = _norm_code(data.get("code") or session.get("present_code") or "")
     with _LOCK:
-        _keep_room_cursor(data, _ROOMS.get(want_pre))
+        room_pre = _ROOMS.get(want_pre)
+        _keep_room_cursor(data, room_pre)
+        want_sol = _want_sol(data, live, room_pre)
     snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         return jsonify(ok=False, error=err), 400
@@ -473,9 +620,10 @@ def api_present_push():
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     live = _sanitize_live(data.get("live"))
-    want_sol = bool(data.get("show_sol")) and bool(live.get("checked"))
     with _LOCK:
-        _keep_room_cursor(data, _ROOMS.get(code))
+        room_pre = _ROOMS.get(code)
+        _keep_room_cursor(data, room_pre)
+        want_sol = _want_sol(data, live, room_pre)
     snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         with _LOCK:
@@ -536,6 +684,27 @@ def api_present_state():
                 room["sec_titles"] = list(snap.get("sec_titles") or [])
         out = _room_out(room)
     return jsonify(out)
+
+
+@base.app.post("/api/present/peek")
+def api_present_peek():
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or request.args.get("code") or "")
+    token = str(data.get("token") or request.args.get("token") or "")
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token:
+            return jsonify(ok=False, error="Chỉ máy thầy xem gợi ý được."), 401
+        qk = str((room.get("q") or {}).get("kind") or "")
+        pos = int(room.get("pos") or 0)
+        raw = _raw_q_from_room(room) if qk not in {"LT", "PP"} else None
+    if qk in {"LT", "PP"}:
+        return jsonify(ok=True, kind=qk, hint="", solution="", pos=pos)
+    peek = _teacher_peek_payload(raw)
+    if not peek:
+        return jsonify(ok=False, error="Không tải được đáp án."), 400
+    peek.update(ok=True, pos=pos)
+    return jsonify(peek)
 
 
 def _tts_speak_letters(x: str) -> str:
@@ -637,6 +806,7 @@ def api_present_step():
     code = _norm_code(data.get("code") or "")
     token = str(data.get("token") or "")
     have_abs = data.get("pos") is not None and str(data.get("pos")) != ""
+    mode = str(data.get("mode") or "q").strip().lower()
     try:
         delta = int(data.get("delta") or 0)
     except (TypeError, ValueError):
@@ -647,7 +817,7 @@ def api_present_step():
         abs_pos = None
         have_abs = False
     if not code or (not have_abs and delta not in (-1, 1)):
-        return jsonify(ok=False, error="Thiếu hướng chuyển dạng."), 400
+        return jsonify(ok=False, error="Thiếu hướng chuyển câu / dạng."), 400
     with _LOCK:
         room = _ROOMS.get(code)
         if not room or str(room.get("token") or "") != token:
@@ -666,6 +836,8 @@ def api_present_step():
         pos = max(0, min(max(1, int((room or {}).get("total") or 1)) - 1, pos))
         kind = "pp" if qk == "PP" else "lt"
         snap, err = _comp_snapshot(kind, path, pos, zoom)
+    elif ids and mode == "dang" and not have_abs:
+        snap, err = _dang_step(path, ids, cur, delta, zoom)
     elif ids:
         pos = max(0, min(len(ids) - 1, pos))
         snap, err = _snapshot(False, zoom, reveal=False, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
@@ -805,10 +977,18 @@ def present_watch(code=""):
         "<div class='cinema-q'>"
         "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát / dạng trước'>✕</button>"
         "<div class='cinemahost' id='cinemaHost' hidden>"
-        "<button type='button' id='secPrev' title='Dạng trước'>◀</button>"
-        "<select id='secJump' aria-label='Chọn dạng'></select>"
-        "<button type='button' id='secNext' title='Dạng sau'>▶</button>"
+        "<div class='cinema-navrow' id='qNav'>"
+        "<button type='button' class='cinema-tool' id='qPrev' title='Câu trước'>◀ Câu</button>"
+        "<select id='secJump' aria-label='Chọn câu'></select>"
+        "<button type='button' class='cinema-tool' id='qNext' title='Câu sau'>Câu ▶</button>"
+        "</div>"
+        "<div class='cinema-navrow' id='dangNav' hidden>"
+        "<button type='button' class='cinema-tool' id='secPrev' title='Dạng trước'>◀ Dạng</button>"
+        "<select id='dangJump' aria-label='Chọn dạng'></select>"
+        "<button type='button' class='cinema-tool' id='secNext' title='Dạng sau'>Dạng ▶</button>"
+        "</div>"
         "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận</button>"
+        "<button type='button' class='cinema-tool' id='peekToggle' hidden>💡 Gợi ý</button>"
         "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "<button type='button' class='cinema-tool spk-f'>Nữ</button>"
@@ -825,6 +1005,7 @@ def present_watch(code=""):
         "</div>"
         "<img src='" + qr_src + "' width='72' height='72' alt='QR vào chiếu'>"
         "<span>Quét · " + code + "</span></div>"
+        "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
         "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
@@ -1227,6 +1408,7 @@ let lastDrawKey='';
 let lastQ=null;
 let lastLive={};
 let lastShowSol=false;
+let lastPeekPos=-1;
 function hostTok(){
   try{
     const p=JSON.parse(localStorage.getItem('ldvlPresent')||'null');
@@ -1234,34 +1416,64 @@ function hostTok(){
   }catch(e){}
   return null;
 }
-function paintSecNav(pos,total,secs,kind){
+function paintSecNav(pos,total,secs,kind,dangs,dangPrev,dangNext){
   const bar=document.getElementById('cinemaHost');
   const jump=document.getElementById('secJump');
+  const qPrev=document.getElementById('qPrev'), qNext=document.getElementById('qNext');
   const a=document.getElementById('secPrev'), b=document.getElementById('secNext');
+  const dangJump=document.getElementById('dangJump');
+  const dangNav=document.getElementById('dangNav');
+  const qNav=document.getElementById('qNav');
   const on=!!hostTok();
   if(bar) bar.hidden=!on;
-  if(a) a.hidden=!on;
-  if(b) b.hidden=!on;
   if(!on){paintHostTools();return;}
   const n=Math.max(1, total||1);
   const p=Math.max(0, Math.min(n-1, pos||0));
-  if(a) a.disabled=!(p>0);
-  if(b) b.disabled=!(p<n-1);
-  if(!jump) return;
-  const lab={PP:'Dạng',LT:'Mục'}[String(kind||'').toUpperCase()]||'Câu';
+  const k=String(kind||'').toUpperCase();
+  const quiz=k && k!=='LT' && k!=='PP';
+  if(qNav) qNav.hidden=false;
+  if(qPrev){ qPrev.hidden=!on; qPrev.disabled=!(p>0); qPrev.textContent=quiz?'◀ Câu':'◀ Mục'; qPrev.title=quiz?'Câu trước':'Mục trước'; }
+  if(qNext){ qNext.hidden=!on; qNext.disabled=!(p<n-1); qNext.textContent=quiz?'Câu ▶':'Mục ▶'; qNext.title=quiz?'Câu sau':'Mục sau'; }
+  const lab={PP:'Dạng',LT:'Mục'}[k]||'Câu';
   let titles=Array.isArray(secs)&&secs.length?secs.map(function(t,i){return String(t||'').trim()||(lab+' '+(i+1));}):null;
   if(!titles) titles=Array.from({length:n},function(_,i){return lab+' '+(i+1)+' / '+n;});
-  const fp=titles.join('\x1f')+'\x1f'+n;
-  if(jump.dataset.fp!==fp){
-    jump.innerHTML=titles.map(function(t,i){return '<option value="'+i+'">'+E((i+1)+'. '+t)+'</option>';}).join('');
-    jump.dataset.fp=fp;
+  if(jump){
+    const fp=titles.join('\x1f')+'\x1f'+n;
+    if(jump.dataset.fp!==fp){
+      jump.innerHTML=titles.map(function(t,i){return '<option value="'+i+'">'+E((i+1)+'. '+t)+'</option>';}).join('');
+      jump.dataset.fp=fp;
+    }
+    jump.value=String(p);
   }
-  jump.value=String(p);
+  const rows=Array.isArray(dangs)?dangs:[];
+  if(dangNav) dangNav.hidden=!quiz;
+  if(quiz && dangJump){
+    const dfp=rows.map(function(d){return String(d.pos)+'\x1f'+String(d.name||'');}).join('\n');
+    if(dangJump.dataset.fp!==dfp){
+      dangJump.innerHTML=rows.map(function(d,i){
+        const nm=String(d.name||('Dạng '+(i+1))).trim()||('Dạng '+(i+1));
+        return '<option value="'+Number(d.pos||0)+'">'+(i+1)+'. '+E(nm)+'</option>';
+      }).join('');
+      dangJump.dataset.fp=dfp;
+    }
+    let di=0;
+    for(let i=0;i<rows.length;i++) if(p>=Number(rows[i].pos||0)) di=i;
+    if(rows[di]) dangJump.value=String(rows[di].pos||0);
+  }
+  if(a){ a.hidden=!quiz; a.disabled=quiz?!dangPrev:true; }
+  if(b){ b.hidden=!quiz; b.disabled=quiz?!dangNext:true; }
   paintHostTools();
 }
 function hideCinemaAi(){
   const pane=document.getElementById('cinemaAi');
   if(pane) pane.hidden=true;
+  hideCinemaPeek();
+}
+function hideCinemaPeek(){
+  const el=document.getElementById('cinemaPeek');
+  if(el){ el.hidden=true; el.innerHTML=''; }
+  const b=document.getElementById('peekToggle');
+  if(b) b.classList.remove('on');
 }
 function isQuizQ(q){
   const k=String((q&&q.kind)||'').toUpperCase();
@@ -1288,6 +1500,7 @@ function paintHostTools(){
   document.body.classList.toggle('is-host', on);
   document.body.classList.toggle('sol-on', !!lastShowSol);
   const chk=document.getElementById('chkToggle');
+  const peek=document.getElementById('peekToggle');
   const sol=document.getElementById('solToggle');
   const ai=document.getElementById('aiToggle');
   if(chk){
@@ -1295,6 +1508,11 @@ function paintHostTools(){
     chk.disabled=done || !cinemaReady();
     chk.textContent=done?'✅ Đã xác nhận':'✅ Xác nhận';
     chk.title=done?'Đã khóa lựa chọn':(cinemaReady()?'Khóa đáp án lớp chọn':'Hãy chọn đủ đáp án trước.');
+  }
+  if(peek){
+    peek.hidden=!quiz;
+    peek.disabled=false;
+    peek.title='Chỉ máy thầy — lớp không thấy cho đến khi bấm Đáp án.';
   }
   if(sol){
     sol.hidden=!quiz;
@@ -1366,11 +1584,13 @@ function liveStudent(q, live){
   if(k==='DS') return (live.ds||[]).map(function(x){return x===true?'Đ':(x===false?'S':'')}).join('');
   return String(live.text||'').trim();
 }
-async function stepDang(delta){
+async function stepDang(delta, mode){
   const p=hostTok(); if(!p) return;
   hideCinemaAi();
-  await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify({code:p.code,token:p.token,delta:delta})});
+  const r=await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:p.code,token:p.token,delta:delta,mode:mode||'q'})});
+  const d=await r.json().catch(function(){return {}});
+  if(d&&d.error) alert(d.error);
   lastVer=-1; tick();
 }
 async function jumpPos(pos){
@@ -1555,10 +1775,14 @@ async function tick(){
     lastQ=d.q||null;
     lastLive=d.live||{};
     lastShowSol=!!d.show_sol;
+    if(typeof d.pos==='number' && d.pos!==lastPeekPos){
+      if(lastPeekPos>=0) hideCinemaPeek();
+      lastPeekPos=d.pos;
+    }
     if(err) err.textContent='';
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
-    paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'');
+    paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next);
     bindCinemaPick();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
@@ -1567,14 +1791,36 @@ async function tick(){
 tick();
 setInterval(tick,2500);
 (function(){
+  const qPrev=document.getElementById('qPrev'), qNext=document.getElementById('qNext');
   const a=document.getElementById('secPrev'), b=document.getElementById('secNext'), jump=document.getElementById('secJump');
-  if(a) a.onclick=function(){stepDang(-1)};
-  if(b) b.onclick=function(){stepDang(1)};
+  const dangJump=document.getElementById('dangJump');
+  if(qPrev) qPrev.onclick=function(){stepDang(-1)};
+  if(qNext) qNext.onclick=function(){stepDang(1)};
+  if(a) a.onclick=function(){stepDang(-1,'dang')};
+  if(b) b.onclick=function(){stepDang(1,'dang')};
   if(jump) jump.onchange=function(){jumpPos(parseInt(jump.value,10)||0)};
+  if(dangJump) dangJump.onchange=function(){jumpPos(parseInt(dangJump.value,10)||0)};
   const x=document.getElementById('cinemaExit');
   if(x) x.onclick=function(){
     if(hostTok()){ stepDang(-1); return; }
     location.href='/xem';
+  };
+  const peekBtn=document.getElementById('peekToggle');
+  if(peekBtn) peekBtn.onclick=async function(){
+    const el=document.getElementById('cinemaPeek');
+    if(!el) return;
+    if(!el.hidden){ hideCinemaPeek(); return; }
+    const p=hostTok(); if(!p) return;
+    const r=await fetch('/api/present/peek',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({code:p.code,token:p.token})});
+    const d=await r.json().catch(function(){return {}});
+    if(!d||!d.ok){alert((d&&d.error)||'Không xem được gợi ý.');return;}
+    const sol=d.solution?('<div class="cinema-peek-sol">'+d.solution+'</div>'):'';
+    el.innerHTML='<b>💡 Chỉ thầy</b> · lớp chưa thấy · <span>'+E(d.hint||'—')+'</span>'+sol;
+    el.hidden=false;
+    peekBtn.classList.add('on');
+    if(window.ldvlTypeset) window.ldvlTypeset(el);
+    else if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([el]).catch(function(){});
   };
   const sol=document.getElementById('solToggle');
   if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
@@ -1668,6 +1914,67 @@ function solVisible(){
   const sol=document.getElementById('solbox');
   return !!(sol && sol.style.display==='block');
 }
+function adminQuizPos(){
+  const items=document.querySelectorAll('.palette .pitem');
+  if(!items.length) return null;
+  for(let i=0;i<items.length;i++){
+    if(items[i].classList.contains('pcur')) return i;
+  }
+  return null;
+}
+function adminGoPos(pos){
+  pos=Number(pos);
+  if(!(pos>=0)) return;
+  const page=document.querySelector('.ltpage[data-de-path]');
+  if(page){
+    const jump=document.getElementById('ltjump');
+    if(!jump||jump.options.length<2) return;
+    const idx=Math.max(0, Math.min(jump.options.length-2, pos));
+    const opt=jump.options[idx+1];
+    if(!opt) return;
+    if(jump.selectedIndex===idx+1) return;
+    window.__ldvlFollowRoom=true;
+    jump.selectedIndex=idx+1;
+    jump.dispatchEvent(new Event('change'));
+    window.__ldvlFollowRoom=false;
+    return;
+  }
+  if(!document.querySelector('.palette .pitem')) return;
+  const cur=adminQuizPos();
+  if(cur===pos) return;
+  window.__ldvlFollowing=true;
+  location.href='/practice/jump/'+pos;
+}
+async function followPresentRoom(){
+  if(!P||!P.code||document.hidden||window.__ldvlFollowing) return;
+  try{
+    const r=await fetch('/api/present/state?code='+encodeURIComponent(P.code),{credentials:'same-origin'});
+    const d=await r.json().catch(function(){return {}});
+    if(!d||!d.ok) return;
+    if(typeof d.pos!=='number') return;
+    window.__ldvlRoomPos=d.pos;
+    if(d.ids_sig && d.ids_sig!==window.__ldvlIdsSig){
+      const first=!window.__ldvlIdsSig;
+      window.__ldvlIdsSig=d.ids_sig;
+      if(!first && document.querySelector('.palette .pitem')){
+        window.__ldvlFollowing=true;
+        location.href='/practice/jump/'+(d.pos||0);
+        return;
+      }
+    }
+    const qk=String((d.q&&d.q.kind)||'').toUpperCase();
+    const page=document.querySelector('.ltpage[data-de-path]');
+    if(page){
+      if(qk!=='LT'&&qk!=='PP') return;
+      adminGoPos(d.pos);
+      return;
+    }
+    if(document.querySelector('.palette .pitem')){
+      if(qk==='LT'||qk==='PP') return;
+      adminGoPos(d.pos);
+    }
+  }catch(e){}
+}
 function collectLive(){
   const q=window.Q||{};
   const live={tn:null,ds:[],text:'',checked:!!window.checked,ok:null};
@@ -1689,7 +1996,7 @@ function collectLive(){
 }
 function payload(opts){
   opts=opts||{};
-  const o={code:P&&P.code,token:P&&P.token,show_sol:!!(window.checked && solVisible()),zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
+  const o={code:P&&P.code,token:P&&P.token,zoom:typeof qZoom==='number'?qZoom:1,live:collectLive()};
   const page=document.querySelector('.ltpage[data-de-path]');
   if(page){
     o.comp_kind=page.getAttribute('data-lt-kind')||'lt';
@@ -1839,10 +2146,10 @@ async function presentStep(delta){
     if(d&&d.ok){
       if(typeof d.pos==='number'){
         window.__ldvlQuizPos=d.pos;
-        window.__ldvlQuizTouched=true;
+        window.__ldvlRoomPos=d.pos;
+        window.__ldvlQuizTouched=false;
+        adminGoPos(d.pos);
       }
-      window.__ldvlPresentFp='';
-      await presentPush({force:true});
     }
   }catch(e){}
 }
@@ -1890,9 +2197,11 @@ async function presentPush(opts){
   opts=opts||{};
   if(!P||!P.code||P._busy) return;
   if(!opts.force && document.hidden) return;
+  const ap=adminQuizPos();
+  if(!opts.force && typeof ap==='number' && typeof window.__ldvlRoomPos==='number' && ap!==window.__ldvlRoomPos) return;
   const body=payload(opts);
   if(opts.force) body.force_kind=true;
-  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',quiz_path:body.quiz_path||'',quiz_ids:body.quiz_ids||[],quiz_pos:body.quiz_pos,show_sol:!!body.show_sol,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
+  const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',quiz_path:body.quiz_path||'',quiz_ids:body.quiz_ids||[],quiz_pos:body.quiz_pos,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
   if(!opts.force && fp===window.__ldvlPresentFp) return;
   try{
     const r=await fetch('/api/present/push',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
@@ -1995,11 +2304,13 @@ function mountBtn(){
       presentStep(-1);
     }
   },true);
-  if(P&&P.code){showBar(P);presentPush();}
+  if(P&&P.code){showBar(P);presentPush();followPresentRoom();}
   setInterval(function(){if(P&&P.code && !document.hidden) presentPush();},8000);
+  setInterval(function(){if(P&&P.code && !document.hidden) followPresentRoom();},2000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
   const jump=document.getElementById('ltjump');
   if(jump) jump.addEventListener('change', function(){
+    if(window.__ldvlFollowRoom) return;
     if(jump.value) window.__ldvlPresentSec=jump.value;
     window.__ldvlSecTouched=true;
     window.__ldvlPresentFp='';
