@@ -5755,9 +5755,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 51,
+      "count": 51,
+      "dang": {
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 51
+      },
+      "dang_kinds": {
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
+          "TN": 47,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
