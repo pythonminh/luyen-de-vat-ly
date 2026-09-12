@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 159,
+  "total_files": 160,
   "total_questions": 11582,
   "lessons": [
     {
@@ -5722,6 +5722,19 @@
           "TL": 4
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-thiet-bi-dien.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng thiết bị điện",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
