@@ -705,103 +705,10 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
-      "questions": 185,
-      "count": 185,
-      "dang": {
-        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 14,
-        "An toàn khi sử dụng thiết bị điện": 18,
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 17,
-        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": 24,
-        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 17,
-        "Xây dựng quy trình thực hành an toàn": 16,
-        "Xử lí sự cố và sơ cứu trong phòng thực hành": 15,
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": 9,
-        "Nhận biết nội quy và quy tắc an toàn": 15,
-        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 13,
-        "Phân tích mối nguy và đánh giá mức độ rủi ro": 15,
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 3,
-        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": 9
-      },
-      "dang_kinds": {
-        "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 4
-        },
-        "An toàn khi sử dụng thiết bị điện": {
-          "TN": 9,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 4
-        },
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
-          "TN": 17,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": {
-          "TN": 16,
-          "DS": 8,
-          "TLN": 0,
-          "TL": 0
-        },
-        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": {
-          "TN": 6,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 6
-        },
-        "Xây dựng quy trình thực hành an toàn": {
-          "TN": 8,
-          "DS": 3,
-          "TLN": 1,
-          "TL": 4
-        },
-        "Xử lí sự cố và sơ cứu trong phòng thực hành": {
-          "TN": 10,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 2
-        },
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành.": {
-          "TN": 6,
-          "DS": 3,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Nhận biết nội quy và quy tắc an toàn": {
-          "TN": 7,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 4
-        },
-        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 4
-        },
-        "Phân tích mối nguy và đánh giá mức độ rủi ro": {
-          "TN": 6,
-          "DS": 4,
-          "TLN": 1,
-          "TL": 4
-        },
-        "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo/de.tex",
