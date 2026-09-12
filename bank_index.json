@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 170,
+  "total_files": 171,
   "total_questions": 11582,
   "lessons": [
     {
@@ -5975,6 +5975,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-phan-tich-nguy-co-mat-an-toan-lien-quan-den-thie.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh.",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
