@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 158,
-  "total_questions": 11616,
+  "total_files": 159,
+  "total_questions": 11582,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -705,12 +705,12 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
-      "questions": 219,
-      "count": 219,
+      "questions": 185,
+      "count": 185,
       "dang": {
         "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 14,
         "An toàn khi sử dụng thiết bị điện": 18,
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 51,
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": 17,
         "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh.": 24,
         "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 17,
         "Xây dựng quy trình thực hành an toàn": 16,
@@ -736,8 +736,8 @@
           "TL": 4
         },
         "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.": {
-          "TN": 47,
-          "DS": 4,
+          "TN": 17,
+          "DS": 0,
           "TLN": 0,
           "TL": 0
         },
@@ -5699,6 +5699,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-an-toan-khi-su-dung-dung-cu-thuy-tinh-vat-sac-nh.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
