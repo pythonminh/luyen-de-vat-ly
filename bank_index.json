@@ -5801,9 +5801,19 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · An toàn với nguồn nhiệt và nguy cơ cháy nổ",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 17,
+      "count": 17,
+      "dang": {
+        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 17
+      },
+      "dang_kinds": {
+        "An toàn với nguồn nhiệt và nguy cơ cháy nổ": {
+          "TN": 6,
+          "DS": 4,
+          "TLN": 1,
+          "TL": 6
+        }
+      }
     }
   ]
 }
