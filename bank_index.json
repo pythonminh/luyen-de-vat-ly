@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 160,
+  "total_files": 161,
   "total_questions": 11582,
   "lessons": [
     {
@@ -5745,6 +5745,19 @@
           "TL": 4
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-quy-trinh-so-cuu-khan-cap-khi-xay-ra-tai-nan-die.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật.",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
