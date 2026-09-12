@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 167,
+  "total_files": 168,
   "total_questions": 11582,
   "lessons": [
     {
@@ -5906,6 +5906,19 @@
           "TL": 4
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí/dang-nhan-biet-va-giai-thich-bien-bao-ki-hieu-canh-ba.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương I. Mở đầu",
+      "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
+      "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí · Nhận biết và giải thích biển báo, kí hiệu cảnh báo",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
