@@ -113,6 +113,59 @@ def _extract_ai_fields(raw):
     return obj
 
 
+def _is_math_glue(s):
+    if "\n" in str(s or ""):
+        return False
+    u = re.sub(r"\\(?:times|cdot|pm|mp|left|right|quad|Rightarrow|to)\b", "", s or "")
+    u = re.sub(r"\s+", "", u)
+    if not u or u in {")", ").", ");", ")!", ")?"}:
+        return False
+    return bool(re.fullmatch(r"[+\-=≈≡×·(),]+", u))
+
+
+def _merge_broken_math(t):
+    """Gộp $\\vec{A}$ + $\\vec{B}$ thành $\\vec{A}+\\vec{B}$, tránh lồng $."""
+    t = str(t or "")
+    matches = list(re.finditer(r"\$([^$]*)\$", t))
+    if len(matches) < 2:
+        t = re.sub(
+            r"\$([^$]+)\$\s*(=)\s*((?:\\(?:vec|overrightarrow)\s*\{[^{}]+\}|-?\d+(?:[.,]\d+)?))(?!\s*\$)",
+            lambda m: "$" + m.group(1) + m.group(2) + m.group(3) + "$",
+            t,
+        )
+        return t
+    out = []
+    last = 0
+    i = 0
+    n = len(matches)
+    while i < n:
+        m = matches[i]
+        out.append(t[last:m.start()])
+        buf = [m.group(1)]
+        end = m.end()
+        i += 1
+        while i < n and _is_math_glue(t[end:matches[i].start()]):
+            buf.append(t[end:matches[i].start()])
+            buf.append(matches[i].group(1))
+            end = matches[i].end()
+            i += 1
+        trail = re.match(r"^[ \t]*\)+[ \t]*", t[end:])
+        if trail and ")" in trail.group(0):
+            buf.append(trail.group(0))
+            end += trail.end()
+        out.append("$" + "".join(buf).replace("$", "") + "$")
+        last = end
+    out.append(t[last:])
+    t = "".join(out)
+    t = re.sub(
+        r"\$([^$]+)\$\s*(=)\s*((?:\\(?:vec|overrightarrow)\s*\{[^{}]+\}|-?\d+(?:[.,]\d+)?))(?!\s*\$)",
+        lambda m: "$" + m.group(1) + m.group(2) + m.group(3) + "$",
+        t,
+    )
+    t = re.sub(r"\$\s*\$", "", t)
+    return t
+
+
 def _fix_latex(t):
     """Gỡ lỗi AI hay gặp: \\frac bị nuốt, \\ trước tiếng Việt, toán không bọc $."""
     t = str(t or "")
@@ -126,6 +179,7 @@ def _fix_latex(t):
     t = re.sub(r"\\(?=-\d)", "-", t)
     t = re.sub(r"(?<!\\)\\([,;:])(?=\s|$)", r"\1", t)
     t = re.sub(r"\$\s*\$", "", t)
+    t = _merge_broken_math(t)
     return t.strip()
 
 
@@ -522,6 +576,29 @@ def _rewrite_bad_structure(kind, stem, new_opts, answer, solution=""):
     return False
 
 
+def _formula_keep_block(pack):
+    texts = [pack.get("text") or "", pack.get("solution") or "", pack.get("answer") or ""]
+    for o in pack.get("options") or []:
+        texts.append((o.get("text") if isinstance(o, dict) else o) or "")
+    blob = "\n".join(str(x) for x in texts)
+    bits = re.findall(r"\$[^$\n]{1,240}\$", blob)
+    cmds = re.findall(r"\\(?:vec|overrightarrow|frac|dfrac|sqrt|Delta|alpha|beta|theta|omega|pi)\b(?:\s*\{[^{}]{1,80}\})?", blob)
+    lines = [
+        "CÔNG THỨC — ưu tiên tuyệt đối:\n"
+        "- Copy nguyên các $...$ và \\vec / \\frac / \\sqrt của đề cũ. Chỉ viết lại chữ tiếng Việt.\n"
+        "- Mỗi đẳng thức / mỗi vector MỘT cặp $...$ duy nhất. CẤM $ lồng trong $, CẤM tách $\\vec{GA}$ rồi dấu = rồi $\\vec{a}$.\n"
+        "  SAI: $\\vec{GC}$ = -($\\vec{GA}$ + $\\vec{GB}$)\n"
+        "  ĐÚNG: $\\vec{GC}=-(\\vec{GA}+\\vec{GB})$\n"
+        "- CẤM bọc từng tên điểm: $A$ $B$ $C$ $G$ $ABC$. Viết: tam giác ABC, trọng tâm G.\n"
+        "- Vector: $\\vec{GA}=-\\vec{a}$ (cả vế trong cùng $).\n"
+    ]
+    if bits:
+        lines.append("Copy nguyên các công thức này:\n" + "\n".join(list(dict.fromkeys(bits))[:24]))
+    if cmds:
+        lines.append("Giữ các lệnh: " + ", ".join(list(dict.fromkeys(cmds))[:30]))
+    return "\n".join(lines) + "\n"
+
+
 def _prompt(pack, retry=False):
     letters = "ABCD"
     kind = str(pack.get("kind") or "TL").upper()
@@ -533,8 +610,8 @@ def _prompt(pack, retry=False):
     extra = ""
     if retry:
         extra = (
-            "LẦN 2 — bản trước SAI CẤU TRÚC (thiếu đề, lời giải chỉ là một số, lẫn TN/ĐS, thiếu 4 mệnh đề). "
-            "BẮT BUỘC đề đầy đủ VÀ lời giải đủ bước (công thức, đổi đơn vị, tính ra đáp án). CẤM solution chỉ ghi 20.\n"
+            "LẦN 2 — bản trước SAI CẤU TRÚC hoặc SAI $ LaTeX (tách $\\vec{A}$ rồi = rồi $\\vec{B}$). "
+            "BẮT BUỘC đề đầy đủ, lời giải đủ bước, MỖI công thức một cặp $ duy nhất. Copy nguyên công thức đề cũ.\n"
         )
     if stem_incomplete(pack.get("text") or ""):
         extra += (
@@ -560,8 +637,9 @@ def _prompt(pack, retry=False):
     )
     return (
         extra
-        +         "Bạn là giáo viên THPT soạn đề. VIẾT LẠI (hoặc BỔ SUNG nếu đề cũ thiếu) ĐỀ và LỜI GIẢI cho ĐẦY ĐỦ, đúng, gọn, giọng giáo viên.\n"
-        "Không được để stem trống. Không copy nguyên văn nếu đề cũ đã đủ. Giữ ý toán khi đề cũ đủ; nếu đề cũ thiếu thì dựng đề khớp lời giải/đáp án. Tính lại cho khớp.\n"
+        + _formula_keep_block(pack)
+        + "Bạn là giáo viên THPT soạn đề. VIẾT LẠI chữ tiếng Việt cho gọn, GIỮ NGUYÊN công thức LaTeX. "
+        "Chỉ bổ sung đề khi đề cũ thiếu. Không đổi ý toán, không đổi đáp án đúng.\n"
         f"Loại câu này là {kind} — không đổi sang loại khác.\n"
         + kind_structure_text(kind)
         + "CẤM trong stem/options/solution/answer: dòng comment LaTeX (bắt đầu %), % ID:, % Mức:, %=== Câu, \\begin{ex}, \\end{ex}, \\loigiai, \\True.\n"
@@ -572,10 +650,11 @@ def _prompt(pack, retry=False):
         "CẤM đơn vị trong answer, CẤM A/B/C/D, CẤM dạng ngày Excel kiểu 15/01/1900 hay 15/1/1900 "
         "(Excel hay đổi phân số 15/1 thành ngày — hãy ghi 15). Không nhầm số với ngày tháng.\n"
         "LaTeX BẮT BUỘC:\n"
-        "- Mọi công thức (kể cả \\pi, \\frac, \\Rightarrow, \\cos, \\left\\right) phải nằm trong $...$.\n"
-        "- Không gõ \\ trước chữ tiếng Việt (sai: \\Để  .\\Để  :\\-3). Viết: Để  : -3.\n"
-        "- Trong JSON, mỗi backslash LaTeX phải viết HAI lần: \\\\frac \\\\pi \\\\Rightarrow \\\\left \\\\right.\n"
-        "- Xuống dòng bằng \\n trong JSON, không dùng \\\\ rồi xuống dòng lung tung.\n"
+        "- Copy nguyên $...$ của đề cũ. Mỗi công thức một cặp $...$, không lồng $.\n"
+        "- Mọi \\vec \\frac \\pi \\Rightarrow \\cos phải nằm trong đúng một $...$.\n"
+        "- Không gõ \\ trước chữ tiếng Việt (sai: \\Để). Viết: Để.\n"
+        "- Trong JSON, mỗi backslash LaTeX phải viết HAI lần: \\\\frac \\\\vec \\\\pi.\n"
+        "- Xuống dòng bằng \\n trong JSON.\n"
         "JSON một object: "
         '{"stem":"...","options":["..."],"answer":"...","solution":"...","note":""}\n'
         + opt_json
@@ -590,11 +669,32 @@ def _prompt(pack, retry=False):
     )
 
 
-def _raw_parts(q):
-    raw = q.get("raw") or ""
+def _ex_inner(tex, file_idx):
+    try:
+        want = int(file_idx)
+    except (TypeError, ValueError):
+        return None
+    for i, m in enumerate(base.EX_RE.finditer(tex or "")):
+        if i == want:
+            return m.group(1)
+    return None
+
+
+def _raw_parts(q, tex=None, file_idx=None):
+    raw = ""
+    if tex is not None and file_idx is not None:
+        raw = _ex_inner(tex, file_idx) or ""
+    if not raw:
+        raw = q.get("raw") or ""
+        wrapped = raw if re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", raw, re.I) else (
+            "\\begin{ex}\n" + raw + "\n\\end{ex}\n"
+        )
+        m = base.EX_RE.search(wrapped)
+        if m:
+            raw = m.group(1)
     head, _tail = _split_head_tail(raw)
     _comments, stem = _split_comments(head)
-    sol = base.solution_of(raw) or (q.get("solution") or "")
+    sol = base.solution_of("\\begin{ex}\n" + (raw or "") + "\n\\end{ex}\n") or (q.get("solution") or "")
     return _clean_tex(stem), _clean_tex(sol)
 
 
@@ -674,7 +774,7 @@ def api_rewrite_question():
     if not q:
         return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
     pack = _q_plain_pack(q)
-    raw_stem, raw_sol = _raw_parts(q)
+    raw_stem, raw_sol = _raw_parts(q, _tex, fi)
     mode = str(data.get("mode") or "ai").strip().lower()
     if mode in {"current", "edit"}:
         return jsonify(
@@ -966,15 +1066,24 @@ function showEditor(box, d){
   box.querySelector('.rwCancel').onclick=function(){box.innerHTML='';};
   box.querySelector('.rwPrev').onclick=function(){previewBox(box)};
   box.querySelector('.rwSave').onclick=async function(){
+    const btn=this;
     if(!confirm('Ghi đề/lời giải vào TEX + GitHub?'))return;
-    const x=readDraft(box,d);
-    const s=await fetch('/api/admin/rewrite-question-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({src:d.src,file_idx:d.file_idx,stem:x.stem,solution:x.solution,answer:x.answer,options:x.options,
-        apply_stem:!!x.flags.stem,apply_opts:!!x.flags.opts,apply_sol:!!x.flags.sol,apply_answer:!!x.flags.answer})});
-    const sd=await s.json();
-    if(!sd.ok){alert(sd.error||'Không ghi được');return;}
-    box.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
-    location.reload();
+    btn.disabled=true;
+    try{
+      const x=readDraft(box,d);
+      const s=await fetch('/api/admin/rewrite-question-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({src:d.src,file_idx:d.file_idx,stem:x.stem,solution:x.solution,answer:x.answer,options:x.options,
+          apply_stem:!!x.flags.stem,apply_opts:!!x.flags.opts,apply_sol:!!x.flags.sol,apply_answer:!!x.flags.answer})});
+      const txt=await s.text();
+      let sd={};
+      try{sd=JSON.parse(txt)}catch(err){
+        alert('Không ghi được (HTTP '+s.status+'): '+(txt||err).toString().slice(0,400));
+        btn.disabled=false;return;
+      }
+      if(!sd.ok){alert(sd.error||'Không ghi được');btn.disabled=false;return;}
+      box.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){alert('Không ghi được: '+err);btn.disabled=false;}
   };
   previewBox(box);
 }

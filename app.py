@@ -927,7 +927,7 @@ def gh_api(api_path,method='GET',payload=None):
     owner,repo=REPO.split('/',1); body=None if payload is None else json.dumps(payload,ensure_ascii=False).encode('utf-8')
     req=urllib.request.Request(f'https://api.github.com/repos/{owner}/{repo}/{api_path.lstrip("/")}',data=body,method=method,headers={'Authorization':f'Bearer {TOKEN}','Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'luyen-de-vat-ly-clean'})
     try:
-        with urllib.request.urlopen(req,timeout=20) as r:return json.loads(r.read().decode('utf-8'))
+        with urllib.request.urlopen(req,timeout=60) as r:return json.loads(r.read().decode('utf-8'))
     except urllib.error.HTTPError as e:
         s=e.read().decode('utf-8','replace')
         try:msg=json.loads(s).get('message',s)

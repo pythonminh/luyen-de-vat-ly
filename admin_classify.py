@@ -335,8 +335,29 @@ def _write_tex(path, text, message, sha=None):
     _, local = base._safe_repo_file(path)
     local.parent.mkdir(parents=True, exist_ok=True)
     local.write_text(text, encoding="utf-8")
-    if base.TOKEN:
-        base.github_put_text(path, text, message, sha or None)
+    if not base.TOKEN:
+        if base._on_render():
+            raise RuntimeError("Chưa có GITHUB_TOKEN trên Render — tải lại trang sẽ mất bản sửa.")
+        return
+    err = None
+    cur = sha
+    for attempt in range(3):
+        try:
+            if not cur:
+                try:
+                    cur = base.github_file_sha(path)
+                except Exception:
+                    cur = None
+            base.github_put_text(path, text, message, cur or None)
+            return
+        except Exception as e:
+            err = e
+            msg = str(e)
+            if attempt < 2 and any(x in msg for x in ("409", "422", "sha", "Sha")):
+                cur = None
+                continue
+            break
+    raise RuntimeError(str(err) if err else "Không ghi được GitHub.")
 
 
 def _delete_tex_file(path):
