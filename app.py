@@ -214,6 +214,7 @@ body.cinema .cinemahost{position:sticky;top:0;z-index:32;display:flex;gap:6px;al
 body.cinema .cinemahost[hidden]{display:none!important}
 body.cinema .cinema-navrow{display:flex;gap:6px;align-items:stretch;flex:1 1 100%;min-width:0}
 body.cinema .cinema-navrow[hidden]{display:none!important}
+body.cinema .cinema-navlab{flex:0 0 auto;align-self:center;font-size:12px;font-weight:800;color:#5b21b6;min-width:2.6em}
 body.cinema .cinemahost select{flex:1;min-width:0;font-size:15px;font-weight:800;padding:8px 10px;min-height:44px;border:1px solid #c4b5fd;border-radius:8px;background:#f5f3ff;color:#5b21b6}
 body.cinema .cinemahost button{flex:0 0 auto;min-width:44px;min-height:44px;border:1px solid #c5d6ea;border-radius:8px;background:#fff;color:#145bb0;font-size:18px;font-weight:800;cursor:pointer}
 body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 10px;font-size:13px;white-space:nowrap}
@@ -723,6 +724,38 @@ def can_manage_bank():
     """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
     return has_full_bank_access()
 def is_vip(m):return account_type_of(m) in {'VIP','SVIP','ADMIN'}
+def can_practice(m, path=None):
+    """VIP / SVIP / ADMIN mới làm bài. Khách và FREE chỉ xem đề."""
+    try:
+        if session.get('role') == 'admin':
+            return True
+    except Exception:
+        pass
+    if not m:
+        return False
+    if has_full_bank_access(m) or is_admin_member(m):
+        return True
+    if not is_vip(m):
+        return False
+    if path:
+        return can_access(m, path)
+    return True
+def dang_view_url(path, dang='', kind=''):
+    url='/member/dang?path='+urllib.parse.quote(str(path or ''), safe='')
+    if dang:
+        url+='&dang='+urllib.parse.quote(str(dang), safe='')
+    if kind:
+        url+='&kind='+urllib.parse.quote(str(kind), safe='')
+    return url
+def view_only_notice_html(m=None, login_next='/member'):
+    if not m:
+        return ("<div class='notice'>👁 Bạn đang <b>xem đề</b> — chưa đăng nhập nên không làm bài. "
+                "Cần tài khoản <b>VIP</b> (ADMIN cấp gói) để làm bài và dùng Gemini. "
+                f"<a class='btn primary' href='{html.escape(login_url(login_next), quote=True)}'>Đăng nhập</a></div>")
+    if can_practice(m):
+        return ''
+    return ("<div class='notice'>👁 Tài khoản <b>FREE</b> chỉ xem đề, không làm bài. "
+            "Nhờ ADMIN cấp gói VIP hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
 def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
 def can_access(m,path):
@@ -1339,14 +1372,15 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                             )
                     except Exception:
                         pass
+                    do_practice = can_practice(m, p)
                     dlinks.append(
-                        f"<a class='drawdang{' on' if on and not current_dang else ''}' href='{html.escape(_go_kind_href(p, '', '', guest), quote=True)}'><span class='drawname'>Cả bài</span><span class='drawn'>{n}</span>{kind_chips_html(all_kinds)}</a>"
+                        f"<a class='drawdang{' on' if on and not current_dang else ''}' href='{html.escape(_go_kind_href(p, '', '', practice=do_practice), quote=True)}'><span class='drawname'>Cả bài</span><span class='drawn'>{n}</span>{kind_chips_html(all_kinds)}</a>"
                     )
                     for i, (dname, cnt) in enumerate(pairs, 1):
                         short = dname if len(dname) <= 48 else dname[:47] + "…"
                         on_d = on and current_dang == dname
                         dlinks.append(
-                            f"<a class='drawdang{' on' if on_d else ''}' href='{html.escape(_go_kind_href(p, dname, '', guest), quote=True)}' title='{html.escape(dname, quote=True)}'><span class='drawname'>{i}. {html.escape(short)}</span><span class='drawn'>{cnt}</span>{kind_chips_html(dang_kinds.get(dname))}</a>"
+                            f"<a class='drawdang{' on' if on_d else ''}' href='{html.escape(_go_kind_href(p, dname, '', practice=do_practice), quote=True)}' title='{html.escape(dname, quote=True)}'><span class='drawname'>{i}. {html.escape(short)}</span><span class='drawn'>{cnt}</span>{kind_chips_html(dang_kinds.get(dname))}</a>"
                         )
                     bais.append(
                         f"<details class='drawbaiwrap'{' open' if on else ''}>"
@@ -2507,12 +2541,9 @@ def ids_of_kind(qs, kind=''):
             continue
     return sort_ids_by_kind(qs, ids, shuffle_within=False)
 
-def kind_tabs_html(path, dang='', current='', counts=None, guest=False):
+def kind_tabs_html(path, dang='', current='', counts=None, guest=False, practice=None):
     counts = counts or {'': 0, 'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0}
     current = norm_kind_tab(current)
-    base = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='')
-    if dang:
-        base += '&dang=' + urllib.parse.quote(str(dang), safe='')
     bits = []
     for k, lab, tip in KIND_TABS:
         n = int(counts.get(k, 0) if k else counts.get('', 0))
@@ -2522,9 +2553,7 @@ def kind_tabs_html(path, dang='', current='', counts=None, guest=False):
         if n <= 0:
             bits.append(f"<span class='ktab{on} off' title='{html.escape(title, quote=True)}'>{html.escape(label)}</span>")
             continue
-        href = base + '&kind=' + urllib.parse.quote(k, safe='')
-        if guest:
-            href = login_url(href)
+        href = _go_kind_href(path, dang, k, guest=guest, practice=practice)
         bits.append(f"<a class='ktab{on}' href='{html.escape(href, quote=True)}' title='{html.escape(tip, quote=True)}'>{html.escape(label)}</a>")
     return "<nav class='kindtabs' aria-label='Loại câu'>" + ''.join(bits) + "</nav>"
 
@@ -2808,6 +2837,11 @@ def admin_dang_bar_html(path, qs, dang=''):
 
 def lesson_switch_html(path, qs, dang='', kind='', guest=False):
     scoped = questions_in_scope(qs, dang)
+    try:
+        m = member_current()
+    except Exception:
+        m = None
+    practice = can_practice(m, path)
     lt_bar = ''
     try:
         import lythuyet as _lt
@@ -2817,28 +2851,34 @@ def lesson_switch_html(path, qs, dang='', kind='', guest=False):
     return (
         "<nav class='subnav'>"
         + lt_bar
-        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest)
-        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest)
+        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest, practice=practice)
+        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest, practice=practice)
         + "</nav>"
         + admin_dang_bar_html(path, qs, dang=dang)
     )
 
-def _go_kind_href(path, dang, kind, guest=False):
-    href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
-    if dang:
-        href += '&dang=' + urllib.parse.quote(str(dang), safe='')
-    if guest:
-        href = login_url(href)
-    return href
+def _go_kind_href(path, dang, kind, guest=False, practice=None):
+    if practice is None:
+        try:
+            m = member_current()
+        except Exception:
+            m = None
+        practice = can_practice(m, path)
+    if practice:
+        href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
+        if dang:
+            href += '&dang=' + urllib.parse.quote(str(dang), safe='')
+        return href
+    return dang_view_url(path, dang, kind)
 
-def dang_tabs_html(path, qs, current_dang='', kind='', guest=False):
+def dang_tabs_html(path, qs, current_dang='', kind='', guest=False, practice=None):
     names, counts = dang_names_of(qs)
     per, allc = dang_kind_counts_of(qs)
     current_dang = str(current_dang or '').strip()
     kind = norm_kind_tab(kind)
     total = sum(counts.values())
     bits = [
-        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest), quote=True)}' title='Mọi dạng trong bài'><span class='dname'>Cả bài · {total}</span>{kind_chips_html(allc)}</a>"
+        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest, practice), quote=True)}' title='Mọi dạng trong bài'><span class='dname'>Cả bài · {total}</span>{kind_chips_html(allc)}</a>"
     ]
     for i, name in enumerate(names, 1):
         n = int(counts.get(name) or 0)
@@ -2846,20 +2886,20 @@ def dang_tabs_html(path, qs, current_dang='', kind='', guest=False):
         lab = f'{i}. {short} · {n}'
         on = ' on' if current_dang == name else ''
         bits.append(
-            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
+            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest, practice), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
         )
     return "<nav class='dangtabs' aria-label='Dạng bài tập'>" + ''.join(bits) + "</nav>"
 
 
 def begin_kind_practice(path, kind='', dang=''):
     m = member_current()
-    if not m:
-        return redirect(login_url(request.full_path if request.query_string else '/member'))
     path = str(path or '').strip()
     dang = str(dang or '').strip()
     kind = norm_kind_tab(kind)
-    if not path or not can_access(m, path):
-        return redirect('/member')
+    if not m:
+        return redirect(dang_view_url(path, dang, kind) if path else login_url('/member'))
+    if not path or not can_practice(m, path):
+        return redirect(dang_view_url(path, dang, kind) if path else '/member')
     try:
         qs = load_lesson_questions(path)
     except Exception as e:
@@ -3024,8 +3064,9 @@ def member_ai():
     m=member_current()
     if not m:return redirect('/member/login')
     extra="<p class='muted'>Key dùng khi chọn chế độ <b>Làm bài + phản biện AI</b>. Sau khi xác nhận đáp án, màn hình chia đôi: bên trái là đề và lời giải, bên phải là Gemini (cuộn riêng).</p>"
+    lock='' if can_practice(m) else "<div class='err'>Cần tài khoản VIP (ADMIN cấp gói) mới dùng Gemini phản biện khi làm bài.</div>"
     body=("<div class='wrap'><div class='panel'><div class='head'>🤖 Gemini — nạp key và phản biện</div><div class='body'>"
-          +gemini_panel_html(extra)+
+          +lock+(gemini_panel_html(extra) if can_practice(m) else '')+
           "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>")
     return page('Key Gemini',body)
 
@@ -3053,9 +3094,10 @@ def member_index():
         sections.append(catalog_chapter_html(mon,lop,chuong,arr))
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
     if m:
-        who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b></div>"
+        extra=(' · 👁 Chỉ xem đề, không làm bài' if not can_practice(m) else '')
+        who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b>"+extra+"</div>"
     else:
-        who="<div class='notice'>👁 <b>Xem đề không cần đăng nhập.</b> Để làm bài và dùng Gemini phản biện, hãy <a href='/member/login'>đăng nhập</a> hoặc <a href='/member/register'>đăng ký</a>.</div>"
+        who="<div class='notice'>👁 <b>Xem đề không cần đăng nhập.</b> Cần VIP (ADMIN cấp gói) để làm bài. <a href='/member/login'>Đăng nhập</a> hoặc <a href='/member/register'>Đăng ký</a>.</div>"
     body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>"+str(len(items))+" bài</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'>"+who+"<form method='get' class='catsearch'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+id_block+(''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>"))+"</div>")
     return page('Mục lục',body)
 
@@ -3106,9 +3148,7 @@ def select_page():
         for q in qs:
             if q['dang'] not in seen_one:seen_one.add(q['dang']);names_one.append(q['dang'])
         admin_box=admin_tex_select_html(p)+_ac.select_admin_panel(p, qs, names_one)
-    guest_note=''
-    if guest:
-        guest_note=f"<div class='notice'>👁 Đăng nhập rồi bấm dạng / loại ở trên để làm bài. <a class='btn primary' href='{html.escape(login_url('/member/select?path='+urllib.parse.quote(p,safe='')), quote=True)}'>Đăng nhập</a></div>"
+    guest_note=view_only_notice_html(m, '/member/select?path='+urllib.parse.quote(p,safe=''))
     chap=chapter_nav_html(p)
     _, cur_lesson = chapter_lessons_for(p)
     bai_name=html.escape(str((cur_lesson or {}).get('BaiHoc') or Path(p).parent.name))
@@ -3128,7 +3168,7 @@ def start_practice():
         import dang_routes as _dang
         return _dang.start_selected_questions()
     p=request.form.get('path','')
-    if not can_access(m,p):return redirect('/member')
+    if not can_practice(m,p):return redirect(dang_view_url(p) if p else '/member')
     try:
         qs=parse_lesson_questions(p)
         if not qs:
@@ -3190,6 +3230,8 @@ def practice():
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
     ai=True
     if not p or not ids:return redirect('/member')
+    if not can_practice(m,p):
+        return redirect(dang_view_url(p, str(session.get('practice_dang') or ''), str(session.get('practice_kind') or '')))
     try:
         allq={q['idx']:q for q in parse_lesson_questions(p)}
         if not allq:
@@ -3396,6 +3438,8 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 def answer():
     m=member_current();
     if not m:return jsonify(ok=False),401
+    if not can_practice(m, str(session.get('practice_path') or '') or None):
+        return jsonify(ok=False,error='Cần VIP để làm bài'),403
     d=request.get_json(silent=True) or {};ok=bool(d.get('ok'));st=int(session.get('practice_streak') or 0);st=st+1 if ok else 0;best=max(int(session.get('practice_best') or 0),st);right=int(session.get('practice_right') or 0)+(1 if ok else 0);pos=int(session.get('practice_pos') or 0);done=list(session.get('practice_done') or []);praise=''
     if ok:
         if st==3:praise='🎉 Đúng 3 câu liên tiếp! Rất tốt!'
@@ -3405,7 +3449,10 @@ def answer():
 
 @app.post('/api/gemini/review')
 def gemini_review():
-    if not member_current():return jsonify(ok=False,error='Chưa đăng nhập'),401
+    m=member_current()
+    if not m:return jsonify(ok=False,error='Chưa đăng nhập'),401
+    if not can_practice(m, str(session.get('practice_path') or '') or None):
+        return jsonify(ok=False,error='Cần VIP để dùng Gemini phản biện'),403
     d=request.get_json(silent=True) or {}
     key=str(d.get('api_key') or '').strip() or GEMINI_KEY
     if not key:return jsonify(ok=False,error='Chưa có key Gemini. Vào mục 🤖 Gemini để nạp key.'),400
