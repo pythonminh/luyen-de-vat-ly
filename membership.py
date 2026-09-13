@@ -288,7 +288,7 @@ def scope_label(m) -> str:
         return "Chờ duyệt " + extra
     pkg = granted_package(m)
     if not pkg:
-        return "Chưa cấp gói"
+        return "FREE · chưa VIP"
     return package_label(pkg)
 
 
@@ -451,7 +451,7 @@ def duration_html(prefix="", selected="", expire_at="", started_at=""):
     start_txt = html.escape(format_vn_date(start) or "—")
     end_txt = html.escape(format_vn_date(end) or "—")
     return (
-        "<div class='pkgrow pkgdur' style='display:flex'><span>Hạn dùng</span>"
+        "<div class='pkgrow pkgdur' style='display:flex'><span>Gói · hạn dùng</span>"
         + "".join(radios)
         + "</div>"
         "<div class='pkgexp'><div class='vipdates'>"
@@ -626,11 +626,11 @@ def picker_html(prefix="", selected=None, student=True, name_package=None, durat
     )
     return (
         "<div class='pkgbox'>"
-        "<div class='pkglabel'>Gói thành viên</div>"
+        "<div class='pkglabel'>Phạm vi lớp / môn</div>"
         f"<div class='pkgrads'>{''.join(radios)}</div>"
         f"<div class='pkgrow pkggrades' style='display:flex'><span>Chọn lớp</span>{gboxes}</div>"
         f"<div class='pkgrow pkgsubs' style='display:flex'><span>Chọn môn</span>{sboxes}</div>"
-        "<p class='pkghint muted'>Tick lớp 10/11/12 và môn Toán / Vật lý. Gói 1–3 lớp cần đúng số lớp; gói 1–2 môn cần đúng số môn.</p>"
+        "<p class='pkghint muted'>Tick lớp 10/11/12 và môn Toán / Vật lý. Chọn đúng số lớp hoặc số môn.</p>"
         + (
             duration_html(
                 prefix,
@@ -652,7 +652,7 @@ PKG_CSS = """
 .pkgrads{display:flex;flex-wrap:wrap;gap:6px}
 .pkgopt,.pkgchk{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #c9dbeb;border-radius:8px;padding:6px 9px;font-weight:800;cursor:pointer}
 .pkgrow{display:flex!important;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
-.pkgrow>span{font-size:11px;font-weight:900;color:#5b738c;min-width:70px}
+.pkgrow>span{font-size:11px;font-weight:900;color:#5b738c;min-width:108px}
 .pkghint{margin:8px 0 0;font-size:11px}
 .pendcard{background:#fff8e6;border:1px solid #e6c56a;border-radius:10px;padding:10px;margin:8px 0}
 .pendcard b.req{color:#8a5a00}
