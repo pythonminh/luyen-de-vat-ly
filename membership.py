@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import datetime
+import unicodedata
+from calendar import monthrange
+from datetime import datetime, timedelta
 from urllib.parse import unquote
 
 GRADES = ("10", "11", "12")
@@ -20,6 +22,13 @@ PACKAGES = {
 }
 
 STUDENT_PACKAGES = ("lop1", "lop2", "lop3", "mon1", "mon2")
+
+DURATIONS = (
+    ("3d", "3 ngày"),
+    ("1m", "1 tháng"),
+    ("3m", "3 tháng"),
+    ("1y", "1 năm"),
+)
 
 
 def _grade(value) -> str:
@@ -64,6 +73,114 @@ def _uniq_subjects(values) -> list[str]:
 def _norm_type(v) -> str:
     s = str(v or "FREE").strip().upper().replace(".", "").replace("-", "")
     return {"SVIP": "SVIP", "VIP": "VIP", "FREE": "FREE", "ADMIN": "ADMIN", "MEMBER": "VIP"}.get(s, "FREE")
+
+
+def _norm_person_name(s) -> str:
+    t = unicodedata.normalize("NFC", str(s or "")).casefold()
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def _norm_phone(s) -> str:
+    d = re.sub(r"\D", "", str(s or ""))
+    if d.startswith("84") and len(d) >= 11:
+        d = "0" + d[2:]
+    if len(d) < 9:
+        return ""
+    return d[-10:] if len(d) >= 10 else d
+
+
+def _merge_score(m) -> tuple:
+    st = package_status(m)
+    typ = _norm_type(m.get("account_type"))
+    return (
+        1 if vip_active(m) else 0,
+        1 if st == "approved" else 0,
+        2 if typ == "SVIP" else (1 if typ == "VIP" else 0),
+        1 if str(m.get("status", "ON")).upper() == "ON" else 0,
+        1 if _norm_phone(m.get("phone")) else 0,
+        1 if str(m.get("name") or "").strip() else 0,
+    )
+
+
+def duplicate_groups(members):
+    people = [
+        m for m in (members or [])
+        if str(m.get("username") or "").strip() and str(m.get("username") or "").strip().casefold() != "admin"
+    ]
+    if len(people) < 2:
+        return []
+    parent = {id(m): id(m) for m in people}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(id(a)), find(id(b))
+        if ra != rb:
+            parent[rb] = ra
+
+    by_name, by_phone = {}, {}
+    for m in people:
+        n = _norm_person_name(m.get("name"))
+        if len(n) >= 6:
+            by_name.setdefault(n, []).append(m)
+        ph = _norm_phone(m.get("phone"))
+        if ph:
+            by_phone.setdefault(ph, []).append(m)
+    for arr in list(by_name.values()) + list(by_phone.values()):
+        if len(arr) < 2:
+            continue
+        for extra in arr[1:]:
+            union(arr[0], extra)
+    buckets = {}
+    for m in people:
+        buckets.setdefault(find(id(m)), []).append(m)
+    groups = [sorted(g, key=_merge_score, reverse=True) for g in buckets.values() if len(g) >= 2]
+    groups.sort(key=len, reverse=True)
+    return groups
+
+
+def merge_members(keep, extras):
+    extras = [x for x in extras if x is not keep]
+    if not extras:
+        return keep
+    aliases = list(keep.get("also_usernames") or [])
+    for other in extras:
+        aliases.append(str(other.get("username") or "").strip())
+        aliases.extend(str(x).strip() for x in (other.get("also_usernames") or []) if x)
+        if not str(keep.get("name") or "").strip() and other.get("name"):
+            keep["name"] = other.get("name")
+        if not _norm_phone(keep.get("phone")) and other.get("phone"):
+            keep["phone"] = other.get("phone")
+        og = granted_package(other)
+        kg = granted_package(keep)
+        if og and (not kg or _merge_score(other) > _merge_score(keep)):
+            keep["package"] = dict(og)
+            keep["grades"] = list(og.get("grades") or [])
+            keep["subjects"] = list(og.get("subjects") or [])
+            keep["account_type"] = other.get("account_type") or keep.get("account_type")
+            keep["package_status"] = "approved"
+        oe, ke = vip_expire_dt(other), vip_expire_dt(keep)
+        if oe and (not ke or oe > ke):
+            keep["vip_expires_at"] = other.get("vip_expires_at")
+            keep["vip_plan"] = other.get("vip_plan") or keep.get("vip_plan")
+            keep["vip_started_at"] = other.get("vip_started_at") or keep.get("vip_started_at")
+        if str(other.get("status", "ON")).upper() == "ON":
+            keep["status"] = "ON"
+    seen = set()
+    out = []
+    ku = str(keep.get("username") or "").strip().casefold()
+    for a in aliases:
+        k = a.casefold()
+        if a and k != ku and k not in seen:
+            seen.add(k)
+            out.append(a)
+    keep["also_usernames"] = out
+    return keep
 
 
 def parse_package(kind, grades, subjects, student=False):
@@ -188,7 +305,127 @@ def package_label(pkg) -> str:
     return PACKAGES.get(kind, {}).get("label") or str(kind)
 
 
-def apply_granted(m, pkg, approved=True):
+def _add_months(dt, months):
+    months = int(months)
+    m0 = dt.month - 1 + months
+    y = dt.year + m0 // 12
+    mo = m0 % 12 + 1
+    d = min(dt.day, monthrange(y, mo)[1])
+    return dt.replace(year=y, month=mo, day=d)
+
+
+def parse_vip_dt(raw):
+    s = str(raw or "").strip()
+    if not s:
+        return None
+    s = s.replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s[:19] if fmt.endswith("%S") else s[:10], fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def vip_expire_dt(m):
+    if not isinstance(m, dict):
+        return None
+    return parse_vip_dt(m.get("vip_expires_at"))
+
+
+def vip_active(m) -> bool:
+    if not m:
+        return False
+    typ = _norm_type(m.get("account_type"))
+    if typ == "ADMIN":
+        return True
+    if typ not in {"VIP", "SVIP"}:
+        return False
+    exp = vip_expire_dt(m)
+    if not exp:
+        return True
+    return datetime.now() < exp
+
+
+def vip_expired(m) -> bool:
+    typ = _norm_type((m or {}).get("account_type"))
+    if typ not in {"VIP", "SVIP"}:
+        return False
+    exp = vip_expire_dt(m)
+    return bool(exp) and datetime.now() >= exp
+
+
+def duration_from_form(form, prefix=""):
+    p = f"{prefix}_" if prefix else ""
+    key = str(form.get(p + "vip_duration") or form.get("vip_duration") or "").strip().lower()
+    if key in dict(DURATIONS):
+        return key
+    return ""
+
+
+def apply_vip_duration(m, key, start=None):
+    key = str(key or "").strip().lower()
+    if key not in dict(DURATIONS):
+        key = "1m"
+    start = start or datetime.now()
+    if key == "3d":
+        end = start + timedelta(days=3)
+    elif key == "1m":
+        end = _add_months(start, 1)
+    elif key == "3m":
+        end = _add_months(start, 3)
+    else:
+        end = _add_months(start, 12)
+    m["vip_plan"] = key
+    m["vip_started_at"] = start.strftime("%Y-%m-%d %H:%M:%S")
+    m["vip_expires_at"] = end.strftime("%Y-%m-%d %H:%M:%S")
+    return end
+
+
+def vip_remaining_label(m) -> str:
+    if not m:
+        return ""
+    if _norm_type(m.get("account_type")) == "ADMIN":
+        return "ADMIN · không hết hạn"
+    if _norm_type(m.get("account_type")) not in {"VIP", "SVIP"}:
+        return "Chưa có hạn VIP"
+    exp = vip_expire_dt(m)
+    if not exp:
+        return "VIP chưa đặt hạn (còn hiệu lực đến khi ADMIN chọn 3 ngày / 1 tháng / 3 tháng / 1 năm)"
+    now = datetime.now()
+    stamp = exp.strftime("%d/%m/%Y")
+    clock = exp.strftime("%H:%M")
+    if now >= exp:
+        return f"Hết hạn VIP ngày {stamp} {clock} · chỉ xem đề"
+    delta = exp - now
+    days = delta.days
+    hours = delta.seconds // 3600
+    mins = (delta.seconds % 3600) // 60
+    if days >= 1:
+        return f"Còn {days} ngày {hours} giờ VIP · hết {stamp}"
+    if hours >= 1:
+        return f"Còn {hours} giờ {mins} phút VIP · hết {stamp} {clock}"
+    return f"Còn {max(1, mins)} phút VIP · hết {stamp} {clock}"
+
+
+def duration_html(prefix="", selected=""):
+    selected = str(selected or "").strip().lower()
+    if selected not in dict(DURATIONS):
+        selected = "1m"
+    p = f"{prefix}_" if prefix else ""
+    name = p + "vip_duration"
+    radios = [
+        f"<label class='pkgchk'><input type='radio' name='{html.escape(name)}' value='{k}'{' checked' if selected==k else ''}> {html.escape(lab)}</label>"
+        for k, lab in DURATIONS
+    ]
+    return (
+        "<div class='pkgrow pkgdur' style='display:flex'><span>Hạn dùng</span>"
+        + "".join(radios)
+        + "</div>"
+    )
+
+
+def apply_granted(m, pkg, approved=True, duration=None):
     if not pkg:
         return
     m["package"] = pkg
@@ -201,6 +438,10 @@ def apply_granted(m, pkg, approved=True):
         m["class"] = grades[0] if len(grades) == 1 else "+".join(grades)
         m["grade"] = m["class"]
         m["requested_package"] = None
+        if duration:
+            apply_vip_duration(m, duration)
+        elif not vip_expire_dt(m) or vip_expired(m):
+            apply_vip_duration(m, m.get("vip_plan") or "1m")
 
 
 def apply_request(m, pkg):
@@ -246,6 +487,13 @@ def can_see_item(m, item) -> bool:
         return False
     if _norm_type(m.get("account_type")) == "ADMIN":
         return True
+    if not vip_active(m):
+        try:
+            import app as base
+            level = str(base.lesson_level(str((item or {}).get("path") or (item or {}).get("file") or ""))).upper()
+            return level != "VIP"
+        except Exception:
+            return False
     pkg = granted_package(m)
     if not pkg:
         try:
@@ -278,9 +526,6 @@ def can_access_path(m, path: str) -> bool:
         pass
     if not m:
         return False
-    pkg = granted_package(m)
-    if package_covers_all(pkg):
-        return True
     want = _norm_path(path)
     if not want:
         return False
@@ -311,7 +556,7 @@ def allowed_paths(m) -> set[str]:
     return out
 
 
-def picker_html(prefix="", selected=None, student=True, name_package=None):
+def picker_html(prefix="", selected=None, student=True, name_package=None, duration=""):
     selected = selected or {}
     kind = str(selected.get("kind") or "")
     grades = set(selected.get("grades") or [])
@@ -349,7 +594,8 @@ def picker_html(prefix="", selected=None, student=True, name_package=None):
         f"<div class='pkgrow pkggrades' style='display:flex'><span>Chọn lớp</span>{gboxes}</div>"
         f"<div class='pkgrow pkgsubs' style='display:flex'><span>Chọn môn</span>{sboxes}</div>"
         "<p class='pkghint muted'>Tick lớp 10/11/12 và môn Toán / Vật lý. Gói 1–3 lớp cần đúng số lớp; gói 1–2 môn cần đúng số môn.</p>"
-        "</div>"
+        + (duration_html(prefix, duration or (selected.get("vip_plan") if isinstance(selected, dict) else "")) if not student else "")
+        + "</div>"
     )
 
 
@@ -364,6 +610,10 @@ PKG_CSS = """
 .pkghint{margin:8px 0 0;font-size:11px}
 .pendcard{background:#fff8e6;border:1px solid #e6c56a;border-radius:10px;padding:10px;margin:8px 0}
 .pendcard b.req{color:#8a5a00}
+.dupbox{background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px;margin:10px 0}
+.dupbox h3{margin:0 0 8px;font-size:15px;color:#9a3412}
+.dupgroup{background:#fff;border:1px solid #fed7aa;border-radius:10px;padding:8px;margin:8px 0}
+.dupgroup form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 </style>
 """
 
@@ -412,7 +662,7 @@ def attach_routes():
         req = requested_package(m)
         st = package_status(m)
         notice = {
-            "approved": f"✅ Đang dùng: <b>{html.escape(package_label(granted))}</b>",
+            "approved": f"✅ Đang dùng: <b>{html.escape(package_label(granted))}</b><br>{html.escape(vip_remaining_label(m))}",
             "pending": f"⏳ Chờ ADMIN duyệt: <b>{html.escape(package_label(req) if req else 'gói đã chọn')}</b>",
             "rejected": "Gói trước đó chưa được duyệt. Hãy chọn lại gói và gửi.",
             "none": "Chưa có gói. Chọn gói bên dưới rồi gửi để ADMIN duyệt.",
