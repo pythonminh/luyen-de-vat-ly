@@ -1147,7 +1147,17 @@ def present_watch(code=""):
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
-        "<div class='cinema-inkframe'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div></div></div>"
+        "<div class='cinema-inktools'>"
+        "<span>Ô ghi</span>"
+        "<button type='button' class='inkpaper' data-paper='lines'>Kẻ hàng</button>"
+        "<button type='button' class='inkpaper' data-paper='grid'>Lưới mờ</button>"
+        "<button type='button' class='inkpaper' data-paper='plain'>Không kẻ</button>"
+        "<button type='button' class='inkpaper' id='inkTaller'>Hạ ô ▾</button>"
+        "<button type='button' class='inkpaper' id='inkShorter'>Thu ▴</button>"
+        "</div>"
+        "<div class='cinema-inkframe' data-paper='lines'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div>"
+        "<div class='cinema-inkresize' id='inkResize' title='Kéo xuống để ghi thêm'>▾ kéo xuống để ghi thêm ▾</div>"
+        "</div></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
@@ -1788,12 +1798,33 @@ function drawKey(q, showSol, pos, total, live){
   if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||''].join('\x1f');
   return [q&&q.kind,q&&q.dang,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
 }
+let inkCssH=0;
+function clampInkH(h){
+  return Math.max(140, Math.min(Math.round(window.innerHeight*0.9), Math.max(140, h|0)));
+}
+function setInkPadHeight(h, remap){
+  const pad=document.getElementById('cinemaInkPad');
+  const frame=document.querySelector('.cinema-inkframe');
+  if(!frame) return;
+  h=clampInkH(h);
+  frame.style.height=h+'px';
+  if(pad) pad.style.setProperty('--ink-h', h+'px');
+  try{localStorage.setItem('ldvlInkH', String(h))}catch(e){}
+  if(remap!==false) sizeInk();
+}
 function sizeInk(){
   const cv=document.getElementById('cinemaInk');
   const frame=document.querySelector('.cinema-inkframe');
   if(!cv||!frame) return;
   const r=frame.getBoundingClientRect();
   if(r.width<8||r.height<8) return;
+  if(inkCssH && Math.abs(inkCssH-r.height)>2){
+    const k=inkCssH/r.height;
+    function remap(s){ (s.p||[]).forEach(function(pt){ pt[1]=Math.max(0, Math.min(1, pt[1]*k)); }); }
+    inkStrokes.forEach(remap);
+    if(inkCur) remap(inkCur);
+  }
+  inkCssH=r.height;
   const dpr=Math.min(2, window.devicePixelRatio||1);
   const w=Math.max(1, Math.floor(r.width*dpr));
   const h=Math.max(1, Math.floor(r.height*dpr));
@@ -1925,12 +1956,72 @@ function bindCinemaInk(){
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
 }
+function setInkPaper(kind){
+  const frame=document.querySelector('.cinema-inkframe');
+  if(!frame) return;
+  const k=(kind==='grid'||kind==='plain')?kind:'lines';
+  frame.setAttribute('data-paper', k);
+  try{localStorage.setItem('ldvlInkPaper', k)}catch(e){}
+  document.querySelectorAll('.cinema-inktools .inkpaper[data-paper]').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-paper')===k);
+  });
+}
+function bindInkPadUi(){
+  const pad=document.getElementById('cinemaInkPad');
+  if(!pad || pad.dataset.ui==='1') return;
+  pad.dataset.ui='1';
+  let paper='lines', h=220;
+  try{paper=localStorage.getItem('ldvlInkPaper')||'lines'}catch(e){}
+  try{h=parseInt(localStorage.getItem('ldvlInkH')||'220',10)||220}catch(e){}
+  setInkPaper(paper);
+  setInkPadHeight(h, false);
+  document.querySelectorAll('.cinema-inktools .inkpaper[data-paper]').forEach(function(b){
+    b.onclick=function(){ setInkPaper(b.getAttribute('data-paper')); };
+  });
+  const taller=document.getElementById('inkTaller');
+  const shorter=document.getElementById('inkShorter');
+  if(taller) taller.onclick=function(){
+    const frame=document.querySelector('.cinema-inkframe');
+    setInkPadHeight((frame?frame.getBoundingClientRect().height:220)+90);
+  };
+  if(shorter) shorter.onclick=function(){
+    const frame=document.querySelector('.cinema-inkframe');
+    setInkPadHeight((frame?frame.getBoundingClientRect().height:220)-80);
+  };
+  const grip=document.getElementById('inkResize');
+  if(grip){
+    let drag=false, y0=0, h0=220;
+    function start(ev){
+      if(ev.pointerType==='mouse' && ev.button!==0) return;
+      ev.preventDefault();
+      drag=true;
+      y0=ev.clientY;
+      const frame=document.querySelector('.cinema-inkframe');
+      h0=frame?frame.getBoundingClientRect().height:220;
+      try{grip.setPointerCapture(ev.pointerId)}catch(e){}
+    }
+    function move(ev){
+      if(!drag) return;
+      ev.preventDefault();
+      setInkPadHeight(h0+(ev.clientY-y0));
+    }
+    function end(ev){
+      if(!drag) return;
+      drag=false;
+      try{grip.releasePointerCapture(ev.pointerId)}catch(e){}
+    }
+    grip.addEventListener('pointerdown', start);
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
+  }
+}
 function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
   if(box.querySelector('.ltsec')) return;
   const pad=document.getElementById('cinemaInkPad');
-  const padH=pad?Math.round(Math.min(240, Math.max(110, window.innerWidth*0.38))+36):0;
+  const padH=pad?Math.round(pad.offsetHeight||0):0;
   const availH=Math.max(180, window.innerHeight-36-padH);
   const availW=Math.max(240, window.innerWidth-20);
   let lo=0.95, hi=2.5, best=0.95;
@@ -2099,6 +2190,7 @@ async function tick(){
     paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next, d.q_lo, d.q_hi);
     bindCinemaPick();
     bindCinemaInk();
+    bindInkPadUi();
     applyInk(d);
     sizeInk();
   }catch(e){
@@ -2226,6 +2318,7 @@ setInterval(tick,900);
   })();
 })();
 window.addEventListener('resize',function(){sizeInk();});
+document.addEventListener('DOMContentLoaded',function(){bindInkPadUi();sizeInk();});
 </script>
 """
 
