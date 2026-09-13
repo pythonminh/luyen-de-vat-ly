@@ -2998,12 +2998,16 @@ def _go_kind_href(path, dang, kind, guest=False, practice=None):
         except Exception:
             m = None
         practice = can_practice(m, path)
-    if practice:
-        href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
-        if dang:
-            href += '&dang=' + urllib.parse.quote(str(dang), safe='')
-        return href
-    return dang_view_url(path, dang, kind)
+    try:
+        admin_browse = can_manage_bank()
+    except Exception:
+        admin_browse = False
+    if admin_browse or not practice:
+        return dang_view_url(path, dang, kind)
+    href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
+    if dang:
+        href += '&dang=' + urllib.parse.quote(str(dang), safe='')
+    return href
 
 def dang_tabs_html(path, qs, current_dang='', kind='', guest=False, practice=None):
     names, counts = dang_names_of(qs)
@@ -4001,6 +4005,13 @@ def admin_edit():
             companion_bar=_lt.companion_ai_panel_html(p, 'lt')
     except Exception as e:
         companion_bar="<div class='err'>Không mở được sửa từng mục: "+html.escape(str(e)[:240])+"</div>"
+    kn=str(p or '').replace('\\','/').rsplit('/',1)[-1].lower()
+    if kn=='lt.tex':
+        back_btn="<a class='btn' href='/admin/ly-thuyet'>← Duyệt LT</a>"
+    elif kn=='pp.tex':
+        back_btn="<a class='btn' href='/admin/ly-thuyet'>← Duyệt dạng mẫu</a>"
+    else:
+        back_btn="<a class='btn' href='"+html.escape(dang_view_url(p), quote=True)+"'>← Về bài tập</a>"
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa TEX ngay trên trang này</div><div class='body'>"
         "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar
@@ -4010,7 +4021,7 @@ def admin_edit():
         "<input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'>"
         "<div class='editbar'><input name='message' value='ADMIN cập nhật TEX' style='flex:1;min-width:12rem;padding:9px;border:1px solid #cbd8e6;border-radius:7px'>"
         "<button class='btn green' type='submit'>💾 Lưu</button> "
-        "<a class='btn' href='/admin/ly-thuyet'>← Duyệt LT</a></div>"
+        + back_btn + "</div>"
         "<label class='muted' style='display:block;margin:8px 0 4px'>Nội dung file</label>"
         "<textarea name='content' class='code' id='texsrc' spellcheck='false' autocomplete='off'>"+html.escape(txt)+"</textarea>"
         "</form>"
