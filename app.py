@@ -739,7 +739,16 @@ def has_full_bank_access(m=None):
 def can_manage_bank():
     """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
     return has_full_bank_access()
-def is_vip(m):return account_type_of(m) in {'VIP','SVIP','ADMIN'}
+def is_vip(m):
+    if account_type_of(m) == 'ADMIN':
+        return True
+    if account_type_of(m) not in {'VIP','SVIP'}:
+        return False
+    try:
+        import membership as _pkg
+        return _pkg.vip_active(m)
+    except Exception:
+        return True
 def can_practice(m, path=None):
     """VIP / SVIP / ADMIN mới làm bài. Khách và FREE chỉ xem đề."""
     try:
@@ -770,6 +779,13 @@ def view_only_notice_html(m=None, login_next='/member'):
                 f"<a class='btn primary' href='{html.escape(login_url(login_next), quote=True)}'>Đăng nhập</a></div>")
     if can_practice(m):
         return ''
+    try:
+        import membership as _pkg
+        if _pkg.vip_expired(m):
+            return ("<div class='notice'>⏱ Gói VIP đã hết hạn. Chỉ xem đề. Nhờ ADMIN gia hạn "
+                    f"(3 ngày / 1 tháng / 3 tháng / 1 năm) hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
+    except Exception:
+        pass
     return ("<div class='notice'>👁 Tài khoản <b>FREE</b> chỉ xem đề, không làm bài. "
             "Nhờ ADMIN cấp gói VIP hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
 def lesson_level(path):
@@ -3114,6 +3130,11 @@ def member_index():
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
     if m:
         extra=(' · 👁 Chỉ xem đề, không làm bài' if not can_practice(m) else '')
+        try:
+            import membership as _pkg
+            extra=' · '+html.escape(_pkg.vip_remaining_label(m))+extra
+        except Exception:
+            pass
         who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b>"+extra+"</div>"
     else:
         who="<div class='notice'>👁 <b>Xem đề không cần đăng nhập.</b> Cần VIP (ADMIN cấp gói) để làm bài. <a href='/member/login'>Đăng nhập</a> hoặc <a href='/member/register'>Đăng ký</a>.</div>"
