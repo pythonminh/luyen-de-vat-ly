@@ -1124,7 +1124,9 @@ def present_watch(code=""):
         "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
-        "<canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div>"
+        "<div class='cinema-inkpad' id='cinemaInkPad'>"
+        "<div class='cinema-inklab'>Ô ghi chú · cùng khung trên mọi máy</div>"
+        "<div class='cinema-inkframe'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div></div></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
@@ -1666,7 +1668,7 @@ function paintHostTools(){
   if(inkBtn){
     inkBtn.hidden=!on;
     inkBtn.classList.toggle('on', on && document.body.classList.contains('ink-on'));
-    inkBtn.title='Viết lên đề bằng bút cảm ứng / ngón tay. Tắt Bút để chọn đáp án.';
+    inkBtn.title='Viết trong ô ghi chú bên dưới. Tắt Bút để chọn đáp án.';
   }
   if(inkClr) inkClr.hidden=!on;
 }
@@ -1767,17 +1769,17 @@ function drawKey(q, showSol, pos, total, live){
 }
 function sizeInk(){
   const cv=document.getElementById('cinemaInk');
-  const stage=document.querySelector('.cinema-stage');
-  if(!cv||!stage) return;
-  const r=stage.getBoundingClientRect();
+  const frame=document.querySelector('.cinema-inkframe');
+  if(!cv||!frame) return;
+  const r=frame.getBoundingClientRect();
   const dpr=Math.min(2, window.devicePixelRatio||1);
   const w=Math.max(1, Math.floor(r.width*dpr));
   const h=Math.max(1, Math.floor(r.height*dpr));
   if(cv.width!==w || cv.height!==h){
     cv.width=w; cv.height=h;
   }
-  cv.style.width=r.width+'px';
-  cv.style.height=r.height+'px';
+  cv.style.width='100%';
+  cv.style.height='100%';
   paintInk();
 }
 function clearInkCanvas(){
@@ -1807,7 +1809,7 @@ function paintInk(){
     if(pts.length<1) return;
     ctx.beginPath();
     ctx.strokeStyle=s.c||'#b91c1c';
-    ctx.lineWidth=Math.max(2, (s.w||3)*Math.min(w,h)/420);
+    ctx.lineWidth=Math.max(2, (s.w||3)*Math.min(w,h)/280);
     ctx.lineCap='round';
     ctx.lineJoin='round';
     pts.forEach(function(pt,i){
