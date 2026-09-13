@@ -178,6 +178,8 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .lt-num{display:inline-flex;align-items:center;justify-content:center;min-width:1.55em;height:1.55em;padding:0 5px;border-radius:999px;background:#16a34a;color:#fff;font:800 12px/1.55em Segoe UI,Arial,sans-serif;letter-spacing:0}
 .ltbox.hd .lt-num{background:#ea580c}
 .ltbox.know .lt-num{background:#2563eb}
+.lt-math{margin:14px 0;overflow-x:auto;padding:8px 6px;text-align:center;color:#c1121f}
+.ltpage .lt-math mjx-container,.ltsec .lt-math mjx-container,.ltpage mjx-container[display="true"],.ltsec mjx-container[display="true"]{display:block!important;margin:.35em auto!important;text-align:center!important;color:#c1121f!important}
 .lttabs .ltform{display:inline;margin:0}
 .dangtabs{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;padding:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff7ed;border-bottom:1px solid #fed7aa}.dtab{flex:0 0 auto;max-width:min(18rem,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:8px;padding:6px 10px;font-weight:700;font-size:12px}.dtab.on{background:#c2410c;border-color:#c2410c;color:#fff}.kindtabs{display:flex;flex-wrap:wrap;gap:4px;align-items:stretch;padding:6px 8px;background:#eef6ff;border-bottom:1px solid var(--line)}.subnav .kindtabs{position:static;top:auto;border-bottom:0;z-index:auto}.kindtabs .ktab{display:inline-flex;flex:1 1 auto;min-width:0;align-items:center;justify-content:center;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:5px 4px;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap}.kindtabs .ktab.on{background:var(--blue);border-color:var(--blue);color:#fff}.kindtabs .ktab.off{opacity:.4;cursor:not-allowed;pointer-events:none}.head{padding:11px 13px;background:#f8fbff;border-bottom:1px solid var(--line);font-weight:900}.body{padding:12px}.btn{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:#179b55;border-color:#179b55;color:#fff}.btn.red{background:#fff1f1;border-color:#efb1b1;color:#b5222b}.btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}.muted{color:#6c7d90}
 .layout{display:grid;grid-template-columns:300px 1fr;gap:10px}.tree{max-height:78vh;overflow:auto}.tree details{border-bottom:1px solid #e8eef5}.tree summary{cursor:pointer;padding:8px 5px;font-weight:900}.tree a{display:block;padding:6px 8px;border-radius:6px}.tree a:hover{background:#eef6ff}.filters{display:grid;gap:8px}.field label{display:block;font-size:11px;color:#66778a;font-weight:800;margin-bottom:3px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd8e6;border-radius:7px;background:#fff}
@@ -313,6 +315,7 @@ body.cinema .ltbox .k{padding:8px 12px;font-size:12px;font-weight:800;background
 body.cinema .ltbox.example,body.cinema .ltbox.vd{background:#f3fdf6!important;border-color:#86efac!important;border-left:5px solid #16a34a!important}
 body.cinema .ltbox.example .k,body.cinema .ltbox.vd .k{background:#dcfce7!important;color:#166534!important}
 body.cinema .ltbox-body{padding:10px 14px;line-height:1.65}
+body.cinema .lt-math,body.cinema .ltpage mjx-container[display="true"],body.cinema .ltsec mjx-container[display="true"]{display:block!important;margin:.4em auto!important;text-align:center!important;color:#c1121f!important}
 body.cinema .qid,.cinema-wait .qid{display:none}
 body.cinema .nguonrow{display:none}
 body.cinema .opt{cursor:default;display:flex;align-items:center;gap:10px}
@@ -2197,6 +2200,38 @@ def _match_tex_env(s, name, start=0):
     return None
 
 
+_LT_DISPLAY_ENVS = (
+    "equation*", "equation", "align*", "align",
+    "gather*", "gather", "multline*", "multline",
+)
+
+
+def _stash_display_math(s, dms):
+    """Gói công thức riêng dòng (equation, \\[ \\], $$) để canh giữa trên web."""
+    s = s or ""
+
+    def stash_raw(raw):
+        dms.append(raw.strip())
+        return f"@@DM{len(dms)-1}@@"
+
+    for name in _LT_DISPLAY_ENVS:
+        while True:
+            hit = _match_tex_env(s, name)
+            if not hit:
+                break
+            a0, a1, b0, b1 = hit
+            body = re.sub(r"\\label\s*\{[^{}]*\}", "", s[a1:b0]).strip()
+            s = s[:a0] + stash_raw("\\[\n" + body + "\n\\]") + s[b1:]
+    s = re.sub(r"\\\[.*?\\\]", lambda m: stash_raw(m.group(0)), s, flags=re.S)
+    s = re.sub(
+        r"\$\$(.+?)\$\$",
+        lambda m: stash_raw("\\[" + m.group(1).strip() + "\\]"),
+        s,
+        flags=re.S,
+    )
+    return s
+
+
 def _tex_grab_group(s, i):
     while i < len(s) and s[i] in " \t\n\r":
         i += 1
@@ -2249,12 +2284,7 @@ def _replace_tex_macro(s, name, wrap):
 def _tex_inline_html(it):
     it = it or ""
     dms = []
-
-    def stash_dm(m):
-        dms.append(m.group(0).strip())
-        return f"@@DM{len(dms)-1}@@"
-
-    it = re.sub(r"\\\[.*?\\\]", stash_dm, it, flags=re.S)
+    it = _stash_display_math(it, dms)
     it = _replace_tex_macro(it, "textbf", lambda b: "@@B@@" + b + "@@/B@@")
     it = _replace_tex_macro(it, "textit", lambda b: "@@I@@" + b + "@@/I@@")
     it = _replace_tex_macro(it, "emph", lambda b: "@@I@@" + b + "@@/I@@")
@@ -2424,10 +2454,7 @@ def latex_to_web(s):
     s=convert_list_env(s, 'itemize', 'ul', lists)
     s=convert_list_env(s, 'enumerate', 'ol', lists)
     dms=[]
-    def stash_dm(m):
-        dms.append(m.group(0).strip())
-        return f'@@DM{len(dms)-1}@@'
-    s=re.sub(r'\\\[.*?\\\]', stash_dm, s, flags=re.S)
+    s=_stash_display_math(s, dms)
     s=re.sub(r'\\begin\s*\{\s*(?:center|minipage|figure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(?:center|minipage|figure)\s*\}','',s,flags=re.I)
     s=re.sub(r'\\vspace\s*\{[^{}]*\}','',s,flags=re.I)

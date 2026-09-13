@@ -43,7 +43,8 @@ LT_CSS = """
 .ltbox .k:before{content:'';flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:center/14px 14px no-repeat #fff;box-shadow:inset 0 0 0 1px #0001}
 .ltbox-body{padding:10px 16px 14px;line-height:1.62;color:#1e293b}
 .ltbox-body>:first-child{margin-top:0}
-.lt-math{margin:10px 0;overflow-x:auto;padding:4px 0}
+.lt-math{margin:14px 0;overflow-x:auto;padding:8px 6px;text-align:center;color:#c1121f}
+.lt-math mjx-container,.ltpage mjx-container[display="true"],.ltsec mjx-container[display="true"]{display:block!important;margin:.35em auto!important;text-align:center!important;color:#c1121f!important}
 .ltsec-tools .btn.primary{background:#145bb0;color:#fff;border:0}
 .ltbox-body ul{margin:6px 0 4px;padding-left:1.35em}
 .ltbox-body ol,ol.tex-list{list-style:none;counter-reset:ltn;margin:8px 0 6px;padding:0}
@@ -510,8 +511,6 @@ def preprocess(s: str) -> str:
     s = _replace_macro_one(s, "chuy", lambda b: "\n@@CHUY@@" + b + "@@/CHUY@@\n")
     s = _replace_macro_one(s, "luuy", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
     s = _replace_macro_one(s, "ghichu", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
-    # Hỗ trợ môi trường \begin{vd}...\end{vd} như một hộp Ví dụ.
-    s = _replace_env(s, "vd", lambda b: "\n@@EX@@" + b + "@@/EX@@\n")
     s = _replace_macro_one(s, "vidu", lambda b: "\n@@EX@@" + b + "@@/EX@@\n")
     s = _replace_macro_two(
         s,
