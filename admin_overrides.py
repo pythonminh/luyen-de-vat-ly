@@ -159,13 +159,38 @@ def _member_manager():
             f"<form id='row_{su}' class='memform' method='post' action='/admin/members/save'>"
             f"<input type='hidden' name='save_user' value='{su}'>"
             f"<div class='now'>Hiện có: <b>{_safe(pkg.package_label(granted))}</b> · {seen} bài "
-            f"<a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem bài</a></div>"
-            + pkg.picker_html(prefix=u, selected=req or granted, student=False)
+            f"<a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem bài</a>"
+            f"<div class='muted'>{_safe(pkg.vip_remaining_label(m))}</div></div>"
+            + pkg.picker_html(prefix=u, selected=req or granted, student=False, duration=m.get("vip_plan"))
             + f"<div class='memacts'><select name='status'><option value='ON' {'selected' if st=='ON' else ''}>ON · đang dùng</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF · khóa</option></select>"
             f"<div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
             f"<div class='passrow'><input class='pass' name='new_password' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
-            f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp gói</button></div></form></article>"
+            f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp gói</button>"
+            f"<button class='btn red small' name='intent' value='delete' onclick=\"return confirm('Xóa thành viên {su}? Không hoàn tác.')\">🗑 Xóa</button></div></form></article>"
         )
+
+    dup_blocks = []
+    for gi, group in enumerate(pkg.duplicate_groups(allm), 1):
+        keep0 = str(group[0].get("username") or "")
+        drops = "".join(f"<input type='hidden' name='also' value='{_safe(m.get('username'))}'>" for m in group)
+        radios = "".join(
+            f"<label class='pkgopt'><input type='radio' name='keep' value='{_safe(m.get('username'))}' {'checked' if str(m.get('username'))==keep0 else ''}> "
+            f"<b>{_safe(m.get('username'))}</b> · {_safe(m.get('name') or '—')} · {_safe(m.get('phone') or 'không SĐT')} · {_safe(pkg.scope_label(m))}</label>"
+            for m in group
+        )
+        dup_blocks.append(
+            f"<div class='dupgroup'><div>Nhóm {gi} · trùng tên hoặc SĐT</div>"
+            f"<form method='post' action='/admin/members/merge'>{drops}{radios}"
+            f"<button class='btn green' type='submit'>🔗 Gộp vào tài khoản đang chọn</button></form></div>"
+        )
+    dup_html = (
+        f"<div class='dupbox'><h3>⚠️ {len(dup_blocks)} nhóm trùng tên / số điện thoại</h3>"
+        "<p class='muted' style='margin:0 0 6px'>Chọn tài khoản giữ lại (nên giữ VIP). Các tài khoản khác trong nhóm sẽ bị xóa sau khi gộp.</p>"
+        + "".join(dup_blocks)
+        + "</div>"
+        if dup_blocks
+        else ""
+    )
 
     create = (
         "<details class='createbox'><summary>➕ Cấp thành viên mới (duyệt luôn)</summary>"
@@ -186,16 +211,17 @@ def _member_manager():
 .toolbar,.bulk,.createbox{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0}}.toolbar{{display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label,.createform label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.pass,select{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{{width:100%}}
 .memcard{{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;margin:8px 0}}.memcard.wait{{border-color:#e0b84a;background:#fffdf6}}.memtop{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}}.ck{{font-weight:800}}.now{{margin:6px 0;font-size:13px}}.memacts{{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}}.pass{{width:150px}}.passrow{{display:flex;gap:4px;align-items:center}}.eye{{height:34px;border:1px solid #cbd8e6;background:#fff;border-radius:6px;cursor:pointer}}
 .badge{{display:inline-block;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900}}.badge.pending{{background:#fff4d6;color:#8a5a00}}.badge.approved{{background:#e8f8ee;color:#116a32}}.badge.none,.badge.rejected{{background:#f1f4f8;color:#5d7084}}.badge.vip{{background:#e8f1ff;color:#145bb0}}.badge.svip{{background:#fff4d6;color:#8a5a00}}.badge.free{{background:#f1f4f8;color:#5d7084}}.badge.ok{{background:#e8f8ee;color:#116a32}}.badge.no{{background:#fff1f2;color:#9f1239}}
-.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff;border-color:#128a4a}}.btn.small{{padding:5px 7px;font-size:11px}}
+.btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff;border-color:#128a4a}}.btn.small{{padding:5px 7px;font-size:11px}}.btn.red{{background:#fff;color:#b91c1c;border-color:#fecaca}}
 .note{{background:#eef7ff;border:1px solid #b9d5ef;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}.cgrid{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}}@media(max-width:800px){{.stats{{grid-template-columns:repeat(2,1fr)}}.cgrid{{grid-template-columns:1fr}}}}
 </style>
 <div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Duyệt gói 1–3 lớp / 1–2 môn · cấp quyền · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
 <div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['approved']}</b><span>Đã cấp gói</span></div><div class='stat'><b>{counts['none']}</b><span>Chưa cấp</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
-<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN duyệt đúng yêu cầu, hoặc sửa gói rồi bấm <b>Lưu / cấp gói</b>. Chưa cấp gói = <b>FREE = chỉ xem đề, không làm bài</b>. Cấp gói → VIP/SVIP mới làm được bài. 1–3 lớp = cả Toán và Lý các khối đó. 1–2 môn = môn đó cho cả 10/11/12. Tài khoản cũ VIP vẫn giữ đúng lớp đã cấp.</div>
+<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN duyệt rồi chọn <b>hạn dùng</b> 3 ngày / 1 tháng / 3 tháng / 1 năm. Hết hạn = chỉ xem đề. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
 {create}
+{dup_html}
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>GÓI</label><select name='pack'><option value=''>Tất cả</option><option value='pending' {'selected' if pack_filter=='pending' else ''}>Chờ duyệt</option><option value='approved' {'selected' if pack_filter=='approved' else ''}>Đã cấp</option><option value='none' {'selected' if pack_filter=='none' else ''}>Chưa cấp</option></select></div><div><label>TÀI KHOẢN</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
 <form id='bulkForm' method='post' action='/admin/members/bulk'></form>
-<div class='bulk'><b>⚡ Đã chọn:</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button></div>
+<div class='bulk'><b>⚡ Đã chọn:</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button> <button class='btn red' name='intent' value='delete' form='bulkForm' onclick="return confirm('Xóa các thành viên đang tick?')">🗑 Xóa đã chọn</button></div>
 {''.join(cards) or "<div class='note'>Không có thành viên phù hợp.</div>"}
 </div>
 <script>function togglePass(b){{const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'}}</script>
@@ -237,30 +263,54 @@ def _save_member():
         if len(pw) < 4:
             return base.page("ADMIN", "<div class='wrap'><div class='panel'><div class='body err'>Mật khẩu phải có ít nhất 4 ký tự.</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
         base.set_member_password(target, pw)
+    if intent == "delete":
+        d["members"] = [m for m in d["members"] if str(m.get("username", "")) != username]
+        _save_members(d, f"ADMIN xóa thành viên {username}")
+        return redirect("/admin/members")
     if intent == "reject":
         target["package_status"] = "rejected"
         target["requested_package"] = None
         target["account_type"] = "FREE"
         target["package"] = None
+        target["vip_expires_at"] = ""
+        target["vip_plan"] = ""
     elif intent == "approve":
         chosen = pkg.requested_package(target)
         if not chosen:
             chosen, err = pkg.package_from_form(request.form, prefix=username, student=False)
             if err:
                 return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
-        pkg.apply_granted(target, chosen, approved=True)
+        pkg.apply_granted(target, chosen, approved=True, duration=pkg.duration_from_form(request.form, prefix=username))
         target["status"] = "ON"
     else:
         chosen, err = pkg.package_from_form(request.form, prefix=username, student=False)
         if err:
             return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
-        pkg.apply_granted(target, chosen, approved=True)
+        pkg.apply_granted(target, chosen, approved=True, duration=pkg.duration_from_form(request.form, prefix=username))
     target["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     _save_members(d, f"ADMIN cấp gói {username}")
     return redirect("/admin/members")
 
 
-def _bulk_save():
+def _merge_members():
+    d = _members()
+    keep_u = str(request.form.get("keep") or "").strip()
+    also = [str(x).strip() for x in request.form.getlist("also") if str(x).strip()]
+    if keep_u not in also:
+        also.append(keep_u)
+    by_u = {str(m.get("username") or "").strip(): m for m in d["members"]}
+    keep = by_u.get(keep_u)
+    if not keep or keep_u.casefold() == "admin":
+        return redirect("/admin/members")
+    extras = [by_u[u] for u in also if u != keep_u and u in by_u and u.casefold() != "admin"]
+    if not extras:
+        return redirect("/admin/members")
+    pkg.merge_members(keep, extras)
+    drop = {str(x.get("username") or "") for x in extras}
+    d["members"] = [m for m in d["members"] if str(m.get("username") or "") not in drop]
+    keep["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _save_members(d, f"ADMIN gộp thành viên vào {keep_u}")
+    return redirect("/admin/members")
     d = _members()
     selected = set(request.form.getlist("selected"))
     intent = str(request.form.get("intent") or "").strip().lower()
@@ -272,12 +322,22 @@ def _bulk_save():
             m["status"] = "OFF"
         elif intent == "on":
             m["status"] = "ON"
+        elif intent == "delete":
+            continue
         elif intent == "approve":
             chosen = pkg.requested_package(m) or pkg.granted_package(m)
             if chosen:
-                pkg.apply_granted(m, chosen, approved=True)
+                pkg.apply_granted(m, chosen, approved=True, duration=pkg.duration_from_form(request.form) or "1m")
                 m["status"] = "ON"
         m["updated_at"] = now
+    if intent == "delete":
+        d["members"] = [
+            m for m in d["members"]
+            if str(m.get("username")) not in selected or str(m.get("username")).casefold() == "admin"
+        ]
+        if selected:
+            _save_members(d, "ADMIN xóa thành viên hàng loạt")
+        return redirect("/admin/members")
     if selected:
         _save_members(d, "ADMIN duyệt / khóa hàng loạt")
     return redirect("/admin/members")
@@ -300,7 +360,7 @@ def _create_member():
         return base.page("ADMIN", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(err)}</div><a class='btn' href='/admin/members'>Quay lại</a></div></div>")
     rec = {"username": username, "name": name or username, "phone": phone, "status": "ON", "account_type": "VIP"}
     base.set_member_password(rec, password)
-    pkg.apply_granted(rec, chosen, approved=True)
+    pkg.apply_granted(rec, chosen, approved=True, duration=pkg.duration_from_form(request.form) or "1m")
     rec["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     d.setdefault("members", []).append(rec)
     _save_members(d, f"ADMIN tạo thành viên {username}")
@@ -371,6 +431,7 @@ def _authoritative_admin_routes():
     if p == "/admin/members/save" and request.method == "POST": return _save_member()
     if p == "/admin/members/bulk" and request.method == "POST": return _bulk_save()
     if p == "/admin/members/create" and request.method == "POST": return _create_member()
+    if p == "/admin/members/merge" and request.method == "POST": return _merge_members()
     if p == "/admin/password": return _admin_password_page()
     return None
 
@@ -378,6 +439,7 @@ def _authoritative_admin_routes():
 # Replace the old admin login view; route rule remains /admin/login.
 if "admin_login" in app.view_functions:
     app.view_functions["admin_login"] = _admin_login
+app.add_url_rule("/admin/members/merge", "admin_members_merge", _merge_members, methods=["POST"])
 
 # Make every existing question-opening endpoint enforce the same class/SVIP rule.
 try:
