@@ -278,6 +278,8 @@ def _comp_snapshot(kind, de_path, sec, zoom=None):
         "dang_nav": [],
         "dang_has_prev": idx > 0,
         "dang_has_next": idx < len(secs) - 1,
+        "q_lo": 0,
+        "q_hi": max(0, len(secs) - 1),
         "updated": _now(),
     }, ""
 
@@ -309,6 +311,53 @@ def _dang_index(dang_nav, cur):
     return di
 
 
+def _dang_span(qs, ids, pos):
+    """Khoảng [lo, hi] inclusive các câu cùng dạng với câu đang chiếu."""
+    ids = list(ids or [])
+    n = len(ids)
+    if n <= 0:
+        return 0, -1
+    pos = max(0, min(n - 1, int(pos or 0)))
+    cur = base._dang_name((qs or {}).get(ids[pos]) or {})
+    lo = pos
+    while lo > 0 and base._dang_name((qs or {}).get(ids[lo - 1]) or {}) == cur:
+        lo -= 1
+    hi = pos
+    while hi + 1 < n and base._dang_name((qs or {}).get(ids[hi + 1]) or {}) == cur:
+        hi += 1
+    return lo, hi
+
+
+def _sort_ids_for_present(qs, ids):
+    """Dạng theo thứ tự bài, rồi TN → ĐS → TLN → TL, rồi idx — khối dạng liền nhau."""
+    ids = list(ids or [])
+    if not ids:
+        return ids
+    ordered = [qs[k] for k in sorted(qs.keys())] if qs else []
+    names, _cnts = base.dang_names_of(ordered)
+    dang_rank = {n: i for i, n in enumerate(names)}
+    kind_rank = {k: i for i, k in enumerate(base.KIND_ORDER)}
+    seen = set()
+    uniq = []
+    for qid in ids:
+        if qid in seen:
+            continue
+        seen.add(qid)
+        uniq.append(qid)
+
+    def key(qid):
+        q = (qs or {}).get(qid) or {}
+        d = base._dang_name(q)
+        k = str(q.get("kind") or "TL").upper()
+        try:
+            idx = int(qid)
+        except (TypeError, ValueError):
+            idx = 0
+        return (dang_rank.get(d, 999), kind_rank.get(k, 99), idx)
+
+    return sorted(uniq, key=key)
+
+
 def _dang_step(path, ids, cur, delta, zoom):
     try:
         qs = _lesson_qs(path)
@@ -324,40 +373,7 @@ def _dang_step(path, ids, cur, delta, zoom):
     if 0 <= nxt < len(dang_nav):
         pos = int(dang_nav[nxt].get("pos") or 0)
         return _snapshot(False, zoom, False, {"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
-    ordered = [qs[k] for k in sorted(qs.keys())] if qs else []
-    all_names, _cnts = base.dang_names_of(ordered)
-    cur_name = base._dang_name(qs.get(ids[cur]) or {})
-    try:
-        gi = all_names.index(cur_name)
-    except ValueError:
-        return None, "Hết dạng."
-    ni = gi + int(delta)
-    if ni < 0 or ni >= len(all_names):
-        return None, "Hết dạng."
-    new_dang = all_names[ni]
-    kinds = {str((qs.get(i) or {}).get("kind") or "").upper() for i in ids}
-    kinds.discard("")
-    new_ids = []
-    for q in ordered:
-        if base._dang_name(q) != new_dang:
-            continue
-        if kinds and str(q.get("kind") or "").upper() not in kinds:
-            continue
-        try:
-            new_ids.append(int(q["idx"]))
-        except (TypeError, ValueError, KeyError):
-            pass
-    if not new_ids:
-        for q in ordered:
-            if base._dang_name(q) != new_dang:
-                continue
-            try:
-                new_ids.append(int(q["idx"]))
-            except (TypeError, ValueError, KeyError):
-                pass
-    if not new_ids:
-        return None, "Dạng này chưa có câu để chiếu."
-    return _snapshot(False, zoom, False, {"quiz_path": path, "quiz_ids": new_ids, "quiz_pos": 0})
+    return None, "Hết dạng trong phần đã chọn."
 
 
 def _pos_after_ids_change(old_ids, old_pos, new_ids):
@@ -383,12 +399,21 @@ def _pos_after_ids_change(old_ids, old_pos, new_ids):
 
 
 def _keep_room_cursor(data, room):
-    """Heartbeat không gửi sec thì giữ dạng/câu đang chiếu, không về mục 1."""
+    """Heartbeat không gửi sec/ids thì giữ dạng/câu đang chiếu, không về mục 1."""
     if not room or not isinstance(data, dict):
         return
     if str(data.get("comp_kind") or "").strip().lower() in {"lt", "pp"} and not str(data.get("sec") or "").strip():
         data["sec"] = str(((room.get("q") or {}).get("sec_id")) or room.get("pos") or "")
-    if data.get("quiz_ids") is not None and room.get("ids") is not None:
+    if data.get("quiz_ids") is None:
+        ids = list(room.get("ids") or [])
+        if ids:
+            data["quiz_ids"] = ids
+            if data.get("quiz_pos") is None:
+                data["quiz_pos"] = room.get("pos") or 0
+            if not str(data.get("quiz_path") or "").strip():
+                data["quiz_path"] = str(room.get("path") or "")
+        return
+    if room.get("ids") is not None:
         try:
             new_ids = [int(x) for x in data.get("quiz_ids") if str(x).isdigit() or isinstance(x, int)]
         except (TypeError, ValueError):
@@ -433,6 +458,18 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
         qs = _lesson_qs(path)
     except Exception as e:
         return None, str(e)
+    if data.get("sort_present") and ids:
+        cur_id = ids[pos] if 0 <= pos < len(ids) else None
+        ids = _sort_ids_for_present(qs, ids)
+        if cur_id is not None and cur_id in ids:
+            pos = ids.index(cur_id)
+        else:
+            pos = 0
+        try:
+            session["practice_ids"] = ids
+            session["practice_pos"] = pos
+        except Exception:
+            pass
     q = qs.get(ids[pos])
     if not q:
         return None, "Không tải được câu hiện tại."
@@ -440,20 +477,16 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
     keys = bool(show or reveal)
     titles, dang_nav = _quiz_nav(qs, ids)
     di = _dang_index(dang_nav, pos)
-    ordered = [qs[k] for k in sorted(qs.keys())] if qs else []
-    all_names, _cnts = base.dang_names_of(ordered)
-    cur_name = base._dang_name(q)
-    try:
-        gi = all_names.index(cur_name) if all_names else -1
-    except ValueError:
-        gi = -1
-    has_prev = di > 0 or gi > 0
-    has_next = (di < len(dang_nav) - 1) or (gi >= 0 and gi < len(all_names) - 1)
+    q_lo, q_hi = _dang_span(qs, ids, pos)
+    has_prev = di > 0
+    has_next = di < len(dang_nav) - 1
     return {
         "path": path,
         "ids": ids,
         "pos": pos,
         "total": len(ids),
+        "q_lo": q_lo,
+        "q_hi": q_hi,
         "sec_titles": titles,
         "dang_nav": dang_nav,
         "dang_has_prev": has_prev,
@@ -472,6 +505,8 @@ def _room_out(room, include_q=True):
         "ver": int(room.get("ver") or 0),
         "pos": int(room.get("pos") or 0),
         "total": int(room.get("total") or 0),
+        "q_lo": int(room.get("q_lo") if room.get("q_lo") is not None else 0),
+        "q_hi": int(room.get("q_hi") if room.get("q_hi") is not None else max(0, int(room.get("total") or 1) - 1)),
         "show_sol": bool(room.get("show_sol")),
         "zoom": float(room.get("zoom") or 1),
         "host": room.get("host") or "",
@@ -565,6 +600,8 @@ def api_present_start():
     data = dict(request.get_json(silent=True) or {})
     live = _sanitize_live(data.get("live"))
     want_pre = _norm_code(data.get("code") or session.get("present_code") or "")
+    if data.get("quiz_ids") is not None:
+        data["sort_present"] = True
     with _LOCK:
         room_pre = _ROOMS.get(want_pre)
         _keep_room_cursor(data, room_pre)
@@ -620,6 +657,8 @@ def api_present_push():
     code = _norm_code(data.get("code") or session.get("present_code") or "")
     token = str(data.get("token") or session.get("present_token") or "")
     live = _sanitize_live(data.get("live"))
+    if bool(data.get("force_kind")) and data.get("quiz_ids") is not None:
+        data["sort_present"] = True
     with _LOCK:
         room_pre = _ROOMS.get(code)
         _keep_room_cursor(data, room_pre)
@@ -977,15 +1016,17 @@ def present_watch(code=""):
         "<div class='cinema-q'>"
         "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát / dạng trước'>✕</button>"
         "<div class='cinemahost' id='cinemaHost' hidden>"
-        "<div class='cinema-navrow' id='qNav'>"
-        "<button type='button' class='cinema-tool' id='qPrev' title='Câu trước'>◀ Câu</button>"
-        "<select id='secJump' aria-label='Chọn câu'></select>"
-        "<button type='button' class='cinema-tool' id='qNext' title='Câu sau'>Câu ▶</button>"
-        "</div>"
         "<div class='cinema-navrow' id='dangNav' hidden>"
-        "<button type='button' class='cinema-tool' id='secPrev' title='Dạng trước'>◀ Dạng</button>"
+        "<span class='cinema-navlab'>Dạng</span>"
+        "<button type='button' class='cinema-tool' id='secPrev' title='Dạng trước'>◀</button>"
         "<select id='dangJump' aria-label='Chọn dạng'></select>"
-        "<button type='button' class='cinema-tool' id='secNext' title='Dạng sau'>Dạng ▶</button>"
+        "<button type='button' class='cinema-tool' id='secNext' title='Dạng sau'>▶</button>"
+        "</div>"
+        "<div class='cinema-navrow' id='qNav'>"
+        "<span class='cinema-navlab'>Câu</span>"
+        "<button type='button' class='cinema-tool' id='qPrev' title='Câu trước cùng dạng'>◀</button>"
+        "<select id='secJump' aria-label='Chọn câu trong dạng'></select>"
+        "<button type='button' class='cinema-tool' id='qNext' title='Câu sau cùng dạng'>▶</button>"
         "</div>"
         "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận</button>"
         "<button type='button' class='cinema-tool' id='peekToggle' hidden>💡 Gợi ý</button>"
@@ -1416,7 +1457,7 @@ function hostTok(){
   }catch(e){}
   return null;
 }
-function paintSecNav(pos,total,secs,kind,dangs,dangPrev,dangNext){
+function paintSecNav(pos,total,secs,kind,dangs,dangPrev,dangNext,qLo,qHi){
   const bar=document.getElementById('cinemaHost');
   const jump=document.getElementById('secJump');
   const qPrev=document.getElementById('qPrev'), qNext=document.getElementById('qNext');
@@ -1431,16 +1472,27 @@ function paintSecNav(pos,total,secs,kind,dangs,dangPrev,dangNext){
   const p=Math.max(0, Math.min(n-1, pos||0));
   const k=String(kind||'').toUpperCase();
   const quiz=k && k!=='LT' && k!=='PP';
+  let lo=0, hi=n-1;
+  if(quiz){
+    lo=Math.max(0, Math.min(n-1, Number(qLo)));
+    hi=Math.max(lo, Math.min(n-1, Number(qHi)));
+    if(!isFinite(lo)) lo=0;
+    if(!isFinite(hi)) hi=n-1;
+  }
   if(qNav) qNav.hidden=false;
-  if(qPrev){ qPrev.hidden=!on; qPrev.disabled=!(p>0); qPrev.textContent=quiz?'◀ Câu':'◀ Mục'; qPrev.title=quiz?'Câu trước':'Mục trước'; }
-  if(qNext){ qNext.hidden=!on; qNext.disabled=!(p<n-1); qNext.textContent=quiz?'Câu ▶':'Mục ▶'; qNext.title=quiz?'Câu sau':'Mục sau'; }
+  if(qPrev){ qPrev.hidden=!on; qPrev.disabled=!(p>lo); qPrev.textContent='◀'; qPrev.title=quiz?'Câu trước cùng dạng':'Mục trước'; }
+  if(qNext){ qNext.hidden=!on; qNext.disabled=!(p<hi); qNext.textContent='▶'; qNext.title=quiz?'Câu sau cùng dạng':'Mục sau'; }
   const lab={PP:'Dạng',LT:'Mục'}[k]||'Câu';
   let titles=Array.isArray(secs)&&secs.length?secs.map(function(t,i){return String(t||'').trim()||(lab+' '+(i+1));}):null;
   if(!titles) titles=Array.from({length:n},function(_,i){return lab+' '+(i+1)+' / '+n;});
+  const localN=hi-lo+1;
+  const localTitles=titles.slice(lo, hi+1);
   if(jump){
-    const fp=titles.join('\x1f')+'\x1f'+n;
+    const fp=lo+'\x1f'+hi+'\x1f'+localTitles.join('\x1f');
     if(jump.dataset.fp!==fp){
-      jump.innerHTML=titles.map(function(t,i){return '<option value="'+i+'">'+E((i+1)+'. '+t)+'</option>';}).join('');
+      jump.innerHTML=localTitles.map(function(t,i){
+        return '<option value="'+(lo+i)+'">'+(i+1)+'/'+localN+'. '+E(t)+'</option>';
+      }).join('');
       jump.dataset.fp=fp;
     }
     jump.value=String(p);
@@ -1782,7 +1834,7 @@ async function tick(){
     if(err) err.textContent='';
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
-    paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next);
+    paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next, d.q_lo, d.q_hi);
     bindCinemaPick();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
@@ -2010,19 +2062,17 @@ function payload(opts){
     }
   }
   const form=document.getElementById('questionForm');
-  if(form && !page){
+  if(form && !page && (opts.force || window.__ldvlQuizTouched)){
     const p=form.querySelector('input[name=path]');
     o.quiz_path=p?p.value:'';
     const boxes=Array.prototype.slice.call(document.querySelectorAll('.qcard input[name=qid]'));
     let ids=boxes.filter(function(x){return x.checked}).map(function(x){return +x.value});
     if(!ids.length) ids=boxes.map(function(x){return +x.value});
     o.quiz_ids=ids;
-    if(opts.force || window.__ldvlQuizTouched){
-      let pos=typeof window.__ldvlQuizPos==='number'?window.__ldvlQuizPos:0;
-      if(pos<0||pos>=ids.length) pos=0;
-      o.quiz_pos=pos;
-      window.__ldvlQuizTouched=false;
-    }
+    let pos=typeof window.__ldvlQuizPos==='number'?window.__ldvlQuizPos:0;
+    if(pos<0||pos>=ids.length) pos=0;
+    o.quiz_pos=pos;
+    window.__ldvlQuizTouched=false;
   }
   return o;
 }
