@@ -210,17 +210,22 @@ body.cinema .tf-flags .pickmark{margin-left:0;font-size:.7em}
 body.cinema .pickmark{display:inline-block;margin-left:.4em;font-size:.78em;font-weight:900;color:#145bb0}
 body.cinema .err{padding:18px 12px;max-width:36rem;margin:12px auto 0;text-align:center}
 body.cinema #perr:empty{display:none;margin:0;padding:0}
-body.cinema .cinemahost{position:sticky;top:0;z-index:32;display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;padding:calc(8px + env(safe-area-inset-top,0px)) 52px 8px 8px;background:#fff;border-bottom:1px solid #c5d6ea}
+body.cinema .cinemahost{position:sticky;top:0;z-index:32;display:flex;gap:4px;align-items:center;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:calc(4px + env(safe-area-inset-top,0px)) 38px 4px 6px;background:#fff;border-bottom:1px solid #c5d6ea;scrollbar-width:thin}
 body.cinema .cinemahost[hidden]{display:none!important}
-body.cinema .cinema-navrow{display:flex;gap:6px;align-items:stretch;flex:1 1 100%;min-width:0}
+body.cinema .cinema-navrow{display:flex;gap:3px;align-items:center;flex:1 1 8.5rem;min-width:7.5rem;max-width:22rem}
 body.cinema .cinema-navrow[hidden]{display:none!important}
-body.cinema .cinema-navlab{flex:0 0 auto;align-self:center;font-size:12px;font-weight:800;color:#5b21b6;min-width:2.6em}
-body.cinema .cinemahost select{flex:1;min-width:0;font-size:15px;font-weight:800;padding:8px 10px;min-height:44px;border:1px solid #c4b5fd;border-radius:8px;background:#f5f3ff;color:#5b21b6}
-body.cinema .cinemahost button{flex:0 0 auto;min-width:44px;min-height:44px;border:1px solid #c5d6ea;border-radius:8px;background:#fff;color:#145bb0;font-size:18px;font-weight:800;cursor:pointer}
-body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 10px;font-size:13px;white-space:nowrap}
+body.cinema .cinema-navlab{flex:0 0 auto;font-size:10px;font-weight:800;color:#5b21b6;line-height:1}
+body.cinema .cinemahost select{flex:1;min-width:0;max-width:100%;font-size:11px;font-weight:700;padding:2px 4px;min-height:28px;height:28px;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6}
+body.cinema .cinemahost button{flex:0 0 auto;min-width:28px;min-height:28px;height:28px;border:1px solid #c5d6ea;border-radius:6px;background:#fff;color:#145bb0;font-size:12px;font-weight:800;cursor:pointer}
+body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 6px;font-size:11px;white-space:nowrap}
 body.cinema .cinemahost button:disabled{opacity:.45;cursor:not-allowed}
-body.cinema .cinemahost .spkmsg{flex:1 1 4rem;min-width:3rem;font-size:11px;color:#64748b;font-weight:700;align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.cinema .cinemahost .spkmsg{display:none}
 body.cinema .cinemahost .cinema-tool.on{background:#ede9fe;border-color:#c4b5fd;color:#5b21b6}
+@media(max-width:700px){
+body.cinema .cinemahost{gap:3px;padding-right:36px}
+body.cinema .cinema-navrow{flex:1 1 6.5rem;min-width:6.2rem}
+body.cinema .cinemahost .cinema-tool{padding:0 5px;font-size:10px}
+}
 body.cinema .cinema-peek{margin:0;padding:8px 12px 10px;border-bottom:1px dashed #c4b5fd;background:#f5f3ff;color:#5b21b6;font-size:14px;font-weight:800;max-height:28vh;overflow:auto}
 body.cinema .cinema-peek[hidden]{display:none!important}
 body.cinema:not(.is-host) .cinema-peek{display:none!important}
