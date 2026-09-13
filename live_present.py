@@ -45,9 +45,20 @@ def _norm_code(raw):
 def _new_code():
     for _ in range(40):
         c = "".join(random.choice(_ALPH) for _ in range(4))
-        if c not in _ROOMS:
+        if c not in _ROOMS and not _weak_code(c):
             return c
     return secrets.token_hex(3).upper()[:6]
+
+
+def _weak_code(c):
+    c = str(c or "").upper()
+    if len(c) < 3:
+        return True
+    if c in {"1234", "12345", "123456", "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "ABCD", "QWER"}:
+        return True
+    if len(set(c)) == 1:
+        return True
+    return False
 
 
 def _host_id():
@@ -650,7 +661,10 @@ def api_present_start():
         return jsonify(ok=False, error="Hãy đăng nhập để mở phòng chiếu."), 401
     data = dict(request.get_json(silent=True) or {})
     live = _sanitize_live(data.get("live"))
-    want_pre = _norm_code(data.get("code") or session.get("present_code") or "")
+    fresh = bool(data.get("fresh"))
+    want_pre = "" if fresh else _norm_code(data.get("code") or session.get("present_code") or "")
+    if want_pre and _weak_code(want_pre) and want_pre not in _ROOMS:
+        want_pre = ""
     if data.get("quiz_ids") is not None:
         data["sort_present"] = True
     with _LOCK:
@@ -660,13 +674,21 @@ def api_present_start():
     snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         return jsonify(ok=False, error=err), 400
-    want = _norm_code(data.get("code"))
-    if data.get("code") not in (None, "") and not want:
-        return jsonify(ok=False, error="Mã phải 3–6 ký tự (chữ hoặc số), ví dụ 1234 hoặc K7M2."), 400
+    want = "" if fresh else _norm_code(data.get("code"))
+    if want and _weak_code(want) and want not in _ROOMS:
+        want = ""
+    if data.get("code") not in (None, "") and not fresh and not want and not _weak_code(_norm_code(data.get("code"))):
+        return jsonify(ok=False, error="Mã phải 3–6 ký tự (chữ hoặc số), ví dụ K7M2."), 400
     with _LOCK:
         _prune()
         old = _norm_code(session.get("present_code"))
         mine = old if old in _ROOMS and _ROOMS[old].get("host") == hid else None
+        if fresh:
+            for c, r0 in list(_ROOMS.items()):
+                if r0.get("host") == hid:
+                    _ROOMS.pop(c, None)
+            mine = None
+            want = ""
         if want:
             taken = _ROOMS.get(want)
             if taken and taken.get("host") != hid:
@@ -694,7 +716,7 @@ def api_present_start():
             _ROOMS[code] = room
             session["present_code"] = code
             session["present_token"] = tok
-    origin = base.public_origin()
+    origin = request.host_url.rstrip("/")
     url = origin + "/xem/" + room["code"]
     return jsonify(ok=True, code=room["code"], url=url, token=session.get("present_token") or room["token"], ver=room["ver"])
 
@@ -1060,7 +1082,7 @@ def present_qr_svg(code):
     code = _norm_code(code)
     if not code:
         return Response("Mã không hợp lệ.", status=400, mimetype="text/plain")
-    url = base.public_origin() + "/xem/" + code
+    url = request.host_url.rstrip("/") + "/xem/" + code
     buf = io.BytesIO()
     segno.make(url, error="m").save(buf, kind="svg", scale=4, border=2)
     return Response(buf.getvalue(), mimetype="image/svg+xml")
@@ -1073,7 +1095,7 @@ def present_watch(code=""):
     if not code:
         body = (
             "<div class='wrap'><div class='panel' style='max-width:480px;margin:40px auto'><div class='head'>📺 Vào chiếu chung</div><div class='body'>"
-            "<p class='muted'>Gõ đúng mã thầy đưa sau khi bấm <b>Chiếu chung</b> (3–6 ký tự, ví dụ <code>K7M2</code> hoặc <code>1234</code> nếu thầy đặt mã đó). Không tự bịa mã khi thầy chưa mở phòng.</p>"
+            "<p class='muted'>Gõ đúng mã thầy đưa sau khi bấm <b>Chiếu chung</b> (4 ký tự, đổi mỗi buổi). Không dùng mã buổi trước — phòng cũ đã tắt.</p>"
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
             "<input name='code' maxlength='8' inputmode='text' autocomplete='off' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
@@ -2222,6 +2244,9 @@ try{
 }catch(e){}
 let P=null;
 try{P=JSON.parse(localStorage.getItem('ldvlPresent')||'null')}catch(e){P=null}
+if(P&&P.code && ['1234','12345','123456','0000','1111'].indexOf(String(P.code).toUpperCase())>=0){
+  P=null; try{localStorage.removeItem('ldvlPresent')}catch(e){}
+}
 function solVisible(){
   const sol=document.getElementById('solbox');
   return !!(sol && sol.style.display==='block');
@@ -2487,14 +2512,17 @@ function showBar(p){
     +'<button type="button" class="btn" id="pPrev">◀ Câu trước</button> '
     +'<button type="button" class="btn" id="pNext">Câu sau ▶</button> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
+    +'<button type="button" class="btn" id="prefresh">🔄 Mã mới</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Đang chiếu: <b>Xóa</b> / ✕ chỉ lùi câu liền trước — không xóa file TEX, không về câu 1. Máy chiếu tự hiện chữ.</div>';
+    +'<div class="muted">Mã và QR đổi mỗi lần bấm Chiếu. Học sinh phải quét QR buổi này — mã buổi trước không vào được.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
   const pv=document.getElementById('pPrev');
   if(pv) pv.onclick=function(){presentStep(-1)};
   const nx=document.getElementById('pNext');
   if(nx) nx.onclick=function(){presentStep(1)};
+  const rf=document.getElementById('prefresh');
+  if(rf) rf.onclick=function(){ presentStart(); };
   const s=document.getElementById('pstop');
   if(s) s.onclick=async function(){
     await fetch('/api/present/stop',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code:p.code,token:p.token})});
@@ -2543,11 +2571,8 @@ async function presentResume(){
   finally{if(P)P._busy=false}
 }
 async function presentStart(){
-  const suggest=(P&&P.code)||'1234';
-  const typed=prompt('Mã chiếu cho lớp gõ vào (3–6 ký tự). Có thể đặt 1234 cho dễ nhớ:', suggest);
-  if(typed===null) return;
   const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify(Object.assign(payload({force:true}),{code:String(typed||'').trim(),force_kind:true}))});
+    body:JSON.stringify(Object.assign(payload({force:true}),{force_kind:true,fresh:true}))});
   const d=await r.json();
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
