@@ -72,8 +72,10 @@ def _member_index():
                 note = '🎫 ' + _pkg.scope_label(m) + ' · ' + _pkg.vip_remaining_label(m) + ' · <a href="/member/goi">Đổi gói</a>'
             else:
                 note = 'Chưa có gói thành viên · <a href="/member/goi">Chọn gói</a>'
-            if not getattr(base, 'can_practice', lambda *_: False)(m):
-                extra = ' · 👁 Chỉ xem đề, không làm bài'
+            if getattr(base, 'can_practice', lambda *_: False)(m):
+                extra = ' · ✅ Xem đáp án và làm bài'
+            else:
+                extra = ' · 👁 Chỉ xem đề, chưa VIP'
         who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · {note}{extra}</div>"
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
