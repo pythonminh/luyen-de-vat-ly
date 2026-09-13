@@ -142,7 +142,6 @@ body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));p
 body.cinema .cinema-stage{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto;position:relative}
 body.cinema .qbox{position:relative;z-index:6;background:var(--bg)}
 body.cinema .cinema-inkpad{flex:0 0 auto;width:calc(100% - 24px);max-width:960px;margin:8px auto 16px;align-self:center;position:relative;z-index:1}
-body.cinema .cinema-inklab{font-size:11px;font-weight:800;color:#9f1239;margin:0 0 4px}
 body.cinema .cinema-inkframe{position:relative;width:100%;height:0;padding-bottom:43.75%;background:#fffef8;border:2px dashed #fca5a5;border-radius:12px;overflow:hidden;transform:translateZ(0);-webkit-transform:translateZ(0);isolation:isolate}
 body.cinema .cinema-ink{position:absolute!important;left:0;top:0;right:0;bottom:0;inset:0;width:100%!important;height:100%!important;max-width:100%;max-height:100%;z-index:0;touch-action:none;pointer-events:none;display:block}
 body.cinema.is-host.ink-on .cinema-ink{pointer-events:auto;cursor:crosshair}
