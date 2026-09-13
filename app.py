@@ -793,10 +793,16 @@ def is_admin_member(m):
     u = str(m.get('username') or '').strip()
     return bool(u) and u.casefold() == str(ADMIN_USER or 'ADMIN').casefold()
 def has_full_bank_access(m=None):
-    """ADMIN (phiên /admin hoặc tài khoản ADMIN) xem toàn bộ bài, mọi khối, VIP lẫn FREE."""
+    """ADMIN (phiên /admin hoặc tài khoản ADMIN) xem toàn bộ bài, mọi khối, VIP lẫn FREE.
+
+    Hồ sơ học viên truyền vào chỉ được coi là ADMIN khi đúng là tài khoản ADMIN —
+    không lấy quyền từ phiên ADMIN đang xem danh sách thành viên.
+    """
     try:
         if session.get('role') == 'admin':
-            return True
+            if m is None:
+                return True
+            return is_admin_member(m)
     except Exception:
         pass
     return is_admin_member(m if m is not None else member_current())
@@ -814,15 +820,15 @@ def is_vip(m):
     except Exception:
         return True
 def can_practice(m, path=None):
-    """VIP / SVIP / ADMIN mới làm bài. Khách và FREE chỉ xem đề."""
+    """VIP / SVIP / ADMIN: làm bài và xem đáp án. Khách và FREE chỉ xem đề."""
     try:
-        if session.get('role') == 'admin':
+        if session.get('role') == 'admin' and (not m or is_admin_member(m)):
             return True
     except Exception:
         pass
     if not m:
         return False
-    if has_full_bank_access(m) or is_admin_member(m):
+    if is_admin_member(m):
         return True
     if not is_vip(m):
         return False
@@ -850,8 +856,8 @@ def view_only_notice_html(m=None, login_next='/member'):
                     f"(3 ngày / 1 tháng / 3 tháng / 1 năm) hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
     except Exception:
         pass
-    return ("<div class='notice'>👁 Tài khoản <b>FREE</b> chỉ xem đề, không làm bài. "
-            "Nhờ ADMIN cấp gói VIP hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
+    return ("<div class='notice'>👁 Tài khoản <b>FREE</b> chỉ xem đề — không xem đáp án, không làm bài. "
+            "Nhờ ADMIN cấp gói VIP (xem đáp án + làm bài) hoặc <a href='/member/goi'>đăng ký gói</a>.</div>")
 def lesson_level(path):
     d=access_data(); return str(d['lessons'].get(path,d['default'])).upper()
 def can_access(m,path):
@@ -3214,7 +3220,7 @@ def member_index():
         sections.append(catalog_chapter_html(mon,lop,chuong,arr))
     subjopts=''.join("<option value='"+html.escape(s,quote=True)+"'"+(" selected" if sm==s else "")+">"+html.escape(s)+"</option>" for s in subjects);classopts=''.join("<option value='"+html.escape(c,quote=True)+"'"+(" selected" if cl==c else "")+">"+html.escape(c)+"</option>" for c in classes)
     if m:
-        extra=(' · 👁 Chỉ xem đề, không làm bài' if not can_practice(m) else '')
+        extra=(' · 👁 Chỉ xem đề (chưa VIP)' if not can_practice(m) else ' · ✅ VIP: xem đáp án và làm bài')
         try:
             import membership as _pkg
             extra=' · '+html.escape(_pkg.vip_remaining_label(m))+extra
