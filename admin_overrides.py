@@ -161,7 +161,7 @@ def _member_manager():
             f"<div class='now'>Hiện có: <b>{_safe(pkg.package_label(granted))}</b> · {seen} bài "
             f"<a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem bài</a>"
             f"<div class='muted'>{_safe(pkg.vip_remaining_label(m))}</div></div>"
-            + pkg.picker_html(prefix=u, selected=req or granted, student=False, duration=m.get("vip_plan"))
+            + pkg.picker_html(prefix=u, selected=req or granted, student=False, duration=m.get("vip_plan"), expire_at=m.get("vip_expires_at"), started_at=m.get("vip_started_at"))
             + f"<div class='memacts'><select name='status'><option value='ON' {'selected' if st=='ON' else ''}>ON · đang dùng</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF · khóa</option></select>"
             f"<div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
             f"<div class='passrow'><input class='pass' name='new_password' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
@@ -204,7 +204,7 @@ def _member_manager():
     )
 
     body = f"""
-{pkg.PKG_CSS}
+{pkg.PKG_CSS}{pkg.PKG_JS}
 <style>
 .adminmembers{{max-width:1100px;margin:auto;padding:12px}}.hero{{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}}.hero h2{{margin:0}}
 .stats{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}}.stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px}}.stat b{{display:block;font-size:20px}}.stat span{{font-size:11px;color:#6c7d90;font-weight:800}}.stat.warn b{{color:#a15b00}}
@@ -216,7 +216,7 @@ def _member_manager():
 </style>
 <div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Duyệt gói 1–3 lớp / 1–2 môn · cấp quyền · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
 <div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['approved']}</b><span>Đã cấp gói</span></div><div class='stat'><b>{counts['none']}</b><span>Chưa cấp</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
-<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN duyệt rồi chọn <b>hạn dùng</b> 3 ngày / 1 tháng / 3 tháng / 1 năm. Hết hạn = chỉ xem đề. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
+<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN chọn hạn dùng — ô cam hiện <b>ngày hết hạn cụ thể</b> (dd/mm/yyyy). Hết hạn = chỉ xem đề. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
 {create}
 {dup_html}
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>GÓI</label><select name='pack'><option value=''>Tất cả</option><option value='pending' {'selected' if pack_filter=='pending' else ''}>Chờ duyệt</option><option value='approved' {'selected' if pack_filter=='approved' else ''}>Đã cấp</option><option value='none' {'selected' if pack_filter=='none' else ''}>Chưa cấp</option></select></div><div><label>TÀI KHOẢN</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
