@@ -1164,7 +1164,7 @@ def present_watch(code=""):
         "<button type='button' class='inkpaper' id='inkTaller'>Hạ ô ▾</button>"
         "<button type='button' class='inkpaper' id='inkShorter'>Thu ▴</button>"
         "</div>"
-        "<div class='cinema-inkframe' data-paper='lines'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div>"
+        "<div class='cinema-inkframe' data-paper='lines'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1' style='background-color:#fffdf6;color-scheme:only light'></canvas></div>"
         "<div class='cinema-inkresize' id='inkResize' title='Kéo xuống để ghi thêm'>▾ kéo xuống để ghi thêm ▾</div>"
         "</div></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
@@ -1845,8 +1845,40 @@ function sizeInk(){
 }
 function inkCtx(cv){
   if(cv._ctx) return cv._ctx;
-  cv._ctx=cv.getContext('2d',{alpha:true,desynchronized:true});
-  return cv._ctx;
+  const ctx=cv.getContext('2d',{alpha:true});
+  if(!ctx) return null;
+  cv._ctx=ctx;
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#fffdf6';
+  ctx.fillRect(0,0,cv.width||1,cv.height||1);
+  return ctx;
+}
+function fillInkPaper(cv, ctx){
+  const w=cv.width, h=cv.height;
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#fffdf6';
+  ctx.fillRect(0,0,w,h);
+  const frame=document.querySelector('.cinema-inkframe');
+  const paper=(frame&&frame.getAttribute('data-paper'))||'lines';
+  const dpr=w/Math.max(1, cv.getBoundingClientRect().width||w);
+  if(paper==='plain') return;
+  ctx.strokeStyle='#b45309';
+  ctx.lineWidth=Math.max(1, 2*dpr);
+  ctx.beginPath();
+  if(paper==='grid'){
+    const step=28*dpr;
+    for(let x=step;x<w;x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,h); }
+    for(let y=step;y<h;y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+  }else{
+    const step=34*dpr;
+    for(let y=step;y<h;y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.strokeStyle='#e11d48';
+    const mx=40*dpr;
+    ctx.moveTo(mx,0); ctx.lineTo(mx,h);
+  }
+  ctx.stroke();
 }
 function inkWidth(cv, s){
   const dpr=cv.width/Math.max(1, cv.getBoundingClientRect().width||cv.width);
@@ -1873,7 +1905,7 @@ function paintInk(){
   if(!cv) return;
   const ctx=inkCtx(cv);
   if(!ctx) return;
-  ctx.clearRect(0,0,cv.width,cv.height);
+  fillInkPaper(cv, ctx);
   const strokes=inkStrokes.slice();
   if(inkCur&&inkCur.p&&inkCur.p.length) strokes.push(inkCur);
   strokes.forEach(function(s){ strokePath(ctx, cv, s); });
@@ -1904,7 +1936,7 @@ function clearInkCanvas(){
   const cv=document.getElementById('cinemaInk');
   if(cv){
     const ctx=inkCtx(cv);
-    if(ctx) ctx.clearRect(0,0,cv.width,cv.height);
+    if(ctx) fillInkPaper(cv, ctx);
   }
 }
 function applyInk(d){
@@ -2021,7 +2053,7 @@ function bindInkPadUi(){
   setInkPaper(paper);
   setInkPadHeight(h, false);
   document.querySelectorAll('.cinema-inktools .inkpaper[data-paper]').forEach(function(b){
-    b.onclick=function(){ setInkPaper(b.getAttribute('data-paper')); };
+    b.onclick=function(){ setInkPaper(b.getAttribute('data-paper')); paintInk(); };
   });
   const taller=document.getElementById('inkTaller');
   const shorter=document.getElementById('inkShorter');
