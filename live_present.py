@@ -694,7 +694,7 @@ def api_present_start():
             _ROOMS[code] = room
             session["present_code"] = code
             session["present_token"] = tok
-    origin = request.host_url.rstrip("/")
+    origin = base.public_origin()
     url = origin + "/xem/" + room["code"]
     return jsonify(ok=True, code=room["code"], url=url, token=session.get("present_token") or room["token"], ver=room["ver"])
 
@@ -1060,7 +1060,7 @@ def present_qr_svg(code):
     code = _norm_code(code)
     if not code:
         return Response("Mã không hợp lệ.", status=400, mimetype="text/plain")
-    url = request.host_url.rstrip("/") + "/xem/" + code
+    url = base.public_origin() + "/xem/" + code
     buf = io.BytesIO()
     segno.make(url, error="m").save(buf, kind="svg", scale=4, border=2)
     return Response(buf.getvalue(), mimetype="image/svg+xml")
