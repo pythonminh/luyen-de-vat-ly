@@ -1772,14 +1772,13 @@ function sizeInk(){
   const frame=document.querySelector('.cinema-inkframe');
   if(!cv||!frame) return;
   const r=frame.getBoundingClientRect();
+  if(r.width<8||r.height<8) return;
   const dpr=Math.min(2, window.devicePixelRatio||1);
   const w=Math.max(1, Math.floor(r.width*dpr));
   const h=Math.max(1, Math.floor(r.height*dpr));
   if(cv.width!==w || cv.height!==h){
     cv.width=w; cv.height=h;
   }
-  cv.style.width='100%';
-  cv.style.height='100%';
   paintInk();
 }
 function clearInkCanvas(){
@@ -1909,7 +1908,9 @@ function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
   if(box.querySelector('.ltsec')) return;
-  const availH=Math.max(220, window.innerHeight-28);
+  const pad=document.getElementById('cinemaInkPad');
+  const padH=pad?Math.round(Math.min(240, Math.max(110, window.innerWidth*0.38))+36):0;
+  const availH=Math.max(180, window.innerHeight-36-padH);
   const availW=Math.max(240, window.innerWidth-20);
   let lo=0.95, hi=2.5, best=0.95;
   for(let i=0;i<12;i++){
