@@ -3039,7 +3039,10 @@ def member_login():
                 found=m;why='ok';break
         if found and why=='ok':
             persist_member_password_on_login(d, found, p)
-            session.clear();session.permanent=True;session.update(role='member',username=found.get('username'),name=found.get('name') or found.get('username'));return redirect(safe_next_url())
+            session.clear();session.permanent=True
+            role='admin' if is_admin_member(found) else 'member'
+            session.update(role=role,username=found.get('username'),name=found.get('name') or found.get('username'))
+            return redirect('/admin/members' if role=='admin' else safe_next_url())
         msg='Tài khoản đang khóa. Liên hệ ADMIN để mở lại.' if why=='off' else 'Sai tài khoản hoặc mật khẩu.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
 
@@ -3472,6 +3475,8 @@ def gemini_review():
 
 @app.route('/admin/login',methods=['GET','POST'])
 def admin_login():
+    if can_manage_bank():
+        return redirect('/admin/members')
     return redirect('/member/login')
 
 def list_bank_tex():
