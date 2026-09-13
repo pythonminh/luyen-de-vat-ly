@@ -333,6 +333,12 @@ def vip_expire_dt(m):
     return parse_vip_dt(m.get("vip_expires_at"))
 
 
+def vip_start_dt(m):
+    if not isinstance(m, dict):
+        return None
+    return parse_vip_dt(m.get("vip_started_at"))
+
+
 def vip_active(m) -> bool:
     if not m:
         return False
@@ -368,18 +374,38 @@ def apply_vip_duration(m, key, start=None):
     if key not in dict(DURATIONS):
         key = "1m"
     start = start or datetime.now()
-    if key == "3d":
-        end = start + timedelta(days=3)
-    elif key == "1m":
-        end = _add_months(start, 1)
-    elif key == "3m":
-        end = _add_months(start, 3)
-    else:
-        end = _add_months(start, 12)
+    end = plan_end_dt(key, start)
     m["vip_plan"] = key
     m["vip_started_at"] = start.strftime("%Y-%m-%d %H:%M:%S")
     m["vip_expires_at"] = end.strftime("%Y-%m-%d %H:%M:%S")
     return end
+
+
+def plan_end_dt(key, start=None):
+    key = str(key or "").strip().lower()
+    start = start or datetime.now()
+    if key == "3d":
+        return start + timedelta(days=3)
+    if key == "1m":
+        return _add_months(start, 1)
+    if key == "3m":
+        return _add_months(start, 3)
+    return _add_months(start, 12)
+
+
+def format_vn_date(dt, with_time=False):
+    if not dt:
+        return ""
+    s = dt.strftime("%d/%m/%Y")
+    if with_time:
+        s += dt.strftime(" lúc %H:%M")
+    return s
+
+
+def vip_period_text(start, end) -> str:
+    a = format_vn_date(start) or "—"
+    b = format_vn_date(end) or "—"
+    return f"Đăng ký {a} — hết hạn {b}"
 
 
 def vip_remaining_label(m) -> str:
@@ -387,28 +413,28 @@ def vip_remaining_label(m) -> str:
         return ""
     if _norm_type(m.get("account_type")) == "ADMIN":
         return "ADMIN · không hết hạn"
-    if _norm_type(m.get("account_type")) not in {"VIP", "SVIP"}:
-        return "Chưa có hạn VIP"
+    start = vip_start_dt(m)
     exp = vip_expire_dt(m)
+    if _norm_type(m.get("account_type")) not in {"VIP", "SVIP"}:
+        return "Chưa cấp VIP"
     if not exp:
-        return "VIP chưa đặt hạn (còn hiệu lực đến khi ADMIN chọn 3 ngày / 1 tháng / 3 tháng / 1 năm)"
+        return "VIP chưa đặt ngày hết hạn (chọn 3 ngày / 1 tháng / 3 tháng / 1 năm rồi Lưu)"
+    period = vip_period_text(start, exp)
     now = datetime.now()
-    stamp = exp.strftime("%d/%m/%Y")
-    clock = exp.strftime("%H:%M")
     if now >= exp:
-        return f"Hết hạn VIP ngày {stamp} {clock} · chỉ xem đề"
+        return f"{period} · đã hết hạn, chỉ xem đề"
     delta = exp - now
     days = delta.days
     hours = delta.seconds // 3600
     mins = (delta.seconds % 3600) // 60
     if days >= 1:
-        return f"Còn {days} ngày {hours} giờ VIP · hết {stamp}"
+        return f"{period} · còn {days} ngày {hours} giờ"
     if hours >= 1:
-        return f"Còn {hours} giờ {mins} phút VIP · hết {stamp} {clock}"
-    return f"Còn {max(1, mins)} phút VIP · hết {stamp} {clock}"
+        return f"{period} · còn {hours} giờ {mins} phút"
+    return f"{period} · còn {max(1, mins)} phút"
 
 
-def duration_html(prefix="", selected=""):
+def duration_html(prefix="", selected="", expire_at="", started_at=""):
     selected = str(selected or "").strip().lower()
     if selected not in dict(DURATIONS):
         selected = "1m"
@@ -418,10 +444,21 @@ def duration_html(prefix="", selected=""):
         f"<label class='pkgchk'><input type='radio' name='{html.escape(name)}' value='{k}'{' checked' if selected==k else ''}> {html.escape(lab)}</label>"
         for k, lab in DURATIONS
     ]
+    end = parse_vip_dt(expire_at) or plan_end_dt(selected)
+    start = parse_vip_dt(started_at) or (datetime.now() if not parse_vip_dt(expire_at) else None)
+    if not start and end:
+        start = datetime.now()
+    start_txt = html.escape(format_vn_date(start) or "—")
+    end_txt = html.escape(format_vn_date(end) or "—")
     return (
         "<div class='pkgrow pkgdur' style='display:flex'><span>Hạn dùng</span>"
         + "".join(radios)
         + "</div>"
+        "<div class='pkgexp'><div class='vipdates'>"
+        f"<span><span class='vipleg'>Ngày đăng ký</span><b data-vipstart>{start_txt}</b></span>"
+        "<span class='vipdash'>—</span>"
+        f"<span><span class='vipleg'>Ngày hết hạn</span><b data-vipexp>{end_txt}</b></span>"
+        "</div><span class='muted'>Đổi 3 ngày / 1 tháng / … sẽ đổi khoảng này; bấm Lưu mới ghi.</span></div>"
     )
 
 
@@ -556,7 +593,7 @@ def allowed_paths(m) -> set[str]:
     return out
 
 
-def picker_html(prefix="", selected=None, student=True, name_package=None, duration=""):
+def picker_html(prefix="", selected=None, student=True, name_package=None, duration="", expire_at="", started_at=""):
     selected = selected or {}
     kind = str(selected.get("kind") or "")
     grades = set(selected.get("grades") or [])
@@ -594,7 +631,16 @@ def picker_html(prefix="", selected=None, student=True, name_package=None, durat
         f"<div class='pkgrow pkggrades' style='display:flex'><span>Chọn lớp</span>{gboxes}</div>"
         f"<div class='pkgrow pkgsubs' style='display:flex'><span>Chọn môn</span>{sboxes}</div>"
         "<p class='pkghint muted'>Tick lớp 10/11/12 và môn Toán / Vật lý. Gói 1–3 lớp cần đúng số lớp; gói 1–2 môn cần đúng số môn.</p>"
-        + (duration_html(prefix, duration or (selected.get("vip_plan") if isinstance(selected, dict) else "")) if not student else "")
+        + (
+            duration_html(
+                prefix,
+                duration or (selected.get("vip_plan") if isinstance(selected, dict) else ""),
+                expire_at=expire_at,
+                started_at=started_at,
+            )
+            if not student
+            else ""
+        )
         + "</div>"
     )
 
@@ -614,7 +660,55 @@ PKG_CSS = """
 .dupbox h3{margin:0 0 8px;font-size:15px;color:#9a3412}
 .dupgroup{background:#fff;border:1px solid #fed7aa;border-radius:10px;padding:8px;margin:8px 0}
 .dupgroup form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.pkgexp{margin-top:8px;font-size:14px;font-weight:800;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px}
+.pkgexp .vipdates{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 16px}
+.pkgexp .vipleg{display:block;font-size:11px;font-weight:800;color:#9a6b3a;margin-bottom:2px}
+.pkgexp b{font-size:20px;letter-spacing:.02em;color:#9a3412}
+.pkgexp .vipdash{font-size:22px;font-weight:900;color:#c2410c;padding-bottom:2px}
+.pkgexp .muted{display:block;margin-top:6px;font-size:11px;font-weight:600;color:#9a6b3a}
 </style>
+"""
+
+PKG_JS = """
+<script>
+(function(){
+  function addMonths(dt, months){
+    var y0=dt.getFullYear(), m0=dt.getMonth()+months;
+    var y=y0+Math.floor(m0/12);
+    var mo=((m0%12)+12)%12;
+    var last=new Date(y, mo+1, 0).getDate();
+    var d=Math.min(dt.getDate(), last);
+    return new Date(y, mo, d, dt.getHours(), dt.getMinutes(), dt.getSeconds());
+  }
+  function endFromPlan(key){
+    var s=new Date();
+    if(key==='3d'){ s.setDate(s.getDate()+3); return s; }
+    if(key==='1m') return addMonths(s,1);
+    if(key==='3m') return addMonths(s,3);
+    return addMonths(s,12);
+  }
+  function fmt(d){
+    var dd=String(d.getDate()).padStart(2,'0');
+    var mm=String(d.getMonth()+1).padStart(2,'0');
+    return dd+'/'+mm+'/'+d.getFullYear();
+  }
+  function bind(box){
+    var radios=box.querySelectorAll('.pkgdur input[type=radio]');
+    var st=box.querySelector('[data-vipstart]');
+    var en=box.querySelector('[data-vipexp]');
+    if(!en||!radios.length) return;
+    radios.forEach(function(r){
+      r.addEventListener('change', function(){
+        if(!r.checked) return;
+        var now=new Date();
+        if(st) st.textContent=fmt(now);
+        en.textContent=fmt(endFromPlan(r.value));
+      });
+    });
+  }
+  document.querySelectorAll('.pkgbox').forEach(bind);
+})();
+</script>
 """
 
 
