@@ -593,7 +593,8 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     drawer = lesson_drawer_html(member_current() if role in ("member", "admin") else None, cur_path, cur_dang)
     mj = (
         "<script>"
-        "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']}},"
+        "window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']],processEscapes:true,packages:{'[+]':['base','ams']},"
+        "macros:{heva:['\\\\begin{cases}#1\\\\end{cases}',1],hoac:['\\\\left[\\\\begin{aligned}#1\\\\end{aligned}\\\\right.',1]}},"
         "chtml:{displayAlign:'left',displayIndent:'0'},"
         "options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},"
         "startup:{typeset:true}};"
@@ -2197,6 +2198,41 @@ def _match_tex_env(s, name, start=0):
     return None
 
 
+def _expand_viet_sys_macros(s):
+    """\\heva / \\hoac (SGK): một khối hệ hoặc hai vế 'và'/'hoặc'."""
+    s = s or ""
+    for name, conj in (("heva", r" \text{ và } "), ("hoac", r" \text{ hoặc } ")):
+        token = "\\" + name
+        ntok = len(token)
+        out = []
+        i = 0
+        while True:
+            j = s.find(token, i)
+            if j < 0:
+                out.append(s[i:])
+                break
+            nxt = s[j + ntok : j + ntok + 1] if j + ntok < len(s) else ""
+            if (j > 0 and s[j - 1] == "\\") or nxt.isalpha():
+                out.append(s[i : j + ntok])
+                i = j + ntok
+                continue
+            out.append(s[i:j])
+            body1, k = _tex_grab_group(s, j + ntok)
+            if body1 is None:
+                out.append(s[j : j + ntok])
+                i = j + ntok
+                continue
+            body2, k2 = _tex_grab_group(s, k)
+            if body2 is not None and "\\\\" not in body1 and "&" not in body1:
+                out.append(body1 + conj + body2)
+                i = k2
+            else:
+                out.append("\\begin{cases}" + body1 + "\\end{cases}")
+                i = k
+        s = "".join(out)
+    return s
+
+
 _LT_DISPLAY_ENVS = (
     "equation*", "equation", "align*", "align",
     "gather*", "gather", "multline*", "multline",
@@ -2280,6 +2316,7 @@ def _replace_tex_macro(s, name, wrap):
 
 def _tex_inline_html(it):
     it = it or ""
+    it = _expand_viet_sys_macros(it)
     dms = []
     it = _stash_display_math(it, dms)
     it = _replace_tex_macro(it, "textbf", lambda b: "@@B@@" + b + "@@/B@@")
@@ -2439,6 +2476,7 @@ def latex_to_web(s):
         wraps.append(found[0] if found else '')
         return f'@@WRAP{len(wraps)-1}@@'
     s=strip_loigiai(peel_immini(s or ''))
+    s=_expand_viet_sys_macros(s)
     s, peds = convert_pedagogic_envs(s)
     s=WRAPFIG_RE.sub(stash_wrap, s)
     s=strip_resizebox(s)
