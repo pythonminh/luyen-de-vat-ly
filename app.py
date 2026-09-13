@@ -3445,6 +3445,7 @@ def practice():
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
+window.practicePath=__PATH__;window.practiceIds=__IDS__;window.practicePos=__QPOS__;window.__ldvlQuizPos=__QPOS__;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 const QZKEY='ldvlQZoom';
@@ -3595,7 +3596,7 @@ let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block';
 fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
-draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
+draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS

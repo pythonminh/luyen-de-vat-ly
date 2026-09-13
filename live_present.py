@@ -452,7 +452,11 @@ def _pos_after_ids_change(old_ids, old_pos, new_ids):
 
 def _keep_room_cursor(data, room):
     """Heartbeat không gửi sec/ids thì giữ dạng/câu đang chiếu, không về mục 1."""
-    if not room or not isinstance(data, dict):
+    if not isinstance(data, dict):
+        return
+    if "_client_sent_quiz_pos" not in data:
+        data["_client_sent_quiz_pos"] = data.get("quiz_pos") is not None
+    if not room:
         return
     if str(data.get("comp_kind") or "").strip().lower() in {"lt", "pp"} and not str(data.get("sec") or "").strip():
         data["sec"] = str(((room.get("q") or {}).get("sec_id")) or room.get("pos") or "")
@@ -490,14 +494,19 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
         pos = int(data.get("quiz_pos") if data.get("quiz_pos") is not None else session.get("practice_pos") or 0)
     except (TypeError, ValueError):
         pos = 0
+    sent_pos = data.get("_client_sent_quiz_pos")
+    if sent_pos is None:
+        sent_pos = data.get("quiz_pos") is not None
     if path and ids:
         try:
             session["practice_path"] = path
             session["practice_ids"] = ids
-            session["practice_pos"] = max(0, min(pos, len(ids) - 1))
+            if sent_pos:
+                session["practice_pos"] = max(0, min(pos, len(ids) - 1))
         except Exception:
             pass
-        pos = int(session.get("practice_pos") or 0)
+        if sent_pos:
+            pos = int(session.get("practice_pos") or 0)
     else:
         path = str(session.get("practice_path") or "")
         ids = list(session.get("practice_ids") or [])
@@ -2401,6 +2410,11 @@ async function followPresentRoom(){
     }
     if(document.querySelector('.palette .pitem')){
       if(qk==='LT'||qk==='PP') return;
+      const cur=adminQuizPos();
+      if(typeof cur==='number'){
+        if(cur===d.pos) window.__ldvlRoomPos=d.pos;
+        return;
+      }
       adminGoPos(d.pos);
     }
   }catch(e){}
@@ -2451,6 +2465,18 @@ function payload(opts){
     if(pos<0||pos>=ids.length) pos=0;
     o.quiz_pos=pos;
     window.__ldvlQuizTouched=false;
+  }else if(!page && document.querySelector('.palette .pitem')){
+    const ids=Array.isArray(window.practiceIds)?window.practiceIds.slice():[];
+    const path=window.practicePath||'';
+    let pos=adminQuizPos();
+    if(pos==null && typeof window.__ldvlQuizPos==='number') pos=window.__ldvlQuizPos;
+    if(pos==null && typeof window.practicePos==='number') pos=window.practicePos;
+    if(ids.length){
+      o.quiz_path=path;
+      o.quiz_ids=ids;
+      if(pos==null||pos<0||pos>=ids.length) pos=0;
+      o.quiz_pos=pos;
+    }
   }
   return o;
 }
@@ -2628,8 +2654,6 @@ async function presentPush(opts){
   opts=opts||{};
   if(!P||!P.code||P._busy) return;
   if(!opts.force && document.hidden) return;
-  const ap=adminQuizPos();
-  if(!opts.force && typeof ap==='number' && typeof window.__ldvlRoomPos==='number' && ap!==window.__ldvlRoomPos) return;
   const body=payload(opts);
   if(opts.force) body.force_kind=true;
   const fp=JSON.stringify({comp_kind:body.comp_kind||'',de_path:body.de_path||'',sec:body.sec||'',quiz_path:body.quiz_path||'',quiz_ids:body.quiz_ids||[],quiz_pos:body.quiz_pos,zoom:body.zoom,live:body.live,force:!!opts.force,pos:window.practicePos||null});
@@ -2641,7 +2665,10 @@ async function presentPush(opts){
     if(d&&d.ok){
       window.__ldvlPresentFp=fp;
       if(d.token&&P){P.token=d.token;try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}}
-      if(typeof d.pos==='number') window.__ldvlQuizPos=d.pos;
+      if(typeof d.pos==='number'){
+        window.__ldvlQuizPos=d.pos;
+        window.__ldvlRoomPos=d.pos;
+      }
       return;
     }
     if(r.status===401) return;
@@ -2732,7 +2759,7 @@ function mountBtn(){
       presentStep(-1);
     }
   },true);
-  if(P&&P.code){showBar(P);presentPush();followPresentRoom();}
+  if(P&&P.code){showBar(P);(async function(){await presentPush();followPresentRoom();})();}
   setInterval(function(){if(P&&P.code && !document.hidden) presentPush();},8000);
   setInterval(function(){if(P&&P.code && !document.hidden) followPresentRoom();},2000);
   if(window.ldvlSpeak) window.ldvlSpeak.bind();
