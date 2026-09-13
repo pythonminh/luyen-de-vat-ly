@@ -94,28 +94,33 @@ def _member_manager():
     members = [m for m in d["members"] if str(m.get("username", "")).strip() and str(m.get("username", "")).strip().casefold() != "admin"]
     q = str(request.args.get("q") or "").strip().lower()
     grade = str(request.args.get("grade") or "").strip()
-    pack_filter = str(request.args.get("pack") or "").strip()
+    type_filter = str(request.args.get("type") or "").strip().lower()
+    dur_filter = str(request.args.get("dur") or "").strip().lower()
     status = str(request.args.get("status") or "").strip().upper()
     if q:
         members = [m for m in members if q in str(m.get("username", "")).lower() or q in str(m.get("name", "")).lower() or q in str(m.get("phone", "")).lower()]
     if grade:
         members = [m for m in members if grade in (pkg.granted_package(m) or {}).get("grades", []) or pkg._grade(m.get("class")) == grade]
-    if pack_filter == "pending":
+    if type_filter == "vip":
+        members = [m for m in members if _norm_type(m.get("account_type")) in {"VIP", "SVIP"} and pkg.vip_active(m)]
+    elif type_filter == "free":
+        members = [m for m in members if not pkg.vip_active(m)]
+    elif type_filter == "pending":
         members = [m for m in members if pkg.package_status(m) == "pending"]
-    elif pack_filter == "approved":
-        members = [m for m in members if pkg.package_status(m) == "approved"]
-    elif pack_filter == "none":
-        members = [m for m in members if pkg.package_status(m) in {"none", "rejected"}]
+    if dur_filter in dict(pkg.DURATIONS):
+        members = [m for m in members if str(m.get("vip_plan") or "").strip().lower() == dur_filter]
+    elif dur_filter == "none":
+        members = [m for m in members if str(m.get("vip_plan") or "").strip().lower() not in dict(pkg.DURATIONS)]
     if status in {"ON", "OFF"}:
         members = [m for m in members if str(m.get("status", "ON")).upper() == status]
 
     allm = [m for m in d["members"] if str(m.get("username", "")).strip().casefold() != "admin"]
     counts = {
         "total": len(allm),
+        "vip": sum(pkg.vip_active(m) for m in allm),
+        "free": sum(not pkg.vip_active(m) for m in allm),
         "on": sum(str(m.get("status", "ON")).upper() == "ON" for m in allm),
         "pending": sum(pkg.package_status(m) == "pending" for m in allm),
-        "approved": sum(pkg.package_status(m) == "approved" for m in allm),
-        "none": sum(pkg.package_status(m) in {"none", "rejected"} for m in allm),
     }
     members.sort(key=lambda m: (0 if pkg.package_status(m) == "pending" else 1, str(m.get("name") or m.get("username") or "")))
 
@@ -142,19 +147,18 @@ def _member_manager():
             )
         typ = _norm_type(m.get("account_type"))
         can_do = bool(getattr(base, "can_practice", lambda *_: False)(m))
-        if typ == "SVIP":
-            type_badge = "<span class='badge svip'>⭐ SVIP</span>"
-        elif typ == "VIP":
-            type_badge = "<span class='badge vip'>🔑 VIP</span>"
+        if can_do:
+            type_badge = "<span class='badge svip'>⭐ SVIP</span>" if typ == "SVIP" else "<span class='badge vip'>🔑 VIP</span>"
+            do_badge = "<span class='badge ok'>xem đáp án + làm bài</span>"
         else:
             type_badge = "<span class='badge free'>FREE</span>"
-        do_badge = "<span class='badge ok'>VIP · làm bài + xem đáp án</span>" if can_do else "<span class='badge no'>FREE · chỉ xem đề</span>"
+            do_badge = "<span class='badge no'>chỉ xem đề</span>"
+        pst_badge = "<span class='badge pending'>⏳ Chờ duyệt</span>" if pst == "pending" else ""
         cards.append(
             f"<article class='memcard{' wait' if pst=='pending' else ''}'>"
             f"<div class='memtop'><label class='ck'><input type='checkbox' name='selected' value='{su}' form='bulkForm'> "
             f"<b>{name}</b> · {su}</label><span class='muted'>{phone}</span>"
-            f"{type_badge}{do_badge}"
-            f"<span class='badge {pst}'>{'⏳ Chờ duyệt' if pst=='pending' else ('✅ Đã cấp' if pst=='approved' else 'Chưa cấp')}</span></div>"
+            f"{type_badge}{do_badge}{pst_badge}</div>"
             f"{req_html}"
             f"<form id='row_{su}' class='memform' method='post' action='/admin/members/save'>"
             f"<input type='hidden' name='save_user' value='{su}'>"
@@ -165,7 +169,7 @@ def _member_manager():
             + f"<div class='memacts'><select name='status'><option value='ON' {'selected' if st=='ON' else ''}>ON · đang dùng</option><option value='OFF' {'selected' if st=='OFF' else ''}>OFF · khóa</option></select>"
             f"<div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
             f"<div class='passrow'><input class='pass' name='new_password' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
-            f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp gói</button>"
+            f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp VIP</button>"
             f"<button class='btn red small' name='intent' value='delete' onclick=\"return confirm('Xóa thành viên {su}? Không hoàn tác.')\">🗑 Xóa</button></div></form></article>"
         )
 
@@ -200,7 +204,7 @@ def _member_manager():
         "<div class='field'><label>Điện thoại</label><input name='phone'></div>"
         "<div class='field'><label>Mật khẩu</label><input name='password' type='password' required></div></div>"
         + pkg.picker_html(student=False)
-        + "<button class='btn primary' type='submit'>✅ Tạo và cấp gói</button></form></details>"
+        + "<button class='btn primary' type='submit'>✅ Tạo và cấp VIP</button></form></details>"
     )
 
     body = f"""
@@ -214,12 +218,12 @@ def _member_manager():
 .btn{{display:inline-block;border:1px solid #b8d5f6;background:#fff;color:#145bb0;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}}.btn.primary{{background:#176bd3;color:#fff}}.btn.green{{background:#179b55;color:#fff;border-color:#128a4a}}.btn.small{{padding:5px 7px;font-size:11px}}.btn.red{{background:#fff;color:#b91c1c;border-color:#fecaca}}
 .note{{background:#eef7ff;border:1px solid #b9d5ef;border-radius:9px;padding:9px;margin:8px 0;font-size:12px}}.cgrid{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}}@media(max-width:800px){{.stats{{grid-template-columns:repeat(2,1fr)}}.cgrid{{grid-template-columns:1fr}}}}
 </style>
-<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Duyệt gói 1–3 lớp / 1–2 môn · cấp quyền · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
-<div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['approved']}</b><span>Đã cấp gói</span></div><div class='stat'><b>{counts['none']}</b><span>Chưa cấp</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
-<div class='note'>📌 <b>Cấp VIP</b> = xem đáp án + làm bài trong hạn dùng. FREE / hết hạn = chỉ xem đề, không đáp án. Ô cam hiện ngày đăng ký — ngày hết hạn. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
+<div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Tài khoản VIP / FREE · hạn dùng 3 ngày / 1 tháng / 3 tháng / 1 năm · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
+<div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['vip']}</b><span>VIP</span></div><div class='stat'><b>{counts['free']}</b><span>FREE</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
+<div class='note'>📌 <b>Tài khoản VIP</b> = xem đáp án + làm bài. <b>FREE</b> = chỉ xem đề. <b>Gói</b> là hạn dùng: 3 ngày / 1 tháng / 3 tháng / 1 năm (ô cam: ngày đăng ký — ngày hết hạn). Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
 {create}
 {dup_html}
-<form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>GÓI</label><select name='pack'><option value=''>Tất cả</option><option value='pending' {'selected' if pack_filter=='pending' else ''}>Chờ duyệt</option><option value='approved' {'selected' if pack_filter=='approved' else ''}>Đã cấp</option><option value='none' {'selected' if pack_filter=='none' else ''}>Chưa cấp</option></select></div><div><label>TÀI KHOẢN</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
+<form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>TÀI KHOẢN</label><select name='type'><option value=''>Tất cả</option><option value='vip' {'selected' if type_filter=='vip' else ''}>VIP</option><option value='free' {'selected' if type_filter=='free' else ''}>FREE</option><option value='pending' {'selected' if type_filter=='pending' else ''}>Chờ duyệt</option></select></div><div><label>GÓI · HẠN DÙNG</label><select name='dur'><option value=''>Tất cả</option><option value='3d' {'selected' if dur_filter=='3d' else ''}>3 ngày</option><option value='1m' {'selected' if dur_filter=='1m' else ''}>1 tháng</option><option value='3m' {'selected' if dur_filter=='3m' else ''}>3 tháng</option><option value='1y' {'selected' if dur_filter=='1y' else ''}>1 năm</option><option value='none' {'selected' if dur_filter=='none' else ''}>Chưa có hạn</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
 <form id='bulkForm' method='post' action='/admin/members/bulk'></form>
 <div class='bulk'><b>⚡ Đã chọn:</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button> <button class='btn red' name='intent' value='delete' form='bulkForm' onclick="return confirm('Xóa các thành viên đang tick?')">🗑 Xóa đã chọn</button></div>
 {''.join(cards) or "<div class='note'>Không có thành viên phù hợp.</div>"}
