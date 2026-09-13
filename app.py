@@ -139,7 +139,7 @@ body.cinema .cinemagate{position:fixed;inset:0;z-index:50;border:0;background:#1
 body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
-body.cinema .cinema-exit{position:fixed;top:8px;right:10px;z-index:31;width:36px;height:36px;border-radius:8px;border:1px solid #c5d6ea;background:#fff;color:#145bb0;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:0 2px 8px #0f172a14}
+body.cinema .cinema-exit{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));right:6px;z-index:40;width:28px;height:28px;border-radius:6px;border:1px solid #c5d6ea;background:#fff;color:#b91c1c;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;box-shadow:0 2px 8px #0f172a14;cursor:pointer}
 body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:auto;top:auto;z-index:34;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 6px 5px;background:#145bb0;border:0;border-radius:10px;box-shadow:0 2px 10px #0f172a28}
 body.cinema .cinema-qr .qr-tools{display:flex;gap:4px;width:100%;justify-content:center}
 body.cinema .cinema-qr .qr-tools button{flex:1;min-width:32px;min-height:28px;padding:0;border:0;border-radius:6px;background:#fff;color:#145bb0;font-size:18px;font-weight:900;line-height:1;cursor:pointer}
@@ -221,6 +221,7 @@ body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 6px;font-size:11px;wh
 body.cinema .cinemahost button:disabled{opacity:.45;cursor:not-allowed}
 body.cinema .cinemahost .spkmsg{display:none}
 body.cinema .cinemahost .cinema-tool.on{background:#ede9fe;border-color:#c4b5fd;color:#5b21b6}
+body.cinema .cinemahost .cinema-leave{color:#b91c1c;border-color:#fecaca;font-weight:900;margin-left:2px}
 @media(max-width:700px){
 body.cinema .cinemahost{gap:3px;padding-right:36px}
 body.cinema .cinema-navrow{flex:1 1 6.5rem;min-width:6.2rem}
