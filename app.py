@@ -1814,14 +1814,32 @@ def html_question(s, tex_path=None):
         if token is not None:
             _TEX_SRC.reset(token)
 
+_MATH_CHUNK = re.compile(
+    r"(\${2}[^$]+\${2}|\$[^$]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])"
+)
+
+
+def _wrap_bare_arrows(chunk):
+    """Bọc vectơ nằm ngoài $...$ — không chèn $ vào giữa công thức đã có."""
+    chunk = str(chunk or "")
+    chunk = re.sub(
+        r"(?<![\\A-Za-z])(over(?:left|right|leftright)arrow)\s*\{([^{}]*)\}",
+        r"\\\1{\2}",
+        chunk,
+    )
+    for cmd in ("overrightarrow", "overleftarrow", "overleftrightarrow", "vec"):
+        chunk = re.sub(rf"\\{cmd}\s*\{{([^{{}}]*)\}}", rf"$\\{cmd}{{\1}}$", chunk)
+    return chunk
+
+
 def prepare_math(s):
-    """Make LaTeX visible to MathJax: keep $...$ and wrap bare \\overrightarrow{ }."""
-    s = strip_bank_meta(s or '')
-    s = re.sub(r'(?<![\\$])overrightarrow\s*\{([^{}]*)\}', r'\\overrightarrow{\1}', s)
-    s = re.sub(r'(?<!\$)\\overrightarrow\s*\{([^{}]*)\}', r'$\\overrightarrow{\1}$', s)
-    s = re.sub(r'(?<!\$)\\vec\s*\{([^{}]*)\}', r'$\\vec{\1}$', s)
-    s = re.sub(r'\$\$+', '$$', s)
-    return s.strip()
+    """Giữ nguyên $...$; chỉ bọc \\overrightarrow / \\vec khi nằm ngoài công thức."""
+    s = strip_bank_meta(s or "")
+    parts = _MATH_CHUNK.split(s)
+    out = []
+    for i, part in enumerate(parts):
+        out.append(part if i % 2 else _wrap_bare_arrows(part))
+    return "".join(out).strip()
 
 TIKZ_RE=re.compile(r'\\begin\s*\{\s*tikzpicture\s*\}.*?\\end\s*\{\s*tikzpicture\s*\}',re.I|re.S)
 TIKZ_CACHE=ROOT/'data'/'tikz-cache'
