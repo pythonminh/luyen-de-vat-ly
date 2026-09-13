@@ -133,7 +133,7 @@ ID_RE = re.compile(r"%\s*ID\s*:\s*(\S+)", re.I)
 CAU_HEAD_RE = re.compile(r"%+\s*[=-]*\s*Câu\s+(\d+)", re.I)
 
 CSS = r"""
-:root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px;--header-h:72px}
+:root{--blue:#176bd3;--blue2:#0f57b4;--line:#d7e2ee;--bg:#f3f7fc;--green:#159447;--red:#cf2d38;--gold:#c98600;--figh:320px;--header-h:48px}
 *{box-sizing:border-box}html{height:100%;scroll-padding-top:var(--header-h)}body{margin:0;min-height:100dvh;background:var(--bg);color:#19324d;font:14px/1.45 Segoe UI,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}img,svg,video{max-width:100%;height:auto}
 a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:2147483000;background:var(--blue);color:#fff;box-shadow:0 2px 12px #0004}.topin{max-width:none;width:100%;margin:0;padding:calc(8px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 8px calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.brand{font-weight:900;font-size:20px}.brandbai{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #ffffff66;border-radius:6px;font-size:13px;font-weight:800;vertical-align:middle}.brandbox{appearance:none;-webkit-appearance:none;background:none;border:0;color:inherit;text-align:left;padding:0;cursor:pointer;font:inherit;min-width:0;max-width:100%}.sub{font-size:11px;opacity:.9}.clock{margin-left:auto;font:700 12px/1.25 ui-monospace,Consolas,monospace;white-space:nowrap;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;min-width:0;text-align:center;flex:0 0 auto}.clock .clockday,.clock .clocktime{display:inline}.clock .clockday::after{content:' · '}.nav{display:none;gap:6px;flex-wrap:wrap;align-items:center;min-width:0;flex-basis:100%;width:100%}.top.nav-open .nav{display:flex}.nav a,.nav button,.who{color:#fff;border:1px solid #ffffff55;background:#ffffff15;padding:7px 10px;border-radius:8px;font-weight:800;cursor:pointer;font:inherit;font-weight:800}.who{background:#ffffff28;font-size:14px;white-space:nowrap;max-width:min(22rem,40vw);overflow:hidden;text-overflow:ellipsis}.nav .who{display:none}.whobar{display:inline-flex;align-items:center;min-width:0;max-width:min(22rem,36vw)}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsbtn{white-space:nowrap}.adminjump{display:inline-flex;align-items:center;flex:0 0 auto;color:#fff;border:1px solid #ffffffaa;background:#ffffff28;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;white-space:nowrap}.adminjump:hover{background:#ffffff44}.top:not(.nav-open) .regline{display:none}.navtoggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 18px/1 sans-serif;cursor:pointer}.baimenu{display:inline-flex;align-items:center;color:#fff;border:1px solid #ffffff55;background:#ffffff15;border-radius:8px;padding:6px 10px;font:800 13px/1.2 inherit;cursor:pointer;white-space:nowrap}.drawer{position:fixed;inset:0;z-index:2147483602;pointer-events:none;visibility:hidden}.drawer.open{pointer-events:auto;visibility:visible}.drawer-back{position:absolute;inset:0;background:#08142888;opacity:0;transition:opacity .2s}.drawer.open .drawer-back{opacity:1}.drawer-panel{position:absolute;left:0;top:0;bottom:0;width:min(92vw,400px);background:#fff;color:#19324d;box-shadow:8px 0 28px #0004;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}.drawer.open .drawer-panel{transform:none}.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #e5edf5}.drawer-head b{font-weight:400;font-size:14px}.drawer-hint{margin:0;padding:8px 12px;font-size:12px;color:#6c7d90}.drawer-tree{overflow:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;flex:1}.drawer-tree details{border-bottom:1px solid #edf2f7}.drawer-tree summary{cursor:pointer;padding:7px 8px;font-weight:400;font-size:12px;list-style:none}.drawer-tree summary::-webkit-details-marker{display:none}.drawer-tree summary::before{content:'▸ ';color:#145bb0}.drawer-tree details[open]>summary::before{content:'▾ '}.drawnest{padding:0 0 6px 10px}.drawbais{display:flex;flex-direction:column;gap:4px;padding:0 0 8px}.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #d7e2ee;border-radius:8px;background:#f8fbff;color:#173a5e;font-weight:400;font-size:12px;line-height:1.35;text-align:left}.drawname{flex:1;min-width:0;text-align:left}.drawn{flex:0 0 auto;margin-left:auto;text-align:right}.drawbai.on{background:#145bb0;color:#fff;border-color:#145bb0}.drawbaiwrap{border-bottom:0}.drawbaiwrap>summary.drawbai{display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none}.drawer-tree .drawbaiwrap>summary::before{content:none!important}.drawdangs{display:flex;flex-direction:column;gap:4px;padding:4px 0 10px}.drawdang{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#9a3412;font-weight:400;font-size:11px;line-height:1.35}.drawdang.on{background:#c2410c;border-color:#c2410c;color:#fff}.drawer-lock{overflow:hidden}.pwatip{position:fixed;z-index:2147483600;left:12px;right:12px;bottom:12px;max-width:440px;margin:auto;background:#fff;color:#19324d;border:1px solid #b8d5f6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px #0005;font-weight:400}.pwatip b{color:#145bb0}.pwatip p{margin:6px 0;line-height:1.45}.pwatip .btn{margin-top:6px}@media(display-mode:standalone){#ldvlInstall{display:none!important}}@media(max-width:1024px){html{scroll-padding-top:var(--header-h)}.brand{font-size:15px;line-height:1.2}.brandbox{flex:1 1 8rem;min-width:0;order:1}.sub{display:none}.topin{padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px;gap:5px 6px;flex-wrap:wrap;align-items:center}.clock{display:none}.whobar{display:inline-flex;order:2;flex:0 1 11rem;max-width:42%;margin:0;min-width:0}.whobar .who{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 8px}.regline{font-size:10px;padding:0 8px 4px}.adminjump{order:3;font-size:12px;padding:5px 8px}.navtoggle{display:inline-flex;align-items:center;justify-content:center;margin-left:0;order:4}.nav{display:none;flex-basis:100%;width:100%;padding:4px 0 6px;gap:5px;order:5;min-width:0}.top.nav-open .nav{display:flex}.nav .who{display:none}.nav a,.nav button,.who{padding:5px 8px;font-size:12px}.wrap{padding:8px}.head{padding:7px 8px}.body{padding:8px}.head.quiztop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;font-weight:600;line-height:1.35}.quizdang{display:none}.qid{padding:1px 6px;font-size:11px}.qzoombar{margin-left:0;gap:3px}.qzoombar .btn,#pStart{padding:4px 7px;font-size:12px}.qzoombar b{min-width:2.6em;font-size:11px}.palette{margin-bottom:6px;padding:6px 8px;gap:4px}.pitems{flex-wrap:wrap;overflow:visible}.pdang{font-size:11px;font-weight:600;min-width:0}.pitem{padding:3px 6px;font-size:10px;flex-shrink:0}.quizstat{font-size:11px;font-weight:600}.subnav{top:var(--header-h);margin-bottom:8px}.dangtabs{padding:6px 8px}.dtab{padding:5px 8px;font-size:11px;max-width:min(14rem,62vw)}.kindtabs{padding:5px 6px;gap:3px;flex-wrap:wrap}.kindtabs .ktab{padding:4px 6px;font-size:10px;flex:1 1 auto}}@media(orientation:landscape) and (max-height:500px){.brand{font-size:16px}.sub{display:none}.topin{padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:4px}.quizacts{padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}.quizacts .btn{min-height:40px;font-size:14px}.body:has(.quizacts){padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}}@media(min-width:1025px){.navtoggle{display:none!important}.nav,.top .nav,.top.nav-open .nav,.top:not(.nav-open) .nav{display:flex;flex-basis:auto;flex:1 1 auto;width:auto;min-width:0;order:unset;padding:0}}
 .wrap{max-width:none;width:100%;margin:0;padding:12px 16px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:100%}.subnav{position:sticky;z-index:40;top:var(--header-h);margin:0 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 10px #1b4d8a10}.lttabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#f5f3ff;border-bottom:1px solid #ddd6fe}
@@ -221,6 +221,16 @@ body.cinema .cinema-inkpad{width:calc(100% - 16px);margin:6px 8px calc(64px + en
 body.cinema .cinema-inkframe{height:var(--ink-h,180px)}
 }
 body.cinema .cinema-exit{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));right:6px;z-index:40;width:28px;height:28px;border-radius:6px;border:1px solid #c5d6ea;background:#fff;color:#b91c1c;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;box-shadow:0 2px 8px #0f172a14;cursor:pointer}
+body.cinema.is-host .cinema-exit{display:none!important}
+body.cinema.is-host .cinemahost{padding-right:8px}
+.topin{flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px}
+.brand{font-size:15px}
+.sub,.regline,.adminjump{display:none!important}
+.navtoggle{display:none!important}
+.nav,.top .nav,.top.nav-open .nav,.top:not(.nav-open) .nav{display:flex!important;flex-wrap:nowrap!important;flex-basis:auto!important;width:auto!important;flex:1 1 auto;overflow-x:auto;order:unset!important;padding:0!important;gap:4px}
+.nav a,.nav button,.who,.fsbtn{padding:4px 7px!important;font-size:12px!important;border-radius:6px;line-height:1.2}
+.clock{padding:4px 6px;font-size:11px}
+.whobar{max-width:9rem}
 body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:auto;top:auto;z-index:34;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 6px 5px;background:#145bb0;border:0;border-radius:10px;box-shadow:0 2px 10px #0f172a28}
 body.cinema .cinema-qr .qr-tools{display:flex;gap:4px;width:100%;justify-content:center}
 body.cinema .cinema-qr .qr-tools button{flex:1;min-width:32px;min-height:28px;padding:0;border:0;border-radius:6px;background:#fff;color:#145bb0;font-size:18px;font-weight:900;line-height:1;cursor:pointer}
@@ -298,7 +308,8 @@ body.cinema .cinema-navrow[hidden]{display:none!important}
 body.cinema .cinema-navlab{flex:0 0 auto;font-size:10px;font-weight:800;color:#5b21b6;line-height:1}
 body.cinema .cinemahost select{flex:1;min-width:0;max-width:100%;font-size:11px;font-weight:700;padding:2px 4px;min-height:28px;height:28px;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#5b21b6}
 body.cinema .cinemahost button{flex:0 0 auto;min-width:28px;min-height:28px;height:28px;border:1px solid #c5d6ea;border-radius:6px;background:#fff;color:#145bb0;font-size:12px;font-weight:800;cursor:pointer}
-body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 6px;font-size:11px;white-space:nowrap}
+body.cinema .cinemahost .cinema-tool{min-width:0;padding:0 5px;font-size:11px;white-space:nowrap;height:26px;min-height:26px}
+body.cinema .cinemahost button{min-height:26px;height:26px;min-width:26px}
 body.cinema .cinemahost button:disabled{opacity:.45;cursor:not-allowed}
 body.cinema .cinemahost .spkmsg{display:none}
 body.cinema .cinemahost .cinema-tool.on{background:#ede9fe;border-color:#c4b5fd;color:#5b21b6}
@@ -474,8 +485,8 @@ def _who_chip(text: str, extra: str = "") -> str:
 def page(title: str, body: str, cinema: bool = False) -> Response:
     role = session.get("role")
     nav = [
-        "<button type='button' class='navback' onclick=\"if(history.length>1)history.back();else location.href='/member'\">← Quay lại</button>",
-        "<a href='/member'>📚 MỤC LỤC</a>",
+        "<button type='button' class='navback' onclick=\"if(history.length>1)history.back();else location.href='/member'\" title='Quay lại'>←</button>",
+        "<a href='/member' title='Mục lục'>📚</a>",
     ]
     who = ""
     admin_jump = ""
@@ -485,31 +496,26 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     except Exception:
         pass
     if admin_ui:
-        extra = _class_label(member_current())
-        label = "🔐 ADMIN" + (f" · {extra}" if extra else "")
         who = (
-            f"<a class='who' href='/admin/members' title='Quản lý thành viên'>"
-            f"{html.escape(label)}</a>"
+            "<a class='who' href='/admin/members' title='Quản lý thành viên'>🔐 ADMIN</a>"
         )
-        admin_jump = "<a class='adminjump' href='/admin/members' title='Quản lý thành viên'>👥 Thành viên</a>"
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
-            "<a href='/member/ai'>🤖 Gemini</a>",
-            "<a href='/xem' title='Học viên nhập mã. Thầy bấm Chiếu lý thuyết trên trang bài.'>📺 Xem chiếu</a>",
-            "<a href='/admin'>📂 ngan-hang</a>",
-            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
-            "<a href='/admin/members'>👥 Thành viên</a>",
-            "<a href='/admin/ly-thuyet'>📖 Duyệt LT</a>",
-            f"<a href='{out_href}'>🚪 Thoát</a>",
+            "<a href='/member/ai' title='Gemini'>🤖</a>",
+            "<a href='/xem' title='Xem chiếu'>📺 Chiếu</a>",
+            "<a href='/admin' title='ngan-hang'>📂</a>",
+            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener' title='GitHub'>🐙</a>",
+            "<a href='/admin/ly-thuyet' title='Duyệt lý thuyết'>📖 LT</a>",
+            f"<a href='{out_href}' title='Thoát'>🚪</a>",
         ]
     elif role == "member":
         m = member_current()
         nm = str((m or {}).get("name") or session.get("name") or (m or {}).get("username") or session.get("username") or "").strip()
         if nm:
             who = _who_chip("👤 " + nm, _class_label(m))
-        nav.append("<a href='/member/goi'>🎫 Gói</a>")
-        nav.append("<a href='/member/ai'>🤖 Gemini</a>")
-        nav.append("<a href='/member/logout'>🚪 Thoát</a>")
+        nav.append("<a href='/member/goi' title='Gói'>🎫</a>")
+        nav.append("<a href='/member/ai' title='Gemini'>🤖</a>")
+        nav.append("<a href='/member/logout' title='Thoát'>🚪</a>")
     else:
         nav += [
             "<a href='/xem' title='Học viên nhập mã. Thầy bấm Chiếu lý thuyết trên trang bài.'>📺 Xem chiếu</a>",
@@ -524,9 +530,9 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         + (f"<span class='whobar'>{who}</span>" if who else "")
         + admin_jump
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
-        + "<div class='nav' id='ldvlNav'>" + who + "".join(nav)
-        + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲 Cài app</button>"
-        + "<button type='button' class='fsbtn' id='ldvlFs' onclick='ldvlToggleFs()' title='Toàn màn hình'>⛶ Toàn màn hình</button>"
+        + "<div class='nav' id='ldvlNav'>" + "".join(nav)
+        + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲</button>"
+        + "<button type='button' class='fsbtn' id='ldvlFs' onclick='ldvlToggleFs()' title='Toàn màn hình'>⛶</button>"
         + "</div></div>"
         "<div class='regline'>Đăng ký dùng: liên hệ thầy Minh 0357991010 (Zalo)</div>"
         "</div>"
