@@ -487,6 +487,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         admin_jump = "<a class='adminjump' href='/admin/members' title='Quản lý thành viên'>👥 Thành viên</a>"
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
+            "<a href='/member/ai'>🤖 Gemini</a>",
             "<a href='/xem' title='Học viên nhập mã. Thầy bấm Chiếu lý thuyết trên trang bài.'>📺 Xem chiếu</a>",
             "<a href='/admin'>📂 ngan-hang</a>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
@@ -3187,10 +3188,16 @@ def member_kicked():
 
 @app.get('/member/ai')
 def member_ai():
+    if can_manage_bank():
+        extra="<p class='muted'>Key lưu trên trình duyệt này, dùng cho viết lại đề, lọc câu, lý thuyết và phản biện.</p>"
+        body=("<div class='wrap'><div class='panel'><div class='head'>🤖 Gemini — nạp key</div><div class='body'>"
+              +gemini_panel_html(extra)+
+              "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>")
+        return page('Key Gemini',body)
     m=member_current()
     if not m:return redirect('/member/login')
     extra="<p class='muted'>Key dùng khi chọn chế độ <b>Làm bài + phản biện AI</b>. Sau khi xác nhận đáp án, màn hình chia đôi: bên trái là đề và lời giải, bên phải là Gemini (cuộn riêng).</p>"
-    lock='' if can_practice(m) else "<div class='err'>Cần tài khoản VIP (ADMIN cấp gói) mới dùng Gemini phản biện khi làm bài.</div>"
+    lock='' if can_practice(m) else "<div class='err'>Cần tài khoản VIP mới dùng Gemini phản biện khi làm bài.</div>"
     body=("<div class='wrap'><div class='panel'><div class='head'>🤖 Gemini — nạp key và phản biện</div><div class='body'>"
           +lock+(gemini_panel_html(extra) if can_practice(m) else '')+
           "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>")
