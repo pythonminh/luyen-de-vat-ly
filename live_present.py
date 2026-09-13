@@ -1823,6 +1823,7 @@ function setInkPadHeight(h, remap){
   if(remap!==false) sizeInk();
 }
 function sizeInk(){
+  if(inkDrawing) return;
   const cv=document.getElementById('cinemaInk');
   const frame=document.querySelector('.cinema-inkframe');
   if(!cv||!frame) return;
@@ -1917,14 +1918,14 @@ function paintInkTail(){
   const ctx=inkCtx(cv);
   if(!ctx) return;
   const pts=inkCur.p, w=cv.width, h=cv.height;
-  const a=pts[pts.length-2], b=pts[pts.length-1];
+  const i0=Math.max(0, pts.length-24);
   ctx.beginPath();
   ctx.strokeStyle=inkCur.c||'#9f1239';
   ctx.lineWidth=inkWidth(cv,inkCur);
   ctx.lineCap='round';
   ctx.lineJoin='round';
-  ctx.moveTo(a[0]*w,a[1]*h);
-  ctx.lineTo(b[0]*w,b[1]*h);
+  ctx.moveTo(pts[i0][0]*w, pts[i0][1]*h);
+  for(let i=i0+1;i<pts.length;i++) ctx.lineTo(pts[i][0]*w, pts[i][1]*h);
   ctx.stroke();
 }
 function clearInkCanvas(){
@@ -1937,6 +1938,10 @@ function clearInkCanvas(){
   lastInkQ='';
   const cv=document.getElementById('cinemaInk');
   if(cv){
+    if(cv.dataset.winmove==='1'){
+      cv.dataset.winmove='0';
+      window.removeEventListener('pointermove', cv._inkMove, true);
+    }
     const ctx=inkCtx(cv);
     if(ctx) fillInkPaper(cv, ctx);
   }
@@ -1947,7 +1952,7 @@ function applyInk(d){
     clearInkCanvas();
     lastInkQ=qk;
   }
-  if(inkDrawing || (Date.now()-inkLocalAt)<500) return;
+  if(inkDrawing || (Date.now()-inkLocalAt)<1500) return;
   inkStrokes=Array.isArray(d.ink)?d.ink:[];
   paintInk();
 }
@@ -1973,9 +1978,13 @@ function bindCinemaInk(){
   cv.dataset.bound='1';
   function isInkPen(ev){
     const t=String(ev.pointerType||'');
+    return t==='pen' || t==='mouse';
+  }
+  function penIsDown(ev){
+    const t=String(ev.pointerType||'');
     if(t==='touch') return false;
-    if(t==='pen') return true;
-    if(t==='mouse') return ev.button===0 || ev.buttons===1 || ev.type!=='pointerdown';
+    if(t==='pen') return (ev.buttons&1) || (ev.pressure>0.01);
+    if(t==='mouse') return !!(ev.buttons&1);
     return false;
   }
   function pos(ev){
@@ -1984,50 +1993,65 @@ function bindCinemaInk(){
     const y=(ev.clientY-r.top)/Math.max(1,r.height);
     return [Math.max(0,Math.min(1,x)), Math.max(0,Math.min(1,y))];
   }
+  function holdPtr(ev){
+    try{cv.setPointerCapture(ev.pointerId)}catch(e){}
+    inkPtrId=ev.pointerId;
+  }
+  function startStroke(ev){
+    inkDrawing=true;
+    inkLocalAt=Date.now();
+    inkCur={p:[pos(ev)],c:'#9f1239',w:4.4};
+    holdPtr(ev);
+    setWinMove(true);
+    paintInk();
+  }
+  function addPtsFrom(ev){
+    if(!inkCur) return;
+    const list=(ev.getCoalescedEvents&&ev.getCoalescedEvents())||[ev];
+    const before=inkCur.p.length;
+    for(let i=0;i<list.length;i++){
+      const pt=pos(list[i]);
+      const last=inkCur.p[inkCur.p.length-1];
+      if(last){
+        const dx=pt[0]-last[0], dy=pt[1]-last[1];
+        if(dx*dx+dy*dy<2.5e-7) continue;
+      }
+      inkCur.p.push(pt);
+    }
+    if(inkCur.p.length>1200) inkCur.p=inkCur.p.slice(-900);
+    if(inkCur.p.length>before){
+      inkLocalAt=Date.now();
+      paintInkTail();
+    }
+  }
   function down(ev){
     if(!hostTok() || !document.body.classList.contains('ink-on')) return;
     if(!isInkPen(ev)) return;
     if(ev.pointerType==='mouse' && ev.button!==0) return;
-    if(inkDrawing && inkPtrId!=null && ev.pointerId!==inkPtrId) return;
     ev.preventDefault();
-    try{cv.setPointerCapture(ev.pointerId)}catch(e){}
-    inkPtrId=ev.pointerId;
-    inkDrawing=true;
-    inkLocalAt=Date.now();
-    inkCur={p:[pos(ev)],c:'#9f1239',w:4.4};
-    paintInk();
+    if(inkDrawing && inkCur){
+      holdPtr(ev);
+      addPtsFrom(ev);
+      return;
+    }
+    startStroke(ev);
   }
-  let moveRaf=0, moveEv=null;
   function move(ev){
-    if(!inkDrawing||!inkCur) return;
-    if(inkPtrId!=null && ev.pointerId!==inkPtrId) return;
-    if(String(ev.pointerType||'')==='touch') return;
+    if(!hostTok() || !document.body.classList.contains('ink-on')) return;
+    if(!isInkPen(ev)) return;
+    if(!inkDrawing || !inkCur){
+      if(penIsDown(ev) && cv.contains(ev.target)) startStroke(ev);
+      return;
+    }
+    if(inkPtrId!=null && ev.pointerId!==inkPtrId && ev.pointerType!=='pen') return;
+    if(ev.pointerType==='pen') holdPtr(ev);
     ev.preventDefault();
-    moveEv=ev;
-    if(moveRaf) return;
-    moveRaf=requestAnimationFrame(function(){
-      moveRaf=0;
-      if(!inkDrawing||!inkCur||!moveEv) return;
-      const pt=pos(moveEv);
-      const last=inkCur.p[inkCur.p.length-1];
-      if(last){
-        const dx=pt[0]-last[0], dy=pt[1]-last[1];
-        if(dx*dx+dy*dy<1.6e-5) return;
-      }
-      inkCur.p.push(pt);
-      if(inkCur.p.length>500){
-        const keep=[];
-        for(let i=0;i<inkCur.p.length;i+=2) keep.push(inkCur.p[i]);
-        keep.push(inkCur.p[inkCur.p.length-1]);
-        inkCur.p=keep;
-      }
-      inkLocalAt=Date.now();
-      paintInkTail();
-    });
+    addPtsFrom(ev);
   }
   function up(ev){
     if(!inkDrawing) return;
-    if(ev && inkPtrId!=null && ev.pointerId!==inkPtrId) return;
+    if(ev && inkPtrId!=null && ev.pointerId!==inkPtrId && ev.pointerType!=='pen') return;
+    if(ev && ev.pointerType==='pen' && penIsDown(ev)) return;
     if(ev) try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
     if(inkCur&&inkCur.p&&inkCur.p.length){
       if(inkCur.p.length===1){
@@ -2041,13 +2065,33 @@ function bindCinemaInk(){
     inkDrawing=false;
     inkPtrId=null;
     inkLocalAt=Date.now();
+    setWinMove(false);
     paintInk();
     pushInk();
   }
+  function keepStroke(ev){
+    if(!inkDrawing) return;
+    if(ev && inkPtrId!=null && ev.pointerId!==inkPtrId && ev.pointerType!=='pen') return;
+    if(ev) holdPtr(ev);
+    setWinMove(true);
+  }
+  function setWinMove(on){
+    if(on){
+      if(cv.dataset.winmove==='1') return;
+      cv.dataset.winmove='1';
+      window.addEventListener('pointermove', move, {passive:false, capture:true});
+    }else if(cv.dataset.winmove==='1'){
+      cv.dataset.winmove='0';
+      window.removeEventListener('pointermove', move, true);
+    }
+  }
+  cv._inkMove=move;
   cv.addEventListener('pointerdown', down, {passive:false});
   cv.addEventListener('pointermove', move, {passive:false});
   cv.addEventListener('pointerup', up);
-  cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointercancel', keepStroke);
+  cv.addEventListener('lostpointercapture', keepStroke);
+  window.addEventListener('pointerup', up, true);
 }
 function setInkPaper(kind){
   const frame=document.querySelector('.cinema-inkframe');
