@@ -147,8 +147,20 @@ def _sanitize_live(raw):
     return live
 
 
-_INK_MAX_STROKES = 120
-_INK_MAX_POINTS = 500
+_INK_MAX_STROKES = 250
+_INK_MAX_POINTS = 8000
+
+
+def _thin_pts(pts, max_n):
+    n = len(pts)
+    if n <= max_n:
+        return pts
+    out = []
+    last = max_n - 1
+    for i in range(max_n):
+        j = int(round(i * (n - 1) / last))
+        out.append(pts[j])
+    return out
 
 
 def _sanitize_ink(raw):
@@ -161,7 +173,7 @@ def _sanitize_ink(raw):
         if not isinstance(pts, list):
             continue
         clean = []
-        for pt in pts[:_INK_MAX_POINTS]:
+        for pt in pts:
             if not isinstance(pt, (list, tuple)) or len(pt) < 2:
                 continue
             try:
@@ -175,6 +187,7 @@ def _sanitize_ink(raw):
                 if dx * dx + dy * dy < 4e-8:
                     continue
             clean.append([round(x, 4), round(y, 4)])
+        clean = _thin_pts(clean, _INK_MAX_POINTS)
         if len(clean) < 2:
             continue
         color = str(s.get("c") or "#b91c1c")[:16]
@@ -1952,6 +1965,7 @@ function applyInk(d){
     clearInkCanvas();
     lastInkQ=qk;
   }
+  if(hostTok()) return;
   if(inkDrawing || (Date.now()-inkLocalAt)<1500) return;
   inkStrokes=Array.isArray(d.ink)?d.ink:[];
   paintInk();
@@ -2018,7 +2032,6 @@ function bindCinemaInk(){
       }
       inkCur.p.push(pt);
     }
-    if(inkCur.p.length>1200) inkCur.p=inkCur.p.slice(-900);
     if(inkCur.p.length>before){
       inkLocalAt=Date.now();
       paintInkTail();
@@ -2059,7 +2072,7 @@ function bindCinemaInk(){
         inkCur.p=[a,[Math.min(1,a[0]+0.002),a[1]]];
       }
       inkStrokes.push(inkCur);
-      if(inkStrokes.length>120) inkStrokes=inkStrokes.slice(-120);
+      if(inkStrokes.length>250) inkStrokes=inkStrokes.slice(-250);
     }
     inkCur=null;
     inkDrawing=false;
