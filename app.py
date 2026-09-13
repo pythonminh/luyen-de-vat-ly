@@ -258,14 +258,25 @@ body.cinema .cinema-inkframe{height:var(--ink-h,180px)}
 body.cinema .cinema-exit{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));right:6px;z-index:40;width:28px;height:28px;border-radius:6px;border:1px solid #c5d6ea;background:#fff;color:#b91c1c;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;box-shadow:0 2px 8px #0f172a14;cursor:pointer}
 body.cinema.is-host .cinema-exit{display:none!important}
 body.cinema.is-host .cinemahost{padding-right:8px}
-.topin{flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px}
+.topin{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px}
 .brand{font-size:15px}
 .sub,.regline,.adminjump{display:none!important}
 .navtoggle{display:none!important}
-.nav,.top .nav,.top.nav-open .nav,.top:not(.nav-open) .nav{display:flex!important;flex-wrap:nowrap!important;flex-basis:auto!important;width:auto!important;flex:1 1 auto;overflow-x:auto;order:unset!important;padding:0!important;gap:4px}
+.nav,.top .nav,.top.nav-open .nav,.top:not(.nav-open) .nav{display:flex!important;flex-wrap:nowrap;flex-basis:auto!important;width:auto!important;flex:1 1 auto;overflow-x:auto;order:unset!important;padding:0!important;gap:4px}
 .nav a,.nav button,.who,.fsbtn{padding:4px 7px!important;font-size:12px!important;border-radius:6px;line-height:1.2}
 .clock{padding:4px 6px;font-size:11px}
 .whobar{max-width:9rem}
+@media(max-width:700px){
+.topin{flex-wrap:wrap!important;overflow:visible;align-items:stretch;gap:5px}
+.brandbox{order:-1!important;flex:1 1 100%!important;max-width:none!important;display:flex;align-items:center;justify-content:space-between;min-height:32px;height:32px;padding:0 8px;border:1px solid #ffffff55;background:#ffffff18;border-radius:8px;box-sizing:border-box}
+.brand{font-size:13px!important;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brandbai{font-size:11px;padding:1px 6px;margin-left:6px}
+.whobar{order:0;flex:1 1 100%!important;max-width:none!important}
+.whobar .who{width:100%;height:32px;padding:0 8px!important;display:flex!important;align-items:center;box-sizing:border-box;font-size:11px!important}
+.nav,.top .nav,.top.nav-open .nav,.top:not(.nav-open) .nav{flex:1 1 100%!important;width:100%!important;flex-wrap:nowrap!important;overflow:visible!important;gap:5px!important}
+.nav a,.nav button,.fsbtn,.nav .navback{flex:1 1 0!important;min-width:0!important;width:auto!important;height:34px!important;padding:0 3px!important;margin:0!important;font-size:11px!important;font-weight:800!important;line-height:1.15!important;border-radius:8px!important;display:inline-flex!important;align-items:center;justify-content:center;text-align:center;white-space:normal;box-sizing:border-box}
+.nav .fsbtn{display:none!important}
+}
 body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:auto;top:auto;z-index:34;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 6px 5px;background:#145bb0;border:0;border-radius:10px;box-shadow:0 2px 10px #0f172a28}
 body.cinema .cinema-qr .qr-tools{display:flex;gap:4px;width:100%;justify-content:center}
 body.cinema .cinema-qr .qr-tools button{flex:1;min-width:32px;min-height:28px;padding:0;border:0;border-radius:6px;background:#fff;color:#145bb0;font-size:18px;font-weight:900;line-height:1;cursor:pointer}
