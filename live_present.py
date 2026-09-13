@@ -136,6 +136,47 @@ def _sanitize_live(raw):
     return live
 
 
+_INK_MAX_STROKES = 80
+_INK_MAX_POINTS = 160
+
+
+def _sanitize_ink(raw):
+    strokes = raw if isinstance(raw, list) else []
+    out = []
+    for s in strokes[:_INK_MAX_STROKES]:
+        if not isinstance(s, dict):
+            continue
+        pts = s.get("p")
+        if not isinstance(pts, list):
+            continue
+        clean = []
+        for pt in pts[:_INK_MAX_POINTS]:
+            if not isinstance(pt, (list, tuple)) or len(pt) < 2:
+                continue
+            try:
+                x = max(0.0, min(1.0, float(pt[0])))
+                y = max(0.0, min(1.0, float(pt[1])))
+            except (TypeError, ValueError):
+                continue
+            if clean:
+                dx = x - clean[-1][0]
+                dy = y - clean[-1][1]
+                if dx * dx + dy * dy < 4e-8:
+                    continue
+            clean.append([round(x, 4), round(y, 4)])
+        if len(clean) < 2:
+            continue
+        color = str(s.get("c") or "#b91c1c")[:16]
+        if not re.match(r"^#[0-9a-fA-F]{3,8}$", color):
+            color = "#b91c1c"
+        try:
+            w = max(1.0, min(12.0, float(s.get("w") or 3)))
+        except (TypeError, ValueError):
+            w = 3.0
+        out.append({"p": clean, "c": color, "w": w})
+    return out
+
+
 def _norm_ans(s):
     t = re.sub(r"\$+", "", str(s or ""))
     t = re.sub(r"\s+", "", t).replace(",", ".").lower()
@@ -522,6 +563,7 @@ def _room_out(room, include_q=True):
         + str((room.get("ids") or [None])[-1])
         + ":"
         + str(room.get("path") or ""),
+        "ink": list(room.get("ink") or []),
     }
     if include_q:
         d["q"] = room.get("q") or {}
@@ -576,6 +618,15 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
         room["live"] = live
         room["host"] = hid
         room["code"] = code
+        ink_q = (
+            room.get("path"),
+            room.get("pos"),
+            (room.get("q") or {}).get("kind"),
+            (room.get("q") or {}).get("text"),
+        )
+        if room.get("_ink_q") != ink_q:
+            room["ink"] = []
+            room["_ink_q"] = ink_q
         new_fp = (
             room.get("pos"),
             room.get("total"),
@@ -983,6 +1034,27 @@ def api_present_live():
         return jsonify(ok=True, ver=room["ver"], live=incoming)
 
 
+@base.app.post("/api/present/ink")
+def api_present_ink():
+    hid = _host_id()
+    if not hid:
+        return jsonify(ok=False, error="Hãy đăng nhập ADMIN trên máy chiếu."), 401
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or "")
+    token = str(data.get("token") or "")
+    ink = _sanitize_ink(data.get("ink"))
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token or str(room.get("host") or "") != hid:
+            return jsonify(ok=False, error="Phòng đã tắt."), 401
+        prev = room.get("ink") or []
+        if json.dumps(prev, sort_keys=True) != json.dumps(ink, sort_keys=True):
+            room["ink"] = ink
+            room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        return jsonify(ok=True, ver=int(room.get("ver") or 0))
+
+
 @base.app.get("/xem/<code>/qr.svg")
 def present_qr_svg(code):
     code = _norm_code(code)
@@ -1030,6 +1102,8 @@ def present_watch(code=""):
         "</div>"
         "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận</button>"
         "<button type='button' class='cinema-tool' id='peekToggle' hidden>💡 Gợi ý</button>"
+        "<button type='button' class='cinema-tool' id='inkToggle' hidden>✏️ Bút</button>"
+        "<button type='button' class='cinema-tool' id='inkClear' hidden>🧹 Xóa</button>"
         "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "<button type='button' class='cinema-tool spk-f'>Nữ</button>"
@@ -1048,7 +1122,9 @@ def present_watch(code=""):
         "<img src='" + qr_src + "' width='72' height='72' alt='QR vào chiếu'>"
         "<span>Quét · " + code + "</span></div>"
         "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
-        "<div id='perr' class='err'></div><div id='q' class='qbox' hidden></div>"
+        "<div id='perr' class='err'></div>"
+        "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
+        "<canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
@@ -1451,6 +1527,12 @@ let lastQ=null;
 let lastLive={};
 let lastShowSol=false;
 let lastPeekPos=-1;
+let inkStrokes=[];
+let inkDrawing=false;
+let inkCur=null;
+let inkTimer=0;
+let inkLocalAt=0;
+let lastInkQ='';
 function hostTok(){
   try{
     const p=JSON.parse(localStorage.getItem('ldvlPresent')||'null');
@@ -1579,6 +1661,14 @@ function paintHostTools(){
     ai.disabled=!done;
     ai.title=done?'':'Hãy chọn đáp án và bấm Xác nhận trước.';
   }
+  const inkBtn=document.getElementById('inkToggle');
+  const inkClr=document.getElementById('inkClear');
+  if(inkBtn){
+    inkBtn.hidden=!on;
+    inkBtn.classList.toggle('on', on && document.body.classList.contains('ink-on'));
+    inkBtn.title='Viết lên đề bằng bút cảm ứng / ngón tay. Tắt Bút để chọn đáp án.';
+  }
+  if(inkClr) inkClr.hidden=!on;
 }
 async function presentReveal(show){
   const p=hostTok(); if(!p) return false;
@@ -1614,6 +1704,7 @@ function cinemaDsCopy(){
 }
 function bindCinemaPick(){
   if(!hostTok() || lastShowSol || (lastLive&&lastLive.checked) || !isQuizQ(lastQ)) return;
+  if(document.body.classList.contains('ink-on')) return;
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   document.querySelectorAll('#q .opt').forEach(function(el,i){
     el.onclick=function(){ presentLive({tn:i}, false); };
@@ -1670,6 +1761,131 @@ function drawKey(q, showSol, pos, total, live){
   if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||''].join('\x1f');
   return [q&&q.kind,q&&q.dang,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
 }
+function sizeInk(){
+  const cv=document.getElementById('cinemaInk');
+  const stage=document.querySelector('.cinema-stage');
+  if(!cv||!stage) return;
+  const r=stage.getBoundingClientRect();
+  const dpr=Math.min(2, window.devicePixelRatio||1);
+  const w=Math.max(1, Math.floor(r.width*dpr));
+  const h=Math.max(1, Math.floor(r.height*dpr));
+  if(cv.width!==w || cv.height!==h){
+    cv.width=w; cv.height=h;
+  }
+  cv.style.width=r.width+'px';
+  cv.style.height=r.height+'px';
+  paintInk();
+}
+function paintInk(){
+  const cv=document.getElementById('cinemaInk');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  if(!ctx) return;
+  const w=cv.width, h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  const strokes=inkStrokes.slice();
+  if(inkCur&&inkCur.p&&inkCur.p.length) strokes.push(inkCur);
+  strokes.forEach(function(s){
+    const pts=s.p||[];
+    if(pts.length<1) return;
+    ctx.beginPath();
+    ctx.strokeStyle=s.c||'#b91c1c';
+    ctx.lineWidth=Math.max(2, (s.w||3)*Math.min(w,h)/420);
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    pts.forEach(function(pt,i){
+      const x=pt[0]*w, y=pt[1]*h;
+      if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+    });
+    if(pts.length===1){
+      ctx.lineTo(pts[0][0]*w+0.01, pts[0][1]*h);
+    }
+    ctx.stroke();
+  });
+}
+function applyInk(d){
+  const qk=String((d&&d.pos)||0)+'\x1f'+String((d&&d.q&&d.q.text)||'').slice(0,120);
+  if(qk!==lastInkQ){
+    lastInkQ=qk;
+    if(!inkDrawing) inkStrokes=[];
+  }
+  if(inkDrawing || (Date.now()-inkLocalAt)<500) return;
+  inkStrokes=Array.isArray(d.ink)?d.ink:[];
+  paintInk();
+}
+function pushInkSoon(){
+  clearTimeout(inkTimer);
+  inkTimer=setTimeout(pushInk, 140);
+}
+function inkPayload(){
+  const s=inkStrokes.slice();
+  if(inkCur&&inkCur.p&&inkCur.p.length) s.push(inkCur);
+  return s;
+}
+async function pushInk(){
+  const p=hostTok(); if(!p) return;
+  try{
+    await fetch('/api/present/ink',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({code:p.code,token:p.token,ink:inkPayload()})});
+  }catch(e){}
+}
+function bindCinemaInk(){
+  const cv=document.getElementById('cinemaInk');
+  if(!cv || cv.dataset.bound==='1') return;
+  cv.dataset.bound='1';
+  function pos(ev){
+    const r=cv.getBoundingClientRect();
+    const x=(ev.clientX-r.left)/Math.max(1,r.width);
+    const y=(ev.clientY-r.top)/Math.max(1,r.height);
+    return [Math.max(0,Math.min(1,x)), Math.max(0,Math.min(1,y))];
+  }
+  function down(ev){
+    if(!hostTok() || !document.body.classList.contains('ink-on')) return;
+    if(ev.pointerType==='mouse' && ev.button!==0) return;
+    ev.preventDefault();
+    try{cv.setPointerCapture(ev.pointerId)}catch(e){}
+    inkDrawing=true;
+    inkLocalAt=Date.now();
+    inkCur={p:[pos(ev)],c:'#b91c1c',w:3};
+    paintInk();
+  }
+  function move(ev){
+    if(!inkDrawing||!inkCur) return;
+    ev.preventDefault();
+    const pt=pos(ev);
+    const last=inkCur.p[inkCur.p.length-1];
+    if(last){
+      const dx=pt[0]-last[0], dy=pt[1]-last[1];
+      if(dx*dx+dy*dy<4e-6) return;
+    }
+    inkCur.p.push(pt);
+    if(inkCur.p.length>160) inkCur.p=inkCur.p.slice(-160);
+    inkLocalAt=Date.now();
+    paintInk();
+    pushInkSoon();
+  }
+  function up(ev){
+    if(!inkDrawing) return;
+    if(ev) try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
+    if(inkCur&&inkCur.p&&inkCur.p.length){
+      if(inkCur.p.length===1){
+        const a=inkCur.p[0];
+        inkCur.p=[a,[Math.min(1,a[0]+0.002),a[1]]];
+      }
+      inkStrokes.push(inkCur);
+      if(inkStrokes.length>80) inkStrokes=inkStrokes.slice(-80);
+    }
+    inkCur=null;
+    inkDrawing=false;
+    inkLocalAt=Date.now();
+    paintInk();
+    pushInk();
+  }
+  cv.addEventListener('pointerdown', down);
+  cv.addEventListener('pointermove', move);
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', up);
+}
 function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
@@ -1685,6 +1901,7 @@ function fitQuestion(){
     else hi=mid;
   }
   box.style.setProperty('--qzoom', String(Math.max(0.95, Math.min(2.5, Math.round(best*0.97*10)/10))));
+  sizeInk();
 }
 function typeset(el){
   const box=el||document.getElementById('q');
@@ -1823,7 +2040,10 @@ async function tick(){
       }
       return;
     }
-    if(d.unchanged) return;
+    if(d.unchanged){
+      sizeInk();
+      return;
+    }
     lastVer=d.ver;
     lastQ=d.q||null;
     lastLive=d.live||{};
@@ -1837,12 +2057,15 @@ async function tick(){
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
     paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next, d.q_lo, d.q_hi);
     bindCinemaPick();
+    bindCinemaInk();
+    applyInk(d);
+    sizeInk();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
 }
 tick();
-setInterval(tick,2500);
+setInterval(tick,900);
 (function(){
   const qPrev=document.getElementById('qPrev'), qNext=document.getElementById('qNext');
   const a=document.getElementById('secPrev'), b=document.getElementById('secNext'), jump=document.getElementById('secJump');
@@ -1882,6 +2105,21 @@ setInterval(tick,2500);
   if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
   const chk=document.getElementById('chkToggle');
   if(chk) chk.onclick=async function(){ await presentLive(null, true); };
+  const inkBtn=document.getElementById('inkToggle');
+  if(inkBtn) inkBtn.onclick=function(){
+    if(!hostTok()) return;
+    document.body.classList.toggle('ink-on');
+    paintHostTools();
+    bindCinemaPick();
+    sizeInk();
+  };
+  const inkClr=document.getElementById('inkClear');
+  if(inkClr) inkClr.onclick=function(){
+    if(!hostTok()) return;
+    inkStrokes=[]; inkCur=null; inkDrawing=false; inkLocalAt=Date.now();
+    paintInk();
+    pushInk();
+  };
   const ai=document.getElementById('aiToggle');
   if(ai) ai.onclick=async function(){
     const pane=document.getElementById('cinemaAi');
@@ -1947,7 +2185,7 @@ setInterval(tick,2500);
     if(hide) hide.onclick=function(){ setHide(!box.classList.contains('is-hide')); };
   })();
 })();
-window.addEventListener('resize',function(){});
+window.addEventListener('resize',function(){sizeInk();});
 </script>
 """
 
