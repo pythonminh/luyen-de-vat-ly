@@ -14,6 +14,7 @@ import mimetypes
 import os
 import random
 import re
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -35,6 +36,69 @@ app.config.update(
     SESSION_COOKIE_SECURE=(os.getenv("RENDER") == "true" or os.getenv("RENDER") == "1"),
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
+
+_DEVICE_LOCK = threading.Lock()
+_DEVICE_SID = {}
+ZALO_LOCK = "0946111107"
+
+
+def bind_member_device(username):
+    """Mỗi tài khoản học viên chỉ một máy. Đăng nhập máy mới đá máy cũ."""
+    u = str(username or "").strip().casefold()
+    if not u:
+        return ""
+    sid = secrets.token_hex(16)
+    with _DEVICE_LOCK:
+        _DEVICE_SID[u] = sid
+    session["device_sid"] = sid
+    return sid
+
+
+def release_member_device():
+    if session.get("role") != "member":
+        return
+    u = str(session.get("username") or "").strip().casefold()
+    sid = str(session.get("device_sid") or "")
+    if not u or not sid:
+        return
+    with _DEVICE_LOCK:
+        if _DEVICE_SID.get(u) == sid:
+            _DEVICE_SID.pop(u, None)
+
+
+def _skip_device_check(path):
+    p = str(path or "")
+    if p in {"/member/kicked", "/member/login", "/member/register", "/member/logout", "/sw.js", "/manifest.webmanifest"}:
+        return True
+    for pre in ("/static/", "/tikz/", "/favicon"):
+        if p.startswith(pre):
+            return True
+    return False
+
+
+@app.before_request
+def _one_device_per_member():
+    if session.get("role") != "member":
+        return None
+    if _skip_device_check(request.path):
+        return None
+    u = str(session.get("username") or "").strip().casefold()
+    if not u:
+        return None
+    sid = str(session.get("device_sid") or "")
+    with _DEVICE_LOCK:
+        live = _DEVICE_SID.get(u)
+        if live is None:
+            if sid:
+                _DEVICE_SID[u] = sid
+            else:
+                session["device_sid"] = secrets.token_hex(16)
+                _DEVICE_SID[u] = session["device_sid"]
+            return None
+        if sid and sid == live:
+            return None
+    session.clear()
+    return redirect("/member/kicked")
 
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
 BRANCH = (os.getenv("GITHUB_BRANCH") or "main").strip() or "main"
@@ -3068,6 +3132,8 @@ def member_login():
             session.clear();session.permanent=True
             role='admin' if is_admin_member(found) else 'member'
             session.update(role=role,username=found.get('username'),name=found.get('name') or found.get('username'))
+            if role=='member':
+                bind_member_device(found.get('username'))
             return redirect('/admin/members' if role=='admin' else safe_next_url())
         msg='Tài khoản đang khóa. Liên hệ ADMIN để mở lại.' if why=='off' else 'Sai tài khoản hoặc mật khẩu.'
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>👤 Đăng nhập học viên</div><div class='body'><form method='post' action='/member/login'><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='current-password' required></div><button class='btn primary' type='submit'>Đăng nhập</button> <a class='btn' href='/member/register'>Đăng ký</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng nhập',body)
@@ -3088,11 +3154,30 @@ def member_register():
             try:save_json_github(MEMBERS_FILE,d,'members.json','Add member')
             except Exception as e:msg='Không ghi được tài khoản: '+str(e)
             else:
-                session.clear();session.permanent=True;session.update(role='member',username=u,name=n or u);return redirect('/member')
+                session.clear();session.permanent=True;session.update(role='member',username=u,name=n or u);bind_member_device(u);return redirect('/member')
     body=f"<div class='wrap'><div class='panel' style='max-width:430px;margin:60px auto'><div class='head'>📝 Đăng ký thành viên FREE</div><div class='body'><form method='post' action='/member/register'><div class='field'><label>Họ tên</label><input name='name' autocomplete='name'></div><div class='field'><label>Tài khoản</label><input name='username' autocomplete='username' required></div><div class='field'><label>Mật khẩu</label><input name='password' type='password' autocomplete='new-password' required></div><button class='btn primary' type='submit'>Tạo tài khoản</button> <a class='btn' href='/member/login'>Đã có tài khoản</a><div class='err'>{html.escape(msg)}</div></form></div></div></div>";return page('Đăng ký',body)
 
 @app.get('/member/logout')
-def member_logout():session.clear();return redirect('/member')
+def member_logout():
+    release_member_device()
+    session.clear()
+    return redirect('/member')
+
+@app.get('/member/kicked')
+def member_kicked():
+    z = html.escape(ZALO_LOCK)
+    body = (
+        "<div class='wrap'><div class='panel' style='max-width:520px;margin:60px auto'>"
+        "<div class='head'>⚠ Đăng nhập máy khác</div><div class='body'>"
+        "<p style='font-size:16px;line-height:1.55;font-weight:700;color:#9a3412'>"
+        "Thông tin bạn bị đăng nhập máy khác. Vui lòng liên hệ Zalo "
+        f"<a href='https://zalo.me/{z}' target='_blank' rel='noopener'>{z}</a> "
+        "để xin đổi mật khẩu.</p>"
+        "<p><a class='btn primary' href='/member/login'>Đăng nhập lại</a> "
+        f"<a class='btn' href='https://zalo.me/{z}' target='_blank' rel='noopener'>Mở Zalo</a></p>"
+        "</div></div></div>"
+    )
+    return page('Đăng nhập máy khác', body)
 
 @app.get('/member/ai')
 def member_ai():
