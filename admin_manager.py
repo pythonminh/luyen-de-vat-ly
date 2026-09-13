@@ -11,7 +11,7 @@ import urllib.parse
 from pathlib import Path
 
 from flask import redirect, request, session
-from app import app, page, members_data, member_current, admin_current, gh_api, BRANCH, set_member_password, member_password_plain
+from app import app, page, members_data, member_current, admin_current, can_manage_bank, gh_api, BRANCH, set_member_password, member_password_plain
 
 _LOCK = threading.Lock()
 _RESULTS_FILE = Path(__file__).resolve().parent / "attempts_runtime.json"
@@ -42,7 +42,10 @@ def _save_members(data):
 
 
 def _admin_guard():
-    return admin_current()
+    try:
+        return bool(admin_current() or can_manage_bank())
+    except Exception:
+        return bool(admin_current())
 
 
 def _norm_type(value):
