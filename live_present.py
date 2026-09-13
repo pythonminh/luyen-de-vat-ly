@@ -1014,7 +1014,7 @@ def present_watch(code=""):
     qr_src = "/xem/" + code + "/qr.svg"
     body = (
         "<div class='cinema-q'>"
-        "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát / dạng trước'>✕</button>"
+        "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát chiếu'>✕</button>"
         "<div class='cinemahost' id='cinemaHost' hidden>"
         "<div class='cinema-navrow' id='dangNav' hidden>"
         "<span class='cinema-navlab'>Dạng</span>"
@@ -1036,6 +1036,7 @@ def present_watch(code=""):
         "<button type='button' class='cinema-tool spk-m'>Nam</button>"
         "<button type='button' class='cinema-tool spk-play'>▶ Đọc</button>"
         "<button type='button' class='cinema-tool spk-pause'>⏸</button>"
+        "<button type='button' class='cinema-tool cinema-leave' id='cinemaLeave' title='Thoát chiếu, về màn trước'>✕</button>"
         "<span class='spkmsg' id='spkMsg'></span>"
         "</div>"
         "<div class='cinema-qr is-min' id='cinemaQr'>"
@@ -1852,11 +1853,14 @@ setInterval(tick,2500);
   if(b) b.onclick=function(){stepDang(1,'dang')};
   if(jump) jump.onchange=function(){jumpPos(parseInt(jump.value,10)||0)};
   if(dangJump) dangJump.onchange=function(){jumpPos(parseInt(dangJump.value,10)||0)};
+  function leaveCinema(){
+    if(window.history.length>1){ history.back(); return; }
+    location.href=hostTok()?'/member':'/xem';
+  }
   const x=document.getElementById('cinemaExit');
-  if(x) x.onclick=function(){
-    if(hostTok()){ stepDang(-1); return; }
-    location.href='/xem';
-  };
+  const leave=document.getElementById('cinemaLeave');
+  if(x) x.onclick=leaveCinema;
+  if(leave) leave.onclick=leaveCinema;
   const peekBtn=document.getElementById('peekToggle');
   if(peekBtn) peekBtn.onclick=async function(){
     const el=document.getElementById('cinemaPeek');
