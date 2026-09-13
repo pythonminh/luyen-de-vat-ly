@@ -148,7 +148,7 @@ def _member_manager():
             type_badge = "<span class='badge vip'>🔑 VIP</span>"
         else:
             type_badge = "<span class='badge free'>FREE</span>"
-        do_badge = "<span class='badge ok'>Làm bài: có</span>" if can_do else "<span class='badge no'>Làm bài: không · chỉ xem đề</span>"
+        do_badge = "<span class='badge ok'>VIP · làm bài + xem đáp án</span>" if can_do else "<span class='badge no'>FREE · chỉ xem đề</span>"
         cards.append(
             f"<article class='memcard{' wait' if pst=='pending' else ''}'>"
             f"<div class='memtop'><label class='ck'><input type='checkbox' name='selected' value='{su}' form='bulkForm'> "
@@ -216,7 +216,7 @@ def _member_manager():
 </style>
 <div class='adminmembers'><div class='hero'><div><h2>👥 Quản lý thành viên</h2><div class='muted'>Duyệt gói 1–3 lớp / 1–2 môn · cấp quyền · khóa · mật khẩu</div></div><div><a class='btn primary' href='/admin'>📂 ngan-hang</a> <a class='btn' href='{html.escape(base.github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a> <a class='btn' href='/admin/password'>🔑 Đổi mật khẩu ADMIN</a></div></div>
 <div class='stats'><div class='stat'><b>{counts['total']}</b><span>Tổng</span></div><div class='stat warn'><b>{counts['pending']}</b><span>Chờ duyệt</span></div><div class='stat'><b>{counts['approved']}</b><span>Đã cấp gói</span></div><div class='stat'><b>{counts['none']}</b><span>Chưa cấp</span></div><div class='stat'><b>{counts['on']}</b><span>Đang dùng</span></div></div>
-<div class='note'>📌 Học viên tự chọn gói khi đăng ký. ADMIN chọn hạn dùng — ô cam hiện <b>ngày hết hạn cụ thể</b> (dd/mm/yyyy). Hết hạn = chỉ xem đề. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
+<div class='note'>📌 <b>Cấp VIP</b> = xem đáp án + làm bài trong hạn dùng. FREE / hết hạn = chỉ xem đề, không đáp án. Ô cam hiện ngày đăng ký — ngày hết hạn. Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
 {create}
 {dup_html}
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>GÓI</label><select name='pack'><option value=''>Tất cả</option><option value='pending' {'selected' if pack_filter=='pending' else ''}>Chờ duyệt</option><option value='approved' {'selected' if pack_filter=='approved' else ''}>Đã cấp</option><option value='none' {'selected' if pack_filter=='none' else ''}>Chưa cấp</option></select></div><div><label>TÀI KHOẢN</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
@@ -243,7 +243,7 @@ def _access_report():
         arr = by_grade[g]
         lines = ''.join(f"<tr><td>{_safe(x.get('Mon'))}</td><td>{_safe(x.get('Chuong'))}</td><td>{_safe(x.get('BaiHoc') or x.get('De'))}</td><td>{int(x.get('questions') or x.get('count') or 0)}</td><td>{_safe(x.get('path'))}</td></tr>" for x in arr)
         blocks.append(f"<h3>Khối {g} · {len(arr)} bài</h3><div style='overflow:auto'><table><tr><th>Môn</th><th>Chương</th><th>Bài</th><th>Câu</th><th>File</th></tr>{lines or '<tr><td colspan=5>Không được xem</td></tr>'}</table></div>")
-    do_lab = "Làm bài: có" if getattr(base, "can_practice", lambda *_: False)(m) else "Làm bài: không · chỉ xem đề"
+    do_lab = "VIP · làm bài + xem đáp án" if getattr(base, "can_practice", lambda *_: False)(m) else "FREE · chỉ xem đề"
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>👁 Quyền xem của học viên</div><div class='body'><div class='notice'><b>{_safe(m.get('name') or username)}</b> · <b>{_safe(username)}</b> · Gói <b>{_safe(pkg.scope_label(m))}</b> · <b>{_safe(do_lab)}</b> · Được xem <b>{len(allowed)}</b> / {len(all_items)} bài · Bị khóa <b>{hidden}</b> bài</div>{''.join(blocks)}<p><a class='btn' href='/admin/members'>← Quản lý thành viên</a></p></div></div></div>
 """
