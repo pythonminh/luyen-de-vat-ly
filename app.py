@@ -36,6 +36,27 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
+PUBLIC_HOST = (os.getenv("PUBLIC_HOST") or "lophocthayminh.onrender.com").strip().lower()
+LEGACY_HOSTS = {"luyen-de-vat-ly.onrender.com"}
+
+
+def public_origin():
+    host = (request.host or "").split(":")[0].lower()
+    if PUBLIC_HOST and (host in LEGACY_HOSTS or host == PUBLIC_HOST):
+        return "https://" + PUBLIC_HOST
+    return request.host_url.rstrip("/")
+
+
+@app.before_request
+def _canonical_public_host():
+    host = (request.host or "").split(":")[0].lower()
+    if not PUBLIC_HOST or host not in LEGACY_HOSTS:
+        return None
+    path = request.full_path
+    if path.endswith("?"):
+        path = path[:-1]
+    return redirect("https://" + PUBLIC_HOST + path, code=301)
+
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
 BRANCH = (os.getenv("GITHUB_BRANCH") or "main").strip() or "main"
 TOKEN = (os.getenv("GITHUB_TOKEN") or "").strip()
