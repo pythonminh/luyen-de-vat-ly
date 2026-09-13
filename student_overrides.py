@@ -57,10 +57,10 @@ def _member_index():
     subjopts = ''.join(f"<option value='{html.escape(s, quote=True)}' {'selected' if sm==s else ''}>{html.escape(s)}</option>" for s in subjects)
     classopts = ''.join(f"<option value='{html.escape(c, quote=True)}' {'selected' if _grade(cl)==c else ''}>{html.escape(c)}</option>" for c in classes)
     if not m:
-        note = '👁 Xem đề không cần đăng nhập · Đăng nhập để làm bài và dùng Gemini phản biện'
-        who = f"<div class='notice'>{html.escape(note)} · <a class='btn primary' href='/member/login'>Đăng nhập</a> <a class='btn' href='/member/register'>Đăng ký</a></div>"
+        who = "<div class='notice'>👁 Chỉ xem đề không cần đăng nhập. Cần <b>VIP</b> (ADMIN cấp gói) để làm bài. <a class='btn primary' href='/member/login'>Đăng nhập</a> <a class='btn' href='/member/register'>Đăng ký</a></div>"
     else:
         typ = _norm_type(m.get('account_type'))
+        extra = ''
         if getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
             note = '🔐 ADMIN · được xem toàn bộ bài, mọi khối, VIP lẫn FREE'
         else:
@@ -69,10 +69,12 @@ def _member_index():
             if st == 'pending':
                 note = '⏳ Gói đang chờ ADMIN duyệt · <a href="/member/goi">Xem gói</a>'
             elif st == 'approved':
-                note = '🎫 ' + _pkg.scope_label(m) + ' · <a href="/member/goi">Đổi gói</a>'
+                note = '🎫 ' + _pkg.scope_label(m) + ' · ' + _pkg.vip_remaining_label(m) + ' · <a href="/member/goi">Đổi gói</a>'
             else:
                 note = 'Chưa có gói thành viên · <a href="/member/goi">Chọn gói</a>'
-        who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · {note}</div>"
+            if not getattr(base, 'can_practice', lambda *_: False)(m):
+                extra = ' · 👁 Chỉ xem đề, không làm bài'
+        who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · {note}{extra}</div>"
     body = f"""
 <div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
 {who}
