@@ -1572,6 +1572,7 @@ let lastPeekPos=-1;
 let inkStrokes=[];
 let inkDrawing=false;
 let inkCur=null;
+let inkPtrId=null;
 let inkTimer=0;
 let inkLocalAt=0;
 let lastInkQ='';
@@ -1931,6 +1932,7 @@ function clearInkCanvas(){
   inkStrokes=[];
   inkCur=null;
   inkDrawing=false;
+  inkPtrId=null;
   inkLocalAt=0;
   lastInkQ='';
   const cv=document.getElementById('cinemaInk');
@@ -1969,6 +1971,13 @@ function bindCinemaInk(){
   const cv=document.getElementById('cinemaInk');
   if(!cv || cv.dataset.bound==='1') return;
   cv.dataset.bound='1';
+  function isInkPen(ev){
+    const t=String(ev.pointerType||'');
+    if(t==='touch') return false;
+    if(t==='pen') return true;
+    if(t==='mouse') return ev.button===0 || ev.buttons===1 || ev.type!=='pointerdown';
+    return false;
+  }
   function pos(ev){
     const r=cv.getBoundingClientRect();
     const x=(ev.clientX-r.left)/Math.max(1,r.width);
@@ -1977,9 +1986,12 @@ function bindCinemaInk(){
   }
   function down(ev){
     if(!hostTok() || !document.body.classList.contains('ink-on')) return;
+    if(!isInkPen(ev)) return;
     if(ev.pointerType==='mouse' && ev.button!==0) return;
+    if(inkDrawing && inkPtrId!=null && ev.pointerId!==inkPtrId) return;
     ev.preventDefault();
     try{cv.setPointerCapture(ev.pointerId)}catch(e){}
+    inkPtrId=ev.pointerId;
     inkDrawing=true;
     inkLocalAt=Date.now();
     inkCur={p:[pos(ev)],c:'#9f1239',w:4.4};
@@ -1988,6 +2000,8 @@ function bindCinemaInk(){
   let moveRaf=0, moveEv=null;
   function move(ev){
     if(!inkDrawing||!inkCur) return;
+    if(inkPtrId!=null && ev.pointerId!==inkPtrId) return;
+    if(String(ev.pointerType||'')==='touch') return;
     ev.preventDefault();
     moveEv=ev;
     if(moveRaf) return;
@@ -2013,6 +2027,7 @@ function bindCinemaInk(){
   }
   function up(ev){
     if(!inkDrawing) return;
+    if(ev && inkPtrId!=null && ev.pointerId!==inkPtrId) return;
     if(ev) try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
     if(inkCur&&inkCur.p&&inkCur.p.length){
       if(inkCur.p.length===1){
@@ -2024,12 +2039,13 @@ function bindCinemaInk(){
     }
     inkCur=null;
     inkDrawing=false;
+    inkPtrId=null;
     inkLocalAt=Date.now();
     paintInk();
     pushInk();
   }
-  cv.addEventListener('pointerdown', down);
-  cv.addEventListener('pointermove', move);
+  cv.addEventListener('pointerdown', down, {passive:false});
+  cv.addEventListener('pointermove', move, {passive:false});
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
 }
