@@ -167,15 +167,32 @@ def is_approved(de_path: str, kind: str = "lt") -> bool:
 
 
 def set_status(de_path: str, kind: str, approved: bool):
-    folder = _folder_key(de_path)
+    set_statuses([(de_path, kind, approved)])
+
+
+def set_statuses(updates):
     d = status_data()
     lessons = d.setdefault("lessons", {})
-    rec = lessons.setdefault(folder, {})
-    rec[kind] = {
-        "status": "approved" if approved else "pending",
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    }
-    save_status(d, "ADMIN " + ("duyệt" if approved else "gỡ duyệt") + f" {kind} " + folder)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    n = 0
+    for de_path, kind, approved in updates or []:
+        kind = str(kind or "lt").strip().lower()
+        if kind not in TRACKS:
+            kind = _kind_of_file(de_path)
+        if kind not in TRACKS:
+            continue
+        folder = _folder_key(de_path)
+        if not folder:
+            continue
+        rec = lessons.setdefault(folder, {})
+        rec[kind] = {
+            "status": "approved" if approved else "pending",
+            "updated": now,
+        }
+        n += 1
+    if n:
+        save_status(d, "ADMIN duyệt " + str(n) + " mục lý thuyết/dạng mẫu")
+    return n
 
 
 def companion_visible(de_path: str, kind: str = "lt", for_admin: bool = False) -> bool:
@@ -880,7 +897,12 @@ def admin_companion_list():
         for kind, meta in TRACKS.items():
             exists = companion_exists(row["path"], kind)
             ok = is_approved(row["path"], kind) if exists else False
-            stub = looks_like_stub(row["path"], kind) if exists else True
+            stub = False
+            if exists:
+                try:
+                    stub = (ROOT / companion_path(row["path"], kind)).stat().st_size < 800
+                except Exception:
+                    stub = True
             if ok:
                 n_ok += 1
             elif exists:
@@ -900,19 +922,15 @@ def admin_companion_list():
             cells.append(
                 "<td>"
                 + badge
-                + f"<div style='margin-top:6px;display:flex;gap:4px;flex-wrap:wrap'>"
+                + f"<div class='ltst' style='margin-top:6px;display:flex;gap:4px;flex-wrap:wrap'>"
                 f"<a class='btn' href='{html.escape(meta['route'])}?path={quote(row['path'], safe='')}'>✏️ Sửa từng mục</a>"
                 f"<a class='btn' href='/admin/edit?path={qp}'>📄 Cả file</a>"
-                f"<form method='post' action='/admin/companion/status' style='display:inline'>"
-                f"<input type='hidden' name='path' value='{html.escape(fp, quote=True)}'>"
-                f"<input type='hidden' name='kind' value='{kind}'>"
-                f"<input type='hidden' name='next' value='/admin/ly-thuyet?st={html.escape(want)}'>"
                 + (
-                    f"<button class='btn green' name='status' value='approved' type='submit'>Duyệt</button>"
+                    f"<button type='button' class='btn green ltStBtn' data-path='{html.escape(fp, quote=True)}' data-kind='{kind}' data-status='approved'>Duyệt</button>"
                     if not ok
-                    else f"<button class='btn red' name='status' value='pending' type='submit'>Gỡ</button>"
+                    else f"<button type='button' class='btn red ltStBtn' data-path='{html.escape(fp, quote=True)}' data-kind='{kind}' data-status='pending'>Gỡ</button>"
                 )
-                + "</form></div></td>"
+                + "</div></td>"
             )
         if want != "all":
             keep = False
@@ -946,6 +964,7 @@ def admin_companion_list():
         "ADMIN bấm <b>Sửa / AI</b> để đọc TEX hiện có, dán link SGK/SBT, rồi để Gemini viết lại lý thuyết hoặc phương pháp. "
         f"Đang chờ: <b>{n_wait}</b> · Đã duyệt: <b>{n_ok}</b>.</div>"
         f"<p style='display:flex;gap:8px;flex-wrap:wrap'>{tabs}"
+        f"<button type='button' class='btn green ltStAll'>✅ Duyệt hết mục đang hiện</button>"
         f"<a class='btn' href='/admin'>← ngan-hang</a></p>"
         "<form method='get' style='display:flex;gap:8px;margin:8px 0'><input type='hidden' name='st' value='"
         + html.escape(want)
@@ -957,8 +976,87 @@ def admin_companion_list():
         "<th>Lý thuyết</th><th>Dạng mẫu</th></tr></thead><tbody>"
         + ("".join(bits) or "<tr><td colspan='5' class='muted'>Không có mục phù hợp.</td></tr>")
         + "</tbody></table></div></div></div></div>"
+        + LT_STATUS_JS
     )
     return base.page("Duyệt lý thuyết", body)
+
+
+LT_STATUS_JS = r"""
+<script>
+(function(){
+if(window.ldvlLtStatus) return;
+window.ldvlLtStatus=true;
+function flip(btn, approved){
+  const td=btn.closest('td');
+  if(!td) return;
+  const tag=td.querySelector('.tag');
+  if(tag){
+    tag.className=approved?'tag had':'tag miss';
+    tag.textContent=approved?'Đã duyệt':'Chờ duyệt';
+  }
+  btn.className=approved?'btn red ltStBtn':'btn green ltStBtn';
+  btn.setAttribute('data-status', approved?'pending':'approved');
+  btn.textContent=approved?'Gỡ':'Duyệt';
+  btn.disabled=false;
+}
+async function postItems(items){
+  const r=await fetch('/api/admin/companion-status',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({items:items})});
+  const t=await r.text();
+  try{return JSON.parse(t)}catch(e){return {ok:false,error:t.slice(0,180)||'Lỗi máy chủ'};}
+}
+document.addEventListener('click',async function(e){
+  const all=e.target.closest&&e.target.closest('.ltStAll');
+  const btn=e.target.closest&&e.target.closest('.ltStBtn');
+  if(!all&&!btn) return;
+  e.preventDefault();
+  if(all){
+    const btns=[].slice.call(document.querySelectorAll('.ltStBtn[data-status="approved"]'));
+    if(!btns.length){alert('Không còn mục chờ duyệt trên trang này.');return;}
+    if(!confirm('Duyệt '+btns.length+' mục đang hiện (không tải lại trang)?')) return;
+    all.disabled=true;
+    const items=btns.map(function(b){return {path:b.getAttribute('data-path'),kind:b.getAttribute('data-kind'),status:'approved'};});
+    const d=await postItems(items);
+    all.disabled=false;
+    if(!d.ok){alert(d.error||'Không duyệt được');return;}
+    btns.forEach(function(b){flip(b,true);});
+    return;
+  }
+  btn.disabled=true;
+  const want=btn.getAttribute('data-status')||'approved';
+  const d=await postItems([{path:btn.getAttribute('data-path'),kind:btn.getAttribute('data-kind'),status:want}]);
+  if(!d.ok){alert(d.error||'Không ghi được');btn.disabled=false;return;}
+  flip(btn, want==='approved');
+});
+})();
+</script>
+"""
+
+
+@app.post("/api/admin/companion-status")
+def api_admin_companion_status():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    raw = data.get("items")
+    if not isinstance(raw, list) or not raw:
+        raw = [data]
+    updates = []
+    for it in raw[:400]:
+        if not isinstance(it, dict):
+            continue
+        path = str(it.get("path") or "").replace("\\", "/").strip()
+        kind = str(it.get("kind") or "lt").strip().lower()
+        if kind not in TRACKS:
+            kind = _kind_of_file(path)
+        if not path:
+            continue
+        approved = str(it.get("status") or "") == "approved"
+        updates.append((path, kind, approved))
+    if not updates:
+        return jsonify(ok=False, error="Thiếu mục."), 400
+    n = set_statuses(updates)
+    return jsonify(ok=True, n=n)
 
 
 @app.post("/admin/companion/status")
@@ -1733,11 +1831,11 @@ def api_admin_companion_ai_save():
         folder = base.lesson_folder(rel)
         text = _merge_companion_tex(old, latex, kind, folder)
         from admin_classify import _write_tex
-        _write_tex(rel, text, "ADMIN AI soạn " + TRACKS[kind]["file"], sha or None)
+        warn = _write_tex(rel, text, "ADMIN AI soạn " + TRACKS[kind]["file"], sha or None)
         set_status(rel, kind, False)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
-    return jsonify(ok=True, src=rel, kind=kind)
+    return jsonify(ok=True, src=rel, kind=kind, warning=warn or None)
 
 
 def _companion_admin_file(path, kind):
@@ -1895,8 +1993,8 @@ def api_admin_companion_section_save():
     text = join_companion_sections(prefix, secs)
     try:
         from admin_classify import _write_tex
-        _write_tex(rel, text, msg, sha or None)
+        warn = _write_tex(rel, text, msg, sha or None)
         set_status(rel, kind, False)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
-    return jsonify(ok=True, src=rel, kind=kind)
+    return jsonify(ok=True, src=rel, kind=kind, warning=warn or None)

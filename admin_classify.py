@@ -337,7 +337,7 @@ def _write_tex(path, text, message, sha=None):
     local.write_text(text, encoding="utf-8")
     tok = base.github_token()
     if not tok:
-        return
+        return "Đã lưu trên Render. Chưa có GITHUB_TOKEN nên chưa lên GitHub (mất khi deploy)."
     err = None
     cur = sha
     for attempt in range(3):
@@ -348,7 +348,7 @@ def _write_tex(path, text, message, sha=None):
                 except Exception:
                     cur = None
             base.github_put_text(path, text, message, cur or None)
-            return
+            return ""
         except Exception as e:
             err = e
             msg = str(e)
@@ -356,7 +356,7 @@ def _write_tex(path, text, message, sha=None):
                 cur = None
                 continue
             break
-    raise RuntimeError(str(err) if err else "Không ghi được GitHub.")
+    return "Đã lưu trên máy. GitHub: " + str(err if err else "không ghi được") + "."
 
 
 def _delete_tex_file(path):

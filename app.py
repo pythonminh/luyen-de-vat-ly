@@ -1049,21 +1049,7 @@ def read_tex(path, need_sha=False):
     p, local=_safe_repo_file(path)
     text=''
     tok=github_token()
-    from_github=bool(tok) and (_on_render() or need_sha)
-    if from_github:
-        try:
-            text=_fetch_tex_remote(p)
-            try:
-                local.parent.mkdir(parents=True, exist_ok=True)
-                local.write_text(text, encoding='utf-8')
-            except Exception:
-                pass
-        except Exception as e:
-            if local.is_file():
-                text=local.read_text(encoding='utf-8', errors='replace')
-            else:
-                raise e
-    elif local.is_file():
+    if local.is_file():
         text=local.read_text(encoding='utf-8', errors='replace')
     else:
         text=_fetch_tex_remote(p)
@@ -1073,7 +1059,7 @@ def read_tex(path, need_sha=False):
         except Exception:
             pass
     sha=''
-    if need_sha:
+    if need_sha and tok:
         try:sha=github_file_sha(p)
         except Exception:
             sha=''
