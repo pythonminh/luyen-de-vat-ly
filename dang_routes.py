@@ -11,7 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from flask import request, jsonify, redirect, session
-from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_view, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, tex_without_questions
+from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, tex_without_questions, view_only_notice_html
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -86,7 +86,7 @@ def qid_results_html(needle, member):
               +'&dang='+urllib.parse.quote(h['dang'],safe='')
               +'&id='+urllib.parse.quote(h['id'],safe=''))
         do=''
-        if logged:
+        if logged and can_practice(member, h.get('path')):
             do=(f"<form method='post' action='/member/start-selected' style='display:inline'>"
                 f"<input type='hidden' name='path' value='{_esc(h['path'])}'>"
                 f"<input type='hidden' name='dang' value='{_esc(h['dang'])}'>"
@@ -212,7 +212,10 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
 def member_dang():
     m=member_current()
     path=request.args.get('path','').strip(); dang=request.args.get('dang','').strip()
-    if not path or not dang:return redirect('/member')
+    kind_filter=str(request.args.get('kind') or '').strip().upper()
+    if kind_filter not in {'TN','DS','TLN','TL'}:
+        kind_filter=''
+    if not path:return redirect('/member')
     if not can_view(m,path):
         if not m:
             return redirect(login_url('/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')))
@@ -223,13 +226,18 @@ def member_dang():
             _, tex = read_tex(path); qs = parse_questions(tex)
     except Exception as exc:
         return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div></div></div></div>")
-    selected=[q for q in qs if _same_dang(q.get('dang'), dang)]
-    if not selected and dang == 'Chưa phân dạng':
-        selected=[q for q in qs if not str(q.get('dang') or '').strip() or _same_dang(q.get('dang'), dang)]
+    if dang:
+        selected=[q for q in qs if _same_dang(q.get('dang'), dang)]
+        if not selected and dang == 'Chưa phân dạng':
+            selected=[q for q in qs if not str(q.get('dang') or '').strip() or _same_dang(q.get('dang'), dang)]
+    else:
+        selected=list(qs)
     notice_extra=''
-    if not selected and qs:
+    if dang and not selected and qs:
         selected=list(qs)
         notice_extra=f"<div class='notice'>Không khớp đúng tên dạng «{_esc(dang)}» — đang hiện {len(selected)} câu trong file.</div>"
+    if kind_filter:
+        selected=[q for q in selected if str(q.get('kind') or '')==kind_filter]
     if not selected:
         return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>File TEX này chưa có câu hỏi \\begin{ex}...\\end{ex}.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
     selected=sort_questions_by_kind(selected)
@@ -246,14 +254,15 @@ def member_dang():
                       for k,lab in (('TN','Trắc nghiệm'),('DS','Đúng/Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')) if kc.get(k))
              +"<button type='button' class='btn primary' onclick='applyKinds()'>Áp dụng số câu</button></div>")
     guest = not m
-    tabs=lesson_switch_html(path, qs, dang=dang, kind='', guest=guest)
+    can_do = can_practice(m, path)
+    tabs=lesson_switch_html(path, qs, dang=dang, kind=kind_filter, guest=guest)
     groups=find_duplicate_groups(selected)
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
     admin_view=can_manage_bank()
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
-    cards=''.join(_question_card(q,i+1,total,q.get('src') or path,dmap.get(q.get('idx')),show_solution=admin_view,highlight_id=highlight_id) for i,q in enumerate(selected))
+    cards=''.join(_question_card(q,i+1,total,q.get('src') or path,dmap.get(q.get('idx')),show_solution=(admin_view or can_do),highlight_id=highlight_id) for i,q in enumerate(selected))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
@@ -294,12 +303,17 @@ def member_dang():
     login_next='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
     if highlight_id:
         login_next+='&id='+urllib.parse.quote(highlight_id,safe='')
-    if guest:
-        guest_note=("<div class='notice'>👁 Bạn đang xem đề — chưa đăng nhập nên không làm bài và không gọi Gemini. "
-                    f"<a class='btn primary' href='{_esc(login_url(login_next))}'>Đăng nhập để làm bài</a></div>")
+    start_form=("<form method='post' action='/member/start-selected' id='questionForm'>"
+                f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
+    start_bottom=("<div class='toolbar bottom modebar'>"
+                  "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
+                  "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
+                  "<a class='btn' href='/member'>← Mục lục</a></div>")
+    if not can_do:
+        guest_note=view_only_notice_html(m, login_next)
         tools=f"<div class='toolbar'>{find_box}</div>"
         bottom=f"<div class='toolbar bottom'><a class='btn' href='/member'>← Mục lục</a></div>"
-        form_open=f"<div class='guestview'>"
+        form_open="<div class='guestview'>"
         form_close="</div>"
     elif admin_view:
         guest_note="<div class='notice'>🔐 ADMIN · xem đáp án và lời giải ngay trên từng thẻ, không cần làm bài.</div>"
@@ -311,26 +325,26 @@ def member_dang():
           + f"<a class='btn' href='{_esc('/admin/edit?path='+urllib.parse.quote(path,safe=''))}'>✏️ Sửa file TEX</a>"
           + find_box
           + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
-        bottom=("<div class='toolbar bottom modebar'>"
-                "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
-                "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
-                "<a class='btn' href='/member'>← Mục lục</a></div>")
-        form_open=("<form method='post' action='/member/start-selected' id='questionForm'>"
-                   f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
+        bottom=start_bottom
+        form_open=start_form
         form_close="</form>"
     else:
-        guest_note=''
-        tools=f"<div class='toolbar'>{find_box}</div>"
-        bottom=f"<div class='toolbar bottom'><a class='btn' href='/member'>← Mục lục</a></div>"
-        form_open="<div class='guestview'>"
-        form_close="</div>"
+        guest_note="<div class='notice'>🔑 VIP · xem đáp án và lời giải trên từng thẻ, đồng thời chọn câu rồi bấm Làm bài.</div>"
+        tools=(kindbar+
+          "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
+          + find_box
+          + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
+        bottom=start_bottom
+        form_open=start_form
+        form_close="</form>"
+    pick_js = can_do
     find_js=(
-        "<script>let DUPONLY=false,KINDFILTER='';"
+        f"<script>let DUPONLY=false,KINDFILTER={json.dumps(kind_filter)};"
         "function vis(c){const box=document.getElementById('findq');const q=(box&&box.value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}"
         "function filterQ(){document.querySelectorAll('.qcard').forEach(vis);if(typeof upd==='function'&&document.getElementById('sum'))upd()}"
         "function bootFind(){const box=document.getElementById('findq');if(!box)return;box.addEventListener('input',filterQ);const p=new URLSearchParams(location.search);const id=(p.get('id')||p.get('qid')||'').trim();if(id){if(!box.value)box.value=id;filterQ();const t=id.toLowerCase();const el=document.querySelector('.qcard.qhit')||Array.prototype.find.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return (c.getAttribute('data-qid')||'')===t})||document.querySelector('.qcard:not(.hideq)');if(el){el.classList.add('qhit');el.scrollIntoView({block:'center'})}}else{filterQ()}}"
     )
-    if admin_view:
+    if pick_js:
         find_js += (
             "function onlyDup(v){DUPONLY=!!v;filterQ()}function onlyKind(k){KINDFILTER=k||'';filterQ()}"
             "function kindCount(k){return Array.prototype.filter.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return c.getAttribute('data-kind')===k}).reduce(function(n,c){const i=c.querySelector('input[name=qid]');return n+(i&&i.checked?1:0)},0)}"
@@ -355,7 +369,8 @@ def member_dang():
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
-    body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
+    dang_lab=dang or 'Cả bài'
+    body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
           +form_open+"<div id='presentSlot'></div>"+tools+
           f"<div class='questions'>{cards}</div>"
@@ -364,7 +379,7 @@ def member_dang():
           "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.qtext{font-size:16px;line-height:1.7;padding:10px 2px;font-family:'Times New Roman',Times,serif;font-weight:400}.opts{display:grid;gap:7px}.opt{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff;display:flex;align-items:center;gap:10px}.opt.ok{background:#e8f8ee;border-color:#42ae6b}.okmark{display:inline-block;min-width:4.6em;text-align:center;margin-left:0;padding:3px 10px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           + find_js + rw_js
           )
-    return page('Chọn câu' if not guest else 'Xem đề',body)
+    return page('Chọn câu' if can_do else 'Xem đề',body)
 
 @app.post('/admin/delete-question')
 def admin_delete_question():
@@ -1285,25 +1300,28 @@ def start_selected_questions():
         return redirect('/member')
     path=request.form.get('path','').strip()
     dang=request.form.get('dang','').strip()
-    if not path or not can_access(m,path):
-        return redirect('/member')
+    if not path or not can_practice(m,path):
+        return redirect(dang_view_url(path, dang) if path else '/member')
     try:
         qs=parse_lesson_questions(path)
         if not qs:
             _,tex=read_tex(path); qs=parse_questions(tex)
     except Exception:
         return redirect('/member')
-    valid={
-        int(q.get('idx'))
-        for q in qs
-        if str(q.get('idx','')).isdigit() and _same_dang(q.get('dang'), dang)
-    }
-    if not valid and dang=='Chưa phân dạng':
+    if dang:
         valid={
             int(q.get('idx'))
             for q in qs
-            if str(q.get('idx','')).isdigit() and not str(q.get('dang') or '').strip()
+            if str(q.get('idx','')).isdigit() and _same_dang(q.get('dang'), dang)
         }
+        if not valid and dang=='Chưa phân dạng':
+            valid={
+                int(q.get('idx'))
+                for q in qs
+                if str(q.get('idx','')).isdigit() and not str(q.get('dang') or '').strip()
+            }
+    else:
+        valid={int(q.get('idx')) for q in qs if str(q.get('idx','')).isdigit()}
     ids=[]
     for raw in request.form.getlist('qid'):
         try:i=int(raw)
