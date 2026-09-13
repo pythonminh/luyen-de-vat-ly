@@ -1125,7 +1125,6 @@ def present_watch(code=""):
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
-        "<div class='cinema-inklab'>Ô ghi chú · cùng khung trên mọi máy</div>"
         "<div class='cinema-inkframe'><canvas id='cinemaInk' class='cinema-ink' width='1' height='1'></canvas></div></div></div>"
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
