@@ -37,6 +37,34 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
+PUBLIC_HOST = (os.getenv("PUBLIC_HOST") or "lophocthayminh.onrender.com").strip().lower()
+LEGACY_HOSTS = {"luyen-de-vat-ly.onrender.com"}
+
+
+def public_origin():
+    """Link Chiếu / QR luôn trỏ domain đang dùng cho lớp."""
+    want = PUBLIC_HOST
+    host = (request.host or "").split(":")[0].lower()
+    if want and (host == want or host in LEGACY_HOSTS):
+        return "https://" + want
+    return request.host_url.rstrip("/")
+
+
+@app.before_request
+def _canonical_public_host():
+    want = PUBLIC_HOST
+    if not want:
+        return None
+    if request.path in {"/health", "/sw.js"}:
+        return None
+    host = (request.host or "").split(":")[0].lower()
+    if host not in LEGACY_HOSTS:
+        return None
+    dest = "https://" + want + request.full_path
+    if dest.endswith("?"):
+        dest = dest[:-1]
+    return redirect(dest, code=307)
+
 _DEVICE_LOCK = threading.Lock()
 _DEVICE_SID = {}
 ZALO_LOCK = "0946111107"
@@ -213,10 +241,10 @@ body.cinema .cinema-inkpad{flex:0 0 auto;width:calc(100% - 24px);max-width:960px
 body.cinema .cinema-inktools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px;font-size:12px;font-weight:800;color:#9a6b3a}
 body.cinema .cinema-inktools .inkpaper{border:1px solid #f0c7a0;background:#fff;color:#9a3412;border-radius:8px;padding:4px 8px;cursor:pointer;font:inherit;font-weight:800}
 body.cinema .cinema-inktools .inkpaper.on{background:#9a3412;color:#fff;border-color:#9a3412}
-body.cinema .cinema-inkframe{position:relative;width:100%;height:var(--ink-h,220px);min-height:140px;max-height:90vh;padding-bottom:0;background:#fffef8;border:2px dashed #fca5a5;border-radius:12px;overflow:hidden;transform:translateZ(0);-webkit-transform:translateZ(0);isolation:isolate}
-body.cinema .cinema-inkframe[data-paper="lines"]{background-color:#fffef8;background-image:repeating-linear-gradient(to bottom,transparent 0 27px,#e8d4b8 27px,#e8d4b8 28px)}
-body.cinema .cinema-inkframe[data-paper="grid"]{background-color:#fffef8;background-image:repeating-linear-gradient(to right,transparent 0 27px,#ead9c4 27px,#ead9c4 28px),repeating-linear-gradient(to bottom,transparent 0 27px,#ead9c4 27px,#ead9c4 28px)}
-body.cinema .cinema-inkframe[data-paper="plain"]{background:#fffef8;background-image:none}
+body.cinema .cinema-inkframe{position:relative;width:100%;height:var(--ink-h,220px);min-height:140px;max-height:90vh;padding-bottom:0;background:#fffdf6;border:2px solid #e8c39a;border-radius:12px;overflow:hidden;transform:translateZ(0);-webkit-transform:translateZ(0);isolation:isolate}
+body.cinema .cinema-inkframe[data-paper="lines"]{background-color:#fffdf6;background-image:linear-gradient(to right,transparent 0 40px,#e11d48 40px,#e11d48 42px,transparent 42px),repeating-linear-gradient(#fffdf6 0 32px,#b45309 32px,#b45309 34px)}
+body.cinema .cinema-inkframe[data-paper="grid"]{background-color:#fffdf6;background-image:repeating-linear-gradient(to right,transparent 0 26px,#b45309 26px,#b45309 28px),repeating-linear-gradient(to bottom,transparent 0 26px,#b45309 26px,#b45309 28px)}
+body.cinema .cinema-inkframe[data-paper="plain"]{background:#fffdf6;background-image:none}
 body.cinema .cinema-ink{position:absolute!important;left:0;top:0;right:0;bottom:0;inset:0;width:100%!important;height:100%!important;max-width:100%;max-height:100%;z-index:0;touch-action:none;pointer-events:none;display:block;background:transparent}
 body.cinema.is-host.ink-on .cinema-ink{pointer-events:auto;cursor:crosshair}
 body.cinema .cinema-inkresize{height:22px;margin-top:2px;border:1px dashed #f0c7a0;border-radius:8px;background:#fff7ed;color:#c2410c;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:ns-resize;user-select:none;touch-action:none}

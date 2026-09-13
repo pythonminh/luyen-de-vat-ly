@@ -147,8 +147,8 @@ def _sanitize_live(raw):
     return live
 
 
-_INK_MAX_STROKES = 80
-_INK_MAX_POINTS = 160
+_INK_MAX_STROKES = 120
+_INK_MAX_POINTS = 500
 
 
 def _sanitize_ink(raw):
@@ -725,7 +725,7 @@ def api_present_start():
             _ROOMS[code] = room
             session["present_code"] = code
             session["present_token"] = tok
-    origin = request.host_url.rstrip("/")
+    origin = base.public_origin()
     url = origin + "/xem/" + room["code"]
     return jsonify(ok=True, code=room["code"], url=url, token=session.get("present_token") or room["token"], ver=room["ver"])
 
@@ -1091,7 +1091,7 @@ def present_qr_svg(code):
     code = _norm_code(code)
     if not code:
         return Response("Mã không hợp lệ.", status=400, mimetype="text/plain")
-    url = request.host_url.rstrip("/") + "/xem/" + code
+    url = base.public_origin() + "/xem/" + code
     buf = io.BytesIO()
     segno.make(url, error="m").save(buf, kind="svg", scale=4, border=2)
     return Response(buf.getvalue(), mimetype="image/svg+xml")
@@ -1839,8 +1839,60 @@ function sizeInk(){
   const h=Math.max(1, Math.floor(r.height*dpr));
   if(cv.width!==w || cv.height!==h){
     cv.width=w; cv.height=h;
+    cv._ctx=null;
   }
   paintInk();
+}
+function inkCtx(cv){
+  if(cv._ctx) return cv._ctx;
+  cv._ctx=cv.getContext('2d',{alpha:true,desynchronized:true});
+  return cv._ctx;
+}
+function inkWidth(cv, s){
+  const dpr=cv.width/Math.max(1, cv.getBoundingClientRect().width||cv.width);
+  return Math.max(3, (s&&s.w||4.4)*dpr);
+}
+function strokePath(ctx, cv, s){
+  const pts=s.p||[];
+  if(pts.length<1) return;
+  const w=cv.width, h=cv.height;
+  ctx.beginPath();
+  ctx.strokeStyle=s.c||'#9f1239';
+  ctx.lineWidth=inkWidth(cv,s);
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  pts.forEach(function(pt,i){
+    const x=pt[0]*w, y=pt[1]*h;
+    if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+  });
+  if(pts.length===1) ctx.lineTo(pts[0][0]*w+0.8, pts[0][1]*h);
+  ctx.stroke();
+}
+function paintInk(){
+  const cv=document.getElementById('cinemaInk');
+  if(!cv) return;
+  const ctx=inkCtx(cv);
+  if(!ctx) return;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const strokes=inkStrokes.slice();
+  if(inkCur&&inkCur.p&&inkCur.p.length) strokes.push(inkCur);
+  strokes.forEach(function(s){ strokePath(ctx, cv, s); });
+}
+function paintInkTail(){
+  const cv=document.getElementById('cinemaInk');
+  if(!cv||!inkCur||!inkCur.p||inkCur.p.length<2) return;
+  const ctx=inkCtx(cv);
+  if(!ctx) return;
+  const pts=inkCur.p, w=cv.width, h=cv.height;
+  const a=pts[pts.length-2], b=pts[pts.length-1];
+  ctx.beginPath();
+  ctx.strokeStyle=inkCur.c||'#9f1239';
+  ctx.lineWidth=inkWidth(cv,inkCur);
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.moveTo(a[0]*w,a[1]*h);
+  ctx.lineTo(b[0]*w,b[1]*h);
+  ctx.stroke();
 }
 function clearInkCanvas(){
   clearTimeout(inkTimer);
@@ -1851,36 +1903,9 @@ function clearInkCanvas(){
   lastInkQ='';
   const cv=document.getElementById('cinemaInk');
   if(cv){
-    const ctx=cv.getContext('2d');
+    const ctx=inkCtx(cv);
     if(ctx) ctx.clearRect(0,0,cv.width,cv.height);
   }
-}
-function paintInk(){
-  const cv=document.getElementById('cinemaInk');
-  if(!cv) return;
-  const ctx=cv.getContext('2d');
-  if(!ctx) return;
-  const w=cv.width, h=cv.height;
-  ctx.clearRect(0,0,w,h);
-  const strokes=inkStrokes.slice();
-  if(inkCur&&inkCur.p&&inkCur.p.length) strokes.push(inkCur);
-  strokes.forEach(function(s){
-    const pts=s.p||[];
-    if(pts.length<1) return;
-    ctx.beginPath();
-    ctx.strokeStyle=s.c||'#b91c1c';
-    ctx.lineWidth=Math.max(2, (s.w||3)*Math.min(w,h)/280);
-    ctx.lineCap='round';
-    ctx.lineJoin='round';
-    pts.forEach(function(pt,i){
-      const x=pt[0]*w, y=pt[1]*h;
-      if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
-    });
-    if(pts.length===1){
-      ctx.lineTo(pts[0][0]*w+0.01, pts[0][1]*h);
-    }
-    ctx.stroke();
-  });
 }
 function applyInk(d){
   const qk=String((d&&d.pos)||0)+'\x1f'+String((d&&d.q&&d.q.text)||'').slice(0,120);
@@ -1894,7 +1919,7 @@ function applyInk(d){
 }
 function pushInkSoon(){
   clearTimeout(inkTimer);
-  inkTimer=setTimeout(pushInk, 140);
+  inkTimer=setTimeout(pushInk, 450);
 }
 function inkPayload(){
   const s=inkStrokes.slice();
@@ -1925,23 +1950,34 @@ function bindCinemaInk(){
     try{cv.setPointerCapture(ev.pointerId)}catch(e){}
     inkDrawing=true;
     inkLocalAt=Date.now();
-    inkCur={p:[pos(ev)],c:'#b91c1c',w:3};
+    inkCur={p:[pos(ev)],c:'#9f1239',w:4.4};
     paintInk();
   }
+  let moveRaf=0, moveEv=null;
   function move(ev){
     if(!inkDrawing||!inkCur) return;
     ev.preventDefault();
-    const pt=pos(ev);
-    const last=inkCur.p[inkCur.p.length-1];
-    if(last){
-      const dx=pt[0]-last[0], dy=pt[1]-last[1];
-      if(dx*dx+dy*dy<4e-6) return;
-    }
-    inkCur.p.push(pt);
-    if(inkCur.p.length>160) inkCur.p=inkCur.p.slice(-160);
-    inkLocalAt=Date.now();
-    paintInk();
-    pushInkSoon();
+    moveEv=ev;
+    if(moveRaf) return;
+    moveRaf=requestAnimationFrame(function(){
+      moveRaf=0;
+      if(!inkDrawing||!inkCur||!moveEv) return;
+      const pt=pos(moveEv);
+      const last=inkCur.p[inkCur.p.length-1];
+      if(last){
+        const dx=pt[0]-last[0], dy=pt[1]-last[1];
+        if(dx*dx+dy*dy<1.6e-5) return;
+      }
+      inkCur.p.push(pt);
+      if(inkCur.p.length>500){
+        const keep=[];
+        for(let i=0;i<inkCur.p.length;i+=2) keep.push(inkCur.p[i]);
+        keep.push(inkCur.p[inkCur.p.length-1]);
+        inkCur.p=keep;
+      }
+      inkLocalAt=Date.now();
+      paintInkTail();
+    });
   }
   function up(ev){
     if(!inkDrawing) return;
@@ -1952,7 +1988,7 @@ function bindCinemaInk(){
         inkCur.p=[a,[Math.min(1,a[0]+0.002),a[1]]];
       }
       inkStrokes.push(inkCur);
-      if(inkStrokes.length>80) inkStrokes=inkStrokes.slice(-80);
+      if(inkStrokes.length>120) inkStrokes=inkStrokes.slice(-120);
     }
     inkCur=null;
     inkDrawing=false;
