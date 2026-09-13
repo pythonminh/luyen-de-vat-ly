@@ -102,11 +102,15 @@ def _one_device_per_member():
 
 REPO = (os.getenv("GITHUB_REPO") or "pythonminh/luyen-de-vat-ly").strip()
 BRANCH = (os.getenv("GITHUB_BRANCH") or "main").strip() or "main"
-TOKEN = (os.getenv("GITHUB_TOKEN") or "").strip()
+TOKEN = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
 ADMIN_USER = (os.getenv("ADMIN_USERNAME") or "ADMIN").strip() or "ADMIN"
 ADMIN_PASS = (os.getenv("ADMIN_PASSWORD") or "").strip()
 GEMINI_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = (os.getenv("GEMINI_REVIEW_MODEL") or "gemini-2.5-flash").strip()
+
+def github_token():
+    """Đọc token lúc ghi/đọc GitHub — không chỉ lúc import."""
+    return (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or TOKEN or "").strip()
 
 def github_folder_url(path='ngan-hang'):
     p = str(path or 'ngan-hang').replace('\\', '/').strip('/')
@@ -923,9 +927,10 @@ def _safe_repo_file(path):
     return p, ROOT.joinpath(*p.split('/'))
 
 def gh_api(api_path,method='GET',payload=None):
-    if not TOKEN:raise RuntimeError('Thiếu GITHUB_TOKEN trên Render.')
+    tok=github_token()
+    if not tok:raise RuntimeError('Thiếu GITHUB_TOKEN trên Render. Vào Dashboard Render → Environment → thêm GITHUB_TOKEN (PAT GitHub quyền repo), rồi Manual Deploy.')
     owner,repo=REPO.split('/',1); body=None if payload is None else json.dumps(payload,ensure_ascii=False).encode('utf-8')
-    req=urllib.request.Request(f'https://api.github.com/repos/{owner}/{repo}/{api_path.lstrip("/")}',data=body,method=method,headers={'Authorization':f'Bearer {TOKEN}','Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'luyen-de-vat-ly-clean'})
+    req=urllib.request.Request(f'https://api.github.com/repos/{owner}/{repo}/{api_path.lstrip("/")}',data=body,method=method,headers={'Authorization':f'Bearer {tok}','Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'luyen-de-vat-ly-clean'})
     try:
         with urllib.request.urlopen(req,timeout=60) as r:return json.loads(r.read().decode('utf-8'))
     except urllib.error.HTTPError as e:
@@ -984,7 +989,7 @@ def _on_render():
 
 def _fetch_tex_remote(path):
     p,_=_safe_repo_file(path)
-    if TOKEN:
+    if github_token():
         d=gh_api(f'contents/{urllib.parse.quote(p,safe="/")}?ref={urllib.parse.quote(BRANCH)}')
         return base64.b64decode((d.get('content') or '').replace('\n','')).decode('utf-8','replace')
     raw_url=f'https://raw.githubusercontent.com/{REPO}/{urllib.parse.quote(BRANCH,safe="")}/{urllib.parse.quote(p,safe="/")}'
@@ -999,8 +1004,9 @@ def _fetch_tex_remote(path):
 def read_tex(path, need_sha=False):
     if not str(path or '').lower().endswith('.tex'):raise ValueError('Đường dẫn .tex không hợp lệ.')
     p, local=_safe_repo_file(path)
-    from_github=_on_render() or need_sha
     text=''
+    tok=github_token()
+    from_github=bool(tok) and (_on_render() or need_sha)
     if from_github:
         try:
             text=_fetch_tex_remote(p)

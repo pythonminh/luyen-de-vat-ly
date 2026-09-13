@@ -335,9 +335,8 @@ def _write_tex(path, text, message, sha=None):
     _, local = base._safe_repo_file(path)
     local.parent.mkdir(parents=True, exist_ok=True)
     local.write_text(text, encoding="utf-8")
-    if not base.TOKEN:
-        if base._on_render():
-            raise RuntimeError("Chưa có GITHUB_TOKEN trên Render — tải lại trang sẽ mất bản sửa.")
+    tok = base.github_token()
+    if not tok:
         return
     err = None
     cur = sha
