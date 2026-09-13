@@ -139,6 +139,10 @@ body.cinema .cinemagate{position:fixed;inset:0;z-index:50;border:0;background:#1
 body.cinema .cinemagate[hidden]{display:none!important}
 body.cinema .cinemahud{display:none}
 body.cinema .cinema-q{padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px);display:flex;flex-direction:column}
+body.cinema .cinema-stage{position:relative;flex:1 1 auto;min-height:40vh}
+body.cinema .cinema-ink{position:absolute;inset:0;width:100%;height:100%;z-index:22;touch-action:none;pointer-events:none}
+body.cinema.is-host.ink-on .cinema-ink{pointer-events:auto;cursor:crosshair}
+body.cinema.is-host.ink-on .opt,body.cinema.is-host.ink-on .tf-box,body.cinema.is-host.ink-on .cinema-ans,body.cinema.is-host.ink-on .answerline{pointer-events:none}
 body.cinema .cinema-exit{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));right:6px;z-index:40;width:28px;height:28px;border-radius:6px;border:1px solid #c5d6ea;background:#fff;color:#b91c1c;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;box-shadow:0 2px 8px #0f172a14;cursor:pointer}
 body.cinema .cinema-qr{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:auto;top:auto;z-index:34;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 6px 5px;background:#145bb0;border:0;border-radius:10px;box-shadow:0 2px 10px #0f172a28}
 body.cinema .cinema-qr .qr-tools{display:flex;gap:4px;width:100%;justify-content:center}
