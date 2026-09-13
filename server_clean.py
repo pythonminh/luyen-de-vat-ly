@@ -297,6 +297,7 @@ def unified_member_auth(*args, **kwargs):
             session.clear()
             session.update(role="member", username=username, name=member["name"])
             session.permanent = remember
+            base.bind_member_device(username)
             return redirect("/member/goi")
 
         data, found = _member_lookup(username, password)
@@ -323,6 +324,7 @@ def unified_member_auth(*args, **kwargs):
             session.clear()
             session.permanent = remember
             session.update(role="member", username=found.get("username"), name=str(found.get("name") or username))
+            base.bind_member_device(found.get("username"))
             return redirect(base.safe_next_url())
         return _auth_page("Sai tài khoản hoặc mật khẩu.", "login", request.form)
 
