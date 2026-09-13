@@ -1734,14 +1734,18 @@ async function stepDang(delta, mode){
   const r=await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,delta:delta,mode:mode||'q'})});
   const d=await r.json().catch(function(){return {}});
-  if(d&&d.error) alert(d.error);
+  if(d&&d.error){ alert(d.error); return; }
+  clearInkCanvas();
   lastVer=-1; tick();
 }
 async function jumpPos(pos){
   const p=hostTok(); if(!p) return;
   hideCinemaAi();
-  await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+  const r=await fetch('/api/present/step',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,pos:pos})});
+  const d=await r.json().catch(function(){return {}});
+  if(d&&d.error){ alert(d.error); return; }
+  clearInkCanvas();
   lastVer=-1; tick();
 }
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -1776,6 +1780,19 @@ function sizeInk(){
   cv.style.height=r.height+'px';
   paintInk();
 }
+function clearInkCanvas(){
+  clearTimeout(inkTimer);
+  inkStrokes=[];
+  inkCur=null;
+  inkDrawing=false;
+  inkLocalAt=0;
+  lastInkQ='';
+  const cv=document.getElementById('cinemaInk');
+  if(cv){
+    const ctx=cv.getContext('2d');
+    if(ctx) ctx.clearRect(0,0,cv.width,cv.height);
+  }
+}
 function paintInk(){
   const cv=document.getElementById('cinemaInk');
   if(!cv) return;
@@ -1806,8 +1823,8 @@ function paintInk(){
 function applyInk(d){
   const qk=String((d&&d.pos)||0)+'\x1f'+String((d&&d.q&&d.q.text)||'').slice(0,120);
   if(qk!==lastInkQ){
+    clearInkCanvas();
     lastInkQ=qk;
-    if(!inkDrawing) inkStrokes=[];
   }
   if(inkDrawing || (Date.now()-inkLocalAt)<500) return;
   inkStrokes=Array.isArray(d.ink)?d.ink:[];
@@ -2049,7 +2066,7 @@ async function tick(){
     lastLive=d.live||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
-      if(lastPeekPos>=0) hideCinemaPeek();
+      if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
       lastPeekPos=d.pos;
     }
     if(err) err.textContent='';
@@ -2116,8 +2133,7 @@ setInterval(tick,900);
   const inkClr=document.getElementById('inkClear');
   if(inkClr) inkClr.onclick=function(){
     if(!hostTok()) return;
-    inkStrokes=[]; inkCur=null; inkDrawing=false; inkLocalAt=Date.now();
-    paintInk();
+    clearInkCanvas();
     pushInk();
   };
   const ai=document.getElementById('aiToggle');
