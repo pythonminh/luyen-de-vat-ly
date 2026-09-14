@@ -3046,8 +3046,8 @@ def admin_dang_bar_html(path, qs, dang=''):
         miss = 'Đã có đủ 4 loại.'
         heur_txt = kind_quota_line(counts)
     tex_lab = '✏️ TEX dạng này' if dang else '✏️ TEX cả bài'
-    url_ph = 'Dán link đề — không cần chọn dạng, AI tự gán dạng'
-    hint = 'Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>.'
+    url_ph = 'Hoặc link http/https (không dán G:\\... — chọn file bên cạnh)'
+    hint = 'Máy chủ <b>không mở được ổ đĩa</b>: chọn file .tex trên máy, hoặc dán link GitHub/raw. Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>.'
     return (
         "<details class='admindang-fold'>"
         "<summary class='admindang-sum'>▸ Công cụ ADMIN · TEX / AI / link</summary>"
@@ -3059,8 +3059,11 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
         "<button type='button' class='btn' id='aiGap'>1. 🤖 Soát dạng · đếm thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
+        "<label class='btn' style='margin:0'>📂 Chọn .tex trên máy"
+        "<input id='aiSrcFile' type='file' accept='.tex,.ltx,.txt,text/plain' hidden></label>"
+        "<span id='aiSrcFileName' class='muted'>Chưa chọn file</span>"
         "<input id='aiSrcUrl' type='url' placeholder='"+html.escape(url_ph, quote=True)+"'>"
-        "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link → TEX</button>"
+        "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link / file → TEX</button>"
         "<button type='button' class='btn' id='aiNb'>📋 Prompt NotebookLM</button>"
         "<span class='muted'>"+hint+"</span>"
         "<div id='aiGapOut'></div></div></details>"

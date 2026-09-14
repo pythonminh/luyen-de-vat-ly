@@ -1003,6 +1003,24 @@ function stripMeta(s){
   }).join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
+function readAiSrcFile(){
+  return new Promise(function(resolve,reject){
+    const inp=document.getElementById('aiSrcFile');
+    const file=inp&&inp.files&&inp.files[0];
+    if(!file){resolve('');return;}
+    if(file.size>900000){reject(new Error('File .tex quá lớn (dưới 900KB).'));return;}
+    const r=new FileReader();
+    r.onload=function(){resolve(String(r.result||''));};
+    r.onerror=function(){reject(new Error('Không đọc được file trên máy.'));};
+    r.readAsText(file,'UTF-8');
+  });
+}
+document.addEventListener('change',function(e){
+  const inp=e.target&&e.target.id==='aiSrcFile'?e.target:null;
+  if(!inp) return;
+  const lab=document.getElementById('aiSrcFileName');
+  if(lab) lab.textContent=(inp.files&&inp.files[0]&&inp.files[0].name)||'Chưa chọn file';
+});
 function dropOf(btn){
   const raw=btn.getAttribute('data-drop')||'';
   const i=raw.lastIndexOf('||');
@@ -1191,15 +1209,24 @@ document.addEventListener('click',async function(e){
   const ks=keys();
   if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
   const urlEl=document.getElementById('aiSrcUrl');
-  const sourceUrl=urlEl?String(urlEl.value||'').trim():'';
-  if(imp && !sourceUrl){alert('Dán link http/https vào ô rồi bấm Lấy từ link. Không cần chọn dạng — để Cả bài.');return;}
-  if(fill && !dang && !sourceUrl){alert('Đang ở Cả bài: dán link rồi bấm Lấy từ link. Nút AI viết thiếu dùng khi đã mở một dạng.');return;}
-  out.innerHTML=sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...';
+  let sourceUrl=urlEl?String(urlEl.value||'').trim():'';
+  let sourceTex='';
+  try{sourceTex=await readAiSrcFile();}catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
+  if(sourceUrl && !/^https?:\/\//i.test(sourceUrl)){
+    if(sourceTex){sourceUrl='';}
+    else{
+      alert('Không dán đường dẫn ổ đĩa (G:\\...). Hãy bấm «Chọn .tex trên máy» hoặc dán link http/https.');
+      return;
+    }
+  }
+  if(imp && !sourceUrl && !sourceTex){alert('Chọn file .tex trên máy, hoặc dán link http/https, rồi bấm Lấy từ link / file. Không cần chọn dạng — để Cả bài.');return;}
+  if(fill && !dang && !sourceUrl && !sourceTex){alert('Đang ở Cả bài: chọn file hoặc dán link rồi bấm Lấy từ link / file. Nút AI viết thiếu dùng khi đã mở một dạng.');return;}
+  out.innerHTML=sourceTex?'⏳ Đang đọc file rồi AI chuyển sang TEX...':(sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...');
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex})});
     const d=await r.json();
     if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
