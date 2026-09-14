@@ -854,8 +854,8 @@ def _near_dup(new_q, pool, thr):
             return True
     return False
 
-def _filter_import_rows(rows, qs, fallback_dang=''):
-    """Bỏ câu gần trùng / vượt trần; ưu tiên đủ mức cố gắng rồi mới nhận câu khác biệt."""
+def _filter_import_rows(rows, qs, fallback_dang='', relax=False):
+    """Lọc câu import. relax=True (file/link): chỉ bỏ sai cấu trúc — đưa lên xem trước rồi ADMIN lọc trùng sau."""
     from app import KIND_AIM, KIND_MAX, KIND_ORDER, _dang_name
     from collections import defaultdict
     have = defaultdict(lambda: {k: 0 for k in KIND_ORDER})
@@ -877,17 +877,18 @@ def _filter_import_rows(rows, qs, fallback_dang=''):
         if not _block_ok_for_kind(block, k):
             skipped.append('sai cấu trúc ' + k)
             continue
-        n = have[dname][k]
-        if n >= KIND_MAX[k]:
-            skipped.append('vượt trần ' + k)
-            continue
-        pool = pools[(dname, k)]
-        if _near_dup(fake, pool, 0.72):
-            skipped.append('gần trùng ' + k)
-            continue
-        if n >= KIND_AIM[k] and _near_dup(fake, pool, 0.58):
-            skipped.append('cùng ý khi đã đủ ' + k)
-            continue
+        if not relax:
+            n = have[dname][k]
+            if n >= KIND_MAX[k]:
+                skipped.append('vượt trần ' + k)
+                continue
+            pool = pools[(dname, k)]
+            if _near_dup(fake, pool, 0.72):
+                skipped.append('gần trùng ' + k)
+                continue
+            if n >= KIND_AIM[k] and _near_dup(fake, pool, 0.58):
+                skipped.append('cùng ý khi đã đủ ' + k)
+                continue
         kept.append((dname, block))
         have[dname][k] += 1
         pools[(dname, k)].append(fake)
@@ -1243,19 +1244,29 @@ def api_admin_dang_fill():
     if not latex.strip():
         latex = '\n\n'.join(blocks) + '\n'
     rows = _chunks_from_import(latex, dang)
-    kept, skipped = _filter_import_rows(rows, qs, dang)
+    # File/link: đưa câu lên ô xem trước trước, ADMIN lọc trùng sau khi ghi.
+    kept, skipped = _filter_import_rows(rows, qs, dang, relax=bool(page_text))
     if kept:
         latex = '\n\n'.join('\\dangbt{' + d + '}\n' + b for d, b in kept) + '\n'
     elif page_text:
-        return jsonify(ok=False, error='Mọi câu từ link đều gần trùng, sai cấu trúc, hoặc đã chạm trần dạng. Soát gợi ý xóa rồi thử lại.'), 400
+        return jsonify(ok=False, error='AI không ra câu đúng cấu trúc (\\begin{ex} + \\choice/\\choiceTF...). Thử lại hoặc sửa nguồn.'), 400
     else:
         if skipped and all('sai cấu trúc' in s for s in skipped):
             return jsonify(ok=False, error='Câu AI viết sai cấu trúc loại (ĐS = \\choiceTF 4 mệnh đề, không hỏi «nào sau đây»; TN = \\choice 4 ý). Thử lại.'), 400
         return jsonify(ok=False, error='Câu AI viết gần trùng đề đang có. Soát xóa bản thừa, đừng nhồi thêm biến thể.'), 400
     latex = _latex_with_nguon(latex, source_url)
     nd = len(_chunks_from_import(latex, dang))
-    skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần / sai cấu trúc).') if skipped else ''
-    summary = 'AI soạn ' + str(nd or len(blocks)) + ' câu' + (' từ link (tự gán dạng)' if (source_url and not dang) else (' từ link' if source_url else ' (' + want + ')')) + skip_txt + '. Mỗi câu có \\nguon{link}. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
+    if page_text:
+        skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu sai cấu trúc.') if skipped else ''
+        summary = (
+            'AI soạn ' + str(nd or len(blocks)) + ' câu từ file/link'
+            + (' (tự gán dạng)' if not dang else '')
+            + skip_txt
+            + '. Xem ô LaTeX → Chấp nhận ghi TEX → dùng «Lọc câu gần nội dung» để bỏ trùng.'
+        )
+    else:
+        skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần / sai cấu trúc).') if skipped else ''
+        summary = 'AI soạn ' + str(nd or len(blocks)) + ' câu (' + want + ')' + skip_txt + '. Mỗi câu có \\nguon{link}. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
     return jsonify(ok=True, src=src, latex=latex, n=nd or len(blocks), add=add, counts=counts, summary=summary)
 
 @app.post('/api/admin/dang-fill-save')
