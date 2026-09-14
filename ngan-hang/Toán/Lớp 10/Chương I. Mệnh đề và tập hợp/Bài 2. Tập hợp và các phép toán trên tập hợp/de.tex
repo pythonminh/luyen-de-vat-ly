@@ -373,19 +373,42 @@ tập hợp con của tập hợp $A$ là $X=\{2;12\}$.
 % ID: T10C1B2-05-DS
 % Mức: VD
 \dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
-\begin{ex}Lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa, $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi cả Lý và Hóa, $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa.
+\begin{ex}Xét lớp $10 B_1$ có $7$ học sinh giỏi Toán, $5$ học sinh giỏi Lý, $6$ học sinh giỏi Hóa. Trong đó, có $2$ học sinh chỉ giỏi Toán và Lý, $3$ học sinh chỉ giỏi Toán và Hóa, $1$ học sinh chỉ giỏi Lý và Hóa, và $1$ học sinh giỏi cả $3$ môn Toán, Lý, Hóa. Hãy nhận xét các phát biểu sau:
 \choiceTF
-{\True Số học sinh chỉ giỏi môn Toán là $1$ học sinh}
-{\True Số học sinh chỉ giỏi môn Lý là $1$ học sinh}
-{Số học sinh chỉ giỏi môn Hóa là $2$ học sinh}
-{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh}
+{\True Số học sinh chỉ giỏi môn Toán là $1$.}
+{\True Số học sinh chỉ giỏi môn Lý là $1$.}
+{Số học sinh chỉ giỏi môn Hóa là $2$.}
+{\True Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$.}
 \loigiai{
-\begin{itemchoice}
-\item (Đúng) Số học sinh chỉ giỏi môn Toán là $1$ học sinh.
-\item (Đúng) Số học sinh chỉ giỏi môn Lý là $1$ học sinh.
-\item (Sai) Số học sinh chỉ giỏi môn Hóa là $2$ học sinh. (Vì): ố học sinh chỉ giỏi môn Hóa là $1$ học sinh, đề bài cho là $2$ học sinh
-\item (Đúng) Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$ học sinh.
-\end{itemchoice}
+Gọi T, L, H lần lượt là tập hợp các học sinh giỏi Toán, Lý, Hóa.
+Theo đề bài, ta có:
+$|T| = 7|L| = 5|H| = 6|T \cap L \setminus H| = 2$ (chỉ giỏi Toán và Lý)
+$|T \cap H \setminus L| = 3$ (chỉ giỏi Toán và Hóa)
+$|L \cap H \setminus T| = 1$ (chỉ giỏi Lý và Hóa)
+$|T \cap L \cap H| = 1$ (giỏi cả 3 môn)
+a. Số học sinh chỉ giỏi môn Toán:
+Số học sinh chỉ giỏi Toán là $ |T| - (|T \cap L \setminus H| + |T \cap H \setminus L| + |T \cap L \cap H|) $.
+$ 7 - (2 + 3 + 1) = 7 - 6 = 1 $.
+Vậy, phát biểu "Số học sinh chỉ giỏi môn Toán là $1$" là đúng.
+b. Số học sinh chỉ giỏi môn Lý:
+Số học sinh chỉ giỏi Lý là $ |L| - (|T \cap L \setminus H| + |L \cap H \setminus T| + |T \cap L \cap H|) $.
+$ 5 - (2 + 1 + 1) = 5 - 4 = 1 $.
+Vậy, phát biểu "Số học sinh chỉ giỏi môn Lý là $1$" là đúng.
+c. Số học sinh chỉ giỏi môn Hóa:
+Số học sinh chỉ giỏi Hóa là $ |H| - (|T \cap H \setminus L| + |L \cap H \setminus T| + |T \cap L \cap H|) $.
+$ 6 - (3 + 1 + 1) = 6 - 5 = 1 $.
+Vậy, phát biểu "Số học sinh chỉ giỏi môn Hóa là $2$" là sai (vì số học sinh chỉ giỏi Hóa là $1)$.
+d. Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa):
+Số học sinh giỏi ít nhất một môn là $ |T \cup L \cup H| $.
+Áp dụng công thức hợp của ba tập hợp:
+$ |T \cup L \cup H| = |T| + |L| + |H| - (|T \cap L| + |T \cap H| + |L \cap H|) + |T \cap L \cap H| $.
+Ta có:
+$ |T \cap L| = |T \cap L \setminus H| + |T \cap L \cap H| = 2 + 1 = 3 $.
+$ |T \cap H| = |T \cap H \setminus L| + |T \cap L \cap H| = 3 + 1 = 4 $.
+$ |L \cap H| = |L \cap H \setminus T| + |T \cap L \cap H| = 1 + 1 = 2 $.
+Vậy, $ |T \cup L \cup H| = 7 + 5 + 6 - (3 + 4 + 2) + 1 $.
+$ |T \cup L \cup H| = 18 - 9 + 1 = 10 $.
+Vậy, phát biểu "Số học sinh giỏi ít nhất một môn (Toán, Lý, Hóa) là $10$" là đúng.
 }
 \end{ex}
 
