@@ -2382,3 +2382,98 @@ Xét phương trình
 		Do đó $b=2$, $c= -18$. Suy ra $P=b+c=-16$.
 	}
 \end{bt}
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+Một cửa hàng điện máy khảo sát $100$ khách hàng về việc mua tủ lạnh và máy giặt. Kết quả cho thấy có $60$ khách hàng mua tủ lạnh, $50$ khách hàng mua máy giặt, và $25$ khách hàng không mua cả hai sản phẩm. Hỏi có bao nhiêu khách hàng mua cả tủ lạnh và máy giặt?
+\shortans{35}
+\loigiai{Gọi $A$ là tập hợp khách hàng mua tủ lạnh, $B$ là tập hợp khách hàng mua máy giặt.
+Ta có $|A| = 60$, $|B| = 50$.
+Số khách hàng không mua cả hai sản phẩm là $25$, nên số khách hàng mua ít nhất một trong hai sản phẩm là $100 - 25 = 75$.
+Theo công thức hợp của hai tập hợp: $|A \cup B| = |A| + |B| - |A \cap B|$.
+Thay số vào, ta có $75 = 60 + 50 - |A \cap B|$.
+$75 = 110 - |A \cap B|$.
+$|A \cap B| = 110 - 75 = 35$.
+Vậy có $35$ khách hàng mua cả tủ lạnh và máy giặt.}
+\end{ex}
+
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+Đề: Một cuộc khảo sát về sở thích đọc sách của $100$ học sinh cho thấy: $45$ học sinh thích đọc truyện trinh thám, $38$ học sinh thích đọc truyện khoa học viễn tưởng, $32$ học sinh thích đọc truyện lịch sử. Có $15$ học sinh thích cả trinh thám và khoa học viễn tưởng, $12$ học sinh thích cả khoa học viễn tưởng và lịch sử, $10$ học sinh thích cả trinh thám và lịch sử. Biết rằng có $5$ học sinh thích đọc cả ba loại truyện trên. Hỏi có bao nhiêu học sinh không thích đọc bất kỳ loại truyện nào trong ba loại trên?
+\loigiai{
+Gọi $A$ là tập hợp học sinh thích đọc truyện trinh thám.
+Gọi $B$ là tập hợp học sinh thích đọc truyện khoa học viễn tưởng.
+Gọi $C$ là tập hợp học sinh thích đọc truyện lịch sử.
+Theo đề bài, ta có:
+$|A| = 45$
+$|B| = 38$
+$|C| = 32$
+$|A \cap B| = 15$
+$|B \cap C| = 12$
+$|A \cap C| = 10$
+$|A \cap B \cap C| = 5$
+Số học sinh thích ít nhất một trong ba loại truyện là:
+$|A \cup B \cup C| = |A| + |B| + |C| - (|A \cap B| + |B \cap C| + |A \cap C|) + |A \cap B \cap C|$
+$|A \cup B \cup C| = 45 + 38 + 32 - (15 + 12 + 10) + 5$
+$|A \cup B \cup C| = 115 - 37 + 5 = 83$
+Tổng số học sinh được khảo sát là $100$.
+Số học sinh không thích đọc bất kỳ loại truyện nào là:
+$100 - |A \cup B \cup C| = 100 - 83 = 17$
+Vậy có $17$ học sinh không thích đọc bất kỳ loại truyện nào trong ba loại trên.
+}
+\end{ex}
+
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+Đề: Trong một lớp học có $50$ học sinh, có $28$ học sinh tham gia câu lạc bộ bóng đá, $20$ học sinh tham gia câu lạc bộ bóng rổ, và $15$ học sinh tham gia câu lạc bộ cờ vua. Biết rằng có $10$ học sinh tham gia cả bóng đá và bóng rổ, $8$ học sinh tham gia cả bóng rổ và cờ vua, $6$ học sinh tham gia cả bóng đá và cờ vua. Có $3$ học sinh tham gia cả ba câu lạc bộ. Hỏi có bao nhiêu học sinh không tham gia câu lạc bộ nào?
+\loigiai{
+Gọi $B$ là tập hợp học sinh tham gia câu lạc bộ bóng đá.
+Gọi $R$ là tập hợp học sinh tham gia câu lạc bộ bóng rổ.
+Gọi $C$ là tập hợp học sinh tham gia câu lạc bộ cờ vua.
+Theo đề bài, ta có:
+$|B| = 28$
+$|R| = 20$
+$|C| = 15$
+$|B \cap R| = 10$
+$|R \cap C| = 8$
+$|B \cap C| = 6$
+$|B \cap R \cap C| = 3$
+Số học sinh tham gia ít nhất một câu lạc bộ là:
+$|B \cup R \cup C| = |B| + |R| + |C| - (|B \cap R| + |R \cap C| + |B \cap C|) + |B \cap R \cap C|$
+$|B \cup R \cup C| = 28 + 20 + 15 - (10 + 8 + 6) + 3$
+$|B \cup R \cup C| = 63 - 24 + 3 = 42$
+Tổng số học sinh trong lớp là $50$.
+Số học sinh không tham gia câu lạc bộ nào là:
+$50 - |B \cup R \cup C| = 50 - 42 = 8$
+Vậy có $8$ học sinh không tham gia câu lạc bộ nào.
+}
+\end{ex}
+
+\dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
+\begin{ex}
+Đề: Một công ty tiến hành khảo sát $120$ nhân viên về việc sử dụng ba loại phần mềm $X, Y, Z$. Kết quả cho thấy: $60$ nhân viên sử dụng phần mềm $X$, $50$ nhân viên sử dụng phần mềm $Y$, $40$ nhân viên sử dụng phần mềm $Z$. Có $25$ nhân viên sử dụng cả $X$ và $Y$, $20$ nhân viên sử dụng cả $Y$ và $Z$, $15$ nhân viên sử dụng cả $X$ và $Z$. Biết rằng có $10$ nhân viên sử dụng cả ba phần mềm. Hỏi có bao nhiêu nhân viên chỉ sử dụng đúng một loại phần mềm?
+\loigiai{
+Gọi $X_s$ là tập hợp nhân viên sử dụng phần mềm $X$.
+Gọi $Y_s$ là tập hợp nhân viên sử dụng phần mềm $Y$.
+Gọi $Z_s$ là tập hợp nhân viên sử dụng phần mềm $Z$.
+Theo đề bài, ta có:
+$|X_s| = 60$
+$|Y_s| = 50$
+$|Z_s| = 40$
+$|X_s \cap Y_s| = 25$
+$|Y_s \cap Z_s| = 20$
+$|X_s \cap Z_s| = 15$
+$|X_s \cap Y_s \cap Z_s| = 10$
+Số nhân viên chỉ sử dụng phần mềm $X$ là:
+$|X_s| - (|X_s \cap Y_s| + |X_s \cap Z_s|) + |X_s \cap Y_s \cap Z_s|$
+$= 60 - (25 + 15) + 10 = 60 - 40 + 10 = 30$
+Số nhân viên chỉ sử dụng phần mềm $Y$ là:
+$|Y_s| - (|X_s \cap Y_s| + |Y_s \cap Z_s|) + |X_s \cap Y_s \cap Z_s|$
+$= 50 - (25 + 20) + 10 = 50 - 45 + 10 = 15$
+Số nhân viên chỉ sử dụng phần mềm $Z$ là:
+$|Z_s| - (|Y_s \cap Z_s| + |X_s \cap Z_s|) + |X_s \cap Y_s \cap Z_s|$
+$= 40 - (20 + 15) + 10 = 40 - 35 + 10 = 15$
+Tổng số nhân viên chỉ sử dụng đúng một loại phần mềm là:
+$30 + 15 + 15 = 60$
+Vậy có $60$ nhân viên chỉ sử dụng đúng một loại phần mềm.
+}
+\end{ex}
