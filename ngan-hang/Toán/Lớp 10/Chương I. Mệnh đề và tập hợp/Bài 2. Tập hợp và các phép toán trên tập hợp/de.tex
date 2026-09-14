@@ -226,20 +226,19 @@ Vậy có 5 học sinh giỏi cả ba môn Toán, Lý, Hóa.
 % ===== Câu 11 =====
 % ID: T10C1B2-03-TLN
 % Mức: VD
-\begin{ex}Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
+\begin{ex}
+% ID: T10C1B2-03-TLN
+% Mức: VD
+Một lớp học có $25$ học sinh chơi bóng đá, $23$ học sinh chơi bóng bàn, $14$ học sinh chơi cả bóng đá và bóng bàn, $6$ học sinh không chơi môn nào. Tìm số học sinh chỉ chơi một môn thể thao.
 \shortans{20}
 \loigiai{
-Gọi $A$ là tập hợp các học sinh chơi bóng đá và $B$ là tập hợp các học sinh chơi bóng bàn.
-Số học sinh chơi bóng đá là $|A|=25$.
-Số học sinh chơi bóng bàn là $|B|=23$.
-Số học sinh chơi cả bóng đá và bóng bàn là $|A \cap B|=14$.
-Số học sinh chỉ chơi một môn thể thao là tổng số học sinh chỉ chơi bóng đá và số học sinh chỉ chơi bóng bàn.
-Số học sinh chỉ chơi bóng đá là $|A| - |A \cap B|$.
-Số học sinh chỉ chơi bóng bàn là $|B| - |A \cap B|$.
-Vậy, số học sinh chỉ chơi một môn thể thao là $(|A| - |A \cap B|) + (|B| - |A \cap B|)$.
-Ta có:
-$|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14 = 20$.
-Vậy, số học sinh chỉ chơi một môn thể thao là $20$.
+Gọi $A$ là tập hợp các học sinh chơi bóng đá, $B$ là tập hợp các học sinh chơi bóng bàn, $C$ là tập hợp các học sinh không chơi môn thể thao nào.
+Ta có
+ $|A|$ là số học sinh chơi bóng đá;
+$|B|$ là số học sinh chơi bóng bàn;
+$|C|$ là số học sinh không chơi môn thể thao nào.
+Khi đó số học sinh chỉ chơi một môn thể thao là:
+ $|A|+|B|-2| A \cap B| = 25+23- 2 \cdot 14=20$.
 }
 \end{ex}
 
@@ -455,17 +454,10 @@ Vậy $m=9$.
 % ID: T10C1B2-05-TLN
 % Mức: VD
 \dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
-\begin{ex}
-% ID: T10C1B2-05-TLN
-% Mức: VD
-Lớp 10 $A$ có $45$ học sinh trong đó có $12$ bạn học sinh giỏi Văn, $9$ bạn học sinh giỏi Địa lí, và $30$ bạn không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu bạn học sinh giỏi cả hai môn Văn và Địa lí?
+\begin{ex}Lớp $10A$ có $45$ học sinh. Trong đó, có $12$ học sinh giỏi Văn, $9$ học sinh giỏi Địa lí và $30$ học sinh không giỏi môn học nào trong hai môn Văn, Địa lí. Hỏi lớp $10A$ có bao nhiêu học sinh giỏi cả hai môn Văn và Địa lí?
 \shortans{6}
 \loigiai{
-Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).
-Số học sinh giỏi cả 2 môn Văn và Địa lí là $12+9-15=6(học sinh)$.
-
-[LG-ONLY]
-[HINH]
+Số học sinh giỏi Văn hoặc giỏi Địa lí là $45 - 30=15$ (học sinh).\nSố học sinh giỏi cả hai môn Văn và Địa lí là $12+9-15=6$ (học sinh).
 }
 \end{ex}
 
