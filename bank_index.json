@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 173,
-  "total_questions": 11749,
+  "total_questions": 11748,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -180,8 +180,8 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 182,
-      "count": 182,
+      "questions": 181,
+      "count": 181,
       "dang": {
         "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 10,
         "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13,
@@ -190,7 +190,7 @@
         "Bài toán tham số về tập hợp và khoảng": 7,
         "Các tập số, khoảng, đoạn và nửa khoảng": 3,
         "Xác định đường biên và miền nghiệm": 3,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 124
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 123
       },
       "dang_kinds": {
         "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
@@ -238,7 +238,7 @@
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
           "TN": 52,
           "DS": 15,
-          "TLN": 47,
+          "TLN": 46,
           "TL": 10
         }
       }
