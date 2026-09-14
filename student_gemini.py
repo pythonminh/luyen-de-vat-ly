@@ -202,7 +202,8 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
         method="POST",
         headers={"Content-Type": "application/json", "User-Agent": "luyen-de-vat-ly-student-gemini"},
     )
-    with urllib.request.urlopen(req, timeout=90) as r:
+    # File .tex lớn / dang-fill cần thời gian sinh dài; gunicorn timeout phải cao hơn.
+    with urllib.request.urlopen(req, timeout=180) as r:
         obj = json.loads(r.read().decode("utf-8"))
     cands = obj.get("candidates") or []
     text = "".join(
