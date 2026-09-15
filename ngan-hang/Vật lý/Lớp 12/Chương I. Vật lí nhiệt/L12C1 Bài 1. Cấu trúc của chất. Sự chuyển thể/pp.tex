@@ -207,17 +207,51 @@ Ngược lại, chất rắn vô định hình không có cấu trúc tinh thể
 
 
 \subsubsection{Dạng: Xác định số phân tử, khối lượng phân tử và mật độ phân tử}
-
 \begin{phuongphap}
-	\begin{enumerate}
-		\item Dấu hiệu nhận biết:Bài toán yêu cầu tính toán số phân tử, khối lượng của một phân tử, hoặc mật độ phân tử (số phân tử trong một đơn vị thể tích) của một chất ở thể rắn, lỏng, khí khi biết khối lượng, khối lượng riêng hoặc thể tích của chất đó.
-		
-			\begin{equation}
-				N = \dfrac{m}{M} \cdot N_A \quad \text{và} \quad \mu = \dfrac{N}{V} = \dfrac{D \cdot N_A}{M}
-				\label{eq:solid_mol}
-		\end{equation}
-		\item Lưu ý sai lầm thường gặp nếu có Cần đổi đúng đơn vị khối lượng sang gam hoặc kilôgam tương thích với khối lượng mol $M$; thể tích phải đổi về mét khối ($\mathrm{m^3}$).
-	\end{enumerate}
+Để xác định số phân tử, khối lượng phân tử và mật độ phân tử của một chất, ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định các đại lượng đã biết và cần tìm:}
+    \begin{itemize}
+        \item Đọc kỹ đề bài để xác định các thông số đã cho như khối lượng ($m$), thể tích ($V$), khối lượng riêng ($D$), khối lượng mol ($M$), hằng số Avogadro ($N_A$).
+        \item Xác định đại lượng cần tìm: số phân tử ($N$), khối lượng của một phân tử ($m_0$), mật độ phân tử ($\mu$).
+    \end{itemize}
+    \item \textbf{Chuyển đổi đơn vị:}
+    \begin{itemize}
+        \item Đảm bảo tất cả các đại lượng đều ở đơn vị chuẩn trong hệ SI hoặc đơn vị tương thích với các công thức sử dụng.
+        \item Khối lượng ($m$) sang kilôgam ($\mathrm{kg}$) hoặc gam ($\mathrm{g}$) tùy thuộc vào đơn vị của khối lượng mol ($M$).
+        \item Thể tích ($V$) sang mét khối ($\mathrm{m^3}$).
+        \item Khối lượng riêng ($D$) sang kilôgam trên mét khối ($\mathrm{kg/m^3}$).
+        \item Khối lượng mol ($M$) sang gam trên mol ($\mathrm{g/mol}$) hoặc kilôgam trên mol ($\mathrm{kg/mol}$).
+    \end{itemize}
+    \item \textbf{Áp dụng công thức:}
+    \begin{itemize}
+        \item \textbf{Tính số phân tử ($N$):}
+        Nếu biết khối lượng ($m$) và khối lượng mol ($M$):
+        \begin{equation}
+            N = \dfrac{m}{M} \cdot N_A
+        \end{equation}
+        Nếu biết thể tích ($V$), khối lượng riêng ($D$) và khối lượng mol ($M$):
+        \begin{equation}
+            N = \dfrac{D \cdot V}{M} \cdot N_A
+        \end{equation}
+        \item \textbf{Tính khối lượng của một phân tử ($m_0$):}
+        \begin{equation}
+            m_0 = \dfrac{M}{N_A}
+        \end{equation}
+        \item \textbf{Tính mật độ phân tử ($\mu$):}
+        \begin{equation}
+            \mu = \dfrac{N}{V}
+        \end{equation}
+        Hoặc, nếu biết khối lượng riêng ($D$) và khối lượng mol ($M$):
+        \begin{equation}
+            \mu = \dfrac{D \cdot N_A}{M}
+        \end{equation}
+    \end{itemize}
+    \item \textbf{Kiểm tra kết quả:}
+    \begin{itemize}
+        \item Đảm bảo kết quả có đơn vị phù hợp và giá trị hợp lý.
+    \end{itemize}
+\end{enumerate}
 \end{phuongphap}
 
 \begin{vidumau}
@@ -250,7 +284,7 @@ Một bình chứa dung tích $2{,}0\ \mathrm{l}$ đựng đầy nước lỏng 
 		\[
 		\begin{aligned}
 			m &= D \cdot V \\
-			&= 1000 \cdot 2{,}0 \cdot 10^{-3} \\
+			&= 1000\ \mathrm{kg/m^3} \cdot 2{,}0 \cdot 10^{-3}\ \mathrm{m^3} \\
 			&= 2{,}0\ \mathrm{kg} = 2000\ \mathrm{g}.
 		\end{aligned}
 		\]
@@ -258,7 +292,7 @@ Một bình chứa dung tích $2{,}0\ \mathrm{l}$ đựng đầy nước lỏng 
 		\[
 		\begin{aligned}
 			N &= \dfrac{m}{M} \cdot N_A \\
-			&= \dfrac{2000}{18} \cdot 6{,}02 \cdot 10^{23} \\
+			&= \dfrac{2000\ \mathrm{g}}{18\ \mathrm{g/mol}} \cdot 6{,}02 \cdot 10^{23}\ \mathrm{mol^{-1}} \\
 			&\approx 6{,}69 \cdot 10^{25}\ \mathrm{phân\ tử}.
 		\end{aligned}
 		\]
@@ -266,14 +300,13 @@ Một bình chứa dung tích $2{,}0\ \mathrm{l}$ đựng đầy nước lỏng 
 		\[
 		\begin{aligned}
 			\mu &= \dfrac{N}{V} \\
-			&= \dfrac{6{,}69 \cdot 10^{25}}{2{,}0 \cdot 10^{-3}} \\
+			&= \dfrac{6{,}69 \cdot 10^{25}\ \mathrm{phân\ tử}}{2{,}0 \cdot 10^{-3}\ \mathrm{m^3}} \\
 			&\approx 3{,}35 \cdot 10^{28}\ \mathrm{m^{-3}}.
 		\end{aligned}
 		\]
 	\end{enumerate}
 }
 \end{vidumau}
-
 \subsubsection{Dạng: Ước tính khoảng cách trung bình giữa các phân tử ở các thể khác nhau}
 
 \begin{phuongphap}
