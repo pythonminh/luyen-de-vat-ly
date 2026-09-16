@@ -2,116 +2,311 @@
 % Lớp: 11
 % Chương: Chương I. Dao động
 % Bài: L11C1 Bài 1. Dao động điều hòa
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Chưa có dạng}
+
+\subsubsection{Dạng: Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
 \begin{phuongphap}
+Để xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ $x = A\cos(\omega t + \varphi)$, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định biên độ ($A$):} Biên độ là giá trị dương lớn nhất của li độ, được xác định trực tiếp từ hệ số đứng trước hàm $\cos$ trong phương trình. Đơn vị của $A$ thường là cm hoặc m.
+    \item \textbf{Xác định tần số góc ($\omega$):} Tần số góc là hệ số của $t$ trong biểu thức pha $(\omega t + \varphi)$. Đơn vị của $\omega$ là rad/s.
+    \item \textbf{Xác định pha ban đầu ($\varphi$):} Pha ban đầu là hằng số cộng thêm vào $\omega t$ trong biểu thức pha. Đơn vị của $\varphi$ là rad. Giá trị của $\varphi$ thường nằm trong khoảng $(-\pi, \pi]$ hoặc $[0, 2\pi)$.
+    \item \textbf{Xác định chu kì ($T$):} Sử dụng công thức liên hệ giữa chu kì và tần số góc: $T = \frac{2\pi}{\omega}$. Đơn vị của $T$ là giây (s).
+    \item \textbf{Xác định tần số ($f$):} Sử dụng công thức liên hệ giữa tần số và tần số góc (hoặc chu kì): $f = \frac{\omega}{2\pi} = \frac{1}{T}$. Đơn vị của $f$ là Hertz (Hz).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật thực hiện 18 dao động trong $9 \text{s}$. Tần số dao động theo đơn vị Hz bằng bao nhiêu?
+\loigiai{
+Tần số dao động là số dao động toàn phần thực hiện được trong một đơn vị thời gian.
+Ta có:
+Số dao động toàn phần $N = 18$ dao động.
+Thời gian thực hiện dao động $t = 9 \text{s}$.
+Tần số dao động $f = \frac{N}{t} = \frac{18}{9} = 2 \text{ Hz}$.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
+\subsubsection{Dạng: Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).}
 \begin{phuongphap}
+Để xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình dao động $x = A\cos(\omega t + \varphi)$, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đồng nhất phương trình:} So sánh phương trình dao động đã cho với dạng tổng quát $x = A\cos(\omega t + \varphi)$ để xác định các giá trị của $A$, $\omega$, và $\varphi$.
+    \item \textbf{Tính toán các đại lượng khác:}
+    \begin{itemize}
+        \item \textbf{Chu kì ($T$):} $T = \frac{2\pi}{\omega}$.
+        \item \textbf{Tần số ($f$):} $f = \frac{1}{T} = \frac{\omega}{2\pi}$.
+        \item \textbf{Vận tốc cực đại ($v_{max}$):} $v_{max} = A\omega$.
+        \item \textbf{Gia tốc cực đại ($a_{max}$):} $a_{max} = A\omega^2$.
+        \item \textbf{Vận tốc tại li độ $x$:} $v = \pm \omega \sqrt{A^2 - x^2}$. Dấu của $v$ phụ thuộc vào chiều chuyển động (dương nếu vật đi theo chiều dương, âm nếu vật đi theo chiều âm).
+        \item \textbf{Gia tốc tại li độ $x$:} $a = -\omega^2 x$.
+    \end{itemize}
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng được tính toán có đơn vị phù hợp (ví dụ: $A$ (cm, m), $\omega$ (rad/s), $T$ (s), $f$ (Hz), $v$ (cm/s, m/s), $a$ (cm/s$^2$, m/s$^2$)).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Với $x=5\cos(4\pi t-\pi/6)$ cm. Xác định biên độ, tần số góc, chu kì và tần số của dao động.
+\loigiai{
+So sánh phương trình $x=5\cos(4\pi t-\pi/6)$ cm với phương trình tổng quát $x = A\cos(\omega t + \varphi)$:
+\begin{itemize}
+    \item Biên độ $A = 5$ cm.
+    \item Tần số góc $\omega = 4\pi$ rad/s.
+    \item Pha ban đầu $\varphi = -\pi/6$ rad.
+    \item Chu kì $T = \frac{2\pi}{\omega} = \frac{2\pi}{4\pi} = 0,5$ s.
+    \item Tần số $f = \frac{1}{T} = \frac{1}{0,5} = 2$ Hz.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).}
+\subsubsection{Dạng: Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian}
 \begin{phuongphap}
+Để xác định các đại lượng đặc trưng và viết phương trình dao động điều hòa $x = A\cos(\omega t + \varphi)$ từ đồ thị li độ - thời gian ($x-t$), ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định biên độ ($A$):} Biên độ là giá trị li độ cực đại (hoặc cực tiểu) trên đồ thị. $A = |x_{max}|$.
+    \item \textbf{Xác định chu kì ($T$):} Chu kì là khoảng thời gian ngắn nhất để vật lặp lại trạng thái dao động (ví dụ: khoảng thời gian giữa hai đỉnh liên tiếp, hoặc hai điểm cắt trục $x$ theo cùng một chiều).
+    \item \textbf{Xác định tần số góc ($\omega$):} Sử dụng công thức $\omega = \frac{2\pi}{T}$.
+    \item \textbf{Xác định pha ban đầu ($\varphi$):}
+    \begin{itemize}
+        \item Quan sát trạng thái của vật tại thời điểm ban đầu ($t=0$).
+        \item Sử dụng phương trình $x(0) = A\cos(\varphi)$.
+        \item Xác định chiều chuyển động của vật tại $t=0$ (dựa vào độ dốc của đồ thị: nếu $x$ đang tăng thì $v>0$, nếu $x$ đang giảm thì $v<0$).
+        \item Từ $x(0)$ và chiều chuyển động, ta có thể xác định giá trị của $\varphi$.
+        \begin{itemize}
+            \item Nếu $x(0) = A$ (vật ở biên dương), thì $\varphi = 0$.
+            \item Nếu $x(0) = -A$ (vật ở biên âm), thì $\varphi = \pm \pi$.
+            \item Nếu $x(0) = 0$ và $v>0$ (vật qua VTCB theo chiều dương), thì $\varphi = -\frac{\pi}{2}$.
+            \item Nếu $x(0) = 0$ và $v<0$ (vật qua VTCB theo chiều âm), thì $\varphi = \frac{\pi}{2}$.
+        \end{itemize}
+    \item \textbf{Viết phương trình dao động:} Thay các giá trị $A$, $\omega$, $\varphi$ đã tìm được vào phương trình $x = A\cos(\omega t + \varphi)$.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Trên đồ thị li độ–thời gian, hai đỉnh dương liên tiếp ở $t=1$ s và $t=2$ s. Chu kì theo đơn vị s bằng bao nhiêu?
+\loigiai{
+Hai đỉnh dương liên tiếp trên đồ thị li độ-thời gian biểu thị hai thời điểm mà vật ở biên dương và lặp lại trạng thái dao động. Khoảng thời gian giữa hai đỉnh dương liên tiếp chính là một chu kì dao động.
+Thời điểm đỉnh dương thứ nhất: $t_1 = 1$ s.
+Thời điểm đỉnh dương thứ hai: $t_2 = 2$ s.
+Chu kì $T = t_2 - t_1 = 2 - 1 = 1$ s.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 4. Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian}
+\subsubsection{Dạng: Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).}
 \begin{phuongphap}
+Để xác định các đại lượng đặc trưng của dao động điều hòa từ đồ thị $x-t$, $v-t$, hoặc $a-t$, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định loại đồ thị:} Nhận biết đồ thị là của li độ ($x-t$), vận tốc ($v-t$), hay gia tốc ($a-t$).
+    \item \textbf{Xác định biên độ ($A$, $V_{max}$, $A_{max}$):}
+    \begin{itemize}
+        \item Đối với đồ thị $x-t$: Biên độ $A$ là giá trị cực đại của li độ.
+        \item Đối với đồ thị $v-t$: Biên độ vận tốc $V_{max} = A\omega$ là giá trị cực đại của vận tốc. Từ đó có thể suy ra $A = V_{max}/\omega$.
+        \item Đối với đồ thị $a-t$: Biên độ gia tốc $A_{max} = A\omega^2$ là giá trị cực đại của gia tốc. Từ đó có thể suy ra $A = A_{max}/\omega^2$.
+    \end{itemize}
+    \item \textbf{Xác định chu kì ($T$):} Chu kì là khoảng thời gian ngắn nhất để đồ thị lặp lại hình dạng của nó (ví dụ: khoảng thời gian giữa hai đỉnh liên tiếp, hoặc hai điểm cắt trục thời gian theo cùng một chiều).
+    \item \textbf{Xác định tần số góc ($\omega$):} Sử dụng công thức $\omega = \frac{2\pi}{T}$.
+    \item \textbf{Xác định pha ban đầu ($\varphi$):}
+    \begin{itemize}
+        \item Quan sát giá trị của đại lượng tại $t=0$ và chiều biến thiên của nó.
+        \item \textbf{Đối với $x-t$:} Sử dụng $x(0) = A\cos\varphi$ và chiều biến thiên của $x$ tại $t=0$ để xác định $\varphi$.
+        \item \textbf{Đối với $v-t$:} Phương trình vận tốc là $v = -A\omega\sin(\omega t + \varphi) = A\omega\cos(\omega t + \varphi + \frac{\pi}{2})$. Sử dụng $v(0) = A\omega\cos(\varphi + \frac{\pi}{2})$ và chiều biến thiên của $v$ tại $t=0$ để xác định $\varphi + \frac{\pi}{2}$, từ đó suy ra $\varphi$.
+        \item \textbf{Đối với $a-t$:} Phương trình gia tốc là $a = -A\omega^2\cos(\omega t + \varphi) = A\omega^2\cos(\omega t + \varphi + \pi)$. Sử dụng $a(0) = A\omega^2\cos(\varphi + \pi)$ và chiều biến thiên của $a$ tại $t=0$ để xác định $\varphi + \pi$, từ đó suy ra $\varphi$.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Đồ thị $x-t$ cho biên độ $8 \text{cm}$, chu kì $1 \text{s}$ và ban đầu ở biên dương. Viết phương trình dao động.
+\loigiai{
+Từ đồ thị $x-t$:
+\begin{itemize}
+    \item Biên độ $A = 8$ cm.
+    \item Chu kì $T = 1$ s.
+    \item Tần số góc $\omega = \frac{2\pi}{T} = \frac{2\pi}{1} = 2\pi$ rad/s.
+    \item Tại thời điểm ban đầu ($t=0$), vật ở biên dương, tức là $x(0) = A$.
+    Thay vào phương trình $x(t) = A\cos(\omega t + \varphi)$:
+    $A = A\cos(\omega \cdot 0 + \varphi) \Rightarrow 1 = \cos\varphi$.
+    Giá trị $\varphi = 0$ rad thỏa mãn điều kiện này.
+\end{itemize}
+Vậy phương trình dao động là $x = 8\cos(2\pi t)$ cm.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 5. Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).}
+\subsubsection{Dạng: Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
 \begin{phuongphap}
+Để xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Viết phương trình dao động:} Đảm bảo hai dao động được biểu diễn dưới dạng chuẩn $x_1 = A_1\cos(\omega t + \varphi_1)$ và $x_2 = A_2\cos(\omega t + \varphi_2)$. Lưu ý rằng tần số góc $\omega$ phải giống nhau vì hai dao động cùng chu kì.
+    \item \textbf{Xác định pha ban đầu:} Xác định $\varphi_1$ và $\varphi_2$ từ hai phương trình.
+    \item \textbf{Tính độ lệch pha:} Độ lệch pha $\Delta\varphi$ được tính bằng hiệu các pha ban đầu: $\Delta\varphi = |\varphi_2 - \varphi_1|$.
+    \item \textbf{Phân loại độ lệch pha:}
+    \begin{itemize}
+        \item \textbf{Cùng pha:} Nếu $\Delta\varphi = 2k\pi$ (với $k \in \mathbb{Z}$). Hai dao động luôn cùng trạng thái.
+        \item \textbf{Ngược pha:} Nếu $\Delta\varphi = (2k+1)\pi$ (với $k \in \mathbb{Z}$). Hai dao động luôn ở trạng thái ngược nhau.
+        \item \textbf{Vuông pha:} Nếu $\Delta\varphi = (2k+1)\frac{\pi}{2}$ (với $k \in \mathbb{Z}$). Hai dao động vuông pha với nhau.
+        \item \textbf{Lệch pha bất kì:} Nếu $\Delta\varphi$ không thuộc các trường hợp trên.
+    \end{itemize}
+    \item \textbf{Lưu ý:} Đôi khi có thể lấy $\Delta\varphi = \varphi_2 - \varphi_1$ và xét dấu để biết dao động nào sớm pha hơn. Nếu $\Delta\varphi > 0$, dao động 2 sớm pha hơn dao động 1. Nếu $\Delta\varphi < 0$, dao động 2 trễ pha hơn dao động 1.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Hai vật dao động điều hòa cùng chu kì với phương trình: $x_1 = 4\cos(2\pi t)$ cm và $x_2 = 4\cos(2\pi t + \frac{\pi}{3})$ cm. Độ lệch pha giữa hai dao động là bao nhiêu?
+\loigiai{
+Từ phương trình dao động của hai vật:
+\begin{itemize}
+    \item Dao động 1: $x_1 = 4\cos(2\pi t)$ cm. Pha ban đầu $\varphi_1 = 0$ rad.
+    \item Dao động 2: $x_2 = 4\cos(2\pi t + \frac{\pi}{3})$ cm. Pha ban đầu $\varphi_2 = \frac{\pi}{3}$ rad.
+\end{itemize}
+Độ lệch pha giữa hai dao động là $\Delta\varphi = |\varphi_2 - \varphi_1| = |\frac{\pi}{3} - 0| = \frac{\pi}{3}$ rad.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 6. Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
+\subsubsection{Dạng: Xác định li độ và pha của dao động tại một thời điểm xác định}
 \begin{phuongphap}
+Để xác định li độ và pha của dao động tại một thời điểm xác định $t$, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Viết phương trình dao động:} Đảm bảo phương trình dao động được cho dưới dạng chuẩn $x = A\cos(\omega t + \varphi)$.
+    \item \textbf{Thay thế thời điểm $t$:} Thay giá trị thời điểm $t$ cần xác định vào phương trình li độ.
+    \item \textbf{Tính toán li độ ($x$):} Thực hiện phép tính để tìm giá trị của $x$. Đảm bảo đơn vị của $\omega t + \varphi$ là radian khi tính hàm $\cos$.
+    \item \textbf{Xác định pha của dao động:} Pha của dao động tại thời điểm $t$ là giá trị của biểu thức $(\omega t + \varphi)$. Đơn vị của pha là radian.
+    \item \textbf{Lưu ý về đơn vị:} Đảm bảo các đơn vị của $A$, $\omega$, $t$, $\varphi$ là nhất quán. Ví dụ, nếu $A$ là cm, thì $x$ sẽ là cm.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Hai dao động cùng tần số có pha ban đầu $\pi/6$ và $\pi/2.$ Độ lệch pha bằng bao nhiêu lần $\pi$?
+\loigiai{
+Pha ban đầu của dao động thứ nhất là $\varphi_1 = \frac{\pi}{6}$.
+Pha ban đầu của dao động thứ hai là $\varphi_2 = \frac{\pi}{2}$.
+Độ lệch pha giữa hai dao động là $\Delta\varphi = |\varphi_2 - \varphi_1| = |\frac{\pi}{2} - \frac{\pi}{6}| = |\frac{3\pi}{6} - \frac{\pi}{6}| = \frac{2\pi}{6} = \frac{\pi}{3}$.
+Để biểu diễn độ lệch pha dưới dạng "bao nhiêu lần $\pi$", ta có $\Delta\varphi = \frac{1}{3}\pi$.
+Vậy độ lệch pha bằng $\frac{1}{3}$ lần $\pi$.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 7. Xác định li độ và pha của dao động tại một thời điểm xác định}
+\subsubsection{Dạng: Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động}
 \begin{phuongphap}
+Để giải các bài toán liên quan đến mối liên hệ giữa dao động điều hòa và chuyển động tròn đều, đặc biệt là bài toán đếm số dao động, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Hiểu mối liên hệ:} Hình chiếu của một chất điểm chuyển động tròn đều lên một đường kính của quỹ đạo là một dao động điều hòa.
+    \begin{itemize}
+        \item Biên độ $A$ của dao động điều hòa bằng bán kính $R$ của chuyển động tròn đều ($A=R$).
+        \item Tần số góc $\omega$ của dao động điều hòa bằng tốc độ góc của chuyển động tròn đều.
+        \item Chu kì $T$ và tần số $f$ của dao động điều hòa bằng chu kì và tần số của chuyển động tròn đều.
+    \end{itemize}
+    \item \textbf{Xác định các đại lượng đặc trưng:} Từ các dữ kiện của chuyển động tròn đều (bán kính $R$, tốc độ góc $\omega$, chu kì $T$, tần số $f$), xác định các đại lượng tương ứng của dao động điều hòa.
+    \item \textbf{Đếm số dao động:}
+    \begin{itemize}
+        \item \textbf{Nếu biết thời gian $t$ và chu kì $T$:} Số dao động $N = \frac{t}{T}$.
+        \item \textbf{Nếu biết thời gian $t$ và tần số $f$:} Số dao động $N = f \cdot t$.
+        \item \textbf{Nếu biết góc quay $\Delta\alpha$ của chuyển động tròn đều:} Mỗi dao động toàn phần tương ứng với một vòng quay ($2\pi$ rad). Vậy số dao động $N = \frac{\Delta\alpha}{2\pi}$.
+    \end{itemize}
+    \item \textbf{Lưu ý về đơn vị:} Đảm bảo các đơn vị là nhất quán (ví dụ: thời gian tính bằng giây, góc tính bằng radian).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật dao động điều hòa có phương trình $x=4\cos(2\pi t+0)$ cm. Xác định số dao động vật thực hiện được trong 5 giây.
+\choice
+A. 5 dao động
+B. 10 dao động
+C. 2 dao động
+D. 1 dao động
+\True{B}
+\loigiai{
+Từ phương trình dao động $x=4\cos(2\pi t+0)$ cm, ta có tần số góc $\omega = 2\pi$ rad/s.
+Chu kì dao động là $T = \frac{2\pi}{\omega} = \frac{2\pi}{2\pi} = 1$ s.
+Số dao động vật thực hiện được trong thời gian $t = 5$ s là:
+$N = \frac{t}{T} = \frac{5}{1} = 5$ dao động.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 8. Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động}
+\subsubsection{Dạng: Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian}
 \begin{phuongphap}
+Để xác định chu kì, tần số và biên độ của dao động điều hòa từ các dữ kiện về quỹ đạo và thời gian, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định biên độ ($A$):}
+    \begin{itemize}
+        \item Nếu đề bài cho "chiều dài quỹ đạo" ($L$), thì biên độ $A = \frac{L}{2}$.
+        \item Nếu đề bài cho "khoảng cách giữa hai vị trí biên", thì đó chính là chiều dài quỹ đạo $L$, suy ra $A = \frac{L}{2}$.
+        \item Nếu đề bài liên quan đến chuyển động tròn đều, biên độ $A$ bằng bán kính $R$ của đường tròn.
+    \end{itemize}
+    \item \textbf{Xác định chu kì ($T$):}
+    \begin{itemize}
+        \item Nếu đề bài cho số dao động toàn phần ($N$) trong một khoảng thời gian ($t$), thì chu kì $T = \frac{t}{N}$.
+        \item Nếu đề bài cho thời gian vật đi từ một vị trí đến một vị trí khác, ta cần phân tích quãng đường đó tương ứng với bao nhiêu phần của chu kì. Ví dụ:
+            \begin{itemize}
+                \item Từ biên này sang biên kia: $t = \frac{T}{2}$.
+                \item Từ VTCB ra biên: $t = \frac{T}{4}$.
+                \item Từ VTCB đến $A/2$ theo chiều dương: $t = \frac{T}{12}$.
+                \item Từ $A/2$ đến biên dương: $t = \frac{T}{6}$.
+            \end{itemize}
+        \item Nếu đề bài liên quan đến chuyển động tròn đều, chu kì $T = \frac{2\pi}{\omega}$, với $\omega$ là tốc độ góc.
+    \end{itemize}
+    \item \textbf{Xác định tần số ($f$):} Sau khi có chu kì $T$, tần số được tính bằng $f = \frac{1}{T}$.
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp ($A$ (cm, m), $T$ (s), $f$ (Hz)).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một chất điểm chuyển động tròn đều với tốc độ góc bằng $5\pi$ rad/s trên đường tròn có bán kính bằng $6$ cm. Hình chiếu của chất điểm này lên một đường kính nằm ngang dao động điều hòa. Khảo sát các thông số của hình chiếu.
+\loigiai{
+Hình chiếu của chất điểm chuyển động tròn đều lên một đường kính là một dao động điều hòa.
+\begin{itemize}
+    \item \textbf{Biên độ ($A$):} Biên độ của dao động điều hòa bằng bán kính của đường tròn.
+    $A = R = 6$ cm.
+    \item \textbf{Tần số góc ($\omega$):} Tần số góc của dao động điều hòa bằng tốc độ góc của chuyển động tròn đều.
+    $\omega = 5\pi$ rad/s.
+    \item \textbf{Chu kì ($T$):}
+    $T = \frac{2\pi}{\omega} = \frac{2\pi}{5\pi} = 0,4$ s.
+    \item \textbf{Tần số ($f$):}
+    $f = \frac{1}{T} = \frac{1}{0,4} = 2,5$ Hz.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 9. Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian}
+\subsubsection{Dạng: Chưa có dạng}
 \begin{phuongphap}
+Đối với các bài tập chưa thuộc các dạng đã phân loại cụ thể, ta cần phân tích đề bài để xác định các đại lượng đã biết và đại lượng cần tìm. Sau đó, áp dụng các công thức cơ bản của dao động điều hòa một cách linh hoạt.
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và phân tích đề bài:} Xác định rõ các thông số đã cho (li độ, thời gian, số dao động, chiều dài quỹ đạo, vận tốc, gia tốc, v.v.) và các đại lượng cần tìm.
+    \item \textbf{Xác định các công thức liên quan:}
+    \begin{itemize}
+        \item Phương trình li độ: $x = A\cos(\omega t + \varphi)$
+        \item Phương trình vận tốc: $v = -\omega A\sin(\omega t + \varphi) = \omega A\cos(\omega t + \varphi + \frac{\pi}{2})$
+        \item Phương trình gia tốc: $a = -\omega^2 A\cos(\omega t + \varphi) = -\omega^2 x = \omega^2 A\cos(\omega t + \varphi + \pi)$
+        \item Hệ thức độc lập thời gian: $A^2 = x^2 + \frac{v^2}{\omega^2}$
+        \item Chu kì: $T = \frac{2\pi}{\omega}$
+        \item Tần số: $f = \frac{1}{T}$
+        \item Chiều dài quỹ đạo: $L = 2A$
+    \end{itemize}
+    \item \textbf{Lập kế hoạch giải:} Dựa vào các đại lượng đã biết và cần tìm, chọn lựa các công thức phù hợp để thiết lập các phương trình.
+    \item \textbf{Thực hiện tính toán:} Giải các phương trình để tìm các đại lượng cần thiết.
+    \item \textbf{Kiểm tra đơn vị và dấu:} Đảm bảo các đơn vị được sử dụng nhất quán và kết quả có dấu phù hợp với chiều chuyển động hoặc hướng của đại lượng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Một dao động điều hoà trên đoạn thẳng dài $10 \mathrm{cm}$ và thực hiện được 50 dao động trong thời gian $78,5 \mathrm{s}$. Tìm vận tốc và gia tốc của vật khi đi qua vị trí có li độ $x =$ -3 $\mathrm{cm}$ theo chiều dương.
+\loigiai{
+\begin{itemize}
+    \item \textbf{Xác định biên độ ($A$):}
+    Chiều dài quỹ đạo $L = 10$ cm.
+    Biên độ $A = \frac{L}{2} = \frac{10}{2} = 5$ cm.
 
+    \item \textbf{Xác định chu kì ($T$) và tần số góc ($\omega$):}
+    Số dao động $N = 50$ dao động trong thời gian $t = 78,5$ s.
+    Chu kì $T = \frac{t}{N} = \frac{78,5}{50} = 1,57$ s.
+    Tần số góc $\omega = \frac{2\pi}{T} = \frac{2\pi}{1,57} \approx 4$ rad/s. (Sử dụng $\pi \approx 3,14$ thì $T = \frac{2 \times 3,14}{4} = 1,57$ s).
+
+    \item \textbf{Tìm vận tốc ($v$) khi $x = -3$ cm theo chiều dương:}
+    Sử dụng hệ thức độc lập thời gian: $A^2 = x^2 + \frac{v^2}{\omega^2}$.
+    $\Rightarrow v^2 = \omega^2 (A^2 - x^2)$
+    $\Rightarrow v = \pm \omega \sqrt{A^2 - x^2}$
+    Vì vật đi theo chiều dương, nên $v > 0$.
+    $v = 4 \sqrt{5^2 - (-3)^2} = 4 \sqrt{25 - 9} = 4 \sqrt{16} = 4 \times 4 = 16$ cm/s.
+
+    \item \textbf{Tìm gia tốc ($a$) khi $x = -3$ cm:}
+    Gia tốc $a = -\omega^2 x$.
+    $a = -(4)^2 \times (-3) = -16 \times (-3) = 48$ cm/s$^2$.
+\end{itemize}
+Vậy, khi vật đi qua vị trí có li độ $x = -3$ cm theo chiều dương, vận tốc của vật là $16$ cm/s và gia tốc của vật là $48$ cm/s$^2$.
+}
+\end{vidumau}
