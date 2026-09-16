@@ -3,18 +3,124 @@
 % Chương: Chương I. Vật lí nhiệt
 % Bài: L12C1 Bài 5. Nhiệt nóng chảy riêng
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
+\subsubsection{Nhiệt nóng chảy riêng}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+Các em đã được học về nhiệt lượng thu vào hoặc tỏa ra khi một vật thay đổi nhiệt độ mà không thay đổi trạng thái. Công thức tính nhiệt lượng này là $Q = mc\Delta T$, trong đó $m$ là khối lượng, $c$ là nhiệt dung riêng và $\Delta T$ là độ biến thiên nhiệt độ.
 \end{emdahoc}
+
+\begin{kienthuc}
+Khi một chất rắn nóng chảy, nó thu nhiệt lượng mà không làm tăng nhiệt độ. Nhiệt lượng này được gọi là nhiệt nóng chảy.
+\begin{itemize}
+    \item \textbf{Nhiệt nóng chảy riêng} ($L$) của một chất là nhiệt lượng cần cung cấp để 1 kg chất đó nóng chảy hoàn toàn ở nhiệt độ nóng chảy của nó.
+    \item Đơn vị SI của nhiệt nóng chảy riêng là \textbf{Joule trên kilôgam (J/kg)}.
+    \item Công thức tính nhiệt lượng $Q$ cần thiết để nóng chảy hoàn toàn một khối lượng $m$ của một chất là:
+    \[ Q = mL \]
+    Trong đó:
+    \begin{itemize}
+        \item $Q$ là nhiệt lượng thu vào (J).
+        \item $m$ là khối lượng của chất (kg).
+        \item $L$ là nhiệt nóng chảy riêng của chất (J/kg).
+    \end{itemize}
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcobiet}
+Nhiệt nóng chảy riêng của các chất khác nhau là khác nhau. Ví dụ, nước đá có nhiệt nóng chảy riêng khoảng $3,34 \times 10^5$ J/kg, trong khi chì có nhiệt nóng chảy riêng khoảng $2,5 \times 10^4$ J/kg. Điều này cho thấy để nóng chảy cùng một khối lượng nước đá cần nhiệt lượng lớn hơn nhiều so với chì.
+\end{emcobiet}
+
+\subsubsection{Bài toán nóng chảy và đông đặc}
+
+\begin{kienthuc}
+Các bài toán liên quan đến nóng chảy và đông đặc thường yêu cầu tính toán nhiệt lượng tổng hợp khi một chất trải qua nhiều giai đoạn: tăng nhiệt độ, nóng chảy (hoặc đông đặc), và tiếp tục tăng/giảm nhiệt độ.
+\begin{itemize}
+    \item \textbf{Giai đoạn 1: Tăng nhiệt độ (hoặc giảm nhiệt độ) của chất rắn}
+    Nhiệt lượng thu vào (hoặc tỏa ra): $Q_1 = m c_r \Delta T_r$, với $c_r$ là nhiệt dung riêng của chất rắn.
+    \item \textbf{Giai đoạn 2: Nóng chảy hoàn toàn (hoặc đông đặc hoàn toàn)}
+    Nhiệt lượng thu vào (hoặc tỏa ra): $Q_2 = mL$.
+    \item \textbf{Giai đoạn 3: Tăng nhiệt độ (hoặc giảm nhiệt độ) của chất lỏng}
+    Nhiệt lượng thu vào (hoặc tỏa ra): $Q_3 = m c_l \Delta T_l$, với $c_l$ là nhiệt dung riêng của chất lỏng.
+\end{itemize}
+\textbf{Tổng nhiệt lượng} trong quá trình chuyển pha là tổng nhiệt lượng của từng giai đoạn:
+\[ Q_{tổng} = Q_1 + Q_2 + Q_3 + \dots \]
+\end{kientuc}
+
+\begin{hoatdong}
+\chuy{Bài toán nóng chảy một phần và đông đặc:}
+Xét một khối nước đá ở nhiệt độ dưới $0^\circ$C được đặt vào một bình chứa nước ở nhiệt độ trên $0^\circ$C.
+\begin{itemize}
+    \item \textbf{Phát biểu 1:} Nếu nhiệt lượng do nước tỏa ra không đủ để làm nước đá tăng nhiệt độ đến $0^\circ$C, thì nước đá sẽ không nóng chảy và nhiệt độ cuối cùng của hệ sẽ nhỏ hơn $0^\circ$C.
+    \item \textbf{Phát biểu 2:} Nếu nhiệt lượng do nước tỏa ra đủ để làm nước đá tăng nhiệt độ đến $0^\circ$C và nóng chảy một phần, thì nhiệt độ cuối cùng của hệ sẽ là $0^\circ$C.
+    \item \textbf{Phát biểu 3:} Nếu nhiệt lượng do nước tỏa ra đủ để làm nước đá nóng chảy hoàn toàn và tiếp tục tăng nhiệt độ, thì nhiệt độ cuối cùng của hệ sẽ lớn hơn $0^\circ$C.
+\end{itemize}
+Các phát biểu trên đều đúng và mô tả các trường hợp có thể xảy ra trong bài toán nóng chảy và đông đặc. Để giải quyết các bài toán này, cần xác định rõ các giai đoạn chuyển nhiệt và trạng thái cuối cùng của hệ.
+\end{hoatdong}
+
+\subsubsection{Bài toán công suất, hiệu suất và thời gian đun}
+
+\begin{kienthuc}
+Trong các bài toán thực tế, nhiệt lượng thường được cung cấp bởi một nguồn nhiệt có công suất nhất định trong một khoảng thời gian.
+\begin{itemize}
+    \item \textbf{Công suất của nguồn nhiệt} ($P$): Là nhiệt lượng mà nguồn cung cấp trong một đơn vị thời gian. Đơn vị SI là Watt (W) hoặc Joule trên giây (J/s).
+    \item \textbf{Nhiệt lượng cung cấp} ($Q_{cung cấp}$): Nếu nguồn nhiệt hoạt động với công suất $P$ trong thời gian $t$, nhiệt lượng cung cấp là:
+    \[ Q_{cung cấp} = P \cdot t \]
+    \item \textbf{Hiệu suất} ($H$): Là tỉ số giữa nhiệt lượng có ích ($Q_{có ích}$) và nhiệt lượng toàn phần cung cấp ($Q_{cung cấp}$). Hiệu suất thường được biểu diễn dưới dạng phần trăm.
+    \[ H = \frac{Q_{có ích}}{Q_{cung cấp}} \times 100\% \]
+    Hoặc $Q_{có ích} = H \cdot Q_{cung cấp}$.
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+\chuy{Tính nhiệt lượng tổng hợp có chuyển pha:}
+Cho bốn nhận định:
+\begin{itemize}
+    \item \textbf{(1) Tổng nhiệt lượng bằng tổng nhiệt lượng của từng giai đoạn.}
+    Nhận định này \chuy{đúng}. Khi một chất trải qua nhiều giai đoạn (tăng nhiệt độ, nóng chảy, tăng nhiệt độ tiếp), tổng nhiệt lượng thu vào (hoặc tỏa ra) là tổng đại số của nhiệt lượng trong mỗi giai đoạn.
+    \item \textbf{(2) Có thể bỏ qua nhiệt lượng làm tăng nhiệt độ trước khi nóng chảy.}
+    Nhận định này \chuy{sai}. Nhiệt lượng làm tăng nhiệt độ của chất rắn từ nhiệt độ ban đầu đến nhiệt độ nóng chảy là một phần quan trọng của tổng nhiệt lượng và không thể bỏ qua, trừ khi nhiệt độ ban đầu đã là nhiệt độ nóng chảy.
+    \item \textbf{(3) Cần kiểm tra đơn vị và điều kiện áp dụng khi xử lí dạng “Tính nhiệt lượng tổng hợp có chuyển pha”.}
+    Nhận định này \chuy{đúng}. Việc kiểm tra đơn vị (J, kg, J/kg, J/kg.K) và điều kiện áp dụng (ví dụ: nhiệt độ nóng chảy, nhiệt độ sôi, nhiệt dung riêng của từng pha) là cực kỳ quan trọng để đảm bảo kết quả chính xác.
+\end{itemize}
+\end{hoatdong}
+
+\subsubsection{Thực nghiệm xác định nhiệt nóng chảy riêng}
+
+\begin{kienthuc}
+Để xác định nhiệt nóng chảy riêng của một chất bằng thực nghiệm, người ta thường sử dụng phương pháp trao đổi nhiệt.
+\begin{itemize}
+    \item \textbf{Nguyên tắc:} Cung cấp một nhiệt lượng xác định cho một khối lượng chất cần nghiên cứu và đo các thông số liên quan đến quá trình nóng chảy.
+    \item \textbf{Thiết bị:} Bình cách nhiệt (nhiệt lượng kế), nguồn nhiệt (dây nung, bếp điện), nhiệt kế, cân, đồng hồ bấm giờ.
+    \item \textbf{Phương pháp:}
+    \begin{enumerate}
+        \item Đặt một khối lượng $m$ chất rắn (ví dụ: nước đá) ở nhiệt độ nóng chảy ($0^\circ$C) vào nhiệt lượng kế.
+        \item Cung cấp nhiệt lượng cho chất rắn bằng một dây nung có công suất $P$ trong thời gian $t$.
+        \item Đo khối lượng chất rắn đã nóng chảy $m_{nc}$.
+        \item Nhiệt lượng do dây nung cung cấp là $Q_{cung cấp} = P \cdot t$.
+        \item Nhiệt lượng có ích dùng để nóng chảy chất rắn là $Q_{có ích} = m_{nc} \cdot L$.
+        \item Nếu bỏ qua hao phí nhiệt, ta có $Q_{cung cấp} = Q_{có ích}$, suy ra $P \cdot t = m_{nc} \cdot L$.
+        \item Từ đó, nhiệt nóng chảy riêng có thể được tính: $L = \frac{P \cdot t}{m_{nc}}$.
+    \end{enumerate}
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+\chuy{Thực nghiệm xác định nhiệt nóng chảy riêng:}
+Phân tích nhận định sau và sửa lại nếu sai: “Mọi nhiệt lượng của dây nung đều chắc chắn chỉ dùng để nóng chảy mẫu.”
+\begin{itemize}
+    \item \textbf{Phân tích:} Nhận định này \chuy{sai}.
+    \item \textbf{Sửa lại:} Trong thực tế, không phải mọi nhiệt lượng do dây nung cung cấp đều được dùng để nóng chảy mẫu. Một phần nhiệt lượng sẽ bị hao phí ra môi trường xung quanh (do truyền nhiệt qua thành bình, bức xạ nhiệt), một phần có thể làm nóng nhiệt lượng kế hoặc các dụng cụ khác. Do đó, nhiệt lượng có ích dùng để nóng chảy mẫu thường nhỏ hơn nhiệt lượng toàn phần do dây nung cung cấp. Để giảm thiểu sai số, cần sử dụng bình cách nhiệt tốt và thực hiện thí nghiệm cẩn thận.
+\end{itemize}
+\end{hoatdong}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Vận dụng kiến thức về nhiệt nóng chảy riêng để giải thích các hiện tượng tự nhiên như sự tan chảy của băng tuyết, quá trình đông đặc của nước.
+    \item Thiết kế và thực hiện các thí nghiệm đơn giản để xác định nhiệt nóng chảy riêng của một số chất thông dụng.
+    \item Phân tích và đánh giá hiệu suất của các thiết bị làm nóng hoặc làm lạnh có liên quan đến quá trình chuyển pha.
+\end{itemize}
 \end{emcothe}
