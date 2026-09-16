@@ -2,56 +2,128 @@
 % Lớp: 11
 % Chương: Chương I. Hàm số lượng giác và phương trình lượng giác
 % Bài: Bài 1. Giá trị lượng giác của góc lượng giác
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Chuyển đổi số đo góc giữa độ và radian}
+\subsubsection{Dạng: Chuyển đổi số đo góc giữa độ và radian}
 \begin{phuongphap}
+Để chuyển đổi số đo góc giữa độ và radian, ta sử dụng các công thức sau:
+\begin{itemize}
+    \item Để chuyển từ độ sang radian: $ \alpha_{rad} = \alpha_{độ} \cdot \frac{\pi}{180^\circ} $.
+    \item Để chuyển từ radian sang độ: $ \alpha_{độ} = \alpha_{rad} \cdot \frac{180^\circ}{\pi} $.
+\end{itemize}
+\textbf{Lưu ý:}
+\begin{itemize}
+    \item Số đo góc theo radian thường không có đơn vị hoặc có đơn vị là "rad".
+    \item Số đo góc theo độ có đơn vị là "$^\circ$".
+\end{itemize}
+\end{phuongphap}
+\begin{vidumau}
+Đổi số đo của góc $120^\circ$ sang radian. Khẳng định sau đây \textbf{ĐÚNG} hay $\textbf{SAI}$?
+\choice
+A. $120^\circ = \frac{2\pi}{3}$ rad \True
+B. $120^\circ = \frac{\pi}{3}$ rad
+C. $120^\circ = \frac{3\pi}{2}$ rad
+D. $120^\circ = \frac{2\pi}{5}$ rad
+\loigiai{
+Để đổi $120^\circ$ sang radian, ta áp dụng công thức: $ \alpha_{rad} = \alpha_{độ} \cdot \frac{\pi}{180^\circ} $.
+Thay $ \alpha_{độ} = 120^\circ $ vào công thức, ta được:
+$ 120^\circ \cdot \frac{\pi}{180^\circ} = \frac{120\pi}{180} = \frac{2\pi}{3} $ rad.
+Vậy, $120^\circ = \frac{2\pi}{3}$ rad.
+Khẳng định A là đúng.
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Xác định góc có cùng điểm biểu diễn trên đường tròn lượng giác}
+\begin{phuongphap}
+Hai góc lượng giác $\alpha$ và $\beta$ có cùng điểm biểu diễn trên đường tròn lượng giác khi và chỉ khi hiệu của chúng là một bội số nguyên của $2\pi$ (nếu tính theo radian) hoặc $360^\circ$ (nếu tính theo độ).
+Tức là:
+\begin{itemize}
+    \item Nếu tính theo radian: $ \beta = \alpha + k2\pi $, với $k \in \mathbb{Z}$.
+    \item Nếu tính theo độ: $ \beta = \alpha + k360^\circ $, với $k \in \mathbb{Z}$.
+\end{itemize}
+Để kiểm tra hai góc có cùng điểm biểu diễn hay không, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item Đưa cả hai góc về cùng một đơn vị đo (độ hoặc radian).
+    \item Tính hiệu của hai góc đó.
+    \item Kiểm tra xem hiệu đó có phải là bội số nguyên của $2\pi$ (hoặc $360^\circ$) hay không.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Các cặp góc sau có cùng điểm biểu diễn trên đường tròn lượng giác. Khẳng định sau đây \textbf{ĐÚNG} hay $\textbf{SAI}$?
+Cặp góc $ \frac{\pi}{4} $ và $ \frac{9\pi}{4} $ có cùng điểm biểu diễn trên đường tròn lượng giác.
+\choice
+A. ĐÚNG \True
+B. SAI
+\loigiai{
+Để kiểm tra xem hai góc $ \frac{\pi}{4} $ và $ \frac{9\pi}{4} $ có cùng điểm biểu diễn trên đường tròn lượng giác hay không, ta tính hiệu của chúng:
+$ \frac{9\pi}{4} - \frac{\pi}{4} = \frac{8\pi}{4} = 2\pi $.
+Vì hiệu của hai góc là $2\pi$, tức là $1 \cdot 2\pi$ (với $k=1 \in \mathbb{Z}$), nên hai góc này có cùng điểm biểu diễn trên đường tròn lượng giác.
+Khẳng định A là đúng.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Xác định góc có cùng điểm biểu diễn trên đường tròn}
+\subsubsection{Dạng: Xác định góc phần tư của góc lượng giác}
 \begin{phuongphap}
+Để xác định góc phần tư của một góc lượng giác $\alpha$, ta thực hiện các bước sau:
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item Đưa góc $\alpha$ về dạng $ \alpha_0 + k2\pi $ (hoặc $ \alpha_0 + k360^\circ $), trong đó $0 \le \alpha_0 < 2\pi$ (hoặc $0^\circ \le \alpha_0 < 360^\circ$).
+    \item Dựa vào giá trị của $\alpha_0$ để xác định góc phần tư:
+    \begin{itemize}
+        \item Góc phần tư I: $0 < \alpha_0 < \frac{\pi}{2}$ (hoặc $0^\circ < \alpha_0 < 90^\circ$).
+        \item Góc phần tư II: $\frac{\pi}{2} < \alpha_0 < \pi$ (hoặc $90^\circ < \alpha_0 < 180^\circ$).
+        \item Góc phần tư III: $\pi < \alpha_0 < \frac{3\pi}{2}$ (hoặc $180^\circ < \alpha_0 < 270^\circ$).
+        \item Góc phần tư IV: $\frac{3\pi}{2} < \alpha_0 < 2\pi$ (hoặc $270^\circ < \alpha_0 < 360^\circ$).
+    \end{itemize}
+    \textbf{Lưu ý:} Các góc $0, \frac{\pi}{2}, \pi, \frac{3\pi}{2}, 2\pi$ (hoặc $0^\circ, 90^\circ, 180^\circ, 270^\circ, 360^\circ$) nằm trên các trục tọa độ và không thuộc bất kỳ góc phần tư nào.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Góc $ \frac{7\pi}{3} $ thuộc góc phần tư thứ mấy? Các mệnh đề sau đây \textbf{ĐÚNG} hay $\textbf{SAI}$?
+Góc $ \frac{7\pi}{3} $ thuộc góc phần tư thứ I.
+\choice
+A. ĐÚNG \True
+B. SAI
+\loigiai{
+Để xác định góc phần tư của góc $ \frac{7\pi}{3} $, ta đưa nó về dạng $ \alpha_0 + k2\pi $ với $0 \le \alpha_0 < 2\pi$.
+Ta có: $ \frac{7\pi}{3} = \frac{6\pi + \pi}{3} = \frac{6\pi}{3} + \frac{\pi}{3} = 2\pi + \frac{\pi}{3} $.
+Ở đây, $ \alpha_0 = \frac{\pi}{3} $ và $k=1$.
+Vì $0 < \frac{\pi}{3} < \frac{\pi}{2}$, nên góc $ \frac{7\pi}{3} $ có điểm biểu diễn nằm trong góc phần tư thứ I.
+Khẳng định A là đúng.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Xác định góc phần tư của góc lượng giác}
+\subsubsection{Dạng: Tính độ dài cung tròn khi biết bán kính và số đo góc}
 \begin{phuongphap}
-\begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
-\end{enumerate}
-\end{phuongphap}
+Để tính độ dài cung tròn $l$ khi biết bán kính $R$ và số đo góc ở tâm $\alpha$, ta sử dụng công thức:
+$ l = R \cdot \alpha $
+Trong đó:
+\begin{itemize}
+    \item $l$: độ dài cung tròn.
+    \item $R$: bán kính của đường tròn.
+    \item $\alpha$: số đo góc ở tâm chắn cung đó, \textbf{phải được tính bằng radian}.
+\end{itemize}
+Nếu số đo góc được cho bằng độ, ta phải chuyển đổi sang radian trước khi áp dụng công thức: $ \alpha_{rad} = \alpha_{độ} \cdot \frac{\pi}{180^\circ} $.
+\end{phuphuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Cho đường tròn có bán kính bằng $9$ (cm). Tìm số đo (theo radian) của cung có độ dài $3\pi$ (cm).
+\choice
+A. $ \frac{\pi}{3} $ \True
+B. $ \frac{\pi}{2} $
+C. $ \pi $
+D. $ \frac{2\pi}{3} $
+\loigiai{
+Gọi $R$ là bán kính đường tròn, $l$ là độ dài cung tròn và $\alpha$ là số đo góc ở tâm (theo radian).
+Theo đề bài, ta có:
+$R = 9$ cm
+$l = 3\pi$ cm
+Công thức tính độ dài cung tròn là $l = R \cdot \alpha$.
+Thay các giá trị đã biết vào công thức, ta được:
+$3\pi = 9 \cdot \alpha$
+Để tìm $\alpha$, ta chia cả hai vế cho $9$:
+$ \alpha = \frac{3\pi}{9} = \frac{\pi}{3} $ (radian).
+Vậy, số đo của cung là $ \frac{\pi}{3} $ radian.
+}
 \end{vidumau}
-
-\subsubsection{Dạng 4. Tính độ dài cung tròn khi biết bán kính và số đo góc}
-\begin{phuongphap}
-\begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
-\end{enumerate}
-\end{phuongphap}
-\begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
-
