@@ -3,18 +3,152 @@
 % Chương: Chương I. Hàm số lượng giác và phương trình lượng giác
 % Bài: Bài 1. Giá trị lượng giác của góc lượng giác
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
+Tuyệt vời! Dưới đây là bản soạn lý thuyết cho Bài 1. Giá trị lượng giác của góc lượng giác, theo đúng yêu cầu của bạn, với giọng văn SGK, đầy đủ các mục và sửa các lỗi/thiếu sót trong TEX cũ.
+
+```latex
+% Môn: Toán
+% Lớp: 11
+% Chương: Chương I. Hàm số lượng giác và phương trình lượng giác
+% Bài: Bài 1. Giá trị lượng giác của góc lượng giác
+% Loại: Lý thuyết
+% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Khái niệm về góc trong hình học phẳng.
+    \item Các đơn vị đo góc: độ.
+    \item Các kiến thức cơ bản về đường tròn.
+\end{itemize}
 \end{emdahoc}
+
+\subsubsection{Góc lượng giác}
+
+\begin{hoatdong}
+Trên mặt phẳng tọa độ $Oxy$, cho tia $Ou$ trùng với tia $Ox$. Quay tia $Ou$ quanh gốc $O$ theo chiều ngược kim đồng hồ một góc $30^\circ$ để được tia $Ov$. Nếu tiếp tục quay tia $Ov$ thêm một góc $60^\circ$ theo chiều ngược kim đồng hồ thì tia cuối cùng sẽ trùng với tia nào? Nếu quay tia $Ou$ theo chiều kim đồng hồ một góc $45^\circ$ thì tia cuối cùng sẽ nằm ở góc phần tư nào?
+\end{hoatdong}
+
+\begin{kienthuc}
+\textbf{1. Khái niệm góc lượng giác}
+
+Trong mặt phẳng tọa độ $Oxy$, cho hai tia $Ou$ và $Ov$ có chung gốc $O$.
+\begin{itemize}
+    \item Nếu tia $Ou$ quay quanh gốc $O$ theo một chiều nhất định đến trùng với tia $Ov$, ta nói tia $Ou$ đã tạo ra một \chuy{góc lượng giác} $(Ou, Ov)$.
+    \item Tia $Ou$ được gọi là \chuy{tia đầu}, tia $Ov$ được gọi là \chuy{tia cuối}.
+    \item Chiều quay ngược chiều kim đồng hồ được quy ước là \chuy{chiều dương}. Chiều quay cùng chiều kim đồng hồ được quy ước là \chuy{chiều âm}.
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcobiet}
+Một góc lượng giác có thể có nhiều số đo khác nhau, tùy thuộc vào số vòng quay và chiều quay.
+\end{emcobiet}
+
+\subsubsection{Đơn vị đo góc và độ dài cung tròn}
+
+\begin{hoatdong}
+Một đường tròn có bán kính $R=1$ (đơn vị). Hãy tính chu vi của đường tròn này. Nếu ta lấy một cung tròn có độ dài bằng bán kính $R$, thì cung đó chắn một góc ở tâm bằng bao nhiêu độ?
+\end{hoatdong}
+
+\begin{kienthuc}
+\textbf{1. Đơn vị radian}
+
+\begin{itemize}
+    \item Trên đường tròn tùy ý, cung có độ dài bằng bán kính được gọi là \chuy{cung có số đo 1 radian}.
+    \item Góc ở tâm chắn cung 1 radian được gọi là \chuy{góc có số đo 1 radian}. Kí hiệu là $1 \text{ rad}$.
+\end{itemize}
+
+\textbf{2. Mối liên hệ giữa độ và radian}
+
+Ta có mối liên hệ sau:
+\begin{itemize}
+    \item $180^\circ = \pi \text{ rad}$
+    \item $1^\circ = \frac{\pi}{180} \text{ rad}$
+    \item $1 \text{ rad} = \left(\frac{180}{\pi}\right)^\circ \approx 57^\circ 17'45''$
+\end{itemize}
+
+\textbf{3. Công thức chuyển đổi}
+\begin{itemize}
+    \item Để đổi từ độ sang radian, ta nhân số đo độ với $\frac{\pi}{180}$.
+    \item Để đổi từ radian sang độ, ta nhân số đo radian với $\frac{180}{\pi}$.
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcobiet}
+Khi viết số đo góc bằng radian, người ta thường bỏ qua chữ "rad". Ví dụ, $\frac{\pi}{2}$ được hiểu là $\frac{\pi}{2}$ radian.
+\end{emcobiet}
+
+\begin{kienthuc}
+\textbf{4. Độ dài cung tròn}
+
+Trên đường tròn bán kính $R$, cung có số đo $\alpha$ (radian) có độ dài $l$ được tính theo công thức:
+$$l = R \cdot \alpha$$
+\end{kienthuc}
+
+\subsubsection{Đường tròn lượng giác}
+
+\begin{hoatdong}
+Trên mặt phẳng tọa độ $Oxy$, vẽ một đường tròn tâm $O$, bán kính $R=1$. Lấy điểm $A(1;0)$. Nếu ta quay tia $OA$ một góc $90^\circ$ theo chiều dương, điểm $A$ sẽ di chuyển đến vị trí nào?
+\end{hoatdong}
+
+\begin{kienthuc}
+\textbf{1. Định nghĩa đường tròn lượng giác}
+
+Trong mặt phẳng tọa độ $Oxy$, \chuy{đường tròn lượng giác} là đường tròn tâm $O$ (gốc tọa độ), bán kính $R=1$.
+\begin{itemize}
+    \item Điểm $A(1;0)$ được chọn làm \chuy{điểm gốc} của đường tròn lượng giác.
+    \item Chiều dương là chiều ngược kim đồng hồ.
+\end{itemize}
+\end{kientuc}
+
+\begin{kienthuc}
+\textbf{2. Điểm biểu diễn của góc lượng giác trên đường tròn lượng giác}
+
+Với mỗi số thực $\alpha$, có một điểm $M$ duy nhất trên đường tròn lượng giác sao cho số đo của góc lượng giác $(OA, OM)$ bằng $\alpha$. Điểm $M$ này được gọi là \chuy{điểm biểu diễn của góc lượng giác $\alpha$}.
+\end{kienthuc}
+
+\begin{emcobiet}
+Hai góc lượng giác có số đo khác nhau nhưng có thể có cùng điểm biểu diễn trên đường tròn lượng giác. Ví dụ, góc $30^\circ$ và $390^\circ$ có cùng điểm biểu diễn.
+\end{emcobiet}
+
+\begin{kienthuc}
+\textbf{3. Các góc có cùng điểm biểu diễn}
+
+Hai góc lượng giác $\alpha$ và $\beta$ có cùng điểm biểu diễn trên đường tròn lượng giác khi và chỉ khi hiệu của chúng là một bội số nguyên của $2\pi$ (hoặc $360^\circ$). Tức là:
+$$\beta = \alpha + k2\pi \quad (k \in \mathbb{Z})$$
+hoặc
+$$\beta = \alpha + k360^\circ \quad (k \in \mathbb{Z})$$
+\end{kienthuc}
+
+\subsubsection{Xác định góc phần tư của góc lượng giác}
+
+\begin{hoatdong}
+Trên đường tròn lượng giác, điểm $A(1;0)$ nằm ở đâu? Điểm $B(0;1)$ nằm ở đâu? Điểm $C(-1;0)$ nằm ở đâu? Điểm $D(0;-1)$ nằm ở đâu?
+\end{hoatdong}
+
+\begin{kienthuc}
+\textbf{1. Các góc phần tư}
+
+Đường tròn lượng giác chia mặt phẳng tọa độ thành bốn góc phần tư:
+\begin{itemize}
+    \item \chuy{Góc phần tư thứ I}: Các điểm $M(x;y)$ với $x>0, y>0$. Các góc $\alpha$ có điểm biểu diễn nằm trong góc phần tư này thỏa mãn $k2\pi < \alpha < \frac{\pi}{2} + k2\pi$ (hoặc $k360^\circ < \alpha < 90^\circ + k360^\circ$).
+    \item \chuy{Góc phần tư thứ II}: Các điểm $M(x;y)$ với $x<0, y>0$. Các góc $\alpha$ có điểm biểu diễn nằm trong góc phần tư này thỏa mãn $\frac{\pi}{2} + k2\pi < \alpha < \pi + k2\pi$ (hoặc $90^\circ + k360^\circ < \alpha < 180^\circ + k360^\circ$).
+    \item \chuy{Góc phần tư thứ III}: Các điểm $M(x;y)$ với $x<0, y<0$. Các góc $\alpha$ có điểm biểu diễn nằm trong góc phần tư này thỏa mãn $\pi + k2\pi < \alpha < \frac{3\pi}{2} + k2\pi$ (hoặc $180^\circ + k360^\circ < \alpha < 270^\circ + k360^\circ$).
+    \item \chuy{Góc phần tư thứ IV}: Các điểm $M(x;y)$ với $x>0, y<0$. Các góc $\alpha$ có điểm biểu diễn nằm trong góc phần tư này thỏa mãn $\frac{3\pi}{2} + k2\pi < \alpha < 2\pi + k2\pi$ (hoặc $270^\circ + k360^\circ < \alpha < 360^\circ + k360^\circ$).
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcobiet}
+Các điểm nằm trên các trục tọa độ (ví dụ: $0, \frac{\pi}{2}, \pi, \frac{3\pi}{2}, 2\pi, \dots$) không thuộc bất kỳ góc phần tư nào.
+\end{emcobiet}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Sử dụng đường tròn lượng giác để biểu diễn các góc và xác định vị trí của chúng.
+    \item Vận dụng các công thức chuyển đổi giữa độ và radian để giải quyết các bài toán thực tế.
+    \item Xác định được góc phần tư của một góc lượng giác cho trước.
+    \item Nhận biết các góc có cùng điểm biểu diễn trên đường tròn lượng giác.
+\end{itemize}
 \end{emcothe}
