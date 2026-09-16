@@ -6,14 +6,14 @@
         "updated": "2026-09-09T01:33:28Z"
       },
       "pp": {
-        "status": "pending",
-        "updated": "2026-09-15T12:26:11Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     },
     "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề": {
       "lt": {
-        "status": "pending",
-        "updated": "2026-09-09T01:12:25Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       },
       "pp": {
         "status": "approved",
@@ -26,24 +26,28 @@
         "updated": "2026-09-11T05:16:19Z"
       },
       "pp": {
-        "status": "pending",
-        "updated": "2026-09-11T04:30:14Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     },
     "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế": {
       "pp": {
-        "status": "pending",
-        "updated": "2026-09-05T04:47:59Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       },
       "lt": {
-        "status": "pending",
-        "updated": "2026-09-05T04:16:29Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     },
     "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn": {
       "lt": {
         "status": "approved",
         "updated": "2026-09-03T15:19:42Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     },
     "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng": {
@@ -70,6 +74,10 @@
       "lt": {
         "status": "approved",
         "updated": "2026-09-05T05:37:13Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     },
     "ngan-hang/Vật lý/Lớp 10/Chương I. Mở đầu/L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo": {
@@ -102,10 +110,734 @@
         "updated": "2026-09-16T01:10:37Z"
       }
     },
+    "ngan-hang/Toán/Lớp 10/Chương IV. Vectơ/Bài 7. Các khái niệm mở đầu": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 10/Chương IV. Vectơ/Bài 8. Tổng và hiệu của hai vectơ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 10/Chương IV. Vectơ/Bài 9. Tích của một vectơ với một số": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 1. Giá trị lượng giác của góc lượng giác": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 2. Công thức lượng giác": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 3. Hàm số lượng giác": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 11/Chương I. Hàm số lượng giác và phương trình lượng giác/Bài 4. Phương trình lượng giác cơ bản": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/Bài 1. Tính đơn điệu và cực trị của hàm số": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/OTC1-De1": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 12/Chương I. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số/OTC1-De2": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 5. Tốc độ và vận tốc": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương II. Động học/L10C2 Bài 8. Chuyển động biến đổi. Gia tốc": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 14. Định luật 1 Newton": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 15. Định luật 2 Newton": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 16. Định luật 3 Newton": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 17. Trọng lực và lực căng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 18. Lực ma sát": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 19. Lực cản và lực nâng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 21. Mômen lực. Cân bằng của vật rắn": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 22. Thực hành- Tổng hợp lực": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 28. Động lượng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 29. Định luật bảo toàn động lượng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương V. Động lượng/L10C5 Bài 30. Thực hành- Xác định động lượng của vật trước và sau va chạm": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 31. Động học của chuyển động tròn đều": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương VI. Chuyển động tròn/L10C6 Bài 32. Lực hướng tâm và gia tốc hướng tâm": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 10/Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng/L10C7 Bài 33. Biến dạng của vật rắn": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 10. Thực hành- Đo tần số của sóng âm": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 11. Sóng điện từ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 12. Giao thoa sóng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 13. Sóng dừng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 14. Bài tập về sóng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 15. Thực hành- Đo tốc độ truyền âm": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 8. Mô tả sóng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương II. Sóng/L11C2 Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 16. Lực tương tác giữa hai điện tích": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 17. Khái niệm điện trường": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 18. Điện trường đều": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 19. Thế năng điện": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 20. Điện thế": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương III. Điện trường/L11C3 Bài 21. Tụ điện": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 22. Cường độ dòng điện": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 23. Điện trở. Định luật Ohm": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 24. Nguồn điện": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 11/Chương IV. Dòng điện. Mạch điện/L11C4 Bài 25. Năng lượng điện và công suất điện": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
     "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 5. Nhiệt nóng chảy riêng": {
       "lt": {
-        "status": "pending",
-        "updated": "2026-09-16T11:56:37Z"
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 6. Nhiệt hóa hơi riêng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 11. Phương trình trạng thái của khí lí tưởng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 13. Bài tập về khí lí tưởng": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 9. Định luật Boyle": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 14. Từ trường": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 16. Từ thông. Hiện tượng cảm ứng điện từ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 17. Máy phát điện xoay chiều": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 18. Ứng dụng hiện tượng cảm ứng điện từ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 19. Điện từ trường. Mô hình sóng điện từ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương III. Từ trường/L12C3 Bài 20. Bài tập về từ trường": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 21. Cấu trúc hạt nhân": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 22. Phản ứng hạt nhân và năng lượng liên kết": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 23. Hiện tượng phóng xạ": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 24. Công nghiệp hạt nhân": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Vật lý/Lớp 12/Chương IV. Vật lí hạt nhân/L12C4 Bài 25. Bài tập về vật lí hạt nhân": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/_Chua_phan_loai": {
+      "lt": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-09-16T11:57:22Z"
       }
     }
   }
