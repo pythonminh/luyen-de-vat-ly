@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 173,
-  "total_questions": 11748,
+  "total_questions": 11745,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3794,15 +3794,15 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "questions": 20,
-      "count": 20,
+      "questions": 17,
+      "count": 17,
       "dang": {
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 20
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 17
       },
       "dang_kinds": {
         "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
           "TN": 12,
-          "DS": 5,
+          "DS": 2,
           "TLN": 1,
           "TL": 2
         }
