@@ -2,17 +2,45 @@
 % Lớp: 12
 % Chương: Chương I. Vật lí nhiệt
 % Bài: L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
+Tuyệt vời! Dưới đây là bản chỉnh sửa file `pp.tex` theo yêu cầu, với các phương pháp giải cụ thể cho từng dạng bài tập, không sử dụng 3 bước chung chung.
+
+```latex
+% Môn: Vật lý
+% Lớp: 12
+% Chương: Chương I. Vật lí nhiệt
+% Bài: L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế
+% Loại: Dạng mẫu · phương pháp giải
+% File riêng pp.tex, không trộn vào de.tex
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Chuyển đổi nhiệt độ giữa các thang đo thông dụng}
+\subsubsection{Dạng: Chuyển đổi nhiệt độ giữa các thang đo thông dụng}
 \begin{phuongphap}
+	Để chuyển đổi nhiệt độ giữa các thang đo Celsius ($t$), Kelvin ($T$) và Fahrenheit ($t_{\mathrm{F}}$), ta sử dụng các công thức sau:
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Chuyển từ Celsius ($t$) sang Kelvin ($T$):}
+		Sử dụng công thức: $T = t + 273{,}15$.
+		\begin{itemize}
+			\item Đơn vị của $t$ là $^\circ\mathrm{C}$, đơn vị của $T$ là $\mathrm{K}$.
+			\item Lưu ý: Trong các bài toán thực hành, thường làm tròn $273{,}15$ thành $273$.
+		\end{itemize}
+		\item \textbf{Chuyển từ Kelvin ($T$) sang Celsius ($t$):}
+		Sử dụng công thức: $t = T - 273{,}15$.
+		\item \textbf{Chuyển từ Celsius ($t$) sang Fahrenheit ($t_{\mathrm{F}}$):}
+		Sử dụng công thức: $t_{\mathrm{F}} = 1{,}8 \cdot t + 32$.
+		\begin{itemize}
+			\item Đơn vị của $t$ là $^\circ\mathrm{C}$, đơn vị của $t_{\mathrm{F}}$ là $^\circ\mathrm{F}$.
+		\end{itemize}
+		\item \textbf{Chuyển từ Fahrenheit ($t_{\mathrm{F}}$) sang Celsius ($t$):}
+		Sử dụng công thức: $t = \dfrac{t_{\mathrm{F}} - 32}{1{,}8}$.
+		\item \textbf{Chuyển đổi gián tiếp:}
+		Để chuyển đổi giữa Kelvin và Fahrenheit, ta thường chuyển đổi qua thang Celsius làm trung gian.
+		\begin{itemize}
+			\item Kelvin $\to$ Celsius $\to$ Fahrenheit.
+			\item Fahrenheit $\to$ Celsius $\to$ Kelvin.
+		\end{itemize}
 	\end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
@@ -56,12 +84,30 @@
 	}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Thiết lập và chuyển đổi thang nhiệt độ tự chế}
+\subsubsection{Dạng: Thiết lập và chuyển đổi thang nhiệt độ tự chế}
 \begin{phuongphap}
+	Để thiết lập và chuyển đổi giữa một thang nhiệt độ tự chế (gọi là thang X, với nhiệt độ $t_{\mathrm{X}}$) và một thang nhiệt độ chuẩn (ví dụ Celsius, với nhiệt độ $t_{\mathrm{C}}$), ta thực hiện các bước sau:
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Xác định các điểm mốc chuẩn:}
+		\begin{itemize}
+			\item Xác định nhiệt độ của điểm đóng băng (nước đá đang tan) trong cả hai thang đo: $t_{\mathrm{X,đóng băng}}$ và $t_{\mathrm{C,đóng băng}}$. (Với Celsius, $t_{\mathrm{C,đóng băng}} = 0\ ^\circ\mathrm{C}$).
+			\item Xác định nhiệt độ của điểm sôi (nước đang sôi) trong cả hai thang đo: $t_{\mathrm{X,sôi}}$ và $t_{\mathrm{C,sôi}}$. (Với Celsius, $t_{\mathrm{C,sôi}} = 100\ ^\circ\mathrm{C}$).
+		\end{itemize}
+		\item \textbf{Thiết lập công thức chuyển đổi tuyến tính:}
+		Mối quan hệ giữa nhiệt độ của hai thang đo là tuyến tính. Ta sử dụng tỷ lệ của khoảng cách từ điểm đóng băng đến nhiệt độ cần đo so với tổng khoảng cách giữa hai điểm mốc chuẩn:
+		\[
+			\dfrac{t_{\mathrm{C}} - t_{\mathrm{C,đóng băng}}}{t_{\mathrm{C,sôi}} - t_{\mathrm{C,đóng băng}}} = \dfrac{t_{\mathrm{X}} - t_{\mathrm{X,đóng băng}}}{t_{\mathrm{X,sôi}} - t_{\mathrm{X,đóng băng}}}
+		\]
+		\item \textbf{Rút gọn và giải phương trình:}
+		Thay các giá trị đã biết vào công thức trên và rút gọn để tìm ra công thức chuyển đổi giữa $t_{\mathrm{C}}$ và $t_{\mathrm{X}}$.
+		\begin{itemize}
+			\item Nếu cần tìm $t_{\mathrm{C}}$ theo $t_{\mathrm{X}}$, hãy biến đổi để $t_{\mathrm{C}}$ là ẩn số.
+			\item Nếu cần tìm $t_{\mathrm{X}}$ theo $t_{\mathrm{C}}$, hãy biến đổi để $t_{\mathrm{X}}$ là ẩn số.
+		\end{itemize}
+		\item \textbf{Tính toán giá trị cụ thể:}
+		Sử dụng công thức đã thiết lập để tính toán nhiệt độ cần tìm khi biết một giá trị nhiệt độ trong thang đo khác.
+		\item \textbf{Tìm nhiệt độ trùng nhau (nếu có):}
+		Nếu đề bài yêu cầu tìm nhiệt độ mà tại đó số chỉ của hai thang đo trùng nhau, ta đặt $t_{\mathrm{C}} = t_{\mathrm{X}} = t$ và giải phương trình để tìm $t$.
 	\end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
@@ -118,13 +164,31 @@
 	}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Lý thuyết về nhiệt độ và cân bằng nhiệt}
+\subsubsection{Dạng: Lý thuyết về nhiệt độ và cân bằng nhiệt}
 \begin{phuongphap}
+	Để giải quyết các câu hỏi lý thuyết về nhiệt độ và cân bằng nhiệt, ta cần nắm vững các khái niệm và nguyên lý sau:
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Khái niệm nhiệt độ:}
+		\begin{itemize}
+			\item \textbf{Góc nhìn vĩ mô:} Nhiệt độ là đại lượng đặc trưng cho mức độ nóng, lạnh của vật và quyết định chiều truyền nhiệt năng.
+			\item \textbf{Góc nhìn vi mô:} Nhiệt độ (tuyệt đối $T$) là số đo động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật. Công thức liên hệ: $\bar{E}_{\mathrm{d}} = \dfrac{3}{2} k T$, trong đó $k$ là hằng số Boltzmann.
+		\end{itemize}
+		\item \textbf{Nhiệt năng (nội năng):}
+		Là tổng động năng chuyển động nhiệt hỗn loạn của các phân tử và tổng thế năng tương tác giữa chúng. Nhiệt năng phụ thuộc vào nhiệt độ, khối lượng và bản chất của vật.
+		\item \textbf{Truyền nhiệt năng:}
+		Nhiệt năng luôn tự truyền từ vật có nhiệt độ cao hơn sang vật có nhiệt độ thấp hơn khi chúng tiếp xúc nhiệt.
+		\item \textbf{Cân bằng nhiệt:}
+		Là trạng thái mà tại đó không còn sự trao đổi nhiệt năng giữa các vật tiếp xúc nhiệt. Khi hệ đạt cân bằng nhiệt, tất cả các vật trong hệ có cùng nhiệt độ.
+		\item \textbf{Độ không tuyệt đối ($0\ \mathrm{K}$):}
+		Là nhiệt độ thấp nhất có thể đạt được trong vũ trụ, tại đó động năng tịnh tiến trung bình của các phân tử đạt giá trị cực tiểu (không phải bằng 0 tuyệt đối do vẫn còn dao động lượng tử).
 	\end{enumerate}
+	Khi phân tích, cần:
+	\begin{itemize}
+		\item Xác định rõ các khái niệm được hỏi (nhiệt độ, nhiệt năng, cân bằng nhiệt).
+		\item Phân biệt giữa nhiệt độ (đại lượng cường tính, trung bình) và nhiệt năng (đại lượng dung tính, tổng cộng).
+		\item Mô tả sự thay đổi của động năng phân tử và chiều truyền nhiệt năng trong quá trình đạt cân bằng nhiệt.
+		\item So sánh nhiệt độ và động năng tịnh tiến trung bình của các phân tử khi hệ đạt cân bằng nhiệt (chúng bằng nhau).
+	\end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 	Cho hai vật kim loại $A$ (ở nhiệt độ $t_A = 80\ ^\circ\mathrm{C}$) và vật kim loại $B$ (ở nhiệt độ $t_B = 25\ ^\circ\mathrm{C}$) đặt tiếp xúc trực tiếp với nhau trong một bình cách nhiệt hoàn chỉnh với môi trường ngoài.
@@ -137,64 +201,114 @@
 	\loigiai{
 		\begin{enumerate}
 			\item \textbf{Chiều truyền nhiệt năng:}
-			Nhiệt năng luôn tự truyền từ vật có nhiệt độ cao hơn sang vật có nhiệt độ thấp hơn. Do $t_A > t_B$ ($80\ ^\circ\mathrm{C} > 25\ ^\circ\mathrm{C}$), nhiệt năng sẽ \textbf{tự truyền từ vật A sang vật B}.
-			\item \textbf{Sự thay đổi động năng ở góc độ vi mô:}
+			Nhiệt năng luôn tự truyền từ vật có nhiệt độ cao hơn sang vật có nhiệt độ thấp hơn. Do $t_A > t_B$ ($80\ ^\circ\mathrm{C} > 25\ ^\circ\mathrm{C}$), nhiệt năng sẽ \textbf{tự truyền từ vật $A$ sang vật $B$}.
+			\item \textbf{Mô tả sự thay đổi động năng chuyển động nhiệt ở góc độ vi mô:}
 			\begin{itemize}
-				\item \textbf{Vật A:} Truyền bớt nhiệt năng sang vật B nên nội năng giảm, nhiệt độ của vật A giảm dần. Ở góc độ vi mô, tốc độ chuyển động nhiệt hỗn loạn của các phân tử cấu tạo nên vật A chậm lại, dẫn tới \textbf{động năng chuyển động nhiệt trung bình của các phân tử vật A giảm dần}.
-				\item \textbf{Vật B:} Nhận thêm nhiệt năng từ vật A nên nội năng tăng, nhiệt độ của vật B tăng dần. Ở góc độ vi mô, tốc độ chuyển động nhiệt hỗn loạn của các phân tử cấu tạo nên vật B nhanh lên, dẫn tới \textbf{động năng chuyển động nhiệt trung bình của các phân tử vật B tăng dần}.
+				\item Khi vật $A$ và vật $B$ tiếp xúc, các phân tử ở bề mặt tiếp xúc của vật $A$ (có động năng trung bình lớn hơn do nhiệt độ cao hơn) sẽ va chạm với các phân tử ở bề mặt tiếp xúc của vật $B$ (có động năng trung bình nhỏ hơn).
+				\item Trong các va chạm này, các phân tử của vật $A$ sẽ truyền một phần động năng của chúng cho các phân tử của vật $B$.
+				\item Quá trình này diễn ra liên tục: động năng tịnh tiến trung bình của các phân tử vật $A$ giảm dần (nhiệt độ vật $A$ giảm), trong khi động năng tịnh tiến trung bình của các phân tử vật $B$ tăng dần (nhiệt độ vật $B$ tăng).
+				\item Sự truyền động năng này tiếp diễn cho đến khi động năng tịnh tiến trung bình của các phân tử ở cả hai vật trở nên bằng nhau.
 			\end{itemize}
-			\item \textbf{Khi đạt trạng thái cân bằng nhiệt:}
+			\item \textbf{So sánh nhiệt độ và động năng tịnh tiến trung bình khi cân bằng nhiệt:}
+			Khi hệ đạt trạng thái cân bằng nhiệt:
 			\begin{itemize}
-				\item Quá trình truyền nhiệt ròng dừng lại. Khi đó, nhiệt độ của hai vật bằng nhau: $t_{\mathrm{cân\ bằng}} = t_A = t_B$.
-				\item Vì nhiệt độ tuyệt đối $T$ tỷ lệ thuận với động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật ($\bar{E}_{\mathrm{d}} = \dfrac{3}{2} k T$), nên khi nhiệt độ hai vật bằng nhau, \textbf{động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật A bằng đúng động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật B}.
+				\item \textbf{Nhiệt độ:} Nhiệt độ của vật $A$ và vật $B$ sẽ \textbf{bằng nhau} ($t_A' = t_B'$).
+				\item \textbf{Động năng tịnh tiến trung bình của các phân tử:} Do nhiệt độ là số đo động năng tịnh tiến trung bình của các phân tử ($\bar{E}_{\mathrm{d}} = \dfrac{3}{2} k T$), khi nhiệt độ của hai vật bằng nhau, thì động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật $A$ và vật $B$ cũng sẽ \textbf{bằng nhau}.
 			\end{itemize}
 		\end{enumerate}
 	}
 \end{vidumau}
 
-\subsubsection{Dạng 4. Nguyên lý hoạt động và sử dụng nhiệt kế}
+\subsubsection{Dạng: Nguyên lý hoạt động và sử dụng nhiệt kế}
 \begin{phuongphap}
+	Để giải quyết các bài tập liên quan đến nguyên lý hoạt động và sử dụng nhiệt kế, ta cần hiểu rõ các nguyên tắc sau:
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Nguyên lý hoạt động chung của nhiệt kế:}
+		\begin{itemize}
+			\item Dựa trên sự giãn nở vì nhiệt của chất lỏng (thủy ngân, rượu), chất rắn hoặc chất khí, hoặc sự thay đổi của các tính chất vật lý khác (điện trở, suất điện động cặp nhiệt điện) theo nhiệt độ.
+			\item Khi nhiệt kế tiếp xúc với vật cần đo, nó sẽ trao đổi nhiệt với vật cho đến khi đạt cân bằng nhiệt. Lúc đó, nhiệt độ của nhiệt kế bằng nhiệt độ của vật.
+		\end{itemize}
+		\item \textbf{Cấu tạo cơ bản của nhiệt kế chất lỏng (thủy ngân, rượu):}
+		\begin{itemize}
+			\item Bầu chứa chất lỏng: Nơi chứa chất lỏng giãn nở.
+			\item Ống mao dẫn: Ống thủy tinh nhỏ có vạch chia độ.
+			\item Thang chia độ: Các vạch số trên ống mao dẫn tương ứng với các giá trị nhiệt độ.
+		\end{itemize}
+		\item \textbf{Các điểm mốc chuẩn và thang nhiệt độ:}
+		\begin{itemize}
+			\item Thường sử dụng điểm đóng băng của nước ($0\ ^\circ\mathrm{C}$) và điểm sôi của nước ($100\ ^\circ\mathrm{C}$) ở áp suất chuẩn để hiệu chuẩn nhiệt kế.
+			\item Khoảng cách giữa hai điểm mốc này được chia thành các đơn vị độ.
+		\end{itemize}
+		\item \textbf{Hiệu chuẩn nhiệt kế (nếu nhiệt kế bị lỗi):}
+		Nếu nhiệt kế bị lỗi (chỉ sai các điểm mốc), ta sử dụng phương pháp thiết lập thang nhiệt độ tự chế (Dạng 2) để tìm mối quan hệ tuyến tính giữa số chỉ của nhiệt kế lỗi và nhiệt độ thực tế.
+		\item \textbf{Giới hạn đo của nhiệt kế:}
+		Mỗi loại nhiệt kế có giới hạn đo nhất định, phụ thuộc vào tính chất của vật liệu làm nhiệt kế (ví dụ: điểm đông đặc, điểm sôi của chất lỏng).
 	\end{enumerate}
+	Khi giải bài tập, cần:
+	\begin{itemize}
+		\item Xác định loại nhiệt kế và nguyên lý hoạt động của nó.
+		\item Áp dụng các công thức chuyển đổi hoặc hiệu chuẩn nếu có.
+		\item Giải thích các hiện tượng liên quan đến sự giãn nở vì nhiệt hoặc giới hạn đo.
+	\end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 	\begin{enumerate}
-		\item Một học sinh muốn chế tạo một nhiệt kế rượu đơn giản bằng cách cho một lượng rượu màu vào bầu của một ống thủy tinh có tiết diện trong nhỏ và đều. Hãy giải thích nguyên lý hoạt động của loại nhiệt kế này và trình bày cách học sinh đó có thể tự hiệu chuẩn để chia các vạch nhiệt độ từ $0\ ^\circ\mathrm{C}$ đến $50\ ^\circ\mathrm{C}$ theo thang Celsius.
-		\item Tại sau người ta không sử dụng nhiệt kế thủy ngân hay nhiệt kế rượu thông thường để đo các nhiệt độ cực kỳ thấp gần mức độ không tuyệt đối ($0\ \mathrm{K}$)?
+		\item Giả sử bạn muốn tự chế tạo một nhiệt kế rượu để đo nhiệt độ trong khoảng từ $0\ ^\circ\mathrm{C}$ đến $50\ ^\circ\mathrm{C}$. Hãy mô tả các bước cơ bản để hiệu chuẩn và chia độ cho nhiệt kế này.
+		\item Giải thích tại sao không thể sử dụng nhiệt kế thủy ngân hoặc nhiệt kế rượu thông thường để đo nhiệt độ gần độ không tuyệt đối ($0\ \mathrm{K}$).
 	\end{enumerate}
-	\nguon{Dựa trên Sách bài tập Vật lí 12 Kết nối tri thức với cuộc sống (Bài 3.7 và 3.8)}
+	\nguon{Dựa trên Sách giáo khoa Vật lí 12 Chân trời sáng tạo và Sách giáo khoa Vật lí 12 Cánh diều}
 	\loigiai{
 		\begin{enumerate}
-			\item \textbf{Nguyên lý hoạt động và quy trình hiệu chuẩn:}
+			\item \textbf{Các bước hiệu chuẩn và chia độ nhiệt kế rượu:}
+			Để chế tạo một nhiệt kế rượu đo từ $0\ ^\circ\mathrm{C}$ đến $50\ ^\circ\mathrm{C}$, ta cần thực hiện các bước sau:
 			\begin{itemize}
-				\item \textbf{Nguyên lý hoạt động:} Nhiệt kế rượu hoạt động dựa trên hiện tượng vật lý \textbf{sự nở vì nhiệt của chất lỏng}. Thể tích của rượu tăng tỷ lệ thuận với sự dâng cao của nhiệt độ. Khi nhiệt độ môi trường thay đổi, thể tích rượu thay đổi, dẫn đến sự dâng lên hoặc hạ xuống của cột rượu trong ống thủy tinh hẹp có thang chia độ.
-				\item \textbf{Quy trình hiệu chuẩn (chia vạch):}
+				\item \textbf{Chuẩn bị:} Một ống thủy tinh mao dẫn có bầu chứa rượu, một nhiệt kế chuẩn (đã được hiệu chuẩn chính xác), nước đá đang tan, và một nguồn nhiệt có thể duy trì nhiệt độ ổn định ở $50\ ^\circ\mathrm{C}$ (ví dụ: bể ổn nhiệt).
+				\item \textbf{Xác định điểm $0\ ^\circ\mathrm{C}$:}
 				\begin{itemize}
-					\item \textbf{Mốc $0\ ^\circ\mathrm{C}$:} Nhúng bầu nhiệt kế vào hỗn hợp nước đá tinh khiết đang tan ở áp suất tiêu chuẩn. Chờ cho mực rượu ổn định không đổi, đánh dấu vị trí mực rượu này là mốc $0\ ^\circ\mathrm{C}$.
-					\item \textbf{Mốc $50\ ^\circ\mathrm{C}$:} Nhúng bầu nhiệt kế vào một bình nước ấm có nhiệt độ chuẩn được kiểm chứng bằng nhiệt kế chuẩn xác là đúng $50\ ^\circ\mathrm{C}$. Chờ mực rượu dâng lên đứng yên, đánh dấu vị trí này là mốc $50\ ^\circ\mathrm{C}$.
-					\item \textbf{Chia độ:} Dùng thước đo khoảng cách giữa hai mốc $0\ ^\circ\mathrm{C}$ và $50\ ^\circ\mathrm{C}$ trên ống thủy tinh, rồi chia đều khoảng cách này thành $50$ phần bằng nhau. Mỗi phần chia nhỏ tương ứng với khoảng biến thiên nhiệt độ là $1\ ^\circ\mathrm{C}$.
+					\item Nhúng bầu nhiệt kế rượu vào hỗn hợp nước đá đang tan (ở $0\ ^\circ\mathrm{C}$ theo áp suất chuẩn).
+					\item Chờ cho cột rượu trong ống mao dẫn ngừng di chuyển (đạt cân bằng nhiệt).
+					\item Đánh dấu vị trí này trên ống thủy tinh và ghi là $0\ ^\circ\mathrm{C}$.
 				\end{itemize}
+				\item \textbf{Xác định điểm $50\ ^\circ\mathrm{C}$:}
+				\begin{itemize}
+					\item Nhúng bầu nhiệt kế rượu vào môi trường có nhiệt độ chuẩn được kiểm chứng bằng nhiệt kế chuẩn xác là đúng $50\ ^\circ\mathrm{C}$.
+					\item Chờ mực rượu dâng lên đứng yên, đánh dấu vị trí này là mốc $50\ ^\circ\mathrm{C}$.
+				\end{itemize}
+				\item \textbf{Chia độ:} Dùng thước đo khoảng cách giữa hai mốc $0\ ^\circ\mathrm{C}$ và $50\ ^\circ\mathrm{C}$ trên ống thủy tinh, rồi chia đều khoảng cách này thành $50$ phần bằng nhau. Mỗi phần chia nhỏ tương ứng với khoảng biến thiên nhiệt độ là $1\ ^\circ\mathrm{C}$.
 			\end{itemize}
 			\item \textbf{Lý do không sử dụng đo nhiệt độ gần độ không tuyệt đối:}
 			\begin{itemize}
 				\item Độ không tuyệt đối ($0\ \mathrm{K}$ tương ứng với $-273{,}15\ ^\circ\mathrm{C}$) là mức nhiệt độ lý thuyết thấp nhất trong vũ trụ. 
 				\item Thủy ngân có điểm đông đặc (hóa rắn) ở nhiệt độ $-38{,}83\ ^\circ\mathrm{C}$ ($234{,}32\ \mathrm{K}$) và rượu tinh khiết (ethanol) hóa rắn ở nhiệt độ $-114{,}1\ ^\circ\mathrm{C}$ ($159\ \mathrm{K}$). 
-				\item Do đó, trước khi đạt tới mức nhiệt độ cực thấp gần $0\ \mathrm{K}$, thủy ngân và rượu đều đã \textbf{bị đông đặc hoàn toàn thành thể rắn}. Khi ở thể rắn, chúng không còn có sự giãn nở vì nhiệt linh hoạt của thể lỏng nữa, vì vậy hoàn toàn không thể sử dụng các dụng cụ đo chất lỏng thông thường này để đo.
+				\item Do đó, trước khi đạt tới mức nhiệt độ cực thấp gần $0\ \mathrm{K}$, thủy ngân và rượu đều đã \textbf{bị đông đặc hoàn toàn thành thể rắn}. Khi ở thể rắn, chúng không còn có sự giãn nở vì nhiệt linh hoạt của thể lỏng nữa, vì vậy hoàn toàn không thể sử dụng các dụng cụ đo chất lỏng thông thường này để đo. Để đo nhiệt độ cực thấp, người ta phải sử dụng các loại nhiệt kế chuyên dụng khác như nhiệt kế điện trở hoặc nhiệt kế khí.
 			\end{itemize}
 		\end{enumerate}
 	}
 \end{vidumau}
 
-\subsubsection{Dạng 5. Khái niệm nhiệt độ}
+\subsubsection{Dạng: Khái niệm nhiệt độ}
 \begin{phuongphap}
+	Để trả lời các câu hỏi về khái niệm nhiệt độ, ta cần hiểu rõ định nghĩa nhiệt độ ở cả hai góc độ vĩ mô và vi mô, cũng như phân biệt nhiệt độ với các khái niệm liên quan như nhiệt năng.
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Định nghĩa nhiệt độ (góc nhìn vĩ mô):}
+		Nhiệt độ là đại lượng vật lý đặc trưng cho trạng thái cân bằng nhiệt của một hệ và cho biết mức độ nóng, lạnh của vật. Nó quyết định chiều truyền nhiệt năng giữa các vật khi chúng tiếp xúc nhiệt.
+		\item \textbf{Định nghĩa nhiệt độ (góc nhìn vi mô - theo thuyết động học phân tử):}
+		Nhiệt độ tuyệt đối ($T$) của một vật là số đo động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật đó. Nhiệt độ càng cao, các phân tử chuyển động càng nhanh và hỗn loạn, động năng tịnh tiến trung bình càng lớn.
+		Công thức liên hệ: $\bar{E}_{\mathrm{d}} = \dfrac{3}{2} k T$, trong đó $k$ là hằng số Boltzmann.
+		\item \textbf{Phân biệt nhiệt độ và nhiệt năng (nội năng):}
+		\begin{itemize}
+			\item \textbf{Nhiệt độ:} Là đại lượng \textit{cường tính} (intensive property), không phụ thuộc vào kích thước hay khối lượng của vật. Nó là giá trị \textit{trung bình} của động năng phân tử.
+			\item \textbf{Nhiệt năng (nội năng):} Là đại lượng \textit{dung tính} (extensive property), phụ thuộc vào kích thước, khối lượng và số lượng phân tử của vật. Nó là \textit{tổng} động năng và thế năng của tất cả các phân tử trong vật.
+		\end{itemize}
+		\item \textbf{Độ không tuyệt đối:}
+		Là nhiệt độ thấp nhất có thể đạt được ($0\ \mathrm{K}$ hoặc $-273{,}15\ ^\circ\mathrm{C}$), tại đó động năng tịnh tiến trung bình của các phân tử đạt giá trị cực tiểu (không bằng 0 do vẫn còn dao động lượng tử).
 	\end{enumerate}
+	Khi giải bài tập, cần:
+	\begin{itemize}
+		\item Trình bày rõ ràng định nghĩa nhiệt độ theo yêu cầu (vĩ mô, vi mô).
+		\item Giải thích sự khác biệt giữa nhiệt độ và nhiệt năng bằng cách sử dụng các khái niệm "trung bình" và "tổng", và đưa ra ví dụ minh họa cụ thể nếu cần.
+		\item Nêu bật ý nghĩa của độ không tuyệt đối.
+	\end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 	\begin{enumerate}
@@ -226,12 +340,39 @@
 	}
 \end{vidumau}
 
-\subsubsection{Dạng 6. Thang nhiệt độ và nhiệt kế}
+\subsubsection{Dạng: Thang nhiệt độ và nhiệt kế}
 \begin{phuongphap}
+	Dạng bài tập này tập trung vào việc hiểu cấu tạo, nguyên lý hoạt động, cách hiệu chuẩn và các vấn đề liên quan đến thang nhiệt độ và nhiệt kế, đặc biệt là khi nhiệt kế có sai số hoặc cần thiết lập thang đo mới.
 	\begin{enumerate}
-		\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-		\item Ghi công thức hoặc mô hình liên quan.
-		\item Tính toán và đối chiếu đơn vị, dấu.
+		\item \textbf{Xác định các điểm mốc chuẩn:}
+		\begin{itemize}
+			\item Đối với nhiệt kế chuẩn (ví dụ Celsius): điểm đóng băng của nước là $0\ ^\circ\mathrm{C}$, điểm sôi của nước là $100\ ^\circ\mathrm{C}$ (ở áp suất chuẩn).
+			\item Đối với nhiệt kế bị lỗi hoặc thang tự chế: xác định các giá trị đo được tại các điểm mốc chuẩn này.
+		\end{itemize}
+		\item \textbf{Thiết lập mối quan hệ tuyến tính:}
+		Giả định rằng sự giãn nở của chất lỏng (hoặc sự thay đổi của tính chất vật lý khác) là tuyến tính với nhiệt độ. Ta có thể sử dụng công thức tương tự như thiết lập thang nhiệt độ tự chế (Dạng 2):
+		\[
+			\dfrac{t_{\mathrm{thực}} - t_{\mathrm{thực,đóng băng}}}{t_{\mathrm{thực,sôi}} - t_{\mathrm{thực,đóng băng}}} = \dfrac{t_{\mathrm{đo}} - t_{\mathrm{đo,đóng băng}}}{t_{\mathrm{đo,sôi}} - t_{\mathrm{đo,đóng băng}}}
+		\]
+		Trong đó:
+		\begin{itemize}
+			\item $t_{\mathrm{thực}}$: nhiệt độ thực tế.
+			\item $t_{\mathrm{đo}}$: nhiệt độ đọc được trên nhiệt kế bị lỗi.
+			\item $t_{\mathrm{thực,đóng băng}}$, $t_{\mathrm{thực,sôi}}$: nhiệt độ thực tế của điểm đóng băng và điểm sôi.
+			\item $t_{\mathrm{đo,đóng băng}}$, $t_{\mathrm{đo,sôi}}$: số chỉ của nhiệt kế lỗi tại điểm đóng băng và điểm sôi.
+		\end{itemize}
+		\item \textbf{Giải phương trình và tính toán:}
+		\begin{itemize}
+			\item Rút ra công thức chuyển đổi từ $t_{\mathrm{đo}}$ sang $t_{\mathrm{thực}}$ hoặc ngược lại.
+			\item Thay các giá trị cụ thể vào công thức để tìm nhiệt độ cần thiết.
+		\end{itemize}
+		\item \textbf{Tìm nhiệt độ mà nhiệt kế chỉ đúng:}
+		Nếu đề bài yêu cầu tìm nhiệt độ mà tại đó nhiệt kế bị lỗi chỉ đúng giá trị, ta đặt $t_{\mathrm{đo}} = t_{\mathrm{thực}} = x$ và giải phương trình để tìm $x$.
+		\item \textbf{Hiểu các yếu tố ảnh hưởng đến nhiệt kế:}
+		\begin{itemize}
+			\item Áp suất: Các điểm mốc chuẩn (đóng băng, sôi) phụ thuộc vào áp suất.
+			\item Giới hạn đo: Chất lỏng trong nhiệt kế có thể đông đặc hoặc bay hơi ở nhiệt độ cực đoan.
+		\end{itemize}
 	\end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
