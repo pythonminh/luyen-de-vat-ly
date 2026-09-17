@@ -352,7 +352,14 @@ def member_dang():
             "function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(function(x){x.checked=v});upd()}"
             "function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(function(inp){const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=Array.prototype.filter.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return c.getAttribute('data-kind')===k});cards.slice(0,want).forEach(function(c){const i=c.querySelector('input[name=qid]');if(i)i.checked=true})});upd()}"
             "document.querySelectorAll('input[name=qid]').forEach(function(x){x.addEventListener('change',upd)});"
-            "document.querySelectorAll('.kn').forEach(function(x){x.addEventListener('change',applyKinds)});"
+           document.querySelectorAll('.kn').forEach(function(x){
+    x.addEventListener('click', function(e){
+        e.stopPropagation()
+    });
+    x.addEventListener('keydown', function(e){
+        e.stopPropagation()
+    });
+});
             "const form=document.getElementById('questionForm');if(form)form.addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});"
         )
     find_js += (
