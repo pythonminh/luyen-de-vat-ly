@@ -1,6 +1,6 @@
-# Luyện đề Vật lý
+# Luyện đề Vật lý Toán học
 
-Hệ thống luyện đề Vật lý THPT.
+Hệ thống luyện đề Vật lý - Toán học THPT.
 
 ## Mục tiêu
 - Học viên đăng nhập và được phân loại FREE/VIP/SVIP.
