@@ -10,6 +10,22 @@
 	% ID: L11C1B4-33-DS
 	% Mức: TH
 	Khi phân tích các đặc điểm của đồ thị li độ – thời gian của một vật dao động điều hòa quanh vị trí cân bằng, hãy nhận xét các mệnh đề sau:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=2,ymin=-12,ymax=12,
+xtick={0,0.25,0.5,0.75,1,1.25,1.5,1.75,2},ytick={-10,0,10},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:2,clip=false]
+\addplot[blue,very thick,smooth] {10*cos(deg(2*pi*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
 	\choiceTF
 	{\True Tọa độ li độ $x$ của vật tại một thời điểm được xác định trực tiếp bằng tung độ của điểm biểu diễn tương ứng trên đồ thị.}
 	{\True Độ dốc của đồ thị tại một điểm bất kì biểu thị giá trị vận tốc tức thời của vật tại thời điểm đó.}
@@ -32,6 +48,22 @@
 	% ID: L11C1B4-34-DS
 	% Mức: VD
 	Quan sát đồ thị dao động điều hòa của một vật có đường hình sin biểu diễn trên hệ tọa độ $x - t$. Tại thời điểm $t = 0$, đồ thị đi qua gốc tọa độ và đang đi lên theo chiều dương, sau đó đạt tới biên dương với tọa độ li độ $10$ cm lần đầu tiên tại mốc thời gian $t = 0,25$ s. Khảo sát các mệnh đề sau:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=1,ymin=-12,ymax=12,
+xtick={0,0.25,0.5,0.75,1},ytick={-10,0,10},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:1,clip=false]
+\addplot[blue,very thick,smooth] {10*sin(deg(2*pi*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
 	\choiceTF
 	{\True Biên độ dao động của vật là $A = 10$ cm.}
 	{\True Chu kì dao động của vật là $T = 1,0$ s.}
@@ -54,6 +86,22 @@
 	% ID: L11C1B4-35-DS
 	% Mức: VD
 	Một vật dao động điều hòa có đồ thị li độ – thời gian dạng hình sin. Tại thời điểm $t = 0$, đồ thị bắt đầu từ biên dương $x_0 = 5$ cm và đi xuống vị trí cân bằng lần đầu tiên tại thời điểm $t = 0,1$ s. Xét các thông số của dao động:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=0.8,ymin=-6,ymax=6,
+xtick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8},ytick={-5,0,5},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:0.8,clip=false]
+\addplot[blue,very thick,smooth] {5*cos(deg(5*pi*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
 	\choiceTF
 	{\True Biên độ dao động của vật bằng $5$ cm.}
 	{\True Chu kì dao động của vật bằng $0,4$ s.}
@@ -76,6 +124,22 @@
 	% ID: L11C1B4-36-TLN
 	% Mức: VD
 	Trên đồ thị li độ–thời gian, hai đỉnh dương liên tiếp ở $t=1$ s và $t=5$ s. Chu kì theo đơn vị s bằng bao nhiêu?
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=9,ymin=-6,ymax=6,
+xtick={0,1,3,5,7,9},ytick={-5,0,5},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:9,clip=false]
+\addplot[blue,very thick,smooth] {5*cos(deg(pi/2*x))};
+\addplot[only marks,mark=*] coordinates {(1,5)(5,5)};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
 	\shortans{03/01/1900}
 \end{ex}
 
@@ -252,6 +316,22 @@ Phương trình dao động nào phù hợp?
 		% ID: L11C1B4-39-TN
 		% Mức: VD
 		Đồ thị li độ – thời gian cho thấy vật có biên độ $6\,\text{cm}$, chu kì $4\,\text{s}$ và ở biên dương tại t = 0. Phương trình dao động nào phù hợp?
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=8,ymin=-8,ymax=8,
+xtick={0,1,2,3,4,5,6,7,8},ytick={-6,0,6},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:8,clip=false]
+\addplot[blue,very thick,smooth] {6*cos(deg(pi/2*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
 		\choice
 		{\True x = 6cos(πt/2) cm}
 		{x = 6cos(2πt) cm}
@@ -264,7 +344,15 @@ Phương trình dao động nào phù hợp?
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Một vật dao động điều hoà với tần số góc $\omega = 1$ rad/s, có đồ thị li độ $x$, vận tốc $v$ và gia tốc $a$ theo thời gian $t$ được mô tả bởi các đường 1, 2, 3 trên Hình 4.1 SGK. Phương án nào sau đây xác định đúng các đường tương ứng?
+		Một vật dao động điều hoà với tần số góc $\omega = 1$ rad/s, có đồ thị li độ $x$, vận tốc $v$ và gia tốc $a$ theo thời gian $t$ được mô tả bởi các đường 1, 2, 3 trên Hình 4.1 SGK.
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{s})$},xmin=0,xmax=6.5,ymin=-1.4,ymax=1.4,xtick={0,1.57,3.14,4.71,6.28},xticklabels={$0$,$\pi/2$,$\pi$,$3\pi/2$,$2\pi$},ytick={-1,0,1},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:6.5,clip=false]
+\addplot[blue,very thick] {sin(deg(x))};\addlegendentry{Đường 1}
+\addplot[red,very thick] {cos(deg(x))};\addlegendentry{Đường 2}
+\addplot[teal!70!black,very thick] {-cos(deg(x))};\addlegendentry{Đường 3}
+\end{axis}\end{tikzpicture}\end{center}
+ Phương án nào sau đây xác định đúng các đường tương ứng?
 		\choice
 		{Đường 1 là $v(t)$, đường 2 là $a(t)$, đường 3 là $x(t)$}
 		{\True Đường 1 là $v(t)$, đường 2 là $x(t)$, đường 3 là $a(t)$}
@@ -281,7 +369,23 @@ Phương trình dao động nào phù hợp?
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Hình 4.3 SGK là đồ thị li độ – thời gian của một vật dao động điều hoà. Phương trình dao động của vật là
+		Hình 4.3 SGK là đồ thị li độ – thời gian của một vật dao động điều hoà.
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=0.24,ymin=-12,ymax=12,
+xtick={0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24},ytick={-10,0,10},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:0.24,clip=false]
+\addplot[blue,very thick,smooth] {10*sin(deg(50*pi/3*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+ Phương trình dao động của vật là
 		\choice
 		{$x = 10\cos\left(\dfrac{25\pi}{3}t - \dfrac{\pi}{2}\right)$ (cm)}
 		{$x = 10\cos\left(\dfrac{50\pi}{3}t + \dfrac{\pi}{2}\right)$ (cm)}
@@ -301,6 +405,13 @@ Phương trình dao động nào phù hợp?
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
 		Dựa vào đồ thị li độ – thời gian của hai vật dao động điều hoà A và B như Hình 4.4 SGK, phương trình dao động của vật A là
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=160,ymin=-25,ymax=25,xtick={0,20,40,60,80,100,120,140,160},ytick={-20,-10,0,10,20},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:160,clip=false]
+\addplot[blue,very thick] {20*sin(deg(2*pi*x/80))};\addlegendentry{$x_A$}
+\addplot[red,very thick] {10*cos(deg(2*pi*x/80))};\addlegendentry{$x_B$}
+\end{axis}\end{tikzpicture}\end{center}
+
 		\choice
 		{$x_A = 20\cos\left(25\pi t + \dfrac{\pi}{2}\right)$ (cm)}
 		{\True $x_A = 20\cos\left(25\pi t - \dfrac{\pi}{2}\right)$ (cm)}
@@ -319,6 +430,13 @@ Phương trình dao động nào phù hợp?
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
 		Dựa vào đồ thị li độ – thời gian của hai vật dao động điều hoà A và B như Hình 4.4 SGK, phương trình dao động của vật B là
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=160,ymin=-25,ymax=25,xtick={0,20,40,60,80,100,120,140,160},ytick={-20,-10,0,10,20},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:160,clip=false]
+\addplot[blue,very thick] {20*sin(deg(2*pi*x/80))};\addlegendentry{$x_A$}
+\addplot[red,very thick] {10*cos(deg(2*pi*x/80))};\addlegendentry{$x_B$}
+\end{axis}\end{tikzpicture}\end{center}
+
 		\choice
 		{$x_B = 10\cos\left(25\pi t - \dfrac{\pi}{2}\right)$ (cm)}
 		{\True $x_B = 10\cos\left(25\pi t + \pi\right)$ (cm)}
@@ -337,6 +455,13 @@ Phương trình dao động nào phù hợp?
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
 		Đồ thị li độ – thời gian của hai vật dao động điều hoà A và B có cùng tần số nhưng lệch pha nhau được cho như Hình 4.4 SGK. Xét tính đúng/sai của các mệnh đề sau:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=160,ymin=-25,ymax=25,xtick={0,20,40,60,80,100,120,140,160},ytick={-20,-10,0,10,20},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:160,clip=false]
+\addplot[blue,very thick] {20*sin(deg(2*pi*x/80))};\addlegendentry{$x_A$}
+\addplot[red,very thick] {10*cos(deg(2*pi*x/80))};\addlegendentry{$x_B$}
+\end{axis}\end{tikzpicture}\end{center}
+
 		\choiceTF
 		{\True Khi vật A có li độ cực đại thì vật B có li độ bằng 0.}
 		{Vật B đạt tới li độ cực đại trước vật A.}
@@ -355,7 +480,23 @@ Phương trình dao động nào phù hợp?
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Hình 4.3 SGK là đồ thị li độ – thời gian của một vật dao động điều hoà. Chu kì dao động của vật bằng bao nhiêu giây?
+		Hình 4.3 SGK là đồ thị li độ – thời gian của một vật dao động điều hoà.
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+width=10cm,height=5cm,axis lines=middle,
+axis line style={-{Stealth[length=2mm]},thick},
+xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
+xmin=0,xmax=0.24,ymin=-12,ymax=12,
+xtick={0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24},ytick={-10,0,10},
+grid=major,major grid style={gray!30,dashed},
+samples=300,domain=0:0.24,clip=false]
+\addplot[blue,very thick,smooth] {10*sin(deg(50*pi/3*x))};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+ Chu kì dao động của vật bằng bao nhiêu giây?
 		\shortans{0,12}
 		\loigiai{
 			Từ đồ thị, ta thấy ở thời điểm ban đầu ($t = 0$), vật đi qua vị trí cân bằng theo chiều dương và quay lại vị trí cân bằng theo chiều âm ở $t = 60$ ms. 
@@ -367,7 +508,14 @@ Phương trình dao động nào phù hợp?
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Đồ thị li độ – thời gian của hai vật dao động điều hoà A và B có cùng tần số nhưng lệch pha nhau như Hình 4.4 SGK. Độ lớn độ lệch pha giữa dao động của vật A so với dao động của vật B có dạng $\dfrac{\pi}{a}$ rad. Giá trị của $a$ bằng bao nhiêu?
+		Đồ thị li độ – thời gian của hai vật dao động điều hoà A và B có cùng tần số nhưng lệch pha nhau như Hình 4.4 SGK. Độ lớn độ lệch pha giữa dao động của vật A so với dao động của vật B có dạng
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=160,ymin=-25,ymax=25,xtick={0,20,40,60,80,100,120,140,160},ytick={-20,-10,0,10,20},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:160,clip=false]
+\addplot[blue,very thick] {20*sin(deg(2*pi*x/80))};\addlegendentry{$x_A$}
+\addplot[red,very thick] {10*cos(deg(2*pi*x/80))};\addlegendentry{$x_B$}
+\end{axis}\end{tikzpicture}\end{center}
+ $\dfrac{\pi}{a}$ rad. Giá trị của $a$ bằng bao nhiêu?
 		\shortans{2}
 		\loigiai{
 			Từ đồ thị, đỉnh li độ cực đại của vật A ở $t = 20$ ms và đỉnh cực đại của vật B ở $t = 40$ ms.
@@ -382,6 +530,13 @@ Phương trình dao động nào phù hợp?
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
 		Đồ thị li độ – thời gian của hai vật dao động điều hoà A và B có cùng tần số nhưng lệch pha nhau được cho như Hình 4.4 SGK. Dựa vào đồ thị:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=160,ymin=-25,ymax=25,xtick={0,20,40,60,80,100,120,140,160},ytick={-20,-10,0,10,20},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:160,clip=false]
+\addplot[blue,very thick] {20*sin(deg(2*pi*x/80))};\addlegendentry{$x_A$}
+\addplot[red,very thick] {10*cos(deg(2*pi*x/80))};\addlegendentry{$x_B$}
+\end{axis}\end{tikzpicture}\end{center}
+
 		a) Hãy cho biết vật A hay vật B đạt tới li độ cực đại trước.
 		b) Xác định li độ dao động của vật B khi vật A có li độ cực đại và ngược lại.
 		\loigiai{
@@ -396,7 +551,15 @@ Phương trình dao động nào phù hợp?
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Một vật dao động điều hoà với tần số góc $\omega = 1$ rad/s, có đồ thị li độ $x$, vận tốc $v$ và gia tốc $a$ theo thời gian $t$ được mô tả trên Hình 4.1 SGK. Hãy giải thích cách xác định đồ thị nào tương ứng với đại lượng nào trong số li độ, vận tốc và gia tốc.
+		Một vật dao động điều hoà với tần số góc $\omega = 1$ rad/s, có đồ thị li độ $x$, vận tốc $v$ và gia tốc $a$ theo thời gian $t$ được mô tả trên Hình 4.1 SGK.
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{s})$},xmin=0,xmax=6.5,ymin=-1.4,ymax=1.4,xtick={0,1.57,3.14,4.71,6.28},xticklabels={$0$,$\pi/2$,$\pi$,$3\pi/2$,$2\pi$},ytick={-1,0,1},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:6.5,clip=false]
+\addplot[blue,very thick] {sin(deg(x))};\addlegendentry{Đường 1}
+\addplot[red,very thick] {cos(deg(x))};\addlegendentry{Đường 2}
+\addplot[teal!70!black,very thick] {-cos(deg(x))};\addlegendentry{Đường 3}
+\end{axis}\end{tikzpicture}\end{center}
+ Hãy giải thích cách xác định đồ thị nào tương ứng với đại lượng nào trong số li độ, vận tốc và gia tốc.
 		\loigiai{
 			\begin{itemize}
 				\item Theo tính chất động học của dao động điều hoà: Vận tốc $v$ sớm pha $\dfrac{\pi}{2}$ so với li độ $x$. Gia tốc $a$ sớm pha $\dfrac{\pi}{2}$ so với vận tốc $v$ và ngược pha hoàn toàn so với li độ $x$.
