@@ -167,7 +167,74 @@
 	\begin{ex}
 		% ID: L11C1B4-38-TN
 		% Mức: VD
-		Đồ thị li độ – thời gian cho thấy vật có biên độ $4\,\text{cm}$, chu kì $2\,\text{s}$; tại t = 0 vật qua vị trí cân bằng theo chiều dương. Phương trình dao động nào phù hợp?
+	
+Phương trình dao động nào phù hợp?
+   \begin{tikzpicture}
+                \begin{axis}[
+                    width=10cm,
+                    height=5.5cm,
+                    axis lines=middle,
+                    axis line style={
+                        thick,
+                        -{Stealth[length=2mm]}
+                    },
+                    xlabel={$t\,(\mathrm{s})$},
+                    ylabel={$x\,(\mathrm{cm})$},
+                    xlabel style={
+                        at={(axis description cs:1,0.48)},
+                        anchor=west,
+                        font=\small
+                    },
+                    ylabel style={
+                        at={(axis description cs:0,1)},
+                        anchor=south,
+                        font=\small
+                    },
+                    xmin=0,
+                    xmax=8,
+                    ymin=-5,
+                    ymax=5,
+                    xtick distance=2,
+                    ytick={-4,0,4},
+                    tick label style={font=\small},
+                    tick style={black},
+                    grid=both,
+                    major grid style={
+                        gray!35,
+                        dashed,
+                        line width=0.4pt
+                    },
+                    minor tick num=0,
+                    samples=300,
+                    domain=0:8,
+                    clip=false
+                ]
+
+                    % Duong bien do
+                    \addplot[
+                        red!75!black,
+                        dashed,
+                        thin,
+                        domain=0:8
+                    ] {4};
+
+                    \addplot[
+                        red!75!black,
+                        dashed,
+                        thin,
+                        domain=0:8
+                    ] {-4};
+
+                    % Do thi dao dong
+                    \addplot[
+                        red,
+                        very thick,
+                        smooth
+                    ] {4*cos(deg(2*pi*x/2+-90))};
+
+                \end{axis}
+            \end{tikzpicture}%
+        }
 		\choice
 		{x = 4cos(πt + π/2) cm}
 		{\True x = 4cos(πt - π/2) cm}
