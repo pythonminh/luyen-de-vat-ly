@@ -378,38 +378,71 @@ samples=300,domain=0:8,clip=false]
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
-		Hình 4.3 SGK là đồ thị li độ – thời gian của một vật dao động điều hoà.
-\begin{center}
-\begin{tikzpicture}
-\begin{axis}[
-width=10cm,height=5cm,axis lines=middle,
-axis line style={-{Stealth[length=2mm]},thick},
-xlabel={$t\,(\mathrm{s})$},ylabel={$x\,(\mathrm{cm})$},
-xmin=0,xmax=0.24,ymin=-12,ymax=12,
-xtick={0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24},ytick={-10,0,10},
-grid=major,major grid style={gray!30,dashed},
-samples=300,domain=0:0.24,clip=false]
-\addplot[blue,very thick,smooth] {10*sin(deg(50*pi/3*x))};
+    Hình 4.3 SGK là đồ thị li độ -- thời gian của một vật dao động điều hòa.
 
-\end{axis}
-\end{tikzpicture}
-\end{center}
- Phương trình dao động của vật là
-		\choice
-		{$x = 10\cos\left(\dfrac{25\pi}{3}t - \dfrac{\pi}{2}\right)$ (cm)}
-		{$x = 10\cos\left(\dfrac{50\pi}{3}t + \dfrac{\pi}{2}\right)$ (cm)}
-		{\True $x = 10\cos\left(\dfrac{50\pi}{3}t - \dfrac{\pi}{2}\right)$ (cm)}
-		{$x = 10\cos\left(50\pi t - \dfrac{\pi}{2}\right)$ (cm)}
-		\loigiai{
-			Từ đồ thị, biên độ dao động là $A = 10$ cm.
-			Thời gian vật đi từ vị trí cân bằng theo chiều dương ($t = 0$) đến vị trí cân bằng theo chiều âm ($t = 60$ ms) là nửa chu kì. 
-			Suy ra $\dfrac{T}{2} = 60$ ms $\Rightarrow T = 120$ ms $= 0,12$ s.
-			Tần số góc của dao động: $\omega = \dfrac{2\pi}{T} = \dfrac{2\pi}{0,12} = \dfrac{50\pi}{3}$ rad/s.
-			Tại $t = 0$, vật đi qua vị trí cân bằng theo chiều dương ($x = 0$ và $v > 0$) nên pha ban đầu $\varphi = -\dfrac{\pi}{2}$ rad.
-			Phương trình dao động của vật là $x = 10\cos\left(\dfrac{50\pi}{3}t - \dfrac{\pi}{2}\right)$ (cm).
-		}
-		\nguon{SGK KNTT Vật lý Lớp 11 Bài 4 câu 4}
-	\end{ex}
+    \begin{center}
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=9cm,height=4.5cm,
+            axis lines=middle,
+            axis line style={-{Stealth[length=2mm]},thick},
+            xlabel={$t\,(\mathrm{s})$},
+            ylabel={$x\,(\mathrm{cm})$},
+            xlabel style={at={(axis description cs:1,0.5)},anchor=west},
+            ylabel style={at={(axis description cs:0.5,1)},anchor=south},
+            xmin=0,xmax=0.25,
+            ymin=-12,ymax=12,
+            xtick={0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24},
+            ytick={-10,0,10},
+            grid=major,
+            major grid style={gray!30,dashed},
+            tick label style={font=\small},
+            samples=250,
+            domain=0:0.24,
+            clip=false
+        ]
+            \addplot[blue,very thick]
+                {10*sin(deg(50*pi/3*x))};
+
+            \node[above left] at (axis cs:0,10) {$10$};
+            \node[below left] at (axis cs:0,-10) {$-10$};
+        \end{axis}
+    \end{tikzpicture}
+    \end{center}
+
+    Phương trình dao động của vật là
+    \choice
+        {$x=10\cos\left(\dfrac{25\pi}{3}t-\dfrac{\pi}{2}\right)\,\text{cm}$}
+        {$x=10\cos\left(\dfrac{50\pi}{3}t+\dfrac{\pi}{2}\right)\,\text{cm}$}
+        {\True $x=10\cos\left(\dfrac{50\pi}{3}t-\dfrac{\pi}{2}\right)\,\text{cm}$}
+        {$x=10\cos\left(50\pi t-\dfrac{\pi}{2}\right)\,\text{cm}$}
+
+    \loigiai{
+        Từ đồ thị, biên độ $A=10\,\text{cm}$.
+
+        Vật đi từ vị trí cân bằng theo chiều dương đến vị trí cân bằng lần tiếp theo sau $0{,}06\,\text{s}$, nên
+        \[
+            \frac{T}{2}=0{,}06
+            \Rightarrow T=0{,}12\,\text{s}.
+        \]
+        Do đó
+        \[
+            \omega=\frac{2\pi}{T}=\frac{50\pi}{3}\,\text{rad/s}.
+        \]
+
+        Tại $t=0$, vật qua vị trí cân bằng theo chiều dương nên
+        $\varphi=-\dfrac{\pi}{2}$.
+
+        Vậy phương trình dao động là
+        \[
+            \boxed{
+            x=10\cos\left(\frac{50\pi}{3}t-\frac{\pi}{2}\right)
+            \,\text{cm}.
+            }
+        \]
+    }
+    \nguon{SGK KNTT Vật lý Lớp 11 Bài 4 câu 4}
+\end{ex}
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
