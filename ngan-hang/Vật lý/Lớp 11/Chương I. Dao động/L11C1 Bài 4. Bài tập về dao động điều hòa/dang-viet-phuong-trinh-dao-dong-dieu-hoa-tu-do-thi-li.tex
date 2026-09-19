@@ -381,34 +381,53 @@ samples=300,domain=0:8,clip=false]
     Hình 4.3 SGK là đồ thị li độ -- thời gian của một vật dao động điều hòa.
 
     \begin{center}
-    \begin{tikzpicture}
-        \begin{axis}[
-            width=9cm,height=4.5cm,
-            axis lines=middle,
-            axis line style={-{Stealth[length=2mm]},thick},
-            xlabel={$t\,(\mathrm{s})$},
-            ylabel={$x\,(\mathrm{cm})$},
-            xlabel style={at={(axis description cs:1,0.5)},anchor=west},
-            ylabel style={at={(axis description cs:0.5,1)},anchor=south},
-            xmin=0,xmax=0.25,
-            ymin=-12,ymax=12,
-            xtick={0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24},
-            ytick={-10,0,10},
-            grid=major,
-            major grid style={gray!30,dashed},
-            tick label style={font=\small},
-            samples=250,
-            domain=0:0.24,
-            clip=false
-        ]
-            \addplot[blue,very thick]
-                {10*sin(deg(50*pi/3*x))};
+\begin{tikzpicture}
+\begin{axis}[
+    width=9cm,
+    height=4.5cm,
+    xmin=0, xmax=0.25,
+    ymin=-12, ymax=12,
+    axis lines=left,
+    axis line style={-Stealth,thick},
+    xlabel={$t\,(\mathrm{s})$},
+    ylabel={$x\,(\mathrm{cm})$},
+    xlabel style={
+        at={(axis description cs:1,0)},
+        anchor=west,
+        font=\small
+    },
+    ylabel style={
+        at={(axis description cs:0,1)},
+        anchor=south,
+        font=\small
+    },
+    xtick={0,0.06,0.12,0.18,0.24},
+    xticklabels={$0$,$0{,}06$,$0{,}12$,$0{,}18$,$0{,}24$},
+    ytick={-10,0,10},
+    yticklabels={$-10$,$0$,$10$},
+    tick label style={font=\small},
+    tick align=outside,
+    grid=major,
+    major grid style={gray!25,densely dashed},
+    samples=300,
+    domain=0:0.24,
+    clip=false
+]
+    % Đồ thị dao động
+    \addplot[
+        blue,
+        very thick,
+        smooth
+    ] {10*sin(deg(50*pi/3*x))};
 
-            \node[above left] at (axis cs:0,10) {$10$};
-            \node[below left] at (axis cs:0,-10) {$-10$};
-        \end{axis}
-    \end{tikzpicture}
-    \end{center}
+    % Ghi chú biên độ
+    \draw[densely dashed,gray]
+        (axis cs:0,10) -- (axis cs:0.12,10);
+    \draw[densely dashed,gray]
+        (axis cs:0,-10) -- (axis cs:0.12,-10);
+\end{axis}
+\end{tikzpicture}
+\end{center}
 
     Phương trình dao động của vật là
     \choice
