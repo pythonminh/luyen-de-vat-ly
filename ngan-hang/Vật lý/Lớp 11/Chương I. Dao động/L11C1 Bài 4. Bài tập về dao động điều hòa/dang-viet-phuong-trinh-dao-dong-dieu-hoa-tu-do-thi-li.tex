@@ -85,7 +85,72 @@
 \begin{ex}
 	% ID: L11C1B4-37-TN
 	% Mức: NB
-	$\immini$ {Dựa vào đồ thị li độ – thời gian như hình vẽ, biên độ dao động của vật là:
+	Dựa vào đồ thị li độ – thời gian như hình vẽ, biên độ dao động của vật là:
+ \begin{tikzpicture}
+                \begin{axis}[
+                    width=10cm,
+                    height=5.5cm,
+                    axis lines=middle,
+                    axis line style={
+                        thick,
+                        -{Stealth[length=2mm]}
+                    },
+                    xlabel={$t\,(\mathrm{s})$},
+                    ylabel={$x\,(\mathrm{cm})$},
+                    xlabel style={
+                        at={(axis description cs:1,0.48)},
+                        anchor=west,
+                        font=\small
+                    },
+                    ylabel style={
+                        at={(axis description cs:0,1)},
+                        anchor=south,
+                        font=\small
+                    },
+                    xmin=0,
+                    xmax=2,
+                    ymin=-6.25,
+                    ymax=6.25,
+                    xtick distance=0.5,
+                    ytick={-5,0,5},
+                    tick label style={font=\small},
+                    tick style={black},
+                    grid=both,
+                    major grid style={
+                        gray!35,
+                        dashed,
+                        line width=0.4pt
+                    },
+                    minor tick num=0,
+                    samples=300,
+                    domain=0:2,
+                    clip=false
+                ]
+
+                    % Duong bien do
+                    \addplot[
+                        red!75!black,
+                        dashed,
+                        thin,
+                        domain=0:2
+                    ] {5};
+
+                    \addplot[
+                        red!75!black,
+                        dashed,
+                        thin,
+                        domain=0:2
+                    ] {-5};
+
+                    % Do thi dao dong
+                    \addplot[
+                        red,
+                        very thick,
+                        smooth
+                    ] {5*cos(deg(2*pi*x/3+30))};
+
+                \end{axis}
+            \end{tikzpicture}%
 		\choice
 		{$10\ \mathrm{cm}$}
 		{$15\ \mathrm{cm}$}
