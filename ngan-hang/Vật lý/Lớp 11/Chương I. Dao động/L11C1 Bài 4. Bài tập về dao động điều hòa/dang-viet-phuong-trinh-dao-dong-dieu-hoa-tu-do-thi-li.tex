@@ -108,11 +108,11 @@
                         font=\small
                     },
                     xmin=0,
-                    xmax=2,
-                    ymin=-6.25,
-                    ymax=6.25,
-                    xtick distance=0.5,
-                    ytick={-5,0,5},
+                    xmax=8,
+                    ymin=-25,
+                    ymax=25,
+                    xtick distance=2,
+                    ytick={-20,0,20},
                     tick label style={font=\small},
                     tick style={black},
                     grid=both,
@@ -123,7 +123,7 @@
                     },
                     minor tick num=0,
                     samples=300,
-                    domain=0:2,
+                    domain=0:8,
                     clip=false
                 ]
 
@@ -132,22 +132,22 @@
                         red!75!black,
                         dashed,
                         thin,
-                        domain=0:2
-                    ] {5};
+                        domain=0:8
+                    ] {20};
 
                     \addplot[
                         red!75!black,
                         dashed,
                         thin,
-                        domain=0:2
-                    ] {-5};
+                        domain=0:8
+                    ] {-20};
 
                     % Do thi dao dong
                     \addplot[
                         red,
                         very thick,
                         smooth
-                    ] {5*cos(deg(2*pi*x/3+30))};
+                    ] {20*cos(deg(2*pi*x/3+0))};
 
                 \end{axis}
             \end{tikzpicture}%
