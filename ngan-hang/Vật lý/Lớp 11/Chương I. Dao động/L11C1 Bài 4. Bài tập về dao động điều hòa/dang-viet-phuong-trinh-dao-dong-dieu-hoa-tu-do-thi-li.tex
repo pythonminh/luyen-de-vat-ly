@@ -315,7 +315,7 @@ Phương trình dao động nào phù hợp?
 	\begin{ex}
 		% ID: L11C1B4-39-TN
 		% Mức: VD
-		Đồ thị li độ – thời gian cho thấy vật có biên độ $6\,\text{cm}$, chu kì $4\,\text{s}$ và ở biên dương tại t = 0. Phương trình dao động nào phù hợp?
+	 Phương trình dao động nào phù hợp?
 \begin{center}
 \begin{tikzpicture}
 \begin{axis}[
@@ -332,14 +332,23 @@ samples=300,domain=0:8,clip=false]
 \end{tikzpicture}
 \end{center}
 
-		\choice
-		{\True x = 6cos(πt/2) cm}
-		{x = 6cos(2πt) cm}
-		{x = 6cos(πt/2 + π/2) cm}
-		{x = 6cos(πt) cm}
-		\loigiai{
-			$T=4\,\text{s}$ nên ω = π/2 rad/s. Vật ở biên dương lúc t = 0 nên pha ban đầu bằng 0.
-		}
+	\choice
+    {\True $x = 6\cos\left(\dfrac{\pi}{2}t\right)\,\text{cm}$}
+    {$x = 6\cos(2\pi t)\,\text{cm}$}
+    {$x = 6\cos\left(\dfrac{\pi}{2}t+\dfrac{\pi}{2}\right)\,\text{cm}$}
+    {$x = 6\cos(\pi t)\,\text{cm}$}
+\loigiai{
+    Chu kì dao động $T=4\,\text{s}$ nên tần số góc:
+    \[
+        \omega=\dfrac{2\pi}{T}=\dfrac{\pi}{2}\,\text{rad/s}.
+    \]
+    Vật ở biên dương tại $t=0$ nên pha ban đầu $\varphi=0$.
+
+    Phương trình dao động:
+    \[
+        \boxed{x=6\cos\left(\dfrac{\pi}{2}t\right)\,\text{cm}.}
+    \]
+}
 	\end{ex}
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
