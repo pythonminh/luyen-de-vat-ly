@@ -305,9 +305,14 @@ def member_dang():
         login_next+='&id='+urllib.parse.quote(highlight_id,safe='')
     start_form=("<form method='post' action='/member/start-selected' id='questionForm'>"
                 f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
+    exam_btns=""
+    if can_manage_bank():
+        from exam_paper import exam_buttons_html
+        exam_btns=exam_buttons_html(True)
     start_bottom=("<div class='toolbar bottom modebar'>"
                   "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
                   "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
+                  +exam_btns+
                   "<a class='btn' href='/member'>← Mục lục</a></div>")
     if not can_do:
         guest_note=view_only_notice_html(m, login_next)
@@ -323,6 +328,7 @@ def member_dang():
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
           + f"<a class='btn' href='{_esc('/admin/edit?path='+urllib.parse.quote(path,safe=''))}'>✏️ Sửa file TEX</a>"
+          + exam_btns
           + find_box
           + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
         bottom=start_bottom
@@ -352,15 +358,8 @@ def member_dang():
             "function setAll(v){document.querySelectorAll('.qcard:not(.hideq) input[name=qid]').forEach(function(x){x.checked=v});upd()}"
             "function applyKinds(){setAll(false);document.querySelectorAll('.kn').forEach(function(inp){const k=inp.getAttribute('data-k');let want=Math.max(0,Math.min(Number(inp.max)||0,Number(inp.value)||0));inp.value=want;const cards=Array.prototype.filter.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return c.getAttribute('data-kind')===k});cards.slice(0,want).forEach(function(c){const i=c.querySelector('input[name=qid]');if(i)i.checked=true})});upd()}"
             "document.querySelectorAll('input[name=qid]').forEach(function(x){x.addEventListener('change',upd)});"
-           document.querySelectorAll('.kn').forEach(function(x){
-    x.addEventListener('click', function(e){
-        e.stopPropagation()
-    });
-    x.addEventListener('keydown', function(e){
-        e.stopPropagation()
-    });
-});
-            "const form=document.getElementById('questionForm');if(form)form.addEventListener('submit',function(e){if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert('Hãy chọn ít nhất một câu.')}});"
+            "document.querySelectorAll('.kn').forEach(function(x){x.addEventListener('click',function(e){e.stopPropagation()});x.addEventListener('keydown',function(e){e.stopPropagation()})});"
+            "const form=document.getElementById('questionForm');if(form)form.addEventListener('submit',function(e){const act=(e.submitter&&e.submitter.getAttribute('name')==='exam_action');if(act&&!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')&&document.querySelector('.kn'))applyKinds();if(!document.querySelector('.qcard:not(.hideq) input[name=qid]:checked')){e.preventDefault();alert(act?'Hãy chọn số câu theo loại (hoặc tick câu) rồi Tạo đề / Trộn đề / In đề.':'Hãy chọn ít nhất một câu.')}});"
         )
     find_js += (
         "document.querySelectorAll('.qcard').forEach(function(card){"

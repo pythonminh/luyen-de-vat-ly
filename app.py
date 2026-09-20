@@ -3405,14 +3405,22 @@ def select_page():
                 tr=f"<tr class='{'uncat' if uncat else 'had'}'>"
                 if ki==0: tr+=dang_cell
                 rows.append(tr+f"<td>{label}</td><td>{c['N']}/{c['H']}/{c['V']}/{c['C']}</td><td>{inputs}</td><td>{total}</td></tr>")
+        from exam_paper import exam_buttons_html
+        exam_row=("<div class='modebar'>"
+            "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
+            "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
+            + exam_buttons_html(True) + "</div>")
         pick_html=(
             "<form method='post' action='/member/start'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+            "<div class='notice'>📝 <b>Tạo đề / In đề / Trộn đề</b> — điền số câu theo dạng và mức N (NB) / H (TH) / V (VD) / C (VDC). Trộn đề xáo thứ tự câu trong từng phần và đảo A–D. Số bản trộn = nhiều mã đề khác nhau.</div>"
+            +exam_row+
             "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>"
             +''.join(rows)+"</table></div>"
-            "<div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
-            "<div class='modebar'><button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
-            "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button></div></form>"
-            "<script>function upd(){let t=0;document.querySelectorAll('.n').forEach(x=>{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();</script>"
+            "<div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu — điền số câu N/H/V/C rồi Tạo đề / Trộn đề / In đề.</div>"
+            +exam_row+
+            "</form>"
+            "<script>function upd(){let t=0;document.querySelectorAll('.n').forEach(x=>{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();"
+            "document.querySelectorAll(\"form[action='/member/start']\").forEach(function(f){f.addEventListener('submit',function(e){let t=0;f.querySelectorAll('.n').forEach(x=>t+=Number(x.value)||0);if(t<=0){e.preventDefault();alert('Hãy điền số câu N/H/V/C rồi bấm Tạo đề / Trộn đề / In đề / Làm bài.')}})});</script>"
         )
     admin_box=''
     if admin_pick:
@@ -4151,6 +4159,7 @@ def server_error(exc):
 
 # Always register chọn câu / làm bài, regardless of gunicorn target.
 import dang_routes  # noqa: E402,F401
+import exam_paper  # noqa: E402,F401
 import lythuyet  # noqa: E402,F401
 import student_gemini  # noqa: E402,F401
 import admin_classify  # noqa: E402,F401
