@@ -1934,24 +1934,53 @@ function reportAway(reason, opts){
   }catch(e){}
   return log;
 }
-function paintAwayBanner(log){
+function awayEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function awayPendingKey(){ return 'ldvlAwayPending:'+String(CODE||'').toUpperCase(); }
+function setAwayPending(on){
+  try{ if(on) localStorage.setItem(awayPendingKey(),'1'); else localStorage.removeItem(awayPendingKey()); }catch(e){}
+}
+function hasAwayPending(){
+  try{ return localStorage.getItem(awayPendingKey())==='1'; }catch(e){ return false; }
+}
+function paintAwayBanner(log, force){
   const el=document.getElementById('cinemaAway');
-  if(!el || hostTok()){ if(el) el.hidden=true; return; }
+  if(!el || hostTok()){
+    if(el){ el.hidden=true; el.classList.remove('is-on'); el.innerHTML=''; }
+    return;
+  }
+  // Chỉ hiện khi vừa rời màn (hoặc còn cờ chờ), không hiện lại log cũ lúc mới vào
+  if(!force && !hasAwayPending()){
+    el.hidden=true; el.classList.remove('is-on'); el.innerHTML='';
+    return;
+  }
   log=log||readLeaveLog();
   const events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
-  if(!events.length){ el.hidden=true; el.innerHTML=''; return; }
+  if(!events.length){
+    el.hidden=true; el.classList.remove('is-on'); el.innerHTML=''; setAwayPending(false);
+    return;
+  }
   const last=events[events.length-1];
   const first=events[0].t;
   const n=events.length;
   function span(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000);const m=Math.floor(s/60);const h=Math.floor(m/60);if(h>0) return h+' giờ '+(m%60)+' phút'; if(m>0) return m+' phút'; return s+' giây';}
   const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'}[last.reason]||'rời màn chiếu';
+  setAwayPending(true);
   el.hidden=false;
-  el.innerHTML='<b>⚠ Bạn đã rời màn chiếu khi đang tham gia</b>'
-    +'<div>Câu lúc đó: <b>'+E(qLeaveLabel(last))+'</b></div>'
-    +'<div>Lý do: <b>'+E(reasonLab)+'</b> · <b>'+n+'</b> lần trong <b>'+span(last.t-first)+'</b></div>'
-    +'<button type="button" class="btn" id="awayDismiss">Đã hiểu</button>';
+  el.classList.add('is-on');
+  el.innerHTML='<div class="away-card" role="alertdialog" aria-live="assertive">'
+    +'<h3>⚠ Lỗi: bạn đã rời màn chiếu</h3>'
+    +'<div>Câu lúc đó: <b>'+awayEsc(qLeaveLabel(last))+'</b></div>'
+    +'<div>Lý do: <b>'+awayEsc(reasonLab)+'</b></div>'
+    +'<div>Số lần: <b>'+n+'</b> trong <b>'+span(last.t-first)+'</b></div>'
+    +'<button type="button" class="btn" id="awayDismiss">Đã hiểu — tiếp tục xem</button>'
+    +'</div>';
   const btn=document.getElementById('awayDismiss');
-  if(btn) btn.onclick=function(){ el.hidden=true; };
+  if(btn) btn.onclick=function(){
+    setAwayPending(false);
+    el.hidden=true;
+    el.classList.remove('is-on');
+    el.innerHTML='';
+  };
 }
 function goLeaveNotice(reason){
   reportAway(reason||'button', {exit:true});
@@ -2906,33 +2935,40 @@ setInterval(tick,900);
   if(x) x.onclick=leaveCinema;
   if(leave) leave.onclick=leaveCinema;
   // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab — kèm câu đang chiếu
+  function markAwayAndShow(reason){
+    if(hostTok()) return;
+    const log=reportAway(reason, {exit:false});
+    if(!log) return;
+    setAwayPending(true);
+    // Hiện ngay khi quay lại (tab đang ẩn thì đợi pageshow/visibility)
+    if(!document.hidden) paintAwayBanner(log, true);
+  }
+  function showAwayIfPending(){
+    if(hostTok() || document.hidden) return;
+    if(hasAwayPending()) paintAwayBanner(null, true);
+  }
   window.addEventListener('pagehide', function(){
     if(hostTok() || leaveRecorded) return;
     reportAway('pagehide', {exit:true});
   });
   document.addEventListener('visibilitychange', function(){
     if(hostTok()) return;
-    if(document.hidden){
-      const log=reportAway('hidden', {exit:false});
-      if(log && !log.dup) paintAwayBanner(log);
-    }else{
-      paintAwayBanner();
-    }
+    if(document.hidden) markAwayAndShow('hidden');
+    else showAwayIfPending();
   });
+  window.addEventListener('pageshow', function(){ showAwayIfPending(); });
+  window.addEventListener('focus', function(){ showAwayIfPending(); });
   window.addEventListener('blur', function(){
     if(hostTok() || document.hidden) return;
     // Một số trình duyệt thu nhỏ cửa sổ không bật hidden ngay
     setTimeout(function(){
-      if(document.hidden || !document.hasFocus()){
-        const log=reportAway('blur', {exit:false});
-        if(log && !log.dup) paintAwayBanner(log);
-      }
+      if(document.hidden || !document.hasFocus()) markAwayAndShow('blur');
     }, 200);
   });
   try{
     const log=readLeaveLog();
     if(!log.joined) writeLeaveLog(Object.assign({}, log, {joined:joinedAt, first:Number(log.first)||joinedAt, events:Array.isArray(log.events)?log.events:[]}));
-    paintAwayBanner(log);
+    showAwayIfPending();
   }catch(e){}
   const peekBtn=document.getElementById('peekToggle');
   if(peekBtn) peekBtn.onclick=async function(){
