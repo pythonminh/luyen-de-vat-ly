@@ -286,89 +286,45 @@ Kết luận: Giá trị tham số $m$ cần tìm là $1 \le m \le 3$.
 
 \subsubsection{Dạng: Các tập số, khoảng, đoạn và nửa khoảng}
 \begin{phuongphap}
+Để thực hiện các phép toán giao, hợp, hiệu trên các khoảng, đoạn, nửa khoảng:
 \begin{enumerate}
-\item \textbf{Xác định dạng của tập hợp:}
-\begin{itemize}
-    \item Đọc kĩ các bất đẳng thức mô tả phần tử của tập hợp để xác định đó là khoảng, đoạn hay nửa khoảng.
-    \item Ví dụ: $a < x < b$ là khoảng $(a; b)$; $a \le x \le b$ là đoạn $[a; b]$; $a \le x < b$ là nửa khoảng $[a; b)$; $a < x \le b$ là nửa khoảng $(a; b]$.
-\end{itemize}
-\item \textbf{Biểu diễn các tập hợp trên trục số:} Vẽ trục số thực và biểu diễn từng tập hợp bằng các kí hiệu mút tròn "$($", "$)$" hoặc mút vuông "$[$", "$]$" và tô đậm phần tương ứng.
-\item \textbf{Thực hiện các phép toán trên trục số:}
-\begin{itemize}
-    \item \textbf{Phép giao ($\cap$):} Giữ lại phần chung (phần bị tô đậm bởi cả hai tập hợp). Gạch bỏ các phần còn lại.
-    \item \textbf{Phép hợp ($\cup$):} Lấy toàn bộ phạm vi phủ của cả hai tập hợp (phần bị tô đậm bởi ít nhất một trong hai tập hợp).
-    \item \textbf{Phép hiệu ($\setminus$):} Giữ lại phần thuộc tập thứ nhất nhưng không thuộc tập thứ hai. Khi gạch bỏ phần thuộc tập thứ hai, cần chú ý đổi mút vuông thành mút tròn (nếu điểm mút đó thuộc tập thứ hai và là điểm chung) hoặc giữ nguyên mút (nếu điểm mút đó không thuộc tập thứ hai).
-\end{itemize}
-\item \textbf{Viết kết quả dưới dạng khoảng, đoạn, nửa khoảng:} Dựa vào biểu diễn trên trục số để viết tập hợp kết quả.
+    \item \textbf{Sắp xếp điểm mút:} Liệt kê và sắp xếp tất cả các giá trị đầu mút của các tập hợp theo thứ tự tăng dần trên trục số thực.
+    \item \textbf{Biểu diễn trên trục số theo từng phép toán:}
+    \begin{itemize}
+        \item \emph{Tìm $A \cap B$:} Gạch bỏ phần ngoài tập $A$, sau đó gạch tiếp phần ngoài tập $B$. Phần không bị gạch trên trục số chính là $A \cap B$.
+        \item \emph{Tìm $A \cup B$:} Tô đậm các phần tử thuộc $A$ và các phần tử thuộc $B$. Phần được tô đậm là $A \cup B$.
+        \item \emph{Tìm $A \setminus B$:} Biểu diễn tập $A$, sau đó gạch bỏ toàn bộ phần thuộc tập $B$. Phần còn lại thuộc $A$ chính là $A \setminus B$.
+    \end{itemize}
+    \item \textbf{Xác định trạng thái mút tại ranh giới:}
+    \begin{itemize}
+        \item Với $A \cap B$: Đầu mút lấy dấu ngoặc vuông $[$ hoặc $]$ khi và chỉ khi mút đó thuộc cả hai tập hợp; nếu không thì dùng ngoặc tròn $($ hoặc $)$.
+        \item Với $A \setminus B$: Nếu điểm ranh giới $x_0 \in B$ thì bị loại khỏi hiệu (chuyển thành ngoặc tròn); nếu $x_0 \notin B$ và $x_0 \in A$ thì được giữ lại (chuyển thành ngoặc vuông).
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 
 \begin{vidumau}
 Cho hai tập hợp $A = [-3; 2)$ và $B = (0; 5]$. Xác định các tập hợp $A \cap B$ và $A \setminus B$.
-\end{vidumau}\par
+\end{vidumau}
+
 \loigiai{
+Sắp xếp các điểm mút theo thứ tự tăng dần: $-3 < 0 < 2 < 5$.
+
 \begin{enumerate}
-\item \textbf{Xác định giao của hai tập hợp $A \cap B$:}
-Tập hợp $A = [-3; 2)$ bao gồm các số thực $x$ thỏa mãn $-3 \le x < 2$.
-Tập hợp $B = (0; 5]$ bao gồm các số thực $x$ thỏa mãn $0 < x \le 5$.
-Để tìm $A \cap B$, ta tìm các số thực $x$ vừa thỏa mãn $-3 \le x < 2$ vừa thỏa mãn $0 < x \le 5$.
-Phạm vi chung là các số thực lớn hơn $0$ và nhỏ hơn $2$.
-Do đó, ta thu được nửa khoảng $A \cap B = (0; 2)$.
-Minh họa trên trục số:
-\begin{center}
-\begin{tikzpicture}[scale=1.2, >=stealth]
-\draw[->, thick] (-4,0) -- (6,0) node[above] {$\mathbb{R}$};
-% Gạch phần không thuộc A
-\draw[line width=1.5pt, gray!50] (-4,0) -- (-3,0);
-\draw[line width=1.5pt, gray!50] (2,0) -- (6,0);
-% Gạch phần không thuộc B
-\draw[line width=1.5pt, gray!50] (-4,0.1) -- (0,0.1);
-\draw[line width=1.5pt, gray!50] (5,0.1) -- (6,0.1);
+    \item \textbf{Tìm $A \cap B$:}
+    \begin{itemize}
+        \item Giao của hai tập hợp gồm các phần tử vừa thuộc $A$ vừa thuộc $B$, tức là $-3 \le x < 2$ và $0 < x \le 5 \iff 0 < x < 2$.
+        \item Tại $x = 0$: $0 \notin B$ nên $0 \notin A \cap B$ (dùng mút tròn).
+        \item Tại $x = 2$: $2 \notin A$ nên $2 \notin A \cap B$ (dùng mút tròn).
+    \end{itemize}
+    Vậy $A \cap B = (0; 2)$.
 
-\node[below] at (-3,0) {$-3$};
-\node[below] at (0,0) {$0$};
-\node[below] at (2,0) {$2$};
-\node[below] at (5,0) {$5$};
-
-\node[thick] at (-3,0) {$[$};
-\node[thick] at (2,0) {$)$};
-\node[thick] at (0,0.1) {$($};
-\node[thick] at (5,0.1) {$]$};
-
-\draw[red, very thick] (0,0) -- (2,0);
-\node[red, above] at (1,0.2) {$A \cap B = (0; 2)$};
-\end{tikzpicture}
-\end{center}
-\item \textbf{Xác định hiệu của hai tập hợp $A \setminus B$:}
-Ta lấy các số thực $x$ thuộc $A$ nhưng loại bỏ đi những số thực thuộc $B$.
-Tức là lấy những số thực thuộc $[-3; 2)$ và không thuộc $(0; 5]$.
-Phần thuộc $A$ là $[-3; 2)$. Phần thuộc $B$ là $(0; 5]$.
-Khi loại bỏ phần $(0; 5]$ khỏi $[-3; 2)$, ta chỉ còn lại phần từ $-3$ đến $0$.
-Điểm $0$ không thuộc $B=(0;5]$ nên $0$ vẫn thuộc $A \setminus B$.
-Do đó, ta thu được đoạn $A \setminus B = [-3; 0]$.
-Minh họa trên trục số:
-\begin{center}
-\begin{tikzpicture}[scale=1.2, >=stealth]
-\draw[->, thick] (-4,0) -- (6,0) node[above] {$\mathbb{R}$};
-% Gạch phần thuộc B
-\draw[line width=1.5pt, gray!50] (0,0) -- (5,0);
-% Gạch phần không thuộc A
-\draw[line width=1.5pt, gray!50] (-4,0) -- (-3,0);
-\draw[line width=1.5pt, gray!50] (2,0) -- (6,0);
-
-\node[below] at (-3,0) {$-3$};
-\node[below] at (0,0) {$0$};
-\node[below] at (2,0) {$2$};
-\node[below] at (5,0) {$5$};
-
-\node[thick] at (-3,0) {$[$};
-\node[thick] at (2,0) {$)$};
-\node[thick] at (0,0) {$($}; % Mút tròn của B
-\node[thick] at (5,0) {$]$};
-
-\draw[red, very thick] (-3,0) -- (0,0);
-\node[red, above] at (-1.5,0.2) {$A \setminus B = [-3; 0]$};
-\end{tikzpicture}
-\end{center}
+    \item \textbf{Tìm $A \setminus B$:}
+    \begin{itemize}
+        \item Hiệu $A \setminus B$ gồm các phần tử thuộc $A$ nhưng bị loại bỏ phần thuộc $B$. 
+        \item Bỏ khoảng $(0; 5]$ ra khỏi $[-3; 2)$, phần còn lại trên trục số là $[-3; 0]$.
+        \item Xét điểm mút $x = 0$: vì $0 \in A$ và $0 \notin B$ nên $0 \in A \setminus B$ (dùng mút vuông).
+    \end{itemize}
+    Vậy $A \setminus B = [-3; 0]$.
 \end{enumerate}
 }
