@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 173,
-  "total_questions": 11700,
+  "total_questions": 11722,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -180,10 +180,10 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 181,
-      "count": 181,
+      "questions": 203,
+      "count": 203,
       "dang": {
-        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 10,
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 32,
         "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13,
         "Tập hợp bằng nhau, tập rỗng và số tập con": 10,
         "Xác định tập hợp, phần tử và tập con": 12,
@@ -194,10 +194,10 @@
       },
       "dang_kinds": {
         "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
-          "TN": 1,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
+          "TN": 8,
+          "DS": 6,
+          "TLN": 10,
+          "TL": 8
         },
         "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
           "TN": 11,
