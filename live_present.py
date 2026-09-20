@@ -655,6 +655,23 @@ def _vote_stats(room):
     return {"kind": kind or "", "n": n}
 
 
+def _leave_stats(room):
+    """Số máy đã thoát khi đang xem chiếu (ẩn danh)."""
+    bag = (room or {}).get("leaves") or {}
+    events = 0
+    last = 0.0
+    for arr in bag.values():
+        if not isinstance(arr, list):
+            continue
+        events += len(arr)
+        for t in arr:
+            try:
+                last = max(last, float(t))
+            except (TypeError, ValueError):
+                pass
+    return {"machines": len(bag), "events": events, "last": last or None}
+
+
 def _room_out(room, include_q=True):
     _reset_votes_if_needed(room)
     d = {
@@ -670,6 +687,7 @@ def _room_out(room, include_q=True):
         "host": room.get("host") or "",
         "live": room.get("live") or {},
         "votes": _vote_stats(room),
+        "leaves": _leave_stats(room),
         "secs": list(room.get("sec_titles") or []),
         "dangs": list(room.get("dang_nav") or []),
         "dang_has_prev": bool(room.get("dang_has_prev")),
@@ -1226,6 +1244,42 @@ def api_present_vote():
     return jsonify(ok=True, ver=ver, votes=stats, mine=vote)
 
 
+@base.app.post("/api/present/leave")
+def api_present_leave():
+    """Ghi nhận người xem thoát khi đang tham gia chiếu (ẩn danh)."""
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or "")
+    voter = _norm_voter_id(data.get("voter") or "")
+    reason = str(data.get("reason") or "leave")[:32]
+    if not code:
+        return jsonify(ok=False, error="Thiếu mã phòng."), 400
+    if not voter:
+        return jsonify(ok=False, error="Thiếu mã máy."), 400
+    now = _now()
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room:
+            # Vẫn trả ok để máy xem hiện cảnh báo local dù phòng vừa tắt
+            return jsonify(ok=True, recorded=False, leaves={"machines": 0, "events": 0})
+        bag = room.setdefault("leaves", {})
+        arr = list(bag.get(voter) or [])
+        # Tránh đếm đôi trong vòng 8 giây (pagehide + nút X)
+        if arr:
+            try:
+                if now - float(arr[-1]) < 8:
+                    return jsonify(ok=True, recorded=False, leaves=_leave_stats(room), ver=int(room.get("ver") or 0))
+            except (TypeError, ValueError):
+                pass
+        arr.append(round(now, 3))
+        bag[voter] = arr[-40:]
+        room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = now
+        room["_leave_reason"] = reason
+        stats = _leave_stats(room)
+        ver = int(room.get("ver") or 0)
+    return jsonify(ok=True, recorded=True, leaves=stats, ver=ver, at=now)
+
+
 @base.app.get("/xem/<code>/qr.svg")
 def present_qr_svg(code):
     code = _norm_code(code)
@@ -1240,7 +1294,42 @@ def present_qr_svg(code):
 @base.app.get("/xem")
 @base.app.get("/xem/<code>")
 def present_watch(code=""):
+    left_code = _norm_code(request.args.get("left") or "")
     code = _norm_code(code or request.args.get("code") or "")
+    if left_code and not code:
+        # Trang cảnh báo sau khi thoát khi đang tham gia
+        body = (
+            "<div class='wrap'><div class='panel' style='max-width:520px;margin:40px auto'>"
+            "<div class='head'>⚠ Thoát khi đang tham gia</div><div class='body'>"
+            "<div class='err' id='leaveErr'>Bạn đã thoát ra khi đang tham gia chiếu chung.</div>"
+            "<div id='leaveStats' class='notice' style='margin-top:10px'>Đang tải ghi nhận…</div>"
+            "<p style='display:flex;gap:8px;flex-wrap:wrap;margin-top:14px'>"
+            "<a class='btn primary' id='leaveRejoin' href='/xem/" + left_code + "'>↩ Vào lại chiếu " + left_code + "</a>"
+            "<a class='btn' href='/xem'>Mã khác</a></p>"
+            "</div></div></div>"
+            "<script>(function(){"
+            "const CODE=" + json.dumps(left_code) + ";"
+            "function fmt(ts){const d=new Date(ts);const p=n=>String(n).padStart(2,'0');"
+            "return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+' · '+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear();}"
+            "function span(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000);const m=Math.floor(s/60);const h=Math.floor(m/60);"
+            "if(h>0) return h+' giờ '+ (m%60) +' phút'; if(m>0) return m+' phút '+ (s%60) +' giây'; return s+' giây';}"
+            "let log={first:0,events:[]};"
+            "try{log=JSON.parse(localStorage.getItem('ldvlLeaveLog:'+CODE)||'{}')||{};}catch(e){}"
+            "const ev=Array.isArray(log.events)?log.events.map(Number).filter(Boolean):[];"
+            "const last=ev.length?ev[ev.length-1]:Date.now();"
+            "const firstJoin=Number(log.joined)||Number(log.first)|| (ev[0]||last);"
+            "const firstEv=ev[0]||last;"
+            "const n=ev.length;"
+            "const el=document.getElementById('leaveStats');"
+            "if(el) el.innerHTML='<b>Ghi nhận lỗi</b><br>'"
+            "+'Mã phòng: <code>'+CODE+'</code><br>'"
+            "+'Thời điểm thoát gần nhất: <b>'+fmt(last)+'</b><br>'"
+            "+'Số lần thoát: <b>'+n+'</b> lần trong <b>'+span(last-firstEv)+'</b>'"
+            "+(n>1?' (từ lần thoát đầu đến lần này)':'')+'.<br>'"
+            "+'Thời gian từ lúc vào xem đến lần thoát này: <b>'+span(last-firstJoin)+'</b>.';"
+            "})();</script>"
+        )
+        return base.page("Thoát chiếu", body)
     if not code:
         body = (
             "<div class='wrap'><div class='panel' style='max-width:480px;margin:40px auto'><div class='head'>📺 Vào chiếu chung</div><div class='body'>"
@@ -1737,6 +1826,48 @@ function voterId(){
     return id;
   }catch(e){ return 'v'+String(Date.now()); }
 }
+let leaveRecorded=false;
+let joinedAt=Date.now();
+function leaveLogKey(){ return 'ldvlLeaveLog:'+String(CODE||'').toUpperCase(); }
+function readLeaveLog(){
+  try{ return JSON.parse(localStorage.getItem(leaveLogKey())||'{}')||{}; }catch(e){ return {}; }
+}
+function writeLeaveLog(log){
+  try{ localStorage.setItem(leaveLogKey(), JSON.stringify(log)); }catch(e){}
+}
+function recordLeaveLocal(){
+  const now=Date.now();
+  const log=readLeaveLog();
+  let events=Array.isArray(log.events)?log.events.map(Number).filter(Boolean):[];
+  // Giữ trong 24 giờ
+  const cut=now-24*3600*1000;
+  events=events.filter(function(t){return t>=cut;});
+  if(events.length && now-events[events.length-1]<8000) return {first:Number(log.first)||events[0],events:events,dup:true};
+  events.push(now);
+  const first=Number(log.first)||events[0]||now;
+  const out={first:first,events:events.slice(-40),joined:Number(log.joined)||joinedAt};
+  writeLeaveLog(out);
+  return out;
+}
+function reportLeave(reason){
+  if(hostTok() || leaveRecorded) return null;
+  leaveRecorded=true;
+  const log=recordLeaveLocal();
+  const body=JSON.stringify({code:CODE,voter:voterId(),reason:String(reason||'leave')});
+  try{
+    if(navigator.sendBeacon){
+      const blob=new Blob([body],{type:'application/json'});
+      navigator.sendBeacon('/api/present/leave', blob);
+    }else{
+      fetch('/api/present/leave',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:body,keepalive:true}).catch(function(){});
+    }
+  }catch(e){}
+  return log;
+}
+function goLeaveNotice(reason){
+  reportLeave(reason||'button');
+  location.href='/xem?left='+encodeURIComponent(String(CODE||'').toUpperCase());
+}
 function voteQfp(q, pos){
   return [CODE, pos, (q&&q.kind)||'', String((q&&q.text)||'').slice(0,120)].join('\x1f');
 }
@@ -2030,7 +2161,16 @@ function paintVotes(votes){
   const on=!!hostTok() && isQuizQ(lastQ);
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   votes=votes||{};
+  const leaves=window.lastLeaves||{};
+  const leaveLine=(leaves.events||leaves.machines)
+    ?('<div class="vleave">🚪 Thoát khi xem: <b>'+Number(leaves.machines||0)+'</b> máy · <b>'+Number(leaves.events||0)+'</b> lần</div>')
+    :'';
   if(!on || (k!=='TN' && k!=='DS')){
+    if(on && leaveLine){
+      el.hidden=false;
+      el.innerHTML='<b>📊 Lớp</b>'+leaveLine;
+      return;
+    }
     el.hidden=true;
     el.innerHTML='';
     return;
@@ -2058,7 +2198,7 @@ function paintVotes(votes){
     }).join('');
   }
   el.hidden=false;
-  el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+(body||'<div class="muted">Chưa có phiếu — học viên chạm đáp án trên máy /xem</div>');
+  el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+leaveLine+(body||'<div class="muted">Chưa có phiếu — học viên chạm đáp án trên máy /xem</div>');
 }
 function liveStudent(q, live){
   live=live||{};
@@ -2623,6 +2763,7 @@ async function tick(){
     lastQ=d.q||null;
     lastLive=d.live||{};
     lastVotes=d.votes||{};
+    window.lastLeaves=d.leaves||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
       if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
@@ -2658,13 +2799,26 @@ setInterval(tick,900);
   if(jump) jump.onchange=function(){jumpPos(parseInt(jump.value,10)||0)};
   if(dangJump) dangJump.onchange=function(){jumpPos(parseInt(dangJump.value,10)||0)};
   function leaveCinema(){
-    if(window.history.length>1){ history.back(); return; }
-    location.href=hostTok()?'/member':'/xem';
+    if(hostTok()){
+      if(window.history.length>1){ history.back(); return; }
+      location.href='/member';
+      return;
+    }
+    goLeaveNotice('button');
   }
   const x=document.getElementById('cinemaExit');
   const leave=document.getElementById('cinemaLeave');
   if(x) x.onclick=leaveCinema;
   if(leave) leave.onclick=leaveCinema;
+  // Ghi nhận khi đóng tab / điều hướng khỏi trang chiếu (không tính đổi app tạm)
+  window.addEventListener('pagehide', function(){
+    if(hostTok() || leaveRecorded) return;
+    reportLeave('pagehide');
+  });
+  try{
+    const log=readLeaveLog();
+    if(!log.joined) writeLeaveLog(Object.assign({}, log, {joined:joinedAt, first:Number(log.first)||joinedAt, events:Array.isArray(log.events)?log.events:[]}));
+  }catch(e){}
   const peekBtn=document.getElementById('peekToggle');
   if(peekBtn) peekBtn.onclick=async function(){
     const el=document.getElementById('cinemaPeek');
