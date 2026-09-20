@@ -332,6 +332,23 @@ body.cinema .nguonrow{display:none}
 body.cinema .opt{cursor:default;display:flex;align-items:center;gap:10px}
 body.cinema .opt.picked{border-color:var(--blue);background:#eef6ff;box-shadow:0 0 0 3px #176bd322}
 body.cinema.is-host:not(.sol-on) .opt,body.cinema.is-host:not(.sol-on) .tf-box{cursor:pointer}
+body.cinema.voter-on:not(.sol-on) .opt,body.cinema.voter-on:not(.sol-on) .tf-box{cursor:pointer}
+body.cinema .opt.mine{outline:2px solid #0ea5e9;background:#f0f9ff}
+body.cinema .tf-box.mine{box-shadow:inset 0 0 0 2px #0ea5e9}
+body.cinema .mypick{color:#0369a1;font-weight:800;font-size:12px;margin-left:6px}
+body.cinema .votetip{margin:6px 0 10px;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:8px;background:#f0f9ff;color:#0369a1;font-size:13px;font-weight:700}
+body.cinema .cinema-votes{margin:8px 12px;padding:10px 12px;border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;font-size:13px;line-height:1.4}
+body.cinema .cinema-votes b{margin-right:6px}
+body.cinema .cinema-votes .vrow{display:grid;grid-template-columns:1.6em 1fr 5.5em;gap:8px;align-items:center;margin:6px 0}
+body.cinema .cinema-votes .vrow.ds{grid-template-columns:1.6em 1fr}
+body.cinema .cinema-votes .vlab{font-weight:900;color:#1e3a8a}
+body.cinema .cinema-votes .vbar{height:12px;background:#dbeafe;border-radius:999px;overflow:hidden}
+body.cinema .cinema-votes .vbar i{display:block;height:100%;background:#2563eb;border-radius:999px}
+body.cinema .cinema-votes .vnum{font-weight:800;font-size:12px;color:#1e40af;text-align:right}
+body.cinema .cinema-votes .vpair{display:flex;gap:12px;flex-wrap:wrap;font-weight:800}
+body.cinema .cinema-votes .vy{color:#15803d}
+body.cinema .cinema-votes .vn{color:#b91c1c}
+body.cinema:not(.is-host) .cinema-votes{display:none!important}
 body.cinema .cinema-ans{width:min(100%,28em);max-width:100%;padding:10px 12px;font-size:16px;border:1px solid #cbd8e6;border-radius:8px;margin:0 8px 0 0}
 body.cinema .opt.correct,body.cinema .tf.correct{background:#f3faf5!important;border:2px solid #86c99a!important;box-shadow:none}
 body.cinema .opt.correct .okmark,body.cinema .okmark{display:inline-block;margin-left:.4em;padding:.12em .55em;border-radius:999px;background:#15803d;color:#fff;font-size:.78em;font-weight:900;vertical-align:middle;white-space:nowrap}

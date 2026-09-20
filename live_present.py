@@ -572,7 +572,91 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
     }, ""
 
 
+def _vote_fp(room):
+    q = (room or {}).get("q") or {}
+    return (
+        str((room or {}).get("path") or ""),
+        int((room or {}).get("pos") or 0),
+        str(q.get("kind") or ""),
+        str(q.get("text") or "")[:160],
+    )
+
+
+def _reset_votes_if_needed(room):
+    fp = _vote_fp(room)
+    if room.get("_vote_fp") != fp:
+        room["votes"] = {}
+        room["_vote_fp"] = fp
+
+
+def _norm_voter_id(raw):
+    s = re.sub(r"[^A-Za-z0-9_-]", "", str(raw or ""))[:48]
+    return s if len(s) >= 8 else ""
+
+
+def _sanitize_student_vote(q, raw):
+    """Chỉ nhận phiếu TN / DS ẩn danh — không lưu tên học viên."""
+    d = raw if isinstance(raw, dict) else {}
+    kind = str((q or {}).get("kind") or "").upper()
+    if kind == "TN":
+        opts = q.get("options") or []
+        try:
+            i = int(d.get("tn"))
+        except (TypeError, ValueError):
+            return None, "Hãy chọn A–D."
+        if i < 0 or i >= len(opts):
+            return None, "Hãy chọn A–D."
+        return {"tn": i}, ""
+    if kind == "DS":
+        stmts = q.get("statements") or []
+        ds = d.get("ds")
+        if not isinstance(ds, list) or len(ds) < len(stmts):
+            return None, "Hãy chọn Đúng/Sai đủ các ý."
+        out = []
+        for x in ds[: len(stmts)]:
+            if x is True or x == 1 or x == "1":
+                out.append(True)
+            elif x is False or x == 0 or x == "0":
+                out.append(False)
+            else:
+                return None, "Hãy chọn Đúng/Sai đủ các ý."
+        return {"ds": out}, ""
+    return None, "Câu này chưa hỗ trợ bình chọn lớp (chỉ TN / Đúng-Sai)."
+
+
+def _vote_stats(room):
+    """Thống kê gộp — không lộ từng máy."""
+    q = (room or {}).get("q") or {}
+    kind = str(q.get("kind") or "").upper()
+    votes = (room or {}).get("votes") or {}
+    n = len(votes)
+    if kind == "TN":
+        opts = len(q.get("options") or [])
+        counts = [0] * max(0, opts)
+        for v in votes.values():
+            try:
+                i = int((v or {}).get("tn"))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(counts):
+                counts[i] += 1
+        return {"kind": "TN", "n": n, "counts": counts}
+    if kind == "DS":
+        stmts = len(q.get("statements") or [])
+        rows = [{"yes": 0, "no": 0} for _ in range(max(0, stmts))]
+        for v in votes.values():
+            ds = (v or {}).get("ds") or []
+            for i in range(min(len(rows), len(ds))):
+                if ds[i] is True:
+                    rows[i]["yes"] += 1
+                elif ds[i] is False:
+                    rows[i]["no"] += 1
+        return {"kind": "DS", "n": n, "rows": rows}
+    return {"kind": kind or "", "n": n}
+
+
 def _room_out(room, include_q=True):
+    _reset_votes_if_needed(room)
     d = {
         "ok": True,
         "code": room["code"],
@@ -585,6 +669,7 @@ def _room_out(room, include_q=True):
         "zoom": float(room.get("zoom") or 1),
         "host": room.get("host") or "",
         "live": room.get("live") or {},
+        "votes": _vote_stats(room),
         "secs": list(room.get("sec_titles") or []),
         "dangs": list(room.get("dang_nav") or []),
         "dang_has_prev": bool(room.get("dang_has_prev")),
@@ -660,6 +745,7 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
         if room.get("_ink_q") != ink_q:
             room["ink"] = []
             room["_ink_q"] = ink_q
+        _reset_votes_if_needed(room)
         new_fp = (
             room.get("pos"),
             room.get("total"),
@@ -1099,6 +1185,44 @@ def api_present_ink():
         return jsonify(ok=True, ver=int(room.get("ver") or 0))
 
 
+@base.app.post("/api/present/vote")
+def api_present_vote():
+    """Học viên (máy /xem) gửi lựa chọn ẩn danh → ADMIN xem thống kê realtime."""
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or "")
+    voter = _norm_voter_id(data.get("voter") or "")
+    if not code:
+        return jsonify(ok=False, error="Thiếu mã phòng."), 400
+    if not voter:
+        return jsonify(ok=False, error="Thiếu mã máy (tải lại trang)."), 400
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room:
+            return jsonify(ok=False, error="Phòng chưa mở hoặc đã tắt."), 404
+        _reset_votes_if_needed(room)
+        qk = str((room.get("q") or {}).get("kind") or "").upper()
+        if qk in {"LT", "PP"}:
+            return jsonify(ok=False, error="Đang chiếu lý thuyết / dạng mẫu."), 400
+        if bool(room.get("show_sol")):
+            return jsonify(ok=False, error="Đã mở đáp án — không đổi phiếu."), 400
+        # Dùng payload công khai (không lộ đáp án) để đếm số ô
+        pub = room.get("q") or {}
+        vote, err = _sanitize_student_vote(pub, data.get("vote") or data)
+        if err:
+            return jsonify(ok=False, error=err), 400
+        bag = room.setdefault("votes", {})
+        if len(bag) >= 400 and voter not in bag:
+            return jsonify(ok=False, error="Phòng đã đủ phiếu."), 429
+        prev = bag.get(voter)
+        bag[voter] = vote
+        if prev != vote:
+            room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        stats = _vote_stats(room)
+        ver = int(room.get("ver") or 0)
+    return jsonify(ok=True, ver=ver, votes=stats, mine=vote)
+
+
 @base.app.get("/xem/<code>/qr.svg")
 def present_qr_svg(code):
     code = _norm_code(code)
@@ -1166,6 +1290,7 @@ def present_watch(code=""):
         "<img src='" + qr_src + "' width='72' height='72' alt='QR vào chiếu'>"
         "<span>Quét · " + code + "</span></div>"
         "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
+        "<div id='cinemaVotes' class='cinema-votes' hidden></div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
@@ -1580,8 +1705,11 @@ let lastVer=-1;
 let lastDrawKey='';
 let lastQ=null;
 let lastLive={};
+let lastVotes={};
 let lastShowSol=false;
 let lastPeekPos=-1;
+let myVote=null;
+let myVoteFp='';
 let inkStrokes=[];
 let inkDrawing=false;
 let inkCur=null;
@@ -1595,6 +1723,37 @@ function hostTok(){
     if(p&&String(p.code||'').toUpperCase()===String(CODE).toUpperCase()&&p.token) return p;
   }catch(e){}
   return null;
+}
+function voterId(){
+  try{
+    let id=localStorage.getItem('ldvlVoterId')||'';
+    if(!id||id.length<8){
+      id='v'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+      localStorage.setItem('ldvlVoterId', id);
+    }
+    return id;
+  }catch(e){ return 'v'+String(Date.now()); }
+}
+function voteQfp(q, pos){
+  return [CODE, pos, (q&&q.kind)||'', String((q&&q.text)||'').slice(0,120)].join('\x1f');
+}
+function rememberMyVote(fp, vote){
+  myVoteFp=fp||'';
+  myVote=vote||null;
+  try{
+    if(vote) localStorage.setItem('ldvlMyVote:'+fp, JSON.stringify(vote));
+    else localStorage.removeItem('ldvlMyVote:'+fp);
+  }catch(e){}
+}
+function loadMyVote(fp){
+  if(myVoteFp===fp) return myVote;
+  myVoteFp=fp||'';
+  myVote=null;
+  try{
+    const raw=localStorage.getItem('ldvlMyVote:'+fp);
+    if(raw) myVote=JSON.parse(raw);
+  }catch(e){ myVote=null; }
+  return myVote;
 }
 function paintSecNav(pos,total,secs,kind,dangs,dangPrev,dangNext,qLo,qHi){
   const bar=document.getElementById('cinemaHost');
@@ -1777,6 +1936,124 @@ function bindCinemaPick(){
     save.onclick=function(){ presentLive({text:String(inp.value||'')}, false); };
   }
 }
+function studentDsCopy(){
+  const n=((lastQ&&lastQ.statements)||[]).length;
+  const mine=myVote&&Array.isArray(myVote.ds)?myVote.ds.slice():[];
+  while(mine.length<n) mine.push(null);
+  return mine.slice(0,n);
+}
+function studentVoteReady(vote){
+  const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
+  if(k==='TN') return vote && vote.tn!=null;
+  if(k==='DS'){
+    const n=((lastQ&&lastQ.statements)||[]).length;
+    const ds=(vote&&vote.ds)||[];
+    if(ds.length<n) return false;
+    for(let i=0;i<n;i++) if(ds[i]!==true && ds[i]!==false) return false;
+    return true;
+  }
+  return false;
+}
+async function presentVote(vote){
+  if(hostTok() || lastShowSol || !isQuizQ(lastQ)) return false;
+  const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
+  if(k!=='TN' && k!=='DS') return false;
+  const payload=Object.assign({}, vote||{});
+  const fp=voteQfp(lastQ, lastPeekPos);
+  if(k==='DS' && !studentVoteReady(payload)){
+    rememberMyVote(fp, payload);
+    paintStudentPickUi();
+    return false;
+  }
+  const r=await fetch('/api/present/vote',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    body:JSON.stringify({code:CODE,voter:voterId(),vote:payload})});
+  const d=await r.json().catch(function(){return {}});
+  if(!d||!d.ok){alert((d&&d.error)||'Không gửi được lựa chọn.');return false;}
+  rememberMyVote(fp, d.mine||payload);
+  if(d.votes){ lastVotes=d.votes; paintVotes(lastVotes); }
+  paintStudentPickUi();
+  if(typeof d.ver==='number') lastVer=Math.max(lastVer, d.ver);
+  return true;
+}
+function bindStudentVote(){
+  document.body.classList.toggle('voter-on', !hostTok() && !lastShowSol && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0);
+  if(hostTok() || lastShowSol || !isQuizQ(lastQ)) return;
+  const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
+  if(k!=='TN' && k!=='DS') return;
+  loadMyVote(voteQfp(lastQ, lastPeekPos));
+  document.querySelectorAll('#q .opt').forEach(function(el,i){
+    el.onclick=function(){ presentVote({tn:i}); };
+  });
+  document.querySelectorAll('#q .tf').forEach(function(row,i){
+    const yes=row.querySelector('.tf-box.yes');
+    const no=row.querySelector('.tf-box.no');
+    if(yes) yes.onclick=function(){ const ds=studentDsCopy(); ds[i]=true; presentVote({ds:ds}); };
+    if(no) no.onclick=function(){ const ds=studentDsCopy(); ds[i]=false; presentVote({ds:ds}); };
+  });
+}
+function paintStudentPickUi(){
+  if(hostTok() || !lastQ) return;
+  const mine=loadMyVote(voteQfp(lastQ, lastPeekPos))||{};
+  const k=String(lastQ.kind||'').toUpperCase();
+  if(k==='TN'){
+    document.querySelectorAll('#q .opt').forEach(function(el,i){
+      const on=mine.tn===i;
+      el.classList.toggle('mine', on);
+      let mark=el.querySelector('.mypick');
+      if(on && !mark){
+        mark=document.createElement('span');
+        mark.className='mypick pickmark';
+        mark.textContent='◀ bạn chọn';
+        const flags=el.querySelector('.tf-flags')||el;
+        flags.appendChild(mark);
+      }else if(!on && mark) mark.remove();
+    });
+  }else if(k==='DS'){
+    document.querySelectorAll('#q .tf').forEach(function(row,i){
+      const pick=(mine.ds||[])[i];
+      const yes=row.querySelector('.tf-box.yes');
+      const no=row.querySelector('.tf-box.no');
+      if(yes) yes.classList.toggle('mine', pick===true);
+      if(no) no.classList.toggle('mine', pick===false);
+    });
+  }
+}
+function paintVotes(votes){
+  const el=document.getElementById('cinemaVotes');
+  if(!el) return;
+  const on=!!hostTok() && isQuizQ(lastQ);
+  const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
+  votes=votes||{};
+  if(!on || (k!=='TN' && k!=='DS')){
+    el.hidden=true;
+    el.innerHTML='';
+    return;
+  }
+  const n=Number(votes.n||0);
+  let body='';
+  if(k==='TN'){
+    const counts=votes.counts||[];
+    const labs='ABCDEFGH';
+    body=counts.map(function(c,i){
+      const pct=n?Math.round(100*c/n):0;
+      return '<div class="vrow"><span class="vlab">'+labs.charAt(i)+'</span>'
+        +'<span class="vbar"><i style="width:'+pct+'%"></i></span>'
+        +'<span class="vnum">'+c+' · '+pct+'%</span></div>';
+    }).join('');
+  }else{
+    const rows=votes.rows||[];
+    body=rows.map(function(r,i){
+      const y=Number(r.yes||0), no=Number(r.no||0);
+      const tot=Math.max(1, y+no);
+      const yp=Math.round(100*y/tot), np=Math.round(100*no/tot);
+      const lab='ABCD'.charAt(i)||String(i+1);
+      return '<div class="vrow ds"><span class="vlab">'+lab+'</span>'
+        +'<span class="vpair"><span class="vy">Đ '+y+' ('+yp+'%)</span><span class="vn">S '+no+' ('+np+'%)</span></span></div>';
+    }).join('');
+  }
+  el.hidden=false;
+  el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+(body||'<div class="muted">Chưa có phiếu — học viên chạm đáp án trên máy /xem</div>');
+}
 function liveStudent(q, live){
   live=live||{};
   const k=String((q&&q.kind)||'').toUpperCase();
@@ -1818,8 +2095,8 @@ function dangLine(q){
 }
 function drawKey(q, showSol, pos, total, live){
   live=live||{};
-  if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||''].join('\x1f');
-  return [q&&q.kind,q&&q.dang,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok].join('\x1f');
+  if(q&&(q.kind==='LT'||q.kind==='PP')) return [q.kind,pos,total,q.title||'',!!hostTok()].join('\x1f');
+  return [q&&q.kind,q&&q.dang,pos,total,!!showSol,q&&q.text||'',live.tn,JSON.stringify(live.ds||[]),live.text||'',!!live.checked,live.ok,!!hostTok()].join('\x1f');
 }
 let inkCssH=0;
 function clampInkH(h){
@@ -2211,6 +2488,9 @@ function draw(q, showSol, pos, total, live){
   const checked=!!live.checked;
   box.hidden=false;
   let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span>'+(dangLine(q)?'<div class="qdang">'+E(dangLine(q))+'</div>':'')+'<div class="qstem">'+q.text+'</div></div>';
+  if(!hostTok() && !showSol && (q.kind==='TN'||q.kind==='DS')){
+    h+='<div class="votetip">Chạm đáp án để gửi phiếu ẩn danh — thầy thấy thống kê realtime</div>';
+  }
   if(checked && live.ok!=null){
     const labs='ABCD';
     let head=live.ok?'Đúng':'Sai';
@@ -2329,16 +2609,21 @@ async function tick(){
     lastVer=d.ver;
     lastQ=d.q||null;
     lastLive=d.live||{};
+    lastVotes=d.votes||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
       if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
       lastPeekPos=d.pos;
     }
     if(err) err.textContent='';
+    loadMyVote(voteQfp(lastQ, typeof d.pos==='number'?d.pos:lastPeekPos));
     const changed=draw(d.q, !!d.show_sol, d.pos, d.total, d.live||{});
     if(changed!==false && window.ldvlSpeak) window.ldvlSpeak.onDraw();
     paintSecNav(d.pos, d.total, d.secs||[], (d.q&&d.q.kind)||'', d.dangs||[], !!d.dang_has_prev, !!d.dang_has_next, d.q_lo, d.q_hi);
     bindCinemaPick();
+    bindStudentVote();
+    paintStudentPickUi();
+    paintVotes(lastVotes);
     bindCinemaInk();
     bindInkPadUi();
     applyInk(d);
