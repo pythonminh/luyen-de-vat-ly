@@ -1606,6 +1606,7 @@ def present_watch(code=""):
         "<div class='namegate-err' id='nameGateErr' hidden></div>"
         "</form></div>"
         "<div id='cinemaNameBadge' class='cinema-namebadge' hidden></div>"
+        "<div id='cinemaViolate' class='cinema-violate' hidden></div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
@@ -2064,11 +2065,78 @@ function normDisplayName(raw){
 }
 function paintNameBadge(){
   const el=document.getElementById('cinemaNameBadge');
-  if(!el || hostTok()){ if(el){ el.hidden=true; el.textContent=''; } return; }
+  if(!el || hostTok()){ if(el){ el.hidden=true; el.textContent=''; } paintViolatePanels(); return; }
   const nm=readDisplayName();
-  if(!nm){ el.hidden=true; el.textContent=''; return; }
+  if(!nm){ el.hidden=true; el.textContent=''; paintViolatePanels(); return; }
   el.hidden=false;
   el.textContent='Bạn: '+nm+' · tham gia xuyên suốt buổi chiếu';
+  paintViolatePanels();
+}
+function leaveBucket(reason){
+  const r=String(reason||'');
+  if(r==='hidden'||r==='blur') return 'mini';
+  if(r==='button'||r==='pagehide') return 'exit';
+  if(r==='net'||r==='offline') return 'net';
+  return 'other';
+}
+function leaveCounts(pos){
+  const empty={mini:0,exit:0,net:0,other:0,total:0};
+  const all=Object.assign({}, empty);
+  const cur=Object.assign({}, empty);
+  const log=readLeaveLog();
+  const events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
+  const hasPos=(pos!=null && pos!=='' && !isNaN(Number(pos)));
+  events.forEach(function(e){
+    const b=leaveBucket(e.reason);
+    all[b]=(all[b]||0)+1; all.total++;
+    if(hasPos && Number(e.pos)===Number(pos)){ cur[b]=(cur[b]||0)+1; cur.total++; }
+  });
+  return {all:all, cur:cur, pos:hasPos?Number(pos):null};
+}
+function violateHtml(st){
+  const cur=st.cur||{};
+  const all=st.all||{};
+  const qn=(st.pos!=null)?('Câu '+(st.pos+1)):'Câu đang chiếu';
+  const bad=!!(cur.total||all.total);
+  return '<div class="vt">⚠ Vi phạm trên bài đang chiếu · '+awayEsc(qn)+'</div>'
+    +'<div class="vr">'
+    +'<span>Thu nhỏ/đổi tab: <b>'+Number(cur.mini||0)+'</b></span>'
+    +'<span>Thoát: <b>'+Number(cur.exit||0)+'</b></span>'
+    +'<span>Rớt mạng: <b>'+Number(cur.net||0)+'</b></span>'
+    +'</div>'
+    +'<div class="vr" style="margin-top:4px;opacity:.92">Buổi này tổng: <b>'+Number(all.total||0)+'</b> lần'
+    +' (thu nhỏ '+Number(all.mini||0)+' · thoát '+Number(all.exit||0)+' · mạng '+Number(all.net||0)+')</div>'
+    +(bad?'':'<div class="vr" style="margin-top:2px;font-weight:600;opacity:.8">Đang theo dõi — chưa có vi phạm trên câu này.</div>');
+}
+function paintViolatePanels(){
+  const named=!!normDisplayName(readDisplayName());
+  const st=leaveCounts(typeof lastPeekPos==='number'?lastPeekPos:null);
+  const bad=!!((st.cur&&st.cur.total)||(st.all&&st.all.total));
+  const html=violateHtml(st);
+  const top=document.getElementById('cinemaViolate');
+  if(top){
+    if(hostTok() || !named){ top.hidden=true; top.innerHTML=''; top.classList.remove('has-bad'); }
+    else {
+      top.hidden=false;
+      top.classList.toggle('has-bad', bad);
+      top.innerHTML=html;
+    }
+  }
+  const box=document.getElementById('q');
+  if(box && !hostTok() && named && !box.hidden){
+    let el=document.getElementById('qViolate');
+    if(!el){
+      el=document.createElement('div');
+      el.id='qViolate';
+      el.className='qviolate';
+      box.insertBefore(el, box.firstChild);
+    }
+    el.classList.toggle('has-bad', bad);
+    el.innerHTML=html;
+  }else{
+    const old=document.getElementById('qViolate');
+    if(old) old.remove();
+  }
 }
 function showNameGate(on, errMsg){
   const gate=document.getElementById('cinemaNameGate');
@@ -2188,6 +2256,7 @@ function recordLeaveLocal(reason){
   const out={first:first,events:events.slice(-40),joined:Number(log.joined)||joinedAt};
   writeLeaveLog(out);
   lastAwayAt=now;
+  try{ paintViolatePanels(); }catch(e){}
   return Object.assign({}, out, {last:row,dup:false});
 }
 function reportAway(reason, opts){
@@ -2242,7 +2311,7 @@ function paintAwayBanner(log, force){
   const first=events[0].t;
   const n=events.length;
   function span(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000);const m=Math.floor(s/60);const h=Math.floor(m/60);if(h>0) return h+' giờ '+(m%60)+' phút'; if(m>0) return m+' phút'; return s+' giây';}
-  const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'}[last.reason]||'rời màn chiếu';
+  const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ',net:'rớt mạng',offline:'rớt mạng'}[last.reason]||'rời màn chiếu';
   setAwayPending(true);
   el.hidden=false;
   el.classList.add('is-on');
@@ -2251,6 +2320,7 @@ function paintAwayBanner(log, force){
     +'<div>Câu lúc đó: <b>'+awayEsc(qLeaveLabel(last))+'</b></div>'
     +'<div>Lý do: <b>'+awayEsc(reasonLab)+'</b></div>'
     +'<div>Số lần: <b>'+n+'</b> trong <b>'+span(last.t-first)+'</b></div>'
+    +'<div style="margin-top:8px;font-size:12px;opacity:.9">Số liệu vẫn hiện trên bài đang chiếu — không gỡ được khi kiểm tra.</div>'
     +'<button type="button" class="btn" id="awayDismiss">Đã hiểu — tiếp tục xem</button>'
     +'</div>';
   const btn=document.getElementById('awayDismiss');
@@ -2259,6 +2329,7 @@ function paintAwayBanner(log, force){
     el.hidden=true;
     el.classList.remove('is-on');
     el.innerHTML='';
+    paintViolatePanels();
   };
 }
 function goLeaveNotice(reason){
@@ -3080,7 +3151,7 @@ function draw(q, showSol, pos, total, live){
   box.hidden=false;
   let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span>'+(dangLine(q)?'<div class="qdang">'+E(dangLine(q))+'</div>':'')+'<div class="qstem">'+q.text+'</div></div>';
   if(!isHost && (q.kind==='TN'||q.kind==='DS')){
-    if(!showSol && !checked) h+='<div class="votetip">Chạm đáp án để gửi phiếu ẩn danh — có thể đổi đến khi thầy xác nhận</div>';
+    if(!showSol && !checked) h+='<div class="votetip">Chạm đáp án để gửi phiếu (theo tên bạn) — có thể đổi đến khi thầy xác nhận</div>';
     else if(checked) h+='<div class="votetip locked">Đã khóa phiếu — thầy đã xác nhận</div>';
   }
   if(checked && live.ok!=null){
@@ -3178,6 +3249,7 @@ function draw(q, showSol, pos, total, live){
     body.classList.add('hassplit');
   })();
   typeset(box);
+  try{ paintViolatePanels(); }catch(e){}
   return true;
 }
 async function tick(){
@@ -3205,11 +3277,14 @@ async function tick(){
           +'<div class="muted" style="margin-top:8px;font-weight:400">Đợi thầy bấm <b>Chiếu chung</b> với mã <code>'+E(CODE)+'</code> · <a href="/xem">Mã khác</a></div>';
       }else if(err){
         err.innerHTML='<span class="muted" style="font-weight:700">Đang kết nối lại…</span>';
+        reportAway('net', {exit:false});
+        paintViolatePanels();
       }
       return;
     }
     if(d.unchanged){
       sizeInk();
+      paintViolatePanels();
       return;
     }
     lastVer=d.ver;
@@ -3233,12 +3308,15 @@ async function tick(){
     paintStudentPickUi();
     paintVotes(lastVotes);
     paintNameBadge();
+    paintViolatePanels();
     bindCinemaInk();
     bindInkPadUi();
     applyInk(d);
     sizeInk();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
+    reportAway('net', {exit:false});
+    paintViolatePanels();
   }
 }
 bindNameGate();
@@ -3266,10 +3344,11 @@ setInterval(tick,900);
   const leave=document.getElementById('cinemaLeave');
   if(x) x.onclick=leaveCinema;
   if(leave) leave.onclick=leaveCinema;
-  // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab — kèm câu đang chiếu
+  // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab / rớt mạng — kèm câu đang chiếu
   function markAwayAndShow(reason){
     if(hostTok()) return;
     const log=reportAway(reason, {exit:false});
+    paintViolatePanels();
     if(!log) return;
     setAwayPending(true);
     // Hiện ngay khi quay lại (tab đang ẩn thì đợi pageshow/visibility)
@@ -3277,6 +3356,7 @@ setInterval(tick,900);
   }
   function showAwayIfPending(){
     if(hostTok() || document.hidden) return;
+    paintViolatePanels();
     if(hasAwayPending()) paintAwayBanner(null, true);
   }
   window.addEventListener('pagehide', function(){
@@ -3297,9 +3377,11 @@ setInterval(tick,900);
       if(document.hidden || !document.hasFocus()) markAwayAndShow('blur');
     }, 200);
   });
+  window.addEventListener('offline', function(){ markAwayAndShow('offline'); });
   try{
     const log=readLeaveLog();
     if(!log.joined) writeLeaveLog(Object.assign({}, log, {joined:joinedAt, first:Number(log.first)||joinedAt, events:Array.isArray(log.events)?log.events:[]}));
+    paintViolatePanels();
     showAwayIfPending();
   }catch(e){}
   const peekBtn=document.getElementById('peekToggle');

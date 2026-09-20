@@ -367,7 +367,16 @@ body.cinema .cinema-namegate input{width:100%;box-sizing:border-box;padding:12px
 body.cinema .cinema-namegate .btn{width:100%;min-height:44px;font-weight:900}
 body.cinema .cinema-namegate .namegate-err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:13px}
 body.cinema .cinema-namebadge{margin:6px 12px 0;padding:6px 10px;border-radius:8px;background:#ecfdf3;border:1px solid #86efac;color:#166534;font-size:12px;font-weight:800}
-body.cinema.is-host .cinema-namegate,body.cinema.is-host .cinema-namebadge{display:none!important}
+body.cinema .cinema-violate{margin:6px 12px 0;padding:10px 12px;border-radius:10px;border:2px solid #f59e0b;background:#fffbeb;color:#9a3412;font-size:13px;line-height:1.45;font-weight:700}
+body.cinema .cinema-violate.has-bad{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+body.cinema .cinema-violate .vt{font-size:14px;font-weight:900;margin:0 0 4px}
+body.cinema .cinema-violate .vr{display:flex;flex-wrap:wrap;gap:6px 12px}
+body.cinema .cinema-violate .vr b{color:#7f1d1d}
+body.cinema .qviolate{margin:0 0 10px;padding:10px 12px;border-radius:10px;border:2px solid #f59e0b;background:#fff7ed;color:#9a3412;font-size:13px;line-height:1.45;font-weight:700}
+body.cinema .qviolate.has-bad{border-color:#b91c1c;background:#fef2f2;color:#7f1d1d}
+body.cinema .qviolate .vt{font-size:14px;font-weight:900;margin:0 0 4px}
+body.cinema .qviolate .vr{display:flex;flex-wrap:wrap;gap:6px 12px}
+body.cinema.is-host .cinema-namegate,body.cinema.is-host .cinema-namebadge,body.cinema.is-host .cinema-violate,body.cinema.is-host .qviolate{display:none!important}
 body.cinema .cinema-away{display:none}
 body.cinema .cinema-away.is-on{display:flex;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;padding:16px;background:#7f1d1dcc;box-sizing:border-box}
 body.cinema .cinema-away .away-card{width:min(440px,100%);padding:16px 18px;border:3px solid #fecaca;border-radius:14px;background:#fff7ed;color:#7f1d1d;font-size:15px;line-height:1.45;box-shadow:0 12px 40px #0006}
