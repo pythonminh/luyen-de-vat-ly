@@ -2024,8 +2024,11 @@ let lastLive={};
 let lastVotes={};
 let lastShowSol=false;
 let lastPeekPos=-1;
-let leaveAnchorQ=null; // đóng băng câu lúc bắt đầu rời màn (không đổi theo tick nền)
+let shownPos=-1; // câu đang hiện trên màn học viên (chỉ cập nhật khi tab đang hiện)
+let shownQMeta=null;
+let leaveAnchorQ=null; // đóng băng câu lúc bắt đầu rời màn
 let pendingPeekPos=null;
+let pendingRoom=null; // state nhận khi tab ẩn — áp dụng khi quay lại
 let myVote=null;
 let myVoteFp='';
 let inkStrokes=[];
@@ -2082,26 +2085,45 @@ function leaveBucket(reason){
   return 'other';
 }
 function snapshotQMeta(forcePos){
+  // Ưu tiên: neo lúc rời màn → câu đang hiện trên màn → poll
+  const base=leaveAnchorQ||shownQMeta||null;
   const q=lastQ||{};
-  const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const raw=String((base&&base.preview)||q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
   let pos=forcePos;
   if(pos==null || pos==='' || isNaN(Number(pos))){
-    if(leaveAnchorQ && leaveAnchorQ.pos!=null && !isNaN(Number(leaveAnchorQ.pos))) pos=Number(leaveAnchorQ.pos);
+    if(base && base.pos!=null && !isNaN(Number(base.pos))) pos=Number(base.pos);
+    else if(typeof shownPos==='number' && shownPos>=0) pos=shownPos;
     else if(typeof lastPeekPos==='number' && lastPeekPos>=0) pos=lastPeekPos;
     else pos=null;
   }else pos=Number(pos);
-  const fromAnchor=(leaveAnchorQ && Number(leaveAnchorQ.pos)===Number(pos))?leaveAnchorQ:null;
   return {
     pos: pos,
-    kind: String((fromAnchor&&fromAnchor.kind)||q.kind||''),
-    id: String((fromAnchor&&fromAnchor.id)||q.id||''),
-    dang: String((fromAnchor&&fromAnchor.dang)||q.dang||''),
-    preview: String((fromAnchor&&fromAnchor.preview)||raw.slice(0,80))
+    kind: String((base&&base.kind)||q.kind||''),
+    id: String((base&&base.id)||q.id||''),
+    dang: String((base&&base.dang)||q.dang||''),
+    preview: String((base&&base.preview)||raw.slice(0,80))
   };
 }
+function rememberShownQ(q, pos){
+  if(document.hidden && !hostTok()) return;
+  q=q||lastQ||{};
+  const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  shownPos=(typeof pos==='number' && pos>=0)?pos:shownPos;
+  shownQMeta={
+    pos: shownPos>=0?shownPos:null,
+    kind: String(q.kind||''),
+    id: String(q.id||''),
+    dang: String(q.dang||''),
+    preview: raw.slice(0,80)
+  };
+  if(shownPos>=0) lastPeekPos=shownPos;
+}
 function freezeLeaveAnchor(){
-  // Chốt câu đang xem TRƯỚC khi tab ẩn / trước khi tick nền đổi câu
-  leaveAnchorQ=snapshotQMeta(typeof lastPeekPos==='number' && lastPeekPos>=0?lastPeekPos:null);
+  // Chốt đúng câu đang hiện trên màn — không lấy câu thầy vừa chuyển khi tab đang ẩn
+  leaveAnchorQ=snapshotQMeta(typeof shownPos==='number' && shownPos>=0?shownPos:null);
+  if(leaveAnchorQ && (leaveAnchorQ.pos==null || leaveAnchorQ.pos==='')){
+    leaveAnchorQ=Object.assign({}, leaveAnchorQ, shownQMeta||{});
+  }
   return leaveAnchorQ;
 }
 function clearLeaveAnchor(){
@@ -2148,28 +2170,30 @@ function violateHtml(st){
   const rows=Array.isArray(st.rows)?st.rows:[];
   const curPos=st.pos;
   const bad=!!(all.total);
-  const curLabel=(curPos!=null)?('Câu '+(curPos+1)):'Câu đang chiếu';
+  const curLabel=(curPos!=null)?('Câu '+(curPos+1)):'—';
   let list='';
   if(rows.length){
     list='<div class="vlist">'
       +rows.map(function(r){
         const isCur=(curPos!=null && Number(r.pos)===Number(curPos));
         const bits=[];
-        if(r.mini) bits.push('thu nhỏ '+r.mini);
-        if(r.exit) bits.push('thoát '+r.exit);
-        if(r.net) bits.push('mạng '+r.net);
-        if(r.other) bits.push('khác '+r.other);
+        if(r.mini) bits.push('thu nhỏ/đổi tab: '+r.mini);
+        if(r.exit) bits.push('thoát: '+r.exit);
+        if(r.net) bits.push('rớt mạng: '+r.net);
+        if(r.other) bits.push('khác: '+r.other);
+        const qLab=r.label||((r.pos>=0)?('Câu '+(r.pos+1)):'Câu ?');
         return '<div class="vline'+(isCur?' on':'')+'">'
-          +'<b>'+awayEsc(r.label)+'</b>'
+          +'<div><b>'+awayEsc(qLab)+'</b>'
           +(isCur?' <span class="vtag">đang chiếu</span>':'')
-          +' · '+awayEsc(bits.join(' · ')||('tổng '+r.total))
+          +'</div>'
+          +'<div>'+awayEsc(bits.join(' · ')||('tổng '+r.total))+'</div>'
           +'</div>';
       }).join('')
       +'</div>';
   }
-  return '<div class="vt">⚠ Đã ghi nhận vi phạm theo từng câu</div>'
+  return '<div class="vt">⚠ Vi phạm gắn đúng câu lúc xảy ra</div>'
     +list
-    +'<div class="vr" style="margin-top:6px">Câu đang chiếu (<b>'+awayEsc(curLabel)+'</b>): '
+    +'<div class="vr" style="margin-top:6px">Trên <b>'+awayEsc(curLabel)+'</b> (câu đang hiện): '
     +'thu nhỏ <b>'+Number(cur.mini||0)+'</b> · thoát <b>'+Number(cur.exit||0)+'</b> · mạng <b>'+Number(cur.net||0)+'</b></div>'
     +'<div class="vr" style="margin-top:4px;opacity:.92">Buổi này tổng: <b>'+Number(all.total||0)+'</b> lần'
     +' (thu nhỏ '+Number(all.mini||0)+' · thoát '+Number(all.exit||0)+' · mạng '+Number(all.net||0)+')</div>'
@@ -2177,8 +2201,9 @@ function violateHtml(st){
 }
 function paintViolatePanels(){
   const named=!!normDisplayName(readDisplayName());
-  const st=leaveCounts(typeof lastPeekPos==='number'?lastPeekPos:null);
-  const bad=!!((st.cur&&st.cur.total)||(st.all&&st.all.total));
+  const viewPos=(typeof shownPos==='number' && shownPos>=0)?shownPos:((typeof lastPeekPos==='number' && lastPeekPos>=0)?lastPeekPos:null);
+  const st=leaveCounts(viewPos);
+  const bad=!!(st.all&&st.all.total);
   const html=violateHtml(st);
   const top=document.getElementById('cinemaViolate');
   if(top){
@@ -2189,21 +2214,9 @@ function paintViolatePanels(){
       top.innerHTML=html;
     }
   }
-  const box=document.getElementById('q');
-  if(box && !hostTok() && named && !box.hidden){
-    let el=document.getElementById('qViolate');
-    if(!el){
-      el=document.createElement('div');
-      el.id='qViolate';
-      el.className='qviolate';
-      box.insertBefore(el, box.firstChild);
-    }
-    el.classList.toggle('has-bad', bad);
-    el.innerHTML=html;
-  }else{
-    const old=document.getElementById('qViolate');
-    if(old) old.remove();
-  }
+  // Không nhét thêm bản sao vào #q — tránh báo lỗi 2 lần
+  const old=document.getElementById('qViolate');
+  if(old) old.remove();
 }
 function showNameGate(on, errMsg){
   const gate=document.getElementById('cinemaNameGate');
@@ -2392,6 +2405,7 @@ function paintAwayBanner(log, force){
   };
 }
 function goLeaveNotice(reason){
+  freezeLeaveAnchor();
   reportAway(reason||'button', {exit:true});
   location.href='/xem?left='+encodeURIComponent(String(CODE||'').toUpperCase());
 }
@@ -3191,7 +3205,10 @@ function draw(q, showSol, pos, total, live){
   if(!box||!q) return false;
   live=live||{};
   const key=drawKey(q, showSol, pos, total, live);
-  if(key===lastDrawKey && box.innerHTML) return false;
+  if(key===lastDrawKey && box.innerHTML){
+    rememberShownQ(q, pos);
+    return false;
+  }
   lastDrawKey=key;
   box.removeAttribute('data-mj');
   if(q.kind==='LT'||q.kind==='PP'){
@@ -3200,6 +3217,8 @@ function draw(q, showSol, pos, total, live){
     box.innerHTML='<div class="qheadline"><span class="qbadge">'+lab+' · '+(pos+1)+'/'+total+'</span></div>'+(q.text||'');
     if(window.ldvlSpeak&&window.ldvlSpeak.mountChunks) window.ldvlSpeak.mountChunks(box);
     typeset(box);
+    rememberShownQ(q, pos);
+    try{ paintViolatePanels(); }catch(e){}
     return true;
   }
   const checked=!!live.checked;
@@ -3308,6 +3327,7 @@ function draw(q, showSol, pos, total, live){
     body.classList.add('hassplit');
   })();
   typeset(box);
+  rememberShownQ(q, pos);
   try{ paintViolatePanels(); }catch(e){}
   return true;
 }
@@ -3346,6 +3366,13 @@ async function tick(){
       paintViolatePanels();
       return;
     }
+    // Tab đang ẩn: chỉ giữ state chờ — KHÔNG draw / KHÔNG đổi câu đang hiện
+    if(document.hidden && !hostTok()){
+      pendingRoom=d;
+      if(typeof d.pos==='number') pendingPeekPos=d.pos;
+      paintViolatePanels();
+      return;
+    }
     lastVer=d.ver;
     lastQ=d.q||null;
     lastLive=d.live||{};
@@ -3354,14 +3381,9 @@ async function tick(){
     window.lastRoster=d.roster||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
-      // Khi tab đang ẩn: không đổi lastPeekPos — tránh ghi nhầm vi phạm sang câu mới thầy vừa chuyển
-      if(document.hidden){
-        pendingPeekPos=d.pos;
-      }else{
-        if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
-        lastPeekPos=d.pos;
-        pendingPeekPos=null;
-      }
+      if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
+      lastPeekPos=d.pos;
+      pendingPeekPos=null;
     }
     if(err) err.textContent='';
     loadMyVote(voteQfp(lastQ, typeof d.pos==='number'?d.pos:lastPeekPos));
@@ -3380,6 +3402,7 @@ async function tick(){
     sizeInk();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
+    if(!leaveAnchorQ) freezeLeaveAnchor();
     reportAway('net', {exit:false});
     paintViolatePanels();
   }
@@ -3423,11 +3446,22 @@ setInterval(tick,900);
   function showAwayIfPending(){
     if(hostTok() || document.hidden) return;
     clearLeaveAnchor();
+    const pending=pendingRoom;
+    pendingRoom=null;
+    if(pending && pending.ok){
+      lastVer=-1;
+      // Áp dụng câu mới chỉ SAU khi đã ghi vi phạm theo câu cũ
+      tick();
+      paintViolatePanels();
+      if(hasAwayPending()) paintAwayBanner(null, true);
+      return;
+    }
     if(pendingPeekPos!=null && pendingPeekPos!==lastPeekPos){
       if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
       lastPeekPos=pendingPeekPos;
       pendingPeekPos=null;
       lastVer=-1;
+      tick();
     }
     paintViolatePanels();
     if(hasAwayPending()) paintAwayBanner(null, true);
