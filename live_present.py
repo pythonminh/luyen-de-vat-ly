@@ -2139,7 +2139,7 @@ function leaveCounts(pos){
     const b=leaveBucket(e.reason);
     all[b]=(all[b]||0)+1; all.total++;
     const p=(e.pos!=null && e.pos!=='' && !isNaN(Number(e.pos)))?Number(e.pos):-1;
-    if(!byPos[p]) byPos[p]={mini:0,exit:0,net:0,other:0,total:0,label:'',id:'',dang:'',preview:''};
+    if(!byPos[p]) byPos[p]={mini:0,exit:0,net:0,other:0,total:0,id:'',dang:'',preview:'',kind:''};
     byPos[p][b]=(byPos[p][b]||0)+1;
     byPos[p].total++;
     if(e.id) byPos[p].id=e.id;
@@ -2154,50 +2154,57 @@ function leaveCounts(pos){
   Object.keys(byPos).forEach(function(k){
     const p=Number(k);
     const row=byPos[k];
-    const label=(p>=0)?('Câu '+(p+1)):(row.id?('ID '+row.id):'Câu không xác định');
-    rows.push(Object.assign({pos:p,label:label}, row));
+    const label=(p>=0)?('Câu '+(p+1)):(row.id?('ID '+row.id):'Câu ?');
+    rows.push(Object.assign({}, row, {pos:p, label:label}));
   });
   rows.sort(function(a,b){
     if(a.pos<0 && b.pos>=0) return 1;
     if(b.pos<0 && a.pos>=0) return -1;
     return a.pos-b.pos;
   });
-  return {all:all, cur:cur, pos:hasPos?Number(pos):null, rows:rows};
+  return {all:all, cur:cur, pos:hasPos?Number(pos):null, rows:rows, events:events};
+}
+function shortQLabel(pos){
+  if(pos==null || pos==='' || isNaN(Number(pos)) || Number(pos)<0) return 'Câu ?';
+  return 'Câu '+(Number(pos)+1);
 }
 function violateHtml(st){
   const all=st.all||{};
-  const cur=st.cur||{};
   const rows=Array.isArray(st.rows)?st.rows:[];
   const curPos=st.pos;
   const bad=!!(all.total);
-  const curLabel=(curPos!=null)?('Câu '+(curPos+1)):'—';
-  let list='';
-  if(rows.length){
-    list='<div class="vlist">'
-      +rows.map(function(r){
-        const isCur=(curPos!=null && Number(r.pos)===Number(curPos));
-        const bits=[];
-        if(r.mini) bits.push('thu nhỏ/đổi tab: '+r.mini);
-        if(r.exit) bits.push('thoát: '+r.exit);
-        if(r.net) bits.push('rớt mạng: '+r.net);
-        if(r.other) bits.push('khác: '+r.other);
-        const qLab=r.label||((r.pos>=0)?('Câu '+(r.pos+1)):'Câu ?');
-        return '<div class="vline'+(isCur?' on':'')+'">'
-          +'<div><b>'+awayEsc(qLab)+'</b>'
-          +(isCur?' <span class="vtag">đang chiếu</span>':'')
-          +'</div>'
-          +'<div>'+awayEsc(bits.join(' · ')||('tổng '+r.total))+'</div>'
-          +'</div>';
-      }).join('')
-      +'</div>';
+  const nowLab=shortQLabel(curPos);
+  // Tóm tắt ngắn: thoát / thu nhỏ / mạng theo đúng câu
+  const exitRows=rows.filter(function(r){return Number(r.exit||0)>0;});
+  const miniRows=rows.filter(function(r){return Number(r.mini||0)>0;});
+  const netRows=rows.filter(function(r){return Number(r.net||0)>0;});
+  function fmtRows(list, key){
+    if(!list.length) return 'không';
+    return list.map(function(r){
+      return awayEsc(r.label)+' ×'+Number(r[key]||0);
+    }).join(', ');
   }
-  return '<div class="vt">⚠ Vi phạm gắn đúng câu lúc xảy ra</div>'
-    +list
-    +'<div class="vr" style="margin-top:6px">Trên <b>'+awayEsc(curLabel)+'</b> (câu đang hiện): '
-    +'thu nhỏ <b>'+Number(cur.mini||0)+'</b> · thoát <b>'+Number(cur.exit||0)+'</b> · mạng <b>'+Number(cur.net||0)+'</b></div>'
-    +'<div class="vr" style="margin-top:4px;opacity:.92">Buổi này tổng: <b>'+Number(all.total||0)+'</b> lần'
+  const lastExit=exitRows.length?exitRows[exitRows.length-1]:null;
+  // Lần thoát gần nhất (theo thời gian sự kiện)
+  let lastExitPos=null;
+  const ev=Array.isArray(st.events)?st.events:[];
+  for(let i=ev.length-1;i>=0;i--){
+    if(leaveBucket(ev[i].reason)==='exit'){
+      lastExitPos=ev[i].pos;
+      break;
+    }
+  }
+  return '<div class="vt">⚠ Báo cáo vi phạm</div>'
+    +'<div class="vr"><b>Đang chiếu:</b> '+awayEsc(nowLab)+'</div>'
+    +'<div class="vr"><b>Thoát gần nhất:</b> '+(lastExitPos!=null && lastExitPos!==''?awayEsc(shortQLabel(lastExitPos)):'chưa')
+    +(lastExit?' <span class="vmut">('+awayEsc(lastExit.label)+' tổng thoát ×'+Number(lastExit.exit||0)+')</span>':'')
+    +'</div>'
+    +'<div class="vr"><b>Thoát theo câu:</b> '+fmtRows(exitRows,'exit')+'</div>'
+    +'<div class="vr"><b>Thu nhỏ/đổi tab:</b> '+fmtRows(miniRows,'mini')+'</div>'
+    +'<div class="vr"><b>Rớt mạng:</b> '+fmtRows(netRows,'net')+'</div>'
+    +'<div class="vr vmut">Buổi này: <b>'+Number(all.total||0)+'</b> lần'
     +' (thu nhỏ '+Number(all.mini||0)+' · thoát '+Number(all.exit||0)+' · mạng '+Number(all.net||0)+')</div>'
-    +(bad?'':'<div class="vr" style="margin-top:2px;font-weight:600;opacity:.8">Đang theo dõi — chưa có vi phạm.</div>');
+    +(bad?'':'<div class="vr vmut">Đang theo dõi — chưa có vi phạm.</div>');
 }
 function paintViolatePanels(){
   const named=!!normDisplayName(readDisplayName());
