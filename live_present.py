@@ -656,20 +656,29 @@ def _vote_stats(room):
 
 
 def _leave_stats(room):
-    """Số máy đã thoát khi đang xem chiếu (ẩn danh)."""
+    """Số máy đã thoát/thu nhỏ/đổi tab khi đang xem chiếu (ẩn danh)."""
     bag = (room or {}).get("leaves") or {}
     events = 0
     last = 0.0
+    by_pos = {}
     for arr in bag.values():
         if not isinstance(arr, list):
             continue
         events += len(arr)
-        for t in arr:
+        for item in arr:
             try:
-                last = max(last, float(t))
+                if isinstance(item, dict):
+                    t = float(item.get("t") or 0)
+                    pos = item.get("pos")
+                else:
+                    t = float(item)
+                    pos = None
+                last = max(last, t)
+                if pos is not None:
+                    by_pos[int(pos)] = by_pos.get(int(pos), 0) + 1
             except (TypeError, ValueError):
                 pass
-    return {"machines": len(bag), "events": events, "last": last or None}
+    return {"machines": len(bag), "events": events, "last": last or None, "by_pos": by_pos}
 
 
 def _room_out(room, include_q=True):
@@ -1251,6 +1260,14 @@ def api_present_leave():
     code = _norm_code(data.get("code") or "")
     voter = _norm_voter_id(data.get("voter") or "")
     reason = str(data.get("reason") or "leave")[:32]
+    qmeta = data.get("q") if isinstance(data.get("q"), dict) else {}
+    q_pos = qmeta.get("pos")
+    try:
+        q_pos = int(q_pos) if q_pos is not None else None
+    except (TypeError, ValueError):
+        q_pos = None
+    q_kind = str(qmeta.get("kind") or "")[:8]
+    q_id = str(qmeta.get("id") or "")[:48]
     if not code:
         return jsonify(ok=False, error="Thiếu mã phòng."), 400
     if not voter:
@@ -1259,22 +1276,28 @@ def api_present_leave():
     with _LOCK:
         room = _ROOMS.get(code)
         if not room:
-            # Vẫn trả ok để máy xem hiện cảnh báo local dù phòng vừa tắt
             return jsonify(ok=True, recorded=False, leaves={"machines": 0, "events": 0})
         bag = room.setdefault("leaves", {})
         arr = list(bag.get(voter) or [])
-        # Tránh đếm đôi trong vòng 8 giây (pagehide + nút X)
+        # Tránh đếm đôi trong vòng 5 giây (hidden + pagehide + nút X)
         if arr:
             try:
-                if now - float(arr[-1]) < 8:
+                last = arr[-1]
+                last_t = float(last.get("t") if isinstance(last, dict) else last)
+                if now - last_t < 5:
                     return jsonify(ok=True, recorded=False, leaves=_leave_stats(room), ver=int(room.get("ver") or 0))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, AttributeError):
                 pass
-        arr.append(round(now, 3))
+        arr.append({
+            "t": round(now, 3),
+            "reason": reason,
+            "pos": q_pos,
+            "kind": q_kind,
+            "id": q_id,
+        })
         bag[voter] = arr[-40:]
         room["ver"] = int(room.get("ver") or 0) + 1
         room["updated"] = now
-        room["_leave_reason"] = reason
         stats = _leave_stats(room)
         ver = int(room.get("ver") or 0)
     return jsonify(ok=True, recorded=True, leaves=stats, ver=ver, at=now)
@@ -1313,20 +1336,28 @@ def present_watch(code=""):
             "return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+' · '+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear();}"
             "function span(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000);const m=Math.floor(s/60);const h=Math.floor(m/60);"
             "if(h>0) return h+' giờ '+ (m%60) +' phút'; if(m>0) return m+' phút '+ (s%60) +' giây'; return s+' giây';}"
+            "function normEv(x){if(x&&typeof x==='object') return {t:Number(x.t)||0,reason:x.reason||'',pos:x.pos,kind:x.kind||'',id:x.id||'',preview:x.preview||'',dang:x.dang||''};"
+            "return {t:Number(x)||0,reason:'',pos:null,kind:'',id:'',preview:'',dang:''};}"
+            "function qLabel(e){if(!e) return '—'; const n=(e.pos!=null&&e.pos!=='')?('Câu '+(Number(e.pos)+1)):'Câu đang chiếu';"
+            "const bits=[n]; if(e.kind) bits.push(e.kind); if(e.dang) bits.push(e.dang); if(e.id) bits.push('ID '+e.id);"
+            "if(e.preview) bits.push(e.preview); return bits.join(' · ');}"
             "let log={first:0,events:[]};"
             "try{log=JSON.parse(localStorage.getItem('ldvlLeaveLog:'+CODE)||'{}')||{};}catch(e){}"
-            "const ev=Array.isArray(log.events)?log.events.map(Number).filter(Boolean):[];"
-            "const last=ev.length?ev[ev.length-1]:Date.now();"
-            "const firstJoin=Number(log.joined)||Number(log.first)|| (ev[0]||last);"
-            "const firstEv=ev[0]||last;"
+            "const ev=(Array.isArray(log.events)?log.events:[]).map(normEv).filter(function(e){return e.t>0;});"
+            "const last=ev.length?ev[ev.length-1]:{t:Date.now()};"
+            "const firstJoin=Number(log.joined)||Number(log.first)|| (ev[0]?ev[0].t:last.t);"
+            "const firstEv=ev[0]?ev[0].t:last.t;"
             "const n=ev.length;"
+            "const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'}[last.reason]||last.reason||'rời màn chiếu';"
             "const el=document.getElementById('leaveStats');"
             "if(el) el.innerHTML='<b>Ghi nhận lỗi</b><br>'"
             "+'Mã phòng: <code>'+CODE+'</code><br>'"
-            "+'Thời điểm thoát gần nhất: <b>'+fmt(last)+'</b><br>'"
-            "+'Số lần thoát: <b>'+n+'</b> lần trong <b>'+span(last-firstEv)+'</b>'"
-            "+(n>1?' (từ lần thoát đầu đến lần này)':'')+'.<br>'"
-            "+'Thời gian từ lúc vào xem đến lần thoát này: <b>'+span(last-firstJoin)+'</b>.';"
+            "+'Câu lúc rời: <b>'+qLabel(last)+'</b><br>'"
+            "+'Lý do: <b>'+reasonLab+'</b><br>'"
+            "+'Thời điểm gần nhất: <b>'+fmt(last.t)+'</b><br>'"
+            "+'Số lần: <b>'+n+'</b> lần trong <b>'+span(last.t-firstEv)+'</b>'"
+            "+(n>1?' (từ lần đầu đến lần này)':'')+'.<br>'"
+            "+'Từ lúc vào xem đến lần này: <b>'+span(last.t-firstJoin)+'</b>.';"
             "})();</script>"
         )
         return base.page("Thoát chiếu", body)
@@ -1383,6 +1414,7 @@ def present_watch(code=""):
         "<span>Quét · " + code + "</span></div>"
         "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
         "<div id='cinemaVotes' class='cinema-votes' hidden></div>"
+        "<div id='cinemaAway' class='cinema-away' hidden></div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
@@ -1827,6 +1859,7 @@ function voterId(){
   }catch(e){ return 'v'+String(Date.now()); }
 }
 let leaveRecorded=false;
+let lastAwayAt=0;
 let joinedAt=Date.now();
 function leaveLogKey(){ return 'ldvlLeaveLog:'+String(CODE||'').toUpperCase(); }
 function readLeaveLog(){
@@ -1835,38 +1868,97 @@ function readLeaveLog(){
 function writeLeaveLog(log){
   try{ localStorage.setItem(leaveLogKey(), JSON.stringify(log)); }catch(e){}
 }
-function recordLeaveLocal(){
+function currentQMeta(){
+  const q=lastQ||{};
+  const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  return {
+    pos: (typeof lastPeekPos==='number' && lastPeekPos>=0)?lastPeekPos:null,
+    kind: String(q.kind||''),
+    id: String(q.id||''),
+    dang: String(q.dang||''),
+    preview: raw.slice(0,80)
+  };
+}
+function normLeaveEv(x){
+  if(x&&typeof x==='object') return {t:Number(x.t)||0,reason:x.reason||'',pos:x.pos,kind:x.kind||'',id:x.id||'',preview:x.preview||'',dang:x.dang||''};
+  return {t:Number(x)||0,reason:'',pos:null,kind:'',id:'',preview:'',dang:''};
+}
+function qLeaveLabel(e){
+  if(!e) return '—';
+  const n=(e.pos!=null&&e.pos!=='')?('Câu '+(Number(e.pos)+1)):'Câu đang chiếu';
+  const bits=[n];
+  if(e.kind) bits.push(e.kind);
+  if(e.dang) bits.push(String(e.dang).slice(0,40));
+  if(e.id) bits.push('ID '+e.id);
+  if(e.preview) bits.push(e.preview);
+  return bits.join(' · ');
+}
+function recordLeaveLocal(reason){
   const now=Date.now();
   const log=readLeaveLog();
-  let events=Array.isArray(log.events)?log.events.map(Number).filter(Boolean):[];
-  // Giữ trong 24 giờ
+  let events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
   const cut=now-24*3600*1000;
-  events=events.filter(function(t){return t>=cut;});
-  if(events.length && now-events[events.length-1]<8000) return {first:Number(log.first)||events[0],events:events,dup:true};
-  events.push(now);
-  const first=Number(log.first)||events[0]||now;
+  events=events.filter(function(e){return e.t>=cut;});
+  if(events.length && now-events[events.length-1].t<5000){
+    return {first:Number(log.first)||events[0].t,events:events,joined:Number(log.joined)||joinedAt,dup:true,last:events[events.length-1]};
+  }
+  const meta=currentQMeta();
+  const row=Object.assign({t:now,reason:String(reason||'leave')}, meta);
+  events.push(row);
+  const first=Number(log.first)||events[0].t||now;
   const out={first:first,events:events.slice(-40),joined:Number(log.joined)||joinedAt};
   writeLeaveLog(out);
-  return out;
+  lastAwayAt=now;
+  return Object.assign({}, out, {last:row,dup:false});
 }
-function reportLeave(reason){
-  if(hostTok() || leaveRecorded) return null;
-  leaveRecorded=true;
-  const log=recordLeaveLocal();
-  const body=JSON.stringify({code:CODE,voter:voterId(),reason:String(reason||'leave')});
+function reportAway(reason, opts){
+  opts=opts||{};
+  if(hostTok()) return null;
+  if(opts.exit && leaveRecorded) return null;
+  const now=Date.now();
+  if(!opts.exit && lastAwayAt && now-lastAwayAt<5000) return readLeaveLog();
+  if(opts.exit) leaveRecorded=true;
+  const log=recordLeaveLocal(reason);
+  if(log && log.dup){
+    // Đã ghi gần đây (vd. hidden rồi pagehide) — không gửi trùng
+    return log;
+  }
+  const meta=(log && log.last) ? {pos:log.last.pos,kind:log.last.kind,id:log.last.id,dang:log.last.dang,preview:log.last.preview} : currentQMeta();
+  const body=JSON.stringify({code:CODE,voter:voterId(),reason:String(reason||'leave'),q:meta});
   try{
     if(navigator.sendBeacon){
-      const blob=new Blob([body],{type:'application/json'});
-      navigator.sendBeacon('/api/present/leave', blob);
+      navigator.sendBeacon('/api/present/leave', new Blob([body],{type:'application/json'}));
     }else{
       fetch('/api/present/leave',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:body,keepalive:true}).catch(function(){});
     }
   }catch(e){}
   return log;
 }
+function paintAwayBanner(log){
+  const el=document.getElementById('cinemaAway');
+  if(!el || hostTok()){ if(el) el.hidden=true; return; }
+  log=log||readLeaveLog();
+  const events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
+  if(!events.length){ el.hidden=true; el.innerHTML=''; return; }
+  const last=events[events.length-1];
+  const first=events[0].t;
+  const n=events.length;
+  function span(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000);const m=Math.floor(s/60);const h=Math.floor(m/60);if(h>0) return h+' giờ '+(m%60)+' phút'; if(m>0) return m+' phút'; return s+' giây';}
+  const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'}[last.reason]||'rời màn chiếu';
+  el.hidden=false;
+  el.innerHTML='<b>⚠ Bạn đã rời màn chiếu khi đang tham gia</b>'
+    +'<div>Câu lúc đó: <b>'+E(qLeaveLabel(last))+'</b></div>'
+    +'<div>Lý do: <b>'+E(reasonLab)+'</b> · <b>'+n+'</b> lần trong <b>'+span(last.t-first)+'</b></div>'
+    +'<button type="button" class="btn" id="awayDismiss">Đã hiểu</button>';
+  const btn=document.getElementById('awayDismiss');
+  if(btn) btn.onclick=function(){ el.hidden=true; };
+}
 function goLeaveNotice(reason){
-  reportLeave(reason||'button');
+  reportAway(reason||'button', {exit:true});
   location.href='/xem?left='+encodeURIComponent(String(CODE||'').toUpperCase());
+}
+function reportLeave(reason){
+  return reportAway(reason||'pagehide', {exit:true});
 }
 function voteQfp(q, pos){
   return [CODE, pos, (q&&q.kind)||'', String((q&&q.text)||'').slice(0,120)].join('\x1f');
@@ -2162,8 +2254,11 @@ function paintVotes(votes){
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   votes=votes||{};
   const leaves=window.lastLeaves||{};
+  const byPos=leaves.by_pos||{};
+  const onThis=(typeof lastPeekPos==='number' && lastPeekPos>=0 && byPos[lastPeekPos]!=null)?Number(byPos[lastPeekPos]):0;
   const leaveLine=(leaves.events||leaves.machines)
-    ?('<div class="vleave">🚪 Thoát khi xem: <b>'+Number(leaves.machines||0)+'</b> máy · <b>'+Number(leaves.events||0)+'</b> lần</div>')
+    ?('<div class="vleave">🚪 Rời màn (thoát/thu nhỏ/đổi tab): <b>'+Number(leaves.machines||0)+'</b> máy · <b>'+Number(leaves.events||0)+'</b> lần'
+      +(onThis?(' · câu này: <b>'+onThis+'</b>'):'')+'</div>')
     :'';
   if(!on || (k!=='TN' && k!=='DS')){
     if(on && leaveLine){
@@ -2810,14 +2905,34 @@ setInterval(tick,900);
   const leave=document.getElementById('cinemaLeave');
   if(x) x.onclick=leaveCinema;
   if(leave) leave.onclick=leaveCinema;
-  // Ghi nhận khi đóng tab / điều hướng khỏi trang chiếu (không tính đổi app tạm)
+  // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab — kèm câu đang chiếu
   window.addEventListener('pagehide', function(){
     if(hostTok() || leaveRecorded) return;
-    reportLeave('pagehide');
+    reportAway('pagehide', {exit:true});
+  });
+  document.addEventListener('visibilitychange', function(){
+    if(hostTok()) return;
+    if(document.hidden){
+      const log=reportAway('hidden', {exit:false});
+      if(log && !log.dup) paintAwayBanner(log);
+    }else{
+      paintAwayBanner();
+    }
+  });
+  window.addEventListener('blur', function(){
+    if(hostTok() || document.hidden) return;
+    // Một số trình duyệt thu nhỏ cửa sổ không bật hidden ngay
+    setTimeout(function(){
+      if(document.hidden || !document.hasFocus()){
+        const log=reportAway('blur', {exit:false});
+        if(log && !log.dup) paintAwayBanner(log);
+      }
+    }, 200);
   });
   try{
     const log=readLeaveLog();
     if(!log.joined) writeLeaveLog(Object.assign({}, log, {joined:joinedAt, first:Number(log.first)||joinedAt, events:Array.isArray(log.events)?log.events:[]}));
+    paintAwayBanner(log);
   }catch(e){}
   const peekBtn=document.getElementById('peekToggle');
   if(peekBtn) peekBtn.onclick=async function(){

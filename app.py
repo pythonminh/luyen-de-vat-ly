@@ -350,6 +350,10 @@ body.cinema .cinema-votes .vpair{display:flex;gap:12px;flex-wrap:wrap;font-weigh
 body.cinema .cinema-votes .vy{color:#15803d}
 body.cinema .cinema-votes .vn{color:#b91c1c}
 body.cinema .cinema-votes .vleave{margin-top:8px;padding-top:8px;border-top:1px dashed #93c5fd;color:#9a3412;font-weight:700}
+body.cinema .cinema-away{margin:8px 12px;padding:10px 12px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#92400e;font-size:13px;line-height:1.45}
+body.cinema .cinema-away b{color:#9a3412}
+body.cinema .cinema-away .btn{margin-top:8px}
+body.cinema.is-host .cinema-away{display:none!important}
 body.cinema:not(.is-host) .cinema-votes{display:none!important}
 body.cinema .cinema-ans{width:min(100%,28em);max-width:100%;padding:10px 12px;font-size:16px;border:1px solid #cbd8e6;border-radius:8px;margin:0 8px 0 0}
 body.cinema .opt.correct,body.cinema .tf.correct{background:#f3faf5!important;border:2px solid #86c99a!important;box-shadow:none}
