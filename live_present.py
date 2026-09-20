@@ -2029,6 +2029,8 @@ let shownQMeta=null;
 let leaveAnchorQ=null; // đóng băng câu lúc bắt đầu rời màn
 let pendingPeekPos=null;
 let pendingRoom=null; // state nhận khi tab ẩn — áp dụng khi quay lại
+let qWatch={pos:null, start:0, end:null, frozen:null}; // cửa sổ đếm: vào câu → Xác nhận
+const CHEER_MSG='Bình tĩnh, cố gắng — Lớp học Thầy Minh';
 let myVote=null;
 let myVoteFp='';
 let inkStrokes=[];
@@ -2108,7 +2110,9 @@ function rememberShownQ(q, pos){
   if(document.hidden && !hostTok()) return;
   q=q||lastQ||{};
   const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  shownPos=(typeof pos==='number' && pos>=0)?pos:shownPos;
+  const next=(typeof pos==='number' && pos>=0)?pos:shownPos;
+  const changed=(typeof next==='number' && next>=0 && next!==qWatch.pos);
+  shownPos=next;
   shownQMeta={
     pos: shownPos>=0?shownPos:null,
     kind: String(q.kind||''),
@@ -2117,6 +2121,7 @@ function rememberShownQ(q, pos){
     preview: raw.slice(0,80)
   };
   if(shownPos>=0) lastPeekPos=shownPos;
+  if(changed) resetQWatch(shownPos);
 }
 function freezeLeaveAnchor(){
   // Chốt đúng câu đang hiện trên màn — không lấy câu thầy vừa chuyển khi tab đang ẩn
@@ -2128,6 +2133,56 @@ function freezeLeaveAnchor(){
 }
 function clearLeaveAnchor(){
   leaveAnchorQ=null;
+}
+function qWatchKey(){ return 'ldvlQWatch:'+String(CODE||'').toUpperCase(); }
+function loadQWatch(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(qWatchKey())||'null');
+    if(raw && typeof raw==='object') qWatch=Object.assign({pos:null,start:0,end:null,frozen:null}, raw);
+  }catch(e){}
+}
+function saveQWatch(){
+  try{ localStorage.setItem(qWatchKey(), JSON.stringify(qWatch)); }catch(e){}
+}
+function resetQWatch(pos){
+  const p=(typeof pos==='number' && pos>=0)?pos:null;
+  qWatch={pos:p, start:Date.now(), end:null, frozen:null};
+  saveQWatch();
+  setAwayPending(false);
+}
+function syncQWatchConfirm(checked){
+  const p=(typeof shownPos==='number' && shownPos>=0)?shownPos:qWatch.pos;
+  if(p==null) return;
+  if(qWatch.pos!==p) resetQWatch(p);
+  if(checked){
+    if(qWatch.end==null){
+      qWatch.end=Date.now();
+      qWatch.frozen=countInQWatch();
+      saveQWatch();
+    }
+  }else if(qWatch.end!=null){
+    // Thầy mở lại / câu mới chưa xác nhận
+    qWatch.end=null;
+    qWatch.frozen=null;
+    saveQWatch();
+  }
+}
+function countInQWatch(){
+  const empty={mini:0,exit:0,net:0,other:0,total:0};
+  const out=Object.assign({}, empty);
+  if(qWatch.pos==null || qWatch.pos==='') return out;
+  const start=Number(qWatch.start)||0;
+  const end=(qWatch.end!=null)?Number(qWatch.end):Number.POSITIVE_INFINITY;
+  const log=readLeaveLog();
+  const events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
+  events.forEach(function(e){
+    if(Number(e.pos)!==Number(qWatch.pos)) return;
+    if(e.t<start || e.t>end) return;
+    const b=leaveBucket(e.reason);
+    out[b]=(out[b]||0)+1;
+    out.total++;
+  });
+  return out;
 }
 function leaveCounts(pos){
   const empty={mini:0,exit:0,net:0,other:0,total:0};
@@ -2169,48 +2224,36 @@ function shortQLabel(pos){
   return 'Câu '+(Number(pos)+1);
 }
 function violateHtml(st){
-  const all=st.all||{};
-  const rows=Array.isArray(st.rows)?st.rows:[];
-  const curPos=st.pos;
-  const bad=!!(all.total);
-  const nowLab=shortQLabel(curPos);
-  // Tóm tắt ngắn: thoát / thu nhỏ / mạng theo đúng câu
-  const exitRows=rows.filter(function(r){return Number(r.exit||0)>0;});
-  const miniRows=rows.filter(function(r){return Number(r.mini||0)>0;});
-  const netRows=rows.filter(function(r){return Number(r.net||0)>0;});
-  function fmtRows(list, key){
-    if(!list.length) return 'không';
-    return list.map(function(r){
-      return awayEsc(r.label)+' ×'+Number(r[key]||0);
-    }).join(', ');
+  const nowLab=shortQLabel(st.pos);
+  const checked=!!(lastLive&&lastLive.checked);
+  syncQWatchConfirm(checked);
+  const cur=(checked && qWatch.frozen)?qWatch.frozen:countInQWatch();
+  const bad=!!(cur.total);
+  const hasExit=!!(cur.exit);
+  let status='';
+  if(checked){
+    status=hasExit
+      ?('Trong '+awayEsc(nowLab)+' (đến lúc thầy xác nhận): <b>có thoát màn hình ×'+Number(cur.exit)+'</b>')
+      :('Trong '+awayEsc(nowLab)+' (đến lúc thầy xác nhận): <b>không thoát màn hình</b>');
+  }else{
+    status=hasExit
+      ?('Đang theo dõi '+awayEsc(nowLab)+': <b>đã thoát ×'+Number(cur.exit)+'</b> — chờ thầy xác nhận')
+      :('Đang theo dõi '+awayEsc(nowLab)+': chưa thoát — chờ thầy xác nhận');
   }
-  const lastExit=exitRows.length?exitRows[exitRows.length-1]:null;
-  // Lần thoát gần nhất (theo thời gian sự kiện)
-  let lastExitPos=null;
-  const ev=Array.isArray(st.events)?st.events:[];
-  for(let i=ev.length-1;i>=0;i--){
-    if(leaveBucket(ev[i].reason)==='exit'){
-      lastExitPos=ev[i].pos;
-      break;
-    }
-  }
-  return '<div class="vt">⚠ Báo cáo vi phạm</div>'
+  return '<div class="vt">'+(bad?'⚠ ':'✓ ')+'Câu đang chiếu</div>'
     +'<div class="vr"><b>Đang chiếu:</b> '+awayEsc(nowLab)+'</div>'
-    +'<div class="vr"><b>Thoát gần nhất:</b> '+(lastExitPos!=null && lastExitPos!==''?awayEsc(shortQLabel(lastExitPos)):'chưa')
-    +(lastExit?' <span class="vmut">('+awayEsc(lastExit.label)+' tổng thoát ×'+Number(lastExit.exit||0)+')</span>':'')
-    +'</div>'
-    +'<div class="vr"><b>Thoát theo câu:</b> '+fmtRows(exitRows,'exit')+'</div>'
-    +'<div class="vr"><b>Thu nhỏ/đổi tab:</b> '+fmtRows(miniRows,'mini')+'</div>'
-    +'<div class="vr"><b>Rớt mạng:</b> '+fmtRows(netRows,'net')+'</div>'
-    +'<div class="vr vmut">Buổi này: <b>'+Number(all.total||0)+'</b> lần'
-    +' (thu nhỏ '+Number(all.mini||0)+' · thoát '+Number(all.exit||0)+' · mạng '+Number(all.net||0)+')</div>'
-    +(bad?'':'<div class="vr vmut">Đang theo dõi — chưa có vi phạm.</div>');
+    +'<div class="vr">'+status+'</div>'
+    +'<div class="vr">Trong câu này: thoát <b>'+Number(cur.exit||0)+'</b> · thu nhỏ/đổi tab <b>'+Number(cur.mini||0)+'</b> · rớt mạng <b>'+Number(cur.net||0)+'</b></div>'
+    +'<div class="vr cheer">'+awayEsc(CHEER_MSG)+'</div>';
 }
 function paintViolatePanels(){
   const named=!!normDisplayName(readDisplayName());
   const viewPos=(typeof shownPos==='number' && shownPos>=0)?shownPos:((typeof lastPeekPos==='number' && lastPeekPos>=0)?lastPeekPos:null);
+  if(viewPos!=null && qWatch.pos!==viewPos) resetQWatch(viewPos);
+  syncQWatchConfirm(!!(lastLive&&lastLive.checked));
   const st=leaveCounts(viewPos);
-  const bad=!!(st.all&&st.all.total);
+  const cur=(lastLive&&lastLive.checked&&qWatch.frozen)?qWatch.frozen:countInQWatch();
+  const bad=!!(cur.total);
   const html=violateHtml(st);
   const top=document.getElementById('cinemaViolate');
   if(top){
@@ -2218,10 +2261,10 @@ function paintViolatePanels(){
     else {
       top.hidden=false;
       top.classList.toggle('has-bad', bad);
+      top.classList.toggle('is-ok', !bad);
       top.innerHTML=html;
     }
   }
-  // Không nhét thêm bản sao vào #q — tránh báo lỗi 2 lần
   const old=document.getElementById('qViolate');
   if(old) old.remove();
 }
@@ -3415,6 +3458,7 @@ async function tick(){
   }
 }
 bindNameGate();
+loadQWatch();
 tick();
 setInterval(tick,900);
 (function(){
