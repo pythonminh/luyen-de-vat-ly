@@ -2168,8 +2168,7 @@ function syncQWatchConfirm(checked){
   }
 }
 function countInQWatch(){
-  const empty={mini:0,exit:0,net:0,other:0,total:0};
-  const out=Object.assign({}, empty);
+  const out={mini:0,exit:0,net:0,other:0,total:0,exitAt:[],miniAt:[],netAt:[]};
   if(qWatch.pos==null || qWatch.pos==='') return out;
   const start=Number(qWatch.start)||0;
   const end=(qWatch.end!=null)?Number(qWatch.end):Number.POSITIVE_INFINITY;
@@ -2181,8 +2180,31 @@ function countInQWatch(){
     const b=leaveBucket(e.reason);
     out[b]=(out[b]||0)+1;
     out.total++;
+    if(b==='exit') out.exitAt.push(e.t);
+    if(b==='mini') out.miniAt.push(e.t);
+    if(b==='net') out.netAt.push(e.t);
   });
   return out;
+}
+function fmtClock(ts){
+  const d=new Date(Number(ts)||0);
+  if(!ts || isNaN(d.getTime())) return '—';
+  const p=function(n){return String(n).padStart(2,'0');};
+  return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+}
+function fmtClockList(arr){
+  if(!arr||!arr.length) return '';
+  return arr.slice(-5).map(fmtClock).join(', ')+(arr.length>5?'…':'');
+}
+function currentQStats(){
+  const checked=!!(lastLive&&lastLive.checked);
+  if(checked && qWatch.frozen) return qWatch.frozen;
+  return countInQWatch();
+}
+function isViolateLocked(){
+  if(hostTok()) return false;
+  const c=currentQStats();
+  return !!(Number(c.exit||0) || Number(c.mini||0));
 }
 function leaveCounts(pos){
   const empty={mini:0,exit:0,net:0,other:0,total:0};
@@ -2227,24 +2249,53 @@ function violateHtml(st){
   const nowLab=shortQLabel(st.pos);
   const checked=!!(lastLive&&lastLive.checked);
   syncQWatchConfirm(checked);
-  const cur=(checked && qWatch.frozen)?qWatch.frozen:countInQWatch();
-  const bad=!!(cur.total);
+  const cur=currentQStats();
+  const locked=isViolateLocked();
   const hasExit=!!(cur.exit);
+  const exitTimes=fmtClockList(cur.exitAt);
+  const miniTimes=fmtClockList(cur.miniAt);
   let status='';
-  if(checked){
-    status=hasExit
-      ?('Trong '+awayEsc(nowLab)+' (đến lúc thầy xác nhận): <b>có thoát màn hình ×'+Number(cur.exit)+'</b>')
-      :('Trong '+awayEsc(nowLab)+' (đến lúc thầy xác nhận): <b>không thoát màn hình</b>');
+  if(locked){
+    status='<b>ĐÓNG MỘC VI PHẠM</b> — không được làm '+awayEsc(nowLab);
+  }else if(checked){
+    status='Trong '+awayEsc(nowLab)+' (đến lúc thầy xác nhận): <b>không thoát / không thu nhỏ</b>';
   }else{
-    status=hasExit
-      ?('Đang theo dõi '+awayEsc(nowLab)+': <b>đã thoát ×'+Number(cur.exit)+'</b> — chờ thầy xác nhận')
-      :('Đang theo dõi '+awayEsc(nowLab)+': chưa thoát — chờ thầy xác nhận');
+    status='Đang theo dõi '+awayEsc(nowLab)+' đến khi thầy xác nhận';
   }
-  return '<div class="vt">'+(bad?'⚠ ':'✓ ')+'Câu đang chiếu</div>'
+  let timeLines='';
+  if(hasExit){
+    timeLines+='<div class="vr"><b>Thoát màn hình lúc:</b> '+awayEsc(exitTimes||'—')+'</div>';
+  }else{
+    timeLines+='<div class="vr"><b>Thoát màn hình:</b> chưa</div>';
+  }
+  if(cur.mini){
+    timeLines+='<div class="vr"><b>Thu nhỏ/đổi tab lúc:</b> '+awayEsc(miniTimes||'—')+'</div>';
+  }
+  return '<div class="vt">'+(locked?'⛔ ':'✓ ')+'Câu đang chiếu</div>'
     +'<div class="vr"><b>Đang chiếu:</b> '+awayEsc(nowLab)+'</div>'
     +'<div class="vr">'+status+'</div>'
+    +timeLines
     +'<div class="vr">Trong câu này: thoát <b>'+Number(cur.exit||0)+'</b> · thu nhỏ/đổi tab <b>'+Number(cur.mini||0)+'</b> · rớt mạng <b>'+Number(cur.net||0)+'</b></div>'
+    +(locked?'<div class="vr seal">Đã đóng mộc — phiếu câu này bị khóa trên máy bạn</div>':'')
     +'<div class="vr cheer">'+awayEsc(CHEER_MSG)+'</div>';
+}
+function paintViolateSeal(locked, pos){
+  let seal=document.getElementById('cinemaViolateSeal');
+  if(hostTok() || !locked){
+    if(seal){ seal.hidden=true; seal.innerHTML=''; }
+    return;
+  }
+  if(!seal){
+    seal=document.createElement('div');
+    seal.id='cinemaViolateSeal';
+    seal.className='cinema-violate-seal';
+    const stage=document.querySelector('.cinema-stage')||document.querySelector('.cinema-q');
+    if(stage) stage.insertBefore(seal, stage.firstChild);
+    else document.body.appendChild(seal);
+  }
+  seal.hidden=false;
+  seal.innerHTML='<div class="seal-stamp">ĐÓNG MỘC VI PHẠM</div>'
+    +'<div>Không được làm '+awayEsc(shortQLabel(pos))+' trên máy này</div>';
 }
 function paintViolatePanels(){
   const named=!!normDisplayName(readDisplayName());
@@ -2252,21 +2303,25 @@ function paintViolatePanels(){
   if(viewPos!=null && qWatch.pos!==viewPos) resetQWatch(viewPos);
   syncQWatchConfirm(!!(lastLive&&lastLive.checked));
   const st=leaveCounts(viewPos);
-  const cur=(lastLive&&lastLive.checked&&qWatch.frozen)?qWatch.frozen:countInQWatch();
+  const cur=currentQStats();
   const bad=!!(cur.total);
+  const locked=isViolateLocked();
   const html=violateHtml(st);
   const top=document.getElementById('cinemaViolate');
   if(top){
-    if(hostTok() || !named){ top.hidden=true; top.innerHTML=''; top.classList.remove('has-bad'); }
+    if(hostTok() || !named){ top.hidden=true; top.innerHTML=''; top.classList.remove('has-bad','is-ok','is-seal'); }
     else {
       top.hidden=false;
-      top.classList.toggle('has-bad', bad);
-      top.classList.toggle('is-ok', !bad);
+      top.classList.toggle('has-bad', bad||locked);
+      top.classList.toggle('is-ok', !bad && !locked);
+      top.classList.toggle('is-seal', locked);
       top.innerHTML=html;
     }
   }
+  document.body.classList.toggle('violate-lock', !hostTok() && locked);
   const old=document.getElementById('qViolate');
   if(old) old.remove();
+  paintViolateSeal(locked, viewPos);
 }
 function showNameGate(on, errMsg){
   const gate=document.getElementById('cinemaNameGate');
@@ -2378,7 +2433,10 @@ function recordLeaveLocal(reason){
   const out={first:first,events:events.slice(-40),joined:Number(log.joined)||joinedAt};
   writeLeaveLog(out);
   lastAwayAt=now;
-  try{ paintViolatePanels(); }catch(e){}
+  try{
+    paintViolatePanels();
+    bindStudentVote();
+  }catch(e){}
   return Object.assign({}, out, {last:row,dup:false});
 }
 function reportAway(reason, opts){
@@ -2684,6 +2742,11 @@ function studentVoteReady(vote){
 }
 async function presentVote(vote){
   if(hostTok() || lastShowSol || (lastLive&&lastLive.checked) || !isQuizQ(lastQ)) return false;
+  if(isViolateLocked()){
+    alert('ĐÓNG MỘC VI PHẠM — không được làm câu này (đã thoát/thu nhỏ màn hình).');
+    paintViolatePanels();
+    return false;
+  }
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   if(k!=='TN' && k!=='DS') return false;
   const nm=normDisplayName(readDisplayName());
@@ -2706,12 +2769,16 @@ async function presentVote(vote){
   return true;
 }
 function votesLocked(){
-  return !!(lastLive&&lastLive.checked) || !!lastShowSol;
+  return !!(lastLive&&lastLive.checked) || !!lastShowSol || isViolateLocked();
 }
 function bindStudentVote(){
   const canVote=!hostTok() && !votesLocked() && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0;
   document.body.classList.toggle('voter-on', canVote);
-  if(!canVote) return;
+  document.body.classList.toggle('violate-lock', !hostTok() && isViolateLocked());
+  if(!canVote){
+    document.querySelectorAll('#q .opt, #q .tf-box').forEach(function(el){ el.onclick=null; });
+    return;
+  }
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   loadMyVote(voteQfp(lastQ, lastPeekPos));
   document.querySelectorAll('#q .opt').forEach(function(el,i){
@@ -3279,7 +3346,8 @@ function draw(q, showSol, pos, total, live){
   box.hidden=false;
   let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span>'+(dangLine(q)?'<div class="qdang">'+E(dangLine(q))+'</div>':'')+'<div class="qstem">'+q.text+'</div></div>';
   if(!isHost && (q.kind==='TN'||q.kind==='DS')){
-    if(!showSol && !checked) h+='<div class="votetip">Chạm đáp án để gửi phiếu (theo tên bạn) — có thể đổi đến khi thầy xác nhận</div>';
+    if(isViolateLocked()) h+='<div class="votetip locked seal">⛔ ĐÓNG MỘC VI PHẠM — không được làm câu này</div>';
+    else if(!showSol && !checked) h+='<div class="votetip">Chạm đáp án để gửi phiếu (theo tên bạn) — có thể đổi đến khi thầy xác nhận</div>';
     else if(checked) h+='<div class="votetip locked">Đã khóa phiếu — thầy đã xác nhận</div>';
   }
   if(checked && live.ok!=null){

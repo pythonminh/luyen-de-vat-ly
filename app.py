@@ -374,9 +374,14 @@ body.cinema .cinema-violate .vt{font-size:14px;font-weight:900;margin:0 0 6px}
 body.cinema .cinema-violate .vr{margin:3px 0}
 body.cinema .cinema-violate .vr b{color:#7f1d1d}
 body.cinema .cinema-violate.is-ok .vr b{color:#166534}
-body.cinema .cinema-violate .cheer{margin-top:8px;padding-top:8px;border-top:1px dashed #86efac;color:#145bb0;font-weight:800}
-body.cinema .cinema-violate .vmut{font-weight:600;opacity:.88;font-size:12px}
-body.cinema .qviolate{display:none!important}
+body.cinema .cinema-violate.is-seal{border-color:#7f1d1d;background:#450a0a;color:#fecaca}
+body.cinema .cinema-violate.is-seal .vr b,body.cinema .cinema-violate .seal{color:#fecaca}
+body.cinema .cinema-violate .seal{margin-top:6px;font-weight:900;letter-spacing:.02em}
+body.cinema .votetip.seal{border-color:#b91c1c;background:#fef2f2;color:#991b1b}
+body.cinema .cinema-violate-seal{margin:8px 12px;padding:14px 12px;border:3px solid #b91c1c;border-radius:12px;background:#7f1d1dee;color:#fff;text-align:center;font-weight:800;z-index:25;position:relative}
+body.cinema .cinema-violate-seal .seal-stamp{display:inline-block;margin:0 0 6px;padding:6px 12px;border:3px solid #fecaca;border-radius:8px;transform:rotate(-6deg);font-size:16px;font-weight:900;letter-spacing:.04em;color:#fecaca;background:#450a0a}
+body.cinema.violate-lock:not(.is-host) .opt,body.cinema.violate-lock:not(.is-host) .tf-box{pointer-events:none!important;opacity:.55;cursor:not-allowed!important}
+body.cinema.is-host .cinema-violate-seal{display:none!important}
 body.cinema.is-host .cinema-namegate,body.cinema.is-host .cinema-namebadge,body.cinema.is-host .cinema-violate,body.cinema.is-host .qviolate{display:none!important}
 body.cinema .cinema-away{display:none}
 body.cinema .cinema-away.is-on{display:flex;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;padding:16px;background:#7f1d1dcc;box-sizing:border-box}
