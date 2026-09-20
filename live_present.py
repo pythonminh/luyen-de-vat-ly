@@ -683,56 +683,140 @@ def _vote_stats(room):
 
 
 def _vote_roster(room):
-    """Danh sách tên + đáp án từng học viên — chỉ gửi cho máy thầy."""
+    """Danh sách tên + đáp án + vi phạm rời màn — chỉ gửi cho máy thầy."""
     q = (room or {}).get("q") or {}
     kind = str(q.get("kind") or "").upper()
     votes = (room or {}).get("votes") or {}
     names = (room or {}).get("names") or {}
+    leaves = (room or {}).get("leaves") or {}
+    try:
+        cur_pos = int((room or {}).get("pos") or 0)
+    except (TypeError, ValueError):
+        cur_pos = 0
+    vids = set(names.keys()) | set(votes.keys()) | set(leaves.keys())
     rows = []
-    for vid, vote in votes.items():
-        nm = _norm_display_name(names.get(vid) or "") or ("Máy " + str(vid)[-4:])
-        rows.append({
-            "name": nm,
-            "pick": _format_pick_label(kind, vote),
-            "vote": vote if isinstance(vote, dict) else {},
-        })
-    rows.sort(key=lambda r: (str(r.get("name") or "").casefold(), str(r.get("pick") or "")))
-    joined = []
-    for vid, nm in names.items():
-        label = _norm_display_name(nm) or ("Máy " + str(vid)[-4:])
-        joined.append(label)
-    joined = sorted(set(joined), key=lambda s: s.casefold())
-    return {"kind": kind, "rows": rows, "joined": joined, "joined_n": len(joined)}
-
-
-def _leave_stats(room):
-    """Số máy đã thoát/thu nhỏ/đổi tab khi đang xem chiếu (ẩn danh)."""
-    bag = (room or {}).get("leaves") or {}
-    events = 0
-    last = 0.0
-    by_pos = {}
-    for arr in bag.values():
-        if not isinstance(arr, list):
-            continue
-        events += len(arr)
+    for vid in vids:
+        nm = _norm_display_name(names.get(vid) or "")
+        arr = leaves.get(vid) if isinstance(leaves.get(vid), list) else []
+        if not nm and arr:
+            last = arr[-1]
+            if isinstance(last, dict):
+                nm = _norm_display_name(last.get("name") or "")
+        if not nm:
+            nm = "Máy " + str(vid)[-4:]
+        vote = votes.get(vid) if isinstance(votes.get(vid), dict) else None
+        pick = _format_pick_label(kind, vote) if vote else ""
+        leave_n = len(arr)
+        on_this = 0
+        last_reason = ""
+        last_t = 0.0
         for item in arr:
             try:
                 if isinstance(item, dict):
                     t = float(item.get("t") or 0)
                     pos = item.get("pos")
+                    reason = str(item.get("reason") or "")
                 else:
                     t = float(item)
                     pos = None
-                last = max(last, t)
-                if pos is not None:
-                    by_pos[int(pos)] = by_pos.get(int(pos), 0) + 1
+                    reason = ""
+                if pos is not None and int(pos) == cur_pos:
+                    on_this += 1
+                if t >= last_t:
+                    last_t = t
+                    last_reason = reason
             except (TypeError, ValueError):
                 pass
-    return {"machines": len(bag), "events": events, "last": last or None, "by_pos": by_pos}
+        rows.append({
+            "name": nm,
+            "pick": pick or "—",
+            "voted": bool(vote),
+            "leave_n": leave_n,
+            "on_this": on_this,
+            "last_reason": last_reason,
+            "vote": vote or {},
+        })
+    rows.sort(key=lambda r: (
+        0 if int(r.get("leave_n") or 0) else 1,
+        0 if r.get("voted") else 1,
+        str(r.get("name") or "").casefold(),
+    ))
+    joined = sorted(
+        {_norm_display_name(n) or ("Máy " + str(v)[-4:]) for v, n in names.items()},
+        key=lambda s: s.casefold(),
+    )
+    return {"kind": kind, "rows": rows, "joined": joined, "joined_n": len(joined)}
+
+
+def _leave_stats(room):
+    """Số máy đã thoát/thu nhỏ/đổi tab khi đang xem chiếu."""
+    bag = (room or {}).get("leaves") or {}
+    names = (room or {}).get("names") or {}
+    events = 0
+    last = 0.0
+    by_pos = {}
+    people = []
+    try:
+        cur_pos = int((room or {}).get("pos") or 0)
+    except (TypeError, ValueError):
+        cur_pos = 0
+    for vid, arr in bag.items():
+        if not isinstance(arr, list) or not arr:
+            continue
+        events += len(arr)
+        nm = _norm_display_name(names.get(vid) or "")
+        on_this = 0
+        last_reason = ""
+        for item in arr:
+            try:
+                if isinstance(item, dict):
+                    t = float(item.get("t") or 0)
+                    pos = item.get("pos")
+                    reason = str(item.get("reason") or "")
+                    if not nm:
+                        nm = _norm_display_name(item.get("name") or "")
+                else:
+                    t = float(item)
+                    pos = None
+                    reason = ""
+                last = max(last, t)
+                if pos is not None:
+                    ip = int(pos)
+                    by_pos[ip] = by_pos.get(ip, 0) + 1
+                    if ip == cur_pos:
+                        on_this += 1
+                last_reason = reason or last_reason
+            except (TypeError, ValueError):
+                pass
+        if not nm:
+            nm = "Máy " + str(vid)[-4:]
+        people.append({
+            "name": nm,
+            "events": len(arr),
+            "on_this": on_this,
+            "last_reason": last_reason,
+        })
+    people.sort(key=lambda p: (-int(p.get("events") or 0), str(p.get("name") or "").casefold()))
+    return {
+        "machines": len(bag),
+        "events": events,
+        "last": last or None,
+        "by_pos": by_pos,
+        "people": people,
+    }
+
 
 
 def _room_out(room, include_q=True, host=False):
     _reset_votes_if_needed(room)
+    leaves = _leave_stats(room)
+    if not host:
+        leaves = {
+            "machines": leaves.get("machines") or 0,
+            "events": leaves.get("events") or 0,
+            "last": leaves.get("last"),
+            "by_pos": leaves.get("by_pos") or {},
+        }
     d = {
         "ok": True,
         "code": room["code"],
@@ -746,7 +830,7 @@ def _room_out(room, include_q=True, host=False):
         "host": room.get("host") or "",
         "live": room.get("live") or {},
         "votes": _vote_stats(room),
-        "leaves": _leave_stats(room),
+        "leaves": leaves,
         "secs": list(room.get("sec_titles") or []),
         "dangs": list(room.get("dang_nav") or []),
         "dang_has_prev": bool(room.get("dang_has_prev")),
@@ -1346,11 +1430,12 @@ def api_present_vote():
 
 @base.app.post("/api/present/leave")
 def api_present_leave():
-    """Ghi nhận người xem thoát khi đang tham gia chiếu (ẩn danh)."""
+    """Ghi nhận người xem thoát/thu nhỏ/đổi tab khi đang tham gia chiếu."""
     data = request.get_json(silent=True) or {}
     code = _norm_code(data.get("code") or "")
     voter = _norm_voter_id(data.get("voter") or "")
     reason = str(data.get("reason") or "leave")[:32]
+    name = _norm_display_name(data.get("name") or "")
     qmeta = data.get("q") if isinstance(data.get("q"), dict) else {}
     q_pos = qmeta.get("pos")
     try:
@@ -1368,6 +1453,10 @@ def api_present_leave():
         room = _ROOMS.get(code)
         if not room:
             return jsonify(ok=True, recorded=False, leaves={"machines": 0, "events": 0})
+        if name:
+            room.setdefault("names", {})[voter] = name
+        else:
+            name = _norm_display_name((room.get("names") or {}).get(voter) or "")
         bag = room.setdefault("leaves", {})
         arr = list(bag.get(voter) or [])
         # Tránh đếm đôi trong vòng 5 giây (hidden + pagehide + nút X)
@@ -1385,6 +1474,7 @@ def api_present_leave():
             "pos": q_pos,
             "kind": q_kind,
             "id": q_id,
+            "name": name,
         })
         bag[voter] = arr[-40:]
         room["ver"] = int(room.get("ver") or 0) + 1
@@ -2113,7 +2203,7 @@ function reportAway(reason, opts){
     return log;
   }
   const meta=(log && log.last) ? {pos:log.last.pos,kind:log.last.kind,id:log.last.id,dang:log.last.dang,preview:log.last.preview} : currentQMeta();
-  const body=JSON.stringify({code:CODE,voter:voterId(),reason:String(reason||'leave'),q:meta});
+  const body=JSON.stringify({code:CODE,voter:voterId(),name:normDisplayName(readDisplayName()),reason:String(reason||'leave'),q:meta});
   try{
     if(navigator.sendBeacon){
       navigator.sendBeacon('/api/present/leave', new Blob([body],{type:'application/json'}));
@@ -2481,12 +2571,33 @@ function paintVotes(votes){
     ?('<div class="vleave">🚪 Rời màn (thoát/thu nhỏ/đổi tab): <b>'+Number(leaves.machines||0)+'</b> máy · <b>'+Number(leaves.events||0)+'</b> lần'
       +(onThis?(' · câu này: <b>'+onThis+'</b>'):'')+'</div>')
     :'';
+  const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'};
   const rows=Array.isArray(roster.rows)?roster.rows:[];
   const joinedN=Number(roster.joined_n||0);
   const rosterHtml=rows.length
-    ?('<div class="vroster"><b class="head">Đáp án học viên</b>'
+    ?('<div class="vroster"><b class="head">Học viên · đáp án · vi phạm</b>'
       +rows.map(function(r){
-        return '<div class="vwho"><span class="vnm">'+E(r.name||'—')+'</span><span class="vpk">'+E(r.pick||'—')+'</span></div>';
+        const leaveN=Number(r.leave_n||0);
+        const onQ=Number(r.on_this||0);
+        const leaveTxt=leaveN
+          ?('⚠ '+leaveN+' lần'+(onQ?(' · câu này '+onQ):'')+(r.last_reason?(' · '+(reasonLab[r.last_reason]||r.last_reason)):''))
+          :'ổn';
+        return '<div class="vwho'+(leaveN?' bad':'')+'">'
+          +'<span class="vnm">'+E(r.name||'—')+'</span>'
+          +'<span class="vpk">'+E(r.pick||'—')+'</span>'
+          +'<span class="vlc">'+E(leaveTxt)+'</span>'
+          +'</div>';
+      }).join('')
+      +'</div>')
+    :'';
+  const leavePeople=Array.isArray(leaves.people)?leaves.people:[];
+  const leavePeopleHtml=(!rows.length && leavePeople.length)
+    ?('<div class="vroster"><b class="head">Máy vi phạm rời màn</b>'
+      +leavePeople.map(function(p){
+        return '<div class="vwho bad"><span class="vnm">'+E(p.name||'—')+'</span>'
+          +'<span class="vlc">⚠ '+Number(p.events||0)+' lần'
+          +(Number(p.on_this||0)?(' · câu này '+Number(p.on_this)): '')
+          +'</span></div>';
       }).join('')
       +'</div>')
     :'';
@@ -2494,9 +2605,9 @@ function paintVotes(votes){
     ?('<div class="vjoined">Đã vào tên: <b>'+joinedN+'</b>'+(Array.isArray(roster.joined)&&roster.joined.length?(' · '+E(roster.joined.slice(0,12).join(', '))+(roster.joined.length>12?'…':'')):'')+'</div>')
     :'';
   if(!on || (k!=='TN' && k!=='DS')){
-    if(on && (leaveLine||rosterHtml||joinedLine)){
+    if(on && (leaveLine||rosterHtml||leavePeopleHtml||joinedLine)){
       el.hidden=false;
-      el.innerHTML='<b>📊 Lớp</b>'+joinedLine+leaveLine+rosterHtml;
+      el.innerHTML='<b>📊 Lớp</b>'+joinedLine+leaveLine+rosterHtml+leavePeopleHtml;
       return;
     }
     el.hidden=true;
@@ -2528,7 +2639,7 @@ function paintVotes(votes){
   el.hidden=false;
   el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+joinedLine+leaveLine
     +(body||'<div class="muted">Chưa có phiếu — học viên đặt tên rồi chạm đáp án trên máy /xem</div>')
-    +rosterHtml;
+    +rosterHtml+leavePeopleHtml;
 }
 function liveStudent(q, live){
   live=live||{};

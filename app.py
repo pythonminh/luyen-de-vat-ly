@@ -350,11 +350,13 @@ body.cinema .cinema-votes .vpair{display:flex;gap:12px;flex-wrap:wrap;font-weigh
 body.cinema .cinema-votes .vy{color:#15803d}
 body.cinema .cinema-votes .vn{color:#b91c1c}
 body.cinema .cinema-votes .vleave{margin-top:8px;padding-top:8px;border-top:1px dashed #93c5fd;color:#9a3412;font-weight:700}
-body.cinema .cinema-votes .vroster{margin-top:10px;padding-top:8px;border-top:1px dashed #93c5fd;max-height:28vh;overflow:auto}
+body.cinema .cinema-votes .vroster{margin-top:10px;padding-top:8px;border-top:1px dashed #93c5fd;max-height:32vh;overflow:auto}
 body.cinema .cinema-votes .vroster b.head{display:block;margin-bottom:6px;color:#1e3a8a}
-body.cinema .cinema-votes .vwho{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px;border-bottom:1px solid #dbeafe}
+body.cinema .cinema-votes .vwho{display:grid;grid-template-columns:minmax(0,1.2fr) 3.2em minmax(0,1.4fr);gap:8px;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #dbeafe}
+body.cinema .cinema-votes .vwho.bad{background:#fff7ed}
 body.cinema .cinema-votes .vwho .vnm{font-weight:800;color:#0f172a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.cinema .cinema-votes .vwho .vpk{font-weight:900;color:#145bb0;flex:0 0 auto}
+body.cinema .cinema-votes .vwho .vpk{font-weight:900;color:#145bb0;text-align:center}
+body.cinema .cinema-votes .vwho .vlc{font-weight:700;color:#9a3412;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.cinema .cinema-votes .vjoined{margin-top:6px;font-size:12px;color:#334155}
 body.cinema .cinema-namegate{display:none;position:fixed;inset:0;z-index:70;align-items:center;justify-content:center;padding:16px;background:#0f172acc;box-sizing:border-box}
 body.cinema .cinema-namegate.is-on{display:flex}
