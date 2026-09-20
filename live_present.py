@@ -594,8 +594,17 @@ def _norm_voter_id(raw):
     return s if len(s) >= 8 else ""
 
 
+def _norm_display_name(raw):
+    """Tên hiện thị học viên trên chiếu (2–24 ký tự)."""
+    s = re.sub(r"\s+", " ", str(raw or "")).strip()
+    s = re.sub(r"[\x00-\x1f\x7f<>\"'`]", "", s)
+    if len(s) < 2:
+        return ""
+    return s[:24]
+
+
 def _sanitize_student_vote(q, raw):
-    """Chỉ nhận phiếu TN / DS ẩn danh — không lưu tên học viên."""
+    """Chỉ nhận phiếu TN / DS — tên lưu riêng trong room['names']."""
     d = raw if isinstance(raw, dict) else {}
     kind = str((q or {}).get("kind") or "").upper()
     if kind == "TN":
@@ -624,8 +633,26 @@ def _sanitize_student_vote(q, raw):
     return None, "Câu này chưa hỗ trợ bình chọn lớp (chỉ TN / Đúng-Sai)."
 
 
+def _format_pick_label(kind, vote):
+    kind = str(kind or "").upper()
+    vote = vote if isinstance(vote, dict) else {}
+    if kind == "TN":
+        try:
+            i = int(vote.get("tn"))
+        except (TypeError, ValueError):
+            return ""
+        if i < 0:
+            return ""
+        labs = "ABCDEFGH"
+        return labs[i] if i < len(labs) else str(i + 1)
+    if kind == "DS":
+        ds = vote.get("ds") or []
+        return "".join("Đ" if x is True else ("S" if x is False else "·") for x in ds)
+    return ""
+
+
 def _vote_stats(room):
-    """Thống kê gộp — không lộ từng máy."""
+    """Thống kê gộp — không lộ từng máy (học viên)."""
     q = (room or {}).get("q") or {}
     kind = str(q.get("kind") or "").upper()
     votes = (room or {}).get("votes") or {}
@@ -655,6 +682,29 @@ def _vote_stats(room):
     return {"kind": kind or "", "n": n}
 
 
+def _vote_roster(room):
+    """Danh sách tên + đáp án từng học viên — chỉ gửi cho máy thầy."""
+    q = (room or {}).get("q") or {}
+    kind = str(q.get("kind") or "").upper()
+    votes = (room or {}).get("votes") or {}
+    names = (room or {}).get("names") or {}
+    rows = []
+    for vid, vote in votes.items():
+        nm = _norm_display_name(names.get(vid) or "") or ("Máy " + str(vid)[-4:])
+        rows.append({
+            "name": nm,
+            "pick": _format_pick_label(kind, vote),
+            "vote": vote if isinstance(vote, dict) else {},
+        })
+    rows.sort(key=lambda r: (str(r.get("name") or "").casefold(), str(r.get("pick") or "")))
+    joined = []
+    for vid, nm in names.items():
+        label = _norm_display_name(nm) or ("Máy " + str(vid)[-4:])
+        joined.append(label)
+    joined = sorted(set(joined), key=lambda s: s.casefold())
+    return {"kind": kind, "rows": rows, "joined": joined, "joined_n": len(joined)}
+
+
 def _leave_stats(room):
     """Số máy đã thoát/thu nhỏ/đổi tab khi đang xem chiếu (ẩn danh)."""
     bag = (room or {}).get("leaves") or {}
@@ -681,7 +731,7 @@ def _leave_stats(room):
     return {"machines": len(bag), "events": events, "last": last or None, "by_pos": by_pos}
 
 
-def _room_out(room, include_q=True):
+def _room_out(room, include_q=True, host=False):
     _reset_votes_if_needed(room)
     d = {
         "ok": True,
@@ -710,6 +760,8 @@ def _room_out(room, include_q=True):
         + str(room.get("path") or ""),
         "ink": list(room.get("ink") or []),
     }
+    if host:
+        d["roster"] = _vote_roster(room)
     if include_q:
         d["q"] = room.get("q") or {}
     return d
@@ -906,6 +958,7 @@ def api_present_stop():
 @base.app.get("/api/present/state")
 def api_present_state():
     code = _norm_code(request.args.get("code") or "")
+    token = str(request.args.get("token") or "")
     try:
         since = int(request.args.get("ver") or 0)
     except (TypeError, ValueError):
@@ -921,6 +974,7 @@ def api_present_state():
             ), 404
         ver = int(room.get("ver") or 0)
         room["updated"] = _now()
+        is_host = bool(token) and str(room.get("token") or "") == token
         if since and since == ver:
             return jsonify(ok=True, unchanged=True, ver=ver)
         qk = str((room.get("q") or {}).get("kind") or "")
@@ -929,8 +983,38 @@ def api_present_state():
             snap, _err = _comp_snapshot(kind, room.get("path"), room.get("pos"), room.get("zoom"))
             if snap:
                 room["sec_titles"] = list(snap.get("sec_titles") or [])
-        out = _room_out(room)
+        out = _room_out(room, host=is_host)
     return jsonify(out)
+
+
+@base.app.post("/api/present/join")
+def api_present_join():
+    """Học viên đặt tên để tham gia chiếu (giữ xuyên suốt buổi)."""
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or "")
+    voter = _norm_voter_id(data.get("voter") or "")
+    name = _norm_display_name(data.get("name") or "")
+    if not code:
+        return jsonify(ok=False, error="Thiếu mã phòng."), 400
+    if not voter:
+        return jsonify(ok=False, error="Thiếu mã máy (tải lại trang)."), 400
+    if not name:
+        return jsonify(ok=False, error="Nhập tên (ít nhất 2 ký tự)."), 400
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room:
+            return jsonify(ok=False, error="Phòng chưa mở hoặc đã tắt."), 404
+        bag = room.setdefault("names", {})
+        if len(bag) >= 400 and voter not in bag:
+            return jsonify(ok=False, error="Phòng đã đủ người."), 429
+        prev = bag.get(voter)
+        bag[voter] = name
+        if prev != name:
+            room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        ver = int(room.get("ver") or 0)
+        roster = _vote_roster(room)
+    return jsonify(ok=True, ver=ver, name=name, roster=roster)
 
 
 @base.app.post("/api/present/peek")
@@ -1214,14 +1298,17 @@ def api_present_ink():
 
 @base.app.post("/api/present/vote")
 def api_present_vote():
-    """Học viên (máy /xem) gửi lựa chọn ẩn danh → ADMIN xem thống kê realtime."""
+    """Học viên (máy /xem) gửi lựa chọn kèm tên → ADMIN xem thống kê + đáp án từng người."""
     data = request.get_json(silent=True) or {}
     code = _norm_code(data.get("code") or "")
     voter = _norm_voter_id(data.get("voter") or "")
+    name = _norm_display_name(data.get("name") or "")
     if not code:
         return jsonify(ok=False, error="Thiếu mã phòng."), 400
     if not voter:
         return jsonify(ok=False, error="Thiếu mã máy (tải lại trang)."), 400
+    if not name:
+        return jsonify(ok=False, error="Hãy đặt tên trước khi chọn đáp án."), 400
     with _LOCK:
         room = _ROOMS.get(code)
         if not room:
@@ -1240,6 +1327,10 @@ def api_present_vote():
         vote, err = _sanitize_student_vote(pub, data.get("vote") or data)
         if err:
             return jsonify(ok=False, error=err), 400
+        names = room.setdefault("names", {})
+        if len(names) >= 400 and voter not in names:
+            return jsonify(ok=False, error="Phòng đã đủ người."), 429
+        names[voter] = name
         bag = room.setdefault("votes", {})
         if len(bag) >= 400 and voter not in bag:
             return jsonify(ok=False, error="Phòng đã đủ phiếu."), 429
@@ -1250,7 +1341,7 @@ def api_present_vote():
         room["updated"] = _now()
         stats = _vote_stats(room)
         ver = int(room.get("ver") or 0)
-    return jsonify(ok=True, ver=ver, votes=stats, mine=vote)
+    return jsonify(ok=True, ver=ver, votes=stats, mine=vote, name=name)
 
 
 @base.app.post("/api/present/leave")
@@ -1368,7 +1459,7 @@ def present_watch(code=""):
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
             "<input name='code' maxlength='8' inputmode='text' autocomplete='off' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
-            "<p class='muted'>Không cần đăng nhập. Trang tự theo câu / lý thuyết / dạng mẫu thầy đang chiếu.</p>"
+            "<p class='muted'>Không cần đăng nhập. Vào mã rồi <b>đặt tên</b> để tham gia — thầy xem được đáp án theo tên. Trang tự theo câu thầy đang chiếu.</p>"
             "</div></div></div>"
             "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
@@ -1415,6 +1506,16 @@ def present_watch(code=""):
         "<div id='cinemaPeek' class='cinema-peek' hidden></div>"
         "<div id='cinemaVotes' class='cinema-votes' hidden></div>"
         "<div id='cinemaAway' class='cinema-away' hidden></div>"
+        "<div id='cinemaNameGate' class='cinema-namegate' hidden>"
+        "<form id='nameGateForm' class='namegate-card'>"
+        "<h2>Đặt tên để tham gia</h2>"
+        "<p>Tên này dùng xuyên suốt buổi chiếu — thầy sẽ thấy đáp án của bạn.</p>"
+        "<input id='nameGateInput' name='displayName' maxlength='24' autocomplete='nickname' "
+        "placeholder='VD: Minh · Tổ 2' required>"
+        "<button class='btn primary' type='submit'>Vào chiếu</button>"
+        "<div class='namegate-err' id='nameGateErr' hidden></div>"
+        "</form></div>"
+        "<div id='cinemaNameBadge' class='cinema-namebadge' hidden></div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
@@ -1858,6 +1959,94 @@ function voterId(){
     return id;
   }catch(e){ return 'v'+String(Date.now()); }
 }
+function displayNameKey(){ return 'ldvlDisplayName:'+String(CODE||'').toUpperCase(); }
+function readDisplayName(){
+  try{ return String(localStorage.getItem(displayNameKey())||'').trim(); }catch(e){ return ''; }
+}
+function writeDisplayName(name){
+  try{ localStorage.setItem(displayNameKey(), String(name||'').trim()); }catch(e){}
+}
+function normDisplayName(raw){
+  let s=String(raw||'').replace(/\s+/g,' ').trim();
+  s=s.replace(/[\x00-\x1f\x7f<>"'`]/g,'');
+  if(s.length<2) return '';
+  return s.slice(0,24);
+}
+function paintNameBadge(){
+  const el=document.getElementById('cinemaNameBadge');
+  if(!el || hostTok()){ if(el){ el.hidden=true; el.textContent=''; } return; }
+  const nm=readDisplayName();
+  if(!nm){ el.hidden=true; el.textContent=''; return; }
+  el.hidden=false;
+  el.textContent='Bạn: '+nm+' · tham gia xuyên suốt buổi chiếu';
+}
+function showNameGate(on, errMsg){
+  const gate=document.getElementById('cinemaNameGate');
+  if(!gate) return;
+  if(hostTok()){ gate.hidden=true; gate.classList.remove('is-on'); return; }
+  if(on){
+    gate.hidden=false;
+    gate.classList.add('is-on');
+    const err=document.getElementById('nameGateErr');
+    if(err){
+      if(errMsg){ err.hidden=false; err.textContent=errMsg; }
+      else { err.hidden=true; err.textContent=''; }
+    }
+    const inp=document.getElementById('nameGateInput');
+    if(inp){ if(!inp.value) inp.value=readDisplayName()||''; setTimeout(function(){ try{inp.focus();}catch(e){} }, 50); }
+  }else{
+    gate.hidden=true;
+    gate.classList.remove('is-on');
+  }
+}
+let studentJoined=false;
+async function ensureStudentName(){
+  if(hostTok()){ showNameGate(false); paintNameBadge(); return true; }
+  const nm=normDisplayName(readDisplayName());
+  if(!nm){ showNameGate(true); paintNameBadge(); studentJoined=false; return false; }
+  writeDisplayName(nm);
+  if(!studentJoined){
+    try{
+      const r=await fetch('/api/present/join',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({code:CODE,voter:voterId(),name:nm})});
+      const d=await r.json().catch(function(){return {}});
+      if(d&&d.ok) studentJoined=true;
+    }catch(e){}
+  }
+  showNameGate(false);
+  paintNameBadge();
+  return true;
+}
+function bindNameGate(){
+  const form=document.getElementById('nameGateForm');
+  if(!form || form.__bound) return;
+  form.__bound=1;
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(hostTok()){ showNameGate(false); return; }
+    const inp=document.getElementById('nameGateInput');
+    const nm=normDisplayName(inp&&inp.value);
+    if(!nm){ showNameGate(true, 'Nhập tên (ít nhất 2 ký tự).'); return; }
+    const btn=form.querySelector('button[type="submit"]');
+    if(btn) btn.disabled=true;
+    try{
+      const r=await fetch('/api/present/join',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({code:CODE,voter:voterId(),name:nm})});
+      const d=await r.json().catch(function(){return {}});
+      if(!d||!d.ok){ showNameGate(true, (d&&d.error)||'Không ghi được tên.'); return; }
+      writeDisplayName(d.name||nm);
+      studentJoined=true;
+      showNameGate(false);
+      paintNameBadge();
+      lastVer=-1;
+      tick();
+    }catch(err){
+      showNameGate(true, 'Mất kết nối, thử lại.');
+    }finally{
+      if(btn) btn.disabled=false;
+    }
+  });
+}
 let leaveRecorded=false;
 let lastAwayAt=0;
 let joinedAt=Date.now();
@@ -2213,6 +2402,8 @@ async function presentVote(vote){
   if(hostTok() || lastShowSol || (lastLive&&lastLive.checked) || !isQuizQ(lastQ)) return false;
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   if(k!=='TN' && k!=='DS') return false;
+  const nm=normDisplayName(readDisplayName());
+  if(!nm){ showNameGate(true, 'Đặt tên trước khi chọn đáp án.'); return false; }
   const payload=Object.assign({}, vote||{});
   const fp=voteQfp(lastQ, lastPeekPos);
   if(k==='DS' && !studentVoteReady(payload)){
@@ -2221,7 +2412,7 @@ async function presentVote(vote){
     return false;
   }
   const r=await fetch('/api/present/vote',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify({code:CODE,voter:voterId(),vote:payload})});
+    body:JSON.stringify({code:CODE,voter:voterId(),name:nm,vote:payload})});
   const d=await r.json().catch(function(){return {}});
   if(!d||!d.ok){alert((d&&d.error)||'Không gửi được lựa chọn.');return false;}
   rememberMyVote(fp, d.mine||payload);
@@ -2283,16 +2474,29 @@ function paintVotes(votes){
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   votes=votes||{};
   const leaves=window.lastLeaves||{};
+  const roster=window.lastRoster||{};
   const byPos=leaves.by_pos||{};
   const onThis=(typeof lastPeekPos==='number' && lastPeekPos>=0 && byPos[lastPeekPos]!=null)?Number(byPos[lastPeekPos]):0;
   const leaveLine=(leaves.events||leaves.machines)
     ?('<div class="vleave">🚪 Rời màn (thoát/thu nhỏ/đổi tab): <b>'+Number(leaves.machines||0)+'</b> máy · <b>'+Number(leaves.events||0)+'</b> lần'
       +(onThis?(' · câu này: <b>'+onThis+'</b>'):'')+'</div>')
     :'';
+  const rows=Array.isArray(roster.rows)?roster.rows:[];
+  const joinedN=Number(roster.joined_n||0);
+  const rosterHtml=rows.length
+    ?('<div class="vroster"><b class="head">Đáp án học viên</b>'
+      +rows.map(function(r){
+        return '<div class="vwho"><span class="vnm">'+E(r.name||'—')+'</span><span class="vpk">'+E(r.pick||'—')+'</span></div>';
+      }).join('')
+      +'</div>')
+    :'';
+  const joinedLine=joinedN
+    ?('<div class="vjoined">Đã vào tên: <b>'+joinedN+'</b>'+(Array.isArray(roster.joined)&&roster.joined.length?(' · '+E(roster.joined.slice(0,12).join(', '))+(roster.joined.length>12?'…':'')):'')+'</div>')
+    :'';
   if(!on || (k!=='TN' && k!=='DS')){
-    if(on && leaveLine){
+    if(on && (leaveLine||rosterHtml||joinedLine)){
       el.hidden=false;
-      el.innerHTML='<b>📊 Lớp</b>'+leaveLine;
+      el.innerHTML='<b>📊 Lớp</b>'+joinedLine+leaveLine+rosterHtml;
       return;
     }
     el.hidden=true;
@@ -2311,8 +2515,8 @@ function paintVotes(votes){
         +'<span class="vnum">'+c+' · '+pct+'%</span></div>';
     }).join('');
   }else{
-    const rows=votes.rows||[];
-    body=rows.map(function(r,i){
+    const dsRows=votes.rows||[];
+    body=dsRows.map(function(r,i){
       const y=Number(r.yes||0), no=Number(r.no||0);
       const tot=Math.max(1, y+no);
       const yp=Math.round(100*y/tot), np=Math.round(100*no/tot);
@@ -2322,7 +2526,9 @@ function paintVotes(votes){
     }).join('');
   }
   el.hidden=false;
-  el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+leaveLine+(body||'<div class="muted">Chưa có phiếu — học viên chạm đáp án trên máy /xem</div>');
+  el.innerHTML='<b>📊 Lớp chọn</b> · <span>'+n+' phiếu</span>'+joinedLine+leaveLine
+    +(body||'<div class="muted">Chưa có phiếu — học viên đặt tên rồi chạm đáp án trên máy /xem</div>')
+    +rosterHtml;
 }
 function liveStudent(q, live){
   live=live||{};
@@ -2867,7 +3073,19 @@ async function tick(){
   const err=document.getElementById('perr');
   const box=document.getElementById('q');
   try{
-    const r=await fetch('/api/present/state?code='+encodeURIComponent(CODE)+'&ver='+lastVer,{credentials:'same-origin'});
+    if(!hostTok()){
+      const okName=await ensureStudentName();
+      if(!okName){
+        if(box) box.hidden=true;
+        return;
+      }
+    }else{
+      showNameGate(false);
+    }
+    const p=hostTok();
+    let url='/api/present/state?code='+encodeURIComponent(CODE)+'&ver='+lastVer;
+    if(p&&p.token) url+='&token='+encodeURIComponent(p.token);
+    const r=await fetch(url,{credentials:'same-origin'});
     const d=await r.json();
     if(!d.ok){
       if(lastVer<0){
@@ -2888,6 +3106,7 @@ async function tick(){
     lastLive=d.live||{};
     lastVotes=d.votes||{};
     window.lastLeaves=d.leaves||{};
+    window.lastRoster=d.roster||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
       if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
@@ -2902,6 +3121,7 @@ async function tick(){
     bindStudentVote();
     paintStudentPickUi();
     paintVotes(lastVotes);
+    paintNameBadge();
     bindCinemaInk();
     bindInkPadUi();
     applyInk(d);
@@ -2910,6 +3130,7 @@ async function tick(){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
   }
 }
+bindNameGate();
 tick();
 setInterval(tick,900);
 (function(){
