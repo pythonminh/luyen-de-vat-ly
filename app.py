@@ -375,7 +375,10 @@ body.cinema .cinema-violate .vr b{color:#7f1d1d}
 body.cinema .qviolate{margin:0 0 10px;padding:10px 12px;border-radius:10px;border:2px solid #f59e0b;background:#fff7ed;color:#9a3412;font-size:13px;line-height:1.45;font-weight:700}
 body.cinema .qviolate.has-bad{border-color:#b91c1c;background:#fef2f2;color:#7f1d1d}
 body.cinema .qviolate .vt{font-size:14px;font-weight:900;margin:0 0 4px}
-body.cinema .qviolate .vr{display:flex;flex-wrap:wrap;gap:6px 12px}
+body.cinema .cinema-violate .vlist,body.cinema .qviolate .vlist{margin:6px 0;display:grid;gap:4px}
+body.cinema .cinema-violate .vline,body.cinema .qviolate .vline{padding:4px 6px;border-radius:6px;background:#fff;border:1px solid #fdba74;font-size:12px}
+body.cinema .cinema-violate .vline.on,body.cinema .qviolate .vline.on{border-color:#dc2626;background:#fee2e2}
+body.cinema .cinema-violate .vtag,body.cinema .qviolate .vtag{display:inline-block;padding:0 5px;border-radius:999px;background:#b91c1c;color:#fff;font-size:10px;font-weight:900}
 body.cinema.is-host .cinema-namegate,body.cinema.is-host .cinema-namebadge,body.cinema.is-host .cinema-violate,body.cinema.is-host .qviolate{display:none!important}
 body.cinema .cinema-away{display:none}
 body.cinema .cinema-away.is-on{display:flex;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;padding:16px;background:#7f1d1dcc;box-sizing:border-box}

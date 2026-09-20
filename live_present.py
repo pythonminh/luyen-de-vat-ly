@@ -2024,6 +2024,8 @@ let lastLive={};
 let lastVotes={};
 let lastShowSol=false;
 let lastPeekPos=-1;
+let leaveAnchorQ=null; // đóng băng câu lúc bắt đầu rời màn (không đổi theo tick nền)
+let pendingPeekPos=null;
 let myVote=null;
 let myVoteFp='';
 let inkStrokes=[];
@@ -2079,34 +2081,99 @@ function leaveBucket(reason){
   if(r==='net'||r==='offline') return 'net';
   return 'other';
 }
+function snapshotQMeta(forcePos){
+  const q=lastQ||{};
+  const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  let pos=forcePos;
+  if(pos==null || pos==='' || isNaN(Number(pos))){
+    if(leaveAnchorQ && leaveAnchorQ.pos!=null && !isNaN(Number(leaveAnchorQ.pos))) pos=Number(leaveAnchorQ.pos);
+    else if(typeof lastPeekPos==='number' && lastPeekPos>=0) pos=lastPeekPos;
+    else pos=null;
+  }else pos=Number(pos);
+  const fromAnchor=(leaveAnchorQ && Number(leaveAnchorQ.pos)===Number(pos))?leaveAnchorQ:null;
+  return {
+    pos: pos,
+    kind: String((fromAnchor&&fromAnchor.kind)||q.kind||''),
+    id: String((fromAnchor&&fromAnchor.id)||q.id||''),
+    dang: String((fromAnchor&&fromAnchor.dang)||q.dang||''),
+    preview: String((fromAnchor&&fromAnchor.preview)||raw.slice(0,80))
+  };
+}
+function freezeLeaveAnchor(){
+  // Chốt câu đang xem TRƯỚC khi tab ẩn / trước khi tick nền đổi câu
+  leaveAnchorQ=snapshotQMeta(typeof lastPeekPos==='number' && lastPeekPos>=0?lastPeekPos:null);
+  return leaveAnchorQ;
+}
+function clearLeaveAnchor(){
+  leaveAnchorQ=null;
+}
 function leaveCounts(pos){
   const empty={mini:0,exit:0,net:0,other:0,total:0};
   const all=Object.assign({}, empty);
-  const cur=Object.assign({}, empty);
+  const byPos={};
   const log=readLeaveLog();
   const events=(Array.isArray(log.events)?log.events:[]).map(normLeaveEv).filter(function(e){return e.t>0;});
-  const hasPos=(pos!=null && pos!=='' && !isNaN(Number(pos)));
   events.forEach(function(e){
     const b=leaveBucket(e.reason);
     all[b]=(all[b]||0)+1; all.total++;
-    if(hasPos && Number(e.pos)===Number(pos)){ cur[b]=(cur[b]||0)+1; cur.total++; }
+    const p=(e.pos!=null && e.pos!=='' && !isNaN(Number(e.pos)))?Number(e.pos):-1;
+    if(!byPos[p]) byPos[p]={mini:0,exit:0,net:0,other:0,total:0,label:'',id:'',dang:'',preview:''};
+    byPos[p][b]=(byPos[p][b]||0)+1;
+    byPos[p].total++;
+    if(e.id) byPos[p].id=e.id;
+    if(e.dang) byPos[p].dang=e.dang;
+    if(e.preview) byPos[p].preview=e.preview;
+    if(e.kind) byPos[p].kind=e.kind;
   });
-  return {all:all, cur:cur, pos:hasPos?Number(pos):null};
+  const hasPos=(pos!=null && pos!=='' && !isNaN(Number(pos)));
+  const curPos=hasPos?Number(pos):-999;
+  const cur=byPos[curPos]?Object.assign({}, byPos[curPos]):Object.assign({}, empty);
+  const rows=[];
+  Object.keys(byPos).forEach(function(k){
+    const p=Number(k);
+    const row=byPos[k];
+    const label=(p>=0)?('Câu '+(p+1)):(row.id?('ID '+row.id):'Câu không xác định');
+    rows.push(Object.assign({pos:p,label:label}, row));
+  });
+  rows.sort(function(a,b){
+    if(a.pos<0 && b.pos>=0) return 1;
+    if(b.pos<0 && a.pos>=0) return -1;
+    return a.pos-b.pos;
+  });
+  return {all:all, cur:cur, pos:hasPos?Number(pos):null, rows:rows};
 }
 function violateHtml(st){
-  const cur=st.cur||{};
   const all=st.all||{};
-  const qn=(st.pos!=null)?('Câu '+(st.pos+1)):'Câu đang chiếu';
-  const bad=!!(cur.total||all.total);
-  return '<div class="vt">⚠ Vi phạm trên bài đang chiếu · '+awayEsc(qn)+'</div>'
-    +'<div class="vr">'
-    +'<span>Thu nhỏ/đổi tab: <b>'+Number(cur.mini||0)+'</b></span>'
-    +'<span>Thoát: <b>'+Number(cur.exit||0)+'</b></span>'
-    +'<span>Rớt mạng: <b>'+Number(cur.net||0)+'</b></span>'
-    +'</div>'
+  const cur=st.cur||{};
+  const rows=Array.isArray(st.rows)?st.rows:[];
+  const curPos=st.pos;
+  const bad=!!(all.total);
+  const curLabel=(curPos!=null)?('Câu '+(curPos+1)):'Câu đang chiếu';
+  let list='';
+  if(rows.length){
+    list='<div class="vlist">'
+      +rows.map(function(r){
+        const isCur=(curPos!=null && Number(r.pos)===Number(curPos));
+        const bits=[];
+        if(r.mini) bits.push('thu nhỏ '+r.mini);
+        if(r.exit) bits.push('thoát '+r.exit);
+        if(r.net) bits.push('mạng '+r.net);
+        if(r.other) bits.push('khác '+r.other);
+        return '<div class="vline'+(isCur?' on':'')+'">'
+          +'<b>'+awayEsc(r.label)+'</b>'
+          +(isCur?' <span class="vtag">đang chiếu</span>':'')
+          +' · '+awayEsc(bits.join(' · ')||('tổng '+r.total))
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
+  return '<div class="vt">⚠ Đã ghi nhận vi phạm theo từng câu</div>'
+    +list
+    +'<div class="vr" style="margin-top:6px">Câu đang chiếu (<b>'+awayEsc(curLabel)+'</b>): '
+    +'thu nhỏ <b>'+Number(cur.mini||0)+'</b> · thoát <b>'+Number(cur.exit||0)+'</b> · mạng <b>'+Number(cur.net||0)+'</b></div>'
     +'<div class="vr" style="margin-top:4px;opacity:.92">Buổi này tổng: <b>'+Number(all.total||0)+'</b> lần'
     +' (thu nhỏ '+Number(all.mini||0)+' · thoát '+Number(all.exit||0)+' · mạng '+Number(all.net||0)+')</div>'
-    +(bad?'':'<div class="vr" style="margin-top:2px;font-weight:600;opacity:.8">Đang theo dõi — chưa có vi phạm trên câu này.</div>');
+    +(bad?'':'<div class="vr" style="margin-top:2px;font-weight:600;opacity:.8">Đang theo dõi — chưa có vi phạm.</div>');
 }
 function paintViolatePanels(){
   const named=!!normDisplayName(readDisplayName());
@@ -2216,15 +2283,7 @@ function writeLeaveLog(log){
   try{ localStorage.setItem(leaveLogKey(), JSON.stringify(log)); }catch(e){}
 }
 function currentQMeta(){
-  const q=lastQ||{};
-  const raw=String(q.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  return {
-    pos: (typeof lastPeekPos==='number' && lastPeekPos>=0)?lastPeekPos:null,
-    kind: String(q.kind||''),
-    id: String(q.id||''),
-    dang: String(q.dang||''),
-    preview: raw.slice(0,80)
-  };
+  return snapshotQMeta(null);
 }
 function normLeaveEv(x){
   if(x&&typeof x==='object') return {t:Number(x.t)||0,reason:x.reason||'',pos:x.pos,kind:x.kind||'',id:x.id||'',preview:x.preview||'',dang:x.dang||''};
@@ -3295,8 +3354,14 @@ async function tick(){
     window.lastRoster=d.roster||{};
     lastShowSol=!!d.show_sol;
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
-      if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
-      lastPeekPos=d.pos;
+      // Khi tab đang ẩn: không đổi lastPeekPos — tránh ghi nhầm vi phạm sang câu mới thầy vừa chuyển
+      if(document.hidden){
+        pendingPeekPos=d.pos;
+      }else{
+        if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
+        lastPeekPos=d.pos;
+        pendingPeekPos=null;
+      }
     }
     if(err) err.textContent='';
     loadMyVote(voteQfp(lastQ, typeof d.pos==='number'?d.pos:lastPeekPos));
@@ -3347,6 +3412,7 @@ setInterval(tick,900);
   // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab / rớt mạng — kèm câu đang chiếu
   function markAwayAndShow(reason){
     if(hostTok()) return;
+    if(!leaveAnchorQ) freezeLeaveAnchor();
     const log=reportAway(reason, {exit:false});
     paintViolatePanels();
     if(!log) return;
@@ -3356,28 +3422,44 @@ setInterval(tick,900);
   }
   function showAwayIfPending(){
     if(hostTok() || document.hidden) return;
+    clearLeaveAnchor();
+    if(pendingPeekPos!=null && pendingPeekPos!==lastPeekPos){
+      if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
+      lastPeekPos=pendingPeekPos;
+      pendingPeekPos=null;
+      lastVer=-1;
+    }
     paintViolatePanels();
     if(hasAwayPending()) paintAwayBanner(null, true);
   }
   window.addEventListener('pagehide', function(){
     if(hostTok() || leaveRecorded) return;
+    if(!leaveAnchorQ) freezeLeaveAnchor();
     reportAway('pagehide', {exit:true});
   });
   document.addEventListener('visibilitychange', function(){
     if(hostTok()) return;
-    if(document.hidden) markAwayAndShow('hidden');
-    else showAwayIfPending();
+    if(document.hidden){
+      freezeLeaveAnchor();
+      markAwayAndShow('hidden');
+    }else{
+      showAwayIfPending();
+    }
   });
   window.addEventListener('pageshow', function(){ showAwayIfPending(); });
   window.addEventListener('focus', function(){ showAwayIfPending(); });
   window.addEventListener('blur', function(){
     if(hostTok() || document.hidden) return;
     // Một số trình duyệt thu nhỏ cửa sổ không bật hidden ngay
+    freezeLeaveAnchor();
     setTimeout(function(){
       if(document.hidden || !document.hasFocus()) markAwayAndShow('blur');
     }, 200);
   });
-  window.addEventListener('offline', function(){ markAwayAndShow('offline'); });
+  window.addEventListener('offline', function(){
+    if(!leaveAnchorQ) freezeLeaveAnchor();
+    markAwayAndShow('offline');
+  });
   try{
     const log=readLeaveLog();
     if(!log.joined) writeLeaveLog(Object.assign({}, log, {joined:joinedAt, first:Number(log.first)||joinedAt, events:Array.isArray(log.events)?log.events:[]}));
