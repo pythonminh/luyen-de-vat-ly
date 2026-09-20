@@ -337,6 +337,7 @@ body.cinema .opt.mine{outline:2px solid #0ea5e9;background:#f0f9ff}
 body.cinema .tf-box.mine{box-shadow:inset 0 0 0 2px #0ea5e9}
 body.cinema .mypick{color:#0369a1;font-weight:800;font-size:12px;margin-left:6px}
 body.cinema .votetip{margin:6px 0 10px;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:8px;background:#f0f9ff;color:#0369a1;font-size:13px;font-weight:700}
+body.cinema .votetip.locked{border-color:#fbbf24;background:#fffbeb;color:#92400e}
 body.cinema .cinema-votes{margin:8px 12px;padding:10px 12px;border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;font-size:13px;line-height:1.4}
 body.cinema .cinema-votes b{margin-right:6px}
 body.cinema .cinema-votes .vrow{display:grid;grid-template-columns:1.6em 1fr 5.5em;gap:8px;align-items:center;margin:6px 0}

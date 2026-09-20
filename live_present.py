@@ -1203,6 +1203,9 @@ def api_present_vote():
         qk = str((room.get("q") or {}).get("kind") or "").upper()
         if qk in {"LT", "PP"}:
             return jsonify(ok=False, error="Đang chiếu lý thuyết / dạng mẫu."), 400
+        live_room = room.get("live") if isinstance(room.get("live"), dict) else {}
+        if bool(live_room.get("checked")):
+            return jsonify(ok=False, error="Thầy đã xác nhận — không đổi phiếu."), 400
         if bool(room.get("show_sol")):
             return jsonify(ok=False, error="Đã mở đáp án — không đổi phiếu."), 400
         # Dùng payload công khai (không lộ đáp án) để đếm số ô
@@ -1955,7 +1958,7 @@ function studentVoteReady(vote){
   return false;
 }
 async function presentVote(vote){
-  if(hostTok() || lastShowSol || !isQuizQ(lastQ)) return false;
+  if(hostTok() || lastShowSol || (lastLive&&lastLive.checked) || !isQuizQ(lastQ)) return false;
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   if(k!=='TN' && k!=='DS') return false;
   const payload=Object.assign({}, vote||{});
@@ -1975,11 +1978,14 @@ async function presentVote(vote){
   if(typeof d.ver==='number') lastVer=Math.max(lastVer, d.ver);
   return true;
 }
+function votesLocked(){
+  return !!(lastLive&&lastLive.checked) || !!lastShowSol;
+}
 function bindStudentVote(){
-  document.body.classList.toggle('voter-on', !hostTok() && !lastShowSol && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0);
-  if(hostTok() || lastShowSol || !isQuizQ(lastQ)) return;
+  const canVote=!hostTok() && !votesLocked() && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0;
+  document.body.classList.toggle('voter-on', canVote);
+  if(!canVote) return;
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
-  if(k!=='TN' && k!=='DS') return;
   loadMyVote(voteQfp(lastQ, lastPeekPos));
   document.querySelectorAll('#q .opt').forEach(function(el,i){
     el.onclick=function(){ presentVote({tn:i}); };
@@ -2486,10 +2492,15 @@ function draw(q, showSol, pos, total, live){
     return true;
   }
   const checked=!!live.checked;
+  const isHost=!!hostTok();
+  // Người tham gia chỉ thấy lựa chọn của thầy SAU khi ADMIN bấm Xác nhận
+  const showTeacherPick=isHost || checked;
+  const viewLive=showTeacherPick?live:{tn:null,ds:[],text:'',checked:false,ok:null};
   box.hidden=false;
   let h='<div class="qheadline"><span class="qbadge">Câu '+(pos+1)+'</span>'+(dangLine(q)?'<div class="qdang">'+E(dangLine(q))+'</div>':'')+'<div class="qstem">'+q.text+'</div></div>';
-  if(!hostTok() && !showSol && (q.kind==='TN'||q.kind==='DS')){
-    h+='<div class="votetip">Chạm đáp án để gửi phiếu ẩn danh — thầy thấy thống kê realtime</div>';
+  if(!isHost && (q.kind==='TN'||q.kind==='DS')){
+    if(!showSol && !checked) h+='<div class="votetip">Chạm đáp án để gửi phiếu ẩn danh — có thể đổi đến khi thầy xác nhận</div>';
+    else if(checked) h+='<div class="votetip locked">Đã khóa phiếu — thầy đã xác nhận</div>';
   }
   if(checked && live.ok!=null){
     const labs='ABCD';
@@ -2522,7 +2533,7 @@ function draw(q, showSol, pos, total, live){
     h+='<div class="result '+(live.ok?'good':'bad')+'">'+head+extra+'</div>';
   }
   if(q.kind==='TN')(q.options||[]).forEach(function(o,i){
-    const picked=live.tn===i;
+    const picked=showTeacherPick && viewLive.tn===i;
     let cls='opt';
     if(showSol && o.correct) cls+=' correct';
     else if(showSol && picked) cls+=' wrong';
@@ -2535,7 +2546,7 @@ function draw(q, showSol, pos, total, live){
   else if(q.kind==='DS'){
     h+='<div class="qbody ds"><div class="qfig" hidden></div><div class="qtf"><div class="tfgrid"><div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';
     (q.statements||[]).forEach(function(s,i){
-    const pick=(live.ds||[])[i];
+    const pick=showTeacherPick?(viewLive.ds||[])[i]:null;
     const has=pick===true||pick===false;
     const revealed=!!showSol;
     let cls='tf';
@@ -2558,11 +2569,13 @@ function draw(q, showSol, pos, total, live){
     h+='</div></div></div>';
   }
   else {
-    const typed=String(live.text||'').trim();
-    if(hostTok() && !showSol && !checked){
-      h+='<div class="answerline"><input id="cinemaAns" class="cinema-ans" value="'+E(typed)+'" placeholder="Nhập đáp án lớp chọn"><button type="button" class="cinema-tool" id="cinemaAnsSave">Ghi</button></div>';
-    }else{
+    const typed=showTeacherPick?String(viewLive.text||'').trim():'';
+    if(isHost && !showSol && !checked){
+      h+='<div class="answerline"><input id="cinemaAns" class="cinema-ans" value="'+E(String(live.text||'').trim())+'" placeholder="Nhập đáp án lớp chọn"><button type="button" class="cinema-tool" id="cinemaAnsSave">Ghi</button></div>';
+    }else if(showTeacherPick){
       h+='<div class="answerline">'+(typed?('<b>Thầy viết:</b> '+E(typed)):'✎ Đang chờ thầy nhập…')+'</div>';
+    }else{
+      h+='<div class="answerline">✎ Đang chờ thầy xác nhận…</div>';
     }
     if(showSol&&q.answer) h+='<div class="answerline result good"><b>Đáp án đúng:</b> '+E(q.answer)+'</div>';
   }
