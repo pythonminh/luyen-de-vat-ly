@@ -223,6 +223,18 @@ def _raw_q_from_room(room):
     return qs.get(ids[pos])
 
 
+def _has_live_pick(q, live):
+    live = live if isinstance(live, dict) else {}
+    kind = str((q or {}).get("kind") or "").upper()
+    if kind == "TN":
+        return live.get("tn") is not None and live.get("tn") != ""
+    if kind == "DS":
+        stmts = q.get("statements") or []
+        ds = list(live.get("ds") or [])
+        return len(ds) >= len(stmts) and all(x is True or x is False for x in ds[: len(stmts)])
+    return bool(str(live.get("text") or "").strip())
+
+
 def _score_live(q, live):
     live = _sanitize_live(live)
     kind = str((q or {}).get("kind") or "").upper()
@@ -1359,17 +1371,23 @@ def api_present_live():
             q = _raw_q_from_room({"path": path, "ids": ids, "pos": pos})
             if not q:
                 return jsonify(ok=False, error="Không tải được câu."), 400
-            incoming, err = _score_live(q, incoming)
-            if err:
-                return jsonify(ok=False, error=err), 400
-        want_sol = bool(incoming.get("checked"))
-        snap, err = _snapshot(want_sol, zoom, reveal=want_sol, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
+            # Cho phép xác nhận + mở lời giải dù thầy chưa chọn (để lớp chép)
+            if _has_live_pick(q, incoming):
+                incoming, err = _score_live(q, incoming)
+                if err:
+                    return jsonify(ok=False, error=err), 400
+            else:
+                incoming = _sanitize_live(incoming)
+                incoming["checked"] = True
+                incoming["ok"] = None
+        want_sol = True
+        snap, err = _snapshot(want_sol, zoom, reveal=True, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
         if not snap:
             return jsonify(ok=False, error=err or "Không tải được câu."), 400
         room, rerr = _put_room(hid, code, token, snap, incoming, force_kind=True)
         if not room:
             return jsonify(ok=False, error=rerr), 409
-        return jsonify(ok=True, ver=room.get("ver"), live=room.get("live") or incoming, show_sol=bool(room.get("show_sol")))
+        return jsonify(ok=True, ver=room.get("ver"), live=room.get("live") or incoming, show_sol=True)
     incoming["checked"] = False
     incoming["ok"] = None
     with _LOCK:
@@ -1595,11 +1613,11 @@ def present_watch(code=""):
         "<select id='secJump' aria-label='Chọn câu trong dạng'></select>"
         "<button type='button' class='cinema-tool' id='qNext' title='Câu sau cùng dạng'>▶</button>"
         "</div>"
-        "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận</button>"
+        "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận + lời giải</button>"
         "<button type='button' class='cinema-tool' id='peekToggle' hidden>💡 Gợi ý</button>"
         "<button type='button' class='cinema-tool' id='inkToggle' hidden>✏️ Bút</button>"
         "<button type='button' class='cinema-tool' id='inkClear' hidden>🧹 Xóa</button>"
-        "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Đáp án</button>"
+        "<button type='button' class='cinema-tool' id='solToggle' hidden>📖 Lời giải</button>"
         "<button type='button' class='cinema-tool' id='aiToggle' hidden>🤖 Phản biện</button>"
         "<button type='button' class='cinema-tool spk-f'>Nữ</button>"
         "<button type='button' class='cinema-tool spk-m'>Nam</button>"
@@ -2670,27 +2688,31 @@ function paintHostTools(){
   const sol=document.getElementById('solToggle');
   const ai=document.getElementById('aiToggle');
   if(chk){
-    chk.hidden=!quiz || !!lastShowSol;
-    chk.disabled=done || !cinemaReady();
-    chk.textContent=done?'✅ Đã xác nhận':'✅ Xác nhận';
-    chk.title=done?'Đã khóa + hiện đáp án để lớp chép':(cinemaReady()?'Khóa phiếu và hiện đáp án/lời giải để lớp chép':'Hãy chọn đủ đáp án trước.');
+    chk.hidden=!quiz;
+    chk.disabled=!!done;
+    chk.textContent=done?'✅ Đã xác nhận':'✅ Xác nhận + lời giải';
+    chk.title=done
+      ?'Đã khóa phiếu và hiện đáp án/lời giải cho lớp chép'
+      :(cinemaReady()
+        ?'Khóa phiếu lớp + chấm lựa chọn thầy + hiện lời giải'
+        :'Khóa phiếu lớp và hiện đáp án/lời giải (không bắt buộc thầy chọn trước)');
   }
   if(peek){
     peek.hidden=!quiz;
     peek.disabled=false;
-    peek.title='Chỉ máy thầy — lớp không thấy cho đến khi bấm Xác nhận / Đáp án.';
+    peek.title='Chỉ máy thầy — lớp không thấy cho đến khi xác nhận.';
   }
   if(sol){
     sol.hidden=!quiz;
     sol.disabled=!done && !lastShowSol;
     sol.classList.toggle('on', !!lastShowSol);
-    sol.textContent=lastShowSol?'🙈 Ẩn đáp án':'📖 Đáp án';
-    sol.title=done||lastShowSol?'Hiện/ẩn đáp án + lời giải để lớp chép':'Hãy chọn đáp án và bấm Xác nhận trước.';
+    sol.textContent=lastShowSol?'🙈 Ẩn lời giải':'📖 Lời giải';
+    sol.title=done||lastShowSol?'Hiện/ẩn đáp án + lời giải để lớp chép':'Bấm Xác nhận + lời giải trước.';
   }
   if(ai){
     ai.hidden=!quiz;
     ai.disabled=!done;
-    ai.title=done?'':'Hãy chọn đáp án và bấm Xác nhận trước.';
+    ai.title=done?'':'Hãy bấm Xác nhận + lời giải trước.';
   }
   const inkBtn=document.getElementById('inkToggle');
   const inkClr=document.getElementById('inkClear');
@@ -2704,25 +2726,33 @@ function paintHostTools(){
 async function presentReveal(show){
   const p=hostTok(); if(!p) return false;
   if(show && !(lastLive&&lastLive.checked)){
-    alert('Hãy chọn đáp án và bấm Xác nhận trước.');
-    return false;
+    // Tự xác nhận rồi mở lời giải
+    const ok=await presentLive(null, true);
+    if(!ok) return false;
+    if(lastShowSol) return true;
   }
   const r=await fetch('/api/present/reveal',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,show_sol:!!show})});
   const d=await r.json().catch(function(){return {}});
   if(!d||!d.ok){alert((d&&d.error)||'Không hiện được đáp án. Đăng nhập ADMIN trên máy này.');return false;}
+  if(typeof d.show_sol==='boolean') lastShowSol=!!d.show_sol;
   lastVer=-1;
   await tick();
   return true;
 }
 async function presentLive(patch, commit){
   const p=hostTok(); if(!p) return false;
+  if(commit && document.body.classList.contains('ink-on')){
+    document.body.classList.remove('ink-on');
+  }
   const live=Object.assign({tn:null,ds:[],text:'',checked:false,ok:null}, lastLive||{}, patch||{});
   if(patch && Object.prototype.hasOwnProperty.call(patch,'ds')) live.ds=patch.ds;
   const r=await fetch('/api/present/live',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
     body:JSON.stringify({code:p.code,token:p.token,live:live,commit:!!commit})});
   const d=await r.json().catch(function(){return {}});
   if(!d||!d.ok){alert((d&&d.error)||'Không gửi được lựa chọn.');return false;}
+  if(d.live) lastLive=d.live;
+  if(typeof d.show_sol==='boolean') lastShowSol=!!d.show_sol;
   lastVer=-1;
   await tick();
   return true;
