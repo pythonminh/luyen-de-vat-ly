@@ -3422,7 +3422,14 @@ function fitQuestion(){
   const pad=document.getElementById('cinemaInkPad');
   const zoomBar=document.getElementById('cinemaZoomBar');
   const host=document.getElementById('cinemaHost');
-  const topChrome=(zoomBar&&!zoomBar.hidden?zoomBar.offsetHeight:0)+(host&&!host.hidden?Math.min(host.offsetHeight||0,72):0);
+  let zoomH=0;
+  if(zoomBar && !zoomBar.hidden){
+    try{
+      const pos=window.getComputedStyle(zoomBar).position;
+      if(pos!=='fixed' && pos!=='absolute') zoomH=Math.round(zoomBar.offsetHeight||0);
+    }catch(e){ zoomH=Math.round(zoomBar.offsetHeight||0); }
+  }
+  const topChrome=zoomH+(host&&!host.hidden?Math.min(host.offsetHeight||0,72):0);
   const padH=pad&&!document.body.classList.contains('proj-lean')?Math.round(pad.offsetHeight||0):0;
   const availH=Math.max(160, window.innerHeight-28-topChrome-padH);
   const availW=Math.max(220, window.innerWidth-16);
@@ -3485,7 +3492,9 @@ function updateProjLean(){
   // Nằm ngang / máy chiếu: gọn chrome, ưu tiên chữ to
   const lean=window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches
     || window.matchMedia('(min-aspect-ratio: 4/3) and (min-width: 900px)').matches;
+  const landscape=window.matchMedia('(orientation: landscape)').matches;
   document.body.classList.toggle('proj-lean', !!lean);
+  document.body.classList.toggle('cinema-zoom-corner', !!(lean || landscape));
 }
 function typeset(el){
   const box=el||document.getElementById('q');

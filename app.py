@@ -391,7 +391,26 @@ body.cinema.proj-lean .cinema-inkpad{display:none!important}
 body.cinema.proj-lean .cinema-namebadge,body.cinema.proj-lean .cinema-violate{max-height:22vh;overflow:auto}
 body.cinema.proj-lean .cinema-qr{transform:scale(.85);transform-origin:bottom right}
 body.cinema.proj-lean .qbox{padding-bottom:24px!important;font-size:calc(20px * var(--qzoom,1))}
-body.cinema.proj-lean .cinema-zoombar{position:sticky;top:0;z-index:28;margin:4px 8px 0;box-shadow:0 2px 8px #0f172a14}
+/* Ngang / máy chiếu: zoom sát góc phải trên, nhỏ như QR — không che chữ */
+body.cinema.proj-lean .cinema-zoombar,
+body.cinema.cinema-zoom-corner .cinema-zoombar{
+position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));left:auto;bottom:auto;z-index:36;
+margin:0;padding:4px 5px;gap:3px;flex-wrap:nowrap;width:auto;max-width:none;
+border:0;border-radius:10px;background:#145bb0e8;box-shadow:0 2px 10px #0f172a28;
+opacity:.7;transition:opacity .15s ease
+}
+body.cinema.proj-lean .cinema-zoombar:hover,body.cinema.proj-lean .cinema-zoombar:focus-within,
+body.cinema.cinema-zoom-corner .cinema-zoombar:hover,body.cinema.cinema-zoom-corner .cinema-zoombar:focus-within{opacity:1}
+body.cinema.proj-lean .cinema-zoombar .cinema-navlab,
+body.cinema.cinema-zoom-corner .cinema-zoombar .cinema-navlab{display:none}
+body.cinema.proj-lean .cinema-zoombar b,
+body.cinema.cinema-zoom-corner .cinema-zoombar b{min-width:2.4em;font-size:11px;color:#fff;font-weight:800;letter-spacing:-.02em}
+body.cinema.proj-lean .cinema-zoombar .cinema-tool,
+body.cinema.cinema-zoom-corner .cinema-zoombar .cinema-tool{
+min-height:28px;min-width:30px;padding:0 6px;font-size:12px;font-weight:900;line-height:1;
+border:0;border-radius:6px;background:#fff;color:#145bb0;box-shadow:none
+}
+body.cinema.proj-lean .qbox,body.cinema.cinema-zoom-corner .qbox{padding-top:8px!important}
 @media(orientation:landscape) and (max-height:520px){
 body.cinema .cinema-stage{min-height:0}
 body.cinema .qbox{padding:6px 10px 18px!important}
