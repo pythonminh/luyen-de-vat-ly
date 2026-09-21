@@ -383,6 +383,21 @@ body.cinema .cinema-violate-seal .seal-stamp{display:inline-block;margin:0 0 6px
 body.cinema.violate-lock:not(.is-host) .opt,body.cinema.violate-lock:not(.is-host) .tf-box{pointer-events:none!important;opacity:.55;cursor:not-allowed!important}
 body.cinema.is-host .cinema-violate-seal{display:none!important}
 body.cinema.is-host .cinema-namegate,body.cinema.is-host .cinema-namebadge,body.cinema.is-host .cinema-violate,body.cinema.is-host .qviolate{display:none!important}
+body.cinema .cinema-violate .cheer{margin-top:8px;padding-top:8px;border-top:1px dashed #86efac;color:#145bb0;font-weight:800}
+body.cinema .cinema-zoombar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 12px 0;padding:6px 8px;border:1px solid #c5d6ea;border-radius:10px;background:#f8fbff}
+body.cinema .cinema-zoombar b{min-width:3.2em;text-align:center;font-size:13px;color:#145bb0}
+body.cinema .cinema-zoombar .cinema-tool{min-height:36px;padding:0 10px;font-weight:900}
+body.cinema.proj-lean .cinema-inkpad{display:none!important}
+body.cinema.proj-lean .cinema-namebadge,body.cinema.proj-lean .cinema-violate{max-height:22vh;overflow:auto}
+body.cinema.proj-lean .cinema-qr{transform:scale(.85);transform-origin:bottom right}
+body.cinema.proj-lean .qbox{padding-bottom:24px!important;font-size:calc(20px * var(--qzoom,1))}
+body.cinema.proj-lean .cinema-zoombar{position:sticky;top:0;z-index:28;margin:4px 8px 0;box-shadow:0 2px 8px #0f172a14}
+@media(orientation:landscape) and (max-height:520px){
+body.cinema .cinema-stage{min-height:0}
+body.cinema .qbox{padding:6px 10px 18px!important}
+body.cinema .cinema-votes{max-height:18vh;overflow:auto;margin:4px 8px}
+body.cinema .cinema-away.is-on{padding:8px}
+}
 body.cinema .cinema-away{display:none}
 body.cinema .cinema-away.is-on{display:flex;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;padding:16px;background:#7f1d1dcc;box-sizing:border-box}
 body.cinema .cinema-away .away-card{width:min(440px,100%);padding:16px 18px;border:3px solid #fecaca;border-radius:14px;background:#fff7ed;color:#7f1d1d;font-size:15px;line-height:1.45;box-shadow:0 12px 40px #0006}
