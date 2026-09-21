@@ -1304,6 +1304,29 @@ def api_present_reveal():
     return jsonify(ok=True, show_sol=bool(room.get("show_sol")), ver=room.get("ver"))
 
 
+@base.app.post("/api/present/zoom")
+def api_present_zoom():
+    """ADMIN chỉnh cỡ chữ chiếu — đồng bộ sang máy học viên / máy chiếu."""
+    hid = _host_id()
+    if not hid:
+        return jsonify(ok=False, error="Hãy đăng nhập ADMIN trên máy đang chiếu."), 401
+    data = request.get_json(silent=True) or {}
+    code = _norm_code(data.get("code") or session.get("present_code") or "")
+    token = str(data.get("token") or session.get("present_token") or "")
+    z = _zoom(data.get("zoom"))
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token or str(room.get("host") or "") != hid:
+            return jsonify(ok=False, error="Không phải phòng của bạn."), 401
+        prev = float(room.get("zoom") or 1)
+        room["zoom"] = z
+        if abs(prev - z) >= 0.01:
+            room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        ver = int(room.get("ver") or 0)
+    return jsonify(ok=True, zoom=z, ver=ver)
+
+
 @base.app.post("/api/present/live")
 def api_present_live():
     hid = _host_id()
@@ -1339,14 +1362,14 @@ def api_present_live():
             incoming, err = _score_live(q, incoming)
             if err:
                 return jsonify(ok=False, error=err), 400
-        want_sol = show_sol and bool(incoming.get("checked"))
+        want_sol = bool(incoming.get("checked"))
         snap, err = _snapshot(want_sol, zoom, reveal=want_sol, data={"quiz_path": path, "quiz_ids": ids, "quiz_pos": pos})
         if not snap:
             return jsonify(ok=False, error=err or "Không tải được câu."), 400
         room, rerr = _put_room(hid, code, token, snap, incoming, force_kind=True)
         if not room:
             return jsonify(ok=False, error=rerr), 409
-        return jsonify(ok=True, ver=room.get("ver"), live=room.get("live") or incoming)
+        return jsonify(ok=True, ver=room.get("ver"), live=room.get("live") or incoming, show_sol=bool(room.get("show_sol")))
     incoming["checked"] = False
     incoming["ok"] = None
     with _LOCK:
@@ -1607,6 +1630,13 @@ def present_watch(code=""):
         "</form></div>"
         "<div id='cinemaNameBadge' class='cinema-namebadge' hidden></div>"
         "<div id='cinemaViolate' class='cinema-violate' hidden></div>"
+        "<div class='cinema-zoombar' id='cinemaZoomBar'>"
+        "<span class='cinema-navlab'>Chữ</span>"
+        "<button type='button' class='cinema-tool' id='cinemaZmOut' title='Thu nhỏ chữ'>A−</button>"
+        "<b id='cinemaZmLab'>100%</b>"
+        "<button type='button' class='cinema-tool' id='cinemaZmIn' title='Phóng to chữ'>A+</button>"
+        "<button type='button' class='cinema-tool' id='cinemaZmFit' title='Vừa màn hình / máy chiếu'>Vừa</button>"
+        "</div>"
         "<div id='perr' class='err'></div>"
         "<div class='cinema-stage'><div id='q' class='qbox' hidden></div>"
         "<div class='cinema-inkpad' id='cinemaInkPad'>"
@@ -2643,19 +2673,19 @@ function paintHostTools(){
     chk.hidden=!quiz || !!lastShowSol;
     chk.disabled=done || !cinemaReady();
     chk.textContent=done?'✅ Đã xác nhận':'✅ Xác nhận';
-    chk.title=done?'Đã khóa lựa chọn':(cinemaReady()?'Khóa đáp án lớp chọn':'Hãy chọn đủ đáp án trước.');
+    chk.title=done?'Đã khóa + hiện đáp án để lớp chép':(cinemaReady()?'Khóa phiếu và hiện đáp án/lời giải để lớp chép':'Hãy chọn đủ đáp án trước.');
   }
   if(peek){
     peek.hidden=!quiz;
     peek.disabled=false;
-    peek.title='Chỉ máy thầy — lớp không thấy cho đến khi bấm Đáp án.';
+    peek.title='Chỉ máy thầy — lớp không thấy cho đến khi bấm Xác nhận / Đáp án.';
   }
   if(sol){
     sol.hidden=!quiz;
     sol.disabled=!done && !lastShowSol;
     sol.classList.toggle('on', !!lastShowSol);
     sol.textContent=lastShowSol?'🙈 Ẩn đáp án':'📖 Đáp án';
-    sol.title=done||lastShowSol?'':'Hãy chọn đáp án và bấm Xác nhận trước.';
+    sol.title=done||lastShowSol?'Hiện/ẩn đáp án + lời giải để lớp chép':'Hãy chọn đáp án và bấm Xác nhận trước.';
   }
   if(ai){
     ai.hidden=!quiz;
@@ -3291,24 +3321,124 @@ function bindInkPadUi(){
     grip.addEventListener('pointercancel', end);
   }
 }
+let cinemaZoomManual=null;
+function cinemaZoomKey(){ return 'ldvlCinemaZoom:'+String(CODE||'').toUpperCase(); }
+function loadCinemaZoom(){
+  try{
+    const v=parseFloat(localStorage.getItem(cinemaZoomKey())||'');
+    if(v && v>=0.8 && v<=2.6) cinemaZoomManual=v;
+  }catch(e){}
+}
+function saveCinemaZoom(z){
+  try{
+    if(z==null) localStorage.removeItem(cinemaZoomKey());
+    else localStorage.setItem(cinemaZoomKey(), String(z));
+  }catch(e){}
+}
+function paintCinemaZoomLab(z){
+  const lab=document.getElementById('cinemaZmLab');
+  if(lab) lab.textContent=Math.round((Number(z)||1)*100)+'%';
+}
+function applyCinemaZoom(z, opts){
+  opts=opts||{};
+  const box=document.getElementById('q');
+  z=Math.max(0.8, Math.min(2.6, Number(z)||1));
+  z=Math.round(z*100)/100;
+  if(opts.manual){
+    cinemaZoomManual=z;
+    saveCinemaZoom(z);
+  }
+  if(box) box.style.setProperty('--qzoom', String(z));
+  document.documentElement.style.setProperty('--qzoom', String(z));
+  paintCinemaZoomLab(z);
+  try{ sizeInk(); }catch(e){}
+  return z;
+}
+function bumpCinemaZoom(delta){
+  const box=document.getElementById('q');
+  let cur=cinemaZoomManual;
+  if(cur==null){
+    try{ cur=parseFloat((box&&box.style.getPropertyValue('--qzoom'))||'1')||1; }catch(e){ cur=1; }
+  }
+  const z=applyCinemaZoom(cur+delta, {manual:true});
+  pushCinemaZoom(z);
+  return z;
+}
 function fitQuestion(){
   const box=document.getElementById('q');
   if(!box||box.hidden) return;
   if(box.querySelector('.ltsec')) return;
+  if(cinemaZoomManual!=null){
+    applyCinemaZoom(cinemaZoomManual, {manual:false});
+    return;
+  }
   const pad=document.getElementById('cinemaInkPad');
-  const padH=pad?Math.round(pad.offsetHeight||0):0;
-  const availH=Math.max(180, window.innerHeight-36-padH);
-  const availW=Math.max(240, window.innerWidth-20);
-  let lo=0.95, hi=2.5, best=0.95;
-  for(let i=0;i<12;i++){
+  const zoomBar=document.getElementById('cinemaZoomBar');
+  const host=document.getElementById('cinemaHost');
+  const topChrome=(zoomBar&&!zoomBar.hidden?zoomBar.offsetHeight:0)+(host&&!host.hidden?Math.min(host.offsetHeight||0,72):0);
+  const padH=pad&&!document.body.classList.contains('proj-lean')?Math.round(pad.offsetHeight||0):0;
+  const availH=Math.max(160, window.innerHeight-28-topChrome-padH);
+  const availW=Math.max(220, window.innerWidth-16);
+  let lo=0.85, hi=2.6, best=0.95;
+  for(let i=0;i<14;i++){
     const mid=(lo+hi)/2;
     box.style.setProperty('--qzoom', String(mid));
     void box.offsetHeight;
-    if(box.scrollHeight<=availH+6 && box.scrollWidth<=availW+6){best=mid;lo=mid;}
+    if(box.scrollHeight<=availH+8 && box.scrollWidth<=availW+8){best=mid;lo=mid;}
     else hi=mid;
   }
-  box.style.setProperty('--qzoom', String(Math.max(0.95, Math.min(2.5, Math.round(best*0.97*10)/10))));
-  sizeInk();
+  applyCinemaZoom(Math.max(0.85, Math.min(2.6, Math.round(best*0.98*100)/100)), {manual:false});
+}
+async function pushCinemaZoom(z){
+  const p=hostTok();
+  if(!p) return;
+  try{
+    await fetch('/api/present/zoom',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({code:p.code,token:p.token,zoom:z})});
+  }catch(e){}
+}
+function bindCinemaZoom(){
+  const bar=document.getElementById('cinemaZoomBar');
+  if(!bar || bar.__bound) return;
+  bar.__bound=1;
+  loadCinemaZoom();
+  const out=document.getElementById('cinemaZmOut');
+  const inn=document.getElementById('cinemaZmIn');
+  const fit=document.getElementById('cinemaZmFit');
+  if(out) out.onclick=function(){ bumpCinemaZoom(-0.1); };
+  if(inn) inn.onclick=function(){ bumpCinemaZoom(0.1); };
+  if(fit) fit.onclick=function(){
+    cinemaZoomManual=null;
+    saveCinemaZoom(null);
+    fitQuestion();
+    const box=document.getElementById('q');
+    let z=1;
+    try{ z=parseFloat((box&&box.style.getPropertyValue('--qzoom'))||'1')||1; }catch(e){}
+    pushCinemaZoom(z);
+  };
+  window.addEventListener('resize', function(){
+    clearTimeout(window.__cinemaZoomT);
+    window.__cinemaZoomT=setTimeout(function(){
+      updateProjLean();
+      if(cinemaZoomManual==null) fitQuestion();
+      else applyCinemaZoom(cinemaZoomManual, {manual:false});
+    }, 120);
+  });
+  window.addEventListener('orientationchange', function(){
+    setTimeout(function(){
+      updateProjLean();
+      cinemaZoomManual=null;
+      saveCinemaZoom(null);
+      fitQuestion();
+    }, 250);
+  });
+  updateProjLean();
+}
+function updateProjLean(){
+  // Nằm ngang / máy chiếu: gọn chrome, ưu tiên chữ to
+  const lean=window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches
+    || window.matchMedia('(min-aspect-ratio: 4/3) and (min-width: 900px)').matches;
+  document.body.classList.toggle('proj-lean', !!lean);
 }
 function typeset(el){
   const box=el||document.getElementById('q');
@@ -3498,6 +3628,17 @@ async function tick(){
     window.lastLeaves=d.leaves||{};
     window.lastRoster=d.roster||{};
     lastShowSol=!!d.show_sol;
+    if(typeof d.zoom==='number' && d.zoom>0){
+      if(window.__lastRoomZoom==null || Math.abs(window.__lastRoomZoom-d.zoom)>=0.01){
+        window.__lastRoomZoom=d.zoom;
+        if(!hostTok()){
+          cinemaZoomManual=d.zoom;
+          applyCinemaZoom(d.zoom, {manual:false});
+        }else if(cinemaZoomManual==null){
+          applyCinemaZoom(d.zoom, {manual:false});
+        }
+      }
+    }
     if(typeof d.pos==='number' && d.pos!==lastPeekPos){
       if(lastPeekPos>=0){ hideCinemaPeek(); clearInkCanvas(); }
       lastPeekPos=d.pos;
@@ -3518,6 +3659,7 @@ async function tick(){
     bindInkPadUi();
     applyInk(d);
     sizeInk();
+    updateProjLean();
   }catch(e){
     if(err) err.textContent='Mất kết nối, đang thử lại…';
     if(!leaveAnchorQ) freezeLeaveAnchor();
@@ -3527,6 +3669,7 @@ async function tick(){
 }
 bindNameGate();
 loadQWatch();
+bindCinemaZoom();
 tick();
 setInterval(tick,900);
 (function(){
@@ -3639,7 +3782,11 @@ setInterval(tick,900);
   const sol=document.getElementById('solToggle');
   if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
   const chk=document.getElementById('chkToggle');
-  if(chk) chk.onclick=async function(){ await presentLive(null, true); };
+  if(chk) chk.onclick=async function(){
+    const ok=await presentLive(null, true);
+    // Sau xác nhận: tự mở đáp án để lớp chép (nếu API chưa mở)
+    if(ok && !lastShowSol) await presentReveal(true);
+  };
   const inkBtn=document.getElementById('inkToggle');
   if(inkBtn) inkBtn.onclick=function(){
     if(!hostTok()) return;
