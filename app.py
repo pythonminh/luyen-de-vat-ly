@@ -255,7 +255,7 @@ body.cinema .cinema-inkresize{height:22px;margin-top:2px;border:1px dashed #f0c7
 body.cinema .cinema-inkpad{width:calc(100% - 16px);margin:6px 8px calc(64px + env(safe-area-inset-bottom,0px))}
 body.cinema .cinema-inkframe{height:var(--ink-h,180px)}
 }
-body.cinema .cinema-exit{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));right:6px;z-index:40;width:28px;height:28px;border-radius:6px;border:1px solid #c5d6ea;background:#fff;color:#b91c1c;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;box-shadow:0 2px 8px #0f172a14;cursor:pointer}
+body.cinema .cinema-exit{display:none!important}
 body.cinema.is-host .cinema-exit{display:none!important}
 body.cinema.is-host .cinemahost{padding-right:8px}
 .topin{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:calc(4px + env(safe-area-inset-top,0px)) 8px 4px}
@@ -389,12 +389,11 @@ body.cinema .cinema-zoombar b{min-width:3.2em;text-align:center;font-size:13px;c
 body.cinema .cinema-zoombar .cinema-tool{min-height:36px;padding:0 10px;font-weight:900}
 body.cinema.proj-lean .cinema-inkpad{display:none!important}
 body.cinema.proj-lean .cinema-namebadge,body.cinema.proj-lean .cinema-violate{max-height:22vh;overflow:auto}
-body.cinema.proj-lean .cinema-qr{transform:scale(.85);transform-origin:bottom right}
 body.cinema.proj-lean .qbox{padding-bottom:24px!important;font-size:calc(20px * var(--qzoom,1))}
-/* Ngang / máy chiếu: zoom sát góc phải trên, nhỏ như QR — không che chữ */
+/* Ngang / máy chiếu: zoom sát góc phải dưới, nhỏ như QR — không che chữ */
 body.cinema.proj-lean .cinema-zoombar,
 body.cinema.cinema-zoom-corner .cinema-zoombar{
-position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));left:auto;bottom:auto;z-index:36;
+position:fixed;top:auto;right:calc(8px + env(safe-area-inset-right,0px));left:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:36;
 margin:0;padding:4px 5px;gap:3px;flex-wrap:nowrap;width:auto;max-width:none;
 border:0;border-radius:10px;background:#145bb0e8;box-shadow:0 2px 10px #0f172a28;
 opacity:.7;transition:opacity .15s ease
@@ -410,7 +409,12 @@ body.cinema.cinema-zoom-corner .cinema-zoombar .cinema-tool{
 min-height:28px;min-width:30px;padding:0 6px;font-size:12px;font-weight:900;line-height:1;
 border:0;border-radius:6px;background:#fff;color:#145bb0;box-shadow:none
 }
-body.cinema.proj-lean .qbox,body.cinema.cinema-zoom-corner .qbox{padding-top:8px!important}
+/* QR nằm trên thanh zoom để không đè nhau */
+body.cinema.proj-lean .cinema-qr,
+body.cinema.cinema-zoom-corner .cinema-qr{
+bottom:calc(52px + env(safe-area-inset-bottom,0px));right:calc(8px + env(safe-area-inset-right,0px));transform:scale(.85);transform-origin:bottom right
+}
+body.cinema.proj-lean .qbox,body.cinema.cinema-zoom-corner .qbox{padding-bottom:56px!important}
 @media(orientation:landscape) and (max-height:520px){
 body.cinema .cinema-stage{min-height:0}
 body.cinema .qbox{padding:6px 10px 18px!important}

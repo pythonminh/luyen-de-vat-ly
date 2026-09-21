@@ -1616,7 +1616,6 @@ def present_watch(code=""):
     qr_src = "/xem/" + code + "/qr.svg"
     body = (
         "<div class='cinema-q'>"
-        "<button type='button' class='cinema-exit' id='cinemaExit' title='Thoát chiếu'>✕</button>"
         "<div class='cinemahost' id='cinemaHost' hidden>"
         "<div class='cinema-navrow' id='dangNav' hidden>"
         "<span class='cinema-navlab'>Dạng</span>"
