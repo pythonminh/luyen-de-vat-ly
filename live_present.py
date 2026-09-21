@@ -89,8 +89,22 @@ def _want_sol(data, live, room):
     data = data if isinstance(data, dict) else {}
     live = live if isinstance(live, dict) else {}
     if "show_sol" in data:
-        return bool(data.get("show_sol")) and bool(live.get("checked"))
+        return bool(data.get("show_sol")) and bool(live.get("checked") or (room or {}).get("show_sol"))
     return bool((room or {}).get("show_sol"))
+
+
+def _merge_push_live(room, incoming):
+    """Giữ xác nhận từ màn chiếu; lần đầu xác nhận trên trang làm bài → báo mở lời giải."""
+    incoming = _sanitize_live(incoming)
+    old = _sanitize_live((room or {}).get("live") if isinstance((room or {}).get("live"), dict) else {})
+    open_sol = False
+    if old.get("checked") and not incoming.get("checked"):
+        # Trang làm bài chưa xác nhận — đừng xóa trạng thái đã khóa trên /xem
+        incoming = old
+    elif incoming.get("checked") and not old.get("checked"):
+        # ADMIN vừa Xác nhận trên trang làm bài → mở đáp án/lời giải cho lớp
+        open_sol = True
+    return incoming, open_sol
 
 
 def _teacher_peek_payload(q):
@@ -1018,7 +1032,10 @@ def api_present_push():
     with _LOCK:
         room_pre = _ROOMS.get(code)
         _keep_room_cursor(data, room_pre)
+        live, open_sol = _merge_push_live(room_pre, live)
         want_sol = _want_sol(data, live, room_pre)
+        if open_sol:
+            want_sol = True
     snap, err = _snapshot(want_sol, data.get("zoom"), reveal=want_sol, data=data)
     if not snap:
         with _LOCK:
@@ -3837,7 +3854,7 @@ setInterval(tick,900);
     if(!pane) return;
     if(!pane.hidden){ pane.hidden=true; return; }
     if(!(lastLive&&lastLive.checked)){
-      alert('Hãy chọn đáp án và bấm Xác nhận trước.');
+      alert('Hãy bấm Xác nhận + lời giải trước.');
       return;
     }
     if(!lastShowSol) await presentReveal(true);
