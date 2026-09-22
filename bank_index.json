@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 173,
+  "total_files": 174,
   "total_questions": 11659,
   "lessons": [
     {
@@ -5951,6 +5951,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
