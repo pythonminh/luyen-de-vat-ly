@@ -1,0 +1,198 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương I. Mệnh đề và tập hợp
+% Bài: Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con
+% Số câu: 56
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 2. Tập hợp và các phép toán trên tập hợp
+
+
+
+% ===== Câu 3 =====
+% ID: T10C1B2-01-TLN
+% Mức: VD
+\dangbt{Tập hợp bằng nhau, tập rỗng và số tập con}
+\begin{ex}
+% ID: T10C1B2-01-TLN
+% Mức: VD
+Cho tập $A=\left\{ x\in \mathbb{N}|~x(2-x)(x^2-3x-4)=0 \right\}$. Hỏi tập $A$ có bao nhiêu tập con ?
+\shortans{8}
+\loigiai{
+$x(2-x)(x^2-3x-4)=0 \Leftrightarrow x=0$ hoặc $2-x=0$ hoặc $x^2-3x-4=0$.
+$x=0 \in \mathbb{N}$.
+$2-x=0 \Leftrightarrow x=2 \in \mathbb{N}$.
+$x^2-3x-4=0 \Leftrightarrow (x-4)(x+1)=0 \Leftrightarrow x=4 \in \mathbb{N}$ hoặc $x=-1 \notin \mathbb{N}$.
+Vậy $A=\{0;2;4\}$.
+Số tập con của tập $A$ là $2^{|A|} = 2^3 = 8$.
+8
+}
+\end{ex}
+
+% ===== Câu 7 =====
+% ID: T10C1B2-02-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-02-TLN
+% Mức: VD
+Cho ba tập hợp $A=\{2; 5\}$, $B=\{5 ; x\}$, $C=\{x ; y ; 5\}$, biết $A=B=C$. Biết $x \neq y$, khi đó giá trị $x + y$ bằng
+\shortans{7}
+\loigiai{
+Vì $A=B$ nên $x=2$. Lại có $B=C$ nên $y=5$.
+Vậy $x+y=2+5=7$.
+}
+\end{ex}
+
+% ===== Câu 9 =====
+% ID: T10C1B2-03-DS
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-03-DS
+% Mức: VD
+Cho hai tập hợp $A=\{x\in \mathbb{R}|~(x-1)(x-2)(x-3)=0\}$, $B=\{5;3;1\}$.
+\choiceTF
+{\True Tập hợp $A$ có $3$ phần tử}
+{Tập hợp $A\cup B$ có $6$ phần tử}
+{Tập hợp $A \subset B$}
+{Tập hợp $B \subset A$}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có $3$ phần tử. (Vì): Phương trình $(x-1)(x-2)(x-3)=0$ có ba nghiệm phân biệt là $x=1$, $x=2$, $x=3$. Do đó, tập hợp $A=\{1;2;3\}$ có đúng $3$ phần tử
+\item (Sai) Tập hợp $A\cup B$ có $6$ phần tử. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Hợp của hai tập hợp $A\cup B$ bao gồm tất cả các phần tử thuộc $A$ hoặc thuộc $B$ hoặc thuộc cả hai. Ta có $A\cup B = \{1;2;3;5\}$. Tập hợp này có $4$ phần tử, không phải $6$ phần tử
+\item (Sai) Tập hợp $A \subset B$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $A$ là tập con của $B$ ($A \subset B$), mọi phần tử của $A$ phải thuộc $B$. Tuy nhiên, phần tử $2$ thuộc $A$ nhưng không thuộc $B$. Do đó, $A$ không phải là tập con của $B$
+\item (Sai) Tập hợp $B \subset A$. (Vì): Tập hợp $A=\{1;2;3\}$ và tập hợp $B=\{5;3;1\}$. Để $B$ là tập con của $A$ ($B \subset A$), mọi phần tử của $B$ phải thuộc $A$. Tuy nhiên, phần tử $5$ thuộc $B$ nhưng không thuộc $A$. Do đó, $B$ không phải là tập con của $A$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 13 =====
+% ID: T10C1B2-04-DS
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-04-DS
+% Mức: VD
+Cho hai tập hợp $A=\{n \in \mathbb{N}\mid (n^2-2n-3)(n^2-1)=0\}$ và $B=\{x \in \mathbb{R}\mid 2x^2-x+3=0\}$. Khi đó
+\choiceTF
+{\True Tập hợp $A$ có 2 phần tử.}
+{\True Tập hợp $A$ có 4 tập hợp con.}
+{\True Tập hợp $B$ là tập hợp rỗng.}
+{\True Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4.}
+\loigiai{
+\begin{itemchoice}
+\item (Đúng) Tập hợp $A$ có 2 phần tử. (Vì): Tập hợp $A$ được xác định bởi phương trình $(n^2-2n-3)(n^2-1)=0$. Ta có $n^2-2n-3=0 \Leftrightarrow (n-3)(n+1)=0 \Leftrightarrow n=3$ hoặc $n=-1$. Ta có $n^2-1=0 \Leftrightarrow (n-1)(n+1)=0 \Leftrightarrow n=1$ hoặc $n=-1$. Vì $n \in \mathbb{N}$ (tập số tự nhiên), nên các giá trị của $n$ thỏa mãn là $n=1$ và $n=3$. Do đó, tập hợp $A = \{1; 3\}$. Tập hợp $A$ có 2 phần tử
+\item (Đúng) Tập hợp $A$ có 4 tập hợp con. (Vì): Số tập hợp con của một tập hợp có $k$ phần tử là $2^k$. Tập hợp $A$ có 2 phần tử, nên số tập hợp con của tập hợp $A$ là $2^2 = 4$
+\item (Đúng) Tập hợp $B$ là tập hợp rỗng. (Vì): Tập hợp $B$ được xác định bởi phương trình $2x^2-x+3=0$. Ta xét biệt thức $\Delta = b^2 - 4ac = (-1)^2 - 4(2)(3) = 1 - 24 = -23$. Vì $\Delta < 0$, phương trình $2x^2-x+3=0$ vô nghiệm. Do đó, tập hợp $B$ là tập hợp rỗng, ký hiệu là $B = \emptyset$
+\item (Đúng) Tổng các phần tử của tập hợp $A$ và tập hợp $B$ bằng 4. (Vì): Tổng các phần tử của tập hợp $A$ là $1+3=4$. Tập hợp $B$ là tập hợp rỗng nên không có phần tử nào để tính tổng. Tổng các phần tử của tập hợp $A$ và tập hợp $B$ là $4+0=4$
+\end{itemchoice}
+}
+\end{ex}
+
+% ===== Câu 20 =====
+% ID: T10C1B2-05-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-05-TN
+% Mức: NB
+Cho tập $A$ có $3$ phần tử, số tập con của tập $A$ bằng
+\choice
+{$6$}
+{$3$}
+{\True $8$}
+{$4$}
+\loigiai{
+Giả sử $A=\left\{ a;b;c \right\}$, các tập con của $A$ là: $\varnothing$, $\left\{ a \right\}$, $\left\{ b \right\}$, $\left\{ c \right\}$, $\left\{ a;b \right\}$, $\left\{ a;c \right\}$, $\left\{ b;c \right\}$, $\left\{ a;b;c \right\}$.
+Vậy có $8$ tập con của $A$.
+}
+\end{ex}
+
+% ===== Câu 35 =====
+% ID: T10C1B2-17-TN
+% Mức: NB
+\begin{ex}
+% ID: T10C1B2-17-TN
+% Mức: NB
+Cho tập hợp $A=\{a ; b ; c\}$. Số tập con của tập hợp $A$ là
+\choice
+{6}
+{\True 8}
+{9}
+{7}
+\loigiai{
+Do tập hợp $A$ có 3 phần tử nên số tập con của tập hợp $A$ là $2^3=8$.
+}
+\end{ex}
+
+% ===== Câu 43 =====
+% ID: T10C1B2-25-TN
+% Mức: TH
+\begin{ex}
+% ID: T10C1B2-25-TN
+% Mức: TH
+Tập hợp nào sau đây khi biểu diễn trên trục số sẽ tương ứng với phần còn trống trên hình vẽ bên?
+\choice
+{$[-3;5]$}
+{$(-3;5)$}
+{$[-3;5)$}
+{\True $(-3;5]$}
+\loigiai{
+Dựa vào hình vẽ, phần còn trống trên trục số tương ứng với khoảng $(-3;5]$, tức là tập hợp các số thực $x$ thỏa mãn $-3 \lt  x \leq 5$. Điểm $-3$ không thuộc tập hợp (dấu ngoặc tròn, vòng tròn rỗng trên trục số) và điểm $5$ thuộc tập hợp (dấu ngoặc vuông, vòng tròn đặc trên trục số). Vậy đáp án là $(-3;5]$.
+}
+\end{ex}
+
+% ===== Câu 44 =====
+% ID: T10C1B2-26-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-26-TN
+% Mức: VD
+Có bao nhiêu tập $A$ để $\left\{ m;n \right\}\subset A\subset \left\{ m;n;x;y \right\}$ ?
+\choice
+{$2$}
+{\True $4$}
+{$1$}
+{$3$}
+\loigiai{
+Vì $\{ m;n \} \subset A \subset \{ m;n;x;y \}$ nên $A$ có thể là một trong bốn tập hợp sau
+ $\{ m;n \};~\{m;n;x\};~\{ m;n;y \};~\{ m;n;x;y\}.$
+}
+\end{ex}
+
+% ===== Câu 45 =====
+% ID: T10C1B2-27-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-27-TN
+% Mức: VD
+Tập $A=\{0;1;2\}$ có bao nhiêu tập con có đúng $2$ phần tử?
+\choice
+{$6$}
+{$7$}
+{\True $3$}
+{$4$}
+\loigiai{
+Có $3$ tập con có đúng $2$ phần tử của tập $A=\left\{ 0;1;2 \right\}$ là $\left\{ 0;1 \right\}$, $\left\{ 0;2 \right\}$, $\left\{ 1;2 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 46 =====
+% ID: T10C1B2-28-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-28-TN
+% Mức: VD
+Cho tập hợp $B=\left\{ x\in\mathbb{Z}\mid x^4-11x^2+18=0\right\}$. Khi đó số phần tử của tập hợp $B$ là
+\choice
+{$1$}
+{\True $2$}
+{$3$}
+{$4$}
+\loigiai{
+Ta có phương trình $x^4-11x^2+18=0$.
+Đặt $t=x^2$, với $t \ge 0$. Phương trình trở thành $t^2-11t+18=0$.
+Phương trình này có hai nghiệm là $t=2$ và $t=9$.
+Trường hợp 1: $x^2=2$. Suy ra $x=\sqrt{2}$ hoặc $x=-\sqrt{2}$. Cả hai giá trị này đều không thuộc tập số nguyên $\mathbb{Z}$.
+Trường hợp 2: $x^2=9$. Suy ra $x=3$ hoặc $x=-3$. Cả hai giá trị này đều thuộc tập số nguyên $\mathbb{Z}$.
+Vậy tập hợp $B$ gồm các phần tử nguyên là $B=\{-3; 3\}$.
+Số phần tử của tập hợp $B$ là 2.
+}
+\end{ex}
