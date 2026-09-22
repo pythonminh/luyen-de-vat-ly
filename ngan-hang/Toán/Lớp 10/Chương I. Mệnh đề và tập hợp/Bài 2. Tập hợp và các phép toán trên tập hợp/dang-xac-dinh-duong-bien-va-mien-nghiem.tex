@@ -1,0 +1,86 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương I. Mệnh đề và tập hợp
+% Bài: Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm
+% Số câu: 56
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 2. Tập hợp và các phép toán trên tập hợp
+
+
+
+% ===== Câu 52 =====
+% ID: T10C1B2-34-TN
+% Mức: VD
+\dangbt{Xác định đường biên và miền nghiệm}
+\begin{ex}
+% ID: T10C1B2-34-TN
+% Mức: VD
+Cho tập $X=\{ x \in \mathbb{N} |~ (x^2-4)(x-1)=0\}$. Tính số phần tử của $X$.
+\choice
+{$1$}
+{$3$}
+{\True $2$}
+{$4$}
+\loigiai{
+Ta có
+  $(x^2-4)(x-1)=0\Leftrightarrow$ hoặc{&x^2-4=0
+&x-1=0}
+ $\Leftrightarrow$ hoặc{&x=2
+&x=-2 $\notin\mathbb{N}$
+&x=1.} 
+ Do $x\in \mathbb{N} \Rightarrow x \in \{ 2;1\}$. Vậy $X$ có $2$ phần tử.
+}
+\end{ex}
+
+% ===== Câu 53 =====
+% ID: T10C1B2-35-TN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-35-TN
+% Mức: VD
+Viết tập hợp $A=\{ x \in \mathbb{N} |~ (2x+1)(x^2-5x+6)=0\}$ bằng cách liệt kê.
+\choice
+{$\{ -1;2;3 \}$}
+{\True $\{ 2;3 \}$}
+{$\left\{ -\dfrac{1}{2};2;3 \right\}$}
+{$\{ -1;2 \}$}
+\loigiai{
+Ta có
+  (2x+1)$(x^2-5x+6)$=0 $\Leftrightarrow$
+ hoặc{&2x+1=0
+&x^2-5x+6=0} $\Leftrightarrow$
+ hoặc{&x=-$\dfrac{1}{2}$
+&x=2
+&x=3.} 
+ Do $x \in \mathbb{N} \Rightarrow A=\left\{ 2;3 \right\}$.
+}
+\end{ex}
+
+% ===== Câu 54 =====
+% ID: T10C1B2-36-TN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-36-TN
+% Mức: VDC
+Cho hai tập hợp $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\},\,B=\{x\in \mathbb{Z}|3x+10\gt 1\}$. Khẳng định nào sau đây là đúng?
+\choice
+{$\mathrm{C}_B A=\{2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{-3;-2;-1;2;3;4;\ldots\}$}
+{$\mathrm{C}_B A=\{0;1;2;3;4;\ldots\}$}
+{\True $\mathrm{C}_B A=\{-2;-1;2;3;4;\ldots\}$}
+\loigiai{
+Ta có $A=\left\{x\in \mathbb{N}|-5\le 2x-\dfrac{1}{3}\le 3\right\}$.
+$-5\le 2x-\dfrac{1}{3}\le 3-5+\dfrac{1}{3}\le 2x\le 3+\dfrac{1}{3}-\dfrac{14}{3}\le 2x\le \dfrac{10}{3}-\dfrac{7}{3}\le x\le \dfrac{5}{3}$
+Vì $x\in\mathbb{N}$ nên $x\in\{0; 1\}$. Vậy $A=\{0; 1\}$.
+
+Ta có $B=\{x\in \mathbb{Z}|3x+10\gt 1\}$.
+$3x\gt 1-103x\gt -9x\gt -3$
+Vì $x\in\mathbb{Z}$ nên $x\in\{-2; -1; 0; 1; 2; 3; \ldots\}$. Vậy $B=\{-2; -1; 0; 1; 2; 3; \ldots\}$.
+
+Ta cần tìm khẳng định đúng.
+Xét tập hợp $B \setminus A = \{x \mid x \in B \text{ và } x \notin A\}$.
+$B \setminus A = \{-2; -1; 0; 1; 2; 3; \ldots\} \setminus \{0; 1\} = \{-2; -1; 2; 3; \ldots\}$.
+Khẳng định $D$ là $B \setminus A = \{-2; -1; 2; 3; \ldots\}$.
+}
+\end{ex}
