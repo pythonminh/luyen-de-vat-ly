@@ -6076,9 +6076,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Các tập số, khoảng, đoạn và nửa khoảng": 3
+      },
+      "dang_kinds": {
+        "Các tập số, khoảng, đoạn và nửa khoảng": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
