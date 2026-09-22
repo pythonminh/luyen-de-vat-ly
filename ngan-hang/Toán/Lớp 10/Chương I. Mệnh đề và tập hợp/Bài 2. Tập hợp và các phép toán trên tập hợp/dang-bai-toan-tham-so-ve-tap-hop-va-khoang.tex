@@ -1,0 +1,208 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương I. Mệnh đề và tập hợp
+% Bài: Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng
+% Số câu: 56
+% App đọc file này trực tiếp — sửa rồi Commit trên GitHub, bấm Đồng bộ GitHub .tex
+
+% Bài 2. Tập hợp và các phép toán trên tập hợp
+
+
+
+% ===== Câu 6 =====
+% ID: T10C1B2-02-TL
+% Mức: VD
+\dangbt{Bài toán tham số về tập hợp và khoảng}
+\begin{bt}
+% ID: T10C1B2-02-TL
+% Mức: VD
+Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+\loigiai{
+Để $A \subset B$, ta cần có:
+[LG-ONLY]
+[HINH]
+$m-1 \ge -2$ và $4 \le 2m+2$.
+$m \ge -1$ và $2m \ge 2$.
+$m \ge -1$ và $m \ge 1$.
+Suy ra $m \ge 1$.
+Vì $m$ là số nguyên dương, nên $m \in \{1, 2, 3, 4\}$.
+Tuy nhiên, đề bài cho $A=(m-1; 4]$ và $B=(-2; 2m+2)$.
+Để $A \subset B$, ta cần:
+$m-1 \ge -2 \implies m \ge -1$.
+$4 \le 2m+2 \implies 2m \ge 2 \implies m \ge 1$.
+Kết hợp hai điều kiện, ta có $m \ge 1$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Kiểm tra lại điều kiện $A$ và $B$ khác rỗng:
+$m-1 \lt  4 \implies m \lt  5$.
+$-2 \lt  2m+2 \implies 2m \gt  -4 \implies m \gt  -2$.
+Vậy điều kiện để $A$ và $B$ khác rỗng là $-2 \lt  m \lt  5$.
+Kết hợp với điều kiện $m \ge 1$, ta có $1 \le m \lt  5$.
+Do $m$ là số nguyên dương, các giá trị của $m$ là $1, 2, 3, 4$.
+Có 4 giá trị nguyên dương của $m$ thỏa mãn.
+
+$m \in \{1, 2, 3, 4\}$.
+}
+\end{bt}
+
+% ===== Câu 14 =====
+% ID: T10C1B2-04-TL
+% Mức: VDC
+\begin{bt}
+% ID: T10C1B2-04-TL
+% Mức: VDC
+Cho $A=\left[m-3 ; \dfrac{m+2}{4}\right)$, $B=(-\infty ;-1) \cup [2 ;+\infty)$. Xác định $m$ để $(A \cap B=\varnothing)$.
+\loigiai{
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \leq 4m-12 \\,\text{m} \geq 2 \text{ và } m+2 \leq 8 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} 14 \leq 3m \\,\text{m} \geq 2 \text{ và } m \leq 6 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \geq \dfrac{14}{3} \\ 2 \leq m \leq 6 \end{array} \right.\Leftrightarrow m \in \left[2; 6\right] \cup \left[\dfrac{14}{3}; +\infty\right)$.
+
+Kiểm tra lại đề bài: $A \cap B = \varnothing$.
+Điều kiện để $A \cap B = \varnothing$ là khoảng $A$ nằm hoàn toàn bên trái hoặc hoàn toàn bên phải khoảng $B$.
+Trường hợp 1: Khoảng $A$ nằm hoàn toàn bên trái khoảng $B$.
+Điều này xảy ra khi phần tử cuối của $A$ nhỏ hơn phần tử đầu của phần bên trái của $B$.
+$\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+Trường hợp 2: Khoảng $A$ nằm hoàn toàn bên phải khoảng $B$.
+Điều này xảy ra khi phần tử đầu của $A$ lớn hơn hoặc bằng phần tử cuối của phần bên phải của $B$.
+$m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc có vẻ đã hiểu sai điều kiện giao rỗng.
+Ta có $A \cap B = \varnothing$ khi:
+1. Khoảng $A$ nằm hoàn toàn bên trái của $(-\infty; -1)$.
+   $\dfrac{m+2}{4} \lt  -1 \Leftrightarrow m+2 \lt  -4 \Leftrightarrow m \lt  -6$.
+2. Khoảng $A$ nằm hoàn toàn bên phải của $[2; +\infty)$.
+   $m-3 \geq 2 \Leftrightarrow m \geq 5$.
+
+Vậy $m \lt  -6$ hoặc $m \geq 5$.
+
+Lời giải gốc:
+$A\cap B=\varnothing \Leftrightarrow \left\{ \begin{aligned} \dfrac{m+2}{4} \leq m-3 \\,\text{m}-3 \geq -1 \text{ và } \dfrac{m+2}{4} \leq 2 \end{aligned} \right.$
+Điều kiện này là để $A$ nằm trong $B$, không phải giao rỗng.
+
+Chỉnh lại theo đúng yêu cầu:
+$A \cap B = \varnothing \Leftrightarrow \left[ \begin{array}{l} \dfrac{m+2}{4} \lt  -1 \\,\text{m}-3 \geq 2 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m+2 \lt  -4 \\,\text{m} \geq 5 \end{array} \right.\Leftrightarrow \left[ \begin{array}{l} m \lt  -6 \\,\text{m} \geq 5 \end{array} \right.m \in (-\infty; -6) \cup [5; +\infty)$.
+}
+\end{bt}
+
+% ===== Câu 15 =====
+% ID: T10C1B2-04-TLN
+% Mức: VD
+\begin{ex}
+% ID: T10C1B2-04-TLN
+% Mức: VD
+Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \subset B$?
+\shortans{1}
+\loigiai{
+Để $A \subset B$, ta cần $m+1 \gt  0$ và $2m-1 \lt  6$.
+$m+1 \gt  0 \Leftrightarrow m \gt  -1$.
+$2m-1 \lt  6 \Leftrightarrow 2m \lt  7 \Leftrightarrow m \lt  \frac{7}{2}$.
+Kết hợp hai điều kiện, ta có $-1 \lt  m \lt  \frac{7}{2}$.
+Vì $m$ là số nguyên, các giá trị nguyên của $m$ thỏa mãn là $0, 1, 2, 3$.
+Tuy nhiên, đề bài cho tập hợp $A=[m+1;2m-1]$. Để tập hợp này có nghĩa, ta cần $m+1 \le 2m-1$, suy ra $m \ge 2$.
+Kết hợp điều kiện $m \ge 2$ với $-1 \lt  m \lt  \frac{7}{2}$, ta được $2 \le m \lt  \frac{7}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $2, 3$.
+Có 2 giá trị nguyên của $m$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 18 =====
+% ID: T10C1B2-05-TL
+% Mức: VDC
+\begin{bt}
+% ID: T10C1B2-05-TL
+% Mức: VDC
+Cho tập hợp $A=(0 ;+\infty)$ và $B=\left\{x \in \mathbb{R} \mid m x^2-6 x+m-8=0\right\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \subset A$.
+\loigiai{
+Tập $B$ có đúng hai tập con $\Leftrightarrow B$ có đúng một phần tử.
+Do đó, phương trình $m x^2-6 x+m-8=0$ có duy nhất một nghiệm.
+
+Trường hợp 1: $m=0$.
+Phương trình trở thành $-6x-8=0 \Leftrightarrow x=-\dfrac{4}{3}$.
+Khi đó $B=\left\{-\dfrac{4}{3}\right\}$.
+Vì $-\dfrac{4}{3} \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Trường hợp 2: $m \neq 0$.
+Phương trình có nghiệm duy nhất $\Leftrightarrow \Delta'=0$.
+$\Delta' = (-3)^2 - m(m-8) = 9 - m^2 + 8m$.
+$\Delta'=0 \Leftrightarrow -m^2+8m+9=0 \Leftrightarrow m^2-8m-9=0 \Leftrightarrow (m-9)(m+1)=0$.
+$\Leftrightarrow m=9$ hoặc $m=-1$.
+
+Nếu $m=-1$:
+Phương trình là $-x^2-6x-9=0 \Leftrightarrow x^2+6x+9=0 \Leftrightarrow (x+3)^2=0 \Leftrightarrow x=-3$.
+Khi đó $B=\{-3\}$.
+Vì $-3 \notin A=(0 ;+\infty)$ nên $B \not\subset A$.
+
+Nếu $m=9$:
+Phương trình là $9x^2-6x+1=0 \Leftrightarrow (3x-1)^2=0 \Leftrightarrow x=\dfrac{1}{3}$.
+Khi đó $B=\left\{\dfrac{1}{3}\right\}$.
+Vì $\dfrac{1}{3} \in A=(0 ;+\infty)$ nên $B \subset A$.
+
+Vậy $m=9$.
+9
+}
+\end{bt}
+
+% ===== Câu 21 =====
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-06-TLN
+% Mức: VDC
+Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \in \mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \subset B$. Có bao nhiêu tập con của $S$?
+\shortans{4}
+\loigiai{
+$A \subset B \Leftrightarrow \begin{cases} 2a-1 \lt  4 \\ 3a+5 \ge 7 \end{cases} \Leftrightarrow \begin{cases} a \lt  \frac{5}{2} \\ a \ge \frac{2}{3} \end{cases} \Leftrightarrow \frac{2}{3} \le a \lt  \frac{5}{2}$.
+$a \in \mathbb{Z} \Rightarrow S = \{1; 2\}$.
+Số tập con của $S$ là $2^{|S|} = 2^2 = 4$.
+4
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 23 =====
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-07-TLN
+% Mức: VDC
+Cho số thực $m<0$ và hai tập hợp $A=(-\infty ; 9m)$, $B=\left(\dfrac{4}{m};+\infty\right)$. Biết tất cả các giá trị thực của tham số $m \in (a,b)$ để $A \cap B \neq \varnothing$.
+Khi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).
+\shortans{0{,}67}
+\loigiai{
+Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
+
+ Nên hai tập hợp $A$ và $B$ giao nhau khác rỗng,
+  $\Leftrightarrow9\,\text{m}$ > $\dfrac{4}{m}\Leftrightarrow9\,\text{m}$ ^2<4 $\quad(\text{do }$ m<0)
+ $\Rightarrow$ m^2< $\dfrac{4}{9}\Leftrightarrow$ - $\dfrac{2}{3}$ < m < 0. 
+ Vậy $m \in \left(-\dfrac{2}{3};0\right)$ thỏa $A \cap B \neq \varnothing$. Khi đó $b-a = 0 - \left( -\dfrac{2}{3}\right) \approx 0,67$.
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
+
+% ===== Câu 25 =====
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+\begin{ex}
+% ID: T10C1B2-08-TLN
+% Mức: VDC
+Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
+\shortans{1}
+\loigiai{
+Để $B \neq \varnothing$, ta có $m \lt  4m - 1 \Leftrightarrow m \gt  \dfrac{1}{3}$.
+Để $B \subset A$, ta có $m \geq 1$ và $4m - 1 \leq 5$.
+$4m - 1 \leq 5 \Leftrightarrow 4m \leq 6 \Leftrightarrow m \leq \dfrac{3}{2}$.
+Kết hợp các điều kiện, ta có $1 \leq m \leq \dfrac{3}{2}$.
+Các giá trị nguyên của $m$ thỏa mãn là $m=1$.
+Có 1 giá trị nguyên của $m$.
+1
+
+[LG-ONLY]
+[HINH]
+}
+\end{ex}
