@@ -5961,9 +5961,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 32,
+      "count": 32,
+      "dang": {
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 32
+      },
+      "dang_kinds": {
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
+          "TN": 8,
+          "DS": 6,
+          "TLN": 10,
+          "TL": 8
+        }
+      }
     }
   ]
 }
