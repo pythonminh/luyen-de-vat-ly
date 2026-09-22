@@ -716,6 +716,23 @@ Phần tử chung của hai tập hợp $A$ và $B$ là 0 và 1. Do đó, $A\cap
 % Mức: NB
 \dangbt{Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp}
 \begin{ex}Cho các tập hợp $A, B, X$ được biểu diễn trong biểu đồ Venn như hình vẽ dưới đây. Khẳng định nào sau đây là $\textbf{sai}$?
+\begin{center}
+\begin{tikzpicture}[scale=0.85, every node/.style={font=\normalsize}]
+    % Tập hợp X
+    \draw[thick] (0,0) rectangle (8,4.2);
+    \node at (0.4,3.8) {$X$};
+
+    % Tập hợp A
+    \draw[thick, blue!70!black, fill=blue!15]
+        (2,2.1) circle (1.1);
+    \node at (2,2.1) {$A$};
+
+    % Tập hợp B
+    \draw[thick, red!70!black, fill=red!15]
+        (5.5,2.1) circle (1.1);
+    \node at (5.5,2.1) {$B$};
+\end{tikzpicture}
+\end{center}
 \choice
 {$B \subset C_X A$}
 {$A \cap B = \varnothing$}
