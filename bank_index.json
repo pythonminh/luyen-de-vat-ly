@@ -180,68 +180,10 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 202,
-      "count": 202,
-      "dang": {
-        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 32,
-        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13,
-        "Tập hợp bằng nhau, tập rỗng và số tập con": 10,
-        "Xác định tập hợp, phần tử và tập con": 12,
-        "Bài toán tham số về tập hợp và khoảng": 7,
-        "Các tập số, khoảng, đoạn và nửa khoảng": 3,
-        "Xác định đường biên và miền nghiệm": 3,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 122
-      },
-      "dang_kinds": {
-        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
-          "TN": 8,
-          "DS": 6,
-          "TLN": 10,
-          "TL": 8
-        },
-        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
-          "TN": 11,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 1
-        },
-        "Tập hợp bằng nhau, tập rỗng và số tập con": {
-          "TN": 6,
-          "DS": 2,
-          "TLN": 2,
-          "TL": 0
-        },
-        "Xác định tập hợp, phần tử và tập con": {
-          "TN": 12,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán tham số về tập hợp và khoảng": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 4,
-          "TL": 3
-        },
-        "Các tập số, khoảng, đoạn và nửa khoảng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định đường biên và miền nghiệm": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 52,
-          "DS": 15,
-          "TLN": 45,
-          "TL": 10
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/vbb.tex",
