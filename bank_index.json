@@ -6099,9 +6099,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Xác định đường biên và miền nghiệm": 3
+      },
+      "dang_kinds": {
+        "Xác định đường biên và miền nghiệm": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
