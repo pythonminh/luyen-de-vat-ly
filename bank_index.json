@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 181,
-  "total_questions": 11659,
+  "total_questions": 11682,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -172,6 +172,190 @@
       "dang_kinds": {}
     },
     {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Bài toán tham số về tập hợp và khoảng": 7
+      },
+      "dang_kinds": {
+        "Bài toán tham số về tập hợp và khoảng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 4,
+          "TL": 3
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Các tập số, khoảng, đoạn và nửa khoảng": 3
+      },
+      "dang_kinds": {
+        "Các tập số, khoảng, đoạn và nửa khoảng": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
+      "questions": 122,
+      "count": 122,
+      "dang": {
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 122
+      },
+      "dang_kinds": {
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
+          "TN": 52,
+          "DS": 15,
+          "TLN": 45,
+          "TL": 10
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
+      "questions": 13,
+      "count": 13,
+      "dang": {
+        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13
+      },
+      "dang_kinds": {
+        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
+          "TN": 11,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 1
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
+      "questions": 10,
+      "count": 10,
+      "dang": {
+        "Tập hợp bằng nhau, tập rỗng và số tập con": 10
+      },
+      "dang_kinds": {
+        "Tập hợp bằng nhau, tập rỗng và số tập con": {
+          "TN": 6,
+          "DS": 2,
+          "TLN": 2,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
+      "questions": 32,
+      "count": 32,
+      "dang": {
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 32
+      },
+      "dang_kinds": {
+        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
+          "TN": 8,
+          "DS": 6,
+          "TLN": 10,
+          "TL": 8
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
+      "questions": 3,
+      "count": 3,
+      "dang": {
+        "Xác định đường biên và miền nghiệm": 3
+      },
+      "dang_kinds": {
+        "Xác định đường biên và miền nghiệm": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
+      "questions": 12,
+      "count": 12,
+      "dang": {
+        "Xác định tập hợp, phần tử và tập con": 12
+      },
+      "dang_kinds": {
+        "Xác định tập hợp, phần tử và tập con": {
+          "TN": 12,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex",
       "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex",
       "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de.tex",
@@ -180,10 +364,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 0,
-      "count": 0,
-      "dang": {},
-      "dang_kinds": {}
+      "questions": 23,
+      "count": 23,
+      "dang": {
+        "Chưa phân dạng": 23
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 13,
+          "DS": 0,
+          "TLN": 5,
+          "TL": 5
+        }
+      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/vbb.tex",
@@ -5891,190 +6084,6 @@
           "DS": 5,
           "TLN": 6,
           "TL": 6
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-ung-dung-so-do-venn-va-bai-toan-thuc-te-ve-tap-h.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp",
-      "questions": 32,
-      "count": 32,
-      "dang": {
-        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": 32
-      },
-      "dang_kinds": {
-        "Ứng dụng sơ đồ Venn và bài toán thực tế về tập hợp": {
-          "TN": 8,
-          "DS": 6,
-          "TLN": 10,
-          "TL": 8
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
-      "questions": 13,
-      "count": 13,
-      "dang": {
-        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13
-      },
-      "dang_kinds": {
-        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
-          "TN": 11,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 1
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
-      "questions": 10,
-      "count": 10,
-      "dang": {
-        "Tập hợp bằng nhau, tập rỗng và số tập con": 10
-      },
-      "dang_kinds": {
-        "Tập hợp bằng nhau, tập rỗng và số tập con": {
-          "TN": 6,
-          "DS": 2,
-          "TLN": 2,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-tap-hop-phan-tu-va-tap-con.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
-      "questions": 12,
-      "count": 12,
-      "dang": {
-        "Xác định tập hợp, phần tử và tập con": 12
-      },
-      "dang_kinds": {
-        "Xác định tập hợp, phần tử và tập con": {
-          "TN": 12,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
-      "questions": 7,
-      "count": 7,
-      "dang": {
-        "Bài toán tham số về tập hợp và khoảng": 7
-      },
-      "dang_kinds": {
-        "Bài toán tham số về tập hợp và khoảng": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 4,
-          "TL": 3
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-cac-tap-so-khoang-doan-va-nua-khoang.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Các tập số, khoảng, đoạn và nửa khoảng",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Các tập số, khoảng, đoạn và nửa khoảng": 3
-      },
-      "dang_kinds": {
-        "Các tập số, khoảng, đoạn và nửa khoảng": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-xac-dinh-duong-bien-va-mien-nghiem.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định đường biên và miền nghiệm",
-      "questions": 3,
-      "count": 3,
-      "dang": {
-        "Xác định đường biên và miền nghiệm": 3
-      },
-      "dang_kinds": {
-        "Xác định đường biên và miền nghiệm": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        }
-      }
-    },
-    {
-      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
-      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
-      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-lap-va-giai-bai-toan-thuc-te-bang-bat-phuong-tri.tex",
-      "Mon": "Toán",
-      "Lop": "10",
-      "Chuong": "Chương I. Mệnh đề và tập hợp",
-      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
-      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
-      "questions": 122,
-      "count": 122,
-      "dang": {
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 122
-      },
-      "dang_kinds": {
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 52,
-          "DS": 15,
-          "TLN": 45,
-          "TL": 10
         }
       }
     }
