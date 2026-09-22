@@ -6053,9 +6053,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Bài toán tham số về tập hợp và khoảng",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 7,
+      "count": 7,
+      "dang": {
+        "Bài toán tham số về tập hợp và khoảng": 7
+      },
+      "dang_kinds": {
+        "Bài toán tham số về tập hợp và khoảng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 4,
+          "TL": 3
+        }
+      }
     }
   ]
 }
