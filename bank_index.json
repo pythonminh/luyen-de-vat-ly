@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 174,
+  "total_files": 175,
   "total_questions": 11659,
   "lessons": [
     {
@@ -5974,6 +5974,19 @@
           "TL": 8
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-phep-giao-hop-hieu-va-phan-bu-cua-hai-tap-hop.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
