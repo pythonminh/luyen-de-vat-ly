@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 175,
+  "total_files": 176,
   "total_questions": 11659,
   "lessons": [
     {
@@ -5997,6 +5997,19 @@
           "TL": 1
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-tap-hop-bang-nhau-tap-rong-va-so-tap-con.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
