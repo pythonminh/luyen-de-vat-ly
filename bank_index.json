@@ -5984,9 +5984,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Phép giao, hợp, hiệu và phần bù của hai tập hợp",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 13,
+      "count": 13,
+      "dang": {
+        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": 13
+      },
+      "dang_kinds": {
+        "Phép giao, hợp, hiệu và phần bù của hai tập hợp": {
+          "TN": 11,
+          "DS": 1,
+          "TLN": 0,
+          "TL": 1
+        }
+      }
     }
   ]
 }
