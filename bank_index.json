@@ -6007,9 +6007,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Tập hợp bằng nhau, tập rỗng và số tập con",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 10,
+      "count": 10,
+      "dang": {
+        "Tập hợp bằng nhau, tập rỗng và số tập con": 10
+      },
+      "dang_kinds": {
+        "Tập hợp bằng nhau, tập rỗng và số tập con": {
+          "TN": 6,
+          "DS": 2,
+          "TLN": 2,
+          "TL": 0
+        }
+      }
     }
   ]
 }
