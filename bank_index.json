@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 181,
-  "total_questions": 11733,
+  "total_questions": 11770,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -364,17 +364,17 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
-      "questions": 74,
-      "count": 74,
+      "questions": 111,
+      "count": 111,
       "dang": {
-        "Chưa phân dạng": 74
+        "Chưa phân dạng": 111
       },
       "dang_kinds": {
         "Chưa phân dạng": {
-          "TN": 62,
+          "TN": 86,
           "DS": 0,
-          "TLN": 5,
-          "TL": 7
+          "TLN": 15,
+          "TL": 10
         }
       }
     },
