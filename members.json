@@ -430,6 +430,26 @@
       "password_sha256": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
       "password_enc": "v1:uDbAE0Tl-4s=",
       "updated_at": "2026-09-22 05:39:56"
+    },
+    {
+      "username": "Thu Trúc",
+      "name": "Trần Thị Thu Trúc",
+      "phone": "0705335540",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "mon1",
+        "grades": [
+          "10"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "e086504c4a4b8c6df889fec9946e13b6cfd3bd190e2dcb7acdfa65a5f031aa57",
+      "password_enc": "v1:_XaGREDg_IbTbiIQ"
     }
   ]
 }
