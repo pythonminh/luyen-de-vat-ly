@@ -6122,9 +6122,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 122,
+      "count": 122,
+      "dang": {
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 122
+      },
+      "dang_kinds": {
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
+          "TN": 52,
+          "DS": 15,
+          "TLN": 45,
+          "TL": 10
+        }
+      }
     }
   ]
 }
