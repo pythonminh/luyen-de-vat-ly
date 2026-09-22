@@ -20,3 +20,287 @@ Nhiệt lượng cần cung cấp để làm hóa hơi hoàn toàn $2\,\text{kg}
 ${Q}={mc} \Delta {t}+{mL}=2 . 4200 .(100-20)+2 . 2,3 . 10^{6}=5272000 {~J} \approx 5,3 . 10^{6} {~J}$.
 }
 \end{ex}
+% =========================================================
+% BÀI 1
+% =========================================================
+\begin{ex}
+Một xô có chứa $M=10\,\mathrm{kg}$ hỗn hợp nước và nước đá ở
+trong phòng. Sự thay đổi nhiệt độ của hỗn hợp theo thời gian được
+biểu diễn như hình vẽ. Lấy gần đúng nhiệt dung riêng của nước là
+$c=4200\,\mathrm{J/(kg.K)}$, nhiệt nóng chảy riêng của nước đá là
+$\lambda=3,4\cdot10^5\,\mathrm{J/kg}$. Cho rằng sự hấp thụ nhiệt từ
+môi trường là đều.
+
+\begin{center}
+\begin{tikzpicture}[>=stealth,scale=0.9]
+    \draw[->] (0,0) -- (0,3) node[left] {$t(^\circ\mathrm C)$};
+    \draw[->] (0,0) -- (5,0) node[below] {$\tau(\mathrm{phút})$};
+
+    \draw[dashed] (0,2.5) -- (4.2,2.5);
+    \draw[dashed] (3.5,0) -- (3.5,2.5);
+    \draw[dashed] (4.2,0) -- (4.2,2.5);
+
+    \draw[thick] (3.5,0) -- (4.2,2.5);
+
+    \node[left] at (0,2.5) {$2$};
+    \node[below] at (3.5,0) {$50$};
+    \node[below] at (4.2,0) {$60$};
+
+    \fill (3.5,0) circle (1.5pt);
+    \fill (4.2,2.5) circle (1.5pt);
+
+    \node[below left] at (3.5,0) {$A$};
+    \node[above right] at (4.2,2.5) {$B$};
+\end{tikzpicture}
+\end{center}
+
+Xét tính đúng -- sai của các phát biểu sau:
+
+\choiceTF
+{Tại điểm $A$, toàn bộ nước đá trong xô đã tan hết.}
+{Trong $50$ phút đầu, hỗn hợp không hấp thụ nhiệt từ môi trường.}
+{Khối lượng nước ban đầu trong xô xấp xỉ $8,76\,\mathrm{kg}$.}
+{Khối lượng nước đá còn lại trong xô ở thời điểm $20$ phút xấp xỉ
+$0,75\,\mathrm{kg}$.}
+
+\loigiai{
+Từ phút thứ $50$ đến phút thứ $60$, nhiệt độ nước tăng từ
+$0^\circ\mathrm C$ lên $2^\circ\mathrm C$.
+
+Nhiệt lượng nước nhận trong $10$ phút cuối:
+\[
+Q=Mc\Delta t
+=10\cdot4200\cdot2
+=84000\,\mathrm J.
+\]
+
+Do nhiệt lượng cung cấp đều nên trong $50$ phút đầu, nhiệt lượng dùng
+để làm tan nước đá là:
+\[
+Q_{\mathrm{nc}}
+=84000\cdot\frac{50}{10}
+=420000\,\mathrm J.
+\]
+
+Khối lượng nước đá ban đầu:
+\[
+m_{\mathrm{đ}}
+=\frac{Q_{\mathrm{nc}}}{\lambda}
+=\frac{420000}{3,4\cdot10^5}
+\approx1,235\,\mathrm{kg}.
+\]
+
+Do đó khối lượng nước ban đầu:
+\[
+m_{\mathrm n}=10-1,235\approx8,765\,\mathrm{kg}.
+\]
+
+Sau $20$ phút, khối lượng nước đá đã tan:
+\[
+m_{\mathrm{tan}}
+=1,235\cdot\frac{20}{50}
+\approx0,494\,\mathrm{kg}.
+\]
+
+Khối lượng nước đá còn lại:
+\[
+m_{\mathrm{còn}}
+=1,235-0,494
+\approx0,741\,\mathrm{kg}.
+\]
+
+Vậy:
+\[
+\boxed{\text{a) Đúng;\quad b) Sai;\quad c) Đúng;\quad d) Đúng.}}
+\]
+}
+\end{ex}
+
+
+% =========================================================
+% BÀI 2
+% =========================================================
+\begin{ex}
+Sự biến thiên nhiệt độ của một cục nước đá đựng trong một ca nhôm
+theo nhiệt lượng cung cấp cho hệ được mô tả bằng đồ thị. Lấy nhiệt
+nóng chảy riêng của nước đá là
+$\lambda=3,4\cdot10^5\,\mathrm{J/kg}$, nhiệt dung riêng của nước là
+$c_{\mathrm n}=4200\,\mathrm{J/(kg.K)}$, nhiệt dung riêng của nhôm là
+$c_{\mathrm{Al}}=880\,\mathrm{J/(kg.K)}$. Xem hệ ca nhôm và nước luôn
+có nhiệt độ giống nhau.
+
+\begin{center}
+\begin{tikzpicture}[>=stealth,scale=0.9]
+    \draw[->] (0,0) -- (0,3.2) node[left] {$t(^\circ\mathrm C)$};
+    \draw[->] (0,0) -- (5.5,0) node[below] {$Q(\mathrm{kJ})$};
+
+    \draw[dashed] (0,2.5) -- (4.5,2.5);
+    \draw[dashed] (3.8,0) -- (3.8,2.5);
+    \draw[dashed] (4.5,0) -- (4.5,2.5);
+
+    \draw[thick] (3.8,0) -- (4.5,2.5);
+
+    \node[left] at (0,2.5) {$3$};
+    \node[below] at (3.8,0) {$170$};
+    \node[below] at (4.5,0) {$177$};
+
+    \fill (3.8,0) circle (1.5pt);
+    \fill (4.5,2.5) circle (1.5pt);
+
+    \node[below left] at (3.8,0) {$A$};
+    \node[above right] at (4.5,2.5) {$B$};
+\end{tikzpicture}
+\end{center}
+
+Xét tính đúng -- sai của các phát biểu sau:
+
+\choiceTF
+{Trong giai đoạn $AB$, ca nhôm không thu nhiệt.}
+{Cần cung cấp $170\,\mathrm{kJ}$ để làm tan chảy hoàn toàn lượng nước đá ban đầu.}
+{Khối lượng nước đá ban đầu là $0,20\,\mathrm{kg}$.}
+{Khối lượng ca nhôm xấp xỉ $0,265\,\mathrm{kg}$.}
+
+\loigiai{
+Tại điểm $A$, nước đá đã tan hoàn toàn và hệ bắt đầu tăng nhiệt độ
+từ $0^\circ\mathrm C$.
+
+Nhiệt lượng cần để làm tan hoàn toàn nước đá:
+\[
+Q_{\mathrm{nc}}=170\,\mathrm{kJ}=170000\,\mathrm J.
+\]
+
+Do đó khối lượng nước đá:
+\[
+m_{\mathrm{đ}}
+=\frac{Q_{\mathrm{nc}}}{\lambda}
+=\frac{170000}{3,4\cdot10^5}
+=0,50\,\mathrm{kg}.
+\]
+
+Vì vậy phát biểu c) là sai.
+
+Từ $A$ đến $B$, nhiệt lượng cung cấp thêm:
+\[
+\Delta Q=177-170=7\,\mathrm{kJ}.
+\]
+
+Trong giai đoạn này, nhiệt độ tăng từ $0^\circ\mathrm C$ lên
+$3^\circ\mathrm C$. Khi đó nước và ca nhôm đều thu nhiệt:
+\[
+\Delta Q=(m_{\mathrm n}c_{\mathrm n}+m_{\mathrm{Al}}c_{\mathrm{Al}})\Delta t.
+\]
+
+Với $m_{\mathrm n}=0,5\,\mathrm{kg}$:
+\[
+7000=(0,5\cdot4200+m_{\mathrm{Al}}\cdot880)\cdot3.
+\]
+
+Suy ra:
+\[
+m_{\mathrm{Al}}
+=\frac{7000-6300}{880\cdot3}
+\approx0,265\,\mathrm{kg}.
+\]
+
+Vậy:
+\[
+\boxed{\text{a) Sai;\quad b) Đúng;\quad c) Sai;\quad d) Đúng.}}
+\]
+}
+\end{ex}
+
+
+% =========================================================
+% BÀI 3
+% =========================================================
+\begin{ex}
+Người ta dùng một lò hồ quang điện để nấu chảy một khối kim loại
+nặng $29\,\mathrm{kg}$. Biết mỗi phút, lò hồ quang cung cấp cho khối
+kim loại một nhiệt lượng không đổi bằng $400\,\mathrm{kJ}$.
+Sự thay đổi nhiệt độ của khối kim loại theo thời gian được biểu diễn
+như hình vẽ.
+
+\begin{center}
+\begin{tikzpicture}[>=stealth,scale=0.9]
+    \draw[->] (0,0) -- (0,4) node[left] {$t(^\circ\mathrm C)$};
+    \draw[->] (0,0) -- (6,0) node[below] {$\tau(\mathrm{phút})$};
+
+    \draw[dashed] (0,3) -- (4.0,3);
+    \draw[dashed] (3.0,0) -- (3.0,3);
+    \draw[dashed] (4.0,0) -- (4.0,3);
+
+    \draw[thick] (0,0.7) -- (3.0,3.0);
+    \draw[thick] (3.0,3.0) -- (4.0,3.0);
+    \draw[thick] (4.0,3.0) -- (5.3,3.7);
+
+    \node[left] at (0,0.7) {$30$};
+    \node[left] at (0,3) {$1530$};
+    \node[below] at (3.0,0) {$50$};
+    \node[below] at (4.0,0) {$70$};
+
+    \fill (0,0.7) circle (1.5pt);
+    \fill (3.0,3) circle (1.5pt);
+    \fill (4.0,3) circle (1.5pt);
+
+    \node[below right] at (0,0.7) {$A$};
+    \node[above] at (3.0,3) {$B$};
+    \node[above] at (4.0,3) {$C$};
+    \node[above right] at (5.3,3.7) {$D$};
+\end{tikzpicture}
+\end{center}
+
+Xét tính đúng -- sai của các phát biểu sau:
+
+\choiceTF
+{Giai đoạn $AB$ trên đồ thị tương ứng với quá trình nóng chảy
+của kim loại.}
+{Trong giai đoạn $BC$, khối kim loại không nhận thêm nhiệt lượng
+từ lò nung.}
+{Đoạn $CD$ ứng với giai đoạn khối kim loại ở thể lỏng.}
+{Nhiệt dung riêng của khối kim loại xấp xỉ
+$459,8\,\mathrm{J/(kg.K)}$.}
+
+\loigiai{
+Trong giai đoạn $AB$, nhiệt độ của kim loại tăng từ
+$30^\circ\mathrm C$ lên $1530^\circ\mathrm C$, nên đây là quá trình
+kim loại rắn được đun nóng đến nhiệt độ nóng chảy.
+
+Nhiệt lượng cung cấp trong giai đoạn $AB$:
+\[
+Q_{AB}=400\cdot50=20000\,\mathrm{kJ}
+=2,0\cdot10^7\,\mathrm J.
+\]
+
+Độ tăng nhiệt độ:
+\[
+\Delta t=1530-30=1500^\circ\mathrm C.
+\]
+
+Từ
+\[
+Q_{AB}=mc\Delta t
+\]
+suy ra:
+\[
+c=\frac{Q_{AB}}{m\Delta t}
+=\frac{2,0\cdot10^7}{29\cdot1500}
+\approx459,8\,\mathrm{J/(kg.K)}.
+\]
+
+Trong giai đoạn $BC$, nhiệt độ không đổi ở $1530^\circ\mathrm C$
+nhưng lò vẫn cung cấp nhiệt lượng:
+\[
+Q_{BC}=400(70-50)=8000\,\mathrm{kJ}.
+\]
+
+Nhiệt lượng này dùng để làm nóng chảy kim loại.
+
+Sau khi nóng chảy hoàn toàn, giai đoạn $CD$ có nhiệt độ tiếp tục
+tăng nên kim loại ở thể lỏng.
+
+Vậy:
+\[
+\boxed{\text{a) Sai;\quad b) Sai;\quad c) Đúng;\quad d) Đúng.}}
+\]
+}
+\end{ex}
