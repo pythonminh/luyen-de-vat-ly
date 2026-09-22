@@ -6030,9 +6030,19 @@
       "Chuong": "Chương I. Mệnh đề và tập hợp",
       "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
       "De": "Bài 2. Tập hợp và các phép toán trên tập hợp · Xác định tập hợp, phần tử và tập con",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 12,
+      "count": 12,
+      "dang": {
+        "Xác định tập hợp, phần tử và tập con": 12
+      },
+      "dang_kinds": {
+        "Xác định tập hợp, phần tử và tập con": {
+          "TN": 12,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
