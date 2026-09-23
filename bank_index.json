@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 181,
-  "total_questions": 11754,
+  "total_files": 182,
+  "total_questions": 11775,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -375,6 +375,29 @@
           "DS": 0,
           "TLN": 15,
           "TL": 25
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de1.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de1.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/de1.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
+      "questions": 21,
+      "count": 21,
+      "dang": {
+        "Chưa phân dạng": 21
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 2,
+          "TLN": 4,
+          "TL": 3
         }
       }
     },
