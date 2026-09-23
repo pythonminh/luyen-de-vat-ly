@@ -227,6 +227,21 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .admindang .gapnote{font-size:12px;font-weight:700;color:#9a3412}
 .admindang #aiGapOut:empty{display:none}
 .admindang #aiGapOut:not(:empty){flex:1 1 100%;font-size:13px;line-height:1.4;max-height:30vh;overflow:auto}
+.ai-intake{flex:1 1 100%;display:flex;flex-direction:column;gap:6px;padding:8px;border:1px dashed #7dd3fc;border-radius:10px;background:#fff}
+.ai-intake.over{border-color:#145bb0;background:#eef6ff}
+.ai-intake-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ai-intake-bar strong{font-size:12px;color:#145bb0}
+.ai-intake-bar .ai-hint{font-size:12px;color:#64748b;font-weight:600;margin-right:auto}
+.ai-shots{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ai-shots:empty{display:none}
+.ai-shot{position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;border:1px solid #d7e2ee;background:#f8fafc}
+.ai-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.ai-shot button,.ai-chip button{position:absolute;top:2px;right:2px;width:16px;height:16px;border:0;border-radius:99px;background:#0f172acc;color:#fff;font:700 11px/16px Arial,sans-serif;cursor:pointer;padding:0}
+.ai-chip{position:relative;display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 22px 4px 8px;border-radius:99px;background:#eef6ff;border:1px solid #bfdbfe;color:#1e3a8a;font:700 12px/1.2 Segoe UI,Arial,sans-serif}
+.ai-chip button{top:50%;right:4px;transform:translateY(-50%)}
+#aiPaste{width:100%;min-height:64px;max-height:132px;resize:vertical;border:1px solid #d7e2ee;border-radius:8px;padding:7px 8px;font:13px/1.4 Segoe UI,Arial,sans-serif;background:#fff}
+.ai-intake #aiSrcUrl{width:100%;flex:1 1 auto;min-width:0}
+.ai-intake input[type=file]{display:none!important}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
 .admindang .simrev h4{margin:10px 0 4px;font-size:13px}
 .admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff}
@@ -3184,8 +3199,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         miss = 'Đã có đủ 4 loại.'
         heur_txt = kind_quota_line(counts)
     tex_lab = '✏️ TEX dạng này' if dang else '✏️ TEX cả bài'
-    url_ph = 'Hoặc link http/https (không dán G:\\... — chọn file bên cạnh)'
-    hint = 'Máy chủ <b>không mở được ổ đĩa</b>: chọn file .tex trên máy, hoặc dán link GitHub/raw. Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>.'
+    hint = 'Máy chủ <b>không mở được ổ đĩa</b>: dán ảnh, Word .docx, TEX hoặc link http. Mỗi dạng cố gắng <b>9 TN · 2 ĐS · 3 TLN · 4 TL</b>, trần <b>18 · 4 · 6 · 8</b>.'
     return (
         "<details class='admindang-fold'>"
         "<summary class='admindang-sum'>▸ Công cụ ADMIN · TEX / AI / link</summary>"
@@ -3197,12 +3211,19 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<span class='muted'>"+html.escape(heur_txt)+"</span>"
         "<button type='button' class='btn' id='aiGap'>1. 🤖 Soát dạng · đếm thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
-        "<label class='btn' style='margin:0'>📂 Chọn .tex trên máy"
-        "<input id='aiSrcFile' type='file' accept='.tex,.ltx,.txt,text/plain' hidden></label>"
-        "<span id='aiSrcFileName' class='muted'>Chưa chọn file</span>"
-        "<input id='aiSrcUrl' type='url' placeholder='"+html.escape(url_ph, quote=True)+"'>"
-        "<button type='button' class='btn' id='aiImport'>📥 Lấy từ link / file → TEX</button>"
         "<button type='button' class='btn' id='aiNb'>📋 Prompt NotebookLM</button>"
+        "<div class='ai-intake' id='aiIntake' tabindex='0'>"
+        "<div class='ai-intake-bar'>"
+        "<strong>Nhận đề</strong>"
+        "<span class='ai-hint'>Ảnh · Word · TEX · chữ</span>"
+        "<label class='btn'>Ảnh<input id='aiImgFile' type='file' accept='image/png,image/jpeg,image/webp,image/gif' multiple></label>"
+        "<label class='btn'>Word / TEX<input id='aiSrcFile' type='file' accept='.docx,.tex,.ltx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
+        "<button type='button' class='btn green' id='aiImport'>AI phân tích → TEX</button>"
+        "</div>"
+        "<div class='ai-shots' id='aiShots'></div>"
+        "<textarea id='aiPaste' rows='3' placeholder='Dán ảnh (Ctrl+V), TEX hoặc chữ. Kéo thả Word .docx, ảnh, file .tex cũng được.'></textarea>"
+        "<input id='aiSrcUrl' type='url' placeholder='"+html.escape('Link http tuỳ chọn — không dán ổ đĩa G:\\...', quote=True)+"'>"
+        "</div>"
         "<span class='muted'>"+hint+"</span>"
         "<div id='aiGapOut'></div></div></details>"
     )

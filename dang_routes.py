@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """Member question browser: show every question before building a test."""
 from __future__ import annotations
+import base64
 import html
+import io
 import ipaddress
 import json
+import posixpath
 import re
 import socket
 import time
+import zipfile
+from xml.etree import ElementTree as ET
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1066,6 +1071,209 @@ def _fetch_public_page(url):
         return '', 'Trang gần như không có chữ (có thể chặn bot / cần đăng nhập).'
     return plain[:48000], ''
 
+_W_NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+_M_NS = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
+_A_NS = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+_R_NS = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+_PKG_REL = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+
+
+def _xml_local(tag):
+    return str(tag or '').split('}')[-1]
+
+
+def _omml_to_latex(el):
+    tag = _xml_local(el.tag)
+    if tag == 't':
+        return el.text or ''
+    kids = list(el)
+
+    def child(name):
+        for c in kids:
+            if _xml_local(c.tag) == name:
+                return _omml_to_latex(c)
+        return ''
+
+    if tag == 'f':
+        return '\\frac{' + child('num') + '}{' + child('den') + '}'
+    if tag == 'sSup':
+        return child('e') + '^{' + child('sup') + '}'
+    if tag == 'sSub':
+        return child('e') + '_{' + child('sub') + '}'
+    if tag == 'sSubSup':
+        return child('e') + '_{' + child('sub') + '}^{' + child('sup') + '}'
+    if tag == 'rad':
+        deg = child('deg').strip()
+        body = child('e')
+        return ('\\sqrt[' + deg + ']{' + body + '}') if deg else ('\\sqrt{' + body + '}')
+    if tag == 'd':
+        beg, end = '(', ')'
+        for c in el.iter():
+            loc = _xml_local(c.tag)
+            if loc == 'begChr' and (c.get(_M_NS + 'val') or c.get('val')):
+                beg = c.get(_M_NS + 'val') or c.get('val')
+            if loc == 'endChr' and (c.get(_M_NS + 'val') or c.get('val')):
+                end = c.get(_M_NS + 'val') or c.get('val')
+        inner = ''.join(_omml_to_latex(c) for c in kids if _xml_local(c.tag) == 'e')
+        return beg + inner + end
+    return ''.join(_omml_to_latex(c) for c in kids)
+
+
+def _docx_p_line(p):
+    bits = []
+
+    def walk(node):
+        loc = _xml_local(node.tag)
+        if loc == 't' and str(node.tag).startswith(_W_NS):
+            bits.append(node.text or '')
+            return
+        if loc in ('oMath', 'oMathPara'):
+            latex = _omml_to_latex(node).strip()
+            if latex:
+                bits.append('$' + latex + '$')
+            return
+        if loc == 'tab':
+            bits.append(' ')
+        elif loc in ('br', 'cr'):
+            bits.append(' ')
+        for c in list(node):
+            walk(c)
+
+    for c in list(p):
+        walk(c)
+    return re.sub(r'[ \t]{2,}', ' ', ''.join(bits)).strip()
+
+
+def _docx_blocks(el, out):
+    for node in list(el):
+        loc = _xml_local(node.tag)
+        if loc == 'p':
+            line = _docx_p_line(node)
+            if line:
+                out.append(line)
+        elif loc == 'tbl':
+            for tr in node.findall(_W_NS + 'tr'):
+                cells = []
+                for tc in tr.findall(_W_NS + 'tc'):
+                    cells.append(' '.join(_docx_p_line(p) for p in tc.findall(_W_NS + 'p')).strip())
+                row = ' | '.join(c for c in cells if c)
+                if row:
+                    out.append(row)
+        elif loc in ('sdt', 'sdtContent', 'tc', 'body'):
+            _docx_blocks(node, out)
+
+
+def _docx_images(zf, root):
+    rel_name = 'word/_rels/document.xml.rels'
+    if rel_name not in zf.namelist():
+        return []
+    id_to_target = {}
+    try:
+        rel_root = ET.fromstring(zf.read(rel_name))
+    except ET.ParseError:
+        return []
+    for rel in list(rel_root):
+        rid = rel.get('Id')
+        target = rel.get('Target') or ''
+        if rid and target:
+            id_to_target[rid] = target.replace('\\', '/')
+    found = []
+    seen = set()
+    for el in root.iter():
+        rid = el.get(_R_NS + 'embed') or el.get(_R_NS + 'id')
+        if not rid or rid in seen or rid not in id_to_target:
+            continue
+        seen.add(rid)
+        target = id_to_target[rid]
+        if target.startswith('/'):
+            zpath = target.lstrip('/')
+        else:
+            zpath = posixpath.normpath(posixpath.join('word', target))
+        if zpath not in zf.namelist():
+            continue
+        raw = zf.read(zpath)
+        if not raw or len(raw) > 1_500_000:
+            continue
+        ext = zpath.rsplit('.', 1)[-1].lower()
+        mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif', 'webp': 'image/webp'}.get(ext)
+        if not mime:
+            continue
+        found.append({'mime': mime, 'data': base64.b64encode(raw).decode('ascii')})
+        if len(found) >= 4:
+            break
+    return found
+
+
+def _docx_extract(blob):
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return '', [], 'File không phải Word .docx (hãy Lưu thành .docx).'
+    try:
+        if 'word/document.xml' not in zf.namelist():
+            return '', [], 'File Word không có nội dung.'
+        try:
+            root = ET.fromstring(zf.read('word/document.xml'))
+        except ET.ParseError:
+            return '', [], 'Không đọc được nội dung Word.'
+        lines = []
+        body = root.find(_W_NS + 'body')
+        _docx_blocks(body if body is not None else root, lines)
+        text = '\n'.join(lines).strip()
+        images = _docx_images(zf, root)
+    finally:
+        zf.close()
+    if len(text) < 20 and not images:
+        return '', [], 'File Word gần như không có chữ.'
+    return text[:80000], images, ''
+
+
+def _b64_blob(raw):
+    s = str(raw or '').strip()
+    if s.startswith('data:'):
+        s = s.split(',', 1)[-1]
+    s = re.sub(r'\s+', '', s)
+    if not s:
+        return b'', ''
+    try:
+        return base64.b64decode(s, validate=True), ''
+    except Exception:
+        return b'', 'Dữ liệu file không hợp lệ.'
+
+
+def _images_from_payload(data):
+    raw = (data or {}).get('source_images') or (data or {}).get('images') or []
+    if not isinstance(raw, list):
+        return []
+    out = []
+    allow = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+    for item in raw[:4]:
+        if not isinstance(item, dict):
+            continue
+        mime = str(item.get('mime') or item.get('mime_type') or 'image/jpeg').split(';', 1)[0].strip().lower()
+        if mime not in allow:
+            continue
+        blob, err = _b64_blob(item.get('data'))
+        if err or not blob or len(blob) > 1_600_000:
+            continue
+        out.append({'mime': mime, 'data': base64.b64encode(blob).decode('ascii')})
+    return out
+
+
+def _docx_from_payload(data):
+    raw = str((data or {}).get('source_docx') or '').strip()
+    if not raw:
+        return '', [], ''
+    blob, err = _b64_blob(raw)
+    if err:
+        return '', [], err
+    if not blob:
+        return '', [], ''
+    if len(blob) > 6_000_000:
+        return '', [], 'File Word quá lớn (dưới 6MB).'
+    return _docx_extract(blob)
+
+
 def _page_text_from_payload(data):
     """Ưu tiên file .tex gửi từ máy ADMIN; không thì tải http/https."""
     data = data or {}
@@ -1077,12 +1285,12 @@ def _page_text_from_payload(data):
         return _fetch_public_page(url)
     return '', ''
 
-def _gemini_fill_raw(keys, prompt, tok, temp=0.25):
+def _gemini_fill_raw(keys, prompt, tok, temp=0.25, images=None):
     from student_gemini import _gemini_generate
     raw, err = '', ''
     for key in keys:
         try:
-            raw = _gemini_generate(key, prompt, tok, temp)
+            raw = _gemini_generate(key, prompt, tok, temp, images)
             err = ''
             break
         except Exception as e:
@@ -1156,6 +1364,14 @@ def api_admin_dang_fill():
     page_text, ferr = _page_text_from_payload(data)
     if ferr:
         return jsonify(ok=False, error=ferr), 400
+    docx_text, docx_images, derr = _docx_from_payload(data)
+    if derr:
+        return jsonify(ok=False, error=derr), 400
+    if docx_text:
+        page_text = (page_text + '\n\n' + docx_text).strip()
+    images = (_images_from_payload(data) + docx_images)[:4]
+    if images and not page_text.strip():
+        page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
     if not dang and not page_text:
         return jsonify(ok=False, error='Chọn file .tex trên máy hoặc dán link, rồi bấm AI từ file/link (không cần chọn dạng).'), 400
     try:
@@ -1183,11 +1399,12 @@ def api_admin_dang_fill():
     )
     if page_text and not dang:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB hoặc FILE LATEX sang ngân hàng.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng.\n"
             "CHỈ lấy câu thuộc BÀI đang soạn (đúng chủ đề các dạng dưới). Bỏ bài/chương khác trong cùng file.\n"
             "Gán vào dạng đã có; mỗi dạng cố gắng 9 TN / 2 ĐS / 3 TLN / 4 TL, trần 18 / 4 / 6 / 8.\n"
             "Không lấy hai câu cùng ý. Đủ mục tiêu thì chỉ lấy câu thật khác; chạm trần thì bỏ.\n"
             "Không bịa đề không có trong nguồn. Nếu nguồn là .tex: lọc \\begin{ex}, sửa cho khớp cấu trúc ngân hàng.\n"
+            "Nếu có hình đính kèm: đọc hết chữ và công thức trên hình, kể cả đề viết tay hoặc ảnh trong file Word.\n"
             "Với MỖI câu, trước \\begin{ex} phải có đúng một dòng \\dangbt{Tên dạng}.\n"
             "Ưu tiên gán vào các dạng ĐÃ CÓ của bài: " + dang_list + "\n"
             "Chỉ tạo tên dạng mới khi câu không khớp dạng nào ở trên. Không markdown, không lời dẫn.\n"
@@ -1196,7 +1413,7 @@ def api_admin_dang_fill():
         )
     elif page_text:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ TRANG WEB hoặc FILE LATEX sang ngân hàng câu hỏi.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng câu hỏi.\n"
             "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
             "Dạng đang nạp: " + dang + "\n"
             "Lấy các câu trong nguồn CÙNG CHỦ ĐỀ dạng này. Ý khác nhau — bỏ biến thể cùng một bài toán.\n"
@@ -1226,7 +1443,7 @@ def api_admin_dang_fill():
         err = ''
     if page_text:
         tok = 16000
-        raw, err = _gemini_fill_raw(keys, prompt, tok, 0.25)
+        raw, err = _gemini_fill_raw(keys, prompt, tok, 0.25, images)
         if not raw:
             return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
         raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
@@ -1238,7 +1455,7 @@ def api_admin_dang_fill():
                 "Viết TIẾP các khối \\begin{ex} CHƯA có, không lặp đề cũ. Vẫn đủ \\nguon và \\loigiai.\n"
                 "Đã có (cấm trùng):\n" + raw[-4000:]
             )
-            extra, _ = _gemini_fill_raw(keys, more_prompt, tok, 0.2)
+            extra, _ = _gemini_fill_raw(keys, more_prompt, tok, 0.2, images)
             if extra:
                 extra = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', extra.strip(), flags=re.I)
                 raw = (raw + '\n\n' + extra).strip()

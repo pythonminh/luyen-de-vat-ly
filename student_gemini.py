@@ -189,16 +189,24 @@ def _keys_from_payload(data: dict) -> list[str]:
     return keys
 
 
-def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool, model: str | None = None):
+def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool, model: str | None = None, images=None):
     model = _model_name(model or "gemini-2.5-flash")
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + urllib.parse.quote(model, safe="-_.") + ":generateContent?key=" + urllib.parse.quote(api_key, safe="")
     cfg = {"temperature": temperature, "maxOutputTokens": max_tokens}
     if no_thinking:
         # Token suy nghĩ của 2.5-flash tính chung vào maxOutputTokens nên dễ ăn hết phần trả lời.
         cfg["thinkingConfig"] = {"thinkingBudget": 0}
+    parts = [{"text": prompt}]
+    for im in (images or [])[:4]:
+        if not isinstance(im, dict):
+            continue
+        mime = str(im.get("mime") or "image/jpeg")
+        data = str(im.get("data") or "")
+        if mime and data:
+            parts.append({"inlineData": {"mimeType": mime, "data": data}})
     req = urllib.request.Request(
         url,
-        data=json.dumps({"contents": [{"parts": [{"text": prompt}]}], "generationConfig": cfg}, ensure_ascii=False).encode("utf-8"),
+        data=json.dumps({"contents": [{"parts": parts}], "generationConfig": cfg}, ensure_ascii=False).encode("utf-8"),
         method="POST",
         headers={"Content-Type": "application/json", "User-Agent": "luyen-de-vat-ly-student-gemini"},
     )
@@ -220,16 +228,16 @@ def _http_busy(exc: urllib.error.HTTPError) -> bool:
     return exc.code in (429, 503)
 
 
-def _gemini_generate(api_key: str, prompt: str, max_tokens: int = 6000, temperature: float = 0.15) -> str:
+def _gemini_generate(api_key: str, prompt: str, max_tokens: int = 6000, temperature: float = 0.15, images=None) -> str:
     last = None
     for model in GEMINI_MODELS:
         for attempt in range(3):
             try:
                 try:
-                    text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, True, model)
+                    text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, True, model, images)
                 except urllib.error.HTTPError as e:
                     if e.code == 400:
-                        text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, False, model)
+                        text, finish = _gemini_call(api_key, prompt, max_tokens, temperature, False, model, images)
                     elif _http_busy(e):
                         last = e
                         time.sleep(1.4 * (attempt + 1))
@@ -237,7 +245,7 @@ def _gemini_generate(api_key: str, prompt: str, max_tokens: int = 6000, temperat
                     else:
                         raise
                 if finish == "MAX_TOKENS":
-                    longer, finish2 = _gemini_call(api_key, prompt, max_tokens * 2, temperature, True, model)
+                    longer, finish2 = _gemini_call(api_key, prompt, max_tokens * 2, temperature, True, model, images)
                     if len(longer) > len(text):
                         text, finish = longer, finish2
                     if finish == "MAX_TOKENS" and text:

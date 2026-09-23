@@ -1003,6 +1003,71 @@ function stripMeta(s){
   }).join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
+var aiShots=[];
+var aiDocx=null;
+function renderIntake(){
+  var box=document.getElementById('aiShots');
+  if(!box) return;
+  var h='';
+  if(aiDocx) h+='<span class="ai-chip">'+esc(aiDocx.name)+'<button type="button" data-clear-docx="1" title="Bỏ Word">×</button></span>';
+  aiShots.forEach(function(s,i){
+    h+='<span class="ai-shot"><img alt="" src="'+s.url+'"><button type="button" data-shot="'+i+'" title="Bỏ ảnh">×</button></span>';
+  });
+  box.innerHTML=h;
+}
+function addImageFile(file){
+  if(aiShots.length>=4){alert('Tối đa 4 ảnh.');return;}
+  if(file.size>8000000){alert('Ảnh quá lớn.');return;}
+  var img=new Image();
+  var url=URL.createObjectURL(file);
+  img.onload=function(){
+    var max=1400,w=img.width||1,h=img.height||1,sc=Math.min(1,max/Math.max(w,h));
+    w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(url);
+    var dataUrl=c.toDataURL('image/jpeg',0.82);
+    var b64=(dataUrl.split(',')[1]||'');
+    if(b64.length>1800000){alert('Ảnh vẫn quá nặng sau khi thu nhỏ.');return;}
+    aiShots.push({url:dataUrl,mime:'image/jpeg',data:b64});
+    renderIntake();
+  };
+  img.onerror=function(){URL.revokeObjectURL(url);};
+  img.src=url;
+}
+function addDocxFile(file){
+  var name=file.name||'';
+  if(/\.doc$/i.test(name)&&!/\.docx$/i.test(name)){alert('File .doc cũ không đọc được. Trong Word hãy Lưu thành .docx.');return;}
+  if(!/\.docx$/i.test(name)){alert('Chỉ nhận Word định dạng .docx.');return;}
+  if(file.size>6000000){alert('File Word quá lớn (dưới 6MB).');return;}
+  var r=new FileReader();
+  r.onload=function(){
+    aiDocx={name:name||'de.docx', b64:String(r.result||'').split(',')[1]||''};
+    renderIntake();
+  };
+  r.readAsDataURL(file);
+}
+function addTexFile(file){
+  if(file.size>900000){alert('File chữ quá lớn (dưới 900KB).');return;}
+  var r=new FileReader();
+  r.onload=function(){
+    var ta=document.getElementById('aiPaste');
+    if(!ta) return;
+    var t=String(r.result||'').replace(/^\uFEFF/,'');
+    ta.value=(ta.value&&ta.value.trim())?(ta.value.replace(/\s+$/,'')+'\n\n'+t):t;
+    ta.focus();
+  };
+  r.readAsText(file,'UTF-8');
+}
+function takeFiles(files){
+  Array.prototype.forEach.call(files||[], function(file){
+    var name=file.name||'';
+    if(/^image\//.test(file.type)||/\.(png|jpe?g|webp|gif)$/i.test(name)) addImageFile(file);
+    else if(/\.docx?$/i.test(name)) addDocxFile(file);
+    else if(/\.(tex|ltx|txt)$/i.test(name)||file.type==='text/plain') addTexFile(file);
+    else alert('Chỉ nhận ảnh, Word .docx hoặc file .tex/.txt.');
+  });
+}
 function readAiSrcFile(){
   return new Promise(function(resolve,reject){
     const inp=document.getElementById('aiSrcFile');
@@ -1016,10 +1081,52 @@ function readAiSrcFile(){
   });
 }
 document.addEventListener('change',function(e){
-  const inp=e.target&&e.target.id==='aiSrcFile'?e.target:null;
-  if(!inp) return;
-  const lab=document.getElementById('aiSrcFileName');
-  if(lab) lab.textContent=(inp.files&&inp.files[0]&&inp.files[0].name)||'Chưa chọn file';
+  var t=e.target;
+  if(!t||(t.id!=='aiSrcFile'&&t.id!=='aiImgFile')) return;
+  takeFiles(t.files);
+  t.value='';
+});
+document.addEventListener('click',function(e){
+  var btn=e.target&&e.target.closest&&e.target.closest('#aiShots button');
+  if(!btn) return;
+  e.preventDefault();
+  if(btn.getAttribute('data-clear-docx')!=null){aiDocx=null;renderIntake();return;}
+  var i=btn.getAttribute('data-shot');
+  if(i!=null){aiShots.splice(+i,1);renderIntake();}
+});
+document.addEventListener('paste',function(e){
+  var tray=document.getElementById('aiIntake');
+  if(!tray||!e.clipboardData) return;
+  var ae=document.activeElement;
+  if(ae!==tray&&!tray.contains(ae)) return;
+  var files=[];
+  var items=e.clipboardData.items||[];
+  for(var i=0;i<items.length;i++){
+    if(items[i].kind==='file'){
+      var f=items[i].getAsFile();
+      if(f&&/^image\//.test(f.type||'')) files.push(f);
+    }
+  }
+  if(!files.length) return;
+  e.preventDefault();
+  takeFiles(files);
+});
+document.addEventListener('dragover',function(e){
+  var tray=e.target&&e.target.closest&&e.target.closest('#aiIntake');
+  if(!tray) return;
+  e.preventDefault();
+  tray.classList.add('over');
+});
+document.addEventListener('dragleave',function(e){
+  var tray=e.target&&e.target.closest&&e.target.closest('#aiIntake');
+  if(tray) tray.classList.remove('over');
+});
+document.addEventListener('drop',function(e){
+  var tray=e.target&&e.target.closest&&e.target.closest('#aiIntake');
+  if(!tray) return;
+  e.preventDefault();
+  tray.classList.remove('over');
+  takeFiles(e.dataTransfer&&e.dataTransfer.files);
 });
 function dropOf(btn){
   const raw=btn.getAttribute('data-drop')||'';
@@ -1208,25 +1315,32 @@ document.addEventListener('click',async function(e){
   }
   const ks=keys();
   if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+  const pasteEl=document.getElementById('aiPaste');
   const urlEl=document.getElementById('aiSrcUrl');
   let sourceUrl=urlEl?String(urlEl.value||'').trim():'';
-  let sourceTex='';
-  try{sourceTex=await readAiSrcFile();}catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
+  let sourceTex=pasteEl?String(pasteEl.value||''):'';
+  try{
+    const fileTex=await readAiSrcFile();
+    if(fileTex && sourceTex.indexOf(fileTex.slice(0,120))<0) sourceTex=(sourceTex.trim()?sourceTex.replace(/\s+$/,'')+'\n\n':'')+fileTex;
+  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
+  const sourceImages=aiShots.map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
+  const sourceDocx=aiDocx&&aiDocx.b64?aiDocx.b64:'';
+  const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx);
   if(sourceUrl && !/^https?:\/\//i.test(sourceUrl)){
-    if(sourceTex){sourceUrl='';}
+    if(hasBag){sourceUrl='';}
     else{
-      alert('Không dán đường dẫn ổ đĩa (G:\\...). Hãy bấm «Chọn .tex trên máy» hoặc dán link http/https.');
+      alert('Không dán đường dẫn ổ đĩa (G:\\...). Hãy dán ảnh, Word .docx, TEX, hoặc link http/https.');
       return;
     }
   }
-  if(imp && !sourceUrl && !sourceTex){alert('Chọn file .tex trên máy, hoặc dán link http/https, rồi bấm Lấy từ link / file. Không cần chọn dạng — để Cả bài.');return;}
-  if(fill && !dang && !sourceUrl && !sourceTex){alert('Đang ở Cả bài: chọn file hoặc dán link rồi bấm Lấy từ link / file. Nút AI viết thiếu dùng khi đã mở một dạng.');return;}
-  out.innerHTML=sourceTex?'⏳ Đang đọc file rồi AI chuyển sang TEX...':(sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...');
+  if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
+  if(fill && !dang && !sourceUrl && !hasBag){alert('Đang ở Cả bài: dán nguồn vào khung Nhận đề, hoặc mở một dạng rồi bấm AI viết các câu còn thiếu.');return;}
+  out.innerHTML=(sourceDocx||sourceImages.length)?'⏳ Đang đọc Word/ảnh rồi AI chuyển sang TEX...':(sourceTex.trim()?'⏳ Đang đọc chữ/TEX rồi AI chuyển sang TEX...':(sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...'));
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,source_docx:sourceDocx})});
     const d=await r.json();
     if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
