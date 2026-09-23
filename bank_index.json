@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 181,
-  "total_questions": 11788,
+  "total_questions": 11784,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3906,15 +3906,15 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
-      "questions": 19,
-      "count": 19,
+      "questions": 15,
+      "count": 15,
       "dang": {
-        "Các cách làm biến đổi nội năng của một vật": 19
+        "Các cách làm biến đổi nội năng của một vật": 15
       },
       "dang_kinds": {
         "Các cách làm biến đổi nội năng của một vật": {
           "TN": 11,
-          "DS": 5,
+          "DS": 1,
           "TLN": 1,
           "TL": 2
         }
