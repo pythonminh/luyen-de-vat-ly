@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11848,
+  "total_questions": 11862,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1162,25 +1162,25 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
       "De": "L10C1 Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí",
-      "questions": 49,
-      "count": 49,
+      "questions": 63,
+      "count": 63,
       "dang": {
-        "Nhận biết nội quy và quy tắc an toàn": 30,
+        "Nhận biết nội quy và quy tắc an toàn": 39,
         "An toàn khi sử dụng dụng cụ thủy tinh, vật sắc nhọn": 1,
         "Giải nghĩa các kí hiệu kĩ thuật và biển cảnh báo an toàn trong phòng thực hành": 2,
-        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 1,
-        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật": 3,
-        "Phân tích mối nguy và đánh giá mức độ rủi ro": 4,
-        "An toàn khi sử dụng thiết bị điện": 3,
+        "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": 2,
+        "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật": 4,
+        "Phân tích mối nguy và đánh giá mức độ rủi ro": 5,
+        "An toàn khi sử dụng thiết bị điện": 4,
         "Vận dụng quy tắc an toàn khi sử dụng các thiết bị đo điện, nhiệt và thủy tinh": 1,
-        "Xử lí sự cố và sơ cứu trong phòng thực hành": 2,
+        "Xử lí sự cố và sơ cứu trong phòng thực hành": 3,
         "An toàn với nguồn nhiệt và nguy cơ cháy nổ": 1,
         "Phân tích nguy cơ mất an toàn liên quan đến thiết bị nhiệt và thủy tinh": 1
       },
       "dang_kinds": {
         "Nhận biết nội quy và quy tắc an toàn": {
-          "TN": 30,
-          "DS": 0,
+          "TN": 35,
+          "DS": 4,
           "TLN": 0,
           "TL": 0
         },
@@ -1197,26 +1197,26 @@
           "TL": 0
         },
         "Nhận biết và giải thích biển báo, kí hiệu cảnh báo": {
-          "TN": 1,
+          "TN": 2,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
         "Quy trình sơ cứu khẩn cấp khi xảy ra tai nạn điện giật": {
-          "TN": 3,
+          "TN": 4,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
         "Phân tích mối nguy và đánh giá mức độ rủi ro": {
-          "TN": 4,
+          "TN": 5,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
         "An toàn khi sử dụng thiết bị điện": {
           "TN": 3,
-          "DS": 0,
+          "DS": 1,
           "TLN": 0,
           "TL": 0
         },
@@ -1228,7 +1228,7 @@
         },
         "Xử lí sự cố và sơ cứu trong phòng thực hành": {
           "TN": 2,
-          "DS": 0,
+          "DS": 1,
           "TLN": 0,
           "TL": 0
         },
