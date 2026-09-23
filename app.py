@@ -2413,6 +2413,7 @@ def _replace_tex_macro(s, name, wrap):
 
 def _tex_inline_html(it):
     it = it or ""
+    it = re.sub(r"\\hfill\b", " ", it)
     it = _expand_viet_sys_macros(it)
     dms = []
     it = _stash_display_math(it, dms)
@@ -2590,6 +2591,7 @@ def latex_to_web(s):
     s=re.sub(r'\\begin\s*\{\s*(?:center|minipage|figure)\s*\}(?:\{[^{}]*\})?','',s,flags=re.I)
     s=re.sub(r'\\end\s*\{\s*(?:center|minipage|figure)\s*\}','',s,flags=re.I)
     s=re.sub(r'\\vspace\s*\{[^{}]*\}','',s,flags=re.I)
+    s=re.sub(r'\\hfill\b',' ',s)
     s=re.sub(r'\\centering\b','',s,flags=re.I)
     s=re.sub(r'(@@FIG\d+@@)\s*&\s*', r'\1 ', s)
     s=re.sub(r'(?<!\\)&',' ',s)
@@ -2609,6 +2611,19 @@ def latex_to_web(s):
         put(f'@@IT{i}@@', f'<i>{html.escape(prepare_math(t), quote=False)}</i>')
     for i,dm in enumerate(dms):
         put(f'@@DM{i}@@', f'<div class="lt-math">{html.escape(prepare_math(dm), quote=False)}</div>')
+    def splice_media(chunk):
+        """TikZ trong itemize đã bị nhốt trong HTML của danh sách, không còn nằm ở chuỗi ngoài."""
+        for i, fig in enumerate(figs):
+            tok = f'@@FIG{i}@@'
+            chunk = chunk.replace(html.escape(tok, quote=False), fig).replace(tok, fig)
+        for i, im in enumerate(incs):
+            tok = f'@@INC{i}@@'
+            chunk = chunk.replace(html.escape(tok, quote=False), im).replace(tok, im)
+        for i, vd in enumerate(vids):
+            tok = f'@@VID{i}@@'
+            chunk = chunk.replace(html.escape(tok, quote=False), vd).replace(tok, vd)
+        return chunk
+    lists[:] = [splice_media(x) for x in lists]
     for i,fig in enumerate(figs):
         put(f'@@FIG{i}@@', fig)
     for i,tb in enumerate(tabs):
