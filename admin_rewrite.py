@@ -1005,11 +1005,13 @@ function stripMeta(s){
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 var aiShots=[];
 var aiDocx=null;
+var aiPdf=null;
 function renderIntake(){
   var box=document.getElementById('aiShots');
   if(!box) return;
   var h='';
   if(aiDocx) h+='<span class="ai-chip">'+esc(aiDocx.name)+'<button type="button" data-clear-docx="1" title="Bỏ Word">×</button></span>';
+  if(aiPdf) h+='<span class="ai-chip">'+esc(aiPdf.name)+'<button type="button" data-clear-pdf="1" title="Bỏ PDF">×</button></span>';
   aiShots.forEach(function(s,i){
     h+='<span class="ai-shot"><img alt="" src="'+s.url+'"><button type="button" data-shot="'+i+'" title="Bỏ ảnh">×</button></span>';
   });
@@ -1047,6 +1049,17 @@ function addDocxFile(file){
   };
   r.readAsDataURL(file);
 }
+function addPdfFile(file){
+  var name=file.name||'de.pdf';
+  if(!/\.pdf$/i.test(name)&&file.type!=='application/pdf'){alert('Chỉ nhận file PDF.');return;}
+  if(file.size>8000000){alert('File PDF quá lớn (dưới 8MB).');return;}
+  var r=new FileReader();
+  r.onload=function(){
+    aiPdf={name:name, b64:String(r.result||'').split(',')[1]||''};
+    renderIntake();
+  };
+  r.readAsDataURL(file);
+}
 function addTexFile(file){
   if(file.size>900000){alert('File chữ quá lớn (dưới 900KB).');return;}
   var r=new FileReader();
@@ -1064,8 +1077,9 @@ function takeFiles(files){
     var name=file.name||'';
     if(/^image\//.test(file.type)||/\.(png|jpe?g|webp|gif)$/i.test(name)) addImageFile(file);
     else if(/\.docx?$/i.test(name)) addDocxFile(file);
+    else if(/\.pdf$/i.test(name)||file.type==='application/pdf') addPdfFile(file);
     else if(/\.(tex|ltx|txt)$/i.test(name)||file.type==='text/plain') addTexFile(file);
-    else alert('Chỉ nhận ảnh, Word .docx hoặc file .tex/.txt.');
+    else alert('Chỉ nhận ảnh, Word .docx, PDF hoặc file .tex/.txt.');
   });
 }
 function readAiSrcFile(){
@@ -1091,6 +1105,7 @@ document.addEventListener('click',function(e){
   if(!btn) return;
   e.preventDefault();
   if(btn.getAttribute('data-clear-docx')!=null){aiDocx=null;renderIntake();return;}
+  if(btn.getAttribute('data-clear-pdf')!=null){aiPdf=null;renderIntake();return;}
   var i=btn.getAttribute('data-shot');
   if(i!=null){aiShots.splice(+i,1);renderIntake();}
 });
@@ -1325,17 +1340,18 @@ document.addEventListener('click',async function(e){
   }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
   const sourceImages=aiShots.map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
   const sourceDocx=aiDocx&&aiDocx.b64?aiDocx.b64:'';
-  const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx);
+  const sourcePdf=aiPdf&&aiPdf.b64?aiPdf.b64:'';
+  const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx||sourcePdf);
   if(sourceUrl && !/^https?:\/\//i.test(sourceUrl)){
     if(hasBag){sourceUrl='';}
     else{
-      alert('Không dán đường dẫn ổ đĩa (G:\\...). Hãy dán ảnh, Word .docx, TEX, hoặc link http/https.');
+      alert('Không dán đường dẫn ổ đĩa (G:\\...). Hãy dán ảnh, Word .docx, PDF, TEX, hoặc link http/https.');
       return;
     }
   }
-  if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
+  if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, PDF, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
   if(fill && !dang && !sourceUrl && !hasBag){alert('Đang ở Cả bài: dán nguồn vào khung Nhận đề, hoặc mở một dạng rồi bấm AI viết các câu còn thiếu.');return;}
-  const waitLabel=(sourceDocx||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu'));
+  const waitLabel=(sourcePdf)?'Đang đọc PDF, AI chuyển sang TEX':((sourceDocx||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu')));
   const btnRun=document.getElementById('aiImport');
   if(btnRun) btnRun.disabled=true;
   const t0=Date.now();
@@ -1356,7 +1372,7 @@ document.addEventListener('click',async function(e){
   const killer=setTimeout(function(){ctrl.abort();},210000);
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',signal:ctrl.signal,
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,source_docx:sourceDocx})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,source_docx:sourceDocx,source_pdf:sourcePdf})});
     const raw=await r.text();
     let d={};
     try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}

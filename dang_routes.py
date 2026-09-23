@@ -1274,6 +1274,74 @@ def _docx_from_payload(data):
     return _docx_extract(blob)
 
 
+def _pdf_page_jpeg(page):
+    import fitz
+    for zoom, quality in ((1.35, 62), (1.05, 50)):
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        raw, mime = None, 'image/jpeg'
+        try:
+            raw = pix.tobytes('jpeg', jpg_quality=quality)
+        except Exception:
+            try:
+                raw = pix.tobytes('jpg')
+            except Exception:
+                raw = pix.tobytes('png')
+                mime = 'image/png'
+        if raw and len(raw) <= 1_500_000:
+            return {'mime': mime, 'data': base64.b64encode(raw).decode('ascii')}
+    return None
+
+
+def _pdf_extract(blob):
+    try:
+        import fitz
+    except Exception:
+        return '', [], 'Máy chủ chưa có thư viện đọc PDF.'
+    try:
+        doc = fitz.open(stream=blob, filetype='pdf')
+    except Exception:
+        return '', [], 'Không đọc được file PDF.'
+    lines = []
+    images = []
+    try:
+        total = doc.page_count or 0
+        n = min(total, 12)
+        if total > n:
+            lines.append('(PDF có %d trang, chỉ đọc %d trang đầu.)' % (total, n))
+        for i in range(n):
+            page = doc.load_page(i)
+            text = re.sub(r'\n{3,}', '\n\n', (page.get_text('text') or '')).strip()
+            if text:
+                lines.append('--- Trang %d ---\n%s' % (i + 1, text))
+            sparse = len(re.sub(r'\s+', '', text)) < 40
+            if sparse and len(images) < 4:
+                shot = _pdf_page_jpeg(page)
+                if shot:
+                    images.append(shot)
+    finally:
+        doc.close()
+    text_out = '\n\n'.join(lines).strip()
+    if len(text_out) < 20 and not images:
+        return '', [], 'File PDF gần như không có chữ.'
+    return text_out[:80000], images, ''
+
+
+def _pdf_from_payload(data):
+    raw = str((data or {}).get('source_pdf') or '').strip()
+    if not raw:
+        return '', [], ''
+    blob, err = _b64_blob(raw)
+    if err:
+        return '', [], err
+    if not blob:
+        return '', [], ''
+    if len(blob) > 8_000_000:
+        return '', [], 'File PDF quá lớn (dưới 8MB).'
+    if not blob.startswith(b'%PDF'):
+        return '', [], 'File không phải PDF.'
+    return _pdf_extract(blob)
+
+
 def _page_text_from_payload(data):
     """Ưu tiên file .tex gửi từ máy ADMIN; không thì tải http/https."""
     data = data or {}
@@ -1367,9 +1435,14 @@ def api_admin_dang_fill():
     docx_text, docx_images, derr = _docx_from_payload(data)
     if derr:
         return jsonify(ok=False, error=derr), 400
+    pdf_text, pdf_images, perr = _pdf_from_payload(data)
+    if perr:
+        return jsonify(ok=False, error=perr), 400
     if docx_text:
         page_text = (page_text + '\n\n' + docx_text).strip()
-    images = (_images_from_payload(data) + docx_images)[:4]
+    if pdf_text:
+        page_text = (page_text + '\n\n' + pdf_text).strip()
+    images = (_images_from_payload(data) + pdf_images + docx_images)[:4]
     if images and not page_text.strip():
         page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
     if not dang and not page_text:
@@ -1399,12 +1472,12 @@ def api_admin_dang_fill():
     )
     if page_text and not dang:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, PDF, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng.\n"
             "CHỈ lấy câu thuộc BÀI đang soạn (đúng chủ đề các dạng dưới). Bỏ bài/chương khác trong cùng file.\n"
             "Gán vào dạng đã có; mỗi dạng cố gắng 9 TN / 2 ĐS / 3 TLN / 4 TL, trần 18 / 4 / 6 / 8.\n"
             "Không lấy hai câu cùng ý. Đủ mục tiêu thì chỉ lấy câu thật khác; chạm trần thì bỏ.\n"
             "Không bịa đề không có trong nguồn. Nếu nguồn là .tex: lọc \\begin{ex}, sửa cho khớp cấu trúc ngân hàng.\n"
-            "Nếu có hình đính kèm: đọc hết chữ và công thức trên hình, kể cả đề viết tay hoặc ảnh trong file Word.\n"
+            "Nếu có hình đính kèm: đọc hết chữ và công thức trên hình, kể cả đề viết tay, trang PDF scan hoặc ảnh trong file Word.\n"
             "Với MỖI câu, trước \\begin{ex} phải có đúng một dòng \\dangbt{Tên dạng}.\n"
             "Ưu tiên gán vào các dạng ĐÃ CÓ của bài: " + dang_list + "\n"
             "Chỉ tạo tên dạng mới khi câu không khớp dạng nào ở trên. Không markdown, không lời dẫn.\n"
@@ -1413,7 +1486,7 @@ def api_admin_dang_fill():
         )
     elif page_text:
         prompt = (
-            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng câu hỏi.\n"
+            "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, PDF, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng câu hỏi.\n"
             "Chỉ trả về các khối \\begin{ex}...\\end{ex}, không markdown, không lời dẫn.\n"
             "Dạng đang nạp: " + dang + "\n"
             "Lấy các câu trong nguồn CÙNG CHỦ ĐỀ dạng này. Ý khác nhau — bỏ biến thể cùng một bài toán.\n"
