@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11775,
+  "total_questions": 11743,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1176,13 +1176,13 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
       "De": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
-      "questions": 260,
-      "count": 260,
+      "questions": 228,
+      "count": 228,
       "dang": {
         "Phép đo trực tiếp và phép đo gián tiếp": 18,
         "Sai số": 67,
         "Xác định chữ số có nghĩa trong giá trị đo": 45,
-        "Thứ nguyên": 50,
+        "Thứ nguyên": 18,
         "Tính giá trị trung bình của đại lượng đo": 40,
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40
       },
@@ -1206,10 +1206,10 @@
           "TL": 6
         },
         "Thứ nguyên": {
-          "TN": 21,
-          "DS": 5,
-          "TLN": 18,
-          "TL": 6
+          "TN": 12,
+          "DS": 1,
+          "TLN": 4,
+          "TL": 1
         },
         "Tính giá trị trung bình của đại lượng đo": {
           "TN": 11,
