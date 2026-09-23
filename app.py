@@ -1987,6 +1987,30 @@ def prepare_math(s):
         out.append(part if i % 2 else _wrap_bare_arrows(part))
     return "".join(out).strip()
 
+
+def _blank_bare_amp(s):
+    """& ngoài công thức làm vỡ HTML. & trong $...$ (hệ \\heva / cases) phải giữ."""
+    parts = _MATH_CHUNK.split(s or "")
+    out = []
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+        else:
+            out.append(re.sub(r"(?<!\\)&", " ", part))
+    return "".join(out)
+
+
+def _nl_to_br_outside_math(s):
+    """Xuống dòng ngoài $...$. Không chèn <br> vào giữa một công thức."""
+    parts = _MATH_CHUNK.split(s or "")
+    out = []
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+        else:
+            out.append(part.replace("\n", "<br>\n"))
+    return "".join(out)
+
 TIKZ_RE=re.compile(r'\\begin\s*\{\s*tikzpicture\s*\}.*?\\end\s*\{\s*tikzpicture\s*\}',re.I|re.S)
 TIKZ_CACHE=ROOT/'data'/'tikz-cache'
 
@@ -2420,7 +2444,8 @@ def _tex_inline_html(it):
     it = _replace_tex_macro(it, "textbf", lambda b: "@@B@@" + b + "@@/B@@")
     it = _replace_tex_macro(it, "textit", lambda b: "@@I@@" + b + "@@/I@@")
     it = _replace_tex_macro(it, "emph", lambda b: "@@I@@" + b + "@@/I@@")
-    inner = html.escape(prepare_math(it), quote=False).replace('\n', '<br>\n')
+    inner = html.escape(prepare_math(it), quote=False)
+    inner = _nl_to_br_outside_math(inner)
     inner = inner.replace('@@B@@', '<b>').replace('@@/B@@', '</b>')
     inner = inner.replace(html.escape('@@B@@', quote=False), '<b>').replace(html.escape('@@/B@@', quote=False), '</b>')
     inner = inner.replace('@@I@@', '<i>').replace('@@/I@@', '</i>')
@@ -2594,13 +2619,14 @@ def latex_to_web(s):
     s=re.sub(r'\\hfill\b',' ',s)
     s=re.sub(r'\\centering\b','',s,flags=re.I)
     s=re.sub(r'(@@FIG\d+@@)\s*&\s*', r'\1 ', s)
-    s=re.sub(r'(?<!\\)&',' ',s)
+    s=_blank_bare_amp(s)
     s=re.sub(r'((?:@@FIG\d+@@\s*){2,})', lambda m: '@@ROW@@'+m.group(1)+'@@/ROW@@', s)
     s=_replace_tex_macro(s, 'textbf', lambda b: (bolds.append(b) or f'@@BF{len(bolds)-1}@@'))
     s=_replace_tex_macro(s, 'textit', lambda b: (italics.append(b) or f'@@IT{len(italics)-1}@@'))
     s=_replace_tex_macro(s, 'emph', lambda b: (italics.append(b) or f'@@IT{len(italics)-1}@@'))
     s=re.sub(r'\\item\b','\n• ',s)
-    s=html.escape(prepare_math(s), quote=False).replace('\n','<br>\n')
+    s=html.escape(prepare_math(s), quote=False)
+    s=_nl_to_br_outside_math(s)
     s=LINK_RE.sub(lambda m: f'<a href="{m.group(0)}" target="_blank" rel="noopener">{m.group(0)}</a>', s)
     def put(tok, html_val):
         nonlocal s
