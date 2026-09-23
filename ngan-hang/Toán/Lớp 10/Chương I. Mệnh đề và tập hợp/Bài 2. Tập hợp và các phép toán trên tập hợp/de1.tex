@@ -227,28 +227,59 @@
 
 %=== Câu 14 (ID: None) ===%
 
-\nguon{nhóm Latex}
-\dang{Ôn tập đề  1}
 \begin{ex}
-	\immini{ Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Ven như sau. Khẳng định nào sau đây \textbf{sai}?
+	\immini{
+		Cho các tập hợp $A$, $B$, $X$ được biểu diễn trong biểu đồ Venn như sau. Khẳng định nào sau đây \textbf{sai}?
 		\choice
 		{$B \subset C_X A$}
 		{$A \cap B=\varnothing$}
 		{$A \subset C_X B$}
 		{\True $A \cup B=X$}
 	}{
-		\begin{tikzpicture}[scale=0.5,thick,rotate=-90]
-			\colorlet{MauNet}{black}
+		\begin{tikzpicture}[
+			scale=0.5,
+			thick,
+			rotate=-90
+		]
+			% ===== MÀU SẮC =====
+			\definecolor{MauNenX}{RGB}{235,245,255}
+			\definecolor{MauA}{RGB}{100,170,240}
+			\definecolor{MauB}{RGB}{255,190,110}
+			\definecolor{MauVien}{RGB}{45,65,90}
+
+			% ===== CÁC TẬP HỢP =====
 			\def\ElipA{(0,0) ellipse (0.8cm and 1.3cm)}
 			\def\ElipB{(2,3) ellipse (0.8cm and 1.4cm)}
 			\def\ElipC{(1,2) ellipse (3cm and 5cm)}
-			\draw[MauNet] \ElipA node[black] {$A$};
-			\draw[MauNet] \ElipB node[black] {$B$};
-			\draw[MauNet] \ElipC node[black,above right=1cm] {$X$};
+
+			% ===== MIỀN X =====
+			\fill[MauNenX] \ElipC;
+
+			% ===== MIỀN A VÀ B =====
+			\fill[MauA] \ElipA;
+			\fill[MauB] \ElipB;
+
+			% ===== ĐƯỜNG VIỀN =====
+			\draw[MauVien,line width=1.1pt]
+				\ElipC
+				node[black,above right=1cm] {$X$};
+
+			\draw[MauVien,line width=1.1pt]
+				\ElipA
+				node[black] {$A$};
+
+			\draw[MauVien,line width=1.1pt]
+				\ElipB
+				node[black] {$B$};
+
 		\end{tikzpicture}
 	}
 	\loigiai{
-		Nhìn biểu đồ,  ta thấy $A \cup B \neq X$.
+		Nhìn biểu đồ, ta thấy
+		\[
+			A\cup B\neq X.
+		\]
+		Vậy khẳng định sai là $A\cup B=X$.
 	}
 \end{ex}
 
