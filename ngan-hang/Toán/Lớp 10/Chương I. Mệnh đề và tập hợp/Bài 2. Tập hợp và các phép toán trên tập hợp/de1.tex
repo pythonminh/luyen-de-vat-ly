@@ -433,14 +433,13 @@
 
 \nguon{nhóm Latex}
 \dang{Ôn tập đề  1}
-\begin{bt}
-	Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
-	\loigiai{
-		Vẽ trục số thể hiện $A \subset B$.
+\begin{bt}Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2), m \in \mathbb{R}$. Tìm $m$ nguyên dương để $A \subset B$.
+\loigiai{
+Vẽ trục số thể hiện $A \subset B$.
 		\begin{center}
 			\begin{tikzpicture}[scale=1,>=stealth, font=\footnotesize, line join=round, line cap=round]
 				\draw [-stealth] (0,0)--(7,0);
-				\path (1,0) node{$($} (1,-0.1)node[below]{$-2$} (-.5,0)node[left]{$A \subset B$}; 
+				\path (1,0) node{$($} (1,-0.1)node[below]{$-2$} (-.5,0)node[left]{$A \subset B$};
 				\path (5,0) node{$)$} (5,-0.1)node[below]{$2m+2$};
 				\path (1.7,0) node{$($} (1.8,-0.1)node[below]{$m-1$};
 				\path (3.7,0) node{$]$} (3.8,-0.1)node[below]{$4$};
@@ -448,16 +447,48 @@
 				\foreach \x in{5.1,5.2,...,6.8} \draw (\x,0)--++(45:.08) (\x,0)--++(-135:.08);
 			\end{tikzpicture}
 		\end{center}
-		Với $2$ tập khác rỗng $A$, $B$ ta có điều kiện $ \heva{&m-1<4 \\&2m+2>-2} 
+		Với $2$ tập khác rỗng $A, B$ ta có điều kiện $ \heva{&m-1<4 \\&2m+2>-2}
 		\Leftrightarrow \heva{&m<5\\&m>-2}
-		\Leftrightarrow-2<m<5$.\\
-		Để $A \subset B 
-		\Leftrightarrow \heva{& m-1 \geqslant-2 \\& 2 m+2>4} 
-		\Leftrightarrow \heva{& m \geqslant-1 \\& 2 m+2>4} 
-		\Leftrightarrow \heva{& m \geqslant-1 \\& m>1} 
-		\Leftrightarrow m>1$.\\
-		So với điều kiện $\Rightarrow 1<m<5$. Do đó có $3$ giá trị nguyên của $m$ thỏa mãn $A \subset B$.
-	}
+		\Leftrightarrow-2<m<5$. Để $A \subset B
+		\Leftrightarrow \heva{& m-1 \geqslant-2 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& 2 m+2>4}
+		\Leftrightarrow \heva{& m \geqslant-1 \\& m>1}
+		\Leftrightarrow m>1$. So với điều kiện $\Rightarrow 1<m<5$. Do đó có $3$ giá trị nguyên của $m$ thỏa mãn $A \subset B$.
+\begin{center}
+\begin{tikzpicture}[
+    >=stealth,
+    font=\footnotesize,
+    line cap=round,
+    line join=round
+]
+    \definecolor{MauA}{RGB}{40,120,230}
+    \definecolor{MauB}{RGB}{230,55,90}
+    \draw[->,thick] (-2.8,0)--(7.2,0);
+    \draw[MauB,line width=5pt]
+        (-2,0)--(6,0);
+    \draw[white,line width=2pt]
+        (-2,0)--(6,0);
+    \draw[MauA,line width=5pt]
+        (0,0)--(4,0);
+    \draw[MauB,fill=white,line width=1.5pt]
+        (-2,0) circle (2.5pt);
+    \draw[MauB,fill=white,line width=1.5pt]
+        (6,0) circle (2.5pt);
+    \draw[MauA,fill=white,line width=1.5pt]
+        (0,0) circle (2.5pt);
+    \draw[MauA,fill=MauA,line width=1.5pt]
+        (4,0) circle (2.5pt);
+    \node[MauB,above] at (2,0.65)
+        {$B=(-2,2m+2)$};
+    \node[MauA,above] at (2,0.15)
+        {$A=(m-1,4]$};
+    \node[below=4pt] at (-2,0) {$-2$};
+    \node[below=4pt] at (0,0) {$m-1$};
+    \node[below=4pt] at (4,0) {$4$};
+    \node[below=4pt] at (6,0) {$2m+2$};
+\end{tikzpicture}
+\end{center}
+}
 \end{bt}
 
 %=== Câu 20 (ID: None) ===%
