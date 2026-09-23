@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12198,
+  "total_questions": 12263,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4160,44 +4160,79 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 78,
-      "count": 78,
+      "questions": 143,
+      "count": 143,
       "dang": {
-        "Lý thuyết định luật I và ứng dụng": 9,
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 12,
-        "Các cách làm biến đổi nội năng của một vật": 16,
-        "Nội năng và truyền nhiệt": 21,
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 20
+        "Lý thuyết định luật I và ứng dụng": 23,
+        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 15,
+        "Các cách làm biến đổi nội năng của một vật": 18,
+        "Nội năng và truyền nhiệt": 24,
+        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 40,
+        "Hiệu suất động cơ nhiệt": 8,
+        "Chưa phân dạng": 1,
+        "Tính hiệu suất động cơ nhiệt": 11,
+        "Tính công suất động cơ nhiệt": 1,
+        "Lý thuyết về nội năng và các cách biến đổi nội năng": 2
       },
       "dang_kinds": {
         "Lý thuyết định luật I và ứng dụng": {
-          "TN": 1,
+          "TN": 15,
           "DS": 3,
           "TLN": 2,
           "TL": 3
         },
         "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
-          "TN": 10,
+          "TN": 13,
           "DS": 2,
           "TLN": 0,
           "TL": 0
         },
         "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 8,
+          "TN": 10,
           "DS": 8,
           "TLN": 0,
           "TL": 0
         },
         "Nội năng và truyền nhiệt": {
-          "TN": 10,
+          "TN": 13,
           "DS": 11,
           "TLN": 0,
           "TL": 0
         },
         "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
-          "TN": 0,
+          "TN": 3,
+          "DS": 9,
+          "TLN": 28,
+          "TL": 0
+        },
+        "Hiệu suất động cơ nhiệt": {
+          "TN": 8,
           "DS": 0,
-          "TLN": 20,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Chưa phân dạng": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính hiệu suất động cơ nhiệt": {
+          "TN": 1,
+          "DS": 5,
+          "TLN": 5,
+          "TL": 0
+        },
+        "Tính công suất động cơ nhiệt": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
+          "TN": 0,
+          "DS": 2,
+          "TLN": 0,
           "TL": 0
         }
       }
