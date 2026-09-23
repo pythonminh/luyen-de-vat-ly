@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11847,
+  "total_questions": 11900,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1255,25 +1255,27 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
       "De": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
-      "questions": 219,
-      "count": 219,
+      "questions": 272,
+      "count": 272,
       "dang": {
-        "Phép đo trực tiếp và phép đo gián tiếp": 18,
-        "Sai số": 67,
+        "Phép đo trực tiếp và phép đo gián tiếp": 34,
+        "Sai số": 92,
         "Xác định chữ số có nghĩa trong giá trị đo": 45,
-        "Thứ nguyên": 18,
-        "Tính giá trị trung bình của đại lượng đo": 31,
-        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40
+        "Thứ nguyên": 23,
+        "Tính giá trị trung bình của đại lượng đo": 33,
+        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40,
+        "Các phương pháp nghiên cứu vật lí": 2,
+        "Quy trình đo": 3
       },
       "dang_kinds": {
         "Phép đo trực tiếp và phép đo gián tiếp": {
-          "TN": 6,
+          "TN": 22,
           "DS": 7,
           "TLN": 4,
           "TL": 1
         },
         "Sai số": {
-          "TN": 29,
+          "TN": 54,
           "DS": 14,
           "TLN": 18,
           "TL": 6
@@ -1285,13 +1287,13 @@
           "TL": 6
         },
         "Thứ nguyên": {
-          "TN": 12,
+          "TN": 17,
           "DS": 1,
           "TLN": 4,
           "TL": 1
         },
         "Tính giá trị trung bình của đại lượng đo": {
-          "TN": 11,
+          "TN": 13,
           "DS": 5,
           "TLN": 9,
           "TL": 6
@@ -1301,6 +1303,18 @@
           "DS": 5,
           "TLN": 18,
           "TL": 6
+        },
+        "Các phương pháp nghiên cứu vật lí": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Quy trình đo": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
         }
       }
     },
