@@ -1379,11 +1379,13 @@ document.addEventListener('click',async function(e){
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
     const sec=Math.max(1,Math.round((Date.now()-t0)/1000));
     stopWait();
-    aiStatus('Xong sau '+sec+'s. LaTeX nằm ngay dưới — xem rồi bấm Chấp nhận ghi TEX.','ok');
+    aiStatus(nTikz(d.latex)?('Xong sau '+sec+'s. Có hình TikZ — xem trước rồi mới bấm duyệt.'):('Xong sau '+sec+'s. LaTeX nằm ngay dưới — xem rồi bấm Chấp nhận ghi TEX.'),'ok');
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
-      +(d.note?'<div class="muted">'+esc(d.note)+'</div>':'')
+      +(d.note?'<div>'+esc(d.note)+'</div>':'')
+      +'<div id="aiTikzPrev" class="ai-tikz"></div>'
       +'<textarea id="aiFillTex" class="rwta" style="min-height:220px">'+esc(d.latex||'')+'</textarea>'
-      +'<p><button type="button" class="btn green" id="aiFillSave">3. ✅ Chấp nhận ghi TEX</button></p>';
+      +'<p><button type="button" class="btn" id="aiTikzReload">Xem trước TikZ</button> <button type="button" class="btn green" id="aiFillSave">3. ✅ Chấp nhận ghi TEX</button></p>';
+    showTikzPreview(d.latex||'');
     if(out.scrollIntoView) out.scrollIntoView({block:'nearest'});
   }catch(err){
     stopWait();
@@ -1391,6 +1393,44 @@ document.addEventListener('click',async function(e){
     aiStatus(msg,'err');
     out.innerHTML='<div class="err">'+esc(msg)+'</div>';
   }finally{clearTimeout(killer);}
+});
+function nTikz(tex){
+  var re=/\\begin\s*\{\s*tikzpicture\s*\}/gi;
+  var n=0, m;
+  while((m=re.exec(tex||''))) n++;
+  return n;
+}
+function tikzOnly(tex){
+  var re=/\\begin\s*\{\s*tikzpicture[\s\S]*?\\end\s*\{\s*tikzpicture\s*\}/gi;
+  var m, bits=[];
+  while((m=re.exec(tex||''))) bits.push(m[0]);
+  return bits;
+}
+async function showTikzPreview(tex){
+  var box=document.getElementById('aiTikzPrev');
+  if(!box) return;
+  var bits=tikzOnly(tex);
+  if(!bits.length){
+    box.innerHTML='<div class="ai-tikz-k">Chưa có hình TikZ</div><div>Nếu ảnh gốc có đồ thị hoặc trục số, sửa LaTeX rồi bấm Xem trước TikZ.</div>';
+    return;
+  }
+  box.innerHTML='<div class="ai-tikz-k">Đang vẽ '+bits.length+' hình…</div>';
+  try{
+    var r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:bits.join('\n\n')})});
+    var d=await r.json();
+    if(!d.ok&&d.error){box.innerHTML='<div class="err">'+esc(d.error)+'</div>';return;}
+    box.innerHTML='<div class="ai-tikz-k">Xem trước hình TikZ — đối chiếu với ảnh gốc rồi mới duyệt</div>'+(d.html||'');
+    if(window.ldvlTypeset) ldvlTypeset(box);
+  }catch(err){
+    box.innerHTML='<div class="err">'+esc(err)+'</div>';
+  }
+}
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('#aiTikzReload');
+  if(!b) return;
+  e.preventDefault();
+  var ta=document.getElementById('aiFillTex');
+  showTikzPreview(ta?ta.value:'');
 });
 function aiStatus(msg, kind){
   const el=document.getElementById('aiStatus');

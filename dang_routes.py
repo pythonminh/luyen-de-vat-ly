@@ -1470,6 +1470,13 @@ def api_admin_dang_fill():
         + "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Không % ID.\n"
         + ("Trong MỖI khối \\begin{ex} phải có đúng một " + nguon_line + " (link tải trang, không đổi).\n" if nguon_line else "")
     )
+    if images:
+        kind_rules += (
+            "Nếu ảnh có đồ thị, trục số, sơ đồ, mạch hoặc hình học: vẽ lại bằng TikZ trong câu, bọc \\begin{center}...\\end{center}.\n"
+            "TikZ biên dịch bằng pdflatex: chỉ \\draw, \\node, \\path, \\fill, \\foreach; mũi tên >=stealth.\n"
+            "Nhãn tiếng Việt có dấu dùng \\text{...}, cấm \\mathrm với chữ có dấu.\n"
+            "Không \\usetikzlibrary, không pgfplots. Giữ đúng số và ký hiệu trên hình. Không bịa hình không có trong ảnh.\n"
+        )
     if page_text and not dang:
         prompt = (
             "Bạn là giáo viên ra đề thi THPT. Chuyển đề từ Word, PDF, ảnh chụp, chữ thường, trang web hoặc file LaTeX sang ngân hàng.\n"

@@ -226,7 +226,12 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .admindang input,#aiSrcUrl{flex:1 1 12rem;min-width:10rem;padding:6px 8px;border:1px solid #cbd8e6;border-radius:7px}
 .admindang .gapnote{font-size:12px;font-weight:700;color:#9a3412}
 .admindang #aiGapOut:empty{display:none}
-.admindang #aiGapOut:not(:empty){flex:1 1 100%;font-size:13px;line-height:1.4;max-height:30vh;overflow:auto}
+.admindang #aiGapOut:not(:empty){flex:1 1 100%;font-size:13px;line-height:1.4;max-height:70vh;overflow:auto}
+.ai-tikz{margin:0 0 8px;padding:8px;border:1px solid #d7e2ee;border-radius:10px;background:#fff}
+.ai-tikz:empty{display:none}
+.ai-tikz-k{font:700 12px/1.3 Segoe UI,Arial,sans-serif;color:#145bb0;margin:0 0 6px}
+.ai-tikz .tikzfig{display:inline-block;margin:4px 8px 4px 0;vertical-align:top}
+.ai-tikz .tikz-img{max-width:min(100%,420px);height:auto;max-height:220px;background:#fff}
 .ai-intake{flex:1 1 100%;display:flex;flex-direction:column;gap:6px;padding:8px;border:1px dashed #7dd3fc;border-radius:10px;background:#fff}
 .ai-intake.over{border-color:#145bb0;background:#eef6ff}
 .ai-intake-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
