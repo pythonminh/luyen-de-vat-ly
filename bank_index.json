@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11856,
+  "total_questions": 11921,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1255,36 +1255,36 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
       "De": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
-      "questions": 228,
-      "count": 228,
+      "questions": 293,
+      "count": 293,
       "dang": {
-        "Phép đo trực tiếp và phép đo gián tiếp": 34,
-        "Sai số": 79,
-        "Xác định chữ số có nghĩa trong giá trị đo": 27,
+        "Phép đo trực tiếp và phép đo gián tiếp": 35,
+        "Sai số": 110,
+        "Xác định chữ số có nghĩa trong giá trị đo": 45,
         "Thứ nguyên": 23,
-        "Tính giá trị trung bình của đại lượng đo": 33,
-        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 27,
+        "Tính giá trị trung bình của đại lượng đo": 34,
+        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40,
         "Các phương pháp nghiên cứu vật lí": 2,
-        "Quy trình đo": 3
+        "Quy trình đo": 4
       },
       "dang_kinds": {
         "Phép đo trực tiếp và phép đo gián tiếp": {
           "TN": 22,
-          "DS": 7,
+          "DS": 8,
           "TLN": 4,
           "TL": 1
         },
         "Sai số": {
           "TN": 54,
-          "DS": 10,
-          "TLN": 9,
+          "DS": 24,
+          "TLN": 26,
           "TL": 6
         },
         "Xác định chữ số có nghĩa trong giá trị đo": {
           "TN": 16,
-          "DS": 1,
-          "TLN": 9,
-          "TL": 1
+          "DS": 5,
+          "TLN": 18,
+          "TL": 6
         },
         "Thứ nguyên": {
           "TN": 17,
@@ -1294,14 +1294,14 @@
         },
         "Tính giá trị trung bình của đại lượng đo": {
           "TN": 13,
-          "DS": 5,
+          "DS": 6,
           "TLN": 9,
           "TL": 6
         },
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": {
           "TN": 11,
-          "DS": 1,
-          "TLN": 9,
+          "DS": 5,
+          "TLN": 18,
           "TL": 6
         },
         "Các phương pháp nghiên cứu vật lí": {
@@ -1311,7 +1311,7 @@
           "TL": 0
         },
         "Quy trình đo": {
-          "TN": 3,
+          "TN": 4,
           "DS": 0,
           "TLN": 0,
           "TL": 0
