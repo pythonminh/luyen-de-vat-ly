@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11900,
+  "total_questions": 11856,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1255,15 +1255,15 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
       "De": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
-      "questions": 272,
-      "count": 272,
+      "questions": 228,
+      "count": 228,
       "dang": {
         "Phép đo trực tiếp và phép đo gián tiếp": 34,
-        "Sai số": 92,
-        "Xác định chữ số có nghĩa trong giá trị đo": 45,
+        "Sai số": 79,
+        "Xác định chữ số có nghĩa trong giá trị đo": 27,
         "Thứ nguyên": 23,
         "Tính giá trị trung bình của đại lượng đo": 33,
-        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40,
+        "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 27,
         "Các phương pháp nghiên cứu vật lí": 2,
         "Quy trình đo": 3
       },
@@ -1276,15 +1276,15 @@
         },
         "Sai số": {
           "TN": 54,
-          "DS": 14,
-          "TLN": 18,
+          "DS": 10,
+          "TLN": 9,
           "TL": 6
         },
         "Xác định chữ số có nghĩa trong giá trị đo": {
           "TN": 16,
-          "DS": 5,
-          "TLN": 18,
-          "TL": 6
+          "DS": 1,
+          "TLN": 9,
+          "TL": 1
         },
         "Thứ nguyên": {
           "TN": 17,
@@ -1300,8 +1300,8 @@
         },
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": {
           "TN": 11,
-          "DS": 5,
-          "TLN": 18,
+          "DS": 1,
+          "TLN": 9,
           "TL": 6
         },
         "Các phương pháp nghiên cứu vật lí": {
