@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11921,
+  "total_questions": 11944,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1327,20 +1327,20 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
       "De": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
-      "questions": 64,
-      "count": 64,
+      "questions": 87,
+      "count": 87,
       "dang": {
-        "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 21,
+        "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 41,
         "Khái niệm và đặc điểm của chất điểm": 10,
         "Nhận biết chuyển động cơ học và vật mốc": 5,
         "Tính tương đối của chuyển động và hệ quy chiếu": 16,
         "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 6,
         "Thành phần và cấu trúc của hệ quy chiếu": 3,
-        "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 3
+        "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 6
       },
       "dang_kinds": {
         "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": {
-          "TN": 11,
+          "TN": 31,
           "DS": 5,
           "TLN": 5,
           "TL": 0
@@ -1376,7 +1376,7 @@
           "TL": 0
         },
         "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": {
-          "TN": 3,
+          "TN": 6,
           "DS": 0,
           "TLN": 0,
           "TL": 0
