@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12096,
+  "total_questions": 12092,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1392,11 +1392,11 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 5. Tốc độ và vận tốc",
       "De": "L10C2 Bài 5. Tốc độ và vận tốc",
-      "questions": 200,
-      "count": 200,
+      "questions": 196,
+      "count": 196,
       "dang": {
         "Cộng vận tốc cho các chuyển động cùng phương": 37,
-        "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 135,
+        "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 131,
         "Phân biệt tốc độ trung bình và vận tốc trung bình trong chuyển động đổi chiều": 12,
         "Tính vận tốc tương đối giữa hai vật": 16
       },
@@ -1408,7 +1408,7 @@
           "TL": 5
         },
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": {
-          "TN": 77,
+          "TN": 73,
           "DS": 36,
           "TLN": 17,
           "TL": 5
