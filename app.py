@@ -242,6 +242,11 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 #aiPaste{width:100%;min-height:64px;max-height:132px;resize:vertical;border:1px solid #d7e2ee;border-radius:8px;padding:7px 8px;font:13px/1.4 Segoe UI,Arial,sans-serif;background:#fff}
 .ai-intake #aiSrcUrl{width:100%;flex:1 1 auto;min-width:0}
 .ai-intake input[type=file]{display:none!important}
+.ai-status{font:700 13px/1.35 Segoe UI,Arial,sans-serif;padding:6px 8px;border-radius:8px}
+.ai-status[hidden]{display:none!important}
+.ai-status.is-wait{background:#fff7ed;color:#9a3412;border:1px solid #fdba74}
+.ai-status.is-ok{background:#ecfdf5;color:#166534;border:1px solid #86efac}
+.ai-status.is-err{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
 .admindang .simrev h4{margin:10px 0 4px;font-size:13px}
 .admindang .simbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:8px;border:1px solid #fdba74;border-radius:8px;background:#fff}
@@ -3220,6 +3225,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<label class='btn'>Word / TEX<input id='aiSrcFile' type='file' accept='.docx,.tex,.ltx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
         "<button type='button' class='btn green' id='aiImport'>AI phân tích → TEX</button>"
         "</div>"
+        "<div id='aiStatus' class='ai-status' hidden></div>"
         "<div class='ai-shots' id='aiShots'></div>"
         "<textarea id='aiPaste' rows='3' placeholder='Dán ảnh (Ctrl+V), TEX hoặc chữ. Kéo thả Word .docx, ảnh, file .tex cũng được.'></textarea>"
         "<input id='aiSrcUrl' type='url' placeholder='"+html.escape('Link http tuỳ chọn — không dán ổ đĩa G:\\...', quote=True)+"'>"

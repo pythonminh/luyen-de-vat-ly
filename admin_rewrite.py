@@ -1335,20 +1335,54 @@ document.addEventListener('click',async function(e){
   }
   if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
   if(fill && !dang && !sourceUrl && !hasBag){alert('Đang ở Cả bài: dán nguồn vào khung Nhận đề, hoặc mở một dạng rồi bấm AI viết các câu còn thiếu.');return;}
-  out.innerHTML=(sourceDocx||sourceImages.length)?'⏳ Đang đọc Word/ảnh rồi AI chuyển sang TEX...':(sourceTex.trim()?'⏳ Đang đọc chữ/TEX rồi AI chuyển sang TEX...':(sourceUrl?'⏳ Đang tải trang rồi AI chuyển sang TEX...':'⏳ AI đang viết các câu còn thiếu (mỗi lần tối đa vài câu). Cứ để nguyên tab...'));
+  const waitLabel=(sourceDocx||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu'));
+  const btnRun=document.getElementById('aiImport');
+  if(btnRun) btnRun.disabled=true;
+  const t0=Date.now();
+  if(window._aiWaitTimer) clearInterval(window._aiWaitTimer);
+  function paintWait(){
+    const s=Math.round((Date.now()-t0)/1000);
+    aiStatus(waitLabel+'… '+s+'s. Thường 1–3 phút, chưa xong thì cứ để trang mở.','wait');
+  }
+  paintWait();
+  window._aiWaitTimer=setInterval(paintWait,1000);
+  function stopWait(){
+    if(window._aiWaitTimer){clearInterval(window._aiWaitTimer);window._aiWaitTimer=null;}
+    if(btnRun) btnRun.disabled=false;
+  }
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
+  const ctrl=new AbortController();
+  const killer=setTimeout(function(){ctrl.abort();},210000);
   try{
-    const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+    const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',signal:ctrl.signal,
       body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,source_docx:sourceDocx})});
-    const d=await r.json();
-    if(!d.ok){out.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    const raw=await r.text();
+    let d={};
+    try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
+    if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
+    const sec=Math.max(1,Math.round((Date.now()-t0)/1000));
+    stopWait();
+    aiStatus('Xong sau '+sec+'s. LaTeX nằm ngay dưới — xem rồi bấm Chấp nhận ghi TEX.','ok');
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
       +(d.note?'<div class="muted">'+esc(d.note)+'</div>':'')
       +'<textarea id="aiFillTex" class="rwta" style="min-height:220px">'+esc(d.latex||'')+'</textarea>'
       +'<p><button type="button" class="btn green" id="aiFillSave">3. ✅ Chấp nhận ghi TEX</button></p>';
-  }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';}
+    if(out.scrollIntoView) out.scrollIntoView({block:'nearest'});
+  }catch(err){
+    stopWait();
+    const msg=(err&&err.name==='AbortError')?'Quá 3,5 phút chưa có kết quả. Bấm AI phân tích lại.':String(err);
+    aiStatus(msg,'err');
+    out.innerHTML='<div class="err">'+esc(msg)+'</div>';
+  }finally{clearTimeout(killer);}
 });
+function aiStatus(msg, kind){
+  const el=document.getElementById('aiStatus');
+  if(!el) return;
+  el.hidden=!msg;
+  el.className='ai-status'+(kind?(' is-'+kind):'');
+  el.textContent=msg||'';
+}
 })();
 </script>
 """
