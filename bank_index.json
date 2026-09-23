@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 11743,
+  "total_questions": 11799,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -798,56 +798,56 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 1. Làm quen với Vật lí",
       "De": "L10C1 Bài 1. Làm quen với Vật lí",
-      "questions": 203,
-      "count": 203,
+      "questions": 268,
+      "count": 268,
       "dang": {
-        "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 8,
-        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 37,
-        "Vận dụng tiến trình của phương pháp thực nghiệm": 25,
-        "Vận dụng tiến trình của phương pháp mô hình": 57,
-        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 18,
-        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 40,
-        "Quá trình phát triển của Vật lí": 18
+        "Phân biệt các loại mô hình trong nghiên cứu Vật lí": 9,
+        "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": 55,
+        "Vận dụng tiến trình của phương pháp thực nghiệm": 31,
+        "Vận dụng tiến trình của phương pháp mô hình": 60,
+        "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": 26,
+        "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": 55,
+        "Quá trình phát triển của Vật lí": 32
       },
       "dang_kinds": {
         "Phân biệt các loại mô hình trong nghiên cứu Vật lí": {
-          "TN": 4,
+          "TN": 5,
           "DS": 2,
           "TLN": 1,
           "TL": 1
         },
         "Vai trò của Vật lí đối với khoa học, kĩ thuật, công nghệ và đời sống": {
-          "TN": 11,
+          "TN": 29,
           "DS": 13,
           "TLN": 7,
           "TL": 6
         },
         "Vận dụng tiến trình của phương pháp thực nghiệm": {
-          "TN": 10,
+          "TN": 16,
           "DS": 6,
           "TLN": 5,
           "TL": 4
         },
         "Vận dụng tiến trình của phương pháp mô hình": {
-          "TN": 34,
+          "TN": 37,
           "DS": 10,
           "TLN": 7,
           "TL": 6
         },
         "Vận dụng tiến trình nghiên cứu Vật lí vào tình huống thực tiễn": {
-          "TN": 1,
+          "TN": 9,
           "DS": 5,
           "TLN": 6,
           "TL": 6
         },
         "Đối tượng nghiên cứu và mục tiêu của môn Vật lí": {
-          "TN": 19,
+          "TN": 34,
           "DS": 8,
           "TLN": 7,
           "TL": 6
         },
         "Quá trình phát triển của Vật lí": {
-          "TN": 1,
+          "TN": 15,
           "DS": 5,
           "TLN": 6,
           "TL": 6
@@ -1176,14 +1176,14 @@
       "Chuong": "Chương I. Mở đầu",
       "BaiHoc": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
       "De": "L10C1 Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo",
-      "questions": 228,
-      "count": 228,
+      "questions": 219,
+      "count": 219,
       "dang": {
         "Phép đo trực tiếp và phép đo gián tiếp": 18,
         "Sai số": 67,
         "Xác định chữ số có nghĩa trong giá trị đo": 45,
         "Thứ nguyên": 18,
-        "Tính giá trị trung bình của đại lượng đo": 40,
+        "Tính giá trị trung bình của đại lượng đo": 31,
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": 40
       },
       "dang_kinds": {
@@ -1214,7 +1214,7 @@
         "Tính giá trị trung bình của đại lượng đo": {
           "TN": 11,
           "DS": 5,
-          "TLN": 18,
+          "TLN": 9,
           "TL": 6
         },
         "Viết số dưới dạng kí hiệu khoa học với số chữ số có nghĩa cho trước": {
