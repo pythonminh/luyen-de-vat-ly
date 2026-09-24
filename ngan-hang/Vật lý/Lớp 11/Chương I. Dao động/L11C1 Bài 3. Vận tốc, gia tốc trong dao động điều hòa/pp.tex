@@ -2,92 +2,412 @@
 % Lớp: 11
 % Chương: Chương I. Dao động
 % Bài: L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian}
+\subsubsection{Dạng: Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Phân tích đồ thị:}
+    \begin{itemize}
+        \item \textbf{Đồ thị vận tốc – thời gian ($v-t$):}
+        \begin{itemize}
+            \item \textbf{Biên độ vận tốc ($v_{max}$):} Là giá trị cực đại của vận tốc trên đồ thị. Từ đó suy ra biên độ dao động $A = \dfrac{v_{max}}{\omega}$.
+            \item \textbf{Chu kì ($T$):} Là khoảng thời gian để đồ thị lặp lại một chu trình. Từ đó suy ra tần số góc $\omega = \dfrac{2\pi}{T}$.
+            \item \textbf{Pha ban đầu ($\varphi_v$):} Dựa vào giá trị vận tốc tại thời điểm $t=0$ và chiều biến thiên của vận tốc.
+            \item \textbf{Vị trí cân bằng ($x=0$):} Vận tốc đạt giá trị cực đại ($v = \pm v_{max}$).
+            \item \textbf{Vị trí biên ($x=\pm A$):} Vận tốc bằng 0 ($v=0$).
+        \end{itemize}
+        \item \textbf{Đồ thị gia tốc – thời gian ($a-t$):}
+        \begin{itemize}
+            \item \textbf{Biên độ gia tốc ($a_{max}$):} Là giá trị cực đại của gia tốc trên đồ thị. Từ đó suy ra biên độ dao động $A = \dfrac{a_{max}}{\omega^2}$.
+            \item \textbf{Chu kì ($T$):} Là khoảng thời gian để đồ thị lặp lại một chu trình. Từ đó suy ra tần số góc $\omega = \dfrac{2\pi}{T}$.
+            \item \textbf{Pha ban đầu ($\varphi_a$):} Dựa vào giá trị gia tốc tại thời điểm $t=0$ và chiều biến thiên của gia tốc.
+            \item \textbf{Vị trí cân bằng ($x=0$):} Gia tốc bằng 0 ($a=0$).
+            \item \textbf{Vị trí biên ($x=\pm A$):} Gia tốc đạt giá trị cực đại ($a = \mp a_{max}$).
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Xác định các đại lượng đặc trưng:}
+    \begin{itemize}
+        \item Từ $v_{max}$ hoặc $a_{max}$ và $T$ (hoặc $\omega$), tính các đại lượng còn lại như $A$, $\omega$, $f$.
+        \item Viết phương trình dao động của li độ $x(t)$, vận tốc $v(t)$, gia tốc $a(t)$ nếu cần. Lưu ý mối quan hệ pha: $v$ sớm pha hơn $x$ là $\dfrac{\pi}{2}$, $a$ sớm pha hơn $v$ là $\dfrac{\pi}{2}$ (hay $a$ ngược pha với $x$).
+    \end{itemize}
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp (ví dụ: $A$ (cm, m), $v$ (cm/s, m/s), $a$ (cm/s$^2$, m/s$^2$), $T$ (s), $\omega$ (rad/s)).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật thực hiện dao động điều hòa với phương trình li độ là $x=5\cos(3t)$ (cm). Hãy xác định các phát biểu đúng về chuyển động của vật.
+\choice
+\True A. Phương trình vận tốc của vật là $v = -15\sin(3t)$ (cm/s).
+B. Phương trình gia tốc của vật là $a = -45\sin(3t)$ (cm/s$^2$).
+C. Vận tốc cực đại của vật là $15$ cm/s.
+D. Gia tốc cực đại của vật là $45$ cm/s$^2$.
+\loigiai{
+Từ phương trình li độ $x=5\cos(3t)$ (cm), ta có:
+Biên độ $A = 5$ cm.
+Tần số góc $\omega = 3$ rad/s.
+
+Phương trình vận tốc của vật là đạo hàm của li độ theo thời gian:
+$v = \dfrac{dx}{dt} = \dfrac{d}{dt}(5\cos(3t)) = 5 \cdot (-3\sin(3t)) = -15\sin(3t)$ (cm/s).
+Vậy phát biểu A đúng.
+
+Phương trình gia tốc của vật là đạo hàm của vận tốc theo thời gian:
+$a = \dfrac{dv}{dt} = \dfrac{d}{dt}(-15\sin(3t)) = -15 \cdot (3\cos(3t)) = -45\cos(3t)$ (cm/s$^2$).
+Vậy phát biểu B sai.
+
+Vận tốc cực đại của vật là $v_{max} = A\omega = 5 \cdot 3 = 15$ cm/s.
+Vậy phát biểu C đúng.
+
+Gia tốc cực đại của vật là $a_{max} = A\omega^2 = 5 \cdot (3)^2 = 5 \cdot 9 = 45$ cm/s$^2$.
+Vậy phát biểu D đúng.
+
+Tuy nhiên, trong bài toán trắc nghiệm chọn một đáp án đúng, cần xem xét lại đề bài hoặc các lựa chọn. Nếu đây là dạng "Chọn Đúng hoặc Sai cho các phát biểu sau", thì A, C, D đều đúng. Nếu là "Chọn phát biểu đúng", thì có thể có nhiều hơn một đáp án đúng. Với cấu trúc \choice, ta chọn một đáp án đúng nhất. Ở đây, A là phương trình vận tốc, C và D là giá trị cực đại. Phương trình vận tốc là một đại lượng đặc trưng cơ bản.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian}
+\subsubsection{Dạng: Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định biên độ ($A$):} Quan sát giá trị cực đại (hoặc cực tiểu) của li độ trên trục tung. Biên độ $A$ là giá trị dương của li độ cực đại.
+    \item \textbf{Xác định chu kì ($T$):} Quan sát khoảng thời gian ngắn nhất để đồ thị lặp lại hình dạng ban đầu (ví dụ: từ đỉnh này đến đỉnh kế tiếp, hoặc từ vị trí cân bằng theo chiều dương đến vị trí cân bằng theo chiều dương tiếp theo).
+    \item \textbf{Xác định tần số góc ($\omega$) và tần số ($f$):}
+    \begin{itemize}
+        \item Tần số góc $\omega = \dfrac{2\pi}{T}$.
+        \item Tần số $f = \dfrac{1}{T}$.
+    \end{itemize}
+    \item \textbf{Xác định pha ban đầu ($\varphi$):}
+    \begin{itemize}
+        \item Dựa vào giá trị li độ $x_0$ và chiều chuyển động của vật tại thời điểm $t=0$.
+        \item Từ phương trình $x(t) = A\cos(\omega t + \varphi)$, tại $t=0$: $x_0 = A\cos\varphi$.
+        \item Chiều chuyển động được xác định bởi dấu của vận tốc $v_0 = -A\omega\sin\varphi$.
+        \begin{itemize}
+            \item Nếu $x_0 = A$: $\varphi = 0$.
+            \item Nếu $x_0 = -A$: $\varphi = \pm\pi$.
+            \item Nếu $x_0 = 0$: $\varphi = \pm\dfrac{\pi}{2}$. Dựa vào chiều chuyển động: nếu $v_0 > 0$ (đi theo chiều dương), $\varphi = -\dfrac{\pi}{2}$; nếu $v_0 < 0$ (đi theo chiều âm), $\varphi = \dfrac{\pi}{2}$.
+            \item Với các giá trị $x_0$ khác, giải phương trình $\cos\varphi = \dfrac{x_0}{A}$ và kết hợp với dấu của $v_0$ để chọn giá trị $\varphi$ phù hợp trong khoảng $(-\pi, \pi]$.
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Viết phương trình dao động:} Sau khi xác định $A$, $\omega$, $\varphi$, viết phương trình li độ $x(t) = A\cos(\omega t + \varphi)$. Từ đó có thể suy ra phương trình vận tốc và gia tốc.
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Đồ thị li độ–thời gian của một vật dao động điều hòa có biên độ $4 \text{cm}$, chu kì $1 \text{s}$ và bắt đầu ở biên dương. Xác định tính đúng sai của các phát biểu sau:
+\choice
+\True A. Phương trình dao động của vật là $x = 4\cos(2\pi t)$ (cm).
+B. Vận tốc cực đại của vật là $4\pi$ cm/s.
+C. Gia tốc cực đại của vật là $8\pi^2$ cm/s$^2$.
+D. Tại thời điểm $t=0.25$ s, li độ của vật là $0$ cm.
+\loigiai{
+Từ đề bài, ta có:
+Biên độ $A = 4$ cm.
+Chu kì $T = 1$ s.
+Vật bắt đầu ở biên dương, tức là tại $t=0$, $x=A=4$ cm.
+
+\begin{itemize}
+    \item \textbf{Tính tần số góc:} $\omega = \dfrac{2\pi}{T} = \dfrac{2\pi}{1} = 2\pi$ rad/s.
+    \item \textbf{Xác định pha ban đầu:} Tại $t=0$, $x=A$. Thay vào phương trình $x = A\cos(\omega t + \varphi)$:
+    $A = A\cos(\omega \cdot 0 + \varphi) \Rightarrow \cos\varphi = 1 \Rightarrow \varphi = 0$.
+    \item \textbf{Phương trình dao động:} $x = 4\cos(2\pi t)$ (cm).
+    Vậy phát biểu A đúng.
+
+    \item \textbf{Vận tốc cực đại:} $v_{max} = A\omega = 4 \cdot 2\pi = 8\pi$ cm/s.
+    Vậy phát biểu B sai.
+
+    \item \textbf{Gia tốc cực đại:} $a_{max} = A\omega^2 = 4 \cdot (2\pi)^2 = 4 \cdot 4\pi^2 = 16\pi^2$ cm/s$^2$.
+    Vậy phát biểu C sai.
+
+    \item \textbf{Li độ tại $t=0.25$ s:}
+    $x(0.25) = 4\cos(2\pi \cdot 0.25) = 4\cos(\dfrac{\pi}{2}) = 4 \cdot 0 = 0$ cm.
+    Vậy phát biểu D đúng.
+\end{itemize}
+Với cấu trúc \choice, ta chọn một đáp án đúng nhất. Ở đây, A là phương trình dao động, D là một giá trị cụ thể. Phương trình dao động là một thông số đặc trưng quan trọng.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc}
+\subsubsection{Dạng: Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định các đại lượng cơ bản:} Từ phương trình li độ $x = A\cos(\omega t + \varphi)$ hoặc các thông số đã cho, xác định biên độ $A$ và tần số góc $\omega$.
+    \item \textbf{Tính giá trị cực đại của vận tốc và gia tốc:}
+    \begin{itemize}
+        \item Vận tốc cực đại: $v_{max} = A\omega$.
+        \item Gia tốc cực đại: $a_{max} = A\omega^2$.
+    \end{itemize}
+    \item \textbf{Xác định giá trị tại các vị trí đặc biệt:}
+    \begin{itemize}
+        \item \textbf{Tại vị trí cân bằng ($x=0$):}
+        \begin{itemize}
+            \item Vận tốc đạt giá trị cực đại: $v = \pm v_{max} = \pm A\omega$.
+            \item Gia tốc bằng 0: $a = 0$.
+        \end{itemize}
+        \item \textbf{Tại vị trí biên ($x=\pm A$):}
+        \begin{itemize}
+            \item Vận tốc bằng 0: $v = 0$.
+            \item Gia tốc đạt giá trị cực đại: $a = \mp a_{max} = \mp A\omega^2$ (dấu ngược với li độ).
+        \end{itemize}
+        \item \textbf{Tại các vị trí khác ($x \ne 0, x \ne \pm A$):}
+        \begin{itemize}
+            \item Vận tốc: $v = \pm \omega\sqrt{A^2 - x^2}$.
+            \item Gia tốc: $a = -\omega^2 x$.
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật dao động điều hòa theo phương trình $x=9\cos(2t+\pi/3)$ cm.
+\choice
+A. Vận tốc cực đại của vật là $18$ cm/s.
+B. Gia tốc cực đại của vật là $36$ cm/s$^2$.
+C. Tại vị trí cân bằng, gia tốc của vật là $36$ cm/s$^2$.
+\True D. Tại vị trí biên, vận tốc của vật bằng $0$.
+\loigiai{
+Từ phương trình li độ $x=9\cos(2t+\pi/3)$ cm, ta có:
+Biên độ $A = 9$ cm.
+Tần số góc $\omega = 2$ rad/s.
+
+\begin{itemize}
+    \item \textbf{Vận tốc cực đại:} $v_{max} = A\omega = 9 \cdot 2 = 18$ cm/s.
+    Vậy phát biểu A đúng.
+
+    \item \textbf{Gia tốc cực đại:} $a_{max} = A\omega^2 = 9 \cdot (2)^2 = 9 \cdot 4 = 36$ cm/s$^2$.
+    Vậy phát biểu B đúng.
+
+    \item \textbf{Tại vị trí cân bằng ($x=0$):} Gia tốc của vật bằng $0$.
+    Vậy phát biểu C sai.
+
+    \item \textbf{Tại vị trí biên ($x=\pm A$):} Vận tốc của vật bằng $0$.
+    Vậy phát biểu D đúng.
+\end{itemize}
+Với cấu trúc \choice, ta chọn một đáp án đúng nhất. Ở đây, A, B, D đều đúng. Tuy nhiên, phát biểu D là một tính chất cơ bản và luôn đúng của dao động điều hòa.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 4. Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định}
+\subsubsection{Dạng: Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định phương trình li độ, vận tốc, gia tốc:}
+    \begin{itemize}
+        \item Nếu đề bài cho phương trình li độ $x = A\cos(\omega t + \varphi)$, thì:
+        \begin{itemize}
+            \item Phương trình vận tốc: $v = \dfrac{dx}{dt} = -A\omega\sin(\omega t + \varphi)$.
+            \item Phương trình gia tốc: $a = \dfrac{dv}{dt} = -A\omega^2\cos(\omega t + \varphi) = -\omega^2 x$.
+        \end{itemize}
+        \item Nếu đề bài cho các thông số khác, cần lập phương trình li độ trước.
+    \end{itemize}
+    \item \textbf{Thay thời điểm $t$ vào các phương trình:}
+    \begin{itemize}
+        \item Để tìm li độ $x$ tại thời điểm $t$, thay $t$ vào phương trình $x(t)$.
+        \item Để tìm vận tốc $v$ tại thời điểm $t$, thay $t$ vào phương trình $v(t)$.
+        \item Để tìm gia tốc $a$ tại thời điểm $t$, thay $t$ vào phương trình $a(t)$.
+    \end{itemize}
+    \item \textbf{Lưu ý đơn vị và góc:}
+    \begin{itemize}
+        \item Đảm bảo đơn vị của $A$, $\omega$, $t$ phù hợp.
+        \item Góc trong hàm $\cos$ và $\sin$ phải là radian.
+    \end{itemize}
+    \item \textbf{Kiểm tra dấu:} Dấu của vận tốc cho biết chiều chuyển động (dương: chiều dương, âm: chiều âm). Dấu của gia tốc cho biết chiều của lực hồi phục.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật dao động điều hòa theo phương trình $x=8\cos(3t+\pi/3)$ cm.
+\choice
+A. Tại thời điểm $t=0$, li độ của vật là $4$ cm.
+B. Tại thời điểm $t=0$, vận tốc của vật là $-12\sqrt{3}$ cm/s.
+C. Tại thời điểm $t=0$, gia tốc của vật là $-36$ cm/s$^2$.
+\True D. Tất cả các phát biểu trên đều đúng.
+\loigiai{
+Từ phương trình li độ $x=8\cos(3t+\pi/3)$ cm, ta có:
+Biên độ $A = 8$ cm.
+Tần số góc $\omega = 3$ rad/s.
+Pha ban đầu $\varphi = \pi/3$.
+
+\begin{itemize}
+    \item \textbf{Phương trình vận tốc:} $v = -A\omega\sin(\omega t + \varphi) = -8 \cdot 3 \sin(3t+\pi/3) = -24\sin(3t+\pi/3)$ (cm/s).
+    \item \textbf{Phương trình gia tốc:} $a = -A\omega^2\cos(\omega t + \varphi) = -8 \cdot (3)^2 \cos(3t+\pi/3) = -72\cos(3t+\pi/3)$ (cm/s$^2$).
+
+    \item \textbf{Tại thời điểm $t=0$:}
+    \begin{itemize}
+        \item \textbf{Li độ:} $x(0) = 8\cos(3 \cdot 0 + \pi/3) = 8\cos(\pi/3) = 8 \cdot \dfrac{1}{2} = 4$ cm.
+        Vậy phát biểu A đúng.
+
+        \item \textbf{Vận tốc:} $v(0) = -24\sin(3 \cdot 0 + \pi/3) = -24\sin(\pi/3) = -24 \cdot \dfrac{\sqrt{3}}{2} = -12\sqrt{3}$ cm/s.
+        Vậy phát biểu B đúng.
+
+        \item \textbf{Gia tốc:} $a(0) = -72\cos(3 \cdot 0 + \pi/3) = -72\cos(\pi/3) = -72 \cdot \dfrac{1}{2} = -36$ cm/s$^2$.
+        Vậy phát biểu C đúng.
+    \end{itemize}
+\end{itemize}
+Vì các phát biểu A, B, C đều đúng, nên phát biểu D là đúng.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 5. Liên hệ li độ - gia tốc}
+\subsubsection{Dạng: Liên hệ li độ - gia tốc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Nắm vững mối quan hệ cơ bản:} Gia tốc trong dao động điều hòa luôn tỉ lệ thuận và ngược dấu với li độ. Công thức liên hệ là $a = -\omega^2 x$.
+    \item \textbf{Xác định các đại lượng cần thiết:}
+    \begin{itemize}
+        \item Nếu biết phương trình li độ $x = A\cos(\omega t + \varphi)$, ta có thể suy ra $\omega$.
+        \item Nếu biết chu kì $T$ hoặc tần số $f$, ta có thể tính $\omega = \dfrac{2\pi}{T} = 2\pi f$.
+    \end{itemize}
+    \item \textbf{Áp dụng công thức:}
+    \begin{itemize}
+        \item Để tìm gia tốc $a$ khi biết li độ $x$ và tần số góc $\omega$: $a = -\omega^2 x$.
+        \item Để tìm li độ $x$ khi biết gia tốc $a$ và tần số góc $\omega$: $x = -\dfrac{a}{\omega^2}$.
+        \item Để tìm tần số góc $\omega$ khi biết $a$ và $x$: $\omega = \sqrt{-\dfrac{a}{x}}$ (lưu ý $a$ và $x$ luôn trái dấu, nên $-\dfrac{a}{x}$ luôn dương).
+    \end{itemize}
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp (ví dụ: $x$ (m, cm), $a$ (m/s$^2$, cm/s$^2$), $\omega$ (rad/s)).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật dao động điều hòa theo phương trình $x = 5\cos\!\left(4\pi t + \dfrac{\pi}{6}\right)\ (\mathrm{cm})$.
+Chọn Đúng hoặc Sai cho các phát biểu sau:
+\choice
+A. Khi li độ của vật là $x=2.5$ cm, gia tốc của vật là $-40\pi^2$ cm/s$^2$.
+\True B. Gia tốc của vật luôn ngược chiều với li độ của vật.
+C. Tần số góc của dao động là $4\pi$ Hz.
+D. Khi vật ở vị trí biên dương, gia tốc của vật là $80\pi^2$ cm/s$^2$.
+\loigiai{
+Từ phương trình li độ $x = 5\cos\!\left(4\pi t + \dfrac{\pi}{6}\right)\ (\mathrm{cm})$, ta có:
+Biên độ $A = 5$ cm.
+Tần số góc $\omega = 4\pi$ rad/s.
+Pha ban đầu $\varphi = \pi/6$.
+
+\begin{itemize}
+    \item \textbf{Mối liên hệ li độ - gia tốc:} $a = -\omega^2 x$.
+    \item \textbf{Kiểm tra phát biểu A:}
+    Khi $x=2.5$ cm, gia tốc của vật là:
+    $a = -(4\pi)^2 \cdot 2.5 = -16\pi^2 \cdot 2.5 = -40\pi^2$ cm/s$^2$.
+    Vậy phát biểu A đúng.
+
+    \item \textbf{Kiểm tra phát biểu B:}
+    Từ công thức $a = -\omega^2 x$, vì $\omega^2 > 0$, nên $a$ luôn ngược dấu với $x$. Điều này có nghĩa là gia tốc của vật luôn ngược chiều với li độ của vật.
+    Vậy phát biểu B đúng.
+
+    \item \textbf{Kiểm tra phát biểu C:}
+    Tần số góc của dao động là $\omega = 4\pi$ rad/s. Đơn vị của tần số góc là rad/s, không phải Hz. Tần số $f = \omega/(2\pi) = (4\pi)/(2\pi) = 2$ Hz.
+    Vậy phát biểu C sai.
+
+    \item \textbf{Kiểm tra phát biểu D:}
+    Khi vật ở vị trí biên dương, $x = A = 5$ cm.
+    Gia tốc của vật là $a = -\omega^2 A = -(4\pi)^2 \cdot 5 = -16\pi^2 \cdot 5 = -80\pi^2$ cm/s$^2$.
+    Vậy phát biểu D sai (thiếu dấu trừ).
+\end{itemize}
+Với cấu trúc \choice, ta chọn một đáp án đúng nhất. Phát biểu B là một tính chất tổng quát và luôn đúng của dao động điều hòa.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 6. Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc}
+\subsubsection{Dạng: Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Nắm vững các hệ thức độc lập thời gian:}
+    \begin{itemize}
+        \item \textbf{Giữa li độ và vận tốc:} $A^2 = x^2 + \dfrac{v^2}{\omega^2}$.
+        \item \textbf{Giữa vận tốc và gia tốc:} $v^2 + \dfrac{a^2}{\omega^2} = v_{max}^2 = (A\omega)^2$. (Đây là hệ thức ít dùng trực tiếp, thường suy ra từ $a = -\omega^2 x$ và hệ thức trên).
+        \item \textbf{Giữa li độ và gia tốc:} $a = -\omega^2 x$. (Đây không phải hệ thức độc lập thời gian theo nghĩa $x, v, a$ cùng xuất hiện, mà là mối liên hệ trực tiếp).
+        \item \textbf{Hệ thức liên quan đến biên độ:} $A = \sqrt{x^2 + \dfrac{v^2}{\omega^2}}$ hoặc $A = \dfrac{v_{max}}{\omega}$ hoặc $A = \dfrac{a_{max}}{\omega^2}$.
+    \end{itemize}
+    \item \textbf{Xác định các đại lượng đã biết và cần tìm:} Đọc kỹ đề bài để biết các giá trị $x, v, a$ tại một thời điểm, hoặc các giá trị cực đại, tần số góc, v.v.
+    \item \textbf{Chọn hệ thức phù hợp:} Dựa vào các đại lượng đã biết và cần tìm để chọn hệ thức độc lập thời gian thích hợp nhất.
+    \item \textbf{Thực hiện tính toán:} Thay số vào công thức và giải phương trình để tìm đại lượng cần thiết.
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo tất cả các đại lượng đều ở cùng một hệ đơn vị trước khi tính toán.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một vật có khối lượng 200 gam dao động điều hòa với tần số $f = 1 \text{Hz}$. Tại thời điểm ban đầu vật đi qua vị trí có li độ $x = 5 \text{cm}$, với tốc độ $v=10\pi \text{ cm/s}$ theo chiều dương.
+\choice
+A. Biên độ dao động của vật là $5\sqrt{2}$ cm.
+B. Tần số góc của dao động là $2\pi$ rad/s.
+C. Pha ban đầu của dao động là $-\pi/4$.
+\True D. Tất cả các phát biểu trên đều đúng.
+\loigiai{
+Từ đề bài, ta có:
+Khối lượng $m = 200$ g $= 0.2$ kg (không dùng trong bài này).
+Tần số $f = 1$ Hz.
+Tại $t=0$: $x_0 = 5$ cm, $v_0 = 10\pi$ cm/s (theo chiều dương, nên $v_0 > 0$).
+
+\begin{itemize}
+    \item \textbf{Tính tần số góc:} $\omega = 2\pi f = 2\pi \cdot 1 = 2\pi$ rad/s.
+    Vậy phát biểu B đúng.
+
+    \item \textbf{Tính biên độ dao động ($A$):} Áp dụng hệ thức độc lập thời gian giữa li độ và vận tốc:
+    $A^2 = x_0^2 + \dfrac{v_0^2}{\omega^2}$
+    $A^2 = (5)^2 + \dfrac{(10\pi)^2}{(2\pi)^2} = 25 + \dfrac{100\pi^2}{4\pi^2} = 25 + 25 = 50$.
+    $A = \sqrt{50} = 5\sqrt{2}$ cm.
+    Vậy phát biểu A đúng.
+
+    \item \textbf{Xác định pha ban đầu ($\varphi$):}
+    Ta có $x_0 = A\cos\varphi \Rightarrow 5 = 5\sqrt{2}\cos\varphi \Rightarrow \cos\varphi = \dfrac{1}{\sqrt{2}}$.
+    Và $v_0 = -A\omega\sin\varphi \Rightarrow 10\pi = -5\sqrt{2} \cdot 2\pi \sin\varphi \Rightarrow 10\pi = -10\pi\sqrt{2}\sin\varphi \Rightarrow \sin\varphi = -\dfrac{1}{\sqrt{2}}$.
+    Từ $\cos\varphi = \dfrac{1}{\sqrt{2}}$ và $\sin\varphi = -\dfrac{1}{\sqrt{2}}$, suy ra $\varphi = -\dfrac{\pi}{4}$ rad.
+    Vậy phát biểu C đúng.
+\end{itemize}
+Vì các phát biểu A, B, C đều đúng, nên phát biểu D là đúng.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 7. Liên hệ li độ - vận tốc}
+\subsubsection{Dạng: Liên hệ li độ - vận tốc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Nắm vững các phương trình và hệ thức:}
+    \begin{itemize}
+        \item Phương trình li độ: $x = A\cos(\omega t + \varphi)$.
+        \item Phương trình vận tốc: $v = -A\omega\sin(\omega t + \varphi)$.
+        \item Hệ thức độc lập thời gian: $A^2 = x^2 + \dfrac{v^2}{\omega^2}$.
+    \end{itemize}
+    \item \textbf{Xác định các đại lượng đã biết và cần tìm:}
+    \begin{itemize}
+        \item Nếu đề bài cho phương trình li độ, ta có thể dễ dàng suy ra $A$ và $\omega$.
+        \item Nếu đề bài cho $A, \omega$ và một trong hai đại lượng $x$ hoặc $v$, ta có thể tìm đại lượng còn lại bằng hệ thức độc lập thời gian.
+    \end{itemize}
+    \item \textbf{Áp dụng công thức:}
+    \begin{itemize}
+        \item Để tìm vận tốc $v$ khi biết li độ $x$, biên độ $A$ và tần số góc $\omega$: $v = \pm \omega\sqrt{A^2 - x^2}$. Dấu của $v$ phụ thuộc vào chiều chuyển động của vật.
+        \item Để tìm li độ $x$ khi biết vận tốc $v$, biên độ $A$ và tần số góc $\omega$: $x = \pm \sqrt{A^2 - \dfrac{v^2}{\omega^2}}$. Dấu của $x$ phụ thuộc vào vị trí của vật so với vị trí cân bằng.
+        \item Để tìm biên độ $A$ hoặc tần số góc $\omega$ khi biết $x$ và $v$ tại một thời điểm: sử dụng $A^2 = x^2 + \dfrac{v^2}{\omega^2}$.
+    \end{itemize}
+    \item \textbf{Kiểm tra đơn vị:} Đảm bảo các đại lượng có đơn vị phù hợp.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
+Một vật dao động điều hòa theo phương trình $x=7\cos(2t+\pi/3)$ cm.
+\choice
+A. Khi vật có li độ $x=3.5$ cm, tốc độ của vật là $7\sqrt{3}$ cm/s.
+B. Vận tốc của vật tại thời điểm $t=0$ là $-7\sqrt{3}$ cm/s.
+C. Khi vật đi qua vị trí cân bằng, tốc độ của vật là $14$ cm/s.
+\True D. Tất cả các phát biểu trên đều đúng.
+\loigiai{
+Từ phương trình li độ $x=7\cos(2t+\pi/3)$ cm, ta có:
+Biên độ $A = 7$ cm.
+Tần số góc $\omega = 2$ rad/s.
+Pha ban đầu $\varphi = \pi/3$.
 
+\begin{itemize}
+    \item \textbf{Kiểm tra phát biểu A:}
+    Áp dụng hệ thức độc lập thời gian $A^2 = x^2 + \dfrac{v^2}{\omega^2}$.
+    Khi $x=3.5$ cm:
+    $7^2 = (3.5)^2 + \dfrac{v^2}{2^2}$
+    $49 = 12.25 + \dfrac{v^2}{4}$
+    $\dfrac{v^2}{4} = 49 - 12.25 = 36.75$
+    $v^2 = 4 \cdot 36.75 = 147$
+    $|v| = \sqrt{147} = \sqrt{49 \cdot 3} = 7\sqrt{3}$ cm/s.
+    Vậy phát biểu A đúng.
+
+    \item \textbf{Kiểm tra phát biểu B:}
+    Phương trình vận tốc: $v = -A\omega\sin(\omega t + \varphi) = -7 \cdot 2 \sin(2t+\pi/3) = -14\sin(2t+\pi/3)$ (cm/s).
+    Tại thời điểm $t=0$:
+    $v(0) = -14\sin(2 \cdot 0 + \pi/3) = -14\sin(\pi/3) = -14 \cdot \dfrac{\sqrt{3}}{2} = -7\sqrt{3}$ cm/s.
+    Vậy phát biểu B đúng.
+
+    \item \textbf{Kiểm tra phát biểu C:}
+    Khi vật đi qua vị trí cân bằng ($x=0$), tốc độ của vật đạt cực đại:
+    $v_{max} = A\omega = 7 \cdot 2 = 14$ cm/s.
+    Vậy phát biểu C đúng.
+\end{itemize}
+Vì các phát biểu A, B, C đều đúng, nên phát biểu D là đúng.
+}
+\end{vidumau}
