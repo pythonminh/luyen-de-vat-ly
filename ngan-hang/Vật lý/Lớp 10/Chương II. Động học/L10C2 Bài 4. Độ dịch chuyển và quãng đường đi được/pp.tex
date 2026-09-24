@@ -2,92 +2,303 @@
 % Lớp: 10
 % Chương: Chương II. Động học
 % Bài: L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng}
+\subsubsection{Dạng: Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định điểm đầu và điểm cuối:} Đọc kỹ đề bài để xác định vị trí ban đầu (điểm xuất phát) và vị trí cuối cùng (điểm kết thúc) của vật.
+    \item \textbf{Tính độ dịch chuyển:}
+    \begin{itemize}
+        \item Độ dịch chuyển là một đại lượng vectơ, được xác định bằng vectơ nối từ vị trí đầu đến vị trí cuối của vật.
+        \item Trong chuyển động thẳng, độ lớn của độ dịch chuyển là khoảng cách giữa điểm đầu và điểm cuối. Nếu chọn chiều dương, độ dịch chuyển có thể mang dấu dương hoặc âm tùy thuộc vào hướng của vectơ độ dịch chuyển so với chiều dương.
+        \item Công thức: $\Delta d = x_{cuoi} - x_{dau}$ (với $x_{cuoi}$ và $x_{dau}$ là tọa độ của điểm cuối và điểm đầu).
+    \end{itemize}
+    \item \textbf{Tính quãng đường đi được:}
+    \begin{itemize}
+        \item Quãng đường đi được là tổng chiều dài quỹ đạo mà vật đã đi qua. Đây là một đại lượng vô hướng và luôn không âm.
+        \item Trong chuyển động thẳng, nếu vật chỉ chuyển động theo một chiều (không đổi hướng), quãng đường đi được bằng độ lớn của độ dịch chuyển.
+        \item Nếu vật đổi chiều chuyển động, quãng đường đi được là tổng độ lớn của các đoạn đường vật đã đi trong từng giai đoạn.
+    \end{itemize}
+    \item \textbf{So sánh và kết luận:} Đối chiếu kết quả của độ dịch chuyển và quãng đường để đưa ra nhận xét hoặc trả lời câu hỏi của đề bài.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một người đi bộ từ nhà (điểm O) đến siêu thị (điểm A) cách nhà $600 \text{m}$ theo hướng Đông, rồi quay lại đi về phía Tây $200 \text{m}$ đến điểm $B$ để mua thêm đồ ở cửa hàng.
+\begin{enumerate}
+    \item Độ dịch chuyển của người đó là bao nhiêu?
+    \item Quãng đường người đó đã đi được là bao nhiêu?
+\end{enumerate}
+\loigiai{
+\textbf{Phân tích:}
+Chọn gốc tọa độ O tại nhà, chiều dương là chiều từ nhà đến siêu thị (hướng Đông).
+\begin{enumerate}
+    \item \textbf{Xác định vị trí đầu và cuối:}
+    \begin{itemize}
+        \item Vị trí đầu: $x_O = 0 \text{ m}$ (tại nhà).
+        \item Vị trí cuối: Người đó đi từ A ($x_A = 600 \text{ m}$) quay lại $200 \text{ m}$ về phía Tây. Vậy vị trí cuối cùng B là $x_B = x_A - 200 = 600 - 200 = 400 \text{ m}$.
+    \end{itemize}
+    \item \textbf{Tính độ dịch chuyển:}
+    Độ dịch chuyển là $\Delta d = x_B - x_O = 400 - 0 = 400 \text{ m}$.
+    Độ dịch chuyển là $400 \text{ m}$ theo hướng Đông.
+    \item \textbf{Tính quãng đường đi được:}
+    Quãng đường đi được là tổng chiều dài các đoạn đường:
+    \begin{itemize}
+        \item Đoạn 1: Từ O đến A là $s_1 = 600 \text{ m}$.
+        \item Đoạn 2: Từ A đến B là $s_2 = 200 \text{ m}$.
+    \end{itemize}
+    Tổng quãng đường đi được là $s = s_1 + s_2 = 600 + 200 = 800 \text{ m}$.
+\end{enumerate}
+\textbf{Kết quả:}
+\begin{enumerate}
+    \item Độ dịch chuyển của người đó là $400 \text{ m}$ (theo hướng Đông).
+    \item Quãng đường người đó đã đi được là $800 \text{ m}$.
+\end{enumerate}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Khái niệm và đặc điểm của chất điểm}
+\subsubsection{Dạng: Khái niệm và đặc điểm của chất điểm}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và hiểu câu hỏi:} Xác định rõ câu hỏi yêu cầu gì về khái niệm hoặc đặc điểm của chất điểm.
+    \item \textbf{Nhớ lại định nghĩa chất điểm:} Chất điểm là một vật có kích thước rất nhỏ so với quãng đường chuyển động hoặc so với các khoảng cách mà ta xét. Khi coi một vật là chất điểm, ta bỏ qua kích thước và hình dạng của nó, chỉ quan tâm đến vị trí của nó trong không gian.
+    \item \textbf{Xem xét các đặc điểm liên quan:}
+    \begin{itemize}
+        \item Kích thước: Rất nhỏ so với quỹ đạo hoặc khoảng cách.
+        \item Hình dạng: Bị bỏ qua.
+        \item Chuyển động: Coi như chuyển động của một điểm.
+        \item Điều kiện áp dụng: Phụ thuộc vào mục đích nghiên cứu và hệ quy chiếu.
+    \end{itemize}
+    \item \textbf{Phân tích các phương án (nếu là trắc nghiệm):} Đối chiếu từng phương án với định nghĩa và đặc điểm của chất điểm để chọn câu trả lời đúng nhất.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Trong các trường hợp sau, trường hợp nào \textbf{không thể} coi vật là chất điểm?
+\choice
+{A. Một ô tô đang chạy trên đường từ Hà Nội đến TP. Hồ Chí Minh.}
+{B. Một viên đạn đang bay trong không khí.}
+{C. Một người đang đi bộ từ nhà đến trường.}
+{\True D. Một người thợ đang sửa chữa động cơ của một chiếc xe máy.}
+\loigiai{
+\textbf{Phân tích:}
+\begin{itemize}
+    \item \textbf{A. Một ô tô đang chạy trên đường từ Hà Nội đến TP. Hồ Chí Minh:} Quãng đường từ Hà Nội đến TP. Hồ Chí Minh rất lớn so với kích thước của ô tô. Do đó, có thể coi ô tô là chất điểm.
+    \item \textbf{B. Một viên đạn đang bay trong không khí:} Quỹ đạo bay của viên đạn rất lớn so với kích thước của nó. Do đó, có thể coi viên đạn là chất điểm.
+    \item \textbf{C. Một người đang đi bộ từ nhà đến trường:} Khoảng cách từ nhà đến trường thường lớn hơn nhiều so với kích thước của người. Do đó, có thể coi người là chất điểm.
+    \item \textbf{D. Một người thợ đang sửa chữa động cơ của một chiếc xe máy:} Trong trường hợp này, người thợ cần quan tâm đến từng chi tiết nhỏ của động cơ, kích thước của người thợ và các bộ phận của động cơ là đáng kể so với không gian làm việc. Kích thước và hình dạng của người thợ là quan trọng để thực hiện công việc. Do đó, \textbf{không thể} coi người thợ là chất điểm.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Nhận biết chuyển động cơ học và vật mốc}
+\subsubsection{Dạng: Nhận biết chuyển động cơ học và vật mốc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và hiểu câu hỏi:} Xác định yêu cầu của đề bài: nhận biết chuyển động cơ học hay xác định vật mốc.
+    \item \textbf{Nhớ lại định nghĩa chuyển động cơ học:} Chuyển động cơ học là sự thay đổi vị trí của một vật theo thời gian so với một vật mốc.
+    \item \textbf{Nhớ lại định nghĩa vật mốc:} Vật mốc là vật được chọn làm chuẩn để xác định vị trí và sự thay đổi vị trí của vật đang xét. Vật mốc phải là vật đứng yên so với người quan sát.
+    \item \textbf{Phân tích tình huống cụ thể:}
+    \begin{itemize}
+        \item Để nhận biết chuyển động cơ học: Tìm xem có sự thay đổi vị trí của vật so với một vật khác (vật mốc) hay không. Nếu có, vật đang chuyển động.
+        \item Để xác định vật mốc: Tìm vật mà vị trí của vật đang xét được so sánh với nó. Vật mốc thường là vật đứng yên trong hệ quy chiếu đang xét.
+    \end{itemize}
+    \item \textbf{Lưu ý tính tương đối:} Chuyển động và đứng yên có tính tương đối, phụ thuộc vào vật mốc được chọn.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một hành khách đang ngồi trên một toa tàu đang chạy. Phát biểu nào sau đây là \textbf{đúng}?
+\choice
+{A. Hành khách đứng yên so với nhà ga.}
+{B. Hành khách chuyển động so với toa tàu.}
+{C. Toa tàu đứng yên so với đường ray.}
+{\True D. Hành khách chuyển động so với nhà ga.}
+\loigiai{
+\textbf{Phân tích:}
+\begin{itemize}
+    \item \textbf{A. Hành khách đứng yên so với nhà ga:} Tàu đang chạy, nên hành khách cũng đang chuyển động cùng tàu. Do đó, hành khách chuyển động so với nhà ga (vật mốc đứng yên). Phát biểu này sai.
+    \item \textbf{B. Hành khách chuyển động so với toa tàu:} Hành khách đang ngồi yên trong toa tàu, nên vị trí của hành khách không thay đổi so với toa tàu. Do đó, hành khách đứng yên so với toa tàu. Phát biểu này sai.
+    \item \textbf{C. Toa tàu đứng yên so với đường ray:} Toa tàu đang chạy trên đường ray, nên vị trí của toa tàu thay đổi so với đường ray. Do đó, toa tàu chuyển động so với đường ray. Phát biểu này sai.
+    \item \textbf{D. Hành khách chuyển động so với nhà ga:} Vì tàu đang chạy, vị trí của hành khách thay đổi liên tục so với nhà ga. Do đó, hành khách chuyển động so với nhà ga. Phát biểu này đúng.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 4. Tính tương đối của chuyển động và hệ quy chiếu}
+\subsubsection{Dạng: Tính tương đối của chuyển động và hệ quy chiếu}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và hiểu câu hỏi:} Xác định yêu cầu về tính tương đối của chuyển động hoặc vai trò của hệ quy chiếu.
+    \item \textbf{Nhớ lại nguyên tắc tính tương đối:} Trạng thái chuyển động hay đứng yên của một vật chỉ có ý nghĩa khi được xét trong một hệ quy chiếu cụ thể (so với một vật mốc cụ thể). Một vật có thể đứng yên so với vật mốc này nhưng lại chuyển động so với vật mốc khác.
+    \item \textbf{Nhớ lại khái niệm hệ quy chiếu:} Hệ quy chiếu bao gồm vật mốc, hệ tọa độ gắn với vật mốc và đồng hồ đo thời gian.
+    \item \textbf{Phân tích các tình huống/phát biểu:}
+    \begin{itemize}
+        \item Xác định vật đang xét và các vật mốc khác nhau.
+        \item Đánh giá trạng thái chuyển động (đứng yên hay chuyển động) của vật so với từng vật mốc.
+        \item Rút ra kết luận về tính tương đối.
+    \end{itemize}
+    \item \textbf{Lưu ý các bẫy:} Cẩn thận với các phát biểu tuyệt đối hóa chuyển động hoặc đứng yên mà không đề cập đến vật mốc.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Trong các phát biểu sau, phát biểu nào đúng?
+\choice
+{A. Chuyển động của một vật là tuyệt đối, không phụ thuộc vào vật mốc.}
+{B. Vận tốc của một vật là đại lượng không đổi trong mọi hệ quy chiếu.}
+{C. Quỹ đạo của một vật là như nhau trong mọi hệ quy chiếu.}
+{\True D. Trạng thái chuyển động hay đứng yên của một vật phụ thuộc vào vật mốc được chọn.}
+\loigiai{
+\textbf{Phân tích:}
+\begin{itemize}
+    \item \textbf{A. Chuyển động của một vật là tuyệt đối, không phụ thuộc vào vật mốc:} Phát biểu này sai. Chuyển động có tính tương đối, phụ thuộc vào vật mốc. Ví dụ, người ngồi trên tàu đứng yên so với tàu nhưng chuyển động so với nhà ga.
+    \item \textbf{B. Vận tốc của một vật là đại lượng không đổi trong mọi hệ quy chiếu:} Phát biểu này sai. Vận tốc của một vật cũng có tính tương đối, phụ thuộc vào hệ quy chiếu. Ví dụ, vận tốc của người đi bộ so với mặt đất khác với vận tốc của người đó so với một người khác đang đi cùng chiều.
+    \item \textbf{C. Quỹ đạo của một vật là như nhau trong mọi hệ quy chiếu:} Phát biểu này sai. Quỹ đạo của một vật cũng có tính tương đối. Ví dụ, quỹ đạo của đầu van xe đạp so với trục bánh xe là đường tròn, nhưng so với mặt đất khi xe chạy thẳng là đường cycloid.
+    \item \textbf{D. Trạng thái chuyển động hay đứng yên của một vật phụ thuộc vào vật mốc được chọn:} Phát biểu này đúng. Đây chính là bản chất của tính tương đối của chuyển động.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 5. Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật}
+\subsubsection{Dạng: Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và hiểu đồ thị:}
+    \begin{itemize}
+        \item Trục hoành ($t$): Biểu diễn thời gian.
+        \item Trục tung ($d$ hoặc $x$): Biểu diễn độ dịch chuyển (hoặc tọa độ).
+        \item Dạng đường đồ thị: Đường thẳng, đường cong, đoạn thẳng nằm ngang, đoạn thẳng dốc lên/xuống.
+    \end{itemize}
+    \item \textbf{Xác định thông tin từ đồ thị:}
+    \begin{itemize}
+        \item \textbf{Vị trí ban đầu ($d_0$ hoặc $x_0$):} Giá trị của $d$ (hoặc $x$) tại $t=0$.
+        \item \textbf{Vị trí tại thời điểm $t$ bất kỳ ($d_t$ hoặc $x_t$):} Đọc giá trị trên trục tung tương ứng với giá trị $t$ trên trục hoành.
+        \item \textbf{Độ dịch chuyển trong khoảng thời gian $\Delta t = t_2 - t_1$:} $\Delta d = d_2 - d_1$.
+        \item \textbf{Vận tốc:} Độ dốc của đường đồ thị.
+        \begin{itemize}
+            \item Nếu đồ thị là đường thẳng: $v = \frac{\Delta d}{\Delta t} = \frac{d_2 - d_1}{t_2 - t_1}$.
+            \item Nếu đồ thị dốc lên (hệ số góc dương): vật chuyển động theo chiều dương.
+            \item Nếu đồ thị dốc xuống (hệ số góc âm): vật chuyển động theo chiều âm.
+            \item Nếu đồ thị là đường nằm ngang (hệ số góc bằng 0): vật đứng yên ($v=0$).
+            \item Độ dốc càng lớn (đường càng dốc): tốc độ càng lớn.
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Trả lời câu hỏi:} Dựa vào các thông tin đã xác định từ đồ thị để trả lời các câu hỏi về vị trí, độ dịch chuyển, vận tốc, chiều chuyển động, trạng thái chuyển động (đứng yên hay chuyển động).
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Cho đồ thị độ dịch chuyển -- thời gian của một vật chuyển động thẳng như hình vẽ.
+\begin{center}
+    \includegraphics[width=0.6\textwidth]{example_graph.png} % Giả sử có file ảnh example_graph.png
+\end{center}
+(Đồ thị là một đường thẳng đi qua gốc tọa độ (0,0) và điểm (2s, 10m))
+Xác định vận tốc của vật trong 2 giây đầu tiên.
+\choice
+{A. $0 \text{ m/s}$}
+{B. $5 \text{ m/s}$}
+{C. $10 \text{ m/s}$}
+{D. $20 \text{ m/s}$}
+\loigiai{
+\textbf{Phân tích:}
+Đồ thị độ dịch chuyển -- thời gian là một đường thẳng, cho thấy vật chuyển động thẳng đều.
+Vận tốc của vật được xác định bằng độ dốc của đường đồ thị.
+\begin{itemize}
+    \item Tại thời điểm $t_1 = 0 \text{ s}$, độ dịch chuyển $d_1 = 0 \text{ m}$.
+    \item Tại thời điểm $t_2 = 2 \text{ s}$, độ dịch chuyển $d_2 = 10 \text{ m}$.
+\end{itemize}
+\textbf{Tính toán:}
+Vận tốc $v = \frac{\Delta d}{\Delta t} = \frac{d_2 - d_1}{t_2 - t_1} = \frac{10 \text{ m} - 0 \text{ m}}{2 \text{ s} - 0 \text{ s}} = \frac{10}{2} = 5 \text{ m/s}$.
+\textbf{Kết quả:}
+Vận tốc của vật là $5 \text{ m/s}$.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 6. Thành phần và cấu trúc của hệ quy chiếu}
+\subsubsection{Dạng: Thành phần và cấu trúc của hệ quy chiếu}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Đọc và hiểu câu hỏi:} Xác định câu hỏi yêu cầu về các thành phần cấu tạo nên hệ quy chiếu hoặc chức năng của chúng.
+    \item \textbf{Nhớ lại định nghĩa hệ quy chiếu:} Hệ quy chiếu là một tập hợp các yếu tố dùng để xác định vị trí và thời gian của một vật trong không gian.
+    \item \textbf{Liệt kê các thành phần của hệ quy chiếu:}
+    \begin{itemize}
+        \item \textbf{Vật mốc:} Vật được chọn làm chuẩn để xác định vị trí của vật đang xét.
+        \item \textbf{Hệ tọa độ:} Gắn với vật mốc, dùng để xác định vị trí của vật trong không gian (ví dụ: trục Ox cho chuyển động thẳng, hệ Oxy cho chuyển động trong mặt phẳng, hệ Oxyz cho chuyển động trong không gian).
+        \item \textbf{Đồng hồ đo thời gian:} Dùng để xác định thời điểm và khoảng thời gian diễn ra sự kiện.
+    \end{itemize}
+    \item \textbf{Phân tích các phương án (nếu là trắc nghiệm):} Đối chiếu từng phương án với các thành phần và cấu trúc chuẩn của hệ quy chiếu để chọn câu trả lời đúng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Hãy chọn câu đúng về các thành phần của một hệ quy chiếu.
+\choice
+{A. Hệ quy chiếu bao gồm vật mốc và đồng hồ đo thời gian.}
+{B. Hệ quy chiếu bao gồm hệ tọa độ và đồng hồ đo thời gian.}
+{C. Hệ quy chiếu bao gồm vật mốc và hệ tọa độ.}
+{\True D. Hệ quy chiếu bao gồm vật mốc, hệ tọa độ và đồng hồ đo thời gian.}
+\loigiai{
+\textbf{Phân tích:}
+Để mô tả đầy đủ chuyển động của một vật, chúng ta cần biết vị trí của nó tại mỗi thời điểm.
+\begin{itemize}
+    \item \textbf{Vật mốc:} Cần có một vật làm chuẩn để xác định vị trí tương đối của vật đang xét.
+    \item \textbf{Hệ tọa độ:} Cần có một hệ tọa độ gắn với vật mốc để định lượng vị trí của vật trong không gian (ví dụ: tọa độ x, y, z).
+    \item \textbf{Đồng hồ đo thời gian:} Cần có một đồng hồ để xác định thời điểm mà vật ở một vị trí nhất định, từ đó mô tả sự thay đổi vị trí theo thời gian.
+\end{itemize}
+Thiếu bất kỳ thành phần nào trong ba thành phần trên đều không thể mô tả đầy đủ chuyển động cơ học.
+\textbf{Kết quả:}
+Phát biểu D là đúng và đầy đủ nhất.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 7. Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng}
+\subsubsection{Dạng: Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Vẽ hình biểu diễn các độ dịch chuyển:}
+    \begin{itemize}
+        \item Biểu diễn mỗi độ dịch chuyển thành một vectơ trên mặt phẳng, có gốc tại điểm xuất phát của độ dịch chuyển đó và hướng theo hướng chuyển động.
+        \item Chú ý đến độ lớn và hướng của từng vectơ.
+    \end{itemize}
+    \item \textbf{Chọn hệ tọa độ phù hợp:}
+    \begin{itemize}
+        \item Thường chọn hệ tọa độ Descartes Oxy với gốc O tại điểm xuất phát ban đầu của vật.
+        \item Trục Ox thường trùng với một trong các hướng chuyển động chính (ví dụ: hướng Đông, hướng Bắc).
+    \end{itemize}
+    \item \textbf{Phân tích các vectơ độ dịch chuyển thành các thành phần:}
+    \begin{itemize}
+        \item Đối với mỗi vectơ độ dịch chuyển $\vec{d_i}$, xác định các thành phần của nó trên trục Ox và Oy: $d_{ix} = d_i \cos \alpha_i$ và $d_{iy} = d_i \sin \alpha_i$, trong đó $\alpha_i$ là góc hợp bởi vectơ $\vec{d_i}$ với trục Ox dương.
+        \item Chú ý dấu của các thành phần tùy thuộc vào góc và hướng của vectơ.
+    \end{itemize}
+    \item \textbf{Tổng hợp các thành phần:}
+    \begin{itemize}
+        \item Tổng hợp các thành phần theo trục Ox: $D_x = \sum d_{ix}$.
+        \item Tổng hợp các thành phần theo trục Oy: $D_y = \sum d_{iy}$.
+    \end{itemize}
+    \item \textbf{Tính độ lớn và hướng của độ dịch chuyển tổng hợp:}
+    \begin{itemize}
+        \item Độ lớn của độ dịch chuyển tổng hợp $\vec{D}$ là $D = \sqrt{D_x^2 + D_y^2}$.
+        \item Hướng của độ dịch chuyển tổng hợp được xác định bởi góc $\theta$ với trục Ox: $\tan \theta = \frac{D_y}{D_x}$. Dựa vào dấu của $D_x$ và $D_y$ để xác định góc $\theta$ nằm trong góc phần tư nào.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Một người đi bộ từ điểm A đến điểm B theo hướng Đông $3 \text{ km}$, sau đó rẽ sang hướng Bắc và đi thêm $4 \text{ km}$ đến điểm C.
+Xác định độ lớn của độ dịch chuyển tổng hợp của người đó từ A đến C.
+\choice
+{A. $1 \text{ km}$}
+{B. $3 \text{ km}$}
+{C. $4 \text{ km}$}
+{\True D. $5 \text{ km}$}
+\loigiai{
+\textbf{Phân tích:}
+\begin{itemize}
+    \item Chọn hệ tọa độ Oxy với gốc O tại điểm A. Trục Ox trùng với hướng Đông, trục Oy trùng với hướng Bắc.
+    \item Độ dịch chuyển thứ nhất: $\vec{d_1}$ có độ lớn $3 \text{ km}$ theo hướng Đông. Vậy $\vec{d_1} = (3, 0)$.
+    \item Độ dịch chuyển thứ hai: $\vec{d_2}$ có độ lớn $4 \text{ km}$ theo hướng Bắc. Vậy $\vec{d_2} = (0, 4)$.
+\end{itemize}
+\textbf{Tính toán:}
+Độ dịch chuyển tổng hợp $\vec{D} = \vec{d_1} + \vec{d_2}$.
+Các thành phần của độ dịch chuyển tổng hợp:
+$D_x = d_{1x} + d_{2x} = 3 + 0 = 3 \text{ km}$.
+$D_y = d_{1y} + d_{2y} = 0 + 4 = 4 \text{ km}$.
+Độ lớn của độ dịch chuyển tổng hợp:
+$D = \sqrt{D_x^2 + D_y^2} = \sqrt{3^2 + 4^2} = \sqrt{9 + 16} = \sqrt{25} = 5 \text{ km}$.
+\textbf{Kết quả:}
+Độ lớn của độ dịch chuyển tổng hợp là $5 \text{ km}$.
+}
 \end{vidumau}
-
