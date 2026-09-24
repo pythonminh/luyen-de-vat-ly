@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12261,
+  "total_questions": 12241,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2785,12 +2785,12 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 75,
-      "count": 75,
+      "questions": 55,
+      "count": 55,
       "dang": {
         "Liên hệ li độ - gia tốc": 14,
         "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 20,
-        "Liên hệ li độ - vận tốc": 41
+        "Liên hệ li độ - vận tốc": 21
       },
       "dang_kinds": {
         "Liên hệ li độ - gia tốc": {
@@ -2806,9 +2806,9 @@
           "TL": 0
         },
         "Liên hệ li độ - vận tốc": {
-          "TN": 20,
-          "DS": 12,
-          "TLN": 9,
+          "TN": 9,
+          "DS": 9,
+          "TLN": 3,
           "TL": 0
         }
       }
