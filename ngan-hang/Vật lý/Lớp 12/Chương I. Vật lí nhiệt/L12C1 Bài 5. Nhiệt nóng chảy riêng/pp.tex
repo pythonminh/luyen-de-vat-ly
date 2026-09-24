@@ -7,51 +7,330 @@
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
+
 \subsubsection{Dạng 1. Thực nghiệm xác định nhiệt nóng chảy riêng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item \textbf{Nguyên lý thí nghiệm:} Dùng dây điện trở nhiệt nối với nguồn điện và oát kế để tỏa nhiệt lượng $Q = \overline{P} \cdot \Delta \tau$ đun nóng chảy hoàn toàn khối lượng $m$ nước đá nghiền nhỏ ở $0\ ^\circ\mathrm{C}$ trong bình nhiệt lượng kế cách nhiệt.
+\item \textbf{Công thức xác định:}
+\[
+\lambda = \dfrac{Q}{m} = \dfrac{\overline{P} \cdot \Delta \tau}{m}
+\]
+Trong đó:
+\begin{itemize}
+    \item $\overline{P}$ là công suất điện tỏa ra trung bình trên dây điện trở ($\mathrm{W}$).
+    \item $\Delta \tau$ là thời gian đun từ khi bắt đầu đến khi nước đá tan hoàn toàn ($\mathrm{s}$).
+    \item $m$ là khối lượng nước đá đã nóng chảy ($\mathrm{kg}$).
+\end{itemize}
+\item \textbf{Phân tích sai số:} So sánh giá trị thực nghiệm với giá trị tiêu chuẩn ($\lambda_0 = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$). Nguyên nhân sai số chính do hao phí nhiệt truyền ra vỏ bình và không khí, sai số của thiết bị đo và nước đá chưa hoàn toàn ráo nước.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\haicotchay{
+Một nhóm học sinh tiến hành thí nghiệm đo nhiệt nóng chảy riêng của nước đá bằng bộ dụng cụ gồm nhiệt lượng kế xốp, dây điện trở nhiệt, oát kế và cân điện tử. Khối lượng nước đá nghiền nhỏ ở $0\ ^\circ\mathrm{C}$ ban đầu cho vào bình là $250\ \mathrm{g}$. Công suất điện trung bình hiển thị trên oát kế là $\overline{P} = 20\ \mathrm{W}$. Thời gian đun từ khi bật nguồn đến khi khối nước đá tan hoàn toàn thành nước ở $0\ ^\circ\mathrm{C}$ là $\Delta \tau = 4200\ \mathrm{s}$.
+\begin{enumerate}
+    \item Tính nhiệt lượng tỏa ra từ dây điện trở nhiệt trong khoảng thời gian đun trên.
+    \item Xác định nhiệt nóng chảy riêng của nước đá từ kết quả thực nghiệm của nhóm học sinh.
+    \item So sánh kết quả đo được với giá trị chuẩn $\lambda_0 = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$ và tính sai số tương đối của phép đo.
+\end{enumerate}
+\nguon{SBT Vật lí 12 Kết nối tri thức - Bài 5 thực hành}
+}{
+\centering
+\resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+    % Khung cân điện tử
+    \draw[thick, fill=gray!25] (-1.5,-1.2) rectangle (1.5,-0.8);
+    \draw[thick, fill=black!85] (-1.2,-1.2) rectangle (1.2,-0.9);
+    \node at (0,-1.05) [green!80!white, font=\tiny\bfseries] {$250.00\ \mathrm{g}$};
+    \draw[very thick] (-1.4,-0.8) -- (1.4,-0.8);
+    % Bình nhiệt lượng kế xốp
+    \draw[thick, fill=gray!10] (-0.95,-0.8) -- (-0.95,1.4) -- (0.95,1.4) -- (0.95,-0.8) -- cycle;
+    \draw[thick, fill=cyan!15] (-0.85,-0.8) rectangle (0.85,0.7);
+    % Các viên đá nghiền nhỏ
+    \foreach \x/\y in {-0.6/-0.6, -0.2/-0.5, 0.4/-0.6, 0.1/-0.3, -0.4/-0.2, 0.5/-0.2, -0.1/0.1, 0.3/0.2} {
+        \draw[fill=cyan!30, draw=blue!50] (\x,\y) rectangle (\x+0.25,\y+0.25);
+    }
+    % Dây điện trở nhiệt (dạng lò xo xoắn)
+    \draw[red, very thick] (0,-0.7) -- (0,-0.4) 
+        sin (-0.2,-0.3) cos (0.2,-0.2) sin (-0.2,-0.1) cos (0.2,0.0) sin (-0.2,0.1) cos (0.2,0.2) -- (0,1.2);
+    % Nhiệt kế cảm biến
+    \draw[thick, fill=gray!30] (0.55,-0.5) -- (0.55,1.6) -- (0.65,1.6) -- (0.65,-0.5) -- cycle;
+    \node at (0.6, 1.8) [font=\tiny, red] {$0.0\ ^\circ\mathrm{C}$};
+    \node at (0, 1.6) [font=\tiny, blue] {$\text{Dây nhiệt}$};
+    \end{tikzpicture}%
+}
+}
+\loigiai{
+\begin{enumerate}
+    \item Đổi khối lượng nước đá sang kg: $m = 250\ \mathrm{g} = 0{,}25\ \mathrm{kg}$.
+    Nhiệt lượng tỏa ra từ dây điện trở nhiệt trong khoảng thời gian đun $\Delta \tau = 4200\ \mathrm{s}$ là:
+    \[
+    \begin{aligned}
+        Q &= \overline{P} \cdot \Delta \tau \\
+          &= 20 \cdot 4200 \\
+          &= 84000\ \mathrm{J} = 84\ \mathrm{kJ}.
+    \end{aligned}
+    \]
+    \item Nhiệt nóng chảy riêng của nước đá đo được từ kết quả thực nghiệm là:
+    \[
+    \begin{aligned}
+        \lambda &= \dfrac{Q}{m} \\
+                &= \dfrac{84000}{0{,}25} \\
+                &= 336000\ \mathrm{J/kg} = 3{,}36 \cdot 10^5\ \mathrm{J/kg}.
+    \end{aligned}
+    \]
+    \item Giá trị thực nghiệm đo được $\lambda = 3{,}36 \cdot 10^5\ \mathrm{J/kg}$ rất gần với giá trị tiêu chuẩn $\lambda_0 = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$.
+    Sai số tương đối của phép đo thực nghiệm là:
+    \[
+    \begin{aligned}
+        \delta &= \dfrac{|\lambda - \lambda_0|}{\lambda_0} \cdot 100\% \\
+               &= \dfrac{|3{,}36 \cdot 10^5 - 3{,}34 \cdot 10^5|}{3{,}34 \cdot 10^5} \cdot 100\% \\
+               &= \dfrac{0{,}02}{3{,}34} \cdot 100\% \approx 0{,}60\%.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 2. Bài toán nóng chảy và đông đặc}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item \textbf{Phương pháp giải:}
+\begin{itemize}
+    \item Nhiệt lượng cần cung cấp để chuyển hoàn toàn $m$ kg chất rắn kết tinh sang thể lỏng ở nhiệt độ nóng chảy $t_{\text{nc}}$ là:
+    \[
+    Q_{\text{thu}} = \lambda \cdot m
+    \]
+    \item Ngược lại, khi chất lỏng đông đặc hoàn toàn thành thể rắn ở nhiệt độ đông đặc ($t_{\text{đđ}} = t_{\text{nc}}$), độ lớn nhiệt lượng tỏa ra môi trường là:
+    \[
+    Q_{\text{tỏa}} = \lambda \cdot m
+    \]
+\end{itemize}
+\item \textbf{Chú ý quan trọng:} Trong suốt quá trình nóng chảy hoặc đông đặc của chất rắn kết tinh ở áp suất tiêu chuẩn, nhiệt độ của hệ luôn giữ không đổi ở $t_{\text{nc}}$.
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\haicotchay{
+Để đúc một bức tượng bằng đồng có khối lượng $5{,}0\ \mathrm{kg}$, người thợ rèn nấu chảy hoàn toàn một khối đồng trong lò đun ở nhiệt độ nóng chảy $1084\ ^\circ\mathrm{C}$. Sau khi đổ đồng lỏng vào khuôn đúc, bức tượng đồng tỏa nhiệt và đông đặc hoàn toàn thành thể rắn ở $1084\ ^\circ\mathrm{C}$. Biết nhiệt nóng chảy riêng của đồng là $\lambda = 1{,}80 \cdot 10^5\ \mathrm{J/kg}$.
+\begin{enumerate}
+    \item Tính nhiệt lượng $Q_1$ cần cung cấp cho khối đồng để làm nó nóng chảy hoàn toàn ở $1084\ ^\circ\mathrm{C}$.
+    \item Tính nhiệt lượng $Q_2$ tỏa ra môi trường xung quanh khi bức tượng đồng đông đặc hoàn toàn ở $1084\ ^\circ\mathrm{C}$.
+\end{enumerate}
+\nguon{Phát triển từ SGK Vật lí 12 KNTT - Bài 5 trang 24}
+}{
+\centering
+\resizebox{0.9\linewidth}{!}{%
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+    % Đế lò
+    \draw[thick, fill=gray!30] (-1.2,-1.0) rectangle (1.2,-0.7);
+    % Ngọn lửa lò đun
+    \draw[red, fill=orange] (-0.6,-0.7) -- (-0.4,-0.2) -- (-0.2,-0.7) -- (0,-0.1) -- (0.2,-0.7) -- (0.4,-0.2) -- (0.6,-0.7) -- cycle;
+    % Cốc nung đồng (Crucible)
+    \draw[very thick, fill=gray!20] (-0.85,-0.6) -- (-0.65,0.7) -- (0.65,0.7) -- (0.85,-0.6) -- cycle;
+    % Đồng lỏng nóng chảy
+    \fill[orange!90!red, opacity=0.85] (-0.8,-0.5) -- (-0.68,0.4) -- (0.68,0.4) -- (0.8,-0.5) -- cycle;
+    \node at (0, 0.0) [white, font=\small\bfseries] {$\mathrm{Cu\ l\text{ỏ}ng}$};
+    \node at (0, 0.9) [font=\tiny, red!80!black] {$1084\ ^\circ\mathrm{C}$};
+    \end{tikzpicture}%
+}
+}
+\loigiai{
+\begin{enumerate}
+    \item Nhiệt lượng cần cung cấp để $5{,}0\ \mathrm{kg}$ đồng nóng chảy hoàn toàn ở nhiệt độ nóng chảy $1084\ ^\circ\mathrm{C}$ là:
+    \[
+    \begin{aligned}
+        Q_1 &= \lambda \cdot m \\
+            &= 1{,}80 \cdot 10^5 \cdot 5{,}0 \\
+            &= 900000\ \mathrm{J} = 900\ \mathrm{kJ}.
+    \end{aligned}
+    \]
+    \item Quá trình đông đặc là quá trình ngược lại của quá trình nóng chảy. Khi bức tượng đồng lỏng đông đặc hoàn toàn thành thể rắn ở nhiệt độ đông đặc $1084\ ^\circ\mathrm{C}$, nhiệt lượng tỏa ra môi trường có độ lớn bằng đúng nhiệt lượng thu vào khi nóng chảy:
+    \[
+    \begin{aligned}
+        Q_2 &= \lambda \cdot m \\
+            &= 1{,}80 \cdot 10^5 \cdot 5{,}0 \\
+            &= 900000\ \mathrm{J} = 900\ \mathrm{kJ}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 3. Tính nhiệt lượng tổng hợp có chuyển pha}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item \textbf{Các giai đoạn truyền nhiệt năng:}
+\begin{itemize}
+    \item Giai đoạn 1: Đun nóng chất rắn từ nhiệt độ ban đầu $t_1$ lên nhiệt độ nóng chảy $t_{\text{nc}}$:
+    \[
+    Q_1 = m \cdot c_{\text{rắn}} \cdot (t_{\text{nc}} - t_1)
+    \]
+    \item Giai đoạn 2: Nóng chảy hoàn toàn chất rắn ở nhiệt độ nóng chảy $t_{\text{nc}}$ không đổi:
+    \[
+    Q_2 = \lambda \cdot m
+    \]
+    \item Giai đoạn 3 (nếu có): Đun nóng chất lỏng từ $t_{\text{nc}}$ lên nhiệt độ cuối $t_2$:
+    \[
+    Q_3 = m \cdot c_{\text{lỏng}} \cdot (t_2 - t_{\text{nc}})
+    \]
+\end{itemize}
+\item \textbf{Tổng nhiệt lượng có ích và tính toán năng lượng nguồn đun:}
+\[
+Q_{\text{ích}} = Q_1 + Q_2 + Q_3
+\]
+Nếu đun bằng bếp/lò công suất $\mathscr{P}$ có hiệu suất $H\%$:
+\[
+Q_{\text{tp}} = \dfrac{Q_{\text{ích}}}{H\%} \implies \tau = \dfrac{Q_{\text{tp}}}{\mathscr{P}}
+\]
 \end{enumerate}
 \end{phuongphap}
+
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+\haicotchay{
+Một khối nước đá có khối lượng $1{,}5\ \mathrm{kg}$ ở nhiệt độ ban đầu $-20\ ^\circ\mathrm{C}$ được đun nóng bằng một lò điện có công suất không đổi $1200\ \mathrm{W}$ với hiệu suất truyền nhiệt có ích đạt $80\%$. Biết nhiệt dung riêng của nước đá là $2100\ \mathrm{J/(kg\cdot K)}$, nhiệt dung riêng của nước lỏng là $4200\ \mathrm{J/(kg\cdot K)}$ và nhiệt nóng chảy riêng của nước đá là $\lambda = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$.
+\begin{enumerate}
+    \item Tính tổng nhiệt lượng có ích $Q_{\text{ích}}$ cần cung cấp để chuyển toàn bộ khối nước đá từ $-20\ ^\circ\mathrm{C}$ thành nước lỏng ở $20\ ^\circ\mathrm{C}$.
+    \item Xác định tổng thời gian đun $\tau$ cần thiết của lò điện.
+\end{enumerate}
+\nguon{SBT Vật lí 12 Kết nối tri thức - Bài 5.6}
+}{
+\centering
+\resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+    % Trục tọa độ đồ thị t - tau
+    \draw[->, thick] (0,0) -- (4.2,0) node[right, font=\tiny] {$\tau\ (\mathrm{s})$};
+    \draw[->, thick] (0,-1.0) -- (0,2.5) node[above, font=\tiny] {$t\ (^^\circ\mathrm{C})$};
+    % Đường đồ thị nhiệt độ
+    \draw[ultra thick, blue] (0,-0.8) node[left, font=\tiny, black] {$-20$} 
+        -- (1.0,0) node[below left, font=\tiny, black] {$O$} 
+        -- (3.0,0) 
+        -- (4.0,1.5) node[right, font=\tiny, black] {$20$};
+    \draw[dashed, gray] (4.0,0) -- (4.0,1.5) -- (0,1.5);
+    \draw[dashed, gray] (1.0,0) -- (1.0,-0.8);
+    \draw[dashed, gray] (3.0,0) -- (3.0,-0.8);
+    \node at (0.5,0.4) [font=\tiny, blue] {$Q_1$};
+    \node at (2.0,0.3) [font=\tiny, red] {$Q_2$};
+    \node at (3.6,1.0) [font=\tiny, cyan!80!black] {$Q_3$};
+    \end{tikzpicture}%
+}
+}
+\loigiai{
+\begin{enumerate}
+    \item Quá trình biến đổi nhiệt diễn ra qua 3 giai đoạn liên tiếp:
+    \begin{itemize}
+        \item Giai đoạn 1: Nâng nhiệt độ khối nước đá từ $-20\ ^\circ\mathrm{C}$ lên nhiệt độ nóng chảy $0\ ^\circ\mathrm{C}$:
+        \[
+        \begin{aligned}
+            Q_1 &= m \cdot c_{\text{đá}} \cdot [0 - (-20)] \\
+                &= 1{,}5 \cdot 2100 \cdot 20 \\
+                &= 63000\ \mathrm{J}.
+        \end{aligned}
+        \]
+        \item Giai đoạn 2: Làm nóng chảy hoàn toàn khối nước đá ở $0\ ^\circ\mathrm{C}$ thành nước lỏng ở $0\ ^\circ\mathrm{C}$:
+        \[
+        \begin{aligned}
+            Q_2 &= \lambda \cdot m \\
+                &= 3{,}34 \cdot 10^5 \cdot 1{,}5 \\
+                &= 501000\ \mathrm{J}.
+        \end{aligned}
+        \]
+        \item Giai đoạn 3: Nâng nhiệt độ khối nước lỏng từ $0\ ^\circ\mathrm{C}$ lên $20\ ^\circ\mathrm{C}$:
+        \[
+        \begin{aligned}
+            Q_3 &= m \cdot c_{\text{nước}} \cdot (20 - 0) \\
+                &= 1{,}5 \cdot 4200 \cdot 20 \\
+                &= 126000\ \mathrm{J}.
+        \end{aligned}
+        \]
+    \end{itemize}
+    Tổng nhiệt lượng có ích cần cung cấp cho khối chất là:
+    \[
+    \begin{aligned}
+        Q_{\text{ích}} &= Q_1 + Q_2 + Q_3 \\
+                       &= 63000 + 501000 + 126000 \\
+                       &= 690000\ \mathrm{J} = 690\ \mathrm{kJ}.
+    \end{aligned}
+    \]
+    \item Nhiệt lượng toàn phần do lò điện cần tỏa ra (với hiệu suất $H = 80\% = 0{,}80$) là:
+    \[
+    \begin{aligned}
+        Q_{\text{tp}} &= \dfrac{Q_{\text{ích}}}{H} \\
+                      &= \dfrac{690000}{0{,}80} \\
+                      &= 862500\ \mathrm{J}.
+    \end{aligned}
+    \]
+    Thời gian đun cần thiết của lò điện công suất $\mathscr{P} = 1200\ \mathrm{W}$ là:
+    \[
+    \begin{aligned}
+        \tau &= \dfrac{Q_{\text{tp}}}{\mathscr{P}} \\
+             &= \dfrac{862500}{1200} \\
+             &= 718{,}75\ \mathrm{s} \approx 11\ \text{phút}\ 59\ \text{giây}.
+    \end{aligned}
+    \]
+\end{enumerate}
+}
 \end{vidumau}
 
 \subsubsection{Dạng 4. Lí thuyết về nhiệt nóng chảy riêng}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+\item \textbf{Định nghĩa & Đơn vị:} Nhiệt nóng chảy riêng $\lambda$ của một chất là nhiệt lượng cần cung cấp cho $1\ \mathrm{kg}$ chất rắn kết tinh để nó chuyển hoàn toàn từ thể rắn sang thể lỏng ở nhiệt độ nóng chảy. Đơn vị trong hệ SI là jun trên kilôgam ($\mathrm{J/kg}$).
+\item \textbf{Bản chất vi mô:} Trong suốt quá trình nóng chảy ở nhiệt độ $t_{\text{nc}}$ không đổi, toàn bộ nhiệt năng hấp thụ từ bên ngoài được dùng để bẻ gãy các liên kết giữa các hạt tại nút mạng tinh thể (phá hủy trật tự mạng tinh thể), làm tăng thế năng tương tác giữa các phân tử mà không làm tăng động năng tịnh tiến trung bình của chúng ($\bar{E}_d = \dfrac{3}{2}kT$), do đó nhiệt độ giữ nguyên không tăng.
+\item \textbf{Ý nghĩa thực tế:} Phục vụ thiết kế quy trình luyện kim, đúc kim loại, chế tạo hợp kim, tính toán nhiên liệu lò nung, công nghệ bảo quản thực phẩm bằng nước đá lạnh.
 \end{enumerate}
 \end{phuongphap}
-\begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
-\end{vidumau}
 
+\begin{vidumau}
+\haicotchay{
+Trả lời các câu hỏi lý thuyết sau đây về đặc tính nóng chảy của chất rắn:
+\begin{enumerate}
+    \item Trình bày định nghĩa và ý nghĩa vật lý của nhiệt nóng chảy riêng $\lambda$. Cho biết ý nghĩa của con số nhiệt nóng chảy riêng của nước đá $\lambda = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$.
+    \item Giải thích tại sao trong suốt quá trình đun cho một khối nước đá tan chảy ở $0\ ^\circ\mathrm{C}$, nhiệt độ của hệ không hề tăng lên mặc dù ta vẫn liên tục cung cấp nhiệt năng từ bên ngoài? Giải thích dưới góc nhìn của mô hình động học phân tử.
+\end{enumerate}
+\nguon{SGK Vật lí 12 Kết nối tri thức - Bài 5 trang 23, 24}
+}{
+\centering
+\resizebox{0.95\linewidth}{!}{%
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+    % Mạng tinh thể đá (rắn)
+    \draw[thick, fill=blue!10] (-1.8,-0.8) rectangle (-0.2,0.8);
+    \foreach \x in {-1.5, -1.0, -0.5} {
+        \foreach \y in {-0.5, 0, 0.5} {
+            \fill[blue!80!black] (\x,\y) circle (2.5pt);
+            \draw[gray, thin] (\x-0.2,\y) -- (\x+0.2,\y);
+            \draw[gray, thin] (\x,\y-0.2) -- (\x,\y+0.2);
+        }
+    }
+    \node at (-1.0,-1.1) [font=\tiny, blue!80!black] {Mạng tinh thể (Rắn)};
+
+    % Mũi tên chuyển pha + nhiệt Q
+    \draw[->, ultra thick, red] (-0.1,0) -- (0.5,0) node[midway, above, font=\tiny] {$+Q$};
+
+    % Chất lỏng tự do
+    \draw[thick, fill=cyan!10] (0.6,-0.8) rectangle (2.2,0.8);
+    \foreach \x/\y in {0.8/-0.4, 1.2/-0.2, 1.8/-0.5, 1.0/0.3, 1.6/0.2, 2.0/0.5, 1.4/0.6} {
+        \fill[cyan!80!black] (\x,\y) circle (2.5pt);
+        \draw[->, gray, thin] (\x,\y) -- (\x+0.1,\y+0.1);
+    }
+    \node at (1.4,-1.1) [font=\tiny, cyan!80!black] {Hạt tự do (Lỏng)};
+    \end{tikzpicture}%
+}
+}
+\loigiai{
+\begin{enumerate}
+    \item Định nghĩa và ý nghĩa:
+    \begin{itemize}
+        \item \textbf{Định nghĩa:} Nhiệt nóng chảy riêng $\lambda$ của một chất là nhiệt lượng cần thiết để cung cấp cho $1\ \mathrm{kg}$ chất đó chuyển hoàn toàn từ thể rắn sang thể lỏng ở nhiệt độ nóng chảy không đổi.
+        \item \textbf{Ý nghĩa con số $\lambda = 3{,}34 \cdot 10^5\ \mathrm{J/kg}$:} Con số này cho biết để làm cho $1\ \mathrm{kg}$ nước đá ở nhiệt độ nóng chảy $0\ ^\circ\mathrm{C}$ chuyển thành $1\ \mathrm{kg}$ nước lỏng ở $0\ ^\circ\mathrm{C}$ dưới áp suất tiêu chuẩn, ta cần phải cung cấp một nhiệt lượng bằng $3{,}34 \cdot 10^5\ \mathrm{J}$ (hay $334\ \mathrm{kJ}$).
+    \end{itemize}
+    \item Giải thích ở góc độ vi mô dựa trên mô hình động học phân tử:
+    \begin{itemize}
+        \item Theo thuyết động học phân tử, nhiệt độ của một vật tỷ lệ thuận với động năng tịnh tiến trung bình của các phân tử cấu tạo nên vật ($\bar{E}_d = \dfrac{3}{2}kT$).
+        \item Trong suốt quá trình đun nước đá ở $0\ ^\circ\mathrm{C}$, toàn bộ nhiệt năng mà khối đá thu nhận từ môi trường bên ngoài không làm tăng tốc độ dao động của các phân tử (không làm tăng động năng trung bình phân tử), do đó nhiệt độ của hệ giữ không đổi ở $0\ ^\circ\mathrm{C}$.
+        \item Thay vào đó, toàn bộ nhiệt năng hấp thụ được dùng để thực hiện công phá vỡ các liên kết hydro bền vững giữa các phân tử tại nút mạng tinh thể, làm trật tự mạng tinh thể bị phá hủy hoàn toàn và giải phóng các phân tử chuyển sang thể lỏng (tức là làm tăng thế năng tương tác giữa các phân tử).
+    \end{itemize}
+\end{enumerate}
+}
+\end{vidumau}
