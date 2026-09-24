@@ -3,18 +3,150 @@
 % Chương: Chương II. Động học
 % Bài: L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Khái niệm về chuyển động cơ học, vật mốc và hệ quy chiếu.
+    \item Khái niệm về tốc độ và vận tốc.
+\end{itemize}
 \end{emdahoc}
+
+\subsubsection{1. Độ dịch chuyển}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item \textbf{Độ dịch chuyển} là một đại lượng vectơ, đặc trưng cho sự thay đổi vị trí của vật.
+    \item Độ dịch chuyển được xác định bằng vectơ nối vị trí đầu và vị trí cuối của vật.
+    \item Kí hiệu: $\vec{d}$.
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+Một người đi bộ từ nhà (điểm O) đến siêu thị (điểm A) cách nhà $600 \text{m}$ theo hướng Đông, rồi quay lại đi về phía Tây $200 \text{m}$ đến điểm $B$ để mua thêm đồ ở cửa hàng.
+\begin{itemize}
+    \item Vẽ hình minh họa chuyển động của người đó.
+    \item Xác định vị trí đầu và vị trí cuối của người đó.
+    \item Vẽ vectơ độ dịch chuyển của người đó từ O đến A, từ A đến B và từ O đến B.
+\end{itemize}
+\end{hoatdong}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Trong chuyển động thẳng, nếu chọn trục tọa độ trùng với quỹ đạo chuyển động, độ dịch chuyển có thể được biểu diễn bằng một giá trị đại số.
+    \item Nếu vật chuyển động từ vị trí có tọa độ $x_1$ đến vị trí có tọa độ $x_2$, độ dịch chuyển là $\Delta x = x_2 - x_1$.
+    \item Giá trị $\Delta x$ có thể dương, âm hoặc bằng không, tùy thuộc vào chiều chuyển động và vị trí tương đối của $x_1, x_2$.
+    \item Độ lớn của độ dịch chuyển là $|\Delta x|$.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{2. Quãng đường đi được}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item \textbf{Quãng đường đi được} là tổng chiều dài quỹ đạo mà vật đã đi qua trong một khoảng thời gian nhất định.
+    \item Quãng đường là một đại lượng vô hướng và luôn có giá trị không âm.
+    \item Kí hiệu: $s$.
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+Trở lại ví dụ người đi bộ từ nhà (O) đến siêu thị (A) cách nhà $600 \text{m}$ theo hướng Đông, rồi quay lại đi về phía Tây $200 \text{m}$ đến điểm $B$.
+\begin{itemize}
+    \item Tính quãng đường người đó đi được từ O đến A.
+    \item Tính quãng đường người đó đi được từ A đến B.
+    \item Tính tổng quãng đường người đó đi được từ O đến B.
+\end{itemize}
+\end{hoatdong}
+
+\subsubsection{3. Phân biệt quãng đường và độ dịch chuyển}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item \textbf{Độ dịch chuyển} là đại lượng vectơ, chỉ phụ thuộc vào vị trí đầu và vị trí cuối.
+    \item \textbf{Quãng đường} là đại lượng vô hướng, phụ thuộc vào toàn bộ quỹ đạo chuyển động.
+    \item Trong chuyển động thẳng và không đổi chiều, độ lớn của độ dịch chuyển bằng quãng đường đi được ($|\Delta x| = s$).
+    \item Trong các trường hợp khác, quãng đường thường lớn hơn độ lớn của độ dịch chuyển ($s \ge |\Delta x|$).
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+Một người đi bộ từ nhà (điểm O) đến siêu thị (điểm A) cách nhà $600 \text{m}$ theo hướng Đông, rồi quay lại đi về phía Tây $200 \text{m}$ đến điểm $B$ để mua thêm đồ ở cửa hàng.
+\begin{itemize}
+    \item Chọn gốc tọa độ tại O, chiều dương là chiều từ O đến A (hướng Đông).
+    \item Xác định tọa độ của A và B.
+    \item Tính độ dịch chuyển của người đó khi đi từ O đến B.
+    \item Tính quãng đường người đó đi được khi đi từ O đến B.
+    \item So sánh độ lớn của độ dịch chuyển và quãng đường trong trường hợp này.
+\end{itemize}
+\end{hoatdong}
+
+\subsubsection{4. Đồ thị độ dịch chuyển -- thời gian}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Đồ thị độ dịch chuyển -- thời gian ($x-t$) biểu diễn sự phụ thuộc của độ dịch chuyển (hoặc tọa độ) của vật vào thời gian.
+    \item Trục tung biểu diễn độ dịch chuyển (hoặc tọa độ $x$), trục hoành biểu diễn thời gian ($t$).
+    \item Từ đồ thị $x-t$, ta có thể xác định:
+    \begin{itemize}
+        \item Vị trí của vật tại các thời điểm khác nhau.
+        \item Chiều chuyển động của vật (độ dốc của đồ thị).
+        \item Vận tốc của vật (độ dốc của đồ thị).
+        \item Độ dịch chuyển trong một khoảng thời gian.
+    \end{itemize}
+\end{itemize}
+\end{kienthuc}
+
+\begin{haicotchay}{Đồ thị độ dịch chuyển -- thời gian}{
+\begin{tikzpicture}
+\draw[->] (0,0) -- (5,0) node[right] {$t (\text{s})$};
+\draw[->] (0,0) -- (0,4) node[above] {$x (\text{m})$};
+\draw[thick, blue] (0,1) -- (2,3) node[above right] {A};
+\draw[thick, blue] (2,3) -- (4,1) node[below right] {B};
+\node at (0,1) [left] {$x_0$};
+\node at (2,3) [above left] {$x_1$};
+\node at (4,1) [below left] {$x_2$};
+\node at (2,0) [below] {$t_1$};
+\node at (4,0) [below] {$t_2$};
+\end{tikzpicture}
+}
+\end{haicotchay}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Nếu đồ thị là đường thẳng dốc lên, vật chuyển động theo chiều dương.
+    \item Nếu đồ thị là đường thẳng dốc xuống, vật chuyển động theo chiều âm.
+    \item Nếu đồ thị là đường thẳng nằm ngang, vật đứng yên.
+    \item Độ dốc của đường thẳng trên đồ thị $x-t$ cho biết vận tốc của vật: $v = \frac{\Delta x}{\Delta t}$.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{5. Tổng hợp độ dịch chuyển}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Khi một vật thực hiện nhiều độ dịch chuyển liên tiếp, độ dịch chuyển tổng hợp là tổng vectơ của các độ dịch chuyển thành phần.
+    \item Nếu vật dịch chuyển từ A đến B ($\vec{d}_{AB}$) rồi từ B đến C ($\vec{d}_{BC}$), thì độ dịch chuyển tổng hợp từ A đến C là $\vec{d}_{AC} = \vec{d}_{AB} + \vec{d}_{BC}$.
+    \item Phép tổng hợp độ dịch chuyển tuân theo quy tắc cộng vectơ (quy tắc hình bình hành hoặc quy tắc đa giác).
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+Hai người đi xe đạp từ $A$ đến $C$. Người thứ nhất đi theo đường từ $A$ đến $B$ rồi từ $B$ đến $C$; người thứ hai đi thẳng từ $A$ đến $C$. Cả hai đều về đích cùng một lúc.
+\begin{itemize}
+    \item Vẽ hình minh họa hai con đường đi.
+    \item So sánh độ dịch chuyển của hai người.
+    \item So sánh quãng đường đi được của hai người.
+\end{itemize}
+\end{hoatdong}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Vận dụng khái niệm độ dịch chuyển và quãng đường để giải thích các hiện tượng trong đời sống.
+    \item Phân tích và vẽ đồ thị độ dịch chuyển -- thời gian cho các chuyển động đơn giản.
+    \item Tính toán độ dịch chuyển tổng hợp bằng phương pháp vectơ trong các trường hợp cụ thể.
+\end{itemize}
 \end{emcothe}
