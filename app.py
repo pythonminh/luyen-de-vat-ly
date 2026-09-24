@@ -2009,13 +2009,35 @@ def _wrap_bare_arrows(chunk):
     return chunk
 
 
+def _wrap_unicode_math(chunk: str) -> str:
+    """Chữ có dấu trong công thức (Q_{tổng}) phải nằm trong \\text thì MathJax mới vẽ.
+    % trần trong công thức bị TeX hiểu là chú thích — giữ thành \\%."""
+    parts = re.split(r"(\\(?:text|mathrm|textbf|textit)\{[^{}]*\})", chunk or "")
+    out = []
+
+    def word(m):
+        w = m.group(0)
+        if any(ord(ch) > 127 for ch in w):
+            return "\\text{" + w + "}"
+        return w
+
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+            continue
+        part = re.sub(r"(?<!\\)%", r"\\%", part)
+        part = re.sub(r"[A-Za-z0-9À-ỹ]*[^\x00-\x7F][A-Za-z0-9À-ỹ]*", word, part)
+        out.append(part)
+    return "".join(out)
+
+
 def prepare_math(s):
     """Giữ nguyên $...$; chỉ bọc \\overrightarrow / \\vec khi nằm ngoài công thức."""
     s = strip_bank_meta(s or "")
     parts = _MATH_CHUNK.split(s)
     out = []
     for i, part in enumerate(parts):
-        out.append(part if i % 2 else _wrap_bare_arrows(part))
+        out.append(_wrap_unicode_math(part) if i % 2 else _wrap_bare_arrows(part))
     return "".join(out).strip()
 
 

@@ -78,8 +78,11 @@ LT_CSS = """
 .ltbox.ans .k:before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round'><path d='M4 19V7a2 2 0 012-2h9l5 5v9a2 2 0 01-2 2H6a2 2 0 01-2-2z'/><path d='M15 5v4h4'/></svg>")}
 .lt-split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:16px;align-items:start;margin:12px 0}
 .lt-split>div:last-child{background:#f8fbff;border:1px solid #d7e2ee;border-radius:12px;padding:10px;text-align:center}
-.lt-chuy{margin:10px 0;padding:10px 12px 10px 14px;border-radius:10px;border:1px solid #fcd34d;border-left:5px solid #d97706;background:#fffbeb;font-style:italic;color:#78350f}
-.lt-chuy ul,.lt-chuy ol{margin:6px 0 0;padding-left:1.3em}
+.lt-chuy{font-style:italic;font-weight:800;color:#9a3412}
+.lt-chuy.block{display:block;margin:10px 0;padding:10px 12px 10px 14px;border-radius:10px;border:1px solid #fcd34d;border-left:5px solid #d97706;background:#fffbeb;font-weight:600;color:#78350f}
+.lt-mark{display:inline-block;margin:0 .28em;padding:0 .5em;border-radius:999px;font-style:normal;font-weight:800;font-size:.86em;line-height:1.45;vertical-align:baseline}
+.lt-mark.ok{background:#dcfce7;color:#166534}
+.lt-mark.bad{background:#fee2e2;color:#991b1b}
 .lt-q{margin:4px 0}
 .lt-opts{display:grid;gap:6px;margin:10px 0 8px}
 .lt-opt{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #d7e2ee;border-radius:10px;background:#fff}
@@ -403,6 +406,37 @@ def _replace_macro_one(s: str, name: str, wrap):
     return "".join(out)
 
 
+def _hoatdong_wrap(title, body):
+    """\\begin{hoatdong} không có tiêu đề mà mở bằng \\chuy{...} thì lấy dòng đó làm tiêu đề."""
+    title = re.sub(r"\s+", " ", str(title or "")).strip().rstrip(":").strip()
+    body = body or ""
+    if not title:
+        m = re.match(r"\s*(?:@@CHUY@@(.*?)@@/CHUY@@|\\chuy\s*\{)", body, re.S)
+        if m and m.group(1) is not None and m.group(1).strip():
+            title = re.sub(r"\s+", " ", m.group(1)).strip().rstrip(":").strip()
+            body = body[m.end() :]
+        elif m:
+            inner, k = _grab_group(body, m.end() - 1)
+            if inner.strip():
+                title = re.sub(r"\s+", " ", inner).strip().rstrip(":").strip()
+                body = body[k:]
+    title = title.replace("@", "")
+    return "\n@@HD:" + title + "@@" + body + "@@/HD@@\n"
+
+
+def _chuy_html(inner: str) -> str:
+    plain = re.sub(r"<[^>]+>", "", inner or "")
+    plain = re.sub(r"\s+", " ", plain).strip().rstrip(".").strip()
+    key = plain.casefold()
+    if key in {"đúng", "dung"}:
+        return f"<b class='lt-mark ok'>{plain or 'đúng'}</b>"
+    if key in {"sai"}:
+        return f"<b class='lt-mark bad'>{plain or 'sai'}</b>"
+    if "<ul" in (inner or "") or "<ol" in (inner or "") or len(plain) > 160:
+        return f"<div class='lt-chuy block'>{inner}</div>"
+    return f"<em class='lt-chuy'>{inner}</em>"
+
+
 def _replace_env(s: str, name: str, wrap, titled=False):
     open_re = re.compile(r"\\begin\s*\{\s*" + re.escape(name) + r"\s*\}", re.I)
     close_re = re.compile(r"\\end\s*\{\s*" + re.escape(name) + r"\s*\}", re.I)
@@ -525,7 +559,7 @@ def preprocess(s: str) -> str:
     s = s.replace("\r\n", "\n")
     s = re.sub(r"\\input\s*\{[^{}]*lythuyet\.tex\}", "", s)
     s = _replace_macro_one(s, "indam", lambda b: r"\textbf{" + b + "}")
-    s = _replace_macro_one(s, "chuy", lambda b: "\n@@CHUY@@" + b + "@@/CHUY@@\n")
+    s = _replace_macro_one(s, "chuy", lambda b: "@@CHUY@@" + b + "@@/CHUY@@")
     s = _replace_macro_one(s, "luuy", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
     s = _replace_macro_one(s, "ghichu", lambda b: "\n@@NOTE@@" + b + "@@/NOTE@@\n")
     s = _replace_macro_one(s, "vidu", lambda b: "\n@@EX@@" + b + "@@/EX@@\n")
@@ -539,7 +573,7 @@ def preprocess(s: str) -> str:
         "haicotchay",
         lambda a, b: "\n@@SPLIT@@" + a + "@@MID@@" + b + "@@/SPLIT@@\n",
     )
-    s = _replace_env(s, "hoatdong", lambda t, b: "\n@@HD:" + t + "@@" + b + "@@/HD@@\n", titled=True)
+    s = _replace_env(s, "hoatdong", _hoatdong_wrap, titled=True)
     s = _replace_env(s, "dangmau", lambda t, b: "\n@@HD:" + t + "@@" + b + "@@/HD@@\n", titled=True)
     s = _replace_env(s, "emcobiet", lambda b: "\n@@FUN@@" + b + "@@/FUN@@\n")
     s = _replace_env(s, "emdahoc", lambda b: "\n@@SUM1@@" + b + "@@/SUM1@@\n")
@@ -581,7 +615,7 @@ def _flush_tokens(s: str) -> str:
         e = s.find("@@/CHUY@@", a)
         if e < 0:
             break
-        s = s[:a] + f"<div class='lt-chuy'>{s[a + 8 : e]}</div>" + s[e + 9 :]
+        s = s[:a] + _chuy_html(s[a + 8 : e]) + s[e + 9 :]
     while "@@HD:" in s:
         a = s.find("@@HD:")
         mid = s.find("@@", a + 5)
@@ -651,7 +685,7 @@ def parse_theory(tex: str):
 def _html_or_tokens(chunk: str) -> str:
     """Keep @@ tokens, convert the rest with latex_to_web in pieces."""
     bits = re.split(
-        r"(@@(?:SPLIT|CHUY|HD:[^@]+|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@/(?:SPLIT|CHUY|HD|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@MID@@)",
+        r"(@@(?:SPLIT|HD:[^@]+|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@/(?:SPLIT|HD|FUN|SUM1|SUM2|KNOW|NOTE|EX|ANS|METH|SAMPLE|H3|H4)@@|@@MID@@)",
         chunk,
     )
     out = []
