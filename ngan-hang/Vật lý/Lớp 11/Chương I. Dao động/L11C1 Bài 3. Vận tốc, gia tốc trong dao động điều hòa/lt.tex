@@ -3,18 +3,128 @@
 % Chương: Chương I. Dao động
 % Bài: L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Khái niệm về dao động điều hòa và phương trình li độ của dao động điều hòa: $x = A\cos(\omega t + \varphi)$.
+    \item Các đại lượng đặc trưng của dao động điều hòa: biên độ $A$, tần số góc $\omega$, chu kì $T$, tần số $f$ và pha ban đầu $\varphi$.
+\end{itemize}
 \end{emdahoc}
+
+\subsubsection{Vận tốc trong dao động điều hòa}
+
+\begin{hoatdong}
+\chuy{Từ phương trình li độ của dao động điều hòa $x = A\cos(\omega t + \varphi)$, hãy nhớ lại cách tính vận tốc tức thời của một vật chuyển động thẳng biến đổi đều. Từ đó, thử suy ra biểu thức vận tốc của vật dao động điều hòa.}
+\end{hoatdong}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Vận tốc tức thời của một vật dao động điều hòa là đạo hàm bậc nhất của li độ theo thời gian:
+    $$v = \dfrac{\mathrm{d}x}{\mathrm{d}t} = \dfrac{\mathrm{d}}{\mathrm{d}t}[A\cos(\omega t + \varphi)] = -A\omega\sin(\omega t + \varphi)$$
+    \item Biểu thức vận tốc có thể viết lại dưới dạng:
+    $$v = A\omega\cos\left(\omega t + \varphi + \dfrac{\pi}{2}\right)$$
+    \item Từ biểu thức trên, ta thấy vận tốc cũng biến thiên điều hòa cùng tần số góc $\omega$ với li độ, nhưng sớm pha hơn li độ một góc $\dfrac{\pi}{2}$.
+    \item Giá trị cực đại của vận tốc (tốc độ cực đại) là $v_{\text{max}} = A\omega$.
+    \item Giá trị cực tiểu của vận tốc là $v_{\text{min}} = -A\omega$.
+    \item Vận tốc bằng 0 tại các vị trí biên ($x = \pm A$).
+    \item Vận tốc có độ lớn cực đại tại vị trí cân bằng ($x = 0$).
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Gia tốc trong dao động điều hòa}
+
+\begin{hoatdong}
+\chuy{Tương tự như vận tốc, từ biểu thức vận tốc $v = -A\omega\sin(\omega t + \varphi)$, hãy suy ra biểu thức gia tốc của vật dao động điều hòa.}
+\end{hoatdong}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item Gia tốc tức thời của một vật dao động điều hòa là đạo hàm bậc nhất của vận tốc theo thời gian (hoặc đạo hàm bậc hai của li độ theo thời gian):
+    $$a = \dfrac{\mathrm{d}v}{\mathrm{d}t} = \dfrac{\mathrm{d}}{\mathrm{d}t}[-A\omega\sin(\omega t + \varphi)] = -A\omega^2\cos(\omega t + \varphi)$$
+    \item Biểu thức gia tốc có thể viết lại dưới dạng:
+    $$a = A\omega^2\cos\left(\omega t + \varphi + \pi\right)$$
+    \item Từ biểu thức trên, ta thấy gia tốc cũng biến thiên điều hòa cùng tần số góc $\omega$ với li độ, nhưng sớm pha hơn li độ một góc $\pi$ (hay ngược pha với li độ).
+    \item Mối liên hệ giữa gia tốc và li độ: $a = -\omega^2 x$.
+    \item Giá trị cực đại của gia tốc là $a_{\text{max}} = A\omega^2$.
+    \item Giá trị cực tiểu của gia tốc là $a_{\text{min}} = -A\omega^2$.
+    \item Gia tốc có độ lớn cực đại tại các vị trí biên ($x = \pm A$).
+    \item Gia tốc bằng 0 tại vị trí cân bằng ($x = 0$).
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Liên hệ giữa li độ, vận tốc và gia tốc}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item \textbf{Liên hệ li độ - vận tốc:}
+    Từ $x = A\cos(\omega t + \varphi)$ và $v = -A\omega\sin(\omega t + \varphi)$, ta có:
+    $$\left(\dfrac{x}{A}\right)^2 = \cos^2(\omega t + \varphi)$$
+    $$\left(\dfrac{v}{A\omega}\right)^2 = \sin^2(\omega t + \varphi)$$
+    Cộng hai phương trình trên, ta được hệ thức độc lập thời gian giữa li độ và vận tốc:
+    $$\left(\dfrac{x}{A}\right)^2 + \left(\dfrac{v}{A\omega}\right)^2 = 1 \quad \text{hay} \quad x^2 + \dfrac{v^2}{\omega^2} = A^2$$
+    \item \textbf{Liên hệ li độ - gia tốc:}
+    Như đã trình bày ở trên, gia tốc và li độ liên hệ với nhau qua biểu thức:
+    $$a = -\omega^2 x$$
+    \item \textbf{Hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc:}
+    Từ $a = -\omega^2 x$, ta có $x = -\dfrac{a}{\omega^2}$. Thay vào hệ thức độc lập thời gian giữa li độ và vận tốc:
+    $$\left(-\dfrac{a}{\omega^2}\right)^2 + \dfrac{v^2}{\omega^2} = A^2$$
+    $$\dfrac{a^2}{\omega^4} + \dfrac{v^2}{\omega^2} = A^2$$
+    Đây là một dạng hệ thức độc lập thời gian liên hệ cả li độ, vận tốc và gia tốc.
+\end{itemize}
+\end{kienthuc}
+
+\subsubsection{Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian}
+
+\begin{kienthuc}
+\begin{itemize}
+    \item \textbf{Đồ thị vận tốc – thời gian ($v-t$):}
+    Đồ thị $v-t$ của dao động điều hòa có dạng hình sin hoặc cosin. Từ đồ thị này, ta có thể xác định:
+    \begin{itemize}
+        \item \textbf{Tốc độ cực đại ($v_{\text{max}}$):} Là giá trị lớn nhất của vận tốc trên đồ thị. Từ đó suy ra biên độ $A = \dfrac{v_{\text{max}}}{\omega}$.
+        \item \textbf{Chu kì ($T$):} Là khoảng thời gian để vận tốc lặp lại trạng thái cũ (ví dụ, từ một đỉnh đến đỉnh tiếp theo). Từ đó suy ra tần số góc $\omega = \dfrac{2\pi}{T}$.
+        \item \textbf{Pha ban đầu của vận tốc ($\varphi_v$):} Dựa vào giá trị vận tốc tại thời điểm $t=0$ và chiều biến thiên của vận tốc.
+        \item \textbf{Vị trí cân bằng và vị trí biên:} Vận tốc bằng 0 tại biên, vận tốc có độ lớn cực đại tại vị trí cân bằng.
+    \end{itemize}
+    \item \textbf{Đồ thị gia tốc – thời gian ($a-t$):}
+    Đồ thị $a-t$ của dao động điều hòa cũng có dạng hình sin hoặc cosin. Từ đồ thị này, ta có thể xác định:
+    \begin{itemize}
+        \item \textbf{Gia tốc cực đại ($a_{\text{max}}$):} Là giá trị lớn nhất của gia tốc trên đồ thị. Từ đó suy ra biên độ $A = \dfrac{a_{\text{max}}}{\omega^2}$.
+        \item \textbf{Chu kì ($T$):} Là khoảng thời gian để gia tốc lặp lại trạng thái cũ. Từ đó suy ra tần số góc $\omega = \dfrac{2\pi}{T}$.
+        \item \textbf{Pha ban đầu của gia tốc ($\varphi_a$):} Dựa vào giá trị gia tốc tại thời điểm $t=0$ và chiều biến thiên của gia tốc.
+        \item \textbf{Vị trí cân bằng và vị trí biên:} Gia tốc bằng 0 tại vị trí cân bằng, gia tốc có độ lớn cực đại tại biên.
+    \end{itemize}
+\end{itemize}
+\end{kienthuc}
+
+\begin{emcobiet}
+\chuy{Mối quan hệ pha giữa li độ, vận tốc và gia tốc có thể được biểu diễn trên giản đồ Fresnel hoặc vòng tròn lượng giác. Vận tốc sớm pha $\dfrac{\pi}{2}$ so với li độ, và gia tốc sớm pha $\pi$ (ngược pha) so với li độ.}
+\haicotchay{
+    \begin{itemize}
+        \item Li độ: $x = A\cos(\omega t + \varphi)$
+        \item Vận tốc: $v = A\omega\cos\left(\omega t + \varphi + \dfrac{\pi}{2}\right)$
+        \item Gia tốc: $a = A\omega^2\cos\left(\omega t + \varphi + \pi\right)$
+    \end{itemize}
+}{
+    \begin{tikzpicture}
+        \draw[->] (0,0) -- (2,0) node[right] {$x$};
+        \draw[->] (0,0) -- (0,2) node[above] {$v$};
+        \draw[->] (0,0) -- (-2,0) node[left] {$a$};
+        \draw[dashed] (0,0) circle (2cm);
+        \node at (1.5,0.2) {$\varphi$};
+        \node at (0.2,1.5) {$\varphi+\pi/2$};
+        \node at (-1.5,0.2) {$\varphi+\pi$};
+    \end{tikzpicture}
+}
+\end{emcobiet}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Sử dụng các công cụ toán học như đạo hàm để tìm biểu thức vận tốc và gia tốc từ li độ.
+    \item Phân tích đồ thị để xác định các đại lượng đặc trưng của dao động điều hòa.
+    \item Áp dụng các hệ thức độc lập thời gian để giải quyết các bài toán liên quan đến li độ, vận tốc và gia tốc tại một thời điểm bất kì.
+\end{itemize}
 \end{emcothe}
