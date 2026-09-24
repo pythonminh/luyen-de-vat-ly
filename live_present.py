@@ -629,6 +629,84 @@ def _norm_display_name(raw):
     return s[:24]
 
 
+_TEAM_TAIL = re.compile(
+    r"(?:^|[\s·•|\-–—])((?:tổ|to|tố)\s*[:.]?\s*\d{1,2}[A-Za-z]?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _norm_team(raw):
+    """Tổ hiển thị dạng 'Tổ 2'. Nhận '2', 'tổ 2', 'Tổ 2'."""
+    s = re.sub(r"\s+", " ", str(raw or "")).strip()
+    s = re.sub(r"[\x00-\x1f\x7f<>\"'`]", "", s)
+    if not s:
+        return ""
+    m = re.search(r"(?i)(?:tổ|to|tố)\s*[:.]?\s*(\d{1,2}[A-Za-z]?)", s)
+    if m:
+        return "Tổ " + m.group(1)
+    if re.fullmatch(r"\d{1,2}[A-Za-z]?", s):
+        return "Tổ " + s
+    return s[:12]
+
+
+def _peel_team(name):
+    """Tách 'Minh - tổ 2' thành ('Minh', 'Tổ 2')."""
+    s = re.sub(r"\s+", " ", str(name or "")).strip()
+    s = re.sub(r"[\x00-\x1f\x7f<>\"'`]", "", s)
+    m = _TEAM_TAIL.search(s)
+    if not m:
+        return _norm_display_name(s), ""
+    team = _norm_team(m.group(1))
+    rest = re.sub(r"[\s\-–—·|•]+$", "", s[: m.start()]).strip()
+    return _norm_display_name(rest), team
+
+
+def _show_identity(name, team=""):
+    peeled, parsed = _peel_team(name)
+    tm = _norm_team(team) or parsed
+    if peeled:
+        return peeled, tm
+    if tm:
+        return "", tm
+    return _norm_display_name(name) or "", ""
+
+
+def _team_sort_key(team):
+    label = str(team or "").strip()
+    if not label:
+        return (1, 99, "")
+    m = re.search(r"\d+", label)
+    return (0, int(m.group()) if m else 99, label.casefold())
+
+
+def _remember_student(room, voter, name, team=None):
+    """Lưu tên và tổ riêng. team=None: chỉ tách từ tên, không xoá tổ đã có."""
+    peeled, parsed = _peel_team(name)
+    if team is None:
+        tm = parsed
+        explicit = False
+    else:
+        tm = _norm_team(team) or parsed
+        explicit = True
+    stored = peeled or _norm_display_name(name)
+    if not stored and tm:
+        stored = tm
+    if not stored:
+        return "", "", False
+    names = room.setdefault("names", {})
+    teams = room.setdefault("teams", {})
+    prev_n = names.get(voter)
+    prev_t = teams.get(voter) or ""
+    names[voter] = stored
+    if tm:
+        teams[voter] = tm
+    elif explicit and not parsed:
+        teams.pop(voter, None)
+    show_name, show_team = _show_identity(names.get(voter) or "", teams.get(voter) or "")
+    changed = prev_n != names.get(voter) or prev_t != (teams.get(voter) or "")
+    return show_name or stored, show_team, changed
+
+
 def _sanitize_student_vote(q, raw):
     """Chỉ nhận phiếu TN / DS — tên lưu riêng trong room['names']."""
     d = raw if isinstance(raw, dict) else {}
@@ -719,16 +797,18 @@ def _vote_roster(room):
         cur_pos = int((room or {}).get("pos") or 0)
     except (TypeError, ValueError):
         cur_pos = 0
+    teams = (room or {}).get("teams") or {}
     vids = set(names.keys()) | set(votes.keys()) | set(leaves.keys())
     rows = []
     for vid in vids:
-        nm = _norm_display_name(names.get(vid) or "")
+        raw_nm = names.get(vid) or ""
         arr = leaves.get(vid) if isinstance(leaves.get(vid), list) else []
-        if not nm and arr:
+        if not raw_nm and arr:
             last = arr[-1]
             if isinstance(last, dict):
-                nm = _norm_display_name(last.get("name") or "")
-        if not nm:
+                raw_nm = last.get("name") or ""
+        nm, tm = _show_identity(raw_nm, teams.get(vid) or "")
+        if not nm and not tm:
             nm = "Máy " + str(vid)[-4:]
         vote = votes.get(vid) if isinstance(votes.get(vid), dict) else None
         pick = _format_pick_label(kind, vote) if vote else ""
@@ -754,7 +834,8 @@ def _vote_roster(room):
             except (TypeError, ValueError):
                 pass
         rows.append({
-            "name": nm,
+            "name": nm or "—",
+            "team": tm,
             "pick": pick or "—",
             "voted": bool(vote),
             "leave_n": leave_n,
@@ -763,15 +844,25 @@ def _vote_roster(room):
             "vote": vote or {},
         })
     rows.sort(key=lambda r: (
+        _team_sort_key(r.get("team")),
         0 if int(r.get("leave_n") or 0) else 1,
         0 if r.get("voted") else 1,
         str(r.get("name") or "").casefold(),
     ))
+    groups = []
+    group_at = {}
+    for row in rows:
+        key = str(row.get("team") or "")
+        if key not in group_at:
+            group_at[key] = len(groups)
+            groups.append({"team": key, "names": []})
+        label = row.get("name") if row.get("name") and row.get("name") != "—" else "chưa ghi tên"
+        groups[group_at[key]]["names"].append(label)
     joined = sorted(
         {_norm_display_name(n) or ("Máy " + str(v)[-4:]) for v, n in names.items()},
         key=lambda s: s.casefold(),
     )
-    return {"kind": kind, "rows": rows, "joined": joined, "joined_n": len(joined)}
+    return {"kind": kind, "rows": rows, "joined": joined, "joined_n": len(joined), "groups": groups}
 
 
 def _leave_stats(room):
@@ -790,7 +881,7 @@ def _leave_stats(room):
         if not isinstance(arr, list) or not arr:
             continue
         events += len(arr)
-        nm = _norm_display_name(names.get(vid) or "")
+        raw_nm = names.get(vid) or ""
         on_this = 0
         last_reason = ""
         for item in arr:
@@ -799,8 +890,8 @@ def _leave_stats(room):
                     t = float(item.get("t") or 0)
                     pos = item.get("pos")
                     reason = str(item.get("reason") or "")
-                    if not nm:
-                        nm = _norm_display_name(item.get("name") or "")
+                    if not raw_nm:
+                        raw_nm = item.get("name") or ""
                 else:
                     t = float(item)
                     pos = None
@@ -814,10 +905,12 @@ def _leave_stats(room):
                 last_reason = reason or last_reason
             except (TypeError, ValueError):
                 pass
-        if not nm:
+        nm, tm = _show_identity(raw_nm, ((room or {}).get("teams") or {}).get(vid) or "")
+        if not nm and not tm:
             nm = "Máy " + str(vid)[-4:]
         people.append({
-            "name": nm,
+            "name": nm or "—",
+            "team": tm,
             "events": len(arr),
             "on_this": on_this,
             "last_reason": last_reason,
@@ -1107,6 +1200,7 @@ def api_present_join():
     code = _norm_code(data.get("code") or "")
     voter = _norm_voter_id(data.get("voter") or "")
     name = _norm_display_name(data.get("name") or "")
+    team = data.get("team") if "team" in data else None
     if not code:
         return jsonify(ok=False, error="Thiếu mã phòng."), 400
     if not voter:
@@ -1120,14 +1214,13 @@ def api_present_join():
         bag = room.setdefault("names", {})
         if len(bag) >= 400 and voter not in bag:
             return jsonify(ok=False, error="Phòng đã đủ người."), 429
-        prev = bag.get(voter)
-        bag[voter] = name
-        if prev != name:
+        show_name, show_team, changed = _remember_student(room, voter, name, team)
+        if changed:
             room["ver"] = int(room.get("ver") or 0) + 1
         room["updated"] = _now()
         ver = int(room.get("ver") or 0)
         roster = _vote_roster(room)
-    return jsonify(ok=True, ver=ver, name=name, roster=roster)
+    return jsonify(ok=True, ver=ver, name=show_name, team=show_team, roster=roster)
 
 
 @base.app.post("/api/present/peek")
@@ -1445,6 +1538,7 @@ def api_present_vote():
     code = _norm_code(data.get("code") or "")
     voter = _norm_voter_id(data.get("voter") or "")
     name = _norm_display_name(data.get("name") or "")
+    team = data.get("team") if "team" in data else None
     if not code:
         return jsonify(ok=False, error="Thiếu mã phòng."), 400
     if not voter:
@@ -1472,18 +1566,18 @@ def api_present_vote():
         names = room.setdefault("names", {})
         if len(names) >= 400 and voter not in names:
             return jsonify(ok=False, error="Phòng đã đủ người."), 429
-        names[voter] = name
+        show_name, _show_team, name_changed = _remember_student(room, voter, name, team)
         bag = room.setdefault("votes", {})
         if len(bag) >= 400 and voter not in bag:
             return jsonify(ok=False, error="Phòng đã đủ phiếu."), 429
         prev = bag.get(voter)
         bag[voter] = vote
-        if prev != vote:
+        if prev != vote or name_changed:
             room["ver"] = int(room.get("ver") or 0) + 1
         room["updated"] = _now()
         stats = _vote_stats(room)
         ver = int(room.get("ver") or 0)
-    return jsonify(ok=True, ver=ver, votes=stats, mine=vote, name=name)
+    return jsonify(ok=True, ver=ver, votes=stats, mine=vote, name=show_name)
 
 
 @base.app.post("/api/present/leave")
@@ -1494,6 +1588,7 @@ def api_present_leave():
     voter = _norm_voter_id(data.get("voter") or "")
     reason = str(data.get("reason") or "leave")[:32]
     name = _norm_display_name(data.get("name") or "")
+    team = data.get("team") if "team" in data else None
     qmeta = data.get("q") if isinstance(data.get("q"), dict) else {}
     q_pos = qmeta.get("pos")
     try:
@@ -1512,7 +1607,8 @@ def api_present_leave():
         if not room:
             return jsonify(ok=True, recorded=False, leaves={"machines": 0, "events": 0})
         if name:
-            room.setdefault("names", {})[voter] = name
+            show_name, _show_team, _changed = _remember_student(room, voter, name, team)
+            name = show_name or name
         else:
             name = _norm_display_name((room.get("names") or {}).get(voter) or "")
         bag = room.setdefault("leaves", {})
@@ -1656,9 +1752,13 @@ def present_watch(code=""):
         "<div id='cinemaNameGate' class='cinema-namegate' hidden>"
         "<form id='nameGateForm' class='namegate-card'>"
         "<h2>Đặt tên để tham gia</h2>"
-        "<p>Tên này dùng xuyên suốt buổi chiếu — thầy sẽ thấy đáp án của bạn.</p>"
+        "<p>Tên và tổ giữ suốt buổi — thầy xem kết quả theo từng tổ.</p>"
+        "<div class='namegate-row'>"
         "<input id='nameGateInput' name='displayName' maxlength='24' autocomplete='nickname' "
-        "placeholder='VD: Minh · Tổ 2' required>"
+        "placeholder='Tên, VD: Minh' required>"
+        "<input id='teamGateInput' name='displayTeam' maxlength='8' inputmode='numeric' autocomplete='off' "
+        "placeholder='Tổ 2' aria-label='Tổ'>"
+        "</div>"
         "<button class='btn primary' type='submit'>Vào chiếu</button>"
         "<div class='namegate-err' id='nameGateErr' hidden></div>"
         "</form></div>"
@@ -2122,11 +2222,18 @@ function voterId(){
   }catch(e){ return 'v'+String(Date.now()); }
 }
 function displayNameKey(){ return 'ldvlDisplayName:'+String(CODE||'').toUpperCase(); }
+function displayTeamKey(){ return 'ldvlDisplayTeam:'+String(CODE||'').toUpperCase(); }
 function readDisplayName(){
   try{ return String(localStorage.getItem(displayNameKey())||'').trim(); }catch(e){ return ''; }
 }
 function writeDisplayName(name){
   try{ localStorage.setItem(displayNameKey(), String(name||'').trim()); }catch(e){}
+}
+function readDisplayTeam(){
+  try{ return String(localStorage.getItem(displayTeamKey())||'').trim(); }catch(e){ return ''; }
+}
+function writeDisplayTeam(team){
+  try{ localStorage.setItem(displayTeamKey(), String(team||'').trim()); }catch(e){}
 }
 function normDisplayName(raw){
   let s=String(raw||'').replace(/\s+/g,' ').trim();
@@ -2134,13 +2241,35 @@ function normDisplayName(raw){
   if(s.length<2) return '';
   return s.slice(0,24);
 }
+function normTeam(raw){
+  let s=String(raw||'').replace(/\s+/g,' ').trim();
+  s=s.replace(/[\x00-\x1f\x7f<>"'`]/g,'');
+  if(!s) return '';
+  const m=s.match(/(?:tổ|to|tố)\s*[:.]?\s*(\d{1,2}[A-Za-z]?)/i);
+  if(m) return 'Tổ '+m[1];
+  if(/^\d{1,2}[A-Za-z]?$/.test(s)) return 'Tổ '+s;
+  return s.slice(0,12);
+}
+function peelTeam(raw){
+  const s=String(raw||'').replace(/\s+/g,' ').trim();
+  const m=s.match(/(?:^|[\s·•|\-–—])((?:tổ|to|tố)\s*[:.]?\s*\d{1,2}[A-Za-z]?)\s*$/i);
+  if(!m) return {name:normDisplayName(s), team:''};
+  const rest=s.slice(0, m.index).replace(/[\s\-–—·|•]+$/g,'').trim();
+  return {name:normDisplayName(rest), team:normTeam(m[1])};
+}
+function currentIdentity(){
+  const peeled=peelTeam(readDisplayName());
+  const nm=peeled.name||normDisplayName(readDisplayName());
+  const tm=normTeam(readDisplayTeam())||peeled.team||'';
+  return {name:nm, team:tm};
+}
 function paintNameBadge(){
   const el=document.getElementById('cinemaNameBadge');
   if(!el || hostTok()){ if(el){ el.hidden=true; el.textContent=''; } paintViolatePanels(); return; }
-  const nm=readDisplayName();
-  if(!nm){ el.hidden=true; el.textContent=''; paintViolatePanels(); return; }
+  const idn=currentIdentity();
+  if(!idn.name){ el.hidden=true; el.textContent=''; paintViolatePanels(); return; }
   el.hidden=false;
-  el.textContent='Bạn: '+nm+' · tham gia xuyên suốt buổi chiếu';
+  el.textContent='Bạn: '+idn.name+(idn.team?(' · '+idn.team):'')+' · tham gia xuyên suốt buổi chiếu';
   paintViolatePanels();
 }
 function leaveBucket(reason){
@@ -2400,7 +2529,13 @@ function showNameGate(on, errMsg){
       else { err.hidden=true; err.textContent=''; }
     }
     const inp=document.getElementById('nameGateInput');
-    if(inp){ if(!inp.value) inp.value=readDisplayName()||''; setTimeout(function(){ try{inp.focus();}catch(e){} }, 50); }
+    const tinp=document.getElementById('teamGateInput');
+    if(inp && !inp.value){
+      const idn=currentIdentity();
+      inp.value=idn.name||'';
+      if(tinp && !tinp.value) tinp.value=idn.team||'';
+      setTimeout(function(){ try{inp.focus();}catch(e){} }, 50);
+    }
   }else{
     gate.hidden=true;
     gate.classList.remove('is-on');
@@ -2414,10 +2549,15 @@ async function ensureStudentName(){
   writeDisplayName(nm);
   if(!studentJoined){
     try{
+      const idn=currentIdentity();
       const r=await fetch('/api/present/join',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({code:CODE,voter:voterId(),name:nm})});
+        body:JSON.stringify({code:CODE,voter:voterId(),name:idn.name,team:idn.team})});
       const d=await r.json().catch(function(){return {}});
-      if(d&&d.ok) studentJoined=true;
+      if(d&&d.ok){
+        studentJoined=true;
+        if(d.name) writeDisplayName(d.name);
+        writeDisplayTeam(d.team||idn.team||'');
+      }
     }catch(e){}
   }
   showNameGate(false);
@@ -2432,16 +2572,20 @@ function bindNameGate(){
     e.preventDefault();
     if(hostTok()){ showNameGate(false); return; }
     const inp=document.getElementById('nameGateInput');
-    const nm=normDisplayName(inp&&inp.value);
+    const tinp=document.getElementById('teamGateInput');
+    const peeled=peelTeam(inp&&inp.value);
+    const nm=peeled.name||normDisplayName(inp&&inp.value);
+    const tm=normTeam(tinp&&tinp.value)||peeled.team||'';
     if(!nm){ showNameGate(true, 'Nhập tên (ít nhất 2 ký tự).'); return; }
     const btn=form.querySelector('button[type="submit"]');
     if(btn) btn.disabled=true;
     try{
       const r=await fetch('/api/present/join',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({code:CODE,voter:voterId(),name:nm})});
+        body:JSON.stringify({code:CODE,voter:voterId(),name:nm,team:tm})});
       const d=await r.json().catch(function(){return {}});
       if(!d||!d.ok){ showNameGate(true, (d&&d.error)||'Không ghi được tên.'); return; }
       writeDisplayName(d.name||nm);
+      writeDisplayTeam(d.team||tm);
       studentJoined=true;
       showNameGate(false);
       paintNameBadge();
@@ -2516,7 +2660,8 @@ function reportAway(reason, opts){
     return log;
   }
   const meta=(log && log.last) ? {pos:log.last.pos,kind:log.last.kind,id:log.last.id,dang:log.last.dang,preview:log.last.preview} : currentQMeta();
-  const body=JSON.stringify({code:CODE,voter:voterId(),name:normDisplayName(readDisplayName()),reason:String(reason||'leave'),q:meta});
+  const idn=currentIdentity();
+  const body=JSON.stringify({code:CODE,voter:voterId(),name:idn.name,team:idn.team,reason:String(reason||'leave'),q:meta});
   try{
     if(navigator.sendBeacon){
       navigator.sendBeacon('/api/present/leave', new Blob([body],{type:'application/json'}));
@@ -2825,7 +2970,8 @@ async function presentVote(vote){
   }
   const k=String((lastQ&&lastQ.kind)||'').toUpperCase();
   if(k!=='TN' && k!=='DS') return false;
-  const nm=normDisplayName(readDisplayName());
+  const idn=currentIdentity();
+  const nm=idn.name;
   if(!nm){ showNameGate(true, 'Đặt tên trước khi chọn đáp án.'); return false; }
   const payload=Object.assign({}, vote||{});
   const fp=voteQfp(lastQ, lastPeekPos);
@@ -2835,7 +2981,7 @@ async function presentVote(vote){
     return false;
   }
   const r=await fetch('/api/present/vote',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify({code:CODE,voter:voterId(),name:nm,vote:payload})});
+    body:JSON.stringify({code:CODE,voter:voterId(),name:nm,team:idn.team,vote:payload})});
   const d=await r.json().catch(function(){return {}});
   if(!d||!d.ok){alert((d&&d.error)||'Không gửi được lựa chọn.');return false;}
   rememberMyVote(fp, d.mine||payload);
@@ -2912,7 +3058,7 @@ function paintVotes(votes){
   const rows=Array.isArray(roster.rows)?roster.rows:[];
   const joinedN=Number(roster.joined_n||0);
   const rosterHtml=rows.length
-    ?('<div class="vroster"><b class="head">Học viên · đáp án · vi phạm</b>'
+    ?('<div class="vroster"><b class="head">Tổ · tên · đáp án · vi phạm</b>'
       +rows.map(function(r){
         const leaveN=Number(r.leave_n||0);
         const onQ=Number(r.on_this||0);
@@ -2920,6 +3066,7 @@ function paintVotes(votes){
           ?('⚠ '+leaveN+' lần'+(onQ?(' · câu này '+onQ):'')+(r.last_reason?(' · '+(reasonLab[r.last_reason]||r.last_reason)):''))
           :'ổn';
         return '<div class="vwho'+(leaveN?' bad':'')+'">'
+          +'<span class="vto">'+E(r.team||'—')+'</span>'
           +'<span class="vnm">'+E(r.name||'—')+'</span>'
           +'<span class="vpk">'+E(r.pick||'—')+'</span>'
           +'<span class="vlc">'+E(leaveTxt)+'</span>'
@@ -2931,15 +3078,21 @@ function paintVotes(votes){
   const leavePeopleHtml=(!rows.length && leavePeople.length)
     ?('<div class="vroster"><b class="head">Máy vi phạm rời màn</b>'
       +leavePeople.map(function(p){
-        return '<div class="vwho bad"><span class="vnm">'+E(p.name||'—')+'</span>'
+        return '<div class="vwho bad"><span class="vto">'+E(p.team||'—')+'</span><span class="vnm">'+E(p.name||'—')+'</span>'
           +'<span class="vlc">⚠ '+Number(p.events||0)+' lần'
           +(Number(p.on_this||0)?(' · câu này '+Number(p.on_this)): '')
           +'</span></div>';
       }).join('')
       +'</div>')
     :'';
+  const groups=Array.isArray(roster.groups)?roster.groups:[];
   const joinedLine=joinedN
-    ?('<div class="vjoined">Đã vào tên: <b>'+joinedN+'</b>'+(Array.isArray(roster.joined)&&roster.joined.length?(' · '+E(roster.joined.slice(0,12).join(', '))+(roster.joined.length>12?'…':'')):'')+'</div>')
+    ?('<div class="vjoined">Đã vào: <b>'+joinedN+'</b></div>'
+      +(groups.length?('<div class="vgroups">'+groups.map(function(g){
+          const lab=g.team?g.team:'Chưa ghi tổ';
+          const names=Array.isArray(g.names)?g.names:[];
+          return '<div class="vgrp"><b>'+E(lab)+' · '+names.length+'</b><span>'+E(names.join(', '))+'</span></div>';
+        }).join('')+'</div>'):''))
     :'';
   if(!on || (k!=='TN' && k!=='DS')){
     if(on && (leaveLine||rosterHtml||leavePeopleHtml||joinedLine)){
