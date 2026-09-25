@@ -117,15 +117,21 @@ def ids_from_qid_form(qs, form, dang=""):
             }
     else:
         valid = {int(q.get("idx")) for q in qs if str(q.get("idx", "")).isdigit()}
-    ids = []
+    posted = []
     for raw in (form.getlist("qid") if hasattr(form, "getlist") else []):
         try:
             i = int(raw)
         except (TypeError, ValueError):
             continue
-        if i in valid and i not in ids:
-            ids.append(i)
-    return ids
+        if i not in posted:
+            posted.append(i)
+    if not posted:
+        return []
+    picked = [i for i in posted if i in valid]
+    if picked:
+        return picked
+    any_ids = {int(q.get("idx")) for q in qs if str(q.get("idx", "")).isdigit()}
+    return [i for i in posted if i in any_ids]
 
 
 def new_code(used=None):
@@ -221,6 +227,94 @@ def _rules_html(kind):
     return f"<div class='exrules' style='height:{n * 1.15:.2f}em' aria-hidden='true'></div>"
 
 
+def _bub():
+    return "<span class='bub'></span>"
+
+
+def _tn_sheet(seqs):
+    cols = []
+    for i in range(0, len(seqs), 10):
+        body = "<tr><td></td>" + "".join(f"<th>{x}</th>" for x in "ABCD") + "</tr>"
+        for seq in seqs[i : i + 10]:
+            body += f"<tr><th>{seq}</th>" + "".join(f"<td>{_bub()}</td>" for _ in range(4)) + "</tr>"
+        cols.append(f"<table class='phtn'>{body}</table>")
+    return "<div class='phrow'>" + "".join(cols) + "</div>"
+
+
+def _ds_sheet(items):
+    labs = "abcd"
+    boxes = []
+    for seq, n in items:
+        n = max(1, min(int(n or 4), 8))
+        body = (
+            f"<tr><th colspan='3'>Câu {seq}</th></tr>"
+            "<tr><td></td><th>Đúng</th><th>Sai</th></tr>"
+        )
+        for i in range(n):
+            lab = (labs[i] + ")") if i < 4 else str(i + 1)
+            body += f"<tr><th>{lab}</th><td>{_bub()}</td><td>{_bub()}</td></tr>"
+        boxes.append(f"<table class='phds'>{body}</table>")
+    return "<div class='phrow'>" + "".join(boxes) + "</div>"
+
+
+def _tln_sheet(seqs):
+    marks = ["−", ","] + [str(d) for d in range(10)]
+    boxes = []
+    for seq in seqs:
+        body = f"<tr><th colspan='5'>Câu {seq}</th></tr>"
+        for mark in marks:
+            body += (
+                "<tr><th>"
+                + html.escape(mark)
+                + "</th>"
+                + "".join(f"<td>{_bub()}</td>" for _ in range(4))
+                + "</tr>"
+            )
+        boxes.append(f"<table class='phtln'>{body}</table>")
+    return "<div class='phrow'>" + "".join(boxes) + "</div>"
+
+
+def _phieu_html(rows, code, title):
+    tn = [seq for kind, seq, _n in rows if kind == "TN"]
+    ds = [(seq, n) for kind, seq, n in rows if kind == "DS"]
+    tln = [seq for kind, seq, _n in rows if kind == "TLN"]
+    tl = [seq for kind, seq, _n in rows if kind == "TL"]
+    if not (tn or ds or tln or tl):
+        return ""
+    blocks = [
+        "<section class='exphieu'>",
+        "<h2 class='phtitle'>PHIẾU TRẢ LỜI TRẮC NGHIỆM</h2>",
+        "<div class='phmeta'>",
+        f"<div class='phwho'><div>Bài thi: <b>{_esc(title)}</b></div>",
+        "<div>Họ và tên: ………………………………&nbsp;&nbsp; Lớp: ………&nbsp;&nbsp; SBD: …………</div>",
+        f"<div>Ngày thi: {datetime.now().strftime('%d/%m/%Y')}</div></div>",
+        f"<div class='phcode'>Mã đề<br><b>{_esc(code)}</b></div>",
+        "<div class='phdiem'>Điểm</div>",
+        "</div>",
+    ]
+    if tn:
+        blocks.append("<h3>PHẦN I. Trắc nghiệm</h3>" + _tn_sheet(tn))
+    if ds:
+        blocks.append("<h3>PHẦN II. Đúng / Sai</h3>" + _ds_sheet(ds))
+    if tln:
+        blocks.append(
+            "<h3>PHẦN III. Trả lời ngắn</h3>"
+            "<p class='phhint'>Tô từng chữ số. Hàng đầu là dấu trừ, hàng sau là dấu phẩy.</p>"
+            + _tln_sheet(tln)
+        )
+    if tl:
+        lines = "".join(
+            f"<div class='phtl'><b>Câu {seq}.</b> ……………………………………………………</div>" for seq in tl
+        )
+        blocks.append(
+            "<h3>PHẦN IV. Tự luận</h3>"
+            "<p class='phhint'>Ghi đáp án vào dòng. Bài làm viết trên đề.</p>"
+            + lines
+        )
+    blocks.append("</section>")
+    return "".join(blocks)
+
+
 def _q_html(q, seq, src, show_key=False, ruled=False):
     kind = str(q.get("kind") or "TL")
     stem = html_question(q.get("text") or "", src)
@@ -239,7 +333,7 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
     elif kind == "DS":
         bits = []
         for i, s in enumerate(q.get("statements") or []):
-            lab = "ABCD"[i] if i < 4 else str(i + 1)
+            lab = ("abcd"[i] + ")") if i < 4 else str(i + 1)
             mark = ""
             if show_key:
                 mark = " <b class='exmark'>" + ("Đúng" if s.get("correct") else "Sai") + "</b>"
@@ -294,6 +388,7 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
     ]
     seq = 0
     key_rows = []
+    sheet = []
     for kind in KIND_ORDER:
         arr = groups.get(kind) or []
         if not arr:
@@ -313,11 +408,14 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
             else:
                 ans = "TL"
             key_rows.append(f"<span class='exk'><b>{seq}.</b> {html.escape(ans)}</span>")
+            nopt = len(qq.get("statements") or []) if kind == "DS" else 0
+            sheet.append((kind, seq, nopt))
     key = (
         f"<section class='exanswer'><h3>ĐÁP ÁN · Mã đề {code}</h3>"
         f"<div class='exkgrid'>{''.join(key_rows)}</div></section>"
     )
-    return "<section class='excopy'>" + "".join(parts) + (key if show_key else "") + "</section>", key
+    phieu = _phieu_html(sheet, str(copy.get("code") or ""), title)
+    return "<section class='excopy'>" + "".join(parts) + phieu + (key if show_key else "") + "</section>", key
 
 
 def exam_css():
@@ -330,8 +428,7 @@ def exam_css():
 .exambar select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}
 .exambar .muted{font-size:12px;font-weight:700;color:#64748b}
 .exampaper{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:18px 22px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
-.excopy{break-after:page;page-break-after:always}
-.excopy:last-child{break-after:auto;page-break-after:auto}
+.excopy + .excopy{margin-top:28px;padding-top:16px;border-top:2px dashed #94a3b8}
 .exheadblock{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px;align-items:start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
 .exschool,.exmeta{font-size:13px}.extitle{text-align:center;font-size:18px}
 .exnote{margin:8px 0 14px}
@@ -351,12 +448,29 @@ def exam_css():
 .exanswer{margin-top:18px;padding-top:12px;border-top:2px solid #111}
 .exkgrid{display:flex;flex-wrap:wrap;gap:8px 16px}
 .exk{min-width:6.5rem}
+.exphieu{margin-top:18px;padding:12px 14px;border:2px solid #e11d48;border-radius:8px;background:#fff}
+.phtitle{margin:0 0 8px;text-align:center;font-size:18px;letter-spacing:.03em}
+.phmeta{display:flex;gap:10px;align-items:stretch;margin-bottom:8px}
+.phwho{flex:1;font-size:14px;line-height:1.7}
+.phcode,.phdiem{border:2px solid #e11d48;min-width:78px;text-align:center;padding:6px 8px;font-size:13px}
+.phcode b{display:block;font-size:26px;line-height:1.1}
+.phdiem{min-width:64px}
+.exphieu h3{margin:10px 0 6px;font-size:13px}
+.phhint{margin:0 0 6px;font-size:12px}
+.phrow{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.phtn,.phds,.phtln{border-collapse:collapse;font-size:11px;background:#fff}
+.phtn th,.phtn td,.phds th,.phds td,.phtln th,.phtln td{border:1px solid #fb7185;padding:1px 4px;text-align:center}
+.bub{display:inline-block;width:12px;height:12px;border:1.5px solid #e11d48;border-radius:50%;vertical-align:middle}
+.phtl{margin:3px 0;font-size:14px}
 @media print{
   .top,.nav,.drawer,.exambar,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
   body{background:#fff}
-  .wrap,.examwrap{max-width:none;margin:0;padding:0}
-  .exampaper{border:0;border-radius:0;padding:0}
-  .excopy{page-break-after:always}
+  .wrap,.examwrap,.exampaper{max-width:none;margin:0;padding:0;overflow:visible}
+  .exampaper{border:0;border-radius:0}
+  .excopy + .excopy{margin:0;padding:0;border:0;break-before:page;page-break-before:always}
+  .exphieu{break-before:page;page-break-before:always;margin:0;border-color:#e11d48}
+  .exanswer{break-before:page;page-break-before:always}
+  .bub,.phtn th,.phtn td,.phds th,.phds td,.phtln th,.phtln td,.phcode,.phdiem{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 """
@@ -406,7 +520,7 @@ def render_exam(auto_print=False):
         + "<option value='0'" + ("" if ruled else " selected") + ">Không dòng kẻ</option>"
         + "<option value='1'" + (" selected" if ruled else "") + ">Có dòng kẻ</option>"
         + "</select></label>"
-        + "<span class='muted'>Đáp án ngắn xếp 2 cột; đáp án dài xếp 4 dòng.</span>"
+        + "<span class='muted'>Mỗi mã đề in sang trang mới. Cuối mỗi đề có phiếu tô: trắc nghiệm, đúng/sai, trả lời ngắn, tự luận.</span>"
         "<button class='btn' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
@@ -569,10 +683,37 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
             return render_exam(auto_print=auto_print)
 
     if not path or not ids or qs is None:
+        if request.method == "POST" and action in {"create", "shuffle", "print"}:
+            if path and dang:
+                back = (
+                    "/member/dang?path="
+                    + urllib.parse.quote(path, safe="")
+                    + "&dang="
+                    + urllib.parse.quote(dang, safe="")
+                )
+            elif path:
+                back = "/member/select?path=" + urllib.parse.quote(path, safe="")
+            else:
+                back = "/member"
+            return page(
+                "Tạo đề",
+                "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+                "Chưa chọn được câu nào. Điền số câu <b>NB / TH / VD / VDC</b> trong ma trận rồi bấm "
+                "<b>Tạo đề</b>, <b>Trộn đề</b> hoặc <b>In đề</b>.</div>"
+                f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+            )
         if (session.get("exam") or {}).get("copies"):
             return render_exam(auto_print=auto_print)
         return _redirect_select(path, dang) if path else redirect("/member")
-    _save_exam(path, qs, ids, copies_n, shuffle=shuffle or action == "shuffle", dang=dang, ruled=ruled)
+    _save_exam(
+        path,
+        qs,
+        ids,
+        copies_n,
+        shuffle=bool(shuffle or action == "shuffle" or copies_n > 1),
+        dang=dang,
+        ruled=ruled,
+    )
     return render_exam(auto_print=auto_print)
 
 
@@ -594,6 +735,108 @@ def member_exam_print():
 @app.post("/member/exam/key")
 def member_exam_key():
     return build_from_request()
+
+
+_MX_LEVELS = (("N", "NB"), ("H", "TH"), ("V", "VD"), ("C", "VDC"))
+_MX_KINDS = (
+    ("TN", "Trắc nghiệm"),
+    ("DS", "Đúng / Sai"),
+    ("TLN", "Trả lời ngắn"),
+    ("TL", "Tự luận"),
+)
+
+
+def exam_matrix_html(path, qs, dang="", include_practice=True):
+    """Ma trận số câu theo dạng × loại × NB/TH/VD/VDC. Gửi thẳng sang tạo / trộn / in đề."""
+    dang = str(dang or "").strip()
+    names, seen = [], set()
+    for q in qs or []:
+        d = q.get("dang")
+        if d not in seen:
+            seen.add(d)
+            names.append(d)
+    if dang:
+        targets = []
+        for i, d in enumerate(names):
+            label = str(d or "").strip()
+            if label == dang or (dang == "Chưa phân dạng" and not label):
+                targets.append((i, d))
+        if not targets:
+            return ""
+    else:
+        targets = list(enumerate(names))
+    rows = []
+    for di, dname in targets:
+        arr = [q for q in qs if q.get("dang") == dname]
+        uncat = not str(dname or "").strip() or str(dname).strip() == "Chưa phân dạng"
+        mark = "<span class='tag miss'>Chưa có</span>" if uncat else "<span class='tag had'>Đã có</span>"
+        dang_cell = (
+            f"<td rowspan='{len(_MX_KINDS)}'>{html.escape(str(dname or 'Chưa phân dạng'))} {mark}</td>"
+        )
+        for ki, (kind, label) in enumerate(_MX_KINDS):
+            counts = {
+                z: sum(1 for q in arr if q.get("kind") == kind and q.get("level") == z)
+                for z, _lab in _MX_LEVELS
+            }
+            inputs = "".join(
+                f"<label class='mxn'>{lab}<input class='n' type='number' min='0' max='{counts[z]}' value='0' name='pick:{di}:{kind}:{z}'></label>"
+                for z, lab in _MX_LEVELS
+            )
+            stock = "/".join(str(counts[z]) for z, _lab in _MX_LEVELS)
+            total = sum(counts.values())
+            tr = "<tr class='" + ("uncat" if uncat else "had") + "'>"
+            if ki == 0:
+                tr += dang_cell
+            rows.append(tr + f"<td>{html.escape(label)}</td><td>{stock}</td><td class='mxcells'>{inputs}</td><td>{total}</td></tr>")
+    if not rows:
+        return ""
+    practice = ""
+    if include_practice:
+        practice = (
+            "<button class='btn primary' type='submit' name='ai_review' value='0' formaction='/member/start'>▶ Làm bài</button>"
+            "<button class='btn' type='submit' name='ai_review' value='1' formaction='/member/start'>🤖 Làm bài + phản biện</button>"
+        )
+    controls = (
+        "<label class='examcopies'>Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='1'></label>"
+        "<label class='examcopies'>Ghi bài <select name='exam_ruled'>"
+        "<option value='0'>Không dòng kẻ</option><option value='1'>Có dòng kẻ</option></select></label>"
+    )
+    submits = (
+        "<button class='btn green' type='submit' name='exam_action' value='create'>📝 Tạo đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='print'>🖨 In đề</button>"
+    )
+    top = "<div class='modebar'>" + practice + controls + submits + "</div>"
+    bottom = "<div class='modebar'>" + practice + submits + "</div>"
+    return (
+        "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
+        f"<input type='hidden' name='path' value='{_esc(path)}'>"
+        f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
+        "<div class='notice'>📝 <b>Ma trận đề</b> — điền số câu NB / TH / VD / VDC. "
+        "<b>Tạo đề</b> lấy đúng số đó. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d), "
+        "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
+        + top
+        + "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th>"
+        "<th>Kho NB/TH/VD/VDC</th><th>Chọn NB · TH · VD · VDC</th><th>Tổng</th></tr>"
+        + "".join(rows)
+        + "</table></div>"
+        "<div id='examSum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
+        + bottom
+        + "</form>"
+        "<style>.exammatrix .modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}"
+        ".exammatrix .examcopies{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
+        ".exammatrix .examcopies input,.exammatrix .examcopies select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}"
+        ".exammatrix .examcopies input{width:64px;text-align:center}"
+        ".mxn{display:inline-flex;flex-direction:column;align-items:center;font-size:10px;font-weight:800;color:#334155;margin:0 2px}"
+        ".mxn input.n{width:48px}</style>"
+        "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
+        "function upd(){var t=0;f.querySelectorAll('.n').forEach(function(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});"
+        "var s=document.getElementById('examSum');if(s)s.textContent='TỔNG CHỌN: '+t+' câu — điền NB/TH/VD/VDC rồi Tạo đề, Trộn đề hoặc In đề.';}"
+        "f.querySelectorAll('.n').forEach(function(x){x.addEventListener('input',upd)});upd();"
+        "f.addEventListener('submit',function(e){var t=0;f.querySelectorAll('.n').forEach(function(x){t+=Number(x.value)||0});"
+        "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
+        "})();</script>"
+    )
 
 
 def exam_buttons_html(admin=True):

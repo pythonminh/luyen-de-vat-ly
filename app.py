@@ -3588,38 +3588,8 @@ def select_page():
     admin_pick = can_manage_bank()
     pick_html=''
     if admin_pick:
-        dang_names=[];seen=set()
-        for q in qs:
-            if q['dang'] not in seen:seen.add(q['dang']);dang_names.append(q['dang'])
-        kind_rows=[('TN','Trắc nghiệm'),('DS','Đúng / Sai'),('TLN','Trả lời ngắn'),('TL','Tự luận')]
-        rows=[]
-        for di,dang in enumerate(dang_names):
-            arr=[q for q in qs if q['dang']==dang]
-            uncat=dang in ('','Chưa phân dạng')
-            mark=("<span class='tag miss'>Chưa có</span>" if uncat else "<span class='tag had'>Đã có</span>")
-            dang_cell=f"<td rowspan='{len(kind_rows)}'>{html.escape(dang)} {mark}</td>"
-            for ki,(kind,label) in enumerate(kind_rows):
-                c={z:sum(1 for q in arr if q['kind']==kind and q['level']==z) for z in 'NHVC'};inputs=''.join(f"<input class='n' type='number' min='0' max='{c[z]}' value='0' name='pick:{di}:{kind}:{z}'>" for z in 'NHVC');total=sum(c.values())
-                tr=f"<tr class='{'uncat' if uncat else 'had'}'>"
-                if ki==0: tr+=dang_cell
-                rows.append(tr+f"<td>{label}</td><td>{c['N']}/{c['H']}/{c['V']}/{c['C']}</td><td>{inputs}</td><td>{total}</td></tr>")
-        from exam_paper import exam_buttons_html
-        exam_row=("<div class='modebar'>"
-            "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
-            "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
-            + exam_buttons_html(True) + "</div>")
-        pick_html=(
-            "<form method='post' action='/member/start'><input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
-            "<div class='notice'>📝 <b>Tạo đề / In đề / Trộn đề</b> — điền số câu theo dạng và mức N (NB) / H (TH) / V (VD) / C (VDC). Trộn đề xáo thứ tự câu trong từng phần và đảo A–D. Số bản trộn = nhiều mã đề khác nhau.</div>"
-            +exam_row+
-            "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th><th>Kho N/H/V/C</th><th>Chọn N/H/V/C</th><th>Tổng</th></tr>"
-            +''.join(rows)+"</table></div>"
-            "<div id='sum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu — điền số câu N/H/V/C rồi Tạo đề / Trộn đề / In đề.</div>"
-            +exam_row+
-            "</form>"
-            "<script>function upd(){let t=0;document.querySelectorAll('.n').forEach(x=>{let m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});document.getElementById('sum').textContent='TỔNG CHỌN: '+t+' câu'}document.querySelectorAll('.n').forEach(x=>x.addEventListener('input',upd));upd();"
-            "document.querySelectorAll(\"form[action='/member/start']\").forEach(function(f){f.addEventListener('submit',function(e){let t=0;f.querySelectorAll('.n').forEach(x=>t+=Number(x.value)||0);if(t<=0){e.preventDefault();alert('Hãy điền số câu N/H/V/C rồi bấm Tạo đề / Trộn đề / In đề / Làm bài.')}})});</script>"
-        )
+        from exam_paper import exam_matrix_html
+        pick_html=exam_matrix_html(p, qs, dang='', include_practice=True)
     admin_box=''
     if admin_pick:
         import admin_classify as _ac

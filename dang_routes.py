@@ -311,9 +311,11 @@ def member_dang():
     start_form=("<form method='post' action='/member/start-selected' id='questionForm'>"
                 f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
     exam_btns=""
+    matrix_html=""
     if can_manage_bank():
-        from exam_paper import exam_buttons_html
+        from exam_paper import exam_buttons_html, exam_matrix_html
         exam_btns=exam_buttons_html(True)
+        matrix_html=exam_matrix_html(path, qs, dang=dang, include_practice=False)
     start_bottom=("<div class='toolbar bottom modebar'>"
                   "<button class='btn primary' type='submit' name='ai_review' value='0'>▶ Làm bài (không phản biện)</button>"
                   "<button class='btn' type='submit' name='ai_review' value='1'>🤖 Làm bài + phản biện AI</button>"
@@ -383,7 +385,7 @@ def member_dang():
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
-          +form_open+"<div id='presentSlot'></div>"+tools+
+          +matrix_html+form_open+"<div id='presentSlot'></div>"+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
