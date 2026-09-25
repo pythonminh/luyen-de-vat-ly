@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import random
+import re
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
@@ -188,20 +189,53 @@ def _ds_mask(q):
     return "".join("Đ" if (s or {}).get("correct") else "S" for s in (q.get("statements") or [])) or "—"
 
 
-def _q_html(q, seq, src, show_key=False):
+def _opt_span(tex):
+    """Độ dài nhìn thấy của một phương án. Hình hoặc công thức trưng bày thì xếp một cột."""
+    s = str(tex or "")
+    if re.search(r"\\begin\s*\{|\\includegraphics|\\\[|\\\\", s):
+        return 999
+
+    def inner(m):
+        t = re.sub(r"\\[a-zA-Z]+\*?", "", m.group(0))
+        return re.sub(r"[{}$\\]", "", t)
+
+    s = re.sub(r"\$\$[\s\S]*?\$\$|\$[^$]*\$|\\\([\s\S]*?\\\)", inner, s)
+    s = re.sub(r"\\[a-zA-Z]+\*?", "", s)
+    s = re.sub(r"[{}\\]", "", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return len(s)
+
+
+def _choice_class(options):
+    """Bốn đáp án ngắn: 2 dòng × 2 cột. Đáp án dài: 4 dòng."""
+    opts = list(options or [])
+    if len(opts) != 4:
+        return "stack"
+    if max(_opt_span(o.get("text") or "") for o in opts) <= 36:
+        return "grid2"
+    return "stack"
+
+
+def _rules_html(kind):
+    n = 6 if kind == "TL" else 4
+    return f"<div class='exrules' style='height:{n * 1.15:.2f}em' aria-hidden='true'></div>"
+
+
+def _q_html(q, seq, src, show_key=False, ruled=False):
     kind = str(q.get("kind") or "TL")
     stem = html_question(q.get("text") or "", src)
     body = ""
     if kind == "TN":
+        opts = list(q.get("options") or [])
         bits = []
-        for i, o in enumerate(q.get("options") or []):
+        for i, o in enumerate(opts):
             lab = "ABCD"[i] if i < 4 else str(i + 1)
             ok = " ok" if show_key and o.get("correct") else ""
             bits.append(
                 f"<div class='exopt{ok}'><span class='exlab'>{lab}.</span> "
-                f"{html_question(o.get('text') or '', src)}</div>"
+                f"<span class='exoptxt'>{html_question(o.get('text') or '', src)}</span></div>"
             )
-        body = "<div class='exopts'>" + "".join(bits) + "</div>"
+        body = f"<div class='exopts {_choice_class(opts)}'>" + "".join(bits) + "</div>"
     elif kind == "DS":
         bits = []
         for i, s in enumerate(q.get("statements") or []):
@@ -211,29 +245,33 @@ def _q_html(q, seq, src, show_key=False):
                 mark = " <b class='exmark'>" + ("Đúng" if s.get("correct") else "Sai") + "</b>"
             bits.append(
                 f"<div class='exopt'><span class='exlab'>{lab}.</span> "
-                f"{html_question(s.get('text') or '', src)}{mark}</div>"
+                f"<span class='exoptxt'>{html_question(s.get('text') or '', src)}{mark}</span></div>"
             )
-        body = "<div class='exopts'>" + "".join(bits) + "</div>"
+        body = "<div class='exopts stack'>" + "".join(bits) + "</div>"
     elif kind == "TLN":
-        body = "<div class='exblank'>Đáp án: …………………………</div>"
+        if not ruled:
+            body = "<div class='exblank'>Đáp án: …………………………</div>"
         if show_key:
             ans = str(q.get("answer") or "").strip()
             body += f"<div class='exkeyline'><b>Đáp án:</b> {html_question(ans, src) if ans else '—'}</div>"
     else:
-        body = "<div class='exblank'>……………………………………………………………………………………</div>" * 2
+        if not ruled:
+            body = "<div class='exblank'>Đáp án: …………………………</div>"
         if show_key and str(q.get("solution") or "").strip():
             body += (
                 "<div class='exkeyline'><b>Lời giải:</b> "
                 + html_question(q.get("solution") or "", src)
                 + "</div>"
             )
+    if ruled:
+        body += _rules_html(kind)
     return (
         f"<article class='exq'><div class='exhead'><b>Câu {seq}.</b></div>"
         f"<div class='exstem'>{stem}</div>{body}</article>"
     )
 
 
-def _copy_html(qs, copy, title, show_key=False):
+def _copy_html(qs, copy, title, show_key=False, ruled=False):
     by = {int(q.get("idx")): q for q in qs}
     ids = list(copy.get("ids") or [])
     code = _esc(copy.get("code") or "")
@@ -265,7 +303,7 @@ def _copy_html(qs, copy, title, show_key=False):
             seq += 1
             src = str(q.get("src") or "")
             qq = apply_perm(q, copy)
-            parts.append(_q_html(qq, seq, src, show_key=show_key))
+            parts.append(_q_html(qq, seq, src, show_key=show_key, ruled=ruled))
             if kind == "TN":
                 ans = _tn_letter(qq)
             elif kind == "DS":
@@ -289,6 +327,8 @@ def exam_css():
 .exambar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px;border:1px solid #d7e2ee;border-radius:10px;background:#f8fbff}
 .exambar label{font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .exambar input[type=number]{width:64px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
+.exambar select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}
+.exambar .muted{font-size:12px;font-weight:700;color:#64748b}
 .exampaper{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:18px 22px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
 .excopy{break-after:page;page-break-after:always}
 .excopy:last-child{break-after:auto;page-break-after:auto}
@@ -296,10 +336,14 @@ def exam_css():
 .exschool,.exmeta{font-size:13px}.extitle{text-align:center;font-size:18px}
 .exnote{margin:8px 0 14px}
 .expart{margin:18px 0 8px;font-size:15px;border-bottom:1px solid #bbb;padding-bottom:4px}
-.exq{margin:0 0 14px}
+.exq{margin:0 0 14px;break-inside:avoid;page-break-inside:avoid}
 .exstem{margin:4px 0 8px}
-.exopts{display:grid;gap:4px;padding-left:8px}
-.exopt{display:flex;gap:8px;align-items:flex-start}
+.exopts{display:grid;gap:3px 16px;padding-left:8px}
+.exopts.stack{grid-template-columns:1fr}
+.exopts.grid2{grid-template-columns:1fr 1fr}
+.exopt{display:flex;gap:6px;align-items:flex-start;min-width:0}
+.exoptxt{min-width:0}
+.exrules{margin:8px 0 2px;background-image:repeating-linear-gradient(to bottom,transparent,transparent calc(1.15em - 1px),#334155 calc(1.15em - 1px),#334155 1.15em);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .exopt.ok{background:#e8f8ee;border-radius:6px;padding:2px 6px}
 .exlab{font-weight:700;min-width:1.4em}
 .exblank{margin:8px 0;color:#444}
@@ -336,9 +380,10 @@ def render_exam(auto_print=False):
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     title = exam.get("title") or lesson_title(path)
     show_key = bool(exam.get("show_key"))
+    ruled = bool(exam.get("ruled"))
     papers, keys = [], []
     for copy in copies:
-        html_copy, key = _copy_html(qs, copy, title, show_key=show_key)
+        html_copy, key = _copy_html(qs, copy, title, show_key=show_key, ruled=ruled)
         papers.append(html_copy)
         keys.append(key)
     back = "/member/select?path=" + urllib.parse.quote(path, safe="")
@@ -357,6 +402,11 @@ def render_exam(auto_print=False):
         "<label>Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='"
         + str(len(copies))
         + "'></label>"
+        + "<label>Ghi bài <select name='exam_ruled' onchange='this.form.submit()'>"
+        + "<option value='0'" + ("" if ruled else " selected") + ">Không dòng kẻ</option>"
+        + "<option value='1'" + (" selected" if ruled else "") + ">Có dòng kẻ</option>"
+        + "</select></label>"
+        + "<span class='muted'>Đáp án ngắn xếp 2 cột; đáp án dài xếp 4 dòng.</span>"
         "<button class='btn' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
@@ -381,7 +431,16 @@ def render_exam(auto_print=False):
     return page("Đề thi · " + title, body)
 
 
-def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None):
+def _ruled_flag(exam=None):
+    raw = request.form.get("exam_ruled")
+    if raw is None:
+        raw = request.args.get("exam_ruled")
+    if raw is None:
+        return bool((exam or session.get("exam") or {}).get("ruled"))
+    return str(raw).strip().lower() in {"1", "true", "on", "yes", "co"}
+
+
+def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=None):
     ids = [int(i) for i in ids if str(i).isdigit() or isinstance(i, int)]
     if not ids:
         return None
@@ -402,6 +461,7 @@ def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None):
         "title": lesson_title(path),
         "copies": copies,
         "show_key": bool(session.get("exam", {}).get("show_key") if show_key is None else show_key),
+        "ruled": bool(session.get("exam", {}).get("ruled") if ruled is None else ruled),
         "base_ids": list(ids),
     }
     session["exam"] = exam
@@ -430,7 +490,8 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
     dang = (request.form.get("dang") or request.args.get("dang") or "").strip()
     action = (request.form.get("exam_action") or request.args.get("exam_action") or "").strip().lower()
     copies_n = _copies(request.form.get("exam_copies") or request.args.get("copies") or 1)
-    keep = keep or request.form.get("keep") == "1" or action in {"shuffle", "print", "key", "practice"}
+    keep = keep or request.form.get("keep") == "1" or action in {"shuffle", "print", "key", "practice", "lines"}
+    ruled = _ruled_flag()
     if action == "print":
         auto_print = True
     if action == "shuffle":
@@ -438,6 +499,13 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
     if action == "key":
         exam = session.get("exam") or {}
         exam["show_key"] = not bool(exam.get("show_key"))
+        exam["ruled"] = ruled
+        session["exam"] = exam
+        session.modified = True
+        return render_exam(auto_print=False)
+    if action == "lines":
+        exam = session.get("exam") or {}
+        exam["ruled"] = ruled
         session["exam"] = exam
         session.modified = True
         return render_exam(auto_print=False)
@@ -488,11 +556,15 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
                 qs = load_qs(p)
             except Exception as e:
                 return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+            exam["ruled"] = ruled
+            session["exam"] = exam
+            session.modified = True
             if action == "shuffle" or shuffle:
                 _save_exam(
                     p, qs, ids, copies_n,
                     shuffle=True,
                     dang=exam.get("dang") or dang,
+                    ruled=ruled,
                 )
             return render_exam(auto_print=auto_print)
 
@@ -500,7 +572,7 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         if (session.get("exam") or {}).get("copies"):
             return render_exam(auto_print=auto_print)
         return _redirect_select(path, dang) if path else redirect("/member")
-    _save_exam(path, qs, ids, copies_n, shuffle=shuffle or action == "shuffle", dang=dang)
+    _save_exam(path, qs, ids, copies_n, shuffle=shuffle or action == "shuffle", dang=dang, ruled=ruled)
     return render_exam(auto_print=auto_print)
 
 
@@ -531,6 +603,11 @@ def exam_buttons_html(admin=True):
         "<label class='examcopies' style='display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px'>"
         "Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='1' "
         "style='width:64px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center'></label>"
+        "<label class='examcopies' style='display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px'>"
+        "Ghi bài <select name='exam_ruled' style='padding:6px;border:1px solid #cbd8e6;border-radius:6px'>"
+        "<option value='0'>Không dòng kẻ</option>"
+        "<option value='1'>Có dòng kẻ</option>"
+        "</select></label>"
         "<button class='btn green' type='submit' name='exam_action' value='create' formaction='/member/exam'>📝 Tạo đề</button>"
         "<button class='btn' type='submit' name='exam_action' value='shuffle' formaction='/member/exam'>🔀 Trộn đề</button>"
         "<button class='btn' type='submit' name='exam_action' value='print' formaction='/member/exam'>🖨 In đề</button>"
