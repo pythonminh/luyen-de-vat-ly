@@ -16,7 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from flask import request, jsonify, redirect, session
-from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, nguon_html, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, tex_without_questions, view_only_notice_html
+from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -145,6 +145,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
     src=str(q.get('src') or path or '').replace('\\','/')
     badge={'TN':'TN · Trắc nghiệm','DS':'ĐS · Đúng / Sai','TLN':'TLN · Trả lời ngắn','TL':'TL · Tự luận'}.get(kind,kind)
+    muc=norm_muc(level) or 'H'
     options=''
     sol_html=''
     if kind=='TN':
@@ -207,7 +208,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
-            f"{tex_badge}{gh}{nguon_html(q)}<span class='level'>{html.escape(level)}</span>"
+            f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
             + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if can_manage_bank() else "")
             + "</div>"
@@ -218,6 +219,7 @@ def member_dang():
     m=member_current()
     path=request.args.get('path','').strip(); dang=request.args.get('dang','').strip()
     kind_filter=str(request.args.get('kind') or '').strip().upper()
+    muc=norm_muc(request.args.get('muc') or '')
     if kind_filter not in {'TN','DS','TLN','TL'}:
         kind_filter=''
     if not path:return redirect('/member')
@@ -243,9 +245,14 @@ def member_dang():
         notice_extra=f"<div class='notice'>Không khớp đúng tên dạng «{_esc(dang)}» — đang hiện {len(selected)} câu trong file.</div>"
     if kind_filter:
         selected=[q for q in selected if str(q.get('kind') or '')==kind_filter]
-    if not selected:
+    pool=list(selected)
+    if muc:
+        selected=[q for q in selected if (norm_muc(q.get('level')) or 'H')==muc]
+        if pool and not selected:
+            notice_extra += f"<div class='notice'>Không có câu mức <b>{html.escape(muc_label(muc))}</b> trong phần đang xem. Bấm mức khác trên thanh <b>Mức độ</b>.</div>"
+    if not pool:
         return page('Dạng bài',"<div class='wrap'><div class='panel'><div class='body'><div class='err'>File TEX này chưa có câu hỏi \\begin{ex}...\\end{ex}.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
-    selected=sort_questions_by_kind(selected)
+    selected=sort_questions_for_study(selected)
     folder=path.replace('\\','/').rsplit('/',1)[0] if '/' in path.replace('\\','/') else path
     title=folder.rsplit('/',1)[-1] if '/' in folder else folder
     total=len(selected)
@@ -260,7 +267,7 @@ def member_dang():
              +"<button type='button' class='btn primary' onclick='applyKinds()'>Áp dụng số câu</button></div>")
     guest = not m
     can_do = can_practice(m, path)
-    tabs=lesson_switch_html(path, qs, dang=dang, kind=kind_filter, guest=guest)
+    tabs=lesson_switch_html(path, qs, dang=dang, kind=kind_filter, guest=guest, muc=muc)
     groups=find_duplicate_groups(selected)
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')

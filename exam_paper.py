@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import html
+import io
 import random
 import re
 import urllib.parse
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from flask import redirect, request, session
+from flask import redirect, request, send_file, session
 
 from app import (
     KIND_ORDER,
@@ -520,9 +522,10 @@ def render_exam(auto_print=False):
         + "<option value='0'" + ("" if ruled else " selected") + ">Không dòng kẻ</option>"
         + "<option value='1'" + (" selected" if ruled else "") + ">Có dòng kẻ</option>"
         + "</select></label>"
-        + "<span class='muted'>Mỗi mã đề in sang trang mới. Cuối mỗi đề có phiếu tô: trắc nghiệm, đúng/sai, trả lời ngắn, tự luận.</span>"
+        + "<span class='muted'>Word Azota: tải .docx rồi trên Azota chọn Tạo đề thi và tải file Word lên. Azota không nhận file TEX.</span>"
         "<button class='btn' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
+        "<button class='btn' name='exam_action' value='azota' formaction='/member/exam/azota'>⬇ Word Azota</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
         "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>"
         f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
@@ -583,6 +586,271 @@ def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=N
     return exam
 
 
+_TEX_SYM = {
+    "rightarrow": "→", "leftarrow": "←", "infty": "∞", "degree": "°", "alpha": "α",
+    "beta": "β", "gamma": "γ", "delta": "δ", "Delta": "Δ", "theta": "θ", "pi": "π",
+    "omega": "ω", "Omega": "Ω", "mu": "μ", "lambda": "λ", "sigma": "σ", "phi": "φ",
+    "leq": "≤", "geq": "≥", "neq": "≠", "approx": "≈", "times": "×", "cdot": "·",
+    "pm": "±", "div": "÷", "circ": "°", "le": "≤", "ge": "≥", "ne": "≠", "to": "→",
+}
+
+
+def _brace_body(s, i):
+    if i >= len(s) or s[i] != "{":
+        return "", i
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1 : j], j + 1
+    return s[i + 1 :], len(s)
+
+
+def latex_plain(src):
+    """Đưa công thức về chữ Azota đọc được. Giữ [hình] nếu đề có TikZ hoặc ảnh."""
+    s = str(src or "")
+    s = re.sub(r"\\begin\s*\{tikzpicture\}[\s\S]*?\\end\s*\{tikzpicture\}", " [hình] ", s, flags=re.I)
+    s = re.sub(r"\\includegraphics(?:\[[^\]]*\])?\{[^}]*\}", " [hình] ", s)
+    s = s.replace("\\%", "%").replace("\\&", "&").replace("\\_", "_")
+    for _ in range(12):
+        nxt = s
+        for name in ("text", "mathrm", "mathbf", "textbf", "textit", "textrm", "operatorname"):
+            nxt = re.sub(r"\\" + name + r"\s*\{([^{}]*)\}", r"\1", nxt)
+        nxt2 = []
+        i = 0
+        changed = False
+        while i < len(nxt):
+            m = re.match(r"\\(frac|sqrt)\s*", nxt[i:])
+            if m and i + m.end() < len(nxt) and nxt[i + m.end()] == "{":
+                a, j = _brace_body(nxt, i + m.end())
+                if m.group(1) == "frac" and j < len(nxt) and nxt[j] == "{":
+                    b, j = _brace_body(nxt, j)
+                    nxt2.append("(" + a + ")/(" + b + ")")
+                else:
+                    nxt2.append("√(" + a + ")")
+                i = j
+                changed = True
+                continue
+            nxt2.append(nxt[i])
+            i += 1
+        nxt = "".join(nxt2)
+        nxt = re.sub(r"\^\{([^{}])\}", r"^\1", nxt)
+        nxt = re.sub(r"_\{([^{}])\}", r"_\1", nxt)
+        nxt = re.sub(r"\^\{([^{}]*)\}", r"^(\1)", nxt)
+        nxt = re.sub(r"_\{([^{}]*)\}", r"_(\1)", nxt)
+        if nxt == s and not changed:
+            s = nxt
+            break
+        s = nxt
+    for name in sorted(_TEX_SYM, key=len, reverse=True):
+        s = re.sub(r"\\" + re.escape(name) + r"(?![A-Za-z])", _TEX_SYM[name], s)
+    s = re.sub(r"\$\$|\$|\\\(|\\\)|\\\[|\\\]", "", s)
+    s = re.sub(r"\\[A-Za-z]+\*?", "", s)
+    s = s.replace("{", "").replace("}", "")
+    s = re.sub(r"[ \t]+\n", "\n", s)
+    s = re.sub(r"\n{2,}", "\n", s)
+    s = re.sub(r"[ \t]{2,}", " ", s)
+    return s.strip()
+
+
+def _xml(s):
+    return html.escape(str(s or ""), quote=False)
+
+
+def _w_p(text, bold=False):
+    b = "<w:b/>" if bold else ""
+    return (
+        "<w:p><w:r><w:rPr><w:rFonts w:ascii='Times New Roman' w:hAnsi='Times New Roman' "
+        "w:cs='Times New Roman'/>"
+        + b
+        + "</w:rPr><w:t xml:space='preserve'>"
+        + _xml(text)
+        + "</w:t></w:r></w:p>"
+    )
+
+
+def _w_cell(text, bold=False):
+    return "<w:tc>" + _w_p(text, bold) + "</w:tc>"
+
+
+def _w_table(rows):
+    borders = "".join(
+        f"<w:{edge} w:val='single' w:sz='4' w:space='0' w:color='666666'/>"
+        for edge in ("top", "left", "bottom", "right", "insideH", "insideV")
+    )
+    body = "".join("<w:tr>" + "".join(_w_cell(c, i == 0) for c in row) + "</w:tr>" for i, row in enumerate(rows))
+    return "<w:tbl><w:tblPr><w:tblBorders>" + borders + "</w:tblBorders></w:tblPr>" + body + "</w:tbl>"
+
+
+def _azota_lines(qs, copy):
+    """Một mã đề thành các đoạn Word đúng cấu trúc Azota nhận diện."""
+    by = {int(q.get("idx")): q for q in qs}
+    groups = {k: [] for k in KIND_ORDER}
+    for i in list(copy.get("ids") or []):
+        q = by.get(int(i))
+        if not q:
+            continue
+        k = str(q.get("kind") or "TL")
+        if k not in groups:
+            k = "TL"
+        groups[k].append(q)
+    titles = {
+        "TN": "PHẦN I. Câu trắc nghiệm nhiều phương án",
+        "DS": "PHẦN II. Câu trắc nghiệm đúng sai",
+        "TLN": "PHẦN III. Câu trắc nghiệm trả lời ngắn",
+        "TL": "PHẦN IV. Tự luận",
+    }
+    blocks = []
+    keys = {k: [] for k in KIND_ORDER}
+    solutions = []
+    seq = 0
+    for kind in KIND_ORDER:
+        arr = groups.get(kind) or []
+        if not arr:
+            continue
+        blocks.append(("p", titles[kind], True))
+        for q in arr:
+            seq += 1
+            srcq = apply_perm(q, copy)
+            stem = latex_plain(srcq.get("text") or "")
+            blocks.append(("p", f"Câu {seq}. {stem}", False))
+            if kind == "TN":
+                letter = "A"
+                for i, o in enumerate(srcq.get("options") or []):
+                    lab = "ABCD"[i] if i < 4 else str(i + 1)
+                    if o.get("correct"):
+                        letter = lab if i < 4 else "A"
+                    blocks.append(("p", f"{lab}. {latex_plain(o.get('text') or '')}", False))
+                keys[kind].append((seq, letter))
+            elif kind == "DS":
+                marks = []
+                for i, st in enumerate(srcq.get("statements") or []):
+                    lab = "abcd"[i] if i < 4 else str(i + 1)
+                    blocks.append(("p", f"{lab}) {latex_plain(st.get('text') or '')}", False))
+                    marks.append((lab, "Đúng" if st.get("correct") else "Sai"))
+                keys[kind].append((seq, marks))
+            elif kind == "TLN":
+                ans = latex_plain(srcq.get("answer") or "") or "—"
+                blocks.append(("p", f"Đáp án: {ans}", False))
+                keys[kind].append((seq, ans))
+            else:
+                keys[kind].append((seq, "tự luận"))
+            sol = latex_plain(srcq.get("solution") or "")
+            if sol:
+                solutions.append(f"Câu {seq}. {sol}")
+    code = str(copy.get("code") or "")
+    head = [
+        ("p", f"Mã đề {code}. File này tải lên Azota: Đề thi → Tạo đề thi → chọn file Word.", True),
+    ]
+    tail = [("p", "HẾT", True), ("p", "BẢNG ĐÁP ÁN", True)]
+    if keys["TN"]:
+        tail.append(("p", "PHẦN I", True))
+        for chunk in _azota_chunks(keys["TN"], 10):
+            tail.append(("t", [["Câu"] + [str(n) for n, _a in chunk], ["Chọn"] + [a for _n, a in chunk]]))
+    if keys["DS"]:
+        tail.append(("p", "PHẦN II", True))
+        header = ["Câu", "a", "b", "c", "d"]
+        rows = [header]
+        for seq, marks in keys["DS"]:
+            bym = {lab: val for lab, val in marks}
+            rows.append([str(seq)] + [bym.get(lab, "") for lab in "abcd"])
+        tail.append(("t", rows))
+    if keys["TLN"]:
+        tail.append(("p", "PHẦN III", True))
+        tail.append(("t", [["Câu", "Đáp án"]] + [[str(n), a] for n, a in keys["TLN"]]))
+    if solutions:
+        tail.append(("p", "Lời giải", True))
+        for line in solutions:
+            tail.append(("p", line, False))
+    return head + blocks + tail
+
+
+def _azota_chunks(items, n):
+    for i in range(0, len(items), n):
+        yield items[i : i + n]
+
+
+def _docx_bytes(blocks):
+    parts = []
+    for block in blocks:
+        if block[0] == "p":
+            parts.append(_w_p(block[1], bold=bool(block[2]) if len(block) > 2 else False))
+        else:
+            parts.append(_w_table(block[1]))
+    document = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'>"
+        "<w:body>" + "".join(parts) + "<w:sectPr><w:pgSz w:w='11906' w:h='16838'/>"
+        "<w:pgMar w:top='851' w:right='851' w:bottom='851' w:left='851'/></w:sectPr></w:body></w:document>"
+    )
+    content_types = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'>"
+        "<Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/>"
+        "<Default Extension='xml' ContentType='application/xml'/>"
+        "<Override PartName='/word/document.xml' "
+        "ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/>"
+        "</Types>"
+    )
+    rels = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>"
+        "<Relationship Id='rId1' "
+        "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' "
+        "Target='word/document.xml'/></Relationships>"
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", rels)
+        zf.writestr("word/document.xml", document.encode("utf-8"))
+    buf.seek(0)
+    return buf
+
+
+def _azota_download():
+    if not can_manage_bank():
+        return redirect("/member")
+    exam = session.get("exam") or {}
+    path = str(exam.get("path") or "")
+    copies = list(exam.get("copies") or [])
+    if not path or not copies:
+        return page(
+            "Azota",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+            "Chưa có đề. Hãy tạo đề rồi bấm <b>Word Azota</b>.</div>"
+            "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
+        )
+    try:
+        qs = load_qs(path)
+    except Exception as e:
+        return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    title = exam.get("title") or lesson_title(path)
+    files = []
+    for copy in copies:
+        code = str(copy.get("code") or "de")
+        blocks = [("p", latex_plain(title) or "Đề kiểm tra", True)] + _azota_lines(qs, copy)
+        files.append((f"azota-ma-{code}.docx", _docx_bytes(blocks).getvalue()))
+    if len(files) == 1:
+        name, raw = files[0]
+        buf = io.BytesIO(raw)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=name,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    pack = io.BytesIO()
+    with zipfile.ZipFile(pack, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, raw in files:
+            zf.writestr(name, raw)
+    pack.seek(0)
+    return send_file(pack, as_attachment=True, download_name="azota-de.zip", mimetype="application/zip")
+
+
 def _redirect_select(path, dang=""):
     if dang:
         return redirect(
@@ -623,6 +891,8 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         session["exam"] = exam
         session.modified = True
         return render_exam(auto_print=False)
+    if action == "azota":
+        return _azota_download()
     if action == "practice":
         exam = session.get("exam") or {}
         copy = (exam.get("copies") or [{}])[0]
@@ -640,6 +910,7 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
             practice_path=p,
             practice_dang=str(exam.get("dang") or ""),
             practice_kind=(next(iter(kinds)) if len(kinds) == 1 else ""),
+            practice_muc="",
             practice_ids=ids,
             practice_pos=0,
             practice_right=0,
@@ -725,6 +996,11 @@ def member_exam():
     return build_from_request(shuffle=(action == "shuffle"), auto_print=(action == "print"))
 
 
+@app.route("/member/exam/azota", methods=["POST"])
+def member_exam_azota():
+    return build_from_request()
+
+
 @app.route("/member/exam/print", methods=["GET", "POST"])
 def member_exam_print():
     if request.method == "POST":
@@ -778,16 +1054,16 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
                 z: sum(1 for q in arr if q.get("kind") == kind and q.get("level") == z)
                 for z, _lab in _MX_LEVELS
             }
-            inputs = "".join(
-                f"<label class='mxn'>{lab}<input class='n' type='number' min='0' max='{counts[z]}' value='0' name='pick:{di}:{kind}:{z}'></label>"
+            cells = "".join(
+                "<td class='mxcell'><div class='mxkho'>"
+                + str(counts[z])
+                + f"</div><input class='n' type='number' min='0' max='{counts[z]}' value='0' name='pick:{di}:{kind}:{z}' aria-label='{lab}'></td>"
                 for z, lab in _MX_LEVELS
             )
-            stock = "/".join(str(counts[z]) for z, _lab in _MX_LEVELS)
-            total = sum(counts.values())
             tr = "<tr class='" + ("uncat" if uncat else "had") + "'>"
             if ki == 0:
                 tr += dang_cell
-            rows.append(tr + f"<td>{html.escape(label)}</td><td>{stock}</td><td class='mxcells'>{inputs}</td><td>{total}</td></tr>")
+            rows.append(tr + f"<td>{html.escape(label)}</td>" + cells + "</tr>")
     if not rows:
         return ""
     practice = ""
@@ -817,7 +1093,7 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
         + top
         + "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th>"
-        "<th>Kho NB/TH/VD/VDC</th><th>Chọn NB · TH · VD · VDC</th><th>Tổng</th></tr>"
+        "<th>NB<br>Nhận biết</th><th>TH<br>Thông hiểu</th><th>VD<br>Vận dụng</th><th>VDC<br>Vận dụng cao</th></tr>"
         + "".join(rows)
         + "</table></div>"
         "<div id='examSum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
@@ -827,8 +1103,9 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         ".exammatrix .examcopies{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
         ".exammatrix .examcopies input,.exammatrix .examcopies select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}"
         ".exammatrix .examcopies input{width:64px;text-align:center}"
-        ".mxn{display:inline-flex;flex-direction:column;align-items:center;font-size:10px;font-weight:800;color:#334155;margin:0 2px}"
-        ".mxn input.n{width:48px}</style>"
+        ".mxcell{text-align:center;min-width:72px;background:#f0fdf4}"
+        ".mxcell .n{width:52px;font-weight:800}"
+        ".mxkho{font-size:11px;font-weight:800;color:#166534}</style>"
         "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
         "function upd(){var t=0;f.querySelectorAll('.n').forEach(function(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});"
         "var s=document.getElementById('examSum');if(s)s.textContent='TỔNG CHỌN: '+t+' câu — điền NB/TH/VD/VDC rồi Tạo đề, Trộn đề hoặc In đề.';}"

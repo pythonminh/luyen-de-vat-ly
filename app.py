@@ -202,7 +202,7 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .present-host{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:#eef6ff;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;position:sticky;top:var(--header-h);z-index:45;box-shadow:0 2px 10px #1b4d8a10}
 .present-host .btn,.present-host #pStart,.present-host #navFold{flex:0 0 auto;padding:6px 10px;font-size:13px;white-space:nowrap}
 .present-host #navFold{margin-left:auto}
-html.ldvlAdminCompact .dangtabs,body.ldvlAdminCompact .dangtabs{display:none}
+.lvltabs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px 8px;background:#f0fdf4;border-bottom:1px solid #bbf7d0}.lvltabs b{font-size:12px;color:#166534;margin-right:4px}.lvltabs .ltab{display:inline-flex;align-items:center;justify-content:center;border:1px solid #86efac;background:#fff;color:#166534;border-radius:7px;padding:5px 8px;font-weight:800;font-size:12px;text-decoration:none}.lvltabs .ltab.on{background:#15803d;border-color:#15803d;color:#fff}.lvltabs .ltab.off{opacity:.45;pointer-events:none}.plab{flex:1 1 100%;font-weight:900;font-size:12px;padding:4px 2px 0}span.level.muc-N,a.pitem.muc-N,.plab.muc-N{background:#dcfce7;border-color:#86efac;color:#166534}span.level.muc-H,a.pitem.muc-H,.plab.muc-H{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}span.level.muc-V,a.pitem.muc-V,.plab.muc-V{background:#ffedd5;border-color:#fdba74;color:#c2410c}span.level.muc-C,a.pitem.muc-C,.plab.muc-C{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
 html.ldvlAdminCompact details.admindang-fold:not([open]),body.ldvlAdminCompact details.admindang-fold:not([open]){border-top:0}
 .present-host #presentBar{flex:1 1 100%;margin:0;padding:8px;max-height:28vh;overflow:auto}
 .present-host.is-folded #presentBar,.present-host #presentBar[hidden]{display:none!important}
@@ -1025,12 +1025,15 @@ def can_practice(m, path=None):
     if path:
         return can_access(m, path)
     return True
-def dang_view_url(path, dang='', kind=''):
+def dang_view_url(path, dang='', kind='', muc=''):
     url='/member/dang?path='+urllib.parse.quote(str(path or ''), safe='')
     if dang:
         url+='&dang='+urllib.parse.quote(str(dang), safe='')
     if kind:
         url+='&kind='+urllib.parse.quote(str(kind), safe='')
+    muc=norm_muc(muc)
+    if muc:
+        url+='&muc='+urllib.parse.quote(muc, safe='')
     return url
 def view_only_notice_html(m=None, login_next='/member'):
     if not m:
@@ -2856,6 +2859,24 @@ def dup_index_by_question(groups):
     return info
 
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')
+LEVEL_ORDER = ('N', 'H', 'V', 'C')
+LEVEL_LABS = {'N': 'NB', 'H': 'TH', 'V': 'VD', 'C': 'VDC'}
+LEVEL_TIPS = {'N': 'Nhận biết', 'H': 'Thông hiểu', 'V': 'Vận dụng', 'C': 'Vận dụng cao'}
+
+def norm_muc(raw):
+    s = str(raw or '').strip().upper().replace(' ', '')
+    if s in {'N', 'NB', 'NHANBIET'}:
+        return 'N'
+    if s in {'H', 'TH', 'THONGHIEU'}:
+        return 'H'
+    if s in {'V', 'VD', 'VANDUNG'}:
+        return 'V'
+    if s in {'C', 'VDC', 'VANDUNGCAO'}:
+        return 'C'
+    return ''
+
+def muc_label(level):
+    return LEVEL_LABS.get(norm_muc(level) or 'H', 'TH')
 KIND_CHIP_LABS = (('TN', 'TN'), ('DS', 'ĐS'), ('TLN', 'TLN'), ('TL', 'TL'))
 KIND_AIM = {'TN': 9, 'DS': 2, 'TLN': 3, 'TL': 4}
 KIND_MAX = {'TN': 18, 'DS': 4, 'TLN': 6, 'TL': 8}
@@ -2913,6 +2934,43 @@ def sort_ids_by_kind(questions, ids, shuffle_within=False):
     out.extend(other)
     return out
 
+def sort_questions_for_study(questions):
+    """Dạng theo thứ tự xuất hiện, rồi NB → TH → VD → VDC, rồi loại câu."""
+    dang_order = {}
+    for q in questions or []:
+        d = str((q or {}).get('dang') or '').strip() or 'Chưa phân dạng'
+        if d not in dang_order:
+            dang_order[d] = len(dang_order)
+    level_rank = {k: i for i, k in enumerate(LEVEL_ORDER)}
+    kind_rank = {k: i for i, k in enumerate(KIND_ORDER)}
+
+    def key(q):
+        d = str((q or {}).get('dang') or '').strip() or 'Chưa phân dạng'
+        lv = norm_muc((q or {}).get('level')) or 'H'
+        k = str((q or {}).get('kind') or 'TL')
+        try:
+            idx = int((q or {}).get('idx') or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        return (dang_order.get(d, 99), level_rank.get(lv, 9), kind_rank.get(k, 99), idx)
+
+    return sorted(list(questions or []), key=key)
+
+def sort_ids_for_practice(questions, ids):
+    by = {q.get('idx'): q for q in (questions or [])}
+    picked = []
+    seen = set()
+    for i in ids or []:
+        try:
+            i = int(i)
+        except (TypeError, ValueError):
+            continue
+        if i in seen or i not in by:
+            continue
+        seen.add(i)
+        picked.append(by[i])
+    return [int(q.get('idx')) for q in sort_questions_for_study(picked)]
+
 KIND_TABS = (
     ('', 'Tất cả', 'Tất cả loại'),
     ('TN', 'TN', 'Chỉ trắc nghiệm'),
@@ -2961,9 +3019,9 @@ def ids_of_kind(qs, kind=''):
             ids.append(int(q['idx']))
         except (TypeError, ValueError, KeyError):
             continue
-    return sort_ids_by_kind(qs, ids, shuffle_within=False)
+    return sort_ids_for_practice(qs, ids)
 
-def kind_tabs_html(path, dang='', current='', counts=None, guest=False, practice=None):
+def kind_tabs_html(path, dang='', current='', counts=None, guest=False, practice=None, muc=''):
     counts = counts or {'': 0, 'TN': 0, 'DS': 0, 'TLN': 0, 'TL': 0}
     current = norm_kind_tab(current)
     bits = []
@@ -2975,9 +3033,36 @@ def kind_tabs_html(path, dang='', current='', counts=None, guest=False, practice
         if n <= 0:
             bits.append(f"<span class='ktab{on} off' title='{html.escape(title, quote=True)}'>{html.escape(label)}</span>")
             continue
-        href = _go_kind_href(path, dang, k, guest=guest, practice=practice)
+        href = _go_kind_href(path, dang, k, guest=guest, practice=practice, muc=muc)
         bits.append(f"<a class='ktab{on}' href='{html.escape(href, quote=True)}' title='{html.escape(tip, quote=True)}'>{html.escape(label)}</a>")
     return "<nav class='kindtabs' aria-label='Loại câu'>" + ''.join(bits) + "</nav>"
+
+def level_counts_for(qs, kind=''):
+    kind = norm_kind_tab(kind)
+    c = {'': 0, 'N': 0, 'H': 0, 'V': 0, 'C': 0}
+    for q in qs or []:
+        if kind and str(q.get('kind') or '') != kind:
+            continue
+        lv = norm_muc(q.get('level')) or 'H'
+        c[lv] = c.get(lv, 0) + 1
+        c[''] += 1
+    return c
+
+def level_tabs_html(path, dang='', kind='', current='', counts=None, guest=False, practice=None):
+    counts = counts or {'': 0, 'N': 0, 'H': 0, 'V': 0, 'C': 0}
+    current = norm_muc(current)
+    bits = ["<b>Mức độ</b>"]
+    tabs = [('', 'Mọi mức', 'Mọi mức độ')] + [(k, LEVEL_LABS[k], LEVEL_TIPS[k]) for k in LEVEL_ORDER]
+    for k, lab, tip in tabs:
+        n = int(counts.get(k if k else '', 0) or 0)
+        label = lab if not k else f'{lab} · {n}'
+        on = ' on' if current == k else ''
+        if k and n <= 0:
+            bits.append(f"<span class='ltab{on} off' title='{html.escape(tip, quote=True)}'>{html.escape(label)}</span>")
+            continue
+        href = _go_kind_href(path, dang, kind, guest=guest, practice=practice, muc=k)
+        bits.append(f"<a class='ltab{on}' href='{html.escape(href, quote=True)}' title='{html.escape(tip, quote=True)}'>{html.escape(label)}</a>")
+    return "<nav class='lvltabs' aria-label='Mức độ'>" + ''.join(bits) + "</nav>"
 
 def _dang_name(q):
     return str((q or {}).get('dang') or '').strip() or 'Chưa phân dạng'
@@ -3267,8 +3352,9 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<div id='aiGapOut'></div></div></details>"
     )
 
-def lesson_switch_html(path, qs, dang='', kind='', guest=False):
+def lesson_switch_html(path, qs, dang='', kind='', guest=False, muc=''):
     scoped = questions_in_scope(qs, dang)
+    muc = norm_muc(muc)
     try:
         m = member_current()
     except Exception:
@@ -3283,13 +3369,14 @@ def lesson_switch_html(path, qs, dang='', kind='', guest=False):
     return (
         "<nav class='subnav'>"
         + lt_bar
-        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest, practice=practice)
-        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest, practice=practice)
+        + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest, practice=practice, muc=muc)
+        + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest, practice=practice, muc=muc)
+        + level_tabs_html(path, dang=dang, kind=kind, current=muc, counts=level_counts_for(scoped, kind), guest=guest, practice=practice)
         + "</nav>"
         + admin_dang_bar_html(path, qs, dang=dang)
     )
 
-def _go_kind_href(path, dang, kind, guest=False, practice=None):
+def _go_kind_href(path, dang, kind, guest=False, practice=None, muc=''):
     if practice is None:
         try:
             m = member_current()
@@ -3301,20 +3388,23 @@ def _go_kind_href(path, dang, kind, guest=False, practice=None):
     except Exception:
         admin_browse = False
     if admin_browse or not practice:
-        return dang_view_url(path, dang, kind)
+        return dang_view_url(path, dang, kind, muc)
     href = '/member/go-kind?path=' + urllib.parse.quote(str(path or ''), safe='') + '&kind=' + urllib.parse.quote(str(kind or ''), safe='')
     if dang:
         href += '&dang=' + urllib.parse.quote(str(dang), safe='')
+    muc = norm_muc(muc)
+    if muc:
+        href += '&muc=' + urllib.parse.quote(muc, safe='')
     return href
 
-def dang_tabs_html(path, qs, current_dang='', kind='', guest=False, practice=None):
+def dang_tabs_html(path, qs, current_dang='', kind='', guest=False, practice=None, muc=''):
     names, counts = dang_names_of(qs)
     per, allc = dang_kind_counts_of(qs)
     current_dang = str(current_dang or '').strip()
     kind = norm_kind_tab(kind)
     total = sum(counts.values())
     bits = [
-        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest, practice), quote=True)}' title='Mọi dạng trong bài'><span class='dname'>Cả bài · {total}</span>{kind_chips_html(allc)}</a>"
+        f"<a class='dtab{' on' if not current_dang else ''}' href='{html.escape(_go_kind_href(path, '', kind, guest, practice, muc), quote=True)}' title='Mọi dạng trong bài'><span class='dname'>Cả bài · {total}</span>{kind_chips_html(allc)}</a>"
     ]
     for i, name in enumerate(names, 1):
         n = int(counts.get(name) or 0)
@@ -3322,7 +3412,7 @@ def dang_tabs_html(path, qs, current_dang='', kind='', guest=False, practice=Non
         lab = f'{i}. {short} · {n}'
         on = ' on' if current_dang == name else ''
         bits.append(
-            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest, practice), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
+            f"<a class='dtab{on}' href='{html.escape(_go_kind_href(path, name, kind, guest, practice, muc), quote=True)}' title='{html.escape(name, quote=True)}'><span class='dname'>{html.escape(lab)}</span>{kind_chips_html(per.get(name))}</a>"
         )
     return "<nav class='dangtabs' aria-label='Dạng bài tập'>" + ''.join(bits) + "</nav>"
 
@@ -3332,6 +3422,7 @@ def begin_kind_practice(path, kind='', dang=''):
     path = str(path or '').strip()
     dang = str(dang or '').strip()
     kind = norm_kind_tab(kind)
+    muc = norm_muc(request.args.get('muc') or '')
     if not m:
         return redirect(dang_view_url(path, dang, kind) if path else login_url('/member'))
     if not path or not can_practice(m, path):
@@ -3341,18 +3432,19 @@ def begin_kind_practice(path, kind='', dang=''):
     except Exception as e:
         return page('Lỗi', f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     scoped = questions_in_scope(qs, dang)
+    if muc:
+        scoped = [q for q in scoped if (norm_muc(q.get('level')) or 'H') == muc]
     ids = ids_of_kind(scoped, kind)
     if not ids and kind:
         kind = ''
         ids = ids_of_kind(scoped, '')
     if not ids:
-        if dang:
-            return redirect('/member/dang?path=' + urllib.parse.quote(path, safe='') + '&dang=' + urllib.parse.quote(dang, safe=''))
-        return redirect('/member/select?path=' + urllib.parse.quote(path, safe=''))
+        return redirect(dang_view_url(path, dang, '', muc) if path else '/member')
     session.update(
         practice_path=path,
         practice_dang=dang,
         practice_kind=kind,
+        practice_muc=muc,
         practice_ids=ids,
         practice_pos=0,
         practice_right=0,
@@ -3638,10 +3730,10 @@ def start_practice():
         if 0<=di<len(dang_names):
             pool=[q for q in qs if q['dang']==dang_names[di] and q['kind']==kind and q['level']==lev];wanted.extend(q['idx'] for q in random.sample(pool,min(n,len(pool))))
     if not wanted:return redirect('/member/select?path='+urllib.parse.quote(p,safe=''))
-    wanted=sort_ids_by_kind(qs, wanted, shuffle_within=False)
+    wanted=sort_ids_for_practice(qs, wanted)
     kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
     kinds={k for k in kinds if k}
-    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=True);return redirect('/member/practice')
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=True);return redirect('/member/practice')
 
 @app.get('/member/go-kind')
 def go_kind():
@@ -3696,7 +3788,7 @@ def practice():
                  + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
                  + f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>")
         body=(
-            f"<div class='wrap'>{lesson_switch_html(p, list(allq.values()), dang=str(session.get('practice_dang') or ''), kind=session.get('practice_kind') or '', guest=False)}<div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
+            f"<div class='wrap'>{lesson_switch_html(p, list(allq.values()), dang=str(session.get('practice_dang') or ''), kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')}<div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
             f"<span class='tag'>{'🤖 Có phản biện' if ai else 'Không phản biện'}</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
             + gem
@@ -3709,14 +3801,25 @@ def practice():
         return page('Kết quả',body+extra_js)
     q=allq.get(ids[pos]);
     if not q:return redirect('/member')
-    palette=''.join(f"<a class='pitem {'pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))}' href='/practice/jump/{j}' title='{html.escape(str(allq.get(qid,{}).get('id') or ''), quote=True)}'>{j+1} · {allq.get(qid,{}).get('kind','?')}</a>" for j,qid in enumerate(ids))
+    pal_bits=[]
+    prev_lv=None
+    for j,qid in enumerate(ids):
+        qq=allq.get(qid) or {}
+        lv=norm_muc(qq.get('level')) or 'H'
+        if lv!=prev_lv:
+            pal_bits.append(f"<span class='plab muc-{lv}'>{muc_label(lv)}</span>")
+            prev_lv=lv
+        cls='pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))
+        pal_bits.append(f"<a class='pitem {cls} muc-{lv}' href='/practice/jump/{j}' title='{html.escape(str(qq.get('id') or ''), quote=True)}'>{j+1} · {muc_label(lv)}</a>")
+    palette=''.join(pal_bits)
     payload=question_payload(q)
     is_admin=has_full_bank_access(m)
     mode_tag='🤖 Có phản biện AI' if ai else 'Không phản biện'
     if is_admin: mode_tag='🔐 ADMIN · xem lời giải không cần làm bài'+((' · '+mode_tag) if ai else '')
     dang=str(session.get('practice_dang') or '')
-    tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False)
-    body=(f"<div class='wrap'>{tabs}<div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']}</span></span>"
+    muc_now=muc_label(q.get('level'))
+    tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
+    body=(f"<div class='wrap'>{tabs}<div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
