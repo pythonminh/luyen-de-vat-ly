@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12330,
+  "total_questions": 12285,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4623,17 +4623,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng · Thực nghiệm xác định nhiệt nóng chảy riêng",
-      "questions": 27,
-      "count": 27,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Thực nghiệm xác định nhiệt nóng chảy riêng": 27
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": 18
       },
       "dang_kinds": {
         "Thực nghiệm xác định nhiệt nóng chảy riêng": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         }
       }
     },
@@ -4646,32 +4646,32 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
-      "questions": 185,
-      "count": 185,
+      "questions": 149,
+      "count": 149,
       "dang": {
-        "Bài toán nóng chảy và đông đặc": 40,
-        "Tính nhiệt lượng tổng hợp có chuyển pha": 89,
-        "Lí thuyết về nhiệt nóng chảy riêng": 45,
+        "Bài toán nóng chảy và đông đặc": 31,
+        "Tính nhiệt lượng tổng hợp có chuyển pha": 71,
+        "Lí thuyết về nhiệt nóng chảy riêng": 36,
         "Thực nghiệm xác định nhiệt nóng chảy riêng": 11
       },
       "dang_kinds": {
         "Bài toán nóng chảy và đông đặc": {
           "TN": 18,
           "DS": 10,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         },
         "Tính nhiệt lượng tổng hợp có chuyển pha": {
           "TN": 47,
           "DS": 15,
-          "TLN": 15,
-          "TL": 12
+          "TLN": 5,
+          "TL": 4
         },
         "Lí thuyết về nhiệt nóng chảy riêng": {
           "TN": 28,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         },
         "Thực nghiệm xác định nhiệt nóng chảy riêng": {
           "TN": 8,
