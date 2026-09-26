@@ -1650,7 +1650,11 @@ def api_admin_dang_fill():
     page_text, ferr = _page_text_from_payload(data)
     if ferr:
         return jsonify(ok=False, error=ferr), 400
-    docx_text, docx_images, derr = _docx_from_payload(data)
+    image_files = _image_files_from_payload(data)
+    if image_files and len(page_text.strip()) > 40:
+        docx_text, docx_images, derr = '', [], ''
+    else:
+        docx_text, docx_images, derr = _docx_from_payload(data)
     if derr:
         return jsonify(ok=False, error=derr), 400
     pdf_text, pdf_images, perr = _pdf_from_payload(data)
@@ -1660,13 +1664,15 @@ def api_admin_dang_fill():
         page_text = (page_text + '\n\n' + docx_text).strip()
     if pdf_text:
         page_text = (page_text + '\n\n' + pdf_text).strip()
-    image_files = _image_files_from_payload(data)
     for im in list(docx_images) + list(pdf_images):
         name = str((im or {}).get('file') or '')
         if name and name not in image_files and re.fullmatch(r'images/w-[0-9a-f]{6,40}\.(?:png|jpe?g|gif|webp)', name, re.I):
             image_files.append(name)
     image_files = image_files[:12]
-    images = (_images_from_payload(data) + pdf_images + docx_images)[:8]
+    if image_files:
+        images = []
+    else:
+        images = (_images_from_payload(data) + pdf_images + docx_images)[:4]
     if images and not page_text.strip():
         page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
     if not dang and not page_text:

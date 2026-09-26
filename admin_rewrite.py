@@ -1420,9 +1420,9 @@ document.addEventListener('click',async function(e){
     const fileTex=await readAiSrcFile();
     if(fileTex && sourceTex.indexOf(fileTex.slice(0,120))<0) sourceTex=(sourceTex.trim()?sourceTex.replace(/\s+$/,'')+'\n\n':'')+fileTex;
   }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
-  const sourceImages=aiShots.map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
   const imageFiles=aiShots.map(function(s){return s.file||'';}).filter(Boolean);
-  const sourceDocx=aiDocx&&aiDocx.b64?aiDocx.b64:'';
+  const sourceImages=aiShots.filter(function(s){return !s.file;}).slice(0,4).map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
+  const sourceDocx=(imageFiles.length&&sourceTex.trim().length>40)?'':(aiDocx&&aiDocx.b64?aiDocx.b64:'');
   const sourcePdf=aiPdf&&aiPdf.b64?aiPdf.b64:'';
   const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx||sourcePdf);
   if(sourceUrl && !/^https?:\/\//i.test(sourceUrl)){
