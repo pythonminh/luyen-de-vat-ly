@@ -2,6 +2,7 @@
 """Member question browser: show every question before building a test."""
 from __future__ import annotations
 import base64
+import hashlib
 import html
 import io
 import ipaddress
@@ -1172,7 +1173,33 @@ def _docx_blocks(el, out):
             _docx_blocks(node, out)
 
 
-def _docx_images(zf, root):
+def _image_px(raw, ext):
+    if ext == 'png' and raw[:8] == b'\x89PNG\r\n\x1a\n' and len(raw) >= 24:
+        return int.from_bytes(raw[16:20], 'big'), int.from_bytes(raw[20:24], 'big')
+    if ext in ('jpg', 'jpeg') and raw[:2] == b'\xff\xd8':
+        i = 2
+        while i + 9 < len(raw):
+            if raw[i] != 0xFF:
+                i += 1
+                continue
+            marker = raw[i + 1]
+            if marker in (0xC0, 0xC1, 0xC2):
+                h = int.from_bytes(raw[i + 5:i + 7], 'big')
+                w = int.from_bytes(raw[i + 7:i + 9], 'big')
+                return w, h
+            if marker in (0xD8, 0xD9):
+                i += 2
+                continue
+            if i + 4 > len(raw):
+                break
+            seglen = int.from_bytes(raw[i + 2:i + 4], 'big')
+            if seglen < 2:
+                break
+            i += 2 + seglen
+    return 0, 0
+
+
+def _docx_images(zf, root, limit=6):
     rel_name = 'word/_rels/document.xml.rels'
     if rel_name not in zf.namelist():
         return []
@@ -1188,6 +1215,7 @@ def _docx_images(zf, root):
             id_to_target[rid] = target.replace('\\', '/')
     found = []
     seen = set()
+    hashes = set()
     for el in root.iter():
         rid = el.get(_R_NS + 'embed') or el.get(_R_NS + 'id')
         if not rid or rid in seen or rid not in id_to_target:
@@ -1201,14 +1229,21 @@ def _docx_images(zf, root):
         if zpath not in zf.namelist():
             continue
         raw = zf.read(zpath)
-        if not raw or len(raw) > 1_500_000:
+        if not raw or len(raw) < 2500 or len(raw) > 1_500_000:
             continue
         ext = zpath.rsplit('.', 1)[-1].lower()
         mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif', 'webp': 'image/webp'}.get(ext)
         if not mime:
             continue
-        found.append({'mime': mime, 'data': base64.b64encode(raw).decode('ascii')})
-        if len(found) >= 4:
+        w, h = _image_px(raw, ext)
+        if w and h and (w < 64 or h < 64):
+            continue
+        digest = hashlib.sha1(raw).hexdigest()
+        if digest in hashes:
+            continue
+        hashes.add(digest)
+        found.append({'mime': mime, 'ext': 'jpg' if ext == 'jpeg' else ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10]})
+        if len(found) >= limit:
             break
     return found
 
@@ -1230,11 +1265,80 @@ def _docx_extract(blob):
         _docx_blocks(body if body is not None else root, lines)
         text = '\n'.join(lines).strip()
         images = _docx_images(zf, root)
+        for im in images:
+            im.pop('raw', None)
     finally:
         zf.close()
     if len(text) < 20 and not images:
         return '', [], 'File Word gần như không có chữ.'
     return text[:80000], images, ''
+
+
+def _save_docx_images(path, blob):
+    """Tách ảnh nhúng trong Word, bỏ icon nhỏ, ghi vài ảnh vào images/ của bài."""
+    from app import github_file_sha, github_put_bytes, lesson_folder
+    folder = lesson_folder(path)
+    if not str(folder).startswith('ngan-hang/'):
+        return [], 'Thiếu bài để lưu ảnh.'
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return [], 'File không phải Word .docx.'
+    try:
+        if 'word/document.xml' not in zf.namelist():
+            return [], 'File Word không có nội dung.'
+        try:
+            root = ET.fromstring(zf.read('word/document.xml'))
+        except ET.ParseError:
+            return [], 'Không đọc được nội dung Word.'
+        images = _docx_images(zf, root, limit=6)
+    finally:
+        zf.close()
+    saved = []
+    for im in images:
+        raw = im.get('raw') or b''
+        if not raw:
+            continue
+        ext = im.get('ext') or 'png'
+        name = 'w-' + str(im.get('sha') or 'img') + '.' + ext
+        rel = folder.rstrip('/') + '/images/' + name
+        sha = None
+        try:
+            sha = github_file_sha(rel) or None
+        except Exception:
+            sha = None
+        try:
+            github_put_bytes(rel, raw, 'ADMIN ảnh từ Word ' + name, sha)
+        except Exception as e:
+            return saved, str(e)
+        web = '/bank-img/' + urllib.parse.quote(rel[len('ngan-hang/'):], safe='/')
+        preview = raw if len(raw) <= 350_000 else b''
+        saved.append({
+            'name': name,
+            'url': web,
+            'mime': im.get('mime') or 'image/png',
+            'data': base64.b64encode(preview).decode('ascii') if preview else '',
+        })
+    return saved, ''
+
+
+@app.post('/api/admin/docx-images')
+def api_admin_docx_images():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get('path') or '').replace('\\', '/').strip()
+    if not path.startswith('ngan-hang/'):
+        return jsonify(ok=False, error='Thiếu bài học để lưu ảnh.'), 400
+    blob, err = _b64_blob(data.get('docx') or data.get('source_docx') or '')
+    if err or not blob:
+        return jsonify(ok=False, error=err or 'Chưa có file Word.'), 400
+    if len(blob) > 6_000_000:
+        return jsonify(ok=False, error='File Word quá lớn (dưới 6MB).'), 400
+    saved, serr = _save_docx_images(path, blob)
+    if serr and not saved:
+        return jsonify(ok=False, error=serr), 400
+    return jsonify(ok=True, n=len(saved), images=saved, error=serr or '')
 
 
 def _b64_blob(raw):
@@ -1451,7 +1555,7 @@ def api_admin_dang_fill():
         page_text = (page_text + '\n\n' + docx_text).strip()
     if pdf_text:
         page_text = (page_text + '\n\n' + pdf_text).strip()
-    images = (_images_from_payload(data) + pdf_images + docx_images)[:4]
+    images = (_images_from_payload(data) + pdf_images + docx_images)[:6]
     if images and not page_text.strip():
         page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
     if not dang and not page_text:

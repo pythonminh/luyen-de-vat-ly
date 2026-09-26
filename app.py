@@ -250,6 +250,19 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .ai-status{font:700 13px/1.35 Segoe UI,Arial,sans-serif;padding:6px 8px;border-radius:8px}
 .ai-status[hidden]{display:none!important}
 .ai-status.is-wait{background:#fff7ed;color:#9a3412;border:1px solid #fdba74}
+.ai-cap{font-weight:800;margin:0 0 6px}
+.ai-meter{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ai-col{background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:6px 8px;min-width:0}
+.ai-col b{display:block;font-size:11px;font-weight:800;color:#9a3412}
+.ai-col strong{display:block;font-size:16px;line-height:1.2;color:#111;font-variant-numeric:tabular-nums}
+.ai-col em{display:block;margin-top:2px;font-style:normal;font-size:11px;font-weight:700;color:#9a3412}
+.ai-bar{height:8px;border-radius:99px;background:#ffedd5;overflow:hidden;margin-top:6px}
+.ai-bar i{display:block;height:100%;background:#ea580c;width:0;transition:width .35s linear}
+.ai-status.is-ok .ai-col{border-color:#86efac}
+.ai-status.is-ok .ai-col b,.ai-status.is-ok .ai-col em{color:#166534}
+.ai-status.is-ok .ai-bar{background:#dcfce7}
+.ai-status.is-ok .ai-bar i{background:#16a34a}
+@media(max-width:700px){.ai-meter{grid-template-columns:1fr 1fr}}
 .ai-status.is-ok{background:#ecfdf5;color:#166534;border:1px solid #86efac}
 .ai-status.is-err{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
 .admindang .simrev{flex:1 1 100%;margin-top:6px;padding:10px;border:1px solid #fdba74;border-radius:9px;background:#fff7ed}
@@ -1124,6 +1137,28 @@ def github_put_text(path, text, message, sha=None):
     payload={'message':message,'content':base64.b64encode(str(text).encode('utf-8')).decode(),'branch':BRANCH}
     if sha: payload['sha']=sha
     return gh_api(f'contents/{urllib.parse.quote(p,safe="/")}','PUT',payload)
+
+def github_put_bytes(path, raw, message, sha=None):
+    """Ghi file nhị phân (ảnh) lên GitHub và bản local để xem ngay."""
+    p, local = _safe_repo_file(path)
+    blob = bytes(raw or b'')
+    if not blob:
+        raise ValueError('File ảnh trống.')
+    try:
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_bytes(blob)
+    except Exception:
+        pass
+    payload = {
+        'message': message,
+        'content': base64.b64encode(blob).decode('ascii'),
+        'branch': BRANCH,
+    }
+    if sha:
+        payload['sha'] = sha
+    if not github_token() and not _on_render():
+        return {'local': str(local)}
+    return gh_api(f'contents/{urllib.parse.quote(p, safe="/")}', 'PUT', payload)
 
 def github_delete_path(path, message):
     p,_=_safe_repo_file(path)

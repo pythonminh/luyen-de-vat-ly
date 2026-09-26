@@ -1018,7 +1018,7 @@ function renderIntake(){
   box.innerHTML=h;
 }
 function addImageFile(file){
-  if(aiShots.length>=4){alert('Tối đa 4 ảnh.');return;}
+  if(aiShots.length>=8){alert('Tối đa 8 ảnh.');return;}
   if(file.size>8000000){alert('Ảnh quá lớn.');return;}
   var img=new Image();
   var url=URL.createObjectURL(file);
@@ -1039,15 +1039,42 @@ function addImageFile(file){
 }
 function addDocxFile(file){
   var name=file.name||'';
+  var isDocx=/\.docx$/i.test(name)||/wordprocessingml/i.test(file.type||'');
   if(/\.doc$/i.test(name)&&!/\.docx$/i.test(name)){alert('File .doc cũ không đọc được. Trong Word hãy Lưu thành .docx.');return;}
-  if(!/\.docx$/i.test(name)){alert('Chỉ nhận Word định dạng .docx.');return;}
+  if(!isDocx){alert('Chỉ nhận Word định dạng .docx.');return;}
   if(file.size>6000000){alert('File Word quá lớn (dưới 6MB).');return;}
   var r=new FileReader();
   r.onload=function(){
     aiDocx={name:name||'de.docx', b64:String(r.result||'').split(',')[1]||''};
     renderIntake();
+    pushDocxImages(aiDocx.b64);
   };
   r.readAsDataURL(file);
+}
+async function pushDocxImages(b64){
+  var bar=document.querySelector('.admindang');
+  var path=bar? (bar.getAttribute('data-path')||'') : '';
+  if(!b64) return;
+  aiStatus('Đang tách ảnh trong Word…','wait');
+  try{
+    var r=await fetch('/api/admin/docx-images',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path, docx:b64})});
+    var d=await r.json();
+    if(!d.ok){aiStatus(d.error||'Không tách được ảnh Word.','err');return;}
+    var n=0;
+    (d.images||[]).forEach(function(im){
+      if(aiShots.length>=8) return;
+      var url=im.data?('data:'+(im.mime||'image/png')+';base64,'+im.data):(im.url||'');
+      if(!url) return;
+      aiShots.push({url:url, mime:im.mime||'image/png', data:im.data||''});
+      n++;
+    });
+    renderIntake();
+    if(!n) aiStatus('Word không có ảnh đủ lớn để tách (bỏ icon nhỏ).','ok');
+    else aiStatus('Đã tách '+n+' ảnh từ Word, lưu vào images/ trên GitHub. Xem ngay phía trên.','ok');
+  }catch(err){
+    aiStatus(String(err&&err.message||err),'err');
+  }
 }
 function addPdfFile(file){
   var name=file.name||'de.pdf';
@@ -1076,7 +1103,7 @@ function takeFiles(files){
   Array.prototype.forEach.call(files||[], function(file){
     var name=file.name||'';
     if(/^image\//.test(file.type)||/\.(png|jpe?g|webp|gif)$/i.test(name)) addImageFile(file);
-    else if(/\.docx?$/i.test(name)) addDocxFile(file);
+    else if(/\.docx?$/i.test(name)||/wordprocessingml/i.test(file.type||'')) addDocxFile(file);
     else if(/\.pdf$/i.test(name)||file.type==='application/pdf') addPdfFile(file);
     else if(/\.(tex|ltx|txt)$/i.test(name)||file.type==='text/plain') addTexFile(file);
     else alert('Chỉ nhận ảnh, Word .docx, PDF hoặc file .tex/.txt.');
@@ -1119,7 +1146,9 @@ document.addEventListener('paste',function(e){
   for(var i=0;i<items.length;i++){
     if(items[i].kind==='file'){
       var f=items[i].getAsFile();
-      if(f&&/^image\//.test(f.type||'')) files.push(f);
+      if(!f) continue;
+      var fname=f.name||'';
+      if(/^image\//.test(f.type||'')||/\.docx$/i.test(fname)||/wordprocessingml/i.test(f.type||'')) files.push(f);
     }
   }
   if(!files.length) return;
@@ -1355,10 +1384,37 @@ document.addEventListener('click',async function(e){
   const btnRun=document.getElementById('aiImport');
   if(btnRun) btnRun.disabled=true;
   const t0=Date.now();
+  const srcChars=(sourceTex||'').trim().length;
+  const srcImgs=sourceImages.length;
+  const srcBytes=Math.round((((sourceDocx||'').length)+((sourcePdf||'').length))*0.75);
+  const expectSec=90;
+  function srcLabel(){
+    const bits=[];
+    if(srcChars) bits.push(srcChars.toLocaleString('vi-VN')+' chữ');
+    if(srcBytes) bits.push((srcBytes/1024).toFixed(srcBytes>=102400?0:1).replace('.',',')+' KB');
+    if(srcImgs) bits.push(srcImgs+' ảnh');
+    return bits.join(' · ')||'đang gửi';
+  }
+  function rateLabel(sec){
+    const s=Math.max(1,sec);
+    if(srcChars) return Math.round(srcChars/s).toLocaleString('vi-VN')+' chữ/s';
+    if(srcBytes) return (srcBytes/s/1024).toFixed(1).replace('.',',')+' KB/s';
+    return (Math.round((Math.min(92,s/expectSec*100)/s)*10)/10).toString().replace('.',',')+' %/s';
+  }
   if(window._aiWaitTimer) clearInterval(window._aiWaitTimer);
   function paintWait(){
-    const s=Math.round((Date.now()-t0)/1000);
-    aiStatus(waitLabel+'… '+s+'s. Thường 1–3 phút, chưa xong thì cứ để trang mở.','wait');
+    const s=Math.max(0,Math.round((Date.now()-t0)/1000));
+    const pct=Math.min(92,Math.round(s/expectSec*100));
+    const remain=Math.max(0,expectSec-s);
+    aiMeter({
+      kind:'wait',
+      caption:waitLabel+'… thường 1–3 phút, chưa xong thì cứ để trang mở.',
+      time:(s||0)+'s',
+      src:srcLabel(),
+      rate:s?rateLabel(s):'…',
+      pct:pct,
+      hint:remain?('còn khoảng '+remain+'s'):'lâu hơn ước lượng — cứ để trang mở'
+    });
   }
   paintWait();
   window._aiWaitTimer=setInterval(paintWait,1000);
@@ -1379,7 +1435,17 @@ document.addEventListener('click',async function(e){
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
     const sec=Math.max(1,Math.round((Date.now()-t0)/1000));
     stopWait();
-    aiStatus(nTikz(d.latex)?('Xong sau '+sec+'s. Có hình TikZ — xem trước rồi mới bấm duyệt.'):('Xong sau '+sec+'s. LaTeX nằm ngay dưới — xem rồi bấm Chấp nhận ghi TEX.'),'ok');
+    const nQ=Number(d.n)||nTikz(d.latex)||((d.latex||'').split(/\\begin\s*\{\s*ex\s*\}/i).length-1);
+    const perMin=Math.max(1,Math.round(nQ/sec*60));
+    aiMeter({
+      kind:'ok',
+      caption:nTikz(d.latex)?('Xong sau '+sec+'s. Có hình TikZ — xem trước rồi mới bấm duyệt.'):('Xong sau '+sec+'s. LaTeX nằm ngay dưới — xem rồi bấm Chấp nhận ghi TEX.'),
+      time:sec+'s',
+      src:srcLabel(),
+      rate:nQ?((nQ+' câu · '+perMin+' câu/phút')):rateLabel(sec),
+      pct:100,
+      hint:(d.latex||'').length.toLocaleString('vi-VN')+' ký tự TEX'
+    });
     out.innerHTML='<div class="success">'+esc(d.summary||'Đã soạn. Xem LaTeX rồi bấm Chấp nhận.')+'</div>'
       +(d.note?'<div>'+esc(d.note)+'</div>':'')
       +'<div id="aiTikzPrev" class="ai-tikz"></div>'
@@ -1438,6 +1504,22 @@ function aiStatus(msg, kind){
   el.hidden=!msg;
   el.className='ai-status'+(kind?(' is-'+kind):'');
   el.textContent=msg||'';
+}
+function aiMeter(o){
+  const el=document.getElementById('aiStatus');
+  if(!el) return;
+  o=o||{};
+  el.hidden=false;
+  el.className='ai-status is-'+(o.kind||'wait');
+  const pct=Math.max(0,Math.min(100,Number(o.pct)||0));
+  el.innerHTML='<div class="ai-cap">'+esc(o.caption||'')+'</div>'
+    +'<div class="ai-meter">'
+    +'<div class="ai-col"><b>Thời gian</b><strong>'+esc(o.time||'0s')+'</strong></div>'
+    +'<div class="ai-col"><b>Dữ liệu</b><strong>'+esc(o.src||'')+'</strong></div>'
+    +'<div class="ai-col"><b>Tốc độ</b><strong>'+esc(o.rate||'…')+'</strong></div>'
+    +'<div class="ai-col"><b>Hoàn thành</b><strong>'+pct+'%</strong><em>'+esc(o.hint||'')+'</em>'
+    +'<div class="ai-bar"><i style="width:'+pct+'%"></i></div></div>'
+    +'</div>';
 }
 })();
 </script>
