@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12318,
+  "total_questions": 12291,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4690,10 +4690,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 33,
-      "count": 33,
+      "questions": 24,
+      "count": 24,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 27,
+        "Bài toán công suất, hiệu suất và thời gian đun": 18,
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 2,
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 2,
         "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 1,
@@ -4703,8 +4703,8 @@
         "Bài toán công suất, hiệu suất và thời gian đun": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         },
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
           "TN": 2,
@@ -4741,17 +4741,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian nóng chảy",
-      "questions": 27,
-      "count": 27,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 27
+        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 18
       },
       "dang_kinds": {
         "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         }
       }
     },
@@ -4948,17 +4948,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng",
-      "questions": 27,
-      "count": 27,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 27
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 18
       },
       "dang_kinds": {
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         }
       }
     },
