@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12291,
+  "total_questions": 12300,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4690,30 +4690,30 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
       "De": "L12C1 Bài 6. Nhiệt hóa hơi riêng · Bài toán công suất, hiệu suất và thời gian đun",
-      "questions": 24,
-      "count": 24,
+      "questions": 33,
+      "count": 33,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 18,
-        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 2,
-        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 2,
+        "Bài toán công suất, hiệu suất và thời gian đun": 20,
+        "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 4,
+        "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 5,
         "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 1,
-        "Nhận biết và phân tích các quá trình chuyển thể": 1
+        "Nhận biết và phân tích các quá trình chuyển thể": 3
       },
       "dang_kinds": {
         "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 10,
+          "TN": 12,
           "DS": 5,
           "TLN": 1,
           "TL": 2
         },
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": {
-          "TN": 2,
+          "TN": 4,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
-          "TN": 2,
+          "TN": 5,
           "DS": 0,
           "TLN": 0,
           "TL": 0
@@ -4725,7 +4725,7 @@
           "TL": 0
         },
         "Nhận biết và phân tích các quá trình chuyển thể": {
-          "TN": 1,
+          "TN": 3,
           "DS": 0,
           "TLN": 0,
           "TL": 0
