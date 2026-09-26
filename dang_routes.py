@@ -1545,7 +1545,7 @@ def _place_images_from_source(latex, source):
     chunks = []
     for part in parts:
         files = re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{(images/w-[^}]+)\}', part)
-        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{4,}', part.lower()))
+        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{6,}', part.lower()))
         if files:
             chunks.append((words, files))
     if not chunks:
@@ -1565,7 +1565,7 @@ def _place_images_from_source(latex, source):
     used = set()
     chosen = {}
     for mi, m in enumerate(matches):
-        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{4,}', strip_figs(m.group(0)).lower()))
+        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{6,}', strip_figs(m.group(0)).lower()))
         best_i, best_score = None, 0
         for ci, (cw, _files) in enumerate(chunks):
             if ci in used:
@@ -1573,7 +1573,7 @@ def _place_images_from_source(latex, source):
             score = sum(len(w) for w in (words & cw))
             if score > best_score:
                 best_i, best_score = ci, score
-        if best_i is not None and best_score >= 12:
+        if best_i is not None and best_score >= 28:
             used.add(best_i)
             chosen[mi] = chunks[best_i][1]
     if not chosen:
