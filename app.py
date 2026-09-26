@@ -3380,7 +3380,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         "</div>"
         "<div id='aiStatus' class='ai-status' hidden></div>"
         "<div class='ai-shots' id='aiShots'></div>"
-        "<textarea id='aiPaste' rows='3' placeholder='Dán ảnh (Ctrl+V), TEX hoặc chữ. Kéo thả Word .docx, PDF, ảnh, file .tex cũng được.'></textarea>"
+        "<textarea id='aiPaste' rows='3' placeholder='Thả file Word .doc hoặc .docx vào đây — ảnh hiện ngay, không cần Save As. Dán chữ, TEX, PDF cũng được.'></textarea>"
         "<input id='aiSrcUrl' type='url' placeholder='"+html.escape('Link http tuỳ chọn — không dán ổ đĩa G:\\...', quote=True)+"'>"
         "</div>"
         "<span class='muted'>"+hint+"</span>"

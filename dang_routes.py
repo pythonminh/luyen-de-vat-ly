@@ -1362,6 +1362,14 @@ def _save_docx_images(path, blob):
         try:
             github_put_bytes(rel, raw, 'ADMIN ảnh từ Word ' + name, sha)
         except Exception as e:
+            web = '/bank-img/' + urllib.parse.quote(rel[len('ngan-hang/'):], safe='/')
+            preview = raw if len(raw) <= 350_000 else b''
+            saved.append({
+                'name': name,
+                'url': web,
+                'mime': im.get('mime') or 'image/png',
+                'data': base64.b64encode(preview).decode('ascii') if preview else '',
+            })
             return saved, str(e)
         web = '/bank-img/' + urllib.parse.quote(rel[len('ngan-hang/'):], safe='/')
         preview = raw if len(raw) <= 350_000 else b''

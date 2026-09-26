@@ -1045,35 +1045,83 @@ function addDocxFile(file){
   if(file.size>6000000){alert('File Word quá lớn (dưới 6MB).');return;}
   var r=new FileReader();
   r.onload=function(){
-    aiDocx={name:name||'de.docx', b64:String(r.result||'').split(',')[1]||''};
+    var dataUrl=String(r.result||'');
+    var b64=dataUrl.split(',')[1]||'';
+    aiDocx={name:name||'de.doc', b64:b64};
+    var n=showWordImages(b64);
     renderIntake();
-    pushDocxImages(aiDocx.b64);
+    if(n) aiStatus('Thấy '+n+' ảnh trong file Word. Đang lưu lên GitHub…','wait');
+    else aiStatus('Chưa thấy ảnh nhúng trong file. Thả đúng file .doc/.docx, không cần Save As.','err');
+    pushDocxImages(b64);
   };
   r.readAsDataURL(file);
+}
+function u32be(s,i){
+  return ((s.charCodeAt(i)<<24)|(s.charCodeAt(i+1)<<16)|(s.charCodeAt(i+2)<<8)|s.charCodeAt(i+3))>>>0;
+}
+function addShotB64(b64, mime){
+  if(!b64||aiShots.length>=12) return false;
+  var head=b64.slice(0,80);
+  if(aiShots.some(function(s){return (s.data||'').slice(0,80)===head;})) return false;
+  aiShots.push({url:'data:'+mime+';base64,'+b64, mime:mime, data:b64});
+  return true;
+}
+function showWordImages(b64){
+  var bin='';
+  try{ bin=atob(b64); }catch(e){ return 0; }
+  var n=0, i=0, sig='\x89PNG\r\n\x1a\n';
+  while(n<12){
+    var j=bin.indexOf(sig,i);
+    if(j<0) break;
+    var k=bin.indexOf('IEND', j+8);
+    if(k<0){ i=j+8; continue; }
+    var slice=bin.slice(j, k+8);
+    var w=slice.length>=24?u32be(slice,16):0;
+    var h=slice.length>=24?u32be(slice,20):0;
+    if(slice.length>=2500 && (!w||!h||(w>=64&&h>=64))){
+      try{ if(addShotB64(btoa(slice),'image/png')) n++; }catch(e){}
+    }
+    i=k+8;
+  }
+  i=0;
+  sig='\xff\xd8\xff';
+  while(n<12){
+    j=bin.indexOf(sig,i);
+    if(j<0) break;
+    k=bin.indexOf('\xff\xd9', j+3);
+    if(k<0) break;
+    slice=bin.slice(j, k+2);
+    if(slice.length>=2500 && slice.length<=400000){
+      try{ if(addShotB64(btoa(slice),'image/jpeg')) n++; }catch(e){}
+    }
+    i=k+2;
+  }
+  return n;
 }
 async function pushDocxImages(b64){
   var bar=document.querySelector('.admindang');
   var path=bar? (bar.getAttribute('data-path')||'') : '';
   if(!b64) return;
-  aiStatus('Đang tách ảnh trong Word…','wait');
+  if(!aiShots.length) aiStatus('Đang tách ảnh trong Word…','wait');
   try{
     var r=await fetch('/api/admin/docx-images',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({path:path, docx:b64})});
     var d=await r.json();
-    if(!d.ok){aiStatus(d.error||'Không tách được ảnh Word.','err');return;}
+    if(!d.ok){
+      if(aiShots.length) aiStatus('Đã hiện '+aiShots.length+' ảnh. Lưu GitHub chưa xong: '+(d.error||'lỗi')+'.','err');
+      else aiStatus(d.error||'Không tách được ảnh Word.','err');
+      return;
+    }
     var n=0;
     (d.images||[]).forEach(function(im){
-      if(aiShots.length>=12) return;
-      var url=im.data?('data:'+(im.mime||'image/png')+';base64,'+im.data):(im.url||'');
-      if(!url) return;
-      aiShots.push({url:url, mime:im.mime||'image/png', data:im.data||''});
-      n++;
+      if(im.data && addShotB64(im.data, im.mime||'image/png')) n++;
     });
     renderIntake();
-    if(!n) aiStatus('Word không có ảnh đủ lớn để tách (bỏ icon nhỏ).','ok');
-    else aiStatus('Đã tách '+n+' ảnh từ Word (kể cả file .doc cũ), lưu vào images/ trên GitHub. Xem ngay phía trên.','ok');
+    if(!aiShots.length) aiStatus('Word không có ảnh đủ lớn để tách (bỏ icon nhỏ).','ok');
+    else aiStatus('Đã hiện '+aiShots.length+' ảnh từ Word'+(n?' , đã lưu GitHub.':' .')+' Không cần Save As.','ok');
   }catch(err){
-    aiStatus(String(err&&err.message||err),'err');
+    if(aiShots.length) aiStatus('Đã hiện '+aiShots.length+' ảnh trong khung. '+String(err&&err.message||err),'err');
+    else aiStatus(String(err&&err.message||err),'err');
   }
 }
 function addPdfFile(file){
