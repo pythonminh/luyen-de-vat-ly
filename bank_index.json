@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 182,
-  "total_questions": 12280,
+  "total_questions": 12330,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4646,31 +4646,38 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
       "De": "L12C1 Bài 5. Nhiệt nóng chảy riêng",
-      "questions": 135,
-      "count": 135,
+      "questions": 185,
+      "count": 185,
       "dang": {
-        "Bài toán nóng chảy và đông đặc": 27,
-        "Tính nhiệt lượng tổng hợp có chuyển pha": 81,
-        "Lí thuyết về nhiệt nóng chảy riêng": 27
+        "Bài toán nóng chảy và đông đặc": 40,
+        "Tính nhiệt lượng tổng hợp có chuyển pha": 89,
+        "Lí thuyết về nhiệt nóng chảy riêng": 45,
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": 11
       },
       "dang_kinds": {
         "Bài toán nóng chảy và đông đặc": {
-          "TN": 10,
-          "DS": 5,
+          "TN": 18,
+          "DS": 10,
           "TLN": 6,
           "TL": 6
         },
         "Tính nhiệt lượng tổng hợp có chuyển pha": {
-          "TN": 45,
-          "DS": 12,
-          "TLN": 12,
+          "TN": 47,
+          "DS": 15,
+          "TLN": 15,
           "TL": 12
         },
         "Lí thuyết về nhiệt nóng chảy riêng": {
-          "TN": 10,
+          "TN": 28,
           "DS": 5,
           "TLN": 6,
           "TL": 6
+        },
+        "Thực nghiệm xác định nhiệt nóng chảy riêng": {
+          "TN": 8,
+          "DS": 0,
+          "TLN": 3,
+          "TL": 0
         }
       }
     },
