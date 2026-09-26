@@ -1115,6 +1115,11 @@ async function pushDocxImages(b64){
     var n=0;
     (d.images||[]).forEach(function(im){
       if(im.data && addShotB64(im.data, im.mime||'image/png')) n++;
+      if(!im.file) return;
+      var head=(im.data||'').slice(0,80);
+      aiShots.forEach(function(s){
+        if(head && (s.data||'').slice(0,80)===head) s.file=im.file;
+      });
     });
     renderIntake();
     if(!aiShots.length) aiStatus('Word không có ảnh đủ lớn để tách (bỏ icon nhỏ).','ok');
@@ -1416,6 +1421,7 @@ document.addEventListener('click',async function(e){
     if(fileTex && sourceTex.indexOf(fileTex.slice(0,120))<0) sourceTex=(sourceTex.trim()?sourceTex.replace(/\s+$/,'')+'\n\n':'')+fileTex;
   }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
   const sourceImages=aiShots.map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
+  const imageFiles=aiShots.map(function(s){return s.file||'';}).filter(Boolean);
   const sourceDocx=aiDocx&&aiDocx.b64?aiDocx.b64:'';
   const sourcePdf=aiPdf&&aiPdf.b64?aiPdf.b64:'';
   const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx||sourcePdf);
@@ -1476,7 +1482,7 @@ document.addEventListener('click',async function(e){
   const killer=setTimeout(function(){ctrl.abort();},210000);
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',signal:ctrl.signal,
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,source_docx:sourceDocx,source_pdf:sourcePdf})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docx:sourceDocx,source_pdf:sourcePdf})});
     const raw=await r.text();
     let d={};
     try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}

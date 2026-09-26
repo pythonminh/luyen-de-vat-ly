@@ -1242,7 +1242,8 @@ def _docx_images(zf, root, limit=6):
         if digest in hashes:
             continue
         hashes.add(digest)
-        found.append({'mime': mime, 'ext': 'jpg' if ext == 'jpeg' else ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10]})
+        ext_name = 'jpg' if ext == 'jpeg' else ext
+        found.append({'mime': mime, 'ext': ext_name, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10], 'file': 'images/w-' + digest[:10] + '.' + ext_name})
         if len(found) >= limit:
             break
     return found
@@ -1265,7 +1266,7 @@ def _ole_images(blob, limit=12):
             return
         hashes.add(digest)
         mime = {'png': 'image/png', 'jpg': 'image/jpeg'}.get(ext, 'image/png')
-        found.append({'mime': mime, 'ext': ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10]})
+        found.append({'mime': mime, 'ext': ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10], 'file': 'images/w-' + digest[:10] + '.' + ext})
 
     sig = b'\x89PNG\r\n\x1a\n'
     i = 0
@@ -1359,26 +1360,21 @@ def _save_docx_images(path, blob):
             sha = github_file_sha(rel) or None
         except Exception:
             sha = None
-        try:
-            github_put_bytes(rel, raw, 'ADMIN ảnh từ Word ' + name, sha)
-        except Exception as e:
-            web = '/bank-img/' + urllib.parse.quote(rel[len('ngan-hang/'):], safe='/')
-            preview = raw if len(raw) <= 350_000 else b''
-            saved.append({
-                'name': name,
-                'url': web,
-                'mime': im.get('mime') or 'image/png',
-                'data': base64.b64encode(preview).decode('ascii') if preview else '',
-            })
-            return saved, str(e)
         web = '/bank-img/' + urllib.parse.quote(rel[len('ngan-hang/'):], safe='/')
         preview = raw if len(raw) <= 350_000 else b''
-        saved.append({
+        item = {
             'name': name,
+            'file': 'images/' + name,
             'url': web,
             'mime': im.get('mime') or 'image/png',
             'data': base64.b64encode(preview).decode('ascii') if preview else '',
-        })
+        }
+        try:
+            github_put_bytes(rel, raw, 'ADMIN ảnh từ Word ' + name, sha)
+        except Exception as e:
+            saved.append(item)
+            return saved, str(e)
+        saved.append(item)
     return saved, ''
 
 
@@ -1412,6 +1408,50 @@ def _b64_blob(raw):
         return base64.b64decode(s, validate=True), ''
     except Exception:
         return b'', 'Dữ liệu file không hợp lệ.'
+
+
+def _image_files_from_payload(data):
+    raw = (data or {}).get('image_files') or []
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw[:12]:
+        s = str(item or '').replace('\\', '/').strip().lstrip('/')
+        if not re.fullmatch(r'images/w-[0-9a-f]{6,40}\.(?:png|jpe?g|gif|webp)', s, re.I):
+            continue
+        if s not in out:
+            out.append(s)
+    return out
+
+
+def _inject_saved_images(latex, files):
+    """Ảnh Word đã lưu phải nằm trong câu, không chỉ ở khung xem trước."""
+    files = [f for f in (files or []) if f and f not in (latex or '')]
+    if not files or not latex:
+        return latex
+    matches = list(re.finditer(r'\\begin\s*\{ex\}.*?\\end\s*\{ex\}', latex, re.S))
+    targets = [m for m in matches if 'includegraphics' not in m.group(0)]
+    if not targets:
+        return latex
+    buckets = [[] for _ in targets]
+    for i, name in enumerate(files):
+        buckets[i % len(targets)].append(name)
+    out = latex
+    for m, figs in zip(reversed(targets), reversed(buckets)):
+        if not figs:
+            continue
+        snippet = '\n'.join(
+            '\\begin{center}\\includegraphics[width=0.55\\linewidth]{%s}\\end{center}' % name
+            for name in figs
+        ) + '\n'
+        body = m.group(0)
+        cut = re.search(r'\\choiceTF|\\choice|\\shortans|\\loigiai', body)
+        if cut:
+            body = body[:cut.start()] + snippet + body[cut.start():]
+        else:
+            body = body.replace('\\end{ex}', snippet + '\\end{ex}', 1)
+        out = out[:m.start()] + body + out[m.end():]
+    return out
 
 
 def _images_from_payload(data):
@@ -1620,7 +1660,13 @@ def api_admin_dang_fill():
         page_text = (page_text + '\n\n' + docx_text).strip()
     if pdf_text:
         page_text = (page_text + '\n\n' + pdf_text).strip()
-    images = (_images_from_payload(data) + pdf_images + docx_images)[:6]
+    image_files = _image_files_from_payload(data)
+    for im in list(docx_images) + list(pdf_images):
+        name = str((im or {}).get('file') or '')
+        if name and name not in image_files and re.fullmatch(r'images/w-[0-9a-f]{6,40}\.(?:png|jpe?g|gif|webp)', name, re.I):
+            image_files.append(name)
+    image_files = image_files[:12]
+    images = (_images_from_payload(data) + pdf_images + docx_images)[:8]
     if images and not page_text.strip():
         page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
     if not dang and not page_text:
@@ -1648,7 +1694,15 @@ def api_admin_dang_fill():
         + "Mỗi câu có \\loigiai{...} (trang không có lời giải thì viết ngắn đúng đáp án). Không % ID.\n"
         + ("Trong MỖI khối \\begin{ex} phải có đúng một " + nguon_line + " (link tải trang, không đổi).\n" if nguon_line else "")
     )
-    if images:
+    if image_files:
+        kind_rules += (
+            "Ảnh trong Word đã lưu thành file. Mỗi file dưới đây phải nằm trong đúng câu mà hình minh họa, "
+            "đúng một lần, ngay sau đề và trước \\choice:\n"
+            "\\begin{center}\\includegraphics[width=0.55\\linewidth]{images/tên-file}\\end{center}\n"
+            "Không thay ảnh bằng TikZ. Không bỏ ảnh. Không để ảnh ngoài \\begin{ex}.\n"
+            + '\n'.join('- ' + name for name in image_files) + '\n'
+        )
+    elif images:
         kind_rules += (
             "Nếu ảnh có đồ thị, trục số, sơ đồ, mạch hoặc hình học: vẽ lại bằng TikZ trong câu, bọc \\begin{center}...\\end{center}.\n"
             "TikZ biên dịch bằng pdflatex: chỉ \\draw, \\node, \\path, \\fill, \\foreach; mũi tên >=stealth.\n"
@@ -1735,7 +1789,7 @@ def api_admin_dang_fill():
         if skipped and all('sai cấu trúc' in s for s in skipped):
             return jsonify(ok=False, error='Câu AI viết sai cấu trúc loại (ĐS = \\choiceTF 4 mệnh đề, không hỏi «nào sau đây»; TN = \\choice 4 ý). Thử lại.'), 400
         return jsonify(ok=False, error='Câu AI viết gần trùng đề đang có. Soát xóa bản thừa, đừng nhồi thêm biến thể.'), 400
-    latex = _latex_with_nguon(latex, source_url)
+    latex = _inject_saved_images(_latex_with_nguon(latex, source_url), image_files)
     nd = len(_chunks_from_import(latex, dang))
     if page_text:
         skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu sai cấu trúc.') if skipped else ''
