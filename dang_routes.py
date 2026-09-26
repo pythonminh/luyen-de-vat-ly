@@ -1154,23 +1154,39 @@ def _docx_p_line(p):
     return re.sub(r'[ \t]{2,}', ' ', ''.join(bits)).strip()
 
 
-def _docx_blocks(el, out):
+def _docx_para_figs(p, rid_to_file):
+    lines = []
+    seen = set()
+    for el in p.iter():
+        rid = el.get(_R_NS + 'embed')
+        if not rid or rid in seen or rid not in rid_to_file:
+            continue
+        seen.add(rid)
+        lines.append(_fig_tex(rid_to_file[rid]))
+    return lines
+
+
+def _docx_blocks(el, out, rid_to_file=None):
+    rid_to_file = rid_to_file or {}
     for node in list(el):
         loc = _xml_local(node.tag)
         if loc == 'p':
             line = _docx_p_line(node)
             if line:
                 out.append(line)
+            out.extend(_docx_para_figs(node, rid_to_file))
         elif loc == 'tbl':
             for tr in node.findall(_W_NS + 'tr'):
                 cells = []
                 for tc in tr.findall(_W_NS + 'tc'):
                     cells.append(' '.join(_docx_p_line(p) for p in tc.findall(_W_NS + 'p')).strip())
+                    for p in tc.findall(_W_NS + 'p'):
+                        out.extend(_docx_para_figs(p, rid_to_file))
                 row = ' | '.join(c for c in cells if c)
                 if row:
                     out.append(row)
         elif loc in ('sdt', 'sdtContent', 'tc', 'body'):
-            _docx_blocks(node, out)
+            _docx_blocks(node, out, rid_to_file)
 
 
 def _image_px(raw, ext):
@@ -1243,20 +1259,20 @@ def _docx_images(zf, root, limit=6):
             continue
         hashes.add(digest)
         ext_name = 'jpg' if ext == 'jpeg' else ext
-        found.append({'mime': mime, 'ext': ext_name, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10], 'file': 'images/w-' + digest[:10] + '.' + ext_name})
+        found.append({'mime': mime, 'ext': ext_name, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10], 'file': 'images/w-' + digest[:10] + '.' + ext_name, 'rid': rid})
         if len(found) >= limit:
             break
     return found
 
 
-def _ole_images(blob, limit=12):
-    """Ảnh nhúng trong Word .doc (định dạng cũ). Bỏ icon nhỏ, lấy png rồi jpg."""
+def _ole_images(blob, limit=16):
+    """Ảnh nhúng trong Word .doc, theo đúng thứ tự xuất hiện trong file."""
     blob = bytes(blob or b'')
-    found = []
+    bag = []
     hashes = set()
 
-    def add(raw, ext):
-        if len(found) >= limit or not raw or len(raw) < 2500 or len(raw) > 1_500_000:
+    def add(offset, raw, ext):
+        if len(bag) >= 40 or not raw or len(raw) < 2500 or len(raw) > 1_500_000:
             return
         w, h = _image_px(raw, ext)
         if w and h and (w < 64 or h < 64):
@@ -1266,11 +1282,18 @@ def _ole_images(blob, limit=12):
             return
         hashes.add(digest)
         mime = {'png': 'image/png', 'jpg': 'image/jpeg'}.get(ext, 'image/png')
-        found.append({'mime': mime, 'ext': ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10], 'file': 'images/w-' + digest[:10] + '.' + ext})
+        bag.append((offset, {
+            'mime': mime,
+            'ext': ext,
+            'data': base64.b64encode(raw).decode('ascii'),
+            'raw': raw,
+            'sha': digest[:10],
+            'file': 'images/w-' + digest[:10] + '.' + ext,
+        }))
 
     sig = b'\x89PNG\r\n\x1a\n'
     i = 0
-    while len(found) < limit:
+    while True:
         j = blob.find(sig, i)
         if j < 0:
             break
@@ -1278,23 +1301,109 @@ def _ole_images(blob, limit=12):
         if k < 0:
             i = j + 8
             continue
-        add(blob[j:k + 8], 'png')
+        add(j, blob[j:k + 8], 'png')
         i = k + 8
     i = 0
     sig = b'\xff\xd8\xff'
-    while len(found) < limit:
+    while True:
         j = blob.find(sig, i)
         if j < 0:
             break
         k = blob.find(b'\xff\xd9', j + 3)
         if k < 0:
             break
-        add(blob[j:k + 2], 'jpg')
+        add(j, blob[j:k + 2], 'jpg')
         i = k + 2
-    return found
+    bag.sort(key=lambda item: item[0])
+    return [im for _, im in bag[:limit]]
 
 
 _OLE_MAGIC = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
+
+
+def _fig_tex(name):
+    return '\\begin{center}\\includegraphics[width=0.55\\linewidth]{%s}\\end{center}' % name
+
+
+def _ole_marked_text(blob, images):
+    """Chữ trong Word .doc, mỗi ảnh đứng ngay chỗ nó nằm trong câu."""
+    try:
+        import olefile
+    except Exception:
+        return ''
+    blob = bytes(blob or b'')
+    try:
+        ole = olefile.OleFileIO(io.BytesIO(blob))
+    except Exception:
+        return ''
+    try:
+        if not ole.exists('WordDocument'):
+            return ''
+        word = ole.openstream('WordDocument').read()
+        if len(word) < 0x1AA:
+            return ''
+        flags = int.from_bytes(word[0x000A:0x000C], 'little')
+        table_name = '1Table' if flags & 0x0200 else '0Table'
+        if not ole.exists(table_name):
+            return ''
+        table = ole.openstream(table_name).read()
+        fc_clx = int.from_bytes(word[0x01A2:0x01A6], 'little')
+        lcb_clx = int.from_bytes(word[0x01A6:0x01AA], 'little')
+        if lcb_clx < 5 or fc_clx < 0 or fc_clx + lcb_clx > len(table):
+            return ''
+        clx = table[fc_clx:fc_clx + lcb_clx]
+        i = 0
+        while i < len(clx) and clx[i] == 1:
+            i += 1
+            if i + 2 > len(clx):
+                return ''
+            cb = int.from_bytes(clx[i:i + 2], 'little')
+            i += 2 + cb
+        if i >= len(clx) or clx[i] != 2:
+            return ''
+        i += 1
+        lcb = int.from_bytes(clx[i:i + 4], 'little')
+        i += 4
+        if lcb < 4 or (lcb - 4) % 12 or i + lcb > len(clx):
+            return ''
+        plc = clx[i:i + lcb]
+        n = (lcb - 4) // 12
+        chars = []
+        for pi in range(n):
+            cp0 = int.from_bytes(plc[pi * 4:pi * 4 + 4], 'little')
+            cp1 = int.from_bytes(plc[(pi + 1) * 4:(pi + 2) * 4], 'little')
+            pcd = plc[(n + 1) * 4 + pi * 8:(n + 1) * 4 + (pi + 1) * 8]
+            if len(pcd) < 6:
+                continue
+            fc = int.from_bytes(pcd[2:6], 'little')
+            compressed = bool(fc & 0x40000000)
+            fc &= 0x3FFFFFFF
+            length = cp1 - cp0
+            if length <= 0 or length > 500000:
+                continue
+            if compressed:
+                fc //= 2
+                raw = word[fc:fc + length]
+                chars.append(raw.decode('cp1252', 'replace'))
+            else:
+                raw = word[fc:fc + length * 2]
+                chars.append(raw.decode('utf-16le', 'replace'))
+    finally:
+        ole.close()
+    full = ''.join(chars)
+    figs = [_fig_tex(im.get('file')) for im in images if im.get('file')]
+    out = []
+    fi = 0
+    for ch in full:
+        if ch == '\x01':
+            if fi < len(figs):
+                out.append('\n' + figs[fi] + '\n')
+                fi += 1
+        elif ch in '\r\x07\x0b':
+            out.append('\n')
+        elif ch >= ' ' or ch == '\n':
+            out.append(ch)
+    return re.sub(r'\n{3,}', '\n\n', ''.join(out)).strip()
 
 
 def _docx_extract(blob):
@@ -1311,11 +1420,13 @@ def _docx_extract(blob):
             return '', [], 'Không đọc được nội dung Word.'
         lines = []
         body = root.find(_W_NS + 'body')
-        _docx_blocks(body if body is not None else root, lines)
+        images = _docx_images(zf, root, limit=16)
+        rid_to_file = {im['rid']: im['file'] for im in images if im.get('rid') and im.get('file')}
+        _docx_blocks(body if body is not None else root, lines, rid_to_file)
         text = '\n'.join(lines).strip()
-        images = _docx_images(zf, root)
         for im in images:
             im.pop('raw', None)
+            im.pop('rid', None)
     finally:
         zf.close()
     if len(text) < 20 and not images:
@@ -1424,32 +1535,60 @@ def _image_files_from_payload(data):
     return out
 
 
-def _inject_saved_images(latex, files):
-    """Ảnh Word đã lưu phải nằm trong câu, không chỉ ở khung xem trước."""
-    files = [f for f in (files or []) if f and f not in (latex or '')]
-    if not files or not latex:
+def _place_images_from_source(latex, source):
+    """Ảnh chỉ vào câu mà Word đã đặt nó, không rải sang câu khác."""
+    source = source or ''
+    files_in_source = re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{(images/w-[^}]+)\}', source)
+    if not files_in_source or not latex:
         return latex
+    parts = re.split(r'(?=Câu\s+\d+\s*[\.:])', source)
+    chunks = []
+    for part in parts:
+        files = re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{(images/w-[^}]+)\}', part)
+        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{4,}', part.lower()))
+        if files:
+            chunks.append((words, files))
+    if not chunks:
+        return latex
+
+    def strip_figs(body):
+        return re.sub(
+            r'\\begin\{center\}(?:(?!\\end\{center\}).)*\\includegraphics(?:(?!\\end\{center\}).)*\\end\{center\}\s*',
+            '',
+            body,
+            flags=re.S,
+        )
+
     matches = list(re.finditer(r'\\begin\s*\{ex\}.*?\\end\s*\{ex\}', latex, re.S))
-    targets = [m for m in matches if 'includegraphics' not in m.group(0)]
-    if not targets:
+    if not matches:
         return latex
-    buckets = [[] for _ in targets]
-    for i, name in enumerate(files):
-        buckets[i % len(targets)].append(name)
+    used = set()
+    chosen = {}
+    for mi, m in enumerate(matches):
+        words = set(re.findall(r'[0-9A-Za-z\u00C0-\u1EF9]{4,}', strip_figs(m.group(0)).lower()))
+        best_i, best_score = None, 0
+        for ci, (cw, _files) in enumerate(chunks):
+            if ci in used:
+                continue
+            score = sum(len(w) for w in (words & cw))
+            if score > best_score:
+                best_i, best_score = ci, score
+        if best_i is not None and best_score >= 12:
+            used.add(best_i)
+            chosen[mi] = chunks[best_i][1]
+    if not chosen:
+        return latex
     out = latex
-    for m, figs in zip(reversed(targets), reversed(buckets)):
-        if not figs:
-            continue
-        snippet = '\n'.join(
-            '\\begin{center}\\includegraphics[width=0.55\\linewidth]{%s}\\end{center}' % name
-            for name in figs
-        ) + '\n'
-        body = m.group(0)
-        cut = re.search(r'\\choiceTF|\\choice|\\shortans|\\loigiai', body)
-        if cut:
-            body = body[:cut.start()] + snippet + body[cut.start():]
-        else:
-            body = body.replace('\\end{ex}', snippet + '\\end{ex}', 1)
+    for mi, m in reversed(list(enumerate(matches))):
+        files = chosen.get(mi) or []
+        body = strip_figs(m.group(0))
+        if files:
+            snippet = '\n'.join(_fig_tex(name) for name in files) + '\n'
+            cut = re.search(r'\\choiceTF|\\choice|\\shortans|\\loigiai', body)
+            if cut:
+                body = body[:cut.start()] + snippet + body[cut.start():]
+            else:
+                body = body.replace('\\end{ex}', snippet + '\\end{ex}', 1)
         out = out[:m.start()] + body + out[m.end():]
     return out
 
@@ -1486,9 +1625,10 @@ def _docx_from_payload(data):
         return '', [], 'File Word quá lớn (dưới 6MB).'
     if bytes(blob[:8]) == _OLE_MAGIC:
         images = _ole_images(blob)
+        text = _ole_marked_text(blob, images)
         for im in images:
             im.pop('raw', None)
-        return '', images, ''
+        return text, images, ''
     return _docx_extract(blob)
 
 
@@ -1651,10 +1791,7 @@ def api_admin_dang_fill():
     if ferr:
         return jsonify(ok=False, error=ferr), 400
     image_files = _image_files_from_payload(data)
-    if image_files and len(page_text.strip()) > 40:
-        docx_text, docx_images, derr = '', [], ''
-    else:
-        docx_text, docx_images, derr = _docx_from_payload(data)
+    docx_text, docx_images, derr = _docx_from_payload(data)
     if derr:
         return jsonify(ok=False, error=derr), 400
     pdf_text, pdf_images, perr = _pdf_from_payload(data)
@@ -1702,10 +1839,8 @@ def api_admin_dang_fill():
     )
     if image_files:
         kind_rules += (
-            "Ảnh trong Word đã lưu thành file. Mỗi file dưới đây phải nằm trong đúng câu mà hình minh họa, "
-            "đúng một lần, ngay sau đề và trước \\choice:\n"
-            "\\begin{center}\\includegraphics[width=0.55\\linewidth]{images/tên-file}\\end{center}\n"
-            "Không thay ảnh bằng TikZ. Không bỏ ảnh. Không để ảnh ngoài \\begin{ex}.\n"
+            "Ảnh đã đứng sẵn trong nguồn bằng \\includegraphics, ngay câu của nó. "
+            "Giữ mỗi ảnh trong đúng câu đó. Không chuyển ảnh sang câu khác, không rải ảnh theo thứ tự file.\n"
             + '\n'.join('- ' + name for name in image_files) + '\n'
         )
     elif images:
@@ -1795,7 +1930,7 @@ def api_admin_dang_fill():
         if skipped and all('sai cấu trúc' in s for s in skipped):
             return jsonify(ok=False, error='Câu AI viết sai cấu trúc loại (ĐS = \\choiceTF 4 mệnh đề, không hỏi «nào sau đây»; TN = \\choice 4 ý). Thử lại.'), 400
         return jsonify(ok=False, error='Câu AI viết gần trùng đề đang có. Soát xóa bản thừa, đừng nhồi thêm biến thể.'), 400
-    latex = _inject_saved_images(_latex_with_nguon(latex, source_url), image_files)
+    latex = _place_images_from_source(_latex_with_nguon(latex, source_url), page_text)
     nd = len(_chunks_from_import(latex, dang))
     if page_text:
         skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu sai cấu trúc.') if skipped else ''

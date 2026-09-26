@@ -1,5 +1,6 @@
 Flask>=3.0,<4
 gunicorn>=22,<24
+olefile>=0.46,<1
 pymupdf>=1.24,<2
 edge-tts>=6.1,<8
 segno>=1.6,<2
