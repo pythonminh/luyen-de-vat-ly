@@ -3375,7 +3375,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<strong>Nhận đề</strong>"
         "<span class='ai-hint'>Ảnh · Word · PDF · TEX · chữ</span>"
         "<label class='btn'>Ảnh<input id='aiImgFile' type='file' accept='image/png,image/jpeg,image/webp,image/gif' multiple></label>"
-        "<label class='btn'>Word / PDF / TEX<input id='aiSrcFile' type='file' accept='.docx,.pdf,.tex,.ltx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
+        "<label class='btn'>Word / PDF / TEX<input id='aiSrcFile' type='file' accept='.doc,.docx,.pdf,.tex,.ltx,.txt,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
         "<button type='button' class='btn green' id='aiImport'>AI phân tích → TEX</button>"
         "</div>"
         "<div id='aiStatus' class='ai-status' hidden></div>"

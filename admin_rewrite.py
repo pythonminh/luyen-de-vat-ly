@@ -1018,7 +1018,7 @@ function renderIntake(){
   box.innerHTML=h;
 }
 function addImageFile(file){
-  if(aiShots.length>=8){alert('Tối đa 8 ảnh.');return;}
+  if(aiShots.length>=12){alert('Tối đa 12 ảnh.');return;}
   if(file.size>8000000){alert('Ảnh quá lớn.');return;}
   var img=new Image();
   var url=URL.createObjectURL(file);
@@ -1038,10 +1038,10 @@ function addImageFile(file){
   img.src=url;
 }
 function addDocxFile(file){
-  var name=file.name||'';
+  var name=file.name||'tai-lieu.doc';
   var isDocx=/\.docx$/i.test(name)||/wordprocessingml/i.test(file.type||'');
-  if(/\.doc$/i.test(name)&&!/\.docx$/i.test(name)){alert('File .doc cũ không đọc được. Trong Word hãy Lưu thành .docx.');return;}
-  if(!isDocx){alert('Chỉ nhận Word định dạng .docx.');return;}
+  var isDoc=/\.doc$/i.test(name)||/msword/i.test(file.type||'')||isDocx;
+  if(!isDoc){alert('Chỉ nhận file Word .doc hoặc .docx.');return;}
   if(file.size>6000000){alert('File Word quá lớn (dưới 6MB).');return;}
   var r=new FileReader();
   r.onload=function(){
@@ -1063,7 +1063,7 @@ async function pushDocxImages(b64){
     if(!d.ok){aiStatus(d.error||'Không tách được ảnh Word.','err');return;}
     var n=0;
     (d.images||[]).forEach(function(im){
-      if(aiShots.length>=8) return;
+      if(aiShots.length>=12) return;
       var url=im.data?('data:'+(im.mime||'image/png')+';base64,'+im.data):(im.url||'');
       if(!url) return;
       aiShots.push({url:url, mime:im.mime||'image/png', data:im.data||''});
@@ -1071,7 +1071,7 @@ async function pushDocxImages(b64){
     });
     renderIntake();
     if(!n) aiStatus('Word không có ảnh đủ lớn để tách (bỏ icon nhỏ).','ok');
-    else aiStatus('Đã tách '+n+' ảnh từ Word, lưu vào images/ trên GitHub. Xem ngay phía trên.','ok');
+    else aiStatus('Đã tách '+n+' ảnh từ Word (kể cả file .doc cũ), lưu vào images/ trên GitHub. Xem ngay phía trên.','ok');
   }catch(err){
     aiStatus(String(err&&err.message||err),'err');
   }

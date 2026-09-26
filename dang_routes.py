@@ -1248,6 +1248,54 @@ def _docx_images(zf, root, limit=6):
     return found
 
 
+def _ole_images(blob, limit=12):
+    """Ảnh nhúng trong Word .doc (định dạng cũ). Bỏ icon nhỏ, lấy png rồi jpg."""
+    blob = bytes(blob or b'')
+    found = []
+    hashes = set()
+
+    def add(raw, ext):
+        if len(found) >= limit or not raw or len(raw) < 2500 or len(raw) > 1_500_000:
+            return
+        w, h = _image_px(raw, ext)
+        if w and h and (w < 64 or h < 64):
+            return
+        digest = hashlib.sha1(raw).hexdigest()
+        if digest in hashes:
+            return
+        hashes.add(digest)
+        mime = {'png': 'image/png', 'jpg': 'image/jpeg'}.get(ext, 'image/png')
+        found.append({'mime': mime, 'ext': ext, 'data': base64.b64encode(raw).decode('ascii'), 'raw': raw, 'sha': digest[:10]})
+
+    sig = b'\x89PNG\r\n\x1a\n'
+    i = 0
+    while len(found) < limit:
+        j = blob.find(sig, i)
+        if j < 0:
+            break
+        k = blob.find(b'IEND', j + 8)
+        if k < 0:
+            i = j + 8
+            continue
+        add(blob[j:k + 8], 'png')
+        i = k + 8
+    i = 0
+    sig = b'\xff\xd8\xff'
+    while len(found) < limit:
+        j = blob.find(sig, i)
+        if j < 0:
+            break
+        k = blob.find(b'\xff\xd9', j + 3)
+        if k < 0:
+            break
+        add(blob[j:k + 2], 'jpg')
+        i = k + 2
+    return found
+
+
+_OLE_MAGIC = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
+
+
 def _docx_extract(blob):
     try:
         zf = zipfile.ZipFile(io.BytesIO(blob))
@@ -1280,20 +1328,24 @@ def _save_docx_images(path, blob):
     folder = lesson_folder(path)
     if not str(folder).startswith('ngan-hang/'):
         return [], 'Thiếu bài để lưu ảnh.'
-    try:
-        zf = zipfile.ZipFile(io.BytesIO(blob))
-    except zipfile.BadZipFile:
-        return [], 'File không phải Word .docx.'
-    try:
-        if 'word/document.xml' not in zf.namelist():
-            return [], 'File Word không có nội dung.'
+    images = []
+    if bytes(blob[:8]) == _OLE_MAGIC:
+        images = _ole_images(blob)
+    else:
         try:
-            root = ET.fromstring(zf.read('word/document.xml'))
-        except ET.ParseError:
-            return [], 'Không đọc được nội dung Word.'
-        images = _docx_images(zf, root, limit=6)
-    finally:
-        zf.close()
+            zf = zipfile.ZipFile(io.BytesIO(blob))
+        except zipfile.BadZipFile:
+            return [], 'File không phải Word .docx. File .doc cũ vẫn tách được nếu là Word.'
+        try:
+            if 'word/document.xml' not in zf.namelist():
+                return [], 'File Word không có nội dung.'
+            try:
+                root = ET.fromstring(zf.read('word/document.xml'))
+            except ET.ParseError:
+                return [], 'Không đọc được nội dung Word.'
+            images = _docx_images(zf, root, limit=12)
+        finally:
+            zf.close()
     saved = []
     for im in images:
         raw = im.get('raw') or b''
@@ -1384,6 +1436,11 @@ def _docx_from_payload(data):
         return '', [], ''
     if len(blob) > 6_000_000:
         return '', [], 'File Word quá lớn (dưới 6MB).'
+    if bytes(blob[:8]) == _OLE_MAGIC:
+        images = _ole_images(blob)
+        for im in images:
+            im.pop('raw', None)
+        return '', images, ''
     return _docx_extract(blob)
 
 
