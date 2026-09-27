@@ -1481,6 +1481,26 @@ function rwFixDollars(t){
   }
   return t.replace(/\$\s*\$/g,'');
 }
+function rwNormUnit(unit){
+  if(unit==='°C' || /^\\circ\s*C$/.test(unit)) return '^{\\circ}\\mathrm{C}';
+  return '\\mathrm{'+unit+'}';
+}
+function rwFixUnits(t){
+  const u='(?:m/s\\^\\{2\\}|m/s\\^2|kg/m\\^\\{3\\}|kg/m\\^3|J/kg\\.K|J/kg|rad/s|m/s|kWh|°C|\\\\circ\\s*C|kPa|MPa|kHz|kJ|MJ|mJ|kW|MW|kN|kg|mg|km|cm|mm|dm|ms|kV|mV|mol|eV|Pa|Hz|rad|atm|cal|min|J|W|N|V|A|K|g|m|s|h)';
+  const after=new RegExp('\\$([^$]+?)\\$\\s*('+u+')(?![A-Za-zÀ-ỹ0-9\\\\{])','g');
+  t=String(t||'').replace(after, function(all, inner, unit){
+    const inn=inner.replace(/\s+$/,'');
+    if(!/[\d})]$/.test(inn)) return all;
+    if(/\\mathrm\s*\{[^}]*\}\s*$/.test(inn) || /\^\{?\\circ\}?\s*\\mathrm\{C\}\s*$/.test(inn)) return all;
+    return '$'+inn+'\\,'+rwNormUnit(unit)+'$';
+  });
+  const inside=new RegExp('\\$([^$]*\\d)\\s+('+u+')\\s*\\$','g');
+  t=t.replace(inside, function(all, inner, unit){
+    if(/\\mathrm\s*\{/.test(all)) return all;
+    return '$'+inner+'\\,'+rwNormUnit(unit)+'$';
+  });
+  return t;
+}
 function rwSteps(text){
   let s=String(text||'').trim();
   if(!s) return s;
@@ -1498,7 +1518,13 @@ function rwQuick(box, kind){
   else if(kind==='frac') rwPut(ta,'\\frac{}{}',3);
   else if(kind==='cdot') rwPut(ta,'\\cdot ');
   else if(kind==='delta') rwPut(ta,'\\Delta ');
-  else if(kind==='fix'){
+  else if(kind==='unit'){
+    const a=ta.selectionStart||0;
+    ta.value=rwFixUnits(ta.value);
+    ta.focus();
+    const p=Math.min(a, ta.value.length);
+    ta.selectionStart=ta.selectionEnd=p;
+  }else if(kind==='fix'){
     const a=ta.selectionStart||0;
     ta.value=rwFixDollars(ta.value);
     ta.focus();
@@ -1550,6 +1576,7 @@ function showEditor(box, d){
     +'<button type="button" class="btn mini" data-q="nl" title="Xuống dòng trong ô soạn">Xuống dòng</button>'
     +'<button type="button" class="btn mini" data-q="steps" title="Mỗi dấu = một dòng, bọc \\\\[ \\\\]">Tách bước =</button>'
     +'<button type="button" class="btn mini" data-q="fix" title="Gộp $a$ + $b$ thành $a+b$">Sửa $</button>'
+    +'<button type="button" class="btn mini" data-q="unit" title="Đưa J, W, kg, m/s... vào trong $ và bọc \\\\mathrm">Sửa đơn vị</button>'
     +'<button type="button" class="btn mini" data-q="frac">\\frac</button>'
     +'<button type="button" class="btn mini" data-q="cdot">\\cdot</button>'
     +'<button type="button" class="btn mini" data-q="delta">\\Delta</button>'
