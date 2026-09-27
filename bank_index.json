@@ -3957,28 +3957,14 @@
       "questions": 91,
       "count": 91,
       "dang": {
-        "Đặc điểm và phân loại chất rắn": 63,
-        "Ứng dụng tính chất chất rắn": 10,
-        "Phân loại chất rắn": 18
+        "Đặc điểm và phân loại chất rắn": 91
       },
       "dang_kinds": {
         "Đặc điểm và phân loại chất rắn": {
-          "TN": 30,
-          "DS": 8,
-          "TLN": 10,
-          "TL": 15
-        },
-        "Ứng dụng tính chất chất rắn": {
-          "TN": 2,
-          "DS": 1,
-          "TLN": 3,
-          "TL": 4
-        },
-        "Phân loại chất rắn": {
-          "TN": 9,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
+          "TN": 41,
+          "DS": 11,
+          "TLN": 16,
+          "TL": 23
         }
       }
     },
