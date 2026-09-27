@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12395,
+  "total_questions": 12483,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2785,30 +2785,142 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 52,
-      "count": 52,
+      "questions": 140,
+      "count": 140,
       "dang": {
-        "Liên hệ li độ - gia tốc": 14,
-        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 17,
-        "Liên hệ li độ - vận tốc": 21
+        "Liên hệ li độ - gia tốc": 17,
+        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 27,
+        "Liên hệ li độ - vận tốc": 31,
+        "Đồ thị gia tốc – li độ": 1,
+        "Liên hệ vận tốc cực đại và gia tốc cực đại": 1,
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ vận tốc cực đại và gia tốc cực đại": 2,
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": 7,
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 19,
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 15,
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 1,
+        "Xác định quãng đường đi được trong khoảng thời gian xác định": 2,
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 3,
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 3,
+        "Xác định tốc độ trung bình": 2,
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 3,
+        "Đồ thị li độ - vận tốc": 1,
+        "Đồ thị vận tốc - gia tốc": 1,
+        "Liên hệ vận tốc và gia tốc": 1,
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 3
       },
       "dang_kinds": {
         "Liên hệ li độ - gia tốc": {
-          "TN": 9,
+          "TN": 12,
           "DS": 2,
           "TLN": 3,
           "TL": 0
         },
         "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": {
-          "TN": 7,
+          "TN": 17,
           "DS": 7,
           "TLN": 3,
           "TL": 0
         },
         "Liên hệ li độ - vận tốc": {
-          "TN": 9,
+          "TN": 19,
           "DS": 9,
           "TLN": 3,
+          "TL": 0
+        },
+        "Đồ thị gia tốc – li độ": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Liên hệ vận tốc cực đại và gia tốc cực đại": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ vận tốc cực đại và gia tốc cực đại": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
+          "TN": 7,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 11,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+          "TN": 15,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định quãng đường đi được trong khoảng thời gian xác định": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định tốc độ trung bình": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đồ thị li độ - vận tốc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Đồ thị vận tốc - gia tốc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Liên hệ vận tốc và gia tốc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
           "TL": 0
         }
       }
