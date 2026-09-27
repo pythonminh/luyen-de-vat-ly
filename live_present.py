@@ -3782,6 +3782,7 @@ function draw(q, showSol, pos, total, live){
     fig.hidden=false;
     body.classList.add('hassplit');
   })();
+  if(window.ldvlSplitPics) ldvlSplitPics(box);
   typeset(box);
   rememberShownQ(q, pos);
   try{ paintViolatePanels(); }catch(e){}

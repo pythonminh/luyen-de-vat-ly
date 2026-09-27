@@ -383,6 +383,7 @@ def member_dang():
         "stem.querySelectorAll('.immini,.tikz-row,.tikzfig,.tikz-live,.ytbox,table.tex-table').forEach(function(el){"
         "if(el.closest('.immini,.tikz-row')&&!el.matches('.immini,.tikz-row'))return;bits.push(el);});"
         "if(!bits.length){fig.remove();return;}bits.forEach(function(el){fig.appendChild(el)});fig.hidden=false;body.classList.add('hassplit');});"
+        "if(window.ldvlSplitPics)ldvlSplitPics(document);"
         "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
     )
     rw_js = ""
