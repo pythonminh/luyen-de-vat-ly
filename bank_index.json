@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12382,
+  "total_questions": 12381,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3916,16 +3916,16 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 42,
-      "count": 42,
+      "questions": 41,
+      "count": 41,
       "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 14,
+        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 13,
         "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26,
         "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 2
       },
       "dang_kinds": {
         "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
-          "TN": 14,
+          "TN": 13,
           "DS": 0,
           "TLN": 0,
           "TL": 0
