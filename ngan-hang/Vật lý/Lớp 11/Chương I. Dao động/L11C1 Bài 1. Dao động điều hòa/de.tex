@@ -743,10 +743,27 @@ Tổng quãng đường vật đi được là $S = S_1 + S_2 = 8A + 2A = 10A = 
 \end{ex}
 
 \dangbt{Xác định li độ và pha của dao động tại một thời điểm xác định}
-\begin{ex}
-	\immini{
-		Pha của dao động được dùng để xác định
-		\choice
+\begin{ex}Pha của dao động được dùng để xác định
+\begin{tikzpicture}[scale=1.5]
+\coordinate (O) at (0,0);
+\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+\coordinate (B) at (0,-2);
+\coordinate (C) at ({2*cos(-60)}, {2*sin(-60)});
+\draw[thick] (O) -- (A);
+\fill[red] (A) circle (2pt);
+\node[below ] at (A) {\small (1)};
+\draw[thick,dashed] (O) -- (B);
+\fill[red] (B) circle (2pt);
+\node[below ] at (B) {\small (2)};
+\draw[thick,dashed] (O) -- (C);
+\fill[red] (C) circle (2pt);
+\fill[yellow] (O) circle (1.5pt);
+\draw[dashed, gray, ->]
+([shift={(O)}] -60:2)
+arc[start angle=-60, end angle=-120, radius=2];
+\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+\end{tikzpicture}
+\choice
 		{Biên độ dao động}
 		{\True Trạng thái dao động}
 		{Tần số dao động}
@@ -792,151 +809,91 @@ Tổng quãng đường vật đi được là $S = S_1 + S_2 = 8A + 2A = 10A = 
 		\end{tikzpicture}
 	}
 	\loigiai{
-		\indamm{	Pha dao động}, ký hiệu là {\color{blue}\( \omega t + \varphi \)}, cho biết trạng thái dao động tại thời điểm \( t \), gồm: li độ, vận tốc, gia tốc và chiều chuyển động.
-		
-		\medskip
-		\noindent
-		\begin{minipage}[t]{0.48\textwidth}
-			\centering
-			\textbf{Mô tả bằng con lắc đơn đang đi về VTCB}
-			
-			\begin{tikzpicture}[scale=1.5]
-				% Tâm quay (O)
-				\coordinate (O) at (0,0);
-				
-				% Vị trí (1): lệch góc -70°
-				\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
-				
-				% Vị trí (2): thẳng đứng dưới (góc -90°)
-				\coordinate (B) at (0,-2);
-				
-				% Vị trí (3): lệch góc -70°
-				\coordinate (C) at ({2*cos(-60)}, {2*sin(-60)});
-				
-				% Dây treo (1)
-				\draw[thick] (O) -- (A);
-				\fill[red] (A) circle (2pt);
-				\node[below ] at (A) {\small (1)};
-				
-				% Dây treo (2)
-				\draw[thick,dashed] (O) -- (B);
-				\fill[red] (B) circle (2pt);
-				\node[below ,yshift=-4 ] at (B) {\small (2)};
-				
-				% Dây treo (3)
-				\draw[thick,dashed] (O) -- (C);
-				\fill[red] (C) circle (2pt);
-				
-				
-				% Gắn chốt treo
-				\fill[yellow] (O) circle (1.5pt);
-				
-				% Đường cong quỹ đạo từ (1) đến (2)
-				\draw[dashed, gray, ->]
-				([shift={(O)}] -60:2)
-				arc[start angle=-60, end angle=-120, radius=2];
-				\draw[dashed, gray, ->]
-				([shift={(O)}] -120:2.2)
-				arc[start angle=-120, end angle=-90, radius=2.2];
-				
-				% Vẽ góc giữa hai dây tại O
-				\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
-				\pic [
-				draw,
-				<-,
-				angle radius=3.8cm,
-				red,
-				] {angle = B--O--A};
-				
-				
-			\end{tikzpicture}
-			
-		\end{minipage}
-		\hfill
-		\begin{minipage}[t]{0.48\textwidth}
-			\centering
-			\textbf{Mô tả bằng vòng tròn lượng giác}
-			\begin{tikzpicture}[scale=2]
-				% Vòng tròn
-				\draw[thick] (0,0) circle(1);
-				
-				% Trục x, y
-				\draw[->] (-1.2,0) -- (1.4,0) node[right] {$x$};
-				\draw[->] (0,-1.2) -- (0,1.2) node[above] {$y$};
-				
-				% Góc pha
-				\draw[->, thick, blue] (0,0) -- ({cos(40)}, {sin(40)});
-				\node at (1.4,0.4) [blue] {\small $\omega t + \varphi=\theta$};
-				
-				
-				% Cung tròn pha từ 0 đến 40 độ, bán kính 1
-				
-				
-				
-				\draw[red, dashed, ->] 
-				([shift={(0, 0)}] 40:1.1) 
-				arc[start angle=40, end angle=270, radius=1.1];
-				\draw[red, thick, ->] 
-				([shift={(0, 0)}] 40:1.1) 
-				arc[start angle=40, end angle=90, radius=1.1];
-				
-				% Đường chiếu xuống trục x
-				\draw[dashed] ({cos(40)}, {sin(40)}) -- ({cos(40)}, 0);
-				\fill[blue] ({cos(40)}, {sin(40)}) circle (1pt);
-				
-				% Biên độ A
-				\node at (1.05,-0.1) {$A$};
-				
-				% Li độ x
-				\draw[thick, red] (0,0) -- ({cos(40)}, 0);
-				\fill[red] ({cos(40)}, 0) circle (1pt);
-				\node[below] at ({cos(40)/2}, -1.1) {\small $x = A\cos{\color{blue}(\omega t + \varphi)}$};
-			\end{tikzpicture}
-			
-		\end{minipage}
-		
-		\medskip
-		\noindent
-		\textbf{Biểu diễn bằng đồ thị hình sin:}
-		
-		
-		\begin{tikzpicture}
-			\begin{axis}[
-				width=12cm, height=4cm,
-				axis lines=middle,
-				xlabel={$t$}, ylabel={$x$},
-				xmin=0, xmax=6.5,
-				ymin=-1.2, ymax=1.8,
-				xtick={0,1,...,6},
-				ytick={-1,0,1},
-				grid=both,
-				samples=200,
-				domain=0:6.5,
-				smooth,
-				thick,
-				axis line style={->},
-				xlabel style={right},
-				ylabel style={above}
-				]
-				
-				% Đồ thị hình sin
-				\addplot[red, thick] {cos(deg(2*pi*x/6 + pi/6))}; % lệch pha pi/6
-				
-				% Dấu chấm tại t=0
-				\addplot[only marks, mark=*, mark size=1.5pt, color=blue] coordinates {(0,{cos(deg(pi/6))})};
-				\draw[blue] (axis cs:0,{cos(deg(pi/6))}) node[above right] {\small $x(0) = A\cos( \varphi)$};
-				
-			\end{axis}
-		\end{tikzpicture}
-		
-		
-		\noindent
-		Với pha ban đầu \( \varphi = \theta \), tại \( t=0 \), ta có vật đang tiến về vị trí cân bằng
-		
-		\medskip
-		Pha  dao động giúp xác định chính xác vật đang ở đâu trên đồ thị, đang đi lên hay đi xuống, và bao lâu đến biên. \\
-		\indamm{Pha dao động giúp ta xác định trạng thái dao động}
-	}
+Pha dao động, ký hiệu là $ \omega t + \varphi $, cho biết trạng thái dao động tại thời điểm $ t $, gồm: li độ, vận tốc, gia tốc và chiều chuyển động.
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\textbf{Mô tả bằng con lắc đơn đang đi về VTCB}
+\begin{tikzpicture}[scale=1.5]
+\coordinate (O) at (0,0);
+\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+\coordinate (B) at (0,-2);
+\coordinate (C) at ({2*cos(-60)}, {2*sin(-60)});
+\draw[thick] (O) -- (A);
+\fill[red] (A) circle (2pt);
+\node[below ] at (A) {\small (1)};
+\draw[thick,dashed] (O) -- (B);
+\fill[red] (B) circle (2pt);
+\node[below ,yshift=-4 ] at (B) {\small (2)};
+\draw[thick,dashed] (O) -- (C);
+\fill[red] (C) circle (2pt);
+\fill[yellow] (O) circle (1.5pt);
+\draw[dashed, gray, ->]
+([shift={(O)}] -60:2)
+arc[start angle=-60, end angle=-120, radius=2];
+\draw[dashed, gray, ->]
+([shift={(O)}] -120:2.2)
+arc[start angle=-120, end angle=-90, radius=2.2];
+\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+\pic [
+draw,
+<-,
+angle radius=3.8cm,
+red,
+] {angle = B--O--A};
+\end{tikzpicture}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\textbf{Mô tả bằng vòng tròn lượng giác}
+\begin{tikzpicture}[scale=2]
+\draw[thick] (0,0) circle(1);
+\draw[->] (-1.2,0) -- (1.4,0) node[right] {$x$};
+\draw[->] (0,-1.2) -- (0,1.2) node[above] {$y$};
+\draw[->, thick, blue] (0,0) -- ({cos(40)}, {sin(40)});
+\node at (1.4,0.4) [blue] {\small $\omega t + \varphi=\theta$};
+\draw[red, dashed, ->]
+([shift={(0, 0)}] 40:1.1)
+arc[start angle=40, end angle=270, radius=1.1];
+\draw[red, thick, ->]
+([shift={(0, 0)}] 40:1.1)
+arc[start angle=40, end angle=90, radius=1.1];
+\draw[dashed] ({cos(40)}, {sin(40)}) -- ({cos(40)}, 0);
+\fill[blue] ({cos(40)}, {sin(40)}) circle (1pt);
+\node at (1.05,-0.1) {$A$};
+\draw[thick, red] (0,0) -- ({cos(40)}, 0);
+\fill[red] ({cos(40)}, 0) circle (1pt);
+\node[below] at ({cos(40)/2}, -1.1) {\small $x = A\cos{\color{blue}(\omega t + \varphi)}$};
+\end{tikzpicture}
+\end{minipage}
+\textbf{Biểu diễn bằng đồ thị hình sin:}
+\begin{tikzpicture}
+\begin{axis}[
+width=12cm, height=4cm,
+axis lines=middle,
+xlabel={$t$}, ylabel={$x$},
+xmin=0, xmax=6.5,
+ymin=-1.2, ymax=1.8,
+xtick={0,1,...,6},
+ytick={-1,0,1},
+grid=both,
+samples=200,
+domain=0:6.5,
+smooth,
+thick,
+axis line style={->},
+xlabel style={right},
+ylabel style={above}
+]
+\addplot[red, thick] {cos(deg(2*pi*x/6 + pi/6))}; % lệch pha pi/6
+\addplot[only marks, mark=*, mark size=1.5pt, color=blue] coordinates {(0,{cos(deg(pi/6))})};
+\draw[blue] (axis cs:0,{cos(deg(pi/6))}) node[above right] {\small $x(0) = A\cos( \varphi)$};
+\end{axis}
+\end{tikzpicture}
+Với pha ban đầu $ \varphi = \theta $, tại $ t=0 $, ta có vật đang tiến về vị trí cân bằng.
+Pha dao động giúp xác định chính xác vật đang ở đâu trên đồ thị, đang đi lên hay đi xuống, và bao lâu đến biên.
+Pha dao động giúp ta xác định trạng thái dao động.
+}
 \end{ex}
 
 \dangbt{Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
