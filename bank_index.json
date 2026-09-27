@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12329,
+  "total_questions": 12385,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -5086,10 +5086,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "Ôn tập Chương 1 - Lý 12",
       "De": "Ôn tập Chương 1 - Lý 12",
-      "questions": 0,
-      "count": 0,
-      "dang": {},
-      "dang_kinds": {}
+      "questions": 56,
+      "count": 56,
+      "dang": {
+        "Chưa phân dạng": 56
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 40,
+          "DS": 5,
+          "TLN": 11,
+          "TL": 0
+        }
+      }
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-bai-toan-ap-dung-dinh-luat-charles-tinh-toan-tho.tex",
