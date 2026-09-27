@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """ADMIN: AI phân dạng + mức độ trên trang /member/select."""
 from __future__ import annotations
+import hashlib
 import html
 import json
 import re
+import threading
+import time
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -126,6 +129,28 @@ def _set_id(s, qid):
             flags=re.I,
         )
     return ("% ID: " + qid + "\n") + (s or "")
+
+
+def apply_levels(tex, by_idx):
+    """Chỉ ghi % Mức: cho idx có muc. Không đụng dạng hay ID."""
+    matches = list(BLOCK_RE.finditer(tex or ""))
+    if not matches:
+        return tex
+    chunks = []
+    prev = 0
+    for i, m in enumerate(matches):
+        inter = tex[prev : m.start()]
+        head, qhead = _split_qhead(inter)
+        chunks.append(head)
+        block = m.group(0)
+        muc = str((by_idx.get(i) or {}).get("muc") or "").strip()
+        if muc:
+            block = _set_level(block, muc)
+        chunks.append(qhead)
+        chunks.append(block)
+        prev = m.end()
+    chunks.append(tex[prev:])
+    return "".join(chunks)
 
 
 def apply_ids(tex, by_idx):
@@ -1037,7 +1062,8 @@ def select_admin_panel(path, qs, dang_names):
         "<b>🤖 ADMIN · AI phân dạng và mức độ</b>"
         f"<p class='muted'>Câu chưa có dạng: <b>{uncat}</b> / {len(qs)}. "
         "Dạng <span class='tag miss'>Chưa có</span> cần xếp. Dạng <span class='tag had'>Đã có</span> mặc định giữ nguyên — tick ô dưới nếu muốn xếp lại.</p>"
-        "<p class='muted'>ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
+        "<p class='muted'>Gợi ý mức từng câu (không đổi dạng) là nút <b>🎯 AI gợi ý mức độ</b> trên thanh Mức độ. "
+        "ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
         "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
         "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
         "<b>Rà dạng cả chương</b> mặc định <b>giữ dạng đã chọn</b> — không gợi ý chuyển/đổi tên. "
@@ -1445,6 +1471,265 @@ def api_ai_classify_save():
         pass
     _clear_caches()
     return jsonify(ok=True, changed=changed or len(rows), ids=n_id)
+
+
+_LEVEL_JOBS = {}
+_LEVEL_LOCK = threading.Lock()
+
+
+def _level_job_gc():
+    now = time.time()
+    with _LEVEL_LOCK:
+        dead = [k for k, v in _LEVEL_JOBS.items() if now - float(v.get("ts") or now) > 900]
+        for k in dead:
+            _LEVEL_JOBS.pop(k, None)
+
+
+def _parse_level_json(text):
+    s = str(text or "").strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.I)
+    if m:
+        s = m.group(1).strip()
+    a = s.find("[")
+    b = s.rfind("]")
+    if a < 0 or b <= a:
+        raise ValueError("AI không trả JSON mức độ.")
+    data = json.loads(s[a : b + 1])
+    if not isinstance(data, list):
+        raise ValueError("JSON mức độ không phải mảng.")
+    out = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        try:
+            idx = int(item.get("idx"))
+        except (TypeError, ValueError):
+            continue
+        out.append(
+            {
+                "idx": idx,
+                "muc": _norm_muc(item.get("muc") or item.get("level")),
+                "why": str(item.get("why") or "").strip()[:180],
+            }
+        )
+    return out
+
+
+def _level_prompt(meta, items):
+    lines = []
+    for q in items:
+        lines.append(
+            f"- idx={q['idx']} | loại={q['kind']} | mức hiện tại={q.get('muc') or 'chưa ghi'} | đề: {q['text']}"
+        )
+    return (
+        "Bạn là giáo viên Vật lý THPT. Chỉ gợi ý MỨC ĐỘ từng câu. Không đổi dạng, không giải, không viết lại đề.\n"
+        f"Bài: {meta}\n"
+        "Mức chỉ một trong: NB, TH, VD, VDC.\n"
+        "- NB: nhận biết, nhớ công thức hoặc thay số một bước.\n"
+        "- TH: thông hiểu, khoảng hai bước hoặc giải thích hiện tượng.\n"
+        "- VD: vận dụng, nhiều bước, đồ thị hoặc kết hợp đại lượng.\n"
+        "- VDC: vận dụng cao, nhiều đại lượng, suy luận hoặc bẫy.\n"
+        "Nếu mức hiện tại đã hợp lý thì giữ nguyên.\n"
+        "Trả về DUY NHẤT một mảng JSON, đủ mọi idx đã cho:\n"
+        '[{"idx":0,"muc":"TH","why":"một câu ngắn"}]\n\n'
+        + "\n".join(lines)
+    )
+
+
+def _questions_for_levels(path, dang):
+    qs = base.parse_lesson_questions(path)
+    if not qs:
+        _, tex = base.read_tex(path)
+        qs = base.parse_questions(tex)
+    dang = str(dang or "").strip()
+    scoped = base.questions_in_scope(qs, dang) if dang else list(qs or [])
+    rows = []
+    for q in scoped:
+        rows.append(q)
+        for child in q.get("develop") or []:
+            rows.append(child)
+    return rows
+
+
+def _level_items(path, dang):
+    items = []
+    for q in _questions_for_levels(path, dang):
+        raw = q.get("raw") or ""
+        has = _has_level(raw)
+        old = MUC_FROM_LETTER.get(str(q.get("level") or "H"), "TH") if has else ""
+        try:
+            file_idx = int(q.get("file_idx") if q.get("file_idx") is not None else q.get("idx") or 0)
+        except (TypeError, ValueError):
+            file_idx = 0
+        items.append(
+            {
+                "idx": int(q.get("idx") or 0),
+                "file_idx": file_idx,
+                "src": str(q.get("src") or path).replace("\\", "/"),
+                "id": q.get("id") or "",
+                "cau": q.get("cau") or "",
+                "kind": q.get("kind") or "TL",
+                "develop": bool(q.get("develop_from")),
+                "old": old or "—",
+                "text": _plain(q.get("text") or "", 420),
+            }
+        )
+    return items
+
+
+def _run_level_job(job, path, dang, keys):
+    try:
+        items = _level_items(path, dang)
+        if not items:
+            body = {"ok": False, "error": "Không có câu trong phần đang xem."}
+        else:
+            with _LEVEL_LOCK:
+                rec = _LEVEL_JOBS.get(job) or {}
+                rec["total"] = len(items)
+                rec["done"] = 0
+                rec["ts"] = time.time()
+                _LEVEL_JOBS[job] = rec
+            meta = str(path or "").replace("ngan-hang/", "")
+            if dang:
+                meta += " · dạng " + dang
+            assignments = []
+            for start in range(0, len(items), 8):
+                chunk = items[start : start + 8]
+                prompt = _level_prompt(
+                    meta,
+                    [
+                        {"idx": it["idx"], "kind": it["kind"], "muc": it["old"], "text": it["text"]}
+                        for it in chunk
+                    ],
+                )
+                raw, err = _gemini_once(keys, prompt, 2500)
+                if not raw:
+                    raise RuntimeError(err or "Gemini không trả lời.")
+                guessed = {g["idx"]: g for g in _parse_level_json(raw)}
+                for it in chunk:
+                    g = guessed.get(it["idx"]) or {}
+                    fallback = it["old"] if it["old"] != "—" else "TH"
+                    assignments.append(
+                        {
+                            "idx": it["idx"],
+                            "file_idx": it["file_idx"],
+                            "src": it["src"],
+                            "id": it["id"],
+                            "cau": it["cau"],
+                            "kind": it["kind"],
+                            "develop": it["develop"],
+                            "old": it["old"],
+                            "muc": g.get("muc") or fallback,
+                            "why": g.get("why") or "",
+                        }
+                    )
+                with _LEVEL_LOCK:
+                    rec = _LEVEL_JOBS.get(job) or {}
+                    rec["done"] = len(assignments)
+                    rec["total"] = len(items)
+                    rec["ts"] = time.time()
+                    _LEVEL_JOBS[job] = rec
+            body = {"ok": True, "assignments": assignments, "n": len(assignments)}
+    except Exception as e:
+        body = {"ok": False, "error": str(e)}
+    with _LEVEL_LOCK:
+        prev = _LEVEL_JOBS.get(job) or {}
+        _LEVEL_JOBS[job] = {
+            "state": "done",
+            "ts": time.time(),
+            "done": int(prev.get("done") or 0),
+            "total": int(prev.get("total") or 0),
+            "result": body,
+        }
+
+
+def _spawn_level_job(path, dang, keys):
+    _level_job_gc()
+    job = hashlib.sha1(f"{time.time()}:{path}:{dang}".encode()).hexdigest()[:16]
+    with _LEVEL_LOCK:
+        running = sum(1 for v in _LEVEL_JOBS.values() if v.get("state") == "run")
+        if running >= 2:
+            return jsonify(ok=False, error="Đang có phiên gợi ý mức chạy. Đợi xong rồi bấm lại."), 429
+        _LEVEL_JOBS[job] = {"state": "run", "ts": time.time(), "done": 0, "total": 0, "result": None}
+
+    def work():
+        with base.app.app_context():
+            _run_level_job(job, path, dang, keys)
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify(ok=True, pending=True, job=job)
+
+
+@base.app.post("/api/admin/ai-levels")
+def api_ai_levels():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới gợi ý mức độ."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").replace("\\", "/").strip()
+    dang = str(data.get("dang") or "").strip()
+    if not path.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="Thiếu path bài."), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Nạp key Gemini rồi bấm lại."), 400
+    return _spawn_level_job(path, dang, keys)
+
+
+@base.app.get("/api/admin/ai-levels-job")
+def api_ai_levels_job():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    job = str(request.args.get("job") or "").strip()
+    with _LEVEL_LOCK:
+        rec = dict(_LEVEL_JOBS.get(job) or {})
+    if not rec:
+        return jsonify(ok=False, error="Không thấy phiên đang chạy. Bấm lại."), 404
+    if rec.get("state") != "done":
+        return jsonify(ok=True, pending=True, job=job, done=int(rec.get("done") or 0), total=int(rec.get("total") or 0))
+    result = rec.get("result")
+    if not isinstance(result, dict):
+        return jsonify(ok=False, error="Không đọc được kết quả.")
+    return jsonify(result)
+
+
+@base.app.post("/api/admin/ai-levels-save")
+def api_ai_levels_save():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới ghi mức độ."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or "").replace("\\", "/").strip()
+    rows = data.get("assignments") or []
+    if not path.startswith("ngan-hang/") or not isinstance(rows, list) or not rows:
+        return jsonify(ok=False, error="Thiếu danh sách mức."), 400
+    allowed = {p.replace("\\", "/") for p in base.lesson_tex_paths(path)}
+    allowed.add(path)
+    groups = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        src = str(row.get("src") or path).replace("\\", "/").strip()
+        if src not in allowed:
+            continue
+        try:
+            fi = int(row.get("file_idx"))
+        except (TypeError, ValueError):
+            continue
+        groups.setdefault(src, {})[fi] = {"muc": _norm_muc(row.get("muc") or row.get("level"))}
+    if not groups:
+        return jsonify(ok=False, error="Không có câu hợp lệ để ghi mức."), 400
+    changed = 0
+    try:
+        for src, by_idx in groups.items():
+            sha, tex = base.read_tex(src, need_sha=True)
+            new = apply_levels(tex, by_idx)
+            if new == tex:
+                continue
+            changed += len(by_idx)
+            _write_tex(src, new, "ADMIN gợi ý mức độ " + src, sha or None)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    _clear_caches()
+    return jsonify(ok=True, changed=changed)
 
 
 @base.app.post("/api/admin/merge-dang")

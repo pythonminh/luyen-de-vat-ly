@@ -202,7 +202,7 @@ a{text-decoration:none;color:#145bb0}.top{position:sticky;top:0;z-index:21474830
 .present-host{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px;background:#eef6ff;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;position:sticky;top:var(--header-h);z-index:45;box-shadow:0 2px 10px #1b4d8a10}
 .present-host .btn,.present-host #pStart,.present-host #navFold{flex:0 0 auto;padding:6px 10px;font-size:13px;white-space:nowrap}
 .present-host #navFold{margin-left:auto}
-.lvltabs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px 8px;background:#f0fdf4;border-bottom:1px solid #bbf7d0}.lvltabs b{font-size:12px;color:#166534;margin-right:4px}.lvltabs .ltab{display:inline-flex;align-items:center;justify-content:center;border:1px solid #86efac;background:#fff;color:#166534;border-radius:7px;padding:5px 8px;font-weight:800;font-size:12px;text-decoration:none}.lvltabs .ltab.on{background:#15803d;border-color:#15803d;color:#fff}.lvltabs .ltab.off{opacity:.45;pointer-events:none}.plab{flex:1 1 100%;font-weight:900;font-size:12px;padding:4px 2px 0}span.level.muc-N,a.pitem.muc-N,.plab.muc-N{background:#dcfce7;border-color:#86efac;color:#166534}span.level.muc-H,a.pitem.muc-H,.plab.muc-H{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}span.level.muc-V,a.pitem.muc-V,.plab.muc-V{background:#ffedd5;border-color:#fdba74;color:#c2410c}span.level.muc-C,a.pitem.muc-C,.plab.muc-C{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+.lvltabs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px 8px;background:#f0fdf4;border-bottom:1px solid #bbf7d0}.lvltabs b{font-size:12px;color:#166534;margin-right:4px}.lvltabs .ltab{display:inline-flex;align-items:center;justify-content:center;border:1px solid #86efac;background:#fff;color:#166534;border-radius:7px;padding:5px 8px;font-weight:800;font-size:12px;text-decoration:none}.lvltabs .ltab.on{background:#15803d;border-color:#15803d;color:#fff}.lvltabs .ltab.off{opacity:.45;pointer-events:none}.lvltabs #aiMuc{margin-left:auto}.plab{flex:1 1 100%;font-weight:900;font-size:12px;padding:4px 2px 0}span.level.muc-N,a.pitem.muc-N,.plab.muc-N{background:#dcfce7;border-color:#86efac;color:#166534}span.level.muc-H,a.pitem.muc-H,.plab.muc-H{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}span.level.muc-V,a.pitem.muc-V,.plab.muc-V{background:#ffedd5;border-color:#fdba74;color:#c2410c}span.level.muc-C,a.pitem.muc-C,.plab.muc-C{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
 html.ldvlAdminCompact details.admindang-fold:not([open]),body.ldvlAdminCompact details.admindang-fold:not([open]){border-top:0}
 .present-host #presentBar{flex:1 1 100%;margin:0;padding:8px;max-height:28vh;overflow:auto}
 .present-host.is-folded #presentBar,.present-host #presentBar[hidden]{display:none!important}
@@ -3214,7 +3214,13 @@ def level_tabs_html(path, dang='', kind='', current='', counts=None, guest=False
             continue
         href = _go_kind_href(path, dang, kind, guest=guest, practice=practice, muc=k)
         bits.append(f"<a class='ltab{on}' href='{html.escape(href, quote=True)}' title='{html.escape(tip, quote=True)}'>{html.escape(label)}</a>")
-    return "<nav class='lvltabs' aria-label='Mức độ'>" + ''.join(bits) + "</nav>"
+    admin_btn = ''
+    try:
+        if can_manage_bank():
+            admin_btn = "<button type='button' class='btn' id='aiMuc' title='AI gợi ý NB, TH, VD, VDC cho từng câu. Xem bảng rồi mới ghi. Không đổi dạng.'>🎯 AI gợi ý mức độ</button>"
+    except Exception:
+        admin_btn = ''
+    return "<nav class='lvltabs' aria-label='Mức độ'>" + ''.join(bits) + admin_btn + "</nav>"
 
 def _dang_name(q):
     return str((q or {}).get('dang') or '').strip() or 'Chưa phân dạng'

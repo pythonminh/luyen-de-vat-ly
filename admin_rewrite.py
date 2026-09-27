@@ -2400,6 +2400,87 @@ document.addEventListener('click',function(e){
   if(box) rwUseTikz(box, pick.getAttribute('data-hid')||'', false);
 });
 document.addEventListener('click',async function(e){
+  const go=e.target.closest&&e.target.closest('#aiMuc');
+  const save=e.target.closest&&e.target.closest('#aiMucSave');
+  if(!go&&!save) return;
+  e.preventDefault();
+  const bar=document.querySelector('.admindang');
+  const nav=document.querySelector('.lvltabs');
+  let box=document.getElementById('aiMucOut');
+  if(!box){
+    box=document.createElement('div');
+    box.id='aiMucOut';
+    box.style.cssText='margin:8px 10px;padding:10px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4';
+    if(nav&&nav.parentNode) nav.parentNode.insertBefore(box, nav.nextSibling);
+    else if(bar) bar.appendChild(box);
+  }
+  if(!bar||!box) return;
+  const path=bar.getAttribute('data-path')||'';
+  const dang=bar.getAttribute('data-dang')||'';
+  if(save){
+    const rows=[...document.querySelectorAll('#aiMucTable tr[data-src]')].map(function(tr){
+      const sel=tr.querySelector('select.aimuc');
+      return {src:tr.getAttribute('data-src')||'', file_idx:+tr.getAttribute('data-fi'), muc:sel?sel.value:'TH'};
+    });
+    if(!rows.length){alert('Chưa có gợi ý mức.');return;}
+    if(!confirm('Ghi mức độ '+rows.length+' câu vào TEX? Không đổi dạng, không đổi đề. Danh sách sẽ xếp NB → TH → VD → VDC.'))return;
+    save.disabled=true;
+    try{
+      const r=await fetch('/api/admin/ai-levels-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:path,assignments:rows})});
+      const d=await r.json();
+      if(!d.ok){box.insertAdjacentHTML('afterbegin','<div class="err">'+esc(d.error||'Không ghi được')+'</div>');save.disabled=false;return;}
+      box.innerHTML='<div class="success">✅ Đã ghi mức '+ (d.changed||rows.length) +' câu. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){box.insertAdjacentHTML('afterbegin','<div class="err">'+esc(err)+'</div>');save.disabled=false;}
+    return;
+  }
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+  go.disabled=true;
+  box.innerHTML='⏳ Đang gợi ý mức độ từng câu...';
+  try{
+    const r=await fetch('/api/admin/ai-levels',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,dang:dang,api_keys:ks,background:true})});
+    let d={};
+    try{d=await r.json();}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
+    if(d.pending&&d.job){
+      const t0=Date.now();
+      const job=d.job;
+      d=null;
+      while(Date.now()-t0<240000){
+        await new Promise(function(res){setTimeout(res,2500);});
+        try{
+          const pr=await fetch('/api/admin/ai-levels-job?job='+encodeURIComponent(job),{credentials:'same-origin'});
+          const pd=await pr.json();
+          if(pd&&pd.pending){
+            box.innerHTML='⏳ Đang gợi ý mức... '+(pd.done||0)+'/'+(pd.total||'?')+' câu. Cứ để trang mở.';
+            continue;
+          }
+          d=pd;
+          break;
+        }catch(err){}
+      }
+      if(!d) throw new Error('Quá 4 phút chưa có gợi ý mức. Bấm lại.');
+    }
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
+    const rows=d.assignments||[];
+    const opts=['NB','TH','VD','VDC'];
+    const body=rows.map(function(a){
+      const sel=opts.map(function(m){return '<option'+(m===a.muc?' selected':'')+'>'+m+'</option>';}).join('');
+      const cau=(a.develop?'PT ':'')+(a.cau||'');
+      return '<tr data-src="'+esc(a.src)+'" data-fi="'+a.file_idx+'"><td>'+esc(cau)+'</td><td>'+esc(a.id||'—')+'</td><td>'+esc(a.old||'—')+'</td><td><select class="aimuc">'+sel+'</select></td><td>'+esc(a.why||'')+'</td></tr>';
+    }).join('');
+    const scope=dang?('dạng «'+esc(dang)+'»'):'cả bài';
+    box.innerHTML='<div class="success">Gợi ý mức cho <b>'+rows.length+'</b> câu ('+scope+'). Sửa ô nếu cần rồi ghi. Không đổi dạng. Sau khi ghi, danh sách xếp NB → TH → VD → VDC.</div>'
+      +'<div class="selectwrap"><table class="selectgrid" id="aiMucTable"><tr><th>Câu</th><th>ID</th><th>Đang có</th><th>Gợi ý</th><th>Vì sao</th></tr>'+body+'</table></div>'
+      +'<p><button type="button" class="btn green" id="aiMucSave">💾 Ghi mức vào TEX</button></p>';
+    if(box.scrollIntoView) box.scrollIntoView({block:'nearest'});
+  }catch(err){
+    box.innerHTML='<div class="err">'+esc(err)+'</div>';
+  }finally{go.disabled=false;}
+});
+document.addEventListener('click',async function(e){
   const btn=e.target.closest&&e.target.closest('#aiGap');
   if(!btn) return;
   e.preventDefault();
