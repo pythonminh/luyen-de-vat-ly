@@ -3145,15 +3145,22 @@ def tex_without_questions(tex, drop_idxs):
 def dup_index_by_question(groups):
     info={}
     for gi,g in enumerate(groups,1):
+        extras=set(g.get('extras') or [])
         for q in g['members']:
             i=q['idx']
-            cur=info.setdefault(i, {'n':[], 'label':'', 'extra':False})
+            cur=info.setdefault(i, {'n':[], 'label':'', 'extra':False, 'tick':False, 'keep':False})
             cur['n'].append(gi)
             if g['type']=='dao':
                 cur['label']='TRÙNG (đảo đáp án)'
-                if i in g.get('extras',[]): cur['extra']=True
+                if i in extras:
+                    cur['extra']=True
+                    cur['tick']=True
             elif not cur['label']:
                 cur['label']='CÙNG ĐỀ'
+                if i in extras:
+                    cur['extra']=True
+                else:
+                    cur['keep']=True
     return info
 
 KIND_ORDER = ('TN', 'DS', 'TLN', 'TL')

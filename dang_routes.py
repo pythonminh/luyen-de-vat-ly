@@ -309,10 +309,16 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'
-    dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}</span>" if dup.get('label') else ''
+    role=''
+    if dup.get('label')=='CÙNG ĐỀ':
+        role=' · thừa' if dup.get('extra') else (' · giữ' if dup.get('keep') else '')
+    dtag=f"<span class='dupbadge'>{html.escape(dup.get('label') or '')} · nhóm {','.join(str(x) for x in dup.get('n') or [])}{role}</span>" if dup.get('label') else ''
     xoa=''
     if can_manage_bank() and dup.get('extra'):
-        xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' checked> Xóa bản trùng này</label>"
+        if dup.get('tick'):
+            xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' checked> Xóa bản trùng này</label>"
+        else:
+            xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' data-cung='1'> Xóa bản cùng đề này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
@@ -380,6 +386,7 @@ def member_dang():
     dmap=dup_index_by_question(groups)
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
+    cung_extra=sum(len(g['extras']) for g in groups if g['type']=='cungde')
     admin_view=can_manage_bank()
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
     cards=_study_cards(selected, path, dmap, admin_view or can_do, highlight_id)
@@ -390,19 +397,23 @@ def member_dang():
     next_url='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
     srcs={str(q.get('src') or path).replace('\\','/') for q in selected}
     dup_form=''
-    if can_manage_bank() and dao_n:
+    if can_manage_bank() and (dao_n or cung_extra):
         nfile=len(srcs)
         note_file=f" Trùng có thể nằm ở {nfile} file TEX trong bài — xóa đúng file chứa bản thừa." if nfile>1 else ""
-        dup_form=(
-            f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản trùng đã tick trên thẻ đỏ? Bản đầu mỗi nhóm được giữ lại.')\">"
-            f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
-            f"<b>Xóa trùng:</b> thẻ đỏ (bản thừa) có ô <b>Xóa bản trùng này</b> — mặc định đã tick. Còn <b>{dao_n}</b> bản thừa.{note_file} "
-            "Nhóm «cùng đề khác đáp án» không xóa hàng loạt. "
-            "<label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick</label> "
-            "<button class='btn red' type='submit'>🗑 Xóa các bản trùng đã chọn</button></form>"
+        tick_cung=(
+            f"<button type='button' class='btn' onclick=\"document.querySelectorAll('input[data-cung=1]').forEach(function(x){{x.checked=true}})\">☑ Chọn hết {cung_extra} bản cùng đề thừa</button> "
+            if cung_extra else ""
         )
-    elif can_manage_bank() and cung_n:
-        dup_form="<div class='notice'>Nhóm «cùng đề khác đáp án» chỉ để xem lại, không xóa hàng loạt.</div>"
+        dup_form=(
+            f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản đã tick? Bản đầu mỗi nhóm (nhãn giữ) không bị xóa.')\">"
+            f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
+            f"<b>Xóa trùng:</b> đảo đáp án có <b>{dao_n}</b> bản thừa, ô đã tick sẵn.{note_file} "
+            f"Cùng đề khác đáp án có <b>{cung_extra}</b> bản thừa — ô để trống, bấm «Chọn hết bản cùng đề thừa» hoặc tick từng thẻ. "
+            "Bản đầu mỗi nhóm được giữ. "
+            + tick_cung
+            + "<label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick</label> "
+            "<button class='btn red' type='submit'>🗑 Xóa các bản đã chọn</button></form>"
+        )
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
     qdel_form=''
