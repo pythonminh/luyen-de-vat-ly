@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from flask import request, jsonify, redirect, session
-from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
+from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, develop_reference_html, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nest_developments, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -35,6 +35,8 @@ def _stats_for(path):
     if hit and now-hit[0] < _STATS_TTL: return hit[1]
     _, tex = read_tex(path); qs = parse_questions(tex); stats = {}
     for q in qs:
+        if str(q.get('develop_from') or '').strip():
+            continue
         d=(q.get('dang') or 'Chưa phân dạng').strip() or 'Chưa phân dạng'; k=q.get('kind') or 'TL'
         stats.setdefault(d, {'TN':0,'DS':0,'TLN':0,'TL':0})
         stats[d][k]=stats[d].get(k,0)+1
@@ -195,7 +197,8 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     drop_key=_esc(src+'||'+str(fi))
     rw=''
     if can_manage_bank():
-        rw=(f"<div class='rwbar'><button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
+        rw=(f"<div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
+            f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
@@ -213,7 +216,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
             + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if can_manage_bank() else "")
             + "</div>"
-            f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{rw}{sol_html}</article>")
+            f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
 
 @app.get('/member/dang')
 def member_dang():
@@ -231,7 +234,7 @@ def member_dang():
     try:
         qs = parse_lesson_questions(path)
         if not qs:
-            _, tex = read_tex(path); qs = parse_questions(tex)
+            _, tex = read_tex(path); qs = nest_developments(parse_questions(tex))
     except Exception as exc:
         return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body'><div class='err'>{html.escape(str(exc))}</div></div></div></div>")
     if dang:
@@ -1993,7 +1996,7 @@ def start_selected_questions():
     try:
         qs=parse_lesson_questions(path)
         if not qs:
-            _,tex=read_tex(path); qs=parse_questions(tex)
+            _,tex=read_tex(path); qs=nest_developments(parse_questions(tex))
     except Exception:
         return redirect('/member')
     if dang:

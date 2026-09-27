@@ -220,7 +220,7 @@ details.admindang-fold>summary.admindang-sum::-webkit-details-marker{display:non
 details.rwfold{display:block;margin:8px 0 0;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff}
 details.rwfold>summary{cursor:pointer;padding:7px 10px;font:800 12px/1.3 Segoe UI,Arial,sans-serif;color:#0369a1;list-style:none}
 details.rwfold>summary::-webkit-details-marker{display:none}
-details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7dd3fc}
+details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7dd3fc}details.phat{display:block;margin:10px 0;border:1px solid #86efac;border-radius:10px;background:#f0fdf4}details.phat>summary{cursor:pointer;padding:8px 10px;font:800 13px/1.3 Segoe UI,Arial,sans-serif;color:#166534;list-style:none}details.phat>summary::-webkit-details-marker{display:none}details.phat .phatitem{padding:8px 10px;border-top:1px solid #bbf7d0}details.phat .solution{margin-top:8px}
 .admindang .muted{display:none}
 .admindang .btn,.admindang a.btn{padding:6px 8px;font-size:12px}
 .admindang input,#aiSrcUrl{flex:1 1 12rem;min-width:10rem;padding:6px 8px;border:1px solid #cbd8e6;border-radius:7px}
@@ -1848,7 +1848,7 @@ def parse_lesson_questions(path):
             q["idx"] = n
             n += 1
             out.append(q)
-    return out
+    return nest_developments(out)
 
 
 def get_braced(text,pos):
@@ -2800,14 +2800,15 @@ def parse_questions(tex):
         elif SHORT_RE.search(b):kind='TLN'
         else:kind='TL'
         heads=list(CAU_HEAD_RE.finditer(tex[:m.start()]))
-        qid=id_of(b) or id_of(tex[max(0,m.start()-120):m.end()])
+        parent_m=re.search(r'(?m)^\s*%\s*Phát triển từ\s*:\s*(\S+)', b)
+        qid=id_of(b) if parent_m else (id_of(b) or id_of(tex[max(0,m.start()-120):m.end()]))
         pre=tex[max(0,m.start()-800):m.start()]
         cut=max(pre.rfind('\\end{ex}'), pre.rfind('\\end{bt}'))
         if cut>=0: pre=pre[cut:]
         nguon=' · '.join(dict.fromkeys(extract_nguon(pre)+extract_nguon(b)))
         stem=re.split(r'\\choiceTF\b|\\choice\b|\\shortans\b|\\loigiai\b',b,1,flags=re.I)[0]
         stem=peel_tex_breaks(strip_loigiai(stem))
-        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'text':clean_latex_web(stem),'solution':clean_latex_web(solution_of(b)),'raw':b}
+        q={'idx':idx,'stt':idx+1,'id':qid,'cau':int(heads[-1].group(1)) if heads else idx+1,'line':tex[:m.start()].count('\n')+1,'dang':dang_for_pos(tex,m.start()),'level':level_of(b),'kind':kind,'nguon':nguon,'develop_from':parent_m.group(1).strip() if parent_m else '','text':clean_latex_web(stem),'solution':clean_latex_web(solution_of(b)),'raw':b}
         if kind=='TN':
             opts=[]
             for x in command_args(b,'\\choice')[:4]:
@@ -2831,6 +2832,61 @@ def parse_questions(tex):
             q['answer']=(ans or '').strip()
         out.append(q)
     return out
+
+def nest_developments(qs):
+    """Gỡ câu «Phát triển từ câu» khỏi danh sách làm bài, gắn vào câu gốc để học sinh tham khảo."""
+    rows = list(qs or [])
+    by_key = {}
+    for q in rows:
+        src = str(q.get("src") or "")
+        qid = str(q.get("id") or "").strip()
+        if qid:
+            by_key[(src, qid)] = q
+        by_key[(src, "idx:" + str(q.get("file_idx") if q.get("file_idx") is not None else q.get("idx")))] = q
+    mains = []
+    for q in rows:
+        parent = str(q.get("develop_from") or "").strip()
+        src = str(q.get("src") or "")
+        host = by_key.get((src, parent)) if parent else None
+        if host is None or host is q:
+            mains.append(q)
+            continue
+        host.setdefault("develop", []).append(q)
+    return mains
+
+def develop_reference_html(q, src=""):
+    items = (q or {}).get("develop") or []
+    if not items:
+        return ""
+    blocks = []
+    for i, d in enumerate(items, 1):
+        dsrc = str(d.get("src") or src or "")
+        kind = str(d.get("kind") or "TL")
+        body = html_question(d.get("text") or "", dsrc)
+        extra = ""
+        if kind == "TN":
+            bits = []
+            for j, o in enumerate((d.get("options") or [])[:4]):
+                ok = bool(o.get("correct"))
+                mark = " <span class='okmark'>Đáp án đúng</span>" if ok else ""
+                bits.append(f"<div class='opt{' ok' if ok else ''}'><b>{'ABCD'[j]}.</b> {html_question(o.get('text',''), dsrc)}{mark}</div>")
+            extra = "<div class='opts'>" + "".join(bits) + "</div>"
+        elif kind == "DS":
+            bits = ['<div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>']
+            for j, o in enumerate(d.get("statements") or []):
+                yes = bool(o.get("correct")) if isinstance(o, dict) else False
+                lab = "ABCD"[j] if j < 4 else str(j + 1)
+                txt = html_question(o.get("text", "") if isinstance(o, dict) else o, dsrc)
+                y_on = " on" if yes else ""
+                n_on = " on" if not yes else ""
+                bits.append(f"<div class='tf{' ok' if yes else ' noans'}'><span class='tflab'>{lab}</span><div class='tf-text'>{txt}</div><span class='tf-box yes{y_on}'></span><span class='tf-box no{n_on}'></span></div>")
+            extra = "<div class='tfgrid'>" + "".join(bits) + "</div>"
+        elif kind == "TLN" and str(d.get("answer") or "").strip():
+            extra = f"<div class='answerline'><b>Đáp án:</b> {html_question(str(d.get('answer') or ''), dsrc)}</div>"
+        sol = html_question(d.get("solution") or "", dsrc)
+        blocks.append(f"<div class='phatitem'><div class='nguonrow'><span class='nguon'>Phát triển từ câu · tham khảo {i}</span></div><div class='qstem'>{body}</div>{extra}<div class='solution'><b>Lời giải</b><div>{sol or 'Chưa có lời giải.'}</div></div></div>")
+    n = len(items)
+    return f"<details class='phat'><summary>Phát triển từ câu · {n} câu để tham khảo</summary>{''.join(blocks)}</details>"
 
 def _dup_norm(s):
     s=clean_latex_web(s or '')
@@ -3031,7 +3087,7 @@ def load_lesson_questions(path):
     qs = parse_lesson_questions(path)
     if not qs:
         _, tex = read_tex(path)
-        qs = parse_questions(tex)
+        qs = nest_developments(parse_questions(tex))
     return qs
 
 def questions_in_scope(qs, dang=''):
@@ -3718,7 +3774,7 @@ def select_page():
     try:
         qs=parse_lesson_questions(p)
         if not qs:
-            _,tex=read_tex(p); qs=parse_questions(tex)
+            _,tex=read_tex(p); qs=nest_developments(parse_questions(tex))
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     guest = not m
     admin_pick = can_manage_bank()
@@ -3757,7 +3813,7 @@ def start_practice():
     try:
         qs=parse_lesson_questions(p)
         if not qs:
-            _,tex=read_tex(p); qs=parse_questions(tex)
+            _,tex=read_tex(p); qs=nest_developments(parse_questions(tex))
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     picks={}
     for k,v in request.form.items():
@@ -3795,7 +3851,7 @@ def question_payload(q):
     except (TypeError, ValueError):
         fi=0
     src=str(q.get('src') or '')
-    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text'], src),'solution':html_question(q['solution'], src),'dang':q['dang'],'level':q['level'],'src':src,'file_idx':fi,'line':int(q.get('line') or 0)}
+    p={'kind':q['kind'],'id':q.get('id') or '','cau':q.get('cau') or '','nguon':q.get('nguon') or '','text':html_question(q['text'], src),'solution':html_question(q['solution'], src),'dang':q['dang'],'level':q['level'],'src':src,'file_idx':fi,'line':int(q.get('line') or 0),'develop_html':develop_reference_html(q, src)}
     if q['kind']=='TN':p['options']=[{'text':html_question(o.get('text',''), src),'correct':bool(o.get('correct'))} for o in (q.get('options') or [])]
     elif q['kind']=='DS':p['statements']=[{'text':html_question(o.get('text','') if isinstance(o,dict) else o, src),'correct':bool((o or {}).get('correct') if isinstance(o,dict) else False)} for o in (q.get('statements') or [])]
     elif q['kind']=='TLN':p['answer']=q.get('answer','')
@@ -3820,7 +3876,7 @@ def practice():
     try:
         allq={q['idx']:q for q in parse_lesson_questions(p)}
         if not allq:
-            _,tex=read_tex(p); allq={q['idx']:q for q in parse_questions(tex)}
+            _,tex=read_tex(p); allq={q['idx']:q for q in nest_developments(parse_questions(tex))}
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
@@ -3944,6 +4000,7 @@ if(q.kind==='TN')q.options.forEach((o,i)=>h+='<label class="opt" id="o'+i+'"><in
 else if(q.kind==='DS'){h+='<div class="qbody ds"><div class="qfig" hidden></div><div class="qtf"><div class="tfgrid"><div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>';q.statements.forEach((s,i)=>{const lab='ABCD'.charAt(i)||(i+1);h+='<div class="tf" id="t'+i+'"><span class="tflab">'+lab+'</span><div class="tf-text">'+s.text+'</div><label class="tf-box yes"><input type="radio" name="t'+i+'" value="1"></label><label class="tf-box no"><input type="radio" name="t'+i+'" value="0"></label></div>'});h+='</div></div></div>'}
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
+h+=(q.develop_html||'');
 h+='<div class="quizacts"><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button><button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'))}
 function bind(){let q=Q;
 if(q.kind==='TN')document.querySelectorAll('input[name=a]').forEach(function(el){el.addEventListener('change',syncReady)});
@@ -3979,7 +4036,7 @@ function toggleHint(){
   typeset(box);
 }
 function openSolution(){if(!IS_ADMIN && !checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display=box.style.display==='block'?'none':'block';if(box.style.display==='block') typeset(box);let b=document.getElementById('solbtn');if(b&&!IS_ADMIN)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite();ldvlRemountSpeak()}
-function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrSim">🔁 Phát triển từ câu</button> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrSim').onclick=function(){if(window.ldvlAdminSimilar)ldvlAdminSimilar(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<div class="aispeak"><button type="button" class="btn spk-f">Nữ</button><button type="button" class="btn spk-m">Nam</button><button type="button" class="btn primary spk-play">▶ Đọc</button><button type="button" class="btn spk-pause">⏸ Dừng</button><span class="spkmsg">Bấm mục cần đọc</span></div><p style="margin-top:8px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();if(window.ldvlSpeak&&window.ldvlSpeak.bind)window.ldvlSpeak.bind();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}

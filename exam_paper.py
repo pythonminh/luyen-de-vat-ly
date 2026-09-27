@@ -23,6 +23,7 @@ from app import (
     login_url,
     member_current,
     page,
+    nest_developments,
     parse_lesson_questions,
     parse_questions,
     read_tex,
@@ -53,7 +54,7 @@ def load_qs(path):
     qs = parse_lesson_questions(path)
     if not qs:
         _, tex = read_tex(path)
-        qs = parse_questions(tex)
+        qs = nest_developments(parse_questions(tex))
     return qs
 
 

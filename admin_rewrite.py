@@ -352,6 +352,36 @@ def _apply_inner(inner, kind, stem, solution, options, answer, flags):
     return block
 
 
+def _build_develop_inner(kind, stem, solution, options, answer, parent_mark, meta_lines):
+    lines = [f"% Phát triển từ: {parent_mark}"]
+    for ln in meta_lines or []:
+        raw = str(ln or "").strip()
+        if raw and "phát triển từ" not in raw.casefold():
+            lines.append(raw)
+    lines.append(r"\nguon{Phát triển từ câu}")
+    lines.append(_clean_tex(stem).strip())
+    kind = str(kind or "TL").upper()
+    if kind in {"TN", "DS"} and options:
+        cmd = "\\choiceTF" if kind == "DS" else "\\choice"
+        trues = [bool(x.get("correct")) for x in options]
+        texts = [x.get("text") if isinstance(x, dict) else x for x in options]
+        lines.append(cmd + _pack_choice_braces(texts, trues))
+    elif kind == "TLN" and answer:
+        lines.append("\\shortans{" + _clean_tex(answer) + "}")
+    if solution:
+        lines.append("\\loigiai{\n" + _clean_tex(solution) + "\n}")
+    return "\n".join(lines).strip() + "\n"
+
+
+def _insert_after_ex(tex, file_idx, new_inner):
+    for i, m in enumerate(base.EX_RE.finditer(tex)):
+        if i != file_idx:
+            continue
+        block = "\\begin{ex}\n" + new_inner.strip() + "\n\\end{ex}\n"
+        return tex[: m.end()] + "\n" + block + tex[m.end() :]
+    return None
+
+
 def _replace_ex(tex, file_idx, new_inner):
     for i, m in enumerate(base.EX_RE.finditer(tex)):
         if i != file_idx:
@@ -599,6 +629,67 @@ def _formula_keep_block(pack):
     return "\n".join(lines) + "\n"
 
 
+def _prompt_similar(pack):
+    letters = "ABCD"
+    kind = str(pack.get("kind") or "TL").upper()
+    opt_lines = []
+    for i, o in enumerate(pack.get("options") or []):
+        mark = " [ĐÚNG]" if o.get("correct") else ""
+        lab = letters[i] if kind == "TN" else str(i + 1)
+        opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
+    return (
+        "PHÁT TRIỂN TỪ CÂU GỐC để học sinh tham khảo. Không chép lại nguyên văn câu cũ.\n"
+        f"Giữ đúng loại {kind} và cùng dạng kiến thức.\n"
+        "Đổi các số liệu (khối lượng, thể tích, nhiệt độ, thời gian, công suất, hiệu suất, tiền điện...) sang số mới hợp lí, khác rõ số cũ.\n"
+        "Có thể đổi một vài từ (tên chất, tên vật, tình huống) nhưng vẫn đúng vật lí của dạng này.\n"
+        "Tính lại lời giải từ đầu theo số mới. Đáp án đúng phải là kết quả của phép tính mới.\n"
+        "Cấm giữ nguyên đáp án cũ khi số đã đổi.\n"
+        + kind_structure_text(kind)
+        + "CẤM dòng comment %, \\begin{ex}, \\end{ex}, \\loigiai, \\True trong stem/options/solution.\n"
+        "Lời giải TN/ĐS chỉ gọi A/B/C/D, không chép lại nguyên văn từng phương án.\n"
+        "JSON một object: "
+        '{"stem":"...","options":[{"text":"...","correct":true}],"answer":"...","solution":"...","note":""}\n'
+        "TN: options đúng 4 phương án, đúng một ý correct true theo kết quả mới. "
+        "DS: options đúng 4 mệnh đề, mỗi ý có correct true/false theo số mới. "
+        "TLN: options=[], answer chỉ là số mới. TL: options=[].\n"
+        "Trong JSON mỗi backslash LaTeX viết hai lần. Xuống dòng bằng \\n.\n"
+        "Lặp lại giữa các mốc ===STEM=== ===SOLUTION=== ===ANSWER=== ===NOTE===\n\n"
+        f"Loại: {kind}\n"
+        f"Câu gốc (chỉ để lấy dạng, không được chép số):\n{pack.get('text') or ''}\n"
+        + ("Phương án gốc:\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
+        + (f"Đáp án số cũ (phải đổi): {pack.get('answer')}\n" if pack.get("answer") else "")
+        + f"Lời giải cũ (phải tính lại):\n{pack.get('solution') or ''}\n"
+    )
+
+
+def _prompt_recalc(pack, data):
+    letters = "ABCD"
+    kind = str(pack.get("kind") or "TL").upper()
+    stem = _clean_tex(str((data or {}).get("stem") or ""))
+    raw_opts = (data or {}).get("options") if isinstance((data or {}).get("options"), list) else []
+    lines = []
+    for i, o in enumerate(raw_opts):
+        txt = o.get("text") if isinstance(o, dict) else o
+        lab = letters[i] if kind == "TN" else str(i + 1)
+        lines.append(f"{lab}. {txt or ''}")
+    return (
+        "ADMIN vừa sửa số hoặc từ trong đề. Giữ NGUYÊN stem dưới đây, không viết lại câu chữ của đề.\n"
+        "Tính lại lời giải từ đầu cho khớp đúng bản ADMIN đã sửa.\n"
+        "Đáp án đúng phải là kết quả của số liệu đang có trong stem. Cấm giữ đáp án cũ nếu số đã khác.\n"
+        "TN: sửa các phương án là số để một phương án bằng kết quả mới, ba phương án là nhiễu gần kết quả; đúng một correct true.\n"
+        "DS: nếu mệnh đề chứa số kết quả thì sửa số đó cho khớp phép tính mới; cập nhật correct true/false theo bản đã sửa.\n"
+        "TLN: answer chỉ là số mới. TL: options=[].\n"
+        + kind_structure_text(kind)
+        + "CẤM %, \\begin{ex}, \\loigiai, \\True trong các trường.\n"
+        "JSON: {\"stem\":\"...\",\"options\":[{\"text\":\"...\",\"correct\":true}],\"answer\":\"...\",\"solution\":\"...\",\"note\":\"\"}\n"
+        "stem trong JSON phải là đúng stem ADMIN, không đổi.\n"
+        "Trong JSON mỗi backslash LaTeX viết hai lần.\n"
+        "Lặp lại ===STEM=== ===SOLUTION=== ===ANSWER=== ===NOTE===\n\n"
+        f"Loại: {kind}\nSTEM ADMIN:\n{stem}\n"
+        + ("Phương án hiện có:\n" + "\n".join(lines) + "\n" if lines else "")
+    )
+
+
 def _prompt(pack, retry=False):
     letters = "ABCD"
     kind = str(pack.get("kind") or "TL").upper()
@@ -698,7 +789,7 @@ def _raw_parts(q, tex=None, file_idx=None):
     return _clean_tex(stem), _clean_tex(sol)
 
 
-def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
+def _pack_payload(src, fi, kind, stem, solution, answer, options, note="", develop=False):
     stem = _clean_tex(stem)
     options = [
         {
@@ -745,6 +836,7 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note=""):
         "sol_html": base.html_question(solution, src),
         "opt_html": opt_html,
         "answer_html": base.html_question(answer or "", src),
+        "develop": bool(develop),
     }
 
 
@@ -794,6 +886,9 @@ def api_rewrite_question():
         return jsonify(ok=False, error="Thiếu Gemini API key."), 400
     from admin_classify import _gemini_once
 
+    variant = mode in {"similar", "recalc"}
+    develop = mode == "similar" or bool(data.get("develop"))
+
     def fields_from(raw):
         obj = _extract_ai_fields(raw)
         stem = _clean_tex(obj.get("stem") or "")
@@ -816,20 +911,58 @@ def api_rewrite_question():
                 txt = item.get("text") if isinstance(item, dict) else item
                 if isinstance(item, dict) and "correct" in item:
                     correct = bool(item.get("correct"))
+                elif variant:
+                    correct = False
                 elif i < len(old_opts):
                     correct = bool(old_opts[i].get("correct"))
                 else:
                     correct = False
                 new_opts.append({"text": _clean_tex(txt), "correct": correct})
+        if kind == "TN" and new_opts and not any(o.get("correct") for o in new_opts):
+            hit = re.search(r"\b([A-D])\b", answer or "", re.I)
+            if hit:
+                ix = ord(hit.group(1).upper()) - 65
+                if 0 <= ix < len(new_opts):
+                    new_opts[ix]["correct"] = True
         note = str(obj.get("note") or "").strip()[:300]
         if pack["kind"] == "TLN":
             answer, solution = _coerce_tln(answer, solution)
         return stem, solution, answer, new_opts, note
 
-    raw, err = _gemini_once(keys, _prompt(pack), 5000)
+    if variant and mode == "similar":
+        prompt = _prompt_similar(pack)
+    elif variant:
+        prompt = _prompt_recalc(pack, data)
+    else:
+        prompt = _prompt(pack)
+    raw, err = _gemini_once(keys, prompt, 6000)
     if not raw:
         return jsonify(ok=False, error=err or "Gemini không trả lời."), 400
     stem, solution, answer, new_opts, note = fields_from(raw)
+    if variant:
+        if mode == "recalc":
+            kept = _clean_tex(str(data.get("stem") or ""))
+            if kept:
+                stem = kept
+        if stem_incomplete(stem) or not solution or _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
+            raw2, err2 = _gemini_once(keys, prompt + "\nLẦN 2: bản trước thiếu đề, thiếu lời giải hoặc sai đáp án. Tính lại cho khớp số trong đề.\n", 6000)
+            if raw2:
+                s2, sol2, a2, o2, n2 = fields_from(raw2)
+                if s2 or sol2:
+                    stem, solution, answer, new_opts, note = s2, sol2, a2, o2, n2
+                    if mode == "recalc":
+                        kept = _clean_tex(str(data.get("stem") or ""))
+                        if kept:
+                            stem = kept
+            elif not solution:
+                return jsonify(ok=False, error=err2 or "Chưa tính lại được lời giải."), 400
+        if stem_incomplete(stem) or not solution:
+            return jsonify(ok=False, error="Chưa ra đủ đề và lời giải khớp số mới. Bấm lại."), 400
+        if pack["kind"] in ("TN", "DS") and _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
+            return jsonify(ok=False, error="Đáp án mới chưa đủ 4 ý hoặc chưa có ý đúng. Bấm lại."), 400
+        tag = "Phát triển từ câu — số liệu và đáp án đã tính lại, để học sinh tham khảo." if mode == "similar" else "Đã tính lại lời giải và đáp án theo số hoặc từ vừa sửa."
+        note = (tag + (" " + note if note else "")).strip()
+        return jsonify(_pack_payload(src, fi, pack["kind"], stem, solution, answer, new_opts, note, develop=develop))
     copied = _copied_stem_or_opts(pack, stem, new_opts)
     bad_struct = _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution)
     if copied or bad_struct:
@@ -960,6 +1093,42 @@ def api_rewrite_question_save():
     ans_in = data.get("answer") or ""
     if kind == "TLN":
         ans_in, sol_in = _coerce_tln(ans_in, sol_in)
+    develop_save = str(data.get("save_as") or "").strip().lower() == "develop"
+    if develop_save:
+        parent_mark = str(q.get("id") or "").strip() or f"idx:{fi}"
+        meta = []
+        head, _tail = _split_head_tail(inner)
+        comments, _old_stem = _split_comments(head)
+        for ln in comments.splitlines():
+            if re.search(r"mức", ln, re.I):
+                meta.append(ln.strip())
+        new_inner = _build_develop_inner(
+            kind,
+            _clean_tex(data.get("stem") or ""),
+            _compact_solution(sol_in, merged_opts),
+            merged_opts,
+            _clean_tex(ans_in),
+            parent_mark,
+            meta,
+        )
+        new_tex = _insert_after_ex(tex, fi, new_inner)
+        if new_tex is None:
+            return jsonify(ok=False, error="Không thêm được câu phát triển."), 400
+        try:
+            sha, _ = base.read_tex(src, need_sha=True)
+            from admin_classify import _write_tex
+
+            _write_tex(src, new_tex, "ADMIN phát triển từ câu " + src, sha)
+            try:
+                from dang_routes import _STATS_CACHE, _QID_CACHE
+
+                _STATS_CACHE.clear()
+                _QID_CACHE.clear()
+            except Exception:
+                pass
+        except Exception as e:
+            return jsonify(ok=False, error=str(e)), 500
+        return jsonify(ok=True, added=True)
     new_inner = _apply_inner(
         inner,
         kind,
@@ -1268,34 +1437,52 @@ function showEditor(box, d){
   d.solution=stripMeta(d.solution||'');
   d.answer=stripMeta(d.answer||'');
   (d.options||[]).forEach(function(o){o.text=stripMeta(o.text||'')});
-  let h='<div class="rwprev"><div class="success">Chưa ghi file. Sửa LaTeX trong ô, bấm Xem trước, rồi Chấp nhận.</div>';
+  const develop=!!d.develop;
+  const verb=develop?'Ghi':'Thay';
+  let h='<div class="rwprev"><div class="success">'+(develop?'Phát triển từ câu — chưa ghi. Sửa số hoặc từ, bấm Tính lại lời giải và đáp án, rồi thêm để học sinh tham khảo. Câu gốc giữ nguyên.':'Chưa ghi file. Sửa LaTeX trong ô, bấm Xem trước, rồi Chấp nhận.')+'</div>';
   if(d.note) h+='<p class="muted">'+esc(d.note)+'</p>';
-  h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> Thay đề</label>';
+  h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> '+verb+' đề</label>';
   h+='<textarea class="rwta" data-ta="stem" data-lab="Đề">'+esc(d.stem||'')+'</textarea>';
   (d.options||[]).forEach(function(o,i){
-    if(!i) h+='<label><input type="checkbox" class="rwf" data-k="opts" checked> Thay cách diễn đạt phương án (không đổi đáp án đúng)</label>';
+    if(!i) h+='<label><input type="checkbox" class="rwf" data-k="opts" checked> '+verb+' phương án và đáp án đúng</label>';
     h+='<textarea class="rwta sm" data-ta="opt-'+i+'" data-lab="PA '+(d.kind==='TN'?'ABCD'[i]:(i+1))+'">'+esc(o.text||'')+'</textarea>';
   });
   if(d.kind==='TLN'){
-    h+='<label><input type="checkbox" class="rwf" data-k="answer" checked> Thay đáp án TLN</label>';
+    h+='<label><input type="checkbox" class="rwf" data-k="answer" checked> '+verb+' đáp án TLN</label>';
     h+='<textarea class="rwta sm" data-ta="ans" data-lab="Đáp án">'+esc(d.answer||'')+'</textarea>';
   }
-  h+='<label><input type="checkbox" class="rwf" data-k="sol" checked> Thay lời giải</label>';
+  h+='<label><input type="checkbox" class="rwf" data-k="sol" checked> '+verb+' lời giải</label>';
   h+='<textarea class="rwta" data-ta="sol" data-lab="Lời giải" style="min-height:180px">'+esc(d.solution||'')+'</textarea>';
-  h+='<p><button type="button" class="btn rwPrev">👁 Xem trước</button> <button type="button" class="btn green rwSave">✅ Chấp nhận và ghi TEX</button> <button type="button" class="btn rwCancel">Hủy</button></p>';
+  h+='<p><button type="button" class="btn rwPrev">👁 Xem trước</button> <button type="button" class="btn rwRecalc">🔁 Tính lại lời giải và đáp án</button> <button type="button" class="btn green rwSave">'+(develop?'✅ Thêm Phát triển từ câu':'✅ Chấp nhận và ghi TEX')+'</button> <button type="button" class="btn rwCancel">Hủy</button></p>';
   h+='<div class="rwlook"></div></div>';
   box.innerHTML=h;
   box.querySelector('.rwCancel').onclick=function(){box.innerHTML='';};
   box.querySelector('.rwPrev').onclick=function(){previewBox(box)};
+  box.querySelector('.rwRecalc').onclick=async function(){
+    const btn=this;
+    const look=box.querySelector('.rwlook');
+    const ks=keys();
+    if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}
+    btn.disabled=true;
+    if(look) look.innerHTML='⏳ Đang tính lại lời giải và đáp án theo số hoặc từ vừa sửa...';
+    try{
+      const x=readDraft(box,d);
+      const r=await fetch('/api/admin/rewrite-question',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({src:d.src,file_idx:d.file_idx,mode:'recalc',develop:develop,api_keys:ks,stem:x.stem,options:x.options,solution:x.solution,answer:x.answer})});
+      const back=await r.json();
+      if(!back.ok){if(look) look.innerHTML='<div class="err">'+(back.error||'Lỗi')+'</div>';btn.disabled=false;return;}
+      showEditor(box, back);
+    }catch(err){if(look) look.innerHTML='<div class="err">'+esc(err)+'</div>';btn.disabled=false;}
+  };
   box.querySelector('.rwSave').onclick=async function(){
     const btn=this;
-    if(!confirm('Ghi đề/lời giải vào TEX + GitHub?'))return;
+    if(!confirm(develop?'Thêm vào mục Phát triển từ câu để học sinh tham khảo? Câu gốc không đổi.':'Ghi đề/lời giải vào TEX + GitHub?'))return;
     btn.disabled=true;
     try{
       const x=readDraft(box,d);
       const s=await fetch('/api/admin/rewrite-question-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
         body:JSON.stringify({src:d.src,file_idx:d.file_idx,stem:x.stem,solution:x.solution,answer:x.answer,options:x.options,
-          apply_stem:!!x.flags.stem,apply_opts:!!x.flags.opts,apply_sol:!!x.flags.sol,apply_answer:!!x.flags.answer})});
+          apply_stem:!!x.flags.stem,apply_opts:!!x.flags.opts,apply_sol:!!x.flags.sol,apply_answer:!!x.flags.answer,save_as:develop?'develop':''})});
       const txt=await s.text();
       let sd={};
       try{sd=JSON.parse(txt)}catch(err){
@@ -1303,14 +1490,14 @@ function showEditor(box, d){
         btn.disabled=false;return;
       }
       if(!sd.ok){alert(sd.error||'Không ghi được');btn.disabled=false;return;}
-      box.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
+      box.innerHTML='<div class="success">'+(develop?'✅ Đã thêm Phát triển từ câu. Đang tải lại...':'✅ Đã ghi. Đang tải lại...')+'</div>';
       location.reload();
     }catch(err){alert('Không ghi được: '+err);btn.disabled=false;}
   };
   previewBox(box);
 }
 async function loadRewrite(src, fi, box, mode){
-  box.innerHTML=mode==='edit'?'⏳ Đang tải lời giải hiện tại...':'⏳ AI đang viết lại đề và lời giải...';
+  box.innerHTML=mode==='edit'?'⏳ Đang tải lời giải hiện tại...':(mode==='similar'?'⏳ Đang phát triển từ câu và tính lời giải, đáp án mới...':'⏳ AI đang viết lại đề và lời giải...');
   try{
     const body={src:src,file_idx:fi,mode:mode||'ai'};
     if(mode!=='edit') body.api_keys=keys();
@@ -1322,16 +1509,18 @@ async function loadRewrite(src, fi, box, mode){
   }catch(e){box.innerHTML='<div class="err">'+e+'</div>';}
 }
 window.ldvlAdminRewrite=function(src,fi,box){loadRewrite(src,fi,box,'ai')};
+window.ldvlAdminSimilar=function(src,fi,box){loadRewrite(src,fi,box,'similar')};
 window.ldvlAdminEdit=function(src,fi,box){loadRewrite(src,fi,box,'edit')};
 document.addEventListener('click',function(e){
   const go=e.target.closest&&e.target.closest('.rwgo');
+  const sim=e.target.closest&&e.target.closest('.rwsim');
   const ed=e.target.closest&&e.target.closest('.rwedit');
-  const btn=go||ed;
+  const btn=go||sim||ed;
   if(!btn) return;
   e.preventDefault();
   const p=dropOf(btn);
   if(!p) return;
-  loadRewrite(p.src,p.fi,outBox(btn),ed?'edit':'ai');
+  loadRewrite(p.src,p.fi,outBox(btn),ed?'edit':(sim?'similar':'ai'));
 });
 document.addEventListener('click',async function(e){
   const btn=e.target.closest&&e.target.closest('#aiGap');
