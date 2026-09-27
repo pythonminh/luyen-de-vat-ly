@@ -1631,9 +1631,15 @@ def chapter_nav_html(path):
         n = int(x.get("questions") or x.get("count") or 0)
         cls = "baitab on" if lesson_folder(p) == cur_folder else "baitab"
         tabs.append(f"<a class='{cls}' href='/member/select?path={href}'>{title}<span class='tag'>{n}</span></a>")
+    ch_href = (
+        "/member/chapter?mon=" + urllib.parse.quote(str((cur or {}).get("Mon") or ""), safe="")
+        + "&lop=" + urllib.parse.quote(str((cur or {}).get("Lop") or ""), safe="")
+        + "&chuong=" + urllib.parse.quote(str((cur or {}).get("Chuong") or ""), safe="")
+        + "&path=" + urllib.parse.quote(str(path or ""), safe="")
+    )
     return (
-        f"<div class='chaptree'><div class='titlebar'>{mon} · Lớp {lop} · {chuong}</div>"
-        "<p class='muted' style='margin:8px 0 6px'>Cùng một chương: mỗi bài một lần. Dạng nằm trong bài, không liệt kê từng file .tex.</p>"
+        f"<div class='chaptree'><div class='titlebar'>{mon} · Lớp {lop} · {chuong} · <a href='{html.escape(ch_href, quote=True)}'>Lọc cả chương</a></div>"
+        "<p class='muted' style='margin:8px 0 6px'>Cùng một chương: mỗi bài một lần. Dạng nằm trong bài. Bấm Lọc cả chương để tách đề vào đúng bài và dạng.</p>"
         f"<div class='bairow'>{''.join(tabs)}</div></div>"
         "<style>.chaptree{margin-bottom:14px}.bairow{display:flex;flex-wrap:wrap;gap:8px}"
         ".baitab{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:8px 10px;border:1px solid #c9d8e8;border-radius:9px;background:#fff;text-decoration:none;color:#173a5e;font-weight:700;font-size:13px;line-height:1.35}"
@@ -1733,9 +1739,22 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                     )
                 if open_ch:
                     open_lop = True
+                ch_n = 0
+                for x in arr:
+                    try:
+                        ch_n += int(x.get("questions") or x.get("count") or 0)
+                    except (TypeError, ValueError):
+                        pass
+                first_p = str((arr[0] or {}).get("path") or (arr[0] or {}).get("file") or "") if arr else ""
+                ch_href = (
+                    "/member/chapter?mon=" + urllib.parse.quote(mon, safe="")
+                    + "&lop=" + urllib.parse.quote(str(lop), safe="")
+                    + "&chuong=" + urllib.parse.quote(chuong, safe="")
+                    + "&path=" + urllib.parse.quote(first_p, safe="")
+                )
                 chuong_bits.append(
                     f"<details class='drawchuong'{' open' if open_ch else ''}>"
-                    f"<summary>{html.escape(chuong)}</summary>"
+                    f"<summary><a class='drawchlink' href='{html.escape(ch_href, quote=True)}' onclick='event.stopPropagation()' title='Mở cả chương và lọc đề vào từng bài, từng dạng'>{html.escape(chuong)}</a><span class='drawn'>{ch_n}</span></summary>"
                     f"<div class='drawbais'>{''.join(bais)}</div></details>"
                 )
             if open_lop:
@@ -1757,7 +1776,8 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
         "<aside class='drawer-panel' role='dialog' aria-label='Chọn bài'>"
         "<div class='drawer-head'><b>📚 Chọn bài</b>"
         "<button type='button' class='btn' id='ldvlDrawerClose'>✕</button></div>"
-        "<p class='drawer-hint'>Bấm lớp → chương → bài → dạng. Dạng / bài đang làm được tô.</p>"
+        "<p class='drawer-hint'>Bấm tên chương để lọc cả chương vào các bài và dạng. Bấm bài → dạng để mở một chỗ.</p>"
+        "<style>.drawchlink{color:inherit;font-weight:800;text-decoration:underline;text-underline-offset:2px}.drawchuong>summary{display:flex;justify-content:space-between;gap:8px;align-items:center}</style>"
         f"<div class='drawer-tree'>{inner}</div></aside></div>"
     )
 

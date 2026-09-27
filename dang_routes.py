@@ -2061,6 +2061,175 @@ def _fill_kind_blocks(keys, dang, kind, n, samples, tok=5000):
                 break
     return kept[:n]
 
+def _chapter_lessons(mon, lop, chuong):
+    from app import _lesson_sort_key, index_data, merge_catalog_lessons
+    raw = [x for x in (index_data().get('lessons') or []) if isinstance(x, dict)]
+    items = merge_catalog_lessons(raw)
+    key = (str(mon or '').strip(), str(lop or '').strip(), str(chuong or '').strip())
+    sibs = [
+        x for x in items
+        if (
+            str(x.get('Mon') or '').strip(),
+            str(x.get('Lop') or '').strip(),
+            str(x.get('Chuong') or '').strip(),
+        ) == key
+    ]
+    sibs.sort(key=_lesson_sort_key)
+    return sibs
+
+
+def _lesson_title(item):
+    return str((item or {}).get('BaiHoc') or (item or {}).get('De') or '').strip()
+
+
+def _chapter_brief(sibs):
+    from app import dang_pairs_of
+    lines = []
+    packs = []
+    for item in sibs[:10]:
+        title = _lesson_title(item)
+        path = str(item.get('path') or item.get('file') or '').replace('\\', '/')
+        if not title or not path.startswith('ngan-hang/'):
+            continue
+        try:
+            qs = parse_lesson_questions(path)
+        except Exception:
+            qs = []
+        from app import dang_names_of
+        names, counts = dang_names_of(qs) if qs else ([n for n, _c in dang_pairs_of(item)], {})
+        dang_lines = []
+        for name in names:
+            if not name or name == 'Chưa phân dạng':
+                continue
+            sn = ''
+            kind = ''
+            for q in qs:
+                if str(q.get('dang') or '').strip() != name:
+                    continue
+                sn = _stem_snip(q, 110)
+                kind = str(q.get('kind') or '')
+                if sn:
+                    break
+            bit = '- «' + name + '» (' + str(counts.get(name) or 0) + ' câu)'
+            if sn:
+                bit += '. Mẫu [' + kind + ']: ' + sn
+            dang_lines.append(bit)
+            if len(dang_lines) >= 12:
+                break
+        lines.append('## Bài: ' + title + '\n' + ('\n'.join(dang_lines) or '- (chưa có dạng)'))
+        packs.append({'title': title, 'path': path, 'names': [n for n in names if n], 'qs': qs})
+    return '\n'.join(lines)[:14000], packs
+
+
+def _triples_from_import(text):
+    text = str(text or '')
+    marks = [(m.start(), 'b', (m.group(1) or '').strip()) for m in re.finditer(r'\\baibt\s*\{([^{}]*)\}', text, re.I)]
+    marks += [(m.start(), 'd', (m.group(1) or '').strip()) for m in re.finditer(r'\\dang(?:bt)?\s*\{([^{}]*)\}', text, re.I)]
+    marks += [(m.start(), 'e', m.group(0).strip()) for m in re.finditer(r'\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}', text, re.I | re.S)]
+    bai, dang = '', 'Chưa phân dạng'
+    out = []
+    for _, kind, val in sorted(marks, key=lambda x: x[0]):
+        if kind == 'b':
+            bai = val or bai
+        elif kind == 'd':
+            dang = val or dang
+        else:
+            out.append((bai, dang, val))
+    return out
+
+
+def _fill_chapter_work(data, page_text, images, source_url, n_files):
+    from app import dang_tex_anchor
+    mon = str(data.get('mon') or '').strip()
+    lop = str(data.get('lop') or '').strip()
+    chuong = str(data.get('chuong') or '').strip()
+    sibs = _chapter_lessons(mon, lop, chuong)
+    if len(sibs) < 1:
+        return jsonify(ok=False, error='Không thấy bài nào trong chương này.'), 400
+    if not str(page_text or '').strip() and not images:
+        return jsonify(ok=False, error='Thả file Word, PDF, TEX hoặc dán chữ của cả chương, rồi bấm AI phân tích.'), 400
+    brief, packs = _chapter_brief(sibs)
+    if not packs:
+        return jsonify(ok=False, error='Chương chưa có bài để lọc vào.'), 400
+    titles = [p['title'] for p in packs]
+    by_title = {p['title']: p for p in packs}
+    kind_rules = _kind_rules_all() + 'Mỗi câu có \\loigiai{...}. Không % ID.\n'
+    prompt = (
+        'Bạn là giáo viên ra đề thi THPT. Nguồn có thể là cả chương, nhiều bài, file Word/PDF/TEX hoặc link.\n'
+        'Tách từng câu rồi lọc vào ĐÚNG BÀI và ĐÚNG DẠNG đã có trong chương «' + chuong + '».\n'
+        'So với câu mẫu, không gán chỉ vì tên na ná. Bỏ câu thuộc chương khác.\n'
+        'Với MỖI câu, đúng thứ tự:\n'
+        '\\baibt{Tên bài chép đúng một bài dưới đây}\n'
+        '\\dangbt{Tên dạng chép đúng một dạng của bài đó}\n'
+        '\\begin{ex}...\\end{ex}\n'
+        'Không bịa bài mới. Chỉ đặt dạng mới khi không dạng nào trong bài đó cùng việc phải làm.\n'
+        'Không markdown, không lời dẫn.\n'
+        + kind_rules
+        + 'Các bài và dạng đang có:\n' + brief + '\n\nNguồn:\n' + str(page_text or '')[:80000]
+    )
+    raw, err = _gemini_fill_raw(data and _keys_from_payload_safe(data), prompt, 16000, 0.25, images)
+    if not raw:
+        return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
+    raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
+    triples = _triples_from_import(raw)
+    if not triples:
+        return jsonify(ok=False, error='AI không ra khối \\begin{ex}. Thử lại.'), 400
+    grouped = {}
+    skipped_bai = 0
+    for bai0, dang0, block in triples:
+        bai = _snap_dang_name(bai0, titles)
+        pack = by_title.get(bai)
+        if not pack:
+            skipped_bai += 1
+            continue
+        dang = _snap_dang_name(dang0, pack['names']) if pack['names'] else (dang0 or 'Chưa phân dạng')
+        grouped.setdefault(bai, []).append((dang, block))
+    kept_bits = []
+    n_dup = n_bad = n_keep = 0
+    per_bai = []
+    for title in titles:
+        rows = grouped.get(title) or []
+        if not rows:
+            continue
+        pack = by_title[title]
+        kept, skipped = _filter_import_rows(rows, pack['qs'], '', relax=False)
+        n_dup += sum(1 for s in skipped if ('trùng' in s or 'cùng ý' in s or 'trần' in s))
+        n_bad += sum(1 for s in skipped if 'sai cấu trúc' in s)
+        if not kept:
+            continue
+        n_keep += len(kept)
+        per_bai.append(title + ': ' + str(len(kept)) + ' câu')
+        chunk = ['\\baibt{' + title + '}']
+        for dang, block in kept:
+            chunk.append('\\dangbt{' + dang + '}\n' + block)
+        kept_bits.append('\n'.join(chunk))
+    latex = _latex_with_nguon('\n\n'.join(kept_bits).strip() + ('\n' if kept_bits else ''), source_url)
+    if not n_keep:
+        extra = (' Bỏ ' + str(skipped_bai) + ' câu không thuộc bài nào trong chương.') if skipped_bai else ''
+        summary = 'Đã lọc hết câu gần trùng hoặc không thuộc chương này.' + extra
+        return jsonify(ok=True, latex='', n=0, summary=summary, chapter=True)
+    bits = []
+    if n_dup:
+        bits.append(str(n_dup) + ' câu gần trùng hoặc vượt trần')
+    if n_bad:
+        bits.append(str(n_bad) + ' câu sai cấu trúc')
+    if skipped_bai:
+        bits.append(str(skipped_bai) + ' câu không thuộc bài trong chương')
+    skip_txt = (' Đã lọc bỏ ' + ', '.join(bits) + '.') if bits else ''
+    summary = (
+        'Giữ ' + str(n_keep) + ' câu từ ' + str(max(1, n_files)) + ' nguồn, tách vào '
+        + str(len(per_bai)) + ' bài. ' + ' · '.join(per_bai) + '.' + skip_txt
+        + ' Xem ô LaTeX rồi bấm Chấp nhận ghi TEX.'
+    )
+    src, _line = dang_tex_anchor(packs[0]['path'], '', qs=packs[0]['qs'])
+    return jsonify(ok=True, src=src, latex=latex, n=n_keep, summary=summary, chapter=True)
+
+
+def _keys_from_payload_safe(data):
+    from student_gemini import _keys_from_payload
+    return _keys_from_payload(data)
+
+
 def _dang_fill_work(data):
     from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, dang_tex_anchor, kind_gap_heuristic, load_lesson_questions, questions_in_scope
     from student_gemini import _keys_from_payload
@@ -2111,6 +2280,8 @@ def _dang_fill_work(data):
         images = (_images_from_payload(data) + pdf_images + docx_images)[:4]
     if images and not page_text.strip():
         page_text = 'Nguồn là hình đính kèm. Hãy đọc đề, phương án và lời giải trên hình.'
+    if str(data.get('chapter') or '') in ('1', 'true', 'yes'):
+        return _fill_chapter_work(data, page_text, images, source_url, n_files)
     if not dang and not page_text:
         return jsonify(ok=False, error='Chọn file .tex trên máy hoặc dán link, rồi bấm AI từ file/link (không cần chọn dạng).'), 400
     try:
@@ -2306,6 +2477,133 @@ def api_admin_dang_fill_job():
     return jsonify(result)
 
 
+def _save_chapter_fill(data, raw_tex):
+    from admin_classify import _refresh_index
+    from app import TOKEN, _safe_repo_file, dang_tex_anchor, github_put_text, load_lesson_questions, read_tex
+    mon = str((data or {}).get('mon') or '').strip()
+    lop = str((data or {}).get('lop') or '').strip()
+    chuong = str((data or {}).get('chuong') or '').strip()
+    triples = _triples_from_import(raw_tex)
+    if not triples:
+        return jsonify(ok=False, error='Không có \\begin{ex} để ghi.'), 400
+    sibs = _chapter_lessons(mon, lop, chuong)
+    titles = [_lesson_title(x) for x in sibs if _lesson_title(x)]
+    by_title = {_lesson_title(x): x for x in sibs if _lesson_title(x)}
+    grouped = {}
+    for bai0, dang0, block in triples:
+        bai = _snap_dang_name(bai0, titles) if titles else bai0
+        if bai not in by_title:
+            continue
+        grouped.setdefault(bai, []).append((dang0 or 'Chưa phân dạng', block))
+    if not grouped:
+        return jsonify(ok=False, error='Không khớp bài nào trong chương. Giữ nguyên tên bài trong \\baibt{...}.'), 400
+    written = []
+    url = (data or {}).get('source_url') or ''
+    for title, rows in grouped.items():
+        item = by_title[title]
+        path = str(item.get('path') or item.get('file') or '').replace('\\', '/')
+        try:
+            qs = load_lesson_questions(path)
+        except Exception:
+            qs = []
+        src, _line = dang_tex_anchor(path, '', qs=qs)
+        if not src.startswith('ngan-hang/') or not src.lower().endswith('.tex'):
+            return jsonify(ok=False, error='File TEX không hợp lệ: ' + title), 400
+        bits = []
+        for dang, block in rows:
+            bits.append('\\dangbt{' + dang + '}\n' + block)
+        chunk = _latex_with_nguon('\n\n'.join(bits) + '\n', url)
+        try:
+            sha, tex = read_tex(src, need_sha=True)
+            new = (tex or '').rstrip() + '\n' + chunk
+            local = _safe_repo_file(src)[1]
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(new, encoding='utf-8')
+            if TOKEN:
+                github_put_text(src, new, 'ADMIN lọc cả chương vào ' + title, sha or None)
+            try:
+                qs2 = load_lesson_questions(path)
+                _refresh_index(path, qs2)
+            except Exception:
+                pass
+        except Exception as e:
+            return jsonify(ok=False, error=title + ': ' + str(e)), 500
+        written.append(title + ' ' + str(len(rows)))
+    _STATS_CACHE.clear()
+    _QID_CACHE.clear()
+    return jsonify(ok=True, n=sum(len(v) for v in grouped.values()), src='', note='Đã ghi ' + ', '.join(written))
+
+
+@app.get('/member/chapter')
+def member_chapter():
+    from app import dang_pairs_of, dang_view_url, page
+    m = member_current()
+    mon = str(request.args.get('mon') or '').strip()
+    lop = str(request.args.get('lop') or '').strip()
+    chuong = str(request.args.get('chuong') or '').strip()
+    if not mon or not chuong:
+        return redirect('/member')
+    sibs = _chapter_lessons(mon, lop, chuong)
+    if m:
+        sibs = [x for x in sibs if can_view(m, str(x.get('path') or x.get('file') or ''))]
+    if not sibs:
+        return page('Chương', "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không thấy bài trong chương này.</div><a class='btn' href='/member'>← Mục lục</a></div></div></div>")
+    blocks = []
+    total = 0
+    for item in sibs:
+        title = _lesson_title(item)
+        path = str(item.get('path') or item.get('file') or '')
+        n = int(item.get('questions') or item.get('count') or 0)
+        total += n
+        dlinks = []
+        for i, (dname, cnt) in enumerate(dang_pairs_of(item), 1):
+            short = dname if len(dname) <= 64 else dname[:63] + '…'
+            href = dang_view_url(path, dname)
+            dlinks.append(
+                "<a class='drawdang' href='" + html.escape(href, quote=True) + "'><span class='drawname'>"
+                + str(i) + '. ' + html.escape(short) + "</span><span class='drawn'>" + str(cnt) + "</span></a>"
+            )
+        bai_href = dang_view_url(path, '')
+        blocks.append(
+            "<details class='drawbaiwrap' open><summary class='drawbai'><a href='"
+            + html.escape(bai_href, quote=True) + "' onclick='event.stopPropagation()'>"
+            + html.escape(title) + "</a> <span class='drawn'>" + str(n) + "</span></summary><div class='drawdangs'>"
+            + (''.join(dlinks) or "<p class='muted'>Chưa có dạng</p>")
+            + "</div></details>"
+        )
+    first = str(sibs[0].get('path') or sibs[0].get('file') or '')
+    admin = ''
+    extra = ''
+    if can_manage_bank():
+        admin = (
+            "<details class='admindang-fold' open><summary class='admindang-sum'>▸ Lọc đề vào các bài và dạng của chương</summary>"
+            "<div class='admindang' data-chapter='1' data-path='" + html.escape(first, quote=True) + "' data-dang=''"
+            " data-mon='" + html.escape(mon, quote=True) + "' data-lop='" + html.escape(lop, quote=True) + "' data-chuong='" + html.escape(chuong, quote=True) + "'>"
+            "<div class='ai-intake' id='aiIntake' tabindex='0'><div class='ai-intake-bar'>"
+            "<strong>Nhận đề cả chương</strong>"
+            "<span class='ai-hint'>Nhiều file · Word · PDF · TEX</span>"
+            "<label class='btn'>Ảnh<input id='aiImgFile' type='file' accept='image/png,image/jpeg,image/webp,image/gif' multiple></label>"
+            "<label class='btn'>Word / PDF / TEX<input id='aiSrcFile' type='file' multiple accept='.doc,.docx,.pdf,.tex,.ltx,.txt,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
+            "<button type='button' class='btn green' id='aiImport'>AI phân tích → tách bài / dạng</button>"
+            "</div><div id='aiStatus' class='ai-status' hidden></div><div class='ai-shots' id='aiShots'></div>"
+            "<textarea id='aiPaste' rows='3' placeholder='Thả đề của cả chương. AI lọc từng câu vào đúng bài và đúng dạng ở dưới.'></textarea>"
+            "<input id='aiSrcUrl' type='url' placeholder='Link http tuỳ chọn'>"
+            "</div><div id='aiGapOut'></div></div></details>"
+        )
+        from admin_rewrite import REWRITE_CLIENT_JS
+        extra = REWRITE_CLIENT_JS
+    body = (
+        "<div class='wrap'><div class='panel'><div class='head'>📚 "
+        + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong)
+        + " <span class='tag'>" + str(len(sibs)) + " bài · " + str(total) + " câu</span></div><div class='body'>"
+        + "<p class='muted'>Bấm tên chương ở menu là vào đây. Thả đề, AI tách vào từng bài và từng dạng đang có. Bấm một dạng nếu chỉ muốn mở riêng chỗ đó.</p>"
+        + admin
+        + "<div class='drawbais'>" + ''.join(blocks) + "</div>"
+        + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
+    )
+    return page('Cả chương', body + extra)
+
+
 @app.post('/api/admin/dang-fill-save')
 def api_admin_dang_fill_save():
     if not can_manage_bank():
@@ -2315,6 +2613,8 @@ def api_admin_dang_fill_save():
     path = str(data.get('path') or '').replace('\\', '/').strip()
     dang = str(data.get('dang') or '').strip()
     raw_tex = str(data.get('latex') or '')
+    if str(data.get('chapter') or '') in ('1', 'true', 'yes') or '\\baibt' in raw_tex.lower():
+        return _save_chapter_fill(data, raw_tex)
     rows = _chunks_from_import(raw_tex, dang)
     if not path.startswith('ngan-hang/') or not rows:
         return jsonify(ok=False, error='Thiếu bài hoặc không có \\begin{ex}.'), 400

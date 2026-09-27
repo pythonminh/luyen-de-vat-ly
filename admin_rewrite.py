@@ -2640,14 +2640,16 @@ document.addEventListener('click',async function(e){
   if(!bar||!out) return;
   const path=bar.getAttribute('data-path')||'';
   const dang=bar.getAttribute('data-dang')||'';
+  const chapter=bar.getAttribute('data-chapter')||'';
+  const chapterBody={chapter:chapter, mon:bar.getAttribute('data-mon')||'', lop:bar.getAttribute('data-lop')||'', chuong:bar.getAttribute('data-chuong')||''};
   if(save){
     const ta=document.getElementById('aiFillTex');
     if(!ta||!(ta.value||'').trim()){alert('Chưa có LaTeX để ghi.');return;}
-    if(!confirm('Ghi các câu mới vào file TEX + GitHub?'))return;
+    if(!confirm(chapter==='1'?'Ghi từng câu vào đúng bài và dạng trong chương?':'Ghi các câu mới vào file TEX + GitHub?'))return;
     save.disabled=true;
     try{
       const r=await fetch('/api/admin/dang-fill-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({path:path,dang:dang,latex:ta.value,source_url:(document.getElementById('aiSrcUrl')||{}).value||''})});
+        body:JSON.stringify(Object.assign({path:path,dang:dang,latex:ta.value,source_url:(document.getElementById('aiSrcUrl')||{}).value||''}, chapterBody))});
       const d=await r.json();
       if(!d.ok){out.insertAdjacentHTML('afterbegin','<div class="err">'+(d.error||'Không ghi được')+'</div>');save.disabled=false;return;}
       out.innerHTML='<div class="success">✅ Đã ghi. Đang tải lại...</div>';
@@ -2681,7 +2683,7 @@ document.addEventListener('click',async function(e){
   if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, PDF, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
   if(fill && !dang && !sourceUrl && !hasBag){alert('Đang ở Cả bài: dán nguồn vào khung Nhận đề, hoặc mở một dạng rồi bấm AI viết các câu còn thiếu.');return;}
   const nBag=sourceDocxs.length+sourcePdfs.length+aiTexNames.length;
-  const waitLabel=(nBag>1)?('Đang đọc '+nBag+' file, AI chuyển sang TEX rồi lọc trùng'):((sourcePdfs.length)?'Đang đọc PDF, AI chuyển sang TEX':((sourceDocxs.length||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu'))));
+  const waitLabel=(chapter==='1')?('Đang tách vào các bài và dạng của chương'):((nBag>1)?('Đang đọc '+nBag+' file, AI chuyển sang TEX rồi lọc trùng'):((sourcePdfs.length)?'Đang đọc PDF, AI chuyển sang TEX':((sourceDocxs.length||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu')))));
   const btnRun=document.getElementById('aiImport');
   if(btnRun) btnRun.disabled=true;
   const t0=Date.now();
@@ -2727,7 +2729,7 @@ document.addEventListener('click',async function(e){
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docxs:sourceDocxs,source_pdfs:sourcePdfs,source_count:sourceCount,background:true})});
+      body:JSON.stringify(Object.assign({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docxs:sourceDocxs,source_pdfs:sourcePdfs,source_count:sourceCount,background:true}, chapterBody))});
     const raw=await r.text();
     let d={};
     try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
