@@ -2548,23 +2548,72 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 28,
-      "count": 28,
+      "questions": 141,
+      "count": 141,
       "dang": {
-        "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 9,
-        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 19
+        "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 11,
+        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 20,
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 14,
+        "Chưa có dạng": 25,
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 22,
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 9,
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 13,
+        "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": 14,
+        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": 13
       },
       "dang_kinds": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
-          "TN": 6,
+          "TN": 8,
           "DS": 2,
           "TLN": 1,
           "TL": 0
         },
         "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": {
-          "TN": 9,
+          "TN": 10,
           "DS": 4,
           "TLN": 6,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 8,
+          "DS": 4,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 18,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 10,
+          "DS": 6,
+          "TLN": 4,
+          "TL": 2
+        },
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 5,
+          "DS": 3,
+          "TLN": 1,
+          "TL": 0
+        },
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": {
+          "TN": 5,
+          "DS": 5,
+          "TLN": 3,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng dựa vào công thức (từ phương trình dao động).": {
+          "TN": 6,
+          "DS": 6,
+          "TLN": 2,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng và viết phương trình từ đồ thị li độ - thời gian": {
+          "TN": 6,
+          "DS": 6,
+          "TLN": 1,
           "TL": 0
         }
       }
