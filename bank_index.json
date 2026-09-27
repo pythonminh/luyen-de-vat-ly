@@ -4793,10 +4793,10 @@
       "questions": 1,
       "count": 1,
       "dang": {
-        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": 1
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 1
       },
       "dang_kinds": {
-        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 1,
           "DS": 0,
           "TLN": 0,
