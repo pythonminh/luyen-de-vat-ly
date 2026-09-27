@@ -5000,10 +5000,10 @@
       "questions": 1,
       "count": 1,
       "dang": {
-        "Tính nhiệt hóa hơi": 1
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 1
       },
       "dang_kinds": {
-        "Tính nhiệt hóa hơi": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 1,
           "DS": 0,
           "TLN": 0,
