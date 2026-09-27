@@ -935,7 +935,8 @@ def api_tex_preview():
     data = request.get_json(silent=True) or {}
     tex = _clean_tex(data.get("tex") or data.get("latex") or "")
     src = str(data.get("src") or data.get("path") or "")
-    return jsonify(ok=True, html=base.html_question(tex, src))
+    html = base.inline_tikz_preview(base.html_question(tex, src))
+    return jsonify(ok=True, html=html)
 
 
 @base.app.post("/api/admin/rewrite-question")

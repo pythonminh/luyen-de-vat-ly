@@ -231,7 +231,7 @@ details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7
 .ai-tikz:empty{display:none}
 .ai-tikz-k{font:700 12px/1.3 Segoe UI,Arial,sans-serif;color:#145bb0;margin:0 0 6px}
 .ai-tikz .tikzfig{display:inline-block;margin:4px 8px 4px 0;vertical-align:top}
-.ai-tikz .tikz-img{max-width:min(100%,420px);height:auto;max-height:220px;background:#fff}
+.ai-tikz .tikz-img{max-width:min(100%,640px);height:auto;max-height:360px;background:#fff;display:block}
 .ai-intake{flex:1 1 100%;display:flex;flex-direction:column;gap:6px;padding:8px;border:1px dashed #7dd3fc;border-radius:10px;background:#fff}
 .ai-intake.over{border-color:#145bb0;background:#eef6ff}
 .ai-intake-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
@@ -2774,8 +2774,30 @@ def tikz_to_html(block):
     hid=tikz_remember(block)
     return (
         f'<div class="tikzfig"><img class="tikz-img" loading="eager" decoding="async" '
-        f'alt="Hình TikZ" src="/tikz/{hid}.png"></div>'
+        f'alt="Hình TikZ" src="/tikz/{hid}.png" '
+        f'onerror="var d=document.createElement(\'div\');d.className=\'err\';d.textContent=\'Chưa vẽ được hình TikZ\';this.replaceWith(d)"></div>'
     )
+
+
+def inline_tikz_preview(html_s):
+    """Xem trước: nhúng PNG ngay trong HTML. Lỗi hiện thành chữ, không để khung trắng."""
+    import base64
+    errs = []
+
+    def repl(m):
+        hid = m.group(1)
+        path, err = tikz_build_png(hid)
+        if not path:
+            errs.append(err or "Chưa biên dịch được TikZ.")
+            return 'alt="Lỗi TikZ"'
+        raw = Path(path).read_bytes()
+        b64 = base64.b64encode(raw).decode("ascii")
+        return f'src="data:image/png;base64,{b64}"'
+
+    out = re.sub(r'src="/tikz/([a-f0-9]{40})\.png"', repl, html_s or "")
+    if errs:
+        out = '<div class="err">' + html.escape(" ".join(dict.fromkeys(errs))[:500]) + "</div>" + out
+    return out
 
 YT_URL_RE=re.compile(r'https?://(?:www\.|m\.)?(?:youtube\.com/(?:watch\?(?:[^\s"\'<>]*&(?:amp;)?)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})[^\s<>"\'}\]]*',re.I)
 VIDEO_CMD_RE=re.compile(r'\\(?:video|youtube|clip|link|url)\s*(?:\[(?P<title>[^\]]*)\])?\s*\{(?P<url>[^{}]*)\}',re.I)
