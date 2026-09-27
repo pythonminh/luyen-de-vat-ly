@@ -789,7 +789,85 @@ def _raw_parts(q, tex=None, file_idx=None):
     return _clean_tex(stem), _clean_tex(sol)
 
 
-def _pack_payload(src, fi, kind, stem, solution, answer, options, note="", develop=False):
+def _fig_key(name):
+    return str(name or "").replace("\\", "/").strip().rsplit("/", 1)[-1].lower()
+
+
+def _figure_names(text):
+    return re.findall(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{([^}]*)\}", text or "", re.I)
+
+
+def _fig_gap(gap):
+    return re.fullmatch(r"(?:\s|\\hfill|\\\\(?:\[[^\]]*\])?)*", gap or "") is not None
+
+
+def _figure_pieces(text):
+    """Khối ảnh của đề: ưu tiên \\begin{center}...\\includegraphics, rồi lệnh trần liền nhau."""
+    text = text or ""
+    pieces = []
+    covered = set()
+    spans = []
+    center_re = re.compile(
+        r"\\begin\s*\{\s*center\s*\}(?:(?!\\end\s*\{\s*center\s*\}).)*?\\includegraphics"
+        r"(?:(?!\\end\s*\{\s*center\s*\}).)*?\\end\s*\{\s*center\s*\}",
+        re.I | re.S,
+    )
+    for m in center_re.finditer(text):
+        piece = m.group(0).strip()
+        keys = [_fig_key(n) for n in _figure_names(piece)]
+        keys = [k for k in keys if k]
+        if not keys:
+            continue
+        spans.append((m.start(), m.end()))
+        pieces.append(piece)
+        covered.update(keys)
+    bare_re = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{([^}]*)\}", re.I)
+    bares = []
+    for m in bare_re.finditer(text):
+        if any(a <= m.start() and m.end() <= b for a, b in spans):
+            continue
+        key = _fig_key(m.group(1))
+        if not key or key in covered:
+            continue
+        bares.append((m.start(), m.end(), key))
+        covered.add(key)
+    groups = []
+    for item in bares:
+        if groups and _fig_gap(text[groups[-1][-1][1] : item[0]]):
+            groups[-1].append(item)
+        else:
+            groups.append([item])
+    for group in groups:
+        pieces.append(text[group[0][0] : group[-1][1]].strip())
+    return pieces
+
+
+def _restore_figures(old, new):
+    """Gắn lại ảnh \\includegraphics và tikzpicture của câu gốc nếu bản mới làm rơi."""
+    new = new or ""
+    have = {_fig_key(n) for n in _figure_names(new)}
+    add = []
+    for piece in _figure_pieces(old):
+        keys = [k for k in (_fig_key(n) for n in _figure_names(piece)) if k]
+        if not keys or any(k in have for k in keys):
+            continue
+        add.append(piece)
+        have.update(keys)
+    if "tikzpicture" not in new.lower():
+        tikz = re.findall(
+            r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}",
+            old or "",
+            re.I | re.S,
+        )
+        add.extend(b.strip() for b in tikz if b.strip())
+    if not add:
+        return new
+    prefix = "\n".join(add).strip()
+    body = new.strip()
+    return prefix if not body else prefix + "\n" + body
+
+
+def _pack_payload(src, fi, kind, stem, solution, answer, options, note="", develop=False, keep_stem="", keep_sol=""):
     stem = _clean_tex(stem)
     options = [
         {
@@ -800,6 +878,12 @@ def _pack_payload(src, fi, kind, stem, solution, answer, options, note="", devel
     ]
     solution = _compact_solution(solution, options)
     answer = _clean_tex(answer)
+    stem_had = {_fig_key(n) for n in _figure_names(stem)}
+    sol_had = {_fig_key(n) for n in _figure_names(solution)}
+    stem = _restore_figures(keep_stem, stem)
+    solution = _restore_figures(keep_sol, solution)
+    if ({_fig_key(n) for n in _figure_names(stem)} - stem_had) or ({_fig_key(n) for n in _figure_names(solution)} - sol_had):
+        note = ((note + " ") if note else "") + "Ảnh của câu gốc được giữ."
     opt_html = ""
     if options and kind == "TN":
         bits = []
@@ -878,7 +962,9 @@ def api_rewrite_question():
                 raw_sol or pack["solution"],
                 pack.get("answer") or "",
                 pack["options"],
-                "Sửa trực tiếp — chưa ghi file.",
+                "Sửa trực tiếp — chưa ghi file. Ảnh trong đề được giữ.",
+                keep_stem=raw_stem,
+                keep_sol=raw_sol,
             )
         )
     keys = _keys_from_payload(data)
@@ -962,7 +1048,7 @@ def api_rewrite_question():
             return jsonify(ok=False, error="Đáp án mới chưa đủ 4 ý hoặc chưa có ý đúng. Bấm lại."), 400
         tag = "Phát triển từ câu — số liệu và đáp án đã tính lại, để học sinh tham khảo." if mode == "similar" else "Đã tính lại lời giải và đáp án theo số hoặc từ vừa sửa."
         note = (tag + (" " + note if note else "")).strip()
-        return jsonify(_pack_payload(src, fi, pack["kind"], stem, solution, answer, new_opts, note, develop=develop))
+        return jsonify(_pack_payload(src, fi, pack["kind"], stem, solution, answer, new_opts, note, develop=develop, keep_stem=raw_stem, keep_sol=raw_sol))
     copied = _copied_stem_or_opts(pack, stem, new_opts)
     bad_struct = _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution)
     if copied or bad_struct:
@@ -1035,6 +1121,8 @@ def api_rewrite_question():
             answer or pack.get("answer") or "",
             new_opts,
             note,
+            keep_stem=raw_stem,
+            keep_sol=raw_sol,
         )
     )
 
@@ -1089,10 +1177,13 @@ def api_rewrite_question_save():
             t = opts_in[i]
             t = t.get("text") if isinstance(t, dict) else t
             merged_opts.append({"text": _clean_tex(t), "correct": bool(o.get("correct"))})
+    orig_stem, orig_sol = _raw_parts(q, tex, fi)
     sol_in = data.get("solution") or ""
     ans_in = data.get("answer") or ""
     if kind == "TLN":
         ans_in, sol_in = _coerce_tln(ans_in, sol_in)
+    stem_in = _restore_figures(orig_stem, _clean_tex(data.get("stem") or ""))
+    sol_in = _restore_figures(orig_sol, sol_in)
     develop_save = str(data.get("save_as") or "").strip().lower() == "develop"
     if develop_save:
         parent_mark = str(q.get("id") or "").strip() or f"idx:{fi}"
@@ -1104,7 +1195,7 @@ def api_rewrite_question_save():
                 meta.append(ln.strip())
         new_inner = _build_develop_inner(
             kind,
-            _clean_tex(data.get("stem") or ""),
+            stem_in,
             _compact_solution(sol_in, merged_opts),
             merged_opts,
             _clean_tex(ans_in),
@@ -1132,7 +1223,7 @@ def api_rewrite_question_save():
     new_inner = _apply_inner(
         inner,
         kind,
-        _clean_tex(data.get("stem") or ""),
+        stem_in,
         _compact_solution(sol_in, merged_opts),
         merged_opts,
         _clean_tex(ans_in),
@@ -1620,7 +1711,7 @@ async function previewBox(box){
   const parts=[];
   for(const ta of tas){
     const lab=ta.getAttribute('data-lab')||'';
-    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||''})});
+    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||'',src:box._rwSrc||''})});
     const d=await r.json();
     parts.push('<div class="muted">'+esc(lab)+'</div><div>'+(d.html||'')+'</div>');
   }
@@ -1662,6 +1753,7 @@ function showEditor(box, d){
   h+='<textarea class="rwta" data-ta="sol" data-lab="Lời giải" style="min-height:180px" spellcheck="false">'+esc(d.solution||'')+'</textarea>';
   h+='<p><button type="button" class="btn rwPrev">👁 Xem trước</button> <button type="button" class="btn rwRecalc">🔁 Tính lại lời giải và đáp án</button> <button type="button" class="btn green rwSave">'+(develop?'✅ Thêm Phát triển từ câu':'✅ Chấp nhận và ghi TEX')+'</button> <button type="button" class="btn rwCancel">Hủy</button></p>';
   h+='<div class="rwlook"></div></div>';
+  box._rwSrc=d.src||box._rwSrc||'';
   box.innerHTML=h;
   box.addEventListener('focusin',function(e){
     if(e.target&&e.target.classList&&e.target.classList.contains('rwta')) box._rwTa=e.target;
