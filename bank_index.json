@@ -3927,17 +3927,17 @@
       "questions": 15,
       "count": 15,
       "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 7,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 8
+        "Mô hình động học phân tử và chuyển động Brown": 7,
+        "Cấu trúc và đặc điểm của chất ở thể rắn, lỏng, khí": 8
       },
       "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
+        "Mô hình động học phân tử và chuyển động Brown": {
           "TN": 6,
           "DS": 0,
           "TLN": 0,
           "TL": 1
         },
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
+        "Cấu trúc và đặc điểm của chất ở thể rắn, lỏng, khí": {
           "TN": 3,
           "DS": 4,
           "TLN": 0,
