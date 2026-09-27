@@ -4261,76 +4261,27 @@
       "questions": 146,
       "count": 146,
       "dang": {
-        "Lý thuyết định luật I và ứng dụng": 28,
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": 14,
-        "Các cách làm biến đổi nội năng của một vật": 17,
-        "Nội năng và truyền nhiệt": 24,
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 40,
-        "Hiệu suất động cơ nhiệt": 8,
-        "Chưa phân dạng": 1,
-        "Tính hiệu suất động cơ nhiệt": 11,
-        "Tính công suất động cơ nhiệt": 1,
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": 2
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 61,
+        "Tính độ biến thiên nội năng và nhiệt lượng": 64,
+        "Tính toán hiệu suất và công suất động cơ nhiệt": 21
       },
       "dang_kinds": {
-        "Lý thuyết định luật I và ứng dụng": {
-          "TN": 15,
-          "DS": 3,
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
+          "TN": 36,
+          "DS": 15,
           "TLN": 7,
           "TL": 3
         },
-        "Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng": {
-          "TN": 12,
-          "DS": 2,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Các cách làm biến đổi nội năng của một vật": {
-          "TN": 9,
-          "DS": 8,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Nội năng và truyền nhiệt": {
-          "TN": 13,
-          "DS": 11,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
-          "TN": 3,
-          "DS": 9,
+        "Tính độ biến thiên nội năng và nhiệt lượng": {
+          "TN": 16,
+          "DS": 20,
           "TLN": 28,
           "TL": 0
         },
-        "Hiệu suất động cơ nhiệt": {
-          "TN": 8,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Chưa phân dạng": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Tính hiệu suất động cơ nhiệt": {
-          "TN": 1,
+        "Tính toán hiệu suất và công suất động cơ nhiệt": {
+          "TN": 11,
           "DS": 5,
           "TLN": 5,
-          "TL": 0
-        },
-        "Tính công suất động cơ nhiệt": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lý thuyết về nội năng và các cách biến đổi nội năng": {
-          "TN": 0,
-          "DS": 2,
-          "TLN": 0,
           "TL": 0
         }
       }
