@@ -2,8 +2,11 @@
 """ADMIN: AI viết lại đề + lời giải; chỉ ghi TEX khi ADMIN chấp nhận."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import re
+import urllib.parse
 
 from flask import jsonify, request
 
@@ -843,16 +846,17 @@ def _figure_pieces(text):
 
 
 def _restore_figures(old, new):
-    """Gắn lại ảnh \\includegraphics và tikzpicture của câu gốc nếu bản mới làm rơi."""
+    """Gắn lại ảnh câu gốc nếu bản mới làm rơi. Bản đã có ảnh riêng thì giữ bản đó."""
     new = new or ""
-    have = {_fig_key(n) for n in _figure_names(new)}
     add = []
-    for piece in _figure_pieces(old):
-        keys = [k for k in (_fig_key(n) for n in _figure_names(piece)) if k]
-        if not keys or any(k in have for k in keys):
-            continue
-        add.append(piece)
-        have.update(keys)
+    if not _figure_names(new):
+        have = set()
+        for piece in _figure_pieces(old):
+            keys = [k for k in (_fig_key(n) for n in _figure_names(piece)) if k]
+            if not keys or any(k in have for k in keys):
+                continue
+            add.append(piece)
+            have.update(keys)
     if "tikzpicture" not in new.lower():
         tikz = re.findall(
             r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}",
@@ -1279,8 +1283,239 @@ def api_question_card():
     return jsonify(ok=True, html=_question_card(q, seq, total, src, show_solution=True))
 
 
+_IMG_FILE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(?:png|jpe?g|gif|webp)\Z", re.I)
+_IMG_REL_RE = re.compile(
+    r"(?:images|Images|ImagesGPT)/[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(?:png|jpe?g|gif|webp)\Z",
+    re.I,
+)
+
+
+def _lesson_image_rows(src, file_idx=None):
+    src = str(src or "").replace("\\", "/").strip()
+    if not src.startswith("ngan-hang/") or not src.lower().endswith(".tex"):
+        raise ValueError("File không hợp lệ.")
+    folder = base.lesson_folder(src)
+    if not str(folder).startswith("ngan-hang/"):
+        raise ValueError("Bài không hợp lệ.")
+    items = []
+    seen = set()
+    for dname in base.LESSON_IMAGE_DIRS:
+        rel_dir = folder.rstrip("/") + "/" + dname
+        try:
+            _p, local = base._safe_repo_file(rel_dir)
+        except Exception:
+            continue
+        if not local.is_dir():
+            continue
+        try:
+            children = sorted(local.iterdir(), key=lambda p: p.name.lower())
+        except OSError:
+            continue
+        for child in children:
+            if not child.is_file() or child.suffix.lower() not in base.IMG_EXTS:
+                continue
+            if not _IMG_FILE_RE.fullmatch(child.name):
+                continue
+            try:
+                if child.stat().st_size < 40:
+                    continue
+            except OSError:
+                continue
+            file_rel = dname + "/" + child.name
+            if file_rel.lower() in seen:
+                continue
+            seen.add(file_rel.lower())
+            web = "/bank-img/" + urllib.parse.quote(
+                folder[len("ngan-hang/") :].rstrip("/") + "/" + file_rel,
+                safe="/",
+            )
+            items.append({"file": file_rel, "name": child.name, "url": web})
+            if len(items) >= 80:
+                break
+        if len(items) >= 80:
+            break
+    used = []
+    if file_idx is not None:
+        try:
+            q, tex = _load_q(src, int(file_idx))
+        except Exception:
+            q, tex = None, ""
+        if q:
+            stem, _sol = _raw_parts(q, tex, int(file_idx))
+            for name in _figure_names(stem):
+                key = _fig_key(name)
+                for it in items:
+                    if _fig_key(it["file"]) == key and it["file"] not in used:
+                        used.append(it["file"])
+    return items, used
+
+
+def _check_image_rel(src, file_rel):
+    file_rel = str(file_rel or "").replace("\\", "/").strip().lstrip("/")
+    if not _IMG_REL_RE.fullmatch(file_rel):
+        raise ValueError("Tên ảnh không hợp lệ.")
+    folder = base.lesson_folder(src).rstrip("/")
+    if not folder.startswith("ngan-hang/"):
+        raise ValueError("Bài không hợp lệ.")
+    rel = folder + "/" + file_rel
+    p, local = base._safe_repo_file(rel)
+    if not p.startswith(folder + "/"):
+        raise ValueError("Ảnh không thuộc thư mục bài.")
+    return p, local, file_rel
+
+
+def _strip_inc_text(text):
+    t = text or ""
+    t = re.sub(
+        r"\\begin\s*\{\s*center\s*\}(?:(?!\\end\s*\{\s*center\s*\}).)*?\\includegraphics"
+        r"(?:(?!\\end\s*\{\s*center\s*\}).)*?\\end\s*\{\s*center\s*\}\s*",
+        "",
+        t,
+        flags=re.I | re.S,
+    )
+    t = re.sub(
+        r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]*\}(?:\s*\\hfill|\s*\\\\(?:\[[^\]]*\])?)?\s*",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\n{3,}", "\n\n", t).strip()
+
+
+def _image_kind(blob):
+    if blob.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if blob.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if blob.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if len(blob) >= 12 and blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
+        return "webp"
+    return ""
+
+
+def _decode_image_b64(raw):
+    s = str(raw or "").strip()
+    if s.startswith("data:"):
+        s = s.split(",", 1)[-1]
+    s = re.sub(r"\s+", "", s)
+    if not s:
+        raise ValueError("Chưa có ảnh.")
+    try:
+        blob = base64.b64decode(s, validate=True)
+    except Exception:
+        raise ValueError("Dữ liệu ảnh không hợp lệ.")
+    return blob
+
+
+def _save_uploaded_image(src, blob):
+    ext = _image_kind(blob)
+    if not ext:
+        raise ValueError("Chỉ nhận png, jpg, gif, webp.")
+    if len(blob) > 4_000_000:
+        raise ValueError("Ảnh quá lớn (dưới 4MB).")
+    if len(blob) < 40:
+        raise ValueError("Ảnh trống.")
+    folder = base.lesson_folder(src)
+    if not str(folder).startswith("ngan-hang/"):
+        raise ValueError("Bài không hợp lệ.")
+    name = "w-" + hashlib.sha1(blob).hexdigest()[:10] + "." + ext
+    rel = folder.rstrip("/") + "/images/" + name
+    sha = None
+    try:
+        sha = base.github_file_sha(rel) or None
+    except Exception:
+        sha = None
+    base.github_put_bytes(rel, blob, "ADMIN thêm ảnh " + name, sha)
+    web = "/bank-img/" + urllib.parse.quote(rel[len("ngan-hang/") :], safe="/")
+    return {"file": "images/" + name, "name": name, "url": web}
+
+
+def _write_question_figure(src, fi, mode, file_rel=""):
+    q, tex = _load_q(src, fi)
+    if not q:
+        raise ValueError("Không tìm thấy câu.")
+    if mode == "set":
+        _p, local, file_rel = _check_image_rel(src, file_rel)
+        if not local.is_file():
+            raise ValueError("Không thấy file ảnh trong thư mục bài.")
+    elif mode != "clear":
+        raise ValueError("Không rõ thao tác ảnh.")
+    new_tex = None
+    for i, m in enumerate(base.EX_RE.finditer(tex)):
+        if i != fi:
+            continue
+        inner = m.group(1)
+        head, tail = _split_head_tail(inner)
+        comments, stem = _split_comments(head)
+        stem = _strip_inc_text(stem)
+        if mode == "set":
+            stem = (
+                "\\begin{center}\\includegraphics[width=0.55\\linewidth]{"
+                + file_rel
+                + "}\\end{center}\n"
+                + stem
+            )
+        head_out = ((comments.rstrip() + "\n") if comments.strip() else "") + stem.strip() + "\n"
+        new_tex = _replace_ex(tex, fi, head_out + (tail or ""))
+        break
+    if new_tex is None:
+        raise ValueError("Không ghi được ảnh vào câu.")
+    sha, _ = base.read_tex(src, need_sha=True)
+    from admin_classify import _write_tex
+
+    note = _write_tex(src, new_tex, "ADMIN gắn ảnh câu " + src, sha) or ""
+    try:
+        from dang_routes import _STATS_CACHE, _QID_CACHE
+
+        _STATS_CACHE.clear()
+        _QID_CACHE.clear()
+    except Exception:
+        pass
+    return note
+
+
+@base.app.get("/api/admin/lesson-images")
+def api_lesson_images():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    src = str(request.args.get("src") or "").replace("\\", "/").strip()
+    raw_fi = request.args.get("file_idx")
+    fi = None
+    if raw_fi not in (None, ""):
+        try:
+            fi = int(raw_fi)
+        except (TypeError, ValueError):
+            return jsonify(ok=False, error="Vị trí câu không hợp lệ."), 400
+    try:
+        images, used = _lesson_image_rows(src, fi)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, images=images, used=used)
+
+
+@base.app.post("/api/admin/lesson-image")
+def api_lesson_image():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or "").replace("\\", "/").strip()
+    action = str(data.get("action") or "").strip().lower()
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    try:
+        if action == "upload":
+            image = _save_uploaded_image(src, _decode_image_b64(data.get("data") or ""))
+            return jsonify(ok=True, image=image)
+        fi = int(data.get("file_idx"))
+        note = _write_question_figure(src, fi, action, str(data.get("file") or ""))
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, note=note)
+
+
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -1813,6 +2048,68 @@ async function loadRewrite(src, fi, box, mode){
     showEditor(box,d);
   }catch(e){box.innerHTML='<div class="err">'+e+'</div>';}
 }
+function rwFigLine(file){
+  return '\\begin{center}\\includegraphics[width=0.55\\linewidth]{'+file+'}\\end{center}\n';
+}
+function rwStripFigs(text){
+  return String(text||'')
+    .replace(/\\begin\{center\}[\s\S]*?\\includegraphics[\s\S]*?\\end\{center\}\s*/gi,'')
+    .replace(/\\includegraphics(?:\[[^\]]*\])?\{[^}]*\}(?:\s*\\hfill|\s*\\\\(?:\[[^\]]*\])?)?\s*/gi,'');
+}
+async function rwLoadImgs(box){
+  box.innerHTML='<div class="muted">Đang mở ảnh trong thư mục bài...</div>';
+  try{
+    const r=await fetch('/api/admin/lesson-images?src='+encodeURIComponent(box.getAttribute('data-src')||'')+'&file_idx='+encodeURIComponent(box.getAttribute('data-fi')||''),{credentials:'same-origin'});
+    const d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không mở được thư mục ảnh.')+'</div>';return;}
+    const used=d.used||[];
+    let h='<div class="muted">Ảnh trong thư mục bài. Bấm một ảnh để gắn vào câu. Bấm ảnh viền xanh để bỏ.</div><div class="rwimggrid">';
+    (d.images||[]).forEach(function(im){
+      const on=used.indexOf(im.file)>=0?' on':'';
+      h+='<button type="button" class="rwimgpick'+on+'" data-file="'+esc(im.file)+'"><img alt="" src="'+esc(im.url)+'"><small>'+esc(im.name)+'</small></button>';
+    });
+    h+='</div>';
+    if(!(d.images||[]).length) h+='<div class="muted">Thư mục images/ của bài chưa có ảnh.</div>';
+    h+='<label class="btn mini">Tải ảnh mới vào thư mục<input class="rwimgfile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>';
+    box.innerHTML=h;
+  }catch(err){box.innerHTML='<div class="err">'+esc(err)+'</div>';}
+}
+async function rwApplyImg(box, file, action){
+  const bar=box.closest('.rwbar');
+  const out=bar&&bar.querySelector('.rwout');
+  const ta=out&&out.querySelector('[data-ta=stem]');
+  const editor=out&&out.querySelector('.rwprev');
+  let msg=action==='clear'?'Bỏ ảnh khỏi câu này và ghi TEX?':'Gắn ảnh này vào câu và ghi TEX?';
+  if(editor) msg+=' Ô sửa đề đang mở sẽ đóng.';
+  if(!confirm(msg)) return;
+  try{
+    const r=await fetch('/api/admin/lesson-image',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0),action:action,file:file||''})});
+    const d=await r.json();
+    if(!d.ok){alert(d.error||'Không ghi được ảnh');return;}
+    if(ta){
+      let v=rwStripFigs(ta.value).replace(/^\s+/,'');
+      if(action==='set') v=rwFigLine(file)+v;
+      ta.value=v;
+    }
+    rwShowSaved(out||box, action==='clear'?'✅ Đã bỏ ảnh khỏi câu.':'✅ Đã gắn ảnh vào câu.');
+  }catch(err){alert(String(err&&err.message||err));}
+}
+async function rwUploadImg(box, file){
+  if(!file) return;
+  if(file.size>4000000){alert('Ảnh quá lớn (dưới 4MB).');return;}
+  const reader=new FileReader();
+  reader.onload=async function(){
+    const b64=String(reader.result||'').split(',')[1]||'';
+    box.insertAdjacentHTML('afterbegin','<div class="muted">Đang lưu ảnh vào thư mục...</div>');
+    try{
+      const r=await fetch('/api/admin/lesson-image',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({src:box.getAttribute('data-src')||'',action:'upload',data:b64})});
+      const d=await r.json();
+      if(!d.ok){alert(d.error||'Không lưu được ảnh');rwLoadImgs(box);return;}
+      rwLoadImgs(box);
+    }catch(err){alert(String(err&&err.message||err));}
+  };
+  reader.readAsDataURL(file);
+}
 window.ldvlAdminRewrite=function(src,fi,box){loadRewrite(src,fi,box,'ai')};
 window.ldvlAdminSimilar=function(src,fi,box){loadRewrite(src,fi,box,'similar')};
 window.ldvlAdminEdit=function(src,fi,box){loadRewrite(src,fi,box,'edit')};
@@ -1826,6 +2123,41 @@ document.addEventListener('click',function(e){
   const p=dropOf(btn);
   if(!p) return;
   loadRewrite(p.src,p.fi,outBox(btn),ed?'edit':(sim?'similar':'ai'));
+});
+document.addEventListener('click',function(e){
+  const openBtn=e.target.closest&&e.target.closest('.rwimgs');
+  if(openBtn){
+    e.preventDefault();
+    const bar=openBtn.closest('.rwbar');
+    if(!bar) return;
+    const old=bar.querySelector('.rwimgsbox');
+    if(old){old.remove();return;}
+    const p=dropOf(openBtn);
+    if(!p) return;
+    const box=document.createElement('div');
+    box.className='rwimgsbox';
+    box.setAttribute('data-src', p.src);
+    box.setAttribute('data-fi', String(p.fi));
+    const out=bar.querySelector('.rwout');
+    if(out) out.insertAdjacentElement('afterend', box);
+    else bar.appendChild(box);
+    rwLoadImgs(box);
+    return;
+  }
+  const pick=e.target.closest&&e.target.closest('.rwimgpick');
+  if(!pick) return;
+  e.preventDefault();
+  const box=pick.closest('.rwimgsbox');
+  if(!box) return;
+  rwApplyImg(box, pick.getAttribute('data-file')||'', pick.classList.contains('on')?'clear':'set');
+});
+document.addEventListener('change',function(e){
+  const inp=e.target;
+  if(!inp||!inp.classList||!inp.classList.contains('rwimgfile')) return;
+  const box=inp.closest('.rwimgsbox');
+  const f=inp.files&&inp.files[0];
+  inp.value='';
+  if(box&&f) rwUploadImg(box, f);
 });
 document.addEventListener('click',async function(e){
   const btn=e.target.closest&&e.target.closest('#aiGap');

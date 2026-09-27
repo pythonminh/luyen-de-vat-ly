@@ -200,6 +200,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         rw=(f"<div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
             f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
+            f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
