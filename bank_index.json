@@ -4403,56 +4403,21 @@
       "questions": 236,
       "count": 236,
       "dang": {
-        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 73,
-        "Thiết lập và chuyển đổi thang nhiệt độ tự chế": 24,
-        "Lý thuyết về nhiệt độ và cân bằng nhiệt": 56,
-        "Nguyên lý hoạt động và sử dụng nhiệt kế": 47,
-        "Khái niệm nhiệt độ": 9,
-        "Thang nhiệt độ và nhiệt kế": 20,
-        "Đơn vị và đại lượng nhiệt": 7
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 212,
+        "Thiết lập và chuyển đổi thang nhiệt độ tự chế": 24
       },
       "dang_kinds": {
         "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": {
-          "TN": 53,
-          "DS": 10,
-          "TLN": 7,
-          "TL": 3
+          "TN": 145,
+          "DS": 28,
+          "TLN": 24,
+          "TL": 15
         },
         "Thiết lập và chuyển đổi thang nhiệt độ tự chế": {
           "TN": 15,
           "DS": 6,
           "TLN": 1,
           "TL": 2
-        },
-        "Lý thuyết về nhiệt độ và cân bằng nhiệt": {
-          "TN": 38,
-          "DS": 5,
-          "TLN": 9,
-          "TL": 4
-        },
-        "Nguyên lý hoạt động và sử dụng nhiệt kế": {
-          "TN": 31,
-          "DS": 9,
-          "TLN": 3,
-          "TL": 4
-        },
-        "Khái niệm nhiệt độ": {
-          "TN": 8,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Thang nhiệt độ và nhiệt kế": {
-          "TN": 11,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
-        },
-        "Đơn vị và đại lượng nhiệt": {
-          "TN": 4,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 0
         }
       }
     },
