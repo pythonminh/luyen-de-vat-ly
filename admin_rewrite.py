@@ -1158,8 +1158,38 @@ def api_rewrite_question_save():
     return jsonify(ok=True)
 
 
+@base.app.get("/api/admin/question-card")
+def api_question_card():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    src = str(request.args.get("src") or "").replace("\\", "/").strip()
+    try:
+        fi = int(request.args.get("file_idx"))
+        seq = int(request.args.get("seq") or fi + 1)
+        total = int(request.args.get("total") or seq)
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu vị trí câu."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    try:
+        _, tex = base.read_tex(src)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    raw = base.parse_questions(tex)
+    for q in raw:
+        q["src"] = src
+        q["file_idx"] = int(q.get("idx") or 0)
+    qs = base.nest_developments(raw)
+    q = next((x for x in qs if int(x.get("file_idx") if x.get("file_idx") is not None else -1) == fi), None)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu vừa ghi."), 404
+    from dang_routes import _question_card
+
+    return jsonify(ok=True, html=_question_card(q, seq, total, src, show_solution=True))
+
+
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -1508,6 +1538,43 @@ function rwSteps(text){
   if(s.indexOf('\\[')<0 && s.indexOf('\\]')<0) s='\\[\n'+s+'\n\\]';
   return s;
 }
+async function rwShowSaved(box, note){
+  const card=box.closest&&box.closest('.qcard');
+  if(!card){
+    box.innerHTML='<div class="success">'+note+'</div>';
+    const q=document.getElementById('q');
+    if(q) q.scrollIntoView({block:'start'});
+    location.reload();
+    return;
+  }
+  const lab=card.querySelector('.qcheck span');
+  const m=(lab&&lab.textContent||'').match(/(\d+)\s*\/\s*(\d+)/);
+  const seq=m?m[1]:'1';
+  const total=m?m[2]:seq;
+  const drop=card.getAttribute('data-drop')||'';
+  const cut=drop.lastIndexOf('||');
+  const src=cut>=0?drop.slice(0,cut):'';
+  const fi=cut>=0?drop.slice(cut+2):'';
+  box.innerHTML='<div class="success">'+note+'</div>';
+  try{
+    const r=await fetch('/api/admin/question-card?src='+encodeURIComponent(src)+'&file_idx='+encodeURIComponent(fi)+'&seq='+encodeURIComponent(seq)+'&total='+encodeURIComponent(total),{credentials:'same-origin'});
+    const d=await r.json();
+    if(!d.ok||!d.html){card.classList.add('qhit');card.scrollIntoView({block:'center'});return;}
+    const hold=document.createElement('div');
+    hold.innerHTML=d.html;
+    const neu=hold.querySelector('.qcard')||hold.firstElementChild;
+    if(!neu){card.classList.add('qhit');card.scrollIntoView({block:'center'});return;}
+    neu.classList.add('qhit');
+    neu.insertAdjacentHTML('afterbegin','<div class="success">'+note+'</div>');
+    card.replaceWith(neu);
+    neu.scrollIntoView({block:'center'});
+    if(window.ldvlTypeset) ldvlTypeset(neu);
+    if(window.ldvlSplitPics) ldvlSplitPics(neu);
+  }catch(err){
+    card.classList.add('qhit');
+    card.scrollIntoView({block:'center'});
+  }
+}
 function rwQuick(box, kind){
   const ta=rwField(box);
   if(!ta) return;
@@ -1637,8 +1704,7 @@ function showEditor(box, d){
         btn.disabled=false;return;
       }
       if(!sd.ok){alert(sd.error||'Không ghi được');btn.disabled=false;return;}
-      box.innerHTML='<div class="success">'+(develop?'✅ Đã thêm Phát triển từ câu. Đang tải lại...':'✅ Đã ghi. Đang tải lại...')+'</div>';
-      location.reload();
+      rwShowSaved(box, develop?'✅ Đã thêm Phát triển từ câu.':'✅ Đã ghi câu này.');
     }catch(err){alert('Không ghi được: '+err);btn.disabled=false;}
   };
   previewBox(box);
