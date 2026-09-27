@@ -4816,10 +4816,10 @@
       "questions": 5,
       "count": 5,
       "dang": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 5
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 5
       },
       "dang_kinds": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 5,
           "DS": 0,
           "TLN": 0,
