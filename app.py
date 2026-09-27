@@ -2376,6 +2376,52 @@ def _tikz_lock(hid):
             lock=_TIKZ_LOCKS[hid]=threading.Lock()
         return lock
 
+def repair_tikz(src):
+    """Sửa TikZ do AI viết: parabola bend (a) and (b) không biên dịch được, chữ có dấu trong $...$ cũng vậy."""
+    s = src or ""
+
+    def parabola(m):
+        draw, start, node, left, right = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
+        line = f"{draw}{left} parabola bend {start} {right};"
+        if node:
+            body = re.sub(r"^node\b", "", node.strip(), count=1, flags=re.I).strip()
+            line += f"\n\\node at {start} {body};"
+        return line
+
+    s = re.sub(
+        r"(\\draw\s*(?:\[[^\]]*\])?\s*)(\([^()\n]+\))\s*(node(?:\s*\[[^\]]*\])?\s*\{[^{}]*\})?\s*parabola\s+bend\s+(\([^()\n]+\))\s+and\s+(\([^()\n]+\))\s*;",
+        parabola,
+        s,
+        flags=re.I,
+    )
+    s = re.sub(
+        r"parabola\s+bend\s+(\([^()\n]+\))\s+and\s+(\([^()\n]+\))",
+        r"parabola bend \1 \2",
+        s,
+        flags=re.I,
+    )
+
+    def math_unicode(m):
+        inner = m.group(1)
+        parts = re.split(r"(\\text\{[^{}]*\})", inner)
+
+        def word(w):
+            t = w.group(0)
+            if any(ord(c) > 127 for c in t):
+                return r"\text{" + t + "}"
+            return t
+
+        out = []
+        for i, part in enumerate(parts):
+            if i % 2:
+                out.append(part)
+            else:
+                out.append(re.sub(r"[A-Za-zÀ-ỹ]*[^\x00-\x7F][A-Za-zÀ-ỹ]*", word, part))
+        return "$" + "".join(out) + "$"
+
+    return re.sub(r"\$([^$]+)\$", math_unicode, s)
+
+
 def tikz_build_png(hid, src='', allow_cloud=True):
     """Vẽ 1 hình rồi cache. Nhiều request cùng hình chỉ biên dịch một lần."""
     png=tikz_png_path(hid)
@@ -2386,6 +2432,7 @@ def tikz_build_png(hid, src='', allow_cloud=True):
         p=tikz_src_path(hid)
         if p.is_file():
             src=p.read_text(encoding='utf-8', errors='replace').strip()
+    src=repair_tikz(src)
     if not src or 'tikzpicture' not in src.lower():
         return None, 'Không tìm thấy mã TikZ của hình này.'
     with _tikz_lock(hid):
@@ -2726,7 +2773,7 @@ def tikz_to_html(block):
     """Chỉ ghi mã TikZ + trả thẻ <img>. Ảnh được vẽ ở route /tikz/<hash>.png nên trang mở ngay."""
     hid=tikz_remember(block)
     return (
-        f'<div class="tikzfig"><img class="tikz-img" loading="lazy" decoding="async" '
+        f'<div class="tikzfig"><img class="tikz-img" loading="eager" decoding="async" '
         f'alt="Hình TikZ" src="/tikz/{hid}.png"></div>'
     )
 
