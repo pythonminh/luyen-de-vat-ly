@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 data/tikz-cache/*.tex
 data/tikz-cache/*.svg
+data/fill-jobs/

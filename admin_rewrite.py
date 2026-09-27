@@ -1688,14 +1688,29 @@ function stripMeta(s){
 }
 function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}
 var aiShots=[];
-var aiDocx=null;
-var aiPdf=null;
+var aiDocs=[];
+var aiPdfs=[];
+var aiTexNames=[];
+function bagSlots(){return aiDocs.length+aiPdfs.length;}
+function bagChars(){
+  var n=0;
+  aiDocs.forEach(function(x){n+=(x.b64||'').length;});
+  aiPdfs.forEach(function(x){n+=(x.b64||'').length;});
+  return n;
+}
 function renderIntake(){
   var box=document.getElementById('aiShots');
   if(!box) return;
   var h='';
-  if(aiDocx) h+='<span class="ai-chip">'+esc(aiDocx.name)+'<button type="button" data-clear-docx="1" title="Bỏ Word">×</button></span>';
-  if(aiPdf) h+='<span class="ai-chip">'+esc(aiPdf.name)+'<button type="button" data-clear-pdf="1" title="Bỏ PDF">×</button></span>';
+  aiDocs.forEach(function(x,i){
+    h+='<span class="ai-chip">'+esc(x.name)+'<button type="button" data-clear-docx="'+i+'" title="Bỏ Word">×</button></span>';
+  });
+  aiPdfs.forEach(function(x,i){
+    h+='<span class="ai-chip">'+esc(x.name)+'<button type="button" data-clear-pdf="'+i+'" title="Bỏ PDF">×</button></span>';
+  });
+  aiTexNames.forEach(function(name){
+    h+='<span class="ai-chip">'+esc(name)+'</span>';
+  });
   aiShots.forEach(function(s,i){
     h+='<span class="ai-shot"><img alt="" src="'+s.url+'"><button type="button" data-shot="'+i+'" title="Bỏ ảnh">×</button></span>';
   });
@@ -1727,11 +1742,13 @@ function addDocxFile(file){
   var isDoc=/\.doc$/i.test(name)||/msword/i.test(file.type||'')||isDocx;
   if(!isDoc){alert('Chỉ nhận file Word .doc hoặc .docx.');return;}
   if(file.size>6000000){alert('File Word quá lớn (dưới 6MB).');return;}
+  if(bagSlots()>=6){alert('Tối đa 6 file Word/PDF một lần.');return;}
   var r=new FileReader();
   r.onload=function(){
     var dataUrl=String(r.result||'');
     var b64=dataUrl.split(',')[1]||'';
-    aiDocx={name:name||'de.doc', b64:b64};
+    if(bagChars()+b64.length>12000000){alert('Tổng các file quá nặng (dưới khoảng 9MB).');return;}
+    aiDocs.push({name:name||'de.doc', b64:b64});
     var n=showWordImages(b64);
     renderIntake();
     if(n) aiStatus('Thấy '+n+' ảnh trong file Word. Đang lưu lên GitHub…','wait');
@@ -1817,9 +1834,12 @@ function addPdfFile(file){
   var name=file.name||'de.pdf';
   if(!/\.pdf$/i.test(name)&&file.type!=='application/pdf'){alert('Chỉ nhận file PDF.');return;}
   if(file.size>8000000){alert('File PDF quá lớn (dưới 8MB).');return;}
+  if(bagSlots()>=6){alert('Tối đa 6 file Word/PDF một lần.');return;}
   var r=new FileReader();
   r.onload=function(){
-    aiPdf={name:name, b64:String(r.result||'').split(',')[1]||''};
+    var b64=String(r.result||'').split(',')[1]||'';
+    if(bagChars()+b64.length>12000000){alert('Tổng các file quá nặng (dưới khoảng 9MB).');return;}
+    aiPdfs.push({name:name, b64:b64});
     renderIntake();
   };
   r.readAsDataURL(file);
@@ -1832,6 +1852,8 @@ function addTexFile(file){
     if(!ta) return;
     var t=String(r.result||'').replace(/^\uFEFF/,'');
     ta.value=(ta.value&&ta.value.trim())?(ta.value.replace(/\s+$/,'')+'\n\n'+t):t;
+    aiTexNames.push(file.name||'de.tex');
+    renderIntake();
     ta.focus();
   };
   r.readAsText(file,'UTF-8');
@@ -1868,8 +1890,8 @@ document.addEventListener('click',function(e){
   var btn=e.target&&e.target.closest&&e.target.closest('#aiShots button');
   if(!btn) return;
   e.preventDefault();
-  if(btn.getAttribute('data-clear-docx')!=null){aiDocx=null;renderIntake();return;}
-  if(btn.getAttribute('data-clear-pdf')!=null){aiPdf=null;renderIntake();return;}
+  if(btn.getAttribute('data-clear-docx')!=null){aiDocs.splice(+btn.getAttribute('data-clear-docx'),1);renderIntake();return;}
+  if(btn.getAttribute('data-clear-pdf')!=null){aiPdfs.splice(+btn.getAttribute('data-clear-pdf'),1);renderIntake();return;}
   var i=btn.getAttribute('data-shot');
   if(i!=null){aiShots.splice(+i,1);renderIntake();}
 });
@@ -2644,10 +2666,11 @@ document.addEventListener('click',async function(e){
     if(fileTex && sourceTex.indexOf(fileTex.slice(0,120))<0) sourceTex=(sourceTex.trim()?sourceTex.replace(/\s+$/,'')+'\n\n':'')+fileTex;
   }catch(err){out.innerHTML='<div class="err">'+esc(err)+'</div>';return;}
   const imageFiles=aiShots.map(function(s){return s.file||'';}).filter(Boolean);
-  const sourceDocx=aiDocx&&aiDocx.b64?aiDocx.b64:'';
-  const sourceImages=sourceDocx?[]:aiShots.filter(function(s){return !s.file;}).slice(0,4).map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
-  const sourcePdf=aiPdf&&aiPdf.b64?aiPdf.b64:'';
-  const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocx||sourcePdf);
+  const sourceDocxs=aiDocs.map(function(x){return {name:x.name, b64:x.b64};});
+  const sourcePdfs=aiPdfs.map(function(x){return {name:x.name, b64:x.b64};});
+  const sourceImages=sourceDocxs.length?[]:aiShots.filter(function(s){return !s.file;}).slice(0,4).map(function(s){return {mime:s.mime||'image/jpeg', data:s.data};});
+  const hasBag=!!(sourceTex.trim()||sourceImages.length||sourceDocxs.length||sourcePdfs.length);
+  const sourceCount=sourceDocxs.length+sourcePdfs.length+aiTexNames.length+(sourceUrl?1:0);
   if(sourceUrl && !/^https?:\/\//i.test(sourceUrl)){
     if(hasBag){sourceUrl='';}
     else{
@@ -2657,14 +2680,15 @@ document.addEventListener('click',async function(e){
   }
   if(imp && !sourceUrl && !hasBag){alert('Dán ảnh, Word .docx, PDF, TEX hoặc chữ vào khung Nhận đề. Link http là tuỳ chọn.');return;}
   if(fill && !dang && !sourceUrl && !hasBag){alert('Đang ở Cả bài: dán nguồn vào khung Nhận đề, hoặc mở một dạng rồi bấm AI viết các câu còn thiếu.');return;}
-  const waitLabel=(sourcePdf)?'Đang đọc PDF, AI chuyển sang TEX':((sourceDocx||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu')));
+  const nBag=sourceDocxs.length+sourcePdfs.length+aiTexNames.length;
+  const waitLabel=(nBag>1)?('Đang đọc '+nBag+' file, AI chuyển sang TEX rồi lọc trùng'):((sourcePdfs.length)?'Đang đọc PDF, AI chuyển sang TEX':((sourceDocxs.length||sourceImages.length)?'Đang đọc Word/ảnh, AI chuyển sang TEX':(sourceTex.trim()?'Đang đọc chữ/TEX, AI chuyển sang TEX':(sourceUrl?'Đang tải trang, AI chuyển sang TEX':'AI đang viết các câu còn thiếu'))));
   const btnRun=document.getElementById('aiImport');
   if(btnRun) btnRun.disabled=true;
   const t0=Date.now();
   const srcChars=(sourceTex||'').trim().length;
   const srcImgs=sourceImages.length;
-  const srcBytes=Math.round((((sourceDocx||'').length)+((sourcePdf||'').length))*0.75);
-  const expectSec=90;
+  const srcBytes=Math.round(bagChars()*0.75);
+  const expectSec=Math.min(200, 80+nBag*30);
   function srcLabel(){
     const bits=[];
     if(srcChars) bits.push(srcChars.toLocaleString('vi-VN')+' chữ');
@@ -2685,12 +2709,12 @@ document.addEventListener('click',async function(e){
     const remain=Math.max(0,expectSec-s);
     aiMeter({
       kind:'wait',
-      caption:waitLabel+'… thường 1–3 phút, chưa xong thì cứ để trang mở.',
+      caption:waitLabel+'. Đã chờ '+s+'s.',
       time:(s||0)+'s',
       src:srcLabel(),
       rate:s?rateLabel(s):'…',
       pct:pct,
-      hint:remain?('còn khoảng '+remain+'s'):'lâu hơn ước lượng — cứ để trang mở'
+      hint:remain?('ước lượng còn khoảng '+remain+'s'):'vẫn đang chạy — cứ để trang mở'
     });
   }
   paintWait();
@@ -2703,14 +2727,15 @@ document.addEventListener('click',async function(e){
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
   try{
     const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docx:sourceDocx,source_pdf:sourcePdf,background:true})});
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docxs:sourceDocxs,source_pdfs:sourcePdfs,source_count:sourceCount,background:true})});
     const raw=await r.text();
     let d={};
     try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
     if(d.pending&&d.job){
       const job=d.job;
       d=null;
-      while(Date.now()-t0<240000){
+      let missed=0;
+      while(Date.now()-t0<300000){
         await new Promise(function(res){setTimeout(res,2500);});
         let pr,praw,pd;
         try{
@@ -2718,16 +2743,49 @@ document.addEventListener('click',async function(e){
           praw=await pr.text();
           pd=JSON.parse(praw);
         }catch(err){continue;}
-        if(pd&&pd.pending) continue;
+        const waited=Math.max(0,Math.round((Date.now()-t0)/1000));
+        if(pd&&pd.pending){
+          missed=0;
+          const el=Math.max(waited, Number(pd.elapsed)||0);
+          const left=Math.max(0,expectSec-el);
+          aiMeter({
+            kind:'wait',
+            caption:waitLabel+'. Đã chờ '+el+'s.',
+            time:el+'s',
+            src:srcLabel(),
+            rate:rateLabel(el),
+            pct:Math.min(92,Math.round(el/expectSec*100)),
+            hint:left?('ước lượng còn khoảng '+left+'s'):'vẫn đang chạy — cứ để trang mở'
+          });
+          continue;
+        }
         if(pd&&pd.ok===false&&/phiên đang chạy/i.test(String(pd.error||''))){
-          throw new Error('Phiên vừa mất vì trang khởi động lại. Bấm AI phân tích lại — đừng tải lại trang giữa chừng.');
+          missed++;
+          aiMeter({
+            kind:'wait',
+            caption:'Đang nối lại phiên AI. Đã chờ '+waited+'s.',
+            time:waited+'s',
+            src:srcLabel(),
+            rate:'…',
+            pct:Math.min(92,Math.round(waited/expectSec*100)),
+            hint:'cứ để trang mở'
+          });
+          if(missed<12) continue;
+          throw new Error('Không thấy phiên sau '+waited+'s. Bấm AI phân tích lại.');
         }
         d=pd;
         break;
       }
-      if(!d) throw new Error('Quá 4 phút chưa có kết quả. Bấm AI phân tích lại.');
+      if(!d) throw new Error('Quá 5 phút chưa có kết quả. Bấm AI phân tích lại.');
     }
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
+    if(!String(d.latex||'').trim()){
+      const sec0=Math.max(1,Math.round((Date.now()-t0)/1000));
+      stopWait();
+      aiMeter({kind:'ok', caption:d.summary||'Đã lọc, không còn câu mới.', time:sec0+'s', src:srcLabel(), rate:'0 câu', pct:100, hint:'không có câu để ghi'});
+      out.innerHTML='<div class="success">'+esc(d.summary||'Đã lọc, không còn câu mới.')+'</div>';
+      return;
+    }
     const sec=Math.max(1,Math.round((Date.now()-t0)/1000));
     stopWait();
     const nQ=Number(d.n)||nTikz(d.latex)||((d.latex||'').split(/\\begin\s*\{\s*ex\s*\}/i).length-1);

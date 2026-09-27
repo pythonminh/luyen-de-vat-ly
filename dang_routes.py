@@ -7,6 +7,7 @@ import html
 import io
 import ipaddress
 import json
+import os
 import posixpath
 import re
 import socket
@@ -21,28 +22,65 @@ from flask import request, jsonify, redirect, session
 from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, develop_reference_html, dup_index_by_question, edit_tex_href, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nest_developments, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
 
 _FILL_JOBS = {}
+_FILL_LIVE = set()
 _FILL_LOCK = threading.Lock()
+_FILL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'fill-jobs')
+
+
+def _fill_job_ok(job):
+    return bool(re.fullmatch(r'[0-9a-f]{8,40}', str(job or '')))
+
+
+def _fill_status_path(job):
+    return os.path.join(_FILL_DIR, job + '.json')
+
+
+def _fill_payload_path(job):
+    return os.path.join(_FILL_DIR, job + '.payload.json')
+
+
+def _fill_write_json(path, obj):
+    os.makedirs(_FILL_DIR, exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def _fill_read_json(path):
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def _fill_job_gc():
     now = time.time()
     with _FILL_LOCK:
-        dead = [k for k, v in _FILL_JOBS.items() if now - float(v.get('ts') or now) > 900]
+        dead = [k for k, v in _FILL_JOBS.items() if now - float(v.get('ts') or now) > 900 and k not in _FILL_LIVE]
         for k in dead:
             _FILL_JOBS.pop(k, None)
+    if not os.path.isdir(_FILL_DIR):
+        return
+    for name in os.listdir(_FILL_DIR):
+        path = os.path.join(_FILL_DIR, name)
+        try:
+            age = now - os.path.getmtime(path)
+        except OSError:
+            continue
+        if age < 900:
+            continue
+        if name.endswith('.payload.json') and age < 1200:
+            continue
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
-def _spawn_dang_fill(data):
-    """Chạy AI nền để Render không cắt kết nối dài (HTTP 502)."""
-    _fill_job_gc()
-    job = hashlib.sha1(f'{time.time()}:{id(data)}'.encode()).hexdigest()[:16]
-    with _FILL_LOCK:
-        running = sum(1 for v in _FILL_JOBS.values() if v.get('state') == 'run')
-        if running >= 2:
-            return jsonify(ok=False, error='Đang có phiên AI chạy. Đợi xong rồi bấm lại.'), 429
-        _FILL_JOBS[job] = {'state': 'run', 'ts': time.time(), 'result': None}
-    payload = dict(data or {})
-
+def _start_fill_thread(job, payload):
     def work():
         try:
             with app.app_context():
@@ -56,8 +94,52 @@ def _spawn_dang_fill(data):
             body = {'ok': False, 'error': str(e)}
         with _FILL_LOCK:
             _FILL_JOBS[job] = {'state': 'done', 'ts': time.time(), 'result': body}
+            _FILL_LIVE.discard(job)
+        try:
+            _fill_write_json(_fill_status_path(job), {'state': 'done', 'ts': time.time(), 'result': body})
+        except Exception:
+            pass
+        try:
+            os.remove(_fill_payload_path(job))
+        except OSError:
+            pass
 
     threading.Thread(target=work, daemon=True).start()
+
+
+def _ensure_fill(job):
+    if not _fill_job_ok(job):
+        return
+    with _FILL_LOCK:
+        if job in _FILL_LIVE:
+            return
+        rec = _FILL_JOBS.get(job) or {}
+        if rec.get('state') == 'done':
+            return
+        payload = _fill_read_json(_fill_payload_path(job))
+        if not payload:
+            return
+        _FILL_LIVE.add(job)
+    _start_fill_thread(job, payload)
+
+
+def _spawn_dang_fill(data):
+    """Chạy AI nền. Phiên ghi ra đĩa để máy khởi động lại vẫn nối được."""
+    _fill_job_gc()
+    job = hashlib.sha1(f'{time.time()}:{id(data)}'.encode()).hexdigest()[:16]
+    payload = dict(data or {})
+    payload.pop('background', None)
+    with _FILL_LOCK:
+        running = sum(1 for v in _FILL_JOBS.values() if v.get('state') == 'run')
+        if running >= 2:
+            return jsonify(ok=False, error='Đang có phiên AI chạy. Đợi xong rồi bấm lại.'), 429
+        _FILL_JOBS[job] = {'state': 'run', 'ts': time.time(), 'result': None}
+    try:
+        _fill_write_json(_fill_payload_path(job), payload)
+        _fill_write_json(_fill_status_path(job), {'state': 'run', 'ts': time.time(), 'result': None})
+    except Exception as e:
+        return jsonify(ok=False, error='Không mở được phiên: ' + str(e)), 500
+    _ensure_fill(job)
     return jsonify(ok=True, pending=True, job=job)
 
 
@@ -1782,6 +1864,43 @@ def _images_from_payload(data):
     return out
 
 
+def _named_b64_list(data, many_key, one_key, limit=6):
+    items = []
+    raw = (data or {}).get(many_key)
+    if isinstance(raw, list):
+        for it in raw[:limit]:
+            if isinstance(it, dict):
+                b64 = str(it.get('b64') or it.get('data') or '').strip()
+                name = str(it.get('name') or '').strip() or 'tep'
+            else:
+                b64 = str(it or '').strip()
+                name = 'tep'
+            if b64:
+                items.append((name[:80], b64))
+    if not items:
+        one = str((data or {}).get(one_key) or '').strip()
+        if one:
+            items.append(('tep', one))
+    return items[:limit]
+
+
+def _join_named(parts, cap=80000):
+    out, used = [], 0
+    for name, text in parts:
+        text = str(text or '').strip()
+        if not text:
+            continue
+        block = '===== ' + str(name or 'nguon') + ' =====\n' + text
+        if used >= cap:
+            break
+        if used + len(block) > cap:
+            block = block[: max(0, cap - used)]
+        if block:
+            out.append(block)
+            used += len(block) + 2
+    return '\n\n'.join(out).strip()
+
+
 def _docx_from_payload(data):
     raw = str((data or {}).get('source_docx') or '').strip()
     if not raw:
@@ -1958,16 +2077,29 @@ def _dang_fill_work(data):
     if ferr:
         return jsonify(ok=False, error=ferr), 400
     image_files = _image_files_from_payload(data)
-    docx_text, docx_images, derr = _docx_from_payload(data)
-    if derr:
-        return jsonify(ok=False, error=derr), 400
-    pdf_text, pdf_images, perr = _pdf_from_payload(data)
-    if perr:
-        return jsonify(ok=False, error=perr), 400
-    if docx_text:
-        page_text = (page_text + '\n\n' + docx_text).strip()
-    if pdf_text:
-        page_text = (page_text + '\n\n' + pdf_text).strip()
+    parts = []
+    if page_text.strip():
+        parts.append(('Chữ / TEX', page_text))
+    docx_images, pdf_images = [], []
+    n_files = 1 if page_text.strip() else 0
+    for name, b64 in _named_b64_list(data, 'source_docxs', 'source_docx'):
+        text, images, err = _docx_from_payload({'source_docx': b64})
+        if err:
+            return jsonify(ok=False, error=name + ': ' + err), 400
+        n_files += 1
+        if text.strip():
+            parts.append((name, text))
+        docx_images.extend(images or [])
+    for name, b64 in _named_b64_list(data, 'source_pdfs', 'source_pdf'):
+        text, images, err = _pdf_from_payload({'source_pdf': b64})
+        if err:
+            return jsonify(ok=False, error=name + ': ' + err), 400
+        n_files += 1
+        if text.strip():
+            parts.append((name, text))
+        pdf_images.extend(images or [])
+    if parts:
+        page_text = _join_named(parts)
     for im in list(docx_images) + list(pdf_images):
         name = str((im or {}).get('file') or '')
         if name and name not in image_files and re.fullmatch(r'images/w-[0-9a-f]{6,40}\.(?:png|jpe?g|gif|webp)', name, re.I):
@@ -2090,13 +2222,22 @@ def _dang_fill_work(data):
     if not latex.strip():
         latex = '\n\n'.join(blocks) + '\n'
     rows = _chunks_from_import(latex, dang)
-    # File/link: đưa câu lên ô xem trước trước, ADMIN lọc trùng sau khi ghi.
-    kept, skipped = _filter_import_rows(rows, qs, dang, relax=bool(page_text))
+    kept, skipped = _filter_import_rows(rows, qs, dang, relax=False)
     if kept and page_text and not dang:
         pool = [n for n in names if n and n != 'Chưa phân dạng']
         kept = [(_snap_dang_name(d, pool), b) for d, b in kept]
+    n_dup = sum(1 for s in skipped if ('trùng' in s or 'cùng ý' in s or 'trần' in s))
+    n_bad = sum(1 for s in skipped if 'sai cấu trúc' in s)
     if kept:
         latex = '\n\n'.join('\\dangbt{' + d + '}\n' + b for d, b in kept) + '\n'
+    elif page_text and skipped and n_bad < len(skipped):
+        summary = 'Đã lọc hết ' + str(len(skipped)) + ' câu'
+        if n_dup:
+            summary += ' (gần trùng hoặc vượt trần: ' + str(n_dup) + ')'
+        if n_bad:
+            summary += ', sai cấu trúc: ' + str(n_bad)
+        summary += '. Không còn câu mới để ghi.'
+        return jsonify(ok=True, src='', latex='', n=0, summary=summary)
     elif page_text:
         return jsonify(ok=False, error='AI không ra câu đúng cấu trúc (\\begin{ex} + \\choice/\\choiceTF...). Thử lại hoặc sửa nguồn.'), 400
     else:
@@ -2106,12 +2247,17 @@ def _dang_fill_work(data):
     latex = _place_images_from_source(_latex_with_nguon(latex, source_url), page_text)
     nd = len(_chunks_from_import(latex, dang))
     if page_text:
-        skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu sai cấu trúc.') if skipped else ''
+        bits = []
+        if n_dup:
+            bits.append(str(n_dup) + ' câu gần trùng hoặc vượt trần')
+        if n_bad:
+            bits.append(str(n_bad) + ' câu sai cấu trúc')
+        skip_txt = (' Đã lọc bỏ ' + ', '.join(bits) + '.') if bits else ' Không còn câu trùng để bỏ.'
         summary = (
-            'AI soạn ' + str(nd or len(blocks)) + ' câu từ file/link'
-            + (' (tự gán dạng)' if not dang else '')
-            + skip_txt
-            + '. Xem ô LaTeX → Chấp nhận ghi TEX → dùng «Lọc câu gần nội dung» để bỏ trùng.'
+            'Giữ ' + str(nd or len(blocks)) + ' câu từ ' + str(max(1, n_files)) + ' nguồn'
+            + (' (gán vào dạng đang có)' if not dang else '')
+            + '.' + skip_txt
+            + ' Xem ô LaTeX rồi bấm Chấp nhận ghi TEX.'
         )
     else:
         skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần / sai cấu trúc).') if skipped else ''
@@ -2136,13 +2282,25 @@ def api_admin_dang_fill_job():
     if not can_manage_bank():
         return jsonify(ok=False, error='Chỉ ADMIN.'), 403
     job = str(request.args.get('job') or '').strip()
+    if not _fill_job_ok(job):
+        return jsonify(ok=False, error='Không thấy phiên đang chạy. Bấm lại.'), 404
     with _FILL_LOCK:
         rec = dict(_FILL_JOBS.get(job) or {})
     if not rec:
+        rec = _fill_read_json(_fill_status_path(job)) or {}
+        if rec:
+            with _FILL_LOCK:
+                _FILL_JOBS[job] = rec
+    if not rec:
         return jsonify(ok=False, error='Không thấy phiên đang chạy. Bấm lại.'), 404
     if rec.get('state') != 'done':
-        return jsonify(ok=True, pending=True, job=job)
+        _ensure_fill(job)
+        elapsed = max(0, int(time.time() - float(rec.get('ts') or time.time())))
+        return jsonify(ok=True, pending=True, job=job, elapsed=elapsed)
     result = rec.get('result')
+    if not isinstance(result, dict):
+        disk = _fill_read_json(_fill_status_path(job)) or {}
+        result = disk.get('result')
     if not isinstance(result, dict):
         return jsonify(ok=False, error='Không đọc được kết quả.')
     return jsonify(result)
