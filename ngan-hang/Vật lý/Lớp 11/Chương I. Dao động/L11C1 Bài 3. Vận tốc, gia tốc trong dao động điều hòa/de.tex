@@ -282,6 +282,39 @@ Vật có $A=5$ cm, $\omega=5$ rad/s, tại $x=A/2$ và đi theo chiều dương
 {\True Gia tốc cực đại của chất điểm có độ lớn xấp xỉ bằng $80\text{ cm/}{{\text{s}}^{2}}.$}
 {Tốc độ của chất điểm tại vị trí cân bằng là $8\text{ cm/s}.$}
 \loigiai{
+\begin{center}
+\begin{tikzpicture}[>=stealth]
+    \begin{axis}[
+        width=11cm,
+        height=5.5cm,
+        axis lines=middle,
+        axis line style={-stealth, thick},
+        xlabel={$t\,(\mathrm{s})$},
+        ylabel={$x\,(\mathrm{cm})$},
+        xlabel style={below right},
+        ylabel style={above left},
+        xmin=0, xmax=4.2,
+        ymin=-9.5, ymax=9.5,
+        xtick={0,0.5,1,1.5,2,2.5,3,3.5,4},
+        ytick={-8,-4,0,4,8},
+        grid=both,
+        grid style={dashed,gray!25},
+        minor tick num=1,
+        samples=200,
+        smooth,
+        domain=0:4,
+    ]
+    \addplot[thick, blue]
+        {8*cos(deg(pi*x + pi/4))};
+    \draw[dashed] (axis cs:0,8) -- (axis cs:4,8);
+    \draw[dashed] (axis cs:0,-8) -- (axis cs:4,-8);
+    \addplot[only marks, mark=*, mark size=1.8pt]
+        coordinates {(0,{8/sqrt(2)})};
+    \node[above right] at (axis cs:0,{8/sqrt(2)})
+        {$x_0=4\sqrt{2}$};
+    \end{axis}
+\end{tikzpicture}
+\end{center}
 a. Đúng. Tại $t=0$, li độ $x=8\cos \left( \frac{\pi }{4} \right)=4\sqrt{2}\text{ cm}$.
 Tốc độ $v=x'=-8\pi \sin \left( \pi t+\frac{\pi }{4} \right)$. Tại $t=0, v=-8\pi \sin \left( \frac{\pi }{4} \right)=-4\pi \sqrt{2}\text{ cm/s}$.
 Vì $v<0$ nên chất điểm chuyển động theo chiều âm của trục Ox.
