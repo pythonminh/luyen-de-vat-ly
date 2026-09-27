@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12361,
+  "total_questions": 12333,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4519,19 +4519,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
       "De": "L12C1 Bài 4. Nhiệt dung riêng · Tính thời gian làm nóng vật",
-      "questions": 1,
-      "count": 1,
-      "dang": {
-        "Tính thời gian làm nóng vật": 1
-      },
-      "dang_kinds": {
-        "Tính thời gian làm nóng vật": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng/dang-tinh-toc-do-tang-nhiet-do.tex",
@@ -4565,20 +4556,20 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng",
-      "questions": 96,
-      "count": 96,
+      "questions": 69,
+      "count": 69,
       "dang": {
-        "Bài toán cân bằng nhiệt": 27,
+        "Bài toán cân bằng nhiệt": 18,
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": 14,
-        "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 27,
-        "Xác định nhiệt dung riêng của một chất": 28
+        "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 18,
+        "Xác định nhiệt dung riêng của một chất": 19
       },
       "dang_kinds": {
         "Bài toán cân bằng nhiệt": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         },
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": {
           "TN": 3,
@@ -4589,14 +4580,14 @@
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": {
           "TN": 10,
           "DS": 5,
-          "TLN": 6,
-          "TL": 6
+          "TLN": 1,
+          "TL": 2
         },
         "Xác định nhiệt dung riêng của một chất": {
           "TN": 10,
           "DS": 5,
-          "TLN": 7,
-          "TL": 6
+          "TLN": 2,
+          "TL": 2
         }
       }
     },
