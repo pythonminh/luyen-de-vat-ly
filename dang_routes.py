@@ -10,6 +10,7 @@ import json
 import posixpath
 import re
 import socket
+import threading
 import time
 import zipfile
 from xml.etree import ElementTree as ET
@@ -18,6 +19,47 @@ import urllib.parse
 import urllib.request
 from flask import request, jsonify, redirect, session
 from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, develop_reference_html, dup_index_by_question, edit_tex_href, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nest_developments, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
+
+_FILL_JOBS = {}
+_FILL_LOCK = threading.Lock()
+
+
+def _fill_job_gc():
+    now = time.time()
+    with _FILL_LOCK:
+        dead = [k for k, v in _FILL_JOBS.items() if now - float(v.get('ts') or now) > 900]
+        for k in dead:
+            _FILL_JOBS.pop(k, None)
+
+
+def _spawn_dang_fill(data):
+    """Chạy AI nền để Render không cắt kết nối dài (HTTP 502)."""
+    _fill_job_gc()
+    job = hashlib.sha1(f'{time.time()}:{id(data)}'.encode()).hexdigest()[:16]
+    with _FILL_LOCK:
+        running = sum(1 for v in _FILL_JOBS.values() if v.get('state') == 'run')
+        if running >= 2:
+            return jsonify(ok=False, error='Đang có phiên AI chạy. Đợi xong rồi bấm lại.'), 429
+        _FILL_JOBS[job] = {'state': 'run', 'ts': time.time(), 'result': None}
+    payload = dict(data or {})
+
+    def work():
+        try:
+            with app.app_context():
+                resp = _dang_fill_work(payload)
+                if isinstance(resp, tuple):
+                    resp = resp[0]
+                body = resp.get_json(silent=True) if resp is not None else None
+            if not isinstance(body, dict):
+                body = {'ok': False, 'error': 'Không đọc được kết quả.'}
+        except Exception as e:
+            body = {'ok': False, 'error': str(e)}
+        with _FILL_LOCK:
+            _FILL_JOBS[job] = {'state': 'done', 'ts': time.time(), 'result': body}
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify(ok=True, pending=True, job=job)
+
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -1785,13 +1827,10 @@ def _fill_kind_blocks(keys, dang, kind, n, samples, tok=5000):
                 break
     return kept[:n]
 
-@app.post('/api/admin/dang-fill')
-def api_admin_dang_fill():
-    if not can_manage_bank():
-        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+def _dang_fill_work(data):
     from app import KIND_CHIP_LABS, KIND_ORDER, dang_kind_counts_of, dang_tex_anchor, kind_gap_heuristic, load_lesson_questions, questions_in_scope
     from student_gemini import _keys_from_payload
-    data = request.get_json(silent=True) or {}
+    data = data or {}
     path = str(data.get('path') or '').replace('\\', '/').strip()
     dang = str(data.get('dang') or '').strip()
     if not path.startswith('ngan-hang/'):
@@ -1957,6 +1996,36 @@ def api_admin_dang_fill():
         skip_txt = (' Bỏ ' + str(len(skipped)) + ' câu (gần trùng / vượt trần / sai cấu trúc).') if skipped else ''
         summary = 'AI soạn ' + str(nd or len(blocks)) + ' câu (' + want + ')' + skip_txt + '. Mỗi câu có \\nguon{link}. Sửa ô LaTeX nếu cần, rồi bấm Chấp nhận ghi TEX.'
     return jsonify(ok=True, src=src, latex=latex, n=nd or len(blocks), add=add, counts=counts, summary=summary)
+
+
+@app.post('/api/admin/dang-fill')
+def api_admin_dang_fill():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    data = request.get_json(silent=True) or {}
+    if data.get('background'):
+        payload = dict(data)
+        payload.pop('background', None)
+        return _spawn_dang_fill(payload)
+    return _dang_fill_work(data)
+
+
+@app.get('/api/admin/dang-fill-job')
+def api_admin_dang_fill_job():
+    if not can_manage_bank():
+        return jsonify(ok=False, error='Chỉ ADMIN.'), 403
+    job = str(request.args.get('job') or '').strip()
+    with _FILL_LOCK:
+        rec = dict(_FILL_JOBS.get(job) or {})
+    if not rec:
+        return jsonify(ok=False, error='Không thấy phiên đang chạy. Bấm lại.'), 404
+    if rec.get('state') != 'done':
+        return jsonify(ok=True, pending=True, job=job)
+    result = rec.get('result')
+    if not isinstance(result, dict):
+        return jsonify(ok=False, error='Không đọc được kết quả.')
+    return jsonify(result)
+
 
 @app.post('/api/admin/dang-fill-save')
 def api_admin_dang_fill_save():

@@ -2544,14 +2544,29 @@ document.addEventListener('click',async function(e){
   }
   let add=null;
   try{add=JSON.parse(bar.getAttribute('data-add')||'null')}catch(err){add=null}
-  const ctrl=new AbortController();
-  const killer=setTimeout(function(){ctrl.abort();},210000);
   try{
-    const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',signal:ctrl.signal,
-      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docx:sourceDocx,source_pdf:sourcePdf})});
+    const r=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,dang:dang,add:add,api_keys:ks,source_url:sourceUrl,source_tex:sourceTex,source_images:sourceImages,image_files:imageFiles,source_docx:sourceDocx,source_pdf:sourcePdf,background:true})});
     const raw=await r.text();
     let d={};
     try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
+    if(d.pending&&d.job){
+      const job=d.job;
+      d=null;
+      while(Date.now()-t0<240000){
+        await new Promise(function(res){setTimeout(res,2500);});
+        let pr,praw,pd;
+        try{
+          pr=await fetch('/api/admin/dang-fill-job?job='+encodeURIComponent(job),{credentials:'same-origin'});
+          praw=await pr.text();
+          pd=JSON.parse(praw);
+        }catch(err){continue;}
+        if(pd&&pd.pending) continue;
+        d=pd;
+        break;
+      }
+      if(!d) throw new Error('Quá 4 phút chưa có kết quả. Bấm AI phân tích lại.');
+    }
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
     const sec=Math.max(1,Math.round((Date.now()-t0)/1000));
     stopWait();
@@ -2578,7 +2593,7 @@ document.addEventListener('click',async function(e){
     const msg=(err&&err.name==='AbortError')?'Quá 3,5 phút chưa có kết quả. Bấm AI phân tích lại.':String(err);
     aiStatus(msg,'err');
     out.innerHTML='<div class="err">'+esc(msg)+'</div>';
-  }finally{clearTimeout(killer);}
+  }
 });
 function nTikz(tex){
   var re=/\\begin\s*\{\s*tikzpicture\s*\}/gi;

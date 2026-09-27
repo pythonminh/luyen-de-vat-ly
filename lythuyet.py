@@ -1614,8 +1614,24 @@ document.addEventListener('click',async function(e){
       const pp=await runOne('pp');
       out.innerHTML='⏳ 3/3 Lọc bài tập \\begin{ex}...';
       const er=await fetch('/api/admin/dang-fill',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-        body:JSON.stringify({path:dePath,dang:'',api_keys:ks,source_url:sourceUrl2,source_tex:sourceTex})});
-      const ex=await er.json();
+        body:JSON.stringify({path:dePath,dang:'',api_keys:ks,source_url:sourceUrl2,source_tex:sourceTex,background:true})});
+      let ex=await er.json();
+      if(ex&&ex.pending&&ex.job){
+        const tJob=Date.now();
+        const job=ex.job;
+        ex=null;
+        while(Date.now()-tJob<240000){
+          await new Promise(function(res){setTimeout(res,2500);});
+          try{
+            const pr=await fetch('/api/admin/dang-fill-job?job='+encodeURIComponent(job),{credentials:'same-origin'});
+            const pd=await pr.json();
+            if(pd&&pd.pending) continue;
+            ex=pd;
+            break;
+          }catch(err){}
+        }
+        if(!ex) ex={ok:false,error:'Quá lâu chưa có bài tập.'};
+      }
       let h='';
       if(lt.ok){
         h+='<div class="success">'+esc(lt.summary||'Lý thuyết')+'</div>'
