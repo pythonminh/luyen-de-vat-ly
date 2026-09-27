@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12333,
+  "total_questions": 12414,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4556,19 +4556,23 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng",
-      "questions": 69,
-      "count": 69,
+      "questions": 150,
+      "count": 150,
       "dang": {
-        "Bài toán cân bằng nhiệt": 18,
+        "Bài toán cân bằng nhiệt": 48,
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": 14,
-        "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 18,
-        "Xác định nhiệt dung riêng của một chất": 19
+        "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 29,
+        "Xác định nhiệt dung riêng của một chất": 27,
+        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": 21,
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": 6,
+        "Tính tốc độ tăng nhiệt độ": 2,
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": 3
       },
       "dang_kinds": {
         "Bài toán cân bằng nhiệt": {
-          "TN": 10,
+          "TN": 31,
           "DS": 5,
-          "TLN": 1,
+          "TLN": 10,
           "TL": 2
         },
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": {
@@ -4578,16 +4582,40 @@
           "TL": 0
         },
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": {
-          "TN": 10,
+          "TN": 21,
           "DS": 5,
           "TLN": 1,
           "TL": 2
         },
         "Xác định nhiệt dung riêng của một chất": {
-          "TN": 10,
+          "TN": 15,
           "DS": 5,
-          "TLN": 2,
+          "TLN": 5,
           "TL": 2
+        },
+        "Khái niệm, công thức, đơn vị và ý nghĩa của nhiệt hóa hơi riêng": {
+          "TN": 21,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Thực nghiệm xác định nhiệt hóa hơi riêng": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Tính tốc độ tăng nhiệt độ": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Bài toán công suất, hiệu suất và thời gian hóa hơi": {
+          "TN": 3,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
         }
       }
     },
