@@ -2000,6 +2000,21 @@ function rwNormUnit(unit){
   if(unit==='°C' || /^\\circ\s*C$/.test(unit)) return '^{\\circ}\\mathrm{C}';
   return '\\mathrm{'+unit+'}';
 }
+function rwCommaInner(inner){
+  const parts=String(inner||'').split(/(\\(?:text|mathrm|textbf|textit)\{[^{}]*\})/g);
+  return parts.map(function(part,i){
+    if(i%2) return part;
+    return part.replace(/(\d),(\d)/g,'$1{,}$2');
+  }).join('');
+}
+function rwFixCommas(t){
+  return String(t||'').replace(/\$([^$]+)\$|\\\(([\s\S]*?)\\\)|\\\[([\s\S]*?)\\\]/g, function(all, a, b, c){
+    const open=a!=null?'$':(b!=null?'\\(':'\\[');
+    const close=a!=null?'$':(b!=null?'\\)':'\\]');
+    const inner=a!=null?a:(b!=null?b:c);
+    return open+rwCommaInner(inner)+close;
+  });
+}
 function rwFixUnits(t){
   const u='(?:m/s\\^\\{2\\}|m/s\\^2|kg/m\\^\\{3\\}|kg/m\\^3|J/kg\\.K|J/kg|rad/s|m/s|kWh|°C|\\\\circ\\s*C|kPa|MPa|kHz|kJ|MJ|mJ|kW|MW|kN|kg|mg|km|cm|mm|dm|ms|kV|mV|mol|eV|Pa|Hz|rad|atm|cal|min|J|W|N|V|A|K|g|m|s|h)';
   const after=new RegExp('\\$([^$]+?)\\$\\s*('+u+')(?![A-Za-zÀ-ỹ0-9\\\\{])','g');
@@ -2014,7 +2029,7 @@ function rwFixUnits(t){
     if(/\\mathrm\s*\{/.test(all)) return all;
     return '$'+inner+'\\,'+rwNormUnit(unit)+'$';
   });
-  return t;
+  return rwFixCommas(t);
 }
 function rwSteps(text){
   let s=String(text||'').trim();
@@ -2128,7 +2143,7 @@ function showEditor(box, d){
     +'<button type="button" class="btn mini" data-q="nl" title="Xuống dòng trong ô soạn">Xuống dòng</button>'
     +'<button type="button" class="btn mini" data-q="steps" title="Mỗi dấu = một dòng, bọc \\\\[ \\\\]">Tách bước =</button>'
     +'<button type="button" class="btn mini" data-q="fix" title="Gộp $a$ + $b$ thành $a+b$">Sửa $</button>'
-    +'<button type="button" class="btn mini" data-q="unit" title="Đưa J, W, kg, m/s... vào trong $ và bọc \\\\mathrm">Sửa đơn vị</button>'
+    +'<button type="button" class="btn mini" data-q="unit" title="Số và đơn vị thành $x=4{,}5\\\\,\\\\mathrm{cm}$">Sửa đơn vị</button>'
     +'<button type="button" class="btn mini" data-q="frac">\\frac</button>'
     +'<button type="button" class="btn mini" data-q="cdot">\\cdot</button>'
     +'<button type="button" class="btn mini" data-q="delta">\\Delta</button>'

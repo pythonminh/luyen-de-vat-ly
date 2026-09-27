@@ -2038,7 +2038,8 @@ def strip_bank_meta(s):
     s=re.sub(r'\{\s*\[[A-Za-z0-9._-]+\]\s*\}','',s)
     s=re.sub(r'\[(?=[A-Za-z]{1,4}\d)[A-Za-z0-9._-]{3,}\]','',s)
     s=re.sub(r'\\lq\s*\\lq','«',s,flags=re.I);s=re.sub(r'\\rq\s*\\rq','»',s,flags=re.I)
-    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,(?!\d)',' ',s)
+    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I)
+    s=_thin_space_outside_math(s)
     return s.strip()
 
 def clean_latex_web(s):
@@ -2120,14 +2121,82 @@ def _space_digit_groups(chunk):
     return "".join(out)
 
 
+def _thin_space_outside_math(s):
+    """\\, trong $...$ giữ nguyên (đơn vị \\,\\mathrm). Ngoài công thức thì thành khoảng trắng, trừ khi đứng trước chữ số."""
+    parts = re.split(
+        r"(\${2}[^$]+\${2}|\$[^$]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])",
+        s or "",
+    )
+    out = []
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+        else:
+            out.append(re.sub(r"\\,(?!\d)", " ", part))
+    return "".join(out)
+
+
+_UNIT_ALT = (
+    r"m/s\^\{2\}|m/s\^2|kg/m\^\{3\}|kg/m\^3|J/kg\.K|J/kg|rad/s|m/s|"
+    r"kWh|°C|\\circ\s*C|kPa|MPa|kHz|kJ|MJ|mJ|kW|MW|kN|"
+    r"kg|mg|km|cm|mm|dm|ms|kV|mV|mol|eV|Pa|Hz|rad|atm|cal|min|"
+    r"J|W|N|V|A|K|g|m|s|h"
+)
+
+
+def _norm_unit_tex(unit):
+    if unit == "°C" or re.fullmatch(r"\\circ\s*C", unit or ""):
+        return r"^{\circ}\mathrm{C}"
+    return r"\mathrm{" + unit + "}"
+
+
+def _fix_measure(s):
+    """$x=4,5$ cm → $x=4,5\\,\\mathrm{cm}$. Dấu phẩy thập phân xử lý sau, khi đã tách hàng nghìn."""
+    unit = _UNIT_ALT
+    after = re.compile(r"\$([^$]+?)\$\s*(" + unit + r")(?![A-Za-zÀ-ỹ0-9\\{])")
+
+    def repl_after(m):
+        inn = m.group(1).rstrip()
+        if not re.search(r"[\d})]$", inn):
+            return m.group(0)
+        if re.search(r"\\mathrm\s*\{[^}]*\}\s*$", inn) or re.search(r"\^\{?\\circ\}?\s*\\mathrm\{C\}\s*$", inn):
+            return m.group(0)
+        return "$" + inn + r"\," + _norm_unit_tex(m.group(2)) + "$"
+
+    s = after.sub(repl_after, s or "")
+    inside = re.compile(r"\$([^$]*\d)\s+(" + unit + r")\s*\$")
+
+    def repl_in(m):
+        if r"\mathrm" in m.group(0):
+            return m.group(0)
+        return "$" + m.group(1) + r"\," + _norm_unit_tex(m.group(2)) + "$"
+
+    return inside.sub(repl_in, s)
+
+
+def _decimal_commas(chunk):
+    """4,5 → 4{,}5 trong công thức, để MathJax không tách thành 4 , 5."""
+    parts = re.split(r"(\\(?:text|mathrm|textbf|textit)\{[^{}]*\})", chunk or "")
+    out = []
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+        else:
+            out.append(re.sub(r"(\d),(\d)", r"\1{,}\2", part))
+    return "".join(out)
+
+
 def prepare_math(s):
     """Giữ nguyên $...$; chỉ bọc \\overrightarrow / \\vec khi nằm ngoài công thức."""
     s = strip_bank_meta(s or "")
+    s = _fix_measure(s)
     parts = _MATH_CHUNK.split(s)
     out = []
     for i, part in enumerate(parts):
         if i % 2:
-            out.append(_space_digit_groups(_wrap_unicode_math(part)))
+            part = _space_digit_groups(_wrap_unicode_math(part))
+            part = _decimal_commas(part)
+            out.append(part)
         else:
             out.append(_wrap_bare_arrows(part))
     return "".join(out).strip()
