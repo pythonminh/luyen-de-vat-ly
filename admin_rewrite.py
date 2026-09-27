@@ -1159,7 +1159,7 @@ def api_rewrite_question_save():
 
 
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -1417,6 +1417,108 @@ function readDraft(box, d){
   });
   return {stem:stem||d.stem, solution:solution||d.solution, answer:answer||d.answer, options:opts, flags:flags};
 }
+function rwField(box){
+  const a=box._rwTa;
+  if(a&&box.contains(a)) return a;
+  return box.querySelector('.rwta');
+}
+function rwPut(ta, text, cursorFromEnd){
+  const v=ta.value, a=ta.selectionStart||0, b=ta.selectionEnd||0;
+  ta.value=v.slice(0,a)+text+v.slice(b);
+  const p=a+text.length-(cursorFromEnd||0);
+  ta.focus();
+  ta.selectionStart=ta.selectionEnd=p;
+}
+function rwWrap(ta, open, close){
+  const v=ta.value, a=ta.selectionStart||0, b=ta.selectionEnd||0;
+  const sel=v.slice(a,b);
+  if(sel.length>=open.length+close.length && sel.indexOf(open)===0 && sel.slice(-close.length)===close){
+    const inner=sel.slice(open.length, sel.length-close.length);
+    ta.value=v.slice(0,a)+inner+v.slice(b);
+    ta.focus();
+    ta.selectionStart=a;
+    ta.selectionEnd=a+inner.length;
+    return;
+  }
+  ta.value=v.slice(0,a)+open+sel+close+v.slice(b);
+  ta.focus();
+  if(!sel){ta.selectionStart=ta.selectionEnd=a+open.length;}
+  else{ta.selectionStart=a+open.length;ta.selectionEnd=a+open.length+sel.length;}
+}
+function rwGlue(s){
+  if(String(s||'').indexOf('\n')>=0) return false;
+  const raw=String(s||'');
+  let u=raw.replace(/\\(?:times|cdot|pm|mp|left|right|quad|Rightarrow|to)\b/g,'');
+  u=u.replace(/\s+/g,'');
+  if(!u) return /\\(?:times|cdot|pm|mp)\b|[+\-=≈≡×·]/.test(raw);
+  if(u===')'||u===').'||u===');') return false;
+  return /^[+\-=≈≡×·(),.]+$/.test(u);
+}
+function rwFixDollars(t){
+  const ms=[];
+  const re=/\$([^$]*)\$/g;
+  let m;
+  while((m=re.exec(t))) ms.push({s:m.index,e:m.index+m[0].length,inner:m[1]});
+  let out='', last=0, i=0;
+  if(ms.length>=2){
+    while(i<ms.length){
+      const cur=ms[i];
+      out+=t.slice(last, cur.s);
+      const buf=[cur.inner];
+      let end=cur.e;
+      i++;
+      while(i<ms.length && rwGlue(t.slice(end, ms[i].s))){
+        buf.push(t.slice(end, ms[i].s));
+        buf.push(ms[i].inner);
+        end=ms[i].e;
+        i++;
+      }
+      out+='$'+buf.join('').replace(/\$/g,'')+'$';
+      last=end;
+    }
+    out+=t.slice(last);
+    t=out;
+  }
+  return t.replace(/\$\s*\$/g,'');
+}
+function rwSteps(text){
+  let s=String(text||'').trim();
+  if(!s) return s;
+  s=s.replace(/\s*=\s*/g,' \\\\\n= ');
+  if(s.indexOf('\\[')<0 && s.indexOf('\\]')<0) s='\\[\n'+s+'\n\\]';
+  return s;
+}
+function rwQuick(box, kind){
+  const ta=rwField(box);
+  if(!ta) return;
+  if(kind==='dollar') rwWrap(ta,'$','$');
+  else if(kind==='display') rwWrap(ta,'\\[\n','\n\\]');
+  else if(kind==='lbr') rwPut(ta,'\\\\\n');
+  else if(kind==='nl') rwPut(ta,'\n');
+  else if(kind==='frac') rwPut(ta,'\\frac{}{}',3);
+  else if(kind==='cdot') rwPut(ta,'\\cdot ');
+  else if(kind==='delta') rwPut(ta,'\\Delta ');
+  else if(kind==='fix'){
+    const a=ta.selectionStart||0;
+    ta.value=rwFixDollars(ta.value);
+    ta.focus();
+    const p=Math.min(a, ta.value.length);
+    ta.selectionStart=ta.selectionEnd=p;
+  }else if(kind==='steps'){
+    const v=ta.value;
+    let a=ta.selectionStart||0, b=ta.selectionEnd||0;
+    if(a===b){
+      a=v.lastIndexOf('\n', Math.max(0,a-1))+1;
+      b=v.indexOf('\n', ta.selectionStart||0);
+      if(b<0) b=v.length;
+    }
+    const next=rwSteps(v.slice(a,b));
+    ta.value=v.slice(0,a)+next+v.slice(b);
+    ta.focus();
+    ta.selectionStart=a;
+    ta.selectionEnd=a+next.length;
+  }
+}
 async function previewBox(box){
   const tas=box.querySelectorAll('.rwta');
   const look=box.querySelector('.rwlook');
@@ -1441,21 +1543,39 @@ function showEditor(box, d){
   const verb=develop?'Ghi':'Thay';
   let h='<div class="rwprev"><div class="success">'+(develop?'Phát triển từ câu — chưa ghi. Sửa số hoặc từ, bấm Tính lại lời giải và đáp án, rồi thêm để học sinh tham khảo. Câu gốc giữ nguyên.':'Chưa ghi file. Sửa LaTeX trong ô, bấm Xem trước, rồi Chấp nhận.')+'</div>';
   if(d.note) h+='<p class="muted">'+esc(d.note)+'</p>';
+  h+='<div class="rwquick"><b>Nhanh</b>'
+    +'<button type="button" class="btn mini" data-q="dollar" title="Bọc đoạn bôi đen bằng $...$">$…$</button>'
+    +'<button type="button" class="btn mini" data-q="display" title="Bọc bằng \\\\[ \\\\]">\\[ \\]</button>'
+    +'<button type="button" class="btn mini" data-q="lbr" title="Chèn \\\\\\\\ để xuống dòng trong công thức">\\\\ xuống dòng</button>'
+    +'<button type="button" class="btn mini" data-q="nl" title="Xuống dòng trong ô soạn">Xuống dòng</button>'
+    +'<button type="button" class="btn mini" data-q="steps" title="Mỗi dấu = một dòng, bọc \\\\[ \\\\]">Tách bước =</button>'
+    +'<button type="button" class="btn mini" data-q="fix" title="Gộp $a$ + $b$ thành $a+b$">Sửa $</button>'
+    +'<button type="button" class="btn mini" data-q="frac">\\frac</button>'
+    +'<button type="button" class="btn mini" data-q="cdot">\\cdot</button>'
+    +'<button type="button" class="btn mini" data-q="delta">\\Delta</button>'
+    +'<span class="muted">Bôi đen trong ô đang gõ, rồi bấm.</span></div>';
   h+='<label><input type="checkbox" class="rwf" data-k="stem" checked> '+verb+' đề</label>';
-  h+='<textarea class="rwta" data-ta="stem" data-lab="Đề">'+esc(d.stem||'')+'</textarea>';
+  h+='<textarea class="rwta" data-ta="stem" data-lab="Đề" spellcheck="false">'+esc(d.stem||'')+'</textarea>';
   (d.options||[]).forEach(function(o,i){
     if(!i) h+='<label><input type="checkbox" class="rwf" data-k="opts" checked> '+verb+' phương án và đáp án đúng</label>';
-    h+='<textarea class="rwta sm" data-ta="opt-'+i+'" data-lab="PA '+(d.kind==='TN'?'ABCD'[i]:(i+1))+'">'+esc(o.text||'')+'</textarea>';
+    h+='<textarea class="rwta sm" data-ta="opt-'+i+'" data-lab="PA '+(d.kind==='TN'?'ABCD'[i]:(i+1))+'" spellcheck="false">'+esc(o.text||'')+'</textarea>';
   });
   if(d.kind==='TLN'){
     h+='<label><input type="checkbox" class="rwf" data-k="answer" checked> '+verb+' đáp án TLN</label>';
-    h+='<textarea class="rwta sm" data-ta="ans" data-lab="Đáp án">'+esc(d.answer||'')+'</textarea>';
+    h+='<textarea class="rwta sm" data-ta="ans" data-lab="Đáp án" spellcheck="false">'+esc(d.answer||'')+'</textarea>';
   }
   h+='<label><input type="checkbox" class="rwf" data-k="sol" checked> '+verb+' lời giải</label>';
-  h+='<textarea class="rwta" data-ta="sol" data-lab="Lời giải" style="min-height:180px">'+esc(d.solution||'')+'</textarea>';
+  h+='<textarea class="rwta" data-ta="sol" data-lab="Lời giải" style="min-height:180px" spellcheck="false">'+esc(d.solution||'')+'</textarea>';
   h+='<p><button type="button" class="btn rwPrev">👁 Xem trước</button> <button type="button" class="btn rwRecalc">🔁 Tính lại lời giải và đáp án</button> <button type="button" class="btn green rwSave">'+(develop?'✅ Thêm Phát triển từ câu':'✅ Chấp nhận và ghi TEX')+'</button> <button type="button" class="btn rwCancel">Hủy</button></p>';
   h+='<div class="rwlook"></div></div>';
   box.innerHTML=h;
+  box.addEventListener('focusin',function(e){
+    if(e.target&&e.target.classList&&e.target.classList.contains('rwta')) box._rwTa=e.target;
+  });
+  box.querySelectorAll('[data-q]').forEach(function(b){
+    b.addEventListener('mousedown',function(e){e.preventDefault();});
+    b.onclick=function(){rwQuick(box, b.getAttribute('data-q'));};
+  });
   box.querySelector('.rwCancel').onclick=function(){box.innerHTML='';};
   box.querySelector('.rwPrev').onclick=function(){previewBox(box)};
   box.querySelector('.rwRecalc').onclick=async function(){
