@@ -2679,8 +2679,8 @@
         "Chu kỳ,tần số,tần số góc, pha dao động": {
           "TN": 3,
           "DS": 6,
-          "TLN": 3,
-          "TL": 1
+          "TLN": 4,
+          "TL": 0
         }
       }
     },
