@@ -4747,10 +4747,10 @@
       "questions": 18,
       "count": 18,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 18
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 18
       },
       "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 10,
           "DS": 5,
           "TLN": 1,
