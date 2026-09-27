@@ -1047,24 +1047,27 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         arr = [q for q in qs if q.get("dang") == dname]
         uncat = not str(dname or "").strip() or str(dname).strip() == "Chưa phân dạng"
         mark = "<span class='tag miss'>Chưa có</span>" if uncat else "<span class='tag had'>Đã có</span>"
-        dang_cell = (
-            f"<td rowspan='{len(_MX_KINDS)}'>{html.escape(str(dname or 'Chưa phân dạng'))} {mark}</td>"
+        kind_cells = []
+        for kind, label in _MX_KINDS:
+            picks = []
+            for z, lab in _MX_LEVELS:
+                n = sum(1 for q in arr if q.get("kind") == kind and q.get("level") == z)
+                off = " off" if n <= 0 else ""
+                dis = " disabled" if n <= 0 else ""
+                picks.append(
+                    f"<span class='mxpick{off}' title='{html.escape(label)} · {html.escape(lab)} · kho {n}'>"
+                    f"<b>{n}</b>"
+                    f"<input class='n' type='number' min='0' max='{n}' value='0' "
+                    f"name='pick:{di}:{kind}:{z}' aria-label='{html.escape(label)} {html.escape(lab)}'{dis}>"
+                    f"</span>"
+                )
+            kind_cells.append("<td class='mxkind'><div class='mxline'>" + "".join(picks) + "</div></td>")
+        cls = "uncat" if uncat else "had"
+        rows.append(
+            f"<tr class='{cls}'><td class='mxname'>{html.escape(str(dname or 'Chưa phân dạng'))} {mark}</td>"
+            + "".join(kind_cells)
+            + "</tr>"
         )
-        for ki, (kind, label) in enumerate(_MX_KINDS):
-            counts = {
-                z: sum(1 for q in arr if q.get("kind") == kind and q.get("level") == z)
-                for z, _lab in _MX_LEVELS
-            }
-            cells = "".join(
-                "<td class='mxcell'><div class='mxkho'>"
-                + str(counts[z])
-                + f"</div><input class='n' type='number' min='0' max='{counts[z]}' value='0' name='pick:{di}:{kind}:{z}' aria-label='{lab}'></td>"
-                for z, lab in _MX_LEVELS
-            )
-            tr = "<tr class='" + ("uncat" if uncat else "had") + "'>"
-            if ki == 0:
-                tr += dang_cell
-            rows.append(tr + f"<td>{html.escape(label)}</td>" + cells + "</tr>")
     if not rows:
         return ""
     practice = ""
@@ -1089,12 +1092,19 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
         f"<input type='hidden' name='path' value='{_esc(path)}'>"
         f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
-        "<div class='notice'>📝 <b>Ma trận đề</b> — điền số câu NB / TH / VD / VDC. "
+        "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
         "<b>Tạo đề</b> lấy đúng số đó. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d), "
         "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
         + top
-        + "<div class='selectwrap'><table class='selectgrid'><tr><th>Dạng bài</th><th>Loại</th>"
-        "<th>NB<br>Nhận biết</th><th>TH<br>Thông hiểu</th><th>VD<br>Vận dụng</th><th>VDC<br>Vận dụng cao</th></tr>"
+        + "<div class='selectwrap'><table class='selectgrid mxone'><tr><th>Dạng bài</th>"
+        + "".join(
+            "<th>"
+            + html.escape(label)
+            + "<div class='mxlabs'><span title='Nhận biết'>NB</span><span title='Thông hiểu'>TH</span>"
+            "<span title='Vận dụng'>VD</span><span title='Vận dụng cao'>VDC</span></div></th>"
+            for _kind, label in _MX_KINDS
+        )
+        + "</tr>"
         + "".join(rows)
         + "</table></div>"
         "<div id='examSum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
@@ -1104,9 +1114,17 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         ".exammatrix .examcopies{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
         ".exammatrix .examcopies input,.exammatrix .examcopies select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}"
         ".exammatrix .examcopies input{width:64px;text-align:center}"
-        ".mxcell{text-align:center;min-width:72px;background:#f0fdf4}"
-        ".mxcell .n{width:52px;font-weight:800}"
-        ".mxkho{font-size:11px;font-weight:800;color:#166534}</style>"
+        ".exammatrix table.mxone{width:max-content}"
+        ".exammatrix .mxone th,.exammatrix .mxone td{padding:3px 5px;vertical-align:middle}"
+        ".exammatrix .mxname{text-align:left;font-weight:700;line-height:1.25;white-space:nowrap}"
+        ".exammatrix .mxlabs,.exammatrix .mxline{display:grid;grid-template-columns:repeat(4,48px);gap:2px;justify-content:center;align-items:center}"
+        ".exammatrix .mxlabs span{font-size:10px;font-weight:800;color:#334155;text-align:center}"
+        ".exammatrix td.mxkind{background:#f0fdf4}"
+        ".exammatrix .mxpick{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px}"
+        ".exammatrix .mxpick b{font-size:11px;line-height:1;font-weight:800;color:#166534;min-width:1.1em;text-align:right}"
+        ".exammatrix .mxpick .n{width:26px;padding:1px 0;font-size:12px;font-weight:800}"
+        ".exammatrix .mxpick.off{opacity:.38}"
+        ".exammatrix tr.uncat .mxname{background:#fff8df}</style>"
         "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
         "function upd(){var t=0;f.querySelectorAll('.n').forEach(function(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});"
         "var s=document.getElementById('examSum');if(s)s.textContent='TỔNG CHỌN: '+t+' câu — điền NB/TH/VD/VDC rồi Tạo đề, Trộn đề hoặc In đề.';}"
