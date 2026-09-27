@@ -393,10 +393,15 @@
       "username": "chan",
       "name": "Hoàng Thùy Trang",
       "phone": "0703600545",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "865d96f59ea4b1d92a159bea045ea6052cc5b5e860e985a57358776ecbfb7695",
+      "password_enc": "v1:uzeHT0nh_ILR",
+      "updated_at": "2026-09-27 23:07:27",
+      "package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -405,10 +410,16 @@
           "Toán"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "865d96f59ea4b1d92a159bea045ea6052cc5b5e860e985a57358776ecbfb7695",
-      "password_enc": "v1:uzeHT0nh_ILR",
-      "updated_at": "2026-09-22 05:27:28"
+      "grades": [
+        "10"
+      ],
+      "subjects": [
+        "Toán"
+      ],
+      "grade": "10",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-09-27 23:07:27",
+      "vip_expires_at": "2026-10-27 23:07:27"
     },
     {
       "username": "quantranmanh301008gmail",
