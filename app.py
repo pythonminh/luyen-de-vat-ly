@@ -2015,7 +2015,7 @@ def strip_bank_meta(s):
     s=re.sub(r'\{\s*\[[A-Za-z0-9._-]+\]\s*\}','',s)
     s=re.sub(r'\[(?=[A-Za-z]{1,4}\d)[A-Za-z0-9._-]{3,}\]','',s)
     s=re.sub(r'\\lq\s*\\lq','«',s,flags=re.I);s=re.sub(r'\\rq\s*\\rq','»',s,flags=re.I)
-    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,',' ',s)
+    s=re.sub(r'\\lq\b','«',s,flags=re.I);s=re.sub(r'\\rq\b','»',s,flags=re.I);s=re.sub(r'\\,(?!\d)',' ',s)
     return s.strip()
 
 def clean_latex_web(s):
@@ -2071,13 +2071,42 @@ def _wrap_unicode_math(chunk: str) -> str:
     return "".join(out)
 
 
+_THOUSAND_RE = re.compile(r"(?<![\d.,\\])(\d{4,})(?!\d)")
+
+
+def _space_digit_groups(chunk):
+    """2101440 → 2\\,101\\,440 khi vẽ, để tách hàng nghìn và hàng triệu. Không đụng phần thập phân sau dấu phẩy."""
+    parts = re.split(r"(\\(?:text|mathrm|textbf|textit)\{[^{}]*\})", chunk or "")
+    out = []
+
+    def grouped(m):
+        s = m.group(1)
+        bits = []
+        while len(s) > 3:
+            bits.append(s[-3:])
+            s = s[:-3]
+        bits.append(s)
+        bits.reverse()
+        return r"\,".join(bits)
+
+    for i, part in enumerate(parts):
+        if i % 2:
+            out.append(part)
+        else:
+            out.append(_THOUSAND_RE.sub(grouped, part))
+    return "".join(out)
+
+
 def prepare_math(s):
     """Giữ nguyên $...$; chỉ bọc \\overrightarrow / \\vec khi nằm ngoài công thức."""
     s = strip_bank_meta(s or "")
     parts = _MATH_CHUNK.split(s)
     out = []
     for i, part in enumerate(parts):
-        out.append(_wrap_unicode_math(part) if i % 2 else _wrap_bare_arrows(part))
+        if i % 2:
+            out.append(_space_digit_groups(_wrap_unicode_math(part)))
+        else:
+            out.append(_wrap_bare_arrows(part))
     return "".join(out).strip()
 
 
