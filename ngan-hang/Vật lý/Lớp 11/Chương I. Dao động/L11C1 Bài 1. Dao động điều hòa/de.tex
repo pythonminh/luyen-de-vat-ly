@@ -532,3 +532,615 @@ Quãng đường vật đi được trong $2T$ là $S_1 = 2 \times 4A = 8A$.
 Quãng đường vật đi được trong $0,5T$ là $S_2 = 2A$.
 Tổng quãng đường vật đi được là $S = S_1 + S_2 = 8A + 2A = 10A = 10 \times 1,25 = 12,5$ cm.}
 \end{ex}
+\dangbt{Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
+\begin{ex}
+	Khoảng thời gian để vật thực hiện được một dao động toàn phần gọi là
+	\choice
+	{tần số}
+	{\True chu kì}
+	{biên độ}
+	{tần số góc}
+	\loigiai{Khoảng thời gian để vật thực hiện một dao động toàn phần gọi là chu kì, đơn vị là giây (s)
+		\immini{
+			Một người quan sát thấy con lắc đơn gồm một dây dài không giãn và một quả nặng được treo thẳng đứng dao động qua lại quanh một vị trí cân bằng từ vị trí $(1) \rightarrow (2) \rightarrow (3)$ và ngược lại $(3) \rightarrow (2) \rightarrow (1)$ liên tục trong một thời gian dài.Chu kỳ dao động của con lắc đơn là thời gian vật thực hiện 1 dao động toàn phần
+			\khungct{T=\frac{\Delta t}{n}}
+		}{
+			\begin{tikzpicture}[scale=1.5]
+				\coordinate (O) at (0,0);
+				\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+				\coordinate (B) at (0,-2);
+				\coordinate (C) at ({2*cos(-110)}, {2*sin(-110)});
+				
+				\draw[thick] (O) -- (A);
+				\fill[red] (A) circle (2pt);
+				\node[below] at (A) {\small (1)};
+				
+				\draw[thick] (O) -- (B);
+				\fill[red] (B) circle (2pt);
+				\node[below] at (B) {\small (2)};
+				
+				\draw[thick] (O) -- (C);
+				\fill[red] (C) circle (2pt);
+				\node[below] at (C) {\small (3)};
+				
+				\fill[yellow] (O) circle (1.5pt);
+				
+				\draw[dashed, gray, ->] ([shift={(O)}] -70:2) arc[start angle=-70, end angle=-110, radius=2];
+				
+				\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+			\end{tikzpicture}
+			
+		}
+		
+	}
+\end{ex}
+
+\dangbt{Chưa có dạng}
+\begin{ex}
+	Chuyển động nào sau đây không phải là dao động cơ học?
+	\choice
+	{Chuyển động đung đưa của con lắc của đồng hồ}
+	{Chuyển động đung đưa của lá cây}
+	{Chuyển động nhấp nhô của phao trên mặt nước}
+	{\True Chuyển động của ôtô trên đường}
+	\loigiai{
+		Chuyển động của ôtô trên đường không phải là dao động cơ học.
+		
+		
+		\indamm{Chuyển động qua lại quanh một vị trí cân bằng được gọi là dao động.}
+		
+		Có thể thấy rất nhiều dao động quanh ta như chuyển động của chiếc thuyền nhấp nhô tại chỗ neo, rung động của dây đàn ghita,... Các chuyển động này đều là chuyển động qua lại quanh vị trí cân bằng.
+		
+	}
+\end{ex}
+
+\dangbt{Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
+\begin{ex}
+	\immini{
+		Nếu cả hai quả cầu đều dao động với chu kì là 2,4 s và quả cầu $2$ đạt độ dịch chuyển tối đa về một phía muộn hơn 0,6 s so với quả cầu $1$, thì nó sẽ luôn đi sau quả cầu 1 là 0,6/2,4 tương đương 1/4 chu kì. Do đó, hai dao động này luôn lệch pha nhau một phần tư chu kì. Đồ thị li độ - thời gian của chúng được biểu diễn trên}{\begin{tikzpicture}[scale=1.5]
+			% Tâm quay (O)
+			\coordinate (O) at (0,0);
+			
+			% Vị trí (1): lệch góc -70°
+			\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+			
+			% Vị trí (2): thẳng đứng dưới (góc -90°)
+			\coordinate (B) at (0,-2);
+			
+			% Dây treo (1)
+			\draw[thick] (O) -- (A);
+			\fill[red] (A) circle (2pt);
+			\node[below ] at (A) {\small (1)};
+			
+			% Dây treo (2)
+			\draw[thick] (O) -- (B);
+			\fill[blue] (B) circle (2pt);
+			\node[below ] at (B) {\small (2)};
+			
+			
+			
+			% Gắn chốt treo
+			\fill[yellow] (O) circle (1.5pt);
+			
+			% Đường cong quỹ đạo từ (1) đến (2)
+			\draw[dashed, gray, <-]
+			([shift={(O)}] -70:2)
+			arc[start angle=-70, end angle=-110, radius=2];
+			
+			% Vẽ góc giữa hai dây tại O
+			\pic [draw, ->, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+			
+		\end{tikzpicture}
+	}
+	\loigiai{\begin{tikzpicture}
+			\begin{axis}[
+				width=13cm, height=6cm,
+				axis lines=middle,
+				xlabel={$t\ (\mathrm{s})$}, 
+				ylabel={$x\ (\mathrm{cm})$},
+				xtick=\empty,
+				ytick=\empty,
+				enlargelimits=false,
+				xmin=0, xmax=3.5,
+				ymin=-1.2, ymax=1.2,
+				samples=200,
+				clip=false,
+				axis line style={->},
+				xlabel style={right},
+				ylabel style={above},
+				domain=0:3.5
+				]
+				
+				% Đồ thị đỏ: cos(2πt)
+				\addplot[red, thick] {cos(deg(2*pi*x/2.4))};
+				
+				% Đồ thị xanh: cos(2πt + π/2) => trễ pha 1/4 chu kỳ
+				\addplot[blue, thick] {cos(deg(2*pi*(x - 0.6)/2.4))};
+				
+				% Nhãn T (chu kì)
+				\draw[<->] (axis cs:0,1.1) -- node[above] {Chu kì, $T$} (axis cs:2.4,1.1);
+				
+				% Đường nét đứt thẳng đứng đánh dấu thời điểm
+				\draw[dashed] (axis cs:0,0) -- (axis cs:0,1);
+				\draw[dashed] (axis cs:0.6,-1) -- (axis cs:0.6,1);
+				\draw[dashed] (axis cs:1.2,-1) -- (axis cs:1.2,1);
+				\draw[dashed] (axis cs:1.8,-1) -- (axis cs:1.8,1);
+				\draw[dashed] (axis cs:2.4,-1) -- (axis cs:2.4,1);
+				
+			\end{axis}
+		\end{tikzpicture}
+	}
+\end{ex}
+
+\dangbt{Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
+\begin{ex}
+	\begin{tikzpicture}
+		\begin{axis}[
+			width=14cm, height=7cm,
+			axis lines=middle,
+			xlabel={$t\ (\mathrm{s})$},
+			ylabel={$x\ (\mathrm{cm})$},
+			xmin=0, xmax=30,
+			ymin=-12, ymax=14,
+			xtick={0,5,...,30},
+			ytick={-10,-5,0,5,10},
+			grid=both,
+			minor tick num=1,
+			major grid style={blue!20},
+			thick,
+			samples=300,
+			domain=0:30,
+			axis line style={->},
+			xlabel style={right},
+			ylabel style={above}
+			]
+			\draw[<->] (axis cs:0,10.1) -- node[above] {Chu kì, $T$} (axis cs:20,10.1);
+			\draw[<->] (axis cs:5,6.1) -- node[above] { $\Delta t$} (axis cs:7.5,6.1);
+			\draw[dashed] (axis cs:5,0) -- (axis cs:5,6.3);
+			\draw[dashed] (axis cs:7.5,0) -- (axis cs:7.5,6.3);
+			% Đồ thị 1 (màu xanh): x1 = 10 cos(2πt/20)
+			\addplot[blue, thick] {10 * cos(deg(2*pi*x/20))};
+			
+			% Đồ thị 2 (màu đỏ): lệch pha trễ 2.5s
+			\addplot[red, dashed] {8 * cos(deg(2*pi*(x - 2.5)/20))};
+			
+		\end{axis}
+	\end{tikzpicture}
+	\loigiai{
+		
+		Đồ thị li độ – thời gian của hai dao động có cùng chu kì
+		\begin{enumerate}
+			
+			\item  Chu kì dao động
+			$T = 20\, \text{s}$
+			
+			\item  Độ lệch thời gian của hai dao động khi cùng trạng thái
+			$\Delta t = 2{,}5\, \text{s}$
+			
+			\item Độ lệch pha
+			Kí hiệu độ lệch pha là $\Delta \varphi$, ta có:
+			
+			$$
+			\Delta \varphi = \dfrac{\Delta t}{T} = \dfrac{2{,}5}{20} = \dfrac{1}{8} \text{ dao động}
+			$$
+			
+			\item Đổi sang đơn vị độ và radian:
+			
+			Một dao động tương ứng với $360^\circ = 2\pi \, \text{rad}$
+			
+			$$
+			\Delta \varphi = 0{,}125 \cdot 360^\circ = 45^\circ
+			$$
+			
+			$$
+			\Delta \varphi = 0{,}125 \cdot 2\pi = \dfrac{\pi}{4} \text{ rad}
+			$$
+			
+			
+		\end{enumerate}
+	}
+	
+\end{ex}
+
+\dangbt{Xác định li độ và pha của dao động tại một thời điểm xác định}
+\begin{ex}
+	\immini{
+		Pha của dao động được dùng để xác định
+		\choice
+		{Biên độ dao động}
+		{\True Trạng thái dao động}
+		{Tần số dao động}
+		{Chu kỳ dao động}}{\begin{tikzpicture}[scale=1.5]
+			% Tâm quay (O)
+			\coordinate (O) at (0,0);
+			
+			% Vị trí (1): lệch góc -70°
+			\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+			
+			% Vị trí (2): thẳng đứng dưới (góc -90°)
+			\coordinate (B) at (0,-2);
+			
+			% Vị trí (3): lệch góc -70°
+			\coordinate (C) at ({2*cos(-60)}, {2*sin(-60)});
+			
+			% Dây treo (1)
+			\draw[thick] (O) -- (A);
+			\fill[red] (A) circle (2pt);
+			\node[below ] at (A) {\small (1)};
+			
+			% Dây treo (2)
+			\draw[thick,dashed] (O) -- (B);
+			\fill[red] (B) circle (2pt);
+			\node[below ] at (B) {\small (2)};
+			
+			% Dây treo (3)
+			\draw[thick,dashed] (O) -- (C);
+			\fill[red] (C) circle (2pt);
+			
+			
+			% Gắn chốt treo
+			\fill[yellow] (O) circle (1.5pt);
+			
+			% Đường cong quỹ đạo từ (1) đến (2)
+			\draw[dashed, gray, ->]
+			([shift={(O)}] -60:2)
+			arc[start angle=-60, end angle=-120, radius=2];
+			
+			% Vẽ góc giữa hai dây tại O
+			\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+			
+		\end{tikzpicture}
+	}
+	\loigiai{
+		\indamm{	Pha dao động}, ký hiệu là {\color{blue}\( \omega t + \varphi \)}, cho biết trạng thái dao động tại thời điểm \( t \), gồm: li độ, vận tốc, gia tốc và chiều chuyển động.
+		
+		\medskip
+		\noindent
+		\begin{minipage}[t]{0.48\textwidth}
+			\centering
+			\textbf{Mô tả bằng con lắc đơn đang đi về VTCB}
+			
+			\begin{tikzpicture}[scale=1.5]
+				% Tâm quay (O)
+				\coordinate (O) at (0,0);
+				
+				% Vị trí (1): lệch góc -70°
+				\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+				
+				% Vị trí (2): thẳng đứng dưới (góc -90°)
+				\coordinate (B) at (0,-2);
+				
+				% Vị trí (3): lệch góc -70°
+				\coordinate (C) at ({2*cos(-60)}, {2*sin(-60)});
+				
+				% Dây treo (1)
+				\draw[thick] (O) -- (A);
+				\fill[red] (A) circle (2pt);
+				\node[below ] at (A) {\small (1)};
+				
+				% Dây treo (2)
+				\draw[thick,dashed] (O) -- (B);
+				\fill[red] (B) circle (2pt);
+				\node[below ,yshift=-4 ] at (B) {\small (2)};
+				
+				% Dây treo (3)
+				\draw[thick,dashed] (O) -- (C);
+				\fill[red] (C) circle (2pt);
+				
+				
+				% Gắn chốt treo
+				\fill[yellow] (O) circle (1.5pt);
+				
+				% Đường cong quỹ đạo từ (1) đến (2)
+				\draw[dashed, gray, ->]
+				([shift={(O)}] -60:2)
+				arc[start angle=-60, end angle=-120, radius=2];
+				\draw[dashed, gray, ->]
+				([shift={(O)}] -120:2.2)
+				arc[start angle=-120, end angle=-90, radius=2.2];
+				
+				% Vẽ góc giữa hai dây tại O
+				\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+				\pic [
+				draw,
+				<-,
+				angle radius=3.8cm,
+				red,
+				] {angle = B--O--A};
+				
+				
+			\end{tikzpicture}
+			
+		\end{minipage}
+		\hfill
+		\begin{minipage}[t]{0.48\textwidth}
+			\centering
+			\textbf{Mô tả bằng vòng tròn lượng giác}
+			\begin{tikzpicture}[scale=2]
+				% Vòng tròn
+				\draw[thick] (0,0) circle(1);
+				
+				% Trục x, y
+				\draw[->] (-1.2,0) -- (1.4,0) node[right] {$x$};
+				\draw[->] (0,-1.2) -- (0,1.2) node[above] {$y$};
+				
+				% Góc pha
+				\draw[->, thick, blue] (0,0) -- ({cos(40)}, {sin(40)});
+				\node at (1.4,0.4) [blue] {\small $\omega t + \varphi=\theta$};
+				
+				
+				% Cung tròn pha từ 0 đến 40 độ, bán kính 1
+				
+				
+				
+				\draw[red, dashed, ->] 
+				([shift={(0, 0)}] 40:1.1) 
+				arc[start angle=40, end angle=270, radius=1.1];
+				\draw[red, thick, ->] 
+				([shift={(0, 0)}] 40:1.1) 
+				arc[start angle=40, end angle=90, radius=1.1];
+				
+				% Đường chiếu xuống trục x
+				\draw[dashed] ({cos(40)}, {sin(40)}) -- ({cos(40)}, 0);
+				\fill[blue] ({cos(40)}, {sin(40)}) circle (1pt);
+				
+				% Biên độ A
+				\node at (1.05,-0.1) {$A$};
+				
+				% Li độ x
+				\draw[thick, red] (0,0) -- ({cos(40)}, 0);
+				\fill[red] ({cos(40)}, 0) circle (1pt);
+				\node[below] at ({cos(40)/2}, -1.1) {\small $x = A\cos{\color{blue}(\omega t + \varphi)}$};
+			\end{tikzpicture}
+			
+		\end{minipage}
+		
+		\medskip
+		\noindent
+		\textbf{Biểu diễn bằng đồ thị hình sin:}
+		
+		
+		\begin{tikzpicture}
+			\begin{axis}[
+				width=12cm, height=4cm,
+				axis lines=middle,
+				xlabel={$t$}, ylabel={$x$},
+				xmin=0, xmax=6.5,
+				ymin=-1.2, ymax=1.8,
+				xtick={0,1,...,6},
+				ytick={-1,0,1},
+				grid=both,
+				samples=200,
+				domain=0:6.5,
+				smooth,
+				thick,
+				axis line style={->},
+				xlabel style={right},
+				ylabel style={above}
+				]
+				
+				% Đồ thị hình sin
+				\addplot[red, thick] {cos(deg(2*pi*x/6 + pi/6))}; % lệch pha pi/6
+				
+				% Dấu chấm tại t=0
+				\addplot[only marks, mark=*, mark size=1.5pt, color=blue] coordinates {(0,{cos(deg(pi/6))})};
+				\draw[blue] (axis cs:0,{cos(deg(pi/6))}) node[above right] {\small $x(0) = A\cos( \varphi)$};
+				
+			\end{axis}
+		\end{tikzpicture}
+		
+		
+		\noindent
+		Với pha ban đầu \( \varphi = \theta \), tại \( t=0 \), ta có vật đang tiến về vị trí cân bằng
+		
+		\medskip
+		Pha  dao động giúp xác định chính xác vật đang ở đâu trên đồ thị, đang đi lên hay đi xuống, và bao lâu đến biên. \\
+		\indamm{Pha dao động giúp ta xác định trạng thái dao động}
+	}
+\end{ex}
+
+\dangbt{Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì}
+\begin{ex}
+	Đại lượng nào dưới đây đặc trưng cho độ lệch về thời gian giữa hai dao động điều hòa cùng chu kì?
+	\choice
+	{Li độ}
+	{Pha}
+	{Pha ban đầu}
+	{\True Độ lệch pha}
+	\loigiai{
+		Độ lệch pha đặc trưng cho độ lệch về thời gian giữa hai dao động điều hòa cùng chu kì.
+	}
+\end{ex}
+
+\dangbt{Chưa có dạng}
+\begin{ex}
+	Trong dao động điều hòa thì nhóm đại lượng nào sau đây không thay đổi theo thời gian?
+	\choice
+	{Li độ và thời gian}
+	{\True Biên độ và tần số góc}
+	{Li độ và pha ban đầu}
+	{Tần số và pha dao động}
+	\loigiai{Biên độ và tần số góc là những đại lượng đặc trưng cho dao động và không thay đổi theo thời gian}
+\end{ex}
+
+\dangbt{Chưa có dạng}
+\begin{ex}
+	Chọn phát biểu sai trong các phương án sau:
+	\choice
+	{Dao động điều hòa thì tuần hoàn}
+	{Dao động là chuyển động qua lại quanh một vị trí đặc biệt gọi là vị trí cân bằng}
+	{\True Dao động điều hòa là dao động trong đó li độ của vật là một hàm $\tan$ (hay $\cot$) của thời gian}
+	{Dao động tuần hoàn là dao động mà trạng thái của vật được lặp lại như cũ, theo hướng cũ sau những khoảng thời gian bằng nhau xác định}
+	\loigiai{
+		Đáp án đúng là phát biểu "Dao động điều hòa là dao động trong đó li độ của vật là một hàm $\tan$ (hay $\cot$) của thời gian." là sai, vì dao động điều hòa được mô tả bởi hàm $\sin$ hoặc $\cos$, không phải $\tan$ hoặc $\cot$.
+	}
+\end{ex}
+
+\dangbt{Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
+\begin{ex}
+	Chu kỳ dao động của một vật được xác định bởi biểu thức:
+	\choice
+	{\True $T=\dfrac{2\pi}{\omega}$}
+	{$T=\dfrac{\omega}{2\pi}$}
+	{$T=2\pi\omega$}
+	{$T=\dfrac{1}{\omega}$}
+	\loigiai{
+		Chu kỳ dao động $T$ được xác định bởi biểu thức $T=\dfrac{2\pi}{\omega}$.
+	}
+\end{ex}
+
+\dangbt{Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).}
+\begin{ex}
+	Đồ thị li độ theo thời gian của dao động điều hòa là một
+	\choice
+	{đoạn thẳng}
+	{đường thẳng}
+	{\True đường hình sin}
+	{đường tròn}
+	\loigiai{
+		
+		
+		\indamm{
+			Dao động điều hoà là dao động trong đó li độ của vật là một hàm côsin (hoặc sin) của thời gian.}
+		
+		\begin{tikzpicture}
+			\begin{axis}[
+				width=7cm, height=4cm,
+				axis lines=middle,
+				xlabel={$t$(s)}, xlabel style={above right},
+				ylabel={$x$(cm)}, ylabel style={above left},
+				xtick={0,0.5,...,4},
+				ytick={-20,-10,0,10,20},
+				xmin=0, xmax=4.2,
+				ymin=-22, ymax=25,
+				samples=200,
+				domain=0:4,
+				grid=both,
+				thick,
+				major grid style={gray!30}]
+				\addplot[red, thick] {20*sin(deg(pi*x+pi/3))};
+			\end{axis}
+		\end{tikzpicture}
+	}
+\end{ex}
+
+\dangbt{Chưa có dạng}
+\begin{ex}
+	Dao động là chuyển động có:
+	\choice
+	{\True giới hạn trong không gian lập đi lập lại nhiều lần quanh một VTCB}
+	{trạng thái chuyển động được lập lại như cũ sau những khoảng thời gian bằng nhau}
+	{lặp đi lặp lại nhiều lần có giới hạn trong không gian}
+	{qua lại hai bên VTCB và không giới hạn không gian}
+	\loigiai{
+		Dao động là chuyển động có giới hạn trong không gian, lập đi lập lại nhiều lần quanh một vị trí cân bằng.\\
+		\indamm{Chuyển động qua lại quanh một vị trí cân bằng được gọi là dao động.}
+	}
+\end{ex}
+
+\dangbt{Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
+\begin{ex}
+	Đại lượng cho biết số dao động mà vật thực hiện được trong 1 s gọi là
+	\choice
+	{pha dao động}
+	{tần số góc}
+	{biên độ}
+	{\True tần số}
+	\loigiai{Tần số là đại lượng cho biết số dao động vật thực hiện trong một đơn vị thời gian, đơn vị là Hertz (Hz)}
+\end{ex}
+
+\dangbt{Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian}
+\begin{ex}
+	\immini{
+		Một người quan sát thấy con lắc đơn gồm một dây dài không giãn và một quả nặng được treo thẳng đứng dao động qua lại quanh một vị trí cân bằng từ vị trí $(1) \rightarrow (2) \rightarrow (3)$ và ngược lại $(3) \rightarrow (2) \rightarrow (1)$ liên tục trong một thời gian dài. Biết thời gian để con lắc đi từ vị trí $(1)$ đến vị trí $(2)$ là $1\,\text{s}$. Hỏi chu kỳ dao động của con lắc đơn là:
+		\choice
+		{\True $4\,\text{s}$}
+		{$2\,\text{s}$}
+		{$8\,\text{s}$}
+		{$1\,\text{s}$}
+	}{
+		\begin{tikzpicture}[scale=1.5]
+			\coordinate (O) at (0,0);
+			\coordinate (A) at ({2*cos(-70)}, {2*sin(-70)});
+			\coordinate (B) at (0,-2);
+			\coordinate (C) at ({2*cos(-110)}, {2*sin(-110)});
+			
+			\draw[thick] (O) -- (A);
+			\fill[red] (A) circle (2pt);
+			\node[below] at (A) {\small (1)};
+			
+			\draw[thick] (O) -- (B);
+			\fill[red] (B) circle (2pt);
+			\node[below] at (B) {\small (2)};
+			
+			\draw[thick] (O) -- (C);
+			\fill[red] (C) circle (2pt);
+			\node[below] at (C) {\small (3)};
+			
+			\fill[yellow] (O) circle (1.5pt);
+			
+			\draw[dashed, gray, ->] ([shift={(O)}] -70:2) arc[start angle=-70, end angle=-110, radius=2];
+			
+			\pic [draw, <-, angle radius=1cm, "$\theta$"] {angle = B--O--A};
+		\end{tikzpicture}
+	}
+	\loigiai{
+		Quãng đường từ $(1) \rightarrow (2)$ chỉ bằng $1/4$ chu kỳ vì:
+		
+		\begin{itemize}
+			\item $(1) \rightarrow (2)$ là từ biên về vị trí cân bằng.
+			\item Quãng đường toàn phần của một dao động: $(1) \rightarrow (2) \rightarrow (3) \rightarrow (2) \rightarrow (1)$.
+		\end{itemize}
+		
+		Vậy:  
+		$$T = 4 \times 1\,\text{s} = 4\,\text{s}.$$
+	}
+\end{ex}
+
+\dangbt{Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động}
+\begin{ex}
+	Chọn phát biểu đúng nhất? Hình chiếu của một chuyển động tròn đều lên một đường kính:
+	\choice
+	{\True là một dao động điều hòa}
+	{được xem là một dao động điều hòa}
+	{là một dao động tuần hoàn}
+	{không được xem là một dao động điều hòa}
+	\loigiai{
+		Hình chiếu của một chuyển động tròn đều lên một đường kính là một dao động điều hòa.
+	}
+\end{ex}
+
+\dangbt{Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).}
+\begin{ex}
+	Đồ thị của dao động điều hòa là:
+	\choice[1]
+	{\True một đường hình $\sin$}
+	{một đường thẳng}
+	{một đường elip}
+	{một đường parabol}
+	\loigiai{
+		Đồ thị của dao động điều hòa là một đường hình $\sin$.
+	}
+\end{ex}
+
+\dangbt{Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ}
+\begin{ex}
+	Một chất điểm dao động điều hòa với phương trình $x=A\cos (\omega t+\varphi)$, trong đó $\omega$ có giá trị dương. Đại lượng $\omega$ gọi là:
+	\choice
+	{Biên độ dao động}
+	{Chu kì của dao động}
+	{\True Tần số góc của dao động}
+	{Pha ban đầu của dao động}
+	\loigiai{Đại lượng $\omega$ là tần số góc của dao động, đơn vị là $\mathrm{rad} / s$}
+\end{ex}
+
+\dangbt{Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động}
+\begin{ex}
+	Dao động điều hòa có thể được coi như hình chiếu của một chuyển động tròn đều xuống một
+	\choice
+	{đường thẳng bất kì}
+	{đường thẳng vuông góc với mặt phẳng quỹ đạo}
+	{đường thẳng xiên góc với mặt phẳng quỹ đạo}
+	{\True đường thẳng nằm trong mặt phẳng quỹ đạo}
+	\loigiai{Dao động điều hòa có thể được coi như hình chiếu của một chuyển động tròn đều xuống một đường thẳng nằm trong mặt phẳng quỹ đạo}
+\end{ex}
