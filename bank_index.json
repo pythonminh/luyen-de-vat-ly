@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12381,
+  "total_questions": 12361,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2891,10 +2891,10 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa",
       "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa",
-      "questions": 356,
-      "count": 356,
+      "questions": 336,
+      "count": 336,
       "dang": {
-        "Chu kì biến thiên của động năng, thế năng": 36,
+        "Chu kì biến thiên của động năng, thế năng": 16,
         "Tính động năng, thế năng và cơ năng của dao động điều hòa": 137,
         "Lý thuyết và sự chuyển hóa năng lượng trong dao động điều hòa": 32,
         "Năng lượng của con lắc đơn": 39,
@@ -2905,8 +2905,8 @@
       },
       "dang_kinds": {
         "Chu kì biến thiên của động năng, thế năng": {
-          "TN": 15,
-          "DS": 15,
+          "TN": 5,
+          "DS": 5,
           "TLN": 3,
           "TL": 3
         },
