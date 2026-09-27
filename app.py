@@ -3156,7 +3156,7 @@ def sort_ids_by_kind(questions, ids, shuffle_within=False):
     return out
 
 def sort_questions_for_study(questions):
-    """Dạng theo thứ tự xuất hiện, rồi NB → TH → VD → VDC, rồi loại câu."""
+    """Dạng theo thứ tự xuất hiện, rồi Phần 1 TN → Phần 2 ĐS → Phần 3 TLN → Phần 4 TL, rồi NB → VDC."""
     dang_order = {}
     for q in questions or []:
         d = str((q or {}).get('dang') or '').strip() or 'Chưa phân dạng'
@@ -3173,7 +3173,7 @@ def sort_questions_for_study(questions):
             idx = int((q or {}).get('idx') or 0)
         except (TypeError, ValueError):
             idx = 0
-        return (dang_order.get(d, 99), level_rank.get(lv, 9), kind_rank.get(k, 99), idx)
+        return (dang_order.get(d, 99), kind_rank.get(k, 99), level_rank.get(lv, 9), idx)
 
     return sorted(list(questions or []), key=key)
 

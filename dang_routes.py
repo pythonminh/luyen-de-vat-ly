@@ -184,6 +184,59 @@ def _sol_block(q):
     inner=html_question(sol, src) if sol else "<div class='muted'>Chưa có lời giải trong file TEX.</div>"
     return f"<div class='solution'><b>📖 Lời giải</b><div>{inner}</div></div>"
 
+_KIND_PARTS = (
+    ('TN', 'Phần 1. Trắc nghiệm'),
+    ('DS', 'Phần 2. Đúng/Sai'),
+    ('TLN', 'Phần 3. Trả lời ngắn'),
+    ('TL', 'Phần 4. Tự luận'),
+)
+
+
+def _study_cards(selected, path, dmap, show_solution, highlight_id):
+    """Trong từng dạng: Phần 1 TN, Phần 2 ĐS, Phần 3 TLN, Phần 4 TL."""
+    labels = dict(_KIND_PARTS)
+    dangs = []
+    for q in selected or []:
+        d = str(q.get('dang') or '').strip() or 'Chưa phân dạng'
+        if d not in dangs:
+            dangs.append(d)
+    multi = len(dangs) > 1
+    bits = []
+    bucket = []
+    prev_d = None
+    prev_k = None
+
+    def flush():
+        if not bucket:
+            return
+        kind = prev_k if prev_k in labels else 'TL'
+        bits.append(
+            f"<h2 class='kindpart k-{html.escape(kind)}'>{html.escape(labels.get(kind, labels['TL']))}"
+            f" <span class='tag'>{len(bucket)} câu</span></h2>"
+        )
+        n = len(bucket)
+        for seq, q in enumerate(bucket, 1):
+            bits.append(_question_card(
+                q, seq, n, q.get('src') or path, (dmap or {}).get(q.get('idx')),
+                show_solution=show_solution, highlight_id=highlight_id,
+            ))
+
+    for q in selected or []:
+        d = str(q.get('dang') or '').strip() or 'Chưa phân dạng'
+        k = str(q.get('kind') or 'TL')
+        if k not in labels:
+            k = 'TL'
+        if bucket and (k != prev_k or d != prev_d):
+            flush()
+            bucket = []
+        if multi and d != prev_d:
+            bits.append(f"<h2 class='dangpart'>{html.escape(d)}</h2>")
+        bucket.append(q)
+        prev_d, prev_k = d, k
+    flush()
+    return ''.join(bits)
+
+
 def _question_card(q, seq, total, path='', dup=None, show_solution=False, highlight_id=''):
     n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
     qid=str(q.get('id') or '').strip() or '—'
@@ -329,7 +382,7 @@ def member_dang():
     cung_n=sum(1 for g in groups if g['type']=='cungde')
     admin_view=can_manage_bank()
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
-    cards=''.join(_question_card(q,i+1,total,q.get('src') or path,dmap.get(q.get('idx')),show_solution=(admin_view or can_do),highlight_id=highlight_id) for i,q in enumerate(selected))
+    cards=_study_cards(selected, path, dmap, admin_view or can_do, highlight_id)
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
@@ -416,7 +469,7 @@ def member_dang():
     find_js=(
         f"<script>let DUPONLY=false,KINDFILTER={json.dumps(kind_filter)};"
         "function vis(c){const box=document.getElementById('findq');const q=(box&&box.value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}"
-        "function filterQ(){document.querySelectorAll('.qcard').forEach(vis);if(typeof upd==='function'&&document.getElementById('sum'))upd()}"
+        "function filterQ(){document.querySelectorAll('.qcard').forEach(vis);function visUntil(h,stops){var n=h.nextElementSibling;while(n){if(stops.some(function(c){return n.classList.contains(c)}))break;if(n.classList.contains('qcard')&&!n.classList.contains('hideq'))return true;n=n.nextElementSibling}return false}document.querySelectorAll('.kindpart').forEach(function(h){h.classList.toggle('hideq',!visUntil(h,['kindpart','dangpart']))});document.querySelectorAll('.dangpart').forEach(function(h){h.classList.toggle('hideq',!visUntil(h,['dangpart']))});if(typeof upd==='function'&&document.getElementById('sum'))upd()}"
         "function bootFind(){const box=document.getElementById('findq');if(box)box.addEventListener('input',filterQ);const p=new URLSearchParams(location.search);const id=(p.get('id')||p.get('qid')||'').trim();const idx=(p.get('idx')||'').trim();function show(el){if(!el)return false;el.classList.add('qhit');el.scrollIntoView({block:'center'});return true}if(id){filterQ();const t=id.toLowerCase();const el=document.querySelector('.qcard.qhit')||Array.prototype.find.call(document.querySelectorAll('.qcard'),function(c){return (c.getAttribute('data-qid')||'')===t});if(show(el))return}if(/^\\d+$/.test(idx)){filterQ();if(show(document.querySelector('.qcard[data-idx=\"'+idx+'\"]')))return}filterQ()}"
     )
     if pick_js:
@@ -452,7 +505,7 @@ def member_dang():
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
-          "<style>.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.qtext{font-size:16px;line-height:1.7;padding:10px 2px;font-family:'Times New Roman',Times,serif;font-weight:400}.opts{display:grid;gap:7px}.opt{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff;display:flex;align-items:center;gap:10px}.opt.ok{background:#e8f8ee;border-color:#42ae6b}.okmark{display:inline-block;min-width:4.6em;text-align:center;margin-left:0;padding:3px 10px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<style>.kindpart{margin:14px 0 2px;padding:8px 12px;border-radius:9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.kindpart .tag{background:#fff;color:#1e3a8a}.kindpart.k-DS{background:#f0fdf4;border-color:#bbf7d0;color:#166534}.kindpart.k-DS .tag{color:#166534}.kindpart.k-TLN{background:#fffbeb;border-color:#fde68a;color:#92400e}.kindpart.k-TLN .tag{color:#92400e}.kindpart.k-TL{background:#fdf2f8;border-color:#fbcfe8;color:#9d174d}.kindpart.k-TL .tag{color:#9d174d}.dangpart{margin:18px 0 0;padding:8px 2px 0;font-size:15px;color:#0f172a;border-top:1px solid #dbe4ee}.questions>.dangpart:first-child{border-top:0;margin-top:4px}.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.qtext{font-size:16px;line-height:1.7;padding:10px 2px;font-family:'Times New Roman',Times,serif;font-weight:400}.opts{display:grid;gap:7px}.opt{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff;display:flex;align-items:center;gap:10px}.opt.ok{background:#e8f8ee;border-color:#42ae6b}.okmark{display:inline-block;min-width:4.6em;text-align:center;margin-left:0;padding:3px 10px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           + find_js + rw_js
           )
     return page('Chọn câu' if can_do else 'Xem đề',body)
