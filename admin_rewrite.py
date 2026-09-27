@@ -1514,8 +1514,167 @@ def api_lesson_image():
     return jsonify(ok=True, note=note)
 
 
+def _clean_tikz_code(raw):
+    code = str(raw or "").strip()
+    if len(code) > 20000:
+        raise ValueError("Mã TikZ quá dài.")
+    if not re.search(r"\\begin\s*\{\s*tikzpicture\b", code, re.I):
+        raise ValueError("Chưa thấy \\begin{tikzpicture}.")
+    if re.search(r"\\(?:begin|end)\s*\{\s*(?:ex|bt|document)\s*\}", code, re.I):
+        raise ValueError("Mã TikZ không được bọc cả câu.")
+    return code
+
+
+def _lesson_tikz_items(src):
+    src = str(src or "").replace("\\", "/").strip()
+    if not src.startswith("ngan-hang/") or not src.lower().endswith(".tex"):
+        raise ValueError("File không hợp lệ.")
+    folder = base.lesson_folder(src)
+    _p, local = base._safe_repo_file(folder)
+    if not str(_p).startswith("ngan-hang/"):
+        raise ValueError("Bài không hợp lệ.")
+    items = []
+    seen = set()
+
+    def add(code, name, stored):
+        if len(items) >= 24:
+            return
+        try:
+            code = _clean_tikz_code(code)
+        except ValueError:
+            return
+        hid = base.tikz_hash(code)
+        if hid in seen:
+            return
+        seen.add(hid)
+        base.tikz_remember(code)
+        items.append(
+            {
+                "hid": hid,
+                "name": str(name or "TikZ")[:48],
+                "url": "/tikz/" + hid + ".png",
+                "code": code,
+                "stored": bool(stored),
+            }
+        )
+
+    if local.is_dir():
+        tikz_dir = local / "tikz"
+        if tikz_dir.is_dir():
+            for child in sorted(tikz_dir.glob("*.tex"), key=lambda p: p.name.lower()):
+                try:
+                    if child.stat().st_size > 30000:
+                        continue
+                    add(child.read_text(encoding="utf-8", errors="replace"), child.stem, True)
+                except OSError:
+                    continue
+        for child in sorted(local.glob("*.tex"), key=lambda p: p.name.lower()):
+            try:
+                if child.stat().st_size > 800000:
+                    continue
+                text = child.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            n = 0
+            for m in base.TIKZ_RE.finditer(text):
+                n += 1
+                add(m.group(0), child.stem + " · " + str(n), False)
+                if len(items) >= 24:
+                    break
+            if len(items) >= 24:
+                break
+    return items
+
+
+def _insert_question_tikz(src, fi, code):
+    code = _clean_tikz_code(code)
+    q, tex = _load_q(src, fi)
+    if not q:
+        raise ValueError("Không tìm thấy câu.")
+    new_tex = None
+    for i, m in enumerate(base.EX_RE.finditer(tex)):
+        if i != fi:
+            continue
+        inner = m.group(1)
+        head, tail = _split_head_tail(inner)
+        comments, stem = _split_comments(head)
+        if code in stem:
+            base.tikz_remember(code)
+            return "Câu đã có mã TikZ này."
+        stem = code + "\n" + stem.strip()
+        head_out = ((comments.rstrip() + "\n") if comments.strip() else "") + stem.strip() + "\n"
+        new_tex = _replace_ex(tex, fi, head_out + (tail or ""))
+        break
+    if new_tex is None:
+        raise ValueError("Không chèn được mã TikZ.")
+    sha, _ = base.read_tex(src, need_sha=True)
+    from admin_classify import _write_tex
+
+    note = _write_tex(src, new_tex, "ADMIN chèn TikZ " + src, sha) or ""
+    base.tikz_remember(code)
+    try:
+        from dang_routes import _STATS_CACHE, _QID_CACHE
+
+        _STATS_CACHE.clear()
+        _QID_CACHE.clear()
+    except Exception:
+        pass
+    return note
+
+
+def _store_lesson_tikz(src, code):
+    code = _clean_tikz_code(code)
+    folder = base.lesson_folder(src).rstrip("/")
+    if not folder.startswith("ngan-hang/"):
+        raise ValueError("Bài không hợp lệ.")
+    name = "t-" + base.tikz_hash(code)[:10] + ".tex"
+    rel = folder + "/tikz/" + name
+    sha = None
+    try:
+        sha = base.github_file_sha(rel) or None
+    except Exception:
+        sha = None
+    from admin_classify import _write_tex
+
+    note = _write_tex(rel, code + "\n", "ADMIN cất mã TikZ " + name, sha) or ""
+    base.tikz_remember(code)
+    return {"file": "tikz/" + name, "name": name[:-4], "note": note}
+
+
+@base.app.get("/api/admin/lesson-tikz")
+def api_lesson_tikz():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    src = str(request.args.get("src") or "").replace("\\", "/").strip()
+    try:
+        items = _lesson_tikz_items(src)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, items=items)
+
+
+@base.app.post("/api/admin/lesson-tikz")
+def api_lesson_tikz_act():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or "").replace("\\", "/").strip()
+    action = str(data.get("action") or "").strip().lower()
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    try:
+        if action == "store":
+            saved = _store_lesson_tikz(src, data.get("code") or "")
+            return jsonify(ok=True, **saved)
+        fi = int(data.get("file_idx"))
+        note = _insert_question_tikz(src, fi, data.get("code") or "")
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, note=note)
+
+
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -2158,6 +2317,87 @@ document.addEventListener('change',function(e){
   const f=inp.files&&inp.files[0];
   inp.value='';
   if(box&&f) rwUploadImg(box, f);
+});
+async function rwLoadTikz(box){
+  box.innerHTML='<div class="muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
+  try{
+    const r=await fetch('/api/admin/lesson-tikz?src='+encodeURIComponent(box.getAttribute('data-src')||''),{credentials:'same-origin'});
+    const d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không mở được mã TikZ.')+'</div>';return;}
+    box._tikz={};
+    let h='<div class="muted">Mã TikZ trong thư mục tikz/ của bài và mã đã có trong file TEX. Bấm hình để chèn vào câu. Cất để giữ mã vào thư mục.</div><div class="rwimggrid">';
+    (d.items||[]).forEach(function(im){
+      box._tikz[im.hid]=im.code||'';
+      h+='<div class="rwtikzpick" data-hid="'+esc(im.hid)+'"><img alt="" src="'+esc(im.url)+'" loading="lazy"><small>'+esc(im.name)+'</small>';
+      if(!im.stored) h+='<button type="button" class="btn mini rwtikzsave" data-hid="'+esc(im.hid)+'">Cất</button>';
+      h+='</div>';
+    });
+    h+='</div>';
+    if(!(d.items||[]).length) h+='<div class="muted">Bài này chưa có mã TikZ. Vẽ trong đề bằng \\begin{tikzpicture}...\\end{tikzpicture} rồi mở lại.</div>';
+    box.innerHTML=h;
+  }catch(err){box.innerHTML='<div class="err">'+esc(err)+'</div>';}
+}
+async function rwUseTikz(box, hid, store){
+  const code=(box._tikz&&box._tikz[hid])||'';
+  if(!code){alert('Không thấy mã TikZ.');return;}
+  if(store){
+    try{
+      const r=await fetch('/api/admin/lesson-tikz',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({src:box.getAttribute('data-src')||'',action:'store',code:code})});
+      const d=await r.json();
+      if(!d.ok){alert(d.error||'Không cất được');return;}
+      rwLoadTikz(box);
+    }catch(err){alert(String(err&&err.message||err));}
+    return;
+  }
+  const bar=box.closest('.rwbar');
+  const out=bar&&bar.querySelector('.rwout');
+  const ta=out&&out.querySelector('[data-ta=stem]');
+  if(ta){
+    if(ta.value.indexOf(code)>=0){alert('Ô đề đã có mã này.');return;}
+    rwPut(ta, code+'\n');
+    return;
+  }
+  if(!confirm('Chèn mã TikZ này vào câu và ghi TEX?')) return;
+  try{
+    const r=await fetch('/api/admin/lesson-tikz',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0),action:'insert',code:code})});
+    const d=await r.json();
+    if(!d.ok){alert(d.error||'Không chèn được');return;}
+    rwShowSaved(out||box, '✅ Đã chèn mã TikZ vào câu.');
+  }catch(err){alert(String(err&&err.message||err));}
+}
+document.addEventListener('click',function(e){
+  const save=e.target.closest&&e.target.closest('.rwtikzsave');
+  if(save){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=save.closest('.rwtikzbox');
+    if(box) rwUseTikz(box, save.getAttribute('data-hid')||'', true);
+    return;
+  }
+  const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
+  if(openBtn){
+    e.preventDefault();
+    const bar=openBtn.closest('.rwbar');
+    if(!bar) return;
+    const old=bar.querySelector('.rwtikzbox');
+    if(old){old.remove();return;}
+    const p=dropOf(openBtn);
+    if(!p) return;
+    const box=document.createElement('div');
+    box.className='rwtikzbox';
+    box.setAttribute('data-src', p.src);
+    box.setAttribute('data-fi', String(p.fi));
+    const out=bar.querySelector('.rwout');
+    if(out) out.insertAdjacentElement('afterend', box);
+    else bar.appendChild(box);
+    rwLoadTikz(box);
+    return;
+  }
+  const pick=e.target.closest&&e.target.closest('.rwtikzpick');
+  if(!pick) return;
+  e.preventDefault();
+  const box=pick.closest('.rwtikzbox');
+  if(box) rwUseTikz(box, pick.getAttribute('data-hid')||'', false);
 });
 document.addEventListener('click',async function(e){
   const btn=e.target.closest&&e.target.closest('#aiGap');
