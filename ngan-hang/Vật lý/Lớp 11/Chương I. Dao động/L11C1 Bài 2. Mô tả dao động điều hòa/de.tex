@@ -177,50 +177,41 @@ Với $x=6\cos(4\pi t+\pi/3)$ cm, pha tại $t=1/6$ s là
 {$5\pi/3$ rad}
 \end{ex}
 \dangbt{Chu kỳ,tần số,tần số góc, pha dao động}
-\begin{ex}Đồ thị hình bên mô tả sự thay đổi của động năng theo li độ của một quả cầu có khối lượng $0,4 \text{ kg}$ trong con lắc lò xo treo thẳng đứng.
-\begin{tikzpicture}
-\begin{axis}[
-    width=9cm,
-    height=6cm,
-    axis lines=middle,
-    xmin=-5, xmax=5,
-    ymin=-5, ymax=85,
-    xlabel={$x\,(\mathrm{cm})$},
-    ylabel={$W_{\mathrm{đ}}\,(\mathrm{mJ})$},
-    xlabel style={below right},
-    ylabel style={above left},
-    xtick={-4,0,4},
-    xticklabels={$-4,O,4$},
-    ytick={0,80},
-    yticklabels={$0,80$},
-    axis line style={->},
-    tick style={black},
-    samples=100,
-    smooth
-]
-\addplot[
-    thick,
-    domain=-4:4
-]
-{80*(1-(x/4)^2)};
-\end{axis}
-\end{tikzpicture}
-Hãy xác định:
-a) Cơ năng của con lắc.
-b) Tốc độ cực đại của quả cầu.
-c) Thế năng của con lắc lò xo khi quả cầu có li độ $2 \text{ cm}$.
+\begin{ex}Hai chất điểm dao động với đồ thị như hình bên (x tính bằng $\mathrm{~cm},\ t$ tính bằng s).
+		Hai chất điểm này dao động với độ lệch pha theo độ là:
+		\begin{tikzpicture}[scale=0.8]
+			\begin{axis}[
+				width=14cm,
+				height=7cm,
+				axis lines=middle,
+				xlabel={$t\ (\text{s})$}, xlabel style={above right},
+				ylabel={$x\ (\text{cm})$}, ylabel style={above right},
+				xtick={0,0.5,...,4},
+				ytick={-20,-10,0,10,20},
+				xmin=0, xmax=4.2,
+				ymin=-22, ymax=25,
+				samples=200,
+				domain=0:4,
+				thick,
+				grid=both,
+				grid style={line width=.1pt, draw=gray!30},
+				major grid style={line width=.2pt,draw=gray!50},
+				enlargelimits=false,
+				clip=false, scale=0.5
+				]
+				\addplot[red, thick, dashed] {20*sin(deg(pi*x))};
+				\addplot[blue, thick] {20*sin(deg(pi*x + pi))};
+			\end{axis}
+		\end{tikzpicture}
+	\shortans{180}
 \loigiai{
-a) Từ đồ thị, động năng cực đại của con lắc là $W_{đmax} = 80 \text{ mJ}$.
-Cơ năng của con lắc bằng động năng cực đại:
-$W = W_{đmax} = 80 \text{ mJ}$.
-b) Tốc độ cực đại của quả cầu được tính theo công thức:
-$W_{đmax} = \frac{1}{2}mv_{max}^2 \Rightarrow v_{max} = \sqrt{\frac{2W_{đmax}}{m}}$
-Thay số với $W_{đmax} = 80 \text{ mJ} = 0,08 \text{ J}$ và $m = 0,4 \text{ kg}$:
-$v_{max} = \sqrt{\frac{2 \times 0,08}{0,4}} = \sqrt{\frac{0,16}{0,4}} = \sqrt{0,4} \approx 0,632 \text{ m/s}$.
-c) Từ đồ thị, biên độ dao động là $A = 4 \text{ cm}$.
-Độ cứng của lò xo:
-$W = \frac{1}{2}kA^2 \Rightarrow k = \frac{2W}{A^2} = \frac{2 \times 0,08}{(0,04)^2} = \frac{0,16}{0,0016} = 100 \text{ N/m}$.
-Khi quả cầu có li độ $x = 2 \text{ cm} = 0,02 \text{ m}$, thế năng của con lắc là:
-$W_t = \frac{1}{2}kx^2 = \frac{1}{2} \times 100 	imes (0,02)^2 = 50 \times 0,0004 = 0,02 \text{ J} = 20 \text{ mJ}$.
+\begin{itemize}
+			\item Phương trình dao động chất điểm 1 (nét đứt): $x_1 = 20\sin(\pi t)$.
+			\item Phương trình dao động chất điểm 2 (nét liền): $x_2 = 20\sin(\pi t + \pi)$.
+			\item Ta có: $\sin(\pi t + \pi) = -\sin(\pi t)\Rightarrow$ hai dao động ngược pha nhau.
+			\item Ngược pha có nghĩa là độ lệch pha giữa hai dao động là $\pi$ rad.
+			\item Đổi sang độ: $\pi\ \text{rad} = 180^\circ$.
+		\end{itemize}
+		\textbf{Vậy hai chất điểm dao động lệch pha nhau $180^\circ$.}
 }
 \end{ex}
