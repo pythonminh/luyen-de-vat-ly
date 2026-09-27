@@ -1050,6 +1050,29 @@ def dang_view_url(path, dang='', kind='', muc=''):
     if muc:
         url+='&muc='+urllib.parse.quote(muc, safe='')
     return url
+
+def safe_member_back(raw):
+    """Chỉ nhận link nội bộ về đúng dạng / bài đang xem."""
+    s=str(raw or '').replace('\\','/').strip()
+    if not s.startswith('/') or s.startswith('//') or any(c in s for c in ('\n','\r','\x00')):
+        return ''
+    path=s.split('?',1)[0]
+    if path not in ('/member/dang','/member/select','/member/practice','/member/go-kind'):
+        return ''
+    return s
+
+def edit_tex_href(src, line=0, back=''):
+    href='/admin/edit?path='+urllib.parse.quote(str(src or ''), safe='')
+    try:
+        line=int(line or 0)
+    except (TypeError, ValueError):
+        line=0
+    if line>0:
+        href+='&line='+str(line)
+    back=safe_member_back(back)
+    if back:
+        href+='&back='+urllib.parse.quote(back, safe='')
+    return href
 def view_only_notice_html(m=None, login_next='/member'):
     if not m:
         return ("<div class='notice'>👁 Bạn đang <b>xem đề</b> — chưa đăng nhập nên không làm bài. "
@@ -3432,9 +3455,9 @@ def admin_dang_bar_html(path, qs, dang=''):
     counts = per.get(dang) if dang else allc
     counts = counts or {k: 0 for k in KIND_ORDER}
     src, line = dang_tex_anchor(path, dang, qs=qs)
-    href = '/admin/edit?path=' + urllib.parse.quote(src, safe='')
-    if line:
-        href += '&line=' + str(int(line))
+    kind_q = str(request.args.get("kind") or "")
+    muc_q = str(request.args.get("muc") or "")
+    href = edit_tex_href(src, line, dang_view_url(path, dang, kind_q, muc_q))
     missing = [lab for k, lab in KIND_CHIP_LABS if int(counts.get(k) or 0) == 0]
     over = kind_over_max(counts) if dang else {}
     over_labs = [lab for k, lab in KIND_CHIP_LABS if over.get(k)]
@@ -4065,7 +4088,7 @@ function toggleHint(){
   typeset(box);
 }
 function openSolution(){if(!IS_ADMIN && !checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display=box.style.display==='block'?'none':'block';if(box.style.display==='block') typeset(box);let b=document.getElementById('solbtn');if(b&&!IS_ADMIN)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite();ldvlRemountSpeak()}
-function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrSim">🔁 Phát triển từ câu</button> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button> <button type="button" class="btn mini rwimgs" data-drop="'+Q.src+'||'+Q.file_idx+'">🖼 Ảnh thư mục</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrSim').onclick=function(){if(window.ldvlAdminSimilar)ldvlAdminSimilar(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');if(location.pathname.indexOf('/member/')===0)texHref+='&back='+encodeURIComponent(location.pathname+location.search);r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrSim">🔁 Phát triển từ câu</button> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button> <button type="button" class="btn mini rwimgs" data-drop="'+Q.src+'||'+Q.file_idx+'">🖼 Ảnh thư mục</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrSim').onclick=function(){if(window.ldvlAdminSimilar)ldvlAdminSimilar(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<div class="aispeak"><button type="button" class="btn spk-f">Nữ</button><button type="button" class="btn spk-m">Nam</button><button type="button" class="btn primary spk-play">▶ Đọc</button><button type="button" class="btn spk-pause">⏸ Dừng</button><span class="spkmsg">Bấm mục cần đọc</span></div><p style="margin-top:8px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();if(window.ldvlSpeak&&window.ldvlSpeak.bind)window.ldvlSpeak.bind();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}
@@ -4480,6 +4503,15 @@ def admin_edit():
         q='saved=1' if not gh_err else 'saved=1&gher='+urllib.parse.quote(gh_err[:180])
         if not TOKEN:
             q='saved=1&gher='+urllib.parse.quote('Chưa có GITHUB_TOKEN trên Render — đã lưu máy, chưa lên GitHub.')
+        back_keep=safe_member_back(request.form.get('back'))
+        if back_keep:
+            q += '&back='+urllib.parse.quote(back_keep, safe='')
+        try:
+            line_keep=int(request.form.get('line') or 0)
+        except (TypeError, ValueError):
+            line_keep=0
+        if line_keep>0:
+            q += '&line='+str(line_keep)
         return redirect('/admin/edit?path='+urllib.parse.quote(p,safe='')+'&'+q)
     try:sha,txt=read_tex(p, need_sha=True)
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
@@ -4515,12 +4547,14 @@ def admin_edit():
     except Exception as e:
         companion_bar="<div class='err'>Không mở được sửa từng mục: "+html.escape(str(e)[:240])+"</div>"
     kn=str(p or '').replace('\\','/').rsplit('/',1)[-1].lower()
+    back_here=safe_member_back(request.args.get('back'))
     if kn=='lt.tex':
         back_btn="<a class='btn' href='/admin/ly-thuyet'>← Duyệt LT</a>"
     elif kn=='pp.tex':
         back_btn="<a class='btn' href='/admin/ly-thuyet'>← Duyệt dạng mẫu</a>"
     else:
-        back_btn="<a class='btn' href='"+html.escape(dang_view_url(p), quote=True)+"'>← Về bài tập</a>"
+        back_dest=back_here or dang_view_url(p)
+        back_btn="<a class='btn' href='"+html.escape(back_dest, quote=True)+"'>← Về đúng bài</a>"
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>✏️ ADMIN · Sửa TEX ngay trên trang này</div><div class='body'>"
         "<div class='meta'><code>"+html.escape(p)+"</code></div>"+notice+companion_bar
@@ -4528,6 +4562,8 @@ def admin_edit():
         "<form method='post' class='edittex'>"
         "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
         "<input type='hidden' name='sha' value='"+html.escape(sha,quote=True)+"'>"
+        "<input type='hidden' name='back' value='"+html.escape(back_here,quote=True)+"'>"
+        "<input type='hidden' name='line' value='"+html.escape(str(jump or ''),quote=True)+"'>"
         "<div class='editbar'><input name='message' value='ADMIN cập nhật TEX' style='flex:1;min-width:12rem;padding:9px;border:1px solid #cbd8e6;border-radius:7px'>"
         "<button class='btn green' type='submit'>💾 Lưu</button> "
         + back_btn + "</div>"

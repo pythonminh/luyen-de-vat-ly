@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from flask import request, jsonify, redirect, session
-from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, develop_reference_html, dup_index_by_question, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nest_developments, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
+from app import TOKEN, _safe_repo_file, admin_current, app, can_access, can_manage_bank, can_practice, can_view, dang_view_url, develop_reference_html, dup_index_by_question, edit_tex_href, find_duplicate_groups, github_blob_url, github_put_text, html_question, index_data, lesson_switch_html, login_url, member_current, muc_label, nest_developments, nguon_html, norm_muc, page, parse_lesson_questions, parse_questions, read_tex, sort_ids_by_kind, sort_questions_by_kind, sort_questions_for_study, tex_without_questions, view_only_notice_html
 
 _STATS_CACHE = {}
 _STATS_TTL = 300
@@ -184,9 +184,16 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     gh=''
     tex_badge=f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>"
     if can_manage_bank() and src:
-        edit_href='/admin/edit?path='+urllib.parse.quote(src,safe='')
-        if line:
-            edit_href+='&line='+str(line)
+        try:
+            q_idx=int(q.get('file_idx') if q.get('file_idx') is not None else n)
+        except (TypeError, ValueError):
+            q_idx=int(n or 0)
+        view_path=str(request.args.get('path') or src or '').replace('\\','/')
+        back=dang_view_url(view_path, request.args.get('dang') or '', request.args.get('kind') or '', request.args.get('muc') or '')
+        if qid and qid != '—':
+            back += '&id='+urllib.parse.quote(qid, safe='')
+        back += '&idx='+str(q_idx)
+        edit_href=edit_tex_href(src, line, back)
         tex_badge=f"<a class='btn mini metafile' href='{_esc(edit_href)}'>✏️ TEX Câu {html.escape(str(cau))} · STT file {n+1}</a>"
         if line:
             gh=f" <a class='btn mini' href='{_esc(github_blob_url(src))}#L{line}' target='_blank' rel='noopener'>GitHub dòng {line}</a>"
@@ -211,7 +218,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     if can_manage_bank() and dup.get('extra'):
         xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' checked> Xóa bản trùng này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
-    return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+    return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
@@ -346,7 +353,7 @@ def member_dang():
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
-          + f"<a class='btn' href='{_esc('/admin/edit?path='+urllib.parse.quote(path,safe=''))}'>✏️ Sửa file TEX</a>"
+          + f"<a class='btn' href='{_esc(edit_tex_href(path, 0, dang_view_url(path, dang, kind_filter, muc)))}'>✏️ Sửa file TEX</a>"
           + exam_btns
           + find_box
           + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
@@ -367,7 +374,7 @@ def member_dang():
         f"<script>let DUPONLY=false,KINDFILTER={json.dumps(kind_filter)};"
         "function vis(c){const box=document.getElementById('findq');const q=(box&&box.value||'').trim().toLowerCase();const dup=c.getAttribute('data-dup')==='1';const miss=!!q&&!(c.getAttribute('data-find')||'').includes(q);const missK=!!KINDFILTER&&c.getAttribute('data-kind')!==KINDFILTER;c.classList.toggle('hideq',miss||missK||(DUPONLY&&!dup))}"
         "function filterQ(){document.querySelectorAll('.qcard').forEach(vis);if(typeof upd==='function'&&document.getElementById('sum'))upd()}"
-        "function bootFind(){const box=document.getElementById('findq');if(!box)return;box.addEventListener('input',filterQ);const p=new URLSearchParams(location.search);const id=(p.get('id')||p.get('qid')||'').trim();if(id){if(!box.value)box.value=id;filterQ();const t=id.toLowerCase();const el=document.querySelector('.qcard.qhit')||Array.prototype.find.call(document.querySelectorAll('.qcard:not(.hideq)'),function(c){return (c.getAttribute('data-qid')||'')===t})||document.querySelector('.qcard:not(.hideq)');if(el){el.classList.add('qhit');el.scrollIntoView({block:'center'})}}else{filterQ()}}"
+        "function bootFind(){const box=document.getElementById('findq');if(box)box.addEventListener('input',filterQ);const p=new URLSearchParams(location.search);const id=(p.get('id')||p.get('qid')||'').trim();const idx=(p.get('idx')||'').trim();function show(el){if(!el)return false;el.classList.add('qhit');el.scrollIntoView({block:'center'});return true}if(id){filterQ();const t=id.toLowerCase();const el=document.querySelector('.qcard.qhit')||Array.prototype.find.call(document.querySelectorAll('.qcard'),function(c){return (c.getAttribute('data-qid')||'')===t});if(show(el))return}if(/^\\d+$/.test(idx)){filterQ();if(show(document.querySelector('.qcard[data-idx=\"'+idx+'\"]')))return}filterQ()}"
     )
     if pick_js:
         find_js += (
