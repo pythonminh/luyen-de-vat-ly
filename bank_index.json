@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12580,
+  "total_questions": 12570,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -3991,14 +3991,14 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
-      "questions": 19,
-      "count": 19,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Quá trình chuyển pha": 19
+        "Quá trình chuyển pha": 18
       },
       "dang_kinds": {
         "Quá trình chuyển pha": {
-          "TN": 9,
+          "TN": 8,
           "DS": 3,
           "TLN": 3,
           "TL": 4
@@ -4014,11 +4014,11 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 41,
-      "count": 41,
+      "questions": 40,
+      "count": 40,
       "dang": {
         "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 13,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26,
+        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 25,
         "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 2
       },
       "dang_kinds": {
@@ -4029,7 +4029,7 @@
           "TL": 0
         },
         "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
-          "TN": 23,
+          "TN": 22,
           "DS": 3,
           "TLN": 0,
           "TL": 0
@@ -4051,19 +4051,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 8,
-      "count": 8,
-      "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 8
-      },
-      "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
-          "TN": 3,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 1
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Ôn tập 2.tex",
