@@ -4433,21 +4433,14 @@
       "questions": 21,
       "count": 21,
       "dang": {
-        "Khái niệm nhiệt độ": 18,
-        "Thang nhiệt độ và nhiệt kế": 3
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 21
       },
       "dang_kinds": {
-        "Khái niệm nhiệt độ": {
-          "TN": 9,
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": {
+          "TN": 12,
           "DS": 2,
           "TLN": 3,
           "TL": 4
-        },
-        "Thang nhiệt độ và nhiệt kế": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
         }
       }
     },
