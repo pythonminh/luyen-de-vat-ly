@@ -3300,3 +3300,187 @@ c) Sai. Số mol khí $n=\dfrac{p_1V}{RT_1}=\dfrac{3,41.10^5.1,5}{8,31.276}\appr
 d) Đúng. Các phân tử khí va chạm vào thành lốp gây ra áp suất khí lên lốp
 }
 \end{ex}
+\dangbt{Lý thuyết về nhiệt độ và cân bằng nhiệt}
+\begin{ex}
+		Khi ô tô đóng kín cửa để ngoài trời nắng nóng, nhiệt độ không khí trong xe tăng rất cao so với nhiệt độ bên ngoài, làm giảm tuổi thọ các thiết bị trong xe. Nguyên nhân gây ra sự tăng nhiệt độ này là do
+		{\begin{tikzpicture}[line join=round, line cap=round, >=stealth, scale=0.3]
+				
+				\path[fill=blue!] (5.58,11.57) -- (7.65,11.57).. controls (11.26,11.57)
+				and (11.37,7.12) .. (11.37,6.61) -- (11.78,6.61).. controls (11.78,7.16) and (11.68,11.99) .. (7.86,11.99) -- (5.38,11.99).. controls (3.9,11.99) and (1.45,11.29) .. (1.45,6.61) -- (1.86,6.61).. controls (1.86,9.81) and (3.18,11.57) .. (5.58,11.57) -- cycle;
+				
+				%đầu xe
+				\path[fill=blue!40!orange] (11.99,6.2) -- (1.24,6.2).. controls (0.78,6.2) and
+				(0.41,5.83) .. (0.41,5.38) -- (0.41,3.31).. controls (0.41,2.85) and (0.78,2.48) .. (1.24,2.48) -- (11.99,2.48).. controls (12.45,2.48) and (12.82,2.85) .. (12.82,3.31) -- (12.82,5.38).. controls (12.82,5.83) and (12.45,6.2) .. (11.99,6.2) -- cycle;
+				
+				\path[fill=blue!3](10.46,9.22).. controls (9.9,10.51) and (8.96,11.16) .. (7.65,11.16) -- (5.58,11.16).. controls (4.08,11.16) and (2.27,10.38) .. (2.27,6.61) -- (3.31,6.61).. controls (3.31,7.53) and (4.05,8.27) .. (4.96,8.27).. controls (5.88,8.27) and (6.61,7.53) .. (6.61,6.61) -- (10.96,6.61).. controls (10.96,6.95) and (10.92,8.13) ..
+				(10.46,9.22) -- cycle;
+				
+				\path[fill=white] (4.96,7.86).. controls (4.28,7.86) and (3.72,7.3)
+				.. (3.72,6.61) -- (6.2,6.61).. controls (6.2,7.3) and (5.64,7.86)
+				.. (4.96,7.86) -- cycle;
+				
+				%viền ngoài
+				\path[fill=cyan!30](12.2,6.59).. controls (12.2,6.6) and (12.2,6.61) .. (12.2,6.61).. controls (12.2,7.21) and (12.07,12.4) ..
+				(7.86,12.4) -- (5.38,12.4).. controls (2.62,12.4) and (1.03,10.29) ..
+				(1.03,6.61).. controls (1.03,6.61) and (1.04,6.6) .. (1.04,6.59)..
+				controls (0.45,6.5) and (0,5.99) .. (0,5.38) -- (0,3.31).. controls
+				(0,2.62) and (0.56,2.07) .. (1.24,2.07) -- (1.24,1.03).. controls (1.24,0.92) and (1.33,0.82) .. (1.45,0.82) -- (3.1,0.82).. controls (3.21,0.82) and (3.31,0.92) .. (3.31,1.03) -- (3.31,2.07) -- (9.93,2.07) --
+				(9.93,1.03).. controls (9.93,0.92) and (10.01,0.82) .. (10.13,0.82) --
+				(11.78,0.82).. controls (11.89,0.82) and (11.99,0.92) .. (11.99,1.03) --
+				(11.99,2.07).. controls (12.68,2.07) and (13.23,2.62) .. (13.23,3.31) --
+				(13.23,5.38).. controls (13.23,5.99) and (12.78,6.5) .. (12.2,6.59) --
+				cycle (5.38,11.99) -- (7.86,11.99).. controls (11.68,11.99) and (11.78,7.16) .. (11.78,6.61) -- (11.37,6.61).. controls (11.37,7.12) and
+				(11.26,11.57) .. (7.65,11.57) -- (5.58,11.57).. controls (3.18,11.57) and
+				(1.86,9.81) .. (1.86,6.61) -- (1.45,6.61).. controls (1.45,11.29) and
+				(3.9,11.99) .. (5.38,11.99) -- cycle (4.96,8.27).. controls (4.05,8.27)
+				and (3.31,7.53) .. (3.31,6.61) -- (2.27,6.61).. controls (2.27,10.38)
+				and (4.08,11.16) .. (5.58,11.16) -- (7.65,11.16).. controls (8.96,11.16)
+				and (9.9,10.51) .. (10.46,9.22).. controls (10.92,8.13) and (10.96,6.95) .. (10.96,6.61) -- (6.61,6.61).. controls (6.61,7.53) and
+				(5.88,8.27) .. (4.96,8.27) -- cycle (6.2,6.61) -- (3.72,6.61)..
+				controls (3.72,7.3) and (4.28,7.86) .. (4.96,7.86).. controls (5.64,7.86) and (6.2,7.3) .. (6.2,6.61) -- cycle (2.9,1.24) -- (1.66,1.24)
+				-- (1.66,2.07) -- (2.9,2.07) -- (2.9,1.24) -- cycle (11.57,1.24) --
+				(10.34,1.24) -- (10.34,2.07) -- (11.57,2.07) -- (11.57,1.24) --
+				cycle (12.82,3.31).. controls (12.82,2.85) and (12.45,2.48) .. (11.99,2.48)
+				-- (1.24,2.48).. controls (0.78,2.48) and (0.41,2.85) .. (0.41,3.31) --
+				(0.41,5.38).. controls (0.41,5.83) and (0.78,6.2) .. (1.24,6.2) -- (11.99,6.2).. controls (12.45,6.2) and (12.82,5.83) .. (12.82,5.38) -- (12.82,3.31) -- cycle;
+				
+				\path[fill=white,opacity=0.5](2.27,5.17).. controls (1.82,5.17) and (1.45,4.79) ..
+				(1.45,4.34).. controls (1.45,3.89) and (1.82,3.52) .. (2.27,3.52)..
+				controls (2.73,3.52) and (3.1,3.89) .. (3.1,4.34).. controls (3.1,4.79)
+				and (2.73,5.17) .. (2.27,5.17) -- cycle (2.27,3.92).. controls (2.04,3.92)
+				and (1.86,4.11) .. (1.86,4.34).. controls (1.86,4.57) and (2.04,4.75) ..
+				(2.27,4.75).. controls (2.5,4.75) and (2.69,4.57) .. (2.69,4.34)..
+				controls (2.69,4.11) and (2.5,3.92) .. (2.27,3.92) -- cycle;
+				
+				\path[fill=white,opacity=0.5] (10.96,5.17).. controls (10.5,5.17) and (10.13,4.79)
+				.. (10.13,4.34).. controls (10.13,3.89) and (10.5,3.52) .. (10.96,3.52)..
+				controls (11.41,3.52) and (11.78,3.89) .. (11.78,4.34).. controls (11.78,4.79) and (11.41,5.17) .. (10.96,5.17) -- cycle (10.96,3.92).. controls
+				(10.72,3.92) and (10.54,4.11) .. (10.54,4.34).. controls (10.54,4.57) and
+				(10.72,4.75) .. (10.96,4.75).. controls (11.18,4.75) and (11.37,4.57) ..
+				(11.37,4.34).. controls (11.37,4.11) and (11.18,3.92) .. (10.96,3.92) --
+				cycle;
+				
+				\path[fill=white](8.88,4.96) -- (4.34,4.96).. controls (4.22,4.96) and
+				(4.13,4.87) .. (4.13,4.75).. controls (4.13,4.64) and (4.22,4.55) ..
+				(4.34,4.55) -- (8.88,4.55).. controls (9,4.55) and (9.1,4.64) ..
+				(9.1,4.75).. controls (9.1,4.87) and (9,4.96) .. (8.88,4.96) --
+				cycle;
+				
+				\path[fill=white](8.88,4.13) -- (4.34,4.13).. controls (4.22,4.13) and
+				(4.13,4.04) .. (4.13,3.92).. controls (4.13,3.81) and (4.22,3.72) ..
+				(4.34,3.72) -- (8.88,3.72).. controls (9,3.72) and (9.1,3.81) ..
+				(9.1,3.92).. controls (9.1,4.04) and (9,4.13) .. (8.88,4.13) --
+				cycle;
+				
+				\path[fill=red!30!white] (8.95,9.37).. controls (8.99,9.32) and (9.04,9.3) .. (9.1,9.3).. controls (9.15,9.3) and (9.2,9.32) ..
+				(9.24,9.37).. controls (9.32,9.45) and (9.32,9.57) .. (9.24,9.65)
+				-- (8.82,10.07).. controls (8.75,10.15) and (8.62,10.15) .. (8.54,10.07).. controls (8.46,9.99) and (8.46,9.86) .. (8.54,9.78) --
+				(8.95,9.37) -- cycle;
+				
+				\path[fill=red!30!white] (8.95,8.33).. controls (8.99,8.29) and (9.04,8.27) .. (9.1,8.27).. controls (9.15,8.27) and (9.2,8.29) ..
+				(9.24,8.33).. controls (9.32,8.41) and (9.32,8.54) .. (9.24,8.62)
+				-- (7.79,10.07).. controls (7.71,10.15) and (7.58,10.15) .. (7.5,10.07).. controls (7.42,9.99) and (7.42,9.86) .. (7.5,9.78) --
+				(8.95,8.33) -- cycle;
+				
+				\path[fill=black] (1.66,2.07) rectangle (2.9,1.24);
+				
+				\path[fill=black] (10.34,2.07) rectangle (11.57,1.24);
+				
+				\path[fill=white](2.27,4.34) circle (6.6mm);
+				
+				\path[fill=white] (10.96,4.34) circle (6.6mm);
+				
+		\end{tikzpicture}}
+		{
+			\includegraphics[scale = 0.4]{images/70CumlientruongNinhBinh-P1C2} 
+		}
+		\choice
+		{thể tích khối khí trong ô tô thay đổi nên nhiệt lượng mà khối khí trong ô tô nhận được chủ yếu làm tăng nội năng của khối khí}
+		{thể tích khối khí trong ô tô không đổi nên nhiệt lượng mà khối khí trong ô tô nhận được chủ yếu làm giảm nội năng của khối khí}
+		{thể tích khối khí trong ô tô thay đổi nên nhiệt lượng mà khối khí trong ô tô nhận được chủ yếu làm tăng nội giảm của khối khí}
+		{\True thể tích khối khí trong ô tô không đổi nên nhiệt lượng mà khối khí trong ô tô nhận được chủ yếu làm tăng nội năng của khối khí} 
+		\loigiai{
+		}
+	\end{ex}
+
+\dangbt{Lý thuyết về nhiệt độ và cân bằng nhiệt}
+\begin{ex}
+		Khi đun nóng một khối khí chứa trong một bình kín có thể tích cố định, áp suất chất khí tăng lên vì
+		\choice
+		{các phân tử khí dãn nở và trở nên nặng hơn, vì thế chúng va chạm nhau mạnh hơn}
+		{\True các phân tử khí chuyển động nhanh hơn, chúng va chạm với thành bình mạnh và nhiều hơn}
+		{các phân tử khí va chạm vào thành bình mạnh hơn nhưng ít thường xuyên hơn}
+		{các phân tử khí có ít không gian chuyển động hơn, nên chúng va chạm nhau thường xuyên hơn}
+		\loigiai{
+		}
+	\end{ex}
+
+\dangbt{Lý thuyết về nhiệt độ và cân bằng nhiệt}
+\begin{ex}
+		Cho rằng khi luộc trứng khi nó chín thì nước phải đạt $100^\circ C$. Vậy ở trên núi cao người ta 
+		\choice
+		{có thể luộc chín trứng trong khi nước chưa sôi vì ở đó nước sôi ở nhiệt độ cao hơn $100^\circ C$ nên chưa cần sôi nước đã đạt $100^\circ C$ và trứng đã chín.}
+		{\True không thể luộc chín trứng trong nước sôi vì áp suất trên đó nhỏ hơn áp suất chuẩn nên nước sôi ở nhiệt độ thấp hơn $100^\circ C$}
+		{không thể luộc chín trứng vì ở trên đó nước không thể sôi do áp suất trên đó nhỏ hơn áp suất chuẩn nên nước không đạt nhiệt độ $100^\circ C$ nên nước không sôi}
+		{có thể luộc chín trứng trong nước sôi nhanh hơn so với mặt đất vì ở đó nước sôi ở nhiệt độ cao hơn $100^\circ C$}
+		\loigiai{
+			\itemKN Càng lên cao thì áp suất càng giảm nên nhiệt độ sôi giảm. 
+		}
+	\end{ex}
+
+\dangbt{Lý thuyết về nhiệt độ và cân bằng nhiệt}
+\begin{ex}
+		\immini[thm]{
+			Khi để một cốc nước lạnh ngoài không khí nếu ta cầm vào bên ngoài cốc sẽ thấy có một lớp nước rất mỏng trên đó là do
+			\choice
+			{nước từ trong cốc thấm ra}
+			{hơi nước từ tay ta bốc ra}
+			{mồ hôi của tay chảy ra đọng trên đó}
+			{\True hơi nước từ không khí ngưng tụ trên đó}
+		}{	\begin{tikzpicture}[line cap=round,line join=round]
+				\definecolor{c616161}{RGB}{97,97,97}
+				\definecolor{cff9701}{RGB}{255,151,1}
+				\definecolor{cd3dde5}{RGB}{211,221,229}
+				\definecolor{ce4ebf0}{RGB}{228,235,240}
+				\definecolor{cffb345}{RGB}{255,179,69}
+				\path[draw=c616161,thick] (1.75,-10.39) .. controls +(180:0.9) and +(90:0.2) .. (0.16,-10.79) .. controls +(-90:0) and +(90:0) .. (0.16,-10.81) -- (0.56,-14.62) .. controls +(-90:0.2) and +(180:0.7) .. (1.75,-15.02) .. controls +(0:0.7) and +(-90:0.2) .. (2.94,-14.62) -- (3.33,-10.81) -- (3.33,-10.79) .. controls +(90:0.2) and +(0:0.9) .. (1.75,-10.39) -- cycle;
+				\path[fill=cyan!20] (2.94,-14.62) arc (0:180:1.19 and -0.4) arc (-180:0:1.19 and -0.4) -- cycle;
+				\path[fill=cd3dde5] (0.16,-10.79) -- (3.33,-10.79) -- (2.94,-14.62) -- (0.56,-14.62) -- (0.16,-10.79) -- cycle;
+				\path[draw=c616161,thick] (3.33,-10.78) arc (0:180:1.59 and -0.4) arc (-180:0:1.59 and -0.4) -- cycle;
+				\path[fill=ce4ebf0!20] (3.33,-10.78) arc (0:180:1.59 and -0.4) arc (-180:0:1.59 and -0.4) -- cycle;
+				\path[fill=cyan!20] (0.42,-13.3) -- (3.07,-13.3) -- (2.94,-14.62) -- (0.56,-14.62) -- (0.42,-13.3) -- cycle;
+				\path[draw=c616161,thick] (3.07,-13.3) arc (0:180:1.32 and -0.26) arc (-180:0:1.32 and -0.26) -- cycle;
+				\path[fill=cyan!20] (3.07,-13.3) arc (0:180:1.32 and -0.26) arc (-180:0:1.32 and -0.26) -- cycle;
+				
+				\tikzset{vienda/.pic={\draw[xshift=-0.1cm,yshift=-0.5cm,fill=blue!20,line width=0.01] (0,0)-- (-0.2,-0.1)--(-0.2,-0.3)--(0,-0.2) -- (-0.2,-0.3)--(0,-0.4)--(0.2,-0.3)--(0,-0.2)--(0,0)--(0.2,-0.1)--(0.2,-0.3)--(0,-0.2);}}
+				\path[fill=cyan!20] (0.42,-13.3) -- (3.07,-13.3) -- (2.94,-14.62) -- (0.56,-14.62) -- (0.42,-13.3) -- cycle;
+				\foreach \x/\y/\t in {2/-13/0,2.2/-13/0,1.6/-13/0}{
+					\pic[rotate=\t] at (\x,\y) {vienda=\t};
+					\pic[rotate=\t+30] at ({\x+0.01},{\y+0.03}) {vienda=\t};
+					\pic[rotate=\t-30] at (\x,{\y+0.06}) {vienda=\t};
+					\pic[rotate=\t+60] at (\x,{\y+0.09}) {vienda=\t};}
+				\path[draw=blue!40,thick] (3.07,-13.3) arc (0:180:1.32 and -0.26) arc (-180:0:1.32 and -0.26) -- cycle;
+				\tikzset{nước/.pic={\path[xshift=-0.1mm,yshift=-0.5mm,fill=blue!40,line width=0.01] (2.2,2.3)arc(10:30:0.15) arc(0:180:0.08)arc(180:220:0.1)arc(270:300:0.1);}}
+				
+				\foreach \x/\y/\t in {0/-15/0,0/-16/0,1/-14.4/0}{
+					\pic[rotate=\t] at (\x,\y) {nước=\t};
+					\pic[rotate=\t+10] at ({1.2*\x+0.01},{\y+0.03}) {nước=\t};
+					\pic[rotate=\t] at (1.1*\x,{\y+0.2}) {nước=\t};
+					\pic[rotate=\t+25] at (1*\x,{\y+0.1}) {nước=\t};}
+				
+		\end{tikzpicture}}
+		{
+			\includegraphics[scale =1]{images/70CumlientruongNinhBinh-P1C15}
+		}
+		\loigiai{
+		}
+	\end{ex}
+
+\dangbt{Đơn vị và đại lượng nhiệt}
+\begin{ex}
+		Trong phòng thí nghiệm một nhóm học sinh xác định nhiệt hoá hơi riêng của nước, bằng cách dùng một ấm điện để đun sôi nước, khi nước sôi thì nhóm học sinh đó mở nắp ấm cho nước bay hơi và tiến hành đo thời gian bay hơi của nước. Biết công suất của ấm, khối lượng nước và thời gian để nước bay hơi hết lần lượt là: $\mathcal{P}=(1800 \pm 10)\ W$; $m=(150 \pm 5)\ g$; $t=(196\pm1)\ s$. Cho rằng ấm luôn hoạt động đúng định mức, mọi hao phí nhiệt là không đáng kể. Sai số của nhiệt hoá hơi riêng trong cách làm này bằng bao nhiêu $\%$ (làm tròn kết quả đến chữ số hàng phần mười)?
+		\shortans{4,4}
+		\loigiai{
+			\itemKN $\dfrac{\Delta L}{\overline{L}}=\dfrac{\Delta P}{\overline{P}}+\dfrac{\Delta t}{\overline{t}}+\dfrac{\Delta m}{\overline{m}}\Rightarrow \dfrac{\Delta L}{\overline{L}}=\dfrac{10}{1800}+\dfrac{1}{196}+\dfrac{5}{150}\approx 0,044 = 4,4\%$
+		}
+	\end{ex}
